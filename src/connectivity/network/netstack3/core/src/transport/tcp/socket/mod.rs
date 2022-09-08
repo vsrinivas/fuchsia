@@ -144,6 +144,9 @@ pub trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>: IpDeviceIdContext<I> {
     ) -> O {
         self.with_isn_generator_and_tcp_sockets_mut(|_isn, sockets| cb(sockets))
     }
+
+    /// Calls the function with an immutable reference to TCP socket state.
+    fn with_tcp_sockets<O, F: FnOnce(&TcpSockets<I, Self::DeviceId, C>) -> O>(&self, cb: F) -> O;
 }
 
 /// Socket address includes the ip address and the port number.
@@ -697,6 +700,129 @@ where
     Ok(conn_id)
 }
 
+/// Information about a bound socket's address.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct BoundInfo<A: IpAddress> {
+    /// The IP address the socket is bound to, or `None` for all local IPs.
+    pub addr: Option<SpecifiedAddr<A>>,
+    /// The port number the socket is bound to.
+    pub port: NonZeroU16,
+}
+
+/// Information about a connected socket's address.
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ConnectionInfo<A: IpAddress> {
+    /// The local address the socket is bound to.
+    pub local_addr: SocketAddr<A>,
+    /// The remote address the socket is connected to.
+    pub remote_addr: SocketAddr<A>,
+}
+
+impl<A: IpAddress, D> From<ListenerAddr<A, D, NonZeroU16>> for BoundInfo<A> {
+    fn from(addr: ListenerAddr<A, D, NonZeroU16>) -> Self {
+        let ListenerAddr { ip: ListenerIpAddr { addr, identifier }, device: _ } = addr;
+        BoundInfo { addr, port: identifier }
+    }
+}
+
+impl<A: IpAddress, D> From<ConnAddr<A, D, NonZeroU16, NonZeroU16>> for ConnectionInfo<A> {
+    fn from(addr: ConnAddr<A, D, NonZeroU16, NonZeroU16>) -> Self {
+        let ConnAddr { ip: ConnIpAddr { local, remote }, device: _ } = addr;
+        let convert = |(ip, port)| SocketAddr { ip, port };
+        Self { local_addr: convert(local), remote_addr: convert(remote) }
+    }
+}
+
+// Sealed trait pattern prevents implementations of `LocallyBoundSocketId`
+// outside this module.
+// https://rust-lang.github.io/api-guidelines/future-proofing.html#sealed-traits-protect-against-downstream-implementations-c-sealed
+mod sealed {
+    pub trait Sealed {}
+
+    impl Sealed for super::BoundId {}
+    impl Sealed for super::ListenerId {}
+    impl Sealed for super::ConnectionId {}
+}
+
+/// Abstracts operations over bound, listening, and connected sockets.
+pub trait LocallyBoundSocketId<I: IpExt>: sealed::Sealed {
+    /// Information about the socket's addresses.
+    type AddressInfo;
+
+    /// Get information about the socket's address.
+    ///
+    /// Panics if the socket ID is invalid.
+    fn get_info<SC, C>(&self, sync_ctx: &SC, ctx: &C) -> Self::AddressInfo
+    where
+        C: TcpNonSyncContext,
+        SC: TcpSyncContext<I, C>;
+}
+
+impl<I: IpExt> LocallyBoundSocketId<I> for BoundId {
+    type AddressInfo = BoundInfo<I::Addr>;
+
+    fn get_info<SC, C>(&self, sync_ctx: &SC, ctx: &C) -> Self::AddressInfo
+    where
+        C: TcpNonSyncContext,
+        SC: TcpSyncContext<I, C>,
+    {
+        sync_ctx
+            .with_tcp_sockets(|sockets| {
+                let (bound, (), bound_addr) = sockets
+                    .socketmap
+                    .listeners()
+                    .get_by_id(&self.clone().into())
+                    .expect("invalid bound ID");
+                assert_matches!(bound, MaybeListener::Bound(_));
+                *bound_addr
+            })
+            .into()
+    }
+}
+
+impl<I: IpExt> LocallyBoundSocketId<I> for ListenerId {
+    type AddressInfo = BoundInfo<I::Addr>;
+
+    fn get_info<SC, C>(&self, sync_ctx: &SC, ctx: &C) -> Self::AddressInfo
+    where
+        C: TcpNonSyncContext,
+        SC: TcpSyncContext<I, C>,
+    {
+        sync_ctx
+            .with_tcp_sockets(|sockets| {
+                let (listener, (), addr) = sockets
+                    .socketmap
+                    .listeners()
+                    .get_by_id(&self.clone().into())
+                    .expect("invalid listener ID");
+                assert_matches!(listener, MaybeListener::Listener(_));
+                *addr
+            })
+            .into()
+    }
+}
+
+impl<I: IpExt> LocallyBoundSocketId<I> for ConnectionId {
+    type AddressInfo = ConnectionInfo<I::Addr>;
+
+    fn get_info<SC, C>(&self, sync_ctx: &SC, ctx: &C) -> Self::AddressInfo
+    where
+        C: TcpNonSyncContext,
+        SC: TcpSyncContext<I, C>,
+    {
+        sync_ctx
+            .with_tcp_sockets(|sockets| {
+                let (_, (), addr): &(Connection<_, _, _, _, _, _>, _, _) = sockets
+                    .socketmap
+                    .conns()
+                    .get_by_id(&self.clone().into())
+                    .expect("invalid conn ID");
+                *addr
+            })
+            .into()
+    }
+}
+
 /// Call this function whenever a socket can push out more data. That means either:
 ///
 /// - A retransmission timer fires.
@@ -822,7 +948,7 @@ mod tests {
             device::state::{
                 AddrConfig, AddressState, IpDeviceState, IpDeviceStateIpExt, Ipv6AddressEntry,
             },
-            socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler, IpSocketHandler},
+            socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler},
             BufferIpTransportContext as _, DummyDeviceId, HopLimits, SendIpPacketMeta,
             DEFAULT_HOP_LIMITS,
         },
@@ -948,7 +1074,6 @@ mod tests {
 
     impl<I: TcpTestIpExt> TransportIpContext<I, TcpNonSyncCtx> for TcpSyncCtx<I>
     where
-        TcpSyncCtx<I>: IpSocketHandler<I, TcpNonSyncCtx>,
         TcpSyncCtx<I>: IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         fn get_device_with_assigned_addr(
@@ -976,6 +1101,14 @@ mod tests {
         ) -> O {
             let TcpState { isn_generator, sockets, ip_socket_ctx: _ } = self.get_mut();
             cb(isn_generator, sockets)
+        }
+
+        fn with_tcp_sockets<O, F: FnOnce(&TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>) -> O>(
+            &self,
+            cb: F,
+        ) -> O {
+            let TcpState { sockets, isn_generator: _, ip_socket_ctx: _ } = self.get_ref();
+            cb(sockets)
         }
     }
 
@@ -1136,8 +1269,6 @@ mod tests {
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
         let mut net = new_test_net::<I>();
-        // Work around the `Copy` requirement for `run_until_idle`, capture an
-        // immutable reference.
         let mut rng = new_rng(seed);
 
         let mut maybe_drop_frame =
@@ -1328,7 +1459,7 @@ mod tests {
                 non_sync_ctx,
                 conn,
                 SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_1 },
-                (Rc::new(RefCell::new(RingBuffer::default())), Rc::new(RefCell::new(Vec::new()))),
+                Default::default(),
             )
             .expect("failed to connect")
         });
@@ -1381,5 +1512,68 @@ mod tests {
         run_with_many_seeds(|seed| {
             bind_listen_connect_accept_inner(I::UNSPECIFIED_ADDRESS, false, seed, 0.2)
         });
+    }
+
+    #[ip_test]
+    fn bound_info<I: Ip + TcpTestIpExt>() {
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::<I>::new(
+            I::DUMMY_CONFIG.local_ip,
+            I::DUMMY_CONFIG.remote_ip,
+            I::DUMMY_CONFIG.subnet.prefix(),
+        ));
+        let unbound = create_socket(&mut sync_ctx, &mut non_sync_ctx);
+
+        let (addr, port) = (I::DUMMY_CONFIG.local_ip, PORT_1);
+        let bound = bind(&mut sync_ctx, &mut non_sync_ctx, unbound, *addr, Some(port))
+            .expect("bind should succeed");
+
+        let info = bound.get_info(&sync_ctx, &non_sync_ctx);
+        assert_eq!(info, BoundInfo { addr: Some(addr), port });
+    }
+
+    #[ip_test]
+    fn listener_info<I: Ip + TcpTestIpExt>() {
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::<I>::new(
+            I::DUMMY_CONFIG.local_ip,
+            I::DUMMY_CONFIG.remote_ip,
+            I::DUMMY_CONFIG.subnet.prefix(),
+        ));
+        let unbound = create_socket(&mut sync_ctx, &mut non_sync_ctx);
+
+        let (addr, port) = (I::DUMMY_CONFIG.local_ip, PORT_1);
+        let bound = bind(&mut sync_ctx, &mut non_sync_ctx, unbound, *addr, Some(port))
+            .expect("bind should succeed");
+        let listener = listen(&mut sync_ctx, &mut non_sync_ctx, bound, nonzero!(25usize));
+
+        let info = listener.get_info(&sync_ctx, &non_sync_ctx);
+        assert_eq!(info, BoundInfo { addr: Some(addr), port });
+    }
+
+    #[ip_test]
+    fn connection_info<I: Ip + TcpTestIpExt>()
+    where
+        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
+            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
+    {
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::<I>::new(
+            I::DUMMY_CONFIG.local_ip,
+            I::DUMMY_CONFIG.remote_ip,
+            I::DUMMY_CONFIG.subnet.prefix(),
+        ));
+        let local = SocketAddr { ip: I::DUMMY_CONFIG.local_ip, port: PORT_1 };
+        let remote = SocketAddr { ip: I::DUMMY_CONFIG.remote_ip, port: PORT_2 };
+
+        let unbound = create_socket(&mut sync_ctx, &mut non_sync_ctx);
+        let bound = bind(&mut sync_ctx, &mut non_sync_ctx, unbound, *local.ip, Some(local.port))
+            .expect("bind should succeed");
+
+        let connected =
+            connect_bound(&mut sync_ctx, &mut non_sync_ctx, bound, remote, Default::default())
+                .expect("connect should succeed");
+
+        assert_eq!(
+            connected.get_info(&sync_ctx, &non_sync_ctx),
+            ConnectionInfo { local_addr: local, remote_addr: remote }
+        );
     }
 }

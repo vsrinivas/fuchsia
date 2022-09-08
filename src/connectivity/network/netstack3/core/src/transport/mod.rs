@@ -122,6 +122,14 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for SyncCtx<C> {
         let TcpState { isn_generator, sockets } = &mut self.state.transport.tcpv4;
         cb(isn_generator, &mut sockets.lock())
     }
+
+    fn with_tcp_sockets<O, F: FnOnce(&TcpSockets<Ipv4, Self::DeviceId, C>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        let TcpState { sockets, isn_generator: _ } = &self.state.transport.tcpv4;
+        cb(&sockets.lock())
+    }
 }
 
 impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
@@ -134,6 +142,14 @@ impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
     ) -> O {
         let TcpState { isn_generator, sockets } = &mut self.state.transport.tcpv6;
         cb(isn_generator, &mut sockets.lock())
+    }
+
+    fn with_tcp_sockets<O, F: FnOnce(&TcpSockets<Ipv6, Self::DeviceId, C>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        let TcpState { sockets, isn_generator: _ } = &self.state.transport.tcpv6;
+        cb(&sockets.lock())
     }
 }
 

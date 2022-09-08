@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use core::{convert::Infallible as Never, num::NonZeroU64};
+use core::{
+    convert::Infallible as Never,
+    num::{NonZeroU16, NonZeroU64},
+};
 
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
@@ -379,6 +382,19 @@ impl TryIntoFidl<fnet_interfaces_admin::AddressAssignmentState>
                 Ok(fnet_interfaces_admin::AddressAssignmentState::Tentative)
             }
         }
+    }
+}
+
+impl<A: IpAddress> TryIntoFidl<<A::Version as IpSockAddrExt>::SocketAddress>
+    for (Option<SpecifiedAddr<A>>, NonZeroU16)
+where
+    A::Version: IpSockAddrExt,
+{
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<<A::Version as IpSockAddrExt>::SocketAddress, Self::Error> {
+        let (addr, port) = self;
+        Ok(SockAddr::new(addr.map(ZonedAddr::Unzoned), port.get()))
     }
 }
 
@@ -1017,6 +1033,22 @@ mod tests {
 
         let result = result.try_into_fidl_with_ctx(&ctx).expect("reverse should succeed");
         assert_eq!(result, addr)
+    }
+
+    #[test]
+    fn test_unzoned_ip_port_into_fidl() {
+        let ip = net_ip_v4!("1.7.2.4");
+        let port = 3893;
+        assert_eq!(
+            (SpecifiedAddr::new(ip), NonZeroU16::new(port).unwrap()).into_fidl(),
+            fidl_net::Ipv4SocketAddress { address: ip.into_ext(), port }
+        );
+
+        let ip = net_ip_v6!("1:2:3:4:5::");
+        assert_eq!(
+            (SpecifiedAddr::new(ip), NonZeroU16::new(port).unwrap()).into_fidl(),
+            fidl_net::Ipv6SocketAddress { address: ip.into_ext(), port, zone_index: 0 }
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

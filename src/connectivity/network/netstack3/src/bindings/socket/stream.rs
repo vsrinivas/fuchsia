@@ -5,6 +5,7 @@
 //! Stream sockets, primarily TCP sockets.
 
 use std::{
+    convert::Infallible as Never,
     num::{NonZeroU16, NonZeroUsize},
     ops::DerefMut as _,
 };
@@ -22,15 +23,14 @@ use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
 use futures::StreamExt as _;
 use net_types::{
-    ip::{IpVersionMarker, Ipv4, Ipv6},
+    ip::{IpAddress, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
 };
 use packet::Buf;
 
 use crate::bindings::{
-    socket::{
-        IntoErrno, IpSockAddrExt, SockAddr as _, ZXSIO_SIGNAL_CONNECTED, ZXSIO_SIGNAL_INCOMING,
-    },
+    socket::{IntoErrno, IpSockAddrExt, SockAddr, ZXSIO_SIGNAL_CONNECTED, ZXSIO_SIGNAL_INCOMING},
+    util::{IntoFidl as _, TryIntoFidl},
     LockableContext,
 };
 
@@ -40,8 +40,8 @@ use netstack3_core::{
         buffer::RingBuffer,
         socket::{
             accept, bind, connect_bound, connect_unbound, create_socket, listen, AcceptError,
-            BindError, BoundId, ConnectError, ConnectionId, ListenerId, SocketAddr,
-            TcpNonSyncContext, TcpSyncContext, UnboundId,
+            BindError, BoundId, BoundInfo, ConnectError, ConnectionId, ListenerId,
+            LocallyBoundSocketId as _, SocketAddr, TcpNonSyncContext, TcpSyncContext, UnboundId,
         },
     },
     Ctx, SyncCtx,
@@ -309,6 +309,26 @@ where
         }
     }
 
+    async fn get_sock_name(&self) -> Result<fnet::SocketAddress, fposix::Errno> {
+        let mut guard = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
+        match self.id {
+            SocketId::Unbound(_) => Err(fposix::Errno::Einval),
+            SocketId::Bound(id) => Ok({
+                let BoundInfo { addr, port } = id.get_info(sync_ctx, non_sync_ctx);
+                (addr, port).into_fidl()
+            }),
+            SocketId::Listener(id) => Ok({
+                let BoundInfo { addr, port } = id.get_info(sync_ctx, non_sync_ctx);
+                (addr, port).into_fidl()
+            }),
+            SocketId::Connection(id) => {
+                Ok(id.get_info(sync_ctx, non_sync_ctx).local_addr.into_fidl())
+            }
+        }
+        .map(SockAddr::into_sock_addr)
+    }
+
     async fn accept(
         &mut self,
         want_addr: bool,
@@ -546,7 +566,7 @@ where
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
             }
             fposix_socket::StreamSocketRequest::GetSockName { responder } => {
-                responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+                responder_send!(responder, &mut self.get_sock_name().await);
             }
             fposix_socket::StreamSocketRequest::GetPeerName { responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -782,5 +802,17 @@ where
             }
         }
         StreamProcessing::Continue
+    }
+}
+
+impl<A: IpAddress> TryIntoFidl<<A::Version as IpSockAddrExt>::SocketAddress> for SocketAddr<A>
+where
+    A::Version: IpSockAddrExt,
+{
+    type Error = Never;
+
+    fn try_into_fidl(self) -> Result<<A::Version as IpSockAddrExt>::SocketAddress, Self::Error> {
+        let Self { ip, port } = self;
+        Ok((Some(ip), port).into_fidl())
     }
 }

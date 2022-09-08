@@ -9,10 +9,10 @@ use core::cmp::Ordering;
 use core::convert::Infallible;
 use core::num::NonZeroU8;
 
-use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
+use net_types::ip::{Ip, Ipv4, Ipv6, Ipv6Addr};
 use net_types::{SpecifiedAddr, UnicastAddr};
 use packet::{Buf, BufferMut, SerializeError, Serializer};
-use packet_formats::ip::{Ipv4Proto, Ipv6Proto};
+
 use thiserror::Error;
 
 use crate::{
@@ -337,41 +337,21 @@ where
     ) -> Result<(), S>;
 }
 
-impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv4, C>> IpSocketHandler<Ipv4, C> for SC {
+impl<
+        I: Ip + IpExt + IpDeviceStateIpExt<C::Instant>,
+        C: IpSocketNonSyncContext,
+        SC: IpSocketContext<I, C>,
+    > IpSocketHandler<I, C> for SC
+{
     fn new_ip_socket<O>(
         &mut self,
         ctx: &mut C,
         device: Option<SC::DeviceId>,
-        local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
-        remote_ip: SpecifiedAddr<Ipv4Addr>,
-        proto: Ipv4Proto,
+        local_ip: Option<SpecifiedAddr<I::Addr>>,
+        remote_ip: SpecifiedAddr<I::Addr>,
+        proto: I::Proto,
         options: O,
-    ) -> Result<IpSock<Ipv4, SC::DeviceId, O>, (IpSockCreationError, O)> {
-        // Make sure the remote is routable with a local address before creating
-        // the socket. We do not care about the actual destination here because
-        // we will recalculate it when we send a packet so that the best route
-        // available at the time is used for each outgoing packet.
-        let IpSockRoute { local_ip, destination: _ } =
-            match self.lookup_route(ctx, device, local_ip, remote_ip) {
-                Ok(r) => r,
-                Err(e) => return Err((e.into(), options)),
-            };
-
-        let definition = IpSockDefinition { local_ip, remote_ip, device, proto };
-        Ok(IpSock { definition: definition, options })
-    }
-}
-
-impl<C: IpSocketNonSyncContext, SC: IpSocketContext<Ipv6, C>> IpSocketHandler<Ipv6, C> for SC {
-    fn new_ip_socket<O>(
-        &mut self,
-        ctx: &mut C,
-        device: Option<SC::DeviceId>,
-        local_ip: Option<SpecifiedAddr<Ipv6Addr>>,
-        remote_ip: SpecifiedAddr<Ipv6Addr>,
-        proto: Ipv6Proto,
-        options: O,
-    ) -> Result<IpSock<Ipv6, SC::DeviceId, O>, (IpSockCreationError, O)> {
+    ) -> Result<IpSock<I, SC::DeviceId, O>, (IpSockCreationError, O)> {
         // Make sure the remote is routable with a local address before creating
         // the socket. We do not care about the actual destination here because
         // we will recalculate it when we send a packet so that the best route
@@ -801,7 +781,7 @@ pub(crate) mod testutil {
 
     use derivative::Derivative;
     use net_types::{
-        ip::{AddrSubnet, IpAddress, Subnet},
+        ip::{AddrSubnet, IpAddress, Ipv4Addr, Subnet},
         Witness,
     };
 
@@ -1035,7 +1015,7 @@ mod tests {
     use assert_matches::assert_matches;
     use ip_test_macro::ip_test;
     use net_types::{
-        ip::{AddrSubnet, IpAddr, IpAddress, SubnetEither},
+        ip::{AddrSubnet, IpAddr, IpAddress, Ipv4Addr, SubnetEither},
         Witness,
     };
     use nonzero_ext::nonzero;
