@@ -371,7 +371,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
             .iter()
             .map(|m| {
                 let (out_params, return_param) = get_out_params(&m, name, true, ir)?;
-                let in_params = get_in_params(&m, true, true, ir)?;
+                let in_params = get_in_params(&m, true, false, ir)?;
 
                 let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
@@ -414,21 +414,9 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
                                     name
                                 } else {
                                     match ir.get_declaration(identifier).unwrap() {
-                                        Declaration::Protocol => {
-                                            if not_callback(identifier, ir).unwrap() {
-                                                let ty_name =
-                                                    type_to_cpp_str(&param._type, false, ir)
-                                                        .unwrap();
-                                                format!(
-                                                    "{ty_name}{{{name}_ops, {name}_ctx}}",
-                                                    ty_name = ty_name,
-                                                    name = name
-                                                )
-                                            } else {
-                                                format!("*{}", name)
-                                            }
-                                        }
-                                        Declaration::Struct | Declaration::Union => {
+                                        Declaration::Protocol
+                                        | Declaration::Struct
+                                        | Declaration::Union => {
                                             format!("*{}", name)
                                         }
                                         _ => name,

@@ -60,8 +60,8 @@ public:
         mock_de_register_.VerifyAndClear();
     }
 
-    virtual void BakerRegister(void* intf_ctx, const cookie_maker_protocol_ops_t* intf_ops, void* jar_ctx, const cookie_jarrer_protocol_ops_t* jar_ops) {
-        mock_register_.Call(cookie_maker_protocol_t{intf_ops, intf_ctx}, cookie_jarrer_protocol_t{jar_ops, jar_ctx});
+    virtual void BakerRegister(const cookie_maker_protocol_t* intf, const cookie_jarrer_protocol_t* jar) {
+        mock_register_.Call(*intf, *jar);
     }
 
     virtual void BakerChange(const change_args_t* payload, change_args_t* out_payload) {
