@@ -127,7 +127,7 @@ impl EnclosingEnvironment {
                 "fuchsia.logger.LogSink".into(),
             ],
             provider: None,
-            host_directory: Some(additional_svc_client.into_channel()),
+            host_directory: Some(additional_svc_client),
         };
 
         let mut opts = fv1sys::EnvironmentOptions {

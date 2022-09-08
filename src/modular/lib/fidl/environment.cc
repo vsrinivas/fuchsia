@@ -36,13 +36,12 @@ fuchsia::sys::Launcher* Environment::GetLauncher() {
   return env_launcher_.get();
 }
 
-zx::channel Environment::OpenAsDirectory() {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK)
-    return zx::channel();
-  if (vfs_.ServeDirectory(services_dir_, std::move(h1)) != ZX_OK)
-    return zx::channel();
-  return h2;
+fidl::InterfaceHandle<fuchsia::io::Directory> Environment::OpenAsDirectory() {
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  if (vfs_.ServeDirectory(services_dir_, dir.NewRequest().TakeChannel()) != ZX_OK) {
+    return {};
+  }
+  return dir;
 }
 
 void Environment::InitEnvironment(const fuchsia::sys::EnvironmentPtr& parent_env,

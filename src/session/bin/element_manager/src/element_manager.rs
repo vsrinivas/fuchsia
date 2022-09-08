@@ -20,7 +20,7 @@ use {
     },
     fidl::AsHandleRef,
     fidl_connector::Connect,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement,
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_element as felement, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys as fsys, fidl_fuchsia_ui_app as fuiapp,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component, fuchsia_scenic as scenic, fuchsia_zircon as zx,
@@ -185,7 +185,7 @@ struct AdditionalServices {
     pub names: Vec<String>,
 
     /// A channel to the directory hosting the services in `names`.
-    pub host_directory: zx::Channel,
+    pub host_directory: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
 }
 
 pub type GraphicalPresenterConnector =
@@ -919,7 +919,7 @@ mod tests {
         let service_name = "myService";
         let additional_services = fsys::ServiceList {
             names: vec![service_name.to_string()],
-            host_directory: Some(dir_client.into_channel()),
+            host_directory: Some(dir_client),
             provider: None,
         };
 
@@ -943,8 +943,12 @@ mod tests {
 
                         // Connect to the service hosted in `additional_services.host_directory`.
                         let (_client_channel, server_channel) = zx::Channel::create().unwrap();
-                        fdio::service_connect_at(&host_directory, service_name, server_channel)
-                            .expect("could not connect to service");
+                        fdio::service_connect_at(
+                            host_directory.channel(),
+                            service_name,
+                            server_channel,
+                        )
+                        .expect("could not connect to service");
 
                         fasync::Task::spawn(async move {
                             CREATE_COMPONENT_CALL_COUNT.inc();
@@ -1179,7 +1183,7 @@ mod tests {
         // This is a CFv2 component URL. `additional_services` is only supported for v1 components.
         let component_url = "fuchsia-pkg://fuchsia.com/simple_element#meta/simple_element.cm";
 
-        let (channel, _) = fidl::Channel::create().unwrap();
+        let (channel, _) = fidl::endpoints::create_endpoints().unwrap();
         let additional_services = fsys::ServiceList {
             names: vec!["fuchsia.service.Foo".to_string()],
             host_directory: Some(channel),

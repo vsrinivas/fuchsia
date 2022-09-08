@@ -23,8 +23,8 @@ fuchsia::modular::ModuleData CloneModuleData(const fuchsia::modular::ModuleData&
 
   if (module_data.has_additional_services() &&
       module_data.additional_services().host_directory.is_valid()) {
-    copy.mutable_additional_services()->host_directory =
-        zx::channel(fdio_service_clone(module_data.additional_services().host_directory.get()));
+    copy.mutable_additional_services()->host_directory.set_channel(zx::channel(
+        fdio_service_clone(module_data.additional_services().host_directory.channel().get())));
   }
 
   return copy;

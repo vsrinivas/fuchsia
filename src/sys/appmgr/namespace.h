@@ -149,7 +149,7 @@ class Namespace : public fuchsia::sys::Environment,
   // Set if |additional_services.provider| was set.
   fuchsia::sys::ServiceProviderPtr service_provider_;
   // Set if |additional_services.host_directory| was set.
-  zx::channel service_host_directory_;
+  fidl::InterfaceHandle<fuchsia::io::Directory> service_host_directory_;
   fuchsia::sys::LoaderPtr loader_;
 
   // Weak ptr to store in children namesapce.

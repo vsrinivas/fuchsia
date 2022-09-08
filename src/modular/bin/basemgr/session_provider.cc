@@ -56,8 +56,7 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
   // Session context initializes and holds the sessionmgr process.
   fuchsia::sys::ServiceList v2_services_for_sessionmgr;
   v2_services_for_sessionmgr.names = v2_services_for_sessionmgr_names_;
-  v2_services_for_sessionmgr.host_directory =
-      v2_services_for_sessionmgr_dir_.CloneChannel().TakeChannel();
+  v2_services_for_sessionmgr.host_directory = v2_services_for_sessionmgr_dir_.CloneChannel();
 
   fuchsia::io::DirectoryPtr svc_from_v1_sessionmgr_dir_ptr;
   auto svc_from_v1_sessionmgr_dir_request = svc_from_v1_sessionmgr_dir_ptr.NewRequest();

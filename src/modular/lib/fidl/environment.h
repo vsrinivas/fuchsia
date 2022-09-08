@@ -58,7 +58,7 @@ class Environment {
   const fuchsia::sys::EnvironmentPtr& environment() const { return env_; }
 
  private:
-  zx::channel OpenAsDirectory();
+  fidl::InterfaceHandle<fuchsia::io::Directory> OpenAsDirectory();
 
   void InitEnvironment(const fuchsia::sys::EnvironmentPtr& parent_env, const std::string& label,
                        const std::vector<std::string>& service_names, bool kill_on_oom);

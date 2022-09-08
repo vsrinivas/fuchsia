@@ -411,7 +411,7 @@ TEST_F(ElementManagerTest, ProposeOffersServices) {
   // Construct a ServiceList with the above dir server.
   fuchsia::sys::ServiceList service_list;
   service_list.names.push_back(fuchsia::testing::modular::TestProtocol::Name_);
-  service_list.host_directory = dir_server->Serve().Unbind().TakeChannel();
+  service_list.host_directory = dir_server->Serve().Unbind();
 
   // Create an ElementSpec with the ServiceList in |additional_services|.
   auto element_spec = fidl::Clone(element()->spec());

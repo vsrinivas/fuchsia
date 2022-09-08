@@ -167,16 +167,13 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
   auto path = std::string("/") + modular_config::kServicesForV1Sessionmgr;
   if (files::IsDirectory(path)) {
     FX_LOGS(INFO) << "Found svc_for_v1_sessionmgr";
-    zx_status_t status;
-    zx::channel ns_server;
-    status = zx::channel::create(0, &ns_server, &svc_for_v1_sessionmgr.host_directory);
-    FX_CHECK(status == ZX_OK) << "failed to create channel: " << zx_status_get_string(status);
 
+    zx_status_t status;
     status = fdio_open(path.c_str(),
                        static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
                                              fuchsia_io::wire::OpenFlags::kDirectory |
                                              fuchsia_io::wire::OpenFlags::kRightWritable),
-                       ns_server.release());
+                       svc_for_v1_sessionmgr.host_directory.NewRequest().TakeChannel().release());
     FX_CHECK(status == ZX_OK) << "failed to open " << path << ": " << zx_status_get_string(status);
 
     std::vector<std::string> v2_services;

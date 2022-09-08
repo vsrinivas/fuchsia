@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.sys;
 
+using fuchsia.io;
 using zx;
 
 /// An FDIO file descriptor.
@@ -70,7 +71,10 @@ type ServiceList = resource struct {
     /// A channel to the directory hosting the services in `names`.
     // TODO(fxbug.dev/31262): Support `host_directory` for CreateComponent and deprecate
     // `provider`.
+    @available(removed=10)
     host_directory zx.handle:<CHANNEL, optional>;
+    @available(added=10)
+    host_directory client_end:<fuchsia.io.Directory, optional>;
 };
 
 /// An interface for creating component instances.

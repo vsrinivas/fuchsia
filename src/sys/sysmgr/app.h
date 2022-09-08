@@ -44,7 +44,7 @@ class App {
                        fit::function<void(zx_status_t)> on_ctrl_err);
 
  private:
-  zx::channel OpenAsDirectory();
+  fidl::InterfaceHandle<fuchsia::io::Directory> OpenAsDirectory();
   void ConnectToService(const std::string& service_name, zx::channel channel);
 
   void RegisterSingleton(std::string service_name, fuchsia::sys::LaunchInfoPtr launch_info);

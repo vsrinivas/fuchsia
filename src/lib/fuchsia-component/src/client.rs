@@ -456,7 +456,7 @@ impl LaunchOptions {
     pub fn set_additional_services(
         &mut self,
         names: Vec<String>,
-        host_directory: zx::Channel,
+        host_directory: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
     ) -> &mut Self {
         let list = ServiceList { names, host_directory: Some(host_directory), provider: None };
         self.additional_services = Some(Box::new(list));

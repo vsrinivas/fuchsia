@@ -95,8 +95,8 @@ Namespace::Namespace(PrivateConstructor p, fxl::RefPtr<Namespace> parent, fxl::W
       if (service_host_directory_) {
         services_->AddService(name,
                               fbl::MakeRefCounted<fs::Service>([this, name](zx::channel channel) {
-                                fdio_service_connect_at(service_host_directory_.get(), name.c_str(),
-                                                        channel.release());
+                                fdio_service_connect_at(service_host_directory_.channel().get(),
+                                                        name.c_str(), channel.release());
                                 return ZX_OK;
                               }));
       } else {

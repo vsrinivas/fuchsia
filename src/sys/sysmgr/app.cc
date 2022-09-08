@@ -91,11 +91,11 @@ App::App(bool auto_update_packages, Config config,
 
 App::~App() = default;
 
-zx::channel App::OpenAsDirectory() {
+fidl::InterfaceHandle<fuchsia::io::Directory> App::OpenAsDirectory() {
   fidl::InterfaceHandle<fuchsia::io::Directory> dir;
   svc_root_.Serve(fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
                   dir.NewRequest().TakeChannel());
-  return dir.TakeChannel();
+  return dir;
 }
 
 void App::ConnectToService(const std::string& service_name, zx::channel channel) {

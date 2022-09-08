@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
   // sys realm in sysmgr) and used in components.
   fuchsia::sys::ServiceListPtr root_realm_services(new fuchsia::sys::ServiceList);
   root_realm_services->names = RootRealmServices();
-  root_realm_services->host_directory = environment_services->CloneChannel().TakeChannel();
+  root_realm_services->host_directory = environment_services->CloneChannel();
 
   zx::channel trace_client, trace_server;
   status = zx::channel::create(0, &trace_client, &trace_server);

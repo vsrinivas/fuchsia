@@ -165,7 +165,12 @@ EnclosingEnvironment::EnclosingEnvironment(std::string label,
   // Start environment with services.
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
   service_list->names = std::move(services_->svc_names_);
-  service_list->host_directory = services_->ServeServiceDir().TakeChannel();
+  service_list->host_directory = services_
+                                     ->ServeServiceDir()
+#if __Fuchsia_API_level__ < 10
+                                     .TakeChannel()
+#endif
+      ;
   fuchsia::sys::EnvironmentPtr env;
 
   parent_env->CreateNestedEnvironment(env.NewRequest(), env_controller_.NewRequest(), label_,

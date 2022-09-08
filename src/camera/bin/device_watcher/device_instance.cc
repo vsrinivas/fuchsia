@@ -66,7 +66,7 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
   launch_info.arguments = {kCameraPublishedServiceName};
   launch_info.directory_request = std::move(directory_request);
   launch_info.additional_services = std::move(additional_services);
-  launch_info.additional_services->host_directory = injected_services_dir_channel.TakeChannel();
+  launch_info.additional_services->host_directory = std::move(injected_services_dir_channel);
   launcher->CreateComponent(std::move(launch_info),
                             instance->component_controller_.NewRequest(instance->dispatcher_));
 

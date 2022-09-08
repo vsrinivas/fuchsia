@@ -81,8 +81,6 @@ class NamespaceTest : public ::gtest::RealLoopFixture {
 
 TEST_F(NamespaceTest, NoReferencesToParentAfterItIsShutDown) {
   ServiceListPtr service_list(new ServiceList);
-  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
-  service_list->host_directory = dir.TakeChannel();
   auto parent_ns = MakeNamespace(std::move(service_list));
   auto child_ns = Namespace::CreateChildNamespace(parent_ns.ns(), nullptr, nullptr, nullptr);
   // When creating a child namespace, parent also stores a reference to namespace. As we already
@@ -115,12 +113,12 @@ TEST_F(NamespaceTest, KillNamespaceWithNoParent) {
 
 class NamespaceHostDirectoryTest : public NamespaceTest {
  protected:
-  zx::channel OpenAsDirectory() {
+  fidl::InterfaceHandle<fuchsia::io::Directory> OpenAsDirectory() {
     fidl::InterfaceHandle<fuchsia::io::Directory> dir;
     directory_.Serve(
         fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
         dir.NewRequest().TakeChannel(), dispatcher());
-    return dir.TakeChannel();
+    return dir;
   }
 
   zx_status_t AddService(const std::string& name) {
@@ -221,7 +219,7 @@ TEST_F(NamespaceProviderTest, AdditionalServices) {
   EXPECT_EQ(ZX_OK, AddService(kService1));
   EXPECT_EQ(ZX_OK, AddService(kService2));
 
-  service_list->host_directory = provider_.service_directory()->CloneChannel().TakeChannel();
+  service_list->host_directory = provider_.service_directory()->CloneChannel();
   auto ns = MakeNamespace(std::move(service_list));
 
   zx::channel svc_dir = ns->OpenServicesAsDirectory();

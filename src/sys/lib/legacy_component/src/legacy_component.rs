@@ -139,7 +139,7 @@ impl LegacyComponent {
             }
         }
 
-        let (host_dir_client_end, host_dir_server_end) = create_endpoints::<fio::NodeMarker>()
+        let (host_dir_client_end, host_dir_server_end) = create_endpoints::<fio::DirectoryMarker>()
             .context("could not create node proxy endpoints")?;
         host_pseudo_dir.clone().open(
             execution_scope.clone(),
@@ -153,7 +153,7 @@ impl LegacyComponent {
         let mut additional_services = fsysv1::ServiceList {
             names: svc_names,
             provider: None,
-            host_directory: Some(host_dir_client_end.into_channel()),
+            host_directory: Some(host_dir_client_end),
         };
 
         // Our service list for the new nested environment is all set up, so we can proceed with

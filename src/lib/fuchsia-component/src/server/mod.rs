@@ -589,7 +589,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
         let (client_end, server_end) = fidl::endpoints::create_endpoints()?;
         self.serve_connection(server_end)?;
 
-        Ok(ServiceList { names, provider: None, host_directory: Some(client_end.into_channel()) })
+        Ok(ServiceList { names, provider: None, host_directory: Some(client_end) })
     }
 
     /// Returns true if the root contains any sub-directories.
