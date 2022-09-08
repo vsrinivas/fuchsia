@@ -24,9 +24,6 @@
                 // Used by fdio for running executables.
                 "fuchsia.process.Launcher",
 
-                // To launch v1 components.
-                "fuchsia.sys.Launcher",
-
                 // To watch and attach to v2 components.
                 "fuchsia.sys2.EventSource",
 

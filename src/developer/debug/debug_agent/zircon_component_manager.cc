@@ -43,36 +43,6 @@ namespace {
 // Maximum time we wait for reading "elf/job_id" in the runtime directory.
 constexpr uint64_t kMaxWaitMsForJobId = 1000;
 
-// Maximum time we wait for a component to start.
-constexpr uint64_t kMaxWaitMsForComponent = 1000;
-
-// Attempts to link a zircon socket into the new component's file descriptor number represented by
-// |fd|. If successful, the socket will be connected and a (one way) communication channel with that
-// file descriptor will be made.
-zx::socket AddStdio(int fd, fuchsia::sys::LaunchInfo* launch_info) {
-  zx::socket local;
-  zx::socket target;
-
-  zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &local, &target);
-  if (status != ZX_OK)
-    return zx::socket();
-
-  auto io = std::make_unique<fuchsia::sys::FileDescriptor>();
-  io->type0 = PA_HND(PA_FD, fd);
-  io->handle0 = std::move(target);
-
-  if (fd == STDOUT_FILENO) {
-    launch_info->out = std::move(io);
-  } else if (fd == STDERR_FILENO) {
-    launch_info->err = std::move(io);
-  } else {
-    FX_NOTREACHED() << "Invalid file descriptor: " << fd;
-    return zx::socket();
-  }
-
-  return local;
-}
-
 // Read the content of "elf/job_id" in the runtime directory of an ELF component.
 //
 // |callback| will be issued with ZX_KOID_INVALID if there's any error.
@@ -427,16 +397,6 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
   fuchsia::diagnostics::BatchIteratorPtr log_listener_;
 };
 
-debug::Status ZirconComponentManager::LaunchComponent(const std::vector<std::string>& argv) {
-  if (argv.empty()) {
-    return debug::Status("No argument provided for LaunchComponent");
-  }
-  if (cpp20::ends_with(std::string_view{argv[0]}, ".cmx")) {
-    return LaunchV1Component(argv);
-  }
-  return LaunchV2Component(argv);
-}
-
 debug::Status ZirconComponentManager::LaunchTest(std::string url,
                                                  std::vector<std::string> case_filters,
                                                  DebugAgent* debug_agent) {
@@ -444,53 +404,14 @@ debug::Status ZirconComponentManager::LaunchTest(std::string url,
                                                      debug_agent);
 }
 
-debug::Status ZirconComponentManager::LaunchV1Component(const std::vector<std::string>& argv) {
-  std::string url = argv.front();
-  std::string name = url.substr(url.find_last_of('/') + 1);
-
-  if (expected_v1_components_.count(name)) {
-    return debug::Status(name + " is being launched");
+debug::Status ZirconComponentManager::LaunchComponent(const std::vector<std::string>& argv) {
+  if (argv.empty()) {
+    return debug::Status("No argument provided for LaunchComponent");
+  }
+  if (cpp20::ends_with(std::string_view{argv[0]}, ".cmx")) {
+    return debug::Status("V1 components are no longer supported.");
   }
 
-  // Prepare the launch info. The parameters to the component do not include the component URL.
-  fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = url;
-  if (argv.size() > 1) {
-    launch_info.arguments.emplace();
-    for (size_t i = 1; i < argv.size(); i++)
-      launch_info.arguments->push_back(argv[i]);
-  }
-
-  StdioHandles handles;
-  handles.out = AddStdio(STDOUT_FILENO, &launch_info);
-  handles.err = AddStdio(STDERR_FILENO, &launch_info);
-
-  DEBUG_LOG(Process) << "Launching component url=" << url;
-
-  fuchsia::sys::LauncherSyncPtr launcher;
-  services_->Connect(launcher.NewRequest());
-  fuchsia::sys::ComponentControllerPtr controller;
-  auto status = launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
-  if (status != ZX_OK)
-    return debug::ZxStatus(status);
-
-  // We don't need to wait for the termination.
-  controller->Detach();
-
-  expected_v1_components_.emplace(name, std::move(handles));
-
-  debug::MessageLoop::Current()->PostTimer(
-      FROM_HERE, kMaxWaitMsForComponent, [weak_this = weak_factory_.GetWeakPtr(), name]() {
-        if (weak_this && weak_this->expected_v1_components_.count(name)) {
-          LOGS(Warn) << "Timeout waiting for component " << name << " to start.";
-          weak_this->expected_v1_components_.erase(name);
-        }
-      });
-
-  return debug::Status();
-}
-
-debug::Status ZirconComponentManager::LaunchV2Component(const std::vector<std::string>& argv) {
   constexpr char kParentMoniker[] = "./core";
   constexpr char kCollection[] = "ffx-laboratory";
 
@@ -561,12 +482,6 @@ debug::Status ZirconComponentManager::LaunchV2Component(const std::vector<std::s
 
 bool ZirconComponentManager::OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio,
                                             std::string* process_name_override) {
-  if (auto it = expected_v1_components_.find(process.GetName());
-      it != expected_v1_components_.end()) {
-    *out_stdio = std::move(it->second);
-    expected_v1_components_.erase(it);
-    return true;
-  }
   if (auto component = ComponentManager::FindComponentInfo(process)) {
     if (expected_v2_components_.count(component->moniker)) {
       // It'll be erased in the stopped event.

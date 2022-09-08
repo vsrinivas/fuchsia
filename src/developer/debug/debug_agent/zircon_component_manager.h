@@ -45,9 +45,6 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
  private:
   class TestLauncher;
 
-  debug::Status LaunchV1Component(const std::vector<std::string>& argv);
-  debug::Status LaunchV2Component(const std::vector<std::string>& argv);
-
   fit::callback<void()> ready_callback_ = []() {};
 
   std::shared_ptr<sys::ServiceDirectory> services_;
@@ -55,10 +52,6 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
   // Information of all running components in the system, indexed by their job koids.
   std::map<zx_koid_t, debug_ipc::ComponentInfo> running_component_info_;
   fidl::Binding<fuchsia::sys2::EventStream> event_stream_binding_;
-
-  // Mapping from the process names to the stdio handles of v1 components that have been launched
-  // but haven't been seen by |OnProcessStart|.
-  std::map<std::string, StdioHandles> expected_v1_components_;
 
   // Monikers of v2 components we're expecting.
   // There's no way to set stdio handle for v2 components yet.
