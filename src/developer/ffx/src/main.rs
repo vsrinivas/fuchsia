@@ -24,6 +24,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fuchsia_async::TimeoutExt,
     futures::FutureExt,
+    std::collections::HashMap,
     std::default::Default,
     std::fs::File,
     std::io::Write,
@@ -362,11 +363,29 @@ async fn run() -> Result<()> {
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
     let overrides = set_buildid_config(app.runtime_config_overrides())?;
+    let runtime_args = ffx_config::runtime::populate_runtime(&*app.config, overrides)?;
+    let env_path = app.env.as_ref().map(PathBuf::from);
 
-    let env =
-        ffx_config::init(&*app.config, overrides, app.env.as_ref().map(PathBuf::from)).await?;
+    // If we're given an isolation setting, use that. Otherwise do a normal detection of the environment.
+    let context = match (&app, std::env::var_os("FFX_ISOLATE_DIR")) {
+        (Ffx { isolate_dir: Some(path), .. }, _) => EnvironmentContext::isolated(
+            path.to_path_buf(),
+            HashMap::from_iter(std::env::vars()),
+            runtime_args,
+            env_path,
+        ),
+        (_, Some(path_str)) => EnvironmentContext::isolated(
+            PathBuf::from(path_str),
+            HashMap::from_iter(std::env::vars()),
+            runtime_args,
+            env_path,
+        ),
+        _ => EnvironmentContext::detect(runtime_args, std::env::current_dir()?, env_path)?,
+    };
 
-    match env.env_file_path() {
+    ffx_config::init(&context).await?;
+
+    match context.env_file_path() {
         Ok(path) => path,
         Err(e) => {
             eprintln!("ffx could not determine the environment configuration path: {}", e);
@@ -419,7 +438,7 @@ async fn run() -> Result<()> {
     let analytics_task = fuchsia_async::Task::local(async move {
         let sanitized_args = redact_arg_values();
         if let Err(e) =
-            add_ffx_launch_and_timing_events(&env, sanitized_args, timing_in_millis).await
+            add_ffx_launch_and_timing_events(&context, sanitized_args, timing_in_millis).await
         {
             tracing::error!("metrics submission failed: {}", e);
         }

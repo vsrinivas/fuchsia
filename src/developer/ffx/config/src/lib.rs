@@ -12,23 +12,22 @@ use analytics::{is_opted_in, set_opt_in_status};
 use anyhow::{Context, Result};
 use std::{convert::From, io::Write, path::PathBuf};
 
-pub use config_macros::FfxConfigBacked;
-
 pub mod api;
 pub mod environment;
 pub mod lockfile;
 pub mod logging;
+pub mod runtime;
 pub mod sdk;
 
 mod cache;
 mod mapping;
 mod nested;
 mod paths;
-mod runtime;
 mod ssh_key;
 mod storage;
 
 pub use api::query::{BuildOverride, ConfigQuery, SelectMode};
+pub use config_macros::FfxConfigBacked;
 
 pub use cache::{global_env, global_env_context, init, test_init, TestEnv};
 pub use environment::{Environment, EnvironmentContext};

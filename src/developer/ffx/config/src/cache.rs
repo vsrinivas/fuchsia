@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::runtime::populate_runtime_config;
 use crate::storage::{Config, ConfigMap};
 use crate::{
     environment::{Environment, EnvironmentContext},
     BuildOverride,
 };
-use anyhow::{anyhow, bail, Context, Result};
+use anyhow::{bail, Context, Result};
 use async_lock::{RwLock, RwLockUpgradableReadGuard};
-use serde_json::Value;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -116,32 +114,6 @@ impl Drop for TestEnv {
     }
 }
 
-/// Initialize the configuration. Only the first call in a process runtime takes effect, so users must
-/// call this early with the required values, such as in main() in the ffx binary.
-pub async fn init(
-    runtime: &[String],
-    runtime_overrides: Option<String>,
-    env: Option<PathBuf>,
-) -> Result<EnvironmentContext> {
-    let mut populated_runtime = Value::Null;
-    runtime.iter().chain(&runtime_overrides).try_for_each(|r| {
-        if let Some(v) = populate_runtime_config(&Some(r.clone()))? {
-            crate::api::value::merge(&mut populated_runtime, &v)
-        };
-        Result::<()>::Ok(())
-    })?;
-    let populated_runtime = match populated_runtime {
-        Value::Null => ConfigMap::default(),
-        Value::Object(runtime) => runtime,
-        _ => return Err(anyhow!("Invalid runtime configuration: must be an object")),
-    };
-    let context = EnvironmentContext::detect(populated_runtime, std::env::current_dir()?, env)?;
-
-    init_impl(&context).await?;
-
-    Ok(context)
-}
-
 /// When running tests we usually just want to initialize a blank slate configuration, so
 /// use this for tests. You must hold the returned object object for the duration of the test, not doing so
 /// will result in strange behaviour.
@@ -152,7 +124,7 @@ pub async fn test_init() -> Result<TestEnv> {
     let env = TestEnv::new(TEST_LOCK.lock_arc().await).await?;
 
     // force an overwrite of the configuration setup
-    init_impl(&env.context).await?;
+    init(&env.context).await?;
     // force clearing the cache as well
     invalidate().await;
 
@@ -165,7 +137,9 @@ pub async fn invalidate() {
     CACHE.write().await.clear();
 }
 
-async fn init_impl(context: &EnvironmentContext) -> Result<()> {
+/// Initialize the configuration. Only the first call in a process runtime takes effect, so users must
+/// call this early with the required values, such as in main() in the ffx binary.
+pub async fn init(context: &EnvironmentContext) -> Result<()> {
     let env = context.env_file_path()?;
     if !env.is_file() {
         tracing::debug!("initializing environment {}", env.display());

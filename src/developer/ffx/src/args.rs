@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use argh::EarlyExit;
-
-use {
-    argh::FromArgs, ffx_config::FfxConfigBacked, ffx_core::ffx_command,
-    ffx_lib_sub_command::SubCommand, ffx_writer::Format,
-};
+use argh::FromArgs;
+use ffx_config::FfxConfigBacked;
+use ffx_core::ffx_command;
+use ffx_lib_sub_command::SubCommand;
+use ffx_writer::Format;
+use std::path::PathBuf;
 
 /// The environment variable name used for overriding the command name in help
 /// output.
@@ -49,6 +50,12 @@ pub struct Ffx {
     /// sets the log level for ffx output (default = Debug). Other possible values are Info, Error,
     /// Warn, and Trace. Can be persisted via log.level config setting.
     pub log_level: Option<String>,
+
+    #[argh(option, long = "isolate-dir")]
+    /// turn on isolation mode using the given directory to isolate all config and socket files into
+    /// the specified directory. This overrides the FFX_ISOLATE_DIR env variable, which can also put
+    /// ffx into this mode.
+    pub isolate_dir: Option<PathBuf>,
 
     #[argh(switch, short = 'v', long = "verbose")]
     /// logs ffx output to stdio according to log level

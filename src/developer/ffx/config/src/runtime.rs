@@ -55,6 +55,24 @@ pub(crate) fn populate_runtime_config(config: &Option<String>) -> Result<Option<
     }
 }
 
+pub fn populate_runtime(
+    runtime: &[String],
+    runtime_overrides: Option<String>,
+) -> Result<crate::ConfigMap> {
+    let mut populated_runtime = Value::Null;
+    runtime.iter().chain(&runtime_overrides).try_for_each(|r| {
+        if let Some(v) = populate_runtime_config(&Some(r.clone()))? {
+            crate::api::value::merge(&mut populated_runtime, &v)
+        };
+        Result::<()>::Ok(())
+    })?;
+    match populated_runtime {
+        Value::Null => Ok(crate::ConfigMap::default()),
+        Value::Object(runtime) => Ok(runtime),
+        _ => return Err(anyhow!("Invalid runtime configuration: must be an object")),
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // tests
 

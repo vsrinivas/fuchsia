@@ -209,7 +209,9 @@ impl EnvironmentContext {
         let mut cmd = Command::new(ffx_path);
         match &self.kind {
             EnvironmentKind::InTree { .. } | EnvironmentKind::NoContext => {}
-            EnvironmentKind::Isolated { .. } => {
+            EnvironmentKind::Isolated { isolate_root } => {
+                cmd.arg("--isolate-dir").arg(isolate_root);
+
                 // for isolation we're always going to clear the environment,
                 // because it's better to fail than poison the isolation with something
                 // external.
