@@ -150,6 +150,7 @@
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.composition.FlatlandDisplay",
                 "fuchsia.ui.display.color.Converter",
+                "fuchsia.ui.display.singleton.Info",
 
                 // Used by the input pipeline library to distribute focus.
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
@@ -169,6 +170,12 @@
             protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
             from: "#text_manager",
             to: [ "#virtual_keyboard_manager" ],
+        },
+        {
+            protocol: [ "fuchsia.ui.shortcut.Manager" ],
+            from: "void",
+            to: "#scene_manager",
+            availability: "optional",
         },
     ],
     expose: [

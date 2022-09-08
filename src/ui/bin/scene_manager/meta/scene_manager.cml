@@ -79,11 +79,12 @@
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.pointerinjector.Registry",
                 "fuchsia.ui.scenic.Scenic",
-
-                // Used by the input pipeline library to distribute focus.
-                "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
+        },
+        {
+            protocol: "fuchsia.ui.shortcut.Manager",
+            availability: "optional",
         },
         {
             protocol: "fuchsia.ui.app.ViewProvider",
