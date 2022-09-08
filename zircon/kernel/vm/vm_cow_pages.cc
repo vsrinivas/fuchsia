@@ -3377,17 +3377,6 @@ void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
   }
 }
 
-void VmCowPages::UnpinPageLocked(vm_page_t* page, uint64_t offset) {
-  canary_.Assert();
-
-  DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
-  ASSERT(page->object.pin_count > 0);
-  page->object.pin_count--;
-  if (page->object.pin_count == 0) {
-    MoveToNotWiredLocked(page, offset);
-  }
-}
-
 void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
 
@@ -3553,9 +3542,16 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len, bool allow_gaps) {
   const uint64_t start_page_offset = ROUNDDOWN(offset, PAGE_SIZE);
   const uint64_t end_page_offset = ROUNDUP(offset + len, PAGE_SIZE);
 
+#if (DEBUG_ASSERT_IMPLEMENTED)
+  // For any pages that have their pin count transition to 0, i.e. become unpinned, we want to
+  // perform a range change op. For efficiency track contiguous ranges.
+  uint64_t completely_unpin_start = 0;
+  uint64_t completely_unpin_len = 0;
+#endif
+
   uint64_t unpin_count = 0;
   zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-      [this, &unpin_count, allow_gaps](const auto* page, uint64_t off) {
+      [&](const auto* page, uint64_t off) {
         if (page->IsMarker()) {
           // So far, allow_gaps is only used on contiguous VMOs which have no markers.  We'd need
           // to decide if a marker counts as a gap to allow before removing this assert.
@@ -3563,7 +3559,27 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len, bool allow_gaps) {
           return ZX_ERR_NOT_FOUND;
         }
         AssertHeld(lock_);
-        UnpinPageLocked(page->Page(), off);
+
+        vm_page_t* p = page->Page();
+        ASSERT(p->object.pin_count > 0);
+        p->object.pin_count--;
+        if (p->object.pin_count == 0) {
+          MoveToNotWiredLocked(p, offset);
+#if (DEBUG_ASSERT_IMPLEMENTED)
+          // Check if the current range can be extended.
+          if (completely_unpin_start + completely_unpin_len == off) {
+            completely_unpin_len += PAGE_SIZE;
+          } else {
+            // Complete any existing range and then start again at this offset.
+            if (completely_unpin_len > 0) {
+              RangeChangeUpdateLocked(completely_unpin_start, completely_unpin_len,
+                                      RangeChangeOp::DebugUnpin);
+            }
+            completely_unpin_start = off;
+            completely_unpin_len = PAGE_SIZE;
+          }
+#endif
+        }
         ++unpin_count;
         return ZX_ERR_NEXT;
       },
@@ -3576,10 +3592,36 @@ void VmCowPages::UnpinLocked(uint64_t offset, uint64_t len, bool allow_gaps) {
       start_page_offset, end_page_offset);
   ASSERT_MSG(status == ZX_OK, "Tried to unpin an uncommitted page with allow_gaps false");
 
+#if (DEBUG_ASSERT_IMPLEMENTED)
+  // Check any leftover range.
+  if (completely_unpin_len > 0) {
+    RangeChangeUpdateLocked(completely_unpin_start, completely_unpin_len,
+                            RangeChangeOp::DebugUnpin);
+  }
+#endif
+
   bool overflow = sub_overflow(pinned_page_count_, unpin_count, &pinned_page_count_);
   ASSERT(!overflow);
 
   return;
+}
+
+bool VmCowPages::DebugIsRangePinnedLocked(uint64_t offset, uint64_t len) {
+  canary_.Assert();
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+
+  uint64_t pinned_count = 0;
+  page_list_.ForEveryPageInRange(
+      [&pinned_count](const auto* p, uint64_t off) {
+        if (p->IsPage() && p->Page()->object.pin_count > 0) {
+          pinned_count++;
+          return ZX_ERR_NEXT;
+        }
+        return ZX_ERR_STOP;
+      },
+      offset, offset + len);
+  return pinned_count == len / PAGE_SIZE;
 }
 
 bool VmCowPages::AnyPagesPinnedLocked(uint64_t offset, size_t len) {

@@ -471,6 +471,9 @@ class VmCowPages final
   // See VmObject::Unpin
   void UnpinLocked(uint64_t offset, uint64_t len, bool allow_gaps) TA_REQ(lock_);
 
+  // See VmObject::DebugIsRangePinned
+  bool DebugIsRangePinnedLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
   // Returns true if a page is not currently committed, and if the offset were to be read from, it
   // would be read as zero. Requested offset must be page aligned and within range.
   bool PageWouldReadZeroLocked(uint64_t page_offset) TA_REQ(lock_);
@@ -559,6 +562,10 @@ class VmCowPages final
   enum class RangeChangeOp {
     Unmap,
     RemoveWrite,
+    // Unpin is not a 'real' operation in that it does not cause any actions, and is simply used as
+    // a mechanism to allow the VmCowPages to trigger a search for any kernel mappings that are
+    // still referencing an unpinned page.
+    DebugUnpin,
   };
   // Apply the specified operation to all mappings in the given range. This is applied to all
   // descendants within the range.
@@ -886,10 +893,6 @@ class VmCowPages final
   // hierarchy that is not a slice. The offset of this slice within that VmObjectPaged is set as
   // the output.
   VmCowPages* PagedParentOfSliceLocked(uint64_t* offset) TA_REQ(lock_);
-
-  // Unpins a page and potentially moves it into a different page queue should its pin
-  // count reach zero.
-  void UnpinPageLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);
 
   // Moves an existing page to the wired queue, retaining backlink information if applicable.
   void MoveToWiredLocked(vm_page_t* page, uint64_t offset) TA_REQ(lock_);

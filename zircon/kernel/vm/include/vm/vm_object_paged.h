@@ -138,6 +138,12 @@ class VmObjectPaged final : public VmObject {
     cow_pages_locked()->UnpinLocked(offset, len, /*allow_gaps=*/false);
   }
 
+  // See VmObject::DebugIsRangePinned
+  bool DebugIsRangePinned(uint64_t offset, uint64_t len) override {
+    Guard<CriticalMutex> guard{&lock_};
+    return cow_pages_locked()->DebugIsRangePinnedLocked(offset, len);
+  }
+
   zx_status_t LockRange(uint64_t offset, uint64_t len,
                         zx_vmo_lock_state_t* lock_state_out) override;
   zx_status_t TryLockRange(uint64_t offset, uint64_t len) override;

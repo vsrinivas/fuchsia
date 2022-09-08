@@ -14,7 +14,9 @@
 #include <ktl/iterator.h>
 #include <vm/arch_vm_aspace.h>
 #include <vm/pmm.h>
+#include <vm/vm_address_region.h>
 #include <vm/vm_aspace.h>
+#include <vm/vm_object_paged.h>
 
 #include <ktl/enforce.h>
 
@@ -495,14 +497,28 @@ static bool test_large_region_atomic() {
     // Allocate a large page in the current kernel aspace. Need to allocate in the current aspace
     // and not a test aspace so that we can directly access the mappings.
     auto kaspace = VmAspace::kernel_aspace();
-    void* ptr;
-    const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
-    auto err =
-        kaspace->Alloc("test", alloc_size, &ptr, 0, VmAspace::VMM_FLAG_COMMIT, arch_rw_flags);
-    const vaddr_t va = reinterpret_cast<vaddr_t>(ptr);
-    ASSERT_EQ(ZX_OK, err, "VmAspace::Alloc region of memory");
+    fbl::RefPtr<VmAddressRegion> vmar = kaspace->RootVmar();
+    fbl::RefPtr<VmObjectPaged> vmo;
 
-    auto cleanup_mapping = fit::defer([&] { kaspace->FreeRegion(va); });
+    zx_status_t status =
+        VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, VmObjectPaged::kAlwaysPinned, alloc_size, &vmo);
+    ASSERT_OK(status);
+
+    const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+    fbl::RefPtr<VmMapping> mapping;
+    status = vmar->CreateVmMapping(
+        0, alloc_size, 0,
+        VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE | VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING,
+        vmo, 0, arch_rw_flags, "test", &mapping);
+    ASSERT_OK(status);
+
+    status = mapping->MapRange(0, alloc_size, false);
+    ASSERT_OK(status);
+
+    const vaddr_t va = mapping->base();
+
+    auto cleanup_mapping = fit::defer([&] { mapping->Destroy(); });
 
     // Spin up a thread to start touching pages in the mapping.
     struct State {
@@ -539,9 +555,9 @@ static bool test_large_region_atomic() {
     Thread::Current::SleepRelative(ZX_MSEC(50));
 
     // Unmap a single page.
-    err = kaspace->arch_aspace().Unmap(va + target_offsets[i], 1,
-                                       ArchVmAspace::EnlargeOperation::No, nullptr);
-    EXPECT_EQ(err, ZX_OK, "unmap single page");
+    status = kaspace->arch_aspace().Unmap(va + target_offsets[i], 1,
+                                          ArchVmAspace::EnlargeOperation::No, nullptr);
+    EXPECT_EQ(status, ZX_OK, "unmap single page");
 
     // If the other thread didn't cause a kernel panic by having a page fault, then success.
   }

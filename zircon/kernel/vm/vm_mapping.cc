@@ -434,6 +434,11 @@ void VmMapping::AspaceUnmapVmoRangeLocked(uint64_t offset, uint64_t len) const {
     return;
   }
 
+  // If this is a kernel mapping then we should not be removing mappings out of the arch aspace,
+  // unless this mapping has explicitly opted out of this check.
+  DEBUG_ASSERT(aspace_->is_user() || aspace_->is_guest_physical() ||
+               flags_ & VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING);
+
   zx_status_t status =
       aspace_->arch_aspace().Unmap(base, new_len / PAGE_SIZE, aspace_->EnlargeArchUnmap(), nullptr);
   ASSERT(status == ZX_OK);
@@ -472,6 +477,11 @@ void VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) c
     return;
   }
 
+  // If this is a kernel mapping then we should not be modify mappings in the arch aspace,
+  // unless this mapping has explicitly opted out of this check.
+  DEBUG_ASSERT(aspace_->is_user() || aspace_->is_guest_physical() ||
+               flags_ & VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING);
+
   zx_status_t status = ProtectRangesLockedObject().EnumerateProtectionRanges(
       base_, size_, base, new_len, [this](vaddr_t region_base, size_t region_len, uint mmu_flags) {
         // If this range doesn't currently support being writable then we can skip.
@@ -489,6 +499,34 @@ void VmMapping::AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) c
         return result;
       });
   ASSERT(status == ZX_OK);
+}
+
+void VmMapping::AspaceDebugUnpinLocked(uint64_t offset, uint64_t len) const {
+  LTRACEF("region %p obj_offset %#" PRIx64 " size %zu, offset %#" PRIx64 " len %#" PRIx64 "\n",
+          this, object_offset_, size_, offset, len);
+
+  canary_.Assert();
+
+  // NOTE: must be acquired with the vmo lock held, but doesn't need to take
+  // the address space lock, since it will not manipulate its location in the
+  // vmar tree. However, it must be held in the ALIVE state across this call.
+  //
+  // Avoids a race with DestroyLocked() since it removes ourself from the VMO's
+  // mapping list with the VMO lock held before dropping this state to DEAD. The
+  // VMO cant call back to us once we're out of their list.
+  DEBUG_ASSERT(get_state_locked_object() == LifeCycleState::ALIVE);
+
+  // See if there's an intersect.
+  vaddr_t base;
+  uint64_t new_len;
+  if (!ObjectRangeToVaddrRange(offset, len, &base, &new_len)) {
+    return;
+  }
+
+  // This unpin is not allowed for kernel mappings, unless the mapping has specifically opted out of
+  // this debug check due to it performing its own dynamic management.
+  DEBUG_ASSERT(aspace_->is_user() || aspace_->is_guest_physical() ||
+               flags_ & VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING);
 }
 
 namespace {
@@ -596,6 +634,13 @@ zx_status_t VmMapping::MapRange(size_t offset, size_t len, bool commit, bool ign
   if (!IS_PAGE_ALIGNED(offset) || !is_in_range(base_ + offset, len)) {
     return ZX_ERR_INVALID_ARGS;
   }
+
+  // If this is a kernel mapping then validate that all pages being mapped are currently pinned,
+  // ensuring that they cannot be taken away for any reason, unless the mapping has specifically
+  // opted out of this debug check due to it performing its own dynamic management.
+  DEBUG_ASSERT(aspace_->is_user() || aspace_->is_guest_physical() ||
+               (flags_ & VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING) ||
+               object_->DebugIsRangePinned(object_offset_locked() + offset, len));
 
   // grab the lock for the vmo
   Guard<CriticalMutex> object_guard{object_->lock()};

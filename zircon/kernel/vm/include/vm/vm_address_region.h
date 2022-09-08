@@ -56,6 +56,9 @@
 #define VMAR_FLAG_ALLOW_FAULTS (1 << 8)
 // Treat the offset as an upper limit when allocating a VMO or child VMAR.
 #define VMAR_FLAG_OFFSET_IS_UPPER_LIMIT (1 << 9)
+// Opt this VMAR out of certain debugging checks. This allows for kernel mappings that have a more
+// dynamic management strategy, that the regular checks would otherwise spuriously trip on.
+#define VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING (1 << 10)
 
 #define VMAR_CAN_RWX_FLAGS \
   (VMAR_FLAG_CAN_MAP_READ | VMAR_FLAG_CAN_MAP_WRITE | VMAR_FLAG_CAN_MAP_EXECUTE)
@@ -861,6 +864,10 @@ class VmMapping final : public VmAddressRegionOrMapping,
   // Removes any writeable mappings for the passed in vmo range from the arch aspace.
   // May fall back to unmapping pages from the arch aspace if necessary.
   void AspaceRemoveWriteVmoRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(object_->lock());
+
+  // Checks if this is a kernel mapping within the given VMO range, which would be an error to be
+  // unpinning.
+  void AspaceDebugUnpinLocked(uint64_t offset, uint64_t len) const TA_REQ(object_->lock());
 
   // Marks this mapping as being a candidate for merging, and will immediately attempt to merge with
   // any neighboring mappings. Making a mapping mergeable essentially indicates that you will no

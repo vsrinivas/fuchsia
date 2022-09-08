@@ -169,6 +169,11 @@ zx_status_t VmAddressRegion::CreateSubVmarInternal(size_t offset, size_t size, u
   fbl::AllocChecker ac;
   fbl::RefPtr<VmAddressRegionOrMapping> vmar;
   if (vmo) {
+    // Check that VMOs that back kernel mappings start of with their pages pinned, unless the
+    // dynamic flag has been set to opt out of this specific check.
+    DEBUG_ASSERT(aspace_->is_user() || aspace_->is_guest_physical() ||
+                 vmar_flags & VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING ||
+                 vmo->DebugIsRangePinned(vmo_offset, size));
     vmar = fbl::AdoptRef(new (&ac) VmMapping(*this, new_base, size, vmar_flags, ktl::move(vmo),
                                              is_upper_bound ? 0 : vmo_offset, arch_mmu_flags,
                                              VmMapping::Mergeable::NO));
@@ -231,7 +236,7 @@ zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size,
 
   // Check that only allowed flags have been set
   if (vmar_flags & ~(VMAR_FLAG_SPECIFIC | VMAR_FLAG_SPECIFIC_OVERWRITE | VMAR_CAN_RWX_FLAGS |
-                     VMAR_FLAG_OFFSET_IS_UPPER_LIMIT)) {
+                     VMAR_FLAG_OFFSET_IS_UPPER_LIMIT | VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -1038,9 +1043,13 @@ zx_status_t VmAddressRegion::ReserveSpace(const char* name, vaddr_t base, size_t
     return status;
   }
   vmo->set_name(name, strlen(name));
-  // allocate a region and put it in the aspace list
+  // allocate a region and put it in the aspace list.
+  // Need to set the VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING since we are 'cheating' with this fake
+  // zero-length VMO and so the checks that the pages in that VMO are pinned would otherwise fail.
   fbl::RefPtr<VmMapping> r(nullptr);
-  status = CreateVmMapping(offset, size, 0, VMAR_FLAG_SPECIFIC, vmo, 0, arch_mmu_flags, name, &r);
+  status =
+      CreateVmMapping(offset, size, 0, VMAR_FLAG_SPECIFIC | VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING,
+                      vmo, 0, arch_mmu_flags, name, &r);
   if (status != ZX_OK) {
     return status;
   }

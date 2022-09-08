@@ -1726,6 +1726,8 @@ void VmObjectPaged::RangeChangeUpdateLocked(uint64_t offset, uint64_t len, Range
       m.AspaceUnmapVmoRangeLocked(aligned_offset, aligned_len);
     } else if (op == RangeChangeOp::RemoveWrite) {
       m.AspaceRemoveWriteVmoRangeLocked(aligned_offset, aligned_len);
+    } else if (op == RangeChangeOp::DebugUnpin) {
+      m.AspaceDebugUnpinLocked(aligned_offset, aligned_len);
     } else {
       panic("Unknown RangeChangeOp %d\n", static_cast<int>(op));
     }

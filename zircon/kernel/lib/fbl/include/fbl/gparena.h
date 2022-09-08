@@ -85,7 +85,7 @@ class __OWNER(void) GPArena {
     st = vmar_->CreateVmMapping(0,  // mapping_offset
                                 mem_sz,
                                 false,  // align_pow2
-                                VMAR_FLAG_SPECIFIC, vmo,
+                                VMAR_FLAG_SPECIFIC | VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING, vmo,
                                 0,  // vmo_offset
                                 ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, "gparena",
                                 &mapping_);

@@ -54,6 +54,9 @@ class VmObjectPhysical final : public VmObject {
     // Unpin is a no-op for physical VMOs as they are always pinned.
   }
 
+  // Physical VMOs are implicitly pinned.
+  bool DebugIsRangePinned(uint64_t offset, uint64_t len) override { return true; }
+
   void Dump(uint depth, bool verbose) override;
 
   zx_status_t LookupPagesLocked(uint64_t offset, uint pf_flags, DirtyTrackingAction mark_dirty,

@@ -97,13 +97,13 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
 
   // Create a mapping for the control pool.
   fbl::RefPtr<VmMapping> control_mapping;
-  st = vmar->CreateVmMapping(0,  // mapping_offset
-                             control_mem_sz,
-                             false,  // align_pow2
-                             VMAR_FLAG_SPECIFIC, control_vmo,
-                             0,  // vmo_offset
-                             ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, "control",
-                             &control_mapping);
+  st = vmar->CreateVmMapping(
+      0,  // mapping_offset
+      control_mem_sz,
+      false,  // align_pow2
+      VMAR_FLAG_SPECIFIC | VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING, control_vmo,
+      0,  // vmo_offset
+      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, "control", &control_mapping);
   if (st != ZX_OK || control_mapping == nullptr) {
     LTRACEF("Arena '%s': can't create %zu-byte control mapping (%d)\n", name, control_mem_sz, st);
     return ZX_ERR_NO_MEMORY;
@@ -115,7 +115,7 @@ zx_status_t Arena::Init(const char* name, size_t ob_size, size_t count) {
   st = vmar->CreateVmMapping(control_mem_sz + guard_sz,  // mapping_offset
                              data_mem_sz,
                              false,  // align_pow2
-                             VMAR_FLAG_SPECIFIC, data_vmo,
+                             VMAR_FLAG_SPECIFIC | VMAR_FLAG_DEBUG_DYNAMIC_KERNEL_MAPPING, data_vmo,
                              0,  // vmo_offset
                              ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE, "data",
                              &data_mapping);

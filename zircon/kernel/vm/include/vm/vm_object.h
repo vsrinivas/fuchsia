@@ -319,6 +319,10 @@ class VmObject : public VmHierarchyBase,
   // usermode).
   virtual void Unpin(uint64_t offset, uint64_t len) = 0;
 
+  // Checks if all pages in the provided range are pinned.
+  // This is only intended to be used for debugging checks.
+  virtual bool DebugIsRangePinned(uint64_t offset, uint64_t len) = 0;
+
   // Lock a range from being discarded by the kernel. Can fail if the range was already discarded.
   virtual zx_status_t TryLockRange(uint64_t offset, uint64_t len) { return ZX_ERR_NOT_SUPPORTED; }
 
