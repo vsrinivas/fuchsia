@@ -93,6 +93,11 @@ if [ $UPDATE -eq 1 ]; then
   # go branch.
   $GO get -u gvisor.dev/gvisor@go
   $GO get -u
+  # Starting with https://github.com/theupdateframework/go-tuf/commit/1e35084,
+  # go-tuf/repo.go logs directly to stdout.
+  #
+  # TODO(https://github.com/theupdateframework/go-tuf/issues/376): Remove this.
+  $GO get -u github.com/theupdateframework/go-tuf@fc0190d925a5f43942c51c5e519b8fce3b025610
 else
   $GO get
 fi
