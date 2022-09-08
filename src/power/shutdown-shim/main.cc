@@ -398,6 +398,11 @@ zx_status_t forward_command(statecontrol_fidl::wire::SystemPowerState fallback_s
     if (status != ZX_ERR_UNAVAILABLE && status != ZX_ERR_NOT_SUPPORTED) {
       return status;
     }
+    // Power manager may decide not to support suspend. We should respect that and not attempt to
+    // suspend manually.
+    if (fallback_state == statecontrol_fidl::wire::SystemPowerState::kSuspendRam) {
+      return status;
+    }
   }
 
   printf("[shutdown-shim]: failed to forward command to power_manager: %s\n",
