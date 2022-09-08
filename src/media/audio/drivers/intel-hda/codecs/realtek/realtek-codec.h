@@ -29,6 +29,7 @@ class RealtekCodec : public IntelHDACodecDriverBase {
 
   zx_status_t SetupCommon();
   zx_status_t SetupAcer12();
+  zx_status_t SetupDell5420();
   zx_status_t SetupLenovoX1();
   zx_status_t SetupIntelNUC();
   zx_status_t RunCommandList(const CommandListEntry* cmds, size_t cmd_count);

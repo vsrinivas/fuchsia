@@ -79,8 +79,12 @@ zx_status_t RealtekCodec::ProcessSolicitedResponse(const CodecResponse& resp) {
       res = SetupIntelNUC();
       break;
 
-    case 0x17aa2293:
+    case 0x17aa2293:  // Lenovo X1
       res = SetupLenovoX1();
+      break;
+
+    case 0x10280a20:  // Dell 5420
+      res = SetupDell5420();
       break;
 
     case 0x1025111e:
@@ -271,6 +275,82 @@ zx_status_t RealtekCodec::SetupAcer12() {
   res = CreateAndStartStreams(STREAMS, std::size(STREAMS));
   if (res != ZX_OK) {
     LOG("Failed to create and publish streams for Acer12 (res %d)", res);
+    return res;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t RealtekCodec::SetupDell5420() {
+  zx_status_t res;
+
+  DEBUG_LOG("Setting up for Dell 5420");
+
+  res = SetupCommon();
+  if (res != ZX_OK)
+    return res;
+
+  static const CommandListEntry START_CMDS[] = {
+      // Set up headphone output.
+      // NID 33 is Front External Headphone Out Jack.
+      // Connection Index 1 is NID 3.
+      {33u, SET_CONNECTION_SELECT_CONTROL(1u)},
+
+      // Set up builtin speaker
+      // NID 20 is Integrated Internal Speaker.
+      // Mute: False, Enable Out: True, EAPD(bit 1): True
+      {20u, SET_OUTPUT_AMPLIFIER_GAIN_MUTE(false, 0)},
+      {20u, SET_ANALOG_PIN_WIDGET_CTRL(true, false, false)},
+      {20u, SET_EAPD_BTL_ENABLE(2)},
+
+      // Enable MIC2's input. Failure to keep this enabled causes headphone output to not work.
+      // TODO(103178) : figure out why.
+      {25u, SET_ANALOG_PIN_WIDGET_CTRL(false, true, false)},
+
+      // Power up the top level Audio Function group.
+      {1u, SET_POWER_STATE(HDA_PS_D0)},
+  };
+
+  res = RunCommandList(START_CMDS, std::size(START_CMDS));
+  if (res != ZX_OK) {
+    LOG("Failed to send startup command for Dell 5420 (res %d)", res);
+    return res;
+  }
+
+  // Create and publish the streams we will use.
+  static const StreamProperties STREAMS[] = {
+      // Headphones output.
+      {
+          .stream_id = 1,
+          .afg_nid = 1,
+          .conv_nid = 3,
+          .pc_nid = 33,
+          .is_input = false,
+          .default_conv_gain = DEFAULT_HEADPHONE_GAIN,
+          .default_pc_gain = 0.0f,
+          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
+          .mfr_name = "Dell",
+          .product_name = "Headphone Jack",
+      },
+
+      // Speakers.
+      {
+          .stream_id = 2,
+          .afg_nid = 1,
+          .conv_nid = 2,
+          .pc_nid = 20,
+          .is_input = false,
+          .default_conv_gain = DEFAULT_SPEAKER_GAIN,
+          .default_pc_gain = 0.0f,
+          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
+          .mfr_name = "Dell",
+          .product_name = "Built-in Speakers",
+      },
+  };
+
+  res = CreateAndStartStreams(STREAMS, std::size(STREAMS));
+  if (res != ZX_OK) {
+    LOG("Failed to create and publish streams for Dell 5420 (res %d)", res);
     return res;
   }
 
