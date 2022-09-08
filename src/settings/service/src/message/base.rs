@@ -204,7 +204,6 @@ pub enum Status {
     // Received by the intended address.
     Received,
     // Could not be delivered to the specified target.
-    // TODO(61469): add intended address to this enum.
     Undeliverable,
     // Acknowledged by a recipient.
     Acknowledged,
