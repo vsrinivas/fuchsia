@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
@@ -117,7 +116,7 @@ func (gn *Gn) Gen(ctx context.Context, gnFilterFile string) ([]string, error) {
 	//
 	// This file can be really large (554MB on my machine), so we may
 	// need to investigate streaming this data if it becomes a problem.
-	b, err := ioutil.ReadFile(projectFile)
+	b, err := os.ReadFile(projectFile)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to read project.json file [%v]: %v\n", projectFile, err)
 	}

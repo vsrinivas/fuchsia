@@ -6,7 +6,6 @@ package rfcmeta
 
 import (
 	"context"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -202,7 +201,7 @@ toc:
 			analyzer := analyzer{checkoutDir: checkoutDir}
 
 			for _, file := range test.files {
-				if err := ioutil.WriteFile(filepath.Join(checkoutDir, file.path), []byte(file.content), 0o600); err != nil {
+				if err := os.WriteFile(filepath.Join(checkoutDir, file.path), []byte(file.content), 0o600); err != nil {
 					t.Fatal(err)
 				}
 			}

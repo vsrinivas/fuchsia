@@ -10,7 +10,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -290,7 +289,7 @@ func readABIRevision(manifest *Manifest) (*uint64, error) {
 		return nil, fmt.Errorf("ABI revision file must be 8 bytes")
 	}
 
-	abiRevisionBytes, err := ioutil.ReadAll(f)
+	abiRevisionBytes, err := io.ReadAll(f)
 	if err != nil {
 		return nil, err
 	}

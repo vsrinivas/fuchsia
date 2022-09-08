@@ -9,7 +9,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -89,7 +88,7 @@ type tocEntry struct {
 
 // analyzeToc returns findings from _toc.yaml.
 func (a *analyzer) analyzeToc() ([]*staticanalysis.Finding, error) {
-	file, err := ioutil.ReadFile(filepath.Join(a.checkoutDir, tocPath))
+	file, err := os.ReadFile(filepath.Join(a.checkoutDir, tocPath))
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +165,7 @@ type rfcIndexEntry struct {
 
 // analyzeRfcIndex returns findings from _rfcs.yaml.
 func (a *analyzer) analyzeRfcIndex() ([]*staticanalysis.Finding, error) {
-	file, err := ioutil.ReadFile(filepath.Join(a.checkoutDir, rfcIndexPath))
+	file, err := os.ReadFile(filepath.Join(a.checkoutDir, rfcIndexPath))
 	if err != nil {
 		return nil, err
 	}
@@ -282,7 +281,7 @@ func (a *analyzer) analyzeRfcFile(path string, rfcId string) ([]*staticanalysis.
 		})
 	}
 
-	loadedFile, err := ioutil.ReadFile(filepath.Join(a.checkoutDir, path))
+	loadedFile, err := os.ReadFile(filepath.Join(a.checkoutDir, path))
 	if err != nil {
 		return findings, err
 	}
@@ -299,7 +298,7 @@ func (a *analyzer) analyzeRfcFile(path string, rfcId string) ([]*staticanalysis.
 // `_toc.yaml` counts as "not finding the path", and this function will return
 // false.
 func (a *analyzer) tocContainsPath(path string) bool {
-	b, err := ioutil.ReadFile(filepath.Join(a.checkoutDir, tocPath))
+	b, err := os.ReadFile(filepath.Join(a.checkoutDir, tocPath))
 	if err != nil {
 		return false
 	}
@@ -322,7 +321,7 @@ func (a *analyzer) tocContainsPath(path string) bool {
 // parsing `_rfcs.yaml` counts as "not finding the path", and this function will
 // return false.
 func (a *analyzer) rfcIndexContainsPath(path string) bool {
-	b, err := ioutil.ReadFile(filepath.Join(a.checkoutDir, rfcIndexPath))
+	b, err := os.ReadFile(filepath.Join(a.checkoutDir, rfcIndexPath))
 	if err != nil {
 		return false
 	}
