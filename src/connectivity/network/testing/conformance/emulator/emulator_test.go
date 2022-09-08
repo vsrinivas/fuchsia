@@ -159,8 +159,11 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() {
+		// Just log errors since ffx.Stop() is expected to return a DeadlineExceeded
+		// when the daemon takes longer than usual to shut down (which is not
+		// actionable for us).
 		if err := ffx.Stop(); err != nil {
-			t.Error(err)
+			t.Logf("ffx.Stop() = %s", err)
 		}
 	}()
 
