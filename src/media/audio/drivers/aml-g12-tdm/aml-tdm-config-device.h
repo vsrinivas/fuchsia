@@ -56,6 +56,8 @@ class AmlTdmConfigDevice {
         return MCLK_PAD_0;
       case metadata::AmlTdmMclkPad::MCLK_PAD_1:
         return MCLK_PAD_1;
+      case metadata::AmlTdmMclkPad::MCLK_PAD_2:
+        return MCLK_PAD_2;
     }
     assert(0);
     return MCLK_PAD_0;

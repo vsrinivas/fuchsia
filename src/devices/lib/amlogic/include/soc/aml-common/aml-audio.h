@@ -38,6 +38,7 @@ enum class AmlTdmclk : uint32_t {
 enum class AmlTdmMclkPad : uint32_t {
   MCLK_PAD_0 = 0,
   MCLK_PAD_1 = 1,
+  MCLK_PAD_2 = 2,
 };
 
 enum class AmlTdmSclkPad : uint32_t {

@@ -167,6 +167,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "ethernet_mac/aml-ethernet",
       "sys/platform/05:07:2e/aml-rtc",
       "av400-i2s-audio-out",
+      "av400-i2s-audio-in",
       "sys/platform/05:07:13/av400-audio-pdm-in",
 
       // CPU Device

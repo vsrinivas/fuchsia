@@ -184,6 +184,11 @@
 #define A5_GPIOH_4_PDMA_DIN_2_FN 1
 
 // GPIOT pin alternate functions
+#define A5_GPIOT_0_TDMC_FS_2_FN 1
+#define A5_GPIOT_1_TDMC_SCLK_2_FN 1
+#define A5_GPIOT_2_TDMC_D8_FN 1
+#define A5_GPIOT_6_MCLK_2_FN 1
+
 #define A5_GPIOT_1_SPI_A_SCLK_FN 2
 #define A5_GPIOT_2_SPI_A_MOSI_FN 2
 #define A5_GPIOT_3_SPI_A_MISO_FN 2

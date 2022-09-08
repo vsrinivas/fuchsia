@@ -122,6 +122,19 @@ zx_status_t AmlTdmDevice::SetMClkPad(aml_tdm_mclk_pad_t mclk_pad) {
           break;
       }
       break;
+    case MCLK_PAD_2:
+      switch (version_) {
+        case metadata::AmlVersion::kS905D2G:
+        case metadata::AmlVersion::kS905D3G:
+          ZX_ASSERT_MSG(0, "Not supported");
+          break;
+        case metadata::AmlVersion::kA5:
+          GetMmio().ModifyBits<uint32_t>(mclk_ch_, 8, 2, EE_AUDIO_MCLK_PAD_CTRL1_A5);
+          GetMmio().ModifyBits<uint32_t>(1, 15, 1,
+                                         EE_AUDIO_MCLK_PAD_CTRL1_A5);  // Bit 31 to enable.
+          break;
+      }
+      break;
     default:
       return ZX_ERR_INVALID_ARGS;
   }

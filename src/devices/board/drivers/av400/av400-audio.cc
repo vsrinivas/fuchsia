@@ -32,9 +32,23 @@ static constexpr pbus_bti_t tdm_btis[] = {
     },
 };
 
+static constexpr pbus_bti_t tdm_in_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_AUDIO_IN,
+    },
+};
+
 static constexpr pbus_irq_t frddr_b_irqs[] = {
     {
         .irq = A5_AUDIO_FRDDR_B,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static constexpr pbus_irq_t toddr_a_irqs[] = {
+    {
+        .irq = A5_AUDIO_TODDR_A,
         .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
     },
 };
@@ -198,6 +212,21 @@ zx_status_t Av400::AudioInit() {
                             A5_GPIOC_5_TDMB_D4_FN);  // OUT2 (D613 SPK Board - SPK_CH_01)
   gpio_impl_.SetDriveStrength(A5_GPIOC(5), ua, nullptr);
 
+  // Av400 - tdma - I2S
+  // Reference board has line-in interface. (ES7241 chip)
+  // Support 1x I2S in
+  gpio_impl_.SetAltFunction(A5_GPIOT(0), A5_GPIOT_0_TDMC_FS_2_FN);  // LRCLK2
+  gpio_impl_.SetDriveStrength(A5_GPIOT(0), ua, nullptr);
+
+  gpio_impl_.SetAltFunction(A5_GPIOT(1), A5_GPIOT_1_TDMC_SCLK_2_FN);  // SCLK2
+  gpio_impl_.SetDriveStrength(A5_GPIOT(1), ua, nullptr);
+
+  gpio_impl_.SetAltFunction(A5_GPIOT(2), A5_GPIOT_2_TDMC_D8_FN);  // IN0 - TDM_D8
+  gpio_impl_.SetDriveStrength(A5_GPIOT(2), ua, nullptr);
+
+  gpio_impl_.SetAltFunction(A5_GPIOT(6), A5_GPIOT_6_MCLK_2_FN);  // MCLK
+  gpio_impl_.SetDriveStrength(A5_GPIOT(6), ua, nullptr);
+
   // Config I2S Codec
   zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                               {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5707},
@@ -290,6 +319,67 @@ zx_status_t Av400::AudioInit() {
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
     return status;
+  }
+
+  {
+    // Config Tdmin Capture Device
+    metadata::AmlConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Amlogic");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "av400");
+
+    metadata.is_input = true;
+    metadata.mClockDivFactor = 62;  // mclk = 768M / 62 = 12.19M
+    metadata.sClockDivFactor = 4;   // sclk = 12.19M / 4 = 3.09M
+    metadata.bus = metadata::AmlBus::TDM_A;
+
+    metadata.is_custom_tdm_clk_sel = true;
+    metadata.tdm_clk_sel = metadata::AmlTdmclk::CLK_B;  // you can select A ~ D
+    metadata.is_custom_tdm_mpad_sel = true;
+    metadata.mpad_sel = metadata::AmlTdmMclkPad::MCLK_PAD_2;  // mclk_pad2 <-> MCLK2 (A5_GPIOT_6)
+    metadata.is_custom_tdm_spad_sel = true;
+    metadata.spad_sel =
+        metadata::AmlTdmSclkPad::SCLK_PAD_2;  // sclk/lrclk_pad2  <-> SCLK2/LRCLK2 (A5_GPIOT_1/0)
+    metadata.dpad_mask = 1 << 0;
+    metadata.dpad_sel[0] = metadata::AmlTdmDatPad::TDM_D8;  // lane0 <-> TDM_D8(A5_GPIOT_2)
+
+    metadata.version = metadata::AmlVersion::kA5;
+    metadata.dai.type = metadata::DaiType::I2s;
+    metadata.dai.bits_per_sample = 16;
+    metadata.dai.bits_per_slot = 32;
+    metadata.ring_buffer.number_of_channels = 2;
+    metadata.swaps = 0x10;
+    metadata.lanes_enable_mask[0] = 3;
+
+    pbus_metadata_t tdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
+            .data_size = sizeof(metadata),
+        },
+    };
+
+    pbus_dev_t tdm_dev = {};
+    char name[32];
+    snprintf(name, sizeof(name), "av400-i2s-audio-in");
+    tdm_dev.name = name;
+    tdm_dev.vid = PDEV_VID_AMLOGIC;
+    tdm_dev.pid = PDEV_PID_AMLOGIC_A5;
+    tdm_dev.did = PDEV_DID_AMLOGIC_TDM;
+    tdm_dev.instance_id = tdm_instance_id++;
+    tdm_dev.mmio_list = audio_mmios;
+    tdm_dev.mmio_count = std::size(audio_mmios);
+    tdm_dev.bti_list = tdm_in_btis;
+    tdm_dev.bti_count = std::size(tdm_in_btis);
+    tdm_dev.irq_list = toddr_a_irqs;
+    tdm_dev.irq_count = std::size(toddr_a_irqs);
+    tdm_dev.metadata_list = tdm_metadata;
+    tdm_dev.metadata_count = std::size(tdm_metadata);
+
+    status = pbus_.CompositeDeviceAdd(&tdm_dev, 0, 0, nullptr);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "CompositeDeviceAdd failed: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
   {

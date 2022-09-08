@@ -59,6 +59,12 @@ __BEGIN_CDECLS
 #define EE_AUDIO_CLK_GATE_EN0_A5      0x0000
 #define EE_AUDIO_CLK_GATE_EN1_A5      0x0004
 #define EE_AUDIO_MCLK_A_CTRL_A5       0x0008
+#define EE_AUDIO_DAT_PAD_CTRL0_A5     0x0e40 // TDMIN_A dat_in bit3~0 - TDM_D31 ~ TDM_D0
+#define EE_AUDIO_DAT_PAD_CTRL1_A5     0x0e44 // TDMIN_A dat_in bit7~4 - TDM_D31 ~ TDM_D0
+#define EE_AUDIO_DAT_PAD_CTRL2_A5     0x0e48 // TDMIN_B dat_in bit3~0 - TDM_D31 ~ TDM_D0
+#define EE_AUDIO_DAT_PAD_CTRL3_A5     0x0e4c // TDMIN_B dat_in bit7~4 - TDM_D31 ~ TDM_D0
+#define EE_AUDIO_DAT_PAD_CTRL4_A5     0x0e50 // TDMIN_C dat_in bit3~0 - TDM_D31 ~ TDM_D0
+#define EE_AUDIO_DAT_PAD_CTRL5_A5     0x0e54 // TDMIN_C dat_in bit7~4 - TDM_D31 ~ TDM_D0
 #define EE_AUDIO_DAT_PAD_CTRL6_A5     0x0e58 // TDM_D3  ~ TDM_D0  - out src sel
 #define EE_AUDIO_DAT_PAD_CTRL7_A5     0x0e5c // TDM_D7  ~ TDM_D4  - out src sel
 #define EE_AUDIO_DAT_PAD_CTRL8_A5     0x0e60 // TDM_D11 ~ TDM_D8  - out src sel
@@ -66,6 +72,7 @@ __BEGIN_CDECLS
 #define EE_AUDIO_DAT_PAD_CTRLF_A5     0x0e7c // TDM_Dxx oen: 0 - output; 1 - input
 
 #define EE_AUDIO_MCLK_PAD_CTRL0_A5    0x0e80
+#define EE_AUDIO_MCLK_PAD_CTRL1_A5    0x0e84
 #define EE_AUDIO_SCLK_PAD_CTRL0_A5    0x0e88
 #define EE_AUDIO_LRCLK_PAD_CTRL0_A5   0x0e8c
 
@@ -215,7 +222,8 @@ typedef enum {
 
 typedef enum {
     MCLK_PAD_0 = 0,
-    MCLK_PAD_1
+    MCLK_PAD_1,
+    MCLK_PAD_2
 } aml_tdm_mclk_pad_t;
 
 typedef enum {

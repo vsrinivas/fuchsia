@@ -33,6 +33,10 @@ AmlTdmConfigDevice::AmlTdmConfigDevice(const metadata::AmlConfig& metadata, fdf:
         mclk = MCLK_C;
         break;
     }
+
+    if (metadata.is_custom_tdm_clk_sel)
+      mclk = ToMclkId(metadata.tdm_clk_sel);
+
     device_ = AmlTdmInDevice::Create(std::move(mmio), HIFI_PLL, tdm, ddr, mclk, metadata.version);
   } else {
     aml_tdm_out_t tdm = {};
