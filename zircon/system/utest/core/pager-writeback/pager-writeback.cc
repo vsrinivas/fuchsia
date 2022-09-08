@@ -2386,58 +2386,65 @@ TEST(PagerWriteback, ResizeWritebackWithOutstandingDirtyRequests) {
   ASSERT_TRUE(pager.Init());
 
   Vmo* vmo;
-  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_RESIZABLE | ZX_VMO_TRAP_DIRTY, &vmo));
-  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, ZX_VMO_RESIZABLE | ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
 
   // Resize the VMO up.
-  ASSERT_TRUE(vmo->Resize(3));
+  ASSERT_TRUE(vmo->Resize(5));
 
-  // Write to a page leaving a gap.
+  // Write to a page leaving a gap beyond the old size.
   TestThread t1([vmo]() -> bool {
     uint8_t data[zx_system_get_page_size()];
     memset(data, 0xaa, sizeof(data));
-    return vmo->vmo().write(&data[0], 2 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
+    return vmo->vmo().write(&data[0], 4 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
   });
   ASSERT_TRUE(t1.Start());
 
   ASSERT_TRUE(t1.WaitForBlocked());
-  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
-  ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 4, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 4, 1));
   ASSERT_TRUE(t1.Wait());
 
   // Verify dirty ranges and VMO contents.
-  zx_vmo_dirty_range_t ranges[] = {{1, 1, ZX_VMO_DIRTY_RANGE_IS_ZERO}, {2, 1, 0}};
+  zx_vmo_dirty_range_t ranges[] = {{2, 2, ZX_VMO_DIRTY_RANGE_IS_ZERO}, {4, 1, 0}};
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
 
-  std::vector<uint8_t> expected(3 * zx_system_get_page_size(), 0);
-  vmo->GenerateBufferContents(expected.data(), 1, 0);
-  memset(expected.data() + 2 * zx_system_get_page_size(), 0xaa, zx_system_get_page_size());
-  ASSERT_TRUE(check_buffer_data(vmo, 0, 3, expected.data(), true));
+  std::vector<uint8_t> expected(5 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 2, 0);
+  memset(expected.data() + 4 * zx_system_get_page_size(), 0xaa, zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 5, expected.data(), true));
 
-  // Beging writeback for all the dirty pages.
-  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 1, 2));
+  // Begin writeback for all the dirty pages. This will result in DIRTY requests if they are written
+  // again.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 2, 3));
 
-  // Try to write to page 1. This will trigger a DIRTY request.
+  // Try to write to pages 1 and 2. This will trigger a DIRTY request.
   TestThread t2([vmo]() -> bool {
-    uint8_t data[zx_system_get_page_size()];
+    uint8_t data[2 * zx_system_get_page_size()];
     memset(data, 0xbb, sizeof(data));
     return vmo->vmo().write(&data[0], zx_system_get_page_size(), sizeof(data)) ==
            ZX_ERR_OUT_OF_RANGE;
   });
   ASSERT_TRUE(t2.Start());
   ASSERT_TRUE(t2.WaitForBlocked());
-  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 1, 2, ZX_TIME_INFINITE));
 
-  // Try to write to page 2. This will trigger a DIRTY request.
+  // Try to write to pages 3 and 4. This will also trigger a DIRTY request.
   TestThread t3([vmo]() -> bool {
-    uint8_t data[zx_system_get_page_size()];
+    uint8_t data[2 * zx_system_get_page_size()];
     memset(data, 0xcc, sizeof(data));
-    return vmo->vmo().write(&data[0], 2 * zx_system_get_page_size(), sizeof(data)) ==
+    return vmo->vmo().write(&data[0], 3 * zx_system_get_page_size(), sizeof(data)) ==
            ZX_ERR_OUT_OF_RANGE;
   });
   ASSERT_TRUE(t3.Start());
   ASSERT_TRUE(t3.WaitForBlocked());
-  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 3, 2, ZX_TIME_INFINITE));
+
+  // Complete writeback for the start of the dirty range so that the zero tail can be advanced. This
+  // will give us a gap before the tail. Now we will be able to test all four cases - a non-dirty
+  // page before the tail, a gap before the tail, a non-dirty page after the tail, and a gap after
+  // the tail.
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 2, 1));
 
   // Resize down so that both the DIRTY requests are now out of bounds.
   ASSERT_TRUE(vmo->Resize(1));
@@ -2450,8 +2457,9 @@ TEST(PagerWriteback, ResizeWritebackWithOutstandingDirtyRequests) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
   ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
 
-  // End the writeback we began previously. This will fail as it is out of bounds.
-  ASSERT_FALSE(pager.WritebackEndPages(vmo, 1, 2));
+  // End the remaining range of the writeback we began previously. This will fail as it is out of
+  // bounds.
+  ASSERT_FALSE(pager.WritebackEndPages(vmo, 3, 2));
 
   // Verify dirty ranges and VMO contents again.
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));

@@ -3903,23 +3903,22 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
         // We don't expect an error from the traversal.
         DEBUG_ASSERT(status == ZX_OK);
 
-        // Now resolve DIRTY requests for any gaps starting at supply_zero_offset_.
-        if (supply_zero_offset_ < end) {
-          const uint64_t start_offset = ktl::max(start, supply_zero_offset_);
-          status = page_list_.ForEveryPageAndGapInRange(
-              [](const VmPageOrMarker* p, uint64_t off) {
-                // Nothing to do for pages. We already handled them above.
-                return ZX_ERR_NEXT;
-              },
-              [this](uint64_t gap_start, uint64_t gap_end) {
-                // Resolve any DIRTY requests in this gap.
-                page_source_->OnPagesDirtied(gap_start, gap_end - gap_start);
-                return ZX_ERR_NEXT;
-              },
-              start_offset, end);
-          // We don't expect an error from the traversal.
-          DEBUG_ASSERT(status == ZX_OK);
-        }
+        // Now resolve DIRTY requests for any gaps. After request generation, pages could either
+        // have been evicted, or supply_zero_offset_ advanced on writeback, leading to gaps. So it
+        // is possible for gaps to have outstanding DIRTY requests.
+        status = page_list_.ForEveryPageAndGapInRange(
+            [](const VmPageOrMarker* p, uint64_t off) {
+              // Nothing to do for pages. We already handled them above.
+              return ZX_ERR_NEXT;
+            },
+            [this](uint64_t gap_start, uint64_t gap_end) {
+              // Resolve any DIRTY requests in this gap.
+              page_source_->OnPagesDirtied(gap_start, gap_end - gap_start);
+              return ZX_ERR_NEXT;
+            },
+            start, end);
+        // We don't expect an error from the traversal.
+        DEBUG_ASSERT(status == ZX_OK);
       }
     }
 
