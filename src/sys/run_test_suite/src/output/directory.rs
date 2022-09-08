@@ -78,8 +78,7 @@ impl DirectoryReporter {
             EntityEntry {
                 common: directory::CommonResult {
                     name: "".to_string(),
-                    artifact_dir: output_directory
-                        .new_artifact_dir(artifact_dir_hint(&EntityId::TestRun))?,
+                    artifact_dir: output_directory.new_artifact_dir()?,
                     outcome: directory::Outcome::NotStarted.into(),
                     start_time: None,
                     duration_milliseconds: None,
@@ -112,15 +111,10 @@ impl DirectoryReporter {
             directory::TestRunResult { common: Cow::Borrowed(&run_entry.common), suites: vec![] };
 
         for suite_entity_id in run_entry.children.iter() {
-            let suite_id = match suite_entity_id {
-                EntityId::Suite(suite) => suite,
-                _ => panic!("Child of test run is not a suite"),
-            };
             let suite_entry =
                 entry_lock.get(suite_entity_id).expect("Nonexistant suite referenced");
             let mut suite_result = directory::SuiteResult {
                 common: Cow::Borrowed(&suite_entry.common),
-                summary_file_hint: Cow::Owned(suite_json_name(suite_id.0)),
                 cases: vec![],
                 tags: suite_entry.tags.as_ref().map(Cow::Borrowed).unwrap_or(Cow::Owned(vec![])),
             };
@@ -176,9 +170,7 @@ impl Reporter for DirectoryReporter {
             EntityEntry {
                 common: directory::CommonResult {
                     name: name.to_string(),
-                    artifact_dir: self
-                        .output_directory
-                        .new_artifact_dir(artifact_dir_hint(entity))?,
+                    artifact_dir: self.output_directory.new_artifact_dir()?,
                     outcome: directory::Outcome::NotStarted.into(),
                     start_time: None,
                     duration_milliseconds: None,
@@ -333,23 +325,11 @@ impl DirectoryWrite for DirectoryDirectoryWriter {
     }
 }
 
-fn artifact_dir_hint(entity_id: &EntityId) -> PathBuf {
-    match entity_id {
-        EntityId::TestRun => "artifact-run".into(),
-        EntityId::Suite(suite) => format!("artifact-{:?}", suite.0).into(),
-        EntityId::Case { suite, case } => format!("artifact-{:?}-{:?}", suite.0, case.0).into(),
-    }
-}
-
 fn prefix_for_directory_type(artifact_type: &DirectoryArtifactType) -> &'static str {
     match artifact_type {
         DirectoryArtifactType::Custom => CUSTOM_ARTIFACT_DIRECTORY,
         DirectoryArtifactType::Debug => DEBUG_ARTIFACT_DIRECTORY,
     }
-}
-
-fn suite_json_name(suite_id: u32) -> String {
-    format!("{:?}.json", suite_id)
 }
 
 fn filename_for_type(artifact_type: &directory::ArtifactType) -> &'static str {

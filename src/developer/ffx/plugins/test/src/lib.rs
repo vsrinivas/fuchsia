@@ -89,7 +89,6 @@ struct Experiment {
 }
 
 struct Experiments {
-    structured_output: Experiment,
     managed_structured_output: Experiment,
     result_command: Experiment,
     json_input: Experiment,
@@ -109,7 +108,6 @@ impl Experiments {
 
     async fn from_env() -> Self {
         Self {
-            structured_output: Self::get_experiment("test.experimental_structured_output").await,
             managed_structured_output: Self::get_experiment(
                 "test.experimental_managed_structured_output",
             )
@@ -124,20 +122,10 @@ impl Experiments {
 
 async fn run_test<W: 'static + Write + Send + Sync>(
     builder_connector: Box<testing_lib::RunBuilderConnector>,
-    mut writer: W,
+    writer: W,
     cmd: RunCommand,
 ) -> Result<()> {
     let experiments = Experiments::from_env().await;
-    if experiments.structured_output.enabled {
-        // TODO(fxbug.dev/81195): Once the documentation lands add a link to it here.
-        writeln!(
-            writer,
-            "The experimental structured output will soon be removed.\
-             Please update any tools that read the output to parse the stable format\
-             and remove the {} configuration.",
-            experiments.structured_output.name
-        )?;
-    }
 
     let min_log_severity = cmd.min_severity_logs;
 
@@ -152,14 +140,8 @@ async fn run_test<W: 'static + Write + Send + Sync>(
         }
         (false, None) => None,
     };
-    let output_directory_options =
-        output_directory.map(|root_path| run_test_suite_lib::DirectoryReporterOptions {
-            root_path,
-            schema: match experiments.structured_output.enabled {
-                true => run_test_suite_lib::output::SchemaVersion::UnstablePrototype,
-                false => run_test_suite_lib::output::SchemaVersion::V1,
-            },
-        });
+    let output_directory_options = output_directory
+        .map(|root_path| run_test_suite_lib::DirectoryReporterOptions { root_path });
     let reporter =
         run_test_suite_lib::create_reporter(cmd.filter_ansi, output_directory_options, writer)?;
 

@@ -4,12 +4,6 @@ This document describes the directory format used to collect and store results
 and outputs for tests run on Fuchsia. It is currently output by
 [ffx test run][ffx-test] when the `--output-directory` option is specified.
 
-Note: This document describes the first stable version of the directory format.
-The unstable, experimental version of the output format is available on some
-versions of ffx when the `test.experimental_structured_format` configuration is
-enabled. The experimental version will soon be removed. Users should update
-tools to parse the stable version of the format, and remove the config entry.
-
 ## Background
 
 A single execution of `ffx test` produces a *test run*. A *test run* is
