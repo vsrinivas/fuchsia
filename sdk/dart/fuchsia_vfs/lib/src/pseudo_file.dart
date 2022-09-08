@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 import 'dart:async';
+import 'dart:convert';
 import 'dart:math';
 import 'dart:typed_data';
 
@@ -362,6 +363,11 @@ class _FileConnection extends File {
     if (status != ZX.OK) {
       throw fidl.MethodException(status);
     }
+  }
+
+  @override
+  Future<Uint8List> query() async {
+    return Utf8Encoder().convert(fileProtocolName);
   }
 
   @override

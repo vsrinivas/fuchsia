@@ -37,7 +37,7 @@
         "strictness": "strict"
     },
     {
-        "declaration": "() -> (uint64 protocol)",
+        "declaration": "() -> (vector<uint8> protocol)",
         "kind": "protocol/member",
         "name": "fuchsia.unknown/Queryable.Query"
     },

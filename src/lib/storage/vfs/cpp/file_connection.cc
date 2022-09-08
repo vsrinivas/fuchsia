@@ -51,6 +51,10 @@ void FileConnection::Close(CloseCompleter::Sync& completer) {
   }
 }
 
+void FileConnection::Query(QueryCompleter::Sync& completer) {
+  completer.Reply(Connection::NodeQuery());
+}
+
 void FileConnection::Describe(DescribeCompleter::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {

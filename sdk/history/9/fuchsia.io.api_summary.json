@@ -128,6 +128,12 @@
         "name": "fuchsia.io/ConnectorInfo"
     },
     {
+        "declaration": "string",
+        "kind": "const",
+        "name": "fuchsia.io/DIRECTORY_PROTOCOL_NAME",
+        "value": "fuchsia.io/Directory"
+    },
+    {
         "declaration": "uint64",
         "kind": "struct/member",
         "name": "fuchsia.io/DatagramSocket.rx_meta_buf_size"
@@ -228,7 +234,7 @@
         "name": "fuchsia.io/Directory.Open2"
     },
     {
-        "declaration": "() -> (uint64 protocol)",
+        "declaration": "() -> (vector<uint8> protocol)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.Query"
     },
@@ -406,7 +412,7 @@
         "name": "fuchsia.io/Directory2.Open2"
     },
     {
-        "declaration": "() -> (uint64 protocol)",
+        "declaration": "() -> (vector<uint8> protocol)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory2.Query"
     },
@@ -586,6 +592,12 @@
         "strictness": "strict"
     },
     {
+        "declaration": "string",
+        "kind": "const",
+        "name": "fuchsia.io/FILE_PROTOCOL_NAME",
+        "value": "fuchsia.io/File"
+    },
+    {
         "declaration": "(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.AdvisoryLock"
@@ -646,7 +658,7 @@
         "name": "fuchsia.io/File.OnRepresentation"
     },
     {
-        "declaration": "() -> (uint64 protocol)",
+        "declaration": "() -> (vector<uint8> protocol)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Query"
     },
@@ -740,7 +752,7 @@
         "name": "fuchsia.io/File2.OnRepresentation"
     },
     {
-        "declaration": "() -> (uint64 protocol)",
+        "declaration": "() -> (vector<uint8> protocol)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File2.Query"
     },
@@ -1372,6 +1384,12 @@
         "name": "fuchsia.io/MutableNodeAttributes"
     },
     {
+        "declaration": "string",
+        "kind": "const",
+        "name": "fuchsia.io/NODE_PROTOCOL_NAME",
+        "value": "fuchsia.io/Node"
+    },
+    {
         "declaration": "(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.Clone"
@@ -1417,7 +1435,7 @@
         "name": "fuchsia.io/Node.OnRepresentation"
     },
     {
-        "declaration": "() -> (uint64 protocol)",
+        "declaration": "() -> (vector<uint8> protocol)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.Query"
     },
@@ -1520,7 +1538,7 @@
         "name": "fuchsia.io/Node2.OnRepresentation"
     },
     {
-        "declaration": "() -> (uint64 protocol)",
+        "declaration": "() -> (vector<uint8> protocol)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node2.Query"
     },

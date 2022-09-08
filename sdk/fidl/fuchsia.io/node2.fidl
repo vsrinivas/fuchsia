@@ -25,6 +25,9 @@ type ConnectionInfo = resource table {
     1: rights Rights;
 };
 
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+const NODE_PROTOCOL_NAME string = "fuchsia.io/Node";
+
 /// Node defines the minimal protocol for entities which can be accessed
 /// in a filesystem.
 protocol Node2 {

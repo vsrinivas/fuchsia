@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fidl/cpp/wire/server.h>
@@ -17,9 +17,14 @@
 // If it ever gets out of sync, that would be surfaced by a linker error.
 void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
-class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
+class TestServerBase : public fidl::testing::WireTestBase<fuchsia_io::Node> {
  public:
   ~TestServerBase() override = default;
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
 
   // Exercised by |zxio_close|.
   void Close(CloseCompleter::Sync& completer) override {
@@ -27,40 +32,6 @@ class TestServerBase : public fidl::WireServer<fuchsia_io::Node> {
     completer.ReplySuccess();
     // After the reply, we should close the connection.
     completer.Close(ZX_OK);
-  }
-
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Describe(DescribeCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void Sync(SyncCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
-
-  void GetAttr(GetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void GetFlags(GetFlagsCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
-  }
-
-  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {
-    completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
   uint32_t num_close() const { return num_close_.load(); }

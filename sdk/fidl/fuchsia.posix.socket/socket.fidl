@@ -641,6 +641,9 @@ type SendMsgMeta = table {
 /// for errors on the zircon socket in the same call.
 const FAST_UDP_WAIT_MANY_MAXIMUM_ITEMS uint32 = 63;
 
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+const DATAGRAM_SOCKET_PROTOCOL_NAME string = "fuchsia.posix.socket/DatagramSocket";
+
 /// A datagram socket.
 ///
 /// This type's [`fuchsia.io/Node.Describe`] method returns a zircon socket which can be
@@ -718,6 +721,14 @@ protocol DatagramSocket {
     }) error fuchsia.posix.Errno;
 };
 
+const SYNCHRONOUS_DATAGRAM_SOCKET_PROTOCOL_NAME string
+        = "fuchsia.posix.socket/SynchronousDatagramSocket";
+
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+//
+// TODO(https://fxbug.dev/107841): Move this comment _above_ the constant when
+// the FIDL formatter doesn't misbehave.
+
 /// A synchronous datagram socket.
 ///
 /// This protocol defines synchronous methods for sending and receiving datagram
@@ -785,6 +796,9 @@ protocol SynchronousDatagramSocket {
         len int64;
     }) error fuchsia.posix.Errno;
 };
+
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+const STREAM_SOCKET_PROTOCOL_NAME string = "fuchsia.posix.socket/StreamSocket";
 
 /// A stream socket.
 ///

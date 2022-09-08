@@ -41,8 +41,7 @@ void NullPtyDeviceImpl::ClrSetFeature(ClrSetFeatureRequestView request,
 
 void NullPtyDeviceImpl::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
   fidl::ServerBuffer<fuchsia_hardware_pty::Device::GetWindowSize> buf;
-  fuchsia_hardware_pty::wire::WindowSize wsz = {.width = 0, .height = 0};
-  completer.buffer(buf.view()).Reply(ZX_ERR_NOT_SUPPORTED, wsz);
+  completer.buffer(buf.view()).Reply(ZX_ERR_NOT_SUPPORTED, {});
 }
 
 void NullPtyDeviceImpl::MakeActive(MakeActiveRequestView request,
@@ -83,6 +82,8 @@ void NullPtyDeviceImpl::Clone(CloneRequestView request, CloneCompleter::Sync& co
 }
 
 void NullPtyDeviceImpl::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
+
+void NullPtyDeviceImpl::Query(QueryCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void NullPtyDeviceImpl::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
   ZX_ASSERT(false);

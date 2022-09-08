@@ -46,7 +46,7 @@ class File : public Node {
   // Resize the file to the given |length|.
   virtual zx_status_t Truncate(uint64_t length);
 
-  // Override that describes this object as a file.
+  std::vector<uint8_t> Query() const override;
   void Describe(fuchsia::io::NodeInfo* out_info) override;
   void GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) override;
 

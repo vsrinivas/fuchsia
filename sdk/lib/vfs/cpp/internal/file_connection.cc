@@ -41,6 +41,8 @@ void FileConnection::Clone(fuchsia::io::OpenFlags flags,
 
 void FileConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
+void FileConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
+
 void FileConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }

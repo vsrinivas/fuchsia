@@ -331,8 +331,7 @@ impl<T: 'static + File> FileConnection<T> {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             fio::FileRequest::Query { responder } => {
-                let _ = responder;
-                todo!("https://fxbug.dev/77623");
+                responder.send(fio::FILE_PROTOCOL_NAME.as_bytes())?;
             }
             fio::FileRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");

@@ -451,8 +451,10 @@ where
             fposix_socket::StreamSocketRequest::SetFlags { flags: _, responder } => {
                 responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
             }
-            fposix_socket::StreamSocketRequest::Query { responder: _ } => {
-                todo!("https://fxbug.dev/105608: implement Query");
+            fposix_socket::StreamSocketRequest::Query { responder } => {
+                // TODO(https://fxbug.dev/105608): Use a generated constant.
+                const PROTOCOL: &str = "fuchsia.posix.socket/StreamSocket";
+                responder_send!(responder, PROTOCOL.as_bytes());
             }
             fposix_socket::StreamSocketRequest::QueryFilesystem { responder } => {
                 responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), None);

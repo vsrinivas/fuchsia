@@ -20,13 +20,11 @@ class PtyServerDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
 
   // fuchsia.hardware.pty.Device methods
   void Describe2(Describe2Completer::Sync& completer) final;
-  void OpenClient(OpenClientRequestView request,
-                  OpenClientCompleter::Sync& completer) final;
+  void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) final;
   void ClrSetFeature(ClrSetFeatureRequestView request,
                      ClrSetFeatureCompleter::Sync& completer) final;
   void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final;
-  void MakeActive(MakeActiveRequestView request,
-                  MakeActiveCompleter::Sync& completer) final;
+  void MakeActive(MakeActiveRequestView request, MakeActiveCompleter::Sync& completer) final;
   void ReadEvents(ReadEventsCompleter::Sync& completer) final;
   void SetWindowSize(SetWindowSizeRequestView request,
                      SetWindowSizeCompleter::Sync& completer) final;
@@ -46,6 +44,7 @@ class PtyServerDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
   void Reopen(ReopenRequestView request, ReopenCompleter::Sync& completer) final;
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void Close(CloseCompleter::Sync& completer) final;
+  void Query(QueryCompleter::Sync& completer) final;
   void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) final;
   void Describe(DescribeCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;

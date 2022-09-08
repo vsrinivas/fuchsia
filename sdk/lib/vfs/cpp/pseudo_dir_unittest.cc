@@ -29,6 +29,7 @@ class TestNode : public vfs::internal::Node {
   fuchsia::io::OpenFlags GetProhibitiveFlags() const override { return {}; }
 
  private:
+  std::vector<uint8_t> Query() const override { return {}; }
   void Describe(fuchsia::io::NodeInfo* out_info) override {}
   void GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) override {}
 

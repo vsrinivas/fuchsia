@@ -113,6 +113,7 @@ static_library("cpp") {
       "//zircon/system/ulib/trace",
     ]
     deps += [
+      "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
       "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
       "//sdk/fidl/fuchsia.mem:fuchsia.mem_cpp_wire",
       "//sdk/lib/fdio",

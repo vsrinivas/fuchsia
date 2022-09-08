@@ -179,8 +179,7 @@ impl Connection {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             fio::NodeRequest::Query { responder } => {
-                let _ = responder;
-                todo!("https://fxbug.dev/77623");
+                responder.send(fio::NODE_PROTOCOL_NAME.as_bytes())?;
             }
             fio::NodeRequest::QueryFilesystem { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;

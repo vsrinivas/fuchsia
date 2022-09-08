@@ -54,6 +54,9 @@ protocol File {
     Describe2() -> (FileInfo);
 };
 
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+const FILE_PROTOCOL_NAME string = "fuchsia.io/File";
+
 /// A [`Node2`] which contains a sequence of bytes of definite
 /// length.
 ///

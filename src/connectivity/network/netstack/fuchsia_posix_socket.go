@@ -2583,8 +2583,8 @@ func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	}), nil
 }
 
-func (*datagramSocketImpl) Query(fidl.Context) (uint64, error) {
-	panic("TODO(https://fxbug.dev/105608): implement Query")
+func (*datagramSocketImpl) Query(fidl.Context) ([]uint8, error) {
+	return []byte(socket.DatagramSocketProtocolName), nil
 }
 
 func (s *datagramSocketImpl) Describe2(fidl.Context) (socket.DatagramSocketDescribe2Response, error) {
@@ -2746,8 +2746,8 @@ func (s *synchronousDatagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo,
 	}), nil
 }
 
-func (*synchronousDatagramSocketImpl) Query(fidl.Context) (uint64, error) {
-	panic("TODO(https://fxbug.dev/105608): implement Query")
+func (*synchronousDatagramSocketImpl) Query(fidl.Context) ([]byte, error) {
+	return []byte(socket.SynchronousDatagramSocketProtocolName), nil
 }
 
 func (s *synchronousDatagramSocketImpl) Describe2(fidl.Context) (socket.SynchronousDatagramSocketDescribe2Response, error) {
@@ -3302,8 +3302,8 @@ func (s *streamSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	}), nil
 }
 
-func (*streamSocketImpl) Query(fidl.Context) (uint64, error) {
-	panic("TODO(https://fxbug.dev/105608): implement Query")
+func (*streamSocketImpl) Query(fidl.Context) ([]uint8, error) {
+	return []byte(socket.StreamSocketProtocolName), nil
 }
 
 func (s *streamSocketImpl) Describe2(fidl.Context) (socket.StreamSocketDescribe2Response, error) {
@@ -4032,8 +4032,8 @@ func (s *rawSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	}), nil
 }
 
-func (*rawSocketImpl) Query(fidl.Context) (uint64, error) {
-	panic("TODO(https://fxbug.dev/105608): implement Query")
+func (*rawSocketImpl) Query(fidl.Context) ([]byte, error) {
+	return []byte(rawsocket.SocketProtocolName), nil
 }
 
 func (s *rawSocketImpl) Describe2(fidl.Context) (rawsocket.SocketDescribe2Response, error) {
@@ -4390,8 +4390,8 @@ func (s *packetSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
 	}), nil
 }
 
-func (*packetSocketImpl) Query(fidl.Context) (uint64, error) {
-	panic("TODO(https://fxbug.dev/105608): implement Query")
+func (*packetSocketImpl) Query(fidl.Context) ([]uint8, error) {
+	return []byte(packetsocket.SocketProtocolName), nil
 }
 
 func (s *packetSocketImpl) Describe2(fidl.Context) (packetsocket.SocketDescribe2Response, error) {

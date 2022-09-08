@@ -128,6 +128,12 @@
         "name": "fuchsia.io/ConnectorInfo"
     },
     {
+        "declaration": "string",
+        "kind": "const",
+        "name": "fuchsia.io/DIRECTORY_PROTOCOL_NAME",
+        "value": "fuchsia.io/Directory"
+    },
+    {
         "declaration": "uint64",
         "kind": "struct/member",
         "name": "fuchsia.io/DatagramSocket.rx_meta_buf_size"
@@ -574,6 +580,12 @@
         "kind": "enum",
         "name": "fuchsia.io/DirentType",
         "strictness": "strict"
+    },
+    {
+        "declaration": "string",
+        "kind": "const",
+        "name": "fuchsia.io/FILE_PROTOCOL_NAME",
+        "value": "fuchsia.io/File"
     },
     {
         "declaration": "(fuchsia.io/AdvisoryLockRequest request) -> (fuchsia.io/AdvisoryLocking_AdvisoryLock_Result result)",
@@ -1350,6 +1362,12 @@
     {
         "kind": "table",
         "name": "fuchsia.io/MutableNodeAttributes"
+    },
+    {
+        "declaration": "string",
+        "kind": "const",
+        "name": "fuchsia.io/NODE_PROTOCOL_NAME",
+        "value": "fuchsia.io/Node"
     },
     {
         "declaration": "(fuchsia.io/OpenFlags flags,server_end:fuchsia.io/Node object)",

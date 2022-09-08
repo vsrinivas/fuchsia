@@ -368,6 +368,11 @@ class _DirConnection extends Directory {
     }
   }
 
+  @override
+  Future<Uint8List> query() async {
+    return Utf8Encoder().convert(directoryProtocolName);
+  }
+
   void closeBinding() {
     _binding.close();
     _isClosed = true;

@@ -195,8 +195,9 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // the generated FIDL types in method arguments. This is because return values must recursively
   // own any child objects and handles to avoid a dangling reference.
 
-  void NodeClone(fuchsia_io::wire::OpenFlags flags, fidl::ServerEnd<fuchsia_io::Node> channel);
+  void NodeClone(fuchsia_io::wire::OpenFlags flags, fidl::ServerEnd<fuchsia_io::Node> server_end);
   zx::status<> NodeClose();
+  fidl::VectorView<uint8_t> NodeQuery();
   zx::status<VnodeRepresentation> NodeDescribe();
   void NodeSync(fit::callback<void(zx_status_t)> callback);
   zx::status<VnodeAttributes> NodeGetAttr();

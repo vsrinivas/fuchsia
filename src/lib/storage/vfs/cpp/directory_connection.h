@@ -37,6 +37,7 @@ class DirectoryConnection final : public Connection,
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void Close(CloseCompleter::Sync& completer) final;
+  void Query(QueryCompleter::Sync& completer) final;
   void Describe(DescribeCompleter::Sync& completer) final;
   void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;

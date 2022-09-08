@@ -153,8 +153,8 @@ func (*Service) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error)
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
-func (*Service) Query(fidl.Context) (uint64, error) {
-	panic("TODO(https://fxbug.dev/105608): implement Query")
+func (*Service) Query(fidl.Context) ([]uint8, error) {
+	return []byte(io.NodeProtocolName), nil
 }
 
 type Directory interface {
@@ -426,8 +426,8 @@ func (*directoryState) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo,
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
-func (*directoryState) Query(fidl.Context) (uint64, error) {
-	panic("TODO(https://fxbug.dev/105608): implement Query")
+func (*directoryState) Query(fidl.Context) ([]uint8, error) {
+	return []byte(io.DirectoryProtocolName), nil
 }
 
 type File interface {
@@ -638,8 +638,8 @@ func (*fileState) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, erro
 	return int32(zx.ErrNotSupported), nil, nil
 }
 
-func (*fileState) Query(fidl.Context) (uint64, error) {
-	panic("TODO(https://fxbug.dev/105608): implement Query")
+func (*fileState) Query(fidl.Context) ([]byte, error) {
+	return []byte(io.FileProtocolName), nil
 }
 
 func (fState *fileState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.AdvisoryLockingAdvisoryLockResult, error) {

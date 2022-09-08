@@ -35,6 +35,8 @@ void NodeConnection::Clone(fuchsia::io::OpenFlags flags,
 
 void NodeConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
+void NodeConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
+
 void NodeConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }

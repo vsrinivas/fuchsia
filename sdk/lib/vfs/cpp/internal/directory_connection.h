@@ -33,6 +33,7 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   void Clone(fuchsia::io::OpenFlags flags,
              fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void Close(CloseCallback callback) override;
+  void Query(QueryCallback callback) override;
   void Describe(DescribeCallback callback) override;
   void GetConnectionInfo(GetConnectionInfoCallback callback) override;
   void Sync(SyncCallback callback) override;

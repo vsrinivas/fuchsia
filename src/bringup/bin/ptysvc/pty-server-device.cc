@@ -78,6 +78,8 @@ void PtyServerDevice::Clone(CloneRequestView request, CloneCompleter::Sync& comp
 
 void PtyServerDevice::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
 
+void PtyServerDevice::Query(QueryCompleter::Sync& completer) { ZX_ASSERT(false); }
+
 void PtyServerDevice::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

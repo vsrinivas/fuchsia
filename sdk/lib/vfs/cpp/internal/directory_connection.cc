@@ -42,6 +42,8 @@ void DirectoryConnection::Close(CloseCallback callback) {
   Connection::Close(vn_, std::move(callback));
 }
 
+void DirectoryConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
+
 void DirectoryConnection::Describe(DescribeCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }

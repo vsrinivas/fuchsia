@@ -279,8 +279,7 @@ where
                 responder.send(status.into_raw())?;
             }
             fio::DirectoryRequest::Query { responder } => {
-                let _ = responder;
-                todo!("https://fxbug.dev/77623");
+                responder.send(fio::DIRECTORY_PROTOCOL_NAME.as_bytes())?;
             }
             fio::DirectoryRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");

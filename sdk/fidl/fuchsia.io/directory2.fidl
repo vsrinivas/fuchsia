@@ -42,6 +42,9 @@ protocol DirectoryIterator {
     }) error zx.status;
 };
 
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+const DIRECTORY_PROTOCOL_NAME string = "fuchsia.io/Directory";
+
 /// A [`Node2`] that is capable of containing other nodes.
 protocol Directory2 {
     compose Node2;

@@ -117,6 +117,9 @@ type PacketInfo = struct {
     addr HardwareAddress;
 };
 
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+const SOCKET_PROTOCOL_NAME string = "fuchsia.posix.socket.packet/Socket";
+
 /// A packet socket.
 ///
 /// This interface is essentially POSIX.

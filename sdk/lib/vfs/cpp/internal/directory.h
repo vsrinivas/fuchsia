@@ -34,7 +34,7 @@ class Directory : public Node {
   // |Node| implementation
   zx_status_t Lookup(const std::string& name, Node** out_node) const override;
 
-  // Override that describes this object as a directory.
+  std::vector<uint8_t> Query() const override;
   void Describe(fuchsia::io::NodeInfo* out_info) override;
   void GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) override;
 

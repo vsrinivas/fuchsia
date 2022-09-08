@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:typed_data';
+
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
 import 'package:zircon/zircon.dart';
@@ -46,6 +48,11 @@ class ErrorNodeForSendingEvent extends Node {
   @override
   Future<void> close() async {
     throw MethodException(ZX.ERR_NOT_SUPPORTED);
+  }
+
+  @override
+  Future<Uint8List> query() async {
+    throw UnsupportedError('ErrorNodeForSendingEvent.query is unreachable.');
   }
 
   @override

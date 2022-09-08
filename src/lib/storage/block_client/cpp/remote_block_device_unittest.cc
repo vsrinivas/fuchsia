@@ -145,6 +145,7 @@ class MockBlockDevice {
       completer.Reply(
           fio::wire::NodeInfo::WithFile(fidl::ObjectView<decltype(file)>::FromExternal(&file)));
     }
+    void Query(QueryCompleter::Sync& completer) override {}
     void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override {}
     void Sync(SyncCompleter::Sync& completer) override {}
     void GetAttr(GetAttrCompleter::Sync& completer) override {}

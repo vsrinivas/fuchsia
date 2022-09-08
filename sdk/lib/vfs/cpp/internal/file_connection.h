@@ -31,6 +31,7 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void Clone(fuchsia::io::OpenFlags flags,
              fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void Close(CloseCallback callback) override;
+  void Query(QueryCallback callback) override;
   void Describe(DescribeCallback callback) override;
   void Describe2(Describe2Callback callback) override;
   void GetConnectionInfo(GetConnectionInfoCallback callback) override;

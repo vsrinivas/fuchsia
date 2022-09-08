@@ -114,6 +114,8 @@ void PtyClientDevice::Clone(CloneRequestView request, CloneCompleter::Sync& comp
 
 void PtyClientDevice::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
 
+void PtyClientDevice::Query(QueryCompleter::Sync& completer) { ZX_ASSERT(false); }
+
 void PtyClientDevice::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

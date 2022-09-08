@@ -371,8 +371,7 @@ impl VmoFileConnection {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             fio::FileRequest::Query { responder } => {
-                let _ = responder;
-                todo!("https://fxbug.dev/77623");
+                responder.send(fio::FILE_PROTOCOL_NAME.as_bytes())?;
             }
             fio::FileRequest::QueryFilesystem { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;

@@ -536,7 +536,7 @@ impl BlockServer {
             }
             // TODO(fxbug.dev/105608)
             VolumeAndNodeRequest::Query { responder } => {
-                responder.send(0)?;
+                responder.send(fio::NODE_PROTOCOL_NAME.as_bytes())?;
             }
             VolumeAndNodeRequest::QueryFilesystem { responder } => {
                 match self.file.query_filesystem() {

@@ -50,6 +50,10 @@ void NodeConnection::Close(CloseCompleter::Sync& completer) {
   }
 }
 
+void NodeConnection::Query(QueryCompleter::Sync& completer) {
+  completer.Reply(Connection::NodeQuery());
+}
+
 void NodeConnection::Describe(DescribeCompleter::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {

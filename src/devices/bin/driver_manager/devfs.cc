@@ -107,6 +107,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   }
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override;
+  void Query(QueryCompleter::Sync& completer) override;
   void Describe(DescribeCompleter::Sync& completer) override;
   void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override;
   void Sync(SyncCompleter::Sync& completer) override { completer.ReplyError(ZX_ERR_NOT_SUPPORTED); }
@@ -761,6 +762,12 @@ void DcIostate::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
 void DcIostate::Close(CloseCompleter::Sync& completer) {
   completer.ReplySuccess();
   completer.Close(ZX_OK);
+}
+
+void DcIostate::Query(QueryCompleter::Sync& completer) {
+  const std::string_view kProtocol = fio::wire::kDirectoryProtocolName;
+  uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+  completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
 }
 
 zx::unowned_channel devfs_root_borrow() { return zx::unowned_channel(g_devfs_root); }

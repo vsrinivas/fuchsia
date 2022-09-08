@@ -5,6 +5,7 @@
 #include "src/lib/storage/vfs/cpp/connection.h"
 
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
@@ -250,9 +251,8 @@ zx_status_t Connection::EnsureVnodeClosed() {
   return vnode_->Close();
 }
 
-void Connection::NodeClone(fio::wire::OpenFlags clone_flags,
-                           fidl::ServerEnd<fio::Node> server_end) {
-  auto clone_options = VnodeConnectionOptions::FromIoV1Flags(clone_flags);
+void Connection::NodeClone(fio::wire::OpenFlags flags, fidl::ServerEnd<fio::Node> server_end) {
+  auto clone_options = VnodeConnectionOptions::FromIoV1Flags(flags);
   auto write_error = [describe = clone_options.flags.describe](fidl::ServerEnd<fio::Node> channel,
                                                                zx_status_t error) {
     if (describe) {
@@ -262,8 +262,8 @@ void Connection::NodeClone(fio::wire::OpenFlags clone_flags,
       channel.reset();
     }
   };
-  if (!PrevalidateFlags(clone_flags)) {
-    FS_PRETTY_TRACE_DEBUG("[NodeClone] prevalidate failed", ", incoming flags: ", clone_flags);
+  if (!PrevalidateFlags(flags)) {
+    FS_PRETTY_TRACE_DEBUG("[NodeClone] prevalidate failed", ", incoming flags: ", flags);
     return write_error(std::move(server_end), ZX_ERR_INVALID_ARGS);
   }
   FS_PRETTY_TRACE_DEBUG("[NodeClone] our options: ", options(),
@@ -310,6 +310,29 @@ zx::status<> Connection::NodeClose() {
   return result;
 }
 
+fidl::VectorView<uint8_t> Connection::NodeQuery() {
+  const std::string_view protocol = [this]() {
+    std::optional protocol = vnode()->GetProtocols().first();
+    ZX_ASSERT(protocol.has_value());
+    switch (protocol.value()) {
+      case VnodeProtocol::kConnector: {
+        return fio::wire::kNodeProtocolName;
+      }
+      case VnodeProtocol::kFile: {
+        return fio::wire::kFileProtocolName;
+      }
+      case VnodeProtocol::kDirectory: {
+        return fio::wire::kDirectoryProtocolName;
+      }
+      case VnodeProtocol::kTty: {
+        return fuchsia_hardware_pty::wire::kDeviceProtocolName;
+      }
+    }
+  }();
+  uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(protocol.data()));
+  return fidl::VectorView<uint8_t>::FromExternal(data, protocol.size());
+}
+
 zx::status<VnodeRepresentation> Connection::NodeDescribe() {
   return Describe(vnode(), protocol(), options());
 }
@@ -333,7 +356,7 @@ zx::status<VnodeAttributes> Connection::NodeGetAttr() {
   return zx::ok(attr);
 }
 
-zx::status<> Connection::NodeSetAttr(fuchsia_io::wire::NodeAttributeFlags flags,
+zx::status<> Connection::NodeSetAttr(fio::wire::NodeAttributeFlags flags,
                                      const fio::wire::NodeAttributes& attributes) {
   FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our options: ", options(), ", incoming flags: ", flags);
 

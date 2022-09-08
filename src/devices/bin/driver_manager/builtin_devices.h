@@ -65,6 +65,7 @@ class BuiltinDevVnode : public fs::Vnode, public fidl::WireServer<fuchsia_io::Di
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
+  void Query(QueryCompleter::Sync& completer) override { completer.Close(ZX_ERR_NOT_SUPPORTED); }
   void Describe(DescribeCompleter::Sync& completer) override {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }

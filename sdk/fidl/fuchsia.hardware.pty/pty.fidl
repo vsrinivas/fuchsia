@@ -40,6 +40,9 @@ const EVENT_MASK uint32 = 15;
 /// When an event is pending, this signal is asserted on the Controlling PTY.
 const SIGNAL_EVENT fuchsia.device.DeviceSignal = fuchsia.device.DeviceSignal.OOB;
 
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+const DEVICE_PROTOCOL_NAME string = "fuchsia.hardware.pty/Device";
+
 @discoverable
 protocol Device {
     // Compose from fuchsia.io/File so we can support Read/Write.

@@ -111,6 +111,10 @@ void DirectoryConnection::Close(CloseCompleter::Sync& completer) {
   }
 }
 
+void DirectoryConnection::Query(QueryCompleter::Sync& completer) {
+  completer.Reply(Connection::NodeQuery());
+}
+
 void DirectoryConnection::Describe(DescribeCompleter::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {

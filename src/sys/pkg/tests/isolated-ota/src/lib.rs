@@ -750,8 +750,7 @@ async fn serve_failing_blobfs(
                 responder.send(zx::Status::IO.into_raw()).context("failing watch")?
             }
             fio::DirectoryRequest::Query { responder } => {
-                let _ = responder;
-                todo!("https://fxbug.dev/77623");
+                responder.send(fio::DIRECTORY_PROTOCOL_NAME.as_bytes())?;
             }
             fio::DirectoryRequest::QueryFilesystem { responder } => responder
                 .send(zx::Status::IO.into_raw(), None)
