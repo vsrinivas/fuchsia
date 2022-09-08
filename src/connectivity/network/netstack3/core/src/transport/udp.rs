@@ -1524,7 +1524,7 @@ pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
 /// Panics if `id` is not a valid socket ID.
 pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonSyncContext<I>>(
     sync_ctx: &SC,
-    _ctx: &mut C,
+    _ctx: &C,
     id: UdpSocketId<I>,
 ) -> Option<SC::DeviceId> {
     sync_ctx.with_sockets(|state| {
@@ -1593,7 +1593,7 @@ pub fn get_udp_posix_reuse_port<
     C: UdpStateNonSyncContext<I>,
 >(
     sync_ctx: &SC,
-    _ctx: &mut C,
+    _ctx: &C,
     id: UdpSocketId<I>,
 ) -> bool {
     sync_ctx.with_sockets(|state| {
@@ -1701,8 +1701,8 @@ pub fn get_udp_unicast_hop_limit<
     C: UdpStateNonSyncContext<I>,
     SC: UdpStateContext<I, C>,
 >(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
+    sync_ctx: &SC,
+    ctx: &C,
     id: UdpSocketId<I>,
 ) -> NonZeroU8 {
     crate::socket::datagram::get_ip_hop_limits(sync_ctx, ctx, id).unicast
@@ -1717,8 +1717,8 @@ pub fn get_udp_multicast_hop_limit<
     C: UdpStateNonSyncContext<I>,
     SC: UdpStateContext<I, C>,
 >(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
+    sync_ctx: &SC,
+    ctx: &C,
     id: UdpSocketId<I>,
 ) -> NonZeroU8 {
     crate::socket::datagram::get_ip_hop_limits(sync_ctx, ctx, id).multicast

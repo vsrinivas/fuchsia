@@ -301,11 +301,11 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         device: Option<SC::DeviceId>,
     ) -> Result<(), Self::SetSocketDeviceError>;
 
-    fn get_bound_device(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> Option<SC::DeviceId>;
+    fn get_bound_device(sync_ctx: &SC, ctx: &C, id: SocketId<I, Self>) -> Option<SC::DeviceId>;
 
     fn set_reuse_port(sync_ctx: &mut SC, ctx: &mut C, id: Self::UnboundId, reuse_port: bool);
 
-    fn get_reuse_port(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> bool;
+    fn get_reuse_port(sync_ctx: &SC, ctx: &C, id: SocketId<I, Self>) -> bool;
 
     fn set_multicast_membership(
         sync_ctx: &mut SC,
@@ -330,9 +330,9 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         hop_limit: Option<NonZeroU8>,
     );
 
-    fn get_unicast_hop_limit(sync_ctx: &mut SC, ctx: &mut C, id: SocketId<I, Self>) -> NonZeroU8;
+    fn get_unicast_hop_limit(sync_ctx: &SC, ctx: &C, id: SocketId<I, Self>) -> NonZeroU8;
 
-    fn get_multicast_hop_limit(sync_ctx: &mut SC, ctx: &mut C, id: SocketId<I, Self>) -> NonZeroU8;
+    fn get_multicast_hop_limit(sync_ctx: &SC, ctx: &C, id: SocketId<I, Self>) -> NonZeroU8;
 }
 
 /// An abstraction over transport protocols that allows data to be sent via the Core.
@@ -525,7 +525,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         }
     }
 
-    fn get_bound_device(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> Option<SC::DeviceId> {
+    fn get_bound_device(sync_ctx: &SC, ctx: &C, id: SocketId<I, Self>) -> Option<SC::DeviceId> {
         core_udp::get_udp_bound_device(sync_ctx, ctx, id.into())
     }
 
@@ -533,7 +533,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         core_udp::set_udp_posix_reuse_port(sync_ctx, ctx, id, reuse_port)
     }
 
-    fn get_reuse_port(sync_ctx: &SC, ctx: &mut C, id: SocketId<I, Self>) -> bool {
+    fn get_reuse_port(sync_ctx: &SC, ctx: &C, id: SocketId<I, Self>) -> bool {
         core_udp::get_udp_posix_reuse_port(sync_ctx, ctx, id.into())
     }
 
@@ -573,11 +573,11 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         core_udp::set_udp_multicast_hop_limit(sync_ctx, ctx, id.into(), hop_limit)
     }
 
-    fn get_unicast_hop_limit(sync_ctx: &mut SC, ctx: &mut C, id: SocketId<I, Self>) -> NonZeroU8 {
+    fn get_unicast_hop_limit(sync_ctx: &SC, ctx: &C, id: SocketId<I, Self>) -> NonZeroU8 {
         core_udp::get_udp_unicast_hop_limit(sync_ctx, ctx, id.into())
     }
 
-    fn get_multicast_hop_limit(sync_ctx: &mut SC, ctx: &mut C, id: SocketId<I, Self>) -> NonZeroU8 {
+    fn get_multicast_hop_limit(sync_ctx: &SC, ctx: &C, id: SocketId<I, Self>) -> NonZeroU8 {
         core_udp::get_udp_multicast_hop_limit(sync_ctx, ctx, id.into())
     }
 }
@@ -1030,7 +1030,7 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
 
     fn get_bound_device(
         _sync_ctx: &SyncCtx<NonSyncCtx>,
-        _ctx: &mut NonSyncCtx,
+        _ctx: &NonSyncCtx,
         _id: SocketId<I, Self>,
     ) -> Option<<SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
@@ -1047,7 +1047,7 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
 
     fn get_reuse_port(
         _sync_ctx: &SyncCtx<NonSyncCtx>,
-        _ctx: &mut NonSyncCtx,
+        _ctx: &NonSyncCtx,
         _id: SocketId<I, Self>,
     ) -> bool {
         todo!("https://fxbug.dev/47321: needs Core implementation")
@@ -1086,16 +1086,16 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
     }
 
     fn get_unicast_hop_limit(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
-        _ctx: &mut NonSyncCtx,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
+        _ctx: &NonSyncCtx,
         _id: SocketId<I, Self>,
     ) -> NonZeroU8 {
         todo!("https://fxbug.dev/47321: needs Core implementation")
     }
 
     fn get_multicast_hop_limit(
-        _sync_ctx: &mut SyncCtx<NonSyncCtx>,
-        _ctx: &mut NonSyncCtx,
+        _sync_ctx: &SyncCtx<NonSyncCtx>,
+        _ctx: &NonSyncCtx,
         _id: SocketId<I, Self>,
     ) -> NonZeroU8 {
         todo!("https://fxbug.dev/47321: needs Core implementation")
@@ -2728,11 +2728,11 @@ where
         }
     }
 
-    fn get_reuse_port(mut self) -> bool {
+    fn get_reuse_port(self) -> bool {
         let state = &self.get_state().info.state;
         let id = state.into();
 
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
         T::get_reuse_port(sync_ctx, non_sync_ctx, id)
     }
 
@@ -2852,7 +2852,7 @@ where
         Ok(())
     }
 
-    fn get_unicast_hop_limit(mut self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
+    fn get_unicast_hop_limit(self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
         // TODO(https://fxbug.dev/21198): Allow reading hop limits for
         // dual-stack sockets.
         if ip_version != I::VERSION {
@@ -2861,12 +2861,12 @@ where
 
         let state: &SocketState<_, _> = &self.get_state().info.state;
         let id = state.into();
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
 
         Ok(T::get_unicast_hop_limit(sync_ctx, non_sync_ctx, id).get())
     }
 
-    fn get_multicast_hop_limit(mut self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
+    fn get_multicast_hop_limit(self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
         // TODO(https://fxbug.dev/21198): Allow reading hop limits for
         // dual-stack sockets.
         if ip_version != I::VERSION {
@@ -2875,7 +2875,7 @@ where
 
         let state: &SocketState<_, _> = &self.get_state().info.state;
         let id = state.into();
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
 
         Ok(T::get_multicast_hop_limit(sync_ctx, non_sync_ctx, id).get())
     }
