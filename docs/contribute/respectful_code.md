@@ -1,11 +1,10 @@
 # Respectful Code
 
 Inclusivity is central to Fuchsia's culture, and our values include treating
-each other with dignity. As such, it’s important that everyone can contribute
-without facing the harmful effects of bias and discrimination. However, terms
-in the codebase, UIs, and documentation can perpetuate discrimination.
-This document sets forth guidance that aims to address disrespectful
-terminology in code and documentation.
+each other with respect and dignity. Everyone should be able to contribute 
+to Fuchsia without facing the harmful effects of bias and discrimination. 
+This respectful code policy provides guidance to address language that can
+perpetuate discrimination or harm in the codebase, UIs, and documentation.
 
 ## Policy
 
@@ -17,7 +16,7 @@ directly or indirectly, should be avoided and will be replaced.
 Anything that a contributor would read while working on Fuchsia, including:
 
 - Names of variables, types, functions, files, build rules, binaries, exported
-  variables, ...
+  variables...
 - Test data
 - System output and displays
 - Documentation (both inside and outside of source files)
@@ -39,7 +38,7 @@ fuchsia-community-managers@google.com.
 ## What are examples of terminology to be avoided?
 
 These lists are NOT meant to be comprehensive. They contain common examples
-that people have run into. If you see disrespectful language, report it.
+found in documentation. If you see disrespectful language, report it.
 
 **Specific terms**
 
@@ -72,14 +71,13 @@ understand for people with a different cultural context than you.
 
 ## What if I am interfacing with something that violates this policy?
 
-This circumstance has come up a few times, particularly for code implementing
-specifications. In these circumstances, differing from the language in the
-specification may interfere with the ability to understand the implementation.
-For these circumstances, we suggest one of the following, in order of decreasing
+When implementing code, differing from the language in the specification 
+may interfere with the ability to understand the implementation. In these 
+circumstances, we suggest one of the following, in order of decreasing
 preference:
 
 1. If using alternate terminology doesn't interfere with understanding, use
    alternate terminology.
 2. Failing that, do not propagate the terminology beyond the layer of code that
-   is performing the interfacing. Where necessary, use alternative terminology
+   is performing the interfacing. Where necessary, use alternate terminology
    at the API boundaries.
