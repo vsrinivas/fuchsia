@@ -81,12 +81,6 @@
         {
             protocol: "fuchsia.sys.Launcher",
             from: "self",
-            to: "#remote-control",
-            dependency: "weak_for_migration",
-        },
-        {
-            protocol: "fuchsia.sys.Launcher",
-            from: "self",
             to: "#session-manager",
         },
     ],
