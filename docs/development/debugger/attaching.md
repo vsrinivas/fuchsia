@@ -48,7 +48,7 @@ some time to load symbols so you may see a delay before showing the source
 code):
 
 ```none {:.devsite-disable-click-to-copy}
-Attached Process 1 [Running] koid=51590 my_app.cmx
+Attached Process 1 [Running] koid=51590 my_app.cm
 🛑 on bp 1 main(…) • main.cc:222
    220 }
    221
