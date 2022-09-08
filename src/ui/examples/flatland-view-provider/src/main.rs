@@ -163,6 +163,9 @@ impl<'a> AppModel<'a> {
         self.flatland
             .create_image(&mut IMAGE_ID.clone(), &mut buffer_tokens.import_token, 0, image_props)
             .expect("fidl error");
+        self.flatland
+            .set_image_blending_function(&mut IMAGE_ID.clone(), fland::BlendMode::Src)
+            .expect("fidl error");
 
         // Populate the rest of the Flatland scene.  There is a single transform which is set as the
         // root transform; the newly-created image is set as the content of that transform.
