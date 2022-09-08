@@ -91,7 +91,6 @@ const ALLOW_LIST: &'static [&'static str] = &[
     "blobfs-compression",
     "bootserver",
     "cmc",
-    "fconfig",
     "ffx",
     "fidl-format",
     "fidlc",

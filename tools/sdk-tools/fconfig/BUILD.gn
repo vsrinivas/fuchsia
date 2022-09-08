@@ -8,14 +8,7 @@ import("//build/go/go_test.gni")
 
 go_library("main") {
   source_dir = "cmd"
-  deps = [
-    "//third_party/golibs:go.uber.org/multierr",
-    "//tools/sdk-tools/sdkcommon",
-  ]
-  sources = [
-    "fconfig.go",
-    "fconfig_test.go",
-  ]
+  sources = [ "fconfig.go" ]
 }
 
 go_binary("fconfig") {
@@ -23,16 +16,8 @@ go_binary("fconfig") {
   deps = [ ":main" ]
 }
 
-go_test("fconfig-test") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/sdk-tools/fconfig/cmd" ]
-  deps = [ ":main" ]
-}
-
 install_host_tools("fconfig-host") {
-  deps = [
-    ":fconfig",
-    "//tools/sdk-tools/sdkcommon:host-tool-deps",
-  ]
+  deps = [ ":fconfig" ]
   outputs = [ "fconfig" ]
 }
 

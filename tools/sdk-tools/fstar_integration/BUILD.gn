@@ -30,13 +30,11 @@ if (is_host) {
   _tools_out = "${target_gen_dir}/fstar_runtime_deps/host_tools"
   host_test_data("copy_host_tools") {
     sources = [
-      "${host_tools_dir}/fconfig",
       "${host_tools_dir}/ffx",
       "${host_tools_dir}/fssh",
     ]
     deps = [
       "//src/developer/ffx:host($host_toolchain)",
-      "//tools/sdk-tools/fconfig:fconfig-host($host_toolchain)",
       "//tools/sdk-tools/fssh:fssh-host($host_toolchain)",
     ]
     outputs = [ "${_tools_out}/{{source_file_part}}" ]

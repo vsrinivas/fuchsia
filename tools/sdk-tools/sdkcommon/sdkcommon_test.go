@@ -792,44 +792,6 @@ func TestSaveDeviceConfiguration(t *testing.T) {
 	}
 }
 
-func TestRemoveDeviceConfiguration(t *testing.T) {
-	sdk := SDKProperties{}
-	ExecCommand = helperCommandForRemoveTesting
-	defer clearTestEnv()
-
-	tests := []struct {
-		deviceName                string
-		ffxTargetDefaultGetOutput string
-		expectedErrMessage        string
-	}{
-		{
-			deviceName: "old-device-name",
-		},
-		{
-			ffxTargetDefaultGetOutput: "old-device-name",
-			deviceName:                "old-device-name",
-		},
-		{
-			deviceName: "unknown-device",
-			expectedErrMessage: `Error removing unknown-device configuration with data key device_config.unknown-device: BUG: An internal command error occurred.
-			Config key not found`,
-		},
-	}
-
-	for _, test := range tests {
-		os.Setenv("TEST_FFX_TARGET_DEFAULT_GET", test.ffxTargetDefaultGetOutput)
-		err := sdk.RemoveDeviceConfiguration(test.deviceName, false)
-		if err != nil {
-			message := fmt.Sprintf("%v", err)
-			if message != test.expectedErrMessage {
-				t.Errorf("Got error: '%s', want: '%s'", message, test.expectedErrMessage)
-			}
-		} else if test.expectedErrMessage != "" {
-			t.Errorf("Got no error, want: '%s'", test.expectedErrMessage)
-		}
-	}
-}
-
 func TestResolveTargetAddress(t *testing.T) {
 	sdk := SDKProperties{}
 
@@ -1236,7 +1198,7 @@ func helperCommandForRemoteTarget(command string, s ...string) (cmd *exec.Cmd) {
 	cmd = exec.Command(os.Args[0], cs...)
 	// Set this in the environment, so we can control the result.
 	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
-	cmd.Env = append(cmd.Env, "FFX_TEST_REMOTE_TARGET_FCONFIG=1")
+	cmd.Env = append(cmd.Env, "FFX_TEST_REMOTE_TARGET_CONFIG=1")
 	return cmd
 }
 
@@ -1499,7 +1461,7 @@ func handleGetFake(args []string) bool {
 			}`)
 		}
 	case "device_config":
-		if os.Getenv("FFX_TEST_REMOTE_TARGET_FCONFIG") == "1" {
+		if os.Getenv("FFX_TEST_REMOTE_TARGET_CONFIG") == "1" {
 			fmt.Println(`{
 				"remote-target-name":{
 					"bucket":"fuchsia-bucket","device-ip":"::1","device-name":"remote-target-name","image":"release","package-port":"","package-repo":"","ssh-port":"22"

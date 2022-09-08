@@ -25,8 +25,6 @@ BT_MOCKED_TOOLS=(
    "${MOCKED_SSH_BIN}"
    "${MOCKED_SSH_KEYGEN_BIN}"
    "${MOCKED_HOSTNAME_BIN}"
-   "scripts/sdk/gn/base/tools/x64/fconfig"
-   "scripts/sdk/gn/base/tools/arm64/fconfig"
    "scripts/sdk/gn/base/tools/x64/ffx"
    "scripts/sdk/gn/base/tools/arm64/ffx"
    "${MOCKED_GSUTIL}"
@@ -145,44 +143,6 @@ EOF
     source "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_state"
     EXPECTED_SSH_CMD_LINE=("${BT_TEMP_DIR}/${MOCKED_SSH_BIN}" "-F" "${FUCHSIA_WORK_DIR}/sshconfig" "remote-host" "ls" "-l")
     BT_EXPECT_EQ "${EXPECTED_SSH_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
-}
-
-TEST_get-device-name-one-device() {
-    BT_ASSERT_FUNCTION_EXISTS get-device-name
-    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
-      echo fe80::4607:bff:fe69:b53e%enx44070b69b53f atom-device-name-mocked
-EOF
-    DEVICE_NAME="$(get-device-name)"
-    BT_EXPECT_EQ "${DEVICE_NAME}" "atom-device-name-mocked"
-}
-
-TEST_get-device-name-multiple-devices() {
-    BT_ASSERT_FUNCTION_EXISTS get-device-name
-    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
-      echo fe80::4607:bff:fe69:b53e%enx44070b69b53f atom-device-name-mocked
-      echo fe80::2222:34ba:eaf:ab40%enx41234567 bagel-slurp-grave-multi
-EOF
-    DEVICE_NAME="$(get-device-name)"
-    BT_EXPECT_EQ "${DEVICE_NAME}" "atom-device-name-mocked"
-}
-
-TEST_get-device-name-no-device() {
-    BT_ASSERT_FUNCTION_EXISTS get-device-name
-    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
-      >&2 echo No device found.
-EOF
-    DEVICE_NAME="$(get-device-name)"
-    BT_EXPECT_EQ "${DEVICE_NAME}" ""
-}
-
-TEST_get-device-name() {
-    BT_ASSERT_FUNCTION_EXISTS get-device-name
-
-    get-device-name
-    # shellcheck disable=SC1090
-    source "${MOCKED_FFX}.mock_state"
-    EXPECTED_FFX_CMD_LINE=("${MOCKED_FFX}" "target" "list" "--format" "s")
-    BT_EXPECT_EQ "${EXPECTED_FFX_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
 TEST_get-device-ip-by-name() {
@@ -375,26 +335,6 @@ EOF
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/${MOCKED_KILL}.mock_state"
   gn-test-check-mock-args "_ANY_" "-9" 987654321
-}
-
-TEST_get-fuchsia-property-names() {
-  # Don't copy the property names here, just confirm it is a list and they are valid.
-  BT_ASSERT_FUNCTION_EXISTS get-fuchsia-property-names
-  BT_ASSERT_FUNCTION_EXISTS is-valid-fuchsia-property
-
-  IFS=" " read -r -a prop_list <<< "$(get-fuchsia-property-names)"
-
-  # There should be between 1 and 10 properties
-  BT_ASSERT "(( ${#prop_list[@]} > 1 && ${#prop_list[@]} <= 10  ))"
-
-  for prop in "${prop_list[@]}"; do
-    BT_ASSERT is-valid-fuchsia-property "${prop}"
-  done
-}
-
-TEST_is-valid-fuchsia-property()  {
-  BT_ASSERT is-valid-fuchsia-property "device-ip"
-  BT_ASSERT_FAIL  is-valid-fuchsia-property "random-value"
 }
 
 TEST_migrate_ssh_key() {

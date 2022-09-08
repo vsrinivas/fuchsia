@@ -30,8 +30,6 @@ toc:
   section:
   - title: "bootserver"
     path: /reference/tools/sdk/bootserver.md
-  - title: "fconfig"
-    path: /reference/tools/sdk/fconfig.md
   - title: "fserve"
     path: /reference/tools/sdk/fserve.md
   - title: "fssh"

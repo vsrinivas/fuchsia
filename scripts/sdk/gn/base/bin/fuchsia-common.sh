@@ -15,14 +15,6 @@ readonly DEFAULT_EMULATOR_NAME="fuchsia-5254-0063-5e7a"
 
 DEFAULT_FUCHSIA_BUCKET="fuchsia"
 SSH_BIN="$(command -v ssh)"
-FUCHSIA_PROPERTY_NAMES=(
-  "bucket"      # Used as the default for --bucket
-  "device-ip"   # Used as the default for --device-ip
-  "device-name" # Used as the default for --device-name
-  "image"       # Used as the default for image
-  "emu-image"   # Used as the default for image when running the emulator.
-  "emu-bucket"  # Used as the default for bucket when running the emulator.
-)
 
 function is-mac {
   [[ "$(uname -s)" == "Darwin" ]] && return 0
@@ -85,26 +77,14 @@ function fx-error {
   fi
 }
 
-function get-fuchsia-property-names {
-  echo "${FUCHSIA_PROPERTY_NAMES[@]}"
-}
-
-function is-valid-fuchsia-property {
-  [[ "${FUCHSIA_PROPERTY_NAMES[*]}" =~ $1 ]]
-}
-
-function get-internal-property {
-  local prop_path
-  prop_path="$(get-fuchsia-sdk-data-dir)/.properties/$1.txt"
-  if [[ -e "${prop_path}" ]]; then
-    cat "${prop_path}"
-  else
-    echo ""
-  fi
+function get-default-device {
+  "$(get-fuchsia-sdk-tools-dir)/ffx" "target" "default" "get"
 }
 
 function get-fuchsia-property {
-  "$(get-fuchsia-sdk-tools-dir)/fconfig" "get" "$1"
+  local output=$("$(get-fuchsia-sdk-tools-dir)/ffx" config get device_config.${1} 2>/dev/null)
+  # Remove the quotes from string as ffx config get will be quotes enclosed (example "fuchsia").
+  echo $output | tr -d '"'
 }
 
 function ssh-cmd {
@@ -119,30 +99,7 @@ function ssh-cmd {
 }
 
 function get-device-ip {
-  local device_addr
-  device_addr="$(get-fuchsia-property device-ip)"
-  if [[ "${device_addr}" != "" ]]; then
-    echo "${device_addr}"
-    return 0
-  else
-    "$(get-fuchsia-sdk-tools-dir)/ffx" target list --format a 2>/dev/null | head -1
-  fi
-}
-
-function get-device-name {
-  # Check for a device name being configured.
-  local device_name
-  if ! device_name="$(get-fuchsia-property device-name)"; then
-    return $?
-  fi
-  if [[ "${device_name}" != "" ]]; then
-    echo "${device_name}"
-    return 0
-  else
-    if device_name="$("$(get-fuchsia-sdk-tools-dir)/ffx" target list --format s 2>/dev/null)"; then
-      echo "${device_name}" | head -1 | cut -d' ' -f2
-    fi
-  fi
+  "$(get-fuchsia-sdk-tools-dir)/ffx" target list --format a 2>/dev/null | head -1
 }
 
 function get-device-ip-by-name {
@@ -177,12 +134,6 @@ function get-sdk-version {
     return 1
   fi
   echo "${SDK_VERSION}"
-}
-
-function get-package-src-path {
-  # $1 is the SDK ID.  See #get-sdk-version.
-  # $2 is the image name.
-  echo "gs://${FUCHSIA_BUCKET}/development/${1}/packages/${2}.tar.gz"
 }
 
 function get-image-src-path {

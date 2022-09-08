@@ -17,21 +17,21 @@ source "${SCRIPT_SRC_DIR}/fuchsia-common.sh" || exit $?
 
 FUCHSIA_IMAGE_WORK_DIR="$(get-fuchsia-sdk-data-dir)"
 
-DEVICE_NAME_FILTER="$(get-fuchsia-property device-name)"
+DEVICE_NAME_FILTER="$(get-default-device)"
 
-FUCHSIA_BUCKET="$(get-fuchsia-property bucket)"
+FUCHSIA_BUCKET="$(get-fuchsia-property ${DEVICE_NAME_FILTER}.bucket)"
 if [[ "${FUCHSIA_BUCKET}" == "" ]]; then
   FUCHSIA_BUCKET="${DEFAULT_FUCHSIA_BUCKET}"
 fi
 
-IMAGE_NAME="$(get-fuchsia-property image)"
+IMAGE_NAME="$(get-fuchsia-property ${DEVICE_NAME_FILTER}.image)"
 if [[ "${IMAGE_NAME}" == "" ]]; then
   IMAGE_NAME="generic-x64"
 fi
 
 function usage {
   echo "Usage: $0"
-  echo "  [--image <image name>"]
+  echo "  [--image <image name>]"
   echo "    Defaults to ${IMAGE_NAME}. Use --image list to list all available images."
   echo "  [--work-dir <working directory to store image assets>]"
   echo "    Defaults to ${FUCHSIA_IMAGE_WORK_DIR}."

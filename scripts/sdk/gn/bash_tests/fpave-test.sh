@@ -26,6 +26,11 @@ set_up_ffx() {
     echo fe80::c0ff:eec0:ffee%coffee coffee-coffee-coffee-coffee
     exit
   fi
+
+  if [[ "$*" =~ "config get" ]]; then
+    exit
+  fi
+
   last_arg="${@: -1}"
   if [[ "${last_arg}" =~ "unknown-device" ]]; then
     exit 2
@@ -195,6 +200,7 @@ TEST_fpave_switch_types() {
  BT_EXPECT_FILE_CONTAINS_SUBSTRING pave_image2.txt "WARNING: Removing old image files."
  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${FUCHSIA_WORK_DIR}/image/image.md5" "8890373976687374912_image2.tgz"
 }
+
 TEST_fpave_default_keys() {
   set_up_ssh
   set_up_ffx
@@ -221,24 +227,34 @@ TEST_fpave_default_keys() {
 
 TEST_fpave_with_props() {
   set_up_ssh
-  set_up_ffx
   set_up_gsutil
   set_up_sdk_stubs
 
-    cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+  # Setup ffx with device configurations set.
+  cat >"${MOCKED_FFX}.mock_side_effects" <<"EOF"
+  if [[ "$*" =~ "target default get" ]]; then
+    echo "custom-device-name"
+    return 0
+  fi
 
-  if [[ "$1" == "get" ]]; then
-    if [[ "${2}" == "bucket" ]]; then
+  if [[ "$1" == "config" && "$2" == "get" ]]; then
+    if [[ "${3}" == "device_config.custom-device-name.bucket" ]]; then
       echo "other"
       return 0
-    elif [[ "${2}" == "device-name" ]]; then
-      echo "custom-device-name"
-      return 0
-    elif [[ "${2}" == "image" ]]; then
+    elif [[ "${3}" == "device_config.custom-device-name.image" ]]; then
       echo "image4"
       return 0
     fi
     echo ""
+  fi
+
+  last_arg="${@: -1}"
+  if [[ "${last_arg}" =~ "unknown-device" ]]; then
+    exit 2
+  elif [[ "${last_arg}" == "custom-device-name" ]]; then
+    echo "fe80:cccc:cccc:cccc%dev"
+  else
+    echo "fe80::c0ff:eec0:ffee%coffee"
   fi
 EOF
 
@@ -287,18 +303,27 @@ TEST_fpave_in_zedboot() {
 
 TEST_fpave_name_not_resolved() {
   set_up_ssh
-  set_up_ffx
   set_up_gsutil
   set_up_sdk_stubs
 
-    cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
+  # Setup ffx with unknown-device set as the default device.
+  cat >"${MOCKED_FFX}.mock_side_effects" <<"EOF"
+  if [[ "$*" =~ "target default get" ]]; then
+    echo "unknown-device"
+    return 0
+  fi
 
-  if [[ "$1" == "get" ]]; then
-    if [[ "${2}" == "device-name" ]]; then
-      echo "unknown-device"
-      return 0
-    fi
-    echo ""
+  if [[ "$*" =~ "config get" ]]; then
+    exit
+  fi
+
+  last_arg="${@: -1}"
+  if [[ "${last_arg}" =~ "unknown-device" ]]; then
+    exit 2
+  elif [[ "${last_arg}" == "custom-device-name" ]]; then
+    echo "fe80:cccc:cccc:cccc%dev"
+  else
+    echo "fe80::c0ff:eec0:ffee%coffee"
   fi
 EOF
 
@@ -321,8 +346,6 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/x64/bootserver
   scripts/sdk/gn/base/tools/arm64/bootserver
   test-home/.fuchsia/image/pave.sh
-  scripts/sdk/gn/base/tools/x64/fconfig
-  scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/tools/x64/ffx
   scripts/sdk/gn/base/tools/arm64/ffx
   isolated_path_for/ssh
@@ -342,7 +365,6 @@ BT_SET_UP() {
   mkdir -p "${BT_TEMP_DIR}/scripts/sdk/gn/testdata"
   tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${FUCHSIA_WORK_DIR}/image"  "."
 
-  MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
   MOCKED_FFX="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/ffx"
 
 }

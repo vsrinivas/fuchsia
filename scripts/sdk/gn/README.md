@@ -56,7 +56,6 @@ The internal GN SDK helper scripts/tools can be executed after the GN SDK has be
 ```sh
 $ gn_sdk_dir/tools/x64/fserve
 $ gn_sdk_dir/bin/fpave.sh
-$ gn_sdk_dir/bin/femu.sh
 ```
 
 #### SDK generator tests

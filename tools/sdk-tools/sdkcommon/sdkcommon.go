@@ -1064,35 +1064,6 @@ func (sdk SDKProperties) unsetFFXDefaultDevice() error {
 	return err
 }
 
-// RemoveDeviceConfiguration removes the device settings for the given name.
-func (sdk SDKProperties) RemoveDeviceConfiguration(deviceName string, isGlobal bool) error {
-	dataKey := getDeviceDataKey([]string{deviceName}, isGlobal)
-
-	args := []string{"config", "remove", dataKey}
-
-	if isGlobal {
-		args = append(args, []string{"--level", "global"}...)
-	}
-
-	if _, err := sdk.RunFFX(args, false); err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			return fmt.Errorf("Error removing %s configuration with data key %s: %s", deviceName, dataKey, string(exiterr.Stderr))
-		}
-		return fmt.Errorf("Error removing %s configuration with data key %s: %w", deviceName, dataKey, err)
-	}
-
-	defaultDeviceName, err := sdk.getDefaultFFXDevice()
-	if err != nil {
-		return err
-	}
-	if defaultDeviceName == deviceName && !isGlobal {
-		if err := sdk.unsetFFXDefaultDevice(); err != nil {
-			return fmt.Errorf("unable to unset default device via ffx: %v", err)
-		}
-	}
-	return nil
-}
-
 // ResolveTargetAddress evaluates the deviceIP and deviceName passed in
 // to determine the target IP address. This include consulting the configuration
 // information set via `ffx`.

@@ -45,7 +45,6 @@ type toolsPath struct {
 	ffxPath       string
 	ffxInstance   *ffxutil.FFXInstance
 	ffxConfigPath string // Used to make ffx isolated.
-	fconfigPath   string
 	fsshPath      string
 }
 
@@ -111,11 +110,6 @@ func setUp(t *testing.T) (toolsPath, error) {
 	tools.fsshPath = filepath.Join(hostToolsDir, "fssh")
 	if _, err := os.Stat(tools.fsshPath); os.IsNotExist(err) {
 		return tools, fmt.Errorf("unable to find fssh: %w", err)
-	}
-
-	tools.fconfigPath = filepath.Join(hostToolsDir, "fconfig")
-	if _, err := os.Stat(tools.fconfigPath); os.IsNotExist(err) {
-		return tools, fmt.Errorf("unable to find fconfig: %w", err)
 	}
 
 	testOutDir := filepath.Join(t.TempDir(), "fssh_test")
@@ -193,14 +187,14 @@ func TestFSSH(t *testing.T) {
 
 	t.Logf("Using device name: %s and device ip: %s", deviceName, deviceIP)
 
-	// Set the default device in fconfig.
-	fconfigSetDeviceArgs := []string{"set-device", deviceName, "--default"}
-	t.Logf("Setting the default device by running: %s %s", tools.fconfigPath, fconfigSetDeviceArgs)
-	cmd := exec.Command(tools.fconfigPath, fconfigSetDeviceArgs...)
+	// Set the default device in ffx.
+	ffxSetDefaultDeviceArgs := []string{"target",  "default", "set", deviceName}
+	t.Logf("Setting the default device by running: %s %s", tools.ffxPath, ffxSetDefaultDeviceArgs)
+	cmd := exec.Command(tools.ffxPath, ffxSetDefaultDeviceArgs...)
 
 	_, err = cmd.Output()
 	if err != nil {
-		t.Errorf("fconfig returned unexpected error: %s", err)
+		t.Errorf("ffx returned unexpected error: %s", err)
 	}
 
 	usr, err := user.Current()
@@ -220,22 +214,7 @@ func TestFSSH(t *testing.T) {
 		Discoverable: true,
 	}
 
-	// Get default device information from fconfig.
-	fconfigGetAllArgs := []string{"get-all", deviceName}
-	t.Logf("Getting the default device information by running: %s %s", tools.fconfigPath, fconfigGetAllArgs)
-	cmd = exec.Command(tools.fconfigPath, fconfigGetAllArgs...)
-
-	fconfigGetAllOutput, err := cmd.Output()
-	var deviceConfig sdkcommon.DeviceConfig
-	if err := json.Unmarshal(fconfigGetAllOutput, &deviceConfig); err != nil {
-		t.Fatalf("unable to unmarshal device config from fconfig get-all: %s", err)
-	}
-
-	if diff := cmp.Diff(expectedGetAllDeviceConfig, deviceConfig); diff != "" {
-		t.Errorf("fconfig get-all mismatch (-want +got):\n%s", diff)
-	}
-
-	// fssh into the default device from fconfig.
+	// fssh into the default device.
 	fsshArgs := []string{"-private-key", os.Getenv(constants.SSHKeyEnvKey), "echo", "\"Hello World\""}
 	t.Logf("SSH'ing into the default device by running: %s %s", tools.fsshPath, fsshArgs)
 	cmd = exec.Command(tools.fsshPath, fsshArgs...)
