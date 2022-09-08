@@ -7,11 +7,11 @@ use core::fmt::Debug;
 
 // A single indicator status + value.
 #[derive(Clone, Copy, Debug)]
-struct Indicator<T: Clone + Copy + Debug> {
+pub struct Indicator<T: Clone + Copy + Debug> {
     /// Whether this indicator is enabled or not.
-    enabled: bool,
+    pub enabled: bool,
     /// The value of the indicator.
-    value: Option<T>,
+    pub value: Option<T>,
 }
 
 impl<T: Clone + Copy + Debug> Default for Indicator<T> {
@@ -21,7 +21,7 @@ impl<T: Clone + Copy + Debug> Default for Indicator<T> {
 }
 
 impl<T: Clone + Copy + Debug> Indicator<T> {
-    fn set_if_enabled(&mut self, val: T) {
+    pub fn set_if_enabled(&mut self, val: T) {
         if self.enabled {
             self.value = Some(val);
         }
@@ -31,13 +31,13 @@ impl<T: Clone + Copy + Debug> Indicator<T> {
 // A collection of indicators supported by the AG.
 #[derive(Default, Clone)]
 pub struct AgIndicators {
-    service: Indicator<bool>,
-    call: Indicator<bool>,
-    callsetup: Indicator<u8>,
-    callheld: Indicator<u8>,
-    signal: Indicator<u8>,
-    roam: Indicator<bool>,
-    battchg: Indicator<u8>,
+    pub service: Indicator<bool>,
+    pub call: Indicator<bool>,
+    pub callsetup: Indicator<u8>,
+    pub callheld: Indicator<u8>,
+    pub signal: Indicator<u8>,
+    pub roam: Indicator<bool>,
+    pub battchg: Indicator<u8>,
 }
 
 impl AgIndicators {
@@ -55,5 +55,17 @@ impl AgIndicators {
             }
             _ => {}
         }
+    }
+
+    #[cfg(test)]
+    /// Add default values to indicators.
+    pub fn set_default_values(&mut self) {
+        self.service.value = Some(false);
+        self.call.value = Some(false);
+        self.callsetup.value = Some(0);
+        self.callheld.value = Some(0);
+        self.signal.value = Some(0);
+        self.roam.value = Some(false);
+        self.battchg.value = Some(0);
     }
 }

@@ -34,6 +34,8 @@ pub struct SharedState {
     /// Determines whether the SLCI procedure has completed and
     /// can proceed to do other procedures.
     pub initialized: bool,
+    /// Determines whether the indicator status update function is enabled.
+    pub indicators_update_enabled: bool,
 }
 
 // TODO(fxbug.dev/104703): More fields for SLCI
@@ -71,6 +73,7 @@ impl SharedState {
             ag_features: AgFeatures::default(),
             ag_indicators: AgIndicators::default(),
             initialized: false,
+            indicators_update_enabled: true,
         }
     }
 

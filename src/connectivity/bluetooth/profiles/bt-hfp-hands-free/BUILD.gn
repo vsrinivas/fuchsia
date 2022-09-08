@@ -40,6 +40,7 @@ rustc_binary("bin") {
     "src/peer.rs",
     "src/peer/indicators.rs",
     "src/peer/procedure.rs",
+    "src/peer/procedure/phone_status.rs",
     "src/peer/procedure/slc_initialization.rs",
     "src/peer/service_level_connection.rs",
     "src/profile.rs",

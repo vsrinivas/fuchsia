@@ -5,8 +5,10 @@
 use anyhow::{format_err, Error};
 use at_commands as at;
 
+pub mod phone_status;
 pub mod slc_initialization;
 
+use phone_status::PhoneStatusProcedure;
 use slc_initialization::SlcInitProcedure;
 
 use super::service_level_connection::SharedState;
@@ -15,6 +17,8 @@ use super::service_level_connection::SharedState;
 pub enum ProcedureMarker {
     /// The Service Level Connection Initialization procedure as defined in HFP v1.8 Section 4.2.
     SlcInitialization,
+    /// The Transfer of Phone Status procedures as defined in HFP v1.8 Section 4.4 - 4.7.
+    PhoneStatus,
 }
 
 impl ProcedureMarker {
@@ -22,6 +26,7 @@ impl ProcedureMarker {
     pub fn initialize(&self) -> Box<dyn Procedure> {
         match self {
             Self::SlcInitialization => Box::new(SlcInitProcedure::new()),
+            Self::PhoneStatus => Box::new(PhoneStatusProcedure::new()),
         }
     }
 
