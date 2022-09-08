@@ -15,7 +15,7 @@ use futures::{
     stream::{StreamExt, TryStreamExt},
     FutureExt,
 };
-use tracing::{debug, error, warn};
+use log::{debug, error, warn};
 
 use std::collections::{hash_map, BinaryHeap, HashMap};
 use std::convert::TryFrom;
@@ -492,8 +492,11 @@ async fn handle_events<T: FakeClockObserver>(
     .await
 }
 
-#[fuchsia::main(logging_minimum_severity = "trace")]
+#[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    fuchsia_syslog::init().expect("failed to initialize logger");
+    fuchsia_syslog::set_severity(-2);
+
     debug!("Starting mock clock service");
 
     let mock_clock = Arc::new(Mutex::new(FakeClock::<()>::new()));
@@ -545,12 +548,44 @@ mod tests {
     use fuchsia_zircon::Koid;
     use futures::channel::mpsc;
     use named_timer::DeadlineId;
+    use std::sync::Once;
 
     const DEADLINE_ID: DeadlineId<'static> = DeadlineId::new("component_1", "code_1");
     const DEADLINE_ID_2: DeadlineId<'static> = DeadlineId::new("component_1", "code_2");
 
-    #[fuchsia::test]
+    /// log::Log implementation that uses stdout.
+    ///
+    /// Useful when debugging tests.
+    struct Logger;
+
+    impl log::Log for Logger {
+        fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
+            true
+        }
+
+        fn log(&self, record: &log::Record<'_>) {
+            println!("{}", record.args())
+        }
+
+        fn flush(&self) {}
+    }
+
+    static LOGGER: Logger = Logger;
+
+    static LOGGER_ONCE: Once = Once::new();
+
+    fn set_logger_for_test() {
+        // log::set_logger will panic if called multiple times; using a Once makes
+        // set_logger_for_test idempotent
+        LOGGER_ONCE.call_once(|| {
+            log::set_logger(&LOGGER).unwrap();
+            log::set_max_level(log::LevelFilter::Trace);
+        })
+    }
+
+    #[test]
     fn test_event_heap() {
+        set_logger_for_test();
         let time = zx::Time::get_monotonic();
         let after = time + 10.millis();
         let e1 = PendingEvent { time, event: 0 };
@@ -562,8 +597,9 @@ mod tests {
         assert_eq!(heap.pop().unwrap().time, after);
     }
 
-    #[fuchsia::test]
+    #[test]
     fn test_simple_increments() {
+        set_logger_for_test();
         let mut mock_clock = FakeClock::<()>::new();
         let begin = mock_clock.time;
         let skip = 10.millis();
@@ -571,8 +607,9 @@ mod tests {
         assert_eq!(mock_clock.time, begin + skip);
     }
 
-    #[fuchsia::test]
+    #[test]
     fn test_random_increments() {
+        set_logger_for_test();
         let mut mock_clock = FakeClock::<()>::new();
         let min = 10.nanos();
         let max = 20.nanos();
@@ -593,8 +630,9 @@ mod tests {
             .unwrap_or(false)
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn test_event_signaling() {
+        set_logger_for_test();
         let clock_handle = Arc::new(Mutex::new(FakeClock::<()>::new()));
         let mut mock_clock = clock_handle.lock().unwrap();
         let (e1, cli1) = zx::EventPair::create().unwrap();
@@ -617,8 +655,9 @@ mod tests {
         assert!(check_signaled(&cli3));
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn test_free_running() {
+        set_logger_for_test();
         let clock_handle = Arc::new(Mutex::new(FakeClock::<()>::new()));
         let event = {
             let mut mock_clock = clock_handle.lock().unwrap();
@@ -658,8 +697,9 @@ mod tests {
         }
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn test_observes_handle_closed() {
+        set_logger_for_test();
         let clock_handle = Arc::new(Mutex::new(FakeClock::<RemovalObserver>::new()));
         let event = {
             let mut mock_clock = clock_handle.lock().unwrap();
@@ -676,7 +716,7 @@ mod tests {
         assert_eq!(recv.next().await.unwrap(), koid);
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn test_reschedule() {
         let clock_handle = Arc::new(Mutex::new(FakeClock::<RemovalObserver>::new()));
         let mut mock_clock = clock_handle.lock().unwrap();
@@ -706,7 +746,7 @@ mod tests {
         assert!(check_signaled(&client));
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn test_stop_points() {
         let clock_handle = Arc::new(Mutex::new(FakeClock::<RemovalObserver>::new()));
         let (client_event, server_event) = zx::EventPair::create().unwrap();
@@ -763,7 +803,7 @@ mod tests {
         assert_eq!(clock_handle.lock().unwrap().time, future_deadline_timeout);
     }
 
-    #[fuchsia::test]
+    #[fasync::run_singlethreaded(test)]
     async fn test_ignored_stop_points() {
         let clock_handle = Arc::new(Mutex::new(FakeClock::<RemovalObserver>::new()));
         let () = start_free_running(
