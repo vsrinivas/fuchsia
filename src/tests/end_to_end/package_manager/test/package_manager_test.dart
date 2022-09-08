@@ -84,6 +84,7 @@ void main() {
 
     printErrorHelp();
   });
+
   group('Package Manager', () {
     String originalRewriteRuleJson;
     Set<String> originalRepos;
@@ -499,13 +500,13 @@ void main() {
           'Setting rewriting rule for new repository', localRewriteRule, 0);
 
       var response = await sl4fDriver.ssh.run(
-          'run fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample.cmx');
+          'run-test-suite fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample.cm');
       expect(response.exitCode, 0);
-      expect(response.stdout.toString(), 'Hello, World!\n');
+      expect(response.stdout.toString().contains('Hello, World!\n'), true);
       response = await sl4fDriver.ssh.run(
-          'run fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample2.cmx');
+          'run-test-suite fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample2.cm');
       expect(response.exitCode, 0);
-      expect(response.stdout.toString(), 'Hello, World2!\n');
+      expect(response.stdout.toString().contains('Hello, World2!\n'), true);
 
       await repoServer.pkgctlRuleReplace(
           'Restoring rewriting rule to original state',
@@ -541,14 +542,14 @@ void main() {
       await repoServer.pkgctlRuleReplace(
           'Setting rewriting rule for new repository', localRewriteRule, 0);
 
-      var response = await sl4fDriver.ssh
-          .run('run $repoUrl/$testPackageName#meta/package-manager-sample.cmx');
+      var response = await sl4fDriver.ssh.run(
+          'run-test-suite $repoUrl/$testPackageName#meta/package-manager-sample.cm');
       expect(response.exitCode, 0);
-      expect(response.stdout.toString(), 'Hello, World!\n');
+      expect(response.stdout.toString().contains('Hello, World!\n'), true);
       response = await sl4fDriver.ssh.run(
-          'run $repoUrl/$testPackageName#meta/package-manager-sample2.cmx');
+          'run-test-suite $repoUrl/$testPackageName#meta/package-manager-sample2.cm');
       expect(response.exitCode, 0);
-      expect(response.stdout.toString(), 'Hello, World2!\n');
+      expect(response.stdout.toString().contains('Hello, World2!\n'), true);
 
       await repoServer.pkgctlRuleReplace(
           'Restoring rewriting rule to original state',
