@@ -35,9 +35,6 @@ group("hw_tests") {
     "vkvalidation",
     "//src/lib/vulkan/tests:image-pipe-swapchain-tests",
   ]
-
-  # disabled, but build
-  deps += [ "vkpriority:vkpriority_cmp" ]
 }
 
 group("vulkan-tests") {
@@ -51,6 +48,7 @@ group("vulkan-tests") {
     "vk_timer_query",
     "vkext",
     "vkloop",
+    "vkpriority",
     "vkreadback",
   ]
 }

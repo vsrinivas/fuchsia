@@ -34,6 +34,11 @@ fuchsia_component("vkpriority_cmp") {
 fuchsia_test_package("vkpriority-pkg") {
   package_name = "vkpriority"
   test_components = [ ":vkpriority_cmp" ]
+
+  # Test could flake due to bad luck, so only enable for manual runs.
+  test_specs = {
+    environments = []
+  }
 }
 
 group("vkpriority") {
