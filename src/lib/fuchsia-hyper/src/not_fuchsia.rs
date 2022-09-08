@@ -8,10 +8,10 @@ use {
     futures::io,
     http::uri::{Scheme, Uri},
     hyper::service::Service,
-    log::warn,
     rustls::ClientConfig,
     std::net::ToSocketAddrs,
     std::task::{Context, Poll},
+    tracing::warn,
 };
 
 pub(crate) fn configure_cert_store(tls: &mut ClientConfig) {

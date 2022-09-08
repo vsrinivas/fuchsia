@@ -29,8 +29,8 @@ rustc_library("fuchsia-hyper") {
   if (is_host) {
     deps += [
       "//third_party/rust_crates:async-net",
-      "//third_party/rust_crates:log",
       "//third_party/rust_crates:rustls-native-certs",
+      "//third_party/rust_crates:tracing",
     ]
     test_deps += [ "//third_party/rust_crates:anyhow" ]
   } else {
