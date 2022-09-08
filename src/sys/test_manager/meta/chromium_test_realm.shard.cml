@@ -91,6 +91,30 @@
             to: "#chromium-tests",
             rights: [ "rw*" ],
         },
+        {
+            directory: "dev-goldfish-address-space",
+            from: "parent",
+            to: "#chromium-tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev-goldfish-control",
+            from: "parent",
+            to: "#chromium-tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev-goldfish-pipe",
+            from: "parent",
+            to: "#chromium-tests",
+            rights: [ "rw*" ],
+        },
+        {
+            directory: "dev-goldfish-sync",
+            from: "parent",
+            to: "#chromium-tests",
+            rights: [ "rw*" ],
+        },
 
         // Tests of the media system want to test against the real hardware
         // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.
