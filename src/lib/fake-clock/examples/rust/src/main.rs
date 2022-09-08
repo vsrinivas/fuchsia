@@ -8,14 +8,13 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon as zx;
 use futures::{StreamExt, TryStreamExt};
-use log::warn;
 use named_timer::DeadlineId;
+use tracing::warn;
 
 const DEADLINE_NAME: DeadlineId<'static> = DeadlineId::new("fake-clock-example", "deadline");
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
-    let () = fuchsia_syslog::init().expect("failed to initialize logger");
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(|stream: ExampleRequestStream| stream);
     fs.take_and_serve_directory_handle().expect("failed to serve directory handle");
