@@ -26,14 +26,21 @@ fuchsia_driver("usb-cdc-ecm-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "usb-cdc-ecm.c" ]
+  sources = [ "usb-cdc-ecm.cc" ]
   deps = [
     ":ethernet_usb_cdc_ecm_bind",
     ":usb-cdc-ecm-lib",
-    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_c",
+    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.usb.peripheral:fuchsia.hardware.usb.peripheral_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.usb.virtual.bus:fuchsia.hardware.usb.virtual.bus_cpp_wire",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fdio",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
+    "//src/lib/ddk",
     "//src/lib/listnode",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/pretty",
   ]
 }
@@ -46,12 +53,15 @@ fuchsia_driver_component("usb-cdc-ecm") {
 }
 
 source_set("usb-cdc-ecm-lib") {
-  sources = [ "usb-cdc-ecm-lib.c" ]
+  sources = [ "usb-cdc-ecm-lib.cc" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
-    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_c",
     "//sdk/banjo/fuchsia.hardware.usb.composite:fuchsia.hardware.usb.composite_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_c",
     "//src/devices/usb/lib/usb",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/pretty",
     "//zircon/system/ulib/sync",
   ]
 }

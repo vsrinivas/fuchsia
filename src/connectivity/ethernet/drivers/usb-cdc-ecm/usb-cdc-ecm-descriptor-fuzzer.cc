@@ -63,13 +63,13 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) {
   usb_endpoint_descriptor_t* rx_ep = nullptr;
   usb_interface_descriptor_t* default_ifc = nullptr;
   usb_interface_descriptor_t* data_ifc = nullptr;
-  ecm_ctx_t ecm_ctx;
-  ecm_ctx.usb = proto;
+  usb_cdc_ecm::EcmCtx ecm_ctx;
+  ecm_ctx.usbproto = proto;
   usb_desc_iter_t iter;
   if (ZX_OK != usb_desc_iter_init(&proto, &iter)) {
     return 0;
   }
-  parse_usb_descriptor(&iter, &int_ep, &tx_ep, &rx_ep, &default_ifc, &data_ifc, &ecm_ctx);
+  ecm_ctx.ParseUsbDescriptor(&iter, &int_ep, &tx_ep, &rx_ep, &default_ifc, &data_ifc);
   usb_desc_iter_release(&iter);
   return 0;
 }

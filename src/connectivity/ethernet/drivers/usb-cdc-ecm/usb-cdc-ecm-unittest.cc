@@ -184,13 +184,11 @@ TEST_F(UsbCdcEcmTest, ParseUsbDescriptorTest) {
   usb_endpoint_descriptor_t* rx_ep = nullptr;
   usb_interface_descriptor_t* default_ifc = nullptr;
   usb_interface_descriptor_t* data_ifc = nullptr;
-  ecm_ctx_t ecm_ctx;
+  usb_cdc_ecm::EcmCtx ecm_ctx;
   usb_protocol_t* usb = GetUsbProto();
-  ecm_ctx.usb = *usb;
-
+  ecm_ctx.usbproto = *usb;
   ASSERT_OK(usb_desc_iter_init(usb, &iter));
-  ASSERT_OK(
-      parse_usb_descriptor(&iter, &int_ep, &tx_ep, &rx_ep, &default_ifc, &data_ifc, &ecm_ctx));
+  ASSERT_OK(ecm_ctx.ParseUsbDescriptor(&iter, &int_ep, &tx_ep, &rx_ep, &default_ifc, &data_ifc));
 }
 
 }  // namespace
