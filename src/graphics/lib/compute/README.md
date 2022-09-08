@@ -46,8 +46,8 @@ ffx component resolve /core/compute-benchmarks
 # Explore the `/core/compute-benchmarks` instance
 
 ```
-ffx component explore /core/compute-benchmarks
-$ ls ns/pkg/bin
+ffx component explore -l namespace /core/compute-benchmarks
+$ ls pkg/bin
 bench-vk
 radix-sort-vk-bench
 spinel-vk-bench
@@ -56,13 +56,13 @@ spinel-vk-bench
 # Run `bench-vk`:
 
 ```
-$ chns bench-vk
+$ bench-vk
 ```
 
 # Run `radix-sort-vk-bench`:
 
 ```
-$ chns radix-sort-vk-bench 8086:591C pkg/data/targets/radix_sort_vk_intel_gen8_u32_resource.ar direct 16384 1048576
+$ radix-sort-vk-bench 8086:591C pkg/data/targets/radix_sort_vk_intel_gen8_u32_resource.ar direct 16384 1048576
 ```
 
 # Run `spinel-vk-bench`
@@ -100,14 +100,14 @@ spinel_vk_bench_copy_svg() {
 ```
 $ wget -P /tmp https://upload.wikimedia.org/wikipedia/en/f/ff/UAB_Blazers_logo.svg
 $ spinel_vk_bench_copy_svg /tmp/UAB_Blazers_logo.svg
-$ ffx component explore /core/compute-benchmarks
+$ ffx component explore -l namespace /core/compute-benchmarks
 ```
 
 ## Fuchsia:
 
 ```
-$ chns spinel-vk-bench -h
-$ chns spinel-vk-bench -Q -f /cache/UAB_Blazers_logo.svg -Q -t 20 -r -c 100,100:2
+$ spinel-vk-bench -h
+$ spinel-vk-bench -Q -f /cache/UAB_Blazers_logo.svg -Q -t 20 -r -c 100,100:2
 $ <Ctrl-C to exit>
 ```
 
