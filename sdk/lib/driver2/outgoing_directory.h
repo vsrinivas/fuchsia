@@ -33,6 +33,28 @@ class OutgoingDirectory final {
                     fdf_dispatcher_t* dispatcher)
       : component_outgoing_dir_(std::move(component_outgoing_dir)), dispatcher_(dispatcher) {}
 
+  // OutgoingDirectory can be moved. Once moved, invoking a method on an
+  // instance will yield undefined behavior.
+  OutgoingDirectory(OutgoingDirectory&&) noexcept;
+  OutgoingDirectory& operator=(OutgoingDirectory&&) noexcept;
+
+  // OutgoingDirectory cannot be copied.
+  OutgoingDirectory(const OutgoingDirectory&) = delete;
+  OutgoingDirectory& operator=(const OutgoingDirectory&) = delete;
+
+  // Adds an instance of a FIDL Service.
+  //
+  // A |handler| is added to provide an |instance| of a service.
+  //
+  // The template type |Service| must be the generated type representing a FIDL Service.
+  // The generated class |Service::Handler| helps the caller populate a
+  // |ServiceInstanceHandler|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: The instance already exists.
+  //
+  // ZX_ERR_INVALID_ARGS: |instance| is an empty string or |handler| is empty.
   template <typename Service>
   zx::status<> AddService(ServiceInstanceHandler handler,
                           cpp17::string_view instance = kDefaultInstance) {
@@ -66,8 +88,8 @@ class OutgoingDirectory final {
         RegisterRuntimeToken(std::move(server_end), handler.share());
       };
 
-      zx::status<> status = component_outgoing_dir().AddProtocolAt(std::move(outgoing_handler),
-                                                                   basepath, member_name);
+      zx::status<> status =
+          component_outgoing_dir_.AddProtocolAt(std::move(outgoing_handler), basepath, member_name);
       if (status.is_error()) {
         return status;
       }
@@ -75,16 +97,92 @@ class OutgoingDirectory final {
     return zx::ok();
   }
 
+  //
   // Wrappers around |component::OutgoingDirectory|.
+  //
+  // Protocols are not supported. Drivers should use |AddService| instead.
+  //
 
+  // Starts serving the outgoing directory on the given channel. This should
+  // be invoked after the outgoing directory has been populated, e.g. via
+  // |AddService|.
+  //
+  // This object will implement the |fuchsia.io.Directory| interface using this
+  // channel. Note that this method returns immediately and that the |dispatcher|
+  // provided to the constructor will be responsible for processing messages
+  // sent to the server endpoint.
+  //
+  // # Errors
+  //
+  // ZX_ERR_BAD_HANDLE: |directory_server_end| is not a valid handle.
+  //
+  // ZX_ERR_ACCESS_DENIED: |directory_server_end| has insufficient rights.
   zx::status<> Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_server_end) {
-    return component_outgoing_dir().Serve(std::move(directory_server_end));
+    return component_outgoing_dir_.Serve(std::move(directory_server_end));
   }
 
-  // TODO(fxbug.dev/108374): implement the rest of the |OutgoingDirectory| wraoper functions
-  // and make |component_outgoing_dir| private.
+  // Serve a subdirectory at the root of this outgoing directory.
+  //
+  // The directory will be installed under the path |directory_name|. When
+  // a request is received under this path, then it will be forwarded to
+  // |remote_dir|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_ALREADY_EXISTS: An entry with the provided name already exists.
+  //
+  // ZX_ERR_BAD_HANDLE: |remote_dir| is an invalid handle.
+  //
+  // ZX_ERR_INVALID_ARGS: |directory_name| is an empty string.
+  zx::status<> AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
+                            cpp17::string_view directory_name) {
+    return component_outgoing_dir_.AddDirectory(std::move(remote_dir), directory_name);
+  }
 
-  component::OutgoingDirectory& component_outgoing_dir() { return component_outgoing_dir_; }
+  // Same as |AddDirectory| but allows setting the parent directory
+  // in which the directory will be installed.
+  zx::status<> AddDirectoryAt(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
+                              cpp17::string_view path, cpp17::string_view directory_name) {
+    return component_outgoing_dir_.AddDirectoryAt(std::move(remote_dir), path, directory_name);
+  }
+
+  // Removes an instance of a FIDL Service.
+  //
+  // # Errors
+  //
+  // ZX_ERR_NOT_FOUND: The instance was not found.
+  //
+  // # Example
+  //
+  // ```
+  // outgoing.RemoveService<lib_example::MyService>("my-instance");
+  // ```
+  template <typename Service>
+  zx::status<> RemoveService(cpp17::string_view instance = kDefaultInstance) {
+    return RemoveService(Service::Name, instance);
+  }
+
+  // Same as above but untyped.
+  zx::status<> RemoveService(cpp17::string_view service,
+                             cpp17::string_view instance = kDefaultInstance) {
+    return component_outgoing_dir_.RemoveService(service, instance);
+  }
+
+  // Removes the subdirectory on the provided |directory_name|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_NOT_FOUND: No entry was found with provided name.
+  zx::status<> RemoveDirectory(cpp17::string_view directory_name) {
+    return component_outgoing_dir_.RemoveDirectory(directory_name);
+  }
+
+  // Same as |RemoveDirectory| but allows specifying the parent directory
+  // that the directory will be removed from. The parent directory, |path|,
+  // will not be removed.
+  zx::status<> RemoveDirectoryAt(cpp17::string_view path, cpp17::string_view directory_name) {
+    return component_outgoing_dir_.RemoveDirectoryAt(path, directory_name);
+  }
 
  private:
   template <typename T>

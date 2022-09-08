@@ -6,6 +6,21 @@
 
 namespace driver {
 
+OutgoingDirectory::OutgoingDirectory(OutgoingDirectory&& other) noexcept
+    : component_outgoing_dir_(std::move(other.component_outgoing_dir_)),
+      dispatcher_(other.dispatcher_) {
+  other.dispatcher_ = nullptr;
+}
+
+OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexcept {
+  component_outgoing_dir_ = std::move(other.component_outgoing_dir_);
+  dispatcher_ = other.dispatcher_;
+
+  other.dispatcher_ = nullptr;
+
+  return *this;
+}
+
 void OutgoingDirectory::RegisterRuntimeToken(zx::channel token, AnyHandler handler) {
   auto token_connect_handler = [handler = std::move(handler)](
                                    fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol,
