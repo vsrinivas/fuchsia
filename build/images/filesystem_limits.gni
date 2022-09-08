@@ -11,8 +11,8 @@ declare_args() {
 
   # Maximum allowable contents for the /blob in a release mode build for
   # both slot A and slot B of the system.
-  # Zero means no limit.
-  blobfs_capacity = "0"
+  # False means no limit.
+  blobfs_capacity = false
 
   # Maximum allowable image_size for /blob in a release mode build.
   # Zero means no limit.

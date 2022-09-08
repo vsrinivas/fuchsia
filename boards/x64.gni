@@ -11,7 +11,7 @@ _imports = {  # Import into hidden scope, to avoid importing into args.gn.
 board_name = "x64"
 board_description = "A generic x64 device"
 
-blobfs_capacity = "10485760000"  # 10000 MiB
+blobfs_capacity = 10485760000  # 10000 MiB
 
 _bootfs_deps = [
   # Drivers

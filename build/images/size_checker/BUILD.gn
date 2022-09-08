@@ -13,6 +13,7 @@ import("//src/developer/ffx/build/ffx_action.gni")
 assert(!bootfs_only)
 assert(size_checker_input != {
        })
+assert(blobfs_capacity != false)
 
 _output_dir =
     get_label_info(":convert_size_limits_to_size_budgets", "target_out_dir")
@@ -52,7 +53,7 @@ action("convert_size_limits_to_size_budgets") {
     "--non-blobfs-output",
     rebase_path(_size_budgets_non_blobfs_file, root_build_dir),
     "--blobfs-capacity",
-    blobfs_capacity,
+    "$blobfs_capacity",
   ]
 }
 
