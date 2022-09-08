@@ -228,7 +228,7 @@ fuchsia_test_package("web-semantics-test") {
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
     "//src/ui/a11y/lib/semantics/tests/web_client:component",
     "//src/ui/a11y/lib/semantics/tests/web_client:web_client_default_config",
-    "//src/ui/bin/text:text_manager_comp_v2",
+    "//src/ui/bin/text:text_manager_comp",
   ]
   test_specs = {
     log_settings = {

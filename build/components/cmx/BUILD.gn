@@ -269,7 +269,6 @@ group("cmx_allowlist") {
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv1-component_manifest_compile",
     "//src/ui/bin/root_presenter:component_v1_for_test_manifest_compile",
     "//src/ui/bin/root_presenter:component_v1_manifest_compile",
-    "//src/ui/bin/text:ime_service_comp_manifest_compile",
     "//src/ui/bin/text:text_manager_comp_manifest_compile",
     "//src/ui/examples/flatland-view-provider:flatland-view-provider-v1_manifest_compile",
     "//src/ui/examples/simplest_app:simplest_app_component_manifest_compile",

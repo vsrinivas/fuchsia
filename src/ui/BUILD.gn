@@ -157,10 +157,7 @@ group("ui_packages") {
     deps += [
       "bin/input-pipeline",
       "bin/root_presenter",
-
-      # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
-      # text_manager.
-      "bin/text:ime_service",
+      "bin/text:text_manager",
     ]
   }
 }
@@ -190,11 +187,8 @@ group("ui_with_root_presenter_packages") {
     ":ui_with_root_presenter_package",
     "bin/input-pipeline",
     "bin/root_presenter",
+    "bin/text:text_manager",
     "//src/graphics/bundles:vulkan",
-
-    # TODO(fxbug.dev/82822): Remove after out-of-tree tests migrate to
-    # text_manager.
-    "bin/text:ime_service",
   ]
 }
 

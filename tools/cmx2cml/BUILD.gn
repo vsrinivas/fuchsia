@@ -61,7 +61,7 @@ group("injected_service_v2_providers") {
     "//src/ui/a11y/bin/a11y_manager:component_v2($default_toolchain)",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component($default_toolchain)",
     "//src/ui/bin/root_presenter:component_v2($default_toolchain)",
-    "//src/ui/bin/text:text_manager_comp_v2($default_toolchain)",
+    "//src/ui/bin/text:text_manager_comp($default_toolchain)",
     "//src/ui/scenic:component_v2($default_toolchain)",
   ]
 }

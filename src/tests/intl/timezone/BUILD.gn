@@ -86,7 +86,7 @@ fuchsia_unittest_package("timezone-test") {
     "//src/intl/intl_services:component",
     "//src/settings/service:setui_service_v2",
     "//src/sys/stash:stash_v2",
-    "//src/ui/bin/text:text_manager_comp_v2",
+    "//src/ui/bin/text:text_manager_comp",
   ]
 }
 
@@ -156,7 +156,7 @@ fuchsia_unittest_package("timezone-flutter-test") {
     "//src/tests/intl/timestamp-server-dart:timestamp-server-flutter",
     "//src/ui/a11y/bin/a11y_manager:component_v2",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/bin/text:text_manager_comp_v2",
+    "//src/ui/bin/text:text_manager_comp",
     "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
 

@@ -78,7 +78,7 @@ fuchsia_test_package("touch-input-test-ip") {
     "//src/developer/memory/monitor:component",
     "//src/fonts:font_provider_cm",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
-    "//src/ui/bin/text:text_manager_comp_v2",
+    "//src/ui/bin/text:text_manager_comp",
     "//src/ui/tests/integration_input_tests/touch/embedding-flutter:realm",
     "//src/ui/tests/integration_input_tests/touch/one-chromium:component",
     "//src/ui/tests/integration_input_tests/touch/one-flutter:realm",
