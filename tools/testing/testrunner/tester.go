@@ -764,7 +764,10 @@ func (t *FFXTester) RunSnapshot(ctx context.Context, snapshotFile string) error 
 		return nil
 	}
 	startTime := clock.Now(ctx)
-	err := t.ffx.Snapshot(ctx, t.localOutputDir, snapshotFile)
+	const maxReconnectAttempts = 3
+	err := retry.Retry(ctx, retry.WithMaxAttempts(retry.NewConstantBackoff(time.Second), maxReconnectAttempts), func() error {
+		return t.ffx.Snapshot(ctx, t.localOutputDir, snapshotFile)
+	}, nil)
 	if err != nil {
 		logger.Errorf(ctx, "%s: %s", constants.FailedToRunSnapshotMsg, err)
 	}

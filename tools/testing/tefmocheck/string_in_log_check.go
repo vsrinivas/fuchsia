@@ -459,15 +459,23 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: ffxutilconstants.TimeoutReachingTargetMsg,
 			Type:   swarmingOutputType,
 		},
-		// General ffx error check.
-		&stringInLogCheck{
-			String: ffxutilconstants.CommandFailedMsg,
-			Type:   swarmingOutputType,
-		},
 		// For fxbug.dev/56651.
 		// This error usually happens due to an SSH failure, so that error should take precedence.
 		&stringInLogCheck{
 			String: fmt.Sprintf("testrunner ERROR: %s", testrunnerconstants.FailedToRunSnapshotMsg),
+			Type:   swarmingOutputType,
+		},
+		// General ffx error check.
+		&stringInLogCheck{
+			String: fmt.Sprintf("testrunner FATAL: %s", ffxutilconstants.CommandFailedMsg),
+			Type:   swarmingOutputType,
+		},
+		&stringInLogCheck{
+			String: fmt.Sprintf("testrunner ERROR: %s", ffxutilconstants.CommandFailedMsg),
+			Type:   swarmingOutputType,
+		},
+		&stringInLogCheck{
+			String: fmt.Sprintf("botanist ERROR: %s", ffxutilconstants.CommandFailedMsg),
 			Type:   swarmingOutputType,
 		},
 		// This error happens when `botanist run` exceeds its timeout, e.g.
