@@ -57,9 +57,7 @@ class MsdIntelDevice : public msd_device_t,
   }
 
   // Initialize the device using the given platform |device_handle|.
-  // If |exec_init_batch|, then the render init batch will be executed
-  // (normal case).
-  bool Init(void* device_handle, bool exec_init_batch);
+  bool Init(void* device_handle);
 
   struct DumpState {
     struct RenderCommandStreamer {
@@ -120,6 +118,10 @@ class MsdIntelDevice : public msd_device_t,
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     DASSERT(sequencer_);
     return sequencer_.get();
+  }
+
+  std::vector<EngineCommandStreamer*> engine_command_streamers() {
+    return {render_engine_cs(), video_command_streamer()};
   }
 
   // MsdIntelConnection::Owner

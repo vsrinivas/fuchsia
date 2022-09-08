@@ -40,17 +40,9 @@ class TestMsdIntelDevice : public testing::Test {
 
       ASSERT_TRUE(device->WaitIdleForTest());
 
-      // check that the render init batch succeeded.
       constexpr uint32_t kRenderCsDefaultSeqNo = 0x1000;
-      constexpr uint32_t kVideoCsDefaultSeqNo = kRenderCsDefaultSeqNo + 1;
-      constexpr uint32_t kRenderCsRenderInitBatchSeqNo = kVideoCsDefaultSeqNo + 1;
-      if (DeviceId::is_gen9(device->device_id())) {
-        ASSERT_EQ(device->render_engine_cs()->hardware_status_page()->read_sequence_number(),
-                  kRenderCsRenderInitBatchSeqNo);
-      } else {
-        ASSERT_EQ(device->render_engine_cs()->hardware_status_page()->read_sequence_number(),
-                  kRenderCsDefaultSeqNo);
-      }
+      ASSERT_EQ(device->render_engine_cs()->hardware_status_page()->read_sequence_number(),
+                kRenderCsDefaultSeqNo);
 
       // test register access
       uint32_t expected = 0xabcd1234;
@@ -304,8 +296,7 @@ class TestMsdIntelDevice : public testing::Test {
     std::unique_ptr<MsdIntelDevice> device(new MsdIntelDevice());
     ASSERT_NE(device, nullptr);
 
-    constexpr bool kExecInitBatch = false;
-    ASSERT_TRUE(device->Init(platform_device->GetDeviceHandle(), kExecInitBatch));
+    ASSERT_TRUE(device->Init(platform_device->GetDeviceHandle()));
 
     auto command_streamer = get_command_streamer(device.get(), id);
     ASSERT_TRUE(command_streamer);
@@ -491,8 +482,7 @@ class TestMsdIntelDevice : public testing::Test {
 
     std::unique_ptr<MsdIntelDevice> device = std::unique_ptr<MsdIntelDevice>(new MsdIntelDevice());
 
-    constexpr bool kExecInitBatch = false;
-    ASSERT_TRUE(device->Init(platform_device->GetDeviceHandle(), kExecInitBatch));
+    ASSERT_TRUE(device->Init(platform_device->GetDeviceHandle()));
 
     EXPECT_EQ(device->suspected_gpu_hang_count_.load(), 0u);
 

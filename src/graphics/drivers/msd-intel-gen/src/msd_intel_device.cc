@@ -99,7 +99,7 @@ std::unique_ptr<MsdIntelDevice> MsdIntelDevice::Create(void* device_handle,
                                                        bool start_device_thread) {
   std::unique_ptr<MsdIntelDevice> device(new MsdIntelDevice());
 
-  if (!device->Init(device_handle, true))
+  if (!device->Init(device_handle))
     return DRETP(nullptr, "Failed to initialize MsdIntelDevice");
 
   if (start_device_thread) {
@@ -144,17 +144,12 @@ std::unique_ptr<MsdIntelConnection> MsdIntelDevice::Open(msd_client_id_t client_
   return MsdIntelConnection::Create(this, client_id);
 }
 
-bool MsdIntelDevice::Init(void* device_handle, bool exec_init_batch) {
+bool MsdIntelDevice::Init(void* device_handle) {
   if (!BaseInit(device_handle))
     return DRETF(false, "BaseInit failed");
 
   InitEngine(render_engine_cs());
   InitEngine(video_command_streamer());
-
-  if (exec_init_batch) {
-    if (!RenderInitBatch())
-      return DRETF(false, "RenderInitBatch failed");
-  }
 
   return true;
 }
@@ -561,10 +556,15 @@ int MsdIntelDevice::DeviceThreadLoop() {
 
   DLOG("DeviceThreadLoop starting thread 0x%lx", device_thread_id_->id());
 
-  std::vector<EngineCommandStreamer*> engines{render_engine_cs(), video_command_streamer()};
+  std::vector<EngineCommandStreamer*> engines = engine_command_streamers();
 
   for (auto& engine : engines) {
     EnableInterrupts(engine, true);
+  }
+
+  {
+    bool result = RenderInitBatch();
+    DASSERT(result);
   }
 
   std::chrono::steady_clock::time_point last_freq_poll_time;
@@ -846,13 +846,11 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(
 bool MsdIntelDevice::WaitIdleForTest(uint32_t timeout_ms) {
   CHECK_THREAD_IS_CURRENT(device_thread_id_);
 
-  std::vector<EngineCommandStreamer*> engines{render_engine_cs(), video_command_streamer()};
-
   uint32_t sequence_number = Sequencer::kInvalidSequenceNumber;
 
   auto start = std::chrono::high_resolution_clock::now();
 
-  for (auto engine : engines) {
+  for (auto engine : engine_command_streamers()) {
     while (!engine->IsIdle()) {
       ProcessCompletedCommandBuffers(engine->id());
 
