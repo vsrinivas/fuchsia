@@ -18,10 +18,10 @@ namespace forensics {
 std::optional<std::string> FormatDuration(zx::duration duration);
 
 // Returns the non-localized current time according to |clock|.
-std::optional<timekeeper::time_utc> CurrentUtcTimeRaw(timekeeper::Clock* clock);
+timekeeper::time_utc CurrentUtcTimeRaw(timekeeper::Clock* clock);
 
 // Returns a non-localized human-readable timestamp of the current time according to |clock|.
-std::optional<std::string> CurrentUtcTime(timekeeper::Clock* clock);
+std::string CurrentUtcTime(timekeeper::Clock* clock);
 
 }  // namespace forensics
 

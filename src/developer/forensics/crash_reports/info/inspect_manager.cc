@@ -25,16 +25,6 @@ namespace {
 using files::JoinPath;
 using inspect::Node;
 
-std::string CurrentTime(timekeeper::Clock* clock) {
-  auto current_time = CurrentUtcTime(clock);
-  if (current_time.has_value()) {
-    return current_time.value();
-  } else {
-    FX_LOGS(ERROR) << "Failed to get current UTC time";
-    return "unknown";
-  }
-}
-
 }  // namespace
 
 InspectManager::Report::Report(const std::string& program_name,
@@ -63,7 +53,7 @@ bool InspectManager::AddReport(const std::string& program_name,
 
   Report& report = reports_.at(local_report_id);
   inspect::Node& report_node = node_manager_.Get(report.Path());
-  report.creation_time_ = report_node.CreateString("creation_time", CurrentTime(clock_));
+  report.creation_time_ = report_node.CreateString("creation_time", CurrentUtcTime(clock_));
 
   return true;
 }
@@ -100,7 +90,7 @@ bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
   inspect::Node& server = node_manager_.Get(server_path);
 
   report.server_id_ = server.CreateString("id", server_properties_report_id);
-  report.server_creation_time_ = server.CreateString("creation_time", CurrentTime(clock_));
+  report.server_creation_time_ = server.CreateString("creation_time", CurrentUtcTime(clock_));
 
   return true;
 }

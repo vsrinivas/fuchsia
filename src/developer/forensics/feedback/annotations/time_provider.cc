@@ -26,16 +26,6 @@ ErrorOr<std::string> GetUptime() {
   return *uptime;
 }
 
-ErrorOr<std::string> GetUtcTime(timekeeper::Clock* clock) {
-  const auto time = CurrentUtcTime(clock);
-  if (!time) {
-    FX_LOGS(ERROR) << "Error getting UTC time from timekeeper::Clock::Now()";
-    return Error::kBadValue;
-  }
-
-  return *time;
-}
-
 }  // namespace
 
 TimeProvider::TimeProvider(async_dispatcher_t* dispatcher, zx::unowned_clock clock_handle,
@@ -55,8 +45,14 @@ std::set<std::string> TimeProvider::GetKeys() const {
 }
 
 Annotations TimeProvider::Get() {
-  const ErrorOr<std::string> utc_time =
-      is_utc_time_accurate_ ? GetUtcTime(clock_.get()) : Error::kMissingValue;
+  const auto utc_time = [this]() -> ErrorOr<std::string> {
+    if (is_utc_time_accurate_) {
+      return CurrentUtcTime(clock_.get());
+    }
+
+    return Error::kMissingValue;
+  }();
+
   return {
       {kDeviceUptimeKey, GetUptime()},
       {kDeviceUtcTimeKey, utc_time},

@@ -119,8 +119,7 @@ void ProductQuotas::Reset() {
   files::DeletePath(quota_filepath_, /*recursive=*/true);
 
   if (utc_clock_ready_watcher_->IsUtcClockReady()) {
-    const auto current_time = CurrentUtcTimeRaw(clock_);
-    FX_CHECK(current_time.has_value());
+    const timekeeper::time_utc current_time = CurrentUtcTimeRaw(clock_);
 
     // Resets may not execute exactly at UTC midnight because the system's UTC clock drifts and is
     // subject to correction. The start of the next UTC day needs to be calculated from the
@@ -129,7 +128,7 @@ void ProductQuotas::Reset() {
     // 00:00 of February 2nd and Reset ran at 23:59 of February 1st, the next midnight would be
     // 00:00 February 2nd.
     next_reset_utc_time_ = StartOfDay(*next_reset_utc_time_ + zx::hour(24));
-    const zx::duration time_until_next_reset = *next_reset_utc_time_ - *current_time;
+    const zx::duration time_until_next_reset = *next_reset_utc_time_ - current_time;
     UpdateJson(*next_reset_utc_time_);
     reset_task_.PostDelayed(dispatcher_, time_until_next_reset);
   } else {
@@ -140,24 +139,23 @@ void ProductQuotas::Reset() {
 void ProductQuotas::OnClockStart() {
   reset_task_.Cancel();
 
-  const auto current_time = CurrentUtcTimeRaw(clock_);
-  FX_CHECK(current_time.has_value());
+  const timekeeper::time_utc current_time = CurrentUtcTimeRaw(clock_);
 
   if (!next_reset_utc_time_.has_value()) {
     // Case 1: A next reset time wasn't persisted in the JSON file.
-    next_reset_utc_time_ = StartOfDay(*current_time + zx::hour(24));
-    const zx::duration time_until_next_reset = *next_reset_utc_time_ - *current_time;
+    next_reset_utc_time_ = StartOfDay(current_time + zx::hour(24));
+    const zx::duration time_until_next_reset = *next_reset_utc_time_ - current_time;
 
     UpdateJson(*next_reset_utc_time_);
     reset_task_.PostDelayed(dispatcher_, time_until_next_reset);
-  } else if (*current_time > *next_reset_utc_time_) {
+  } else if (current_time > *next_reset_utc_time_) {
     // Case 2: Deadline already passed. Set the "next reset" to be the previous midnight so that
     // Reset() calculates the next midnight correctly.
-    next_reset_utc_time_ = StartOfDay(*current_time);
+    next_reset_utc_time_ = StartOfDay(current_time);
     Reset();
   } else {
     // Case 3: Deadline not yet passed.
-    const zx::duration time_until_next_reset = *next_reset_utc_time_ - *current_time;
+    const zx::duration time_until_next_reset = *next_reset_utc_time_ - current_time;
     reset_task_.PostDelayed(dispatcher_, time_until_next_reset);
   }
 }

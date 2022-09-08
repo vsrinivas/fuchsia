@@ -244,6 +244,8 @@ fuchsia_component("previous_boot_file_unittest") {
 }
 
 fuchsia_unittest_component("time_unittest") {
+  manifest = "meta/time_unittest.cml"
+
   deps = [ ":time_unittest_exe" ]
 }
 

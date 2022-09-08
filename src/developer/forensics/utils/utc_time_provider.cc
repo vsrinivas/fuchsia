@@ -58,19 +58,14 @@ std::optional<zx::duration> UtcTimeProvider::CurrentUtcMonotonicDifference() con
     return std::nullopt;
   }
 
-  if (const std::optional<timekeeper::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
-      current_utc_time.has_value()) {
-    const zx::duration utc_monotonic_difference(current_utc_time.value().get() -
-                                                clock_->Now().get());
-    if (utc_monotonic_difference_file_.has_value()) {
-      // Write the most recent UTC-monotonic difference in case either clock has been adjusted.
-      files::WriteFile(utc_monotonic_difference_file_.value().CurrentBootPath(),
-                       std::to_string(utc_monotonic_difference.get()));
-    }
-    return utc_monotonic_difference;
+  const timekeeper::time_utc current_utc_time = CurrentUtcTimeRaw(clock_);
+  const zx::duration utc_monotonic_difference(current_utc_time.get() - clock_->Now().get());
+  if (utc_monotonic_difference_file_.has_value()) {
+    // Write the most recent UTC-monotonic difference in case either clock has been adjusted.
+    files::WriteFile(utc_monotonic_difference_file_.value().CurrentBootPath(),
+                     std::to_string(utc_monotonic_difference.get()));
   }
-
-  return std::nullopt;
+  return utc_monotonic_difference;
 }
 
 std::optional<zx::duration> UtcTimeProvider::PreviousBootUtcMonotonicDifference() const {
@@ -79,10 +74,9 @@ std::optional<zx::duration> UtcTimeProvider::PreviousBootUtcMonotonicDifference(
 
 void UtcTimeProvider::OnClockStart() {
   // Write the current difference between the UTC and monotonic clocks.
-  if (const std::optional<timekeeper::time_utc> current_utc_time = CurrentUtcTimeRaw(clock_);
-      current_utc_time.has_value() && utc_monotonic_difference_file_.has_value()) {
-    const zx::duration utc_monotonic_difference(current_utc_time.value().get() -
-                                                clock_->Now().get());
+  if (utc_monotonic_difference_file_.has_value()) {
+    const timekeeper::time_utc current_utc_time = CurrentUtcTimeRaw(clock_);
+    const zx::duration utc_monotonic_difference(current_utc_time.get() - clock_->Now().get());
     files::WriteFile(utc_monotonic_difference_file_.value().CurrentBootPath(),
                      std::to_string(utc_monotonic_difference.get()));
   }

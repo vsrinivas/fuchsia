@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/timekeeper/clock.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
@@ -157,6 +158,18 @@ TEST(TimeTest, CurrentUtcTime) {
 
   clock.Set(kTime3);
   EXPECT_EQ(CurrentUtcTime(&clock), kTime3Str);
+}
+
+// Returns ZX_ERR_BAD_HANDLE when used to get a UTC time.
+class InvalidClock : public timekeeper::Clock {
+ private:
+  zx_status_t GetUtcTime(zx_time_t* time) const override { return ZX_ERR_BAD_HANDLE; }
+  zx_time_t GetMonotonicTime() const override { return 0; }
+};
+
+TEST(TimeTest, CurrentUtcTimeRaw_InvalidStatus) {
+  InvalidClock invalid_clock;
+  ASSERT_DEATH(CurrentUtcTimeRaw(&invalid_clock), "Failed to get current Utc time");
 }
 
 }  // namespace
