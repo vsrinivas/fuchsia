@@ -10,7 +10,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zxio/bsdsocket.h>
-#include <lib/zxio/extensions.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxio/watcher.h>
 #include <lib/zxio/zxio.h>
@@ -41,18 +40,9 @@ using zxio_internal_t = struct zxio_internal {
 
   const zxio_ops_t* ops;
 
-  // See extensions.h
-  //
-  // Clients may specify |extensions| when creating a |zxio_t| from a channel.
-  // When a new |zxio_t| is created from an existing |zxio_t| through
-  // opening/cloning, it will inherit the same |extensions| options.
-  const zxio_extensions_t* extensions = nullptr;
-
-  // If applicable, records which function in |extensions| was used to
-  // initialize this |zxio_t|.
-  uintptr_t extension_init_func = 0;
-
-  uint8_t reserved[7];
+  // When adding fields to the |zxio_internal_t| struct, one may take from
+  // the reserved bytes here to ensure that the ABI stays compatible.
+  uint64_t reserved[3];
 };
 
 static_assert(sizeof(zxio_t) == sizeof(zxio_internal_t), "zxio_t should match zxio_internal_t");
@@ -81,14 +71,6 @@ void zxio_init(zxio_t* io, const zxio_ops_t* ops) { new (io) zxio_internal_t(ops
 const zxio_ops_t* zxio_get_ops(zxio_t* io) {
   const zxio_internal_t* zio = to_internal(io);
   return zio->ops;
-}
-
-uintptr_t zxio_extensions_get_init_function(const zxio_t* io) {
-  return to_internal(io)->extension_init_func;
-}
-
-void zxio_extensions_set(zxio_t* io, const zxio_extensions_t* extensions) {
-  to_internal(io)->extensions = extensions;
 }
 
 zx_status_t zxio_close(zxio_t* io) {

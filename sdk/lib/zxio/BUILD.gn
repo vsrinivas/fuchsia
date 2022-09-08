@@ -10,7 +10,6 @@ import("//build/cpp/verify_public_symbols.gni")
 library_headers("headers") {
   headers = [
     "lib/zxio/cpp/vector.h",
-    "lib/zxio/extensions.h",
     "lib/zxio/null.h",
     "lib/zxio/ops.h",
     "lib/zxio/posix_mode.h",
@@ -77,7 +76,6 @@ source_set("zxio") {
   sources = [
     "create.cc",
     "debuglog.cc",
-    "extensions.cc",
     "get_vmo.cc",
     "inception.cc",
     "null.cc",

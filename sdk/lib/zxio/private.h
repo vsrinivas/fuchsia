@@ -14,7 +14,6 @@
 #include <lib/zx/event.h>
 #include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/vector.h>
-#include <lib/zxio/extensions.h>
 #include <lib/zxio/zxio.h>
 #include <zircon/types.h>
 
@@ -105,8 +104,6 @@ constexpr void HasIo::CheckLayout() {
 uint32_t zxio_node_protocols_to_posix_type(zxio_node_protocols_t protocols);
 
 bool zxio_is_valid(const zxio_t* io);
-
-void zxio_node_init(zxio_node_t* node, zx_handle_t control, const zxio_extension_ops_t* ops);
 
 zx_status_t zxio_dir_init(zxio_storage_t* storage, zx_handle_t control);
 

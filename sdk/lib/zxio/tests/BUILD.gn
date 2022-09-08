@@ -22,7 +22,6 @@ test("zxio") {
     "dir_v2-test.cc",
     "directory-test.cc",
     "dirent-test.cc",
-    "extensions-test.cc",
     "file-test.cc",
     "file_test_suite.cc",
     "file_test_suite.h",

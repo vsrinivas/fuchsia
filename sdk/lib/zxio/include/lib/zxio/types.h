@@ -108,9 +108,6 @@ typedef struct zxio_private {
   uint64_t reserved[8];
 } zxio_private_t;
 
-// See extensions.h
-typedef struct zxio_extensions zxio_extensions_t;
-
 // The storage backing a |zxio_t|.
 typedef struct zxio_storage {
   zxio_t io;
