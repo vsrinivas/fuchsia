@@ -42,6 +42,7 @@ core_realm_shards += [
   # TODO(fxbug.dev/80375): only include in eng builds
   "//src/sys/test_manager:test_manager_core_shard",
   "//src/sys/fuzzing:fuzzing-core-shard",
+  "//src/developer/sshd-host:core_shard",
 
   # TODO(fxbug.dev/103301): consider moving virtualization to another product
   "//src/virtualization/bin/guest_manager:debian_core_shard",
@@ -67,6 +68,10 @@ legacy_base_package_labels += [
   "//src/intl/intl_services:pkg_small",
   "//src/intl/tzdata_provider:pkg",
   "//src/settings/service:setui_service",
+
+  # TODO(fxbug.dev/80375): only include in eng builds
+  "//src/developer/sshd-host",
+  "//src/developer/sshd-host:config",
 ]
 
 # TODO(fxbug.dev/102390): deprecate appmgr from core.
