@@ -6,8 +6,12 @@ use diagnostics_reader::{ArchiveReader, Inspect};
 use fidl_test_structuredconfig_receiver::{ConfigReceiverPuppetMarker, ReceiverConfig};
 use fuchsia_inspect::assert_data_tree;
 
-fn expected_config() -> ReceiverConfig {
-    ReceiverConfig {
+pub async fn run_test_case(inspect_selector: &str) {
+    let puppet =
+        fuchsia_component::client::connect_to_protocol::<ConfigReceiverPuppetMarker>().unwrap();
+
+    let observed = puppet.get_config().await.unwrap();
+    let expected = ReceiverConfig {
         my_flag: true,
         my_uint8: 255,
         my_uint16: 65535,
@@ -28,12 +32,12 @@ fn expected_config() -> ReceiverConfig {
         my_vector_of_int32: vec![-3, -4, 5],
         my_vector_of_int64: vec![-4, -5, 6],
         my_vector_of_string: vec!["hello, world!".into(), "hello, again!".into()],
-    }
-}
+    };
 
-async fn assert_inspect_config(selector: &str) {
+    assert_eq!(observed, expected, "child must receive expected configuration");
+
     let inspector = ArchiveReader::new()
-        .add_selector(selector)
+        .add_selector(inspect_selector)
         .snapshot::<Inspect>()
         .await
         .unwrap()
@@ -105,54 +109,5 @@ async fn assert_inspect_config(selector: &str) {
                 "hello, again!"
             ]
         }
-    })
-}
-
-// TODO(http://fxbug.dev/93830): Find a way to use the same test case with different manifests.
-#[fuchsia::test]
-async fn rust() {
-    let puppet =
-        fuchsia_component::client::connect_to_protocol_at_path::<ConfigReceiverPuppetMarker>(
-            "/svc/test.structuredconfig.receiver.ConfigReceiverPuppet.rust",
-        )
-        .unwrap();
-    assert_eq!(
-        puppet.get_config().await.unwrap(),
-        expected_config(),
-        "child must receive expected configuration"
-    );
-
-    assert_inspect_config("rust_receiver:root").await;
-}
-
-#[fuchsia::test]
-async fn cpp_elf() {
-    let puppet =
-        fuchsia_component::client::connect_to_protocol_at_path::<ConfigReceiverPuppetMarker>(
-            "/svc/test.structuredconfig.receiver.ConfigReceiverPuppet.cpp_elf",
-        )
-        .unwrap();
-    assert_eq!(
-        puppet.get_config().await.unwrap(),
-        expected_config(),
-        "child must receive expected configuration"
-    );
-
-    assert_inspect_config("cpp_elf_receiver:root").await;
-}
-
-#[fuchsia::test]
-async fn cpp_driver() {
-    let puppet =
-        fuchsia_component::client::connect_to_protocol_at_path::<ConfigReceiverPuppetMarker>(
-            "/svc/test.structuredconfig.receiver.ConfigReceiverPuppet.cpp_driver",
-        )
-        .unwrap();
-    assert_eq!(
-        puppet.get_config().await.unwrap(),
-        expected_config(),
-        "child must receive expected configuration"
-    );
-
-    assert_inspect_config("cpp_driver_shim/*/driver_test_realm/pkg-drivers*:root").await;
+    });
 }

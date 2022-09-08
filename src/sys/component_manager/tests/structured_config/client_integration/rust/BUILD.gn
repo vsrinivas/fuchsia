@@ -48,10 +48,29 @@ fuchsia_structured_config_values("values") {
   values_source = "../config/values.json5"
 }
 
-group("rust") {
-  testonly = true
+rustc_test("rust_sc_client_test_bin") {
+  edition = "2021"
+  source_root = "src/test.rs"
+  sources = [ "src/test.rs" ]
+  deps = [
+    "..:sc_client_integration_support",
+    "//src/lib/fuchsia",
+  ]
+}
+
+fuchsia_test_component("test_component") {
+  manifest = "meta/test.cml"
+  deps = [ ":rust_sc_client_test_bin" ]
+}
+
+fuchsia_test_package("rust") {
+  package_name = "sc_rust_client_integration_test"
+  test_components = [ ":test_component" ]
   deps = [
     ":component",
     ":values",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
 }

@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/rust_sc_client_test_bin",
+    },
+    children: [
+        {
+            name: "rust_receiver",
+            url: "#meta/rust_receiver.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "test.structuredconfig.receiver.ConfigReceiverPuppet",
+            from: "#rust_receiver",
+        },
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#rust_receiver" ],
+        },
+    ],
+}

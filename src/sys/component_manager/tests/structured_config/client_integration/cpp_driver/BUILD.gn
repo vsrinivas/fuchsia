@@ -101,13 +101,32 @@ fuchsia_test_component("realm") {
   manifest_deps = [ ":realm.cml" ]
 }
 
-group("cpp_driver") {
-  testonly = true
+rustc_test("cpp_driver_sc_client_test_bin") {
+  edition = "2021"
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    "..:sc_client_integration_support",
+    "//src/lib/fuchsia",
+  ]
+}
+
+fuchsia_test_component("test_component") {
+  manifest = "meta/test.cml"
+  deps = [ ":cpp_driver_sc_client_test_bin" ]
+}
+
+fuchsia_test_package("cpp_driver") {
+  package_name = "sc_cpp_driver_client_integration_test"
+  test_components = [ ":test_component" ]
   deps = [
     ":realm",
     ":receiver_component",
     ":shim_component",
     ":values",
     "//src/devices/bin/driver_host2:component",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
 }

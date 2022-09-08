@@ -5,33 +5,26 @@
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/host.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_test.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_test("test_bin") {
+rustc_library("sc_client_integration_support") {
   edition = "2021"
-  name = "client_integration_tests"
   testonly = true
-  sources = [ "src/lib.rs" ]
+  source_root = "support/lib.rs"
+  sources = [ "support/lib.rs" ]
   deps = [
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/structured_config/fidl:test.structuredconfig.receiver_rust",
   ]
 }
 
-fuchsia_unittest_package("client_integration") {
-  package_name = "structured_config_client_integration"
-  manifest = "meta/tests.cml"
+group("client_integration") {
+  testonly = true
   deps = [
-    ":test_bin",
     "cpp_driver",
     "cpp_elf",
     "rust",
-
-    # fxbug.dev/101490: Dep included for affected tests presubmit
-    "//src/sys/component_manager:component-manager-realm-builder-cmp",
   ]
 }
