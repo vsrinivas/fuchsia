@@ -1,3 +1,2 @@
-fuchsia.netstack.iperf_benchmarks: lo/TCP/recv/1024bytes/bits_per_second
-fuchsia.netstack.iperf_benchmarks: lo/TCP/send-recv/1024bytes/CPU
-fuchsia.netstack.iperf_benchmarks: lo/TCP/send/1024bytes/bits_per_second
+fuchsia.netstack.iperf_benchmarks: TCP/loopback/1024bytes/CPU
+fuchsia.netstack.iperf_benchmarks: TCP/loopback/1024bytes/bits_per_second
