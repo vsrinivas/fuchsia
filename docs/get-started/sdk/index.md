@@ -44,7 +44,7 @@ See [this ticket][ticket-01].
 The tasks include:
 
 *   Bootstrap the SDK samples repository.
-*   Build the SDK tools to initialize the SDK environment.
+*   Download the SDK toolchain to initialize the SDK environment.
 *   Verify that you can run [`ffx`][ffx] commands.
 
 Do the following:
@@ -80,14 +80,15 @@ Do the following:
    scripts/bootstrap.sh
    ```
 
-1. Build the SDK tools:
+1. Download the SDK toolchain:
 
    ```posix-terminal
    tools/bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
    ```
 
-   The first build may take a few minutes to download dependencies, such as Bazel build rules,
-   [Clang][clang]{:.external} and [Fuchsia IDK][fuchsia-idk] (which includes the `ffx` tool).
+   This command may take a few minutes to download all the tools and dependencies, such as
+   Bazel build rules, [Clang][clang]{:.external} and [Fuchsia IDK][fuchsia-idk] (which
+   includes the `ffx` tool).
 
    When finished successfully, it prints output similar to the following in the end:
 
