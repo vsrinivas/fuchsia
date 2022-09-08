@@ -41,7 +41,8 @@ TEST(NamespaceBuilder, SystemData) {
 
   fbl::unique_fd dir(open(".", O_RDONLY));
   NamespaceBuilder builder = NamespaceBuilder(std::move(dir), "test_namespace");
-  zx_status_t status = builder.AddSandbox(sandbox, [] { return zx::channel(); });
+  zx_status_t status = builder.AddSandbox(
+      sandbox, []() -> fidl::InterfaceHandle<fuchsia::io::Directory> { return {}; });
   EXPECT_EQ(ZX_OK, status);
 
   fdio_flat_namespace_t* ns = builder.Build();
@@ -79,12 +80,12 @@ TEST(NamespaceBuilder, FlatNamespaceAreAddedToComponent) {
   fbl::unique_fd dir(open(".", O_RDONLY));
   NamespaceBuilder builder = NamespaceBuilder(std::move(dir), "test_namespace");
   auto flat_namespace = fuchsia::sys::FlatNamespace::New();
-  zx::channel client, server;
-  ASSERT_EQ(zx::channel::create(0, &client, &server), ZX_OK);
+  fidl::InterfaceHandle<fuchsia::io::Directory> client;
+  fidl::InterfaceRequest server = client.NewRequest();
   // The related Koid should equal the Koid of the opposite end of a channel.
   // So the related Koid of the client end should equal the Koid of the server
   // end here, and vice versa.
-  ASSERT_EQ(GetRelatedKoid(client.borrow()), GetKoid(server.borrow()));
+  ASSERT_EQ(GetRelatedKoid(client.channel().borrow()), GetKoid(server.channel().borrow()));
   flat_namespace->directories.push_back(std::move(client));
   flat_namespace->paths.push_back("/dev/class/usb-device");
   builder.AddFlatNamespace(std::move(flat_namespace));
@@ -95,7 +96,7 @@ TEST(NamespaceBuilder, FlatNamespaceAreAddedToComponent) {
   std::vector<std::string> paths;
   EXPECT_EQ(std::string(ns->path[0]), std::string("/dev/class/usb-device"));
   // Assert that the channel in |ns| is connected to the server end.
-  EXPECT_EQ(GetRelatedKoid(zx::unowned_channel(ns->handle[0])), GetKoid(server.borrow()));
+  EXPECT_EQ(GetRelatedKoid(zx::unowned_channel(ns->handle[0])), GetKoid(server.channel().borrow()));
 
   for (size_t i = 0; i < ns->count; ++i) {
     zx_handle_close(ns->handle[i]);

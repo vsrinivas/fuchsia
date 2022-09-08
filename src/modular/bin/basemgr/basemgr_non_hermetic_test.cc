@@ -68,7 +68,7 @@ class BasemgrNonHermeticTest : public gtest::TestWithEnvironmentFixture {
     launch_info.url = kBasemgrUrl;
     launch_info.flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
     launch_info.flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-    launch_info.flat_namespace->directories.push_back(config_dir_handle.TakeChannel());
+    launch_info.flat_namespace->directories.push_back(std::move(config_dir_handle));
     launch_info.directory_request = std::move(svc_request);
 
     bool on_directory_ready = false;

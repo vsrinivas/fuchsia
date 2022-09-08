@@ -43,15 +43,14 @@ std::string Util::GetArgsString(const ::fidl::VectorPtr<::std::string>& argument
   return args;
 }
 
-zx::channel Util::OpenAsDirectory(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> node) {
-  zx::channel h1, h2;
-  if (zx::channel::create(0, &h1, &h2) != ZX_OK) {
-    return zx::channel();
+fidl::InterfaceHandle<fuchsia::io::Directory> Util::OpenAsDirectory(fs::FuchsiaVfs* vfs,
+                                                                    fbl::RefPtr<fs::Vnode> node) {
+  fidl::InterfaceHandle<fuchsia::io::Directory> dir;
+  if (vfs->ServeDirectory(std::move(node), dir.NewRequest().TakeChannel(),
+                          fs::Rights::ReadWrite()) != ZX_OK) {
+    return {};
   }
-  if (vfs->ServeDirectory(std::move(node), std::move(h1), fs::Rights::ReadWrite()) != ZX_OK) {
-    return zx::channel();
-  }
-  return h2;
+  return dir;
 }
 
 }  // namespace component

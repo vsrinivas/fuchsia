@@ -72,19 +72,16 @@ SessionContextImpl::SessionContextImpl(
 
 fuchsia::sys::FlatNamespacePtr SessionContextImpl::CreateAndServeConfigNamespace(
     std::string config_contents) {
-  zx::channel config_request_channel;
-  zx::channel config_dir_channel;
-
-  FX_CHECK(zx::channel::create(0u, &config_request_channel, &config_dir_channel) == ZX_OK);
+  fidl::InterfaceHandle<fuchsia::io::Directory> config_dir;
 
   // Host the config file in a PseudoDir
   config_dir_ = modular::MakeFilePathWithContents(modular_config::kStartupConfigFilePath,
                                                   std::move(config_contents));
-  config_dir_->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, std::move(config_request_channel));
+  config_dir_->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, config_dir.NewRequest().TakeChannel());
 
   auto flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
   flat_namespace->paths.push_back(modular_config::kOverriddenConfigDir);
-  flat_namespace->directories.push_back(std::move(config_dir_channel));
+  flat_namespace->directories.push_back(std::move(config_dir));
 
   return flat_namespace;
 }

@@ -383,7 +383,7 @@ pub fn add_handle_to_namespace(
     dir: ClientEnd<fio::DirectoryMarker>,
 ) {
     namespace.paths.push(path);
-    namespace.directories.push(dir.into_channel());
+    namespace.directories.push(dir);
 }
 
 /// Adds a new directory to the namespace for the new process.

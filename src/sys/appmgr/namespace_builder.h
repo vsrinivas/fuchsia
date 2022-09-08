@@ -28,13 +28,14 @@ class NamespaceBuilder {
   ~NamespaceBuilder();
 
   void AddFlatNamespace(fuchsia::sys::FlatNamespacePtr flat_namespace);
-  void AddPackage(zx::channel package);
+  void AddPackage(fidl::InterfaceHandle<fuchsia::io::Directory> package);
   void AddConfigData(const SandboxMetadata& sandbox, const std::string& component_name);
-  void AddDirectoryIfNotPresent(const std::string& path, zx::channel directory);
-  void AddServices(zx::channel services);
+  void AddDirectoryIfNotPresent(const std::string& path,
+                                fidl::InterfaceHandle<fuchsia::io::Directory> directory);
+  void AddServices(fidl::InterfaceHandle<fuchsia::io::Directory> services);
 
   // A factory function that returns a new directory that /hub points to.
-  using HubDirectoryFactory = fit::function<zx::channel()>;
+  using HubDirectoryFactory = fit::function<fidl::InterfaceHandle<fuchsia::io::Directory>()>;
   // A factory function that returns a new path for /data to point to when it
   // should be isolated from other components and realms
   using IsolatedDataPathFactory = fit::function<fpromise::result<std::string, zx_status_t>()>;
@@ -78,14 +79,15 @@ class NamespaceBuilder {
   void PushDirectoryFromPathAs(std::string src_path, std::string dst_path);
   void PushDirectoryFromPathAsWithPermissions(std::string src_path, std::string dst_path,
                                               fuchsia_io::wire::OpenFlags flags);
-  void PushDirectoryFromChannel(std::string path, zx::channel channel);
+  void PushDirectoryFromChannel(std::string path,
+                                fidl::InterfaceHandle<fuchsia::io::Directory> channel);
   void Release();
 
   std::vector<uint32_t> types_;
   std::vector<zx_handle_t> handles_;
   std::vector<std::string> paths_;
 
-  std::vector<zx::channel> handle_pool_;
+  std::vector<fidl::InterfaceHandle<fuchsia::io::Directory>> handle_pool_;
   std::vector<const char*> path_data_;
   fdio_flat_namespace_t flat_ns_;
 

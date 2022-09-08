@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.sys;
 
+using fuchsia.io;
 using zx;
 
 type FlatNamespace = resource struct {
@@ -12,5 +13,8 @@ type FlatNamespace = resource struct {
     paths vector<string>;
 
     /// The directories mounted at each path in the namespace.
+    @available(removed=10)
     directories vector<zx.handle:CHANNEL>;
+    @available(added=10)
+    directories vector<client_end:fuchsia.io.Directory>;
 };

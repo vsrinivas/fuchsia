@@ -15,7 +15,12 @@ std::unique_ptr<sys::ComponentContext> CreateComponentContext(
     return nullptr;
   }
 
-  zx::channel service_root;
+#if __Fuchsia_API_level__ < 10
+  zx::channel
+#else
+  fidl::InterfaceHandle<fuchsia::io::Directory>
+#endif
+      service_root;
   for (size_t i = 0; i < flat.paths.size(); ++i) {
     if (flat.paths.at(i) == kServiceRootPath) {
       service_root = std::move(flat.directories.at(i));

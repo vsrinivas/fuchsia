@@ -59,6 +59,7 @@ source_set("basemgr_impl") {
 
   deps = [
     "//src/lib/fostr/fidl/fuchsia.session",
+    "//src/lib/fsl",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/fidl:clone",
     "//src/modular/lib/modular_config",

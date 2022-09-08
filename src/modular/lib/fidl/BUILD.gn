@@ -31,15 +31,14 @@ source_set("app_client") {
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fsl",
   ]
 
   deps = [
     ":clone",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/fsl",
     "//src/modular/lib/common:async_holder",
     "//src/modular/lib/deprecated_svc",
+    "//zircon/system/ulib/fdio-caller",
   ]
 }
 

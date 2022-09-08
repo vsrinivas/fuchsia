@@ -485,7 +485,9 @@ Realm::~Realm() {
   }
 }
 
-zx::channel Realm::OpenInfoDir() { return Util::OpenAsDirectory(&info_vfs_, hub_dir()); }
+fidl::InterfaceHandle<fuchsia::io::Directory> Realm::OpenInfoDir() {
+  return Util::OpenAsDirectory(&info_vfs_, hub_dir());
+}
 
 HubInfo Realm::HubInfo() { return component::HubInfo(label_, koid_, hub_.dir()); }
 
@@ -706,7 +708,7 @@ void Realm::CreateComponentWithRunnerForScheme(const std::string& runner_url,
   startup_info.launch_info = std::move(launch_info);
   NamespaceBuilder builder =
       NamespaceBuilder(appmgr_config_dir_.duplicate(), startup_info.launch_info.url);
-  zx::channel svc = ns->OpenServicesAsDirectory();
+  fidl::InterfaceHandle<fuchsia::io::Directory> svc = ns->OpenServicesAsDirectory();
   if (!svc) {
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::INTERNAL_ERROR);
     return;
@@ -875,7 +877,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
   // Note that |builder| is only used in the else block below. It is left here
   // because we would like to use it everywhere once fxbug.dev/28222 is fixed.
   NamespaceBuilder builder = NamespaceBuilder(appmgr_config_dir_.duplicate(), fp.ToString());
-  builder.AddPackage(std::move(pkg));
+  builder.AddPackage(fidl::InterfaceHandle<fuchsia::io::Directory>(std::move(pkg)));
 
   // If meta/*.cmx exists, attempt to read sandbox data from it.
   const std::vector<std::string>* service_allowlist = nullptr;
@@ -918,7 +920,7 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     }
 
     ns->set_component_moniker(ComputeMoniker(this, fp));
-    zx::channel svc = ns->OpenServicesAsDirectory();
+    fidl::InterfaceHandle<fuchsia::io::Directory> svc = ns->OpenServicesAsDirectory();
     if (!svc) {
       component_request.SetReturnValues(kComponentCreationFailed,
                                         TerminationReason::INTERNAL_ERROR);

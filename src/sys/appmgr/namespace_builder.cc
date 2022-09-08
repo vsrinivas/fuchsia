@@ -5,6 +5,7 @@
 #include "src/sys/appmgr/namespace_builder.h"
 
 #include <fcntl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -19,7 +20,6 @@
 
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
-#include "src/lib/fsl/io/fd.h"
 #include "src/sys/appmgr/allow_list.h"
 
 namespace component {
@@ -41,7 +41,7 @@ void NamespaceBuilder::AddFlatNamespace(fuchsia::sys::FlatNamespacePtr ns) {
   }
 }
 
-void NamespaceBuilder::AddPackage(zx::channel package) {
+void NamespaceBuilder::AddPackage(fidl::InterfaceHandle<fuchsia::io::Directory> package) {
   PushDirectoryFromChannel("/pkg", std::move(package));
 }
 
@@ -54,7 +54,8 @@ void NamespaceBuilder::AddConfigData(const SandboxMetadata& sandbox, const std::
   }
 }
 
-void NamespaceBuilder::AddDirectoryIfNotPresent(const std::string& path, zx::channel directory) {
+void NamespaceBuilder::AddDirectoryIfNotPresent(
+    const std::string& path, fidl::InterfaceHandle<fuchsia::io::Directory> directory) {
   if (std::find(paths_.begin(), paths_.end(), path) != paths_.end()) {
     FX_LOGS(INFO) << "Namespace conflict for " << ns_id << ": " << path;
     return;
@@ -62,7 +63,7 @@ void NamespaceBuilder::AddDirectoryIfNotPresent(const std::string& path, zx::cha
   PushDirectoryFromChannel(path, std::move(directory));
 }
 
-void NamespaceBuilder::AddServices(zx::channel services) {
+void NamespaceBuilder::AddServices(fidl::InterfaceHandle<fuchsia::io::Directory> services) {
   PushDirectoryFromChannel("/svc", std::move(services));
 }
 
@@ -223,18 +224,22 @@ void NamespaceBuilder::PushDirectoryFromPathAsWithPermissions(std::string src_pa
   if (status != ZX_OK) {
     return;
   }
-  zx::channel handle = fsl::CloneChannelFromFileDescriptor(dir.get());
-  if (!handle) {
-    FX_DLOGS(WARNING) << "Failed to clone channel for " << src_path;
+  fdio_cpp::FdioCaller caller(std::move(dir));
+  zx::status channel = caller.take_directory();
+  if (channel.is_error()) {
+    FX_DLOGS(WARNING) << "Failed to clone channel for " << src_path << ": "
+                      << channel.status_string();
     return;
   }
-  PushDirectoryFromChannel(std::move(dst_path), std::move(handle));
+  PushDirectoryFromChannel(std::move(dst_path), fidl::InterfaceHandle<fuchsia::io::Directory>(
+                                                    channel.value().TakeChannel()));
 }
 
-void NamespaceBuilder::PushDirectoryFromChannel(std::string path, zx::channel channel) {
+void NamespaceBuilder::PushDirectoryFromChannel(
+    std::string path, fidl::InterfaceHandle<fuchsia::io::Directory> channel) {
   FX_DCHECK(std::find(paths_.begin(), paths_.end(), path) == paths_.end());
   types_.push_back(PA_HND(PA_NS_DIR, types_.size()));
-  handles_.push_back(channel.get());
+  handles_.push_back(channel.channel().get());
   paths_.push_back(std::move(path));
 
   handle_pool_.push_back(std::move(channel));
@@ -269,8 +274,9 @@ fuchsia::sys::FlatNamespace NamespaceBuilder::BuildForRunner() {
 }
 
 void NamespaceBuilder::Release() {
-  for (auto& handle : handle_pool_)
-    (void)handle.release();
+  for (auto& handle : handle_pool_) {
+    __UNUSED const zx_handle_t unused = handle.TakeChannel().release();
+  }
   handle_pool_.clear();
 }
 

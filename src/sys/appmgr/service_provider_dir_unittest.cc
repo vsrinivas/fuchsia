@@ -112,7 +112,8 @@ class ServiceProviderTest : public ::gtest::RealLoopFixture {
     EXPECT_EQ(value_, -1) << service_name.c_str();
   }
 
-  zx::channel OpenAsDirectory(fbl::RefPtr<ServiceProviderDirImpl> service) {
+  fidl::InterfaceHandle<fuchsia::io::Directory> OpenAsDirectory(
+      fbl::RefPtr<ServiceProviderDirImpl> service) {
     return Util::OpenAsDirectory(&vfs_, service);
   }
 

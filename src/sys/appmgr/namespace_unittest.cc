@@ -166,12 +166,12 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices) {
   service_list->host_directory = OpenAsDirectory();
   auto ns = MakeNamespace(std::move(service_list));
 
-  zx::channel svc_dir = ns->OpenServicesAsDirectory();
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService1));
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService2));
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService2));
+  fidl::InterfaceHandle<fuchsia::io::Directory> svc_dir = ns->OpenServicesAsDirectory();
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService1));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService2));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService2));
   // fdio_service_connect_at does not return an error if connection failed.
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), "fuchsia.test.NotExists"));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), "fuchsia.test.NotExists"));
   RunLoopUntilIdle();
   std::vector<std::pair<std::string, int>> connection_ctr_vec;
   for (const auto& e : connection_ctr_) {
@@ -195,11 +195,11 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices_InheritParent) {
   auto parent_ns = MakeNamespace(std::move(parent_service_list));
   auto ns = MakeNamespace(std::move(service_list), parent_ns);
 
-  zx::channel svc_dir = ns->OpenServicesAsDirectory();
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService1));
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService2));
+  fidl::InterfaceHandle<fuchsia::io::Directory> svc_dir = ns->OpenServicesAsDirectory();
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService1));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService2));
   // fdio_service_connect_at does not return an error if connection failed.
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), "fuchsia.test.NotExists"));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), "fuchsia.test.NotExists"));
   RunLoopUntilIdle();
   std::vector<std::pair<std::string, int>> connection_ctr_vec;
   for (const auto& e : connection_ctr_) {
@@ -222,12 +222,12 @@ TEST_F(NamespaceProviderTest, AdditionalServices) {
   service_list->host_directory = provider_.service_directory()->CloneChannel();
   auto ns = MakeNamespace(std::move(service_list));
 
-  zx::channel svc_dir = ns->OpenServicesAsDirectory();
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService1));
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService2));
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService2));
+  fidl::InterfaceHandle<fuchsia::io::Directory> svc_dir = ns->OpenServicesAsDirectory();
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService1));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService2));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService2));
   // fdio_service_connect_at does not return an error if connection failed.
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), "fuchsia.test.NotExists"));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), "fuchsia.test.NotExists"));
   RunLoopUntilIdle();
   std::vector<std::pair<std::string, int>> connection_ctr_vec;
   for (const auto& e : connection_ctr_) {
@@ -250,12 +250,12 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices_NsDies) {
   service_list->host_directory = OpenAsDirectory();
   auto ns = MakeNamespace(std::move(service_list));
 
-  zx::channel svc_dir = ns->OpenServicesAsDirectory();
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService1));
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService2));
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService2));
+  fidl::InterfaceHandle<fuchsia::io::Directory> svc_dir = ns->OpenServicesAsDirectory();
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService1));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService2));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService2));
   // fdio_service_connect_at does not return an error if connection failed.
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), "fuchsia.test.NotExists"));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), "fuchsia.test.NotExists"));
   ns.Kill();
   RunLoopUntilIdle();
   std::vector<std::pair<std::string, int>> connection_ctr_vec;
@@ -265,7 +265,8 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices_NsDies) {
   EXPECT_THAT(connection_ctr_vec,
               ::testing::ElementsAre(StringIntPair(kService1, 1), StringIntPair(kService2, 2)));
   connection_ctr_.clear();
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService1));  // cannot make anymore connections
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(),
+                                    kService1));  // cannot make anymore connections
   RunLoopUntilIdle();
   // we should not see anymore processed conenction requests.
   EXPECT_EQ(0u, connection_ctr_.size());
@@ -286,11 +287,11 @@ TEST_F(NamespaceHostDirectoryTest, AdditionalServices_InheritParent_nsDies) {
   auto parent_ns = MakeNamespace(std::move(parent_service_list));
   auto ns = MakeNamespace(std::move(service_list), parent_ns);
 
-  zx::channel svc_dir = ns->OpenServicesAsDirectory();
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService1));
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), kService2));
+  fidl::InterfaceHandle<fuchsia::io::Directory> svc_dir = ns->OpenServicesAsDirectory();
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService1));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), kService2));
   // fdio_service_connect_at does not return an error if connection failed.
-  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.get(), "fuchsia.test.NotExists"));
+  EXPECT_EQ(ZX_OK, ConnectToService(svc_dir.channel().get(), "fuchsia.test.NotExists"));
   ns.Kill();
   RunLoopUntilIdle();
   std::vector<std::pair<std::string, int>> connection_ctr_vec;

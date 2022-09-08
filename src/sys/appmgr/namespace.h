@@ -50,7 +50,7 @@ class Namespace : public fuchsia::sys::Environment,
 
   zx_status_t ServeServiceDirectory(fidl::InterfaceRequest<fuchsia::io::Directory> request);
 
-  zx::channel OpenServicesAsDirectory();
+  fidl::InterfaceHandle<fuchsia::io::Directory> OpenServicesAsDirectory();
 
   //
   // fuchsia::sys::Environment implementation:

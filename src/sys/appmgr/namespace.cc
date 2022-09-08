@@ -189,7 +189,9 @@ void Namespace::CreateComponent(
   }
 }
 
-zx::channel Namespace::OpenServicesAsDirectory() { return Util::OpenAsDirectory(&vfs_, services_); }
+fidl::InterfaceHandle<fuchsia::io::Directory> Namespace::OpenServicesAsDirectory() {
+  return Util::OpenAsDirectory(&vfs_, services_);
+}
 
 void Namespace::NotifyComponentDiagnosticsDirReady(
     const std::string& component_url, const std::string& component_name,

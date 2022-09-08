@@ -31,7 +31,8 @@ class Util {
 
   static std::string GetArgsString(const ::fidl::VectorPtr<::std::string>& arguments);
 
-  static zx::channel OpenAsDirectory(fs::FuchsiaVfs* vfs, fbl::RefPtr<fs::Vnode> node);
+  static fidl::InterfaceHandle<fuchsia::io::Directory> OpenAsDirectory(fs::FuchsiaVfs* vfs,
+                                                                       fbl::RefPtr<fs::Vnode> node);
 };
 
 }  // namespace component

@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -16,7 +17,6 @@
 #include <fbl/unique_fd.h>
 
 #include "src/lib/files/directory.h"
-#include "src/lib/fsl/io/fd.h"
 #include "src/modular/lib/fidl/clone.h"
 
 namespace modular {
@@ -49,13 +49,14 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
       FX_LOGS(ERROR) << "Unable to open directory at " << data_origin << ". errno: " << errno;
       return;
     }
-
-    launch_info.flat_namespace->directories.push_back(
-        fsl::CloneChannelFromFileDescriptor(dir.get()));
-    if (!launch_info.flat_namespace->directories.at(0)) {
-      FX_LOGS(ERROR) << "Unable create a handle from  " << data_origin;
+    fdio_cpp::FdioCaller caller(std::move(dir));
+    zx::status channel = caller.take_directory();
+    if (channel.is_error()) {
+      FX_PLOGS(ERROR, channel.status_value()) << "Unable create a handle from  " << data_origin;
       return;
     }
+
+    launch_info.flat_namespace->directories.emplace_back(channel.value().TakeChannel());
   }
 
   if (additional_services) {

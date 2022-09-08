@@ -73,7 +73,7 @@ impl LegacyComponent {
                     let client_end = namespace_entry
                         .directory
                         .ok_or(format_err!("directory entry {} has no client handle", entry))?;
-                    flat_namespace.directories.push(client_end.into_channel());
+                    flat_namespace.directories.push(client_end);
                     flat_namespace.paths.push(entry.to_string());
                 }
                 _ => return Err(format_err!("malformed namespace")),

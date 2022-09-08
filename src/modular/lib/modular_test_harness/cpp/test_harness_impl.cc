@@ -310,11 +310,10 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
       sys::testing::EnclosingEnvironment::Create(MakeTestHarnessEnvironmentName(user_env_suffix),
                                                  parent_env_, std::move(env_services), env_options);
 
-  zx::channel client;
-  zx::channel request;
-  FX_CHECK(zx::channel::create(0u, &client, &request) == ZX_OK);
+  fidl::InterfaceHandle<fuchsia::io::Directory> client;
   basemgr_config_dir_ = MakeBasemgrConfigDir(spec_);
-  basemgr_config_dir_->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE, std::move(request));
+  basemgr_config_dir_->Serve(fuchsia::io::OpenFlags::RIGHT_READABLE,
+                             client.NewRequest().TakeChannel());
 
   fuchsia::io::DirectoryPtr basemgr_svc_dir;
   fuchsia::sys::LaunchInfo launch_info;
@@ -331,14 +330,15 @@ void TestHarnessImpl::Run(fuchsia::modular::testing::TestHarnessSpec spec) {
   basemgr_ctrl_.set_error_handler([this](zx_status_t err) { on_exit_(); });
 }
 
-zx::channel TakeSvcFromFlatNamespace(fuchsia::sys::FlatNamespace* flat_namespace) {
+fidl::InterfaceHandle<fuchsia::io::Directory> TakeSvcFromFlatNamespace(
+    fuchsia::sys::FlatNamespace* flat_namespace) {
   for (size_t i = 0; i < flat_namespace->paths.size(); i++) {
     if (flat_namespace->paths[i] == "/svc") {
       return std::move(flat_namespace->directories[i]);
     }
   }
   FX_CHECK(false) << "Could not find /svc in component namespace.";
-  return zx::channel();
+  return {};
 }
 
 zx_status_t TestHarnessImpl::SetupFakeSessionAgent() {
