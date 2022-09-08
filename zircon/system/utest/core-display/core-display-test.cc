@@ -13,9 +13,8 @@
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
@@ -70,6 +69,8 @@ class CoreDisplayTest : public zxtest::Test {
   zx_status_t ReleaseCapture(uint64_t id) const;
   void CaptureSetup();
 
+  fdio_cpp::FdioCaller caller_;
+
   fidl::WireSyncClient<fhd::Controller> dc_client_;
   fidl::WireSyncClient<sysinfo::SysInfo> sysinfo_;
   fidl::WireSyncClient<sysmem::Allocator> sysmem_allocator_;
@@ -78,33 +79,32 @@ class CoreDisplayTest : public zxtest::Test {
   fidl::WireSyncClient<sysmem::BufferCollection> collection_;
 
  private:
-  zx::channel device_client_channel_;
-  zx::channel dc_client_channel_;
-  zx::channel sysinfo_client_channel_;
-  zx::channel sysmem_client_channel_;
-  fdio_cpp::FdioCaller caller_;
+  fidl::ClientEnd<fhd::Controller> device_client_channel_;
   fbl::Vector<fhd::wire::Info> displays_;
   bool capture_supported_ = false;
 };
 
 void CoreDisplayTest::SetUp() {
-  zx::channel device_server_channel;
-  fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
-  zx_status_t status = zx::channel::create(0, &device_server_channel, &device_client_channel_);
-  ASSERT_OK(status);
+  zx::status device_server_channel =
+      fidl::CreateEndpoints<fhd::Controller>(&device_client_channel_);
+  ASSERT_TRUE(device_server_channel.is_ok(), "%s", device_server_channel.status_string());
 
-  zx::channel dc_server_channel;
-  status = zx::channel::create(0, &dc_server_channel, &dc_client_channel_);
-  ASSERT_OK(status);
+  zx::status dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  ASSERT_TRUE(dc_endpoints.is_ok(), "%s", dc_endpoints.status_string());
 
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(open("/dev/class/display-controller/000", O_RDWR)), "%s",
+              strerror(errno));
   caller_.reset(std::move(fd));
-  auto open_status =
-      fidl::WireCall<fhd::Provider>(caller_.channel())
-          ->OpenController(std::move(device_server_channel), std::move(dc_server_channel));
-  ASSERT_TRUE(open_status.ok());
-  ASSERT_EQ(ZX_OK, open_status.value().s);
 
-  dc_client_ = fidl::WireSyncClient<fhd::Controller>(std::move(dc_client_channel_));
+  const fidl::WireResult result = fidl::WireCall(caller_.borrow_as<fhd::Provider>())
+                                      ->OpenController(device_server_channel.value().TakeChannel(),
+                                                       std::move(dc_endpoints->server));
+  ASSERT_TRUE(result.ok(), "%s", result.status_string());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.s);
+
+  dc_client_ = fidl::BindSyncClient(std::move(dc_endpoints->client));
 
   class EventHandler : public fidl::WireSyncEventHandler<fhd::Controller> {
    public:
@@ -137,12 +137,9 @@ void CoreDisplayTest::SetUp() {
   } while (!event_handler.has_display());
 
   // get sysmem
-  zx::channel sysmem_server_channel;
-  status = zx::channel::create(0, &sysmem_server_channel, &sysmem_client_channel_);
-  ASSERT_OK(status);
-  status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server_channel.release());
-  ASSERT_OK(status);
-  sysmem_allocator_ = fidl::WireSyncClient<sysmem::Allocator>(std::move(sysmem_client_channel_));
+  zx::status sysmem_allocator = service::Connect<sysmem::Allocator>();
+  ASSERT_TRUE(sysmem_allocator.is_ok(), "%s", sysmem_allocator.status_string());
+  sysmem_allocator_ = fidl::BindSyncClient(std::move(sysmem_allocator.value()));
 }
 
 void CoreDisplayTest::TearDown() {
@@ -166,36 +163,37 @@ void CoreDisplayTest::ImportEvent() {
 
 void CoreDisplayTest::CreateToken() {
   // Create token and keep the client
-  zx::channel token_server;
-  zx::channel token_client;
-  auto status = zx::channel::create(0, &token_server, &token_client);
-  ASSERT_OK(status);
-
-  token_ = fidl::WireSyncClient<sysmem::BufferCollectionToken>(std::move(token_client));
+  zx::status endpoints = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
+  ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
   // Pass token server to sysmem allocator
-  auto alloc_status = sysmem_allocator_->AllocateSharedCollection(std::move(token_server));
-  ASSERT_TRUE(alloc_status.ok());
+  const fidl::WireResult result =
+      sysmem_allocator_->AllocateSharedCollection(std::move(endpoints->server));
+  ASSERT_TRUE(result.ok(), "%s", result.status_string());
+
+  token_ = fidl::BindSyncClient(std::move(endpoints->client));
 }
 
 void CoreDisplayTest::DuplicateAndImportToken() {
   // Duplicate the token, to be passed to the display controller
-  zx::channel token_dup_client;
-  zx::channel token_dup_server;
-  auto status = zx::channel::create(0, &token_dup_server, &token_dup_client);
-  ASSERT_OK(status);
-  fidl::WireSyncClient<sysmem::BufferCollectionToken> display_token(std::move(token_dup_client));
-  auto dup_res = token_->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
-  ASSERT_TRUE(dup_res.ok());
-  ASSERT_OK(dup_res.status());
-  // sync token
-  // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-  (void)token_->Sync();
+  zx::status endpoints = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
+  ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
-  auto import_resp = dc_client_->ImportBufferCollection(
-      kCollectionId, display_token.TakeClientEnd().TakeChannel());
-  ASSERT_TRUE(import_resp.ok());
-  ASSERT_OK(import_resp.value().res);
+  {
+    const fidl::WireResult result =
+        token_->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(endpoints->server));
+    ASSERT_TRUE(result.ok(), "%s", result.status_string());
+  }
+  {
+    const fidl::WireResult result = token_->Sync();
+    ASSERT_TRUE(result.ok(), "%s", result.status_string());
+  }
+
+  const fidl::WireResult result =
+      dc_client_->ImportBufferCollection(kCollectionId, std::move(endpoints->client));
+  ASSERT_TRUE(result.ok(), "%s", result.status_string());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.res);
 }
 
 void CoreDisplayTest::SetBufferConstraints() {
@@ -210,13 +208,14 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   // now that we have provided all that's needed to the display controllers, we can
   // return our token, set our own constraints and for allocation
   // Before that, we need to create a channel to communicate with the buffer collection
-  zx::channel collection_client;
-  zx::channel collection_server;
-  auto status = zx::channel::create(0, &collection_server, &collection_client);
-  ASSERT_OK(status);
-  auto bind_resp = sysmem_allocator_->BindSharedCollection(token_.TakeClientEnd().TakeChannel(),
-                                                           std::move(collection_server));
-  ASSERT_OK(bind_resp.status());
+  zx::status endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
+  ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
+
+  {
+    const fidl::WireResult result = sysmem_allocator_->BindSharedCollection(
+        token_.TakeClientEnd(), std::move(endpoints->server));
+    ASSERT_TRUE(result.ok(), "%s", result.status_string());
+  }
 
   // token has been returned. Let's set contraints
   sysmem::wire::BufferCollectionConstraints constraints = {};
@@ -245,13 +244,19 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-  collection_ = fidl::WireSyncClient<sysmem::BufferCollection>(std::move(collection_client));
-  auto collection_resp = collection_->SetConstraints(true, constraints);
-  ASSERT_OK(collection_resp.status());
+  collection_ = fidl::BindSyncClient(std::move(endpoints->client));
+  {
+    const fidl::WireResult result = collection_->SetConstraints(true, constraints);
+    ASSERT_TRUE(result.ok(), "%s", result.status_string());
+  }
 
   // Token return and constraints set. Wait for allocation
-  auto wait_resp = collection_->WaitForBuffersAllocated();
-  ASSERT_OK(wait_resp.status());
+  {
+    const fidl::WireResult result = collection_->WaitForBuffersAllocated();
+    ASSERT_TRUE(result.ok(), "%s", result.status_string());
+    const auto& response = result.value();
+    ASSERT_OK(response.status);
+  }
 }
 
 uint64_t CoreDisplayTest::ImportCaptureImage() const {
@@ -314,21 +319,18 @@ void CoreDisplayTest::CaptureSetup() {
 }
 
 TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
-  // Setup connects to display controller. Make sure we can't bound again
-  fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
-  zx::channel device_server, device_client;
-  zx_status_t status = zx::channel::create(0, &device_server, &device_client);
-  ASSERT_EQ(status, ZX_OK);
+  zx::status device_endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  ASSERT_TRUE(device_endpoints.is_ok(), "%s", device_endpoints.status_string());
 
-  zx::channel dc_server, dc_client;
-  status = zx::channel::create(0, &dc_server, &dc_client);
-  ASSERT_EQ(status, ZX_OK);
+  zx::status dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  ASSERT_TRUE(dc_endpoints.is_ok(), "%s", dc_endpoints.status_string());
 
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto open_status = fidl::WireCall<fhd::Provider>(caller.channel())
-                         ->OpenController(std::move(device_server), std::move(dc_server));
-  EXPECT_TRUE(open_status.ok());
-  EXPECT_EQ(ZX_ERR_ALREADY_BOUND, open_status.value().s);
+  const fidl::WireResult result =
+      fidl::WireCall(caller_.borrow_as<fhd::Provider>())
+          ->OpenController(device_endpoints->server.TakeChannel(), std::move(dc_endpoints->server));
+  ASSERT_TRUE(result.ok(), "%s", result.status_string());
+  const fidl::WireResponse response = result.value();
+  ASSERT_STATUS(response.s, ZX_ERR_ALREADY_BOUND);
 }
 
 TEST_F(CoreDisplayTest, CreateLayer) {
