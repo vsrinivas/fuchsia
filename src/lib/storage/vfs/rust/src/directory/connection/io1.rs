@@ -174,9 +174,9 @@ where
                 responder.send(&mut self.directory.close().map_err(|status| status.into_raw()))?;
                 return Ok(ConnectionState::Closed);
             }
-            fio::DirectoryRequest::Describe { responder } => {
+            fio::DirectoryRequest::DescribeDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Describe");
-                let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
+                let mut info = fio::NodeInfoDeprecated::Directory(fio::DirectoryObject);
                 responder.send(&mut info)?;
             }
             fio::DirectoryRequest::GetConnectionInfo { responder } => {
@@ -469,7 +469,7 @@ mod tests {
 
         // The channel also be closed with a NOT_FOUND epitaph.
         assert_matches!(
-            node_proxy.describe().await,
+            node_proxy.describe_deprecated().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
                 protocol_name: "(anonymous) Node",
@@ -547,7 +547,7 @@ mod tests {
 
         // The channel should be closed with a NOT_FOUND epitaph.
         assert_matches!(
-            node_proxy.describe().await,
+            node_proxy.describe_deprecated().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
                 protocol_name: "(anonymous) Node",

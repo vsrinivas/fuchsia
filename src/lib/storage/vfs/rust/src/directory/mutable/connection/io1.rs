@@ -148,7 +148,7 @@ impl MutableConnection {
             | fio::DirectoryRequest::AdvisoryLock { .. }
             | fio::DirectoryRequest::Clone { .. }
             | fio::DirectoryRequest::Close { .. }
-            | fio::DirectoryRequest::Describe { .. }
+            | fio::DirectoryRequest::DescribeDeprecated { .. }
             | fio::DirectoryRequest::GetConnectionInfo { .. }
             | fio::DirectoryRequest::Enumerate { .. }
             | fio::DirectoryRequest::GetAttr { .. }
@@ -266,7 +266,7 @@ impl MutableConnection {
                 .into_stream_and_control_handle()?;
 
         if flags.intersects(fio::OpenFlags::DESCRIBE) {
-            let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
+            let mut info = fio::NodeInfoDeprecated::Directory(fio::DirectoryObject);
             control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info))?;
         }
 

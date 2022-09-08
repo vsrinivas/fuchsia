@@ -54,7 +54,7 @@ TEST(FidlTests, TestFidlBasic) {
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/fidltmp/file-a", endpoints->server.TakeChannel().release()));
 
-  auto describe_result = fidl::WireCall(endpoints->client)->Describe();
+  auto describe_result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
   ASSERT_OK(describe_result.status());
   ASSERT_TRUE(describe_result->info.is_file());
   ASSERT_EQ(describe_result->info.file().event.get(), ZX_HANDLE_INVALID);

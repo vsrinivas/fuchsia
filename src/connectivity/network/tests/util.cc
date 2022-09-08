@@ -24,10 +24,10 @@ void ZxSocketInfoStream(int fd, zx_info_socket_t& out_info) {
   ASSERT_OK(fdio_fd_clone(fd, client_end.channel().reset_and_get_address()));
   fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
 
-  auto response = client->Describe();
+  auto response = client->DescribeDeprecated();
   ASSERT_OK(response.status());
-  const fuchsia_io::wire::NodeInfo& node_info = response.value().info;
-  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+  const fuchsia_io::wire::NodeInfoDeprecated& node_info = response.value().info;
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfoDeprecated::Tag::kStreamSocket);
 
   ASSERT_OK(node_info.stream_socket().socket.get_info(ZX_INFO_SOCKET, &out_info, sizeof(out_info),
                                                       nullptr, nullptr));
@@ -38,10 +38,10 @@ void ZxSocketInfoDgram(int fd, zx_info_socket_t& out_info) {
   ASSERT_OK(fdio_fd_clone(fd, client_end.channel().reset_and_get_address()));
   fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
 
-  auto response = client->Describe();
+  auto response = client->DescribeDeprecated();
   ASSERT_OK(response.status());
-  const fuchsia_io::wire::NodeInfo& node_info = response.value().info;
-  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket);
+  const fuchsia_io::wire::NodeInfoDeprecated& node_info = response.value().info;
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfoDeprecated::Tag::kDatagramSocket);
 
   ASSERT_OK(node_info.datagram_socket().socket.get_info(ZX_INFO_SOCKET, &out_info, sizeof(out_info),
                                                         nullptr, nullptr));

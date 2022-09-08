@@ -339,7 +339,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
             "root",
             server_end.into_channel().into(),
         )?;
-        let _ = root_dir.describe().await?;
+        let _ = root_dir.describe_deprecated().await?;
 
         Ok(ServingSingleVolumeFilesystem {
             process: Some(process),

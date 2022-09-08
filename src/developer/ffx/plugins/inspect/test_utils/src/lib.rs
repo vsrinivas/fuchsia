@@ -251,7 +251,7 @@ impl MockDir {
         let mut stream = object.into_stream().unwrap();
         let _ = stream.control_handle().send_on_open_(
             Status::OK.into_raw(),
-            Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject {})),
+            Some(&mut fio::NodeInfoDeprecated::Directory(fio::DirectoryObject {})),
         );
         while let Ok(Some(request)) = stream.try_next().await {
             match request {

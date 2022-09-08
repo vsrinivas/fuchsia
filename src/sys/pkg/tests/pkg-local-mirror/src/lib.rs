@@ -200,7 +200,7 @@ impl DirectoryEntry for DropAndSignal {
         // Need to send OnOpen because of the Describe flag.
         ch.send_on_open_(
             Status::OK.into_raw(),
-            Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject)),
+            Some(&mut fio::NodeInfoDeprecated::Directory(fio::DirectoryObject)),
         )
         .unwrap();
 

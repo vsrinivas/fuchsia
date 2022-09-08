@@ -120,7 +120,7 @@ impl Service {
             // way of sending on_open_ using FIDL and then getting the channel back.
             let request_stream = fio::NodeRequestStream::from_channel(channel);
             let (status, mut node_info) = match status {
-                Ok(()) => (Status::OK, Some(fio::NodeInfo::Service(fio::Service))),
+                Ok(()) => (Status::OK, Some(fio::NodeInfoDeprecated::Service(fio::Service))),
                 Err(status) => (status, None),
             };
             request_stream.control_handle().send_on_open_(status.into_raw(), node_info.as_mut())?;

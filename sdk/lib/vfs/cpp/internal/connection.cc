@@ -30,8 +30,8 @@ void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
   // |this| is destroyed at this point.
 }
 
-void Connection::Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback) {
-  fuchsia::io::NodeInfo info{};
+void Connection::Describe(Node* vn, fuchsia::io::Node::DescribeDeprecatedCallback callback) {
+  fuchsia::io::NodeInfoDeprecated info{};
   vn->Describe(&info);
   if (info.has_invalid_tag()) {
     vn->Close(this);
@@ -75,11 +75,11 @@ void Connection::SetAttr(Node* vn, fuchsia::io::NodeAttributeFlags flags,
   callback(vn->SetAttr(flags, attributes));
 }
 
-std::unique_ptr<fuchsia::io::NodeInfo> Connection::NodeInfoIfStatusOk(Node* vn,
-                                                                      zx_status_t status) {
-  std::unique_ptr<fuchsia::io::NodeInfo> node_info;
+std::unique_ptr<fuchsia::io::NodeInfoDeprecated> Connection::NodeInfoIfStatusOk(
+    Node* vn, zx_status_t status) {
+  std::unique_ptr<fuchsia::io::NodeInfoDeprecated> node_info;
   if (status == ZX_OK) {
-    node_info = std::make_unique<fuchsia::io::NodeInfo>();
+    node_info = std::make_unique<fuchsia::io::NodeInfoDeprecated>();
     vn->Describe(node_info.get());
   }
   return node_info;

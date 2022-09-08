@@ -285,11 +285,11 @@ async fn read_file(dir: &fio::DirectoryProxy, path: &str) -> Result<Vec<u8>, Ver
                     Ok(()) => Ok(()),
                 }?;
 
-                match *info.expect("fio::FileEvent to have fio::NodeInfo") {
-                    fio::NodeInfo::File(fio::FileObject { event, .. }) => event,
+                match *info.expect("fio::FileEvent to have fio::NodeInfoDeprecated") {
+                    fio::NodeInfoDeprecated::File(fio::FileObject { event, .. }) => event,
                     other => {
                         panic!(
-                            "fio::NodeInfo from fio::FileEventStream to be File variant with event: {:?}",
+                            "fio::NodeInfoDeprecated from fio::FileEventStream to be File variant with event: {:?}",
                             other
                         )
                     }

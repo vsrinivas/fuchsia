@@ -67,7 +67,6 @@ protocol Node2 {
     @selector("fuchsia.io/Node.Close")
     Close() -> (struct {}) error zx.status;
 
-
     /// An event produced eagerly by the server if requested by
     /// [`NodeFlags.GET_REPRESENTATION`]. This event will be the first message
     /// from the server, and is sent exactly once.

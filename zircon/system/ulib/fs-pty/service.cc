@@ -89,7 +89,9 @@ void NullPtyDeviceImpl::GetConnectionInfo(GetConnectionInfoCompleter::Sync& comp
   ZX_ASSERT(false);
 }
 
-void NullPtyDeviceImpl::Describe(DescribeCompleter::Sync& completer) { ZX_ASSERT(false); }
+void NullPtyDeviceImpl::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
 
 void NullPtyDeviceImpl::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
 

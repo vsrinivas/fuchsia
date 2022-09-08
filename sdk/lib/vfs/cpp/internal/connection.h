@@ -91,16 +91,16 @@ class Connection {
   void Clone(Node* vn, fuchsia::io::OpenFlags flags, zx::channel request,
              async_dispatcher_t* dispatcher);
   void Close(Node* vn, fuchsia::io::Node::CloseCallback callback);
-  void Describe(Node* vn, fuchsia::io::Node::DescribeCallback callback);
+  void Describe(Node* vn, fuchsia::io::Node::DescribeDeprecatedCallback callback);
   void GetConnectionInfo(Node* vn, fuchsia::io::Node::GetConnectionInfoCallback callback);
   void Sync(Node* vn, fuchsia::io::Node::SyncCallback callback);
   void GetAttr(Node* vn, fuchsia::io::Node::GetAttrCallback callback);
   void SetAttr(Node* vn, fuchsia::io::NodeAttributeFlags flags,
                fuchsia::io::NodeAttributes attributes, fuchsia::io::Node::SetAttrCallback callback);
 
-  // returns |fuchsia.io.NodeInfo| if status is |ZX_OK|, else returns null
+  // returns |fuchsia.io.NodeInfoDeprecated| if status is |ZX_OK|, else returns null
   // inside unique_ptr.
-  std::unique_ptr<fuchsia::io::NodeInfo> NodeInfoIfStatusOk(Node* vn, zx_status_t status);
+  std::unique_ptr<fuchsia::io::NodeInfoDeprecated> NodeInfoIfStatusOk(Node* vn, zx_status_t status);
 
  private:
   // The flags associated with this connection.

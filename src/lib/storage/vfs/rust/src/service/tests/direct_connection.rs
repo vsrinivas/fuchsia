@@ -156,7 +156,10 @@ fn test_describe() {
                 .into_on_open_()
                 .expect("Expected OnOpen");
             assert_eq!(Status::from_raw(status), Status::OK);
-            assert_matches!(node_info.as_deref(), Some(fio::NodeInfo::Service(fio::Service)));
+            assert_matches!(
+                node_info.as_deref(),
+                Some(fio::NodeInfoDeprecated::Service(fio::Service))
+            );
 
             let proxy = EchoProxy::from_channel(node_proxy.into_channel().unwrap());
 

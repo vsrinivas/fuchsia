@@ -37,9 +37,10 @@ type OpenFlags = strict bits : uint32 {
     /// and, if the node is a file, these extra operations: `GetFlags`, `SetFlags`.
     NODE_REFERENCE = 0x00400000;
     /// Requests that an "OnOpen" event is sent to the interface request.
-    /// The event will contain a non-null NodeInfo if the open/clone is successful. This can be used
-    /// to open a protocol that does not compose fuchsia.io/Node; the event is sent as if the
-    /// protocol is fuchsia.io/Node and then the target protocol is used exclusively.
+    ///
+    /// The event will contain a non-null `NodeInfoDeprecated` if the open/clone is successful. This
+    /// can be used to open a protocol that does not compose fuchsia.io/Node; the event is sent as
+    /// if the protocol is fuchsia.io/Node and then the target protocol is used exclusively.
     DESCRIBE = 0x00800000;
     @available(deprecated=7, removed=HEAD, note="Use POSIX_WRITABLE/POSIX_EXECUTABLE instead.")
     POSIX_DEPRECATED = 0x01000000;

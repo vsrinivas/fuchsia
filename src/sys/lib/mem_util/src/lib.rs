@@ -69,7 +69,7 @@ pub enum FileError {
     #[error("Open() call failed, as reported in the OnOpen event.")]
     OnOpenError(#[source] zxs::Status),
 
-    #[error("We got an OK from OnOpen but didn't receive NodeInfo.")]
+    #[error("We got an OK from OnOpen but didn't receive NodeInfoDeprecated.")]
     MissingNodeInfo,
 
     #[error("Couldn't read a file")]
@@ -149,7 +149,10 @@ mod tests {
             control
                 .send_on_open_(
                     zxs::Status::OK.into_raw(),
-                    Some(&mut fio::NodeInfo::File(fio::FileObject { event: None, stream: None })),
+                    Some(&mut fio::NodeInfoDeprecated::File(fio::FileObject {
+                        event: None,
+                        stream: None,
+                    })),
                 )
                 .unwrap();
 
@@ -191,7 +194,10 @@ mod tests {
             control
                 .send_on_open_(
                     zxs::Status::OK.into_raw(),
-                    Some(&mut fio::NodeInfo::File(fio::FileObject { event: None, stream: None })),
+                    Some(&mut fio::NodeInfoDeprecated::File(fio::FileObject {
+                        event: None,
+                        stream: None,
+                    })),
                 )
                 .unwrap();
 

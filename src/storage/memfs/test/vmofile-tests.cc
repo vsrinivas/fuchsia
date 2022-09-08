@@ -136,9 +136,9 @@ TEST(VmofileTests, test_vmofile_basic) {
   }
 
   {
-    auto describe_result = fidl::WireCall(file)->Describe();
+    auto describe_result = fidl::WireCall(file)->DescribeDeprecated();
     ASSERT_OK(describe_result.status());
-    fio::wire::NodeInfo* info = &describe_result->info;
+    fio::wire::NodeInfoDeprecated* info = &describe_result->info;
     ASSERT_TRUE(info->is_file());
   }
 
@@ -220,9 +220,9 @@ TEST(VmofileTests, test_vmofile_exec) {
   }
 
   {
-    auto describe_result = fidl::WireCall(file)->Describe();
+    auto describe_result = fidl::WireCall(file)->DescribeDeprecated();
     ASSERT_OK(describe_result.status());
-    fio::wire::NodeInfo* info = &describe_result->info;
+    fio::wire::NodeInfoDeprecated* info = &describe_result->info;
     ASSERT_TRUE(info->is_file());
   }
 

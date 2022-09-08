@@ -140,10 +140,10 @@ class MockBlockDevice {
     }
 
     void Close(CloseCompleter::Sync& completer) override {}
-    void Describe(DescribeCompleter::Sync& completer) override {
+    void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
       fio::wire::FileObject file;
-      completer.Reply(
-          fio::wire::NodeInfo::WithFile(fidl::ObjectView<decltype(file)>::FromExternal(&file)));
+      completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
+          fidl::ObjectView<decltype(file)>::FromExternal(&file)));
     }
     void Query(QueryCompleter::Sync& completer) override {}
     void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override {}

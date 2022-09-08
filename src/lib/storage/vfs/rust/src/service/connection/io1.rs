@@ -83,7 +83,7 @@ impl Connection {
         };
 
         if flags.intersects(fio::OpenFlags::DESCRIBE) {
-            let mut info = fio::NodeInfo::Service(fio::Service);
+            let mut info = fio::NodeInfoDeprecated::Service(fio::Service);
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
@@ -137,8 +137,8 @@ impl Connection {
                 responder.send(&mut Ok(()))?;
                 return Ok(ConnectionState::Closed);
             }
-            fio::NodeRequest::Describe { responder } => {
-                let mut info = fio::NodeInfo::Service(fio::Service);
+            fio::NodeRequest::DescribeDeprecated { responder } => {
+                let mut info = fio::NodeInfoDeprecated::Service(fio::Service);
                 responder.send(&mut info)?;
             }
             fio::NodeRequest::GetConnectionInfo { responder } => {

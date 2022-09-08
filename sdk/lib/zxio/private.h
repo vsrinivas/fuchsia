@@ -219,7 +219,7 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t size, zxio_vmo_flags_
                                 zx_handle_t* out_vmo);
 
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
-                                      fuchsia_io::wire::NodeInfo& node_info,
+                                      fuchsia_io::wire::NodeInfoDeprecated& node_info,
                                       zxio_storage_t* storage);
 
 // Common functionalities shared by the fuchsia.io v1 |node| and |remote| transports.

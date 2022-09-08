@@ -13,7 +13,7 @@ Service::Service(Connector connector) : connector_(std::move(connector)) {}
 
 Service::~Service() = default;
 
-void Service::Describe(fuchsia::io::NodeInfo* out_info) {
+void Service::Describe(fuchsia::io::NodeInfoDeprecated* out_info) {
   out_info->set_service(fuchsia::io::Service());
 }
 
@@ -38,7 +38,8 @@ zx_status_t Service::Connect(fuchsia::io::OpenFlags flags, zx::channel request,
   // Send OnOpen event if required before switching from the |Node| protocol back to the service.
   if (Flags::ShouldDescribe(flags)) {
     fidl::EventSender<fuchsia::io::Node> sender(std::move(request));
-    std::unique_ptr<fuchsia::io::NodeInfo> node_info = std::make_unique<fuchsia::io::NodeInfo>();
+    std::unique_ptr<fuchsia::io::NodeInfoDeprecated> node_info =
+        std::make_unique<fuchsia::io::NodeInfoDeprecated>();
     Describe(node_info.get());
     sender.events().OnOpen(ZX_OK, std::move(node_info));
     request = sender.TakeChannel();

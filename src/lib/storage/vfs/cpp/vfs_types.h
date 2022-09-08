@@ -439,11 +439,11 @@ class VnodeRepresentation {
   Variants variants_ = {};
 };
 
-// Converts the vnode representation to a fuchsia.io v1 NodeInfo union, then synchronously invoke
-// the callback. This operation consumes the |representation|. Using a callback works around LLCPP
-// ownership limitations where an extensible union cannot recursively own its variant payload.
+// Converts the vnode representation to a fuchsia.io v1 NodeInfoDeprecated union, then synchronously
+// invoke the callback. This operation consumes the |representation|. Using a callback works around
+// LLCPP ownership limitations where an extensible union cannot recursively own its variant payload.
 void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
-                           fit::callback<void(fuchsia_io::wire::NodeInfo&&)> callback);
+                           fit::callback<void(fuchsia_io::wire::NodeInfoDeprecated&&)> callback);
 
 struct ConnectionInfoConverter {
   explicit ConnectionInfoConverter(VnodeRepresentation representation);

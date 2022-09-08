@@ -379,7 +379,7 @@ class CreateTestBase : public zxtest::Test {
   zxio_t* zxio() { return &storage_.io; }
   zxio_storage_t* storage() { return &storage_; }
 
-  void SendOnOpenEvent(fuchsia_io::wire::NodeInfo node_info) {
+  void SendOnOpenEvent(fuchsia_io::wire::NodeInfoDeprecated node_info) {
     ASSERT_OK(fidl::WireSendEvent(node_server_end_)->OnOpen(ZX_OK, std::move(node_info)));
   }
 
@@ -396,7 +396,7 @@ class CreateTestBase : public zxtest::Test {
 using CreateTest = CreateTestBase<zxio_tests::DescribeNodeServer>;
 using CreateWithOnOpenTest = CreateTestBase<zxio_tests::CloseOnlyNodeServer>;
 
-using DescribeCompleter = fidl::WireServer<::fuchsia_io::Node>::DescribeCompleter;
+using DescribeCompleter = fidl::WireServer<::fuchsia_io::Node>::DescribeDeprecatedCompleter;
 
 class SyncNodeServer : public zxio_tests::DescribeNodeServer {
  public:
@@ -407,7 +407,7 @@ using CreateDirectoryTest = CreateTestBase<SyncNodeServer>;
 
 TEST_F(CreateDirectoryTest, Directory) {
   node_server().set_describe_function([](DescribeCompleter::Sync& completer) mutable {
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
+    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithDirectory({}));
   });
 
   StartServerThread();
@@ -443,7 +443,7 @@ TEST_F(CreateDirectoryTest, DirectoryWithTypeWrapper) {
 using CreateDirectoryWithOnOpenTest = CreateTestBase<SyncNodeServer>;
 
 TEST_F(CreateDirectoryWithOnOpenTest, Directory) {
-  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithDirectory({}));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfoDeprecated::WithDirectory({}));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -459,8 +459,8 @@ class TestFileServerWithDescribe : public zxio_tests::TestReadFileServer {
   void set_file(fuchsia_io::wire::FileObject file) { file_ = std::move(file); }
 
  protected:
-  void Describe(DescribeCompleter::Sync& completer) final {
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithFile(
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
+    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithFile(
         fidl::ObjectView<decltype(file_)>::FromExternal(&file_)));
   }
 
@@ -505,8 +505,8 @@ TEST_F(CreateFileWithOnOpenTest, File) {
       .event = std::move(file_event),
       .stream = std::move(stream),
   };
-  SendOnOpenEvent(
-      fuchsia_io::wire::NodeInfo::WithFile(fidl::ObjectView<decltype(file)>::FromExternal(&file)));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfoDeprecated::WithFile(
+      fidl::ObjectView<decltype(file)>::FromExternal(&file)));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -578,7 +578,7 @@ TEST(CreateWithTypeWrapperTest, Pipe) {
 
 TEST_F(CreateTest, Service) {
   node_server().set_describe_function([](DescribeCompleter::Sync& completer) mutable {
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithService({}));
+    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithService({}));
   });
 
   StartServerThread();
@@ -589,7 +589,7 @@ TEST_F(CreateTest, Service) {
 }
 
 TEST_F(CreateWithOnOpenTest, Service) {
-  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithService({}));
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfoDeprecated::WithService({}));
 
   ASSERT_OK(zxio_create_with_on_open(TakeClientChannel().release(), storage()));
 
@@ -603,7 +603,7 @@ TEST_F(CreateTest, Tty) {
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
   node_server().set_describe_function(
       [event1 = std::move(event1)](DescribeCompleter::Sync& completer) mutable {
-        completer.Reply(fuchsia_io::wire::NodeInfo::WithTty({
+        completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithTty({
             .event = std::move(event1),
         }));
       });
@@ -627,7 +627,7 @@ TEST_F(CreateWithOnOpenTest, Tty) {
   zx::eventpair event0, event1;
 
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
-  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithTty({
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfoDeprecated::WithTty({
       .event = std::move(event1),
   }));
 
@@ -651,8 +651,8 @@ class TestVmofileServerWithDescribe : public zxio_tests::TestVmofileServer {
   void set_vmofile(fuchsia_io::wire::VmofileDeprecated vmofile) { vmofile_ = std::move(vmofile); }
 
  protected:
-  void Describe(DescribeCompleter::Sync& completer) final {
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
+    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithVmofileDeprecated(
         fidl::ObjectView<decltype(vmofile_)>::FromExternal(&vmofile_)));
   }
 
@@ -756,7 +756,7 @@ TEST_F(CreateVmofileWithOnOpenTest, File) {
       .offset = file_start_offset,
       .length = file_length,
   };
-  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfoDeprecated::WithVmofileDeprecated(
       fidl::ObjectView<decltype(vmofile)>::FromExternal(&vmofile)));
 
   node_server().set_seek_offset(offset_within_file);

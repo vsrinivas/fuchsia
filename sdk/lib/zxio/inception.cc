@@ -50,39 +50,39 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_b
 }
 
 zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
-                                       fuchsia_io::wire::NodeInfo& info,
+                                       fuchsia_io::wire::NodeInfoDeprecated& info,
                                        zxio_storage_alloc allocator, void** out_context) {
   zxio_storage_t* storage = nullptr;
   zxio_object_type_t type = ZXIO_OBJECT_TYPE_NONE;
   switch (info.Which()) {
-    case fio::wire::NodeInfo::Tag::kDatagramSocket:
+    case fio::wire::NodeInfoDeprecated::Tag::kDatagramSocket:
       type = ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET;
       break;
-    case fio::wire::NodeInfo::Tag::kDirectory:
+    case fio::wire::NodeInfoDeprecated::Tag::kDirectory:
       type = ZXIO_OBJECT_TYPE_DIR;
       break;
-    case fio::wire::NodeInfo::Tag::kFile:
+    case fio::wire::NodeInfoDeprecated::Tag::kFile:
       type = ZXIO_OBJECT_TYPE_FILE;
       break;
-    case fio::wire::NodeInfo::Tag::kPacketSocket:
+    case fio::wire::NodeInfoDeprecated::Tag::kPacketSocket:
       type = ZXIO_OBJECT_TYPE_PACKET_SOCKET;
       break;
-    case fio::wire::NodeInfo::Tag::kRawSocket:
+    case fio::wire::NodeInfoDeprecated::Tag::kRawSocket:
       type = ZXIO_OBJECT_TYPE_RAW_SOCKET;
       break;
-    case fio::wire::NodeInfo::Tag::kService:
+    case fio::wire::NodeInfoDeprecated::Tag::kService:
       type = ZXIO_OBJECT_TYPE_SERVICE;
       break;
-    case fio::wire::NodeInfo::Tag::kStreamSocket:
+    case fio::wire::NodeInfoDeprecated::Tag::kStreamSocket:
       type = ZXIO_OBJECT_TYPE_STREAM_SOCKET;
       break;
-    case fio::wire::NodeInfo::Tag::kSynchronousDatagramSocket:
+    case fio::wire::NodeInfoDeprecated::Tag::kSynchronousDatagramSocket:
       type = ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET;
       break;
-    case fio::wire::NodeInfo::Tag::kTty:
+    case fio::wire::NodeInfoDeprecated::Tag::kTty:
       type = ZXIO_OBJECT_TYPE_TTY;
       break;
-    case fio::wire::NodeInfo::Tag::kVmofileDeprecated:
+    case fio::wire::NodeInfoDeprecated::Tag::kVmofileDeprecated:
       type = ZXIO_OBJECT_TYPE_VMOFILE;
       break;
   }

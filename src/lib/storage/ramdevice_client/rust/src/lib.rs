@@ -398,8 +398,8 @@ mod tests {
         let fasync_channel =
             fasync::Channel::from_channel(device).expect("failed to convert to fasync channel");
         let proxy = fio::NodeProxy::new(fasync_channel);
-        let info = proxy.describe().await.expect("failed to get node info");
-        assert_matches!(info, fio::NodeInfo::File(_));
+        let info = proxy.describe_deprecated().await.expect("failed to get node info");
+        assert_matches!(info, fio::NodeInfoDeprecated::File(_));
 
         assert_eq!(ramdisk.destroy(), Ok(()));
     }

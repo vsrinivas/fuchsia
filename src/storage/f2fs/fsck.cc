@@ -204,7 +204,7 @@ bool FsckWorker::IsValidBlockAddress(uint32_t addr) {
   return true;
 }
 
-zx_status_t FsckWorker::ValidateNodeBlock(const Node &node_block, NodeInfo node_info,
+zx_status_t FsckWorker::ValidateNodeBlock(const Node &node_block, NodeInfoDeprecated node_info,
                                           FileType ftype, NodeType ntype) {
   if (node_info.nid != LeToCpu(node_block.footer.nid) ||
       node_info.ino != LeToCpu(node_block.footer.ino)) {
@@ -229,7 +229,7 @@ zx_status_t FsckWorker::ValidateNodeBlock(const Node &node_block, NodeInfo node_
   return ZX_OK;
 }
 
-zx::status<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfo node_info,
+zx::status<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfoDeprecated node_info,
                                            FileType ftype, NodeType ntype) {
   nid_t nid = node_info.nid;
   if (ftype != FileType::kFtOrphan || TestValidBitmap(nid, fsck_.nat_area_bitmap.get()) != 0x0) {
@@ -285,7 +285,8 @@ zx::status<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfo node
   return zx::ok(true);
 }
 
-zx::status<std::pair<std::unique_ptr<FsBlock>, NodeInfo>> FsckWorker::ReadNodeBlock(nid_t nid) {
+zx::status<std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>> FsckWorker::ReadNodeBlock(
+    nid_t nid) {
   if (!IsValidNid(nid)) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -294,10 +295,10 @@ zx::status<std::pair<std::unique_ptr<FsBlock>, NodeInfo>> FsckWorker::ReadNodeBl
   if (result.is_error()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
-  NodeInfo node_info = *result;
+  NodeInfoDeprecated node_info = *result;
 
   if (node_info.blk_addr == kNewAddr) {
-    return zx::ok(std::pair<std::unique_ptr<FsBlock>, NodeInfo>{nullptr, node_info});
+    return zx::ok(std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>{nullptr, node_info});
   }
 
   if (!IsValidBlockAddress(node_info.blk_addr) || !IsValidSsaNodeBlock(nid, node_info.blk_addr)) {
@@ -313,7 +314,8 @@ zx::status<std::pair<std::unique_ptr<FsBlock>, NodeInfo>> FsckWorker::ReadNodeBl
   auto fs_block = std::make_unique<FsBlock>();
   ZX_ASSERT(ReadBlock(*fs_block, node_info.blk_addr) == ZX_OK);
 
-  return zx::ok(std::pair<std::unique_ptr<FsBlock>, NodeInfo>{std::move(fs_block), node_info});
+  return zx::ok(
+      std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>{std::move(fs_block), node_info});
 }
 
 zx::status<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t nid, FileType ftype,
@@ -404,7 +406,8 @@ zx::status<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t 
 }
 
 zx::status<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block,
-                                                          NodeInfo node_info, FileType ftype) {
+                                                          NodeInfoDeprecated node_info,
+                                                          FileType ftype) {
   uint32_t child_count = 0, child_files = 0;
   uint64_t block_count = 1;
   nid_t nid = node_info.nid;
@@ -493,7 +496,8 @@ zx::status<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block
 
 zx::status<TraverseResult> FsckWorker::TraverseDnodeBlock(const Inode *inode,
                                                           const Node &node_block,
-                                                          NodeInfo node_info, FileType ftype) {
+                                                          NodeInfoDeprecated node_info,
+                                                          FileType ftype) {
   nid_t nid = node_info.nid;
   uint64_t block_count = 1;
   uint32_t child_count = 0, child_files = 0;
@@ -732,7 +736,7 @@ zx_status_t FsckWorker::CheckOrphanNodes() {
 #if 0  // porting needed
 int FsckWorker::FsckChkXattrBlk(uint32_t ino, uint32_t x_nid, uint32_t *block_count) {
   FsckInfo *fsck = &fsck_;
-  NodeInfo ni;
+  NodeInfoDeprecated ni;
 
   if (x_nid == 0x0)
     return 0;
@@ -2003,8 +2007,8 @@ zx::status<RawNatEntry> FsckWorker::GetNatEntry(nid_t nid) {
   return zx::ok(nat_block->entries[entry_off]);
 }
 
-zx::status<NodeInfo> FsckWorker::GetNodeInfo(nid_t nid) {
-  NodeInfo node_info;
+zx::status<NodeInfoDeprecated> FsckWorker::GetNodeInfo(nid_t nid) {
+  NodeInfoDeprecated node_info;
   auto result = GetNatEntry(nid);
   if (result.is_error()) {
     return result.take_error();
@@ -2159,7 +2163,7 @@ void FsckWorker::BuildNatAreaBitmap() {
 
     nid = block_off * kNatEntryPerBlock;
     for (uint32_t i = 0; i < kNatEntryPerBlock; ++i) {
-      NodeInfo node_info;
+      NodeInfoDeprecated node_info;
       node_info.nid = nid + i;
 
       if ((nid + i) == superblock_info_.GetNodeIno() ||

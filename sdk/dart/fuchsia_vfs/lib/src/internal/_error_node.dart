@@ -56,8 +56,9 @@ class ErrorNodeForSendingEvent extends Node {
   }
 
   @override
-  Future<NodeInfo> describe() async {
-    throw UnsupportedError('ErrorNodeForSendingEvent.describe is unreachable.');
+  Future<NodeInfoDeprecated> describeDeprecated() async {
+    throw UnsupportedError(
+        'ErrorNodeForSendingEvent.describeDeprecated is unreachable.');
   }
 
   @override

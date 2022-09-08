@@ -35,7 +35,7 @@ class Directory : public Node {
   zx_status_t Lookup(const std::string& name, Node** out_node) const override;
 
   std::vector<uint8_t> Query() const override;
-  void Describe(fuchsia::io::NodeInfo* out_info) override;
+  void Describe(fuchsia::io::NodeInfoDeprecated* out_info) override;
   void GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) override;
 
   // Enumerates Directory

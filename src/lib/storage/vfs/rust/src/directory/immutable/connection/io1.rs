@@ -91,7 +91,7 @@ impl DerivedConnection for ImmutableConnection {
             };
 
         if flags.intersects(fio::OpenFlags::DESCRIBE) {
-            let mut info = fio::NodeInfo::Directory(fio::DirectoryObject);
+            let mut info = fio::NodeInfoDeprecated::Directory(fio::DirectoryObject);
             match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,

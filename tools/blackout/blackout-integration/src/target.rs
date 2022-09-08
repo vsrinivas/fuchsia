@@ -25,7 +25,7 @@ impl Test for IntegrationTest {
         let proxy =
             fuchsia_fs::directory::open_in_namespace("/dev", fuchsia_fs::OpenFlags::RIGHT_READABLE)
                 .expect("failed to open /dev");
-        proxy.describe().await?;
+        proxy.describe_deprecated().await?;
 
         Ok(())
     }

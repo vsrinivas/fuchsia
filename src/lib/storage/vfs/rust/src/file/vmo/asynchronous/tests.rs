@@ -146,10 +146,10 @@ fn read_only_read_with_describe() {
 
         assert_event!(proxy, fio::FileEvent::OnOpen_ { s, info }, {
             assert_eq!(s, ZX_OK);
-            let info = *info.expect("Empty fio::NodeInfo");
+            let info = *info.expect("Empty fio::NodeInfoDeprecated");
             assert!(matches!(
                 info,
-                fio::NodeInfo::File(fio::FileObject { event: None, stream: None }),
+                fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None }),
             ));
         });
     });
@@ -247,10 +247,10 @@ fn read_error() {
 
             assert_event!(proxy, fio::FileEvent::OnOpen_ { s, info }, {
                 assert_eq!(s, ZX_OK);
-                let info = *info.expect("Empty fio::NodeInfo");
+                let info = *info.expect("Empty fio::NodeInfoDeprecated");
                 assert!(matches!(
                     info,
-                    fio::NodeInfo::File(fio::FileObject { event: None, stream: None }),
+                    fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None }),
                 ));
             });
 

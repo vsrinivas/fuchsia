@@ -44,7 +44,7 @@ class ServiceTest : public gtest::RealLoopFixture, public test::placeholders::Ec
     bool on_open_called = false;
 
     node_ptr.events().OnOpen = [&](zx_status_t status,
-                                   std::unique_ptr<fuchsia::io::NodeInfo> unused) {
+                                   std::unique_ptr<fuchsia::io::NodeInfoDeprecated> unused) {
       EXPECT_FALSE(on_open_called);  // should be called only once
       on_open_called = true;
       EXPECT_EQ(expected_status, status);
@@ -97,8 +97,8 @@ TEST_F(ServiceTest, TestDescribe) {
   fuchsia::io::NodeSyncPtr ptr;
   dir_ptr()->Open(fuchsia::io::OpenFlags::NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
 
-  fuchsia::io::NodeInfo info;
-  ptr->Describe(&info);
+  fuchsia::io::NodeInfoDeprecated info;
+  ptr->DescribeDeprecated(&info);
   EXPECT_TRUE(info.is_service());
 }
 

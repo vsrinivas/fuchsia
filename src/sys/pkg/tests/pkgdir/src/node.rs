@@ -231,8 +231,8 @@ async fn assert_describe_directory(package_root: &fio::DirectoryProxy, path: &st
 }
 
 async fn verify_describe_directory_success(node: fio::NodeProxy) -> Result<(), Error> {
-    match node.describe().await {
-        Ok(fio::NodeInfo::Directory(directory_object)) => {
+    match node.describe_deprecated().await {
+        Ok(fio::NodeInfoDeprecated::Directory(directory_object)) => {
             assert_eq!(directory_object, fio::DirectoryObject);
             Ok(())
         }
@@ -259,19 +259,20 @@ async fn verify_describe_content_file(
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
     if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
-        match node.describe().await {
-            Ok(fio::NodeInfo::Service(fio::Service)) => Ok(()),
+        match node.describe_deprecated().await {
+            Ok(fio::NodeInfoDeprecated::Service(fio::Service)) => Ok(()),
             Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
             Err(e) => Err(e).context("failed to call describe"),
         }
     } else {
-        match node.describe().await {
-            Ok(fio::NodeInfo::File(fio::FileObject { event: Some(event), stream: None })) => {
-                match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
-                    Ok(_) => Ok(()),
-                    Err(_) => Err(anyhow!("FILE_SIGNAL_READABLE not set")),
-                }
-            }
+        match node.describe_deprecated().await {
+            Ok(fio::NodeInfoDeprecated::File(fio::FileObject {
+                event: Some(event),
+                stream: None,
+            })) => match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
+                Ok(_) => Ok(()),
+                Err(_) => Err(anyhow!("FILE_SIGNAL_READABLE not set")),
+            },
             Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
             Err(e) => Err(e).context("failed to call describe"),
         }
@@ -294,8 +295,8 @@ async fn assert_describe_meta_file(package_root: &fio::DirectoryProxy, path: &st
 }
 
 async fn verify_describe_meta_file_success(node: fio::NodeProxy) -> Result<(), Error> {
-    match node.describe().await {
-        Ok(fio::NodeInfo::File(_)) => Ok(()),
+    match node.describe_deprecated().await {
+        Ok(fio::NodeInfoDeprecated::File(_)) => Ok(()),
         Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
         Err(e) => Err(e).context("failed to call describe"),
     }

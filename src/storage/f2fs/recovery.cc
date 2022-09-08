@@ -181,7 +181,7 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
 void F2fs::DoRecoverData(VnodeF2fs &vnode, NodePage &page) {
   uint32_t start, end;
   Summary sum;
-  NodeInfo ni;
+  NodeInfoDeprecated ni;
 
   if (vnode.RecoverInlineData(page) == ZX_OK) {
     // Restored from inline data.

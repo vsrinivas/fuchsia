@@ -258,7 +258,7 @@ void Connection::NodeClone(fio::wire::OpenFlags flags, fidl::ServerEnd<fio::Node
     if (describe) {
       // Ignore errors since there is nothing we can do if this fails.
       [[maybe_unused]] auto result =
-          fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfo());
+          fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfoDeprecated());
       channel.reset();
     }
   };

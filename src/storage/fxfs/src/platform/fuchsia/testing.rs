@@ -189,7 +189,7 @@ pub async fn open_file(
 ) -> Result<fio::FileProxy, Error> {
     let (proxy, server_end) = create_proxy::<fio::FileMarker>().expect("create_proxy failed");
     dir.open(flags, mode, path, ServerEnd::new(server_end.into_channel()))?;
-    proxy.describe().await?;
+    proxy.describe_deprecated().await?;
     Ok(proxy)
 }
 
@@ -212,7 +212,7 @@ pub async fn open_dir(
 ) -> Result<fio::DirectoryProxy, Error> {
     let (proxy, server_end) = create_proxy::<fio::DirectoryMarker>().expect("create_proxy failed");
     dir.open(flags, mode, path, ServerEnd::new(server_end.into_channel()))?;
-    proxy.describe().await?;
+    proxy.describe_deprecated().await?;
     Ok(proxy)
 }
 

@@ -31,11 +31,13 @@ class CloseOnlyNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Node>
 // other messages.
 class DescribeNodeServer : public CloseOnlyNodeServer {
  public:
-  using DescribeFunc = fit::function<void(DescribeCompleter::Sync& completer)>;
+  using DescribeFunc = fit::function<void(DescribeDeprecatedCompleter::Sync& completer)>;
 
   void set_describe_function(DescribeFunc describe) { describe_ = std::move(describe); }
 
-  void Describe(DescribeCompleter::Sync& completer) final { describe_(completer); }
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
+    describe_(completer);
+  }
 
  private:
   DescribeFunc describe_;

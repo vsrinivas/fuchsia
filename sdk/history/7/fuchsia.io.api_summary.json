@@ -174,9 +174,9 @@
         "name": "fuchsia.io/Directory.Close"
     },
     {
-        "declaration": "() -> (fuchsia.io/NodeInfo info)",
+        "declaration": "() -> (fuchsia.io/NodeInfoDeprecated info)",
         "kind": "protocol/member",
-        "name": "fuchsia.io/Directory.Describe"
+        "name": "fuchsia.io/Directory.DescribeDeprecated"
     },
     {
         "declaration": "(fuchsia.io/DirectoryEnumerateOptions options,server_end:fuchsia.io/DirectoryIterator iterator)",
@@ -214,7 +214,7 @@
         "name": "fuchsia.io/Directory.Link"
     },
     {
-        "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
+        "declaration": " -> (int32 s,fuchsia.io/NodeInfoDeprecated:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory.OnOpen"
     },
@@ -298,9 +298,9 @@
         "name": "fuchsia.io/Directory1.Clone"
     },
     {
-        "declaration": "() -> (fuchsia.io/NodeInfo info)",
+        "declaration": "() -> (fuchsia.io/NodeInfoDeprecated info)",
         "kind": "protocol/member",
-        "name": "fuchsia.io/Directory1.Describe"
+        "name": "fuchsia.io/Directory1.DescribeDeprecated"
     },
     {
         "declaration": "() -> (int32 s,fuchsia.io/NodeAttributes attributes)",
@@ -323,7 +323,7 @@
         "name": "fuchsia.io/Directory1.Link"
     },
     {
-        "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
+        "declaration": " -> (int32 s,fuchsia.io/NodeInfoDeprecated:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Directory1.OnOpen"
     },
@@ -603,14 +603,14 @@
         "name": "fuchsia.io/File.Close"
     },
     {
-        "declaration": "() -> (fuchsia.io/NodeInfo info)",
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File.Describe"
-    },
-    {
         "declaration": "() -> (fuchsia.io/FileInfo payload)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Describe2"
+    },
+    {
+        "declaration": "() -> (fuchsia.io/NodeInfoDeprecated info)",
+        "kind": "protocol/member",
+        "name": "fuchsia.io/File.DescribeDeprecated"
     },
     {
         "declaration": "() -> (int32 s,fuchsia.io/NodeAttributes attributes)",
@@ -638,7 +638,7 @@
         "name": "fuchsia.io/File.GetFlags"
     },
     {
-        "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
+        "declaration": " -> (int32 s,fuchsia.io/NodeInfoDeprecated:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/File.OnOpen"
     },
@@ -1380,9 +1380,9 @@
         "name": "fuchsia.io/Node.Close"
     },
     {
-        "declaration": "() -> (fuchsia.io/NodeInfo info)",
+        "declaration": "() -> (fuchsia.io/NodeInfoDeprecated info)",
         "kind": "protocol/member",
-        "name": "fuchsia.io/Node.Describe"
+        "name": "fuchsia.io/Node.DescribeDeprecated"
     },
     {
         "declaration": "() -> (int32 s,fuchsia.io/NodeAttributes attributes)",
@@ -1405,7 +1405,7 @@
         "name": "fuchsia.io/Node.GetFlags"
     },
     {
-        "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
+        "declaration": " -> (int32 s,fuchsia.io/NodeInfoDeprecated:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node.OnOpen"
     },
@@ -1454,9 +1454,9 @@
         "name": "fuchsia.io/Node1.Clone"
     },
     {
-        "declaration": "() -> (fuchsia.io/NodeInfo info)",
+        "declaration": "() -> (fuchsia.io/NodeInfoDeprecated info)",
         "kind": "protocol/member",
-        "name": "fuchsia.io/Node1.Describe"
+        "name": "fuchsia.io/Node1.DescribeDeprecated"
     },
     {
         "declaration": "() -> (int32 s,fuchsia.io/NodeAttributes attributes)",
@@ -1469,7 +1469,7 @@
         "name": "fuchsia.io/Node1.GetFlags"
     },
     {
-        "declaration": " -> (int32 s,fuchsia.io/NodeInfo:optional info)",
+        "declaration": " -> (int32 s,fuchsia.io/NodeInfoDeprecated:optional info)",
         "kind": "protocol/member",
         "name": "fuchsia.io/Node1.OnOpen"
     },
@@ -1732,56 +1732,56 @@
     {
         "declaration": "fuchsia.io/DatagramSocket",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.datagram_socket"
+        "name": "fuchsia.io/NodeInfoDeprecated.datagram_socket"
     },
     {
         "declaration": "fuchsia.io/DirectoryObject",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.directory"
+        "name": "fuchsia.io/NodeInfoDeprecated.directory"
     },
     {
         "declaration": "fuchsia.io/FileObject",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.file"
+        "name": "fuchsia.io/NodeInfoDeprecated.file"
     },
     {
         "declaration": "fuchsia.io/PacketSocket",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.packet_socket"
+        "name": "fuchsia.io/NodeInfoDeprecated.packet_socket"
     },
     {
         "declaration": "fuchsia.io/RawSocket",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.raw_socket"
+        "name": "fuchsia.io/NodeInfoDeprecated.raw_socket"
     },
     {
         "declaration": "fuchsia.io/Service",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.service"
+        "name": "fuchsia.io/NodeInfoDeprecated.service"
     },
     {
         "declaration": "fuchsia.io/StreamSocket",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.stream_socket"
+        "name": "fuchsia.io/NodeInfoDeprecated.stream_socket"
     },
     {
         "declaration": "fuchsia.io/SynchronousDatagramSocket",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.synchronous_datagram_socket"
+        "name": "fuchsia.io/NodeInfoDeprecated.synchronous_datagram_socket"
     },
     {
         "declaration": "fuchsia.io/Tty",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.tty"
+        "name": "fuchsia.io/NodeInfoDeprecated.tty"
     },
     {
         "declaration": "fuchsia.io/VmofileDeprecated",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.vmofile_deprecated"
+        "name": "fuchsia.io/NodeInfoDeprecated.vmofile_deprecated"
     },
     {
         "kind": "union",
-        "name": "fuchsia.io/NodeInfo",
+        "name": "fuchsia.io/NodeInfoDeprecated",
         "resourceness": "resource",
         "strictness": "strict"
     },

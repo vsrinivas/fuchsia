@@ -20,7 +20,7 @@ void main() {
   }
 
   Future<void> _assertDescribeFile(FileProxy proxy) async {
-    final response = await proxy.describe();
+    final response = await proxy.describeDeprecated();
     expect(response.file, isNotNull);
   }
 

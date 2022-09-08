@@ -235,7 +235,7 @@ impl Client {
 
                         match info {
                             Some(info) => match *info {
-                                fio::NodeInfo::File(fio::FileObject {
+                                fio::NodeInfoDeprecated::File(fio::FileObject {
                                     event: Some(event),
                                     stream: None,
                                 }) => event,

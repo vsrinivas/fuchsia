@@ -64,7 +64,7 @@ zx::status<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_di
     if (!res.ok()) {
       return zx::error(res.error().status());
     }
-    auto describe_res = fidl::WireCall(client)->Describe();
+    auto describe_res = fidl::WireCall(client)->DescribeDeprecated();
     if (!describe_res.ok()) {
       return zx::error(ZX_ERR_NOT_FOUND);
     }

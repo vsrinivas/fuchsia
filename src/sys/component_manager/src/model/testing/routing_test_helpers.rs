@@ -1543,7 +1543,7 @@ pub mod capability_util {
                 assert_eq!(s, zx::sys::ZX_OK);
                 assert!(matches!(
                     *info.expect("failed to receive node info"),
-                    fio::NodeInfo::File(fio::FileObject { .. })
+                    fio::NodeInfoDeprecated::File(fio::FileObject { .. })
                 ));
             }
             fio::FileEvent::OnRepresentation { payload } => {

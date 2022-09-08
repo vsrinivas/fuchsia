@@ -129,7 +129,7 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_b
 //
 // Always consumes |node|. May mutate |info| on success.
 zx_status_t zxio_create_with_allocator(fidl::ClientEnd<fuchsia_io::Node> node,
-                                       fuchsia_io::wire::NodeInfo& info,
+                                       fuchsia_io::wire::NodeInfoDeprecated& info,
                                        zxio_storage_alloc allocator, void** out_context);
 
 #endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_INCEPTION_H_

@@ -33,9 +33,9 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
     zxio_tests::TestFileServerBase::Close(completer);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
-    completer.Reply(fio::wire::NodeInfo::WithFile(
+    completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
   }
 
@@ -76,7 +76,7 @@ class File : public zxtest::Test {
     if (client_end.is_error()) {
       return client_end.status_value();
     }
-    fidl::WireResult result = fidl::WireCall<fio::File>(client_end.value())->Describe();
+    fidl::WireResult result = fidl::WireCall<fio::File>(client_end.value())->DescribeDeprecated();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -107,14 +107,14 @@ class TestServerEvent final : public CloseCountingFileServer {
 
   const zx::event& event() const { return event_; }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     zx_status_t status = event_.duplicate(ZX_RIGHTS_BASIC, &file_object.event);
     if (status != ZX_OK) {
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Reply(fio::wire::NodeInfo::WithFile(
+    completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
   }
 
@@ -295,14 +295,14 @@ class TestServerStream final : public CloseCountingFileServer {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
     zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &file_object.stream);
     if (status != ZX_OK) {
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Reply(fio::wire::NodeInfo::WithFile(
+    completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
   }
 

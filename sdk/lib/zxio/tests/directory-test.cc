@@ -24,8 +24,8 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
     ASSERT_OK(zx::event::create(0, &token_));
   }
 
-  void Describe(DescribeCompleter::Sync& completer) final {
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
+    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithDirectory({}));
   }
 
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) final {
@@ -65,7 +65,7 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
         .event = std::move(file_event),
     };
     ASSERT_OK(fidl::WireSendEvent(file_server)
-                  ->OnOpen(ZX_OK, fuchsia_io::wire::NodeInfo::WithFile(
+                  ->OnOpen(ZX_OK, fuchsia_io::wire::NodeInfoDeprecated::WithFile(
                                       fidl::ObjectView<decltype(file)>::FromExternal(&file))));
     fidl::BindServer(dispatcher_, std::move(file_server), &file_);
   }

@@ -517,7 +517,9 @@ mod tests {
                         control_handle
                             .send_on_open_(
                                 zx::Status::OK.into_raw(),
-                                Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject {})),
+                                Some(&mut fio::NodeInfoDeprecated::Directory(
+                                    fio::DirectoryObject {},
+                                )),
                             )
                             .unwrap();
                     } else {

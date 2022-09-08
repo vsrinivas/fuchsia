@@ -81,7 +81,7 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
 
   if (options.wait_until_ready) {
     // Wait until the filesystem is ready to take incoming requests
-    auto result = fidl::WireCall(outgoing_directory_or->client)->Describe();
+    auto result = fidl::WireCall(outgoing_directory_or->client)->DescribeDeprecated();
     switch (result.status()) {
       case ZX_OK:
         break;

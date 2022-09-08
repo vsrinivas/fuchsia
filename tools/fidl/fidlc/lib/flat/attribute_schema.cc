@@ -373,7 +373,7 @@ void AttributeSchema::ResolveArgsWithoutSchema(CompileStep* step, Attribute* att
 }
 
 static const std::set<std::pair<std::string, std::string_view>> allowed_simple_unions{{
-    {"fuchsia.io", "NodeInfo"},
+    {"fuchsia.io", "NodeInfoDeprecated"},
 }};
 
 static bool IsSimple(const Type* type, Reporter* reporter) {

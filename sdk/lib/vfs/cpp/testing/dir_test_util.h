@@ -69,7 +69,7 @@ class DirConnection : public gtest::RealLoopFixture {
     dir_ptr->Open(flags | fuchsia::io::OpenFlags::DESCRIBE, mode, path, node_ptr.NewRequest());
     bool on_open_called = false;
     node_ptr.events().OnOpen = [&](zx_status_t status,
-                                   std::unique_ptr<fuchsia::io::NodeInfo> unused) {
+                                   std::unique_ptr<fuchsia::io::NodeInfoDeprecated> unused) {
       EXPECT_FALSE(on_open_called);  // should be called only once
       on_open_called = true;
       EXPECT_EQ(expected_status, status) << "from file " << caller_file << ", line " << caller_line;

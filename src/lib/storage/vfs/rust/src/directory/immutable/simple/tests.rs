@@ -95,7 +95,7 @@ fn empty_directory_with_custom_inode_get_attr() {
 #[test]
 fn empty_directory_describe() {
     run_server_client(fio::OpenFlags::RIGHT_READABLE, simple(), |root| async move {
-        assert_describe!(root, fio::NodeInfo::Directory(fio::DirectoryObject));
+        assert_describe!(root, fio::NodeInfoDeprecated::Directory(fio::DirectoryObject));
         assert_close!(root);
     });
 }
@@ -116,7 +116,10 @@ fn open_empty_directory_with_describe() {
 
         assert_event!(root, fio::DirectoryEvent::OnOpen_ { s, info }, {
             assert_eq!(s, ZX_OK);
-            assert_eq!(info, Some(Box::new(fio::NodeInfo::Directory(fio::DirectoryObject))));
+            assert_eq!(
+                info,
+                Some(Box::new(fio::NodeInfoDeprecated::Directory(fio::DirectoryObject)))
+            );
         });
     });
 }

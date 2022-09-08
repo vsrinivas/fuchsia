@@ -84,7 +84,9 @@ void PtyServerDevice::GetConnectionInfo(GetConnectionInfoCompleter::Sync& comple
   ZX_ASSERT(false);
 }
 
-void PtyServerDevice::Describe(DescribeCompleter::Sync& completer) { ZX_ASSERT(false); }
+void PtyServerDevice::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
 
 void PtyServerDevice::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
 

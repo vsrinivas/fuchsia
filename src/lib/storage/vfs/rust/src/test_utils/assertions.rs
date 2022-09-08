@@ -278,7 +278,10 @@ macro_rules! assert_get_attr_path {
             fio::DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(info, Some(Box::new(fio::NodeInfo::Directory(fio::DirectoryObject))));
+                assert_eq!(
+                    info,
+                    Some(Box::new(fio::NodeInfoDeprecated::Directory(fio::DirectoryObject)))
+                );
             }
         );
 
@@ -293,7 +296,7 @@ macro_rules! assert_get_attr_path {
 #[macro_export]
 macro_rules! assert_describe {
     ($proxy:expr, $expected:expr) => {
-        let node_info = $proxy.describe().await.expect("describe failed");
+        let node_info = $proxy.describe_deprecated().await.expect("describe failed");
         assert_eq!(node_info, $expected);
     };
 }
@@ -331,7 +334,7 @@ macro_rules! assert_close_err {
 //
 //     assert_event!(proxy, FileEvent::OnOpen_ {
 //         s: Status::SHOULD_WAIT.into_raw(),
-//         info: Some(Box::new(NodeInfo::{File,Directory} { ... })),
+//         info: Some(Box::new(NodeInfoDeprecated::{File,Directory} { ... })),
 //     });
 //
 // Instead, I need to split the assertion into a pattern and then additional assertions on what
@@ -395,7 +398,7 @@ macro_rules! open_get_file_proxy_assert_ok {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 assert_eq!(
                     info,
-                    Some(Box::new(fio::NodeInfo::File(fio::FileObject {
+                    Some(Box::new(fio::NodeInfoDeprecated::File(fio::FileObject {
                         event: None,
                         stream: None
                     }))),
@@ -419,9 +422,9 @@ macro_rules! open_get_vmo_file_proxy_assert_ok {
             fio::FileEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                let info = *info.expect("Empty fio::NodeInfo");
+                let info = *info.expect("Empty fio::NodeInfoDeprecated");
                 assert!(
-                    matches!(info, fio::NodeInfo::File(fio::FileObject { .. })),
+                    matches!(info, fio::NodeInfoDeprecated::File(fio::FileObject { .. })),
                     "Expected fio::File but got {:?}",
                     info
                 );
@@ -464,7 +467,10 @@ macro_rules! open_get_directory_proxy_assert_ok {
             fio::DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(info, Some(Box::new(fio::NodeInfo::Directory(fio::DirectoryObject))),);
+                assert_eq!(
+                    info,
+                    Some(Box::new(fio::NodeInfoDeprecated::Directory(fio::DirectoryObject))),
+                );
             }
         )
     }};
@@ -516,7 +522,7 @@ macro_rules! clone_get_file_proxy_assert_ok {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 assert_eq!(
                     info,
-                    Some(Box::new(fio::NodeInfo::File(fio::FileObject {
+                    Some(Box::new(fio::NodeInfoDeprecated::File(fio::FileObject {
                         event: None,
                         stream: None
                     }))),
@@ -539,9 +545,9 @@ macro_rules! clone_get_vmo_file_proxy_assert_ok {
             fio::FileEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                let info = *info.expect("Empty fio::NodeInfo");
+                let info = *info.expect("Empty fio::NodeInfoDeprecated");
                 assert!(
-                    matches!(info, fio::NodeInfo::File(fio::FileObject { .. }),),
+                    matches!(info, fio::NodeInfoDeprecated::File(fio::FileObject { .. }),),
                     "Expected fio::File but got {:?}",
                     info
                 );
@@ -563,11 +569,14 @@ macro_rules! clone_get_vmo_file_proxy_assert_err {
             fio::FileEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                let info = *info.expect("Empty fio::NodeInfo");
+                let info = *info.expect("Empty fio::NodeInfoDeprecated");
                 assert!(
                     matches!(
                         info,
-                        fio::NodeInfo::File(fio::FileObject { event: None, stream: None })
+                        fio::NodeInfoDeprecated::File(fio::FileObject {
+                            event: None,
+                            stream: None
+                        })
                     ),
                     "Expected error but got {:?}",
                     info
@@ -609,7 +618,7 @@ macro_rules! clone_get_service_proxy_assert_ok {
             fio::NodeEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(info, Some(Box::new(fio::NodeInfo::Service(fio::Service))),);
+                assert_eq!(info, Some(Box::new(fio::NodeInfoDeprecated::Service(fio::Service))),);
             }
         )
     }};
@@ -628,7 +637,10 @@ macro_rules! clone_get_directory_proxy_assert_ok {
             fio::DirectoryEvent::OnOpen_ { s, info },
             {
                 assert_eq!(Status::from_raw(s), Status::OK);
-                assert_eq!(info, Some(Box::new(fio::NodeInfo::Directory(fio::DirectoryObject))),);
+                assert_eq!(
+                    info,
+                    Some(Box::new(fio::NodeInfoDeprecated::Directory(fio::DirectoryObject))),
+                );
             }
         )
     }};

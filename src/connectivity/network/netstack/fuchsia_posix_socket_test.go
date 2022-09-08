@@ -68,11 +68,11 @@ func TestDatagramSocketWithBlockingEndpoint(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			s.cancel = cancel
 
-			io, err := s.Describe(context.Background())
+			io, err := s.DescribeDeprecated(context.Background())
 			if err != nil {
 				t.Fatalf("got s.Describe(): %s", err)
 			}
-			if got, want := io.Which(), fidlio.I_nodeInfoTag(fidlio.NodeInfoDatagramSocket); got != want {
+			if got, want := io.Which(), fidlio.I_nodeInfoDeprecatedTag(fidlio.NodeInfoDeprecatedDatagramSocket); got != want {
 				t.Fatalf("got io.Which() = %#v, want %#v", got, want)
 			}
 

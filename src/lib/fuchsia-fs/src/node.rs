@@ -101,32 +101,34 @@ pub enum Kind {
 }
 
 impl Kind {
-    fn kind_of(info: &fio::NodeInfo) -> Kind {
+    fn kind_of(info: &fio::NodeInfoDeprecated) -> Kind {
         match info {
-            fio::NodeInfo::Service(_) => Kind::Service,
-            fio::NodeInfo::File(_) => Kind::File,
-            fio::NodeInfo::Directory(_) => Kind::Directory,
-            fio::NodeInfo::VmofileDeprecated(_) => Kind::VmofileDeprecated,
-            fio::NodeInfo::Tty(_) => Kind::Tty,
-            fio::NodeInfo::SynchronousDatagramSocket(_) => Kind::SynchronousDatagramSocket,
-            fio::NodeInfo::StreamSocket(_) => Kind::StreamSocket,
-            fio::NodeInfo::RawSocket(_) => Kind::RawSocket,
-            fio::NodeInfo::PacketSocket(_) => Kind::PacketSocket,
-            fio::NodeInfo::DatagramSocket(_) => Kind::DatagramSocket,
+            fio::NodeInfoDeprecated::Service(_) => Kind::Service,
+            fio::NodeInfoDeprecated::File(_) => Kind::File,
+            fio::NodeInfoDeprecated::Directory(_) => Kind::Directory,
+            fio::NodeInfoDeprecated::VmofileDeprecated(_) => Kind::VmofileDeprecated,
+            fio::NodeInfoDeprecated::Tty(_) => Kind::Tty,
+            fio::NodeInfoDeprecated::SynchronousDatagramSocket(_) => {
+                Kind::SynchronousDatagramSocket
+            }
+            fio::NodeInfoDeprecated::StreamSocket(_) => Kind::StreamSocket,
+            fio::NodeInfoDeprecated::RawSocket(_) => Kind::RawSocket,
+            fio::NodeInfoDeprecated::PacketSocket(_) => Kind::PacketSocket,
+            fio::NodeInfoDeprecated::DatagramSocket(_) => Kind::DatagramSocket,
         }
     }
 
-    fn expect_file(info: fio::NodeInfo) -> Result<(), Kind> {
+    fn expect_file(info: fio::NodeInfoDeprecated) -> Result<(), Kind> {
         match info {
-            fio::NodeInfo::File(fio::FileObject { event: _, stream: None })
-            | fio::NodeInfo::VmofileDeprecated(fio::VmofileDeprecated { .. }) => Ok(()),
+            fio::NodeInfoDeprecated::File(fio::FileObject { event: _, stream: None })
+            | fio::NodeInfoDeprecated::VmofileDeprecated(fio::VmofileDeprecated { .. }) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }
 
-    fn expect_directory(info: fio::NodeInfo) -> Result<(), Kind> {
+    fn expect_directory(info: fio::NodeInfoDeprecated) -> Result<(), Kind> {
         match info {
-            fio::NodeInfo::Directory(fio::DirectoryObject) => Ok(()),
+            fio::NodeInfoDeprecated::Directory(fio::DirectoryObject) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }
@@ -286,11 +288,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_opens_real_node() {
         let file_node = open_in_namespace("/pkg/data/file", OpenFlags::RIGHT_READABLE).unwrap();
-        let info = file_node.describe().await.unwrap();
+        let info = file_node.describe_deprecated().await.unwrap();
         assert_matches!(Kind::expect_file(info), Ok(()));
 
         let dir_node = open_in_namespace("/pkg/data", OpenFlags::RIGHT_READABLE).unwrap();
-        let info = dir_node.describe().await.unwrap();
+        let info = dir_node.describe_deprecated().await.unwrap();
         assert_eq!(Kind::expect_directory(info), Ok(()));
     }
 

@@ -39,9 +39,9 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::Node> {
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
     fio::wire::FileObject file_object;
-    completer.Reply(fio::wire::NodeInfo::WithFile(
+    completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
         fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
   }
 
@@ -167,7 +167,7 @@ class CloneTest : public zxtest::Test {
       const fidl::Status result =
           fidl::WireSendEvent(binding_ref)
               ->OnOpen(ZX_OK,
-                       fio::wire::NodeInfo::WithFile(
+                       fio::wire::NodeInfoDeprecated::WithFile(
                            fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
       ASSERT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
     }
@@ -189,7 +189,7 @@ TEST_F(CloneTest, Clone) {
 
   fidl::ClientEnd<fio::Node> clone_client(std::move(clone));
 
-  const fidl::WireResult describe_response = fidl::WireCall(clone_client)->Describe();
+  const fidl::WireResult describe_response = fidl::WireCall(clone_client)->DescribeDeprecated();
   ASSERT_OK(describe_response.status());
 
   EXPECT_TRUE(describe_response.value().info.is_file());

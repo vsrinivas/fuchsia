@@ -359,7 +359,7 @@ where
             fposix_socket::StreamSocketRequest::Connect { addr, responder } => {
                 responder_send!(responder, &mut self.connect(addr).await);
             }
-            fposix_socket::StreamSocketRequest::Describe { responder } => {
+            fposix_socket::StreamSocketRequest::DescribeDeprecated { responder } => {
                 let socket = self
                     .peer
                     .duplicate_handle(zx::Rights::SAME_RIGHTS)
@@ -367,7 +367,7 @@ where
                 log::info!("describing: {:?}, zx::socket: {:?}", self.id, socket);
                 responder_send!(
                     responder,
-                    &mut fio::NodeInfo::StreamSocket(fio::StreamSocket { socket })
+                    &mut fio::NodeInfoDeprecated::StreamSocket(fio::StreamSocket { socket })
                 );
             }
             fposix_socket::StreamSocketRequest::Describe2 { responder } => {

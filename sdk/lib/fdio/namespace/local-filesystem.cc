@@ -427,7 +427,7 @@ zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
 
   // We know this is a Directory.
   return fdio::create(fidl::ClientEnd<fio::Node>(std::move(clone)),
-                      fio::wire::NodeInfo::WithDirectory({}));
+                      fio::wire::NodeInfoDeprecated::WithDirectory({}));
 }
 
 zx_status_t fdio_namespace::SetRoot(fdio_t* io) {

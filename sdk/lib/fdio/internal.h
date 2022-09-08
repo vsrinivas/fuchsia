@@ -114,7 +114,7 @@ zx_status_t fdio_zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_st
 struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   static zx::status<fdio_ptr> create(zx::handle handle);
   static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node,
-                                     fuchsia_io::wire::NodeInfo info);
+                                     fuchsia_io::wire::NodeInfoDeprecated info);
 
   // Waits for a |fuchsia.io/Node.OnOpen| event on channel.
   static zx::status<fdio_ptr> create_with_on_open(fidl::ClientEnd<fuchsia_io::Node> node);

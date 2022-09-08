@@ -37,7 +37,7 @@ void NodeConnection::Close(CloseCallback callback) { Connection::Close(vn_, std:
 
 void NodeConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
 
-void NodeConnection::Describe(DescribeCallback callback) {
+void NodeConnection::DescribeDeprecated(DescribeDeprecatedCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }
 

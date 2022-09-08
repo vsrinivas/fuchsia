@@ -109,7 +109,7 @@ TEST_F(PtyTestCase, Describe) {
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
 
   {
-    auto result = client->Describe();
+    auto result = client->DescribeDeprecated();
     ASSERT_OK(result.status());
     ASSERT_TRUE(result.value().info.is_tty());
 

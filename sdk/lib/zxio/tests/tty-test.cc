@@ -31,7 +31,7 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) final {
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
     zx::eventpair event;
     zx_status_t status = event1_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
     if (status != ZX_OK) {
@@ -39,7 +39,7 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
       completer.Close(status);
       return;
     }
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithTty({
+    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithTty({
         .event = std::move(event),
     }));
   }

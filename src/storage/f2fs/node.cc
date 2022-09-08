@@ -20,7 +20,7 @@ void NodeManager::ClearNatCacheDirty(NatEntry &ne) {
   clean_nat_list_.push_back(&ne);
 }
 
-void NodeManager::NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_ne) {
+void NodeManager::NodeInfoFromRawNat(NodeInfoDeprecated &ni, RawNatEntry &raw_ne) {
   ni.ino = LeToCpu(raw_ne.ino);
   ni.blk_addr = LeToCpu(raw_ne.block_addr);
   ni.version = raw_ne.version;
@@ -252,7 +252,7 @@ void NodeManager::CacheNatEntry(nid_t nid, RawNatEntry &raw_entry) {
   }
 }
 
-void NodeManager::SetNodeAddr(NodeInfo &ni, block_t new_blkaddr) {
+void NodeManager::SetNodeAddr(NodeInfoDeprecated &ni, block_t new_blkaddr) {
   while (true) {
     std::lock_guard nat_lock(nat_tree_lock_);
     NatEntry *entry = LookupNatCache(ni.nid);
@@ -310,7 +310,7 @@ int NodeManager::TryToFreeNats(int nr_shrink) {
 }
 
 // This function returns always success
-void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
+void NodeManager::GetNodeInfo(nid_t nid, NodeInfoDeprecated &out) {
   CursegInfo *curseg = fs_->GetSegmentManager().CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;
   nid_t start_nid = StartNid(nid);
@@ -343,7 +343,7 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfo &out) {
   }
   if (i < 0) {
     LockedPage page;
-    // Fill NodeInfo from nat page
+    // Fill NodeInfoDeprecated from nat page
     GetCurrentNatPage(start_nid, &page);
     nat_blk = page->GetAddress<NatBlock>();
     ne = nat_blk->entries[nid - start_nid];
@@ -569,7 +569,7 @@ zx::status<uint32_t> NodeManager::GetOfsInDnode(VnodeF2fs &vnode, pgoff_t index)
 }
 
 void NodeManager::TruncateNode(VnodeF2fs &vnode, nid_t nid, NodePage &node_page) {
-  NodeInfo ni;
+  NodeInfoDeprecated ni;
   GetNodeInfo(nid, ni);
   ZX_ASSERT(ni.blk_addr != kNullAddr);
 
@@ -834,7 +834,7 @@ zx::status<LockedPage> NodeManager::NewInodePage(VnodeF2fs &new_vnode) {
 }
 
 zx_status_t NodeManager::NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, LockedPage *out) {
-  NodeInfo old_ni, new_ni;
+  NodeInfoDeprecated old_ni, new_ni;
 
   if (vnode.TestFlag(InodeInfoFlag::kNoAlloc)) {
     return ZX_ERR_ACCESS_DENIED;
@@ -876,7 +876,7 @@ zx_status_t NodeManager::NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, 
 }
 
 zx::status<LockedPage> NodeManager::ReadNodePage(LockedPage page, nid_t nid, int type) {
-  NodeInfo ni;
+  NodeInfoDeprecated ni;
 
   GetNodeInfo(nid, ni);
 
@@ -986,7 +986,7 @@ zx_status_t NodeManager::F2fsWriteNodePage(LockedPage &page, bool is_reclaim) {
     nid_t nid = page.GetPage<NodePage>().NidOfNode();
     ZX_DEBUG_ASSERT(page->GetIndex() == nid);
 
-    NodeInfo ni;
+    NodeInfoDeprecated ni;
     GetNodeInfo(nid, ni);
     // This page is already truncated
     if (ni.blk_addr == kNullAddr) {
@@ -1215,7 +1215,7 @@ void NodeManager::AllocNidFailed(nid_t nid) {
 zx_status_t NodeManager::RecoverInodePage(NodePage &page) {
   Node *src, *dst;
   nid_t ino = page.InoOfNode();
-  NodeInfo old_node_info, new_node_info;
+  NodeInfoDeprecated old_node_info, new_node_info;
   LockedPage ipage;
 
   if (zx_status_t ret = fs_->GetNodeVnode().GrabCachePage(ino, &ipage); ret != ZX_OK) {

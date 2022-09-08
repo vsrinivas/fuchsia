@@ -639,7 +639,7 @@ async fn serve_failing_blobfs(
             .control_handle()
             .send_on_open_(
                 zx::Status::OK.into_raw(),
-                Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject)),
+                Some(&mut fio::NodeInfoDeprecated::Directory(fio::DirectoryObject)),
             )
             .context("sending on open")?;
     }
@@ -655,8 +655,8 @@ async fn serve_failing_blobfs(
             fio::DirectoryRequest::Close { responder } => {
                 responder.send(&mut Err(zx::Status::IO.into_raw())).context("failing close")?
             }
-            fio::DirectoryRequest::Describe { responder } => responder
-                .send(&mut fio::NodeInfo::Directory(fio::DirectoryObject))
+            fio::DirectoryRequest::DescribeDeprecated { responder } => responder
+                .send(&mut fio::NodeInfoDeprecated::Directory(fio::DirectoryObject))
                 .context("describing")?,
             fio::DirectoryRequest::GetConnectionInfo { responder } => {
                 let _ = responder;

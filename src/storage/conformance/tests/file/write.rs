@@ -102,7 +102,7 @@ async fn vmo_file_write_to_limits() {
     )
     .await;
 
-    file.describe().await.expect("describe failed");
+    file.describe_deprecated().await.expect("describe failed");
     let data = vec![0u8];
 
     // The VMO file will have a capacity

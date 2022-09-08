@@ -54,13 +54,14 @@ void NodeConnection::Query(QueryCompleter::Sync& completer) {
   completer.Reply(Connection::NodeQuery());
 }
 
-void NodeConnection::Describe(DescribeCompleter::Sync& completer) {
+void NodeConnection::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
     completer.Close(result.status_value());
   } else {
-    ConvertToIoV1NodeInfo(std::move(result).value(),
-                          [&](fio::wire::NodeInfo&& info) { completer.Reply(std::move(info)); });
+    ConvertToIoV1NodeInfo(std::move(result).value(), [&](fio::wire::NodeInfoDeprecated&& info) {
+      completer.Reply(std::move(info));
+    });
   }
 }
 

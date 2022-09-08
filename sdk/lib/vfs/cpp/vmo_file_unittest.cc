@@ -180,8 +180,8 @@ TEST(VmoFile, ReadOnlyNoSharing) {
 
   // The file should appear as a regular file, the fact that a VMO is backing it
   // is hidden.
-  fuchsia::io::NodeInfo info;
-  EXPECT_EQ(ZX_OK, file_ptr->Describe(&info));
+  fuchsia::io::NodeInfoDeprecated info;
+  EXPECT_EQ(ZX_OK, file_ptr->DescribeDeprecated(&info));
   ASSERT_TRUE(info.is_file());
 }
 
@@ -220,8 +220,8 @@ TEST(VmoFile, WritableNoSharing) {
 
   // The file should appear as a regular file, the fact that a VMO is backing it
   // is hidden.
-  fuchsia::io::NodeInfo info;
-  EXPECT_EQ(ZX_OK, file_ptr->Describe(&info));
+  fuchsia::io::NodeInfoDeprecated info;
+  EXPECT_EQ(ZX_OK, file_ptr->DescribeDeprecated(&info));
   ASSERT_TRUE(info.is_file());
 }
 

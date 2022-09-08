@@ -59,7 +59,7 @@ async fn admin_shutdown_shuts_down_fshost() {
 async fn blobfs_and_data_mounted() {
     let fixture = TestFixtureBuilder::default().with_ramdisk().format_data().build().await;
 
-    fixture.dir("blob").describe().await.expect("describe failed");
+    fixture.dir("blob").describe_deprecated().await.expect("describe failed");
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
 
     let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
@@ -68,7 +68,7 @@ async fn blobfs_and_data_mounted() {
         .open(fio::OpenFlags::RIGHT_READABLE, 0, "foo", server)
         .expect("open failed");
     fixture.check_fs_type("data", data_fs_type()).await;
-    file.describe().await.expect("describe failed");
+    file.describe_deprecated().await.expect("describe failed");
 
     fixture.tear_down().await;
 }
@@ -77,7 +77,7 @@ async fn blobfs_and_data_mounted() {
 async fn data_formatted() {
     let fixture = TestFixtureBuilder::default().with_ramdisk().build().await;
 
-    fixture.dir("data").describe().await.expect("describe failed");
+    fixture.dir("data").describe_deprecated().await.expect("describe failed");
     fixture.check_fs_type("data", data_fs_type()).await;
 
     fixture.tear_down().await;

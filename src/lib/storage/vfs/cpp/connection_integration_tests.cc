@@ -58,10 +58,11 @@ class FileOrDirectory : public fs::Vnode {
 
 // Helper method to monitor the OnOpen event, used by the tests below when
 // OPEN_FLAG_DESCRIBE is used.
-zx::status<fio::wire::NodeInfo> GetOnOpenResponse(fidl::UnownedClientEnd<fio::Node> channel) {
-  zx::status<fio::wire::NodeInfo> node_info{};
+zx::status<fio::wire::NodeInfoDeprecated> GetOnOpenResponse(
+    fidl::UnownedClientEnd<fio::Node> channel) {
+  zx::status<fio::wire::NodeInfoDeprecated> node_info{};
   auto get_on_open_response = [](fidl::UnownedClientEnd<fio::Node> channel,
-                                 zx::status<fio::wire::NodeInfo>& node_info) {
+                                 zx::status<fio::wire::NodeInfoDeprecated>& node_info) {
     class EventHandler final : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
      public:
       explicit EventHandler() = default;
@@ -310,7 +311,7 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
                            fio::wire::OpenFlags::kDirectory,
                        kOpenMode, fidl::StringView("file_or_dir"), std::move(dc->server))
                 .status());
-  zx::status<fio::wire::NodeInfo> dir_info = GetOnOpenResponse(dc->client);
+  zx::status<fio::wire::NodeInfoDeprecated> dir_info = GetOnOpenResponse(dc->client);
   ASSERT_OK(dir_info);
   ASSERT_TRUE(dir_info->is_directory());
 
@@ -322,7 +323,7 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
                            fio::wire::OpenFlags::kNotDirectory,
                        kOpenMode, fidl::StringView("file_or_dir"), std::move(fc->server))
                 .status());
-  zx::status<fio::wire::NodeInfo> file_info = GetOnOpenResponse(fc->client);
+  zx::status<fio::wire::NodeInfoDeprecated> file_info = GetOnOpenResponse(fc->client);
   ASSERT_OK(file_info);
   ASSERT_TRUE(file_info->is_file());
 }

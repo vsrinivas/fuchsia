@@ -143,21 +143,22 @@ ComponentControllerBase::ComponentControllerBase(
                            fuchsia::io::OpenFlags::RIGHT_WRITABLE,
                        cloned_exported_dir_.NewRequest());
 
-  cloned_exported_dir_.events().OnOpen = [this](zx_status_t status,
-                                                std::unique_ptr<fuchsia::io::NodeInfo> /*info*/) {
-    if (status != ZX_OK) {
-      FX_LOGS(WARNING) << "could not bind out directory for component" << label_ << "): " << status;
-      return;
-    }
-    out_ready_ = true;
-    auto output_dir =
-        fbl::MakeRefCounted<fs::RemoteDir>(cloned_exported_dir_.Unbind().TakeChannel());
-    hub_.PublishOut(std::move(output_dir));
-    NotifyDiagnosticsDirReady(diagnostics_max_retries_);
-    TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
-    SendOnDirectoryReadyEvent();
-    TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
-  };
+  cloned_exported_dir_.events().OnOpen =
+      [this](zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfoDeprecated> /*info*/) {
+        if (status != ZX_OK) {
+          FX_LOGS(WARNING) << "could not bind out directory for component" << label_
+                           << "): " << status;
+          return;
+        }
+        out_ready_ = true;
+        auto output_dir =
+            fbl::MakeRefCounted<fs::RemoteDir>(cloned_exported_dir_.Unbind().TakeChannel());
+        hub_.PublishOut(std::move(output_dir));
+        NotifyDiagnosticsDirReady(diagnostics_max_retries_);
+        TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
+        SendOnDirectoryReadyEvent();
+        TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
+      };
 
   cloned_exported_dir_.set_error_handler(
       [this](zx_status_t status) { cloned_exported_dir_.Unbind(); });
@@ -210,7 +211,7 @@ ComponentControllerBase::GetDir(std::string path) {
   fpromise::bridge<void, zx_status_t> bridge;
   diagnostics_dir_node.events().OnOpen =
       [completer = std::move(bridge.completer), label = label_](
-          zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> node_info) mutable {
+          zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfoDeprecated> node_info) mutable {
         if (status != ZX_OK) {
           completer.complete_error(status);
         } else if (!node_info) {

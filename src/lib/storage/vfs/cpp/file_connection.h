@@ -42,7 +42,7 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void Close(CloseCompleter::Sync& completer) final;
   void Query(QueryCompleter::Sync& completer) final;
-  void Describe(DescribeCompleter::Sync& completer) final;
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final;
   void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrCompleter::Sync& completer) final;

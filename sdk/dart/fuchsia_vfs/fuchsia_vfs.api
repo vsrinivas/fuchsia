@@ -724,16 +724,6 @@
               "returnType": "int",
               "type": "MethodDeclarationImpl"
             },
-            "describe": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "describe",
-              "returnType": "NodeInfo",
-              "type": "MethodDeclarationImpl"
-            },
             "describe2": {
               "isAbstract": false,
               "isGetter": false,
@@ -742,6 +732,16 @@
               "isStatic": false,
               "name": "describe2",
               "returnType": "FileInfo",
+              "type": "MethodDeclarationImpl"
+            },
+            "describeDeprecated": {
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "describeDeprecated",
+              "returnType": "NodeInfoDeprecated",
               "type": "MethodDeclarationImpl"
             },
             "getBackingMemory": {
@@ -828,14 +828,14 @@
             "type": "extends"
           },
           "MethodDeclarationImpl": {
-            "describe": {
+            "describeDeprecated": {
               "isAbstract": false,
               "isGetter": false,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "describe",
-              "returnType": "NodeInfo",
+              "name": "describeDeprecated",
+              "returnType": "NodeInfoDeprecated",
               "type": "MethodDeclarationImpl"
             },
             "getBackingMemory": {
@@ -1312,14 +1312,14 @@
             "type": "extends"
           },
           "MethodDeclarationImpl": {
-            "describe": {
+            "describeDeprecated": {
               "isAbstract": false,
               "isGetter": false,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "describe",
-              "returnType": "NodeInfo",
+              "name": "describeDeprecated",
+              "returnType": "NodeInfoDeprecated",
               "type": "MethodDeclarationImpl"
             },
             "getBackingMemory": {

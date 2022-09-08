@@ -212,11 +212,11 @@ async fn start_with_cache_no_space() {
 
     let () = futures::select! {
         res = netstack_fut => panic!("netstack unexpectedly exited; got signals: {:?}", res),
-        res = proxy.describe() => {
+        res = proxy.describe_deprecated() => {
             let info = res.expect("failed to describe diagnostics directory");
             assert_eq!(
                 info,
-                fio::NodeInfo::Directory(fio::DirectoryObject)
+                fio::NodeInfoDeprecated::Directory(fio::DirectoryObject)
             );
         }
     };

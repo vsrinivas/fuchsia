@@ -44,7 +44,7 @@ void DirectoryConnection::Close(CloseCallback callback) {
 
 void DirectoryConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
 
-void DirectoryConnection::Describe(DescribeCallback callback) {
+void DirectoryConnection::DescribeDeprecated(DescribeDeprecatedCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }
 

@@ -918,7 +918,7 @@ mod tests {
             // open_file_no_describe
 
             let file = open_file_no_describe(&example_dir_proxy, file_name, flags).unwrap();
-            match (should_succeed, file.describe().await) {
+            match (should_succeed, file.describe_deprecated().await) {
                 (true, Ok(_)) => (),
                 (false, Err(_)) => continue,
                 (true, Err(e)) => {

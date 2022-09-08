@@ -48,7 +48,7 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
     if (context->is_vmofile) {
       fuchsia_io::wire::VmofileDeprecated vmofile = {
           .offset = 0,
@@ -61,11 +61,11 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
         return;
       }
 
-      completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
+      completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithVmofileDeprecated(
           fidl::ObjectView<fuchsia_io::wire::VmofileDeprecated>::FromExternal(&vmofile)));
     } else {
       fuchsia_io::wire::FileObject fo;
-      completer.Reply(fuchsia_io::wire::NodeInfo::WithFile(
+      completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithFile(
           fidl::ObjectView<fuchsia_io::wire::FileObject>::FromExternal(&fo)));
     }
   }

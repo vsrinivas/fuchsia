@@ -78,15 +78,15 @@ async fn connect_to_archive_at(glob_path: &str) -> Result<ArchiveAccessorProxy, 
             let node =
                 fuchsia_fs::node::open_in_namespace(&path_str, fio::OpenFlags::NODE_REFERENCE)
                     .map_err(|e| Error::io_error("open node in namespace", e.into()))?;
-            if let Ok(node_info) = node.describe().await {
+            if let Ok(node_info) = node.describe_deprecated().await {
                 match node_info {
-                    fio::NodeInfo::Service(_) => {
+                    fio::NodeInfoDeprecated::Service(_) => {
                         return client::connect_to_protocol_at_path::<ArchiveAccessorMarker>(
                             &path_str,
                         )
                         .map_err(|e| Error::ConnectToArchivist(e));
                     }
-                    fio::NodeInfo::Directory(_) => {
+                    fio::NodeInfoDeprecated::Directory(_) => {
                         let directory = fuchsia_fs::directory::open_in_namespace(
                             &path_str,
                             fio::OpenFlags::RIGHT_READABLE,

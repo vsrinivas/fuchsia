@@ -631,8 +631,8 @@ fn generate_valid_file_paths(base: &str) -> Vec<String> {
 }
 
 async fn verify_directory_opened(node: fio::NodeProxy, flag: fio::OpenFlags) -> Result<(), Error> {
-    match node.describe().await {
-        Ok(fio::NodeInfo::Directory(directory_object)) => {
+    match node.describe_deprecated().await {
+        Ok(fio::NodeInfoDeprecated::Directory(directory_object)) => {
             assert_eq!(directory_object, fio::DirectoryObject);
         }
         Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
@@ -643,7 +643,7 @@ async fn verify_directory_opened(node: fio::NodeProxy, flag: fio::OpenFlags) -> 
         match node.take_event_stream().next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-                assert_eq!(*boxed, fio::NodeInfo::Directory(fio::DirectoryObject {}));
+                assert_eq!(*boxed, fio::NodeInfoDeprecated::Directory(fio::DirectoryObject {}));
                 return Ok(());
             }
             Some(Ok(fio::NodeEvent::OnRepresentation { payload })) => {
@@ -663,14 +663,14 @@ async fn verify_content_file_opened(
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
     if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
-        match node.describe().await {
-            Ok(fio::NodeInfo::Service(_)) => (),
+        match node.describe_deprecated().await {
+            Ok(fio::NodeInfoDeprecated::Service(_)) => (),
             Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
             Err(e) => return Err(e).context("failed to call describe"),
         }
     } else {
-        match node.describe().await {
-            Ok(fio::NodeInfo::File(_)) => (),
+        match node.describe_deprecated().await {
+            Ok(fio::NodeInfoDeprecated::File(_)) => (),
             Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
             Err(e) => return Err(e).context("failed to call describe"),
         }
@@ -680,7 +680,7 @@ async fn verify_content_file_opened(
             match node.take_event_stream().next().await {
                 Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                     assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-                    assert_eq!(*boxed, fio::NodeInfo::Service(fio::Service));
+                    assert_eq!(*boxed, fio::NodeInfoDeprecated::Service(fio::Service));
                     return Ok(());
                 }
                 Some(Ok(fio::NodeEvent::OnRepresentation { payload })) => {
@@ -696,7 +696,7 @@ async fn verify_content_file_opened(
                 Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                     assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                     match *boxed {
-                        fio::NodeInfo::File(fio::FileObject {
+                        fio::NodeInfoDeprecated::File(fio::FileObject {
                             event: Some(event),
                             stream: None,
                         }) => {
@@ -734,8 +734,8 @@ async fn verify_meta_as_file_opened(
     node: fio::NodeProxy,
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
-    match node.describe().await {
-        Ok(fio::NodeInfo::File(_)) => (),
+    match node.describe_deprecated().await {
+        Ok(fio::NodeInfoDeprecated::File(_)) => (),
         Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
         Err(e) => return Err(e).context("failed to call describe"),
     }
@@ -745,13 +745,13 @@ async fn verify_meta_as_file_opened(
             Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                 match *boxed {
-                    fio::NodeInfo::File(_) => return Ok(()),
-                    _ => return Err(anyhow!("wrong fio::NodeInfo returned")),
+                    fio::NodeInfoDeprecated::File(_) => return Ok(()),
+                    _ => return Err(anyhow!("wrong fio::NodeInfoDeprecated returned")),
                 }
             }
             Some(Ok(fio::NodeEvent::OnRepresentation { payload })) => match payload {
                 fio::Representation::File(_) => return Ok(()),
-                _ => return Err(anyhow!("wrong fio::NodeInfo returned")),
+                _ => return Err(anyhow!("wrong fio::NodeInfoDeprecated returned")),
             },
             Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
             Some(Err(e)) => return Err(e).context("failed to call onopen"),
@@ -762,7 +762,7 @@ async fn verify_meta_as_file_opened(
 }
 
 async fn verify_open_failed(node: fio::NodeProxy) -> Result<(), Error> {
-    match node.describe().await {
+    match node.describe_deprecated().await {
         Ok(node_info) => Err(anyhow!("node should be closed: {:?}", node_info)),
         Err(fidl::Error::ClientChannelClosed { status: _, protocol_name: _ }) => Ok(()),
         Err(e) => Err(e).context("failed with unexpected error"),
@@ -878,7 +878,7 @@ async fn assert_clone_sends_on_open_event(package_root: &fio::DirectoryProxy, pa
         match node.take_event_stream().next().await {
             Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-                assert_eq!(*boxed, fio::NodeInfo::Directory(fio::DirectoryObject {}));
+                assert_eq!(*boxed, fio::NodeInfoDeprecated::Directory(fio::DirectoryObject {}));
                 return Ok(());
             }
             Some(Ok(other)) => return Err(anyhow!("wrong node event returned: {:?}", other)),

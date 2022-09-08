@@ -108,10 +108,10 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   ASSERT_OK(fdio_fd_transfer(fd.release(), client_end.channel().reset_and_get_address()));
   fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
 
-  auto response = client->Describe();
+  auto response = client->DescribeDeprecated();
   ASSERT_OK(response.status());
-  const fuchsia_io::wire::NodeInfo& node_info = response->info;
-  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+  const fuchsia_io::wire::NodeInfoDeprecated& node_info = response->info;
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfoDeprecated::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 
@@ -121,22 +121,22 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   EXPECT_STATUS(socket.signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED);
 }
 
-static const zx::socket& stream_handle(const fuchsia_io::wire::NodeInfo& node_info) {
+static const zx::socket& stream_handle(const fuchsia_io::wire::NodeInfoDeprecated& node_info) {
   return node_info.stream_socket().socket;
 }
 
-static const zx::socket& datagram_handle(const fuchsia_io::wire::NodeInfo& node_info) {
+static const zx::socket& datagram_handle(const fuchsia_io::wire::NodeInfoDeprecated& node_info) {
   return node_info.datagram_socket().socket;
 }
 
 static const zx::eventpair& synchronous_datagram_handle(
-    const fuchsia_io::wire::NodeInfo& node_info) {
+    const fuchsia_io::wire::NodeInfoDeprecated& node_info) {
   return node_info.synchronous_datagram_socket().event;
 }
 
-template <int Type, int NetworkProtocol, typename FidlProtocol, fuchsia_io::wire::NodeInfo::Tag Tag,
-          typename HandleType,
-          const HandleType& (*GetHandle)(const fuchsia_io::wire::NodeInfo& node_info),
+template <int Type, int NetworkProtocol, typename FidlProtocol,
+          fuchsia_io::wire::NodeInfoDeprecated::Tag Tag, typename HandleType,
+          const HandleType& (*GetHandle)(const fuchsia_io::wire::NodeInfoDeprecated& node_info),
           zx_signals_t PeerClosed>
 struct SocketImpl {
   using Client = fidl::WireSyncClient<FidlProtocol>;
@@ -145,30 +145,30 @@ struct SocketImpl {
 
   static int type() { return Type; }
   static int network_protocol() { return NetworkProtocol; }
-  static fuchsia_io::wire::NodeInfo::Tag tag() { return Tag; }
-  static const Handle& handle(const fuchsia_io::wire::NodeInfo& node_info) {
+  static fuchsia_io::wire::NodeInfoDeprecated::Tag tag() { return Tag; }
+  static const Handle& handle(const fuchsia_io::wire::NodeInfoDeprecated& node_info) {
     return GetHandle(node_info);
   }
   static zx_signals_t peer_closed() { return PeerClosed; }
 };
 
 using StreamSocketImpl = SocketImpl<SOCK_STREAM, IPPROTO_IP, fuchsia_posix_socket::StreamSocket,
-                                    fuchsia_io::wire::NodeInfo::Tag::kStreamSocket, zx::socket,
-                                    stream_handle, ZX_SOCKET_PEER_CLOSED>;
+                                    fuchsia_io::wire::NodeInfoDeprecated::Tag::kStreamSocket,
+                                    zx::socket, stream_handle, ZX_SOCKET_PEER_CLOSED>;
 
 using SynchronousDatagramSocketImplIcmp =
     SocketImpl<SOCK_DGRAM, IPPROTO_ICMP, fuchsia_posix_socket::SynchronousDatagramSocket,
-               fuchsia_io::wire::NodeInfo::Tag::kSynchronousDatagramSocket, zx::eventpair,
+               fuchsia_io::wire::NodeInfoDeprecated::Tag::kSynchronousDatagramSocket, zx::eventpair,
                synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
 
 using SynchronousDatagramSocketImplIp =
     SocketImpl<SOCK_DGRAM, IPPROTO_IP, fuchsia_posix_socket::SynchronousDatagramSocket,
-               fuchsia_io::wire::NodeInfo::Tag::kSynchronousDatagramSocket, zx::eventpair,
+               fuchsia_io::wire::NodeInfoDeprecated::Tag::kSynchronousDatagramSocket, zx::eventpair,
                synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
 
 using DatagramSocketImpl = SocketImpl<SOCK_DGRAM, IPPROTO_IP, fuchsia_posix_socket::DatagramSocket,
-                                      fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket, zx::socket,
-                                      datagram_handle, ZX_SOCKET_PEER_CLOSED>;
+                                      fuchsia_io::wire::NodeInfoDeprecated::Tag::kDatagramSocket,
+                                      zx::socket, datagram_handle, ZX_SOCKET_PEER_CLOSED>;
 
 template <typename Impl>
 class SocketTest : public testing::Test {
@@ -244,9 +244,9 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
       fdio_fd_transfer(this->mutable_fd().release(), client_end.channel().reset_and_get_address()));
   client.Bind(std::move(client_end));
 
-  auto describe_response = client->Describe();
+  auto describe_response = client->DescribeDeprecated();
   ASSERT_OK(describe_response.status());
-  const fuchsia_io::wire::NodeInfo& node_info = describe_response->info;
+  const fuchsia_io::wire::NodeInfoDeprecated& node_info = describe_response->info;
   ASSERT_EQ(node_info.Which(), TypeParam::tag());
 
   zx_signals_t observed;
@@ -312,10 +312,10 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   ASSERT_OK(fdio_fd_transfer(connfd.release(), client_end.channel().reset_and_get_address()));
   fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
 
-  auto response = client->Describe();
+  auto response = client->DescribeDeprecated();
   ASSERT_OK(response.status());
-  const fuchsia_io::wire::NodeInfo& node_info = response->info;
-  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+  const fuchsia_io::wire::NodeInfoDeprecated& node_info = response->info;
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfoDeprecated::Tag::kStreamSocket);
 
   const zx::socket& socket = node_info.stream_socket().socket;
 

@@ -285,10 +285,10 @@ enum NodeKind {
 }
 
 impl NodeKind {
-    fn from(info: &fio::NodeInfo) -> NodeKind {
+    fn from(info: &fio::NodeInfoDeprecated) -> NodeKind {
         match info {
-            fio::NodeInfo::File(_) => NodeKind::File,
-            fio::NodeInfo::Directory(_) => NodeKind::Directory,
+            fio::NodeInfoDeprecated::File(_) => NodeKind::File,
+            fio::NodeInfoDeprecated::Directory(_) => NodeKind::Directory,
             _ => NodeKind::Unknown,
         }
     }
@@ -302,9 +302,9 @@ impl NodeKind {
     }
 }
 
-/// A fuchsia.io.Node along with its NodeInfo.
+/// A fuchsia.io.Node along with its NodeInfoDeprecated.
 ///
-/// The NodeInfo provides information about the concrete protocol spoken by the
+/// The NodeInfoDeprecated provides information about the concrete protocol spoken by the
 /// node.
 struct DescribedNode {
     node: fio::NodeSynchronousProxy,
@@ -319,7 +319,7 @@ struct DescribedNode {
 /// This function adds OPEN_FLAG_DESCRIBE to the given flags and then blocks
 /// until the directory describes the newly opened node.
 ///
-/// Returns the opened Node, along with its NodeInfo, or an error.
+/// Returns the opened Node, along with its NodeInfoDeprecated, or an error.
 fn directory_open(
     directory: &fio::DirectorySynchronousProxy,
     path: &str,

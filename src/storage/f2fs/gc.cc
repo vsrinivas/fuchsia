@@ -280,7 +280,7 @@ zx_status_t GcManager::GcNodeSegment(const SummaryBlock &sum_blk, uint32_t segno
       continue;
     }
 
-    NodeInfo ni;
+    NodeInfoDeprecated ni;
     fs_->GetNodeManager().GetNodeInfo(nid, ni);
     if (ni.blk_addr != fs_->GetSegmentManager().StartBlock(segno) + off) {
       continue;
@@ -302,7 +302,7 @@ zx::status<std::pair<nid_t, block_t>> GcManager::CheckDnode(const Summary &sum, 
     return zx::error(err);
   }
 
-  NodeInfo dnode_info;
+  NodeInfoDeprecated dnode_info;
   fs_->GetNodeManager().GetNodeInfo(nid, dnode_info);
 
   if (sum.version != dnode_info.version) {

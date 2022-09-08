@@ -13,9 +13,9 @@ async fn directory_describe() {
     let root = root_directory(vec![]);
     let test_dir = harness.get_directory(root, fio::OpenFlags::empty());
 
-    let node_info = test_dir.describe().await.expect("describe failed");
+    let node_info = test_dir.describe_deprecated().await.expect("describe failed");
 
-    assert!(matches!(node_info, fio::NodeInfo::Directory { .. }));
+    assert!(matches!(node_info, fio::NodeInfoDeprecated::Directory { .. }));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -32,9 +32,9 @@ async fn file_describe() {
     )
     .await;
 
-    let node_info = file.describe().await.expect("describe failed");
+    let node_info = file.describe_deprecated().await.expect("describe failed");
 
-    assert!(matches!(node_info, fio::NodeInfo::File { .. }));
+    assert!(matches!(node_info, fio::NodeInfoDeprecated::File { .. }));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -55,7 +55,7 @@ async fn vmo_file_describe() {
     )
     .await;
 
-    let node_info = file.describe().await.expect("describe failed");
+    let node_info = file.describe_deprecated().await.expect("describe failed");
 
-    assert!(matches!(node_info, fio::NodeInfo::File { .. }));
+    assert!(matches!(node_info, fio::NodeInfoDeprecated::File { .. }));
 }

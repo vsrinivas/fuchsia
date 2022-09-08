@@ -37,7 +37,7 @@ func respond(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRe
 		proxy := io.NodeEventProxy{Channel: req.Channel}
 		switch err := err.(type) {
 		case nil:
-			info, err := node.Describe(ctx)
+			info, err := node.DescribeDeprecated(ctx)
 			if err != nil {
 				panic(err)
 			}
@@ -100,8 +100,8 @@ func (*Service) Close(fidl.Context) (unknown.CloseableCloseResult, error) {
 	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
-func (*Service) Describe(fidl.Context) (io.NodeInfo, error) {
-	var nodeInfo io.NodeInfo
+func (*Service) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error) {
+	var nodeInfo io.NodeInfoDeprecated
 	nodeInfo.SetService(io.Service{})
 	return nodeInfo, nil
 }
@@ -248,8 +248,8 @@ func (*directoryState) Close(fidl.Context) (unknown.CloseableCloseResult, error)
 	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
-func (*directoryState) Describe(fidl.Context) (io.NodeInfo, error) {
-	var nodeInfo io.NodeInfo
+func (*directoryState) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error) {
+	var nodeInfo io.NodeInfoDeprecated
 	nodeInfo.SetDirectory(io.DirectoryObject{})
 	return nodeInfo, nil
 }
@@ -530,8 +530,8 @@ func (fState *fileState) Close(fidl.Context) (unknown.CloseableCloseResult, erro
 	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
-func (fState *fileState) Describe(fidl.Context) (io.NodeInfo, error) {
-	var nodeInfo io.NodeInfo
+func (fState *fileState) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error) {
+	var nodeInfo io.NodeInfoDeprecated
 	nodeInfo.SetFile(io.FileObject{})
 	return nodeInfo, nil
 }

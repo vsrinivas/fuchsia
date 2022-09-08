@@ -91,7 +91,7 @@ TEST(OrphanInode, RecoverOrphanInode) {
 
   // Check Orphan nids has been freed
   for (const auto &iter : inos) {
-    NodeInfo ni;
+    NodeInfoDeprecated ni;
     fs->GetNodeManager().GetNodeInfo(iter, ni);
     ASSERT_EQ(ni.blk_addr, kNullAddr);
   }
@@ -129,7 +129,7 @@ TEST_F(OrphanTest, VnodeSet) {
 
   std::vector<uint32_t> tmp_inos;
   superblock_info.ForAllVnodesInVnodeSet(InoType::kOrphanIno,
-                                   [&tmp_inos](nid_t ino) { tmp_inos.push_back(ino); });
+                                         [&tmp_inos](nid_t ino) { tmp_inos.push_back(ino); });
   ASSERT_TRUE(std::equal(inos.begin(), inos.end(), tmp_inos.begin()));
 }
 

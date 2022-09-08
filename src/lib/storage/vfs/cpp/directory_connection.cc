@@ -47,7 +47,7 @@ void OpenAt(FuchsiaVfs* vfs, const fbl::RefPtr<Vnode>& parent,
       if (describe) {
         // Ignore errors since there is nothing we can do if this fails.
         [[maybe_unused]] auto unused_result =
-            fidl::WireSendEvent(server_end)->OnOpen(result, fio::wire::NodeInfo());
+            fidl::WireSendEvent(server_end)->OnOpen(result, fio::wire::NodeInfoDeprecated());
         server_end.reset();
       }
     } else if constexpr (std::is_same_v<ResultT, OpenResult::Remote>) {
@@ -115,14 +115,15 @@ void DirectoryConnection::Query(QueryCompleter::Sync& completer) {
   completer.Reply(Connection::NodeQuery());
 }
 
-void DirectoryConnection::Describe(DescribeCompleter::Sync& completer) {
+void DirectoryConnection::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
   zx::status result = Connection::NodeDescribe();
   if (result.is_error()) {
     completer.Close(result.status_value());
     return;
   }
-  ConvertToIoV1NodeInfo(std::move(result).value(),
-                        [&](fio::wire::NodeInfo&& info) { completer.Reply(std::move(info)); });
+  ConvertToIoV1NodeInfo(std::move(result).value(), [&](fio::wire::NodeInfoDeprecated&& info) {
+    completer.Reply(std::move(info));
+  });
 }
 
 void DirectoryConnection::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {
@@ -189,7 +190,7 @@ void DirectoryConnection::Open(OpenRequestView request, OpenCompleter::Sync& com
     if (describe) {
       // Ignore errors since there is nothing we can do if this fails.
       [[maybe_unused]] auto result =
-          fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfo());
+          fidl::WireSendEvent(channel)->OnOpen(error, fio::wire::NodeInfoDeprecated());
       channel.reset();
     }
   };

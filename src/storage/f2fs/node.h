@@ -42,7 +42,7 @@ constexpr uint32_t kMaxNodeBlockLevel = 4;
 constexpr block_t kInvalidOffset = std::numeric_limits<block_t>::max();
 
 // For node information
-struct NodeInfo {
+struct NodeInfoDeprecated {
   nid_t nid = 0;         // node id
   nid_t ino = 0;         // inode number of the node's owner
   block_t blk_addr = 0;  // block address of the node
@@ -58,8 +58,8 @@ class NatEntry : public fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>,
   NatEntry(const NatEntry &&) = delete;
   NatEntry &operator=(const NatEntry &&) = delete;
 
-  const NodeInfo &GetNodeInfo() { return ni_; }
-  void SetNodeInfo(const NodeInfo &value) { ni_ = value; }
+  const NodeInfoDeprecated &GetNodeInfo() { return ni_; }
+  void SetNodeInfo(const NodeInfoDeprecated &value) { ni_ = value; }
 
   bool IsCheckpointed() const { return checkpointed_; }
   void SetCheckpointed() { checkpointed_ = true; }
@@ -76,7 +76,7 @@ class NatEntry : public fbl::WAVLTreeContainable<std::unique_ptr<NatEntry>>,
 
  private:
   bool checkpointed_ = false;  // whether it is checkpointed or not
-  NodeInfo ni_;                // in-memory node information
+  NodeInfoDeprecated ni_;      // in-memory node information
 };
 
 inline uint8_t IncNodeVersion(uint8_t version) { return ++version; }
@@ -106,7 +106,7 @@ class NodeManager {
   NodeManager(F2fs *fs);
 
   zx_status_t NextFreeNid(nid_t *nid);
-  void NodeInfoFromRawNat(NodeInfo &ni, RawNatEntry &raw_ne);
+  void NodeInfoFromRawNat(NodeInfoDeprecated &ni, RawNatEntry &raw_ne);
   zx_status_t BuildNodeManager();
   void DestroyNodeManager();
   zx::status<LockedPage> ReadNodePage(LockedPage page, nid_t nid, int type);
@@ -131,7 +131,7 @@ class NodeManager {
 
   static bool IsColdFile(VnodeF2fs &vnode);
 
-  void GetNodeInfo(nid_t nid, NodeInfo &out);
+  void GetNodeInfo(nid_t nid, NodeInfoDeprecated &out);
 
   // It flushes all dirty node Pages that meet |operation|.if_page.
   // It also removes dirty vnodes from the dirty list when there is no dirty Page for their vnodes
@@ -209,7 +209,7 @@ class NodeManager {
   void DelFromNatCache(NatEntry &entry) __TA_REQUIRES_SHARED(nat_tree_lock_);
   NatEntry *GrabNatEntry(nid_t nid) __TA_REQUIRES_SHARED(nat_tree_lock_);
   void CacheNatEntry(nid_t nid, RawNatEntry &ne);
-  void SetNodeAddr(NodeInfo &ni, block_t new_blkaddr);
+  void SetNodeAddr(NodeInfoDeprecated &ni, block_t new_blkaddr);
   int TryToFreeNats(int nr_shrink);
 
   zx::status<int32_t> GetNodePath(VnodeF2fs &vnode, pgoff_t block,

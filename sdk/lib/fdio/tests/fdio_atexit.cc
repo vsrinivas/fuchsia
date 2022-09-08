@@ -24,14 +24,15 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::St
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
     fuchsia_io::wire::StreamSocket stream_socket;
     zx_status_t status =
         peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
     if (status != ZX_OK) {
       return completer.Close(status);
     }
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithStreamSocket(std::move(stream_socket)));
+    completer.Reply(
+        fuchsia_io::wire::NodeInfoDeprecated::WithStreamSocket(std::move(stream_socket)));
   }
 
   void Accept(AcceptRequestView request, AcceptCompleter::Sync& completer) override {

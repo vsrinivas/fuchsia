@@ -175,7 +175,7 @@ IntegrationTest::Promise<void> IntegrationTest::DoOpen(
   fpromise::bridge<void, Error> bridge;
   client->events().OnOpen = [client, completer = std::move(bridge.completer)](
                                 zx_status_t status,
-                                std::unique_ptr<fuchsia::io::NodeInfo> info) mutable {
+                                std::unique_ptr<fuchsia::io::NodeInfoDeprecated> info) mutable {
     if (status != ZX_OK) {
       std::string error("failed to open node: ");
       error.append(zx_status_get_string(status));
@@ -301,7 +301,8 @@ void WaitForPath(const fidl::InterfacePtr<fuchsia::io::Directory>& dir,
   auto& events = async_watcher->connections().node.events();
   events.OnOpen = [dispatcher, async_watcher = std::move(async_watcher),
                    completer = std::move(completer), request = std::move(request)](
-                      zx_status_t status, std::unique_ptr<fuchsia::io::NodeInfo> info) mutable {
+                      zx_status_t status,
+                      std::unique_ptr<fuchsia::io::NodeInfoDeprecated> info) mutable {
     if (status != ZX_OK) {
       completer.complete_error("Failed to open directory");
       return;

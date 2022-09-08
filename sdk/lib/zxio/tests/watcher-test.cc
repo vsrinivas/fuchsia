@@ -35,8 +35,8 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory({}));
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
+    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithDirectory({}));
   }
 
   void Watch(WatchRequestView request, WatchCompleter::Sync& completer) override {

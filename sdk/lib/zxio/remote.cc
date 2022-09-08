@@ -191,7 +191,7 @@ class Remote {
 
   zx::status<bool> IsATty() const {
     const fidl::WireResult result =
-        fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control()))->Describe();
+        fidl::WireCall(fidl::UnownedClientEnd<fio::Node>(control()))->DescribeDeprecated();
     if (!result.ok()) {
       return zx::error(result.status());
     }

@@ -45,7 +45,7 @@ void main() {
   }
 
   Future<void> _assertDescribeFile(FileProxy proxy) async {
-    var response = await proxy.describe();
+    var response = await proxy.describeDeprecated();
     expect(response.file, isNotNull);
   }
 
@@ -78,7 +78,7 @@ void main() {
 
       await file.proxy.onOpen.first.then((response) {
         expect(response.s, ZX.OK);
-        NodeInfo? nodeInfo = response.info;
+        NodeInfoDeprecated? nodeInfo = response.info;
         if (nodeInfo != null) {
           expect(nodeInfo.file, isNotNull);
         }

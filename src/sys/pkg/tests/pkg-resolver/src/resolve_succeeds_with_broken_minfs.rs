@@ -294,8 +294,8 @@ impl FailingWriteFileStreamHandler {
                 let event = event_stream.try_next().await.unwrap();
                 match event.expect("failed to received file event") {
                     fio::FileEvent::OnOpen_ { s, mut info } => {
-                        // info comes as an Option<Box<NodeInfo>>, but we need to return an
-                        // Option<&mut NodeInfo>. Transform it.
+                        // info comes as an Option<Box<NodeInfoDeprecated>>, but we need to return an
+                        // Option<&mut NodeInfoDeprecated>. Transform it.
                         let node_info = info.as_mut().map(|b| &mut **b);
                         control_handle
                             .send_on_open_(s, node_info)

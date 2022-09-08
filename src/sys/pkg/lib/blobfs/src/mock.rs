@@ -232,7 +232,8 @@ impl Blob {
         let event = fidl::Event::create().unwrap();
         event.signal_handle(zx::Signals::NONE, signals).unwrap();
 
-        let mut info = fio::NodeInfo::File(fio::FileObject { event: Some(event), stream: None });
+        let mut info =
+            fio::NodeInfoDeprecated::File(fio::FileObject { event: Some(event), stream: None });
         let () =
             self.stream.control_handle().send_on_open_(status.into_raw(), Some(&mut info)).unwrap();
     }

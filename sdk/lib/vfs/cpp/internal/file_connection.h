@@ -32,7 +32,7 @@ class FileConnection final : public Connection, public fuchsia::io::File {
              fidl::InterfaceRequest<fuchsia::io::Node> object) override;
   void Close(CloseCallback callback) override;
   void Query(QueryCallback callback) override;
-  void Describe(DescribeCallback callback) override;
+  void DescribeDeprecated(DescribeDeprecatedCallback callback) override;
   void Describe2(Describe2Callback callback) override;
   void GetConnectionInfo(GetConnectionInfoCallback callback) override;
   void Sync(SyncCallback callback) override;

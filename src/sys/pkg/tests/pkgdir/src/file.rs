@@ -513,8 +513,8 @@ async fn assert_clone_sends_on_open_event(package_root: &fio::DirectoryProxy, pa
             Some(Ok(fio::FileEvent::OnOpen_ { s, info: Some(boxed) })) => {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                 match *boxed {
-                    fio::NodeInfo::File(_) => Ok(()),
-                    _ => Err(anyhow!("wrong fio::NodeInfo returned")),
+                    fio::NodeInfoDeprecated::File(_) => Ok(()),
+                    _ => Err(anyhow!("wrong fio::NodeInfoDeprecated returned")),
                 }
             }
             Some(Ok(other)) => Err(anyhow!("wrong node type returned: {:?}", other)),

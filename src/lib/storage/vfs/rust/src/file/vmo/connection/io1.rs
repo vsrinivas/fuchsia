@@ -264,9 +264,9 @@ impl VmoFileConnection {
         let _: Result<(), zx::Status> = self.handle_close().await;
     }
 
-    /// Returns `NodeInfo` for the VMO file.
-    async fn get_node_info(&mut self) -> Result<fio::NodeInfo, zx::Status> {
-        Ok(fio::NodeInfo::File(fio::FileObject { event: None, stream: None }))
+    /// Returns `NodeInfoDeprecated` for the VMO file.
+    async fn get_node_info(&mut self) -> Result<fio::NodeInfoDeprecated, zx::Status> {
+        Ok(fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None }))
     }
 
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
@@ -290,13 +290,15 @@ impl VmoFileConnection {
                 let _ = responder.send(&mut result.map_err(zx::Status::into_raw));
                 return Ok(ConnectionState::Closed);
             }
-            fio::FileRequest::Describe { responder } => match self.get_node_info().await {
-                Ok(mut info) => responder.send(&mut info)?,
-                Err(status) => {
-                    debug_assert!(status != zx::Status::OK);
-                    responder.control_handle().shutdown_with_epitaph(status);
+            fio::FileRequest::DescribeDeprecated { responder } => {
+                match self.get_node_info().await {
+                    Ok(mut info) => responder.send(&mut info)?,
+                    Err(status) => {
+                        debug_assert!(status != zx::Status::OK);
+                        responder.control_handle().shutdown_with_epitaph(status);
+                    }
                 }
-            },
+            }
             fio::FileRequest::Describe2 { responder } => {
                 let _ = responder;
                 todo!("https://fxbug.dev/77623");

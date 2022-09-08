@@ -150,7 +150,7 @@ async fn handle_file_stream_fail_truncate(
 ) {
     ch.send_on_open_(
         Status::OK.into_raw(),
-        Some(&mut fio::NodeInfo::File(fio::FileObject { event: None, stream: None })),
+        Some(&mut fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None })),
     )
     .expect("send on open");
     while let Some(req) = stream.next().await {
@@ -165,7 +165,7 @@ async fn handle_file_stream_fail_write(
 ) {
     ch.send_on_open_(
         Status::OK.into_raw(),
-        Some(&mut fio::NodeInfo::File(fio::FileObject { event: None, stream: None })),
+        Some(&mut fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None })),
     )
     .expect("send on open");
     while let Some(req) = stream.next().await {

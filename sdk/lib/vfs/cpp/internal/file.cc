@@ -11,7 +11,7 @@ namespace internal {
 File::File() = default;
 File::~File() = default;
 
-void File::Describe(fuchsia::io::NodeInfo* out_info) {
+void File::Describe(fuchsia::io::NodeInfoDeprecated* out_info) {
   out_info->set_file(fuchsia::io::FileObject());
 }
 

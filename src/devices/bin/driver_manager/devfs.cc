@@ -108,7 +108,7 @@ class DcIostate : public fbl::DoublyLinkedListable<DcIostate*>,
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
   void Close(CloseCompleter::Sync& completer) override;
   void Query(QueryCompleter::Sync& completer) override;
-  void Describe(DescribeCompleter::Sync& completer) override;
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override;
   void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override;
   void Sync(SyncCompleter::Sync& completer) override { completer.ReplyError(ZX_ERR_NOT_SUPPORTED); }
   void GetAttr(GetAttrCompleter::Sync& completer) override;
@@ -456,11 +456,11 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
     }
 
     auto describe = [&ipc, describe = flags & fio::wire::OpenFlags::kDescribe](
-                        zx::status<fio::wire::NodeInfo> node_info) {
+                        zx::status<fio::wire::NodeInfoDeprecated> node_info) {
       if (describe) {
         __UNUSED auto result = fidl::WireSendEvent(ipc)->OnOpen(
             node_info.status_value(),
-            node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfo());
+            node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfoDeprecated());
       }
     };
 
@@ -478,7 +478,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<
         return;
       }
       fio::wire::DirectoryObject directory;
-      describe(zx::ok(fio::wire::NodeInfo::WithDirectory(directory)));
+      describe(zx::ok(fio::wire::NodeInfoDeprecated::WithDirectory(directory)));
       DcIostate::Bind(std::move(ios), std::move(ipc));
     } else if (dn->service_dir) {
       // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -749,9 +749,9 @@ void DcIostate::GetAttr(GetAttrCompleter::Sync& completer) {
   completer.Reply(ZX_OK, attributes);
 }
 
-void DcIostate::Describe(DescribeCompleter::Sync& completer) {
+void DcIostate::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
   fio::wire::DirectoryObject directory;
-  completer.Reply(fio::wire::NodeInfo::WithDirectory(directory));
+  completer.Reply(fio::wire::NodeInfoDeprecated::WithDirectory(directory));
 }
 
 void DcIostate::GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) {

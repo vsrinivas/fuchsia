@@ -311,7 +311,7 @@ class _DirConnection extends Directory {
     if ((_flags & OpenFlags.describe) == OpenFlags.$none) {
       d = Directory$OnOpen$Response(ZX.ERR_NOT_DIR, null);
     } else {
-      NodeInfo nodeInfo = _describe();
+      NodeInfoDeprecated nodeInfo = _describeDeprecated();
       d = Directory$OnOpen$Response(ZX.OK, nodeInfo);
     }
     return Stream.fromIterable([d]);
@@ -379,8 +379,8 @@ class _DirConnection extends Directory {
   }
 
   @override
-  Future<NodeInfo> describe() async {
-    return _describe();
+  Future<NodeInfoDeprecated> describeDeprecated() async {
+    return _describeDeprecated();
   }
 
   @override
@@ -529,8 +529,8 @@ class _DirConnection extends Directory {
     return ZX.ERR_NOT_SUPPORTED;
   }
 
-  NodeInfo _describe() {
-    return NodeInfo.withDirectory(DirectoryObject(reserved: 0));
+  NodeInfoDeprecated _describeDeprecated() {
+    return NodeInfoDeprecated.withDirectory(DirectoryObject(reserved: 0));
   }
 
   /// returns number of bytes written

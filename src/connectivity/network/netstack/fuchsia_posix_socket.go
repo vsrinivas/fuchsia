@@ -2571,12 +2571,12 @@ func (s *datagramSocketImpl) Close(fidl.Context) (unknown.CloseableCloseResult, 
 	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
-func (s *datagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+func (s *datagramSocketImpl) DescribeDeprecated(fidl.Context) (fidlio.NodeInfoDeprecated, error) {
 	handle, err := s.describe()
 	if err != nil {
-		return fidlio.NodeInfo{}, err
+		return fidlio.NodeInfoDeprecated{}, err
 	}
-	return fidlio.NodeInfoWithDatagramSocket(fidlio.DatagramSocket{
+	return fidlio.NodeInfoDeprecatedWithDatagramSocket(fidlio.DatagramSocket{
 		Socket:        zx.Socket(handle),
 		TxMetaBufSize: uint64(udpTxPreludeSize),
 		RxMetaBufSize: uint64(udpRxPreludeSize),
@@ -2736,12 +2736,12 @@ type synchronousDatagramSocketImpl struct {
 
 var _ socket.SynchronousDatagramSocketWithCtx = (*synchronousDatagramSocketImpl)(nil)
 
-func (s *synchronousDatagramSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+func (s *synchronousDatagramSocketImpl) DescribeDeprecated(fidl.Context) (fidlio.NodeInfoDeprecated, error) {
 	event, err := s.describe()
 	if err != nil {
-		return fidlio.NodeInfo{}, err
+		return fidlio.NodeInfoDeprecated{}, err
 	}
-	return fidlio.NodeInfoWithSynchronousDatagramSocket(fidlio.SynchronousDatagramSocket{
+	return fidlio.NodeInfoDeprecatedWithSynchronousDatagramSocket(fidlio.SynchronousDatagramSocket{
 		Event: event,
 	}), nil
 }
@@ -3292,12 +3292,12 @@ func (s *streamSocketImpl) Reopen(ctx fidl.Context, rights *fidlio.RightsRequest
 	return nil
 }
 
-func (s *streamSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+func (s *streamSocketImpl) DescribeDeprecated(fidl.Context) (fidlio.NodeInfoDeprecated, error) {
 	handle, err := s.describe()
 	if err != nil {
-		return fidlio.NodeInfo{}, err
+		return fidlio.NodeInfoDeprecated{}, err
 	}
-	return fidlio.NodeInfoWithStreamSocket(fidlio.StreamSocket{
+	return fidlio.NodeInfoDeprecatedWithStreamSocket(fidlio.StreamSocket{
 		Socket: zx.Socket(handle),
 	}), nil
 }
@@ -4022,12 +4022,12 @@ type rawSocketImpl struct {
 
 var _ rawsocket.SocketWithCtx = (*rawSocketImpl)(nil)
 
-func (s *rawSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+func (s *rawSocketImpl) DescribeDeprecated(fidl.Context) (fidlio.NodeInfoDeprecated, error) {
 	event, err := s.describe()
 	if err != nil {
-		return fidlio.NodeInfo{}, err
+		return fidlio.NodeInfoDeprecated{}, err
 	}
-	return fidlio.NodeInfoWithRawSocket(fidlio.RawSocket{
+	return fidlio.NodeInfoDeprecatedWithRawSocket(fidlio.RawSocket{
 		Event: event,
 	}), nil
 }
@@ -4380,12 +4380,12 @@ type packetSocketImpl struct {
 	kind packetsocket.Kind
 }
 
-func (s *packetSocketImpl) Describe(fidl.Context) (fidlio.NodeInfo, error) {
+func (s *packetSocketImpl) DescribeDeprecated(fidl.Context) (fidlio.NodeInfoDeprecated, error) {
 	event, err := s.describe()
 	if err != nil {
-		return fidlio.NodeInfo{}, err
+		return fidlio.NodeInfoDeprecated{}, err
 	}
-	return fidlio.NodeInfoWithPacketSocket(fidlio.PacketSocket{
+	return fidlio.NodeInfoDeprecatedWithPacketSocket(fidlio.PacketSocket{
 		Event: event,
 	}), nil
 }

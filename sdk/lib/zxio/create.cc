@@ -92,7 +92,7 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
   switch (handle_info->type) {
     case ZX_OBJ_TYPE_CHANNEL: {
       fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
-      fidl::WireResult result = fidl::WireCall(node)->Describe();
+      fidl::WireResult result = fidl::WireCall(node)->DescribeDeprecated();
       if (!result.ok()) {
         return result.status();
       }
@@ -169,10 +169,11 @@ zx_status_t zxio_create_with_on_open(zx_handle_t raw_handle, zxio_storage_t* sto
   return handler_status;
 }
 
-zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo& info,
+zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
+                                      fio::wire::NodeInfoDeprecated& info,
                                       zxio_storage_t* storage) {
   switch (info.Which()) {
-    case fio::wire::NodeInfo::Tag::kDatagramSocket: {
+    case fio::wire::NodeInfoDeprecated::Tag::kDatagramSocket: {
       fio::wire::DatagramSocket& datagram_socket = info.datagram_socket();
       zx::socket& socket = datagram_socket.socket;
       zx_info_socket_t info;
@@ -189,30 +190,30 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
           storage, std::move(socket), info, prelude_size,
           fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket>(node.TakeChannel()));
     }
-    case fio::wire::NodeInfo::Tag::kDirectory: {
+    case fio::wire::NodeInfoDeprecated::Tag::kDirectory: {
       return zxio_dir_init(storage, node.TakeChannel().release());
     }
-    case fio::wire::NodeInfo::Tag::kFile: {
+    case fio::wire::NodeInfoDeprecated::Tag::kFile: {
       fio::wire::FileObject& file = info.file();
       zx::event event = std::move(file.event);
       zx::stream stream = std::move(file.stream);
       return zxio_file_init(storage, node.TakeChannel().release(), event.release(),
                             stream.release());
     }
-    case fio::wire::NodeInfo::Tag::kPacketSocket: {
+    case fio::wire::NodeInfoDeprecated::Tag::kPacketSocket: {
       return zxio_packet_socket_init(
           storage, std::move(info.packet_socket().event),
           fidl::ClientEnd<fuchsia_posix_socket_packet::Socket>(node.TakeChannel()));
     }
-    case fio::wire::NodeInfo::Tag::kRawSocket: {
+    case fio::wire::NodeInfoDeprecated::Tag::kRawSocket: {
       return zxio_raw_socket_init(
           storage, std::move(info.raw_socket().event),
           fidl::ClientEnd<fuchsia_posix_socket_raw::Socket>(node.TakeChannel()));
     }
-    case fio::wire::NodeInfo::Tag::kService: {
+    case fio::wire::NodeInfoDeprecated::Tag::kService: {
       return zxio_remote_init(storage, node.TakeChannel().release(), ZX_HANDLE_INVALID);
     }
-    case fio::wire::NodeInfo::Tag::kStreamSocket: {
+    case fio::wire::NodeInfoDeprecated::Tag::kStreamSocket: {
       zx::socket& socket = info.stream_socket().socket;
       zx_info_socket_t info;
       bool is_connected;
@@ -238,17 +239,17 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
           storage, std::move(socket), info, is_connected,
           fidl::ClientEnd<fuchsia_posix_socket::StreamSocket>(node.TakeChannel()));
     }
-    case fio::wire::NodeInfo::Tag::kSynchronousDatagramSocket: {
+    case fio::wire::NodeInfoDeprecated::Tag::kSynchronousDatagramSocket: {
       return zxio_synchronous_datagram_socket_init(
           storage, std::move(info.synchronous_datagram_socket().event),
           fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket>(node.TakeChannel()));
     }
-    case fio::wire::NodeInfo::Tag::kTty: {
+    case fio::wire::NodeInfoDeprecated::Tag::kTty: {
       fio::wire::Tty& tty = info.tty();
       zx::eventpair event = std::move(tty.event);
       return zxio_remote_init(storage, node.TakeChannel().release(), event.release());
     }
-    case fio::wire::NodeInfo::Tag::kVmofileDeprecated: {
+    case fio::wire::NodeInfoDeprecated::Tag::kVmofileDeprecated: {
       fio::wire::VmofileDeprecated& file = info.vmofile_deprecated();
       fidl::ClientEnd<fio::File> control(node.TakeChannel());
       const fidl::WireResult result =

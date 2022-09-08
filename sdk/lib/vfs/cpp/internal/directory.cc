@@ -57,7 +57,7 @@ Directory::Directory() = default;
 
 Directory::~Directory() = default;
 
-void Directory::Describe(fuchsia::io::NodeInfo* out_info) {
+void Directory::Describe(fuchsia::io::NodeInfoDeprecated* out_info) {
   out_info->set_directory(fuchsia::io::DirectoryObject());
 }
 

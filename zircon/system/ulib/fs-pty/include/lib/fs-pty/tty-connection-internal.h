@@ -42,7 +42,7 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void Close(CloseCompleter::Sync& completer) final;
   void Query(QueryCompleter::Sync& completer) final;
   void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) final;
-  void Describe(DescribeCompleter::Sync& completer) final;
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final;
   void Sync(SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;

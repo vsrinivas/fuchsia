@@ -22,7 +22,7 @@ namespace {
 namespace fio = fuchsia_io;
 
 void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const char* path,
-                       zx::status<fio::wire::NodeInfo::Tag> expected) {
+                       zx::status<fio::wire::NodeInfoDeprecated::Tag> expected) {
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   const fidl::WireResult result = fidl::WireCall(directory)->Open(
@@ -33,7 +33,7 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
   class EventHandler : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
    public:
     std::optional<zx_status_t> status() const { return status_; }
-    std::optional<fio::wire::NodeInfo::Tag> tag() const { return tag_; }
+    std::optional<fio::wire::NodeInfoDeprecated::Tag> tag() const { return tag_; }
 
     void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
       status_ = event->s;
@@ -48,7 +48,7 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
 
    private:
     std::optional<zx_status_t> status_;
-    std::optional<fio::wire::NodeInfo::Tag> tag_;
+    std::optional<fio::wire::NodeInfoDeprecated::Tag> tag_;
   };
 
   EventHandler event_handler;
@@ -74,7 +74,7 @@ TEST(FidlTestCase, OpenDev) {
   ASSERT_OK(fdio_ns_get_installed(&ns));
   ASSERT_OK(fdio_ns_service_connect(ns, "/dev", endpoints->server.channel().release()));
 
-  FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfo::Tag::kFile));
+  FidlOpenValidator(endpoints->client, "zero", zx::ok(fio::wire::NodeInfoDeprecated::Tag::kFile));
   FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",
                     zx::error(ZX_ERR_NOT_FOUND));
   FidlOpenValidator(endpoints->client, "zero/this-path-better-not-actually-exist",
@@ -88,7 +88,8 @@ TEST(FidlTestCase, OpenPkg) {
   ASSERT_OK(fdio_ns_get_installed(&ns));
   ASSERT_OK(fdio_ns_service_connect(ns, "/pkg", endpoints->server.channel().release()));
 
-  FidlOpenValidator(endpoints->client, "bin", zx::ok(fio::wire::NodeInfo::Tag::kDirectory));
+  FidlOpenValidator(endpoints->client, "bin",
+                    zx::ok(fio::wire::NodeInfoDeprecated::Tag::kDirectory));
   FidlOpenValidator(endpoints->client, "this-path-better-not-actually-exist",
                     zx::error(ZX_ERR_NOT_FOUND));
 }
@@ -97,7 +98,7 @@ TEST(FidlTestCase, BasicDevClass) {
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
-  const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
+  const fidl::WireResult result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
   ASSERT_OK(result.status());
   const auto& response = result.value();
   ASSERT_TRUE(response.info.is_directory());
@@ -107,7 +108,7 @@ TEST(FidlTestCase, BasicDevZero) {
   zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/dev/zero", endpoints->server.channel().release()));
-  const fidl::WireResult result = fidl::WireCall(endpoints->client)->Describe();
+  const fidl::WireResult result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
   ASSERT_OK(result.status());
   const auto& response = result.value();
   ASSERT_TRUE(response.info.is_file());

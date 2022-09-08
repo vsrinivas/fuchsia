@@ -188,9 +188,9 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
 
   // The channel should speak |fuchsia.io/Node| instead of the custom service FIDL protocol. We
   // verify it by calling describe on it, which should return correctly.
-  auto describe_result = fidl::WireCall(abc->client)->Describe();
+  auto describe_result = fidl::WireCall(abc->client)->DescribeDeprecated();
   ASSERT_EQ(ZX_OK, describe_result.status());
-  ASSERT_EQ(fio::wire::NodeInfo::Tag::kService, describe_result.value().info.Which());
+  ASSERT_EQ(fio::wire::NodeInfoDeprecated::Tag::kService, describe_result.value().info.Which());
 
   loop.Shutdown();
 }

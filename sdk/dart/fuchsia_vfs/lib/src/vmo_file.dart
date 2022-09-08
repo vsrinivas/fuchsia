@@ -53,8 +53,8 @@ class VmoFile extends PseudoFile {
   }
 
   @override
-  NodeInfo describe() {
-    return NodeInfo.withFile(FileObject(event: null));
+  NodeInfoDeprecated describeDeprecated() {
+    return NodeInfoDeprecated.withFile(FileObject(event: null));
   }
 
   @override

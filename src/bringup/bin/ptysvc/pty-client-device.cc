@@ -120,7 +120,9 @@ void PtyClientDevice::GetConnectionInfo(GetConnectionInfoCompleter::Sync& comple
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Describe(DescribeCompleter::Sync& completer) { ZX_ASSERT(false); }
+void PtyClientDevice::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
+  ZX_ASSERT(false);
+}
 
 void PtyClientDevice::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
 

@@ -77,7 +77,7 @@ fn describe() {
 
         assert_event!(proxy, fio::FileEvent::OnOpen_ { s, info }, {
             assert_eq!(s, ZX_OK);
-            assert_eq!(info, Some(Box::new(fio::NodeInfo::Service(fio::Service))));
+            assert_eq!(info, Some(Box::new(fio::NodeInfoDeprecated::Service(fio::Service))));
         });
     });
 }

@@ -109,7 +109,7 @@ TEST(PtyTests, pty_test) {
   // Connect to the PTY service.  We have to do this dance rather than just
   // using open() because open() uses the DESCRIBE flag internally, and the
   // plumbing of the PTY service through svchost causes the DESCRIBE to get
-  // consumed by the wrong code, resulting in the wrong NodeInfo being provided.
+  // consumed by the wrong code, resulting in the wrong NodeInfoDeprecated being provided.
   // This manifests as a loss of fd signals.
   fbl::unique_fd ps;
   {

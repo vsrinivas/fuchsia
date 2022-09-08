@@ -137,20 +137,20 @@ fio::wire::NodeAttributes VnodeAttributes::ToIoV1NodeAttributes() const {
 }
 
 void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
-                           fit::callback<void(fio::wire::NodeInfo&&)> callback) {
+                           fit::callback<void(fio::wire::NodeInfoDeprecated&&)> callback) {
   representation.visit([&](auto&& repr) {
     using T = std::decay_t<decltype(repr)>;
     if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Connector>) {
-      callback(fio::wire::NodeInfo::WithService({}));
+      callback(fio::wire::NodeInfoDeprecated::WithService({}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
       fio::wire::FileObject file = {.event = std::move(repr.observer),
                                     .stream = std::move(repr.stream)};
-      callback(fio::wire::NodeInfo::WithFile(
+      callback(fio::wire::NodeInfoDeprecated::WithFile(
           fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
-      callback(fio::wire::NodeInfo::WithDirectory({}));
+      callback(fio::wire::NodeInfoDeprecated::WithDirectory({}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
-      callback(fio::wire::NodeInfo::WithTty({.event = std::move(repr.event)}));
+      callback(fio::wire::NodeInfoDeprecated::WithTty({.event = std::move(repr.event)}));
     } else {
       ZX_PANIC("Representation variant is not initialized");
     }

@@ -352,10 +352,10 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
       // Ignore errors since there is nothing we can do if this fails.
       [[maybe_unused]] auto unused_result =
           fidl::WireSendEvent(fidl::ServerEnd<fuchsia_io::Node>(std::move(server_end)))
-              ->OnOpen(result.status_value(), fio::wire::NodeInfo());
+              ->OnOpen(result.status_value(), fio::wire::NodeInfoDeprecated());
       return result.status_value();
     }
-    ConvertToIoV1NodeInfo(std::move(result).value(), [&](fio::wire::NodeInfo&& info) {
+    ConvertToIoV1NodeInfo(std::move(result).value(), [&](fio::wire::NodeInfoDeprecated&& info) {
       // The channel may switch from |Node| protocol back to a custom protocol, after sending the
       // event, in the case of |VnodeProtocol::kConnector|.
       fidl::ServerEnd<fuchsia_io::Node> typed_server_end(std::move(server_end));

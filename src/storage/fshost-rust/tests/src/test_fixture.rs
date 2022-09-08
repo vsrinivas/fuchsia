@@ -320,7 +320,7 @@ async fn init_data_minfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
         .expect("open failed");
     // We must solicit a response since otherwise shutdown below could race and creation of
     // the file could get dropped.
-    file.describe().await.expect("describe failed");
+    file.describe_deprecated().await.expect("describe failed");
     fs.shutdown().await.expect("shutdown failed");
 }
 
@@ -368,7 +368,7 @@ async fn init_data_fxfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
         .expect("open failed");
     // We must solicit a response since otherwise shutdown below could race and creation of
     // the file could get dropped.
-    file.describe().await.expect("describe failed");
+    file.describe_deprecated().await.expect("describe failed");
     fs.shutdown().await.expect("shutdown failed");
 }
 

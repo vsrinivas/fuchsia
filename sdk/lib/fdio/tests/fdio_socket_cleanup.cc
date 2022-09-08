@@ -18,7 +18,7 @@ namespace {
 
 class Server final : public fidl::testing::WireTestBase<fuchsia_io::Node> {
  public:
-  explicit Server(fuchsia_io::wire::NodeInfo describe_info)
+  explicit Server(fuchsia_io::wire::NodeInfoDeprecated describe_info)
       : describe_info_(std::move(describe_info)) {}
 
   void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
@@ -33,7 +33,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Node> {
     completer.Close(ZX_OK);
   }
 
-  void Describe(DescribeCompleter::Sync& completer) override {
+  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
     ASSERT_TRUE(describe_info_.has_value(), "Describe called more than once");
     completer.Reply(std::move(*describe_info_));
     EXPECT_OK(completer.result_of_reply().status());
@@ -41,12 +41,12 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Node> {
   }
 
  private:
-  cpp17::optional<fuchsia_io::wire::NodeInfo> describe_info_;
+  cpp17::optional<fuchsia_io::wire::NodeInfoDeprecated> describe_info_;
 };
 
 // Serves |node_info| over |endpoints| using a |Server| instance by
 // creating a file descriptor from |client_channel| and immediately closing it.
-void ServeAndExerciseFileDescriptionTeardown(fuchsia_io::wire::NodeInfo node_info,
+void ServeAndExerciseFileDescriptionTeardown(fuchsia_io::wire::NodeInfoDeprecated node_info,
                                              fidl::Endpoints<fuchsia_io::Node> endpoints) {
   Server server(std::move(node_info));
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -67,8 +67,9 @@ TEST(SocketCleanup, SynchronousDatagram) {
   zx::eventpair client_event, server_event;
   ASSERT_OK(zx::eventpair::create(0, &client_event, &server_event));
 
-  fuchsia_io::wire::NodeInfo node_info =
-      fuchsia_io::wire::NodeInfo::WithSynchronousDatagramSocket({.event = std::move(client_event)});
+  fuchsia_io::wire::NodeInfoDeprecated node_info =
+      fuchsia_io::wire::NodeInfoDeprecated::WithSynchronousDatagramSocket(
+          {.event = std::move(client_event)});
 
   ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
@@ -88,8 +89,8 @@ TEST(SocketCleanup, Stream) {
   ASSERT_OK(zx::socket::create(0, &client_socket, &server_socket));
 
   fuchsia_io::wire::StreamSocket stream_info{.socket = std::move(client_socket)};
-  fuchsia_io::wire::NodeInfo node_info =
-      fuchsia_io::wire::NodeInfo::WithStreamSocket(std::move(stream_info));
+  fuchsia_io::wire::NodeInfoDeprecated node_info =
+      fuchsia_io::wire::NodeInfoDeprecated::WithStreamSocket(std::move(stream_info));
 
   ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));
@@ -109,8 +110,9 @@ TEST(SocketCleanup, Datagram) {
   ASSERT_OK(zx::socket::create(0, &client_socket, &server_socket));
 
   fuchsia_io::wire::DatagramSocket datagram_info{.socket = std::move(client_socket)};
-  fuchsia_io::wire::NodeInfo node_info = fuchsia_io::wire::NodeInfo::WithDatagramSocket(
-      fidl::ObjectView<fuchsia_io::wire::DatagramSocket>::FromExternal(&datagram_info));
+  fuchsia_io::wire::NodeInfoDeprecated node_info =
+      fuchsia_io::wire::NodeInfoDeprecated::WithDatagramSocket(
+          fidl::ObjectView<fuchsia_io::wire::DatagramSocket>::FromExternal(&datagram_info));
 
   ASSERT_NO_FATAL_FAILURE(
       ServeAndExerciseFileDescriptionTeardown(std::move(node_info), std::move(endpoints.value())));

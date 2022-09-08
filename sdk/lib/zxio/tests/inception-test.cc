@@ -105,7 +105,7 @@ TEST(CreateWithAllocator, Directory) {
   ASSERT_OK(dir_ends.status_value());
   auto [dir_client, dir_server] = std::move(dir_ends.value());
 
-  auto node_info = fuchsia_io::wire::NodeInfo::WithDirectory({});
+  auto node_info = fuchsia_io::wire::NodeInfoDeprecated::WithDirectory({});
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_DIR) {
@@ -147,8 +147,8 @@ TEST(CreateWithAllocator, File) {
   fuchsia_io::wire::FileObject file = {
       .event = std::move(file_event),
   };
-  auto node_info =
-      fuchsia_io::wire::NodeInfo::WithFile(fidl::ObjectView<decltype(file)>::FromExternal(&file));
+  auto node_info = fuchsia_io::wire::NodeInfoDeprecated::WithFile(
+      fidl::ObjectView<decltype(file)>::FromExternal(&file));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_FILE) {
@@ -208,7 +208,7 @@ TEST(CreateWithAllocator, Service) {
   ASSERT_OK(node_ends.status_value());
   auto [node_client, node_server] = std::move(node_ends.value());
 
-  auto node_info = fuchsia_io::wire::NodeInfo::WithService({});
+  auto node_info = fuchsia_io::wire::NodeInfoDeprecated::WithService({});
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_SERVICE) {
@@ -258,7 +258,7 @@ TEST(CreateWithAllocator, Tty) {
   zx::eventpair event0, event1;
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
 
-  auto node_info = fuchsia_io::wire::NodeInfo::WithTty({
+  auto node_info = fuchsia_io::wire::NodeInfoDeprecated::WithTty({
       .event = std::move(event1),
   });
 
@@ -317,7 +317,7 @@ TEST(CreateWithAllocator, Vmofile) {
       .offset = file_start_offset,
       .length = file_length,
   };
-  auto node_info = fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
+  auto node_info = fuchsia_io::wire::NodeInfoDeprecated::WithVmofileDeprecated(
       fidl::ObjectView<decltype(vmofile)>::FromExternal(&vmofile));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
@@ -380,7 +380,7 @@ TEST(CreateWithAllocator, PacketSocket) {
   zx::eventpair event0, event1;
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
 
-  auto node_info = fuchsia_io::wire::NodeInfo::WithPacketSocket({
+  auto node_info = fuchsia_io::wire::NodeInfoDeprecated::WithPacketSocket({
       .event = std::move(event1),
   });
 
@@ -431,7 +431,7 @@ TEST(CreateWithAllocator, RawSocket) {
   zx::eventpair event0, event1;
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
 
-  auto node_info = fuchsia_io::wire::NodeInfo::WithRawSocket({
+  auto node_info = fuchsia_io::wire::NodeInfoDeprecated::WithRawSocket({
       .event = std::move(event1),
   });
 
@@ -482,7 +482,7 @@ TEST(CreateWithAllocator, SynchronousDatagramSocket) {
   zx::eventpair event0, event1;
   ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
 
-  auto node_info = fuchsia_io::wire::NodeInfo::WithSynchronousDatagramSocket({
+  auto node_info = fuchsia_io::wire::NodeInfoDeprecated::WithSynchronousDatagramSocket({
       .event = std::move(event1),
   });
 
@@ -536,8 +536,9 @@ TEST(CreateWithAllocator, DatagramSocket) {
   ASSERT_OK(socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
 
   fuchsia_io::wire::DatagramSocket datagram_info{.socket = std::move(socket)};
-  fuchsia_io::wire::NodeInfo node_info = fuchsia_io::wire::NodeInfo::WithDatagramSocket(
-      fidl::ObjectView<fuchsia_io::wire::DatagramSocket>::FromExternal(&datagram_info));
+  fuchsia_io::wire::NodeInfoDeprecated node_info =
+      fuchsia_io::wire::NodeInfoDeprecated::WithDatagramSocket(
+          fidl::ObjectView<fuchsia_io::wire::DatagramSocket>::FromExternal(&datagram_info));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET) {
@@ -580,8 +581,8 @@ TEST(CreateWithAllocator, StreamSocket) {
   ASSERT_OK(socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
 
   fuchsia_io::wire::StreamSocket stream_info{.socket = std::move(socket)};
-  fuchsia_io::wire::NodeInfo node_info =
-      fuchsia_io::wire::NodeInfo::WithStreamSocket(std::move(stream_info));
+  fuchsia_io::wire::NodeInfoDeprecated node_info =
+      fuchsia_io::wire::NodeInfoDeprecated::WithStreamSocket(std::move(stream_info));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     if (type != ZXIO_OBJECT_TYPE_STREAM_SOCKET) {

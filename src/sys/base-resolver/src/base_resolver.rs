@@ -306,7 +306,7 @@ mod tests {
             control_handle
                 .send_on_open_(
                     status.into_raw(),
-                    Some(&mut fio::NodeInfo::Directory(fio::DirectoryObject {})),
+                    Some(&mut fio::NodeInfoDeprecated::Directory(fio::DirectoryObject {})),
                 )
                 .expect("failed to send OnOpen event");
             control_handle.shutdown_with_epitaph(status);

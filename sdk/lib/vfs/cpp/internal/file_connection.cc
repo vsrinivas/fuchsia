@@ -43,14 +43,14 @@ void FileConnection::Close(CloseCallback callback) { Connection::Close(vn_, std:
 
 void FileConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
 
-void FileConnection::Describe(DescribeCallback callback) {
+void FileConnection::DescribeDeprecated(DescribeDeprecatedCallback callback) {
   Connection::Describe(vn_, std::move(callback));
 }
 
 void FileConnection::Describe2(Describe2Callback callback) {
-  Describe([callback = std::move(callback)](fuchsia::io::NodeInfo node) {
+  DescribeDeprecated([callback = std::move(callback)](fuchsia::io::NodeInfoDeprecated node) {
     ZX_ASSERT_MSG(node.is_file(), "FileConnection::Describe returned %lu, expected %lu",
-                  node.Which(), fuchsia::io::NodeInfo::Tag::kFile);
+                  node.Which(), fuchsia::io::NodeInfoDeprecated::Tag::kFile);
     fuchsia::io::FileObject& object = node.file();
     fuchsia::io::FileInfo info;
     info.set_observer(std::move(object.event));

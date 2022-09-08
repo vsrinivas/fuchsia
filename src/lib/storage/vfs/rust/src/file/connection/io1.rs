@@ -227,7 +227,7 @@ impl<T: 'static + File> FileConnection<T> {
                 responder.send(&mut self.file.close().await.map_err(|status| status.into_raw()))?;
                 return Ok(ConnectionState::Closed);
             }
-            fio::FileRequest::Describe { responder } => {
+            fio::FileRequest::DescribeDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe");
                 responder.send(&mut self.file.describe(self.flags)?)?;
             }
@@ -800,10 +800,10 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_describe() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
-        let info = env.proxy.describe().await.unwrap();
+        let info = env.proxy.describe_deprecated().await.unwrap();
         match info {
-            fio::NodeInfo::File { .. } => (),
-            _ => panic!("Expected fio::NodeInfo::File, got {:?}", info),
+            fio::NodeInfoDeprecated::File { .. } => (),
+            _ => panic!("Expected fio::NodeInfoDeprecated::File, got {:?}", info),
         };
     }
 
@@ -919,13 +919,13 @@ mod tests {
                 assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
                 assert_eq!(
                     *boxed,
-                    fio::NodeInfo::File(fio::FileObject { event: None, stream: None })
+                    fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None })
                 );
             }
             Some(fio::FileEvent::OnRepresentation { payload }) => {
                 assert_eq!(payload, fio::Representation::File(fio::FileInfo::EMPTY));
             }
-            e => panic!("Expected OnOpen event with fio::NodeInfo::File, got {:?}", e),
+            e => panic!("Expected OnOpen event with fio::NodeInfoDeprecated::File, got {:?}", e),
         }
         let events = env.file.operations.lock().unwrap();
         assert_eq!(

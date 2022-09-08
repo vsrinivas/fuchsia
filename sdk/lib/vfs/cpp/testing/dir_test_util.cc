@@ -48,7 +48,7 @@ void DirConnection::AssertOpen(async_dispatcher_t* dispatcher, fuchsia::io::Open
   if (test_on_open_event) {
     bool on_open_called = false;
     node_ptr.events().OnOpen = [&](zx_status_t status,
-                                   std::unique_ptr<fuchsia::io::NodeInfo> info) {
+                                   std::unique_ptr<fuchsia::io::NodeInfoDeprecated> info) {
       EXPECT_FALSE(on_open_called);  // should be called only once
       on_open_called = true;
       EXPECT_EQ(expected_status, status);

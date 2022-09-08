@@ -103,7 +103,8 @@ zx_status_t fdio_zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_st
   return ZX_OK;
 }
 
-zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node, fio::wire::NodeInfo info) {
+zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node,
+                                  fio::wire::NodeInfoDeprecated info) {
   void* context = nullptr;
   zx_status_t status =
       zxio_create_with_allocator(std::move(node), info, fdio_zxio_allocator, &context);
@@ -171,7 +172,7 @@ zx::status<fdio_ptr> fdio::create(zx::handle handle) {
   // overload.
   if (info.type == ZX_OBJ_TYPE_CHANNEL) {
     fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
-    fidl::WireResult result = fidl::WireCall(node)->Describe();
+    fidl::WireResult result = fidl::WireCall(node)->DescribeDeprecated();
     if (!result.ok()) {
       return zx::error(result.status());
     }

@@ -169,8 +169,8 @@ TEST(VulkanLoader, GoldfishSyncDeviceFs) {
                                              device_ptr.NewRequest().TakeChannel().release()));
 
     // Check that the directory is connected to something.
-    fuchsia::io::NodeInfo result;
-    EXPECT_EQ(ZX_OK, device_ptr->Describe(&result)) << " class " << device_class;
+    fuchsia::io::NodeInfoDeprecated result;
+    EXPECT_EQ(ZX_OK, device_ptr->DescribeDeprecated(&result)) << " class " << device_class;
   }
 }
 

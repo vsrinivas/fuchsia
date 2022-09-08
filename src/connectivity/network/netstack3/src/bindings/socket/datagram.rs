@@ -1497,7 +1497,7 @@ where
                 let events =
                     fposix_socket::SynchronousDatagramSocketRequestStream::from_channel(channel);
                 let control_handle = events.control_handle();
-                let send_on_open = |status: i32, info: Option<&mut fio::NodeInfo>| {
+                let send_on_open = |status: i32, info: Option<&mut fio::NodeInfoDeprecated>| {
                     if let Err(e) = control_handle.send_on_open_(status, info) {
                         error!("failed to send OnOpen event with status ({}): {}", status, e);
                     }
@@ -1534,7 +1534,7 @@ where
                         .make_handler()
                         .await
                         .describe()
-                        .map(fio::NodeInfo::SynchronousDatagramSocket);
+                        .map(fio::NodeInfoDeprecated::SynchronousDatagramSocket);
                     send_on_open(zx::sys::ZX_OK, info.as_mut());
                 }
                 worker.handle_stream(events).await
@@ -1561,11 +1561,11 @@ where
             match event {
                 Ok(req) => {
                     match req {
-                        fposix_socket::SynchronousDatagramSocketRequest::Describe { responder } => {
+                        fposix_socket::SynchronousDatagramSocketRequest::DescribeDeprecated { responder } => {
                             // If the call to duplicate_handle fails, we have no
                             // choice but to drop the responder and close the
                             // channel, since Describe must be infallible.
-                            if let Some(mut info)= self.make_handler().await.describe().map(fio::NodeInfo::SynchronousDatagramSocket) {
+                            if let Some(mut info)= self.make_handler().await.describe().map(fio::NodeInfoDeprecated::SynchronousDatagramSocket) {
                                 responder_send!(responder, &mut info);
                             }
                         }
@@ -2953,9 +2953,9 @@ mod tests {
         proto: fposix_socket::DatagramSocketProtocol,
     ) -> (fposix_socket::SynchronousDatagramSocketProxy, zx::EventPair) {
         let ctlr = get_socket::<A>(test_stack, proto).await;
-        let node_info = ctlr.describe().await.expect("Socked describe succeeds");
+        let node_info = ctlr.describe_deprecated().await.expect("Socked describe succeeds");
         let event = match node_info {
-            fio::NodeInfo::SynchronousDatagramSocket(e) => e.event,
+            fio::NodeInfoDeprecated::SynchronousDatagramSocket(e) => e.event,
             _ => panic!("Got wrong describe response for UDP socket"),
         };
         (ctlr, event)
@@ -3353,9 +3353,14 @@ mod tests {
                 panic!("expected SynchronousDatagramSocket, found DatagramSocket")
             }
         };
-        let info = socket.into_proxy().unwrap().describe().await.expect("Describe call succeeds");
+        let info = socket
+            .into_proxy()
+            .unwrap()
+            .describe_deprecated()
+            .await
+            .expect("Describe call succeeds");
         match info {
-            fio::NodeInfo::SynchronousDatagramSocket(_) => (),
+            fio::NodeInfoDeprecated::SynchronousDatagramSocket(_) => (),
             info => panic!(
                 "Socket Describe call did not return Node of type Socket, got {:?} instead",
                 info
@@ -3493,7 +3498,7 @@ mod tests {
                 assert_eq!(s, zx::sys::ZX_OK);
                 let info = info.unwrap();
                 match *info {
-                    fio::NodeInfo::SynchronousDatagramSocket(_) => (),
+                    fio::NodeInfoDeprecated::SynchronousDatagramSocket(_) => (),
                     info => panic!(
                         "Socket Describe call did not return Node of type Socket, got {:?} instead",
                         info
@@ -3505,9 +3510,9 @@ mod tests {
             } => panic!("Socket Clone produced unexpected event {:?}", event),
         }
         // describe() explicitly.
-        let info = alice_cloned.describe().await.expect("Describe call succeeds");
+        let info = alice_cloned.describe_deprecated().await.expect("Describe call succeeds");
         match info {
-            fio::NodeInfo::SynchronousDatagramSocket(_) => (),
+            fio::NodeInfoDeprecated::SynchronousDatagramSocket(_) => (),
             info => panic!(
                 "Socket Describe call did not return Node of type Socket, got {:?} instead",
                 info
@@ -3625,9 +3630,10 @@ mod tests {
                 body.len() as i64
             );
 
-            let alice_readonly_info = alice_readonly.describe().await.expect("failed to describe");
+            let alice_readonly_info =
+                alice_readonly.describe_deprecated().await.expect("failed to describe");
             let alice_readonly_event = match alice_readonly_info {
-                fio::NodeInfo::SynchronousDatagramSocket(e) => e.event,
+                fio::NodeInfoDeprecated::SynchronousDatagramSocket(e) => e.event,
                 _ => panic!("Got wrong describe response for UDP socket"),
             };
             assert_eq!(

@@ -9,7 +9,8 @@ using zx;
 /// Connection information.
 ///
 /// Refer to [`Node.Describe`] and [`Node.OnOpen`] for usage.
-type NodeInfo = strict resource union {
+@deprecated("replaced by fuchsia.unknown/Queryable.Query")
+type NodeInfoDeprecated = strict resource union {
     /// No protocol information was supplied by the connection.
     1: service struct {};
 
@@ -87,6 +88,9 @@ type NodeInfo = strict resource union {
     };
 };
 
+@deprecated("transitional alias that exists until OOT usages have migrated to the new name")
+alias NodeInfo = NodeInfoDeprecated;
+
 /// The fields of 'attributes' which are used to update the Node are indicated
 /// by the 'flags' argument.
 type NodeAttributeFlags = strict bits : uint32 {
@@ -150,8 +154,9 @@ protocol Node1 {
     ///
     /// This method does not require any rights.
     @selector("fuchsia.io1/Node.Describe")
-    Describe() -> (resource struct {
-        info NodeInfo;
+    @deprecated("replaced by fuchsia.unknown/Queryable.Query")
+    DescribeDeprecated() -> (resource struct {
+        info NodeInfoDeprecated;
     });
 
     /// An event produced eagerly by a FIDL server if requested by `OpenFlags.DESCRIBE`.
@@ -162,7 +167,7 @@ protocol Node1 {
     @selector("fuchsia.io1/Node.OnOpen")
     -> OnOpen(resource struct {
         s zx.status;
-        info NodeInfo:optional;
+        info NodeInfoDeprecated:optional;
     });
 
     /// Acquires information about the node.

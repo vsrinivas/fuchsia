@@ -480,8 +480,8 @@ impl BlockServer {
                 responder.send(&mut Ok(()))?;
             }
             // TODO(fxbug.dev/89873)
-            VolumeAndNodeRequest::Describe { responder } => {
-                let mut info = fio::NodeInfo::Service(fio::Service);
+            VolumeAndNodeRequest::DescribeDeprecated { responder } => {
+                let mut info = fio::NodeInfoDeprecated::Service(fio::Service);
                 responder.send(&mut info)?;
             }
             // TODO(fxbug.dev/89873)
