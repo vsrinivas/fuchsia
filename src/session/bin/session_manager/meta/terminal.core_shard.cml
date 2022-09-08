@@ -1,0 +1,91 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // This core realm shard routes protocols required by the terminal
+    // session from components that run above the session (v1 components,
+    // and children/parent of core) to session-manager.
+    //
+    // session-manager then routes these protocols to the session component,
+    // tiles-session, in session_manager.cml.
+    offer: [
+        {
+            protocol: [ "fuchsia.media.AudioCore" ],
+            from: "#audio_core",
+            to: [ "#session-manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.ui.activity.Provider",
+                "fuchsia.ui.activity.Tracker",
+            ],
+            from: "#activity",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.recovery.FactoryReset",
+            from: "#factory_reset",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.ssh.AuthorizedKeys",
+            from: "#ssh-key-manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.power.button.Monitor",
+            from: "parent",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.ui.brightness.Control",
+            from: "#brightness_manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.net.interfaces.State" ],
+            from: "#network",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.settings.Intl",
+                "fuchsia.settings.Keyboard",
+                "fuchsia.settings.Privacy",
+            ],
+            from: "#setui_service",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
+            from: "#bluetooth-core",
+            to: "#session-manager",
+        },
+        {
+            protocol: "fuchsia.media.sounds.Player",
+            from: "#soundplayer",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.feedback.CrashReporter" ],
+            from: "#feedback",
+            to: "#session-manager",
+        },
+        {
+            directory: [
+                "tzdata",
+                "tzdata-icu-44-le",
+            ],
+            from: "#tzdata-provider",
+            to: "#session-manager",
+        },
+        {
+            event_stream: [ "stopped_v2" ],
+            from: "parent",
+            to: "#session-manager",
+        },
+    ],
+}

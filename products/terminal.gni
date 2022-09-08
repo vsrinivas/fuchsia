@@ -27,20 +27,28 @@ legacy_cache_package_labels += [
   "//src/fonts/collections:small-open-fonts-collection",
   "//src/ui:ui_packages",
   "//src/ui/bin/terminal",
-  "//src/ui/tools/tiles",
+  "//src/session/examples/tiles-session",
 
   # Used to mock out display hardware in UI integration tests.
   "//src/ui/bin/hardware_display_controller_provider",
 ]
 
+# Use scene_manager as the default scene owner for UI.
+use_scene_manager_as_scene_owner = true
+
+# Use Flatland as the default graphics protocol in Scenic.
+use_flatland_by_default = true
+
 # End to end (E2E) `dart_inspect_benchmarks` test requires the dart runner.
 core_realm_shards += [ "//src/dart:dart_runner_core_shard" ]
 
-# Build with both JIT and AOT non-product dart runners. JIT is used for debug
-# builds, and AOT is used for release builds.
+# Build with both JIT and AOT non-product runners. JIT is used for debug builds, and AOT is used
+# for release builds.
 legacy_base_package_labels += [
   "//src/dart:dart_jit",
+  "//src/flutter:flutter_jit",
   "//src/dart:dart_aot",
+  "//src/flutter:flutter_aot",
 ]
 
 # End to end (E2E) product test runtime dependencies. Must be added to cache,
@@ -98,8 +106,12 @@ legacy_universe_package_labels += [
 legacy_cache_package_labels +=
     [ "//src/ui/testing/test_ui_stack:test-ui-stack-flavors" ]
 
+# Include the session framework
+core_realm_shards += [ "//src/session/bin/session_manager:terminal_core_shard" ]
+legacy_base_package_labels += [ "//src/session" ]
+
 # Use the product assembly config file to specify the product configuration.
 #
 # This should be overridden by products which inherit from minimal.
-fuchsia_product_assembly_config_label = "//products/minimal"
-fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/minimal/minimal/product_assembly_config.json"
+fuchsia_product_assembly_config_label = "//products/terminal"
+fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/terminal/terminal/product_assembly_config.json"

@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/assembly/product_assembly_configuration.gni")
+
+assert(
+    is_fuchsia,
+    "Product definitions and assemblies should only be defined in the fuchsia toolchain")
+
+product_assembly_configuration("terminal") {
+  platform = {
+    base_feature_set = "minimal"
+    build_type = "user"
+  }
+  product = {
+    session_url =
+        "fuchsia-pkg://fuchsia.com/tiles-session#meta/tiles-session.cm"
+  }
+}

@@ -8,6 +8,11 @@ import("//build/rust/rustc_library.gni")
 import("//src/sys/core/build/core_shard.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
+# TODO(https://fxbug.dev/46964) delete this along with terminal product
+core_shard("terminal_core_shard") {
+  shard_file = "meta/terminal.core_shard.cml"
+}
+
 core_shard("workstation_core_shard") {
   shard_file = "meta/workstation.core_shard.cml"
 }

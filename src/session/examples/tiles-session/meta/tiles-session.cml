@@ -113,7 +113,10 @@
         {
             protocol: [ "fuchsia.element.GraphicalPresenter" ],
             from: "self",
-            to: [ "#element_manager" ],
+            to: [
+                "#element_manager",
+                "#elements",
+            ],
             dependency: "weak",
         },
         {
