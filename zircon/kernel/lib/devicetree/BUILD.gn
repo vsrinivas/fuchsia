@@ -7,10 +7,16 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("devicetree") {
-  sources = [ "devicetree.cc" ]
+  sources = [
+    "devicetree.cc",
+    "path.cc",
+  ]
   deps = [ "//zircon/system/ulib/fbl" ]
 
-  public_deps = [ "//zircon/system/ulib/zircon-internal:headers" ]
+  public_deps = [
+    "//zircon/system/ulib/zircon-internal:headers",
+    "//zircon/system/ulib/zxc:headers",
+  ]
 
   # TODO: revisit the following three specifications after the zircon-to-fuchsia
   # build migration. They seem currently required in order to export the host

@@ -19,7 +19,10 @@ group("tests") {
 }
 
 test("devicetree-tests") {
-  sources = [ "devicetree_tests.cc" ]
+  sources = [
+    "devicetree_tests.cc",
+    "path_tests.cc",
+  ]
   deps = [
     "//zircon/kernel/lib/devicetree",
     "//zircon/system/ulib/zxtest",
