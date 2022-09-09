@@ -171,6 +171,7 @@ impl RecoveryAppAssistant {
 
 impl AppAssistant for RecoveryAppAssistant {
     fn setup(&mut self) -> Result<(), Error> {
+        println!("recovery: AppAssistant setup");
         Ok(())
     }
 

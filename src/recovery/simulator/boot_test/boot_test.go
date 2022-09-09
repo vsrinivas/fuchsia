@@ -27,7 +27,7 @@ func TestBoot(t *testing.T) {
 	defer cancel()
 	i := distro.CreateContext(ctx, device)
 	i.Start()
-	i.WaitForLogMessage("recovery: started")
+	i.WaitForLogMessage("recovery: AppAssistant setup")
 }
 
 func execDir(t *testing.T) string {
