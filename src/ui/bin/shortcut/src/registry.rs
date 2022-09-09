@@ -5,9 +5,7 @@
 use {
     fidl_fuchsia_input as input, fidl_fuchsia_ui_focus as ui_focus,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_scenic as scenic,
-    fuchsia_syslog::{fx_log_debug, fx_log_info},
-    fuchsia_zircon as zx,
+    fuchsia_scenic as scenic, fuchsia_zircon as zx,
     fuchsia_zircon::AsHandleRef,
     futures::{
         lock::{MappedMutexGuard, Mutex, MutexGuard},
@@ -17,6 +15,7 @@ use {
     std::ops::Deref,
     std::sync::{Arc, Weak},
     std::vec::Vec,
+    tracing::*,
 };
 
 /// Describes a shortcut activation listener.
@@ -130,7 +129,7 @@ impl RegistryStoreInner {
         // performance becomes an issue.
         let focus_chain = self.last_seen_focus_chain.as_ref().map(|f| clone_focus_chain(f));
         if let Some(ref f) = focus_chain {
-            fx_log_debug!("recompute_focused_registries: focus_chain: {:?}", koids_of(f));
+            debug!("recompute_focused_registries: focus_chain: {:?}", koids_of(f));
             self.update_focused_registries(f).await;
         }
     }
@@ -164,14 +163,14 @@ impl RegistryStoreInner {
                         // If Koid can't be received, this means view ref is invalid
                         // and can't be notified.
                         _ => {
-                            fx_log_info!("Client uses invalid ViewRef: {:?}", view_ref);
+                            info!("Client uses invalid ViewRef: {:?}", view_ref);
                             return None;
                         }
                     };
                     Some((koid, registry_weak))
                 } else {
                     // Client registry has no subscriber set and can't be notified.
-                    fx_log_info!("Client has no listener and view ref set up.");
+                    info!("Client has no listener and view ref set up.");
                     None
                 }
             })
@@ -194,10 +193,10 @@ impl RegistryStoreInner {
                     .and_then(|koid| registries.remove(&koid))
             })
             .collect();
-        fx_log_debug!(
-            "update_focused_registries: updated focus chain to: {:?}, num focused registries: {:?}",
+        debug!(
+            num_focused_registries = self.focused_registries.len(),
+            "update_focused_registries: updated focus chain to: {:?}",
             &self.last_seen_focus_chain.as_ref().map(|f| koids_of(f)),
-            &self.focused_registries.len()
         );
     }
 }

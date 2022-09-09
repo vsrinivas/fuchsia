@@ -9,8 +9,8 @@ use {
     fidl_fuchsia_ui_views as ui_views,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic as scenic,
-    fuchsia_syslog::fx_log_debug,
     std::sync::{self, Once},
+    tracing::*,
 };
 
 static START: Once = Once::new();
@@ -125,8 +125,7 @@ impl RegistryService {
     /// [RegistryService::new_view_ref].
     pub async fn new_with_view_ref(view_ref: fidl_fuchsia_ui_views::ViewRef) -> Result<Self> {
         START.call_once(|| {
-            fuchsia_syslog::init_with_tags(&["shortcut"])
-                .expect("shortcut syslog init should not fail");
+            diagnostics_log::init!(&["shortcut"]);
         });
 
         let registry = connect_to_protocol::<ui_shortcut::RegistryMarker>()
@@ -153,8 +152,7 @@ impl ManagerService {
     /// Creates the instance of the test helper and connects to shortcut manager service.
     pub async fn new() -> Result<Self, Error> {
         START.call_once(|| {
-            fuchsia_syslog::init_with_tags(&["shortcut"])
-                .expect("shortcut syslog init should not fail");
+            diagnostics_log::init!(&["shortcut"]);
         });
 
         let manager = connect_to_protocol::<ui_shortcut::ManagerMarker>()
@@ -215,14 +213,14 @@ impl ManagerService {
         let mut was_handled = false;
         let mut iter = keys.into_iter().peekable();
         while let Some(key) = iter.next() {
-            fx_log_debug!("TestCase::press_multiple_keys: processing key: {:?}", &key);
+            debug!(processing_key = ?key, "TestCase::press_multiple_keys");
             let key_handled = self.press_key3(key).await?;
 
             if key_handled && iter.peek().is_some() {
                 panic!("Shortcuts activated, but unused keys remained in the sequence!");
             }
             was_handled = was_handled || key_handled;
-            fx_log_debug!("TestCase::press_multiple_keys: was handled: {:?}", &was_handled);
+            debug!(?was_handled, "TestCase::press_multiple_keys");
         }
         Ok(was_handled)
     }

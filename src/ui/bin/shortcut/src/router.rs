@@ -5,8 +5,8 @@
 use {
     anyhow::{Context as _, Result},
     fidl_fuchsia_ui_shortcut as ui_shortcut,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::TryStreamExt,
+    tracing::{error, info},
 };
 
 use crate::{
@@ -69,7 +69,7 @@ impl Router {
                     responder.send().unwrap_or_else(|e| {
                         // Handle the error to prevent service shutdown in case of
                         // misbehaving client.
-                        fx_log_info!("responding to a shortcut registration: {:?}", e)
+                        info!("responding to a shortcut registration: {:?}", e)
                     });
                 }
             }
@@ -103,7 +103,7 @@ impl Router {
                                 service.handle_key(key_event).await.context("handle key event")?
                             }
                             Err(e) => {
-                                fx_log_err!("Error handling: {}", e);
+                                error!("Error handling: {}", e);
                                 false
                             }
                         }

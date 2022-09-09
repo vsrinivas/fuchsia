@@ -8,13 +8,13 @@ use {
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_shortcut as ui_shortcut,
     fuchsia_async::{self as fasync, TimeoutExt},
-    fuchsia_syslog::fx_log_debug,
     fuchsia_zircon as zx,
     futures::{
         self, future,
         stream::{self, StreamExt},
         FutureExt,
     },
+    tracing::debug,
 };
 
 use crate::test_helpers::{Latch, ManagerService, RegistryService, ShortcutBuilder};
@@ -136,10 +136,7 @@ impl TestCase {
                 })
                 .await
             {
-                fx_log_debug!(
-                    "TestCase::run/pressed: got from shortcut server: {:?}",
-                    &was_handled
-                );
+                debug!("TestCase::run/pressed: got from shortcut server: {:?}", &was_handled);
                 break was_handled;
             }
         }

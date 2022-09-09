@@ -9,7 +9,6 @@ use fidl_fuchsia_ui_focus::FocusChain;
 use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, KeyMeaning};
 use fidl_fuchsia_ui_shortcut2 as fs2;
 use fuchsia_async::{self as fasync, Task};
-use fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_warn};
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
     channel::mpsc::{self, Receiver, Sender},
@@ -22,6 +21,7 @@ use std::{
     collections::{BTreeMap, BTreeSet},
     ops::Deref,
 };
+use tracing::{debug, error, warn};
 
 /// The shortcut identifier for reporting to the consumers.
 #[derive(Debug, Clone, PartialEq)]
@@ -348,7 +348,7 @@ impl Shortcut2Impl {
                                     .await
                                     .expect("out_sender_end always sendable"),
                                 Err(e) => {
-                                    fx_log_warn!("error on send, exiting: {:?}", &e);
+                                    warn!("error on send, exiting: {:?}", &e);
                                     break;
                                 }
                             }
@@ -377,12 +377,12 @@ impl Shortcut2Impl {
 
                 fs2::RegistryRequest::RegisterShortcut { shortcut, responder, .. } => {
                     if let Err(e) = validate_shortcut(&shortcut) {
-                        fx_log_warn!("shortcut failed validation: {:?}", &e);
+                        warn!("shortcut failed validation: {:?}", &e);
                         if let Err(e) = responder
                             .send(&mut Err(fs2::Error::IllegalArgument))
                             .context("while sending RegisterShortcut Error response")
                         {
-                            fx_log_err!("{:?}", &e);
+                            error!(?e);
                         }
                     } else {
                         // Is a session already registered? Then just add into it.
@@ -401,7 +401,7 @@ impl Shortcut2Impl {
                             .send(&mut Ok(()))
                             .context("while sending RegisterShortcut OK response")
                         {
-                            fx_log_err!("{:?}", &e);
+                            error!(?e);
                         }
                     }
                 }
@@ -419,7 +419,7 @@ impl Shortcut2Impl {
             .unwrap_or(vec![]);
         let view_ids =
             crate::registry::koids_of(&view_refs).into_iter().map(|k| ViewId(k)).collect();
-        fx_log_debug!("shortcut2/handle_focus_change: focus_chain: {:?}", &view_ids);
+        debug!(focus_chain = ?view_ids, "shortcut2/handle_focus_change");
 
         self.inner.lock().await.focus_chain_view_ids = view_ids;
     }

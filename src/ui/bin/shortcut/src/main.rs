@@ -6,9 +6,9 @@ use anyhow::{Context, Result};
 use fidl_fuchsia_ui_shortcut as ui_shortcut;
 use fidl_fuchsia_ui_shortcut2 as ui_shortcut2;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_syslog::fx_log_err;
 use futures::{lock::Mutex, StreamExt};
 use std::sync::Arc;
+use tracing::error;
 
 use crate::{
     registry::RegistryStore,
@@ -72,7 +72,7 @@ async fn main() -> Result<()> {
                 router.handle_registry_stream(stream).await.context("shortcut2/Registry error")
             }
         }
-        .unwrap_or_else(|e| fx_log_err!("request failed: {:?}", e))
+        .unwrap_or_else(|e| error!("request failed: {:?}", e))
     })
     .await;
 

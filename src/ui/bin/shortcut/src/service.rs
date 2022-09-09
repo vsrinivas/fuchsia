@@ -7,11 +7,11 @@ use {
     fidl_fuchsia_input as input, fidl_fuchsia_ui_input3 as ui_input3,
     fidl_fuchsia_ui_shortcut as ui_shortcut, fuchsia_async as fasync,
     fuchsia_async::TimeoutExt,
-    fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{lock::Mutex, stream, StreamExt},
     std::collections::HashSet,
     std::sync::Arc,
+    tracing::{debug, error, info},
 };
 
 use crate::registry::{ClientRegistry, RegistryStore, Shortcut, Subscriber};
@@ -140,7 +140,7 @@ impl ManagerService {
                     Ok(true) => Some(()),
                     Ok(false) => None,
                     Err(e) => {
-                        fx_log_err!("shortcut handle error: {:?}", e);
+                        error!("shortcut handle error: {:?}", e);
                         None
                     }
                 }
@@ -182,7 +182,7 @@ impl ManagerService {
         if let Some(ref subscriber) = registry.subscriber {
             self.trigger_shortcuts(&subscriber, shortcuts).await
         } else {
-            fx_log_debug!("process_client_registry: no subscribers to notify");
+            debug!("process_client_registry: no subscribers to notify");
             Ok(false)
         }
     }
@@ -198,10 +198,7 @@ impl ManagerService {
                 .listener
                 .on_shortcut(id)
                 .on_timeout(fasync::Time::after(DEFAULT_LISTENER_TIMEOUT), || {
-                    fx_log_debug!(
-                        "trigger_shortcuts: timeout trying to deliver shortcut: {:?}",
-                        &id
-                    );
+                    debug!("trigger_shortcuts: timeout trying to deliver shortcut: {:?}", &id);
                     Ok(false)
                 })
                 .await;
@@ -212,7 +209,7 @@ impl ManagerService {
                 Ok(false) => {}
                 // Log an error and keep processing on shortcut listener error.
                 Err(e) => {
-                    fx_log_info!("shortcut listener error: {:?}", e);
+                    info!("shortcut listener error: {:?}", e);
                 }
             }
         }
@@ -340,12 +337,9 @@ impl ManagerService {
                 }
                 // Trigger if the key in the event matches the corresponding shortcut key.
                 let matches = event.key == shortcut_key;
-                fx_log_debug!(
-                    "get_matching_shortcuts: matches: {}: event: {:?}, key:{:?}, last: {:?}",
-                    matches,
-                    &event,
-                    &shortcut_key,
-                    &self.last_key_event_observed
+                debug!(
+                    %matches, ?event, key = ?shortcut_key, last = ?self.last_key_event_observed,
+                    "get_matching_shortcuts"
                 );
                 matches
             })
