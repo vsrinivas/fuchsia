@@ -6,6 +6,7 @@
 
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <lib/driver2/node_add_args.h>
+#include <lib/driver2/start_args.h>
 
 #include <deque>
 #include <unordered_set>
@@ -348,23 +349,7 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
 
 const std::vector<fdf::wire::NodeProperty>& Node::properties() const { return properties_; }
 
-DriverHostComponent* Node::driver_host() const { return *driver_host_; }
-
 void Node::set_collection(Collection collection) { collection_ = collection; }
-
-void Node::set_driver_host(DriverHostComponent* driver_host) { driver_host_ = driver_host; }
-
-void Node::set_controller_ref(fidl::ServerBindingRef<fdf::NodeController> controller_ref) {
-  controller_ref_.emplace(std::move(controller_ref));
-}
-
-void Node::set_driver_component(std::unique_ptr<DriverComponent> driver_component) {
-  driver_component_ = std::move(driver_component);
-}
-
-void Node::set_node_ref(fidl::ServerBindingRef<fdf::Node> node_ref) {
-  node_ref_.emplace(std::move(node_ref));
-}
 
 std::string Node::TopoName() const {
   std::deque<std::string_view> names;
@@ -549,15 +534,13 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
   }
 
   if (controller.is_valid()) {
-    auto bind_controller = fidl::BindServer<fidl::WireServer<fdf::NodeController>>(
+    child->controller_ref_ = fidl::BindServer<fidl::WireServer<fdf::NodeController>>(
         dispatcher_, std::move(controller), child.get());
-    child->set_controller_ref(std::move(bind_controller));
   }
   if (node.is_valid()) {
-    auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
+    child->node_ref_ = fidl::BindServer<fidl::WireServer<fdf::Node>>(
         dispatcher_, std::move(node), child,
         [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
-    child->set_node_ref(std::move(bind_node));
   } else {
     // We don't care about tracking binds here, sending nullptr is fine.
     (*driver_binder_)->Bind(*child, nullptr);
@@ -577,6 +560,54 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
     return;
   }
   completer.ReplySuccess();
+}
+
+zx::status<> Node::StartDriver(
+    fuchsia_component_runner::wire::ComponentStartInfo start_info,
+    fidl::ServerEnd<fuchsia_component_runner::ComponentController> controller) {
+  auto url = start_info.resolved_url().get();
+  bool colocate = driver::ProgramValue(start_info.program(), "colocate").value_or("") == "true";
+
+  if (colocate && !driver_host_) {
+    LOGF(ERROR,
+         "Failed to start driver '%.*s', driver is colocated but does not have a prent with a "
+         "driver host",
+         static_cast<int>(url.size()), url.data());
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+
+  // Launch a driver host if we are not colocated.
+  if (!colocate) {
+    auto result = (*driver_binder_)->CreateDriverHost();
+    if (result.is_error()) {
+      return result.take_error();
+    }
+    driver_host_ = result.value();
+  }
+
+  // Bind the Node associated with the driver.
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+  if (endpoints.is_error()) {
+    return zx::error(endpoints.error_value());
+  }
+  node_ref_ = fidl::BindServer<fidl::WireServer<fdf::Node>>(
+      dispatcher_, std::move(endpoints->server), shared_from_this(),
+      [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
+
+  LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), name().c_str());
+  // Start the driver within the driver host.
+  auto start =
+      (*driver_host_)->Start(std::move(endpoints->client), symbols(), std::move(start_info));
+  if (start.is_error()) {
+    return zx::error(start.error_value());
+  }
+
+  // Create a DriverComponent to manage the driver.
+  driver_component_ = std::make_unique<DriverComponent>(
+      std::move(*start), std::move(controller), dispatcher_, url,
+      [node = this](auto status) { node->Remove(); },
+      [node = this](auto status) { node->Remove(); });
+  return zx::ok();
 }
 
 }  // namespace dfv2

@@ -67,7 +67,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   zx::status<> StartDriver(Node& node, std::string_view url,
                            fuchsia_driver_index::DriverPackageType package_type);
 
-  zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
+  zx::status<DriverHost*> CreateDriverHost() override;
   // The untracked version of TryBindAllOrphans.
   void TryBindAllOrphansUntracked();
 

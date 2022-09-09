@@ -52,6 +52,8 @@ class DriverBinder {
   // A nullptr for result_tracker is acceptable if the caller doesn't intend to
   // track the results.
   virtual void Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) = 0;
+
+  virtual zx::status<DriverHost*> CreateDriverHost() = 0;
 };
 
 enum class Collection {
@@ -99,24 +101,22 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
       fidl::ServerEnd<fuchsia_driver_framework::NodeController> controller,
       fidl::ServerEnd<fuchsia_driver_framework::Node> node);
 
+  zx::status<> StartDriver(
+      fuchsia_component_runner::wire::ComponentStartInfo start_info,
+      fidl::ServerEnd<fuchsia_component_runner::ComponentController> controller);
+
   bool IsComposite() const;
 
   const std::string& name() const;
+  const DriverHost* driver_host() const { return *driver_host_; }
   const DriverComponent* driver_component() const;
   const std::vector<Node*>& parents() const;
   const std::list<std::shared_ptr<Node>>& children() const;
   fidl::VectorView<fuchsia_component_decl::wire::Offer> offers() const;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols() const;
   const std::vector<fuchsia_driver_framework::wire::NodeProperty>& properties() const;
-  DriverHostComponent* driver_host() const;
 
   void set_collection(Collection collection);
-  void set_driver_host(DriverHostComponent* driver_host);
-  void set_node_ref(fidl::ServerBindingRef<fuchsia_driver_framework::Node> node_ref);
-  void set_bound_driver_url(std::optional<std::string_view> bound_driver_url);
-  void set_controller_ref(
-      fidl::ServerBindingRef<fuchsia_driver_framework::NodeController> controller_ref);
-  void set_driver_component(std::unique_ptr<DriverComponent> driver_component);
 
   std::string TopoName() const;
 
@@ -143,13 +143,12 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::vector<fuchsia_driver_framework::wire::NodeProperty> properties_;
 
   Collection collection_ = Collection::kNone;
-  fit::nullable<DriverHostComponent*> driver_host_;
+  fit::nullable<DriverHost*> driver_host_;
 
   bool removal_in_progress_ = false;
 
   // If this exists, then this `driver_component_` is bound to this node.
   std::unique_ptr<DriverComponent> driver_component_;
-  std::optional<std::string> bound_driver_url_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::Node>> node_ref_;
   std::optional<fidl::ServerBindingRef<fuchsia_driver_framework::NodeController>> controller_ref_;
 };

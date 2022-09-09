@@ -11,7 +11,19 @@
 
 namespace dfv2 {
 
-class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
+class DriverHost {
+ public:
+  virtual zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
+      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end,
+      fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
+      fuchsia_component_runner::wire::ComponentStartInfo start_info) = 0;
+
+  virtual zx::status<uint64_t> GetProcessKoid() const = 0;
+};
+
+class DriverHostComponent final
+    : public DriverHost,
+      public fbl::DoublyLinkedListable<std::unique_ptr<DriverHostComponent>> {
  public:
   DriverHostComponent(fidl::ClientEnd<fuchsia_driver_host::DriverHost> driver_host,
                       async_dispatcher_t* dispatcher,
@@ -20,9 +32,9 @@ class DriverHostComponent : public fbl::DoublyLinkedListable<std::unique_ptr<Dri
   zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
       fidl::ClientEnd<fuchsia_driver_framework::Node> client_end,
       fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
-      fuchsia_component_runner::wire::ComponentStartInfo start_info);
+      fuchsia_component_runner::wire::ComponentStartInfo start_info) override;
 
-  zx::status<uint64_t> GetProcessKoid() const;
+  zx::status<uint64_t> GetProcessKoid() const override;
 
  private:
   fidl::WireSharedClient<fuchsia_driver_host::DriverHost> driver_host_;

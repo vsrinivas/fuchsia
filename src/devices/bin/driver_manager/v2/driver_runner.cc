@@ -323,50 +323,10 @@ void DriverRunner::Start(StartRequestView request, StartCompleter::Sync& complet
   auto& [_, node] = *it;
   driver_args_.erase(it);
 
-  // Launch a driver host, or use an existing driver host.
-  if (driver::ProgramValue(request->start_info.program(), "colocate").value_or("") == "true") {
-    if (&node == root_node_.get()) {
-      LOGF(ERROR, "Failed to start driver '%.*s', root driver cannot colocate",
-           static_cast<int>(url.size()), url.data());
-      completer.Close(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-  } else {
-    auto result = StartDriverHost();
-    if (result.is_error()) {
-      completer.Close(result.error_value());
-      return;
-    }
-    node.set_driver_host(result.value().get());
-    driver_hosts_.push_back(std::move(*result));
+  auto start_status = node.StartDriver(request->start_info, std::move(request->controller));
+  if (start_status.is_error()) {
+    completer.Close(start_status.error_value());
   }
-
-  // Bind the Node associated with the driver.
-  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
-  if (endpoints.is_error()) {
-    completer.Close(endpoints.error_value());
-    return;
-  }
-  auto bind_node = fidl::BindServer<fidl::WireServer<fdf::Node>>(
-      dispatcher_, std::move(endpoints->server), node.shared_from_this(),
-      [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
-  node.set_node_ref(bind_node);
-
-  LOGF(INFO, "Binding %.*s to  %s", static_cast<int>(url.size()), url.data(), node.name().c_str());
-  // Start the driver within the driver host.
-  auto start = node.driver_host()->Start(std::move(endpoints->client), node.symbols(),
-                                         std::move(request->start_info));
-  if (start.is_error()) {
-    completer.Close(start.error_value());
-    return;
-  }
-
-  // Create a DriverComponent to manage the driver.
-  auto driver = std::make_unique<DriverComponent>(
-      std::move(*start), std::move(request->controller), dispatcher_, url,
-      [node = &node](auto status) { node->Remove(); },
-      [node = &node](auto status) { node->Remove(); });
-  node.set_driver_component(std::move(driver));
 }
 
 void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) {
@@ -483,7 +443,7 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
   driver_index_->MatchDriver(node.CreateAddArgs(arena)).Then(std::move(match_callback));
 }
 
-zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {
+zx::status<DriverHost*> DriverRunner::CreateDriverHost() {
   zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
@@ -504,7 +464,10 @@ zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost()
 
   auto driver_host =
       std::make_unique<DriverHostComponent>(std::move(*client_end), dispatcher_, &driver_hosts_);
-  return zx::ok(std::move(driver_host));
+  auto driver_host_ptr = driver_host.get();
+  driver_hosts_.push_back(std::move(driver_host));
+
+  return zx::ok(driver_host_ptr);
 }
 
 zx::status<> DriverRunner::CreateComponent(std::string name, Collection collection, std::string url,
