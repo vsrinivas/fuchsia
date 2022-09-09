@@ -4,9 +4,9 @@
 
 use {
     anyhow::{bail, Error},
+    fuchsia_triage::{ActionTagDirective, DiagnosticData, ParseResult, Source},
     serde_json,
     std::{collections::HashMap, fs, path::Path},
-    triage_lib::{ActionTagDirective, DiagnosticData, ParseResult, Source},
 };
 
 // Third field is whether the file is required.

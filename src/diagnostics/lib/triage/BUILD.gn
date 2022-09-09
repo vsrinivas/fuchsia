@@ -49,8 +49,7 @@ library_sources = [
 ]
 
 rustc_library("triage") {
-  name = "triage-lib"
-
+  name = "fuchsia-triage"
   edition = "2021"
   version = "0.0.1"
 

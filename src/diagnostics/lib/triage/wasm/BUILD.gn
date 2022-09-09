@@ -25,7 +25,7 @@ group("tests") {
 # We need to specify configs
 config("env") {
   rustenv = [
-    "CARGO_PKG_NAME=\"wasm_triage_lib\"",
+    "CARGO_PKG_NAME=\"triage_lib\"",
     "CARGO_PKG_VERSION=\"0.1\"",
     "CARGO_MANIFEST_DIR=\"/\"",
   ]
@@ -40,7 +40,7 @@ lib_deps = [
 
 if (current_toolchain == unknown_wasm32_toolchain) {
   rustc_wasm_library("lib") {
-    name = "wasm_triage_lib"
+    name = "triage_lib"
     edition = "2021"
 
     configs += [
@@ -59,10 +59,10 @@ if (current_toolchain == unknown_wasm32_toolchain) {
 
 wasm_bindings("lib_wasm") {
   target = ":lib"
-  target_output_name = "wasm_triage_lib"
+  target_output_name = "triage_lib"
 }
 
-rustc_test("wasm_triage_lib_tests") {
+rustc_test("triage_lib_tests") {
   edition = "2021"
   deps = lib_deps + [
            "//src/lib/fuchsia",
@@ -76,5 +76,5 @@ rustc_test("wasm_triage_lib_tests") {
 }
 
 fuchsia_unittest_package("wasm-triage-unittests") {
-  deps = [ ":wasm_triage_lib_tests" ]
+  deps = [ ":triage_lib_tests" ]
 }

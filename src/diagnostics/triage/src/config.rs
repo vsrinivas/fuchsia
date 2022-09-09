@@ -6,8 +6,8 @@ use {
     crate::file_io::{config_from_files, diagnostics_from_directory},
     crate::Options,
     anyhow::{bail, format_err, Error},
+    fuchsia_triage::{ActionTagDirective, DiagnosticData, ParseResult},
     std::{path::Path, str::FromStr},
-    triage_lib::{ActionTagDirective, DiagnosticData, ParseResult},
 };
 
 // TODO(fxbug.dev/50451): Add support for CSV.

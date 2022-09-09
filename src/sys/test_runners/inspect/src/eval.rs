@@ -5,10 +5,10 @@
 use {
     crate::error::{ComponentError, EvaluationError},
     crate::spec::TestCase,
+    fuchsia_triage,
     maplit::hashmap,
     std::collections::HashMap,
     std::convert::TryFrom,
-    triage_lib,
 };
 
 const TRIAGE_PRESENCE_TEMPLATE: &'static str = r#"
@@ -45,7 +45,7 @@ const TRIAGE_LAMBDA_TEMPLATE: &'static str = r#"
 /// Wrapper for the context to evaluate incoming diagnostics data.
 pub(crate) struct EvaluationContext {
     /// The result of constructing and parsing a triage configuration for a specific test case.
-    config_parse_result: triage_lib::ParseResult,
+    config_parse_result: fuchsia_triage::ParseResult,
 
     /// The original config text, for debugging.
     config_text: String,
@@ -53,9 +53,9 @@ pub(crate) struct EvaluationContext {
 
 impl EvaluationContext {
     pub(crate) fn run(&self, json: &str) -> Result<(), EvaluationError> {
-        let data_vec = vec![triage_lib::DiagnosticData::new(
+        let data_vec = vec![fuchsia_triage::DiagnosticData::new(
             "inspect.json".to_string(),
-            triage_lib::Source::Inspect,
+            fuchsia_triage::Source::Inspect,
             json.to_string(),
         )
         .map_err(|e| EvaluationError::ParseFailure {
@@ -63,7 +63,7 @@ impl EvaluationContext {
             data: json.to_string(),
         })?];
 
-        let result = triage_lib::analyze(&data_vec, &self.config_parse_result)
+        let result = fuchsia_triage::analyze(&data_vec, &self.config_parse_result)
             .map_err(|e| EvaluationError::InternalFailure(e.to_string()))?;
         match [
             result.get_infos().as_slice(),
@@ -108,12 +108,14 @@ impl TryFrom<&TestCase> for EvaluationContext {
             "test_case".to_string() => case_config.clone(),
         };
 
-        let config_parse_result =
-            triage_lib::ParseResult::new(&configs, &triage_lib::ActionTagDirective::AllowAll)
-                .map_err(|e| ComponentError::TriageConfigError {
-                    message: e.to_string(),
-                    config: case_config.clone(),
-                })?;
+        let config_parse_result = fuchsia_triage::ParseResult::new(
+            &configs,
+            &fuchsia_triage::ActionTagDirective::AllowAll,
+        )
+        .map_err(|e| ComponentError::TriageConfigError {
+            message: e.to_string(),
+            config: case_config.clone(),
+        })?;
 
         config_parse_result.validate().map_err(|e| ComponentError::TriageConfigError {
             message: e.to_string(),

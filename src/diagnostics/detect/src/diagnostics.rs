@@ -5,7 +5,9 @@
 // Fetches diagnostic data.
 
 use {
-    anyhow::Error, inspect_fetcher::InspectFetcher, triage_lib::DiagnosticData, triage_lib::Source,
+    anyhow::Error,
+    fuchsia_triage::{DiagnosticData, Source},
+    inspect_fetcher::InspectFetcher,
 };
 
 // The capability name for the Inspect reader

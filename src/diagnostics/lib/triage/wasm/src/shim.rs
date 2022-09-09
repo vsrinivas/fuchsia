@@ -4,10 +4,12 @@
 
 use {
     anyhow::{bail, Error},
+    fuchsia_triage::{
+        ActionResultFormatter, ActionTagDirective, DiagnosticData, ParseResult, Source,
+    },
     num_traits::cast::FromPrimitive,
     serde_json5,
     std::collections::HashMap,
-    triage_lib::{ActionResultFormatter, ActionTagDirective, DiagnosticData, ParseResult, Source},
 };
 
 /// Unique identifier to resources too expensive to pass between Rust/JS layer.
@@ -83,7 +85,7 @@ impl TriageManager {
             let target: Target = take_value!(self, &handle, Value::Target);
             targets.push(target);
         }
-        let results = triage_lib::analyze(&targets, &context)?;
+        let results = fuchsia_triage::analyze(&targets, &context)?;
         let results_formatter = ActionResultFormatter::new(&results);
         Ok(results_formatter.to_text())
     }
@@ -99,7 +101,7 @@ impl TriageManager {
             let target: Target = take_value!(self, &handle, Value::Target);
             targets.push(target);
         }
-        let structured_results = triage_lib::analyze_structured(&targets, &context)?;
+        let structured_results = fuchsia_triage::analyze_structured(&targets, &context)?;
         Ok(serde_json5::to_string(&structured_results)?)
     }
 

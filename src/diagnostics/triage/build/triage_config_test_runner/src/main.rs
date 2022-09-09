@@ -4,9 +4,9 @@
 
 use {
     anyhow::{bail, Error},
+    fuchsia_triage::ActionTagDirective,
     structopt::StructOpt,
     triage_app_lib::file_io::config_from_files,
-    triage_lib::ActionTagDirective,
 };
 
 #[derive(StructOpt, Debug)]

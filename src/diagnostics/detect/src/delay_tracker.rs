@@ -6,10 +6,10 @@
 /// should mute too-frequent requests.
 use {
     crate::{Mode, MINIMUM_SIGNATURE_INTERVAL_NANOS},
+    fuchsia_triage::SnapshotTrigger,
     injectable_time::TimeSource,
     std::collections::HashMap,
     tracing::warn,
-    triage_lib::SnapshotTrigger,
 };
 
 pub struct DelayTracker<'a> {

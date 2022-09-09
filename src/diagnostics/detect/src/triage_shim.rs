@@ -7,20 +7,20 @@
 use {
     crate::diagnostics::Selectors,
     anyhow::Error,
+    fuchsia_triage::{ActionTagDirective, ParseResult, SnapshotTrigger},
     std::collections::HashMap,
-    triage_lib::{ActionTagDirective, ParseResult, SnapshotTrigger},
 };
 
 pub fn evaluate_int_math(expression: &str) -> Result<i64, Error> {
-    triage_lib::evaluate_int_math(expression)
+    fuchsia_triage::evaluate_int_math(expression)
 }
 
 type ConfigFiles = HashMap<String, String>;
 
-type DiagnosticData = triage_lib::DiagnosticData;
+type DiagnosticData = fuchsia_triage::DiagnosticData;
 
 pub struct TriageLib {
-    triage_config: triage_lib::ParseResult,
+    triage_config: fuchsia_triage::ParseResult,
 }
 
 impl TriageLib {
@@ -30,14 +30,14 @@ impl TriageLib {
     }
 
     pub fn selectors(&self) -> Selectors {
-        Selectors::new().with_inspect_selectors(triage_lib::all_selectors(&self.triage_config))
+        Selectors::new().with_inspect_selectors(fuchsia_triage::all_selectors(&self.triage_config))
     }
 
     pub fn evaluate(
         &self,
         data: Vec<DiagnosticData>,
-    ) -> (Vec<SnapshotTrigger>, triage_lib::WarningVec) {
-        triage_lib::snapshots(&data, &self.triage_config)
+    ) -> (Vec<SnapshotTrigger>, fuchsia_triage::WarningVec) {
+        fuchsia_triage::snapshots(&data, &self.triage_config)
     }
 }
 
@@ -73,7 +73,7 @@ mod test {
         let lib = TriageLib::new(configs)?;
         let data = vec![DiagnosticData::new(
             "inspect.json".to_string(),
-            triage_lib::Source::Inspect,
+            fuchsia_triage::Source::Inspect,
             INSPECT.to_string(),
         )?];
         let expected_trigger =
