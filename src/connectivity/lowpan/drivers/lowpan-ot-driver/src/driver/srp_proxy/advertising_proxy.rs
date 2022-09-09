@@ -152,7 +152,7 @@ impl AdvertisingProxyInner {
     /// Updates the mDNS service with the host and services from the SrpServerHost.
     pub fn push_srp_host_changes(
         &mut self,
-        _instance: &ot::Instance,
+        instance: &ot::Instance,
         srp_host: &ot::SrpServerHost,
     ) -> Result<(), anyhow::Error> {
         if srp_host.is_deleted() {
@@ -201,12 +201,16 @@ impl AdvertisingProxyInner {
             let (client, server) = create_endpoints::<ServiceInstancePublisherMarker>()
                 .context("Failed to create FIDL endpoints")?;
 
+            let mesh_local_prefix = *instance.get_mesh_local_prefix();
+
             let local_name_copy = local_name.to_string();
             let mut addrs = srp_host
                 .addresses()
                 .iter()
                 .filter_map(|x| {
-                    if !net_types::ip::Ipv6Addr::from_bytes(x.octets()).is_unicast_link_local() {
+                    if !net_types::ip::Ipv6Addr::from_bytes(x.octets()).is_unicast_link_local()
+                        && !mesh_local_prefix.contains(x)
+                    {
                         Some(fidl_fuchsia_net::IpAddress::Ipv6(fidl_fuchsia_net::Ipv6Address {
                             addr: x.octets(),
                         }))
