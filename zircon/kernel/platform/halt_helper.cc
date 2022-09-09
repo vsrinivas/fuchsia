@@ -49,10 +49,22 @@ zx_status_t platform_halt_secondary_cpus(zx_time_t deadline) {
   DEBUG_ASSERT(Thread::Current::Get()->scheduler_state().hard_affinity() ==
                cpu_num_to_mask(BOOT_CPU_ID));
 
+  // It's possible that the one or more secondary CPUs is still in the process
+  // of booting up.  Wait for all the started CPUs to check-in before shutting
+  // them down.
+  //
+  // The deadline here should be long enough that the secondary CPUs have had
+  // ample time to startup but small enough that we don't hold up the shutdown
+  // process "too long".
+  zx_status_t status = mp_wait_for_all_cpus_started(Deadline::after(ZX_SEC(5)));
+  if (status != ZX_OK) {
+    printf("failed to wait for cpus to start: %d\n", status);
+  }
+
   // "Unplug" online secondary CPUs before halting them.
   cpu_mask_t primary = cpu_num_to_mask(BOOT_CPU_ID);
   cpu_mask_t mask = mp_get_online_mask() & ~primary;
-  zx_status_t status = mp_unplug_cpu_mask(mask, deadline);
+  status = mp_unplug_cpu_mask(mask, deadline);
   if (status == ZX_OK) {
     return ZX_OK;
   }
