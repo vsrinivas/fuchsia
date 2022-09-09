@@ -4,8 +4,13 @@
 
 #include "src/devices/bin/driver_host2/driver.h"
 
+#include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fdf/cpp/internal.h>
+#include <lib/fit/defer.h>
 #include <zircon/dlfcn.h>
+
+#include <fbl/string_printf.h>
 
 #include "src/devices/lib/log/log.h"
 
@@ -85,6 +90,45 @@ zx::status<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
   }
   opaque_.emplace(opaque);
   return zx::ok();
+}
+
+uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& program) {
+  auto default_dispatcher_opts = driver::ProgramValueAsVector(program, "default_dispatcher_opts");
+
+  uint32_t opts = 0;
+  if (default_dispatcher_opts.is_ok()) {
+    for (auto opt : *default_dispatcher_opts) {
+      if (opt == "allow_sync_calls") {
+        opts |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
+      } else {
+        LOGF(WARNING, "Ignoring unknown default_dispatcher_opt: %s", opt.c_str());
+      }
+    }
+  }
+  return opts;
+}
+
+zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, std::string_view name,
+                                             uint32_t dispatcher_opts) {
+  // Let the driver runtime know which driver this dispatcher is for.
+  // Since we haven't entered the driver yet, the runtime cannot detect
+  // which driver this dispatcher is associated with.
+  fdf_internal_push_driver(driver.get());
+  auto pop_driver = fit::defer([]() { fdf_internal_pop_driver(); });
+
+  // The dispatcher must be shutdown before the dispatcher is destroyed.
+  // Usually we will wait for the callback from |fdf_internal::DriverShutdown| before destroying
+  // the driver object (and hence the dispatcher).
+  // In the case where we fail to start the driver, the driver object would be destructed
+  // immediately, so here we hold an extra reference to the driver object to ensure the
+  // dispatcher will not be destructed until shutdown completes.
+  //
+  // We do not destroy the dispatcher in the shutdown callback, to prevent crashes that
+  // would happen if the driver attempts to access the dispatcher in its Stop hook.
+  return fdf::Dispatcher::Create(
+      dispatcher_opts,
+      fbl::StringPrintf("%.*s-default-%p", (int)name.size(), name.data(), driver.get()),
+      [driver_ref = driver](fdf_dispatcher_t* dispatcher) {});
 }
 
 }  // namespace dfv2

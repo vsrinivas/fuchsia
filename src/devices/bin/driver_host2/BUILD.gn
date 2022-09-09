@@ -25,6 +25,8 @@ source_set("driver") {
 
   deps = [
     "//sdk/lib/driver2:llcpp",
+    "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
+    "//sdk/lib/fit",
     "//src/devices/lib/log",
     "//zircon/system/ulib/zircon-internal",
   ]

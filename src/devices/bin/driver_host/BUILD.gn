@@ -46,6 +46,7 @@ source_set("common") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
     "//src/devices/lib/driver:driver_runtime",
   ]
 

@@ -16,8 +16,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/dlfcn.h>
 
-#include <fbl/string_printf.h>
-
 #include "src/lib/storage/vfs/cpp/service.h"
 
 // The driver runtime libraries use the fdf namespace, but we would also like to use fdf
@@ -105,22 +103,6 @@ zx::status<> DriverHost::PublishDriverHost(component::OutgoingDirectory& outgoin
   return status;
 }
 
-uint32_t DriverHost::ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& program) {
-  auto default_dispatcher_opts = driver::ProgramValueAsVector(program, "default_dispatcher_opts");
-
-  uint32_t opts = 0;
-  if (default_dispatcher_opts.is_ok()) {
-    for (auto opt : *default_dispatcher_opts) {
-      if (opt == "allow_sync_calls") {
-        opts |= FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
-      } else {
-        FX_SLOG(WARNING, "Ignoring unknown default_dispatcher_opt", KV("opt", opt.data()));
-      }
-    }
-  }
-  return opts;
-}
-
 void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
   if (!request.start_args().url()) {
     FX_SLOG(ERROR, "Failed to start driver, missing 'url' argument");
@@ -167,7 +149,7 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
     return;
   }
 
-  uint32_t default_dispatcher_opts = ExtractDefaultDispatcherOpts(wire_program);
+  uint32_t default_dispatcher_opts = dfv2::ExtractDefaultDispatcherOpts(wire_program);
 
   // Once we receive the VMO from the call to GetBackingMemory, we can load the driver into this
   // driver host. We move the storage and encoded for start_args into this callback to extend its
@@ -206,42 +188,20 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
       return;
     }
 
-    fdf::Dispatcher driver_dispatcher;
-    {
-      // Let the driver runtime know which driver this dispatcher is for.
-      // Since we haven't entered the driver yet, the runtime cannot detect
-      // which driver this dispatcher is associated with.
-      fdf_internal_push_driver((*driver).get());
-      auto pop_driver = fit::defer([]() { fdf_internal_pop_driver(); });
-
-      // The dispatcher must be shutdown before the dispatcher is destroyed.
-      // Usually we will wait for the callback from |fdf_internal::DriverShutdown| before destroying
-      // the driver object (and hence the dispatcher).
-      // In the case where we fail to start the driver, the driver object would be destructed
-      // immediately, so here we hold an extra reference to the driver object to ensure the
-      // dispatcher will not be destructed until shutdown completes.
-      //
-      // We do not destroy the dispatcher in the shutdown callback, to prevent crashes that
-      // would happen if the driver attempts to access the dispatcher in its Stop hook.
-      uint32_t options = default_dispatcher_opts;
-
-      auto dispatcher =
-          fdf::Dispatcher::Create(options,
-                                  fbl::StringPrintf("%.*s-default-%p", (int)manifest.size(),
-                                                    manifest.data(), (*driver).get()),
-                                  [driver_ref = *driver](fdf_dispatcher_t* dispatcher) {});
-      if (dispatcher.is_error()) {
-        completer.Close(dispatcher.status_value());
-        return;
-      }
-      driver_dispatcher = *std::move(dispatcher);
+    zx::status<fdf::Dispatcher> driver_dispatcher =
+        CreateDispatcher(*driver, manifest, default_dispatcher_opts);
+    ;
+    if (driver_dispatcher.is_error()) {
+      completer.Close(driver_dispatcher.status_value());
+      return;
     }
-    async_dispatcher_t* driver_async_dispatcher = driver_dispatcher.async_dispatcher();
+
+    async_dispatcher_t* driver_async_dispatcher = driver_dispatcher->async_dispatcher();
 
     // Task to start the driver. Post this to the driver dispatcher thread.
     auto start_task = [this, request = std::move(request), completer = std::move(completer),
                        start_args = std::move(start_args), driver = std::move(*driver),
-                       driver_dispatcher = std::move(driver_dispatcher)]() mutable {
+                       driver_dispatcher = std::move(*driver_dispatcher)]() mutable {
       // We have to add the driver to this list before calling Start in order to have an accurate
       // count of how many drivers exist in this driver host.
       {
