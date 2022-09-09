@@ -89,10 +89,10 @@ void CompositeDeviceFragment::Inspect(inspect::Inspector& inspector, inspect::No
 
 zx::status<std::unique_ptr<CompositeDeviceAssembler>> CompositeDeviceAssembler::Create(
     std::string name, fuchsia_device_manager::CompositeDeviceDescriptor descriptor,
-    DriverBinder* binder, async_dispatcher_t* dispatcher) {
+    NodeManager* node_manager, async_dispatcher_t* dispatcher) {
   auto assembler = std::make_unique<CompositeDeviceAssembler>();
   assembler->name_ = std::move(name);
-  assembler->binder_ = binder;
+  assembler->node_manager_ = node_manager;
   assembler->dispatcher_ = dispatcher;
 
   if (descriptor.primary_fragment_index() >= descriptor.fragments().size()) {
@@ -195,7 +195,7 @@ void CompositeDeviceAssembler::TryToAssemble() {
   }
 
   auto node = Node::CreateCompositeNode(name_, std::move(parents), parents_names,
-                                        std::move(properties_), binder_, dispatcher_);
+                                        std::move(properties_), node_manager_, dispatcher_);
   if (node.is_error()) {
     return;
   }
@@ -203,7 +203,7 @@ void CompositeDeviceAssembler::TryToAssemble() {
   LOGF(INFO, "Built composite device at '%s'", node->TopoName().c_str());
 
   // Bind the node we just created.
-  binder_->Bind(*node.value(), nullptr);
+  node_manager_->Bind(*node.value(), nullptr);
 }
 
 void CompositeDeviceAssembler::Inspect(inspect::Inspector& inspector, inspect::Node& root) const {
@@ -218,14 +218,17 @@ void CompositeDeviceAssembler::Inspect(inspect::Inspector& inspector, inspect::N
   inspector.emplace(std::move(node));
 }
 
-CompositeDeviceManager::CompositeDeviceManager(DriverBinder* binder, async_dispatcher_t* dispatcher,
+CompositeDeviceManager::CompositeDeviceManager(NodeManager* node_manager,
+                                               async_dispatcher_t* dispatcher,
                                                fit::function<void()> rebind_callback)
-    : binder_(binder), dispatcher_(dispatcher), rebind_callback_(std::move(rebind_callback)) {}
+    : node_manager_(node_manager),
+      dispatcher_(dispatcher),
+      rebind_callback_(std::move(rebind_callback)) {}
 
 zx_status_t CompositeDeviceManager::AddCompositeDevice(
     std::string name, fuchsia_device_manager::CompositeDeviceDescriptor descriptor) {
-  auto assembler = CompositeDeviceAssembler::Create(std::move(name), std::move(descriptor), binder_,
-                                                    dispatcher_);
+  auto assembler = CompositeDeviceAssembler::Create(std::move(name), std::move(descriptor),
+                                                    node_manager_, dispatcher_);
   if (assembler.is_error()) {
     return assembler.error_value();
   }

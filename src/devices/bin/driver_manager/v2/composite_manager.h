@@ -24,7 +24,7 @@ class CompositeNodeManager {
   using ParentSetIterator = std::unordered_multimap<DriverUrl, ParentSetCollector>::iterator;
 
  public:
-  CompositeNodeManager(async_dispatcher_t* dispatcher, DriverBinder* driver_binder_);
+  CompositeNodeManager(async_dispatcher_t* dispatcher, NodeManager* node_manager_);
 
   // If the `matched_driver` passed in completes a parent set, it creates a composite
   // node owned by all the parents and returns it.
@@ -51,7 +51,7 @@ class CompositeNodeManager {
       const fuchsia_driver_index::wire::MatchedCompositeInfo& composite_info);
 
   async_dispatcher_t* const dispatcher_;
-  DriverBinder* driver_binder_;
+  NodeManager* node_manager_;
 
   // This stores our parent set collectors that have not completed yet.
   // It is a multimap because each driver url can have multiple parent set collectors.

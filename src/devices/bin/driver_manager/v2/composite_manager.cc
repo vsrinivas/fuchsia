@@ -45,8 +45,8 @@ zx::status<ValidatedCompositeInfo> GetValidatedCompositeInfo(
 }  // namespace
 
 CompositeNodeManager::CompositeNodeManager(async_dispatcher_t* dispatcher,
-                                           DriverBinder* driver_binder)
-    : dispatcher_(dispatcher), driver_binder_(driver_binder) {}
+                                           NodeManager* driver_binder)
+    : dispatcher_(dispatcher), node_manager_(driver_binder) {}
 
 zx::status<CompositeNodeManager::ParentSetIterator> CompositeNodeManager::AcquireCompositeParentSet(
     std::string_view node_name, const fdi::wire::MatchedCompositeInfo& composite_info) {
@@ -106,7 +106,7 @@ zx::status<Node*> CompositeNodeManager::HandleMatchedCompositeInfo(
   }
   auto composite =
       Node::CreateCompositeNode("composite", std::move(*completed_parents),
-                                std::move(parents_names), {}, driver_binder_, dispatcher_);
+                                std::move(parents_names), {}, node_manager_, dispatcher_);
   if (composite.is_error()) {
     return composite.take_error();
   }

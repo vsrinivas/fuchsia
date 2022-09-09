@@ -36,7 +36,7 @@
 namespace dfv2 {
 
 class DriverRunner : public fidl::WireServer<fuchsia_component_runner::ComponentRunner>,
-                     public DriverBinder {
+                     public NodeManager {
  public:
   DriverRunner(fidl::ClientEnd<fuchsia_component::Realm> realm,
                fidl::ClientEnd<fuchsia_driver_index::DriverIndex> driver_index,
@@ -58,7 +58,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
  private:
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
-  // DriverBinder
+  // NodeManager
   // Attempt to bind `node`.
   // A nullptr for result_tracker is acceptable if the caller doesn't intend to
   // track the results.

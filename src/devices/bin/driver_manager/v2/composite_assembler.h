@@ -46,11 +46,11 @@ class CompositeDeviceFragment {
 // of its fragments matched.
 class CompositeDeviceAssembler {
  public:
-  // Create a CompositeDeviceAssembler. `binder` is unowned and must outlive
+  // Create a CompositeDeviceAssembler. `node_manager` is unowned and must outlive
   // the assembler class.
   static zx::status<std::unique_ptr<CompositeDeviceAssembler>> Create(
       std::string name, fuchsia_device_manager::CompositeDeviceDescriptor descriptor,
-      DriverBinder* binder, async_dispatcher_t* dispatcher);
+      NodeManager* node_manager, async_dispatcher_t* dispatcher);
 
   // Check the node against each fragment of this composite device. Returns
   // true if it matches a fragment that is currently unbound.
@@ -68,7 +68,7 @@ class CompositeDeviceAssembler {
   std::string name_;
 
   async_dispatcher_t* dispatcher_;
-  DriverBinder* binder_;
+  NodeManager* node_manager_;
 
   fidl::Arena<128> arena_;
   // The properties of the composite device being created. This is backed
@@ -81,9 +81,9 @@ class CompositeDeviceAssembler {
 // This class manages all of the `CompositeDeviceAssemblers` that exist.
 class CompositeDeviceManager : fidl::Server<fuchsia_device_composite::DeprecatedCompositeCreator> {
  public:
-  // Create a CompositeDeviceManager. `binder` is unowned and must outlive the
+  // Create a CompositeDeviceManager. `node_manager` is unowned and must outlive the
   // manager class.
-  CompositeDeviceManager(DriverBinder* binder, async_dispatcher_t* dispatcher,
+  CompositeDeviceManager(NodeManager* node_manager, async_dispatcher_t* dispatcher,
                          fit::function<void()> rebind_callback);
 
   zx_status_t AddCompositeDevice(std::string name,
@@ -109,7 +109,7 @@ class CompositeDeviceManager : fidl::Server<fuchsia_device_composite::Deprecated
   void AddCompositeDevice(AddCompositeDeviceRequest& request,
                           AddCompositeDeviceCompleter::Sync& completer) override;
 
-  DriverBinder* binder_;
+  NodeManager* node_manager_;
   async_dispatcher_t* dispatcher_;
   fit::function<void()> rebind_callback_;
 

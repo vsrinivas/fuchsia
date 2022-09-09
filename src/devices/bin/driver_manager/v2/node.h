@@ -44,9 +44,9 @@ class BindResultTracker {
   std::vector<fuchsia_driver_development::wire::NodeBindingInfo> results_;
 };
 
-class DriverBinder {
+class NodeManager {
  public:
-  virtual ~DriverBinder() = default;
+  virtual ~NodeManager() = default;
 
   // Attempt to bind `node`.
   // A nullptr for result_tracker is acceptable if the caller doesn't intend to
@@ -72,7 +72,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
              public std::enable_shared_from_this<Node> {
  public:
-  Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driver_binder,
+  Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
        async_dispatcher_t* dispatcher);
   ~Node() override;
 
@@ -80,7 +80,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
       std::string_view node_name, std::vector<Node*> parents,
       std::vector<std::string> parents_names,
       std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
-      DriverBinder* driver_binder, async_dispatcher_t* dispatcher);
+      NodeManager* driver_binder, async_dispatcher_t* dispatcher);
 
   fuchsia_driver_framework::wire::NodeAddArgs CreateAddArgs(fidl::AnyArena& arena);
 
@@ -134,7 +134,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   std::vector<std::string> parents_names_;
   std::vector<Node*> parents_;
   std::list<std::shared_ptr<Node>> children_;
-  fit::nullable<DriverBinder*> driver_binder_;
+  fit::nullable<NodeManager*> node_manager_;
   async_dispatcher_t* const dispatcher_;
 
   fidl::Arena<128> arena_;

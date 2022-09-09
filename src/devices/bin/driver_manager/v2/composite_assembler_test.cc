@@ -18,9 +18,9 @@ constexpr std::string_view kFragmentName2 = "child-2";
 
 class CompositeAssemblerTest : public gtest::TestLoopFixture {};
 
-class TestBinder : public dfv2::DriverBinder {
+class TestNodeManager : public dfv2::NodeManager {
  public:
-  explicit TestBinder(fit::function<void(dfv2::Node&)> cb) : callback(std::move(cb)) {}
+  explicit TestNodeManager(fit::function<void(dfv2::Node&)> cb) : callback(std::move(cb)) {}
 
   fit::function<void(dfv2::Node&)> callback;
 
@@ -33,18 +33,18 @@ class TestBinder : public dfv2::DriverBinder {
 };
 
 TEST_F(CompositeAssemblerTest, EmptyManager) {
-  TestBinder binder([](auto& node) {});
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([](auto& node) {});
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
   ASSERT_FALSE(manager.BindNode(node));
 }
 
 TEST_F(CompositeAssemblerTest, NoMatches) {
-  TestBinder binder([](auto& node) {});
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([](auto& node) {});
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -61,10 +61,10 @@ TEST_F(CompositeAssemblerTest, NoMatches) {
 // Check that matching just one fragment out of multiple works as expected.
 TEST_F(CompositeAssemblerTest, MatchButDontCreate) {
   bool bind_was_called = false;
-  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -92,10 +92,10 @@ TEST_F(CompositeAssemblerTest, MatchButDontCreate) {
 // Create a one-node composite.
 TEST_F(CompositeAssemblerTest, CreateSingleParentComposite) {
   bool bind_was_called = false;
-  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -133,12 +133,12 @@ TEST_F(CompositeAssemblerTest, CreateSingleParentComposite) {
 
 TEST_F(CompositeAssemblerTest, CreateTwoParentComposite) {
   bool bind_was_called = false;
-  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  auto node2 =
-      std::make_shared<dfv2::Node>("parent2", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  auto node2 = std::make_shared<dfv2::Node>("parent2", std::vector<dfv2::Node*>(), &node_manager,
+                                            dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   // Create two fragments
@@ -182,12 +182,12 @@ TEST_F(CompositeAssemblerTest, CreateTwoParentComposite) {
 
 TEST_F(CompositeAssemblerTest, NodeRemovesCorrectly) {
   bool bind_was_called = false;
-  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  auto node2 =
-      std::make_shared<dfv2::Node>("parent2", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  auto node2 = std::make_shared<dfv2::Node>("parent2", std::vector<dfv2::Node*>(), &node_manager,
+                                            dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   // Create two fragments
@@ -209,7 +209,8 @@ TEST_F(CompositeAssemblerTest, NodeRemovesCorrectly) {
 
   // Bind the first node, then reset it, then rebind it.
   ASSERT_TRUE(manager.BindNode(node));
-  node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
+  node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                      dispatcher());
   ASSERT_TRUE(manager.BindNode(node));
   ASSERT_EQ(0ul, node->children().size());
 
@@ -234,10 +235,10 @@ TEST_F(CompositeAssemblerTest, NodeRemovesCorrectly) {
 // Check that having two composite devices that both bind to the same node works.
 TEST_F(CompositeAssemblerTest, TwoSingleParentComposite) {
   bool bind_was_called = false;
-  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -279,10 +280,10 @@ TEST_F(CompositeAssemblerTest, TwoSingleParentComposite) {
 // Check that adding a composite after a node has already matched works.
 TEST_F(CompositeAssemblerTest, AddCompositeAfterNode) {
   bool bind_was_called = false;
-  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -325,10 +326,10 @@ TEST_F(CompositeAssemblerTest, AddCompositeAfterNode) {
 
 TEST_F(CompositeAssemblerTest, Rebind) {
   bool bind_was_called = false;
-  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;
@@ -386,10 +387,10 @@ class FakeContext : public fpromise::context {
 
 TEST_F(CompositeAssemblerTest, InspectNodes) {
   bool bind_was_called = false;
-  TestBinder binder([&bind_was_called](auto& node) { bind_was_called = true; });
-  auto node =
-      std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &binder, dispatcher());
-  dfv2::CompositeDeviceManager manager(&binder, dispatcher(), []() {});
+  TestNodeManager node_manager([&bind_was_called](auto& node) { bind_was_called = true; });
+  auto node = std::make_shared<dfv2::Node>("parent", std::vector<dfv2::Node*>(), &node_manager,
+                                           dispatcher());
+  dfv2::CompositeDeviceManager manager(&node_manager, dispatcher(), []() {});
 
   fuchsia_device_manager::CompositeDeviceDescriptor descriptor;
   fuchsia_device_manager::DeviceFragment fragment;

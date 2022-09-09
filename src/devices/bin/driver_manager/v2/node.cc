@@ -252,11 +252,11 @@ void BindResultTracker::Complete(size_t current) {
   }
 }
 
-Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driver_binder,
+Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
            async_dispatcher_t* dispatcher)
     : name_(name),
       parents_(std::move(parents)),
-      driver_binder_(driver_binder),
+      node_manager_(node_manager),
       dispatcher_(dispatcher) {
   // The driver's component name is based on the node name, which means that the
   // node name cam only have [a-z0-9-_.] characters. DFv1 composites contain ':'
@@ -274,7 +274,7 @@ Node::Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driv
 zx::status<std::shared_ptr<Node>> Node::CreateCompositeNode(
     std::string_view node_name, std::vector<Node*> parents, std::vector<std::string> parents_names,
     std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
-    DriverBinder* driver_binder, async_dispatcher_t* dispatcher) {
+    NodeManager* driver_binder, async_dispatcher_t* dispatcher) {
   auto composite = std::make_shared<Node>(node_name, std::move(parents), driver_binder, dispatcher);
   composite->parents_names_ = std::move(parents_names);
 
@@ -392,7 +392,7 @@ void Node::Remove() {
 
   // Disable driver binding for the node. This also prevents child nodes from
   // being added to this node.
-  driver_binder_ = nullptr;
+  node_manager_ = nullptr;
 
   // Ask each of our children to remove themselves.
   for (auto it = children_.begin(); it != children_.end();) {
@@ -443,7 +443,7 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
     fuchsia_driver_framework::wire::NodeAddArgs args,
     fidl::ServerEnd<fuchsia_driver_framework::NodeController> controller,
     fidl::ServerEnd<fuchsia_driver_framework::Node> node) {
-  if (driver_binder_ == nullptr) {
+  if (node_manager_ == nullptr) {
     LOGF(WARNING, "Failed to add Node, as this Node '%s' was removed", name().data());
     return fitx::as_error(fdf::wire::NodeError::kNodeRemoved);
   }
@@ -464,7 +464,7 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
       return fitx::as_error(fdf::wire::NodeError::kNameAlreadyExists);
     }
   };
-  auto child = std::make_shared<Node>(name, std::vector<Node*>{this}, *driver_binder_, dispatcher_);
+  auto child = std::make_shared<Node>(name, std::vector<Node*>{this}, *node_manager_, dispatcher_);
 
   if (args.has_offers()) {
     child->offers_.reserve(args.offers().count());
@@ -543,7 +543,7 @@ fitx::result<fuchsia_driver_framework::wire::NodeError, std::shared_ptr<Node>> N
         [](fidl::WireServer<fdf::Node>* node, auto, auto) { static_cast<Node*>(node)->Remove(); });
   } else {
     // We don't care about tracking binds here, sending nullptr is fine.
-    (*driver_binder_)->Bind(*child, nullptr);
+    (*node_manager_)->Bind(*child, nullptr);
   }
   child->AddToParents();
   return fitx::ok(child);
@@ -578,7 +578,7 @@ zx::status<> Node::StartDriver(
 
   // Launch a driver host if we are not colocated.
   if (!colocate) {
-    auto result = (*driver_binder_)->CreateDriverHost();
+    auto result = (*node_manager_)->CreateDriverHost();
     if (result.is_error()) {
       return result.take_error();
     }
