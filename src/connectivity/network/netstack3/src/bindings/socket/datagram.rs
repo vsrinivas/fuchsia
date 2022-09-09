@@ -1266,11 +1266,50 @@ impl<A> AvailableMessageQueue<A> {
 struct NoSpace;
 
 #[derive(Debug)]
-struct BindingData<I: Ip, T: Transport<I>> {
+struct MessageQueue<I: Ip, T> {
     local_event: zx::EventPair,
+    queue: AvailableMessageQueue<I::Addr>,
+    _marker: PhantomData<T>,
+}
+
+impl<I: Ip, T: Transport<I>> MessageQueue<I, T> {
+    fn peek(&self) -> Option<&AvailableMessage<I::Addr>> {
+        let Self { queue, local_event: _, _marker } = self;
+        queue.peek()
+    }
+
+    fn pop(&mut self) -> Option<AvailableMessage<I::Addr>> {
+        let Self { queue, local_event, _marker } = self;
+        let message = queue.pop();
+        if queue.is_empty() {
+            if let Err(e) = local_event.signal_peer(ZXSIO_SIGNAL_INCOMING, zx::Signals::NONE) {
+                error!("socket failed to signal peer: {:?}", e);
+            }
+        }
+        message
+    }
+
+    fn receive(&mut self, addr: I::Addr, port: u16, body: &[u8]) {
+        let Self { queue, local_event, _marker } = self;
+        match queue.push(addr, port, body) {
+            Err(NoSpace) => trace!(
+                "dropping {:?} packet from {:?}:{:?} because the receive queue is full",
+                T::PROTOCOL,
+                addr,
+                port
+            ),
+            Ok(()) => local_event
+                .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)
+                .unwrap_or_else(|e| error!("receive_udp_from_conn failed: {:?}", e)),
+        }
+    }
+}
+
+#[derive(Debug)]
+struct BindingData<I: Ip, T: Transport<I>> {
     peer_event: zx::EventPair,
     info: SocketControlInfo<I, T>,
-    available_data: AvailableMessageQueue<I::Addr>,
+    messages: MessageQueue<I, T>,
     ref_count: usize,
 }
 
@@ -1284,30 +1323,22 @@ impl<I: Ip, T: Transport<I>> BindingData<I, T> {
         properties: SocketWorkerProperties,
     ) -> Self {
         Self {
-            local_event,
             peer_event,
             info: SocketControlInfo {
                 _properties: properties,
                 state: SocketState::Unbound { unbound_id },
             },
-            available_data: AvailableMessageQueue::new(),
+            messages: MessageQueue {
+                queue: AvailableMessageQueue::new(),
+                local_event,
+                _marker: PhantomData,
+            },
             ref_count: 1,
         }
     }
 
     fn receive_datagram(&mut self, addr: I::Addr, port: u16, body: &[u8]) {
-        match self.available_data.push(addr, port, body) {
-            Err(NoSpace) => trace!(
-                "dropping {:?} packet from {:?}:{:?} because the receive queue is full",
-                T::PROTOCOL,
-                addr,
-                port
-            ),
-            Ok(()) => self
-                .local_event
-                .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)
-                .unwrap_or_else(|e| error!("receive_udp_from_conn failed: {:?}", e)),
-        }
+        self.messages.receive(addr, port, body)
     }
 }
 
@@ -2216,14 +2247,22 @@ where
     }
 
     fn get_max_receive_buffer_size(&self) -> u64 {
-        let BindingData { available_data, info: _, local_event: _, peer_event: _, ref_count: _ } =
-            self.get_state();
-        available_data.max_available_messages_size.try_into().unwrap_or(u64::MAX)
+        let BindingData {
+            messages: MessageQueue { queue, local_event: _, _marker },
+            info: _,
+            peer_event: _,
+            ref_count: _,
+        } = self.get_state();
+        queue.max_available_messages_size.try_into().unwrap_or(u64::MAX)
     }
 
     fn set_max_receive_buffer_size(&mut self, max_bytes: u64) {
-        let BindingData { available_data, info: _, local_event: _, peer_event: _, ref_count: _ } =
-            self.get_state_mut();
+        let BindingData {
+            messages: MessageQueue { queue, local_event: _, _marker },
+            info: _,
+            peer_event: _,
+            ref_count: _,
+        } = self.get_state_mut();
 
         let max_bytes = max_bytes
             .try_into()
@@ -2233,7 +2272,7 @@ where
             std::cmp::max(max_bytes, MIN_OUTSTANDING_APPLICATION_MESSAGES_SIZE),
             MAX_OUTSTANDING_APPLICATION_MESSAGES_SIZE,
         );
-        available_data.max_available_messages_size = max_bytes
+        queue.max_available_messages_size = max_bytes
     }
 }
 
@@ -2539,9 +2578,8 @@ where
                 Some(BindingData {
                     info,
                     ref_count: 1,
-                    local_event: _,
                     peer_event: _,
-                    available_data: _,
+                    messages: _,
                 }) => info);
             // always make sure the socket is closed with core.
             let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
@@ -2576,9 +2614,9 @@ where
         let () = self.need_rights(fio::OpenFlags::RIGHT_READABLE)?;
         let state = self.get_state_mut();
         let front = if flags.contains(fposix_socket::RecvMsgFlags::PEEK) {
-            state.available_data.peek().cloned()
+            state.messages.peek().cloned()
         } else {
-            state.available_data.pop()
+            state.messages.pop()
         };
         let available = if let Some(front) = front {
             front
@@ -2611,12 +2649,6 @@ where
         let truncated = data.len().saturating_sub(data_len);
         data.truncate(data_len);
 
-        if state.available_data.is_empty() {
-            if let Err(e) = state.local_event.signal_peer(ZXSIO_SIGNAL_INCOMING, zx::Signals::NONE)
-            {
-                error!("socket failed to signal peer: {:?}", e);
-            }
-        }
         Ok((
             addr,
             data,
@@ -2791,6 +2823,7 @@ where
                 *shutdown_read = true;
                 if let Err(e) = self
                     .get_state()
+                    .messages
                     .local_event
                     .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)
                 {
@@ -4079,12 +4112,11 @@ mod tests {
 
         // Wait for all packets to be delivered before changing the buffer size.
         let stack = t.get(0);
-        let has_all_delivered = |(
-            _,
-            BindingData { available_data, local_event: _, peer_event: _, info: _, ref_count: _ },
-        ): (usize, &BindingData<_, _>)| {
-            available_data.available_messages.len() == SENT_PACKETS.into()
-        };
+        let has_all_delivered =
+            |(_, BindingData { messages, peer_event: _, info: _, ref_count: _ }): (
+                usize,
+                &BindingData<_, _>,
+            )| { messages.queue.available_messages.len() == SENT_PACKETS.into() };
         loop {
             let all_delivered = stack
                 .with_ctx(|Ctx { sync_ctx: _, non_sync_ctx }| {
