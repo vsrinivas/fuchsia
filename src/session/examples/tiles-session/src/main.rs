@@ -15,9 +15,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs, server::ServiceObj},
     fuchsia_scenic::{self as scenic, flatland},
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{channel::mpsc::UnboundedSender, StreamExt, TryStreamExt},
+    tracing::{error, warn},
 };
 
 enum ExposedServices {
@@ -52,7 +52,7 @@ const NUM_CONCURRENT_REQUESTS: usize = 5;
 async fn main() -> Result<(), Error> {
     let result = inner_main().await;
     if let Err(e) = result {
-        fx_log_err!("Uncaught error in main(): {}", e);
+        error!("Uncaught error in main(): {}", e);
         return Err(e);
     }
     Ok(())
@@ -117,7 +117,7 @@ async fn inner_main() -> Result<(), Error> {
                 let mut viewport_creation_token = match view_spec.viewport_creation_token {
                     Some(token) => token,
                     None => {
-                        fx_log_warn!("Client attempted to present Gfx component but only Flatland is supported.");
+                        warn!("Client attempted to present Gfx component but only Flatland is supported.");
                         continue;
                     }
                 };
@@ -170,24 +170,21 @@ async fn inner_main() -> Result<(), Error> {
                 watch_child_view(child_view_watcher, internal_sender.clone());
 
                 if let Err(e) = responder.send(&mut Ok(())) {
-                    fx_log_warn!(
-                        "Failed to send response for GraphicalPresenter.PresentView(): {}",
-                        e
-                    );
+                    warn!("Failed to send response for GraphicalPresenter.PresentView(): {}", e);
                 }
             }
             MessageInternal::DismissClient { control_handle } => {
-                fx_log_warn!("Gotta destroy client resources!");
+                warn!("Gotta destroy client resources!");
                 control_handle.shutdown_with_epitaph(zx::Status::OK);
             }
             MessageInternal::ClientDied {} => {
-                fx_log_warn!("Gotta destroy client resources!");
+                warn!("Gotta destroy client resources!");
             }
             MessageInternal::ReceivedClientViewRef { mut view_ref } => {
                 match root_view.view_focuser.request_focus(&mut view_ref).await {
                     Ok(_) => {}
                     Err(e) => {
-                        fx_log_err!("RequestFocus FIDL error: {}", e);
+                        error!("RequestFocus FIDL error: {}", e);
                     }
                 }
             }
@@ -311,7 +308,7 @@ fn run_graphical_presenter_service(
                         Some(proxy) => match proxy.into_proxy() {
                             Ok(proxy) => Some(proxy),
                             Err(e) => {
-                                fx_log_warn!("Failed to obtain AnnotationControllerProxy: {}", e);
+                                warn!("Failed to obtain AnnotationControllerProxy: {}", e);
                                 None
                             }
                         },
@@ -322,7 +319,7 @@ fn run_graphical_presenter_service(
                         Some(request_stream) => match request_stream.into_stream() {
                             Ok(request_stream) => Some(request_stream),
                             Err(e) => {
-                                fx_log_warn!("Failed to obtain ViewControllerRequestStream: {}", e);
+                                warn!("Failed to obtain ViewControllerRequestStream: {}", e);
                                 None
                             }
                         },
@@ -363,7 +360,7 @@ fn run_client_view_controller_request_stream(
             request_stream.next().await
         {
             {
-                fx_log_warn!("We should dismiss ourselves!");
+                warn!("We should dismiss ourselves!");
                 internal_sender
                     .unbounded_send(MessageInternal::DismissClient { control_handle })
                     .expect("Failed to send MessageInternal::DismissClient");

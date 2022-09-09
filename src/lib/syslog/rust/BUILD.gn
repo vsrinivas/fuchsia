@@ -103,8 +103,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/security/pkg_test/tests/access_ota_blob_as_executable:*",
   "//src/security/pkg_test/tests/bad_signature_update:*",
   "//src/security/tee_manager:*",
-  "//src/session/examples/graphical-session:*",
-  "//src/session/examples/tiles-session:*",
   "//src/settings/service:*",
   "//src/settings/service/integration_tests:*",
   "//src/settings/storage:*",

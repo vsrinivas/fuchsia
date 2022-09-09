@@ -10,7 +10,7 @@ mod view;
 
 /// Entry point for the `graphical_session`. It creates an instance of the `App`, runs it, and
 /// waits for it to finish.
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut app = app::App::new().await?;
     app.run().await
