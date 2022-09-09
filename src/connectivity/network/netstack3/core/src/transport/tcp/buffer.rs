@@ -12,10 +12,11 @@ use core::{cmp, convert::TryFrom, fmt::Debug, mem, num::TryFromIntError, ops::Ra
 use crate::transport::tcp::{
     segment::Payload,
     seqnum::{SeqNum, WindowSize},
+    state::Takeable,
 };
 
 /// Common super trait for both sending and receiving buffer.
-pub trait Buffer: Default + Debug {
+pub trait Buffer: Takeable + Debug + Sized {
     /// Returns the number of bytes in the buffer that can be read.
     fn len(&self) -> usize;
 
@@ -27,7 +28,7 @@ pub trait Buffer: Default + Debug {
 pub trait ReceiveBuffer: Buffer {
     /// Stores the remaining data that have not been read by the user when the
     /// connection is shutdown by the peer.
-    type Residual: From<Self> + Buffer;
+    type Residual: From<Self> + Takeable + Debug;
 
     /// Writes `data` into the buffer at `offset`.
     ///

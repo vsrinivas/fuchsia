@@ -1460,7 +1460,10 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
 
     /// Corresponds to the [CLOSE](https://tools.ietf.org/html/rfc793#page-60)
     /// user call.
-    fn close(&mut self) -> Result<(), CloseError> {
+    fn close(&mut self) -> Result<(), CloseError>
+    where
+        ActiveOpen: IntoBuffers<R, S>,
+    {
         match self {
             State::Closed(_) => Err(CloseError::NoConnection),
             State::Listen(_) | State::SynSent(_) => {
@@ -1472,7 +1475,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                 irs,
                 timestamp: _,
                 retrans_timer: _,
-                simultaneous_open: _,
+                simultaneous_open,
             }) => {
                 // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-60):
                 //   SYN-RECEIVED STATE
@@ -1480,9 +1483,24 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                 //     to send, then form a FIN segment and send it, and enter
                 //     FIN-WAIT-1 state; otherwise queue for processing after
                 //     entering ESTABLISHED state.
-                // Note: `Send` in `FinWait1` always has a FIN queued. Since
-                // we don't support sending data when the connection isn't
-                // established, so enter FIN-WAIT-1 immediately.
+                // Note: Per RFC, we should transition into FIN-WAIT-1, however
+                // popular implementations deviate from it - Freebsd resets the
+                // connection instead of a normal shutdown:
+                // https://github.com/freebsd/freebsd-src/blob/8fc80638496e620519b2585d9fab409494ea4b43/sys/netinet/tcp_subr.c#L2344-L2346
+                // while Linux simply does not send anything:
+                // https://github.com/torvalds/linux/blob/68e77ffbfd06ae3ef8f2abf1c3b971383c866983/net/ipv4/inet_connection_sock.c#L1180-L1187
+                // Here we choose the Linux's behavior, because it is more
+                // popular and it is still correct from the protocol's point of
+                // view: the peer will find out eventually when it retransmits
+                // its SYN - it will get a RST back because now the listener no
+                // longer exists - it is as if the initial SYN is lost. The
+                // following check makes sure we only proceed if we were
+                // actively opened, i.e., initiated by `connect`.
+                let active_open = simultaneous_open.as_mut().ok_or(CloseError::NoConnection)?;
+                let (rcv_buffer, snd_buffer) = active_open.take().into_buffers();
+                // Note: `Send` in `FinWait1` always has a FIN queued.
+                // Since we don't support sending data when connection
+                // isn't established, so enter FIN-WAIT-1 immediately.
                 *self = State::FinWait1(FinWait1 {
                     snd: Send {
                         nxt: *iss + 1,
@@ -1491,12 +1509,12 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                         wnd: WindowSize::DEFAULT,
                         wl1: *iss,
                         wl2: *irs,
-                        buffer: S::default(),
+                        buffer: snd_buffer,
                         last_seq_ts: None,
                         rtt_estimator: Estimator::NoSample,
                         timer: None,
                     },
-                    rcv: Recv { buffer: R::default(), assembler: Assembler::new(*irs + 1) },
+                    rcv: Recv { buffer: rcv_buffer, assembler: Assembler::new(*irs + 1) },
                 });
                 Ok(())
             }
@@ -2710,7 +2728,7 @@ mod test {
             irs: ISS_2,
             timestamp: None,
             retrans_timer: RetransTimer { at: DummyInstant::default(), rto: Duration::new(0, 0) },
-            simultaneous_open: None,
+            simultaneous_open: Some(()),
         });
         assert_eq!(state.close(), Ok(()));
         assert_matches!(state, State::FinWait1(_));
