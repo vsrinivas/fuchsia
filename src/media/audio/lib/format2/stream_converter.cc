@@ -152,18 +152,32 @@ StreamConverter::StreamConverter(StreamConverter&&) = default;
 StreamConverter& StreamConverter::operator=(StreamConverter&&) = default;
 
 // static
-StreamConverter StreamConverter::Create(const Format& source_format, const Format& dest_format) {
-  return StreamConverter(source_format, dest_format, CreateCopyImpl(source_format, dest_format));
+std::shared_ptr<StreamConverter> StreamConverter::Create(const Format& source_format,
+                                                         const Format& dest_format) {
+  return Create(source_format, dest_format, CreateCopyImpl(source_format, dest_format));
 }
 
 // static
-StreamConverter StreamConverter::CreateFromFloatSource(const Format& dest_format) {
+std::shared_ptr<StreamConverter> StreamConverter::CreateFromFloatSource(const Format& dest_format) {
   auto source_format = Format::CreateOrDie({
       .sample_format = AudioSampleFormat::kFloat,
       .channel_count = static_cast<uint32_t>(dest_format.channels()),
       .frames_per_second = static_cast<uint32_t>(dest_format.frames_per_second()),
   });
-  return StreamConverter(source_format, dest_format, CreateCopyWithConvert<float>(dest_format));
+  return Create(source_format, dest_format, CreateCopyWithConvert<float>(dest_format));
+}
+
+// static
+std::shared_ptr<StreamConverter> StreamConverter::Create(const Format& source_format,
+                                                         const Format& dest_format,
+                                                         std::unique_ptr<CopyImpl> copy_impl) {
+  struct WithPublicCtor : public StreamConverter {
+    WithPublicCtor(const Format& source_format, const Format& dest_format,
+                   std::unique_ptr<CopyImpl> copy_impl)
+        : StreamConverter(source_format, dest_format, std::move(copy_impl)) {}
+  };
+
+  return std::make_shared<WithPublicCtor>(source_format, dest_format, std::move(copy_impl));
 }
 
 void StreamConverter::Copy(const void* source_data, void* dest_data, int64_t frame_count) const {

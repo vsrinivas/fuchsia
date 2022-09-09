@@ -27,7 +27,7 @@ class ThreadSafeQueue {
   ThreadSafeQueue& operator=(ThreadSafeQueue&&) = delete;
 
   // Pushes an item onto the end of the queue.
-  void push(T&& item) {
+  void push(T item) {
     std::lock_guard<std::mutex> guard(mutex_);
     queue_.push_back(std::move(item));
   }

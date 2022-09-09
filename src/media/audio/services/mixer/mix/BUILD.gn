@@ -53,6 +53,8 @@ source_set("mix") {
     "silence_padding_stage.h",
     "simple_packet_queue_producer_stage.cc",
     "simple_packet_queue_producer_stage.h",
+    "stream_sink_consumer_writer.cc",
+    "stream_sink_consumer_writer.h",
     "thread.h",
   ]
 
@@ -95,6 +97,7 @@ executable("mix_unittests") {
     "ring_buffer_producer_stage_unittest.cc",
     "silence_padding_stage_unittest.cc",
     "simple_packet_queue_producer_stage_unittest.cc",
+    "stream_sink_consumer_writer_unittest.cc",
   ]
 
   deps = [

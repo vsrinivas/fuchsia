@@ -19,11 +19,12 @@ class StreamConverter {
   StreamConverter& operator=(StreamConverter&&);
 
   // The source and destination formats must have matching frame rates and channel counts.
-  static StreamConverter Create(const Format& source_format, const Format& dest_format);
+  static std::shared_ptr<StreamConverter> Create(const Format& source_format,
+                                                 const Format& dest_format);
 
   // Like Create, but assume the source format is `float`.
   // TODO(fxbug.dev/87651): remove when old audio_core code is gone
-  static StreamConverter CreateFromFloatSource(const Format& dest_format);
+  static std::shared_ptr<StreamConverter> CreateFromFloatSource(const Format& dest_format);
 
   const Format& source_format() const { return source_format_; }
   const Format& dest_format() const { return dest_format_; }
@@ -42,6 +43,10 @@ class StreamConverter {
   class CopyImpl;
 
  private:
+  static std::shared_ptr<StreamConverter> Create(const Format& source_format,
+                                                 const Format& dest_format,
+                                                 std::unique_ptr<CopyImpl> copy_impl);
+
   StreamConverter(const Format& source_format, const Format& dest_format,
                   std::unique_ptr<CopyImpl> copy_impl);
 

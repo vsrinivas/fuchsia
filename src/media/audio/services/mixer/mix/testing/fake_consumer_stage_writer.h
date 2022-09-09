@@ -20,7 +20,7 @@ class FakeConsumerStageWriter : public ConsumerStage::Writer {
     bool is_silence;
     int64_t start_frame;
     int64_t length;
-    void* data;
+    const void* data;
   };
   std::vector<Packet>& packets() { return packets_; }
 
@@ -29,7 +29,7 @@ class FakeConsumerStageWriter : public ConsumerStage::Writer {
   std::vector<std::optional<int64_t>> end_calls() { return end_calls_; }
 
   // Implementation of ConsumerStage::Writer.
-  void WriteData(int64_t start_frame, int64_t length, void* data) final {
+  void WriteData(int64_t start_frame, int64_t length, const void* data) final {
     packets_.push_back({
         .is_silence = false,
         .start_frame = start_frame,
@@ -63,7 +63,7 @@ class FakeConsumerStageWriter : public ConsumerStage::Writer {
   }
 
   // Optional callbacks, to get notifications in addition to the saved packets.
-  void SetOnWriteData(std::function<void(int64_t, int64_t, void*)> fn) {
+  void SetOnWriteData(std::function<void(int64_t, int64_t, const void*)> fn) {
     on_write_packet_ = std::move(fn);
   }
   void SetOnWriteSilence(std::function<void(int64_t, int64_t)> fn) {
@@ -76,7 +76,7 @@ class FakeConsumerStageWriter : public ConsumerStage::Writer {
   std::vector<Packet> packets_;
   std::vector<std::optional<int64_t>> end_calls_;
 
-  std::function<void(int64_t, int64_t, void*)> on_write_packet_;
+  std::function<void(int64_t, int64_t, const void*)> on_write_packet_;
   std::function<void(int64_t, int64_t)> on_write_silence_;
   std::function<void()> on_end_;
 };

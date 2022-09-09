@@ -26,6 +26,11 @@ class MemoryMappedBuffer {
   // Returns the end address of the buffer.
   void* end() const { return static_cast<char*>(start()) + size(); }
 
+  // Returns a byte offset within this buffer.
+  void* offset(size_t bytes_from_start) const {
+    return static_cast<char*>(start()) + bytes_from_start;
+  }
+
   // Returns the size of the buffer in bytes.
   size_t size() const { return mapper_.size(); }
 

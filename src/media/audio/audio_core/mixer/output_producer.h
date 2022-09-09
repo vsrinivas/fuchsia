@@ -54,11 +54,11 @@ class OutputProducer {
   int32_t bytes_per_frame() const { return bytes_per_frame_; }
 
   // Implementation detail. Use Select.
-  OutputProducer(::media_audio::StreamConverter converter,
+  OutputProducer(std::shared_ptr<::media_audio::StreamConverter> converter,
                  const fuchsia::media::AudioStreamType& output_format, int32_t bytes_per_sample);
 
  protected:
-  ::media_audio::StreamConverter converter_;
+  std::shared_ptr<::media_audio::StreamConverter> converter_;
   fuchsia::media::AudioStreamType format_;
   int32_t channels_ = 0;
   int32_t bytes_per_sample_ = 0;

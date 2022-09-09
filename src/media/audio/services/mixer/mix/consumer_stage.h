@@ -72,7 +72,7 @@ class ConsumerStage : public PipelineStage {
   class Writer {
    public:
     virtual ~Writer() = default;
-    virtual void WriteData(int64_t start_frame, int64_t length, void* data) = 0;
+    virtual void WriteData(int64_t start_frame, int64_t length, const void* data) = 0;
     virtual void WriteSilence(int64_t start_frame, int64_t length) = 0;
     virtual void End() = 0;
   };

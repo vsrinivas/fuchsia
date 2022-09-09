@@ -18,7 +18,7 @@
 namespace media::audio {
 
 // Constructor/destructor for the common OutputProducer base class.
-OutputProducer::OutputProducer(::media_audio::StreamConverter converter,
+OutputProducer::OutputProducer(std::shared_ptr<::media_audio::StreamConverter> converter,
                                const fuchsia::media::AudioStreamType& format,
                                int32_t bytes_per_sample)
     : converter_(std::move(converter)),
@@ -30,11 +30,11 @@ OutputProducer::OutputProducer(::media_audio::StreamConverter converter,
 
 void OutputProducer::ProduceOutput(const float* source_ptr, void* dest_void_ptr,
                                    int64_t frames) const {
-  converter_.CopyAndClip(source_ptr, dest_void_ptr, frames);
+  converter_->CopyAndClip(source_ptr, dest_void_ptr, frames);
 }
 
 void OutputProducer::FillWithSilence(void* dest_void_ptr, int64_t frames) const {
-  converter_.WriteSilence(dest_void_ptr, frames);
+  converter_->WriteSilence(dest_void_ptr, frames);
 }
 
 // Selection routine which will instantiate a particular templatized version of the output producer.
