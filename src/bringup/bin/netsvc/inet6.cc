@@ -244,6 +244,7 @@ struct Ip6Stack {
                                                                  size_t length, uint8_t type) {
     std::optional mac = ResolveIp6(daddr);
     if (!mac.has_value()) {
+      printf("%s: Failed to resolve ipv6 addr\n", __func__);
       return std::nullopt;
     }
 
@@ -309,6 +310,7 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   size_t length = dlen + UDP_HDR_LEN;
   zx::status status = DeviceBuffer::Get(ETH_MTU, block);
   if (status.is_error()) {
+    printf("%s: DeviceBuffer::Get failed: %s\n", __func__, status.status_string());
     return status.status_value();
   }
   DeviceBuffer& buffer = status.value();
@@ -341,7 +343,12 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   }
   std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
               body + offsetof(udp_hdr_t, checksum));
-  return buffer.Send(ETH_HDR_LEN + IP6_HDR_LEN + length);
+  zx_status_t ret = buffer.Send(ETH_HDR_LEN + IP6_HDR_LEN + length);
+  if (ret != ZX_OK) {
+    printf("%s: buffer.Send(%zu) failed: %s\n", __func__, ETH_HDR_LEN + IP6_HDR_LEN + length,
+           zx_status_get_string(ret));
+  }
+  return ret;
 }
 
 #if REPORT_BAD_PACKETS

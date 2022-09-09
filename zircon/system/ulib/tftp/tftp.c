@@ -617,21 +617,20 @@ tftp_status tftp_handle_request(tftp_session* session, tftp_file_direction direc
   session->state = REQ_RECEIVED;
   session->direction = direction;
 
-  xprintf("%s Request Parsed\n", (direction == SEND_FILE) ? "Read" : "Write");
-  xprintf("    Mode       : %s\n",
-          session->mode == MODE_NETASCII
-              ? "netascii"
-              : session->mode == MODE_OCTET ? "octet"
-                                            : session->mode == MODE_MAIL ? "mail" : "unrecognized");
-  xprintf("    File Size  : %zu\n", session->file_size);
-  xprintf("Options requested: %08x\n", requested_options.mask);
-  xprintf("    Block Size : %d\n", requested_options.block_size);
-  xprintf("    Timeout    : %d\n", requested_options.timeout);
-  xprintf("    Window Size: %d\n", requested_options.window_size);
-  xprintf("Using options\n");
-  xprintf("    Block Size : %d\n", session->block_size);
-  xprintf("    Timeout    : %d\n", session->timeout);
-  xprintf("    Window Size: %d\n", session->window_size);
+  printf("%s Request Parsed\n", (direction == SEND_FILE) ? "Read" : "Write");
+  printf("    Mode       : %s\n", session->mode == MODE_NETASCII ? "netascii"
+                                  : session->mode == MODE_OCTET  ? "octet"
+                                  : session->mode == MODE_MAIL   ? "mail"
+                                                                 : "unrecognized");
+  printf("    File Size  : %zu\n", session->file_size);
+  printf("Options requested: %08x\n", requested_options.mask);
+  printf("    Block Size : %d\n", requested_options.block_size);
+  printf("    Timeout    : %d\n", requested_options.timeout);
+  printf("    Window Size: %d\n", requested_options.window_size);
+  printf("Using options\n");
+  printf("    Block Size : %d\n", session->block_size);
+  printf("    Timeout    : %d\n", session->timeout);
+  printf("    Window Size: %d\n", session->window_size);
 
   return TFTP_NO_ERROR;
 }
@@ -878,11 +877,11 @@ tftp_status tftp_handle_oack(tftp_session* session, tftp_msg* oack, size_t oack_
   }
   *timeout_ms = 1000 * session->timeout;
 
-  xprintf("Options negotiated\n");
-  xprintf("    File Size  : %zu\n", session->file_size);
-  xprintf("    Block Size : %d\n", session->block_size);
-  xprintf("    Timeout    : %d\n", session->timeout);
-  xprintf("    Window Size: %d\n", session->window_size);
+  printf("Options negotiated\n");
+  printf("    File Size  : %zu\n", session->file_size);
+  printf("    Block Size : %d\n", session->block_size);
+  printf("    Timeout    : %d\n", session->timeout);
+  printf("    Window Size: %d\n", session->window_size);
 
   session->offset = 0;
   session->block_number = 0;

@@ -276,6 +276,7 @@ zx::status<DeviceBuffer> DeviceBuffer::Get(size_t len, bool block) {
 
 zx_status_t DeviceBuffer::Send(size_t len) {
   if (g_state == nullptr) {
+    printf("%s: no state?\n", __func__);
     return ZX_ERR_BAD_STATE;
   }
   return std::visit(
@@ -318,7 +319,11 @@ zx_status_t DeviceBuffer::Send(size_t len) {
             b.data().part(0).CapLength(static_cast<uint32_t>(len));
             b.data().SetFrameType(fuchsia_hardware_network::wire::FrameType::kEthernet);
             b.data().SetPortId(static_cast<NetdeviceIfc&>(*g_state).port_id);
-            return b.Send();
+            zx_status_t ret = b.Send();
+            if (ret != ZX_OK) {
+              printf("%s: Send failed: %s", __func__, zx_status_get_string(ret));
+            }
+            return ret;
           },
       },
       contents_);
