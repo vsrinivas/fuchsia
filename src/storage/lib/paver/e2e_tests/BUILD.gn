@@ -37,7 +37,7 @@ if (is_host) {
 
 if (is_linux || is_mac) {
   e2e_tests_pave("nuc-release-pave") {
-    release_builder = "fuchsia/global.ci/core.x64-release"
+    downgrade_release_builder = "fuchsia/global.ci/core.x64-release"
 
     environments = [
       {
@@ -47,6 +47,9 @@ if (is_linux || is_mac) {
         tags = [ "e2e-isolated" ]
       },
     ]
+    pave_timeout = "5m"
+    cycle_count = "1"
+    cycle_timeout = "15m"
   }
 }
 

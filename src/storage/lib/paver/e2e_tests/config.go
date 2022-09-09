@@ -8,6 +8,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/cli"
 )
@@ -18,6 +19,9 @@ type config struct {
 	deviceConfig         *cli.DeviceConfig
 	downgradeBuildConfig *cli.BuildConfig
 	upgradeBuildConfig   *cli.BuildConfig
+	paveTimeout          time.Duration
+	cycleCount           int
+	cycleTimeout         time.Duration
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
@@ -38,6 +42,10 @@ func newConfig(fs *flag.FlagSet) (*config, error) {
 		downgradeBuildConfig: cli.NewBuildConfigWithPrefix(fs, archiveConfig, deviceConfig, "", "downgrade-"),
 		upgradeBuildConfig:   cli.NewBuildConfigWithPrefix(fs, archiveConfig, deviceConfig, os.Getenv("BUILDBUCKET_ID"), "upgrade-"),
 	}
+
+	fs.DurationVar(&c.paveTimeout, "pave-timeout", 5*time.Minute, "Err if a pave takes longer than this time (default is 5 minutes)")
+	fs.IntVar(&c.cycleCount, "cycle-count", 1, "How many cycles to run the test before completing (default is 1)")
+	fs.DurationVar(&c.cycleTimeout, "cycle-timeout", 20*time.Minute, "Err if a test cycle takes longer than this time (default is 10 minutes)")
 
 	return c, nil
 }

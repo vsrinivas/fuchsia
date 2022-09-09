@@ -6,7 +6,122 @@ import("//build/testing/host_test.gni")
 
 # A template that configures a System Test pave test against a given release builder.  The SSH key,
 # upgrade build ID and target device must come environment variables.
+#
+# Parameters
+#
+#   downgrade_release_builder
+#   - Required: Builder from which the downgrade build artifacts will be
+#     downloaded and installed on the device. This has the form of
+#     `project/bucket/builder id`, like `fuchsia/ci/fuchsia-x64-release`.
+#     Conflicts with `downgrade_release_build_id`.
+#   - Type: string
+#
+#   downgrade_release_build_id
+#   - Required: Build ID from which the downgrade build artifacts will be
+#     downloaded and installed on the device. This has the form of `1234...`.
+#     Conflicts with `downgrade_release_builder`.
+#   - Type: string
+#
+#   upgrade_release_builder
+#   - Optional: Builder from which the upgrade build artifacts will be
+#     downloaded and upgraded to on the device, rather than from the current
+#     build. This has the form of `project/bucket/builder id`, like
+#     `fuchsia/ci/fuchsia-x64-release`.
+#     Conflicts with `upgrade_release_build_id`.
+#   - Type: string
+#
+#   upgrade_release_build_id
+#   - Optional: Build ID from which the upgrade build artifacts will be
+#     downloaded and upgraded to on the device, rather than from the current
+#     build. This has the form of `1234...`. Conflicts with `release_builder`.
+#   - Type: string
+#
+#   service_account
+#   - Optional: The service account that has permission to download the build
+#     artifacts.
+#   - Type: string
+#
+#   environments
+#   - Required: What environments this test should target.
+#   - Type: see //build/testing/test_spec.gni for more details. Note that
+#     any label and service_account in each environment is ignored.
+#
+#   timeout
+#   - Optional: Err if this test takes longer than this time.
+#   - Type: duration string
+#
+#   pave_timeout
+#   - Optional: Err if paving takes longer than this time.
+#   - Type: duration string
+#
+#   cycle_timeout
+#   - Optional: Err if the test cycle takes longer than this time.
+#   - Type: duration string
+#
+#   cycle_count
+#   - Optional: How many test cycles should the test execute. Defaults to 1
+#     cycle.
+#   - Type: integer string
 template("e2e_tests_pave") {
+  assert(is_linux || is_mac, "system_tests are for linux/mac only")
+
+  assert(
+      defined(invoker.release_builder) ||
+          defined(invoker.downgrade_release_builder) ||
+          defined(invoker.downgrade_release_build_id),
+      "downgrade_release_builder or downgrade_release_build_id must be defined for $target_name")
+  assert(
+      !(defined(invoker.release_builder) &&
+            defined(invoker.downgrade_release_builder)),
+      "release_builder and downgrade_release_builder are mutually exclusive for $target_name")
+  assert(
+      !((defined(invoker.release_builder) ||
+             defined(invoker.downgrade_release_builder)) &&
+            defined(invoker.downgrade_release_build_id)),
+      "downgrade_release_builder and downgrade_release_build_id are mutually exclusive for $target_name")
+
+  assert(
+      !(defined(invoker.upgrade_release_builder) &&
+            defined(invoker.upgrade_release_build_id)),
+      "upgrade_release_builder and upgrade_release_build_id are mutually exclusive for $target_name")
+
+  _args = [ "-test.v" ]  # Print test detailed case status
+
+  if (defined(invoker.release_builder)) {
+    _args += [
+      "-downgrade-builder-name",
+      invoker.release_builder,
+    ]
+  }
+
+  if (defined(invoker.downgrade_release_builder)) {
+    _args += [
+      "-downgrade-builder-name",
+      invoker.downgrade_release_builder,
+    ]
+  }
+
+  if (defined(invoker.downgrade_release_build_id)) {
+    _args += [
+      "-downgrade-build-id",
+      invoker.downgrade_release_build_id,
+    ]
+  }
+
+  if (defined(invoker.upgrade_release_builder)) {
+    _args += [
+      "-upgrade-builder-name",
+      invoker.upgrade_release_builder,
+    ]
+  }
+
+  if (defined(invoker.upgrade_release_build_id)) {
+    _args += [
+      "-upgrade-build-id",
+      invoker.upgrade_release_build_id,
+    ]
+  }
+
   _service_account = "artifact-readers@fuchsia-infra.iam.gserviceaccount.com"
   if (defined(invoker.service_account)) {
     assert(invoker.service_account != "",
@@ -14,13 +129,46 @@ template("e2e_tests_pave") {
     _service_account = invoker.service_account
   }
 
+  if (defined(invoker.timeout)) {
+    assert(invoker.timeout != "", "'$target_name' cannot have an empty timeout")
+    _args += [
+      "-test.timeout",
+      invoker.timeout,
+    ]
+  }
+
+  if (defined(invoker.pave_timeout)) {
+    assert(invoker.pave_timeout != "",
+           "'$target_name' cannot have an empty pave timeout")
+    _args += [
+      "-pave-timeout",
+      invoker.pave_timeout,
+    ]
+  }
+
+  if (defined(invoker.cycle_timeout)) {
+    assert(invoker.cycle_timeout != "",
+           "'$target_name' cannot have an empty cycle timeout")
+    _args += [
+      "-cycle-timeout",
+      invoker.cycle_timeout,
+    ]
+  }
+
+  if (defined(invoker.cycle_count)) {
+    assert(invoker.cycle_count != "",
+           "'$target_name' cannot have an empty cycle count")
+    _args += [
+      "-cycle-count",
+      invoker.cycle_count,
+    ]
+  }
+
   host_test(target_name) {
     binary_path = "$root_out_dir/e2e_tests_pave"
-    args = [
-      "-downgrade-builder-name",
-      invoker.release_builder,
-    ]
+    args = _args
     deps = [ "//src/storage/lib/paver/e2e_tests:e2e_tests_pave" ]
+
     environments = []
     foreach(env, invoker.environments) {
       env.service_account = _service_account
