@@ -4,7 +4,10 @@
 
 group("util") {
   testonly = true
-  public_deps = [ ":test_view" ]
+  public_deps = [
+    ":portable_ui_test",
+    ":test_view",
+  ]
 }
 
 source_set("test_view") {
@@ -25,5 +28,29 @@ source_set("test_view") {
     "//sdk/lib/syslog/cpp:cpp-macros",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
+  ]
+}
+
+source_set("portable_ui_test") {
+  testonly = true
+  sources = [
+    "portable_ui_test.cc",
+    "portable_ui_test.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.tracing.provider",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.test.input",
+    "//sdk/fidl/fuchsia.ui.test.scene",
+    "//sdk/fidl/fuchsia.vulkan.loader",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zx",
   ]
 }
