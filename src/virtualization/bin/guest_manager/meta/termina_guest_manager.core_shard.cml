@@ -28,16 +28,9 @@
             to: "#termina-guest-manager",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
             to: "#termina-guest-manager",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-gpu",
-            to: "#termina-guest-manager",
-            subdir: "class/gpu",
         },
         {
             protocol: [
