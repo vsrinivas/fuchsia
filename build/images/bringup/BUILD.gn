@@ -29,10 +29,7 @@ bringup_base = {
 
   bootfs_labels = base_driver_packages + [
                     "//build/input:bootfs",
-                    "//build/input/board:system_image_deps",
                     "//:developer_base_packages",
-                    "//:developer_cache_packages",
-                    "//:developer_universe_packages",
                   ]
 
   _ignored = {
