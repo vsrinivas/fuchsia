@@ -22,14 +22,14 @@ std::optional<std::string> MessageFormatter::FormatStringById(
     const std::vector<ArgValue>& arg_values) {
   auto lookup_result = lookup_->String(id);
   if (lookup_result.is_error()) {
-    FX_LOGS(INFO) << "Failed to retrieve the message with ID == " << id
-                  << " lookup error code == " << static_cast<int>(lookup_result.error());
+    FX_LOGS(ERROR) << "Failed to retrieve the message with ID == " << id
+                   << " lookup error code == " << static_cast<int>(lookup_result.error());
     return std::nullopt;
   }
   std::string_view message_pattern = lookup_result.value();
 
   if (arg_names.size() != arg_values.size()) {
-    FX_LOGS(INFO) << "Different number of values than value names";
+    FX_LOGS(ERROR) << "Different number of values than value names";
     return std::nullopt;
   }
 
@@ -40,8 +40,12 @@ std::optional<std::string> MessageFormatter::FormatStringById(
 
   UErrorCode status = U_ZERO_ERROR;
   icu::MessageFormat message_format(std::string(message_pattern).c_str(), locale_, status);
-  FX_DCHECK(U_SUCCESS(status))
-      << "Tried to build an icu::MessageFormat with a invalid string pattern" << message_pattern;
+  if (U_FAILURE(status)) {
+    FX_LOGS(ERROR) << "Tried to build an icu::MessageFormat with a invalid string pattern: "
+                   << message_pattern;
+    return std::nullopt;
+  }
+
   std::vector<icu::Formattable> icu_arg_values;
   for (auto& value : arg_values) {
     switch (value.index()) {
@@ -62,7 +66,7 @@ std::optional<std::string> MessageFormatter::FormatStringById(
   status = U_ZERO_ERROR;
   std::unique_ptr<icu::StringEnumeration> format_names(message_format.getFormatNames(status));
   if (U_FAILURE(status)) {
-    FX_DCHECK(U_SUCCESS(status)) << "Couldn't get format names for the icu::MessageFormat";
+    FX_LOGS(ERROR) << "Couldn't get format names for the icu::MessageFormat";
     return std::nullopt;
   }
   status = U_ZERO_ERROR;
@@ -86,7 +90,7 @@ std::optional<std::string> MessageFormatter::FormatStringById(
   message_format.format(icu_arg_names.data(), icu_arg_values.data(), icu_arg_values.size(),
                         unicode_result, status);
   if (U_FAILURE(status)) {
-    FX_DCHECK(U_SUCCESS(status)) << "Failed to format message";
+    FX_LOGS(ERROR) << "Failed to format message";
     return std::nullopt;
   }
 
