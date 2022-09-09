@@ -984,6 +984,9 @@ bool PageQueues::DebugPageIsPagerBackedDirty(const vm_page_t* page) const {
 }
 
 bool PageQueues::DebugPageIsAnonymous(const vm_page_t* page) const {
+  if (kAnonymousIsReclaimable) {
+    return DebugPageIsReclaim(page);
+  }
   return page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueAnonymous;
 }
 
@@ -997,9 +1000,6 @@ bool PageQueues::DebugPageIsAnonymousZeroFork(const vm_page_t* page) const {
 }
 
 bool PageQueues::DebugPageIsAnyAnonymous(const vm_page_t* page) const {
-  if (kAnonymousIsReclaimable) {
-    return DebugPageIsReclaim(page);
-  }
   return DebugPageIsAnonymous(page) || DebugPageIsAnonymousZeroFork(page);
 }
 
