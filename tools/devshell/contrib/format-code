@@ -321,9 +321,6 @@ done
 for file in "${FILES[@]}"; do
   # Git reports deleted files, which we don't want to try to format
   if [[ ! -f "${file}" ]]; then
-    if [[ ALL_FILES -ne 1 ]]; then
-      printf "File ${file} does not exist and was not formatted\n"
-    fi
     continue
   fi
 
