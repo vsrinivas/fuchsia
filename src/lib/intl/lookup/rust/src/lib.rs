@@ -4,7 +4,6 @@
 
 use {
     anyhow::{Context, Result},
-    fuchsia_syslog::fx_log_err,
     intl_model as model, libc, rust_icu_common as ucommon, rust_icu_sys as usys,
     rust_icu_uloc as uloc,
     std::collections::BTreeMap,
@@ -15,6 +14,7 @@ use {
     std::io,
     std::mem,
     std::str,
+    tracing::error,
 };
 
 /// The directory where localized resources are kept.
@@ -45,21 +45,21 @@ trait CApi {
 
 impl From<str::Utf8Error> for LookupStatus {
     fn from(e: str::Utf8Error) -> Self {
-        fx_log_err!("intl: utf-8: {:?}", e);
+        error!("intl: utf-8: {:?}", e);
         LookupStatus::Unavailable
     }
 }
 
 impl From<anyhow::Error> for LookupStatus {
     fn from(e: anyhow::Error) -> Self {
-        fx_log_err!("intl: general: {:?}", e);
+        error!("intl: general: {:?}", e);
         LookupStatus::Internal
     }
 }
 
 impl From<ucommon::Error> for LookupStatus {
     fn from(e: ucommon::Error) -> Self {
-        fx_log_err!("intl: icu: {:?}", e);
+        error!("intl: icu: {:?}", e);
         LookupStatus::Internal
     }
 }
@@ -158,7 +158,7 @@ pub unsafe extern "C" fn intl_lookup_new(
         let cstr = ffi::CStr::from_ptr(*raw).to_str();
         match cstr {
             Err(e) => {
-                fx_log_err!("intl::intl_lookup_new::c_str: {:?}", &e);
+                error!("intl::intl_lookup_new::c_str: {:?}", &e);
                 let ls: LookupStatus = e.into();
                 *status = ls as i8;
                 return std::ptr::null::<Lookup>();
@@ -173,7 +173,7 @@ pub unsafe extern "C" fn intl_lookup_new(
     match lookup_or {
         Ok(lookup) => Box::into_raw(Box::new(lookup)),
         Err(e) => {
-            fx_log_err!("intl::intl_lookup_new: {:?}", &e);
+            error!("intl::intl_lookup_new: {:?}", &e);
             let ls: LookupStatus = e.into();
             *status = ls as i8;
             std::ptr::null::<Lookup>()

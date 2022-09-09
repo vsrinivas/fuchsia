@@ -28,12 +28,12 @@ rustc_staticlib("lib") {
   deps = [
     "//src/lib/icu_data/rust/icu_data",
     "//src/lib/intl/model:lib",
-    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:rust_icu_common",
     "//third_party/rust_crates:rust_icu_sys",
     "//third_party/rust_crates:rust_icu_uloc",
+    "//third_party/rust_crates:tracing",
   ]
   non_rust_deps = [
     "//third_party/icu",

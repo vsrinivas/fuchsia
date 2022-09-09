@@ -76,7 +76,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/fonts:*",
   "//src/hwinfo:*",
   "//src/lib/fuchsia-component-test/tests:*",
-  "//src/lib/intl/lookup/rust:*",
   "//src/lib/storage/block_client/rust:*",
   "//src/lib/ui/carnelian:*",
   "//src/lib/ui/input-synthesis:*",
