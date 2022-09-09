@@ -285,7 +285,7 @@ enum StateName {
 struct GestureArena<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> {
     contender_factory: ContenderFactory,
     mutable_state: RefCell<MutableState>,
-    touchpad_event_log: RefCell<BoundedListNode>,
+    inspect_log: RefCell<BoundedListNode>,
 }
 
 impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> GestureArena<ContenderFactory> {
@@ -293,64 +293,71 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> GestureArena<ContenderFa
     fn new_for_test(
         contender_factory: ContenderFactory,
         inspector: &fuchsia_inspect::Inspector,
-        max_touchpad_event_log_entries: usize,
+        max_inspect_log_entries: usize,
     ) -> GestureArena<ContenderFactory> {
-        Self::new_internal(contender_factory, inspector.root(), max_touchpad_event_log_entries)
+        Self::new_internal(contender_factory, inspector.root(), max_inspect_log_entries)
     }
 
     fn new_internal(
         contender_factory: ContenderFactory,
         inspect_node: &InspectNode,
-        max_touchpad_event_log_entries: usize,
+        max_inspect_log_entries: usize,
     ) -> GestureArena<ContenderFactory> {
         GestureArena {
             contender_factory,
             mutable_state: RefCell::new(MutableState::Idle),
-            touchpad_event_log: RefCell::new(BoundedListNode::new(
-                inspect_node.create_child(inspect_keys::TOUCHPAD_EVENTS_ROOT),
-                max_touchpad_event_log_entries,
+            inspect_log: RefCell::new(BoundedListNode::new(
+                inspect_node.create_child(inspect_keys::ARENA_LOG_ROOT),
+                max_inspect_log_entries,
             )),
         }
     }
 }
 
 impl TouchpadEvent {
-    fn log_inspect(&self, inspect_log: &mut BoundedListNode) {
+    fn log_inspect(&self, log_entry_node: &InspectNode) {
         use inspect_keys::*;
-        let touchpad_event_node = inspect_log.create_entry();
+        log_entry_node.atomic_update(|log_entry_node| {
+            let touchpad_event_node = log_entry_node.create_child(&*TOUCHPAD_EVENT_NODE);
 
-        touchpad_event_node.atomic_update(|touchpad_event_node| {
             // Create an inspect array from the pressed buttons.
             let pressed_buttons_node = touchpad_event_node
-                .create_uint_array(&*PRESSED_BUTTONS, self.pressed_buttons.len());
-            // Note: no need for `atomic_update()` on `pressed_buttons_node`,
-            // since there should never be more than 1 pressed button.
+                .create_uint_array(&*PRESSED_BUTTONS_PROP, self.pressed_buttons.len());
             self.pressed_buttons.iter().enumerate().for_each(|(i, &button_id)| {
                 pressed_buttons_node.set(i, button_id);
             });
 
-            // Add all properties to the log entry.
-            touchpad_event_node.record_int(&*EVENT_TIME, self.timestamp.into_nanos());
-            touchpad_event_node.record_int(
-                &*ENTRY_LATENCY,
-                // Use lower precision for latency, to minimize space.
-                (fuchsia_async::Time::now().into_zx() - self.timestamp).into_micros(),
-            );
+            // Populate the touchpad event details
+            log_common(&touchpad_event_node, self.timestamp);
             touchpad_event_node.record(pressed_buttons_node);
-            touchpad_event_node.record_child(&*CONTACT_STATE, |contact_set_node| {
+            touchpad_event_node.record_child(&*CONTACT_STATE_PROP, |contact_set_node| {
                 self.contacts.iter().for_each(|contact| {
                     contact_set_node.record_child(contact.id.to_string(), |contact_node| {
-                        contact_node.record_double(&*X_POS, f64::from(contact.position.x));
-                        contact_node.record_double(&*Y_POS, f64::from(contact.position.y));
+                        contact_node.record_double(&*X_POS_PROP, f64::from(contact.position.x));
+                        contact_node.record_double(&*Y_POS_PROP, f64::from(contact.position.y));
                         if let Some(contact_size) = contact.contact_size {
-                            contact_node.record_double(&*WIDTH, f64::from(contact_size.width));
-                            contact_node.record_double(&*HEIGHT, f64::from(contact_size.height));
+                            contact_node.record_double(&*WIDTH_PROP, f64::from(contact_size.width));
+                            contact_node
+                                .record_double(&*HEIGHT_PROP, f64::from(contact_size.height));
                         }
                     })
                 })
-            })
+            });
+
+            // Pass ownership of the touchpad event node to the log.
+            log_entry_node.record(touchpad_event_node);
         })
     }
+}
+
+fn log_common(inspect_node: &InspectNode, driver_timestamp: zx::Time) {
+    use inspect_keys::*;
+    inspect_node.record_int(&*EVENT_TIME_PROP, driver_timestamp.into_nanos());
+    inspect_node.record_int(
+        &*ENTRY_LATENCY_PROP,
+        // Use lower precision for latency, to minimize space.
+        (fuchsia_async::Time::now().into_zx() - driver_timestamp).into_micros(),
+    );
 }
 
 impl MutableState {
@@ -444,7 +451,7 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> GestureArena<ContenderFa
     ) -> Result<Vec<input_device::InputEvent>, Error> {
         let touchpad_event = parse_touchpad_event(event_time, touchpad_event, device_descriptor)
             .context("dropping touchpad event")?;
-        touchpad_event.log_inspect(&mut self.touchpad_event_log.borrow_mut());
+        touchpad_event.log_inspect(self.inspect_log.borrow_mut().create_entry());
 
         let old_state_name = self.mutable_state.borrow().get_state_name();
         let (new_state, generated_events) = match self.mutable_state.replace(MutableState::Invalid)
@@ -761,7 +768,10 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> GestureArena<ContenderFa
 impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> InputHandler
     for GestureArena<ContenderFactory>
 {
-    /// Interprets `TouchpadEvent`s, and sends corresponding `MouseEvent`s downstream.
+    /// Handle `input_event`:
+    /// * For an unhandled touchpad event, try to interpret as a touchpad gesture.
+    /// * For a keyboard event, log the timestamp, and pass the event onwards.
+    /// * For any other event, pass onwards without logging.
     async fn handle_input_event(
         self: std::rc::Rc<Self>,
         input_event: input_device::InputEvent,
@@ -782,6 +792,17 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> InputHandler
                         vec![input_event]
                     }
                 }
+            }
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Keyboard(_),
+                event_time,
+                ..
+            } => {
+                log_keyboard_event_timestamp(
+                    self.inspect_log.borrow_mut().create_entry(),
+                    event_time,
+                );
+                vec![input_event]
             }
             _ => {
                 vec![input_event]
@@ -889,6 +910,15 @@ fn get_position_divisor_to_mm(
     Ok(first_divisor)
 }
 
+fn log_keyboard_event_timestamp(log_entry_node: &InspectNode, driver_timestamp: zx::Time) {
+    use inspect_keys::*;
+    log_entry_node.atomic_update(|log_entry_node| {
+        log_entry_node.record_child(&*KEY_EVENT_NODE, |key_event_node| {
+            log_common(key_event_node, driver_timestamp);
+        })
+    });
+}
+
 #[cfg(test)]
 mod tests {
     mod utils {
@@ -897,7 +927,7 @@ mod tests {
                 Contender, ExamineEventResult, MatchedContender, ProcessBufferedEventsResult,
                 ProcessNewEventResult, TouchpadEvent, VerifyEventResult, Winner, PRIMARY_BUTTON,
             },
-            crate::{input_device, mouse_binding, touch_binding, Position},
+            crate::{input_device, keyboard_binding, mouse_binding, touch_binding, Position},
             assert_matches::assert_matches,
             fidl_fuchsia_input_report as fidl_input_report, fuchsia_zircon as zx,
             maplit::hashset,
@@ -949,6 +979,23 @@ mod tests {
             }
         }
 
+        /// The gesture arena is mostly agnostic to the event details. Consequently, most
+        /// tests can use the same lightly populated keyboard event.
+        pub(super) fn make_unhandled_keyboard_event() -> input_device::InputEvent {
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Keyboard(
+                    keyboard_binding::KeyboardEvent::new(
+                        fidl_fuchsia_input::Key::A,
+                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                    ),
+                ),
+                device_descriptor: make_keyboard_descriptor(),
+                event_time: zx::Time::ZERO,
+                trace_id: None,
+                handled: input_device::Handled::No,
+            }
+        }
+
         pub(super) fn make_touchpad_descriptor() -> input_device::InputDeviceDescriptor {
             input_device::InputDeviceDescriptor::Touchpad(touch_binding::TouchpadDeviceDescriptor {
                 device_id: 1,
@@ -980,6 +1027,20 @@ mod tests {
                 buttons: Some(vec![PRIMARY_BUTTON]),
                 counts_per_mm: mouse_binding::DEFAULT_COUNTS_PER_MM,
             })
+        }
+
+        fn make_keyboard_descriptor() -> input_device::InputDeviceDescriptor {
+            input_device::InputDeviceDescriptor::Keyboard(
+                keyboard_binding::KeyboardDeviceDescriptor {
+                    device_id: 3,
+                    device_info: fidl_fuchsia_input_report::DeviceInfo {
+                        product_id: 0,
+                        vendor_id: 0,
+                        version: 0,
+                    },
+                    keys: vec![fidl_fuchsia_input::Key::A],
+                },
+            )
         }
 
         #[derive(Clone, Debug)]
@@ -1280,9 +1341,9 @@ mod tests {
                     TouchpadEvent,
                 },
                 utils::{
-                    make_touchpad_descriptor, make_unhandled_mouse_event,
-                    make_unhandled_touchpad_event, ContenderFactoryOnce, StubContender,
-                    StubMatchedContender,
+                    make_touchpad_descriptor, make_unhandled_keyboard_event,
+                    make_unhandled_mouse_event, make_unhandled_touchpad_event,
+                    ContenderFactoryOnce, StubContender, StubMatchedContender,
                 },
             },
             crate::{input_device, touch_binding, Position},
@@ -1300,12 +1361,10 @@ mod tests {
             Rc::new(GestureArena {
                 contender_factory: move || contender_factory.make_contenders(),
                 mutable_state: RefCell::new(state),
-                touchpad_event_log: RefCell::new(
-                    fuchsia_inspect_contrib::nodes::BoundedListNode::new(
-                        fuchsia_inspect::Inspector::new().root().create_child("some_key"),
-                        1,
-                    ),
-                ),
+                inspect_log: RefCell::new(fuchsia_inspect_contrib::nodes::BoundedListNode::new(
+                    fuchsia_inspect::Inspector::new().root().create_child("some_key"),
+                    1,
+                )),
             })
         }
 
@@ -1321,12 +1380,10 @@ mod tests {
             let arena = Rc::new(GestureArena {
                 contender_factory,
                 mutable_state: RefCell::new(state),
-                touchpad_event_log: RefCell::new(
-                    fuchsia_inspect_contrib::nodes::BoundedListNode::new(
-                        fuchsia_inspect::Inspector::new().root().create_child("some_key"),
-                        1,
-                    ),
-                ),
+                inspect_log: RefCell::new(fuchsia_inspect_contrib::nodes::BoundedListNode::new(
+                    fuchsia_inspect::Inspector::new().root().create_child("some_key"),
+                    1,
+                )),
             });
             arena.handle_input_event(make_unhandled_touchpad_event()).await;
             assert!(contender_factory_called.get());
@@ -1345,14 +1402,34 @@ mod tests {
             let arena = Rc::new(GestureArena {
                 contender_factory,
                 mutable_state: RefCell::new(state),
-                touchpad_event_log: RefCell::new(
-                    fuchsia_inspect_contrib::nodes::BoundedListNode::new(
-                        fuchsia_inspect::Inspector::new().root().create_child("some_key"),
-                        1,
-                    ),
-                ),
+                inspect_log: RefCell::new(fuchsia_inspect_contrib::nodes::BoundedListNode::new(
+                    fuchsia_inspect::Inspector::new().root().create_child("some_key"),
+                    1,
+                )),
             });
             arena.handle_input_event(make_unhandled_mouse_event()).await;
+            assert!(!contender_factory_called.get());
+        }
+
+        #[test_case(MutableState::Idle; "idle")]
+        #[test_case(MutableState::Chain; "chain")]
+        #[fuchsia::test(allow_stalls = false)]
+        async fn does_not_invoke_contender_factory_on_keyboard_event(state: MutableState) {
+            let contender_factory_called = Cell::new(false);
+            let contender_factory = || {
+                contender_factory_called.set(true);
+                Vec::new()
+            };
+
+            let arena = Rc::new(GestureArena {
+                contender_factory,
+                mutable_state: RefCell::new(state),
+                inspect_log: RefCell::new(fuchsia_inspect_contrib::nodes::BoundedListNode::new(
+                    fuchsia_inspect::Inspector::new().root().create_child("some_key"),
+                    1,
+                )),
+            });
+            arena.handle_input_event(make_unhandled_keyboard_event()).await;
             assert!(!contender_factory_called.get());
         }
 
@@ -1637,9 +1714,9 @@ mod tests {
                     VerifyEventResult, PRIMARY_BUTTON,
                 },
                 utils::{
-                    make_touchpad_descriptor, make_unhandled_mouse_event,
-                    make_unhandled_touchpad_event, ContenderForever, StubContender,
-                    StubMatchedContender, StubWinner,
+                    make_touchpad_descriptor, make_unhandled_keyboard_event,
+                    make_unhandled_mouse_event, make_unhandled_touchpad_event, ContenderForever,
+                    StubContender, StubMatchedContender, StubWinner,
                 },
             },
             crate::{input_device, mouse_binding, touch_binding, Position},
@@ -1684,12 +1761,10 @@ mod tests {
                     },
                     buffered_events,
                 }),
-                touchpad_event_log: RefCell::new(
-                    fuchsia_inspect_contrib::nodes::BoundedListNode::new(
-                        fuchsia_inspect::Inspector::new().root().create_child("some_key"),
-                        1,
-                    ),
-                ),
+                inspect_log: RefCell::new(fuchsia_inspect_contrib::nodes::BoundedListNode::new(
+                    fuchsia_inspect::Inspector::new().root().create_child("some_key"),
+                    1,
+                )),
             })
         }
 
@@ -1725,6 +1800,24 @@ mod tests {
             matched_contender
                 .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
             arena.handle_input_event(make_unhandled_mouse_event()).await;
+            assert_eq!(contender.calls_received(), 0);
+            assert_eq!(matched_contender.verify_event_calls_received(), 0);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn does_not_invoke_examine_or_verify_event_on_keyboard_event() {
+            let contender = StubContender::new();
+            let matched_contender = StubMatchedContender::new();
+            let arena = make_matching_arena(
+                vec![contender.clone()],
+                vec![matched_contender.clone()],
+                vec![],
+                None,
+            );
+            contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
+            matched_contender
+                .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
+            arena.handle_input_event(make_unhandled_keyboard_event()).await;
             assert_eq!(contender.calls_received(), 0);
             assert_eq!(matched_contender.verify_event_calls_received(), 0);
         }
@@ -2179,8 +2272,9 @@ mod tests {
                     MouseEvent, MutableState, ProcessNewEventResult, TouchpadEvent,
                 },
                 utils::{
-                    make_touchpad_descriptor, make_unhandled_mouse_event,
-                    make_unhandled_touchpad_event, ContenderForever, StubContender, StubWinner,
+                    make_touchpad_descriptor, make_unhandled_keyboard_event,
+                    make_unhandled_mouse_event, make_unhandled_touchpad_event, ContenderForever,
+                    StubContender, StubWinner,
                 },
             },
             crate::{input_device, mouse_binding, touch_binding, Position},
@@ -2215,12 +2309,10 @@ mod tests {
             Rc::new(GestureArena {
                 contender_factory: move || vec![contender.take().expect("`contender` is None")],
                 mutable_state: RefCell::new(MutableState::Forwarding { winner: winner.into() }),
-                touchpad_event_log: RefCell::new(
-                    fuchsia_inspect_contrib::nodes::BoundedListNode::new(
-                        fuchsia_inspect::Inspector::new().root().create_child("some_key"),
-                        1,
-                    ),
-                ),
+                inspect_log: RefCell::new(fuchsia_inspect_contrib::nodes::BoundedListNode::new(
+                    fuchsia_inspect::Inspector::new().root().create_child("some_key"),
+                    1,
+                )),
             })
         }
 
@@ -2245,6 +2337,18 @@ mod tests {
                 "some reason",
             ));
             arena.handle_input_event(make_unhandled_mouse_event()).await;
+            assert_eq!(winner.calls_received(), 0);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn does_not_invoke_process_new_event_on_keyboard_event() {
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), None);
+            winner.set_next_result(ProcessNewEventResult::EndGesture(
+                EndGestureEvent::NoEvent,
+                "some reason",
+            ));
+            arena.handle_input_event(make_unhandled_keyboard_event()).await;
             assert_eq!(winner.calls_received(), 0);
         }
 
@@ -2785,7 +2889,7 @@ mod tests {
                 super::{GestureArena, InputHandler},
                 utils::make_unhandled_touchpad_event,
             },
-            crate::{input_device, touch_binding, Position, Size},
+            crate::{input_device, keyboard_binding, touch_binding, Position, Size},
             assert_matches::assert_matches,
             fidl_fuchsia_input_report as fidl_input_report, fuchsia_async as fasync,
             fuchsia_zircon as zx,
@@ -2794,12 +2898,12 @@ mod tests {
         };
 
         #[fuchsia::test]
-        fn logs_touchpad_event_to_inspect() {
+        fn logs_touchpad_events_and_key_event_timestamps_to_inspect() {
             let mut executor =
                 fasync::TestExecutor::new_with_fake_time().expect("failed to create executor");
             let inspector = fuchsia_inspect::Inspector::new();
             let arena = Rc::new(GestureArena::new_for_test(|| vec![], &inspector, 100));
-            let device_descriptor = input_device::InputDeviceDescriptor::Touchpad(
+            let touchpad_descriptor = input_device::InputDeviceDescriptor::Touchpad(
                 touch_binding::TouchpadDeviceDescriptor {
                     device_id: 1,
                     contacts: vec![touch_binding::ContactDeviceDescriptor {
@@ -2821,7 +2925,19 @@ mod tests {
                     }],
                 },
             );
+            let keyboard_descriptor = input_device::InputDeviceDescriptor::Keyboard(
+                keyboard_binding::KeyboardDeviceDescriptor {
+                    device_id: 2,
+                    device_info: fidl_fuchsia_input_report::DeviceInfo {
+                        product_id: 0,
+                        vendor_id: 0,
+                        version: 0,
+                    },
+                    keys: vec![fidl_fuchsia_input::Key::A, fidl_fuchsia_input::Key::B],
+                },
+            );
 
+            // Process a touchpad event without width/height.
             let mut handle_event_fut = arena.clone().handle_input_event(input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
@@ -2842,12 +2958,50 @@ mod tests {
                         pressed_buttons: hashset! {1},
                     },
                 ),
-                device_descriptor: device_descriptor.clone(),
+                device_descriptor: touchpad_descriptor.clone(),
                 event_time: zx::Time::from_nanos(12_300),
                 trace_id: None,
                 handled: input_device::Handled::No,
             });
             executor.set_fake_time(fasync::Time::from_nanos(10_000_000));
+            assert_matches!(
+                executor.run_until_stalled(&mut handle_event_fut),
+                std::task::Poll::Ready(_)
+            );
+
+            // Process a handled key event.
+            let mut handle_event_fut = arena.clone().handle_input_event(input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Keyboard(
+                    keyboard_binding::KeyboardEvent::new(
+                        fidl_fuchsia_input::Key::A,
+                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                    ),
+                ),
+                device_descriptor: keyboard_descriptor.clone(),
+                event_time: zx::Time::from_nanos(11_000_000),
+                trace_id: None,
+                handled: input_device::Handled::Yes,
+            });
+            executor.set_fake_time(fasync::Time::from_nanos(12_000_000));
+            assert_matches!(
+                executor.run_until_stalled(&mut handle_event_fut),
+                std::task::Poll::Ready(_)
+            );
+
+            // Process an unhandled key event.
+            let mut handle_event_fut = arena.clone().handle_input_event(input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Keyboard(
+                    keyboard_binding::KeyboardEvent::new(
+                        fidl_fuchsia_input::Key::B,
+                        fidl_fuchsia_ui_input3::KeyEventType::Pressed,
+                    ),
+                ),
+                device_descriptor: keyboard_descriptor,
+                event_time: zx::Time::from_nanos(13_000_000),
+                trace_id: None,
+                handled: input_device::Handled::No,
+            });
+            executor.set_fake_time(fasync::Time::from_nanos(14_000_000));
             assert_matches!(
                 executor.run_until_stalled(&mut handle_event_fut),
                 std::task::Poll::Ready(_)
@@ -2866,12 +3020,12 @@ mod tests {
                         pressed_buttons: hashset! {},
                     },
                 ),
-                device_descriptor,
-                event_time: zx::Time::from_nanos(8_000_000),
+                device_descriptor: touchpad_descriptor,
+                event_time: zx::Time::from_nanos(18_000_000),
                 trace_id: None,
                 handled: input_device::Handled::No,
             });
-            executor.set_fake_time(fasync::Time::from_nanos(12_000_000));
+            executor.set_fake_time(fasync::Time::from_nanos(19_000_000));
             assert_matches!(
                 executor.run_until_stalled(&mut handle_event_fut),
                 std::task::Poll::Ready(_)
@@ -2887,25 +3041,40 @@ mod tests {
             */
 
             fuchsia_inspect::assert_data_tree!(inspector, root: {
-                touchpad_events: {
+                gestures_event_log: {
                     "0": {
-                        driver_monotonic_nanos: 12_300i64,
-                        entry_latency_micros: 9987i64,  // 10_000_000 - 12_300 = 9_987_700 nsec
-                        pressed_buttons: vec![ 1u64 ],
-                        contacts: {
-                            "1": {
-                                pos_x_mm: 2.0,
-                                pos_y_mm: 3.0,
-                            },
-                            "2": {
-                                pos_x_mm: 40.0,
-                                pos_y_mm: 50.0,
-                            },
-                        },
+                        touchpad_event: {
+                            driver_monotonic_nanos: 12_300i64,
+                            entry_latency_micros: 9987i64,  // 10_000_000 - 12_300 = 9_987_700 nsec
+                            pressed_buttons: vec![ 1u64 ],
+                            contacts: {
+                                "1": {
+                                    pos_x_mm: 2.0,
+                                    pos_y_mm: 3.0,
+                                },
+                                "2": {
+                                    pos_x_mm: 40.0,
+                                    pos_y_mm: 50.0,
+                                },
+                            }
+                        }
                     },
                     "1": {
-                        driver_monotonic_nanos: 8_000_000i64,
-                        entry_latency_micros: 4_000i64,  // 12_000_000 - 8_000_000 = 4_000_000 nsec
+                        key_event: {
+                            driver_monotonic_nanos: 11_000_000i64,
+                            entry_latency_micros: 1_000i64,  // 12_000_000 - 11_000_000 = 1_000_00 nsec
+                        }
+                    },
+                    "2": {
+                        key_event: {
+                            driver_monotonic_nanos: 13_000_000i64,
+                            entry_latency_micros: 1_000i64,  // 14_000_000 - 13_000_000 = 1_000_00 nsec
+                        }
+                    },
+                    "3": {
+                        touchpad_event: {
+                            driver_monotonic_nanos: 18_000_000i64,
+                            entry_latency_micros: 1_000i64,  // 19_000_000 - 18_000_000 = 1_000_00 nsec
                             pressed_buttons: Vec::<u64>::new(),
                             contacts: {
                                 "1": {
@@ -2914,6 +3083,7 @@ mod tests {
                                     width_raw: 30.0,
                                     height_raw: 40.0,
                                 },
+                            }
                         }
                     },
                 }
@@ -2930,7 +3100,7 @@ mod tests {
             arena.clone().handle_input_event(make_unhandled_touchpad_event()).await; // 3
             arena.clone().handle_input_event(make_unhandled_touchpad_event()).await; // 4
             fuchsia_inspect::assert_data_tree!(inspector, root: {
-                touchpad_events: {
+                gestures_event_log: {
                     "3": contains {},
                     "4": contains {},
                 }
