@@ -69,6 +69,9 @@ type DaiFrameFormatCustom = struct {
     /// Justification of the samples within a slot.
     left_justified bool;
     /// Clocking of data samples and frame sync output on either raising or falling sclk.
+    /// If true then the sclk raises on the raising edge of the data and frame sync, i.e.
+    /// the data will be sampled on the falling edge of sclk (the middle of the sclk cycle).
+    /// Hence, if false then data will be sampled on the raising edge of sclk.
     sclk_on_raising bool;
     /// Number of sclks between the beginning of a frame sync change and audio samples.
     /// For example, for I2S set to 1 and for stereo left justified set to 0.
