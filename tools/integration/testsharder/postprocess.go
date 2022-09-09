@@ -13,14 +13,12 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 )
 
@@ -113,22 +111,25 @@ func extractDepsFromTest(test Test, fuchsiaBuildDir string) (Test, []string, err
 	return test, deps, err
 }
 
+func envsEqual(env1, env2 build.Environment) bool {
+	return environmentName(env1) == environmentName(env2)
+}
+
 // MultiplyShards appends new shards to shards where each new shard contains one test
 // repeated multiple times according to the specifications in multipliers.
 // It also removes all multiplied tests from the input shards.
 func MultiplyShards(
 	ctx context.Context,
 	shards []*Shard,
-	multipliers []TestModifier,
+	multipliers []ModifierMatch,
 	testDurations TestDurationsMap,
 	// TODO(olivernewman): Use the adjusted target duration calculated by
 	// WithTargetDuration instead of the original target duration.
 	targetDuration time.Duration,
 	targetTestCount int,
-) ([]*Shard, error) {
-	var tooManyMatchesMultipliers []string
+) []*Shard {
 	for _, multiplier := range multipliers {
-		if multiplier.TotalRuns < 0 {
+		if multiplier.Modifier.TotalRuns < 0 {
 			continue
 		}
 		type multiplierMatch struct {
@@ -136,32 +137,24 @@ func MultiplyShards(
 			test     Test
 			testIdx  int
 		}
-		var exactMatches []*multiplierMatch
-		var regexMatches []*multiplierMatch
-
-		nameRegex, err := regexp.Compile(multiplier.Name)
-		if err != nil {
-			return nil, fmt.Errorf("%w %q: %s", errInvalidMultiplierRegex, multiplier.Name, err)
-		}
+		var matches []*multiplierMatch
 
 		for si, shard := range shards {
 			for ti, test := range shard.Tests {
-				// An empty OS matches all OSes.
-				if multiplier.OS != "" && multiplier.OS != test.OS {
+				// An empty environment matches all environments.
+				if !envsEqual(multiplier.Env, build.Environment{}) && !envsEqual(multiplier.Env, shard.Env) {
 					continue
 				}
 
 				match := &multiplierMatch{shardIdx: si, test: test, testIdx: ti}
-				if multiplier.Name == test.Name {
-					exactMatches = append(exactMatches, match)
-				} else if nameRegex.FindString(test.Name) != "" {
-					regexMatches = append(regexMatches, match)
+				if multiplier.Test == test.Name {
+					matches = append(matches, match)
 				} else {
 					continue
 				}
 
-				if multiplier.TotalRuns > 0 {
-					match.test.Runs = multiplier.TotalRuns
+				if multiplier.Modifier.TotalRuns > 0 {
+					match.test.Runs = multiplier.Modifier.TotalRuns
 				} else if targetDuration > 0 {
 					// We both cap the number of runs and apply a safety factor because
 					// we want to keep the total runs to a reasonable number
@@ -186,26 +179,6 @@ func MultiplyShards(
 				match.test.RunAlgorithm = StopOnFailure
 				match.test.StopRepeatingAfterSecs = int(targetDuration.Seconds())
 			}
-		}
-
-		// We'll consider partial regex matches only when we have no exact
-		// matches.
-		matches := exactMatches
-		if len(matches) == 0 {
-			matches = regexMatches
-		}
-
-		if len(matches) > maxMatchesPerMultiplier {
-			tooManyMatchesMultipliers = append(tooManyMatchesMultipliers, multiplier.Name)
-			logger.Errorf(ctx, "Multiplier %q matches too many tests (%d), maximum is %d",
-				multiplier.Name, len(matches), maxMatchesPerMultiplier)
-			continue
-		} else if len(tooManyMatchesMultipliers) > 0 {
-			// If we've already failed validation of a previous multiplier,
-			// then we're bound to fail so there's no use constructing the
-			// shard. Just make sure that we proceed to emit logs for other
-			// multipliers that match too many tests.
-			continue
 		}
 
 		shardIdxToTestIdx := make([][]int, len(shards))
@@ -250,14 +223,8 @@ func MultiplyShards(
 			}
 		}
 	}
-	if len(tooManyMatchesMultipliers) > 0 {
-		return nil, fmt.Errorf(
-			"%d multiplier(s) match too many tests: %w",
-			len(tooManyMatchesMultipliers), errTooManyMultiplierMatches,
-		)
-	}
 
-	return shards, nil
+	return shards
 }
 
 // AddExpectedDurationTags uses the given TestDurations to annotate each test
@@ -279,26 +246,32 @@ func AddExpectedDurationTags(shards []*Shard, testDurations TestDurationsMap) []
 }
 
 // ApplyModifiers applies the given test modifiers to tests in the given shards.
-func ApplyModifiers(shards []*Shard, modTests []TestModifier) ([]*Shard, error) {
-	defaultModTest := TestModifier{}
-	foundDefault := false
-	for _, modTest := range modTests {
-		if modTest.Name == "*" {
-			if foundDefault {
+func ApplyModifiers(shards []*Shard, modMatches []ModifierMatch) ([]*Shard, error) {
+	defaultModMatch := ModifierMatch{Modifier: TestModifier{}}
+	modsPerEnv := make(map[string]ModifierMatch)
+	for _, modMatch := range modMatches {
+		if modMatch.Test == "" {
+			if _, ok := modsPerEnv[environmentName(modMatch.Env)]; ok {
 				return nil, errMultipleDefaultModifiers
 			}
-			defaultModTest = modTest
-			foundDefault = true
+			modsPerEnv[environmentName(modMatch.Env)] = modMatch
 		}
 	}
 
 	for _, shard := range shards {
 		var modifiedTests []Test
 		for _, test := range shard.Tests {
-			test.applyModifier(defaultModTest)
-			for _, modTest := range modTests {
-				if modTest.Name == test.Name {
-					test.applyModifier(modTest)
+			defaultModForEnv, ok := modsPerEnv[environmentName(shard.Env)]
+			if !ok {
+				defaultModForEnv = defaultModMatch
+			}
+			test.applyModifier(defaultModForEnv.Modifier)
+			for _, modMatch := range modMatches {
+				if !envsEqual(modMatch.Env, build.Environment{}) && !envsEqual(modMatch.Env, shard.Env) {
+					continue
+				}
+				if modMatch.Test == test.Name {
+					test.applyModifier(modMatch.Modifier)
 				}
 			}
 			modifiedTests = append(modifiedTests, test)

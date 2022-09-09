@@ -154,9 +154,9 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
 	shards = testsharder.AddExpectedDurationTags(shards, testDurations)
 
-	var modifiers []testsharder.TestModifier
+	var modifiers []testsharder.ModifierMatch
 	if flags.modifiersPath != "" {
-		modifiers, err = testsharder.LoadTestModifiers(flags.modifiersPath)
+		modifiers, err = testsharder.LoadTestModifiers(ctx, m.TestSpecs(), flags.modifiersPath)
 		if err != nil {
 			return err
 		}
@@ -185,10 +185,8 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		return err
 	}
 
-	shards, err = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, flags.targetTestCount)
-	if err != nil {
-		return err
-	}
+	shards = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, flags.targetTestCount)
+
 	// Remove the multiplied shards from the set of shards to analyze for
 	// affected tests, as we want to run these shards regardless of whether
 	// the associated tests are affected.

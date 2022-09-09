@@ -5,7 +5,9 @@
 package testsharder
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -14,11 +16,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+
 	"go.fuchsia.dev/fuchsia/tools/build"
 )
 
 var barTestModifier = TestModifier{
-	Name:      "bar_tests",
+	Name:      "bar",
 	TotalRuns: 2,
 }
 
@@ -28,11 +32,11 @@ var bazTestModifier = TestModifier{
 }
 
 func TestLoadTestModifiers(t *testing.T) {
-	areEqual := func(a, b []TestModifier) bool {
-		stringify := func(modifier TestModifier) string {
+	areEqual := func(a, b []ModifierMatch) bool {
+		stringify := func(modifier ModifierMatch) string {
 			return fmt.Sprintf("%#v", modifier)
 		}
-		sort := func(list []TestModifier) {
+		sort := func(list []ModifierMatch) {
 			sort.Slice(list[:], func(i, j int) bool {
 				return stringify(list[i]) < stringify(list[j])
 			})
@@ -55,15 +59,41 @@ func TestLoadTestModifiers(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	actual, err := LoadTestModifiers(modifiersPath)
+	linuxEnv := build.Environment{Dimensions: build.DimensionSet{OS: linux, CPU: x64}}
+	aemuEnv := build.Environment{Dimensions: build.DimensionSet{DeviceType: "AEMU"}}
+	otherDeviceEnv := build.Environment{Dimensions: build.DimensionSet{DeviceType: "other-device"}}
+	specs := []build.TestSpec{
+		{Test: build.Test{Name: "baz_host_tests", OS: linux, CPU: x64},
+			Envs: []build.Environment{linuxEnv},
+		},
+		{
+			Test: build.Test{Name: "bar_tests_hti", OS: linux, CPU: x64},
+			Envs: []build.Environment{aemuEnv},
+		},
+		{
+			Test: build.Test{Name: "bar_tests", OS: fuchsia, CPU: x64},
+			Envs: []build.Environment{aemuEnv, otherDeviceEnv},
+		},
+	}
+
+	actual, err := LoadTestModifiers(context.Background(), specs, modifiersPath)
 	if err != nil {
 		t.Fatalf("failed to load test modifiers: %v", err)
 	}
 
-	bazOut := bazTestModifier
-	barOut := barTestModifier
-	barOut.OS = ""
-	expected := []TestModifier{barOut, bazOut}
+	makeModifierMatch := func(test string, env build.Environment, modifier TestModifier) ModifierMatch {
+		return ModifierMatch{
+			Test:     test,
+			Env:      env,
+			Modifier: modifier,
+		}
+	}
+
+	bazOut := makeModifierMatch("baz_host_tests", linuxEnv, bazTestModifier)
+	barHTIOut := makeModifierMatch("bar_tests_hti", aemuEnv, barTestModifier)
+	barOut := makeModifierMatch("bar_tests", aemuEnv, barTestModifier)
+	barOut2 := makeModifierMatch("bar_tests", otherDeviceEnv, barTestModifier)
+	expected := []ModifierMatch{barHTIOut, barOut, barOut2, bazOut}
 
 	if !areEqual(expected, actual) {
 		t.Fatalf("test modifiers not properly loaded:\nexpected:\n%+v\nactual:\n%+v", expected, actual)
@@ -84,7 +114,8 @@ func TestAffectedModifiers(t *testing.T) {
 		if err != nil {
 			t.Errorf("AffectedModifiers() returned failed: %v", err)
 		}
-		for _, mod := range mods {
+		for _, m := range mods {
+			mod := m.Modifier
 			if mod.MaxAttempts != maxAttempts {
 				t.Errorf("%s.MaxAttempts is %d, want %d", mod.Name, mod.MaxAttempts, maxAttempts)
 			}
@@ -114,22 +145,32 @@ func TestAffectedModifiers(t *testing.T) {
 				Test: build.Test{Name: "affected-other-device", OS: fuchsia, CPU: x64},
 				Envs: []build.Environment{{Dimensions: build.DimensionSet{DeviceType: "other-device"}}},
 			},
+			{
+				Test: build.Test{Name: "affected-AEMU-and-other-device", OS: fuchsia, CPU: x64},
+				Envs: []build.Environment{
+					{Dimensions: build.DimensionSet{DeviceType: "AEMU"}},
+					{Dimensions: build.DimensionSet{DeviceType: "other-device"}},
+				},
+			},
 			{Test: build.Test{Name: "not-affected"}},
 		}
 		nameToShouldBeMultiplied := map[string]bool{
-			"affected-arm64":        false,
-			"affected-linux":        true,
-			"affected-mac":          false,
-			"affected-host+target":  false,
-			"affected-AEMU":         true,
-			"affected-other-device": false,
+			"affected-arm64-Linux":                        false,
+			"affected-linux-Linux":                        true,
+			"affected-mac-Mac":                            false,
+			"affected-host+target-AEMU":                   false,
+			"affected-AEMU-AEMU":                          true,
+			"affected-other-device-other-device":          false,
+			"affected-AEMU-and-other-device-AEMU":         true,
+			"affected-AEMU-and-other-device-other-device": false,
 		}
 		mods, err := AffectedModifiers(specs, name, maxAttempts, len(affectedTests))
 		if err != nil {
 			t.Errorf("AffectedModifiers() returned failed: %v", err)
 		}
-		for _, mod := range mods {
-			shouldBeMultiplied := nameToShouldBeMultiplied[mod.Name]
+		for _, m := range mods {
+			mod := m.Modifier
+			shouldBeMultiplied := nameToShouldBeMultiplied[fmt.Sprintf("%s-%s", m.Test, environmentName(m.Env))]
 			if shouldBeMultiplied {
 				if mod.MaxAttempts != 0 {
 					t.Errorf("%s.MaxAttempts is %d, want 0", mod.Name, mod.MaxAttempts)
@@ -150,6 +191,135 @@ func TestAffectedModifiers(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestMatchModifiersToTests(t *testing.T) {
+	aemuEnv := build.Environment{Dimensions: build.DimensionSet{DeviceType: "AEMU"}}
+	otherDeviceEnv := build.Environment{Dimensions: build.DimensionSet{DeviceType: "other-device"}}
+	cases := []struct {
+		name        string
+		specs       []build.TestSpec
+		multipliers []TestModifier
+		expected    []ModifierMatch
+		err         error
+	}{
+		{
+			name: "one match per test-env",
+			specs: []build.TestSpec{
+				{
+					Test: build.Test{Name: fullTestName(1, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv, otherDeviceEnv},
+				},
+			},
+			multipliers: []TestModifier{
+				{Name: "1", TotalRuns: 1},
+			},
+			expected: []ModifierMatch{
+				{
+					Test: fullTestName(1, "fuchsia"), Env: aemuEnv,
+					Modifier: TestModifier{Name: "1", TotalRuns: 1},
+				},
+				{
+					Test: fullTestName(1, "fuchsia"), Env: otherDeviceEnv,
+					Modifier: TestModifier{Name: "1", TotalRuns: 1},
+				},
+			},
+		},
+		{
+			name: "uses regex matches if no tests match exactly",
+			specs: []build.TestSpec{
+				{
+					Test: build.Test{Name: fullTestName(210, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+			},
+			multipliers: []TestModifier{
+				{Name: "1", TotalRuns: 1},
+			},
+			expected: []ModifierMatch{{
+				Test: fullTestName(210, "fuchsia"), Env: aemuEnv,
+				Modifier: TestModifier{Name: "1", TotalRuns: 1},
+			}},
+		},
+		{
+			name: "prefer exact match over regex match",
+			specs: []build.TestSpec{
+				{
+					Test: build.Test{Name: fullTestName(1, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+				{
+					Test: build.Test{Name: fullTestName(10, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+			},
+			multipliers: []TestModifier{
+				{Name: fullTestName(1, "fuchsia"), TotalRuns: 1},
+			},
+			expected: []ModifierMatch{{
+				Test: fullTestName(1, "fuchsia"), Env: aemuEnv,
+				Modifier: TestModifier{Name: fullTestName(1, "fuchsia"), TotalRuns: 1},
+			}},
+		},
+		{
+			name: "rejects multiplier that matches too many tests",
+			specs: []build.TestSpec{
+				{
+					Test: build.Test{Name: fullTestName(10, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+				{
+					Test: build.Test{Name: fullTestName(11, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+				{
+					Test: build.Test{Name: fullTestName(12, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+				{
+					Test: build.Test{Name: fullTestName(13, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+				{
+					Test: build.Test{Name: fullTestName(14, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+				{
+					Test: build.Test{Name: fullTestName(15, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+			},
+			multipliers: []TestModifier{
+				{Name: "1", TotalRuns: 1},
+			},
+			err: errTooManyMultiplierMatches,
+		},
+		{
+			name: "rejects invalid multiplier regex",
+			specs: []build.TestSpec{
+				{
+					Test: build.Test{Name: fullTestName(10, "fuchsia"), OS: fuchsia, CPU: x64},
+					Envs: []build.Environment{aemuEnv},
+				},
+			},
+			multipliers: []TestModifier{
+				{Name: "["},
+			},
+			err: errInvalidMultiplierRegex,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			actual, err := matchModifiersToTests(context.Background(), tc.specs, tc.multipliers)
+			if !errors.Is(err, tc.err) {
+				t.Fatalf("got err: %s, want %s", err, tc.err)
+			}
+			if diff := cmp.Diff(actual, tc.expected); diff != "" {
+				t.Fatalf("unexpected ModifierMatches: (-got +want):\n%s", diff)
+			}
+		})
+	}
 }
 
 // mkTempFile returns a new temporary file with the specified content that will

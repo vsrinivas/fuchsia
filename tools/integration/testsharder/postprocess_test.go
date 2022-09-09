@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -49,11 +48,17 @@ func TestMultiplyShards(t *testing.T) {
 		Tags:       []string{},
 	}
 
-	makeTestModifier := func(id int, os string, runs int) TestModifier {
-		return TestModifier{
-			Name:      fmt.Sprintf("test%d", id),
-			OS:        os,
-			TotalRuns: runs,
+	makeModifierMatch := func(id int, env build.Environment, runs int) ModifierMatch {
+		os := "fuchsia"
+		if !envsEqual(env, build.Environment{}) && env.Dimensions.OS != "" {
+			os = env.Dimensions.OS
+		}
+		return ModifierMatch{
+			Test: fullTestName(id, os),
+			Env:  env,
+			Modifier: TestModifier{
+				TotalRuns: runs,
+			},
 		}
 	}
 
@@ -80,25 +85,24 @@ func TestMultiplyShards(t *testing.T) {
 	testCases := []struct {
 		name            string
 		shards          []*Shard
-		multipliers     []TestModifier
+		multipliers     []ModifierMatch
 		testDurations   TestDurationsMap
 		targetDuration  time.Duration
 		targetTestCount int
 		expected        []*Shard
-		err             error
 	}{
 		{
-			name: "empty os matches any os",
+			name: "empty env matches any env",
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
-				shard(env3, "linux", 1),
+				shard(env2, "fuchsia", 1),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "", 5),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, build.Environment{}, 5),
 			},
 			expected: []*Shard{
 				multShard(env1, "fuchsia", 1, 5, 0),
-				multShard(env3, "linux", 1, 5, 0),
+				multShard(env2, "fuchsia", 1, 5, 0),
 			},
 		},
 		{
@@ -108,9 +112,10 @@ func TestMultiplyShards(t *testing.T) {
 				shard(env2, "fuchsia", 1, 2, 4),
 				shard(env3, "linux", 3),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 5),
-				makeTestModifier(3, "linux", 3),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 5),
+				makeModifierMatch(1, env2, 5),
+				makeModifierMatch(3, env3, 3),
 			},
 			expected: []*Shard{
 				shard(env2, "fuchsia", 2, 4),
@@ -125,8 +130,8 @@ func TestMultiplyShards(t *testing.T) {
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 0),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
 			},
 			testDurations: TestDurationsMap{
 				"*": {MedianDuration: time.Second},
@@ -143,8 +148,8 @@ func TestMultiplyShards(t *testing.T) {
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 0),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
 			},
 			targetTestCount: 4,
 			expected: []*Shard{
@@ -156,8 +161,8 @@ func TestMultiplyShards(t *testing.T) {
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 0),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
 			},
 			expected: []*Shard{
 				multShard(env1, "fuchsia", 1, 1, 0),
@@ -168,8 +173,8 @@ func TestMultiplyShards(t *testing.T) {
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 0),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
 			},
 			testDurations: TestDurationsMap{
 				"*": {MedianDuration: time.Second},
@@ -184,8 +189,8 @@ func TestMultiplyShards(t *testing.T) {
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 0),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
 			},
 			testDurations: TestDurationsMap{
 				"*": {MedianDuration: 10 * time.Second},
@@ -196,56 +201,12 @@ func TestMultiplyShards(t *testing.T) {
 			},
 		},
 		{
-			name: "uses regex matches if no tests match exactly",
-			shards: []*Shard{
-				shard(env1, "fuchsia", 210),
-			},
-			multipliers: []TestModifier{
-				{Name: "1", TotalRuns: 1},
-			},
-			expected: []*Shard{
-				multShard(env1, "fuchsia", 210, 1, 0),
-			},
-		},
-		{
-			name: "matches on test path/package URL as well as GN name",
-			shards: []*Shard{
-				shard(env1, "fuchsia", 1),
-			},
-			multipliers: []TestModifier{
-				{Name: "fuchsia-pkg", TotalRuns: 1},
-			},
-			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 1, 0),
-			},
-		},
-		{
-			name: "rejects multiplier that matches too many tests",
-			shards: []*Shard{
-				shard(env1, "fuchsia", 10, 11, 12, 13, 14, 15),
-			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 1),
-			},
-			err: errTooManyMultiplierMatches,
-		},
-		{
-			name: "rejects invalid multiplier regex",
-			shards: []*Shard{
-				shard(env1, "fuchsia", 1),
-			},
-			multipliers: []TestModifier{
-				{Name: "["},
-			},
-			err: errInvalidMultiplierRegex,
-		},
-		{
 			name: "doesn't include affected prefix in multiplied shard names",
 			shards: []*Shard{
 				affectedShard(env1, "fuchsia", 1),
 			},
-			multipliers: []TestModifier{
-				{Name: "fuchsia-pkg", TotalRuns: 5},
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, build.Environment{}, 5),
 			},
 			expected: []*Shard{
 				affectedMultShard(env1, "fuchsia", 1, 5, 0),
@@ -256,8 +217,8 @@ func TestMultiplyShards(t *testing.T) {
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1, 2),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 2),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 2),
 			},
 			expected: []*Shard{
 				shard(env1, "fuchsia", 2),
@@ -269,10 +230,10 @@ func TestMultiplyShards(t *testing.T) {
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1, 2),
 			},
-			multipliers: []TestModifier{
-				makeTestModifier(1, "fuchsia", 3),
-				makeTestModifier(1, "fuchsia", 2),
-				makeTestModifier(1, "fuchsia", 5),
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 3),
+				makeModifierMatch(1, env1, 2),
+				makeModifierMatch(1, env1, 5),
 			},
 			expected: []*Shard{
 				shard(env1, "fuchsia", 2),
@@ -283,7 +244,7 @@ func TestMultiplyShards(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual, err := MultiplyShards(
+			actual := MultiplyShards(
 				context.Background(),
 				tc.shards,
 				tc.multipliers,
@@ -291,12 +252,6 @@ func TestMultiplyShards(t *testing.T) {
 				tc.targetDuration,
 				tc.targetTestCount,
 			)
-			if !errors.Is(err, tc.err) {
-				t.Fatalf("got unexpected error %v, expected: %v", err, tc.err)
-			}
-			if err != nil {
-				return
-			}
 			assertEqual(t, tc.expected, actual)
 		})
 	}
@@ -373,6 +328,21 @@ func TestApplyModifiers(t *testing.T) {
 		Tags:       []string{},
 	}
 
+	makeModifierMatch := func(id int, env build.Environment, affected bool, maxAttempts int) ModifierMatch {
+		os := "fuchsia"
+		if env.Dimensions.OS != "" {
+			os = env.Dimensions.OS
+		}
+		return ModifierMatch{
+			Test: fullTestName(id, os),
+			Env:  env,
+			Modifier: TestModifier{
+				Affected:    affected,
+				MaxAttempts: maxAttempts,
+			},
+		}
+	}
+
 	type modifyDetails struct {
 		index       int
 		affected    bool
@@ -398,7 +368,7 @@ func TestApplyModifiers(t *testing.T) {
 	testCases := []struct {
 		name      string
 		shards    []*Shard
-		modifiers []TestModifier
+		modifiers []ModifierMatch
 		expected  []*Shard
 		err       error
 	}{
@@ -419,9 +389,9 @@ func TestApplyModifiers(t *testing.T) {
 				shard(env1, "fuchsia", 1, 2, 3),
 				shard(env2, "linux", 1, 2, 3),
 			},
-			modifiers: []TestModifier{
-				{Name: "*", Affected: true},
-				{Name: "*", Affected: true},
+			modifiers: []ModifierMatch{
+				{Modifier: TestModifier{Name: "*", Affected: true}},
+				{Modifier: TestModifier{Name: "*", Affected: true}},
 			},
 			err: errMultipleDefaultModifiers,
 		},
@@ -431,8 +401,8 @@ func TestApplyModifiers(t *testing.T) {
 				shard(env1, "fuchsia", 1, 2, 3),
 				shard(env2, "linux", 1, 2, 3),
 			},
-			modifiers: []TestModifier{
-				{Name: fullTestName(1, "fuchsia"), Affected: true},
+			modifiers: []ModifierMatch{
+				makeModifierMatch(1, env1, true, 0),
 			},
 			expected: []*Shard{
 				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 1}}),
@@ -445,9 +415,9 @@ func TestApplyModifiers(t *testing.T) {
 				shard(env1, "fuchsia", 1, 2, 3),
 				shard(env2, "linux", 1, 2, 3),
 			},
-			modifiers: []TestModifier{
-				{Name: fullTestName(1, "fuchsia"), Affected: true},
-				{Name: fullTestName(1, "fuchsia"), MaxAttempts: 5},
+			modifiers: []ModifierMatch{
+				makeModifierMatch(1, env1, true, 0),
+				makeModifierMatch(1, env1, false, 5),
 			},
 			expected: []*Shard{
 				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 5}}),
@@ -460,10 +430,10 @@ func TestApplyModifiers(t *testing.T) {
 				shard(env1, "fuchsia", 1, 2, 3),
 				shard(env2, "linux", 1, 2, 3),
 			},
-			modifiers: []TestModifier{
-				{Name: fullTestName(1, "fuchsia"), Affected: true},
-				{Name: fullTestName(2, "fuchsia"), Affected: true},
-				{Name: fullTestName(1, "linux"), MaxAttempts: 5},
+			modifiers: []ModifierMatch{
+				makeModifierMatch(1, env1, true, 0),
+				makeModifierMatch(2, env1, true, 0),
+				makeModifierMatch(1, env2, false, 5),
 			},
 			expected: []*Shard{
 				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 1}, {1, true, 1}}),

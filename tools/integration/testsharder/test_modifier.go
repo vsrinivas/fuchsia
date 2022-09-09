@@ -5,12 +5,15 @@
 package testsharder
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 const (
@@ -43,8 +46,18 @@ type TestModifier struct {
 	MaxAttempts int `json:"max_attempts,omitempty"`
 }
 
+// ModifierMatch is the calculated match of a single test in a single environment
+// with the modifier that it matches. After processing all modifiers, we should
+// return a ModifierMatch for each test-env combination that the modifiers apply to.
+// An empty Env means it matches all environments.
+type ModifierMatch struct {
+	Test     string
+	Env      build.Environment
+	Modifier TestModifier
+}
+
 // LoadTestModifiers loads a set of test modifiers from a json manifest.
-func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
+func LoadTestModifiers(ctx context.Context, testSpecs []build.TestSpec, manifestPath string) ([]ModifierMatch, error) {
 	bytes, err := os.ReadFile(manifestPath)
 	if err != nil {
 		return nil, err
@@ -59,7 +72,7 @@ func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
 			return nil, fmt.Errorf("A test spec's target must have a non-empty name")
 		}
 	}
-	return specs, nil
+	return matchModifiersToTests(ctx, testSpecs, specs)
 }
 
 // AffectedModifiers returns modifiers for tests that are in both testSpecs and
@@ -67,18 +80,27 @@ func LoadTestModifiers(manifestPath string) ([]TestModifier, error) {
 // affectedTestsPath is the path to a file containing test names separated by `\n`.
 // maxAttempts will be applied to any test that is not multiplied.
 // Tests will be considered for multiplication only if num affected tests <= multiplyThreshold.
-func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, maxAttempts, multiplyThreshold int) ([]TestModifier, error) {
+func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, maxAttempts, multiplyThreshold int) ([]ModifierMatch, error) {
 	affectedTestBytes, err := os.ReadFile(affectedTestsPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read affectedTestsPath (%s): %w", affectedTestsPath, err)
 	}
 	affectedTestNames := strings.Split(strings.TrimSpace(string(affectedTestBytes)), "\n")
 
-	ret := []TestModifier{}
-	// Names of tests to which we'll apply maxAttempts (i.e. we didn't multiply them).
-	namesForMaxAttempts := []string{}
+	var ret []ModifierMatch
 	if len(affectedTestNames) > multiplyThreshold {
-		namesForMaxAttempts = affectedTestNames
+		for _, name := range affectedTestNames {
+			// Since we're not multiplying the tests, apply maxAttempts to them instead.
+			ret = append(ret, ModifierMatch{
+				Test: name,
+				Modifier: TestModifier{
+					Name:        name,
+					TotalRuns:   -1,
+					Affected:    true,
+					MaxAttempts: maxAttempts,
+				},
+			})
+		}
 	} else {
 		nameToSpec := make(map[string]build.TestSpec)
 		for _, ts := range testSpecs {
@@ -89,36 +111,113 @@ func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, max
 			if !found {
 				continue
 			}
-			// Only x64 Linux VMs are plentiful, don't multiply anything that would require
-			// any other type of bot.
+			// Only x64 Linux VMs are plentiful, don't multiply affected tests that
+			// would require any other type of bot.
 			if spec.CPU != x64 || (spec.OS != fuchsia && spec.OS != linux) {
-				namesForMaxAttempts = append(namesForMaxAttempts, name)
+				ret = append(ret, ModifierMatch{
+					Test: name,
+					Modifier: TestModifier{
+						Name:        name,
+						TotalRuns:   -1,
+						Affected:    true,
+						MaxAttempts: maxAttempts,
+					},
+				})
 				continue
 			}
-			foundBadEnv := false
 			for _, env := range spec.Envs {
-				// Don't multiply host+target tests because they tend to be flaky already.
-				// The idea is to expose new flakiness, not pre-existing flakiness.
+				shouldMultiply := true
 				if env.Dimensions.DeviceType != "" && spec.OS != fuchsia {
-					foundBadEnv = true
-					break
+					// Don't multiply host+target tests because they tend to be
+					// flaky already. The idea is to expose new flakiness, not
+					// pre-existing flakiness.
+					shouldMultiply = false
+				} else if env.Dimensions.DeviceType != "" &&
+					!strings.HasSuffix(env.Dimensions.DeviceType, "EMU") {
+					// Only x64 Linux VMs are plentiful, don't multiply affected
+					// tests that would require any other type of bot.
+					shouldMultiply = false
 				}
-				// Only x64 Linux VMs are plentiful, don't multiply anything that would require
-				// any other type of bot.
-				if env.Dimensions.DeviceType != "" && !strings.HasSuffix(env.Dimensions.DeviceType, "EMU") {
-					foundBadEnv = true
-					break
+				match := ModifierMatch{
+					Test:     name,
+					Env:      env,
+					Modifier: TestModifier{Name: name, Affected: true},
 				}
+				if !shouldMultiply {
+					match.Modifier.TotalRuns = -1
+					match.Modifier.MaxAttempts = maxAttempts
+				}
+				ret = append(ret, match)
 			}
-			if foundBadEnv {
-				namesForMaxAttempts = append(namesForMaxAttempts, name)
-				continue
-			}
-			ret = append(ret, TestModifier{Name: name, OS: spec.OS, Affected: true})
 		}
 	}
-	for _, name := range namesForMaxAttempts {
-		ret = append(ret, TestModifier{Name: name, TotalRuns: -1, Affected: true, MaxAttempts: maxAttempts})
+	return ret, nil
+}
+
+// matchModifiersToTests analyzes the given modifiers against the testSpec to return
+// modifiers that match tests exactly per allowed environment.
+func matchModifiersToTests(ctx context.Context, testSpecs []build.TestSpec, modifiers []TestModifier) ([]ModifierMatch, error) {
+	var ret []ModifierMatch
+	var tooManyMatchesMultipliers []string
+	for _, modifier := range modifiers {
+		if modifier.Name == "*" {
+			ret = append(ret, ModifierMatch{Modifier: modifier})
+			continue
+		}
+		nameRegex, err := regexp.Compile(modifier.Name)
+		var exactMatches []ModifierMatch
+		var regexMatches []ModifierMatch
+		numExactMatches := 0
+		numRegexMatches := 0
+		if err != nil {
+			return nil, fmt.Errorf("%w %q: %s", errInvalidMultiplierRegex, modifier.Name, err)
+		}
+		for _, ts := range testSpecs {
+			if nameRegex.FindString(ts.Name) == "" {
+				continue
+			}
+			if modifier.OS != "" && modifier.OS != ts.OS {
+				continue
+			}
+
+			isExactMatch := ts.Name == modifier.Name
+			if len(ts.Envs) > 0 {
+				if isExactMatch {
+					numExactMatches += 1
+				} else {
+					numRegexMatches += 1
+				}
+			}
+			for _, env := range ts.Envs {
+				match := ModifierMatch{Test: ts.Name, Env: env, Modifier: modifier}
+				if isExactMatch {
+					exactMatches = append(exactMatches, match)
+				} else {
+					regexMatches = append(regexMatches, match)
+				}
+			}
+		}
+		// We'll consider partial regex matches only when we have no exact
+		// matches.
+		matches := exactMatches
+		numMatches := numExactMatches
+		if numMatches == 0 {
+			matches = regexMatches
+			numMatches = numRegexMatches
+		}
+		if numMatches > maxMatchesPerMultiplier {
+			tooManyMatchesMultipliers = append(tooManyMatchesMultipliers, modifier.Name)
+			logger.Errorf(ctx, "Multiplier %q matches too many tests (%d), maximum is %d",
+				modifier.Name, len(matches), maxMatchesPerMultiplier)
+			continue
+		}
+		ret = append(ret, matches...)
+	}
+	if len(tooManyMatchesMultipliers) > 0 {
+		return nil, fmt.Errorf(
+			"%d multiplier(s) match too many tests: %w",
+			len(tooManyMatchesMultipliers), errTooManyMultiplierMatches,
+		)
 	}
 	return ret, nil
 }
