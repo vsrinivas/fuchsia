@@ -1,11 +1,7 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-
-import("//build/config.gni")
 import("//build/json/validate_json.gni")
-import("//build/sdk/sdk_data.gni")
-import("//src/modular/build/args.gni")
 
 # Validates a modular framework configuration file against a schema
 #
