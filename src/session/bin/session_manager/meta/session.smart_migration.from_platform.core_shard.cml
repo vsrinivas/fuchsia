@@ -1,0 +1,49 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/session/bin/session_manager/meta/session.smart.from_platform.core_shard.cml" ],
+
+    // This core realm shard routes capabilities used by smart_session in migration builds.
+    //
+    // See `session.smart.from_platform.core_shard.cml` for more details.
+    //
+    // TODO(fxbug.dev/103234): Remove this shard
+    offer: [
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-block",
+            to: "#session-manager",
+            subdir: "class/block",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-skip-block",
+            to: "#session-manager",
+            subdir: "class/skip-block",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-nelson-emmc",
+            to: "#session-manager",
+            subdir: "nelson-emmc",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sherlock-emmc",
+            to: "#session-manager",
+            subdir: "sherlock-emmc",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sys",
+            to: "#session-manager",
+            subdir: "sys",
+        },
+    ],
+}
