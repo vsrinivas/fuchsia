@@ -6,8 +6,8 @@ use {
     super::{
         args, click, inspect_keys, motion, one_finger_drag, primary_tap, scroll, secondary_tap,
     },
-    crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, touch_binding},
-    anyhow::{format_err, Error},
+    crate::{input_device, input_handler::InputHandler, mouse_binding, touch_binding},
+    anyhow::{format_err, Context, Error},
     async_trait::async_trait,
     core::cell::RefCell,
     fidl_fuchsia_input_report as fidl_input_report,
@@ -365,46 +365,25 @@ impl MutableState {
     }
 }
 
-impl std::convert::TryFrom<input_device::UnhandledInputEvent> for TouchpadEvent {
-    type Error = input_device::UnhandledInputEvent;
-    fn try_from(
-        unhandled_input_event: input_device::UnhandledInputEvent,
-    ) -> Result<TouchpadEvent, Self::Error> {
-        match unhandled_input_event {
-            input_device::UnhandledInputEvent {
-                device_event: input_device::InputDeviceEvent::Touchpad(ref touchpad_data),
-                device_descriptor:
-                    input_device::InputDeviceDescriptor::Touchpad(ref touchpad_descriptor),
-                event_time,
-                ..
-            } => {
-                let position_divisor = match get_position_divisor_to_mm(touchpad_descriptor) {
-                    Ok(divisor) => divisor,
-                    Err(e) => {
-                        fx_log_err!("dropping touchpad event; could not compute divisor: {}", e);
-                        return Err(unhandled_input_event);
-                    }
-                };
-                Ok(TouchpadEvent {
-                    timestamp: event_time,
-                    pressed_buttons: touchpad_data
-                        .pressed_buttons
-                        .iter()
-                        .copied()
-                        .collect::<Vec<_>>(),
-                    contacts: touchpad_data
-                        .injector_contacts
-                        .iter()
-                        .map(|contact| touch_binding::TouchContact {
-                            position: contact.position / position_divisor,
-                            ..*contact
-                        })
-                        .collect(),
-                })
-            }
-            _ => Err(unhandled_input_event),
-        }
-    }
+fn parse_touchpad_event(
+    event_time: &zx::Time,
+    touchpad_event: &touch_binding::TouchpadEvent,
+    touchpad_descriptor: &touch_binding::TouchpadDeviceDescriptor,
+) -> Result<TouchpadEvent, Error> {
+    let position_divisor =
+        get_position_divisor_to_mm(touchpad_descriptor).context("failed to compute divisor")?;
+    Ok(TouchpadEvent {
+        timestamp: *event_time,
+        pressed_buttons: touchpad_event.pressed_buttons.iter().copied().collect::<Vec<_>>(),
+        contacts: touchpad_event
+            .injector_contacts
+            .iter()
+            .map(|contact| touch_binding::TouchContact {
+                position: contact.position / position_divisor,
+                ..*contact
+            })
+            .collect(),
+    })
 }
 
 impl std::convert::From<MouseEvent> for input_device::InputEvent {
@@ -456,6 +435,42 @@ impl std::convert::From<MouseEvent> for input_device::InputEvent {
 }
 
 impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> GestureArena<ContenderFactory> {
+    /// Interprets `TouchpadEvent`s, and sends corresponding `MouseEvent`s downstream.
+    fn handle_touchpad_event(
+        self: std::rc::Rc<Self>,
+        event_time: &zx::Time,
+        touchpad_event: &touch_binding::TouchpadEvent,
+        device_descriptor: &touch_binding::TouchpadDeviceDescriptor,
+    ) -> Result<Vec<input_device::InputEvent>, Error> {
+        let touchpad_event = parse_touchpad_event(event_time, touchpad_event, device_descriptor)
+            .context("dropping touchpad event")?;
+        touchpad_event.log_inspect(&mut self.touchpad_event_log.borrow_mut());
+
+        let old_state_name = self.mutable_state.borrow().get_state_name();
+        let (new_state, generated_events) = match self.mutable_state.replace(MutableState::Invalid)
+        {
+            MutableState::Idle => self.handle_event_while_idle(touchpad_event),
+            MutableState::Chain => self.handle_event_while_chain(touchpad_event),
+            MutableState::Matching { contenders, matched_contenders, buffered_events } => self
+                .handle_event_while_matching(
+                    contenders,
+                    matched_contenders,
+                    buffered_events,
+                    touchpad_event,
+                ),
+            MutableState::Forwarding { winner } => {
+                self.handle_event_while_forwarding(winner, touchpad_event)
+            }
+            MutableState::Invalid => {
+                unreachable!();
+            }
+        };
+        fx_log_debug!("gesture_arena: {:?} -> {:?}", old_state_name, new_state.get_state_name());
+        self.mutable_state.replace(new_state);
+        // self.log_mutable_state();  // uncomment to log contender set
+        Ok(generated_events.into_iter().map(input_device::InputEvent::from).collect())
+    }
+
     fn handle_event_while_idle(&self, new_event: TouchpadEvent) -> (MutableState, Vec<MouseEvent>) {
         let (contenders, matched_contenders) = (self.contender_factory)()
             .into_iter()
@@ -743,44 +758,35 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> GestureArena<ContenderFa
 }
 
 #[async_trait(?Send)]
-impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> UnhandledInputHandler
+impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> InputHandler
     for GestureArena<ContenderFactory>
 {
     /// Interprets `TouchpadEvent`s, and sends corresponding `MouseEvent`s downstream.
-    async fn handle_unhandled_input_event(
+    async fn handle_input_event(
         self: std::rc::Rc<Self>,
-        unhandled_input_event: input_device::UnhandledInputEvent,
+        input_event: input_device::InputEvent,
     ) -> Vec<input_device::InputEvent> {
-        let touchpad_event = match TouchpadEvent::try_from(unhandled_input_event) {
-            Ok(touchpad_event) => touchpad_event,
-            Err(other_input_event) => {
-                return vec![input_device::InputEvent::from(other_input_event)]
+        match input_event {
+            input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Touchpad(ref touchpad_event),
+                ref event_time,
+                device_descriptor:
+                    input_device::InputDeviceDescriptor::Touchpad(ref touchpad_descriptor),
+                handled: input_device::Handled::No,
+                ..
+            } => {
+                match self.handle_touchpad_event(event_time, touchpad_event, touchpad_descriptor) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        fx_log_err!("{}", e);
+                        vec![input_event]
+                    }
+                }
             }
-        };
-        touchpad_event.log_inspect(&mut self.touchpad_event_log.borrow_mut());
-        let old_state_name = self.mutable_state.borrow().get_state_name();
-        let (new_state, generated_events) = match self.mutable_state.replace(MutableState::Invalid)
-        {
-            MutableState::Idle => self.handle_event_while_idle(touchpad_event),
-            MutableState::Chain => self.handle_event_while_chain(touchpad_event),
-            MutableState::Matching { contenders, matched_contenders, buffered_events } => self
-                .handle_event_while_matching(
-                    contenders,
-                    matched_contenders,
-                    buffered_events,
-                    touchpad_event,
-                ),
-            MutableState::Forwarding { winner } => {
-                self.handle_event_while_forwarding(winner, touchpad_event)
+            _ => {
+                vec![input_event]
             }
-            MutableState::Invalid => {
-                unreachable!();
-            }
-        };
-        fx_log_debug!("gesture_arena: {:?} -> {:?}", old_state_name, new_state.get_state_name());
-        self.mutable_state.replace(new_state);
-        // self.log_mutable_state(); // uncomment to log contender set
-        generated_events.into_iter().map(input_device::InputEvent::from).collect()
+        }
     }
 }
 
@@ -903,8 +909,8 @@ mod tests {
 
         /// The gesture arena is mostly agnostic to the event details. Consequently, most
         /// tests can use the same lightly populated touchpad event.
-        pub(super) fn make_unhandled_touchpad_event() -> input_device::UnhandledInputEvent {
-            input_device::UnhandledInputEvent {
+        pub(super) fn make_unhandled_touchpad_event() -> input_device::InputEvent {
+            input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
                         injector_contacts: vec![],
@@ -914,13 +920,14 @@ mod tests {
                 device_descriptor: make_touchpad_descriptor(),
                 event_time: zx::Time::ZERO,
                 trace_id: None,
+                handled: input_device::Handled::No,
             }
         }
 
         /// The gesture arena is mostly agnostic to the event details. Consequently, most
         /// tests can use the same lightly populated mouse event.
-        pub(super) fn make_unhandled_mouse_event() -> input_device::UnhandledInputEvent {
-            input_device::UnhandledInputEvent {
+        pub(super) fn make_unhandled_mouse_event() -> input_device::InputEvent {
+            input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                     location: mouse_binding::MouseLocation::Relative(
                         mouse_binding::RelativeLocation {
@@ -938,6 +945,7 @@ mod tests {
                 device_descriptor: make_mouse_descriptor(),
                 event_time: zx::Time::ZERO,
                 trace_id: None,
+                handled: input_device::Handled::No,
             }
         }
 
@@ -1268,8 +1276,8 @@ mod tests {
         use {
             super::{
                 super::{
-                    Contender, ExamineEventResult, GestureArena, MutableState, TouchpadEvent,
-                    UnhandledInputHandler,
+                    Contender, ExamineEventResult, GestureArena, InputHandler, MutableState,
+                    TouchpadEvent,
                 },
                 utils::{
                     make_touchpad_descriptor, make_unhandled_mouse_event,
@@ -1320,7 +1328,7 @@ mod tests {
                     ),
                 ),
             });
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
             assert!(contender_factory_called.get());
         }
 
@@ -1344,7 +1352,7 @@ mod tests {
                     ),
                 ),
             });
-            arena.handle_unhandled_input_event(make_unhandled_mouse_event()).await;
+            arena.handle_input_event(make_unhandled_mouse_event()).await;
             assert!(!contender_factory_called.get());
         }
 
@@ -1356,7 +1364,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, state);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
             pretty_assertions::assert_eq!(contender.calls_received(), 1);
         }
 
@@ -1366,7 +1374,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, MutableState::Idle);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
             pretty_assertions::assert_eq!(contender.calls_received(), 1);
         }
 
@@ -1376,7 +1384,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, MutableState::Chain);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
             pretty_assertions::assert_eq!(contender.calls_received(), 0);
         }
 
@@ -1393,7 +1401,7 @@ mod tests {
                 StubMatchedContender::new().into(),
             ));
             second_contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
             pretty_assertions::assert_eq!(first_contender.calls_received(), 1);
             pretty_assertions::assert_eq!(second_contender.calls_received(), 1);
         }
@@ -1416,7 +1424,7 @@ mod tests {
 
             // Process a touchpad event. This should cause `arena` to consume the
             // `ExamineEventResult` set above.
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify that the `ExamineEventResult` was, in fact, consumed.
             initial_contender.assert_next_result_is_none();
@@ -1449,7 +1457,7 @@ mod tests {
 
             // Process a touchpad event. This should cause `arena` to consume the
             // `ExamineEventResult` set above.
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify that the `ExamineEventResult` was, in fact, consumed.
             initial_contender.assert_next_result_is_none();
@@ -1474,7 +1482,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![initial_contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, state);
             // Create the event which will be sent to the arena.
-            let touchpad_event = input_device::UnhandledInputEvent {
+            let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
@@ -1484,6 +1492,7 @@ mod tests {
                 ),
                 device_descriptor: make_touchpad_descriptor(),
                 trace_id: None,
+                handled: input_device::Handled::No,
             };
 
             // Configure `initial_contender` to return a `StubMatchedContender` when
@@ -1495,7 +1504,7 @@ mod tests {
             // Process `touchpad_event`. Because `initial_contender` returns
             // `ExamineEventResult::MatchedContender`, the gesture arena will enter
             // the `Matching` state.
-            arena.clone().handle_unhandled_input_event(touchpad_event).await;
+            arena.clone().handle_input_event(touchpad_event).await;
 
             // Verify that `arena` retained the details of `touchpad_event`.
             assert_matches!(
@@ -1524,7 +1533,7 @@ mod tests {
             let arena = make_gesture_arena_with_state(contender_factory, state);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
 
-            let touchpad_event = input_device::UnhandledInputEvent {
+            let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
@@ -1539,10 +1548,11 @@ mod tests {
                 ),
                 device_descriptor: make_touchpad_descriptor(),
                 trace_id: None,
+                handled: input_device::Handled::No,
             };
 
             pretty_assertions::assert_eq!(
-                arena.clone().handle_unhandled_input_event(touchpad_event).await,
+                arena.clone().handle_input_event(touchpad_event).await,
                 vec![]
             );
 
@@ -1558,7 +1568,7 @@ mod tests {
             let arena = make_gesture_arena_with_state(contender_factory, state);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             pretty_assertions::assert_eq!(
-                arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
+                arena.clone().handle_input_event(make_unhandled_touchpad_event()).await,
                 vec![]
             );
 
@@ -1574,7 +1584,7 @@ mod tests {
             let arena = make_gesture_arena_with_state(contender_factory, state);
             contender.set_next_result(ExamineEventResult::Contender(StubContender::new().into()));
             pretty_assertions::assert_eq!(
-                arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
+                arena.handle_input_event(make_unhandled_touchpad_event()).await,
                 vec![]
             );
         }
@@ -1587,7 +1597,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, state);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
 
@@ -1599,7 +1609,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena = make_gesture_arena_with_state(contender_factory, state);
             contender.set_next_result(ExamineEventResult::Contender(StubContender::new().into()));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Matching { .. });
         }
 
@@ -1613,7 +1623,7 @@ mod tests {
             contender.set_next_result(ExamineEventResult::MatchedContender(
                 StubMatchedContender::new().into(),
             ));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Matching { .. });
         }
     }
@@ -1622,9 +1632,9 @@ mod tests {
         use {
             super::{
                 super::{
-                    Contender, ExamineEventResult, GestureArena, MouseEvent, MutableState,
-                    ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent,
-                    UnhandledInputHandler, VerifyEventResult, PRIMARY_BUTTON,
+                    Contender, ExamineEventResult, GestureArena, InputHandler, MouseEvent,
+                    MutableState, ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent,
+                    VerifyEventResult, PRIMARY_BUTTON,
                 },
                 utils::{
                     make_touchpad_descriptor, make_unhandled_mouse_event,
@@ -1696,7 +1706,7 @@ mod tests {
             contender.set_next_result(ExamineEventResult::Contender(contender.clone().into()));
             matched_contender
                 .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(contender.calls_received(), 1);
             assert_eq!(matched_contender.verify_event_calls_received(), 1);
         }
@@ -1714,7 +1724,7 @@ mod tests {
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             matched_contender
                 .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
-            arena.handle_unhandled_input_event(make_unhandled_mouse_event()).await;
+            arena.handle_input_event(make_unhandled_mouse_event()).await;
             assert_eq!(contender.calls_received(), 0);
             assert_eq!(matched_contender.verify_event_calls_received(), 0);
         }
@@ -1746,7 +1756,7 @@ mod tests {
 
             // Send the touchpad event, and validate that the arena did not call
             // `verify_event()` on the newly returned `MatchedContender`.
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(matched_contender.verify_event_calls_received(), 0);
         }
 
@@ -1763,12 +1773,12 @@ mod tests {
 
             // Process a touchpad event. This should cause `arena` to replace
             // `initial_contender` with `replacement_contender`.
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Process another touchpad event. This should cause `arena` to invoke
             // `examine_event()` on `replacement_contender`.
             replacement_contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify that `replacement_contender` was called.
             assert_eq!(replacement_contender.calls_received(), 1);
@@ -1795,13 +1805,13 @@ mod tests {
 
             // Process a touchpad event. This should cause `arena` to replace
             // `initial_contender` with `replacement_contender`.
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Process another touchpad event. This should cause `arena` to invoke
             // `examine_event()` on `replacement_contender`.
             replacement_contender
                 .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify that `replacement_contender` was called.
             assert_eq!(replacement_contender.verify_event_calls_received(), 1);
@@ -1830,7 +1840,7 @@ mod tests {
 
             // Process a touchpad event. This should cause `arena` to retain
             // replace `contender` with `replacement_contender`.
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Set a return value for the expected call on `replacement_contender`.
             replacement_matched_contender
@@ -1838,7 +1848,7 @@ mod tests {
 
             // Process another touchpad event, and verify that `replacement_contender`
             // is called.
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(replacement_matched_contender.verify_event_calls_received(), 1);
         }
 
@@ -1848,7 +1858,7 @@ mod tests {
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             assert_eq!(
-                arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
+                arena.clone().handle_input_event(make_unhandled_touchpad_event()).await,
                 vec![]
             );
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
@@ -1860,7 +1870,7 @@ mod tests {
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
 
-            let touchpad_event = input_device::UnhandledInputEvent {
+            let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
@@ -1875,10 +1885,11 @@ mod tests {
                 ),
                 device_descriptor: make_touchpad_descriptor(),
                 trace_id: None,
+                handled: input_device::Handled::No,
             };
 
             pretty_assertions::assert_eq!(
-                arena.clone().handle_unhandled_input_event(touchpad_event).await,
+                arena.clone().handle_input_event(touchpad_event).await,
                 vec![]
             );
 
@@ -1890,10 +1901,7 @@ mod tests {
             let contender = StubContender::new();
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
             contender.set_next_result(ExamineEventResult::Contender(contender.clone().into()));
-            assert_eq!(
-                arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
-                vec![]
-            );
+            assert_eq!(arena.handle_input_event(make_unhandled_touchpad_event()).await, vec![]);
         }
 
         #[fuchsia::test(allow_stalls = false)]
@@ -1912,10 +1920,7 @@ mod tests {
             second_matched_contender.set_next_verify_event_result(
                 VerifyEventResult::MatchedContender(second_matched_contender.clone().into()),
             );
-            assert_eq!(
-                arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
-                vec![]
-            );
+            assert_eq!(arena.handle_input_event(make_unhandled_touchpad_event()).await, vec![]);
         }
 
         #[test_case(Some(StubWinner::new()); "with_winner")]
@@ -1973,7 +1978,7 @@ mod tests {
             );
             assert_matches!(
                 arena
-                    .handle_unhandled_input_event(make_unhandled_touchpad_event())
+                    .handle_input_event(make_unhandled_touchpad_event())
                     .await
                     .as_slice(),
                 [
@@ -2027,7 +2032,7 @@ mod tests {
             ));
             arena
                 .clone()
-                .handle_unhandled_input_event(input_device::UnhandledInputEvent {
+                .handle_input_event(input_device::InputEvent {
                     event_time: zx::Time::from_nanos(456),
                     device_event: input_device::InputDeviceEvent::Touchpad(
                         touch_binding::TouchpadEvent {
@@ -2037,6 +2042,7 @@ mod tests {
                     ),
                     device_descriptor: make_touchpad_descriptor(),
                     trace_id: None,
+                    handled: input_device::Handled::No,
                 })
                 .await;
 
@@ -2053,7 +2059,7 @@ mod tests {
                 },
             );
             arena
-                .handle_unhandled_input_event(input_device::UnhandledInputEvent {
+                .handle_input_event(input_device::InputEvent {
                     event_time: zx::Time::from_nanos(789),
                     device_event: input_device::InputDeviceEvent::Touchpad(
                         touch_binding::TouchpadEvent {
@@ -2063,6 +2069,7 @@ mod tests {
                     ),
                     device_descriptor: make_touchpad_descriptor(),
                     trace_id: None,
+                    handled: input_device::Handled::No,
                 })
                 .await;
 
@@ -2084,7 +2091,7 @@ mod tests {
             let contender = StubContender::new();
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
 
@@ -2094,7 +2101,7 @@ mod tests {
             let arena = make_matching_arena(vec![], vec![matched_contender.clone()], vec![], None);
             matched_contender
                 .set_next_verify_event_result(VerifyEventResult::Mismatch("some reason"));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
 
@@ -2103,7 +2110,7 @@ mod tests {
             let contender = StubContender::new();
             let arena = make_matching_arena(vec![contender.clone()], vec![], vec![], None);
             contender.set_next_result(ExamineEventResult::Contender(contender.clone().into()));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Matching { .. });
         }
 
@@ -2123,7 +2130,7 @@ mod tests {
             matched_contender_b.set_next_verify_event_result(VerifyEventResult::MatchedContender(
                 matched_contender_b.clone().into(),
             ));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Matching { .. });
         }
 
@@ -2141,7 +2148,7 @@ mod tests {
                     recognized_gesture: RecognizedGesture::Palm,
                 },
             );
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
 
@@ -2159,7 +2166,7 @@ mod tests {
                     recognized_gesture: RecognizedGesture::Palm,
                 },
             );
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Forwarding { .. });
         }
     }
@@ -2168,8 +2175,8 @@ mod tests {
         use {
             super::{
                 super::{
-                    Contender, EndGestureEvent, ExamineEventResult, GestureArena, MouseEvent,
-                    MutableState, ProcessNewEventResult, TouchpadEvent, UnhandledInputHandler,
+                    Contender, EndGestureEvent, ExamineEventResult, GestureArena, InputHandler,
+                    MouseEvent, MutableState, ProcessNewEventResult, TouchpadEvent,
                 },
                 utils::{
                     make_touchpad_descriptor, make_unhandled_mouse_event,
@@ -2225,7 +2232,7 @@ mod tests {
                 EndGestureEvent::NoEvent,
                 "some reason",
             ));
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(winner.calls_received(), 1);
         }
 
@@ -2237,7 +2244,7 @@ mod tests {
                 EndGestureEvent::NoEvent,
                 "some reason",
             ));
-            arena.handle_unhandled_input_event(make_unhandled_mouse_event()).await;
+            arena.handle_input_event(make_unhandled_mouse_event()).await;
             assert_eq!(winner.calls_received(), 0);
         }
 
@@ -2254,12 +2261,12 @@ mod tests {
                 None,
                 winner.clone().into(),
             ));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             winner.set_next_result(ProcessNewEventResult::ContinueGesture(
                 None,
                 winner.clone().into(),
             ));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify `winner` was called as expected.
             assert_eq!(winner.calls_received(), 2);
@@ -2290,7 +2297,7 @@ mod tests {
                 winner.clone().into(),
             ));
             assert_matches!(
-                arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await.as_slice(),
+                arena.handle_input_event(make_unhandled_touchpad_event()).await.as_slice(),
                 [
                     input_device::InputEvent {
                         event_time,
@@ -2311,10 +2318,7 @@ mod tests {
                 winner.clone().into(),
             ));
             pretty_assertions::assert_eq!(
-                arena
-                    .handle_unhandled_input_event(make_unhandled_touchpad_event())
-                    .await
-                    .as_slice(),
+                arena.handle_input_event(make_unhandled_touchpad_event()).await.as_slice(),
                 vec![]
             );
         }
@@ -2328,10 +2332,7 @@ mod tests {
                 "some reason",
             ));
             pretty_assertions::assert_eq!(
-                arena
-                    .handle_unhandled_input_event(make_unhandled_touchpad_event())
-                    .await
-                    .as_slice(),
+                arena.handle_input_event(make_unhandled_touchpad_event()).await.as_slice(),
                 vec![]
             );
         }
@@ -2357,11 +2358,7 @@ mod tests {
 
             // Verify no events were generated.
             pretty_assertions::assert_eq!(
-                arena
-                    .clone()
-                    .handle_unhandled_input_event(make_unhandled_touchpad_event())
-                    .await
-                    .as_slice(),
+                arena.clone().handle_input_event(make_unhandled_touchpad_event()).await.as_slice(),
                 vec![]
             );
 
@@ -2395,7 +2392,7 @@ mod tests {
             // Set a return value for the `examine_event()` call.
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
 
-            let touchpad_event = input_device::UnhandledInputEvent {
+            let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
@@ -2410,11 +2407,12 @@ mod tests {
                 ),
                 device_descriptor: make_touchpad_descriptor(),
                 trace_id: None,
+                handled: input_device::Handled::No,
             };
 
             // Verify no events were generated.
             pretty_assertions::assert_eq!(
-                arena.clone().handle_unhandled_input_event(touchpad_event).await.as_slice(),
+                arena.clone().handle_input_event(touchpad_event).await.as_slice(),
                 vec![]
             );
 
@@ -2453,7 +2451,7 @@ mod tests {
 
             // Verify events were generated.
             assert_matches!(
-                arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await.as_slice(),
+                arena.handle_input_event(make_unhandled_touchpad_event()).await.as_slice(),
                 [
                     input_device::InputEvent {
                         event_time,
@@ -2491,7 +2489,7 @@ mod tests {
                 mouse_event,
                 winner.clone().into(),
             ));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Forwarding { .. });
         }
 
@@ -2520,7 +2518,7 @@ mod tests {
                 EndGestureEvent::GeneratedEvent(mouse_event),
                 "some reason",
             ));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle { .. });
         }
 
@@ -2549,7 +2547,7 @@ mod tests {
                 EndGestureEvent::GeneratedEvent(mouse_event),
                 "some reason",
             ));
-            let touchpad_event = input_device::UnhandledInputEvent {
+            let touchpad_event = input_device::InputEvent {
                 event_time: zx::Time::from_nanos(123456),
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
@@ -2564,8 +2562,9 @@ mod tests {
                 ),
                 device_descriptor: make_touchpad_descriptor(),
                 trace_id: None,
+                handled: input_device::Handled::No,
             };
-            arena.clone().handle_unhandled_input_event(touchpad_event).await;
+            arena.clone().handle_input_event(touchpad_event).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Chain);
         }
 
@@ -2577,7 +2576,7 @@ mod tests {
                 EndGestureEvent::NoEvent,
                 "reason",
             ));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
         }
 
@@ -2604,7 +2603,7 @@ mod tests {
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
 
             // Send an event into the arena.
-            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            arena.handle_input_event(make_unhandled_touchpad_event()).await;
 
             // Verify that the arena started a new contest.
             assert_eq!(contender.calls_received(), 1);
@@ -2614,7 +2613,7 @@ mod tests {
     mod touchpad_event_payload {
         use {
             super::{
-                super::{ExamineEventResult, GestureArena, UnhandledInputHandler},
+                super::{ExamineEventResult, GestureArena, InputHandler},
                 utils::{ContenderFactoryOnce, StubContender},
             },
             crate::{input_device, touch_binding, Position},
@@ -2651,7 +2650,7 @@ mod tests {
         fn make_unhandled_touchpad_event(
             contact_position_units: Vec<(fidl_input_report::Unit, fidl_input_report::Unit)>,
             positions: Vec<Position>,
-        ) -> input_device::UnhandledInputEvent {
+        ) -> input_device::InputEvent {
             let injector_contacts: Vec<_> = positions
                 .into_iter()
                 .enumerate()
@@ -2662,7 +2661,7 @@ mod tests {
                     pressure: None,
                 })
                 .collect();
-            input_device::UnhandledInputEvent {
+            input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
                         injector_contacts,
@@ -2672,6 +2671,7 @@ mod tests {
                 device_descriptor: make_touchpad_descriptor(contact_position_units),
                 event_time: zx::Time::ZERO,
                 trace_id: None,
+                handled: input_device::Handled::No,
             }
         }
 
@@ -2701,7 +2701,7 @@ mod tests {
             ));
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena
-                .handle_unhandled_input_event(make_unhandled_touchpad_event(
+                .handle_input_event(make_unhandled_touchpad_event(
                     contact_position_units,
                     positions,
                 ))
@@ -2770,7 +2770,7 @@ mod tests {
             ));
             contender.set_next_result(ExamineEventResult::Mismatch("some reason"));
             arena
-                .handle_unhandled_input_event(make_unhandled_touchpad_event(
+                .handle_input_event(make_unhandled_touchpad_event(
                     contact_position_units,
                     positions,
                 ))
@@ -2782,7 +2782,7 @@ mod tests {
     mod inspect {
         use {
             super::{
-                super::{GestureArena, UnhandledInputHandler},
+                super::{GestureArena, InputHandler},
                 utils::make_unhandled_touchpad_event,
             },
             crate::{input_device, touch_binding, Position, Size},
@@ -2822,31 +2822,31 @@ mod tests {
                 },
             );
 
-            let mut handle_event_fut =
-                arena.clone().handle_unhandled_input_event(input_device::UnhandledInputEvent {
-                    device_event: input_device::InputDeviceEvent::Touchpad(
-                        touch_binding::TouchpadEvent {
-                            injector_contacts: vec![
-                                touch_binding::TouchContact {
-                                    id: 1u32,
-                                    position: Position { x: 2.0, y: 3.0 },
-                                    contact_size: None,
-                                    pressure: None,
-                                },
-                                touch_binding::TouchContact {
-                                    id: 2u32,
-                                    position: Position { x: 40.0, y: 50.0 },
-                                    contact_size: None,
-                                    pressure: None,
-                                },
-                            ],
-                            pressed_buttons: hashset! {1},
-                        },
-                    ),
-                    device_descriptor: device_descriptor.clone(),
-                    event_time: zx::Time::from_nanos(12_300),
-                    trace_id: None,
-                });
+            let mut handle_event_fut = arena.clone().handle_input_event(input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Touchpad(
+                    touch_binding::TouchpadEvent {
+                        injector_contacts: vec![
+                            touch_binding::TouchContact {
+                                id: 1u32,
+                                position: Position { x: 2.0, y: 3.0 },
+                                contact_size: None,
+                                pressure: None,
+                            },
+                            touch_binding::TouchContact {
+                                id: 2u32,
+                                position: Position { x: 40.0, y: 50.0 },
+                                contact_size: None,
+                                pressure: None,
+                            },
+                        ],
+                        pressed_buttons: hashset! {1},
+                    },
+                ),
+                device_descriptor: device_descriptor.clone(),
+                event_time: zx::Time::from_nanos(12_300),
+                trace_id: None,
+                handled: input_device::Handled::No,
+            });
             executor.set_fake_time(fasync::Time::from_nanos(10_000_000));
             assert_matches!(
                 executor.run_until_stalled(&mut handle_event_fut),
@@ -2854,23 +2854,23 @@ mod tests {
             );
 
             // Process a touchpad event with width/height.
-            let mut handle_event_fut =
-                arena.clone().handle_unhandled_input_event(input_device::UnhandledInputEvent {
-                    device_event: input_device::InputDeviceEvent::Touchpad(
-                        touch_binding::TouchpadEvent {
-                            injector_contacts: vec![touch_binding::TouchContact {
-                                id: 1u32,
-                                position: Position { x: 2.0, y: 3.0 },
-                                contact_size: Some(Size { width: 30.0, height: 40.0 }),
-                                pressure: None,
-                            }],
-                            pressed_buttons: hashset! {},
-                        },
-                    ),
-                    device_descriptor,
-                    event_time: zx::Time::from_nanos(8_000_000),
-                    trace_id: None,
-                });
+            let mut handle_event_fut = arena.clone().handle_input_event(input_device::InputEvent {
+                device_event: input_device::InputDeviceEvent::Touchpad(
+                    touch_binding::TouchpadEvent {
+                        injector_contacts: vec![touch_binding::TouchContact {
+                            id: 1u32,
+                            position: Position { x: 2.0, y: 3.0 },
+                            contact_size: Some(Size { width: 30.0, height: 40.0 }),
+                            pressure: None,
+                        }],
+                        pressed_buttons: hashset! {},
+                    },
+                ),
+                device_descriptor,
+                event_time: zx::Time::from_nanos(8_000_000),
+                trace_id: None,
+                handled: input_device::Handled::No,
+            });
             executor.set_fake_time(fasync::Time::from_nanos(12_000_000));
             assert_matches!(
                 executor.run_until_stalled(&mut handle_event_fut),
@@ -2906,14 +2906,14 @@ mod tests {
                     "1": {
                         driver_monotonic_nanos: 8_000_000i64,
                         entry_latency_micros: 4_000i64,  // 12_000_000 - 8_000_000 = 4_000_000 nsec
-                        pressed_buttons: Vec::<u64>::new(),
-                        contacts: {
-                            "1": {
-                                pos_x_mm: 2.0,
-                                pos_y_mm: 3.0,
-                                width_raw: 30.0,
-                                height_raw: 40.0,
-                            },
+                            pressed_buttons: Vec::<u64>::new(),
+                            contacts: {
+                                "1": {
+                                    pos_x_mm: 2.0,
+                                    pos_y_mm: 3.0,
+                                    width_raw: 30.0,
+                                    height_raw: 40.0,
+                                },
                         }
                     },
                 }
@@ -2924,11 +2924,11 @@ mod tests {
         async fn retains_latest_events_up_to_cap() {
             let inspector = fuchsia_inspect::Inspector::new();
             let arena = Rc::new(GestureArena::new_for_test(|| vec![], &inspector, 2));
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await; // 0
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await; // 1
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await; // 2
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await; // 3
-            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await; // 4
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await; // 0
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await; // 1
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await; // 2
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await; // 3
+            arena.clone().handle_input_event(make_unhandled_touchpad_event()).await; // 4
             fuchsia_inspect::assert_data_tree!(inspector, root: {
                 touchpad_events: {
                     "3": contains {},
