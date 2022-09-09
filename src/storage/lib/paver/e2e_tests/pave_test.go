@@ -138,7 +138,7 @@ func doTestPave(
 		}
 
 		// Actually pave the device.
-		if err := downgradePaver.PaveWithOptions(ctx, deviceClient.Name(), paver.Options{Mode: paver.ZedbootOnly}); err != nil {
+		if err := downgradePaver.PaveWithOptions(ctx, deviceClient.Name(), paver.Options{Mode: paver.ZedbootOnly, TftpBlockSize: c.tftpBlockSize}); err != nil {
 			return fmt.Errorf("device failed to pave zedboot: %w", err)
 		}
 
@@ -151,7 +151,7 @@ func doTestPave(
 	logger.Infof(ctx, "paved zedboot")
 
 	if err := util.RunWithTimeout(ctx, c.paveTimeout, func() error {
-		if err := upgradePaver.PaveWithOptions(ctx, deviceClient.Name(), paver.Options{Mode: paver.SkipZedboot}); err != nil {
+		if err := upgradePaver.PaveWithOptions(ctx, deviceClient.Name(), paver.Options{Mode: paver.SkipZedboot, TftpBlockSize: c.tftpBlockSize}); err != nil {
 			return fmt.Errorf("device failed to pave main: %w", err)
 		}
 

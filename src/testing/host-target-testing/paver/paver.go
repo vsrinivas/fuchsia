@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"golang.org/x/crypto/ssh"
@@ -35,7 +36,8 @@ const (
 )
 
 type Options struct {
-	Mode Mode
+	Mode          Mode
+	TftpBlockSize uint64
 }
 
 type Paver interface {
@@ -107,6 +109,10 @@ func Stdout(writer io.Writer) BuildPaverOption {
 // pave will only be applied to the specified device.
 func (p *BuildPaver) PaveWithOptions(ctx context.Context, deviceName string, options Options) error {
 	paverArgs := []string{"--fail-fast-if-version-mismatch"}
+
+	if options.TftpBlockSize != 0 {
+		paverArgs = append(paverArgs, "-b", strconv.FormatUint(options.TftpBlockSize, 10))
+	}
 
 	// Write out the public key's authorized keys.
 	if p.sshPublicKey != nil && options.Mode != ZedbootOnly {

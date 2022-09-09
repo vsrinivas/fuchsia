@@ -62,6 +62,10 @@ import("//build/testing/host_test.gni")
 #   - Optional: How many test cycles should the test execute. Defaults to 1
 #     cycle.
 #   - Type: integer string
+#
+#   tftp_block_size
+#   - Optional: tftp block size.
+#   - Type: integer string
 template("e2e_tests_pave") {
   assert(is_linux || is_mac, "system_tests are for linux/mac only")
 
@@ -161,6 +165,15 @@ template("e2e_tests_pave") {
     _args += [
       "-cycle-count",
       invoker.cycle_count,
+    ]
+  }
+
+  if (defined(invoker.tftp_block_size)) {
+    assert(invoker.tftp_block_size != "",
+           "'$target_name' cannot have an empty tftp_block_size")
+    _args += [
+      "-tftp-block-size",
+      invoker.tftp_block_size,
     ]
   }
 
