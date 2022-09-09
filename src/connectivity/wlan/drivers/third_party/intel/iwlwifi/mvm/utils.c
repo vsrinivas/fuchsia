@@ -282,11 +282,6 @@ zx_status_t iwl_mvm_legacy_rate_to_mac80211_idx(uint32_t rate_n_flags, wlan_band
   if (!ptr_chan_idx) {
     return ZX_ERR_INVALID_ARGS;
   }
-#if 0   // NEEDS_PORTING
-  if (band == NL80211_BAND_60GHZ) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-#endif  // NEEDS_PORTING
 
   /* Legacy rate format, search for match in table */
   if (band == WLAN_BAND_FIVE_GHZ) {
@@ -751,11 +746,8 @@ void iwl_mvm_update_smps(struct iwl_mvm* mvm, struct ieee80211_vif* vif,
     /* SMPS is irrelevant for NICs that don't have at least 2 RX antenna */
     if (num_of_ant(iwl_mvm_get_valid_rx_ant(mvm)) == 1) { return; }
 
-    if (vif->type == NL80211_IFTYPE_AP) {
-        smps_mode = IEEE80211_SMPS_OFF;
-    } else {
-        smps_mode = IEEE80211_SMPS_AUTOMATIC;
-    }
+	if (vif->type != NL80211_IFTYPE_STATION)
+		return;
 
     mvmvif = iwl_mvm_vif_from_mac80211(vif);
     mvmvif->smps_requests[req_type] = smps_request;
@@ -779,21 +771,53 @@ zx_status_t iwl_mvm_request_statistics(struct iwl_mvm* mvm, bool clear) {
     struct iwl_statistics_cmd scmd = {
         .flags = clear ? cpu_to_le32(IWL_STATISTICS_FLG_CLEAR) : 0,
     };
+
     struct iwl_host_cmd cmd = {
         .id = STATISTICS_CMD,
         .len[0] = sizeof(scmd),
         .data[0] = &scmd,
-        .flags = CMD_WANT_SKB,
     };
     int ret;
+
+	/* From version 15 - STATISTICS_NOTIFICATION, the reply for
+	 * STATISTICS_CMD is empty, and the response is with
+	 * STATISTICS_NOTIFICATION notification
+	 */
+	if (iwl_fw_lookup_notif_ver(mvm->fw, LEGACY_GROUP,
+				    STATISTICS_NOTIFICATION, 0) < 15) {
+		cmd.flags = CMD_WANT_SKB;
 
     ret = iwl_mvm_send_cmd(mvm, &cmd);
     if (ret) { return ret; }
 
     iwl_mvm_handle_rx_statistics(mvm, cmd.resp_pkt);
     iwl_free_resp(&cmd);
+	} else {
+		struct iwl_notification_wait stats_wait;
+		static const u16 stats_complete[] = {
+			STATISTICS_NOTIFICATION,
+		};
 
-    if (clear) { iwl_mvm_accu_radio_stats(mvm); }
+		iwl_init_notification_wait(&mvm->notif_wait, &stats_wait,
+					   stats_complete, ARRAY_SIZE(stats_complete),
+					   iwl_wait_stats_complete, NULL);
+
+		ret = iwl_mvm_send_cmd(mvm, &cmd);
+		if (ret) {
+			iwl_remove_notification(&mvm->notif_wait, &stats_wait);
+			return ret;
+		}
+
+		/* 200ms should be enough for FW to collect data from all
+		 * LMACs and send STATISTICS_NOTIFICATION to host
+		 */
+		ret = iwl_wait_notification(&mvm->notif_wait, &stats_wait, HZ / 5);
+		if (ret)
+			return ret;
+	}
+
+	if (clear)
+		iwl_mvm_accu_radio_stats(mvm);
 
     return 0;
 #endif  // NEEDS_PORTING
@@ -807,49 +831,76 @@ void iwl_mvm_accu_radio_stats(struct iwl_mvm* mvm) {
 }
 
 #if 0  // NEEDS_PORTING
-static void iwl_mvm_diversity_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    bool* result = _data;
-    int i;
+struct iwl_mvm_diversity_iter_data {
+	struct iwl_mvm_phy_ctxt *ctxt;
+	bool result;
+};
 
-    for (i = 0; i < NUM_IWL_MVM_SMPS_REQ; i++) {
-        if (mvmvif->smps_requests[i] == IEEE80211_SMPS_STATIC ||
-            mvmvif->smps_requests[i] == IEEE80211_SMPS_DYNAMIC) {
-            *result = false;
-        }
-    }
+static void iwl_mvm_diversity_iter(void *_data, u8 *mac,
+				   struct ieee80211_vif *vif)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	struct iwl_mvm_diversity_iter_data *data = _data;
+	int i;
+
+	if (mvmvif->phy_ctxt != data->ctxt)
+		return;
+
+	for (i = 0; i < NUM_IWL_MVM_SMPS_REQ; i++) {
+		if (mvmvif->smps_requests[i] == IEEE80211_SMPS_STATIC ||
+		    mvmvif->smps_requests[i] == IEEE80211_SMPS_DYNAMIC) {
+			data->result = false;
+			break;
+		}
+	}
 }
 
-bool iwl_mvm_rx_diversity_allowed(struct iwl_mvm* mvm) {
-    bool result = true;
+bool iwl_mvm_rx_diversity_allowed(struct iwl_mvm *mvm,
+				  struct iwl_mvm_phy_ctxt *ctxt)
+{
+	struct iwl_mvm_diversity_iter_data data = {
+		.ctxt = ctxt,
+		.result = true,
+	};
 
-    iwl_assert_lock_held(&mvm->mutex);
+	lockdep_assert_held(&mvm->mutex);
 
-    if (num_of_ant(iwl_mvm_get_valid_rx_ant(mvm)) == 1) { return false; }
+	if (iwlmvm_mod_params.power_scheme != IWL_POWER_SCHEME_CAM)
+		return false;
 
-    if (mvm->cfg->rx_with_siso_diversity) { return false; }
+	if (num_of_ant(iwl_mvm_get_valid_rx_ant(mvm)) == 1)
+		return false;
 
-    ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
-                                               iwl_mvm_diversity_iter, &result);
+	if (mvm->cfg->rx_with_siso_diversity)
+		return false;
 
-    return result;
+	ieee80211_iterate_active_interfaces_atomic(
+			mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+			iwl_mvm_diversity_iter, &data);
+
+	return data.result;
 }
 
-void iwl_mvm_send_low_latency_cmd(struct iwl_mvm* mvm, bool low_latency, uint16_t mac_id) {
-    struct iwl_mac_low_latency_cmd cmd = {.mac_id = cpu_to_le32(mac_id)};
+void iwl_mvm_send_low_latency_cmd(struct iwl_mvm *mvm,
+				  bool low_latency, u16 mac_id)
+{
+	struct iwl_mac_low_latency_cmd cmd = {
+		.mac_id = cpu_to_le32(mac_id)
+	};
 
-    if (!fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_DYNAMIC_QUOTA)) { return; }
+	if (!fw_has_capa(&mvm->fw->ucode_capa,
+			 IWL_UCODE_TLV_CAPA_DYNAMIC_QUOTA))
+		return;
 
-    if (low_latency) {
-        /* currently we don't care about the direction */
-        cmd.low_latency_rx = 1;
-        cmd.low_latency_tx = 1;
-    }
+	if (low_latency) {
+		/* currently we don't care about the direction */
+		cmd.low_latency_rx = 1;
+		cmd.low_latency_tx = 1;
+	}
 
-    if (iwl_mvm_send_cmd_pdu(mvm, iwl_cmd_id(LOW_LATENCY_CMD, MAC_CONF_GROUP, 0), 0, sizeof(cmd),
-                             &cmd)) {
-        IWL_ERR(mvm, "Failed to send low latency command\n");
-    }
+	if (iwl_mvm_send_cmd_pdu(mvm, WIDE_ID(MAC_CONF_GROUP, LOW_LATENCY_CMD),
+				 0, sizeof(cmd), &cmd))
+		IWL_ERR(mvm, "Failed to send low latency command\n");
 }
 
 int iwl_mvm_update_low_latency(struct iwl_mvm* mvm, struct ieee80211_vif* vif, bool low_latency,
@@ -873,10 +924,6 @@ int iwl_mvm_update_low_latency(struct iwl_mvm* mvm, struct ieee80211_vif* vif, b
     if (res) { return res; }
 
     iwl_mvm_bt_coex_vif_change(mvm);
-
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-    iwl_mvm_send_tcm_event(mvm, vif);
-#endif
 
     return iwl_mvm_power_update_mac(mvm);
 }
@@ -960,6 +1007,36 @@ struct ieee80211_vif* iwl_mvm_get_bss_vif(struct iwl_mvm* mvm) {
 
     return bss_iter_data.vif;
 }
+
+struct iwl_bss_find_iter_data {
+	struct ieee80211_vif *vif;
+	u32 macid;
+};
+
+static void iwl_mvm_bss_find_iface_iterator(void *_data, u8 *mac,
+					    struct ieee80211_vif *vif)
+{
+	struct iwl_bss_find_iter_data *data = _data;
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+
+	if (mvmvif->id == data->macid)
+		data->vif = vif;
+}
+
+struct ieee80211_vif *iwl_mvm_get_vif_by_macid(struct iwl_mvm *mvm, u32 macid)
+{
+	struct iwl_bss_find_iter_data data = {
+		.macid = macid,
+	};
+
+	lockdep_assert_held(&mvm->mutex);
+
+	ieee80211_iterate_active_interfaces_atomic(
+		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+		iwl_mvm_bss_find_iface_iterator, &data);
+
+	return data.vif;
+}
 #endif  // NEEDS_PORTING
 
 struct iwl_sta_iter_data {
@@ -1008,7 +1085,7 @@ zx_duration_t iwl_mvm_get_wd_timeout(struct iwl_mvm* mvm, struct ieee80211_vif* 
         vif->type == NL80211_IFTYPE_AP) {
       return IWL_WATCHDOG_DISABLED;
     }
-    return iwlmvm_mod_params.tfd_q_hang_detect ? default_timeout : IWL_WATCHDOG_DISABLED;
+    rreturn default_timeout;
   }
 
   trigger = iwl_fw_dbg_get_trigger(mvm->fw, FW_DBG_TRIGGER_TXQ_TIMERS);
@@ -1097,60 +1174,44 @@ static enum iwl_mvm_traffic_load iwl_mvm_tcm_load(struct iwl_mvm* mvm, uint32_t 
     return IWL_MVM_TRAFFIC_LOW;
 }
 
-struct iwl_mvm_tcm_iter_data {
-    struct iwl_mvm* mvm;
-    bool any_sent;
-};
+static void iwl_mvm_tcm_iter(void *_data, u8 *mac, struct ieee80211_vif *vif)
+{
+	struct iwl_mvm *mvm = _data;
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
+	bool low_latency, prev = mvmvif->low_latency & LOW_LATENCY_TRAFFIC;
 
-static void iwl_mvm_tcm_iter(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
-    struct iwl_mvm_tcm_iter_data* data = _data;
-    struct iwl_mvm* mvm = data->mvm;
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    bool low_latency, prev = mvmvif->low_latency & LOW_LATENCY_TRAFFIC;
+	if (mvmvif->id >= NUM_MAC_INDEX_DRIVER)
+		return;
 
-    if (mvmvif->id >= NUM_MAC_INDEX_DRIVER) { return; }
+	low_latency = mvm->tcm.result.low_latency[mvmvif->id];
 
-    low_latency = mvm->tcm.result.low_latency[mvmvif->id];
+	if (!mvm->tcm.result.change[mvmvif->id] &&
+	    prev == low_latency) {
+		iwl_mvm_update_quotas(mvm, false, NULL);
+		return;
+	}
 
-    if (!mvm->tcm.result.change[mvmvif->id] && prev == low_latency) {
-        iwl_mvm_update_quotas(mvm, false, NULL);
-        return;
-    }
-
-    if (prev != low_latency) {
-        /* this sends traffic load and updates quota as well */
-        iwl_mvm_update_low_latency(mvm, vif, low_latency, LOW_LATENCY_TRAFFIC);
-    } else {
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-        iwl_mvm_send_tcm_event(mvm, vif);
-#endif
-        iwl_mvm_update_quotas(mvm, false, NULL);
-    }
-
-    data->any_sent = true;
+	if (prev != low_latency) {
+		/* this sends traffic load and updates quota as well */
+		iwl_mvm_update_low_latency(mvm, vif, low_latency,
+					   LOW_LATENCY_TRAFFIC);
+	} else {
+		iwl_mvm_update_quotas(mvm, false, NULL);
+	}
 }
 
-static void iwl_mvm_tcm_results(struct iwl_mvm* mvm) {
-    struct iwl_mvm_tcm_iter_data data = {
-        .mvm = mvm,
-        .any_sent = false,
-    };
+static void iwl_mvm_tcm_results(struct iwl_mvm *mvm)
+{
+	mutex_lock(&mvm->mutex);
 
-    mutex_lock(&mvm->mutex);
+	ieee80211_iterate_active_interfaces(
+		mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
+		iwl_mvm_tcm_iter, mvm);
 
-    ieee80211_iterate_active_interfaces(mvm->hw, IEEE80211_IFACE_ITER_NORMAL, iwl_mvm_tcm_iter,
-                                        &data);
+	if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN))
+		iwl_mvm_config_scan(mvm);
 
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-    /* send global only */
-    if (mvm->tcm.result.global_change && !data.any_sent) { iwl_mvm_send_tcm_event(mvm, NULL); }
-#endif
-
-    if (fw_has_capa(&mvm->fw->ucode_capa, IWL_UCODE_TLV_CAPA_UMAC_SCAN)) {
-        iwl_mvm_config_scan(mvm);
-    }
-
-    mutex_unlock(&mvm->mutex);
+	mutex_unlock(&mvm->mutex);
 }
 
 static void iwl_mvm_tcm_uapsd_nonagg_detected_wk(struct work_struct* wk) {
@@ -1175,65 +1236,73 @@ static void iwl_mvm_tcm_uapsd_nonagg_detected_wk(struct work_struct* wk) {
     iwl_mvm_connection_loss(mvm, vif, "AP isn't using AMPDU with uAPSD enabled");
 }
 
-static void iwl_mvm_uapsd_agg_disconnect_iter(void* data, uint8_t* mac, struct ieee80211_vif* vif) {
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(vif);
-    struct iwl_mvm* mvm = mvmvif->mvm;
-    int* mac_id = data;
+static void iwl_mvm_uapsd_agg_disconnect(struct iwl_mvm *mvm,
+					 struct ieee80211_vif *vif)
+{
+	struct iwl_mvm_vif *mvmvif = iwl_mvm_vif_from_mac80211(vif);
 
-    if (vif->type != NL80211_IFTYPE_STATION) { return; }
+	if (vif->type != NL80211_IFTYPE_STATION)
+		return;
 
-    if (mvmvif->id != *mac_id) { return; }
+	if (!vif->bss_conf.assoc)
+		return;
 
-    if (!vif->bss_conf.assoc) { return; }
+	if (!mvmvif->queue_params[IEEE80211_AC_VO].uapsd &&
+	    !mvmvif->queue_params[IEEE80211_AC_VI].uapsd &&
+	    !mvmvif->queue_params[IEEE80211_AC_BE].uapsd &&
+	    !mvmvif->queue_params[IEEE80211_AC_BK].uapsd)
+		return;
 
-    if (!mvmvif->queue_params[IEEE80211_AC_VO].uapsd &&
-        !mvmvif->queue_params[IEEE80211_AC_VI].uapsd &&
-        !mvmvif->queue_params[IEEE80211_AC_BE].uapsd &&
-        !mvmvif->queue_params[IEEE80211_AC_BK].uapsd) {
-        return;
-    }
+	if (mvm->tcm.data[mvmvif->id].uapsd_nonagg_detect.detected)
+		return;
 
-    if (mvm->tcm.data[*mac_id].uapsd_nonagg_detect.detected) { return; }
-
-    mvm->tcm.data[*mac_id].uapsd_nonagg_detect.detected = true;
-    IWL_INFO(mvm, "detected AP should do aggregation but isn't, likely due to U-APSD\n");
-    schedule_delayed_work(&mvmvif->uapsd_nonagg_detected_wk, 15 * HZ);
+	mvm->tcm.data[mvmvif->id].uapsd_nonagg_detect.detected = true;
+	IWL_INFO(mvm,
+		 "detected AP should do aggregation but isn't, likely due to U-APSD\n");
+	schedule_delayed_work(&mvmvif->uapsd_nonagg_detected_wk, 15 * HZ);
 }
 
-static void iwl_mvm_check_uapsd_agg_expected_tpt(struct iwl_mvm* mvm, unsigned int elapsed,
-                                                 int mac) {
-    uint64_t bytes = mvm->tcm.data[mac].uapsd_nonagg_detect.rx_bytes;
-    uint64_t tpt;
-    unsigned long rate;
+static void iwl_mvm_check_uapsd_agg_expected_tpt(struct iwl_mvm *mvm,
+						 unsigned int elapsed,
+						 int mac)
+{
+	u64 bytes = mvm->tcm.data[mac].uapsd_nonagg_detect.rx_bytes;
+	u64 tpt;
+	unsigned long rate;
+	struct ieee80211_vif *vif;
 
-    rate = ewma_rate_read(&mvm->tcm.data[mac].uapsd_nonagg_detect.rate);
+	rate = ewma_rate_read(&mvm->tcm.data[mac].uapsd_nonagg_detect.rate);
 
-    if (!rate || mvm->tcm.data[mac].opened_rx_ba_sessions ||
-        mvm->tcm.data[mac].uapsd_nonagg_detect.detected) {
-        return;
-    }
+	if (!rate || mvm->tcm.data[mac].opened_rx_ba_sessions ||
+	    mvm->tcm.data[mac].uapsd_nonagg_detect.detected)
+		return;
 
-    if (iwl_mvm_has_new_rx_api(mvm)) {
-        tpt = 8 * bytes; /* kbps */
-        do_div(tpt, elapsed);
-        rate *= 1000; /* kbps */
-        if (tpt < 22 * rate / 100) { return; }
-    } else {
-        /*
-         * the rate here is actually the threshold, in 100Kbps units,
-         * so do the needed conversion from bytes to 100Kbps:
-         * 100kb = bits / (100 * 1000),
-         * 100kbps = 100kb / (msecs / 1000) ==
-         *           (bits / (100 * 1000)) / (msecs / 1000) ==
-         *           bits / (100 * msecs)
-         */
-        tpt = (8 * bytes);
-        do_div(tpt, elapsed * 100);
-        if (tpt < rate) { return; }
-    }
+	if (iwl_mvm_has_new_rx_api(mvm)) {
+		tpt = 8 * bytes; /* kbps */
+		do_div(tpt, elapsed);
+		rate *= 1000; /* kbps */
+		if (tpt < 22 * rate / 100)
+			return;
+	} else {
+		/*
+		 * the rate here is actually the threshold, in 100Kbps units,
+		 * so do the needed conversion from bytes to 100Kbps:
+		 * 100kb = bits / (100 * 1000),
+		 * 100kbps = 100kb / (msecs / 1000) ==
+		 *           (bits / (100 * 1000)) / (msecs / 1000) ==
+		 *           bits / (100 * msecs)
+		 */
+		tpt = (8 * bytes);
+		do_div(tpt, elapsed * 100);
+		if (tpt < rate)
+			return;
+	}
 
-    ieee80211_iterate_active_interfaces_atomic(mvm->hw, IEEE80211_IFACE_ITER_NORMAL,
-                                               iwl_mvm_uapsd_agg_disconnect_iter, &mac);
+	rcu_read_lock();
+	vif = rcu_dereference(mvm->vif_id_to_mac[mac]);
+	if (vif)
+		iwl_mvm_uapsd_agg_disconnect(mvm, vif);
+	rcu_read_unlock();
 }
 
 static void iwl_mvm_tcm_iterator(void* _data, uint8_t* mac, struct ieee80211_vif* vif) {
@@ -1301,13 +1370,14 @@ static unsigned long iwl_mvm_calc_tcm_stats(struct iwl_mvm* mvm, unsigned long t
         }
 
         /* clear old data */
+        if (handle_uapsd) {
+			    mdata->uapsd_nonagg_detect.rx_bytes = 0;
+        }
         memset(&mdata->rx.airtime, 0, sizeof(mdata->rx.airtime));
         memset(&mdata->tx.airtime, 0, sizeof(mdata->tx.airtime));
-        if (handle_uapsd) { mdata->uapsd_nonagg_detect.rx_bytes = 0; }
     }
 
     load = iwl_mvm_tcm_load(mvm, total_airtime, elapsed);
-    mvm->tcm.result.global_change = load != mvm->tcm.result.global_load;
     mvm->tcm.result.global_load = load;
 
     for (i = 0; i < NUM_NL80211_BANDS; i++) {
@@ -1436,25 +1506,39 @@ void iwl_mvm_tcm_rm_vif(struct iwl_mvm* mvm, struct ieee80211_vif* vif) {
     cancel_delayed_work_sync(&mvmvif->uapsd_nonagg_detected_wk);
 }
 
+u32 iwl_mvm_get_systime(struct iwl_mvm *mvm)
+{
+	u32 reg_addr = DEVICE_SYSTEM_TIME_REG;
+
+	if (mvm->trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_22000 &&
+	    mvm->trans->cfg->gp2_reg_addr)
+		reg_addr = mvm->trans->cfg->gp2_reg_addr;
+
+	return iwl_read_prph(mvm->trans, reg_addr);
+}
 void iwl_mvm_get_sync_time(struct iwl_mvm* mvm, uint32_t* gp2, uint64_t* boottime) {
-    bool ps_disabled;
+	bool ps_disabled;
 
-    iwl_assert_lock_held(&mvm->mutex);
+	lockdep_assert_held(&mvm->mutex);
 
-    /* Disable power save when reading GP2 */
-    ps_disabled = mvm->ps_disabled;
-    if (!ps_disabled) {
-        mvm->ps_disabled = true;
-        iwl_mvm_power_update_device(mvm);
-    }
+	/* Disable power save when reading GP2 */
+	ps_disabled = mvm->ps_disabled;
+	if (!ps_disabled) {
+		mvm->ps_disabled = true;
+		iwl_mvm_power_update_device(mvm);
+	}
 
-    *gp2 = iwl_read_prph(mvm->trans, DEVICE_SYSTEM_TIME_REG);
-    *boottime = ktime_get_boot_ns();
+	*gp2 = iwl_mvm_get_systime(mvm);
 
-    if (!ps_disabled) {
-        mvm->ps_disabled = ps_disabled;
-        iwl_mvm_power_update_device(mvm);
-    }
+	if (clock_type == CLOCK_BOOTTIME && boottime)
+		*boottime = ktime_get_boottime_ns();
+	else if (clock_type == CLOCK_REALTIME && realtime)
+		*realtime = ktime_get_real();
+
+	if (!ps_disabled) {
+		mvm->ps_disabled = ps_disabled;
+		iwl_mvm_power_update_device(mvm);
+	}
 }
 #endif  // NEEDS_PORTING
 

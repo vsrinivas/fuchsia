@@ -575,7 +575,7 @@ static void iwl_mvm_tx_unblock_dwork(struct work_struct* work) {
 
     mvmvif = iwl_mvm_vif_from_mac80211(tx_blocked_vif);
     iwl_mvm_modify_all_sta_disable_tx(mvm, mvmvif, false);
-    mvm->csa_tx_blocked_vif = NULL;
+	RCU_INIT_POINTER(mvm->csa_tx_blocked_vif, NULL);
 unlock:
     mtx_unlock(&mvm->mutex);
 }
@@ -772,10 +772,6 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   iwl_task_create(mvm->dev, iwl_mvm_async_handlers_wk, mvm, &mvm->async_handlers_wk);
 #if 0  // NEEDS_PORTING
     INIT_WORK(&mvm->roc_done_wk, iwl_mvm_roc_done_wk);
-#ifdef CPTCFG_MAC80211_LATENCY_MEASUREMENTS
-    INIT_WORK(&mvm->tx_latency_wk, iwl_mvm_tx_latency_wk);
-    INIT_DELAYED_WORK(&mvm->tx_latency_watchdog_wk, iwl_mvm_tx_latency_watchdog_wk);
-#endif /* CPTCFG_MAC80211_LATENCY_MEASUREMENTS */
 #ifdef CONFIG_PM
     INIT_WORK(&mvm->d0i3_exit_work, iwl_mvm_d0i3_exit_work);
 #endif
@@ -810,17 +806,7 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     mvm->tcm.ts = jiffies;
     mvm->tcm.ll_ts = jiffies;
     mvm->tcm.uapsd_nonagg_ts = jiffies;
-#endif  // NEEDS_PORTING
 
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-  INIT_LIST_HEAD(&mvm->tdls_peer_cache_list);
-#endif
-
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-  mvm->rx_filters = IWL_MVM_VENDOR_RXFILTER_EINVAL;
-#endif
-
-#if 0   // NEEDS_PORTING
     INIT_DELAYED_WORK(&mvm->cs_tx_unblock_dwork, iwl_mvm_tx_unblock_dwork);
 #endif  // NEEDS_PORTING
 
@@ -897,11 +883,6 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   /* set up notification wait support */
   iwl_notification_wait_init(&mvm->notif_wait);
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-  iwl_dnt_init(mvm->trans, dbgfs_dir);
-  iwl_tm_init(trans, mvm->fw, &mvm->mutex, mvm);
-#endif
-
   /* Init phy db */
   mvm->phy_db = iwl_phy_db_init(trans);
   if (!mvm->phy_db) {
@@ -932,11 +913,6 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   iwl_mvm_ref(mvm, IWL_MVM_REF_INIT_UCODE);
   err = iwl_run_init_mvm_ucode(mvm, true);
 
-#if 0   // NEEDS_PORTING
-  if (test_bit(IWL_FWRT_STATUS_WAIT_ALIVE, &mvm->fwrt.status)) {
-      iwl_fw_alive_error_dump(&mvm->fwrt);
-  }
-#endif  // NEEDS_PORTING
   if (!iwlmvm_mod_params.init_dbg || !err) {
     iwl_mvm_stop_device(mvm);
   }
@@ -977,13 +953,6 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
     memset(&mvm->rx_stats, 0, sizeof(struct mvm_statistics_rx));
   }
 
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-  err = iwl_mvm_fm_register(mvm);
-  if (err) {
-    zxlogf(ERROR, "Unable to register with Frequency Manager: %d", err);
-  }
-#endif
-
   /* The transport always starts with a taken reference, we can
    * release it now if d0i3 is supported */
   if (iwl_mvm_is_d0i3_supported(mvm)) {
@@ -991,14 +960,6 @@ static struct iwl_op_mode* iwl_op_mode_mvm_start(struct iwl_trans* trans, const 
   }
 
   iwl_mvm_tof_init(mvm);
-
-#ifdef CPTCFG_IWLWIFI_SUPPORT_DEBUG_OVERRIDES
-  iwl_mvm_init_modparams(mvm);
-#endif
-
-#ifdef CPTCFG_IWLMVM_AX_SOFTAP_TESTMODE
-  mvm->is_bar_enabled = true;
-#endif
 
   iwl_mvm_toggle_tx_ant(mvm, &mvm->mgmt_last_antenna_idx);
   return op_mode;
@@ -1052,24 +1013,24 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
 
   if (mvm->init_status & IWL_MVM_INIT_STATUS_REG_HW_INIT_COMPLETE) {
 #if 0   // NEEDS_PORTING
-        ieee80211_unregister_hw(mvm->hw);
+	/*
+	 * If we couldn't get ownership on the device and we couldn't
+	 * get the NVM from CSME, we haven't registered to mac80211.
+	 * In that case, we didn't fail op_mode_start, because we are
+	 * waiting for CSME to allow us to get the NVM to register to
+	 * mac80211. If that didn't happen, we haven't registered to
+	 * mac80211, hence the if below.
+	 */
+	if (mvm->hw_registered)
+    ieee80211_unregister_hw(mvm->hw);
 #endif  // NEEDS_PORTING
     mvm->init_status &= ~IWL_MVM_INIT_STATUS_REG_HW_INIT_COMPLETE;
   }
-
-#ifdef CPTCFG_IWLWIFI_FRQ_MGR
-  iwl_mvm_fm_unregister(mvm);
-#endif
 
   free(mvm->scan_cmd);
   mvm->scan_cmd = NULL;
   free(mvm->mcast_filter_cmd);
   mvm->mcast_filter_cmd = NULL;
-
-#ifdef CPTCFG_IWLMVM_VENDOR_CMDS
-  kfree(mvm->mcast_active_filter_cmd);
-  mvm->mcast_active_filter_cmd = NULL;
-#endif
 
 #if defined(CONFIG_PM_SLEEP) && defined(CPTCFG_IWLWIFI_DEBUGFS)
   kfree(mvm->d3_resume_sram);
@@ -1079,9 +1040,6 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
   iwl_phy_db_free(mvm->phy_db);
   mvm->phy_db = NULL;
 
-#ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
-  iwl_dnt_free(mvm->trans);
-#endif
   kfree(mvm->nvm_data);
   for (i = 0; i < NVM_MAX_NUM_SECTIONS; i++) {
     kfree((void*)mvm->nvm_sections[i].data);
@@ -1093,10 +1051,6 @@ static void iwl_op_mode_mvm_stop(struct iwl_op_mode* op_mode) {
 #if 0   // NEEDS_PORTING
     cancel_delayed_work_sync(&mvm->tcm.work);
 #endif  // NEEDS_PORTING
-
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-  iwl_mvm_tdls_peer_cache_clear(mvm, NULL);
-#endif /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
 
   iwl_mvm_tof_clean(mvm);
 
@@ -1337,7 +1291,7 @@ static void iwl_mvm_queue_state_change(struct iwl_op_mode* op_mode, int hw_queue
     mvmtxq->stopped = !start;
 
 #if 0   // NEEDS_PORTING
-        if (start) { iwl_mvm_mac_itxq_xmit(mvm->hw, txq); }
+        if (start && mvmsta->sta_state != IEEE80211_STA_NOTEXIST)) { iwl_mvm_mac_itxq_xmit(mvm->hw, txq); }
 #endif  // NEEDS_PORTING
   }
 
@@ -1386,8 +1340,16 @@ static bool iwl_mvm_set_hw_rfkill_state(struct iwl_op_mode* op_mode, bool state)
   iwl_mvm_set_rfkill_state(mvm);
 
 #if 0   // NEEDS_PORTING
-    /* iwl_run_init_mvm_ucode is waiting for results, abort it */
-    if (calibrating) { iwl_abort_notification_waits(&mvm->notif_wait); }
+	 /* iwl_run_init_mvm_ucode is waiting for results, abort it. */
+	if (rfkill_safe_init_done)
+		iwl_abort_notification_waits(&mvm->notif_wait);
+
+	/*
+	 * Don't ask the transport to stop the firmware. We'll do it
+	 * after cfg80211 takes us down.
+	 */
+	if (unified)
+		return false;
 #endif  // NEEDS_PORTING
 
   /*
@@ -1418,9 +1380,9 @@ static void iwl_mvm_reprobe_wk(struct work_struct* wk) {
     struct iwl_mvm_reprobe* reprobe;
 
     reprobe = container_of(wk, struct iwl_mvm_reprobe, work);
-    if (device_reprobe(reprobe->dev)) {
-        IWL_ERR(reprobe->dev, "reprobe failed!\n");
-    }
+	if (device_reprobe(reprobe->dev))
+		dev_err(reprobe->dev, "reprobe failed!\n");
+	put_device(reprobe->dev);
     kfree(reprobe);
     module_put(THIS_MODULE);
 }
@@ -1429,68 +1391,95 @@ static void iwl_mvm_reprobe_wk(struct work_struct* wk) {
 void iwl_mvm_nic_restart(struct iwl_mvm* mvm, bool fw_error) {
   IWL_WARN(mvm, "%s() needs porting\n", __func__);
 #if 0  // NEEDS_PORTING
-    iwl_abort_notification_waits(&mvm->notif_wait);
+	iwl_abort_notification_waits(&mvm->notif_wait);
+	iwl_dbg_tlv_del_timers(mvm->trans);
 
-    /*
-     * This is a bit racy, but worst case we tell mac80211 about
-     * a stopped/aborted scan when that was already done which
-     * is not a problem. It is necessary to abort any os scan
-     * here because mac80211 requires having the scan cleared
-     * before restarting.
-     * We'll reset the scan_status to NONE in restart cleanup in
-     * the next start() call from mac80211. If restart isn't called
-     * (no fw restart) scan status will stay busy.
-     */
-    iwl_mvm_report_scan_aborted(mvm);
+	/*
+	 * This is a bit racy, but worst case we tell mac80211 about
+	 * a stopped/aborted scan when that was already done which
+	 * is not a problem. It is necessary to abort any os scan
+	 * here because mac80211 requires having the scan cleared
+	 * before restarting.
+	 * We'll reset the scan_status to NONE in restart cleanup in
+	 * the next start() call from mac80211. If restart isn't called
+	 * (no fw restart) scan status will stay busy.
+	 */
+	iwl_mvm_report_scan_aborted(mvm);
 
-    /*
-     * If we're restarting already, don't cycle restarts.
-     * If INIT fw asserted, it will likely fail again.
-     * If WoWLAN fw asserted, don't restart either, mac80211
-     * can't recover this since we're already half suspended.
-     */
-    if (!mvm->fw_restart && fw_error) {
-        iwl_fw_dbg_collect_desc(&mvm->fwrt, &iwl_dump_desc_assert, false, 0);
-    } else if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
-        struct iwl_mvm_reprobe* reprobe;
+	/*
+	 * If we're restarting already, don't cycle restarts.
+	 * If INIT fw asserted, it will likely fail again.
+	 * If WoWLAN fw asserted, don't restart either, mac80211
+	 * can't recover this since we're already half suspended.
+	 */
+	if (!mvm->fw_restart && fw_error) {
+		iwl_fw_error_collect(&mvm->fwrt, false);
+	} else if (test_bit(IWL_MVM_STATUS_STARTING,
+			    &mvm->status)) {
+		IWL_ERR(mvm, "Starting mac, retry will be triggered anyway\n");
+	} else if (test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)) {
+		struct iwl_mvm_reprobe *reprobe;
 
-        IWL_ERR(mvm, "Firmware error during reconfiguration - reprobe!\n");
+		IWL_ERR(mvm,
+			"Firmware error during reconfiguration - reprobe!\n");
 
-#if 0   // NEEDS_PORTING
-        /*
-         * get a module reference to avoid doing this while unloading
-         * anyway and to avoid scheduling a work with code that's
-         * being removed.
-         */
-        if (!try_module_get(THIS_MODULE)) {
-            IWL_ERR(mvm, "Module is being unloaded - abort\n");
-            return;
-        }
-#endif  // NEEDS_PORTING
+		/*
+		 * get a module reference to avoid doing this while unloading
+		 * anyway and to avoid scheduling a work with code that's
+		 * being removed.
+		 */
+		if (!try_module_get(THIS_MODULE)) {
+			IWL_ERR(mvm, "Module is being unloaded - abort\n");
+			return;
+		}
 
-        reprobe = calloc(1, sizeof(*reprobe));
-        if (!reprobe) {
-#if 0   // NEEDS_PORTING
-            module_put(THIS_MODULE);
-#endif  // NEEDS_PORTING
-            return;
-        }
-        reprobe->dev = mvm->trans->dev;
-#if 0   // NEEDS_PORTING
-        INIT_WORK(&reprobe->work, iwl_mvm_reprobe_wk);
-        schedule_work(&reprobe->work);
-#endif  // NEEDS_PORTING
-    } else if (mvm->fwrt.cur_fw_img == IWL_UCODE_REGULAR && mvm->hw_registered &&
-               !test_bit(STATUS_TRANS_DEAD, &mvm->trans->status)) {
-        /* don't let the transport/FW power down */
-        iwl_mvm_ref(mvm, IWL_MVM_REF_UCODE_DOWN);
+		reprobe = kzalloc(sizeof(*reprobe), GFP_ATOMIC);
+		if (!reprobe) {
+			module_put(THIS_MODULE);
+			return;
+		}
+		reprobe->dev = get_device(mvm->trans->dev);
+		INIT_WORK(&reprobe->work, iwl_mvm_reprobe_wk);
+		schedule_work(&reprobe->work);
+	} else if (test_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED,
+			    &mvm->status)) {
+		IWL_ERR(mvm, "HW restart already requested, but not started\n");
+	} else if (mvm->fwrt.cur_fw_img == IWL_UCODE_REGULAR &&
+		   mvm->hw_registered &&
+		   !test_bit(STATUS_TRANS_DEAD, &mvm->trans->status)) {
+		/* This should be first thing before trying to collect any
+		 * data to avoid endless loops if any HW error happens while
+		 * collecting debug data.
+		 */
+		set_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status);
 
-        if (fw_error && mvm->fw_restart > 0) { mvm->fw_restart--; }
-        set_bit(IWL_MVM_STATUS_HW_RESTART_REQUESTED, &mvm->status);
-#if 0   // NEEDS_PORTING
-        ieee80211_restart_hw(mvm->hw);
-#endif  // NEEDS_PORTING
-    }
+		if (mvm->fw->ucode_capa.error_log_size) {
+			u32 src_size = mvm->fw->ucode_capa.error_log_size;
+			u32 src_addr = mvm->fw->ucode_capa.error_log_addr;
+			u8 *recover_buf = kzalloc(src_size, GFP_ATOMIC);
+
+			if (recover_buf) {
+				mvm->error_recovery_buf = recover_buf;
+				iwl_trans_read_mem_bytes(mvm->trans,
+							 src_addr,
+							 recover_buf,
+							 src_size);
+			}
+		}
+
+		iwl_fw_error_collect(&mvm->fwrt, false);
+
+		if (fw_error && mvm->fw_restart > 0) {
+			mvm->fw_restart--;
+			ieee80211_restart_hw(mvm->hw);
+		} else if (mvm->fwrt.trans->dbg.restart_required) {
+			IWL_DEBUG_INFO(mvm, "FW restart requested after debug collection\n");
+			mvm->fwrt.trans->dbg.restart_required = FALSE;
+			ieee80211_restart_hw(mvm->hw);
+		} else if (mvm->trans->trans_cfg->device_family <= IWL_DEVICE_FAMILY_8000) {
+			ieee80211_restart_hw(mvm->hw);
+		}
+	}
 #endif  // NEEDS_PORTING
 }
 

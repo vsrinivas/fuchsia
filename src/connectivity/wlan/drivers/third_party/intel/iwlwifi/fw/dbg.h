@@ -231,9 +231,12 @@ static inline bool iwl_fw_dbg_type_on(struct iwl_fw_runtime* fwrt, uint32_t type
 static inline bool iwl_fw_dbg_is_d3_debug_enabled(struct iwl_fw_runtime* fwrt) {
   return false;
 #if 0   // NEEDS_PORTING
-    return fw_has_capa(&fwrt->fw->ucode_capa, IWL_UCODE_TLV_CAPA_D3_DEBUG) &&
-           fwrt->trans->cfg->d3_debug_data_length &&
-           iwl_fw_dbg_type_on(fwrt, IWL_FW_ERROR_DUMP_D3_DEBUG_DATA);
+	return fw_has_capa(&fwrt->fw->ucode_capa,
+			   IWL_UCODE_TLV_CAPA_D3_DEBUG) &&
+		fwrt->trans->cfg->d3_debug_data_length && fwrt->ops &&
+		fwrt->ops->d3_debug_enable &&
+		fwrt->ops->d3_debug_enable(fwrt->ops_ctx) &&
+		iwl_fw_dbg_type_on(fwrt, IWL_FW_ERROR_DUMP_D3_DEBUG_DATA);
 #endif  // NEEDS_PORTING
 }
 

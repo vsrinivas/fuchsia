@@ -243,7 +243,7 @@ static void iwl_mvm_phy_ctxt_cmd_data(struct iwl_mvm* mvm, struct iwl_phy_contex
    * between the two antennas is sufficiently different to impact
    * performance.
    */
-  if (active_cnt == 1 && iwl_mvm_rx_diversity_allowed(mvm)) {
+	if (active_cnt == 1 && iwl_mvm_rx_diversity_allowed(mvm, ctxt)) {
     idle_cnt = 2;
     active_cnt = 2;
   }

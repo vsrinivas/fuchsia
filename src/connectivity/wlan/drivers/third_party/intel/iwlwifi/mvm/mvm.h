@@ -1360,7 +1360,7 @@ static inline bool iwl_mvm_firmware_running(struct iwl_mvm* mvm) {
 static inline struct iwl_mvm_sta* iwl_mvm_sta_from_staid_rcu(struct iwl_mvm* mvm, uint8_t sta_id) {
   struct ieee80211_sta* sta;
 
-  if (sta_id >= ARRAY_SIZE(mvm->fw_id_to_mac_id)) {
+  if (sta_id >=  mvm->fw->ucode_capa.num_stations) {
     return NULL;
   }
 
@@ -1378,7 +1378,7 @@ static inline struct iwl_mvm_sta* iwl_mvm_sta_from_staid_protected(struct iwl_mv
                                                                    uint8_t sta_id) {
   struct ieee80211_sta* sta;
 
-  if (sta_id >= ARRAY_SIZE(mvm->fw_id_to_mac_id)) {
+  if (sta_id >= mvm->fw->ucode_capa.num_stations) {
     return NULL;
   }
 

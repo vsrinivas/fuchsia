@@ -158,7 +158,17 @@ size_t iwl_mvm_create_packet(struct ieee80211_frame_header* hdr, size_t len, siz
      * to do so) we should revisit this and ieee80211_data_to_8023().
      */
     headlen = (len <= skb_tailroom(skb)) ? len : hdrlen + crypt_len + 8;
+
+	/* The firmware may align the packet to DWORD.
+	 * The padding is inserted after the IV.
+	 * After copying the header + IV skip the padding if
+	 * present before copying packet data.
+	 */
     hdrlen += crypt_len;
+
+	if (unlikely(headlen < hdrlen))
+		return -EINVAL;
+
     skb_put_data(skb, hdr, hdrlen);
     skb_put_data(skb, (uint8_t*)hdr + hdrlen + padlen, headlen - hdrlen);
 #endif  // NEEDS_PORTING
@@ -193,26 +203,9 @@ static void iwl_mvm_pass_packet_to_mac80211(struct iwl_mvm* mvm,
                                             struct ieee80211_frame_header* frame, size_t frame_len,
                                             struct ieee80211_rx_status* rx_status, int queue,
                                             struct iwl_mvm_sta* sta) {
-#if 0   // NEEDS_PORTING
-    struct ieee80211_rx_status* rx_status = IEEE80211_SKB_RXCB(skb);
-#endif  // NEEDS_PORTING
-
   if (iwl_mvm_check_pn(mvm, frame, rx_status, queue, sta) != ZX_OK) {
     return;
   }
-
-#if 0   // NEEDS_PORTING
-  unsigned int radiotap_len = 0;
-
-  if (rx_status->flag & RX_FLAG_RADIOTAP_HE) {
-      radiotap_len += sizeof(struct ieee80211_radiotap_he);
-  }
-  if (rx_status->flag & RX_FLAG_RADIOTAP_HE_MU) {
-      radiotap_len += sizeof(struct ieee80211_radiotap_he_mu);
-  }
-  __skb_push(skb, radiotap_len);
-  ieee80211_rx_napi(mvm->hw, sta, skb, napi);
-#endif  // NEEDS_PORTING
 
   // Send to MLME
   // TODO(fxbug.dev/43218) Need to revisit to handle multiple IFs
@@ -348,18 +341,36 @@ static zx_status_t iwl_mvm_rx_crypto(struct iwl_mvm* mvm, struct ieee80211_frame
 }
 
 #if 0  // NEEDS_PORTING
-static void iwl_mvm_rx_csum(struct ieee80211_sta* sta, struct sk_buff* skb,
-                            struct iwl_rx_mpdu_desc* desc) {
-    struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
-    struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
-    uint16_t flags = le16_to_cpu(desc->l3l4_flags);
-    uint8_t l3_prot = (uint8_t)((flags & IWL_RX_L3L4_L3_PROTO_MASK) >> IWL_RX_L3_PROTO_POS);
+static void iwl_mvm_rx_csum(struct iwl_mvm *mvm,
+			    struct ieee80211_sta *sta,
+			    struct sk_buff *skb,
+			    struct iwl_rx_packet *pkt)
+{
+	struct iwl_rx_mpdu_desc *desc = (void *)pkt->data;
 
-    if (mvmvif->features & NETIF_F_RXCSUM && flags & IWL_RX_L3L4_TCP_UDP_CSUM_OK &&
-        (flags & IWL_RX_L3L4_IP_HDR_CSUM_OK || l3_prot == IWL_RX_L3_TYPE_IPV6 ||
-         l3_prot == IWL_RX_L3_TYPE_IPV6_FRAG)) {
-        skb->ip_summed = CHECKSUM_UNNECESSARY;
-    }
+	if (mvm->trans->trans_cfg->device_family >= IWL_DEVICE_FAMILY_AX210) {
+		if (pkt->len_n_flags & cpu_to_le32(FH_RSCSR_RPA_EN)) {
+			u16 hwsum = be16_to_cpu(desc->v3.raw_xsum);
+
+			skb->ip_summed = CHECKSUM_COMPLETE;
+			skb->csum = csum_unfold(~(__force __sum16)hwsum);
+		}
+	} else {
+		struct iwl_mvm_sta *mvmsta = iwl_mvm_sta_from_mac80211(sta);
+		struct iwl_mvm_vif *mvmvif;
+		u16 flags = le16_to_cpu(desc->l3l4_flags);
+		u8 l3_prot = (u8)((flags & IWL_RX_L3L4_L3_PROTO_MASK) >>
+				  IWL_RX_L3_PROTO_POS);
+
+		mvmvif = iwl_mvm_vif_from_mac80211(mvmsta->vif);
+
+		if (mvmvif->features & NETIF_F_RXCSUM &&
+		    flags & IWL_RX_L3L4_TCP_UDP_CSUM_OK &&
+		    (flags & IWL_RX_L3L4_IP_HDR_CSUM_OK ||
+		     l3_prot == IWL_RX_L3_TYPE_IPV6 ||
+		     l3_prot == IWL_RX_L3_TYPE_IPV6_FRAG))
+			skb->ip_summed = CHECKSUM_UNNECESSARY;
+	}
 }
 
 /*
@@ -417,30 +428,6 @@ static bool iwl_mvm_is_dup(struct ieee80211_sta* sta, int queue,
     return false;
 }
 
-int iwl_mvm_notify_rx_queue(struct iwl_mvm* mvm, uint32_t rxq_mask, const uint8_t* data,
-                            uint32_t count) {
-    struct iwl_rxq_sync_cmd* cmd;
-    uint32_t data_size = sizeof(*cmd) + count;
-    int ret;
-
-    /* should be DWORD aligned */
-    if (WARN_ON(count & 3 || count > IWL_MULTI_QUEUE_SYNC_MSG_MAX_SIZE)) { return -EINVAL; }
-
-    cmd = kzalloc(data_size, GFP_KERNEL);
-    if (!cmd) { return -ENOMEM; }
-
-    cmd->rxq_mask = cpu_to_le32(rxq_mask);
-    cmd->count = cpu_to_le32(count);
-    cmd->flags = 0;
-    memcpy(cmd->payload, data, count);
-
-    ret = iwl_mvm_send_cmd_pdu(mvm, WIDE_ID(DATA_PATH_GROUP, TRIGGER_RX_QUEUES_NOTIF_CMD), 0,
-                               data_size, cmd);
-
-    kfree(cmd);
-    return ret;
-}
-
 /*
  * Returns true if sn2 - buffer_size < sn1 < sn2.
  * To be used only in order to compare reorder buffer head with NSSN.
@@ -451,117 +438,160 @@ static bool iwl_mvm_is_sn_less(uint16_t sn1, uint16_t sn2, uint16_t buffer_size)
     return ieee80211_sn_less(sn1, sn2) && !ieee80211_sn_less(sn1, sn2 - buffer_size);
 }
 
-#define RX_REORDER_BUF_TIMEOUT_MQ (HZ / 10)
+static void iwl_mvm_sync_nssn(struct iwl_mvm *mvm, u8 baid, u16 nssn)
+{
+	if (IWL_MVM_USE_NSSN_SYNC) {
+		struct iwl_mvm_nssn_sync_data notif = {
+			.baid = baid,
+			.nssn = nssn,
+		};
 
-static void iwl_mvm_release_frames(struct iwl_mvm* mvm, struct ieee80211_sta* sta,
-                                   struct napi_struct* napi, struct iwl_mvm_baid_data* baid_data,
-                                   struct iwl_mvm_reorder_buffer* reorder_buf, uint16_t nssn) {
-    struct iwl_mvm_reorder_buf_entry* entries =
-        &baid_data->entries[reorder_buf->queue * baid_data->entries_per_queue];
-    uint16_t ssn = reorder_buf->head_sn;
-
-    iwl_assert_lock_held(&reorder_buf->lock);
-
-    /* ignore nssn smaller than head sn - this can happen due to timeout */
-    if (iwl_mvm_is_sn_less(nssn, ssn, reorder_buf->buf_size)) { goto set_timer; }
-
-    while (iwl_mvm_is_sn_less(ssn, nssn, reorder_buf->buf_size)) {
-        int index = ssn % reorder_buf->buf_size;
-        struct sk_buff_head* skb_list = &entries[index].e.frames;
-        struct sk_buff* skb;
-
-        ssn = ieee80211_sn_inc(ssn);
-
-        /*
-         * Empty the list. Will have more than one frame for A-MSDU.
-         * Empty list is valid as well since nssn indicates frames were
-         * received.
-         */
-        while ((skb = __skb_dequeue(skb_list))) {
-            iwl_mvm_pass_packet_to_mac80211(mvm, napi, skb, reorder_buf->queue, sta);
-            reorder_buf->num_stored--;
-        }
-    }
-    reorder_buf->head_sn = nssn;
-
-set_timer:
-    if (reorder_buf->num_stored && !reorder_buf->removed) {
-        uint16_t index = reorder_buf->head_sn % reorder_buf->buf_size;
-
-        while (skb_queue_empty(&entries[index].e.frames)) {
-            index = (index + 1) % reorder_buf->buf_size;
-        }
-        /* modify timer to match next frame's expiration time */
-        mod_timer(&reorder_buf->reorder_timer,
-                  entries[index].e.reorder_time + 1 + RX_REORDER_BUF_TIMEOUT_MQ);
-    } else {
-        del_timer(&reorder_buf->reorder_timer);
-    }
+		iwl_mvm_sync_rx_queues_internal(mvm, IWL_MVM_RXQ_NSSN_SYNC, false,
+						&notif, sizeof(notif));
+	}
 }
 
-void iwl_mvm_reorder_timer_expired(struct timer_list* t) {
-    struct iwl_mvm_reorder_buffer* buf = from_timer(buf, t, reorder_timer);
-    struct iwl_mvm_baid_data* baid_data = iwl_mvm_baid_data_from_reorder_buf(buf);
-    struct iwl_mvm_reorder_buf_entry* entries =
-        &baid_data->entries[buf->queue * baid_data->entries_per_queue];
-    int i;
-    uint16_t sn = 0, index = 0;
-    bool expired = false;
-    bool cont = false;
+#define RX_REORDER_BUF_TIMEOUT_MQ (HZ / 10)
 
-    spin_lock(&buf->lock);
+static void iwl_mvm_release_frames(struct iwl_mvm *mvm,
+				   struct ieee80211_sta *sta,
+				   struct napi_struct *napi,
+				   struct iwl_mvm_baid_data *baid_data,
+				   struct iwl_mvm_reorder_buffer *reorder_buf,
+				   u16 nssn, u32 flags)
+{
+	struct iwl_mvm_reorder_buf_entry *entries =
+		&baid_data->entries[reorder_buf->queue *
+				    baid_data->entries_per_queue];
+	u16 ssn = reorder_buf->head_sn;
 
-    if (!buf->num_stored || buf->removed) {
-        spin_unlock(&buf->lock);
-        return;
-    }
+	lockdep_assert_held(&reorder_buf->lock);
 
-    for (i = 0; i < buf->buf_size; i++) {
-        index = (buf->head_sn + i) % buf->buf_size;
+	/*
+	 * We keep the NSSN not too far behind, if we are sync'ing it and it
+	 * is more than 2048 ahead of us, it must be behind us. Discard it.
+	 * This can happen if the queue that hit the 0 / 2048 seqno was lagging
+	 * behind and this queue already processed packets. The next if
+	 * would have caught cases where this queue would have processed less
+	 * than 64 packets, but it may have processed more than 64 packets.
+	 */
+	if ((flags & IWL_MVM_RELEASE_FROM_RSS_SYNC) &&
+	    ieee80211_sn_less(nssn, ssn))
+		goto set_timer;
 
-        if (skb_queue_empty(&entries[index].e.frames)) {
-            /*
-             * If there is a hole and the next frame didn't expire
-             * we want to break and not advance SN
-             */
-            cont = false;
-            continue;
-        }
-        if (!cont &&
-            !time_after(jiffies, entries[index].e.reorder_time + RX_REORDER_BUF_TIMEOUT_MQ)) {
-            break;
-        }
+	/* ignore nssn smaller than head sn - this can happen due to timeout */
+	if (iwl_mvm_is_sn_less(nssn, ssn, reorder_buf->buf_size))
+		goto set_timer;
 
-        expired = true;
-        /* continue until next hole after this expired frames */
-        cont = true;
-        sn = ieee80211_sn_add(buf->head_sn, i + 1);
-    }
+	while (iwl_mvm_is_sn_less(ssn, nssn, reorder_buf->buf_size)) {
+		int index = ssn % reorder_buf->buf_size;
+		struct sk_buff_head *skb_list = &entries[index].e.frames;
+		struct sk_buff *skb;
 
-    if (expired) {
-        struct ieee80211_sta* sta;
-        struct iwl_mvm_sta* mvmsta;
-        uint8_t sta_id = baid_data->sta_id;
+		ssn = ieee80211_sn_inc(ssn);
+		if ((flags & IWL_MVM_RELEASE_SEND_RSS_SYNC) &&
+		    (ssn == 2048 || ssn == 0))
+			iwl_mvm_sync_nssn(mvm, baid_data->baid, ssn);
 
-        rcu_read_lock();
-        sta = rcu_dereference(buf->mvm->fw_id_to_mac_id[sta_id]);
-        mvmsta = iwl_mvm_sta_from_mac80211(sta);
+		/*
+		 * Empty the list. Will have more than one frame for A-MSDU.
+		 * Empty list is valid as well since nssn indicates frames were
+		 * received.
+		 */
+		while ((skb = __skb_dequeue(skb_list))) {
+			iwl_mvm_pass_packet_to_mac80211(mvm, napi, skb,
+							reorder_buf->queue,
+							sta);
+			reorder_buf->num_stored--;
+		}
+	}
+	reorder_buf->head_sn = nssn;
 
-        /* SN is set to the last expired frame + 1 */
-        IWL_DEBUG_HT(buf->mvm, "Releasing expired frames for sta %u, sn %d\n", sta_id, sn);
-        iwl_mvm_event_frame_timeout_callback(buf->mvm, mvmsta->vif, sta, baid_data->tid);
-        iwl_mvm_release_frames(buf->mvm, sta, NULL, baid_data, buf, sn);
-        rcu_read_unlock();
-    } else {
-        /*
-         * If no frame expired and there are stored frames, index is now
-         * pointing to the first unexpired frame - modify timer
-         * accordingly to this frame.
-         */
-        mod_timer(&buf->reorder_timer,
-                  entries[index].e.reorder_time + 1 + RX_REORDER_BUF_TIMEOUT_MQ);
-    }
-    spin_unlock(&buf->lock);
+set_timer:
+	if (reorder_buf->num_stored && !reorder_buf->removed) {
+		u16 index = reorder_buf->head_sn % reorder_buf->buf_size;
+
+		while (skb_queue_empty(&entries[index].e.frames))
+			index = (index + 1) % reorder_buf->buf_size;
+		/* modify timer to match next frame's expiration time */
+		mod_timer(&reorder_buf->reorder_timer,
+			  entries[index].e.reorder_time + 1 +
+			  RX_REORDER_BUF_TIMEOUT_MQ);
+	} else {
+		del_timer(&reorder_buf->reorder_timer);
+	}
+}
+
+void iwl_mvm_reorder_timer_expired(struct timer_list *t)
+{
+	struct iwl_mvm_reorder_buffer *buf = from_timer(buf, t, reorder_timer);
+	struct iwl_mvm_baid_data *baid_data =
+		iwl_mvm_baid_data_from_reorder_buf(buf);
+	struct iwl_mvm_reorder_buf_entry *entries =
+		&baid_data->entries[buf->queue * baid_data->entries_per_queue];
+	int i;
+	u16 sn = 0, index = 0;
+	bool expired = false;
+	bool cont = false;
+
+	spin_lock(&buf->lock);
+
+	if (!buf->num_stored || buf->removed) {
+		spin_unlock(&buf->lock);
+		return;
+	}
+
+	for (i = 0; i < buf->buf_size ; i++) {
+		index = (buf->head_sn + i) % buf->buf_size;
+
+		if (skb_queue_empty(&entries[index].e.frames)) {
+			/*
+			 * If there is a hole and the next frame didn't expire
+			 * we want to break and not advance SN
+			 */
+			cont = false;
+			continue;
+		}
+		if (!cont &&
+		    !time_after(jiffies, entries[index].e.reorder_time +
+					 RX_REORDER_BUF_TIMEOUT_MQ))
+			break;
+
+		expired = true;
+		/* continue until next hole after this expired frames */
+		cont = true;
+		sn = ieee80211_sn_add(buf->head_sn, i + 1);
+	}
+
+	if (expired) {
+		struct ieee80211_sta *sta;
+		struct iwl_mvm_sta *mvmsta;
+		u8 sta_id = baid_data->sta_id;
+
+		rcu_read_lock();
+		sta = rcu_dereference(buf->mvm->fw_id_to_mac_id[sta_id]);
+		mvmsta = iwl_mvm_sta_from_mac80211(sta);
+
+		/* SN is set to the last expired frame + 1 */
+		IWL_DEBUG_HT(buf->mvm,
+			     "Releasing expired frames for sta %u, sn %d\n",
+			     sta_id, sn);
+		iwl_mvm_event_frame_timeout_callback(buf->mvm, mvmsta->vif,
+						     sta, baid_data->tid);
+		iwl_mvm_release_frames(buf->mvm, sta, NULL, baid_data,
+				       buf, sn, IWL_MVM_RELEASE_SEND_RSS_SYNC);
+		rcu_read_unlock();
+	} else {
+		/*
+		 * If no frame expired and there are stored frames, index is now
+		 * pointing to the first unexpired frame - modify timer
+		 * accordingly to this frame.
+		 */
+		mod_timer(&buf->reorder_timer,
+			  entries[index].e.reorder_time +
+			  1 + RX_REORDER_BUF_TIMEOUT_MQ);
+	}
+	spin_unlock(&buf->lock);
 }
 
 static void iwl_mvm_del_ba(struct iwl_mvm* mvm, int queue, struct iwl_mvm_delba_data* data) {
@@ -596,31 +626,56 @@ out:
 
 void iwl_mvm_rx_queue_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb, int queue) {
 #if 0   // NEEDS_PORTING
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    struct iwl_rxq_sync_notification* notif;
-    struct iwl_mvm_internal_rxq_notif* internal_notif;
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_rxq_sync_notification *notif;
+	struct iwl_mvm_internal_rxq_notif *internal_notif;
+	u32 len = iwl_rx_packet_payload_len(pkt);
 
-    notif = (void*)pkt->data;
-    internal_notif = (void*)notif->payload;
+	notif = (void *)pkt->data;
+	internal_notif = (void *)notif->payload;
 
-    if (internal_notif->sync && mvm->queue_sync_cookie != internal_notif->cookie) {
-        WARN_ONCE(1, "Received expired RX queue sync message\n");
-        return;
-    }
+	if (WARN_ONCE(len < sizeof(*notif) + sizeof(*internal_notif),
+		      "invalid notification size %d (%d)",
+		      len, (int)(sizeof(*notif) + sizeof(*internal_notif))))
+		return;
+	len -= sizeof(*notif) + sizeof(*internal_notif);
 
-    switch (internal_notif->type) {
-    case IWL_MVM_RXQ_EMPTY:
-        break;
-    case IWL_MVM_RXQ_NOTIF_DEL_BA:
-        iwl_mvm_del_ba(mvm, queue, (void*)internal_notif->data);
-        break;
-    default:
-        WARN_ONCE(1, "Invalid identifier %d", internal_notif->type);
-    }
+	if (internal_notif->sync &&
+	    mvm->queue_sync_cookie != internal_notif->cookie) {
+		WARN_ONCE(1, "Received expired RX queue sync message\n");
+		return;
+	}
 
-    if (internal_notif->sync && !atomic_dec_return(&mvm->queue_sync_counter)) {
-        wake_up(&mvm->rx_sync_waitq);
-    }
+	switch (internal_notif->type) {
+	case IWL_MVM_RXQ_EMPTY:
+		WARN_ONCE(len, "invalid empty notification size %d", len);
+		break;
+	case IWL_MVM_RXQ_NOTIF_DEL_BA:
+		if (WARN_ONCE(len != sizeof(struct iwl_mvm_delba_data),
+			      "invalid delba notification size %d (%d)",
+			      len, (int)sizeof(struct iwl_mvm_delba_data)))
+			break;
+		iwl_mvm_del_ba(mvm, queue, (void *)internal_notif->data);
+		break;
+	case IWL_MVM_RXQ_NSSN_SYNC:
+		if (WARN_ONCE(len != sizeof(struct iwl_mvm_nssn_sync_data),
+			      "invalid nssn sync notification size %d (%d)",
+			      len, (int)sizeof(struct iwl_mvm_nssn_sync_data)))
+			break;
+		iwl_mvm_nssn_sync(mvm, napi, queue,
+				  (void *)internal_notif->data);
+		break;
+	default:
+		WARN_ONCE(1, "Invalid identifier %d", internal_notif->type);
+	}
+
+	if (internal_notif->sync) {
+		WARN_ONCE(!test_and_clear_bit(queue, &mvm->queue_sync_state),
+			  "queue sync: queue %d responded a second time!\n",
+			  queue);
+		if (READ_ONCE(mvm->queue_sync_state) == 0)
+			wake_up(&mvm->rx_sync_waitq);
+	}
 #endif  // NEEDS_PORTING
 }
 
@@ -631,173 +686,211 @@ void iwl_mvm_rx_queue_notif(struct iwl_mvm* mvm, struct iwl_rx_cmd_buffer* rxb, 
 static bool iwl_mvm_reorder(struct iwl_mvm* mvm, int queue, struct iwl_rx_mpdu_desc* desc) {
   // TODO(fxbug.dev/79993) (fxbug.dev/51295)
 #if 0   // NEEDS_PORTING
-    struct ieee80211_hdr* hdr = (struct ieee80211_hdr*)skb->data;
-    struct iwl_mvm_sta* mvm_sta;
-    struct iwl_mvm_baid_data* baid_data;
-    struct iwl_mvm_reorder_buffer* buffer;
-    struct sk_buff* tail;
-    uint32_t reorder = le32_to_cpu(desc->reorder_data);
-    bool amsdu = desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU;
-    bool last_subframe = desc->amsdu_info & IWL_RX_MPDU_AMSDU_LAST_SUBFRAME;
-    uint8_t tid = ieee80211_get_tid(hdr);
-    uint8_t sub_frame_idx = desc->amsdu_info & IWL_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
-    struct iwl_mvm_reorder_buf_entry* entries;
-    int index;
-    uint16_t nssn, sn;
-    uint8_t baid;
+	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
+	struct ieee80211_hdr *hdr = iwl_mvm_skb_get_hdr(skb);
+	struct iwl_mvm_sta *mvm_sta;
+	struct iwl_mvm_baid_data *baid_data;
+	struct iwl_mvm_reorder_buffer *buffer;
+	struct sk_buff *tail;
+	u32 reorder = le32_to_cpu(desc->reorder_data);
+	bool amsdu = desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU;
+	bool last_subframe =
+		desc->amsdu_info & IWL_RX_MPDU_AMSDU_LAST_SUBFRAME;
+	u8 tid = ieee80211_get_tid(hdr);
+	u8 sub_frame_idx = desc->amsdu_info &
+			   IWL_RX_MPDU_AMSDU_SUBFRAME_IDX_MASK;
+	struct iwl_mvm_reorder_buf_entry *entries;
+	int index;
+	u16 nssn, sn;
+	u8 baid;
 
-    baid = (reorder & IWL_RX_MPDU_REORDER_BAID_MASK) >> IWL_RX_MPDU_REORDER_BAID_SHIFT;
+	baid = (reorder & IWL_RX_MPDU_REORDER_BAID_MASK) >>
+		IWL_RX_MPDU_REORDER_BAID_SHIFT;
 
-    /*
-     * This also covers the case of receiving a Block Ack Request
-     * outside a BA session; we'll pass it to mac80211 and that
-     * then sends a delBA action frame.
-     */
-    if (baid == IWL_RX_REORDER_DATA_INVALID_BAID) { return false; }
+	/*
+	 * This also covers the case of receiving a Block Ack Request
+	 * outside a BA session; we'll pass it to mac80211 and that
+	 * then sends a delBA action frame.
+	 * This also covers pure monitor mode, in which case we won't
+	 * have any BA sessions.
+	 */
+	if (baid == IWL_RX_REORDER_DATA_INVALID_BAID)
+		return false;
 
-    /* no sta yet */
-    if (WARN_ONCE(IS_ERR_OR_NULL(sta), "Got valid BAID without a valid station assigned\n")) {
-        return false;
-    }
+	/* no sta yet */
+	if (WARN_ONCE(IS_ERR_OR_NULL(sta),
+		      "Got valid BAID without a valid station assigned\n"))
+		return false;
 
-    mvm_sta = iwl_mvm_sta_from_mac80211(sta);
+	mvm_sta = iwl_mvm_sta_from_mac80211(sta);
 
-    /* not a data packet or a bar */
-    if (!ieee80211_is_back_req(hdr->frame_control) &&
-        (!ieee80211_is_data_qos(hdr->frame_control) || is_multicast_ether_addr(hdr->addr1))) {
-        return false;
-    }
+	/* not a data packet or a bar */
+	if (!ieee80211_is_back_req(hdr->frame_control) &&
+	    (!ieee80211_is_data_qos(hdr->frame_control) ||
+	     is_multicast_ether_addr(hdr->addr1)))
+		return false;
 
-    if (unlikely(!ieee80211_is_data_present(hdr->frame_control))) { return false; }
+	if (unlikely(!ieee80211_is_data_present(hdr->frame_control)))
+		return false;
 
-    baid_data = rcu_dereference(mvm->baid_map[baid]);
-    if (!baid_data) {
-        IWL_DEBUG_RX(mvm,
-                     "Got valid BAID but no baid allocated, bypass the re-ordering buffer. Baid %d "
-                     "reorder 0x%x\n",
-                     baid, reorder);
-        return false;
-    }
+	baid_data = rcu_dereference(mvm->baid_map[baid]);
+	if (!baid_data) {
+		IWL_DEBUG_RX(mvm,
+			     "Got valid BAID but no baid allocated, bypass the re-ordering buffer. Baid %d reorder 0x%x\n",
+			      baid, reorder);
+		return false;
+	}
 
-    if (WARN(tid != baid_data->tid || mvm_sta->sta_id != baid_data->sta_id,
-             "baid 0x%x is mapped to sta:%d tid:%d, but was received for sta:%d tid:%d\n", baid,
-             baid_data->sta_id, baid_data->tid, mvm_sta->sta_id, tid)) {
-        return false;
-    }
+	if (WARN(tid != baid_data->tid || mvm_sta->sta_id != baid_data->sta_id,
+		 "baid 0x%x is mapped to sta:%d tid:%d, but was received for sta:%d tid:%d\n",
+		 baid, baid_data->sta_id, baid_data->tid, mvm_sta->sta_id,
+		 tid))
+		return false;
 
-    nssn = reorder & IWL_RX_MPDU_REORDER_NSSN_MASK;
-    sn = (reorder & IWL_RX_MPDU_REORDER_SN_MASK) >> IWL_RX_MPDU_REORDER_SN_SHIFT;
+	nssn = reorder & IWL_RX_MPDU_REORDER_NSSN_MASK;
+	sn = (reorder & IWL_RX_MPDU_REORDER_SN_MASK) >>
+		IWL_RX_MPDU_REORDER_SN_SHIFT;
 
-    buffer = &baid_data->reorder_buf[queue];
-    entries = &baid_data->entries[queue * baid_data->entries_per_queue];
+	buffer = &baid_data->reorder_buf[queue];
+	entries = &baid_data->entries[queue * baid_data->entries_per_queue];
 
-    spin_lock_bh(&buffer->lock);
+	spin_lock_bh(&buffer->lock);
 
-    if (!buffer->valid) {
-        if (reorder & IWL_RX_MPDU_REORDER_BA_OLD_SN) {
-            spin_unlock_bh(&buffer->lock);
-            return false;
-        }
-        buffer->valid = true;
-    }
+	if (!buffer->valid) {
+		if (reorder & IWL_RX_MPDU_REORDER_BA_OLD_SN) {
+			spin_unlock_bh(&buffer->lock);
+			return false;
+		}
+		buffer->valid = true;
+	}
 
-    if (ieee80211_is_back_req(hdr->frame_control)) {
-        iwl_mvm_release_frames(mvm, sta, napi, baid_data, buffer, nssn);
-        goto drop;
-    }
+	if (ieee80211_is_back_req(hdr->frame_control)) {
+		iwl_mvm_release_frames(mvm, sta, napi, baid_data,
+				       buffer, nssn, 0);
+		goto drop;
+	}
 
-    /*
-     * If there was a significant jump in the nssn - adjust.
-     * If the SN is smaller than the NSSN it might need to first go into
-     * the reorder buffer, in which case we just release up to it and the
-     * rest of the function will take care of storing it and releasing up to
-     * the nssn
-     */
-    if (!iwl_mvm_is_sn_less(nssn, buffer->head_sn + buffer->buf_size, buffer->buf_size) ||
-        !ieee80211_sn_less(sn, buffer->head_sn + buffer->buf_size)) {
-        uint16_t min_sn = ieee80211_sn_less(sn, nssn) ? sn : nssn;
+	/*
+	 * If there was a significant jump in the nssn - adjust.
+	 * If the SN is smaller than the NSSN it might need to first go into
+	 * the reorder buffer, in which case we just release up to it and the
+	 * rest of the function will take care of storing it and releasing up to
+	 * the nssn.
+	 * This should not happen. This queue has been lagging and it should
+	 * have been updated by a IWL_MVM_RXQ_NSSN_SYNC notification. Be nice
+	 * and update the other queues.
+	 */
+	if (!iwl_mvm_is_sn_less(nssn, buffer->head_sn + buffer->buf_size,
+				buffer->buf_size) ||
+	    !ieee80211_sn_less(sn, buffer->head_sn + buffer->buf_size)) {
+		u16 min_sn = ieee80211_sn_less(sn, nssn) ? sn : nssn;
 
-        iwl_mvm_release_frames(mvm, sta, napi, baid_data, buffer, min_sn);
-    }
+		iwl_mvm_release_frames(mvm, sta, napi, baid_data, buffer,
+				       min_sn, IWL_MVM_RELEASE_SEND_RSS_SYNC);
+	}
 
-    /* drop any oudated packets */
-    if (ieee80211_sn_less(sn, buffer->head_sn)) { goto drop; }
+	iwl_mvm_oldsn_workaround(mvm, sta, tid, buffer, reorder,
+				 rx_status->device_timestamp, queue);
 
-    /* release immediately if allowed by nssn and no stored frames */
-    if (!buffer->num_stored && ieee80211_sn_less(sn, nssn)) {
-        if (iwl_mvm_is_sn_less(buffer->head_sn, nssn, buffer->buf_size) &&
-            (!amsdu || last_subframe)) {
-            buffer->head_sn = nssn;
-        }
-        /* No need to update AMSDU last SN - we are moving the head */
-        spin_unlock_bh(&buffer->lock);
-        return false;
-    }
+	/* drop any oudated packets */
+	if (ieee80211_sn_less(sn, buffer->head_sn))
+		goto drop;
 
-    /*
-     * release immediately if there are no stored frames, and the sn is
-     * equal to the head.
-     * This can happen due to reorder timer, where NSSN is behind head_sn.
-     * When we released everything, and we got the next frame in the
-     * sequence, according to the NSSN we can't release immediately,
-     * while technically there is no hole and we can move forward.
-     */
-    if (!buffer->num_stored && sn == buffer->head_sn) {
-        if (!amsdu || last_subframe) { buffer->head_sn = ieee80211_sn_inc(buffer->head_sn); }
-        /* No need to update AMSDU last SN - we are moving the head */
-        spin_unlock_bh(&buffer->lock);
-        return false;
-    }
+	/* release immediately if allowed by nssn and no stored frames */
+	if (!buffer->num_stored && ieee80211_sn_less(sn, nssn)) {
+		if (iwl_mvm_is_sn_less(buffer->head_sn, nssn,
+				       buffer->buf_size) &&
+		   (!amsdu || last_subframe)) {
+			/*
+			 * If we crossed the 2048 or 0 SN, notify all the
+			 * queues. This is done in order to avoid having a
+			 * head_sn that lags behind for too long. When that
+			 * happens, we can get to a situation where the head_sn
+			 * is within the interval [nssn - buf_size : nssn]
+			 * which will make us think that the nssn is a packet
+			 * that we already freed because of the reordering
+			 * buffer and we will ignore it. So maintain the
+			 * head_sn somewhat updated across all the queues:
+			 * when it crosses 0 and 2048.
+			 */
+			if (sn == 2048 || sn == 0)
+				iwl_mvm_sync_nssn(mvm, baid, sn);
+			buffer->head_sn = nssn;
+		}
+		/* No need to update AMSDU last SN - we are moving the head */
+		spin_unlock_bh(&buffer->lock);
+		return false;
+	}
 
-    index = sn % buffer->buf_size;
+	/*
+	 * release immediately if there are no stored frames, and the sn is
+	 * equal to the head.
+	 * This can happen due to reorder timer, where NSSN is behind head_sn.
+	 * When we released everything, and we got the next frame in the
+	 * sequence, according to the NSSN we can't release immediately,
+	 * while technically there is no hole and we can move forward.
+	 */
+	if (!buffer->num_stored && sn == buffer->head_sn) {
+		if (!amsdu || last_subframe) {
+			if (sn == 2048 || sn == 0)
+				iwl_mvm_sync_nssn(mvm, baid, sn);
+			buffer->head_sn = ieee80211_sn_inc(buffer->head_sn);
+		}
+		/* No need to update AMSDU last SN - we are moving the head */
+		spin_unlock_bh(&buffer->lock);
+		return false;
+	}
 
-    /*
-     * Check if we already stored this frame
-     * As AMSDU is either received or not as whole, logic is simple:
-     * If we have frames in that position in the buffer and the last frame
-     * originated from AMSDU had a different SN then it is a retransmission.
-     * If it is the same SN then if the subframe index is incrementing it
-     * is the same AMSDU - otherwise it is a retransmission.
-     */
-    tail = skb_peek_tail(&entries[index].e.frames);
-    if (tail && !amsdu) {
-        goto drop;
-    } else if (tail && (sn != buffer->last_amsdu || buffer->last_sub_index >= sub_frame_idx)) {
-        goto drop;
-    }
+	index = sn % buffer->buf_size;
 
-    /* put in reorder buffer */
-    __skb_queue_tail(&entries[index].e.frames, skb);
-    buffer->num_stored++;
-    entries[index].e.reorder_time = jiffies;
+	/*
+	 * Check if we already stored this frame
+	 * As AMSDU is either received or not as whole, logic is simple:
+	 * If we have frames in that position in the buffer and the last frame
+	 * originated from AMSDU had a different SN then it is a retransmission.
+	 * If it is the same SN then if the subframe index is incrementing it
+	 * is the same AMSDU - otherwise it is a retransmission.
+	 */
+	tail = skb_peek_tail(&entries[index].e.frames);
+	if (tail && !amsdu)
+		goto drop;
+	else if (tail && (sn != buffer->last_amsdu ||
+			  buffer->last_sub_index >= sub_frame_idx))
+		goto drop;
 
-    if (amsdu) {
-        buffer->last_amsdu = sn;
-        buffer->last_sub_index = sub_frame_idx;
-    }
+	/* put in reorder buffer */
+	__skb_queue_tail(&entries[index].e.frames, skb);
+	buffer->num_stored++;
+	entries[index].e.reorder_time = jiffies;
 
-    /*
-     * We cannot trust NSSN for AMSDU sub-frames that are not the last.
-     * The reason is that NSSN advances on the first sub-frame, and may
-     * cause the reorder buffer to advance before all the sub-frames arrive.
-     * Example: reorder buffer contains SN 0 & 2, and we receive AMSDU with
-     * SN 1. NSSN for first sub frame will be 3 with the result of driver
-     * releasing SN 0,1, 2. When sub-frame 1 arrives - reorder buffer is
-     * already ahead and it will be dropped.
-     * If the last sub-frame is not on this queue - we will get frame
-     * release notification with up to date NSSN.
-     */
-    if (!amsdu || last_subframe) {
-        iwl_mvm_release_frames(mvm, sta, napi, baid_data, buffer, nssn);
-    }
+	if (amsdu) {
+		buffer->last_amsdu = sn;
+		buffer->last_sub_index = sub_frame_idx;
+	}
 
-    spin_unlock_bh(&buffer->lock);
-    return true;
+	/*
+	 * We cannot trust NSSN for AMSDU sub-frames that are not the last.
+	 * The reason is that NSSN advances on the first sub-frame, and may
+	 * cause the reorder buffer to advance before all the sub-frames arrive.
+	 * Example: reorder buffer contains SN 0 & 2, and we receive AMSDU with
+	 * SN 1. NSSN for first sub frame will be 3 with the result of driver
+	 * releasing SN 0,1, 2. When sub-frame 1 arrives - reorder buffer is
+	 * already ahead and it will be dropped.
+	 * If the last sub-frame is not on this queue - we will get frame
+	 * release notification with up to date NSSN.
+	 */
+	if (!amsdu || last_subframe)
+		iwl_mvm_release_frames(mvm, sta, napi, baid_data,
+				       buffer, nssn,
+				       IWL_MVM_RELEASE_SEND_RSS_SYNC);
+
+	spin_unlock_bh(&buffer->lock);
+	return true;
 
 drop:
-    kfree_skb(skb);
-    spin_unlock_bh(&buffer->lock);
-    return true;
+	kfree_skb(skb);
+	spin_unlock_bh(&buffer->lock);
+	return true;
 #endif  // NEEDS_PORTING
   return false;
 }
@@ -943,294 +1036,331 @@ static void iwl_mvm_decode_he_phy_ru_alloc(struct iwl_mvm_rx_phy_data* phy_data,
         he->data2 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_PRISEC_80_SEC);
     }
 
-    if (he_mu) {
+
 #define CHECK_BW(bw)                                                         \
   BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW_##bw##MHZ != \
+		     RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS); \
+	BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA6_TB_PPDU_BW_ ## bw ## MHZ != \
                RATE_MCS_CHAN_WIDTH_##bw >> RATE_MCS_CHAN_WIDTH_POS)
         CHECK_BW(20);
         CHECK_BW(40);
         CHECK_BW(80);
         CHECK_BW(160);
-        he_mu->flags2 |= le16_encode_bits(FIELD_GET(RATE_MCS_CHAN_WIDTH_MSK, rate_n_flags),
-                                          IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW);
-    }
+
+	if (he_mu)
+		he_mu->flags2 |=
+			le16_encode_bits(FIELD_GET(RATE_MCS_CHAN_WIDTH_MSK_V1,
+						   rate_n_flags),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW);
+	else if (he_type == RATE_MCS_HE_TYPE_TRIG_V1)
+		he->data6 |=
+			cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA6_TB_PPDU_BW_KNOWN) |
+			le16_encode_bits(FIELD_GET(RATE_MCS_CHAN_WIDTH_MSK_V1,
+						   rate_n_flags),
+					 IEEE80211_RADIOTAP_HE_DATA6_TB_PPDU_BW);
 }
 
-static void iwl_mvm_decode_he_phy_data(struct iwl_mvm* mvm, struct iwl_mvm_rx_phy_data* phy_data,
-                                       struct ieee80211_radiotap_he* he,
-                                       struct ieee80211_radiotap_he_mu* he_mu,
-                                       struct ieee80211_rx_status* rx_status, uint32_t rate_n_flags,
-                                       int queue) {
-    switch (phy_data->info_type) {
-    case IWL_RX_PHY_INFO_TYPE_NONE:
-    case IWL_RX_PHY_INFO_TYPE_CCK:
-    case IWL_RX_PHY_INFO_TYPE_OFDM_LGCY:
-    case IWL_RX_PHY_INFO_TYPE_HT:
-    case IWL_RX_PHY_INFO_TYPE_VHT_SU:
-    case IWL_RX_PHY_INFO_TYPE_VHT_MU:
-        return;
-    case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
-        he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE2_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE3_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE4_KNOWN);
-        he->data4 |=
-            le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE1),
-                             IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE1);
-        he->data4 |=
-            le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE2),
-                             IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE2);
-        he->data4 |=
-            le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE3),
-                             IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE3);
-        he->data4 |=
-            le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE4),
-                             IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE4);
-    /* fall through */
-    case IWL_RX_PHY_INFO_TYPE_HE_SU:
-    case IWL_RX_PHY_INFO_TYPE_HE_MU:
-    case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
-    case IWL_RX_PHY_INFO_TYPE_HE_TB:
-        /* HE common */
-        he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_LDPC_XSYMSEG_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA1_DOPPLER_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA1_BSS_COLOR_KNOWN);
-        he->data2 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_PRE_FEC_PAD_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA2_PE_DISAMBIG_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA2_TXOP_KNOWN |
-                                 IEEE80211_RADIOTAP_HE_DATA2_NUM_LTF_SYMS_KNOWN);
-        he->data3 |=
-            le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_BSS_COLOR_MASK),
-                             IEEE80211_RADIOTAP_HE_DATA3_BSS_COLOR);
-        if (phy_data->info_type != IWL_RX_PHY_INFO_TYPE_HE_TB &&
-            phy_data->info_type != IWL_RX_PHY_INFO_TYPE_HE_TB_EXT) {
-            he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_UL_DL_KNOWN);
-            he->data3 |= le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_UPLINK),
-                                          IEEE80211_RADIOTAP_HE_DATA3_UL_DL);
-        }
-        he->data3 |= le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_LDPC_EXT_SYM),
-                                      IEEE80211_RADIOTAP_HE_DATA3_LDPC_XSYMSEG);
-        he->data4 |=
-            le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_SPATIAL_REUSE_MASK),
-                             IEEE80211_RADIOTAP_HE_DATA4_SU_MU_SPTL_REUSE);
-        he->data5 |=
-            le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_PRE_FEC_PAD_MASK),
-                             IEEE80211_RADIOTAP_HE_DATA5_PRE_FEC_PAD);
-        he->data5 |= le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_PE_DISAMBIG),
-                                      IEEE80211_RADIOTAP_HE_DATA5_PE_DISAMBIG);
-        he->data5 |= le16_encode_bits(le32_get_bits(phy_data->d1, IWL_RX_PHY_DATA1_HE_LTF_NUM_MASK),
-                                      IEEE80211_RADIOTAP_HE_DATA5_NUM_LTF_SYMS);
-        he->data6 |=
-            le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_TXOP_DUR_MASK),
-                             IEEE80211_RADIOTAP_HE_DATA6_TXOP);
-        he->data6 |= le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_DOPPLER),
-                                      IEEE80211_RADIOTAP_HE_DATA6_DOPPLER);
-        break;
-    }
+static void iwl_mvm_decode_he_phy_data(struct iwl_mvm *mvm,
+				       struct iwl_mvm_rx_phy_data *phy_data,
+				       struct ieee80211_radiotap_he *he,
+				       struct ieee80211_radiotap_he_mu *he_mu,
+				       struct ieee80211_rx_status *rx_status,
+				       u32 rate_n_flags, int queue)
+{
+	switch (phy_data->info_type) {
+	case IWL_RX_PHY_INFO_TYPE_NONE:
+	case IWL_RX_PHY_INFO_TYPE_CCK:
+	case IWL_RX_PHY_INFO_TYPE_OFDM_LGCY:
+	case IWL_RX_PHY_INFO_TYPE_HT:
+	case IWL_RX_PHY_INFO_TYPE_VHT_SU:
+	case IWL_RX_PHY_INFO_TYPE_VHT_MU:
+		return;
+	case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
+		he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE2_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE3_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE4_KNOWN);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->d2,
+							    IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE1),
+					      IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE1);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->d2,
+							    IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE2),
+					      IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE2);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->d2,
+							    IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE3),
+					      IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE3);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->d2,
+							    IWL_RX_PHY_DATA2_HE_TB_EXT_SPTL_REUSE4),
+					      IEEE80211_RADIOTAP_HE_DATA4_TB_SPTL_REUSE4);
+		fallthrough;
+	case IWL_RX_PHY_INFO_TYPE_HE_SU:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
+	case IWL_RX_PHY_INFO_TYPE_HE_TB:
+		/* HE common */
+		he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_LDPC_XSYMSEG_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_DOPPLER_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA1_BSS_COLOR_KNOWN);
+		he->data2 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_PRE_FEC_PAD_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA2_PE_DISAMBIG_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA2_TXOP_KNOWN |
+					 IEEE80211_RADIOTAP_HE_DATA2_NUM_LTF_SYMS_KNOWN);
+		he->data3 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_BSS_COLOR_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA3_BSS_COLOR);
+		if (phy_data->info_type != IWL_RX_PHY_INFO_TYPE_HE_TB &&
+		    phy_data->info_type != IWL_RX_PHY_INFO_TYPE_HE_TB_EXT) {
+			he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_UL_DL_KNOWN);
+			he->data3 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_UPLINK),
+						      IEEE80211_RADIOTAP_HE_DATA3_UL_DL);
+		}
+		he->data3 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_LDPC_EXT_SYM),
+					      IEEE80211_RADIOTAP_HE_DATA3_LDPC_XSYMSEG);
+		he->data5 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_PRE_FEC_PAD_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA5_PRE_FEC_PAD);
+		he->data5 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_PE_DISAMBIG),
+					      IEEE80211_RADIOTAP_HE_DATA5_PE_DISAMBIG);
+		he->data5 |= le16_encode_bits(le32_get_bits(phy_data->d1,
+							    IWL_RX_PHY_DATA1_HE_LTF_NUM_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA5_NUM_LTF_SYMS);
+		he->data6 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_TXOP_DUR_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA6_TXOP);
+		he->data6 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_DOPPLER),
+					      IEEE80211_RADIOTAP_HE_DATA6_DOPPLER);
+		break;
+	}
 
-    switch (phy_data->info_type) {
-    case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
-        he_mu->flags1 |=
-            le16_encode_bits(le16_get_bits(phy_data->d4, IWL_RX_PHY_DATA4_HE_MU_EXT_SIGB_DCM),
-                             IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_DCM);
-        he_mu->flags1 |=
-            le16_encode_bits(le16_get_bits(phy_data->d4, IWL_RX_PHY_DATA4_HE_MU_EXT_SIGB_MCS_MASK),
-                             IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_MCS);
-        he_mu->flags2 |= le16_encode_bits(
-            le16_get_bits(phy_data->d4, IWL_RX_PHY_DATA4_HE_MU_EXT_PREAMBLE_PUNC_TYPE_MASK),
-            IEEE80211_RADIOTAP_HE_MU_FLAGS2_PUNC_FROM_SIG_A_BW);
-        iwl_mvm_decode_he_mu_ext(mvm, phy_data, rate_n_flags, he_mu);
-    /* fall through */
-    case IWL_RX_PHY_INFO_TYPE_HE_MU:
-        he_mu->flags2 |= le16_encode_bits(
-            le32_get_bits(phy_data->d1, IWL_RX_PHY_DATA1_HE_MU_SIBG_SYM_OR_USER_NUM_MASK),
-            IEEE80211_RADIOTAP_HE_MU_FLAGS2_SIG_B_SYMS_USERS);
-        he_mu->flags2 |=
-            le16_encode_bits(le32_get_bits(phy_data->d1, IWL_RX_PHY_DATA1_HE_MU_SIGB_COMPRESSION),
-                             IEEE80211_RADIOTAP_HE_MU_FLAGS2_SIG_B_COMP);
-    /* fall through */
-    case IWL_RX_PHY_INFO_TYPE_HE_TB:
-    case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
-        iwl_mvm_decode_he_phy_ru_alloc(phy_data, rate_n_flags, he, he_mu, rx_status);
-        break;
-    case IWL_RX_PHY_INFO_TYPE_HE_SU:
-        he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_BEAM_CHANGE_KNOWN);
-        he->data3 |= le16_encode_bits(le32_get_bits(phy_data->d0, IWL_RX_PHY_DATA0_HE_BEAM_CHNG),
-                                      IEEE80211_RADIOTAP_HE_DATA3_BEAM_CHANGE);
-        break;
-    default:
-        /* nothing */
-        break;
-    }
+	switch (phy_data->info_type) {
+	case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU:
+	case IWL_RX_PHY_INFO_TYPE_HE_SU:
+		he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_SPTL_REUSE_KNOWN);
+		he->data4 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_SPATIAL_REUSE_MASK),
+					      IEEE80211_RADIOTAP_HE_DATA4_SU_MU_SPTL_REUSE);
+		break;
+	default:
+		/* nothing here */
+		break;
+	}
+
+	switch (phy_data->info_type) {
+	case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
+		he_mu->flags1 |=
+			le16_encode_bits(le16_get_bits(phy_data->d4,
+						       IWL_RX_PHY_DATA4_HE_MU_EXT_SIGB_DCM),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_DCM);
+		he_mu->flags1 |=
+			le16_encode_bits(le16_get_bits(phy_data->d4,
+						       IWL_RX_PHY_DATA4_HE_MU_EXT_SIGB_MCS_MASK),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_MCS);
+		he_mu->flags2 |=
+			le16_encode_bits(le16_get_bits(phy_data->d4,
+						       IWL_RX_PHY_DATA4_HE_MU_EXT_PREAMBLE_PUNC_TYPE_MASK),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_PUNC_FROM_SIG_A_BW);
+		iwl_mvm_decode_he_mu_ext(mvm, phy_data, rate_n_flags, he_mu);
+		fallthrough;
+	case IWL_RX_PHY_INFO_TYPE_HE_MU:
+		he_mu->flags2 |=
+			le16_encode_bits(le32_get_bits(phy_data->d1,
+						       IWL_RX_PHY_DATA1_HE_MU_SIBG_SYM_OR_USER_NUM_MASK),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_SIG_B_SYMS_USERS);
+		he_mu->flags2 |=
+			le16_encode_bits(le32_get_bits(phy_data->d1,
+						       IWL_RX_PHY_DATA1_HE_MU_SIGB_COMPRESSION),
+					 IEEE80211_RADIOTAP_HE_MU_FLAGS2_SIG_B_COMP);
+		fallthrough;
+	case IWL_RX_PHY_INFO_TYPE_HE_TB:
+	case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
+		iwl_mvm_decode_he_phy_ru_alloc(phy_data, rate_n_flags,
+					       he, he_mu, rx_status);
+		break;
+	case IWL_RX_PHY_INFO_TYPE_HE_SU:
+		he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_BEAM_CHANGE_KNOWN);
+		he->data3 |= le16_encode_bits(le32_get_bits(phy_data->d0,
+							    IWL_RX_PHY_DATA0_HE_BEAM_CHNG),
+					      IEEE80211_RADIOTAP_HE_DATA3_BEAM_CHANGE);
+		break;
+	default:
+		/* nothing */
+		break;
+	}
 }
 
-static void iwl_mvm_rx_he(struct iwl_mvm* mvm, struct sk_buff* skb,
-                          struct iwl_mvm_rx_phy_data* phy_data, uint32_t rate_n_flags,
-                          uint16_t phy_info, int queue) {
-    struct ieee80211_rx_status* rx_status = IEEE80211_SKB_RXCB(skb);
-    struct ieee80211_radiotap_he* he = NULL;
-    struct ieee80211_radiotap_he_mu* he_mu = NULL;
-    uint32_t he_type = rate_n_flags & RATE_MCS_HE_TYPE_MSK;
-    uint8_t stbc, ltf;
-    static const struct ieee80211_radiotap_he known = {
-        .data1 = cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_DATA_MCS_KNOWN |
-                             IEEE80211_RADIOTAP_HE_DATA1_DATA_DCM_KNOWN |
-                             IEEE80211_RADIOTAP_HE_DATA1_STBC_KNOWN |
-                             IEEE80211_RADIOTAP_HE_DATA1_CODING_KNOWN),
-        .data2 = cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_GI_KNOWN |
-                             IEEE80211_RADIOTAP_HE_DATA2_TXBF_KNOWN),
-    };
-    static const struct ieee80211_radiotap_he_mu mu_known = {
-        .flags1 = cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_MCS_KNOWN |
-                              IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_DCM_KNOWN |
-                              IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_SYMS_USERS_KNOWN |
-                              IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_COMP_KNOWN),
-        .flags2 = cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS2_PUNC_FROM_SIG_A_BW_KNOWN |
-                              IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW_KNOWN),
-    };
-    unsigned int radiotap_len = 0;
+static void iwl_mvm_rx_he(struct iwl_mvm *mvm, struct sk_buff *skb,
+			  struct iwl_mvm_rx_phy_data *phy_data,
+			  u32 rate_n_flags, u16 phy_info, int queue)
+{
+	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
+	struct ieee80211_radiotap_he *he = NULL;
+	struct ieee80211_radiotap_he_mu *he_mu = NULL;
+	u32 he_type = rate_n_flags & RATE_MCS_HE_TYPE_MSK;
+	u8 stbc, ltf;
+	static const struct ieee80211_radiotap_he known = {
+		.data1 = cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_DATA_MCS_KNOWN |
+				     IEEE80211_RADIOTAP_HE_DATA1_DATA_DCM_KNOWN |
+				     IEEE80211_RADIOTAP_HE_DATA1_STBC_KNOWN |
+				     IEEE80211_RADIOTAP_HE_DATA1_CODING_KNOWN),
+		.data2 = cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA2_GI_KNOWN |
+				     IEEE80211_RADIOTAP_HE_DATA2_TXBF_KNOWN),
+	};
+	static const struct ieee80211_radiotap_he_mu mu_known = {
+		.flags1 = cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_MCS_KNOWN |
+				      IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_DCM_KNOWN |
+				      IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_SYMS_USERS_KNOWN |
+				      IEEE80211_RADIOTAP_HE_MU_FLAGS1_SIG_B_COMP_KNOWN),
+		.flags2 = cpu_to_le16(IEEE80211_RADIOTAP_HE_MU_FLAGS2_PUNC_FROM_SIG_A_BW_KNOWN |
+				      IEEE80211_RADIOTAP_HE_MU_FLAGS2_BW_FROM_SIG_A_BW_KNOWN),
+	};
 
-    he = skb_put_data(skb, &known, sizeof(known));
-    radiotap_len += sizeof(known);
-    rx_status->flag |= RX_FLAG_RADIOTAP_HE;
+	he = skb_put_data(skb, &known, sizeof(known));
+	rx_status->flag |= RX_FLAG_RADIOTAP_HE;
 
-    if (phy_data->info_type == IWL_RX_PHY_INFO_TYPE_HE_MU ||
-        phy_data->info_type == IWL_RX_PHY_INFO_TYPE_HE_MU_EXT) {
-        he_mu = skb_put_data(skb, &mu_known, sizeof(mu_known));
-        radiotap_len += sizeof(mu_known);
-        rx_status->flag |= RX_FLAG_RADIOTAP_HE_MU;
-    }
+	if (phy_data->info_type == IWL_RX_PHY_INFO_TYPE_HE_MU ||
+	    phy_data->info_type == IWL_RX_PHY_INFO_TYPE_HE_MU_EXT) {
+		he_mu = skb_put_data(skb, &mu_known, sizeof(mu_known));
+		rx_status->flag |= RX_FLAG_RADIOTAP_HE_MU;
+	}
 
-    /* temporarily hide the radiotap data */
-    __skb_pull(skb, radiotap_len);
+	/* report the AMPDU-EOF bit on single frames */
+	if (!queue && !(phy_info & IWL_RX_MPDU_PHY_AMPDU)) {
+		rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
+		rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT_KNOWN;
+		if (phy_data->d0 & cpu_to_le32(IWL_RX_PHY_DATA0_HE_DELIM_EOF))
+			rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT;
+	}
 
-    /* report the AMPDU-EOF bit on single frames */
-    if (!queue && !(phy_info & IWL_RX_MPDU_PHY_AMPDU)) {
-        rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
-        rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT_KNOWN;
-        if (phy_data->d0 & cpu_to_le32(IWL_RX_PHY_DATA0_HE_DELIM_EOF)) {
-            rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT;
-        }
-    }
+	if (phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD)
+		iwl_mvm_decode_he_phy_data(mvm, phy_data, he, he_mu, rx_status,
+					   rate_n_flags, queue);
 
-    if (phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD) {
-        iwl_mvm_decode_he_phy_data(mvm, phy_data, he, he_mu, rx_status, rate_n_flags, queue);
-    }
+	/* update aggregation data for monitor sake on default queue */
+	if (!queue && (phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD) &&
+	    (phy_info & IWL_RX_MPDU_PHY_AMPDU)) {
+		bool toggle_bit = phy_info & IWL_RX_MPDU_PHY_AMPDU_TOGGLE;
 
-    /* update aggregation data for monitor sake on default queue */
-    if (!queue && (phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD) && (phy_info & IWL_RX_MPDU_PHY_AMPDU)) {
-        bool toggle_bit = phy_info & IWL_RX_MPDU_PHY_AMPDU_TOGGLE;
+		/* toggle is switched whenever new aggregation starts */
+		if (toggle_bit != mvm->ampdu_toggle) {
+			rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT_KNOWN;
+			if (phy_data->d0 & cpu_to_le32(IWL_RX_PHY_DATA0_HE_DELIM_EOF))
+				rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT;
+		}
+	}
 
-        /* toggle is switched whenever new aggregation starts */
-        if (toggle_bit != mvm->ampdu_toggle) {
-            rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT_KNOWN;
-            if (phy_data->d0 & cpu_to_le32(IWL_RX_PHY_DATA0_HE_DELIM_EOF)) {
-                rx_status->flag |= RX_FLAG_AMPDU_EOF_BIT;
-            }
-        }
-    }
+	if (he_type == RATE_MCS_HE_TYPE_EXT_SU &&
+	    rate_n_flags & RATE_MCS_HE_106T_MSK) {
+		rx_status->bw = RATE_INFO_BW_HE_RU;
+		rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_106;
+	}
 
-    if (he_type == RATE_MCS_HE_TYPE_EXT_SU && rate_n_flags & RATE_MCS_HE_106T_MSK) {
-        rx_status->bw = RATE_INFO_BW_HE_RU;
-        rx_status->he_ru = NL80211_RATE_INFO_HE_RU_ALLOC_106;
-    }
+	/* actually data is filled in mac80211 */
+	if (he_type == RATE_MCS_HE_TYPE_SU ||
+	    he_type == RATE_MCS_HE_TYPE_EXT_SU)
+		he->data1 |=
+			cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_BW_RU_ALLOC_KNOWN);
 
-    /* actually data is filled in mac80211 */
-    if (he_type == RATE_MCS_HE_TYPE_SU || he_type == RATE_MCS_HE_TYPE_EXT_SU) {
-        he->data1 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA1_BW_RU_ALLOC_KNOWN);
-    }
+	stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
+	rx_status->nss =
+		((rate_n_flags & RATE_MCS_NSS_MSK) >>
+		 RATE_MCS_NSS_POS) + 1;
+	rx_status->rate_idx = rate_n_flags & RATE_MCS_CODE_MSK;
+	rx_status->encoding = RX_ENC_HE;
+	rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
+	if (rate_n_flags & RATE_MCS_BF_MSK)
+		rx_status->enc_flags |= RX_ENC_FLAG_BF;
 
-    stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
-    rx_status->nss = ((rate_n_flags & RATE_VHT_MCS_NSS_MSK) >> RATE_VHT_MCS_NSS_POS) + 1;
-    rx_status->rate_idx = rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK;
-    rx_status->encoding = RX_ENC_HE;
-    rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
-    if (rate_n_flags & RATE_MCS_BF_MSK) { rx_status->enc_flags |= RX_ENC_FLAG_BF; }
+	rx_status->he_dcm =
+		!!(rate_n_flags & RATE_HE_DUAL_CARRIER_MODE_MSK);
 
-    rx_status->he_dcm = !!(rate_n_flags & RATE_HE_DUAL_CARRIER_MODE_MSK);
+#define CHECK_TYPE(F)							\
+	BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA1_FORMAT_ ## F !=	\
+		     (RATE_MCS_HE_TYPE_ ## F >> RATE_MCS_HE_TYPE_POS))
 
-#define CHECK_TYPE(F)                                    \
-  BUILD_BUG_ON(IEEE80211_RADIOTAP_HE_DATA1_FORMAT_##F != \
-               (RATE_MCS_HE_TYPE_##F >> RATE_MCS_HE_TYPE_POS))
+	CHECK_TYPE(SU);
+	CHECK_TYPE(EXT_SU);
+	CHECK_TYPE(MU);
+	CHECK_TYPE(TRIG);
 
-    CHECK_TYPE(SU);
-    CHECK_TYPE(EXT_SU);
-    CHECK_TYPE(MU);
-    CHECK_TYPE(TRIG);
+	he->data1 |= cpu_to_le16(he_type >> RATE_MCS_HE_TYPE_POS);
 
-    he->data1 |= cpu_to_le16(he_type >> RATE_MCS_HE_TYPE_POS);
+	if (rate_n_flags & RATE_MCS_BF_MSK)
+		he->data5 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA5_TXBF);
 
-    if (rate_n_flags & RATE_MCS_BF_MSK) {
-        he->data5 |= cpu_to_le16(IEEE80211_RADIOTAP_HE_DATA5_TXBF);
-    }
+	switch ((rate_n_flags & RATE_MCS_HE_GI_LTF_MSK) >>
+		RATE_MCS_HE_GI_LTF_POS) {
+	case 0:
+		if (he_type == RATE_MCS_HE_TYPE_TRIG)
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
+		else
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
+		if (he_type == RATE_MCS_HE_TYPE_MU)
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		else
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_1X;
+		break;
+	case 1:
+		if (he_type == RATE_MCS_HE_TYPE_TRIG)
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
+		else
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_2X;
+		break;
+	case 2:
+		if (he_type == RATE_MCS_HE_TYPE_TRIG) {
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_3_2;
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		} else {
+			rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
+			ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_2X;
+		}
+		break;
+	case 3:
+		rx_status->he_gi = NL80211_RATE_INFO_HE_GI_3_2;
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		break;
+	case 4:
+		rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
+		break;
+	default:
+		ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_UNKNOWN;
+	}
 
-    switch ((rate_n_flags & RATE_MCS_HE_GI_LTF_MSK) >> RATE_MCS_HE_GI_LTF_POS) {
-    case 0:
-        if (he_type == RATE_MCS_HE_TYPE_TRIG) {
-            rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
-        } else {
-            rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
-        }
-        if (he_type == RATE_MCS_HE_TYPE_MU) {
-            ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
-        } else {
-            ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_1X;
-        }
-        break;
-    case 1:
-        if (he_type == RATE_MCS_HE_TYPE_TRIG) {
-            rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
-        } else {
-            rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
-        }
-        ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_2X;
-        break;
-    case 2:
-        if (he_type == RATE_MCS_HE_TYPE_TRIG) {
-            rx_status->he_gi = NL80211_RATE_INFO_HE_GI_3_2;
-            ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
-        } else {
-            rx_status->he_gi = NL80211_RATE_INFO_HE_GI_1_6;
-            ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_2X;
-        }
-        break;
-    case 3:
-        if ((he_type == RATE_MCS_HE_TYPE_SU || he_type == RATE_MCS_HE_TYPE_EXT_SU) &&
-            rate_n_flags & RATE_MCS_SGI_MSK) {
-            rx_status->he_gi = NL80211_RATE_INFO_HE_GI_0_8;
-        } else {
-            rx_status->he_gi = NL80211_RATE_INFO_HE_GI_3_2;
-        }
-        ltf = IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE_4X;
-        break;
-    }
-
-    he->data5 |= le16_encode_bits(ltf, IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE);
+	he->data5 |= le16_encode_bits(ltf,
+				      IEEE80211_RADIOTAP_HE_DATA5_LTF_SIZE);
 }
 
-static void iwl_mvm_decode_lsig(struct sk_buff* skb, struct iwl_mvm_rx_phy_data* phy_data) {
-    struct ieee80211_rx_status* rx_status = IEEE80211_SKB_RXCB(skb);
-    struct ieee80211_radiotap_lsig* lsig;
+static void iwl_mvm_decode_lsig(struct sk_buff *skb,
+				struct iwl_mvm_rx_phy_data *phy_data)
+{
+	struct ieee80211_rx_status *rx_status = IEEE80211_SKB_RXCB(skb);
+	struct ieee80211_radiotap_lsig *lsig;
 
-    switch (phy_data->info_type) {
-    case IWL_RX_PHY_INFO_TYPE_HT:
-    case IWL_RX_PHY_INFO_TYPE_VHT_SU:
-    case IWL_RX_PHY_INFO_TYPE_VHT_MU:
-    case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
-    case IWL_RX_PHY_INFO_TYPE_HE_SU:
-    case IWL_RX_PHY_INFO_TYPE_HE_MU:
-    case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
-    case IWL_RX_PHY_INFO_TYPE_HE_TB:
-        lsig = skb_put(skb, sizeof(*lsig));
-        lsig->data1 = cpu_to_le16(IEEE80211_RADIOTAP_LSIG_DATA1_LENGTH_KNOWN);
-        lsig->data2 = le16_encode_bits(le32_get_bits(phy_data->d1, IWL_RX_PHY_DATA1_LSIG_LEN_MASK),
-                                       IEEE80211_RADIOTAP_LSIG_DATA2_LENGTH);
-        rx_status->flag |= RX_FLAG_RADIOTAP_LSIG;
-        break;
-    default:
-        break;
-    }
+	switch (phy_data->info_type) {
+	case IWL_RX_PHY_INFO_TYPE_HT:
+	case IWL_RX_PHY_INFO_TYPE_VHT_SU:
+	case IWL_RX_PHY_INFO_TYPE_VHT_MU:
+	case IWL_RX_PHY_INFO_TYPE_HE_TB_EXT:
+	case IWL_RX_PHY_INFO_TYPE_HE_SU:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU:
+	case IWL_RX_PHY_INFO_TYPE_HE_MU_EXT:
+	case IWL_RX_PHY_INFO_TYPE_HE_TB:
+		lsig = skb_put(skb, sizeof(*lsig));
+		lsig->data1 = cpu_to_le16(IEEE80211_RADIOTAP_LSIG_DATA1_LENGTH_KNOWN);
+		lsig->data2 = le16_encode_bits(le32_get_bits(phy_data->d1,
+							     IWL_RX_PHY_DATA1_LSIG_LEN_MASK),
+					       IEEE80211_RADIOTAP_LSIG_DATA2_LENGTH);
+		rx_status->flag |= RX_FLAG_RADIOTAP_LSIG;
+		break;
+	default:
+		break;
+	}
 }
 #endif  // NEEDS_PORTING
 
@@ -1255,7 +1385,6 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
 #if 0   // NEEDS_PORTING
   // TODO(fxbug.dev/84773)
   struct iwl_mvm_rx_phy_data phy_data = {
-      .d4 = desc->phy_data4,
       .info_type = IWL_RX_PHY_INFO_TYPE_NONE,
   };
 #endif  // NEEDS_PORTING
@@ -1295,6 +1424,21 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   }
 
 #if 0   // NEEDS_PORTING
+	if (iwl_fw_lookup_notif_ver(mvm->fw, LEGACY_GROUP,
+				    REPLY_RX_MPDU_CMD, 0) < 4) {
+		rate_n_flags = iwl_new_rate_from_v1(rate_n_flags);
+		IWL_DEBUG_DROP(mvm, "Got old format rate, converting. New rate: 0x%x\n",
+			       rate_n_flags);
+	}
+	format = rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
+
+	len = le16_to_cpu(desc->mpdu_len);
+
+	if (unlikely(len + desc_size > pkt_len)) {
+		IWL_DEBUG_DROP(mvm, "FW lied about packet len\n");
+		return;
+	}
+
   if (sts_phy_info & IWL_RX_MPDU_PHY_TSF_OVERLOAD) {
     phy_data.info_type = le32_get_bits(phy_data.d1, IWL_RX_PHY_DATA1_INFO_TYPE_MASK);
   }
@@ -1400,7 +1544,11 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
     rx_status->flag |= RX_FLAG_AMPDU_DETAILS;
     rx_status->ampdu_reference = mvm->ampdu_ref;
 #endif  // NEEDS_PORTING
-    /* toggle is switched whenever new aggregation starts */
+		/*
+		 * Toggle is switched whenever new aggregation starts. Make
+		 * sure ampdu_reference is never 0 so we can later use it to
+		 * see if the frame was really part of an A-MPDU or not.
+		 */
     if (toggle_bit != mvm->ampdu_toggle) {
       mvm->ampdu_ref++;
       mvm->ampdu_toggle = toggle_bit;
@@ -1424,118 +1572,133 @@ void iwl_mvm_rx_mpdu_mq(struct iwl_mvm* mvm, struct napi_struct* napi,
   }
 
 #if 0  // NEEDS_PORTING
-    if (sta) {
-        struct iwl_mvm_sta* mvmsta = iwl_mvm_sta_from_mac80211(sta);
-        struct ieee80211_vif* tx_blocked_vif = rcu_dereference(mvm->csa_tx_blocked_vif);
-        uint8_t baid =
-            (uint8_t)((le32_to_cpu(desc->reorder_data) & IWL_RX_MPDU_REORDER_BAID_MASK) >>
-                      IWL_RX_MPDU_REORDER_BAID_SHIFT);
-        struct iwl_fw_dbg_trigger_tlv* trig;
-        struct ieee80211_vif* vif = mvmsta->vif;
+	if (sta) {
+		struct iwl_mvm_sta *mvmsta = iwl_mvm_sta_from_mac80211(sta);
+		struct ieee80211_vif *tx_blocked_vif =
+			rcu_dereference(mvm->csa_tx_blocked_vif);
+		u8 baid = (u8)((le32_to_cpu(desc->reorder_data) &
+			       IWL_RX_MPDU_REORDER_BAID_MASK) >>
+			       IWL_RX_MPDU_REORDER_BAID_SHIFT);
+		struct iwl_fw_dbg_trigger_tlv *trig;
+		struct ieee80211_vif *vif = mvmsta->vif;
 
-        if (!mvm->tcm.paused && len >= sizeof(*hdr) && !is_multicast_ether_addr(hdr->addr1) &&
-            ieee80211_is_data(hdr->frame_control) &&
-            time_after(jiffies, mvm->tcm.ts + MVM_TCM_PERIOD)) {
-            schedule_delayed_work(&mvm->tcm.work, 0);
-        }
+		if (!mvm->tcm.paused && len >= sizeof(*hdr) &&
+		    !is_multicast_ether_addr(hdr->addr1) &&
+		    ieee80211_is_data(hdr->frame_control) &&
+		    time_after(jiffies, mvm->tcm.ts + MVM_TCM_PERIOD))
+			schedule_delayed_work(&mvm->tcm.work, 0);
 
-        /*
-         * We have tx blocked stations (with CS bit). If we heard
-         * frames from a blocked station on a new channel we can
-         * TX to it again.
-         */
-        if (unlikely(tx_blocked_vif) && tx_blocked_vif == vif) {
-            struct iwl_mvm_vif* mvmvif = iwl_mvm_vif_from_mac80211(tx_blocked_vif);
+		/*
+		 * We have tx blocked stations (with CS bit). If we heard
+		 * frames from a blocked station on a new channel we can
+		 * TX to it again.
+		 */
+		if (unlikely(tx_blocked_vif) && tx_blocked_vif == vif) {
+			struct iwl_mvm_vif *mvmvif =
+				iwl_mvm_vif_from_mac80211(tx_blocked_vif);
+			struct iwl_rx_sta_csa rx_sta_csa = {
+				.all_sta_unblocked = true,
+				.vif = tx_blocked_vif,
+			};
 
-            if (mvmvif->csa_target_freq == rx_status->freq) {
-                iwl_mvm_sta_modify_disable_tx_ap(mvm, sta, false);
-            }
-        }
+			if (mvmvif->csa_target_freq == rx_status->freq)
+				iwl_mvm_sta_modify_disable_tx_ap(mvm, sta,
+								 false);
+			ieee80211_iterate_stations_atomic(mvm->hw,
+							  iwl_mvm_rx_get_sta_block_tx,
+							  &rx_sta_csa);
 
-        rs_update_last_rssi(mvm, mvmsta, rx_status);
+			if (rx_sta_csa.all_sta_unblocked) {
+				RCU_INIT_POINTER(mvm->csa_tx_blocked_vif, NULL);
+				/* Unblock BCAST / MCAST station */
+				iwl_mvm_modify_all_sta_disable_tx(mvm, mvmvif, false);
+				cancel_delayed_work_sync(&mvm->cs_tx_unblock_dwork);
+			}
+		}
 
-        trig = iwl_fw_dbg_trigger_on(&mvm->fwrt, ieee80211_vif_to_wdev(vif), FW_DBG_TRIGGER_RSSI);
+		rs_update_last_rssi(mvm, mvmsta, rx_status);
 
-        if (trig && ieee80211_is_beacon(hdr->frame_control)) {
-            struct iwl_fw_dbg_trigger_low_rssi* rssi_trig;
-            int32_t rssi;
+		trig = iwl_fw_dbg_trigger_on(&mvm->fwrt,
+					     ieee80211_vif_to_wdev(vif),
+					     FW_DBG_TRIGGER_RSSI);
 
-            rssi_trig = (void*)trig->data;
-            rssi = le32_to_cpu(rssi_trig->rssi);
+		if (trig && ieee80211_is_beacon(hdr->frame_control)) {
+			struct iwl_fw_dbg_trigger_low_rssi *rssi_trig;
+			s32 rssi;
 
-            if (rx_status->signal < rssi) { iwl_fw_dbg_collect_trig(&mvm->fwrt, trig, NULL); }
-        }
+			rssi_trig = (void *)trig->data;
+			rssi = le32_to_cpu(rssi_trig->rssi);
 
-        if (ieee80211_is_data(hdr->frame_control)) { iwl_mvm_rx_csum(sta, skb, desc); }
+			if (rx_status->signal < rssi)
+				iwl_fw_dbg_collect_trig(&mvm->fwrt, trig,
+							NULL);
+		}
 
-#ifdef CPTCFG_IWLMVM_TDLS_PEER_CACHE
-        /*
-         * these packets are from the AP or the existing TDLS peer.
-         * In both cases an existing station.
-         */
-        iwl_mvm_tdls_peer_cache_pkt(mvm, hdr, len, queue);
-#endif  /* CPTCFG_IWLMVM_TDLS_PEER_CACHE */
+		if (ieee80211_is_data(hdr->frame_control))
+			iwl_mvm_rx_csum(mvm, sta, skb, pkt);
 
-        if (iwl_mvm_is_dup(sta, queue, rx_status, hdr, desc)) {
-            kfree_skb(skb);
-            goto out;
-        }
+		if (iwl_mvm_is_dup(sta, queue, rx_status, hdr, desc)) {
+			kfree_skb(skb);
+			goto out;
+		}
 
-        /*
-         * Our hardware de-aggregates AMSDUs but copies the mac header
-         * as it to the de-aggregated MPDUs. We need to turn off the
-         * AMSDU bit in the QoS control ourselves.
-         * In addition, HW reverses addr3 and addr4 - reverse it back.
-         */
-        if ((desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU) &&
-            !WARN_ON(!ieee80211_is_data_qos(hdr->frame_control))) {
-            uint8_t* qc = ieee80211_get_qos_ctl(hdr);
+		/*
+		 * Our hardware de-aggregates AMSDUs but copies the mac header
+		 * as it to the de-aggregated MPDUs. We need to turn off the
+		 * AMSDU bit in the QoS control ourselves.
+		 * In addition, HW reverses addr3 and addr4 - reverse it back.
+		 */
+		if ((desc->mac_flags2 & IWL_RX_MPDU_MFLG2_AMSDU) &&
+		    !WARN_ON(!ieee80211_is_data_qos(hdr->frame_control))) {
+			u8 *qc = ieee80211_get_qos_ctl(hdr);
 
-            *qc &= ~IEEE80211_QOS_CTL_A_MSDU_PRESENT;
+			*qc &= ~IEEE80211_QOS_CTL_A_MSDU_PRESENT;
 
-            if (mvm->trans->cfg->device_family == IWL_DEVICE_FAMILY_9000) {
-                iwl_mvm_flip_address(hdr->addr3);
+			if (mvm->trans->trans_cfg->device_family ==
+			    IWL_DEVICE_FAMILY_9000) {
+				iwl_mvm_flip_address(hdr->addr3);
 
-                if (ieee80211_has_a4(hdr->frame_control)) { iwl_mvm_flip_address(hdr->addr4); }
-            }
-        }
-        if (baid != IWL_RX_REORDER_DATA_INVALID_BAID) {
-            uint32_t reorder_data = le32_to_cpu(desc->reorder_data);
+				if (ieee80211_has_a4(hdr->frame_control))
+					iwl_mvm_flip_address(hdr->addr4);
+			}
+		}
+		if (baid != IWL_RX_REORDER_DATA_INVALID_BAID) {
+			u32 reorder_data = le32_to_cpu(desc->reorder_data);
 
-            iwl_mvm_agg_rx_received(mvm, reorder_data, baid);
-        }
-    }
+			iwl_mvm_agg_rx_received(mvm, reorder_data, baid);
+		}
+	}
 
-  if (!(rate_n_flags & RATE_MCS_CCK_MSK) && rate_n_flags & RATE_MCS_SGI_MSK) {
-    rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
-  }
-  if (rate_n_flags & RATE_HT_MCS_GF_MSK) {
-    rx_status->enc_flags |= RX_ENC_FLAG_HT_GF;
-  }
-  if (rate_n_flags & RATE_MCS_LDPC_MSK) {
-    rx_status->enc_flags |= RX_ENC_FLAG_LDPC;
-  }
+	is_sgi = format == RATE_MCS_HE_MSK ?
+		iwl_he_is_sgi(rate_n_flags) :
+		rate_n_flags & RATE_MCS_SGI_MSK;
+
+	if (!(format == RATE_MCS_CCK_MSK) && is_sgi)
+		rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
+	if (rate_n_flags & RATE_MCS_LDPC_MSK)
+		rx_status->enc_flags |= RX_ENC_FLAG_LDPC;
 #endif  // NEEDS_PORTING
   if (rate_n_flags & RATE_MCS_HT_MSK) {
 #if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/36683)
     uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
     rx_status->encoding = RX_ENC_HT;
-    rx_status->rate_idx = rate_n_flags & RATE_HT_MCS_INDEX_MSK;
+    rx_status->rate_idx = RATE_HT_MCS_INDEX(rate_n_flags);
     rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
 #endif  // NEEDS_PORTING
     rx_status.rx_info.phy = WLAN_PHY_TYPE_HT;
   } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
 #if 0   // NEEDS_PORTING
     // TODO(fxbug.dev/36684)
-    uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
-    rx_status->nss = ((rate_n_flags & RATE_VHT_MCS_NSS_MSK) >> RATE_VHT_MCS_NSS_POS) + 1;
-    rx_status->rate_idx = rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK;
-    rx_status->encoding = RX_ENC_VHT;
-    rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
-    if (rate_n_flags & RATE_MCS_BF_MSK) {
-      rx_status->enc_flags |= RX_ENC_FLAG_BF;
-    }
+		u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >>
+			RATE_MCS_STBC_POS;
+		rx_status->nss = ((rate_n_flags & RATE_MCS_NSS_MSK) >>
+			RATE_MCS_NSS_POS) + 1;
+		rx_status->rate_idx = rate_n_flags & RATE_MCS_CODE_MSK;
+		rx_status->encoding = RX_ENC_VHT;
+		rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
+		if (rate_n_flags & RATE_MCS_BF_MSK)
+			rx_status->enc_flags |= RX_ENC_FLAG_BF;
 #endif  // NEEDS_PORTING
     rx_status.rx_info.phy = WLAN_PHY_TYPE_VHT;
   } else if (!(rate_n_flags & RATE_MCS_HE_MSK)) {
@@ -1588,149 +1751,171 @@ out:
 void iwl_mvm_rx_monitor_ndp(struct iwl_mvm* mvm, struct napi_struct* napi,
                             struct iwl_rx_cmd_buffer* rxb, int queue) {
 #if 0   // NEEDS_PORTING
-    struct ieee80211_rx_status* rx_status;
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    struct iwl_rx_no_data* desc = (void*)pkt->data;
-    uint32_t rate_n_flags = le32_to_cpu(desc->rate);
-    uint32_t gp2_on_air_rise = le32_to_cpu(desc->on_air_rise_time);
-    uint32_t rssi = le32_to_cpu(desc->rssi);
-    uint32_t info_type = le32_to_cpu(desc->info) & RX_NO_DATA_INFO_TYPE_MSK;
-    uint16_t phy_info = IWL_RX_MPDU_PHY_TSF_OVERLOAD;
-    struct ieee80211_sta* sta = NULL;
-    struct sk_buff* skb;
-    uint8_t channel, energy_a, energy_b;
-    struct iwl_mvm_rx_phy_data phy_data = {
-        .d0 = desc->phy_info[0],
-        .info_type = IWL_RX_PHY_INFO_TYPE_NONE,
-    };
+	struct ieee80211_rx_status *rx_status;
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_rx_no_data *desc = (void *)pkt->data;
+	u32 rate_n_flags = le32_to_cpu(desc->rate);
+	u32 gp2_on_air_rise = le32_to_cpu(desc->on_air_rise_time);
+	u32 rssi = le32_to_cpu(desc->rssi);
+	u32 info_type = le32_to_cpu(desc->info) & RX_NO_DATA_INFO_TYPE_MSK;
+	u16 phy_info = IWL_RX_MPDU_PHY_TSF_OVERLOAD;
+	struct ieee80211_sta *sta = NULL;
+	struct sk_buff *skb;
+	u8 channel, energy_a, energy_b;
+	u32 format;
+	struct iwl_mvm_rx_phy_data phy_data = {
+		.info_type = le32_get_bits(desc->phy_info[1],
+					   IWL_RX_PHY_DATA1_INFO_TYPE_MASK),
+		.d0 = desc->phy_info[0],
+		.d1 = desc->phy_info[1],
+	};
+	bool is_sgi;
 
-    if (unlikely(test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status))) { return; }
+	if (iwl_fw_lookup_notif_ver(mvm->fw, DATA_PATH_GROUP,
+				    RX_NO_DATA_NOTIF, 0) < 2) {
+		IWL_DEBUG_DROP(mvm, "Got an old rate format. Old rate: 0x%x\n",
+			       rate_n_flags);
+		rate_n_flags = iwl_new_rate_from_v1(rate_n_flags);
+		IWL_DEBUG_DROP(mvm, " Rate after conversion to the new format: 0x%x\n",
+			       rate_n_flags);
+	}
+	format = rate_n_flags & RATE_MCS_MOD_TYPE_MSK;
 
-    /* Currently only NDP type is supported */
-    if (info_type != RX_NO_DATA_INFO_TYPE_NDP) { return; }
+	if (unlikely(iwl_rx_packet_payload_len(pkt) < sizeof(*desc)))
+		return;
 
-    energy_a = (rssi & RX_NO_DATA_CHAIN_A_MSK) >> RX_NO_DATA_CHAIN_A_POS;
-    energy_b = (rssi & RX_NO_DATA_CHAIN_B_MSK) >> RX_NO_DATA_CHAIN_B_POS;
-    channel = (rssi & RX_NO_DATA_CHANNEL_MSK) >> RX_NO_DATA_CHANNEL_POS;
+	if (unlikely(test_bit(IWL_MVM_STATUS_IN_HW_RESTART, &mvm->status)))
+		return;
 
-    phy_data.info_type = le32_get_bits(desc->phy_info[1], IWL_RX_PHY_DATA1_INFO_TYPE_MASK);
+	energy_a = (rssi & RX_NO_DATA_CHAIN_A_MSK) >> RX_NO_DATA_CHAIN_A_POS;
+	energy_b = (rssi & RX_NO_DATA_CHAIN_B_MSK) >> RX_NO_DATA_CHAIN_B_POS;
+	channel = (rssi & RX_NO_DATA_CHANNEL_MSK) >> RX_NO_DATA_CHANNEL_POS;
 
-    /* Dont use dev_alloc_skb(), we'll have enough headroom once
-     * ieee80211_hdr pulled.
-     */
-    skb = alloc_skb(128, GFP_ATOMIC);
-    if (!skb) {
-        IWL_ERR(mvm, "alloc_skb failed\n");
-        return;
-    }
+	/* Dont use dev_alloc_skb(), we'll have enough headroom once
+	 * ieee80211_hdr pulled.
+	 */
+	skb = alloc_skb(128, GFP_ATOMIC);
+	if (!skb) {
+		IWL_ERR(mvm, "alloc_skb failed\n");
+		return;
+	}
 
-    rx_status = IEEE80211_SKB_RXCB(skb);
+	rx_status = IEEE80211_SKB_RXCB(skb);
 
-    /* 0-length PSDU */
-    rx_status->flag |= RX_FLAG_NO_PSDU;
-    /* currently this is the only type for which we get this notif */
-    rx_status->zero_length_psdu_type = IEEE80211_RADIOTAP_ZERO_LEN_PSDU_SOUNDING;
+	/* 0-length PSDU */
+	rx_status->flag |= RX_FLAG_NO_PSDU;
 
-    /* This may be overridden by iwl_mvm_rx_he() to HE_RU */
-    switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
-    case RATE_MCS_CHAN_WIDTH_20:
-        break;
-    case RATE_MCS_CHAN_WIDTH_40:
-        rx_status->bw = RATE_INFO_BW_40;
-        break;
-    case RATE_MCS_CHAN_WIDTH_80:
-        rx_status->bw = RATE_INFO_BW_80;
-        break;
-    case RATE_MCS_CHAN_WIDTH_160:
-        rx_status->bw = RATE_INFO_BW_160;
-        break;
-    }
+	switch (info_type) {
+	case RX_NO_DATA_INFO_TYPE_NDP:
+		rx_status->zero_length_psdu_type =
+			IEEE80211_RADIOTAP_ZERO_LEN_PSDU_SOUNDING;
+		break;
+	case RX_NO_DATA_INFO_TYPE_MU_UNMATCHED:
+	case RX_NO_DATA_INFO_TYPE_HE_TB_UNMATCHED:
+		rx_status->zero_length_psdu_type =
+			IEEE80211_RADIOTAP_ZERO_LEN_PSDU_NOT_CAPTURED;
+		break;
+	default:
+		rx_status->zero_length_psdu_type =
+			IEEE80211_RADIOTAP_ZERO_LEN_PSDU_VENDOR;
+		break;
+	}
 
-    if (rate_n_flags & RATE_MCS_HE_MSK) {
-        iwl_mvm_rx_he(mvm, skb, &phy_data, rate_n_flags, phy_info, queue);
-    }
+	/* This may be overridden by iwl_mvm_rx_he() to HE_RU */
+	switch (rate_n_flags & RATE_MCS_CHAN_WIDTH_MSK) {
+	case RATE_MCS_CHAN_WIDTH_20:
+		break;
+	case RATE_MCS_CHAN_WIDTH_40:
+		rx_status->bw = RATE_INFO_BW_40;
+		break;
+	case RATE_MCS_CHAN_WIDTH_80:
+		rx_status->bw = RATE_INFO_BW_80;
+		break;
+	case RATE_MCS_CHAN_WIDTH_160:
+		rx_status->bw = RATE_INFO_BW_160;
+		break;
+	}
 
-    iwl_mvm_decode_lsig(skb, &phy_data);
+	if (format == RATE_MCS_HE_MSK)
+		iwl_mvm_rx_he(mvm, skb, &phy_data, rate_n_flags,
+			      phy_info, queue);
 
-    rx_status->device_timestamp = gp2_on_air_rise;
-    rx_status->band = channel > 14 ? NL80211_BAND_5GHZ : NL80211_BAND_2GHZ;
-    rx_status->freq = ieee80211_channel_to_frequency(channel, rx_status->band);
-    iwl_mvm_get_signal_strength(mvm, rx_status, rate_n_flags, energy_a, energy_b);
+	iwl_mvm_decode_lsig(skb, &phy_data);
 
-    rcu_read_lock();
+	rx_status->device_timestamp = gp2_on_air_rise;
+	rx_status->band = channel > 14 ? NL80211_BAND_5GHZ :
+		NL80211_BAND_2GHZ;
+	rx_status->freq = ieee80211_channel_to_frequency(channel,
+							 rx_status->band);
+	iwl_mvm_get_signal_strength(mvm, rx_status, rate_n_flags, energy_a,
+				    energy_b);
 
-    if (!(rate_n_flags & RATE_MCS_CCK_MSK) && rate_n_flags & RATE_MCS_SGI_MSK) {
-        rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
-    }
-    if (rate_n_flags & RATE_HT_MCS_GF_MSK) { rx_status->enc_flags |= RX_ENC_FLAG_HT_GF; }
-    if (rate_n_flags & RATE_MCS_LDPC_MSK) { rx_status->enc_flags |= RX_ENC_FLAG_LDPC; }
-    if (rate_n_flags & RATE_MCS_HT_MSK) {
-        uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
-        rx_status->encoding = RX_ENC_HT;
-        rx_status->rate_idx = rate_n_flags & RATE_HT_MCS_INDEX_MSK;
-        rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
-    } else if (rate_n_flags & RATE_MCS_VHT_MSK) {
-        uint8_t stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >> RATE_MCS_STBC_POS;
-        rx_status->rate_idx = rate_n_flags & RATE_VHT_MCS_RATE_CODE_MSK;
-        rx_status->encoding = RX_ENC_VHT;
-        rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
-        if (rate_n_flags & RATE_MCS_BF_MSK) { rx_status->enc_flags |= RX_ENC_FLAG_BF; }
-        /*
-         * take the nss from the rx_vec since the rate_n_flags has
-         * only 2 bits for the nss which gives a max of 4 ss but
-         * there may be up to 8 spatial streams
-         */
-        rx_status->nss = le32_get_bits(desc->rx_vec[0], RX_NO_DATA_RX_VEC0_VHT_NSTS_MSK) + 1;
-    } else if (rate_n_flags & RATE_MCS_HE_MSK) {
-        rx_status->nss = le32_get_bits(desc->rx_vec[0], RX_NO_DATA_RX_VEC0_HE_NSTS_MSK) + 1;
-    } else {
-        int rate = iwl_mvm_legacy_rate_to_mac80211_idx(rate_n_flags, rx_status->band);
+	rcu_read_lock();
 
-        if (WARN(rate < 0 || rate > 0xFF, "Invalid rate flags 0x%x, band %d,\n", rate_n_flags,
-                 rx_status->band)) {
-            kfree_skb(skb);
-            goto out;
-        }
-        rx_status->rate_idx = rate;
-    }
+	is_sgi = format == RATE_MCS_HE_MSK ?
+		iwl_he_is_sgi(rate_n_flags) :
+		rate_n_flags & RATE_MCS_SGI_MSK;
 
-    iwl_mvm_pass_packet_to_mac80211(mvm, napi, skb, queue, sta);
+	if (!(format == RATE_MCS_CCK_MSK) && is_sgi)
+		rx_status->enc_flags |= RX_ENC_FLAG_SHORT_GI;
+	if (rate_n_flags & RATE_MCS_LDPC_MSK)
+		rx_status->enc_flags |= RX_ENC_FLAG_LDPC;
+	if (format == RATE_MCS_HT_MSK) {
+		u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >>
+				RATE_MCS_STBC_POS;
+		rx_status->encoding = RX_ENC_HT;
+		rx_status->rate_idx = RATE_HT_MCS_INDEX(rate_n_flags);
+		rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
+	} else if (format == RATE_MCS_VHT_MSK) {
+		u8 stbc = (rate_n_flags & RATE_MCS_STBC_MSK) >>
+				RATE_MCS_STBC_POS;
+		rx_status->rate_idx = rate_n_flags & RATE_MCS_CODE_MSK;
+		rx_status->encoding = RX_ENC_VHT;
+		rx_status->enc_flags |= stbc << RX_ENC_FLAG_STBC_SHIFT;
+		if (rate_n_flags & RATE_MCS_BF_MSK)
+			rx_status->enc_flags |= RX_ENC_FLAG_BF;
+		/*
+		 * take the nss from the rx_vec since the rate_n_flags has
+		 * only 2 bits for the nss which gives a max of 4 ss but
+		 * there may be up to 8 spatial streams
+		 */
+		rx_status->nss =
+			le32_get_bits(desc->rx_vec[0],
+				      RX_NO_DATA_RX_VEC0_VHT_NSTS_MSK) + 1;
+	} else if (format == RATE_MCS_HE_MSK) {
+		rx_status->nss =
+			le32_get_bits(desc->rx_vec[0],
+				      RX_NO_DATA_RX_VEC0_HE_NSTS_MSK) + 1;
+	} else {
+		int rate = iwl_mvm_legacy_hw_idx_to_mac80211_idx(rate_n_flags,
+							       rx_status->band);
+
+		if (WARN(rate < 0 || rate > 0xFF,
+			 "Invalid rate flags 0x%x, band %d,\n",
+			 rate_n_flags, rx_status->band)) {
+			kfree_skb(skb);
+			goto out;
+		}
+		rx_status->rate_idx = rate;
+	}
+
+	ieee80211_rx_napi(mvm->hw, sta, skb, napi);
 out:
-    rcu_read_unlock();
+	rcu_read_unlock();
 #endif  // NEEDS_PORTING
 }
 
 void iwl_mvm_rx_frame_release(struct iwl_mvm* mvm, struct napi_struct* napi,
                               struct iwl_rx_cmd_buffer* rxb, int queue) {
 #if 0   // NEEDS_PORTING
-    struct iwl_rx_packet* pkt = rxb_addr(rxb);
-    struct iwl_frame_release* release = (void*)pkt->data;
-    struct ieee80211_sta* sta;
-    struct iwl_mvm_reorder_buffer* reorder_buf;
-    struct iwl_mvm_baid_data* ba_data;
+	struct iwl_rx_packet *pkt = rxb_addr(rxb);
+	struct iwl_frame_release *release = (void *)pkt->data;
 
-    int baid = release->baid;
+	if (unlikely(iwl_rx_packet_payload_len(pkt) < sizeof(*release)))
+		return;
 
-    IWL_DEBUG_HT(mvm, "Frame release notification for BAID %u, NSSN %d\n", release->baid,
-                 le16_to_cpu(release->nssn));
-
-    if (WARN_ON_ONCE(baid == IWL_RX_REORDER_DATA_INVALID_BAID)) { return; }
-
-    rcu_read_lock();
-
-    ba_data = rcu_dereference(mvm->baid_map[baid]);
-    if (WARN_ON_ONCE(!ba_data)) { goto out; }
-
-    sta = rcu_dereference(mvm->fw_id_to_mac_id[ba_data->sta_id]);
-    if (WARN_ON_ONCE(IS_ERR_OR_NULL(sta))) { goto out; }
-
-    reorder_buf = &ba_data->reorder_buf[queue];
-
-    spin_lock_bh(&reorder_buf->lock);
-    iwl_mvm_release_frames(mvm, sta, napi, ba_data, reorder_buf, le16_to_cpu(release->nssn));
-    spin_unlock_bh(&reorder_buf->lock);
-
-out:
-    rcu_read_unlock();
+	iwl_mvm_release_frames_from_notif(mvm, napi, release->baid,
+					  le16_to_cpu(release->nssn),
+					  queue, 0);
 #endif  // NEEDS_PORTING
 }

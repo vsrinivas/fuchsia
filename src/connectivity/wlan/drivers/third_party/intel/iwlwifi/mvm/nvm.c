@@ -405,7 +405,6 @@ zx_status_t iwl_nvm_init(struct iwl_mvm* mvm) {
     /* read External NVM file from the mod param */
     ret = iwl_read_external_nvm(mvm->trans, mvm->nvm_file_name, mvm->nvm_sections);
     if (ret) {
-      const char* nvm_file_C = mvm->cfg->default_nvm_file_C_step;
       mvm->nvm_file_name = nvm_file_C;
 
       if ((ret == -EFAULT || ret == -ENOENT) && mvm->nvm_file_name) {
@@ -575,6 +574,7 @@ zx_status_t iwl_mvm_init_mcc(struct iwl_mvm* mvm) {
   }
 
 #if 0   // NEEDS_PORTING
+  // TODO(fxbug.dev/95163): inform the MLME when the regulatory domain is changed.
   retval = regulatory_set_wiphy_regd_sync_rtnl(mvm->hw->wiphy, regd);
   kfree(regd);
 #endif  // NEEDS_PORTING
