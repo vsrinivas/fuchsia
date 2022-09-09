@@ -2,20 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{format_err, Context as _, Error},
-    argh::FromArgs,
-    fidl_fuchsia_bluetooth_gatt as gatt, fidl_fuchsia_power_battery as fpower,
-    fuchsia_async as fasync,
-    fuchsia_component::client::connect_to_protocol,
-    futures::{try_join, TryStreamExt},
-    parking_lot::Mutex,
-    std::collections::HashSet,
-};
+use anyhow::{format_err, Context as _, Error};
+use battery_client::BatteryClient;
+use bt_le_battery_service_config::Config;
+use fidl::endpoints::{create_request_stream, RequestStream, Responder};
+use fidl_fuchsia_bluetooth_gatt2 as gatt;
+use fuchsia_bluetooth::types::{PeerId, Uuid};
+use fuchsia_component::client::connect_to_protocol;
+use futures::stream::{StreamExt, TryStreamExt};
+use futures::try_join;
+use parking_lot::Mutex;
+use std::collections::HashSet;
+use std::str::FromStr;
+use tracing::{info, warn};
 
+/// Arbitrary Handle assigned to the Battery Service.
+const BATTERY_SERVICE_HANDLE: gatt::ServiceHandle = gatt::ServiceHandle { value: 10 };
+/// Fixed Handle assigned to the Battery characteristic.
+const BATTERY_CHARACTERISTIC_HANDLE: gatt::Handle = gatt::Handle { value: 1 };
 const BATTERY_SERVICE_UUID: &str = "0000180f-0000-1000-8000-00805f9b34fb";
 const BATTERY_LEVEL_UUID: &str = "00002A19-0000-1000-8000-00805f9b34fb";
-const BATTERY_LEVEL_ID: u64 = 0;
 
 /// Struct to manage all the shared state of the tool.
 struct BatteryState {
@@ -23,25 +29,23 @@ struct BatteryState {
 }
 
 impl BatteryState {
-    pub fn new(service: gatt::LocalServiceProxy) -> BatteryState {
+    pub fn new(service: gatt::LocalServiceControlHandle) -> BatteryState {
         BatteryState {
             inner: Mutex::new(BatteryStateInner { level: 0, service, peers: HashSet::new() }),
         }
     }
 
-    /// Add a new peer to the set of peers interested in notifications
-    /// on changes to the battery level.
-    pub fn add_peer(&self, peer_id: String) {
+    /// Add a new peer to the set of peers interested in the battery level change notifications.
+    pub fn add_peer(&self, peer_id: PeerId) {
         let _ = self.inner.lock().peers.insert(peer_id);
     }
 
-    /// Remove a peer from the set of peers interested in notifications
-    /// on changes to the battery level.
-    pub fn remove_peer(&self, peer_id: &str) {
+    /// Remove a peer from the set of peers interested in notifications.
+    pub fn remove_peer(&self, peer_id: &PeerId) {
         let _ = self.inner.lock().peers.remove(peer_id);
     }
 
-    /// Get the last reported level of the battery as a percentage.
+    /// Get the last reported level of the battery as a percentage in [0, 100].
     pub fn get_level(&self) -> u8 {
         self.inner.lock().level
     }
@@ -51,10 +55,14 @@ impl BatteryState {
     pub fn set_level(&self, level: u8) -> Result<(), Error> {
         let mut inner = self.inner.lock();
         if inner.level != level {
-            println!("Battery percentage changed ({}%)", level);
-            for peer_id in inner.peers.iter() {
-                inner.service.notify_value(BATTERY_LEVEL_ID, &peer_id, &[level], false)?;
-            }
+            info!("Battery percentage changed ({}%)", level);
+            let params = gatt::ValueChangedParameters {
+                peer_ids: Some(inner.peers.iter().cloned().map(Into::into).collect()),
+                handle: Some(BATTERY_CHARACTERISTIC_HANDLE),
+                value: Some(vec![level]),
+                ..gatt::ValueChangedParameters::EMPTY
+            };
+            inner.service.send_on_notify_value(params)?;
         }
         inner.level = level;
         Ok(())
@@ -63,148 +71,132 @@ impl BatteryState {
 
 /// Inner data fields used for the `BatteryState` struct.
 struct BatteryStateInner {
-    /// The current battery percentage.
+    /// The current battery percentage. In the range [0, 100].
     level: u8,
 
-    /// The proxy we use to send GATT characteristic value notifications.
-    service: gatt::LocalServiceProxy,
+    /// The control handle used to send GATT notifications.
+    service: gatt::LocalServiceControlHandle,
 
-    /// A set of remote LE device IDs that have subscribed to battery level
-    /// notifications.
-    peers: HashSet<String>,
+    /// Set of remote peers that have subscribed to GATT battery notifications.
+    peers: HashSet<PeerId>,
 }
 
 /// Handle a stream of incoming gatt battery service requests.
 /// Returns when the channel backing the stream closes or an error occurs while handling requests.
 async fn gatt_service_delegate(
     state: &BatteryState,
-    mut stream: gatt::LocalServiceDelegateRequestStream,
+    mut stream: gatt::LocalServiceRequestStream,
 ) -> Result<(), Error> {
+    use gatt::LocalServiceRequest;
     while let Some(request) = stream.try_next().await.context("error running service delegate")? {
-        use fidl_fuchsia_bluetooth_gatt::LocalServiceDelegateRequest::*;
         match request {
-            OnCharacteristicConfiguration { peer_id, notify, indicate, .. } => {
-                println!(
-                    "Peer configured characteristic (notify: {}, indicate: {}, id: {})",
-                    notify, indicate, peer_id
-                );
+            LocalServiceRequest::ReadValue { responder, .. } => {
+                let battery_level = state.get_level();
+                let _ = responder.send(&mut Ok(vec![battery_level]));
+            }
+            LocalServiceRequest::WriteValue { responder, .. } => {
+                // Writing to the battery level characteristic is not permitted.
+                let _ = responder.send(&mut Err(gatt::Error::WriteRequestRejected));
+            }
+            LocalServiceRequest::CharacteristicConfiguration {
+                peer_id, notify, responder, ..
+            } => {
+                let peer_id = peer_id.into();
+                info!("Peer {} configured characteristic (notify: {})", peer_id, notify);
                 if notify {
                     state.add_peer(peer_id);
                 } else {
                     state.remove_peer(&peer_id);
                 }
+                let _ = responder.send();
             }
-            OnReadValue { responder, .. } => {
-                responder.send(Some(&[state.get_level()]), gatt::ErrorCode::NoError)?;
+            LocalServiceRequest::ValueChangedCredit { .. } => {}
+            LocalServiceRequest::PeerUpdate { responder, .. } => {
+                // Per FIDL docs, this can be safely ignored
+                responder.drop_without_shutdown();
             }
-            OnWriteValue { responder, .. } => {
-                // Writing to the battery level characteristic is not permitted.
-                responder.send(gatt::ErrorCode::NotPermitted)?;
-            }
-            OnWriteWithoutResponse { .. } => {}
         }
     }
+    warn!("GATT Battery service was closed");
     Ok(())
 }
 
-/// Handle a stream of incoming battery notifications, updating state.
-/// Returns when the channel backing the stream closes or an error occurs while handling requests.
+/// Watches and saves updates from the local battery service.
 async fn battery_manager_watcher(
     state: &BatteryState,
-    mut stream: fpower::BatteryInfoWatcherRequestStream,
+    mut battery_client: BatteryClient,
 ) -> Result<(), Error> {
-    while let Some(fpower::BatteryInfoWatcherRequest::OnChangeBatteryInfo { info, responder }) =
-        stream.try_next().await.context("error running battery manager info watcher")?
-    {
-        if let Some(level) = info.level_percent {
-            let level = level.round() as u8;
-            state.set_level(level)?;
+    while let Some(update) = battery_client.next().await {
+        if let Some(battery_level) = update.map(|u| u.level())? {
+            state.set_level(battery_level)?;
         }
-
-        // acknowledge watch notification
-        responder.send()?;
     }
 
-    println!("BatteryInfoWatcher was closed; battery level no longer available.");
+    warn!("BatteryClient was closed; battery level no longer available.");
     Ok(())
 }
 
-/// Command line options
-#[derive(FromArgs)]
-struct Options {
-    /// attribute permissions for Battery Level chracteristic (values: "enc", "auth")
-    #[argh(option)]
-    security: Option<String>,
-}
-
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["bt-le-battery-service"])]
 async fn main() -> Result<(), Error> {
-    let args: Options = argh::from_env();
-    let security = Box::new(match args.security {
-        None => gatt::SecurityRequirements {
-            encryption_required: false,
-            authentication_required: false,
-            authorization_required: false,
+    let config = Config::take_from_startup_handle();
+    let security = match config.security.as_str() {
+        "none" => gatt::SecurityRequirements::EMPTY,
+        "enc" => gatt::SecurityRequirements {
+            encryption_required: Some(true),
+            ..gatt::SecurityRequirements::EMPTY
         },
-        Some(s) if s == "enc" => gatt::SecurityRequirements {
-            encryption_required: true,
-            authentication_required: false,
-            authorization_required: false,
+        "auth" => gatt::SecurityRequirements {
+            encryption_required: Some(true),
+            authentication_required: Some(true),
+            ..gatt::SecurityRequirements::EMPTY
         },
-        Some(s) if s == "auth" => gatt::SecurityRequirements {
-            encryption_required: true,
-            authentication_required: true,
-            authorization_required: false,
-        },
-        Some(s) => return Err(format_err!("invalid security value: {}", s)),
-    });
+        other => return Err(format_err!("invalid security value: {}", other)),
+    };
+    info!("Starting LE Battery service with security: {:?}", security);
 
-    // Create endpoints for the required services.
-    let (battery_info_watch_client, battery_info_request_stream) =
-        fidl::endpoints::create_request_stream::<fpower::BatteryInfoWatcherMarker>()?;
-    let (delegate_client, delegate_request_stream) =
-        fidl::endpoints::create_request_stream::<gatt::LocalServiceDelegateMarker>()?;
-    let (service_proxy, service_server) = fidl::endpoints::create_proxy()?;
-
+    // Connect to the gatt2.Server protocol to publish the service.
     let gatt_server = connect_to_protocol::<gatt::Server_Marker>()?;
-    let battery_manager_server = connect_to_protocol::<fpower::BatteryManagerMarker>()?;
+    let (service_client, service_stream) = create_request_stream::<gatt::LocalServiceMarker>()
+        .context("Can't create LocalService endpoints")?;
+    let service_notification_handle = service_stream.control_handle();
 
-    // Initialize internal state.
-    let state = BatteryState::new(service_proxy);
+    // Connect to the battery service and initialize the shared state.
+    let battery_client = BatteryClient::create()?;
+    let state = BatteryState::new(service_notification_handle);
 
     // Build a GATT Battery service.
     let characteristic = gatt::Characteristic {
-        id: BATTERY_LEVEL_ID,
-        type_: BATTERY_LEVEL_UUID.to_string(),
-        properties: gatt::PROPERTY_READ | gatt::PROPERTY_NOTIFY,
-        permissions: Some(Box::new(gatt::AttributePermissions {
+        handle: Some(BATTERY_CHARACTERISTIC_HANDLE),
+        type_: Uuid::from_str(BATTERY_LEVEL_UUID).ok().map(Into::into),
+        properties: Some(
+            (gatt::CharacteristicPropertyBits::READ | gatt::CharacteristicPropertyBits::NOTIFY)
+                .bits()
+                .into(),
+        ),
+        permissions: Some(gatt::AttributePermissions {
             read: Some(security.clone()),
-            write: None,
             update: Some(security),
-        })),
-        descriptors: None,
+            ..gatt::AttributePermissions::EMPTY
+        }),
+        ..gatt::Characteristic::EMPTY
     };
-    let mut service_info = gatt::ServiceInfo {
-        id: 0,
-        primary: true,
-        type_: BATTERY_SERVICE_UUID.to_string(),
+    let service_info = gatt::ServiceInfo {
+        handle: Some(BATTERY_SERVICE_HANDLE),
+        kind: Some(gatt::ServiceKind::Primary),
+        type_: Uuid::from_str(BATTERY_SERVICE_UUID).ok().map(Into::into),
         characteristics: Some(vec![characteristic]),
-        includes: None,
+        ..gatt::ServiceInfo::EMPTY
     };
-
-    // Register the local battery watcher with the battery manager service.
-    battery_manager_server.watch(battery_info_watch_client)?;
 
     // Publish the local gatt service delegate with the gatt service.
-    let status =
-        gatt_server.publish_service(&mut service_info, delegate_client, service_server).await?;
-    if let Some(error) = status.error {
-        return Err(format_err!("Failed to publish battery service to gatt server: {:?}", error));
-    }
-    println!("Published Battery Service to local device database.");
+    gatt_server
+        .publish_service(service_info, service_client)
+        .await?
+        .map_err(|e| format_err!("Failed to publish battery service to gatt server: {:?}", e))?;
+    info!("Published Battery Service to local GATT database.");
 
     // Start the gatt service delegate and battery watcher server.
-    let service_delegate = gatt_service_delegate(&state, delegate_request_stream);
-    let battery_watcher = battery_manager_watcher(&state, battery_info_request_stream);
+    let service_delegate = gatt_service_delegate(&state, service_stream);
+    let battery_watcher = battery_manager_watcher(&state, battery_client);
     try_join!(service_delegate, battery_watcher).map(|((), ())| ())
 }

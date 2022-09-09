@@ -1,0 +1,30 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "bt-le-battery-service",
+            url: "fuchsia-pkg://fuchsia.com/bt-le-battery-service#meta/bt-le-battery-service.cm",
+            startup: "eager",
+            environment: "#core-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-le-battery-service" ],
+        },
+        {
+            protocol: [ "fuchsia.bluetooth.gatt2.Server" ],
+            from: "#bluetooth-core",
+            to: [ "#bt-le-battery-service" ],
+        },
+        {
+            protocol: [ "fuchsia.power.battery.BatteryManager" ],
+            from: "#battery_manager",
+            to: [ "#bt-le-battery-service" ],
+        },
+    ],
+}
