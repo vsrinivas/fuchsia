@@ -6,6 +6,6 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.gpu.agis") {
   sources = [ "agis.fidl" ]
-  sdk_category = "internal"
+  sdk_category = "partner"
   public_deps = [ "//zircon/vdso/zx" ]
 }

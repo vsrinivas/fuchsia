@@ -461,6 +461,8 @@ fidl/fuchsia.fonts/meta.json
 fidl/fuchsia.fonts/overview.fidl
 fidl/fuchsia.fonts/provider.fidl
 fidl/fuchsia.fonts/styles.fidl
+fidl/fuchsia.gpu.agis/agis.fidl
+fidl/fuchsia.gpu.agis/meta.json
 fidl/fuchsia.hardware.adc/adc.fidl
 fidl/fuchsia.hardware.adc/meta.json
 fidl/fuchsia.hardware.audio.signalprocessing/connector.fidl

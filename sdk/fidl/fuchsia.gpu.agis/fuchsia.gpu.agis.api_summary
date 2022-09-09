@@ -1,0 +1,31 @@
+table/member fuchsia.gpu.agis/Connection.port uint16
+table/member fuchsia.gpu.agis/Connection.process_id uint64
+table/member fuchsia.gpu.agis/Connection.process_name string:32
+resource table fuchsia.gpu.agis/Connection
+const fuchsia.gpu.agis/MAX_CONNECTIONS uint32 128
+protocol/member fuchsia.gpu.agis/Session.Connections() -> (fuchsia.gpu.agis/Session_Connections_Result result)
+protocol/member fuchsia.gpu.agis/Session.Register(uint64 process_id,string:32 process_name) -> (fuchsia.gpu.agis/Session_Register_Result result)
+protocol/member fuchsia.gpu.agis/Session.Unregister(uint64 process_id) -> (fuchsia.gpu.agis/Session_Unregister_Result result)
+protocol fuchsia.gpu.agis/Session
+struct/member fuchsia.gpu.agis/Session_Connections_Response.connections vector<fuchsia.gpu.agis/Connection>:128
+resource struct fuchsia.gpu.agis/Session_Connections_Response
+union/member fuchsia.gpu.agis/Session_Connections_Result.err fuchsia.gpu.agis/Status
+union/member fuchsia.gpu.agis/Session_Connections_Result.response fuchsia.gpu.agis/Session_Connections_Response
+resource strict union fuchsia.gpu.agis/Session_Connections_Result
+struct/member fuchsia.gpu.agis/Session_Register_Response.gapii_socket zx/handle:optional
+resource struct fuchsia.gpu.agis/Session_Register_Response
+union/member fuchsia.gpu.agis/Session_Register_Result.err fuchsia.gpu.agis/Status
+union/member fuchsia.gpu.agis/Session_Register_Result.response fuchsia.gpu.agis/Session_Register_Response
+resource strict union fuchsia.gpu.agis/Session_Register_Result
+struct fuchsia.gpu.agis/Session_Unregister_Response
+union/member fuchsia.gpu.agis/Session_Unregister_Result.err fuchsia.gpu.agis/Status
+union/member fuchsia.gpu.agis/Session_Unregister_Result.response fuchsia.gpu.agis/Session_Unregister_Response
+strict union fuchsia.gpu.agis/Session_Unregister_Result
+enum/member fuchsia.gpu.agis/Status.ALREADY_REGISTERED 2
+enum/member fuchsia.gpu.agis/Status.CONNECTIONS_EXCEEDED 3
+enum/member fuchsia.gpu.agis/Status.INTERNAL_ERROR 4
+enum/member fuchsia.gpu.agis/Status.NOT_FOUND 1
+enum/member fuchsia.gpu.agis/Status.OK 0
+enum/member fuchsia.gpu.agis/Status.UNIMPLEMENTED 5
+strict enum fuchsia.gpu.agis/Status uint32
+library fuchsia.gpu.agis

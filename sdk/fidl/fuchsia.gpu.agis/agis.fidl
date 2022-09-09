@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 /// AGIS - Android GPU Inspector Service
+@available(added=9)
 library fuchsia.gpu.agis;
 
 using zx;
