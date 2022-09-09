@@ -10,12 +10,14 @@ mod disk_management;
 mod keys;
 mod pinweaver;
 mod scrypt;
+mod storage_unlock_mechanism;
 #[cfg(test)]
 mod testing;
 
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::RequestStream;
 use fidl_fuchsia_identity_account::AccountManagerRequestStream;
+use fidl_fuchsia_identity_authentication::StorageUnlockMechanismRequestStream;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_process_lifecycle::LifecycleRequestStream;
 use fuchsia_async as fasync;
@@ -30,10 +32,12 @@ use crate::{
     account_manager::{AccountManager, EnvCredManagerProvider},
     account_metadata::DataDirAccountMetadataStore,
     disk_management::DevDiskManager,
+    storage_unlock_mechanism::StorageUnlockMechanism,
 };
 
 enum Services {
     AccountManager(AccountManagerRequestStream),
+    StorageUnlockMechanism(StorageUnlockMechanismRequestStream),
 }
 
 #[fuchsia::main(logging_tags = ["auth"])]
@@ -75,8 +79,11 @@ async fn main() -> Result<(), Error> {
         cred_manager_provider,
     ));
 
+    let storage_unlock_mechanism = Arc::new(StorageUnlockMechanism::new());
+
     let mut fs = ServiceFs::new();
     fs.dir("svc").add_fidl_service(Services::AccountManager);
+    fs.dir("svc").add_fidl_service(Services::StorageUnlockMechanism);
     fs.take_and_serve_directory_handle().context("serving directory handle")?;
 
     let lifecycle_handle_info = HandleInfo::new(HandleType::Lifecycle, 0);
@@ -91,9 +98,14 @@ async fn main() -> Result<(), Error> {
         account_manager_for_lifecycle.handle_requests_for_lifecycle(lifecycle_req_stream).await
     });
 
-    fs.for_each_concurrent(None, |service| match service {
-        Services::AccountManager(stream) => {
-            account_manager.handle_requests_for_account_manager(stream)
+    fs.for_each_concurrent(None, |service| async {
+        match service {
+            Services::AccountManager(stream) => {
+                account_manager.handle_requests_for_account_manager(stream).await
+            }
+            Services::StorageUnlockMechanism(stream) => {
+                storage_unlock_mechanism.handle_requests_for_storage_unlock_mechanism(stream).await
+            }
         }
     })
     .await;

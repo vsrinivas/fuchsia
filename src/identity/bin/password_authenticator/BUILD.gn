@@ -18,6 +18,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_rust",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
+    "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication_rust",
     "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
@@ -62,6 +63,7 @@ rustc_binary("bin") {
     "src/main.rs",
     "src/pinweaver.rs",
     "src/scrypt.rs",
+    "src/storage_unlock_mechanism.rs",
     "src/testing.rs",
   ]
 }
