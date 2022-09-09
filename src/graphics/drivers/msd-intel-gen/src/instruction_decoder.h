@@ -12,6 +12,8 @@ class InstructionDecoder {
   enum Id {
     NOOP = 0x0,
     MI_BATCH_BUFFER_END = 0x0500,
+    STORE_DWORD_IMM = 0x1000,
+    STORE_QWORD_IMM = 0x1020,
     LOAD_REGISTER_IMM = 0x1100,
     _3DSTATE_CLEAR_PARAMS = 0x7804,
     _3DSTATE_DEPTH_BUFFER = 0x7805,
@@ -82,6 +84,10 @@ class InstructionDecoder {
         return "3DSTATE_VERTEX_ELEMENTS";
       case LOAD_REGISTER_IMM:
         return "LOAD_REGISTER_IMM";
+      case STORE_DWORD_IMM:
+        return "STORE_DWORD_IMM";
+      case STORE_QWORD_IMM:
+        return "STORE_QWORD_IMM";
       case PIPE_CONTROL:
         return "PIPE_CONTROL";
       case PIPELINE_SELECT:
@@ -280,6 +286,8 @@ class InstructionDecoder {
       case _3DSTATE_WM_HZ_OP:
       case PIPE_CONTROL:
       case STATE_BASE_ADDRESS:
+      case STORE_DWORD_IMM:
+      case STORE_QWORD_IMM:
         *dword_count_out = (dword & 0xFF) + 2;
         break;
       default:
