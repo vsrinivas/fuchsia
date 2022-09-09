@@ -57,11 +57,11 @@ func createAndRunPaver(t *testing.T, options ...BuildPaverOption) (zedbootPaverA
 	zedbootPaverArgs = strings.Split(outputs[0], " ")
 	paverArgs = strings.Split(outputs[1], " ")
 
-	if zedbootPaverArgs[0] != bootserverPath || zedbootPaverArgs[4] != "pave-zedboot" {
+	if zedbootPaverArgs[0] != bootserverPath || zedbootPaverArgs[6] != "pave-zedboot" {
 		t.Fatalf("Paver called the wrong bootserver or mode. Expected %s with mode pave-zedboot, actual %s with mode %s",
 			bootserverPath, zedbootPaverArgs[0], zedbootPaverArgs[4])
 	}
-	if paverArgs[0] != bootserverPath || paverArgs[4] != "pave" {
+	if paverArgs[0] != bootserverPath || paverArgs[6] != "pave" {
 		t.Fatalf("Paver called the wrong bootserver or mode. Expected %s with mode pave, actual %s with mode %s",
 			bootserverPath, paverArgs[0], paverArgs[4])
 	}
@@ -178,7 +178,7 @@ func TestPaveMode(t *testing.T) {
 		}
 		outputs := strings.Split(output.String(), "\n")
 		args := strings.Split(outputs[0], " ")
-		if args[4] != "pave-zedboot" {
+		if args[6] != "pave-zedboot" {
 			t.Errorf("Paver called with wrong mode")
 		}
 		if len(outputs[1]) != 0 {
@@ -193,7 +193,7 @@ func TestPaveMode(t *testing.T) {
 		}
 		outputs := strings.Split(output.String(), "\n")
 		args := strings.Split(outputs[0], " ")
-		if args[4] != "pave" {
+		if args[6] != "pave" {
 			t.Fatalf("Paver called with wrong mode")
 		}
 		if len(outputs[1]) != 0 {
