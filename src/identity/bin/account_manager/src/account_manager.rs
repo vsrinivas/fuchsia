@@ -221,9 +221,11 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 warn!("Could not initialize account handler: {:?}", err);
                 err.api_error
             })?;
+        let account_id = Some(account_handler.get_account_id().clone().into());
         let pre_auth_state = account_handler
             .proxy()
             .create_account(AccountHandlerControlCreateAccountRequest {
+                id: account_id,
                 auth_mechanism_id,
                 ..AccountHandlerControlCreateAccountRequest::EMPTY
             })

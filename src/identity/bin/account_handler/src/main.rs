@@ -22,7 +22,7 @@ mod test_util;
 
 use {
     crate::{account_handler::AccountHandler, common::AccountLifetime},
-    account_common::{AccountId, AccountManagerError},
+    account_common::AccountId,
     anyhow::{Context as _, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
@@ -64,9 +64,7 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     inspect_runtime::serve(&inspector, &mut fs)?;
 
-    let pre_auth_manager = create_pre_auth_manager(&lifetime, &account_id)?;
-    let account_handler =
-        Arc::new(AccountHandler::new(account_id, lifetime, pre_auth_manager, &inspector));
+    let account_handler = Arc::new(AccountHandler::new(account_id, lifetime, &inspector));
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
         fasync::Task::spawn(async move {
@@ -83,17 +81,4 @@ fn main() -> Result<(), Error> {
 
     info!("Stopping account handler");
     Ok(())
-}
-
-/// Returns a pre-auth manager given the current lifetime and account id.
-fn create_pre_auth_manager(
-    lifetime: &AccountLifetime,
-    id: &AccountId,
-) -> Result<Arc<dyn pre_auth::Manager>, AccountManagerError> {
-    if lifetime == &AccountLifetime::Ephemeral {
-        Ok(Arc::new(pre_auth::InMemoryManager::create(pre_auth::State::NoEnrollments)))
-    } else {
-        let store_name = format!("account_handler/{}", &id.to_canonical_string());
-        Ok(Arc::new(pre_auth::StashManager::create(&store_name)?))
-    }
 }
