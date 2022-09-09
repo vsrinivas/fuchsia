@@ -333,9 +333,10 @@ func TestBuild(t *testing.T) {
 			expectedTargets: []string{"foo"},
 		},
 		{
-			name: "images for testing included",
+			name: "images for testing included without default",
 			staticSpec: &fintpb.Static{
-				IncludeImages: true,
+				IncludeDefaultNinjaTarget: false,
+				IncludeImages:             true,
 			},
 			modules: fakeBuildModules{
 				images: []build.Image{
@@ -343,7 +344,26 @@ func TestBuild(t *testing.T) {
 					{Name: "should-be-ignored", Path: "different_path"},
 				},
 			},
-			expectedTargets: append(extraTargetsForImages, "build/images/updates", "qemu_image_path"),
+			expectedTargets: append(extraTargetsForImages, "qemu_image_path"),
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltImages: []*structpb.Struct{
+					mustStructPB(t, build.Image{Name: qemuImageNames[0], Path: "qemu_image_path"}),
+				},
+			},
+		},
+		{
+			name: "images for testing not included in targets with default",
+			staticSpec: &fintpb.Static{
+				IncludeDefaultNinjaTarget: true,
+				IncludeImages:             true,
+			},
+			modules: fakeBuildModules{
+				images: []build.Image{
+					{Name: qemuImageNames[0], Path: "qemu_image_path"},
+					{Name: "should-be-ignored", Path: "different_path"},
+				},
+			},
+			expectedTargets: append(extraTargetsForImages, ":default"),
 			expectedArtifacts: &fintpb.BuildArtifacts{
 				BuiltImages: []*structpb.Struct{
 					mustStructPB(t, build.Image{Name: qemuImageNames[0], Path: "qemu_image_path"}),

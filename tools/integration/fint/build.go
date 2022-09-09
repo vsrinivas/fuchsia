@@ -413,6 +413,16 @@ func constructNinjaTargets(
 
 	if staticSpec.IncludeDefaultNinjaTarget {
 		targets = append(targets, ":default")
+	} else {
+
+		// "//:host" is a dep of "//:default"
+		if staticSpec.IncludeHostTests {
+			for _, testSpec := range modules.TestSpecs() {
+				if testSpec.OS != "fuchsia" {
+					targets = append(targets, testSpec.Path)
+				}
+			}
+		}
 	}
 
 	if staticSpec.IncludeImages {
@@ -420,7 +430,14 @@ func constructNinjaTargets(
 
 		for _, image := range modules.Images() {
 			if isTestingImage(image, staticSpec.Pave) {
-				targets = append(targets, image.Path)
+
+				// All deps of "//:images" are deps of "//:default", so the
+				// targets don't need to be specified
+				if !staticSpec.IncludeDefaultNinjaTarget {
+					targets = append(targets, image.Path)
+				}
+
+				// However, the artifacts need to be added.
 				imageStruct, err := toStructPB(image)
 				if err != nil {
 					return nil, nil, err
@@ -446,21 +463,11 @@ func constructNinjaTargets(
 					artifacts.BuiltArchives = append(artifacts.BuiltArchives, archiveStruct)
 				}
 			}
-		} else {
-			targets = append(targets, "build/images/updates")
 		}
 	}
 
 	if staticSpec.IncludeGeneratedSources {
 		targets = append(targets, modules.GeneratedSources()...)
-	}
-
-	if staticSpec.IncludeHostTests {
-		for _, testSpec := range modules.TestSpecs() {
-			if testSpec.OS != "fuchsia" {
-				targets = append(targets, testSpec.Path)
-			}
-		}
 	}
 
 	if staticSpec.IncludePrebuiltBinaryManifests {
