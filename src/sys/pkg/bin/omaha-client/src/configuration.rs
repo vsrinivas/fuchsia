@@ -50,6 +50,28 @@ pub enum ChannelSource {
     VbMeta,
 }
 
+fn get_appid(vbmeta_appid: Option<String>, channel_config: &Option<ChannelConfig>) -> String {
+    if let Some(appid) = vbmeta_appid {
+        return appid;
+    }
+
+    // If no appid in vbmeta, look up the appid of the channel from the channel config.
+    if let Some(config) = channel_config {
+        if let Some(appid) = &config.appid {
+            return appid.clone();
+        }
+    }
+
+    // If no appid in the channel configs, then attempt to read from config data.
+    match fs::read_to_string("/config/data/omaha_app_id") {
+        Ok(id) => id,
+        Err(e) => {
+            error!("Unable to read omaha app id from config/data: {:?}", e);
+            String::new()
+        }
+    }
+}
+
 impl ClientConfiguration {
     /// Given an (optional) set of ChannelConfigs, load all the other configs that are needed, and
     /// construct an overall configuration struct that can then be used.
@@ -66,7 +88,7 @@ impl ClientConfiguration {
     async fn initialize_from(
         version: &str,
         channel_configs: Option<&ChannelConfigs>,
-        VbMetaData { appid, channel_name, realm_id, product_id, service_url }: VbMetaData,
+        VbMetaData { appid: vbmeta_appid, channel_name, realm_id, product_id, service_url }: VbMetaData,
     ) -> Self {
         let (channel_name, channel_source) = if channel_name.is_some() {
             (channel_name, ChannelSource::VbMeta)
@@ -88,22 +110,7 @@ impl ClientConfiguration {
             None
         };
 
-        // If no appid in vbmeta, look up the appid of the channel from the channel config.
-        let appid = if let (None, Some(config)) = (&appid, &channel_config) {
-            config.appid.clone()
-        } else {
-            appid
-        };
-
-        // If no appid in the channel configs, then attempt to read from config data.
-        let appid =
-            appid.unwrap_or_else(|| match fs::read_to_string("/config/data/omaha_app_id") {
-                Ok(id) => id,
-                Err(e) => {
-                    error!("Unable to read omaha app id from config/data: {:?}", e);
-                    String::new()
-                }
-            });
+        let appid = get_appid(vbmeta_appid, &channel_config);
 
         // Construct the Fuchsia system app.
         let mut extra_fields: Vec<(String, String)> =
