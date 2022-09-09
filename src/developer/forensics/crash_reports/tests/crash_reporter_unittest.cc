@@ -28,7 +28,7 @@
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
-#include "src/developer/forensics/crash_reports/tests/scoped_test_store.h"
+#include "src/developer/forensics/crash_reports/tests/scoped_test_report_store.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/constants.h"
@@ -177,17 +177,18 @@ class CrashReporterTest : public UnitTestFixture {
             {feedback::kDeviceFeedbackIdKey, kDefaultDeviceId},
             {feedback::kSystemUpdateChannelCurrentKey, kDefaultChannel},
         });
-    store_ = std::make_unique<ScopedTestStore>(annotation_manager_.get(), info_context_);
+    report_store_ =
+        std::make_unique<ScopedTestReportStore>(annotation_manager_.get(), info_context_);
 
     snapshot_collector_ = std::make_unique<SnapshotCollector>(
-        dispatcher(), &clock_, data_provider_server_.get(), store_->GetStore().GetSnapshotStore(),
-        kSnapshotSharedRequestWindow),
+        dispatcher(), &clock_, data_provider_server_.get(),
+        report_store_->GetReportStore().GetSnapshotStore(), kSnapshotSharedRequestWindow),
     crash_server_ =
         std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config, crash_register_.get(), &tags_,
-        snapshot_collector_.get(), crash_server_.get(), &store_->GetStore());
+        snapshot_collector_.get(), crash_server_.get(), &report_store_->GetReportStore());
     FX_CHECK(crash_reporter_);
   }
 
@@ -429,7 +430,7 @@ class CrashReporterTest : public UnitTestFixture {
 
  private:
   std::shared_ptr<InfoContext> info_context_;
-  std::unique_ptr<ScopedTestStore> store_;
+  std::unique_ptr<ScopedTestReportStore> report_store_;
 
  protected:
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;

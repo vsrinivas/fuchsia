@@ -17,7 +17,7 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/network_watcher.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
-#include "src/developer/forensics/crash_reports/tests/scoped_test_store.h"
+#include "src/developer/forensics/crash_reports/tests/scoped_test_report_store.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/stubs/cobalt_logger_factory.h"
@@ -115,7 +115,7 @@ class QueueTest : public UnitTestFixture {
   void SetUp() override {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
-    store_ = std::make_unique<ScopedTestStore>(&annotation_manager_, info_context_);
+    report_store_ = std::make_unique<ScopedTestReportStore>(&annotation_manager_, info_context_);
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProvider();
@@ -132,9 +132,9 @@ class QueueTest : public UnitTestFixture {
                       std::vector<CrashServer::UploadStatus>{}) {
     data_provider_server_ = std::make_unique<stubs::DataProviderReturnsEmptySnapshot>();
     report_id_ = 1;
-    snapshot_collector_ =
-        std::make_unique<SnapshotCollector>(dispatcher(), &clock_, data_provider_server_.get(),
-                                            store_->GetStore().GetSnapshotStore(), zx::sec(5));
+    snapshot_collector_ = std::make_unique<SnapshotCollector>(
+        dispatcher(), &clock_, data_provider_server_.get(),
+        report_store_->GetReportStore().GetSnapshotStore(), zx::sec(5));
     crash_server_ = std::make_unique<StubCrashServer>(dispatcher(), services(),
                                                       upload_attempt_results, kUploadResponseDelay);
 
@@ -143,7 +143,7 @@ class QueueTest : public UnitTestFixture {
 
   void InitQueue() {
     queue_ = std::make_unique<Queue>(dispatcher(), services(), info_context_, &tags_,
-                                     &store_->GetStore(), crash_server_.get(),
+                                     &report_store_->GetReportStore(), crash_server_.get(),
                                      snapshot_collector_.get());
     queue_->WatchReportingPolicy(&reporting_policy_watcher_);
     queue_->WatchNetwork(&network_watcher_);
@@ -186,10 +186,10 @@ class QueueTest : public UnitTestFixture {
     };
 
     std::vector<std::string> program_shortnames;
-    files::ReadDirContents(store_->GetCachePath(), &program_shortnames);
+    files::ReadDirContents(report_store_->GetCachePath(), &program_shortnames);
     RemoveCurDir(&program_shortnames);
     for (const auto& program_shortname : program_shortnames) {
-      const std::string path = files::JoinPath(store_->GetCachePath(), program_shortname);
+      const std::string path = files::JoinPath(report_store_->GetCachePath(), program_shortname);
 
       std::vector<std::string> report_ids;
       files::ReadDirContents(path, &report_ids);
@@ -216,7 +216,7 @@ class QueueTest : public UnitTestFixture {
   feedback::AnnotationManager annotation_manager_;
   std::unique_ptr<SnapshotCollector> snapshot_collector_;
   std::unique_ptr<StubCrashServer> crash_server_;
-  std::unique_ptr<ScopedTestStore> store_;
+  std::unique_ptr<ScopedTestReportStore> report_store_;
   std::shared_ptr<InfoContext> info_context_;
   std::shared_ptr<cobalt::Logger> cobalt_;
 };

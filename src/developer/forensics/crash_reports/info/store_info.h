@@ -16,7 +16,7 @@ class StoreInfo {
  public:
   StoreInfo(std::shared_ptr<InfoContext> context);
 
-  void LogMaxStoreSize(StorageSize max_size);
+  void LogMaxReportStoreSize(StorageSize max_size);
   void LogGarbageCollection(size_t num_reports);
 
  private:

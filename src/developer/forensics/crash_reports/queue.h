@@ -19,9 +19,9 @@
 #include "src/developer/forensics/crash_reports/network_watcher.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
+#include "src/developer/forensics/crash_reports/report_store.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/snapshot_collector.h"
-#include "src/developer/forensics/crash_reports/store.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
@@ -31,7 +31,7 @@ namespace crash_reports {
 class Queue {
  public:
   Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-        std::shared_ptr<InfoContext> info_context, LogTags* tags, Store* store,
+        std::shared_ptr<InfoContext> info_context, LogTags* tags, ReportStore* report_store,
         CrashServer* crash_server, SnapshotCollector* snapshot_collector);
 
   // Watcher functions that allow the queue to react to external events, such as
@@ -133,7 +133,7 @@ class Queue {
   async_dispatcher_t* dispatcher_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   LogTags* tags_;
-  Store* store_;
+  ReportStore* report_store_;
   CrashServer* crash_server_;
   SnapshotCollector* snapshot_collector_;
   UploadMetrics metrics_;

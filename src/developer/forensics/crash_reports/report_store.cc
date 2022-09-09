@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/crash_reports/store.h"
+#include "src/developer/forensics/crash_reports/report_store.h"
 
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
@@ -135,21 +135,22 @@ std::string ReadSnapshotUuid(const std::string& path) {
 
 }  // namespace
 
-Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info,
-             feedback::AnnotationManager* annotation_manager, const Store::Root& temp_root,
-             const Store::Root& persistent_root,
-             const std::string& garbage_collected_snapshots_path, StorageSize max_annotations_size,
-             StorageSize max_archives_size)
+ReportStore::ReportStore(LogTags* tags, std::shared_ptr<InfoContext> info,
+                         feedback::AnnotationManager* annotation_manager,
+                         const ReportStore::Root& temp_root,
+                         const ReportStore::Root& persistent_root,
+                         const std::string& garbage_collected_snapshots_path,
+                         StorageSize max_annotations_size, StorageSize max_archives_size)
     : tmp_metadata_(temp_root.dir, temp_root.max_size),
       cache_metadata_(persistent_root.dir, persistent_root.max_size),
       tags_(tags),
       info_(std::move(info)),
       snapshot_store_(annotation_manager, garbage_collected_snapshots_path, max_annotations_size,
                       max_archives_size) {
-  info_.LogMaxStoreSize(temp_root.max_size + persistent_root.max_size);
+  info_.LogMaxReportStoreSize(temp_root.max_size + persistent_root.max_size);
 
-  // Clean up any empty directories in the store. This may happen if the component stops running
-  // while it is deleting a report.
+  // Clean up any empty directories in the report store. This may happen if the component stops
+  // running while it is deleting a report.
   RemoveEmptyDirectories(tmp_metadata_.RootDir());
   RemoveEmptyDirectories(cache_metadata_.RootDir());
 
@@ -158,7 +159,7 @@ Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info,
   RecreateFromFilesystem(cache_metadata_);
 }
 
-bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports) {
+bool ReportStore::Add(Report report, std::vector<ReportId>* garbage_collected_reports) {
   if (Contains(report.Id())) {
     FX_LOGST(ERROR, tags_->Get(report.Id())) << "Duplicate local report id";
     return false;
@@ -195,9 +196,11 @@ bool Store::Add(Report report, std::vector<ReportId>* garbage_collected_reports)
              garbage_collected_reports);
 }
 
-bool Store::Add(const ReportId report_id, const std::string& program_shortname,
-                const StorageSize report_size, const std::map<std::string, SizedData>& attachments,
-                StoreMetadata& store_root, std::vector<ReportId>* garbage_collected_reports) {
+bool ReportStore::Add(const ReportId report_id, const std::string& program_shortname,
+                      const StorageSize report_size,
+                      const std::map<std::string, SizedData>& attachments,
+                      ReportStoreMetadata& store_root,
+                      std::vector<ReportId>* garbage_collected_reports) {
   // Delete the persisted files and attempt to store the report under a new directory.
   auto on_error = [this, &store_root, report_id, program_shortname, report_size, &attachments,
                    garbage_collected_reports](const std::optional<std::string>& report_dir) {
@@ -247,7 +250,7 @@ bool Store::Add(const ReportId report_id, const std::string& program_shortname,
   return true;
 }
 
-Report Store::Get(const ReportId report_id) {
+Report ReportStore::Get(const ReportId report_id) {
   FX_CHECK(Contains(report_id)) << "Contains() should be called before any Get()";
 
   auto& root_metadata = RootFor(report_id);
@@ -285,7 +288,7 @@ Report Store::Get(const ReportId report_id) {
                 std::move(attachments), std::move(snapshot_uuid), std::move(minidump));
 }
 
-std::vector<ReportId> Store::GetReports() const {
+std::vector<ReportId> ReportStore::GetReports() const {
   auto all_reports = tmp_metadata_.Reports();
   const auto cache_reports = cache_metadata_.Reports();
   all_reports.insert(all_reports.end(), cache_reports.begin(), cache_reports.end());
@@ -293,7 +296,7 @@ std::vector<ReportId> Store::GetReports() const {
   return all_reports;
 }
 
-SnapshotUuid Store::GetSnapshotUuid(const ReportId id) {
+SnapshotUuid ReportStore::GetSnapshotUuid(const ReportId id) {
   if (!Contains(id)) {
     return kNoUuidSnapshotUuid;
   }
@@ -316,7 +319,7 @@ SnapshotUuid Store::GetSnapshotUuid(const ReportId id) {
   return kNoUuidSnapshotUuid;
 }
 
-bool Store::Contains(const ReportId report_id) {
+bool ReportStore::Contains(const ReportId report_id) {
   // Keep the in-memory and on-disk knowledge of the store in sync in case the
   // filesystem has deleted the report content. This is done here because it is a natural
   // synchronization point and any operation acting on a report must call Contains in order to
@@ -334,7 +337,7 @@ bool Store::Contains(const ReportId report_id) {
   return tmp_metadata_.Contains(report_id) || cache_metadata_.Contains(report_id);
 }
 
-bool Store::Remove(const ReportId report_id) {
+bool ReportStore::Remove(const ReportId report_id) {
   if (!Contains(report_id)) {
     return false;
   }
@@ -362,7 +365,7 @@ bool Store::Remove(const ReportId report_id) {
   return true;
 }
 
-void Store::RemoveAll() {
+void ReportStore::RemoveAll() {
   auto DeleteAll = [](const std::string& root_dir) {
     if (!DeletePath(root_dir)) {
       FX_LOGS(ERROR) << "Failed to delete all reports from " << root_dir;
@@ -380,7 +383,7 @@ void Store::RemoveAll() {
   RecreateFromFilesystem(cache_metadata_);
 }
 
-bool Store::RecreateFromFilesystem(StoreMetadata& store_root) {
+bool ReportStore::RecreateFromFilesystem(ReportStoreMetadata& store_root) {
   const bool success = store_root.RecreateFromFilesystem();
   for (const auto report_id : store_root.Reports()) {
     tags_->Register(report_id, {Logname(store_root.ReportProgram(report_id))});
@@ -389,7 +392,7 @@ bool Store::RecreateFromFilesystem(StoreMetadata& store_root) {
   return success;
 }
 
-StoreMetadata& Store::RootFor(const ReportId id) {
+ReportStoreMetadata& ReportStore::RootFor(const ReportId id) {
   if (tmp_metadata_.Contains(id)) {
     return tmp_metadata_;
   }
@@ -401,7 +404,7 @@ StoreMetadata& Store::RootFor(const ReportId id) {
   return cache_metadata_;
 }
 
-StoreMetadata& Store::PickRootForStorage(const StorageSize report_size) {
+ReportStoreMetadata& ReportStore::PickRootForStorage(const StorageSize report_size) {
   // Attempt to make |cache_metadata_| usable if it isn't already.
   if (!cache_metadata_.IsDirectoryUsable()) {
     RecreateFromFilesystem(cache_metadata_);
@@ -413,19 +416,20 @@ StoreMetadata& Store::PickRootForStorage(const StorageSize report_size) {
              : cache_metadata_;
 }
 
-bool Store::HasFallbackRoot(const StoreMetadata& store_root) {
+bool ReportStore::HasFallbackRoot(const ReportStoreMetadata& store_root) {
   // Only /cache can fallback.
   return &store_root == &cache_metadata_;
 }
 
-StoreMetadata& Store::FallbackRoot(StoreMetadata& store_root) {
+ReportStoreMetadata& ReportStore::FallbackRoot(ReportStoreMetadata& store_root) {
   FX_CHECK(HasFallbackRoot(store_root));
   // Always fallback to /tmp.
   return tmp_metadata_;
 }
 
-bool Store::MakeFreeSpace(const StoreMetadata& root_metadata, const StorageSize required_space,
-                          std::vector<ReportId>* garbage_collected_reports) {
+bool ReportStore::MakeFreeSpace(const ReportStoreMetadata& root_metadata,
+                                const StorageSize required_space,
+                                std::vector<ReportId>* garbage_collected_reports) {
   if (required_space >
       root_metadata.CurrentSize() + root_metadata.RemainingSpace() /*the store's max size*/) {
     return false;
@@ -489,7 +493,7 @@ bool Store::MakeFreeSpace(const StoreMetadata& root_metadata, const StorageSize 
   return true;
 }
 
-SnapshotStore* Store::GetSnapshotStore() { return &snapshot_store_; }
+SnapshotStore* ReportStore::GetSnapshotStore() { return &snapshot_store_; }
 
 }  // namespace crash_reports
 }  // namespace forensics

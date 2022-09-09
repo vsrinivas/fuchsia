@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/crash_reports/store.h"
+#include "src/developer/forensics/crash_reports/report_store.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -44,9 +44,11 @@ SizedData MakeSizedData(const std::string& content) {
   return SizedData(content.begin(), content.end());
 }
 
-class StoreTest : public UnitTestFixture {
+class ReportStoreTest : public UnitTestFixture {
  public:
-  StoreTest() : annotation_manager_(dispatcher(), {}) { MakeNewStore(StorageSize::Megabytes(1)); }
+  ReportStoreTest() : annotation_manager_(dispatcher(), {}) {
+    MakeNewStore(StorageSize::Megabytes(1));
+  }
 
  protected:
   void MakeNewStore(const StorageSize max_tmp_size,
@@ -55,12 +57,12 @@ class StoreTest : public UnitTestFixture {
                     const StorageSize max_archives_size = StorageSize::Megabytes(1)) {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
-    store_ =
-        std::make_unique<Store>(&tags_, info_context_, &annotation_manager_,
-                                /*temp_root=*/Store::Root{tmp_dir_.path(), max_tmp_size},
-                                /*persistent_root=*/Store::Root{cache_dir_.path(), max_cache_size},
-                                files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
-                                max_annotations_size, max_archives_size);
+    report_store_ = std::make_unique<ReportStore>(
+        &tags_, info_context_, &annotation_manager_,
+        /*temp_root=*/ReportStore::Root{tmp_dir_.path(), max_tmp_size},
+        /*persistent_root=*/ReportStore::Root{cache_dir_.path(), max_cache_size},
+        files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"), max_annotations_size,
+        max_archives_size);
   }
 
   std::optional<ReportId> Add(const std::string& program_shortname,
@@ -88,7 +90,7 @@ class StoreTest : public UnitTestFixture {
     auto report = Report(report_id, program_shortname, AnnotationMap(annotations),
                          std::move(attachments_data), snapshot_uuid, std::move(minidump_data));
 
-    if (store_->Add(std::move(report), garbage_collected_reports)) {
+    if (report_store_->Add(std::move(report), garbage_collected_reports)) {
       return report_id;
     }
 
@@ -99,10 +101,10 @@ class StoreTest : public UnitTestFixture {
            std::map<std::string, std::string>* annotations,
            std::map<std::string, std::string>* attachments, std::string* snapshot_uuid,
            std::optional<std::string>* minidump) {
-    if (!store_->Contains(id)) {
+    if (!report_store_->Contains(id)) {
       return false;
     }
-    const auto report = store_->Get(id);
+    const auto report = report_store_->Get(id);
 
     *program_shortname = report.ProgramShortname();
     *annotations = report.Annotations().Raw();
@@ -216,13 +218,13 @@ class StoreTest : public UnitTestFixture {
 
   files::ScopedTempDir tmp_dir_;
   files::ScopedTempDir cache_dir_;
-  std::unique_ptr<Store> store_;
+  std::unique_ptr<ReportStore> report_store_;
   feedback::AnnotationManager annotation_manager_;
 
   ReportId next_report_id_{0};
 };
 
-TEST_F(StoreTest, Succeed_AddDefaultsToCache) {
+TEST_F(ReportStoreTest, Succeed_AddDefaultsToCache) {
   const std::string expected_program_shortname = "program_shortname";
 
   const std::map<std::string, std::string> expected_annotations = {
@@ -264,7 +266,7 @@ TEST_F(StoreTest, Succeed_AddDefaultsToCache) {
   EXPECT_TRUE(cache_id.has_value());
   EXPECT_TRUE(garbage_collected_reports.empty());
 
-  ASSERT_TRUE(store_->Contains(cache_id.value()));
+  ASSERT_TRUE(report_store_->Contains(cache_id.value()));
   ASSERT_TRUE(ReadCache(expected_program_shortname, cache_id.value(), &annotations, &attachments,
                         &snapshot_uuid, &minidump));
 
@@ -281,7 +283,7 @@ TEST_F(StoreTest, Succeed_AddDefaultsToCache) {
   EXPECT_TRUE(tmp_id.has_value());
   EXPECT_TRUE(garbage_collected_reports.empty());
 
-  ASSERT_TRUE(store_->Contains(tmp_id.value()));
+  ASSERT_TRUE(report_store_->Contains(tmp_id.value()));
   ASSERT_TRUE(ReadTmp(expected_program_shortname, tmp_id.value(), &annotations, &attachments,
                       &snapshot_uuid, &minidump));
 
@@ -293,7 +295,7 @@ TEST_F(StoreTest, Succeed_AddDefaultsToCache) {
   EXPECT_EQ(expected_minidump, minidump.value());
 }
 
-TEST_F(StoreTest, Succeed_Get) {
+TEST_F(ReportStoreTest, Succeed_Get) {
   const std::string expected_program_shortname = "program_shortname";
 
   const std::map<std::string, std::string> expected_annotations = {
@@ -335,7 +337,7 @@ TEST_F(StoreTest, Succeed_Get) {
   EXPECT_EQ(expected_minidump, minidump.value());
 }
 
-TEST_F(StoreTest, Fail_ReservedAttachmentKey) {
+TEST_F(ReportStoreTest, Fail_ReservedAttachmentKey) {
   std::vector<ReportId> garbage_collected_reports;
   EXPECT_FALSE(Add("program_shortname", /*annotations=*/{},
                    /*attachments=*/{{"annotations.json", ""}},
@@ -355,21 +357,21 @@ TEST_F(StoreTest, Fail_ReservedAttachmentKey) {
   EXPECT_TRUE(garbage_collected_reports.empty());
 }
 
-TEST_F(StoreTest, Succeed_Remove) {
+TEST_F(ReportStoreTest, Succeed_Remove) {
   std::vector<ReportId> garbage_collected_reports;
   const auto id = Add("program_shortname", /*annotations=*/{}, /*attachments=*/{},
                       /*snapshot_uuid=*/"",
                       /*minidump=*/std::nullopt, &garbage_collected_reports);
   EXPECT_TRUE(id.has_value());
   EXPECT_TRUE(garbage_collected_reports.empty());
-  ASSERT_TRUE(store_->Contains(id.value()));
+  ASSERT_TRUE(report_store_->Contains(id.value()));
 
-  store_->Remove(id.value());
-  EXPECT_FALSE(store_->Contains(id.value()));
+  report_store_->Remove(id.value());
+  EXPECT_FALSE(report_store_->Contains(id.value()));
   EXPECT_TRUE(GetProgramShortnames().empty());
 }
 
-TEST_F(StoreTest, NoCacheGarbageCollection) {
+TEST_F(ReportStoreTest, NoCacheGarbageCollection) {
   // Cache only has space for one report.
   MakeNewStore(/*tmp_max_size=*/StorageSize::Bytes(0),
                /*cache_max_size=*/
@@ -380,7 +382,7 @@ TEST_F(StoreTest, NoCacheGarbageCollection) {
   EXPECT_FALSE(Add("program_name_2", &garbage_collected_reports).has_value());
 }
 
-TEST_F(StoreTest, Succeed_TmpGarbageCollection) {
+TEST_F(ReportStoreTest, Succeed_TmpGarbageCollection) {
   // To make this test easier to understand, the below table shows when and why each report is being
   // garbage collected.
   //
@@ -407,16 +409,16 @@ TEST_F(StoreTest, Succeed_TmpGarbageCollection) {
   // Add a report to force garbage collection of the oldest report for program_name3
   const auto id5 = Add("program_name3", &garbage_collected_reports);
   EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id3.value()}));
-  EXPECT_FALSE(store_->Contains(id3.value()));
+  EXPECT_FALSE(report_store_->Contains(id3.value()));
 
   // Add a report to force garbage collection of the oldest report for program_name3
   const auto id6 = Add("program_name3", &garbage_collected_reports);
   EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id4.value()}));
-  EXPECT_FALSE(store_->Contains(id4.value()));
+  EXPECT_FALSE(report_store_->Contains(id4.value()));
 
   // Remove the report for program_name1 from the store and add a report for program_name2 so both
   // program_name2 and program_name3 have 2 reports in the store.
-  EXPECT_TRUE(store_->Remove(id1.value()));
+  EXPECT_TRUE(report_store_->Remove(id1.value()));
   const auto id7 = Add("program_name2", &garbage_collected_reports);
   EXPECT_TRUE(garbage_collected_reports.empty());
 
@@ -424,14 +426,14 @@ TEST_F(StoreTest, Succeed_TmpGarbageCollection) {
   // program_name3.
   const auto id8 = Add("program_name4", &garbage_collected_reports);
   EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id2.value()}));
-  EXPECT_FALSE(store_->Contains(id2.value()));
+  EXPECT_FALSE(report_store_->Contains(id2.value()));
 
-  EXPECT_THAT(store_->GetReports(), UnorderedElementsAreArray({
-                                        id5.value(),
-                                        id6.value(),
-                                        id7.value(),
-                                        id8.value(),
-                                    }));
+  EXPECT_THAT(report_store_->GetReports(), UnorderedElementsAreArray({
+                                               id5.value(),
+                                               id6.value(),
+                                               id7.value(),
+                                               id8.value(),
+                                           }));
   EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({
                                           "program_name2",
                                           "program_name3",
@@ -439,7 +441,7 @@ TEST_F(StoreTest, Succeed_TmpGarbageCollection) {
                                       }));
 }
 
-TEST_F(StoreTest, Succeed_TmpGarbageCollectionMultipleCollected) {
+TEST_F(ReportStoreTest, Succeed_TmpGarbageCollectionMultipleCollected) {
   // We set up the store so it can hold two empty reports at most.
   MakeNewStore(2 * StorageSize::Bytes(2u /*the empty annotations.json*/));
   std::vector<ReportId> garbage_collected_reports;
@@ -451,19 +453,19 @@ TEST_F(StoreTest, Succeed_TmpGarbageCollectionMultipleCollected) {
   // reports are garbage collected, since this report won't fit otherwise.
   const auto id3 = Add("program_name3", {}, {}, "", "m", &garbage_collected_reports);
   EXPECT_THAT(garbage_collected_reports, UnorderedElementsAreArray({id1.value(), id2.value()}));
-  EXPECT_FALSE(store_->Contains(id1.value()));
-  EXPECT_FALSE(store_->Contains(id2.value()));
-  EXPECT_TRUE(store_->Contains(id3.value()));
+  EXPECT_FALSE(report_store_->Contains(id1.value()));
+  EXPECT_FALSE(report_store_->Contains(id2.value()));
+  EXPECT_TRUE(report_store_->Contains(id3.value()));
 
-  EXPECT_THAT(store_->GetReports(), UnorderedElementsAreArray({
-                                        id3.value(),
-                                    }));
+  EXPECT_THAT(report_store_->GetReports(), UnorderedElementsAreArray({
+                                               id3.value(),
+                                           }));
   EXPECT_THAT(GetProgramShortnames(), UnorderedElementsAreArray({
                                           "program_name3",
                                       }));
 }
 
-TEST_F(StoreTest, Succeed_RebuildsMetadata) {
+TEST_F(ReportStoreTest, Succeed_RebuildsMetadata) {
   const std::string expected_program_shortname = "program_shortname";
 
   const std::map<std::string, std::string> expected_annotations = {
@@ -501,7 +503,7 @@ TEST_F(StoreTest, Succeed_RebuildsMetadata) {
     std::string snapshot_uuid;
     std::optional<std::string> minidump;
 
-    ASSERT_TRUE(store_->Contains(id));
+    ASSERT_TRUE(report_store_->Contains(id));
     ASSERT_TRUE(Get(id, &program_shortname, &annotations, &attachments, &snapshot_uuid, &minidump));
 
     EXPECT_EQ(expected_program_shortname, program_shortname);
@@ -520,7 +522,7 @@ TEST_F(StoreTest, Succeed_RebuildsMetadata) {
   EXPECT_TRUE(garbage_collected_reports.empty());
 }
 
-TEST_F(StoreTest, Succeed_RebuildCleansEmptyDirectories) {
+TEST_F(ReportStoreTest, Succeed_RebuildCleansEmptyDirectories) {
   std::vector<ReportId> ids;
   std::vector<ReportId> garbage_collected_reports;
   for (size_t i = 0; i < 5u; ++i) {
@@ -540,7 +542,7 @@ TEST_F(StoreTest, Succeed_RebuildCleansEmptyDirectories) {
   EXPECT_FALSE(files::IsDirectory(empty_dir));
 }
 
-TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
+TEST_F(ReportStoreTest, UsesTmpUntilPersistentReady) {
   const std::string expected_program_shortname = "program_shortname";
 
   const std::map<std::string, std::string> expected_annotations = {
@@ -571,10 +573,10 @@ TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
   // can't create using files::CreateDirectory
   const std::string cache_root = "/cache/delayed/path";
   testing::ScopedMemFsManager scoped_mem_fs;
-  store_ = std::make_unique<Store>(
+  report_store_ = std::make_unique<ReportStore>(
       &tags_, info_context_, &annotation_manager_,
-      /*temp_root=*/Store::Root{tmp_dir_.path(), StorageSize::Bytes(expected_report_size)},
-      /*persistent_root=*/Store::Root{cache_root, StorageSize::Bytes(expected_report_size)},
+      /*temp_root=*/ReportStore::Root{tmp_dir_.path(), StorageSize::Bytes(expected_report_size)},
+      /*persistent_root=*/ReportStore::Root{cache_root, StorageSize::Bytes(expected_report_size)},
       files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
       StorageSize::Bytes(expected_report_size), StorageSize::Bytes(expected_report_size));
 
@@ -589,7 +591,7 @@ TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
   const auto tmp_id = Add(expected_program_shortname, expected_annotations, expected_attachments,
                           expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
 
-  ASSERT_TRUE(store_->Contains(tmp_id.value()));
+  ASSERT_TRUE(report_store_->Contains(tmp_id.value()));
   ASSERT_TRUE(ReadTmp(expected_program_shortname, tmp_id.value(), &annotations, &attachments,
                       &snapshot_uuid, &minidump));
 
@@ -609,7 +611,7 @@ TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
   EXPECT_TRUE(cache_id.has_value());
   EXPECT_TRUE(garbage_collected_reports.empty());
 
-  ASSERT_TRUE(store_->Contains(cache_id.value()));
+  ASSERT_TRUE(report_store_->Contains(cache_id.value()));
   ASSERT_TRUE(Read(cache_root, expected_program_shortname, cache_id.value(), &annotations,
                    &attachments, &snapshot_uuid, &minidump));
 
@@ -621,7 +623,7 @@ TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
   EXPECT_EQ(expected_minidump, minidump.value());
 }
 
-TEST_F(StoreTest, FallbackToTmp) {
+TEST_F(ReportStoreTest, FallbackToTmp) {
   const std::string expected_program_shortname = "program_shortname";
 
   const std::map<std::string, std::string> expected_annotations = {
@@ -667,7 +669,7 @@ TEST_F(StoreTest, FallbackToTmp) {
   const auto tmp_id = Add(expected_program_shortname, expected_annotations, expected_attachments,
                           expected_snapshot_uuid, expected_minidump, &garbage_collected_reports);
 
-  ASSERT_TRUE(store_->Contains(tmp_id.value()));
+  ASSERT_TRUE(report_store_->Contains(tmp_id.value()));
   ASSERT_TRUE(ReadTmp(expected_program_shortname, tmp_id.value(), &annotations, &attachments,
                       &snapshot_uuid, &minidump));
 
@@ -679,7 +681,7 @@ TEST_F(StoreTest, FallbackToTmp) {
   EXPECT_EQ(expected_minidump, minidump.value());
 }
 
-TEST_F(StoreTest, Check_InspectTree) {
+TEST_F(ReportStoreTest, Check_InspectTree) {
   const std::string snapshot_uuid = "snapshot_uuid";
   const std::string minidump = "minidump";
 

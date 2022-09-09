@@ -74,7 +74,7 @@ executable("crash_reporter_unittest_exe") {
   ]
 
   deps = [
-    ":scoped_test_store",
+    ":scoped_test_report_store",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.settings",
@@ -192,7 +192,7 @@ executable("queue_unittest_exe") {
   ]
 
   deps = [
-    ":scoped_test_store",
+    ":scoped_test_report_store",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:network_watcher",
     "//src/developer/forensics/crash_reports:queue",
@@ -257,7 +257,7 @@ executable("snapshot_collector_unittest_exe") {
   sources = [ "snapshot_collector_unittest.cc" ]
 
   deps = [
-    ":scoped_test_store",
+    ":scoped_test_report_store",
     "//src/developer/forensics/crash_reports:errors",
     "//src/developer/forensics/crash_reports:snapshot_collector",
     "//src/developer/forensics/testing:gmatchers",
@@ -288,10 +288,10 @@ executable("snapshot_store_unittest_exe") {
   ]
 }
 
-executable("store_unittest_exe") {
+executable("report_store_unittest_exe") {
   testonly = true
 
-  sources = [ "store_unittest.cc" ]
+  sources = [ "report_store_unittest.cc" ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
@@ -309,12 +309,10 @@ executable("store_unittest_exe") {
   ]
 }
 
-executable("store_metadata_unittest_exe") {
+executable("report_store_metadata_unittest_exe") {
   testonly = true
 
-  # "store_metadata_unittest" is rather generic for the default_output_dir that is set
-  # to root_out_dir so instead we write the binary to target_out_dir.
-  sources = [ "store_metadata_unittest.cc" ]
+  sources = [ "report_store_metadata_unittest.cc" ]
 
   deps = [
     "//sdk/lib/syslog/cpp",
@@ -328,10 +326,10 @@ executable("store_metadata_unittest_exe") {
   ]
 }
 
-source_set("scoped_test_store") {
+source_set("scoped_test_report_store") {
   sources = [
-    "scoped_test_store.cc",
-    "scoped_test_store.h",
+    "scoped_test_report_store.cc",
+    "scoped_test_report_store.h",
   ]
 
   public_deps = [
@@ -455,16 +453,16 @@ fuchsia_component("snapshot_store_unittest") {
   ]
 }
 
-fuchsia_unittest_component("store_metadata_unittest") {
+fuchsia_unittest_component("report_store_metadata_unittest") {
   deps = [
-    ":store_metadata_unittest_exe",
+    ":report_store_metadata_unittest_exe",
     "//src/sys/test_runners:tmp_storage",
   ]
 }
 
-fuchsia_unittest_component("store_unittest") {
+fuchsia_unittest_component("report_store_unittest") {
   deps = [
-    ":store_unittest_exe",
+    ":report_store_unittest_exe",
     "//src/sys/test_runners:tmp_storage",
   ]
 }
@@ -488,8 +486,8 @@ fuchsia_test_package("crash-reports-tests") {
     ":sized_data_reader_unittest",
     ":snapshot_collector_unittest",
     ":snapshot_store_unittest",
-    ":store_unittest",
-    ":store_metadata_unittest",
+    ":report_store_unittest",
+    ":report_store_metadata_unittest",
   ]
 
   test_specs = {

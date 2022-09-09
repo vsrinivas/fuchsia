@@ -19,7 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/crash_reports/tests/scoped_test_store.h"
+#include "src/developer/forensics/crash_reports/tests/scoped_test_report_store.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
@@ -60,8 +60,8 @@ class SnapshotCollectorTest : public UnitTestFixture {
         clock_(),
         executor_(dispatcher()),
         snapshot_collector_(nullptr),
-        store_(&annotation_manager_,
-               std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services())),
+        report_store_(&annotation_manager_, std::make_shared<InfoContext>(
+                                                &InspectRoot(), &clock_, dispatcher(), services())),
         path_(files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {}
 
  protected:
@@ -72,9 +72,9 @@ class SnapshotCollectorTest : public UnitTestFixture {
   void SetUpSnapshotManager(StorageSize max_annotations_size, StorageSize max_archives_size) {
     FX_CHECK(data_provider_server_);
     clock_.Set(zx::time(0u));
-    snapshot_collector_ =
-        std::make_unique<SnapshotCollector>(dispatcher(), &clock_, data_provider_server_.get(),
-                                            store_.GetStore().GetSnapshotStore(), kWindow);
+    snapshot_collector_ = std::make_unique<SnapshotCollector>(
+        dispatcher(), &clock_, data_provider_server_.get(),
+        report_store_.GetReportStore().GetSnapshotStore(), kWindow);
   }
 
   std::set<std::string> ReadGarbageCollectedSnapshots() {
@@ -112,14 +112,14 @@ class SnapshotCollectorTest : public UnitTestFixture {
   bool is_server_bound() { return data_provider_server_->IsBound(); }
 
   Snapshot GetSnapshot(const std::string& uuid) {
-    return store_.GetStore().GetSnapshotStore()->GetSnapshot(uuid);
+    return report_store_.GetReportStore().GetSnapshotStore()->GetSnapshot(uuid);
   }
 
   timekeeper::TestClock clock_;
   async::Executor executor_;
   std::unique_ptr<SnapshotCollector> snapshot_collector_;
   feedback::AnnotationManager annotation_manager_{dispatcher(), {}};
-  ScopedTestStore store_;
+  ScopedTestReportStore report_store_;
 
  private:
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;

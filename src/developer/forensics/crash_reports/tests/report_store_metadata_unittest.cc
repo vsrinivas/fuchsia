@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/crash_reports/store_metadata.h"
+#include "src/developer/forensics/crash_reports/report_store_metadata.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -24,9 +24,9 @@ namespace {
 using testing::UnorderedElementsAreArray;
 namespace fs = std::filesystem;
 
-class StoreMetadataTest : public testing::Test {
+class ReportStoreMetadataTest : public testing::Test {
  public:
-  StoreMetadataTest() : metadata_(tmp_dir_.path(), StorageSize::Megabytes(1u)) {}
+  ReportStoreMetadataTest() : metadata_(tmp_dir_.path(), StorageSize::Megabytes(1u)) {}
 
   bool WriteAttachment(const std::string& program, const ReportId report_id, const std::string& key,
                        const std::string& data) {
@@ -50,7 +50,7 @@ class StoreMetadataTest : public testing::Test {
   }
 
  protected:
-  StoreMetadata& metadata() { return metadata_; }
+  ReportStoreMetadata& metadata() { return metadata_; }
 
   std::string ProgramPath(const std::string& program) {
     return fs::path(tmp_dir_.path()) / program;
@@ -62,10 +62,10 @@ class StoreMetadataTest : public testing::Test {
 
  private:
   files::ScopedTempDir tmp_dir_;
-  StoreMetadata metadata_;
+  ReportStoreMetadata metadata_;
 };
 
-TEST_F(StoreMetadataTest, RecreateFromFilesystem_Reports) {
+TEST_F(ReportStoreMetadataTest, RecreateFromFilesystem_Reports) {
   const std::string kValue("value");
   const StorageSize kValueSize(StorageSize::Bytes(kValue.size()));
 
@@ -133,7 +133,7 @@ TEST_F(StoreMetadataTest, RecreateFromFilesystem_Reports) {
   EXPECT_THAT(metadata().ReportAttachments(5), UnorderedElementsAreArray({"key 4"}));
 }
 
-TEST_F(StoreMetadataTest, RecreateFromFilesystem_Programs) {
+TEST_F(ReportStoreMetadataTest, RecreateFromFilesystem_Programs) {
   const std::string kValue("value");
 
   // Add reports to the filesystem.
@@ -177,7 +177,7 @@ TEST_F(StoreMetadataTest, RecreateFromFilesystem_Programs) {
   EXPECT_EQ(metadata().ReportProgram(5), "program 2");
 }
 
-TEST_F(StoreMetadataTest, AddAndDelete) {
+TEST_F(ReportStoreMetadataTest, AddAndDelete) {
   metadata().Add(0, "program 1", {"key 1", "key 2"}, StorageSize::Bytes(10));
 
   ASSERT_TRUE(metadata().Contains(0));
@@ -189,8 +189,8 @@ TEST_F(StoreMetadataTest, AddAndDelete) {
   ASSERT_FALSE(metadata().Contains("program 1"));
 }
 
-TEST_F(StoreMetadataTest, RecreateFromFilesystem_FailsInitially) {
-  StoreMetadata metadata("/tmp/delayed/path", StorageSize::Gigabytes(1u));
+TEST_F(ReportStoreMetadataTest, RecreateFromFilesystem_FailsInitially) {
+  ReportStoreMetadata metadata("/tmp/delayed/path", StorageSize::Gigabytes(1u));
   ASSERT_FALSE(metadata.IsDirectoryUsable());
 
   ASSERT_TRUE(files::CreateDirectory("/tmp/delayed/path"));

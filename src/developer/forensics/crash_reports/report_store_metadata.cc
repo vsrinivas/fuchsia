@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/crash_reports/store_metadata.h"
+#include "src/developer/forensics/crash_reports/report_store_metadata.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -16,27 +16,28 @@ namespace crash_reports {
 
 namespace fs = std::filesystem;
 
-StoreMetadata::StoreMetadata(std::string store_root, const StorageSize max_size)
-    : store_root_(std::move(store_root)),
+ReportStoreMetadata::ReportStoreMetadata(std::string report_store_root, const StorageSize max_size)
+    : report_store_root_(std::move(report_store_root)),
       max_size_(max_size),
       current_size_(StorageSize::Bytes(0u)),
       is_directory_usable_(false) {
   RecreateFromFilesystem();
 }
 
-bool StoreMetadata::RecreateFromFilesystem() {
+bool ReportStoreMetadata::RecreateFromFilesystem() {
   current_size_ = StorageSize::Bytes(0u);
   report_metadata_.clear();
   program_metadata_.clear();
 
   std::error_code error_code;
-  if (!fs::is_directory(store_root_) && !fs::create_directory(store_root_, error_code)) {
-    FX_LOGS(WARNING) << "Failed to create " << store_root_ << " " << error_code;
+  if (!fs::is_directory(report_store_root_) &&
+      !fs::create_directory(report_store_root_, error_code)) {
+    FX_LOGS(WARNING) << "Failed to create " << report_store_root_ << " " << error_code;
     is_directory_usable_ = false;
     return false;
   }
 
-  for (const auto& program_dir : fs::directory_iterator(store_root_)) {
+  for (const auto& program_dir : fs::directory_iterator(report_store_root_)) {
     const std::string program = program_dir.path().filename();
 
     for (const auto& report_dir : fs::directory_iterator(program_dir)) {
@@ -75,28 +76,28 @@ bool StoreMetadata::RecreateFromFilesystem() {
   return true;
 }
 
-bool StoreMetadata::IsDirectoryUsable() const { return is_directory_usable_; }
+bool ReportStoreMetadata::IsDirectoryUsable() const { return is_directory_usable_; }
 
-bool StoreMetadata::Contains(const ReportId report_id) const {
+bool ReportStoreMetadata::Contains(const ReportId report_id) const {
   return report_metadata_.find(report_id) != report_metadata_.end();
 }
 
-bool StoreMetadata::Contains(const std::string& program) const {
+bool ReportStoreMetadata::Contains(const std::string& program) const {
   return program_metadata_.find(program) != program_metadata_.end();
 }
 
-StorageSize StoreMetadata::CurrentSize() const { return current_size_; }
+StorageSize ReportStoreMetadata::CurrentSize() const { return current_size_; }
 
-StorageSize StoreMetadata::RemainingSpace() const { return max_size_ - current_size_; }
+StorageSize ReportStoreMetadata::RemainingSpace() const { return max_size_ - current_size_; }
 
-const std::string& StoreMetadata::RootDir() const { return store_root_; }
+const std::string& ReportStoreMetadata::RootDir() const { return report_store_root_; }
 
-void StoreMetadata::Add(const ReportId report_id, std::string program,
-                        std::vector<std::string> attachments, const StorageSize size) {
+void ReportStoreMetadata::Add(const ReportId report_id, std::string program,
+                              std::vector<std::string> attachments, const StorageSize size) {
   FX_CHECK(IsDirectoryUsable());
   current_size_ += size;
 
-  program_metadata_[program].dir = fs::path(store_root_) / program;
+  program_metadata_[program].dir = fs::path(report_store_root_) / program;
   program_metadata_[program].report_ids.push_back(report_id);
 
   report_metadata_[report_id].size = size;
@@ -106,7 +107,7 @@ void StoreMetadata::Add(const ReportId report_id, std::string program,
   report_metadata_[report_id].attachments = std::move(attachments);
 }
 
-void StoreMetadata::Delete(const ReportId report_id) {
+void ReportStoreMetadata::Delete(const ReportId report_id) {
   FX_CHECK(IsDirectoryUsable());
   FX_CHECK(Contains(report_id));
 
@@ -121,7 +122,7 @@ void StoreMetadata::Delete(const ReportId report_id) {
   report_metadata_.erase(report_id);
 }
 
-std::vector<std::string> StoreMetadata::Programs() const {
+std::vector<std::string> ReportStoreMetadata::Programs() const {
   std::vector<std::string> programs;
   for (const auto& [program, _] : program_metadata_) {
     programs.push_back(program);
@@ -130,7 +131,7 @@ std::vector<std::string> StoreMetadata::Programs() const {
   return programs;
 }
 
-std::vector<ReportId> StoreMetadata::Reports() const {
+std::vector<ReportId> ReportStoreMetadata::Reports() const {
   std::vector<ReportId> report_ids;
   for (const auto& [report_id, _] : report_metadata_) {
     report_ids.push_back(report_id);
@@ -139,33 +140,33 @@ std::vector<ReportId> StoreMetadata::Reports() const {
   return report_ids;
 }
 
-const std::deque<ReportId>& StoreMetadata::ProgramReports(const std::string& program) const {
+const std::deque<ReportId>& ReportStoreMetadata::ProgramReports(const std::string& program) const {
   FX_CHECK(program_metadata_.find(program) != program_metadata_.end());
   return program_metadata_.at(program).report_ids;
 }
 
-const std::string& StoreMetadata::ReportProgram(const ReportId report_id) const {
+const std::string& ReportStoreMetadata::ReportProgram(const ReportId report_id) const {
   FX_CHECK(Contains(report_id));
   return report_metadata_.at(report_id).program;
 }
 
-const std::string& StoreMetadata::ProgramDirectory(const std::string& program) const {
+const std::string& ReportStoreMetadata::ProgramDirectory(const std::string& program) const {
   FX_CHECK(program_metadata_.find(program) != program_metadata_.end());
   return program_metadata_.at(program).dir;
 }
 
-const std::string& StoreMetadata::ReportDirectory(const ReportId report_id) const {
+const std::string& ReportStoreMetadata::ReportDirectory(const ReportId report_id) const {
   FX_CHECK(Contains(report_id));
   return report_metadata_.at(report_id).dir;
 }
 
-StorageSize StoreMetadata::ReportSize(const ReportId report_id) const {
+StorageSize ReportStoreMetadata::ReportSize(const ReportId report_id) const {
   FX_CHECK(Contains(report_id));
   return report_metadata_.at(report_id).size;
 }
 
-std::vector<std::string> StoreMetadata::ReportAttachments(ReportId report_id,
-                                                          const bool absolute_paths) const {
+std::vector<std::string> ReportStoreMetadata::ReportAttachments(ReportId report_id,
+                                                                const bool absolute_paths) const {
   FX_CHECK(Contains(report_id));
 
   auto& report_metadata = report_metadata_.at(report_id);

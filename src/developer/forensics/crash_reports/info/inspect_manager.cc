@@ -150,6 +150,7 @@ bool InspectManager::Contains(const std::string& local_report_id) {
 }
 
 void InspectManager::ExposeStore(const StorageSize max_size) {
+  // TODO(fxbug.dev/109046): This field will be ambiguous once snapshots are persisted.
   store_.max_size_in_kb = node_manager_.Get("/crash_reporter/store")
                               .CreateUint("max_size_in_kb", max_size.ToKilobytes());
 }

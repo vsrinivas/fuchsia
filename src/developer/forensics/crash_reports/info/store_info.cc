@@ -9,7 +9,7 @@ namespace crash_reports {
 
 StoreInfo::StoreInfo(std::shared_ptr<InfoContext> context) : context_(std::move(context)) {}
 
-void StoreInfo::LogMaxStoreSize(const StorageSize max_size) {
+void StoreInfo::LogMaxReportStoreSize(const StorageSize max_size) {
   context_->InspectManager().ExposeStore(max_size);
 }
 

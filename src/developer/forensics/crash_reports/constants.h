@@ -38,16 +38,16 @@ constexpr const char* kGarbageCollectedSnapshotsPath = "/tmp/garbage_collected_s
 // alloted to /cache. If there is enough space available, the report is written to /cache, otherwise
 // it is written to /tmp. Once in /cache those reports are not subject to garbage collection, unlike
 // /tmp; they are only deleted once the report is no longer needed by the component.
-constexpr const char* kStoreTmpPath = "/tmp/reports";
-constexpr const char* kStoreCachePath = "/cache/reports";
+constexpr const char* kReportStoreTmpPath = "/tmp/reports";
+constexpr const char* kReportStoreCachePath = "/cache/reports";
 
 // Other report data can occupy up to 5 MB of memory and disk.
-constexpr StorageSize kStoreMaxSize = StorageSize::Megabytes(5u);
+constexpr StorageSize kReportStoreMaxSize = StorageSize::Megabytes(5u);
 
 // Minidumps and annotations (the two most common non-snapshot files in crash reports) are usually
 // in the order of 64 - 128KiB. This lets a device store 4-8 of them on disk.
-constexpr StorageSize kStoreMaxCacheSize = StorageSize::Kilobytes(512);
-constexpr StorageSize kStoreMaxTmpSize = kStoreMaxSize - kStoreMaxCacheSize;
+constexpr StorageSize kReportStoreMaxCacheSize = StorageSize::Kilobytes(512);
+constexpr StorageSize kReportStoreMaxTmpSize = kReportStoreMaxSize - kReportStoreMaxCacheSize;
 
 // If a crash report arrives within |kSnapshotSharedRequestWindow| of a call to
 // SnapshotManager::GetSnapshotUuid that schedules a call to

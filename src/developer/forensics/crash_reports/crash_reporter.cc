@@ -42,14 +42,15 @@ using fuchsia::feedback::CrashReport;
 
 constexpr zx::duration kSnapshotTimeout = zx::min(2);
 
-// Returns what the initial ReportId should be, based on the contents of the store in the
+// Returns what the initial ReportId should be, based on the contents of the report store in the
 // filesystem.
 //
-// Note: This function traverses store in the filesystem to and should be used sparingly.
+// Note: This function traverses report store in the filesystem and should be used sparingly.
 ReportId SeedReportId() {
-  // The next ReportId will be one more than the largest in the store.
-  auto all_report_ids = StoreMetadata(kStoreTmpPath, kStoreMaxTmpSize).Reports();
-  const auto all_cache_report_ids = StoreMetadata(kStoreCachePath, kStoreMaxCacheSize).Reports();
+  // The next ReportId will be one more than the largest in the report store.
+  auto all_report_ids = ReportStoreMetadata(kReportStoreTmpPath, kReportStoreMaxTmpSize).Reports();
+  const auto all_cache_report_ids =
+      ReportStoreMetadata(kReportStoreCachePath, kReportStoreMaxCacheSize).Reports();
   all_report_ids.insert(all_report_ids.end(), all_cache_report_ids.begin(),
                         all_cache_report_ids.end());
 
@@ -81,7 +82,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              const std::shared_ptr<InfoContext>& info_context, Config config,
                              CrashRegister* crash_register, LogTags* tags,
                              SnapshotCollector* snapshot_collector, CrashServer* crash_server,
-                             Store* store)
+                             ReportStore* report_store)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
       services_(services),
@@ -91,8 +92,8 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       utc_provider_(&utc_clock_ready_watcher_, clock),
       snapshot_collector_(snapshot_collector),
       crash_server_(crash_server),
-      snapshot_store_(store->GetSnapshotStore()),
-      queue_(dispatcher_, services_, info_context, tags_, store, crash_server_,
+      snapshot_store_(report_store->GetSnapshotStore()),
+      queue_(dispatcher_, services_, info_context, tags_, report_store, crash_server_,
              snapshot_collector_),
       product_quotas_(dispatcher_, clock, config.daily_per_product_quota,
                       feedback::kProductQuotasPath, &utc_clock_ready_watcher_),

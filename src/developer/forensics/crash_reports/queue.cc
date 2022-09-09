@@ -19,12 +19,12 @@ namespace forensics {
 namespace crash_reports {
 
 Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-             std::shared_ptr<InfoContext> info_context, LogTags* tags, Store* store,
+             std::shared_ptr<InfoContext> info_context, LogTags* tags, ReportStore* report_store,
              CrashServer* crash_server, SnapshotCollector* snapshot_collector)
     : dispatcher_(dispatcher),
       services_(services),
       tags_(tags),
-      store_(store),
+      report_store_(report_store),
       crash_server_(crash_server),
       snapshot_collector_(snapshot_collector),
       metrics_(std::move(info_context)) {
@@ -37,10 +37,10 @@ Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirecto
 void Queue::InitFromStore() {
   // Note: The upload attempt data is lost when the component stops and all reports start with
   // upload attempts of 0.
-  for (const auto& report_id : store_->GetReports()) {
+  for (const auto& report_id : report_store_->GetReports()) {
     // It could technically be an hourly snapshot, but the snapshot has not been persisted so it is
     // okay to have another one here.
-    blocked_reports_.emplace_back(report_id, store_->GetSnapshotUuid(report_id),
+    blocked_reports_.emplace_back(report_id, report_store_->GetSnapshotUuid(report_id),
                                   false /*not a known hourly report*/);
   }
 
@@ -159,7 +159,7 @@ bool Queue::Add(PendingReport pending_report, const bool consider_eager_upload,
 
 bool Queue::AddToStore(Report report) {
   std::vector<ReportId> garbage_collected_reports;
-  const bool success = store_->Add(std::move(report), &garbage_collected_reports);
+  const bool success = report_store_->Add(std::move(report), &garbage_collected_reports);
 
   // Retire each pending report that is garbage collected by the store.
   for (auto& pending_report : ready_reports_) {
@@ -212,14 +212,14 @@ void Queue::Upload() {
 
   bool add_to_store = active_report_->HasReport();
   if (!active_report_->HasReport()) {
-    if (!store_->Contains(active_report_->report_id)) {
+    if (!report_store_->Contains(active_report_->report_id)) {
       Retire(std::move(*active_report_), RetireReason::kGarbageCollected);
       active_report_ = std::nullopt;
       Upload();
       return;
     }
 
-    active_report_->SetReport(store_->Get(active_report_->report_id));
+    active_report_->SetReport(report_store_->Get(active_report_->report_id));
   }
 
   // The upload will fail if the annotations are empty.
@@ -235,7 +235,7 @@ void Queue::Upload() {
   metrics_.IncrementUploadAttempts(active_report_->report_id);
   crash_server_->MakeRequest(
       *active_report_->report,
-      store_->GetSnapshotStore()->GetSnapshot(active_report_->snapshot_uuid),
+      report_store_->GetSnapshotStore()->GetSnapshot(active_report_->snapshot_uuid),
       [this, add_to_store](CrashServer::UploadStatus status, std::string server_report_id) mutable {
         switch (status) {
           case CrashServer::UploadStatus::kSuccess:
@@ -300,12 +300,12 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
 
   metrics_.Retire(pending_report, reason, server_report_id);
   if (const bool garbage_collected =
-          store_->GetSnapshotStore()->Release(pending_report.snapshot_uuid);
+          report_store_->GetSnapshotStore()->Release(pending_report.snapshot_uuid);
       garbage_collected) {
     snapshot_collector_->RemoveRequest(pending_report.snapshot_uuid);
   }
   tags_->Unregister(pending_report.report_id);
-  store_->Remove(pending_report.report_id);
+  report_store_->Remove(pending_report.report_id);
 }
 
 void Queue::BlockAll() {
@@ -349,7 +349,7 @@ void Queue::DeleteAll() {
     active_report_->delete_post_upload = true;
   }
 
-  store_->RemoveAll();
+  report_store_->RemoveAll();
 }
 
 // The queue is inheritly conservative with uploading crash reports meaning that a report that is

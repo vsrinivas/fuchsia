@@ -336,12 +336,12 @@ source_set("snapshot_collector") {
 
 source_set("store") {
   sources = [
+    "report_store.cc",
+    "report_store.h",
+    "report_store_metadata.cc",
+    "report_store_metadata.h",
     "snapshot_store.cc",
     "snapshot_store.h",
-    "store.cc",
-    "store.h",
-    "store_metadata.cc",
-    "store_metadata.h",
   ]
 
   public_deps = [

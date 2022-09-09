@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_STORE_METADATA_H_
-#define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_STORE_METADATA_H_
+#ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_REPORT_STORE_METADATA_H_
+#define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_REPORT_STORE_METADATA_H_
 
 #include <deque>
 #include <map>
@@ -16,21 +16,21 @@
 namespace forensics {
 namespace crash_reports {
 
-// In-memory metadata about the store in the filesystem at |store_root|.
+// In-memory metadata about the report store in the filesystem at |report_store_root|.
 //
-// Note: Clients must use Add and Delete to keep the metadata in sync with the store in the
+// Note: Clients must use Add and Delete to keep the metadata in sync with the report store in the
 // filesystem. Use with caution!
-class StoreMetadata {
+class ReportStoreMetadata {
  public:
-  StoreMetadata(std::string store_root, StorageSize max_size);
+  ReportStoreMetadata(std::string report_store_root, StorageSize max_size);
 
-  // Returns true if the directory underlying the StoreMetadata can safely be used.
+  // Returns true if the directory underlying the ReportStoreMetadata can safely be used.
   //
   // Note: Add and Delete will check-fail if this is false as the underlying directory shouldn't be
   // manipulated.
   bool IsDirectoryUsable() const;
 
-  // Recreates the metadata from the store at |store_root_|.
+  // Recreates the metadata from the report store at |report_store_root_|.
   //
   // Returns false if the |metadata| does not accurately represent the filesystem and the underlying
   // directory can't safely be used.
@@ -92,8 +92,8 @@ class StoreMetadata {
     std::vector<std::string> attachments;
   };
 
-  // Where the store is located in the filesystem.
-  std::string store_root_;
+  // Where the report store is located in the filesystem.
+  std::string report_store_root_;
 
   StorageSize max_size_;
   StorageSize current_size_;
@@ -107,4 +107,4 @@ class StoreMetadata {
 }  // namespace crash_reports
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_STORE_METADATA_H_
+#endif  // SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_REPORT_STORE_METADATA_H_
