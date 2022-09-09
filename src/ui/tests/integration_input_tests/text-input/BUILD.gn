@@ -5,8 +5,6 @@
 # By and large copied from //src/ui/tests/integration_input_tests/factory-reset-handler.
 
 import("//build/components.gni")
-import("//build/config.gni")
-import("//build/flutter/config.gni")
 
 group("text-input") {
   testonly = true
@@ -61,24 +59,6 @@ executable("text-input-test-bin") {
   ]
 }
 
-config_data("text-input-test-config") {
-  for_pkg = "text-input-test"
-
-  sources = [
-    # Tells input pipeline to ignore real devices; avoids logging
-    # the "Input pipeline is unable to watch the input report directory"
-    # error.
-    "data/ignore_real_devices",
-  ]
-}
-
-config_data("scenic-test-config") {
-  for_pkg = "text-input-test"
-
-  sources = [ "data/scenic_config" ]
-  outputs = [ "scenic_config" ]
-}
-
 fuchsia_component("text-input-test-component") {
   testonly = true
   component_name = "text_input_test"
@@ -88,11 +68,7 @@ fuchsia_component("text-input-test-component") {
 
 fuchsia_test_package("text-input-test") {
   test_components = [ ":text-input-test-component" ]
-  deps = [
-    ":scenic-test-config",
-    ":text-input-test-config",
-    "text-input-flutter:realm",
-  ]
+  deps = [ "text-input-flutter:realm" ]
   test_specs = {
     log_settings = {
       # Do not fail the test if a message with level ERROR is logged.  Several
