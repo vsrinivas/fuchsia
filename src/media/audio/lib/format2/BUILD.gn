@@ -20,6 +20,8 @@ source_set("format2") {
     "format.cc",
     "format.h",
     "sample_converter.h",
+    "stream_converter.cc",
+    "stream_converter.h",
   ]
 
   public_deps = [
@@ -59,6 +61,7 @@ executable("unittest-bin") {
     "channel_mapper_unittest.cc",
     "format_unittest.cc",
     "sample_converter_unittest.cc",
+    "stream_converter_unittest.cc",
   ]
 
   deps = [

@@ -17,61 +17,24 @@
 
 namespace media::audio {
 
-// Template to fill samples with silence based on sample type.
-template <typename DType, typename Enable = void>
-class SilenceMaker;
-
-template <typename DType>
-class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, int16_t> ||
-                                                    std::is_same_v<DType, int32_t> ||
-                                                    std::is_same_v<DType, float>>> {
- public:
-  static inline void Fill(void* dest_void_ptr, size_t samples) {
-    // This works even if DType is float/double: per IEEE-754, all 0s == +0.0.
-    memset(dest_void_ptr, 0, samples * sizeof(DType));
-  }
-};
-
-template <typename DType>
-class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
- public:
-  static inline void Fill(void* dest_void_ptr, size_t samples) {
-    memset(dest_void_ptr, media_audio::kInt8ToUint8, samples * sizeof(DType));
-  }
-};
-
-// Templated class that implements ProduceOutput and FillWithSilence methods for OutputProducer
-template <typename DType>
-class OutputProducerImpl : public OutputProducer {
- public:
-  explicit OutputProducerImpl(const fuchsia::media::AudioStreamType& format)
-      : OutputProducer(format, sizeof(DType)) {}
-
-  void ProduceOutput(const float* source_ptr, void* dest_void_ptr, int64_t frames) const override {
-    TRACE_DURATION("audio", "OutputProducerImpl::ProduceOutput");
-    auto* dest_ptr = static_cast<DType*>(dest_void_ptr);
-
-    // Previously we clamped here; because of rounding, this is different for
-    // each output type, so it is now handled in Convert() specializations.
-    const size_t kNumSamples = frames * channels_;
-    for (size_t i = 0; i < kNumSamples; ++i) {
-      dest_ptr[i] = media_audio::SampleConverter<DType>::FromFloat(source_ptr[i]);
-    }
-  }
-
-  void FillWithSilence(void* dest_void_ptr, int64_t frames) const override {
-    TRACE_DURATION("audio", "OutputProducerImpl::FillWithSilence");
-    SilenceMaker<DType>::Fill(dest_void_ptr, frames * channels_);
-  }
-};
-
 // Constructor/destructor for the common OutputProducer base class.
-OutputProducer::OutputProducer(const fuchsia::media::AudioStreamType& format,
+OutputProducer::OutputProducer(::media_audio::StreamConverter converter,
+                               const fuchsia::media::AudioStreamType& format,
                                int32_t bytes_per_sample)
-    : channels_(format.channels),
+    : converter_(std::move(converter)),
+      channels_(format.channels),
       bytes_per_sample_(bytes_per_sample),
       bytes_per_frame_(bytes_per_sample * format.channels) {
   fidl::Clone(format, &format_);
+}
+
+void OutputProducer::ProduceOutput(const float* source_ptr, void* dest_void_ptr,
+                                   int64_t frames) const {
+  converter_.CopyAndClip(source_ptr, dest_void_ptr, frames);
+}
+
+void OutputProducer::FillWithSilence(void* dest_void_ptr, int64_t frames) const {
+  converter_.WriteSilence(dest_void_ptr, frames);
 }
 
 // Selection routine which will instantiate a particular templatized version of the output producer.
@@ -83,19 +46,39 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
     return nullptr;
   }
 
+  fuchsia_mediastreams::wire::AudioSampleFormat dest_sample_format;
+  int32_t bytes_per_sample;
+
   switch (format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
-      return std::make_unique<OutputProducerImpl<uint8_t>>(format);
+      dest_sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kUnsigned8;
+      bytes_per_sample = sizeof(uint8_t);
+      break;
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
-      return std::make_unique<OutputProducerImpl<int16_t>>(format);
+      dest_sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16;
+      bytes_per_sample = sizeof(int16_t);
+      break;
     case fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32:
-      return std::make_unique<OutputProducerImpl<int32_t>>(format);
+      dest_sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kSigned24In32;
+      bytes_per_sample = sizeof(int32_t);
+      break;
     case fuchsia::media::AudioSampleFormat::FLOAT:
-      return std::make_unique<OutputProducerImpl<float>>(format);
+      dest_sample_format = fuchsia_mediastreams::wire::AudioSampleFormat::kFloat;
+      bytes_per_sample = sizeof(float);
+      break;
     default:
       FX_LOGS(ERROR) << "Unsupported output format " << (int64_t)format.sample_format;
       return nullptr;
   }
+
+  auto dest_format = ::media_audio::Format::CreateOrDie({
+      .sample_format = dest_sample_format,
+      .channel_count = format.channels,
+      .frames_per_second = format.frames_per_second,
+  });
+
+  return std::make_unique<OutputProducer>(
+      ::media_audio::StreamConverter::CreateFromFloatSource(dest_format), format, bytes_per_sample);
 }
 
 }  // namespace media::audio

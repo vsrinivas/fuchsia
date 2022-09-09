@@ -110,9 +110,9 @@ TEST(SampleConverterTest, Float) {
                     sample);
   }
 
-  // Should be normalized.
-  EXPECT_FLOAT_EQ(SampleConverter<float>::FromFloat(5.5f), 1.0f);
-  EXPECT_FLOAT_EQ(SampleConverter<float>::FromFloat(-1.1f), -1.0f);
+  // Should not be normalized.
+  EXPECT_FLOAT_EQ(SampleConverter<float>::FromFloat(5.5f), 5.5f);
+  EXPECT_FLOAT_EQ(SampleConverter<float>::FromFloat(-1.1f), -1.1f);
 
   EXPECT_FLOAT_EQ(SampleConverter<float>::ToFloat(5.5f), 5.5f);
   EXPECT_FLOAT_EQ(SampleConverter<float>::ToFloat(-1.1f), -1.1f);

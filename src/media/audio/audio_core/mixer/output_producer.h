@@ -9,6 +9,8 @@
 
 #include <memory>
 
+#include "src/media/audio/lib/format2/stream_converter.h"
+
 namespace media::audio {
 
 class OutputProducer {
@@ -16,7 +18,7 @@ class OutputProducer {
   static std::unique_ptr<OutputProducer> Select(
       const fuchsia::media::AudioStreamType& output_format);
 
-  virtual ~OutputProducer() = default;
+  ~OutputProducer() = default;
 
   /**
    * Take frames of audio from the source intermediate buffer and convert them
@@ -34,8 +36,7 @@ class OutputProducer {
    *
    * @param frames The number of frames to produce.
    */
-  virtual void ProduceOutput(const float* source_ptr, void* dest_void_ptr,
-                             int64_t frames) const = 0;
+  void ProduceOutput(const float* source_ptr, void* dest_void_ptr, int64_t frames) const;
 
   /**
    * Fill a destination buffer with silence.
@@ -45,16 +46,19 @@ class OutputProducer {
    *
    * @param frames The number of frames to produce.
    */
-  virtual void FillWithSilence(void* dest_void_ptr, int64_t frames) const = 0;
+  void FillWithSilence(void* dest_void_ptr, int64_t frames) const;
 
   const fuchsia::media::AudioStreamType& format() const { return format_; }
   int32_t channels() const { return channels_; }
   int32_t bytes_per_sample() const { return bytes_per_sample_; }
   int32_t bytes_per_frame() const { return bytes_per_frame_; }
 
- protected:
-  OutputProducer(const fuchsia::media::AudioStreamType& output_format, int32_t bytes_per_sample);
+  // Implementation detail. Use Select.
+  OutputProducer(::media_audio::StreamConverter converter,
+                 const fuchsia::media::AudioStreamType& output_format, int32_t bytes_per_sample);
 
+ protected:
+  ::media_audio::StreamConverter converter_;
   fuchsia::media::AudioStreamType format_;
   int32_t channels_ = 0;
   int32_t bytes_per_sample_ = 0;
