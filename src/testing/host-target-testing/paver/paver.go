@@ -164,11 +164,7 @@ func (p *BuildPaver) Pave(ctx context.Context, deviceName string) error {
 }
 
 func (p *BuildPaver) runPave(ctx context.Context, deviceName string, args ...string) error {
-	// FIXME(fxbug.dev/108834): Temporarily reduce the tftp block size to
-	// 512 to see if it will help with the desync issues we've been
-	// observing in the paver tests. This will eventually be replaced with
-	// the ability to customize this per test.
-	args = append([]string{"-b", "512", "--images", filepath.Join(p.ImageDir, ImageManifest)}, args...)
+	args = append([]string{"--images", filepath.Join(p.ImageDir, ImageManifest)}, args...)
 
 	logger.Infof(ctx, "paving device %q", deviceName)
 	path, err := exec.LookPath(p.BootserverPath)
