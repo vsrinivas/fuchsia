@@ -116,6 +116,7 @@ async fn test_eager_resolve_package() {
             {
                 "url": pkg_url.as_unpinned(),
                 "public_keys": make_default_json_public_keys_for_test(),
+                "minimum_required_version": "1.2.3.4",
             }
         ]
     });
@@ -166,6 +167,7 @@ async fn test_eager_get_hash() {
             {
                 "url": pkg_url.as_unpinned(),
                 "public_keys": make_default_json_public_keys_for_test(),
+                "minimum_required_version": "1.2.3.4",
             }
         ],
     });
@@ -223,6 +225,7 @@ async fn test_cup_write() {
             {
                 "url": pkg_url.as_unpinned(),
                 "public_keys": make_default_json_public_keys_for_test(),
+                "minimum_required_version": "1.2.3.4",
             }
         ]
     });
@@ -304,6 +307,7 @@ async fn test_cup_get_info_persisted() {
             {
                 "url": pkg_url.as_unpinned() ,
                 "public_keys": make_default_json_public_keys_for_test(),
+                "minimum_required_version": "1.2.3.4",
             }
         ],
     });

@@ -67,6 +67,11 @@ import("//build/config.gni")
 #       service_url (required)
 #         [string] url of the Omaha server.
 #
+#       minimum_required_version (required)
+#         [string] the minimum required version for this package, in
+#         "1.2.3.4"-style notation. If there is a fallback version of the eager
+#         package in a build, this version MUST match the fallback version.
+#
 #   data_deps (optional)
 #   deps (optional)
 #     Same as for any GN target.

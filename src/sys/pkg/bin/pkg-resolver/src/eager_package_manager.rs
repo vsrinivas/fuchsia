@@ -22,15 +22,17 @@ use {
     futures::prelude::*,
     omaha_client::{
         cup_ecdsa::{CupVerificationError, Cupv2Verifier, PublicKeys, StandardCupv2Handler},
-        protocol::response::Response,
+        protocol::response::{App, Response},
     },
     p256::ecdsa::{signature::Signature, DerSignature},
     std::{
         collections::{BTreeMap, HashMap},
         convert::TryInto,
+        str::FromStr,
         sync::Arc,
     },
     system_image::CachePackages,
+    version::Version,
 };
 
 const EAGER_PACKAGE_PERSISTENT_FIDL_NAME: &str = "eager_packages.pf";
@@ -42,6 +44,7 @@ struct EagerPackage {
     package_directory: Option<PackageDirectory>,
     cup: Option<CupData>,
     public_keys: PublicKeys,
+    minimum_required_version: Version,
 }
 
 impl EagerPackage {
@@ -64,34 +67,31 @@ impl EagerPackage {
         cache_packages: &CachePackages,
     ) -> Result<PackageSource, LoadError> {
         let pinned_url_in_cup;
+
         let (pinned_url, package_source) = match self.load_cup(url, persistent_cup) {
             Ok(cup) => {
                 let response = parse_omaha_response_from_cup(&cup)?;
-                self.cup = Some(cup);
-                pinned_url_in_cup = response
-                    .apps
-                    .iter()
-                    .find_map(|app| {
-                        app.update_check.as_ref().and_then(|uc| {
-                            uc.get_all_full_urls().find_map(|u| {
-                                PinnedAbsolutePackageUrl::parse(&u)
-                                    .ok()
-                                    .and_then(|u| (u.path() == url.path()).then_some(u))
-                            })
-                        })
-                    })
+                let (app, pinned_url) = find_app_with_matching_url(&response, url)
                     .ok_or_else(|| LoadError::CupResponseURLNotFound(url.clone()))?;
+                pinned_url_in_cup = pinned_url.clone();
 
-                (&pinned_url_in_cup, PackageSource::Cup)
+                if app_version_too_old(&app, &self.minimum_required_version)? {
+                    (
+                        cache_packages
+                            .find_unpinned_url(&url)
+                            .ok_or(LoadError::RequestedVersionTooLow)?,
+                        PackageSource::CachePackages,
+                    )
+                } else {
+                    self.cup = Some(cup);
+
+                    (&pinned_url_in_cup, PackageSource::Cup)
+                }
             }
             Err(e) => {
                 // The config includes an eager package, but no CUP is persisted, try to load it
                 // from cache packages.
-                let pinned_url = cache_packages
-                    .contents()
-                    .find(|pinned_url| pinned_url.as_unpinned() == url)
-                    .ok_or(e)?;
-                (pinned_url, PackageSource::CachePackages)
+                (cache_packages.find_unpinned_url(url).ok_or(e)?, PackageSource::CachePackages)
             }
         };
 
@@ -104,6 +104,7 @@ impl EagerPackage {
 }
 
 // Where the hash of the eager package comes from.
+#[derive(Debug)]
 enum PackageSource {
     Cup,
     CachePackages,
@@ -140,6 +141,43 @@ async fn resolve_pinned_from_cache(
         return Err(anyhow!("at least one blob missing: {:?}", missing_blobs));
     }
     Ok(get.finish().await.context("finish")?)
+}
+
+fn find_app_with_matching_url<'a>(
+    response: &'a Response,
+    url: &'a UnpinnedAbsolutePackageUrl,
+) -> Option<(&'a App, PinnedAbsolutePackageUrl)> {
+    for app in &response.apps {
+        if let Some(uc) = &app.update_check {
+            for u in uc.get_all_full_urls() {
+                if let Ok(u) = PinnedAbsolutePackageUrl::parse(&u) {
+                    if u.path() == url.path() {
+                        return Some((&app, u));
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+#[derive(Debug, thiserror::Error)]
+enum VersionTooOldError {
+    #[error("the manifest version is absent")]
+    ManifestVersionAbsent,
+    #[error("the manifest version could not be parsed")]
+    ManifestVersionParseError(#[source] anyhow::Error),
+}
+
+fn app_version_too_old(
+    app: &App,
+    minimum_required_version: &Version,
+) -> Result<bool, VersionTooOldError> {
+    let manifest_version: Version = Version::from_str(
+        app.get_manifest_version().ok_or(VersionTooOldError::ManifestVersionAbsent)?.as_str(),
+    )
+    .map_err(|e| VersionTooOldError::ManifestVersionParseError(e))?;
+    Ok(manifest_version < *minimum_required_version)
 }
 
 #[derive(Debug)]
@@ -194,11 +232,16 @@ impl<T: Resolver> EagerPackageManager<T> {
             None => (HashMap::new(), true),
         };
         let mut packages = BTreeMap::new();
-        for (i, EagerPackageConfig { url, executable, public_keys }) in
+        for (i, EagerPackageConfig { url, executable, public_keys, minimum_required_version }) in
             config.packages.into_iter().enumerate()
         {
-            let mut package =
-                EagerPackage { executable, package_directory: None, cup: None, public_keys };
+            let mut package = EagerPackage {
+                executable,
+                package_directory: None,
+                cup: None,
+                public_keys,
+                minimum_required_version,
+            };
             let result = package
                 .load_cup_and_package_directory(
                     &url,
@@ -349,7 +392,7 @@ impl<T: Resolver> EagerPackageManager<T> {
         let cup_data: CupData = cup.try_into()?;
         let response = parse_omaha_response_from_cup(&cup_data)?;
         // The full URL must appear in the omaha response.
-        let _app = response
+        let app = response
             .apps
             .iter()
             .find(|app| {
@@ -361,6 +404,7 @@ impl<T: Resolver> EagerPackageManager<T> {
             .ok_or(CupWriteError::CupResponseURLNotFound)?;
 
         let pinned_url: PinnedAbsolutePackageUrl = url.url.parse()?;
+
         let mut packages = self.packages.clone();
         // Make sure the url is an eager package before trying to resolve it.
         let package = packages
@@ -368,6 +412,11 @@ impl<T: Resolver> EagerPackageManager<T> {
             .find(|(url, _package)| url.path() == pinned_url.path())
             .map(|(_url, package)| package)
             .ok_or_else(|| CupWriteError::UnknownURL(pinned_url.as_unpinned().clone()))?;
+
+        if app_version_too_old(&app, &package.minimum_required_version)? {
+            return Err(CupWriteError::RequestedVersionTooLow);
+        }
+
         let (pkg_dir, _resolution_context) =
             Self::resolve_pinned(&self.package_resolver, pinned_url).await?;
         package.package_directory = Some(pkg_dir);
@@ -452,6 +501,10 @@ enum LoadError {
     ResolvePinnedFromCache(#[source] anyhow::Error),
     #[error("the persisted eager package is not available")]
     NotAvailable,
+    #[error("while checking minimum required version")]
+    VersionTooOldError(#[from] VersionTooOldError),
+    #[error("the version to be installed is lower than the minimum required version")]
+    RequestedVersionTooLow,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -470,6 +523,10 @@ enum CupWriteError {
     CupResponseURLNotFound,
     #[error("while persisting CUP data")]
     Persist(#[from] PersistError),
+    #[error("while checking minimum required version")]
+    VersionTooOldError(#[from] VersionTooOldError),
+    #[error("the version to be written is lower than the minimum required version")]
+    RequestedVersionTooLow,
 }
 
 impl From<&CupWriteError> for WriteError {
@@ -482,6 +539,8 @@ impl From<&CupWriteError> for WriteError {
             CupWriteError::ParseCupResponse(_) => WriteError::Verification,
             CupWriteError::CupResponseURLNotFound => WriteError::Verification,
             CupWriteError::Persist(_) => WriteError::Storage,
+            CupWriteError::VersionTooOldError(_) => WriteError::Verification,
+            CupWriteError::RequestedVersionTooLow => WriteError::Verification,
         }
     }
 }
@@ -610,6 +669,8 @@ fn load_result_to_event_code(
         }
         Err(LoadError::ParseCupResponse(_)) => EventCodes::Verification,
         Err(LoadError::CupResponseURLNotFound(_)) => EventCodes::Verification,
+        Err(LoadError::VersionTooOldError(_)) => EventCodes::Verification,
+        Err(LoadError::RequestedVersionTooLow) => EventCodes::Verification,
         Err(LoadError::ResolvePinnedFromCache(_)) => EventCodes::Resolve,
     }
 }
@@ -708,9 +769,17 @@ mod tests {
         (package_resolver, dir)
     }
     fn get_default_cup_response() -> Vec<u8> {
-        get_cup_response("fuchsia-pkg://example.com/", format!("package?hash={TEST_HASH}"))
+        get_cup_response(
+            "fuchsia-pkg://example.com/",
+            format!("package?hash={TEST_HASH}"),
+            "1.2.3.4",
+        )
     }
-    fn get_cup_response(url_codebase: impl AsRef<str>, package_name: impl AsRef<str>) -> Vec<u8> {
+    fn get_cup_response(
+        url_codebase: impl AsRef<str>,
+        package_name: impl AsRef<str>,
+        manifest_version: impl AsRef<str>,
+    ) -> Vec<u8> {
         let response = serde_json::json!({"response":{
           "server": "prod",
           "protocol": "3.0",
@@ -726,7 +795,7 @@ mod tests {
                 ]
               },
               "manifest": {
-                "version": "1.2.3.4",
+                "version": manifest_version.as_ref(),
                 "actions": {
                   "action": [],
                 },
@@ -772,6 +841,7 @@ mod tests {
                 url: UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap(),
                 executable: true,
                 public_keys: make_default_public_keys_for_test(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             }],
         }
     }
@@ -867,7 +937,8 @@ mod tests {
                             "key": RAW_PUBLIC_KEY_FOR_TEST,
                         },
                         "historical": []
-                    }
+                    },
+                    "minimum_required_version": "1.2.3.4"
                 },
                 {
                     "url": "fuchsia-pkg://example.com/package2",
@@ -878,7 +949,8 @@ mod tests {
                             "key": RAW_PUBLIC_KEY_FOR_TEST,
                         },
                         "historical": []
-                    }
+                    },
+                    "minimum_required_version": "1.2.3.4"
                 },
                 {
                     "url": "fuchsia-pkg://example.com/package3",
@@ -888,7 +960,8 @@ mod tests {
                             "key": RAW_PUBLIC_KEY_FOR_TEST,
                         },
                         "historical": []
-                    }
+                    },
+                    "minimum_required_version": "1.2.3.4"
                 }
             ]
         });
@@ -900,16 +973,19 @@ mod tests {
                         url: "fuchsia-pkg://example.com/package".parse().unwrap(),
                         executable: true,
                         public_keys: public_keys.clone(),
+                        minimum_required_version: [1, 2, 3, 4].into(),
                     },
                     EagerPackageConfig {
                         url: "fuchsia-pkg://example.com/package2".parse().unwrap(),
                         executable: false,
                         public_keys: public_keys.clone(),
+                        minimum_required_version: [1, 2, 3, 4].into(),
                     },
                     EagerPackageConfig {
                         url: "fuchsia-pkg://example.com/package3".parse().unwrap(),
                         executable: false,
                         public_keys,
+                        minimum_required_version: [1, 2, 3, 4].into(),
                     },
                 ]
             }
@@ -954,11 +1030,13 @@ mod tests {
                     url: url.clone(),
                     executable: true,
                     public_keys: make_default_public_keys_for_test(),
+                    minimum_required_version: [1, 2, 3, 4].into(),
                 },
                 EagerPackageConfig {
                     url: url2.clone(),
                     executable: false,
                     public_keys: make_default_public_keys_for_test(),
+                    minimum_required_version: [1, 2, 3, 4].into(),
                 },
             ],
         };
@@ -977,6 +1055,7 @@ mod tests {
         let cup2_response = get_cup_response(
             "fuchsia-pkg://example.com/",
             format!("package2?hash={}", "1".repeat(64)),
+            "1.2.3.4",
         );
         // this will fail to resolve because hash doesn't match
         let cup2: CupData = make_cup_data(&cup2_response);
@@ -1042,8 +1121,11 @@ mod tests {
         )
         .unwrap();
 
-        let cup_response =
-            get_cup_response("fuchsia-pkg://real.host.name/", format!("package?hash={TEST_HASH}"));
+        let cup_response = get_cup_response(
+            "fuchsia-pkg://real.host.name/",
+            format!("package?hash={TEST_HASH}"),
+            "1.2.3.4",
+        );
         let cup: CupData = make_cup_data(&cup_response);
         write_persistent_fidl(&data_proxy, [(url.clone(), cup.clone())]).await;
         let (manager, ()) = future::join(
@@ -1078,7 +1160,12 @@ mod tests {
         public_keys.latest.id = 777;
 
         let config = EagerPackageConfigs {
-            packages: vec![EagerPackageConfig { url: url.clone(), executable: true, public_keys }],
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys,
+                minimum_required_version: [1, 2, 3, 4].into(),
+            }],
         };
         let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
         let (cobalt_sender, mut cobalt_receiver) = get_mock_cobalt_sender();
@@ -1308,8 +1395,11 @@ mod tests {
             .data_proxy(data_proxy)
             .build()
             .await;
-        let cup_response =
-            get_cup_response("fuchsia-pkg://real.host.name/", format!("package?hash={TEST_HASH}"));
+        let cup_response = get_cup_response(
+            "fuchsia-pkg://real.host.name/",
+            format!("package?hash={TEST_HASH}"),
+            "1.2.3.4",
+        );
         let cup: CupData = make_cup_data(&cup_response);
 
         manager
@@ -1333,6 +1423,7 @@ mod tests {
                 url: url.clone(),
                 executable: true,
                 public_keys: make_default_public_keys_for_test(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             }],
         };
         let mut manager = TestEagerPackageManagerBuilder::default().config(config).build().await;
@@ -1343,6 +1434,26 @@ mod tests {
         );
         assert!(manager.packages[&url].package_directory.is_none());
         assert!(manager.packages[&url].cup.is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cup_write_too_old() {
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+
+        let mut manager = TestEagerPackageManagerBuilder::default().build().await;
+        let cup: CupData = make_cup_data(&get_cup_response(
+            "fuchsia-pkg://example.com/",
+            format!("package?hash={TEST_HASH}"),
+            "0.0.0.0",
+        ));
+        assert_matches!(
+            manager
+                .cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.clone().into())
+                .await,
+            Err(CupWriteError::RequestedVersionTooLow)
+        );
+        assert!(manager.packages[&url].package_directory.is_none());
+        assert_eq!(manager.packages[&url].cup, None);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1390,6 +1501,7 @@ mod tests {
                 url: url.clone(),
                 executable: true,
                 public_keys: make_default_public_keys_for_test(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             }],
         };
         let mut manager = TestEagerPackageManagerBuilder::default().config(config).build().await;
@@ -1403,5 +1515,146 @@ mod tests {
                 .await,
             Err(CupGetInfoError::CupResponseURLNotFound)
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_cup_and_package_directory() {
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+        let cache_packages = CachePackages::from_entries(vec![TEST_PINNED_URL.parse().unwrap()]);
+        let empty_cache_packages = CachePackages::from_entries(vec![]);
+        let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
+
+        let _handle = fasync::Task::spawn(handle_pkg_cache(pkg_cache_stream)).detach();
+
+        let mut ep = EagerPackage {
+            executable: true,
+            package_directory: None,
+            cup: None,
+            public_keys: make_default_public_keys_for_test(),
+            minimum_required_version: [1, 2, 3, 4].into(),
+        };
+
+        {
+            // If version in the response is malformed, expect a parse error.
+            let mut persistent_cup = HashMap::from([(
+                TEST_URL.to_string(),
+                make_cup_data(&get_cup_response(
+                    "fuchsia-pkg://example.com/",
+                    format!("package?hash={TEST_HASH}"),
+                    /*manifest_version=*/ "",
+                )),
+            )]);
+
+            assert_matches!(
+                ep.load_cup_and_package_directory(
+                    &url,
+                    &mut persistent_cup,
+                    &pkg_cache,
+                    &cache_packages,
+                )
+                .await,
+                Err(LoadError::VersionTooOldError(VersionTooOldError::ManifestVersionParseError(
+                    _
+                )))
+            );
+        }
+
+        {
+            // If the version in the response is too low, and we do not have the
+            // package in cached_packages, report the initial error.
+            let mut persistent_cup = HashMap::from([(
+                TEST_URL.to_string(),
+                make_cup_data(&get_cup_response(
+                    "fuchsia-pkg://example.com/",
+                    format!("package?hash={TEST_HASH}"),
+                    /*manifest_version=*/ "1.2.3.3",
+                )),
+            )]);
+
+            assert_matches!(
+                ep.load_cup_and_package_directory(
+                    &url,
+                    &mut persistent_cup,
+                    &pkg_cache,
+                    &empty_cache_packages,
+                )
+                .await,
+                Err(LoadError::RequestedVersionTooLow)
+            );
+        }
+
+        {
+            // If the version in the response is too low, and we do have the
+            // package in cached_packages, return that.
+            let mut persistent_cup = HashMap::from([(
+                TEST_URL.to_string(),
+                make_cup_data(&get_cup_response(
+                    "fuchsia-pkg://example.com/",
+                    format!("package?hash={TEST_HASH}"),
+                    /*manifest_version=*/ "1.2.3.3",
+                )),
+            )]);
+
+            assert_matches!(
+                ep.load_cup_and_package_directory(
+                    &url,
+                    &mut persistent_cup,
+                    &pkg_cache,
+                    &cache_packages,
+                )
+                .await,
+                Ok(PackageSource::CachePackages)
+            );
+        }
+
+        {
+            // If version in the response is the same as the minimum required
+            // version (as set by the manifest_version), expect to load CUP
+            // successfully.
+            let mut persistent_cup = HashMap::from([(
+                TEST_URL.to_string(),
+                make_cup_data(&get_cup_response(
+                    "fuchsia-pkg://example.com/",
+                    format!("package?hash={TEST_HASH}"),
+                    /*manifest_version=*/ "1.2.3.4",
+                )),
+            )]);
+
+            assert_matches!(
+                ep.load_cup_and_package_directory(
+                    &url,
+                    &mut persistent_cup,
+                    &pkg_cache,
+                    &cache_packages,
+                )
+                .await,
+                Ok(PackageSource::Cup)
+            );
+        }
+
+        {
+            // If version in the response is greater than the minimum required
+            // version (as set by the manifest_version), expect to load CUP
+            // successfully.
+            let mut persistent_cup = HashMap::from([(
+                TEST_URL.to_string(),
+                make_cup_data(&get_cup_response(
+                    "fuchsia-pkg://example.com/",
+                    format!("package?hash={TEST_HASH}"),
+                    /*manifest_version=*/ "1.2.3.5",
+                )),
+            )]);
+
+            assert_matches!(
+                ep.load_cup_and_package_directory(
+                    &url,
+                    &mut persistent_cup,
+                    &pkg_cache,
+                    &cache_packages,
+                )
+                .await,
+                Ok(PackageSource::Cup)
+            );
+        }
     }
 }

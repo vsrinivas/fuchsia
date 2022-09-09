@@ -5,7 +5,7 @@
 use {
     crate::CachePackagesInitError,
     fuchsia_hash::Hash,
-    fuchsia_url::{AbsolutePackageUrl, PinnedAbsolutePackageUrl},
+    fuchsia_url::{AbsolutePackageUrl, PinnedAbsolutePackageUrl, UnpinnedAbsolutePackageUrl},
     serde::{Deserialize, Serialize},
 };
 
@@ -66,6 +66,13 @@ impl CachePackages {
         }
         let content = Packages { version: "1".to_string(), content: self.contents.clone() };
         serde_json::to_writer(writer, &content)
+    }
+
+    pub fn find_unpinned_url(
+        &self,
+        url: &UnpinnedAbsolutePackageUrl,
+    ) -> Option<&PinnedAbsolutePackageUrl> {
+        self.contents().find(|pinned_url| pinned_url.as_unpinned() == url)
     }
 }
 

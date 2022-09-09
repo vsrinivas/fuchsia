@@ -15,6 +15,7 @@ use {
     omaha_client::cup_ecdsa::PublicKeys,
     serde::{Deserialize, Serialize},
     std::collections::{BTreeMap, HashSet},
+    version::Version,
 };
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
@@ -63,6 +64,8 @@ pub struct InputConfig {
     realms: Vec<Realm>,
     /// The URL of the Omaha server.
     service_url: String,
+    /// The minimum required version of the package.
+    minimum_required_version: Version,
 }
 
 pub fn generate_omaha_client_config(
@@ -137,6 +140,7 @@ pub fn generate_pkg_resolver_config(
                     i.service_url
                 ))
                 .clone(),
+            minimum_required_version: i.minimum_required_version,
         })
         .collect();
     if packages.iter().map(|config| config.url.path()).collect::<HashSet<_>>().len()
@@ -186,6 +190,7 @@ pub mod test_support {
                     Realm { app_id: "2b3c4d5e".to_string(), channels: vec!["test".to_string()] },
                 ],
                 service_url: "https://example.com".to_string(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             },
             InputConfig {
                 url: "fuchsia-pkg://example.com/package_service_2".parse().unwrap(),
@@ -197,6 +202,7 @@ pub mod test_support {
                     channels: vec!["stable".to_string()],
                 }],
                 service_url: "https://example.com".to_string(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             },
             InputConfig {
                 url: "fuchsia-pkg://example.com/package_otherservice_1".parse().unwrap(),
@@ -208,6 +214,7 @@ pub mod test_support {
                     channels: vec!["stable".to_string()],
                 }],
                 service_url: "https://other_example.com".to_string(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             },
             InputConfig {
                 url: "fuchsia-pkg://example.com/package_otherservice_2".parse().unwrap(),
@@ -219,6 +226,7 @@ pub mod test_support {
                     channels: vec!["stable".to_string()],
                 }],
                 service_url: "https://other_example.com".to_string(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             },
         ]
     }
@@ -327,7 +335,8 @@ mod tests {
                           "check_interval_secs": null
                         }
                       ]
-                    }
+                    },
+                    "minimum_required_version": "1.2.3.4"
                   },
                   {
                     "url": "fuchsia-pkg://example.com/package_service_2",
@@ -342,7 +351,8 @@ mod tests {
                           "check_interval_secs": null
                         }
                       ]
-                    }
+                    },
+                    "minimum_required_version": "1.2.3.4"
                   }
                 ]
               },
@@ -371,7 +381,8 @@ mod tests {
                           "check_interval_secs": null
                         }
                       ]
-                    }
+                    },
+                    "minimum_required_version": "1.2.3.4"
                   },
                   {
                     "url": "fuchsia-pkg://example.com/package_otherservice_2",
@@ -386,7 +397,8 @@ mod tests {
                           "check_interval_secs": null
                         }
                       ]
-                    }
+                    },
+                    "minimum_required_version": "1.2.3.4"
                   }
                 ]
               }
@@ -412,6 +424,7 @@ mod tests {
                 channels: vec!["stable".to_string(), "beta".to_string(), "alpha".to_string()],
             }],
             service_url: "https://example.com".to_string(),
+            minimum_required_version: [1, 2, 3, 4].into(),
         }];
         let _omaha_client_config = generate_omaha_client_config(&configs, &key_config);
     }
@@ -429,6 +442,7 @@ mod tests {
                 channels: vec!["stable".to_string(), "beta".to_string(), "alpha".to_string()],
             }],
             service_url: "https://example.com".to_string(),
+            minimum_required_version: [1, 2, 3, 4].into(),
         }];
         let pkg_resolver_config = generate_pkg_resolver_config(&configs, &key_config);
         let expected = r#"{
@@ -442,7 +456,8 @@ mod tests {
                             "id": 42
                         },
                         "historical": []
-                    }
+                    },
+                    "minimum_required_version": "1.2.3.4"
                 }
             ]
         }"#;
@@ -467,6 +482,7 @@ mod tests {
                     channels: vec!["stable".to_string(), "beta".to_string(), "alpha".to_string()],
                 }],
                 service_url: "https://example.com".to_string(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             },
             InputConfig {
                 url: "fuchsia-pkg://another-example.com/package_service_1".parse().unwrap(),
@@ -475,6 +491,7 @@ mod tests {
                 executable: None,
                 realms: vec![],
                 service_url: "https://example.com".to_string(),
+                minimum_required_version: [1, 2, 3, 4].into(),
             },
         ];
         let _ = generate_pkg_resolver_config(&configs, &key_config);

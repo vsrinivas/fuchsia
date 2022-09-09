@@ -6,6 +6,7 @@ use {
     fuchsia_url::UnpinnedAbsolutePackageUrl,
     omaha_client::cup_ecdsa::PublicKeys,
     serde::{Deserialize, Serialize},
+    version::Version,
 };
 
 #[cfg(target_os = "fuchsia")]
@@ -28,6 +29,7 @@ pub struct EagerPackageConfig {
     #[serde(default)]
     pub executable: bool,
     pub public_keys: PublicKeys,
+    pub minimum_required_version: Version,
 }
 
 #[cfg(target_os = "fuchsia")]
@@ -112,7 +114,8 @@ mod tests {
             "packages":[
                 {
                     "url": "fuchsia-pkg://example.com/package_service_1",
-                    "public_keys": make_default_json_public_keys_for_test()
+                    "public_keys": make_default_json_public_keys_for_test(),
+                    "minimum_required_version": "1.2.3.4"
                 }
             ]
         });
@@ -122,7 +125,8 @@ mod tests {
                 packages: vec![EagerPackageConfig {
                     url: "fuchsia-pkg://example.com/package_service_1".parse().unwrap(),
                     executable: false,
-                    public_keys: make_default_public_keys_for_test()
+                    public_keys: make_default_public_keys_for_test(),
+                    minimum_required_version: [1, 2, 3, 4].into(),
                 }]
             }
         );
@@ -134,11 +138,13 @@ mod tests {
             "packages":[
                 {
                     "url": "fuchsia-pkg://example.com/package_service_1",
-                    "public_keys": make_default_json_public_keys_for_test()
+                    "public_keys": make_default_json_public_keys_for_test(),
+                    "minimum_required_version": "1.2.3.4"
                 },
                 {
                     "url": "fuchsia-pkg://another-example.com/package_service_1",
-                    "public_keys": make_default_json_public_keys_for_test()
+                    "public_keys": make_default_json_public_keys_for_test(),
+                    "minimum_required_version": "1.2.3.4"
                 }
             ]
         });

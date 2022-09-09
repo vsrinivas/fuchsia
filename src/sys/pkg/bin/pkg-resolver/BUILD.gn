@@ -49,6 +49,7 @@ rustc_library("lib") {
     "//src/sys/pkg/lib/metrics:cobalt_sw_delivery_registry_rustlib",
     "//src/sys/pkg/lib/omaha-client",
     "//src/sys/pkg/lib/system-image",
+    "//src/sys/pkg/lib/version",
     "//src/sys/pkg/lib/work-queue",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
