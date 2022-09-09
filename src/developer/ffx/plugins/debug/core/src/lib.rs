@@ -47,7 +47,7 @@ pub async fn core(rcs: RemoteControlProxy, cmd: ffx_debug_core_args::CoreCommand
     }
 }
 
-// Must be kept in sync with //src/sys/appmgr/config/core_component_id_index.json5.
+// Must be kept in sync with //src/sys/core/core_component_id_index.json5.
 const STORAGE_ID: &str = "eb345fb7dcaa4260ee0c65bb73ef0ec5341b15a4f603f358d6631c4be6bf7080";
 
 struct File {

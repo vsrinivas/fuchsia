@@ -573,7 +573,7 @@ specific features your components may support:
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [dynamic-children]: /docs/concepts/components/v2/realms.md#dynamic-children
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
-[example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
+[example-component-id-index]: /src/sys/core/core_component_id_index.json5
 [fdio_fd_null_create]: /sdk/lib/fdio/include/lib/fdio/fdio.h#48
 [manifests-shard]: /docs/development/components/build.md#component-manifest-shards
 [migrate-components]: /docs/development/components/v2/migration/components.md

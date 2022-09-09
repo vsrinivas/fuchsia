@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/component/component_id_index.gni")
 import("//build/components.gni")
 import("//build/dist/resource.gni")
 import("//build/rust/rustc_binary.gni")
@@ -38,6 +39,13 @@ core_shard("core-env-full-resolver") {
 # This shard gives components access to the base resolver.
 core_shard("core-env-base-resolver") {
   shard_file = "meta/core-env-base-resolver.core_shard.cml"
+}
+
+# This index contains component ID entries for components whose source-code
+# lives in this repository (fuchsia.git).
+# See: https://fuchsia.dev/fuchsia-src/development/components/component_id_index
+component_id_index("core_component_id_index") {
+  source = "core_component_id_index.json5"
 }
 
 executable("core_proxy") {

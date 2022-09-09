@@ -255,11 +255,11 @@ core_shard("appmgr_core_shard") {
   shard_file = "meta/appmgr.core_shard.cml"
 }
 
-# Supply a component ID index to appmgr. This index contains component ID
-# entries for components whose source-code lives in this repository
-# (fuchsia.git).
-component_id_index("core_component_id_index") {
-  source = "config/core_component_id_index.json5"
+# //src/sys/core:core_component_id_index but with extra steps.
+# Left here for transitional purposes.
+# (it's easier to just delete appmgr than to port out-of-tree deps)
+group("core_component_id_index") {
+  deps = [ "//src/sys/core:core_component_id_index" ]
 }
 
 # If this target is included in the build, all components are allowed to use

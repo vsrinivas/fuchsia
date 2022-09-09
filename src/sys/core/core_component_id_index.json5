@@ -115,7 +115,7 @@
         },
         {
             instance_id: "146cb8d457bc5856dffa25ad0ee38c17585c436915128283f3bb6dbf0e9c7c63",
-            moniker: "/core/compute-benchmarks"
+            moniker: "/core/compute-benchmarks",
         },
     ],
 }

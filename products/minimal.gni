@@ -50,6 +50,7 @@ legacy_base_package_labels += [
   "//src/connectivity/network/mdns/bundles:services",
   "//src/connectivity/network/netcfg:config-default",
   "//src/connectivity/network",
+  "//src/sys/core:core_component_id_index",
 
   # TODO(https://fxbug.dev/85821): remove once out-of-tree users no longer
   # reference v1 components.
