@@ -165,6 +165,9 @@ int main(int argc, char** argv) {
     }
   }
   std::string root_driver = "fuchsia-boot:///#driver/platform-bus.so";
+  if (driver_manager_params.use_dfv2) {
+    root_driver = "fuchsia-boot:///#meta/platform-bus.cm";
+  }
   if (!driver_manager_params.root_driver.empty()) {
     root_driver = driver_manager_params.root_driver;
   }

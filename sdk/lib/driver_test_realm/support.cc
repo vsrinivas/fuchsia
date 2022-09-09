@@ -518,7 +518,11 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
       boot_args["driver_manager.root-driver"] =
           std::string(request->args.root_driver().data(), request->args.root_driver().size());
     } else {
-      boot_args["driver_manager.root-driver"] = "fuchsia-boot:///#driver/test-parent-sys.so";
+      if (is_dfv2) {
+        boot_args["driver_manager.root-driver"] = "fuchsia-boot:///#meta/test-parent-sys.cm";
+      } else {
+        boot_args["driver_manager.root-driver"] = "fuchsia-boot:///#driver/test-parent-sys.so";
+      }
     }
 
     if (request->args.has_driver_tests_enable_all() && request->args.driver_tests_enable_all()) {
