@@ -2,24 +2,25 @@
 
 ## Checklist
 
-1.  Use [TestWithEnvironment](/sdk/lib/sys/cpp/testing/test_with_environment.h)
-    to ensure that each test runs with a fresh component topology.
-1.  Do not use CMX `injected-services` to construct component topology. (It
+1.  Use RealmBuilder to ensure that your tests are running with a new instance
+    of component topology with each run. Use gtest::RealLoopFixture for creating
+    your test fixture. If you want your tests to be CTS compatible, use
+    zxtest::Test instead.
+2.  Do not use CML `injected-services` to construct component topology. (It
     shares the same component instances between different test runs.)
-1.  Set up `fuchsia.hardware.display.Provider` to be vended by
-    `fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"`,
-    and bundle `fake-hardware-display-controller` with your test package.
-1.  Bundle [Root Presenter](/src/ui/bin/root_presenter/BUILD.gn)'s
-    `component_v1_for_test` with the test's package. It prevents the actual
-    input driver from interacting with the test. Invoke Root Presenter from the
-    test package's URL. E.g.,
+3.  Set up `fuchsia.hardware.display.Provider` by
+    bundling[`fake-hardware-display-controller-provider-cmv2-component`](https://cs.opensource.google/fuchsia/fuchsia/+/master:src/ui/bin/hardware_display_controller_provider/BUILD.gn;l=29)
+    with the test package.
+4.  Create a CFv2 wrapper component for `Root Presenter` around its CFv1
+    component `component_v1_for_test`. Bundle this component with the test
+    package. It prevents the actual input driver from interacting with the test.
+    Invoke Root Presenter from the test package's URL. E.g.,
     `fuchsia-pkg://touch-input-test#meta/root_presenter.cmx`.
-1.  Bundle [Scenic](/src/ui/scenic/BUILD.gn)'s `component` with the test's
+5.  Bundle [Scenic](/src/ui/scenic/BUILD.gn)'s `component_v2` with the test's
     package. It ensures that the test uses the Scenic it was built with. Invoke
-    Scenic from the test package's URL. E.g.,
-    `fuchsia-pkg://touch-input-test#meta/scenic.cmx`.
-1.  Don't invoke components from *another* test's package!
-1.  No sleeps or waits, unless the API is deficient. Every action by the test is
+    Scenic using the relative URL. E.g., `#meta/scenic.cm`.
+6.  Don't invoke components from *another* test's package!
+7.  No sleeps or waits, unless the API is deficient. Every action by the test is
     gated on a logical condition that the test can observe. E.g., inject touch
     events only when the test observes the child view is actually connected to
     the view tree and vending content to hit.
@@ -135,8 +136,8 @@ tests.
 ## Prefer hermeticity
 
 Various types of
-[hermeticity](/docs/concepts/testing/v2/test_runner_framework#hermeticity)
-make our tests more reliable.
+[hermeticity](/docs/concepts/testing/v2/test_runner_framework#hermeticity) make
+our tests more reliable.
 
 ### Package hermeticity
 
@@ -161,9 +162,9 @@ the display rotation in Root Presenter is conveyed with config-data.
 ### Environment hermeticity
 
 All components in the test should be brought up and torn down in a custom
-Fuchsia environment. For example, in Components Framework v1, the
-"TestWithEnvironment" fixture allows the test to construct the precise
-environment it needs for the test to run properly.
+Fuchsia environment. In component framework v2, the RealmBuilder is responsible
+for rebuilding the component topology for each test run and shutting down the
+components in an ordered manner.
 
 This practice forces component state to be re-initialized on each run of the
 test, thereby preventing inter-test state pollution.
@@ -179,9 +180,9 @@ The advantages of doing so are:
 
 #### No to `injected-services`
 
-In component framework v1, it's possible to declare
-[`injected-services`](/docs/concepts/testing/v1_test_component#integration_testing)
-in a test's CMX manifest. Declaring `injected-services` is somewhat of an
+In component framework v2, it's possible to declare
+[`injected-services`](https://fuchsia.dev/fuchsia-src/development/components/v2/migration/tests?hl=en#injected-services)
+in a test's CML manifest. Declaring `injected-services` is somewhat of an
 anti-pattern. It, too, also constructs a test environment, but *all the test
 executions* run in the *same environment*. If a service component had dirtied
 state, a subsequent `TEST_F` execution will inadvertently run against that
@@ -246,175 +247,72 @@ specific actions, like accessibility color adjustments, will not be accurately
 portrayed in a visual screenshot, because the color adjustment takes place in
 hardware, below Scenic.
 
-### GFX is hard
+## Using the View Observer Protocol
 
-For [GFX](/sdk/fidl/fuchsia.ui.scenic/session.fidl) in particular, nested views
-are particularly difficult to synchronize. The key difficulty is that a client
-needs two discrete pieces of information, relative view size and pixel metrics,
-to construct a correctly scaled content on a particular physical screen, but GFX
-conveys the view metrics only *after* the view is already "linked up" to the
-global scene graph. So from the parent view's perspective, child view
-connectivity cannot imply the child view's content has rendered to screen.
-
-A workaround signal,
-[`fuchsia.ui.gfx.ViewState.is_rendering`](/sdk/fidl/fuchsia.ui.gfx/types.fidl),
-tells the parent view that something in the child view started rendering actual
-content. This is actually sufficient for a single-depth child view, when the
-child's content is simple. In fact, some input tests rely on this signal to
-successfully gate input injection. But for a child view that actually consists
-of a 2+ view hierarchy, the `is_rendering` signal does not say *which* views in
-the child view hierarchy have rendered content, only that *some* descendant view
-has rendered content to screen.
-
-For client views that have direct access to the GFX API, it's possible to
-construct a tower of signals along the child view hierarchy, but this is
-fragile, complex, and subtle. It is also not feasible for clients that employ a
-runner, like web clients. (The web runner internally constructs a parent view
-and a child view for security.) From the test's perspective, such a client will
-not generate a reliable signal in the GFX API.
-
-### Flatland makes it easier
-
-The upcoming Flatland API, in contrast, solves this problem with a sophisticated
-linkage system, where scene graph connectivity is made independent of view
-metrics. That is, a parent view can send a child view the correct view metrics
-*prior* to the child view actually connecting to the global scene graph. Then,
-when the child view has finished preparing the rendered content, it can connect
-to the global scene graph in an atomic step, without revealing intermediate
-content construction phases (for example, nested content in a view hierarchy).
-
-### Test setup - one GFX child view
-
-For a single GFX child view, the test can set up a "interceptor" or "proxy"
-view, to harvest the
-[`fuchsia.ui.gfx.ViewState.is_rendering`](/sdk/fidl/fuchsia.ui.gfx/types.fidl)
-signal from Scenic. Then subsequent actions, such as injecting touch events, can
-be reliably performed, with good assumptions about the child's graphical
-content.
-
-An example is how `touch-input-test.cc` sets up `touch-gfx-client` in
-[`TouchInputTest.CppGfxClientTap`](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc#395).
-Here, the test sets up its own Scenic view, links the child's view underneath
-its own, and waits for the child view to connect, using it as a gate for touch
-injection.
-
-Advantages:
-
-*   Programmatically correct use of APIs
-*   Reliable
-*   Fast, minimal computational disturbance; good for performance work
-
-Disadvantages:
-
-*   Setup and control flow can be delicate to manage
-
-### Test setup - child is a GFX view hierarchy
-
-For a stacked view hierarchy, current best practice is still to set up an
-interceptor view, and gate subsequent actions on the `ViewState.is_rendering`
-signal. However, the signal merely indicates that at least one of the child
-views in the hierarchy started rendering content; for some scenarios, like
-Chromium, this is not a sufficiently robust gating mechanism. That is, the
-signal is a little too early, since the test actually needs both child view and
-grandchild view to be in a rendering state.
-
-To work around this nondeterminism, the subsequent action (touch injection)
-needs to run in a loop, until all descendant views have published their content
-to the scene graph. For example, for `TouchInputTest.ChromiumTap`, the test
-issues a repeated "tap-tap-tap" until it sees the client respond in an expected
-way.
-
-Advantages: same as above
-
-Disadvantages:
-
-*   Can't manage a child view hierarchy in a completely deterministic way.
-
-### Test setup - gate on screenshot histogram
-
-An alternate synchronization scheme is to set up the scene with various
-predefined colors, which may get toggled in response to actions, such as touch
-input. The test requests screenshots in succession, until the desired color
-condition is reached, by counting the number of pixels in each color value (a
-"histogram"). For example, if the child view is expected to present a red
-rectangle, the test will loop until the histogram returns predominantly red, and
-then perform a subsequent action.
-
-Advantages:
-
-*   The resulting test code is nicely linear in control flow, and easy to grasp
-    at a high level.
-*   Works with arbitrarily deep child hierarchies, assuming a good enough color
-    scheme.
-
-Disadvantages:
-
-*   The color scheme has to be relatively simple, and the reader needs to
-    understand the scheme.
-*   Heavyweight and slow, due to all those screenshots taken.
-*   Scenic actually has to work to generate those screenshots, so it can skew
-    tests used for performance analysis.
-*   Not completely foolproof. Flakes can still happen.
-*   Screenshotting is a grandfathered global-scope capability (see
-    [`fuchsia.ui.scenic.Scenic`](/sdk/fidl/fuchsia.ui.scenic/scenic.fidl#89)),
-    and it will be more tightly controlled in the future.
-
-Example: see
-[`FlutterEmbedderTests.Embedding`](/src/ui/tests/integration_flutter_tests/embedder/flutter-embedder-test.cc).
-
-### Test setup - one Flatland child view (TBD)
+Use `fuchsia.ui.observation.geometry.Provider` to correctly know when a view is
+present in the scene graph. Refer [here](/src/ui/tests/view_observer_guide.md)
+for more details on how to use the API
 
 ### Test setup - Realm Builder
 
-The [Touch Input Test](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc)
-is constructed using the Realm Builder [library](/docs/development/testing/components/realm_builder).
-This library is used to construct the test [Realm](/docs/concepts/components/v2/realms)
-in which the components under test operate. The test suite, hereafter test
-driver component, is a v2 component. This is in contrast to the components in
-the constructed realm, e.g. `scenic`, that are at the moment v1 components. This
-is so because Realm Builder provides a v1 "bridge" that allows for Realms
+The
+[Touch Input Test](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc)
+is constructed using the Realm Builder
+[library](/docs/development/testing/components/realm_builder). This library is
+used to construct the test [Realm](/docs/concepts/components/v2/realms) in which
+the components under test operate. The test suite, hereafter test driver
+component, is a v2 component. This is in contrast to the components in the
+constructed realm, e.g. `scenic`, that are at the moment v1 components. This is
+so because Realm Builder provides a v1 "bridge" that allows for Realms
 constructed to include v1 and v2 components.
 
-Realm Builder (and CFv2 in general) allows us to be explicit about what capabilities
-are routed to and from components. This is crucial for testing because it allows
-test authors to have fine-grained control over the test environment of their
-components. Take for example `scenic`. In `touch-input-test`, a handle to
-`fuchsia.hardware.display.Provider` from `fake-hardware-display-controller-provider#meta/hdcp.cmx`
-is routed. By providing a fake hardware display provider, we can write integration
-tests without having to use the real display controller. This mapping of
-source and target is explicitly written in the test [file](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc)
-during Realm construction.
+Realm Builder (and CFv2 in general) allows us to be explicit about what
+capabilities are routed to and from components. This is crucial for testing
+because it allows test authors to have fine-grained control over the test
+environment of their components. Take for example `scenic`. In
+`touch-input-test`, a handle to `fuchsia.hardware.display.Provider` from
+`fake-hardware-display-controller-provider#meta/hdcp.cmx` is routed. By
+providing a fake hardware display provider, we can write integration tests
+without having to use the real display controller. This mapping of source and
+target is explicitly written in the test
+[file](/src/ui/tests/integration_input_tests/touch/touch-input-test.cc) during
+Realm construction.
 
-Since the Realm is populated by v1 components at the moment, it's worth mentioning
-how this works at a high level. Components added to a Realm constructed with
-Realm Builder work in the same way as typical Realm construction statically. In other
-words, Realm Builder doesn't do anything special. It simply allows for the construction
-of Realms at runtime, instead of statically via manifests. It generates the
-necessary manifests and clauses, e.g. offer capability foo to #child-a, behind
-the scene when a user invokes a method like `realm_builder->AddRoute(...)`. For
-v1 components, this is somewhat still true. The major difference is that Realm
-Builder constructs a wrapper v2 component to launch a v1 component. When the
-wrapper component is started, it launches the v1 component by creating a
-singleton `fuchsia.sys.NestedEnvironment`. This NestedEnvironment will only
-contain the v1 component, and won't contain any services except for those
-explicitly routed to it during Realm construction.
+Since the Realm is populated by v1 components at the moment, it's worth
+mentioning how this works at a high level. Components added to a Realm
+constructed with Realm Builder work in the same way as typical Realm
+construction statically. In other words, Realm Builder doesn't do anything
+special. It simply allows for the construction of Realms at runtime, instead of
+statically via manifests. It generates the necessary manifests and clauses, e.g.
+offer capability foo to #child-a, behind the scene when a user invokes a method
+like `realm_builder->AddRoute(...)`. For v1 components, this is somewhat still
+true. The major difference is that Realm Builder constructs a wrapper v2
+component to launch a v1 component. When the wrapper component is started, it
+launches the v1 component by creating a singleton
+`fuchsia.sys.NestedEnvironment`. This NestedEnvironment will only contain the v1
+component, and won't contain any services except for those explicitly routed to
+it during Realm construction.
 
 A sample diagram of a Realm constructed with RealmBuilder would look like:
 
-        <root>
-        /    \
-  <wrapper>  <wrapper>
-    /            \
-scenic.cmx    root_presenter.cmx
+```
+    <root>
+    /    \
+```
 
+<wrapper> <wrapper> / \
+scenic.cmx root_presenter.cmx
 
 In production, the environment would look more like:
 
-     <appmgr>
-         |
-     <modular>
-     /       \
-scenic.cmx  root_presenter.cmx
+```
+ <appmgr>
+     |
+ <modular>
+ /       \
+```
+
+scenic.cmx root_presenter.cmx
 
 ## Modeling complex scenarios
 
@@ -445,6 +343,6 @@ patterns to make sure the APIs are sensible and usable, and serve as as a
 foundation for converting an entire product.
 
 *   For example, converting a product to
-    [Session Framework](/docs/concepts/session/introduction) has many
-    moving parts, and validating specific graphics scenarios builds confidence
-    in APIs, implementations, and migration strategy.
+    [Session Framework](/docs/concepts/session/introduction) has many moving
+    parts, and validating specific graphics scenarios builds confidence in APIs,
+    implementations, and migration strategy.
