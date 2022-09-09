@@ -105,16 +105,16 @@ impl Driver for DummyDevice {
         Ok(Some(Credential::NetworkKey(res)))
     }
 
-    async fn get_factory_mac_address(&self) -> ZxResult<Vec<u8>> {
+    async fn get_factory_mac_address(&self) -> ZxResult<MacAddress> {
         fx_log_info!("Got get_factory_mac_address command");
 
-        Ok(vec![0, 1, 2, 3, 4, 5, 6, 7])
+        Ok(MacAddress { octets: [0, 1, 2, 3, 4, 5, 6, 7] })
     }
 
-    async fn get_current_mac_address(&self) -> ZxResult<Vec<u8>> {
+    async fn get_current_mac_address(&self) -> ZxResult<MacAddress> {
         fx_log_info!("Got get_current_mac_address command");
 
-        Ok(vec![0, 1, 2, 3, 4, 5, 6, 7])
+        Ok(MacAddress { octets: [0, 1, 2, 3, 4, 5, 6, 7] })
     }
 
     fn start_energy_scan(
@@ -190,7 +190,9 @@ impl Driver for DummyDevice {
                         ..Identity::EMPTY
                     }),
                     rssi: Some(-40),
-                    address: Some(vec![0x02, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05]),
+                    address: Some(MacAddress {
+                        octets: [0x02, 0x00, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05],
+                    }),
                     ..BeaconInfo::EMPTY
                 }])
                 .into_stream(),
@@ -208,7 +210,9 @@ impl Driver for DummyDevice {
                             ..Identity::EMPTY
                         }),
                         rssi: Some(-60),
-                        address: Some(vec![0x02, 0x00, 0x00, 0x00, 0x00, 0x03, 0x13, 0x37]),
+                        address: Some(MacAddress {
+                            octets: [0x02, 0x00, 0x00, 0x00, 0x00, 0x03, 0x13, 0x37],
+                        }),
                         ..BeaconInfo::EMPTY
                     },
                     BeaconInfo {
@@ -221,7 +225,9 @@ impl Driver for DummyDevice {
                             ..Identity::EMPTY
                         }),
                         rssi: Some(-26),
-                        address: Some(vec![0x02, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef]),
+                        address: Some(MacAddress {
+                            octets: [0x02, 0x00, 0x00, 0x00, 0xde, 0xad, 0xbe, 0xef],
+                        }),
                         ..BeaconInfo::EMPTY
                     },
                 ])
@@ -310,7 +316,9 @@ impl Driver for DummyDevice {
         Ok(MacAddressFilterSettings {
             mode: Some(MacAddressFilterMode::Allow),
             items: Some(vec![MacAddressFilterItem {
-                mac_address: Some(vec![0xFF, 0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33, 0xFF]),
+                mac_address: Some(MacAddress {
+                    octets: [0xFF, 0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33, 0xFF],
+                }),
                 rssi: Some(8),
                 ..MacAddressFilterItem::EMPTY
             }]),
@@ -320,7 +328,9 @@ impl Driver for DummyDevice {
 
     async fn get_neighbor_table(&self) -> ZxResult<Vec<NeighborInfo>> {
         return Ok(vec![NeighborInfo {
-            mac_address: Some(vec![0xFF, 0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33, 0xFF]),
+            mac_address: Some(MacAddress {
+                octets: [0xFF, 0xAA, 0xBB, 0xCC, 0x11, 0x22, 0x33, 0xFF],
+            }),
             short_address: Some(8),
             age: Some(10042934),
             is_child: Some(true),

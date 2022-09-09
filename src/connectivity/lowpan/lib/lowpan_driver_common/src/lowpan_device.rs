@@ -117,12 +117,12 @@ pub trait Driver: Send + Sync {
     /// Returns the factory-assigned static MAC address for this device.
     ///
     /// See [`fidl_fuchsia_lowpan_test::DeviceTest::get_factory_mac_address`] for more information.
-    async fn get_factory_mac_address(&self) -> ZxResult<Vec<u8>>;
+    async fn get_factory_mac_address(&self) -> ZxResult<MacAddress>;
 
     /// Returns the currently assigned MAC address for this device.
     ///
     /// See [`fidl_fuchsia_lowpan_test::DeviceTest::get_current_mac_address`] for more information.
-    async fn get_current_mac_address(&self) -> ZxResult<Vec<u8>>;
+    async fn get_current_mac_address(&self) -> ZxResult<MacAddress>;
 
     /// Returns the NCP/Stack version string for this device.
     ///
@@ -485,8 +485,8 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
                     let responder = ResponderNoShutdown::wrap(responder);
                     self.get_current_mac_address()
                         .err_into::<Error>()
-                        .and_then(|response| {
-                            ready(responder.unwrap().send(&response).map_err(Error::from))
+                        .and_then(|mut response| {
+                            ready(responder.unwrap().send(&mut response).map_err(Error::from))
                         })
                         .await
                         .context("error in get_current_mac_address request")?;
@@ -900,8 +900,8 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
                     let responder = ResponderNoShutdown::wrap(responder);
                     self.get_factory_mac_address()
                         .err_into::<Error>()
-                        .and_then(|response| {
-                            ready(responder.unwrap().send(&response).map_err(Error::from))
+                        .and_then(|mut response| {
+                            ready(responder.unwrap().send(&mut response).map_err(Error::from))
                         })
                         .await
                         .context("error in get_factory_mac_address request")?;
@@ -910,8 +910,8 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
                     let responder = ResponderNoShutdown::wrap(responder);
                     self.get_current_mac_address()
                         .err_into::<Error>()
-                        .and_then(|response| {
-                            ready(responder.unwrap().send(&response).map_err(Error::from))
+                        .and_then(|mut response| {
+                            ready(responder.unwrap().send(&mut response).map_err(Error::from))
                         })
                         .await
                         .context("error in get_current_mac_address request")?;

@@ -79,7 +79,7 @@ impl JoinCommand {
         self.xpanid
             .as_ref()
             .map(|value| {
-                let res = hex::decode(value.to_string())?.to_vec();
+                let res = hex::decode(value.to_string())?;
                 if res.len() != PROVISION_CMD_XPANID_LEN {
                     return Err(format_err!("xpanid has to be 8 bytes"));
                 }
@@ -92,7 +92,7 @@ impl JoinCommand {
         self.credential_master_key
             .as_ref()
             .map(|value| {
-                let res: Vec<u8> = hex::decode(value.to_string())?.to_vec();
+                let res = hex::decode(value.to_string())?;
                 if res.len() != PROVISION_CMD_CRED_MASTER_LEY_LEN[0]
                     && res.len() != PROVISION_CMD_CRED_MASTER_LEY_LEN[1]
                 {

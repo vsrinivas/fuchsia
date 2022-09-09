@@ -11,14 +11,6 @@ use crate::prelude::*;
 pub struct GetNeighborTableCommand {}
 
 impl GetNeighborTableCommand {
-    fn get_hex_string(&self, vec: &Vec<u8>) -> String {
-        let mut string = String::from("");
-        for item in vec {
-            string.push_str(&format!("{:02X}", item)[..]);
-        }
-        string
-    }
-
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
         let device_test_proxy = context
             .get_default_device_test_proxy()
@@ -31,7 +23,7 @@ impl GetNeighborTableCommand {
         println!("|      MacAddr     |  ShortAddr |    Age   | IsChild | LinkFrameCnt | MgmtFrameCnt |  LastRssiIn  | AvgRssiIn|  LqiIn |  Mode |");
 
         for item in result {
-            let mac_address = format!("{:^16}", self.get_hex_string(&item.mac_address.unwrap()));
+            let mac_address = format!("{:^16}", get_hex_string(&item.mac_address.unwrap().octets));
             let short_address = format!(
                 "{:^10}",
                 item.short_address.map(|x| format!("0x{:04X}", x)).unwrap_or("".to_string())

@@ -45,6 +45,16 @@ mod prelude {
     pub use fuchsia_async as fasync;
     pub use fuchsia_component::client::connect_to_protocol;
     pub use std::convert::TryInto as _;
+
+    pub fn get_hex_string(bytes: &[u8]) -> String {
+        use std::fmt::Write as _;
+
+        let mut s = String::new();
+        for byte in bytes {
+            write!(&mut s, "{:02x}", byte).expect("infallible");
+        }
+        s
+    }
 }
 
 use context::*;

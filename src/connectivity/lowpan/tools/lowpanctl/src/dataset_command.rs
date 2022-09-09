@@ -29,13 +29,14 @@ enum DatasetFormat {
 
 impl std::str::FromStr for DatasetFormat {
     type Err = anyhow::Error;
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         if s == "raw" || s == "tlv" || s == "tlvs" {
             Ok(DatasetFormat::RawTlvs)
         } else if s == "rust" {
             Ok(DatasetFormat::Rust)
         } else {
-            Err(anyhow::format_err!("Unknown format {:?}", s))
+            Err(format_err!("Unknown format {:?}", s))
         }
     }
 }

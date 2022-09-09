@@ -1,10 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+use fidl_fuchsia_lowpan::MacAddress;
 use fidl_fuchsia_lowpan_test::{
     MacAddressFilterItem, MacAddressFilterMode, MacAddressFilterSettings, NeighborInfo,
 };
 use serde::{Deserialize, Serialize};
+
 /// Supported Wpan commands.
 pub enum WpanMethod {
     GetIsCommissioned,
@@ -63,7 +66,7 @@ pub enum ConnectivityState {
 
 #[derive(Serialize, Deserialize)]
 pub struct MacAddressFilterItemDto {
-    pub mac_address: Option<Vec<u8>>,
+    pub mac_address: Option<[u8; 8]>,
     pub rssi: Option<i8>,
 }
 
@@ -82,7 +85,7 @@ pub enum MacAddressFilterModeDto {
 
 #[derive(Serialize, Deserialize)]
 pub struct NeighborInfoDto {
-    pub mac_address: Option<Vec<u8>>,
+    pub mac_address: Option<[u8; 8]>,
     pub short_address: Option<u16>,
     pub age: Option<i64>,
     pub is_child: Option<bool>,
@@ -96,17 +99,15 @@ pub struct NeighborInfoDto {
 
 impl Into<MacAddressFilterItemDto> for MacAddressFilterItem {
     fn into(self) -> MacAddressFilterItemDto {
-        MacAddressFilterItemDto { mac_address: self.mac_address, rssi: self.rssi }
+        let mac_address = self.mac_address.map(|addr| addr.octets);
+        MacAddressFilterItemDto { mac_address, rssi: self.rssi }
     }
 }
 
 impl Into<MacAddressFilterItem> for MacAddressFilterItemDto {
     fn into(self) -> MacAddressFilterItem {
-        MacAddressFilterItem {
-            mac_address: self.mac_address,
-            rssi: self.rssi,
-            ..MacAddressFilterItem::EMPTY
-        }
+        let mac_address = self.mac_address.map(|octets| MacAddress { octets });
+        MacAddressFilterItem { mac_address, rssi: self.rssi, ..MacAddressFilterItem::EMPTY }
     }
 }
 
@@ -163,8 +164,9 @@ impl Into<MacAddressFilterMode> for MacAddressFilterModeDto {
 
 impl Into<NeighborInfoDto> for NeighborInfo {
     fn into(self) -> NeighborInfoDto {
+        let mac_address = self.mac_address.map(|addr| addr.octets);
         NeighborInfoDto {
-            mac_address: self.mac_address,
+            mac_address,
             short_address: self.short_address,
             age: self.age,
             is_child: self.is_child,
@@ -180,8 +182,9 @@ impl Into<NeighborInfoDto> for NeighborInfo {
 
 impl Into<NeighborInfo> for NeighborInfoDto {
     fn into(self) -> NeighborInfo {
+        let mac_address = self.mac_address.map(|octets| MacAddress { octets });
         NeighborInfo {
-            mac_address: self.mac_address,
+            mac_address,
             short_address: self.short_address,
             age: self.age,
             is_child: self.is_child,

@@ -120,7 +120,7 @@ impl NetworkScanCommand {
                 let hwaddr = item
                     .address
                     .as_ref()
-                    .map(Vec::as_slice)
+                    .map(|fidl_fuchsia_lowpan::MacAddress { octets }| octets)
                     .map(hex::encode)
                     .unwrap_or_else(|| "N/A".to_string());
 

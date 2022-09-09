@@ -115,12 +115,14 @@ async fn print_device_status(
     let current_mac = device_test.get_current_mac_address().await.ok();
     let factory_mac = device_test.get_factory_mac_address().await.ok();
 
-    if let Some(current_mac) = current_mac.as_ref() {
-        println!("\tcurr-mac: {}", hex::encode(current_mac));
+    if let Some(fidl_fuchsia_lowpan::MacAddress { octets }) = current_mac.as_ref() {
+        println!("\tcurr-mac: {}", hex::encode(octets));
     }
 
-    if factory_mac.is_some() && factory_mac != current_mac {
-        println!("\tfact-mac: {}", hex::encode(factory_mac.unwrap()));
+    if factory_mac != current_mac {
+        if let Some(fidl_fuchsia_lowpan::MacAddress { octets }) = factory_mac.as_ref() {
+            println!("\tfact-mac: {}", hex::encode(octets));
+        }
     }
 
     if let Some(version) = device_test.get_ncp_version().await.ok() {
@@ -198,12 +200,12 @@ async fn print_device_status_csv(
     let current_mac = device_test.get_current_mac_address().await.ok();
     let factory_mac = device_test.get_factory_mac_address().await.ok();
 
-    if let Some(x) = current_mac.as_ref() {
-        println!("{}, curr_mac, {}", name, hex::encode(x));
+    if let Some(fidl_fuchsia_lowpan::MacAddress { octets }) = current_mac.as_ref() {
+        println!("{}, curr_mac, {}", name, hex::encode(octets));
     }
 
-    if let Some(x) = factory_mac.as_ref() {
-        println!("{}, fact_mac, {}", name, hex::encode(x));
+    if let Some(fidl_fuchsia_lowpan::MacAddress { octets }) = factory_mac.as_ref() {
+        println!("{}, fact_mac, {}", name, hex::encode(octets));
     }
 
     if let Some(x) = device_test.get_ncp_version().await.ok() {

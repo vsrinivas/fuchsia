@@ -15,6 +15,15 @@
         "value": "8"
     },
     {
+        "declaration": "array<uint8,8>",
+        "kind": "struct/member",
+        "name": "fuchsia.lowpan/MacAddress.octets"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.lowpan/MacAddress"
+    },
+    {
         "kind": "library",
         "name": "fuchsia.lowpan"
     }

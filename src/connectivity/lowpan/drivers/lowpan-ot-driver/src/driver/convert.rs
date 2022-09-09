@@ -108,7 +108,7 @@ impl FromExt<ot::ActiveScanResult> for BeaconInfo {
             }),
             rssi: Some(x.rssi()),
             lqi: NonZeroU8::new(x.lqi()).map(NonZeroU8::get),
-            address: Some(x.ext_address().to_vec()),
+            address: Some(MacAddress { octets: x.ext_address().into_array() }),
             ..BeaconInfo::EMPTY
         }
     }

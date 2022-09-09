@@ -24,15 +24,16 @@ impl std::fmt::Display for ExtAddress {
     }
 }
 
+impl std::convert::From<[u8; 8]> for ExtAddress {
+    fn from(value: [u8; 8]) -> Self {
+        Self(otExtAddress { m8: value })
+    }
+}
+
 impl ExtAddress {
-    /// Tries to create an `ExtAddress` reference from a byte slice.
-    pub fn try_ref_from_slice(slice: &[u8]) -> Result<&ExtAddress, ot::WrongSize> {
-        if slice.len() == OT_EXT_ADDRESS_SIZE as usize {
-            Ok(unsafe { Self::ref_from_ot_ptr((slice as *const [u8]) as *const otExtAddress) }
-                .unwrap())
-        } else {
-            Err(ot::WrongSize)
-        }
+    /// Returns the underlying address octets.
+    pub fn into_array(self) -> [u8; 8] {
+        self.0.m8
     }
 
     /// Returns the Extended Address as a byte slice.

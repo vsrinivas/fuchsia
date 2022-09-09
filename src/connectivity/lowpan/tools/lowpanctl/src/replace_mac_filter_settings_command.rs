@@ -23,27 +23,39 @@ pub struct ReplaceMacFilterSettingsCommand {
 }
 
 impl ReplaceMacFilterSettingsCommand {
-    fn get_mac_addr_vec_from_str(&self, mac_addr_str: &str) -> Result<Vec<u8>, Error> {
-        let res = hex::decode(mac_addr_str.to_string())?.to_vec();
-        if res.len() != 8 {
-            return Err(format_err!("mac addr has to be EUI 64 type (8 bytes)"));
-        }
-        Ok(res)
+    fn get_mac_addr_from_str(
+        &self,
+        mac_addr_str: &str,
+    ) -> Result<fidl_fuchsia_lowpan::MacAddress, Error> {
+        let vec = hex::decode(mac_addr_str.to_string())?;
+        let octets = vec
+            .try_into()
+            .map_err(|_: Vec<u8>| format_err!("malformed MAC address {}", mac_addr_str))?;
+        Ok(fidl_fuchsia_lowpan::MacAddress { octets })
     }
 
     fn get_mac_addr_filter_item_vec(&self) -> Result<Vec<MacAddressFilterItem>, Error> {
         let mut filter_item_vec = Vec::<MacAddressFilterItem>::new();
         let mac_addr_filter_item_str_iter = self.mac_addr_filter_items.as_ref().unwrap().split(',');
         for mac_addr_filter_item_str in mac_addr_filter_item_str_iter {
-            let str_vec: Vec<&str> = mac_addr_filter_item_str.split('.').collect();
-            let mac_addr = self.get_mac_addr_vec_from_str(str_vec[0])?;
-            let mut rssi_option = None;
-            if str_vec.len() > 1 {
-                rssi_option = Some(str_vec[1].parse()?);
-            }
+            let mut iter = mac_addr_filter_item_str.split('.');
+            let mac_address =
+                self.get_mac_addr_from_str(iter.next().expect("at least one item"))?;
+            let mac_address = Some(mac_address);
+            let rssi = match iter.next() {
+                None => None,
+                Some(rssi_str) => {
+                    let rssi = rssi_str.parse()?;
+                    Some(rssi)
+                }
+            };
+
+            let excess: Vec<_> = iter.collect();
+            assert!(excess.is_empty(), "excess items {:?}", excess);
+
             filter_item_vec.push(MacAddressFilterItem {
-                mac_address: Some(mac_addr),
-                rssi: rssi_option,
+                mac_address,
+                rssi,
                 ..MacAddressFilterItem::EMPTY
             });
         }

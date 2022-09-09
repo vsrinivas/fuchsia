@@ -59,13 +59,13 @@ protocol DeviceTest {
 
     /// Returns the factory-assigned static MAC address.
     GetFactoryMacAddress() -> (struct {
-        address vector<uint8>:8;
+        address fuchsia.lowpan.MacAddress;
     });
 
     /// Returns the currently used MAC address, which can
     /// differ from the static factory-assigned MAC address.
     GetCurrentMacAddress() -> (struct {
-        address vector<uint8>:8;
+        address fuchsia.lowpan.MacAddress;
     });
 
     /// Returns the current channel index for the radio.

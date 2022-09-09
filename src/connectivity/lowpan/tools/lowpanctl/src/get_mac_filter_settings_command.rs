@@ -12,14 +12,6 @@ use fidl_fuchsia_lowpan_test::*;
 pub struct GetMacFilterSettingsCommand {}
 
 impl GetMacFilterSettingsCommand {
-    fn get_hex_string(&self, vec: &Vec<u8>) -> String {
-        let mut string = String::from("");
-        for item in vec {
-            string.push_str(&format!("{:02x}", item)[..]);
-        }
-        string
-    }
-
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
         let device_test_proxy = context
             .get_default_device_test_proxy()
@@ -41,7 +33,7 @@ impl GetMacFilterSettingsCommand {
 
         if let Some(filter_items) = result.items {
             for item in filter_items {
-                let hwaddr = format!("{:^16}", self.get_hex_string(&item.mac_address.unwrap()));
+                let hwaddr = format!("{:^16}", get_hex_string(&item.mac_address.unwrap().octets));
                 let rssi = if let Some(rssi_val) = item.rssi {
                     format!("{:^9}", rssi_val)
                 } else {

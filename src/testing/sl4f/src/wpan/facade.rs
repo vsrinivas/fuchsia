@@ -59,12 +59,12 @@ impl WpanFacade {
 
     /// Returns the current mac address (thread random mac address) from the DeviceTest
     /// proxy service.
-    pub async fn get_ncp_mac_address(&self) -> Result<Vec<u8>, Error> {
+    pub async fn get_ncp_mac_address(&self) -> Result<[u8; 8], Error> {
         let current_mac_address = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_current_mac_address().await?,
             _ => bail!("DeviceTest proxy is not set"),
         };
-        Ok(current_mac_address)
+        Ok(current_mac_address.octets)
     }
 
     /// Returns the ncp channel from the DeviceTest proxy service.
@@ -86,12 +86,12 @@ impl WpanFacade {
     }
 
     /// Returns the factory mac address from the DeviceTest proxy service.
-    pub async fn get_weave_node_id(&self) -> Result<Vec<u8>, Error> {
+    pub async fn get_weave_node_id(&self) -> Result<[u8; 8], Error> {
         let factory_mac_address = match self.device_test.read().as_ref() {
             Some(device_test) => device_test.get_factory_mac_address().await?,
             _ => bail!("DeviceTest proxy is not set"),
         };
-        Ok(factory_mac_address)
+        Ok(factory_mac_address.octets)
     }
 
     /// Returns the network name from the DeviceExtra proxy service.
@@ -370,7 +370,7 @@ mod tests {
             facade.0.replace_mac_address_filter_settings(MacAddressFilterSettingsDto {
                 mode: Some(MacAddressFilterModeDto::Allow),
                 items: Some(vec![MacAddressFilterItemDto {
-                    mac_address: Some(vec![0, 1, 2, 3, 4, 5, 6, 7]),
+                    mac_address: Some([0, 1, 2, 3, 4, 5, 6, 7]),
                     rssi: None,
                 }]),
             }),

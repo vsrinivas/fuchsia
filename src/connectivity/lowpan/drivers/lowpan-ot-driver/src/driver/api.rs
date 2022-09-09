@@ -475,12 +475,15 @@ where
         Ok(())
     }
 
-    async fn get_factory_mac_address(&self) -> ZxResult<Vec<u8>> {
-        Ok(self.driver_state.lock().ot_instance.get_factory_assigned_ieee_eui_64().to_vec())
+    async fn get_factory_mac_address(&self) -> ZxResult<MacAddress> {
+        let octets =
+            self.driver_state.lock().ot_instance.get_factory_assigned_ieee_eui_64().into_array();
+        Ok(MacAddress { octets })
     }
 
-    async fn get_current_mac_address(&self) -> ZxResult<Vec<u8>> {
-        Ok(self.driver_state.lock().ot_instance.get_extended_address().to_vec())
+    async fn get_current_mac_address(&self) -> ZxResult<MacAddress> {
+        let octets = self.driver_state.lock().ot_instance.get_extended_address().into_array();
+        Ok(MacAddress { octets })
     }
 
     async fn get_ncp_version(&self) -> ZxResult<String> {
@@ -585,7 +588,7 @@ where
             .ot_instance
             .iter_neighbor_info()
             .map(|x| NeighborInfo {
-                mac_address: Some(x.ext_address().to_vec()),
+                mac_address: Some(MacAddress { octets: x.ext_address().into_array() }),
                 short_address: Some(x.rloc16()),
                 age: Some(
                     fuchsia_async::Duration::from_seconds(x.age().try_into().unwrap())

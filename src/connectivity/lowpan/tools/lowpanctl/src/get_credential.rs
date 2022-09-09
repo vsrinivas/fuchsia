@@ -11,14 +11,6 @@ use crate::prelude::*;
 pub struct GetCredentialCommand {}
 
 impl GetCredentialCommand {
-    fn get_hex_string(&self, vec: &Vec<u8>) -> String {
-        let mut string = String::from("");
-        for item in vec {
-            string.push_str(&format!("{:02x}", item)[..]);
-        }
-        string
-    }
-
     pub async fn exec(&self, context: &mut LowpanCtlContext) -> Result<(), Error> {
         let device_extra = context
             .get_default_device_extra_proxy()
@@ -30,7 +22,7 @@ impl GetCredentialCommand {
 
         let credential_str = match credential {
             Some(boxed) => match *boxed {
-                fidl_fuchsia_lowpan_device::Credential::NetworkKey(x) => self.get_hex_string(&x),
+                fidl_fuchsia_lowpan_device::Credential::NetworkKey(x) => get_hex_string(&x),
                 _ => "credential type not recognized".to_string(),
             },
             None => "None".to_string(),
