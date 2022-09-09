@@ -803,6 +803,8 @@ test "${#remote_linker[@]}" = 0 || {
       clang_lib_triple="x86_64-unknown-fuchsia" ;;
     x86_64-linux-gnu | x86_64-*-linux-gnu)
       clang_lib_triple="x86_64-unknown-linux-gnu" ;;
+    wasm32-unknown-unknown)
+      clang_lib_triple="wasm32-unknown-unknown" ;;
     *) msg "unhandled case for clang lib dir: $target_triple"
       exit 1
       ;;
