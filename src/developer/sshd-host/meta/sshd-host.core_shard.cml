@@ -65,7 +65,7 @@
                 "boot",
                 "build-info",
                 "data",
-                "dev",
+                "dev-topological",
                 "hub",
                 "mnt",
                 "pkgfs",
