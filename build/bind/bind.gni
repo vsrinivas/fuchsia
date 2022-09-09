@@ -387,6 +387,9 @@ template("bindc") {
         !invoker.disable_new_bytecode) {
       args += [ "--use-new-bytecode" ]
     }
+    if (defined(invoker.disable_fragment_gen) && invoker.disable_fragment_gen) {
+      args += [ "--disable-fragment-gen" ]
+    }
 
     inputs = [ response_file ]
 

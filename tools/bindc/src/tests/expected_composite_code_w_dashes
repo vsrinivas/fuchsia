@@ -1,4 +1,4 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -33,5 +33,5 @@ constexpr device_fragment_t grey_lourie_fragments[] {
 
 // clang-format off
 #define ZIRCON_DRIVER(Driver, Ops, VendorName, Version) \
-  ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 1) 0x0 \
+  ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 0)  \
   ZIRCON_DRIVER_END_PRIV_V2(Driver)

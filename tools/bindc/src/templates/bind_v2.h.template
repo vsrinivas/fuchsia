@@ -8,7 +8,7 @@
 #include <iterator>
 #define countof(x) std::size(x)
 #endif
-
+{composite_fragment_definition}
 // clang-format off
 #define ZIRCON_DRIVER(Driver, Ops, VendorName, Version) \
   ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, {byte_count}) {binding} \

@@ -81,6 +81,10 @@ enum Command {
         /// Encode the bytecode in the new format if true. Otherwise, encode to the old format.
         #[structopt(short = "n", long = "use-new-bytecode")]
         use_new_bytecode: bool,
+
+        /// Disable generating device_fragment_t data structures in the C++ header.
+        #[structopt(long = "disable-fragment-gen")]
+        disable_fragment_gen: bool,
     },
     #[structopt(name = "debug")]
     Debug {
@@ -189,6 +193,7 @@ fn write_bind_template<'a>(bind_rules: BindRules<'a>) -> Result<String, Error> {
                 include_str!("templates/bind_v2.h.template"),
                 byte_count = byte_count,
                 binding = binding,
+                composite_fragment_definition = "",
             ))
             .context("Failed to format output")?;
     } else {
@@ -226,7 +231,7 @@ fn write_fragment_template<'a>(
     Ok(output)
 }
 
-fn write_composite_bind_template<'a>(bind_rules: CompositeBindRules<'a>) -> Result<String, Error> {
+fn write_fragment_array_template<'a>(bind_rules: CompositeBindRules<'a>) -> Result<String, Error> {
     let mut fragment_list = format!(
         "{}_{}_fragment",
         &bind_rules.device_name,
@@ -248,10 +253,32 @@ fn write_composite_bind_template<'a>(bind_rules: CompositeBindRules<'a>) -> Resu
     let mut output = String::new();
     output
         .write_fmt(format_args!(
-            include_str!("templates/composite_bind.h.template"),
+            include_str!("templates/fragment_array.template"),
             device_name = bind_rules.device_name,
             fragment_definition = fragment_definition,
             fragment_list = fragment_list,
+        ))
+        .context("Failed to format output")?;
+    Ok(output)
+}
+
+fn write_composite_bind_template<'a>(
+    bind_rules: CompositeBindRules<'a>,
+    disable_fragment_gen: bool,
+) -> Result<String, Error> {
+    let fragment_definition = if disable_fragment_gen {
+        "".to_string()
+    } else {
+        write_fragment_array_template(bind_rules)?
+    };
+
+    let mut output = String::new();
+    output
+        .write_fmt(format_args!(
+            include_str!("templates/bind_v2.h.template"),
+            byte_count = "0",
+            binding = "",
+            composite_fragment_definition = fragment_definition,
         ))
         .context("Failed to format output")?;
     Ok(output)
@@ -333,6 +360,7 @@ fn handle_command(command: Command) -> Result<(), Error> {
             disable_autobind,
             output_bytecode,
             use_new_bytecode,
+            disable_fragment_gen,
         } => {
             let includes = handle_includes(options.include, options.include_file)?;
             handle_compile(
@@ -341,6 +369,7 @@ fn handle_command(command: Command) -> Result<(), Error> {
                 disable_autobind,
                 output_bytecode,
                 use_new_bytecode,
+                disable_fragment_gen,
                 options.lint,
                 output,
                 depfile,
@@ -379,6 +408,7 @@ fn handle_compile(
     disable_autobind: bool,
     output_bytecode: bool,
     use_new_bytecode: bool,
+    disable_fragment_gen: bool,
     lint: bool,
     output: Option<PathBuf>,
     depfile: Option<PathBuf>,
@@ -426,7 +456,7 @@ fn handle_compile(
         let template = match compiled_bind_rules {
             CompiledBindRules::Bind(bind_rules) => write_bind_template(bind_rules),
             CompiledBindRules::CompositeBind(bind_rules) => {
-                write_composite_bind_template(bind_rules)
+                write_composite_bind_template(bind_rules, disable_fragment_gen)
             }
         }?;
         output_writer.write_all(template.as_bytes()).context("Failed to write to output file")?;
@@ -743,7 +773,7 @@ mod tests {
         if let CompiledBindRules::CompositeBind(bind_rules) = compiled_bind_rules {
             assert_eq!(
                 include_str!("tests/expected_composite_code"),
-                write_composite_bind_template(bind_rules).unwrap()
+                write_composite_bind_template(bind_rules, false).unwrap()
             );
         }
     }
@@ -761,7 +791,25 @@ mod tests {
         if let CompiledBindRules::CompositeBind(bind_rules) = compiled_bind_rules {
             assert_eq!(
                 include_str!("tests/expected_composite_code_w_dashes"),
-                write_composite_bind_template(bind_rules).unwrap()
+                write_composite_bind_template(bind_rules, false).unwrap()
+            );
+        }
+    }
+
+    #[test]
+    fn composite_bind_with_disabled_fragment_gen() {
+        let composite_bind_rules = "composite grey_lourie;
+            primary node \"go-away-bird\" {
+                fuchsia.BIND_PROTOCOL == 1;
+            }";
+
+        let compiled_bind_rules =
+            compiler::compile(&composite_bind_rules, &vec![], false, false, true, false).unwrap();
+        assert_matches!(compiled_bind_rules, CompiledBindRules::CompositeBind(_));
+        if let CompiledBindRules::CompositeBind(bind_rules) = compiled_bind_rules {
+            assert_eq!(
+                include_str!("tests/expected_composite_code_w_disabled_fragments"),
+                write_composite_bind_template(bind_rules, true).unwrap()
             );
         }
     }

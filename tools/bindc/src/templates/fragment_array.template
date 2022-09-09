@@ -1,0 +1,5 @@
+
+{fragment_definition}
+constexpr device_fragment_t {device_name}_fragments[] {{
+  {fragment_list}
+}};
