@@ -153,6 +153,31 @@ kernel_cmdline("oom.reboot-timeout--low") {
   args = [ "kernel.oom.reboot-timeout-ms=8000" ]
 }
 
+kernel_cmdline("minimal") {
+  args = [
+    # Turn off aslr
+    "aslr.entropy_bits=0",
+
+    # No contiguous or protected memory buffers.
+    "driver.sysmem.contiguous_memory_size=0",
+    "driver.sysmem.protected_memory_size=0",
+
+    # Make trace buffer lazy
+    "ktrace.grpmask=0",
+
+    # OOM behavior
+    "kernel.oom.behavior=reboot",
+    "kernel.oom.evict-at-warning=true",
+    "kernel.oom.evict-continuous=true",
+    "kernel.oom.reboot-timeout-ms=8000",
+
+    # Memory pressure thresholds
+    "kernel.oom.warning-mb=60",
+    "kernel.oom.critical-mb=40",
+    "kernel.oom.outofmemory-mb=20",
+  ]
+}
+
 # Should only be visible on x64.
 if (target_cpu == "x64") {
   kernel_cmdline("kernel.serial--legacy") {
