@@ -24,4 +24,11 @@
             from: "#fake_clock",
         },
     ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#fake_clock",
+        },
+    ],
 }
