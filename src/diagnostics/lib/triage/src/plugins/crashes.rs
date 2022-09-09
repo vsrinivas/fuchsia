@@ -33,13 +33,16 @@ impl Plugin for CrashesPlugin {
                     let formatted_time =
                         format!("{}h{}m{}.{}s", s / 3600, s % 3600 / 60, s % 60, ms);
 
-                    results.push(Action::new_synthetic_warning(format!(
-                        "[WARNING]: {} crashed at {} [{}.{}]",
-                        captures.get(3).unwrap().as_str(),
-                        formatted_time,
-                        s,
-                        ms,
-                    )));
+                    results.push(Action::new_synthetic_error(
+                        format!(
+                            "[ERROR]: {} crashed at {} [{}.{}]",
+                            captures.get(3).unwrap().as_str(),
+                            formatted_time,
+                            s,
+                            ms,
+                        ),
+                        "DeveloperExperience>Forensics>CrashReporting".to_string(),
+                    ));
                 }
                 _ => {}
             };
@@ -55,9 +58,9 @@ mod tests {
 
     #[fuchsia::test]
     fn test_crashes() {
-        let expected_warnings: Vec<String> = vec![
-            "[WARNING]: my_component.cmx crashed at 1h1m1.123s [3661.123]",
-            "[WARNING]: my_component.cmx crashed at 1h2m2.345s [3722.345]",
+        let expected_errors: Vec<String> = vec![
+            "[ERROR]: my_component.cmx crashed at 1h1m1.123s [3661.123]",
+            "[ERROR]: my_component.cmx crashed at 1h2m2.345s [3722.345]",
         ]
         .into_iter()
         .map(|s| s.to_string())
@@ -72,10 +75,10 @@ mod tests {
 
         let mut inputs = FileDataFetcher::new(&empty_diagnostics_vec);
         inputs.klog = &fetcher;
-        assert_eq!(CrashesPlugin {}.run(&inputs).get_warnings(), &expected_warnings);
+        assert_eq!(CrashesPlugin {}.run(&inputs).get_errors(), &expected_errors);
 
         let mut inputs = FileDataFetcher::new(&empty_diagnostics_vec);
         inputs.syslog = &fetcher;
-        assert_eq!(CrashesPlugin {}.run(&inputs).get_warnings(), &expected_warnings);
+        assert_eq!(CrashesPlugin {}.run(&inputs).get_errors(), &expected_errors);
     }
 }

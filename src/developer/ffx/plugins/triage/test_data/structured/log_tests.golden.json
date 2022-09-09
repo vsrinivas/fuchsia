@@ -2,7 +2,8 @@
     "actions": {
         "log_tests": {
             "klog_foo": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {
@@ -30,7 +31,8 @@
                 "tag": null
             },
             "syslog_foo": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {
@@ -58,7 +60,8 @@
                 "tag": null
             },
             "bootlog_foo": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {

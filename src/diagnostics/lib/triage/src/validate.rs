@@ -142,7 +142,7 @@ fn check_failure(
             }
             Some(action) => {
                 let trigger = match action {
-                    Action::Warning(properties) => &properties.trigger,
+                    Action::Alert(properties) => &properties.trigger,
                     Action::Snapshot(properties) => &properties.trigger,
                     _ => {
                         println!("Action {:?} cannot be tested", action);
@@ -168,7 +168,7 @@ fn check_failure(
 mod test {
     use {
         super::*,
-        crate::act::{Action, Warning},
+        crate::act::{Action, Alert, Severity},
         crate::metrics::ValueSource,
         anyhow::Error,
     };
@@ -209,20 +209,22 @@ mod test {
             build_map!(
                 (
                     "fires",
-                    Action::Warning(Warning {
+                    Action::Alert(Alert {
                         trigger: ValueSource::try_from_expression("true")?,
                         print: "good".to_string(),
                         tag: None,
                         file_bug: None,
+                        severity: Severity::Warning,
                     })
                 ),
                 (
                     "no_fire",
-                    Action::Warning(Warning {
+                    Action::Alert(Alert {
                         trigger: ValueSource::try_from_expression("false")?,
                         print: "what?!?".to_string(),
                         tag: None,
                         file_bug: None,
+                        severity: Severity::Warning,
                     })
                 )
             )
@@ -299,20 +301,22 @@ mod test {
             build_map!(
                 (
                     "time_quarter",
-                    Action::Warning(Warning {
+                    Action::Alert(Alert {
                         trigger: ValueSource::try_from_expression("Now()==250000000")?,
                         print: "time_billion".to_string(),
                         tag: None,
                         file_bug: None,
+                        severity: Severity::Warning,
                     })
                 ),
                 (
                     "time_missing",
-                    Action::Warning(Warning {
+                    Action::Alert(Alert {
                         trigger: ValueSource::try_from_expression("Missing(Now())")?,
                         print: "time_missing".to_string(),
                         tag: None,
                         file_bug: None,
+                        severity: Severity::Warning,
                     })
                 )
             )

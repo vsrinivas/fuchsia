@@ -372,10 +372,10 @@ mod test {
         assert!(
             result.contains(
                 r#"Process Crashes Plugin
-Warnings
---------
-[WARNING]: my_component.cmx crashed at 1h1m1.123s [3661.123]
-[WARNING]: my_component.cmx crashed at 1h1m1.124s [3661.124]
+Errors
+------
+[ERROR]: my_component.cmx crashed at 1h1m1.123s [3661.123]
+[ERROR]: my_component.cmx crashed at 1h1m1.124s [3661.124]
 "#
             ),
             "not found in:\n{}",

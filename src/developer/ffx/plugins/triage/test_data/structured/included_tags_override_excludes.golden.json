@@ -2,7 +2,8 @@
     "actions": {
         "sample_tags": {
             "act1": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {

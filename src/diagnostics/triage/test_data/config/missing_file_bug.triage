@@ -1,0 +1,10 @@
+{
+    act: {
+        missing_file_bug: {
+            type: "Alert",
+            severity: "Error",
+            trigger: "False()",
+            print: "something ominous",
+        },
+    },
+}

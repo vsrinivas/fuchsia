@@ -30,19 +30,21 @@ impl Plugin for RoutingErrorsPlugin {
                         (moniker.into(), protocol.into(), name.into())
                     }
                     _ => {
-                        results.push(Action::new_synthetic_warning(
+                        results.push(Action::new_synthetic_error(
                             "[DEBUG: BAD DATA] Routing Errors plugin encountered a bug analyzing \
-                    log line, capture group missing"
+                             log line, capture group missing"
                                 .to_string(),
+                            "Diagnostics>Triage".to_string(),
                         ));
                         return;
                     }
                 };
             if pattern_match.len() == 0 {
-                results.push(Action::new_synthetic_warning(
+                results.push(Action::new_synthetic_error(
                     "[DEBUG: BAD DATA] Routing Errors plugin encountered a bug analyzing log \
-                line, capture group missing"
+                     line, capture group missing"
                         .to_string(),
+                    "Diagnostics>Triage".to_string(),
                 ));
                 return;
             }

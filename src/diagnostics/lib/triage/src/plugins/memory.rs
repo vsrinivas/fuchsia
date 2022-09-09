@@ -66,7 +66,13 @@ impl Plugin for MemoryPlugin {
                         match parsed{
                             Some(parsed) => Some((name, value, mult*parsed)),
                             None => {
-                                results.push(Action::new_synthetic_warning(format!("[DEBUG: BAD DATA] Could not parse '{}' as a valid size. Something is wrong with the output of memory_monitor.", value)));
+                                results.push(Action::new_synthetic_error(
+                                    format!(
+                                        "[DEBUG: BAD DATA] Could not parse '{}' as a valid size. Something is wrong with the output of memory_monitor.",
+                                        value,
+                                    ),
+                                    "Tools>ffx>Profile>Memory".to_string(),
+                                ));
                                 None
                             }
                         }
@@ -98,7 +104,7 @@ mod tests {
                 .into_iter()
                 .map(|s| s.to_string())
                 .collect();
-        let expected_warnings: Vec<String> =
+        let expected_errors: Vec<String> =
             vec!["[DEBUG: BAD DATA] Could not parse 'ABCD' as a valid size. Something is wrong with the output of memory_monitor."]
                 .into_iter()
                 .map(|s| s.to_string())
@@ -123,6 +129,6 @@ mod tests {
         inputs.inspect = &fetcher;
         let result = MemoryPlugin {}.run(&inputs);
         assert_eq!(result.get_gauges(), &expected_gauges);
-        assert_eq!(result.get_warnings(), &expected_warnings);
+        assert_eq!(result.get_errors(), &expected_errors);
     }
 }

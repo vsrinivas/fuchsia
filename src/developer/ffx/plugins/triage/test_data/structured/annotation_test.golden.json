@@ -2,7 +2,8 @@
     "actions": {
         "annotation_tests": {
             "test_not_chromebook": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {
@@ -49,7 +50,8 @@
                 "tag": null
             },
             "test_is_chromebook": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {

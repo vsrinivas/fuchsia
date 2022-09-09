@@ -25,20 +25,39 @@ impl<'a> ActionResultFormatter<'a> {
 
     fn inner_to_text(&self) -> (bool, String) {
         let mut sections = vec![];
-        let mut warning = false;
+        let mut problem = false;
+        if let Some(errors) = self.to_errors() {
+            sections.push(errors);
+            problem = true;
+        }
         if let Some(gauges) = self.to_gauges() {
             sections.push(gauges);
         }
         if let Some(warnings) = self.to_warnings() {
             sections.push(warnings);
-            warning = true;
+            problem = true;
         }
-        if let Some((plugin_warning, plugins)) = self.to_plugins() {
+        if let Some((plugin_problem, plugins)) = self.to_plugins() {
             sections.push(plugins);
-            warning = warning || plugin_warning
+            problem = problem || plugin_problem
+        }
+        if let Some(infos) = self.to_infos() {
+            sections.push(infos);
+        }
+        (problem, sections.join("\n"))
+    }
+
+    fn to_infos(&self) -> Option<String> {
+        if self.action_results.get_infos().is_empty() {
+            return None;
         }
 
-        (warning, sections.join("\n"))
+        let header = Self::make_underline("Info");
+        Some(format!(
+            "{}{}\n",
+            header,
+            self.action_results.get_infos().into_iter().sorted().join("\n")
+        ))
     }
 
     fn to_warnings(&self) -> Option<String> {
@@ -51,6 +70,19 @@ impl<'a> ActionResultFormatter<'a> {
             "{}{}\n",
             header,
             self.action_results.get_warnings().into_iter().sorted().join("\n")
+        ))
+    }
+
+    fn to_errors(&self) -> Option<String> {
+        if self.action_results.get_errors().is_empty() {
+            return None;
+        }
+
+        let header = Self::make_underline("Errors");
+        Some(format!(
+            "{}{}\n",
+            header,
+            self.action_results.get_errors().into_iter().sorted().join("\n")
         ))
     }
 

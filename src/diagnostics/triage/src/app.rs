@@ -40,13 +40,13 @@ impl App {
             OutputFormat::Structured => {
                 let structured_run_result = self.run_structured(diagnostic_data, parse_result)?;
                 structured_run_result.write_report(dest)?;
-                Ok(structured_run_result.has_warnings())
+                Ok(structured_run_result.has_reportable_issues())
             }
             OutputFormat::Text => {
                 let run_result =
                     self.run_unstructured(diagnostic_data, parse_result, output_format)?;
                 run_result.write_report(dest)?;
-                Ok(run_result.has_warnings())
+                Ok(run_result.has_problems())
             }
         }
     }
@@ -86,9 +86,10 @@ impl RunResult {
         RunResult { output_format, action_results }
     }
 
-    /// Returns true if at least one ActionResults has a warning.
-    pub fn has_warnings(&self) -> bool {
-        !self.action_results.get_warnings().is_empty()
+    /// Returns true if at least one ActionResults has a warning or errorF.
+    fn has_problems(&self) -> bool {
+        !(self.action_results.get_warnings().is_empty()
+            && self.action_results.get_errors().is_empty())
     }
 
     /// Writes the contents of the run to the provided writer.
@@ -112,11 +113,6 @@ pub struct StructuredRunResult {
 }
 
 impl StructuredRunResult {
-    /// Returns true if at least one error in TriageOutput.
-    pub fn has_warnings(&self) -> bool {
-        self.triage_output.has_triggered_warning()
-    }
-
     /// Writes the contents of the run_structured to the provided writer.
     ///
     /// This method can be used to output the results to a file or stdout.
@@ -124,6 +120,11 @@ impl StructuredRunResult {
         let output = serde_json::to_string(&self.triage_output)?;
         dest.write_fmt(format_args!("{}\n", output)).context("failed to write to destination")?;
         Ok(())
+    }
+
+    /// Returns true if the result contains a reportable warning, error, or significant Problem
+    pub fn has_reportable_issues(&self) -> bool {
+        self.triage_output.has_reportable_issues()
     }
 }
 
@@ -149,9 +150,11 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_output_text_with_warnings() -> Result<(), Error> {
+    fn test_output_text_with_alerts() -> Result<(), Error> {
         let mut action_results = ActionResults::new();
-        action_results.add_warning("fail".to_string());
+        action_results.add_info("hmmm".to_string());
+        action_results.add_warning("oops".to_string());
+        action_results.add_error("fail".to_string());
 
         let run_result = RunResult::new(OutputFormat::Text, action_results);
 
@@ -159,8 +162,10 @@ mod tests {
         run_result.write_report(&mut dest)?;
 
         let output = String::from_utf8(dest)?;
-        assert_eq!("Warnings\n--------\nfail\n\n", output);
-
+        assert_eq!(
+            "Errors\n------\nfail\n\nWarnings\n--------\noops\n\nInfo\n----\nhmmm\n\n",
+            output,
+        );
         Ok(())
     }
 
@@ -211,10 +216,11 @@ mod tests {
 
         let output = String::from_utf8(dest)?;
         assert_eq!(
-            "{\"actions\":{\"file\":{\"warning_name\":{\"type\":\"Warning\",\"trigger\":\
+            "{\"actions\":{\"file\":{\"warning_name\":{\"type\":\"Alert\",\"trigger\":\
         {\"metric\":{\"Eval\":{\"raw_expression\":\"True()\",\"parsed_expression\":{\"Function\":\
         [\"True\",[]]}}},\"cached_value\":\
-        {\"Bool\":true}},\"print\":\"fail\",\"file_bug\":null,\"tag\":null}}},\"metrics\":\
+        {\"Bool\":true}},\"print\":\"fail\",\"file_bug\":null,\"tag\":null,\
+         \"severity\":\"Warning\"}}},\"metrics\":\
         {\"file\":{}},\"plugin_results\":{},\"triage_errors\":[]}\n",
             output
         );

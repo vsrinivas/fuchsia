@@ -206,7 +206,8 @@
                 "tag": null
             },
             "all_ok": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    act::{Action, ActionResults},
+    act::{Action, ActionResults, Severity},
     metrics::{fetch::FileDataFetcher, metric_value::MetricValue},
 };
 
@@ -31,9 +31,11 @@ pub trait Plugin {
         let structured_results = self.run_structured(inputs);
         for action in structured_results {
             match action {
-                Action::Warning(warning) => {
-                    results.add_warning(warning.print);
-                }
+                Action::Alert(alert) => match alert.severity {
+                    Severity::Info => results.add_info(alert.print),
+                    Severity::Warning => results.add_warning(alert.print),
+                    Severity::Error => results.add_error(alert.print),
+                },
                 Action::Gauge(gauge) => {
                     if let Some(metric_value) = gauge.value.cached_value.into_inner() {
                         if let MetricValue::String(raw_value) = metric_value {

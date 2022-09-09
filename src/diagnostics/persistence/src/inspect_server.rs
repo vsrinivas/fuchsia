@@ -34,7 +34,7 @@ fn store_data(inspect_node: &fuchsia_inspect::Node, name: &str, data: &JsonValue
             }
         }),
         JsonValue::Null => {}
-        // TODO(71350): If the array is all numbers, publish them (and test).
+        // TODO(fxbug.dev/71350): If the array is all numbers, publish them (and test).
         JsonValue::Array(_) => {}
     }
 }

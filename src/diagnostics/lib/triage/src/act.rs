@@ -15,11 +15,11 @@ use {
         },
         plugins::{register_plugins, Plugin},
     },
-    crate::{evaluate_int_math, metric_value_to_int},
+    crate::metric_value_to_int,
     anyhow::{bail, Error},
     fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
     serde::{self, Deserialize, Serialize},
-    std::{cell::RefCell, collections::HashMap, convert::TryFrom},
+    std::{cell::RefCell, collections::HashMap},
 };
 
 /// Provides the [metric_state] context to evaluate [Action]s and results of the [actions].
@@ -40,7 +40,7 @@ impl<'a> ActionContext<'a> {
         let fetcher = FileDataFetcher::new(diagnostic_data);
         let mut action_results = ActionResults::new();
         fetcher.errors().iter().for_each(|e| {
-            action_results.add_warning(format!("[DEBUG: BAD DATA] {}", e));
+            action_results.add_error(format!("[DEBUG: BAD DATA] {}", e));
         });
         ActionContext {
             actions,
@@ -55,7 +55,9 @@ impl<'a> ActionContext<'a> {
 /// the [warnings] and [gauges] that are generated.
 #[derive(Clone, Debug)]
 pub struct ActionResults {
+    infos: Vec<String>,
     warnings: Vec<String>,
+    errors: Vec<String>,
     gauges: Vec<String>,
     snapshots: Vec<SnapshotTrigger>,
     sort_gauges: bool,
@@ -65,7 +67,9 @@ pub struct ActionResults {
 impl ActionResults {
     pub fn new() -> ActionResults {
         ActionResults {
+            infos: Vec::new(),
             warnings: Vec::new(),
+            errors: Vec::new(),
             gauges: Vec::new(),
             snapshots: Vec::new(),
             sort_gauges: true,
@@ -73,8 +77,16 @@ impl ActionResults {
         }
     }
 
+    pub fn add_info(&mut self, info: String) {
+        self.infos.push(info);
+    }
+
     pub fn add_warning(&mut self, warning: String) {
         self.warnings.push(warning);
+    }
+
+    pub fn add_error(&mut self, error: String) {
+        self.errors.push(error);
     }
 
     pub fn add_gauge(&mut self, gauge: String) {
@@ -93,8 +105,16 @@ impl ActionResults {
         self.sort_gauges
     }
 
+    pub fn get_infos(&self) -> &Vec<String> {
+        &self.infos
+    }
+
     pub fn get_warnings(&self) -> &Vec<String> {
         &self.warnings
+    }
+
+    pub fn get_errors(&self) -> &Vec<String> {
+        &self.errors
     }
 
     pub fn get_gauges(&self) -> &Vec<String> {
@@ -129,21 +149,97 @@ pub(crate) type Actions = HashMap<String, ActionsSchema>;
 pub(crate) type ActionsSchema = HashMap<String, Action>;
 
 /// Action represent actions that can be taken using an evaluated value(s).
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, PartialEq)]
 #[serde(tag = "type")]
 pub enum Action {
-    Warning(Warning),
+    Alert(Alert),
     Gauge(Gauge),
     Snapshot(Snapshot),
 }
 
+impl<'de> Deserialize<'de> for Action {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        /// TODO(fxbug.dev/73441): `Warning` will be deprecated once all config files use `Alert`
+        #[derive(Debug, Deserialize)]
+        struct DeWarning {
+            /// A wrapped expression to evaluate which determines if this action triggers.
+            pub trigger: ValueSource,
+            /// What to print if trigger is true.
+            pub print: String,
+            /// Describes where bugs should be filed if this action triggers.
+            pub file_bug: Option<String>,
+            /// An optional tag to associate with this Action.
+            pub tag: Option<String>,
+        }
+
+        #[derive(Debug, Deserialize)]
+        #[serde(tag = "type")]
+        enum DeAction {
+            Alert(Alert),
+            Warning(DeWarning),
+            Gauge(Gauge),
+            Snapshot(Snapshot),
+        }
+
+        Ok(match DeAction::deserialize(deserializer)? {
+            DeAction::Warning(warning) => {
+                let DeWarning { trigger, print, file_bug, tag } = warning;
+                Action::Alert(Alert { trigger, print, file_bug, tag, severity: Severity::Warning })
+            }
+            DeAction::Alert(alert) => Action::Alert(alert),
+            DeAction::Gauge(gauge) => Action::Gauge(gauge),
+            DeAction::Snapshot(snapshot) => Action::Snapshot(snapshot),
+        })
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+//#[serde(tag = "severity")]
+pub enum Severity {
+    Info,
+    Warning,
+    Error,
+}
+
 pub(crate) fn validate_actions(actions: &ActionsSchema) -> Result<(), Error> {
     for (action_name, action) in actions {
-        // The only validation we do so far is make sure the snapshot signature isn't too long.
         match action {
+            // Make sure the snapshot signature isn't too long.
             Action::Snapshot(snapshot) => {
                 if snapshot.signature.len() > MAX_CRASH_SIGNATURE_LENGTH as usize {
                     bail!("Signature too long in {}", action_name);
+                }
+                // Make sure repeat is a const int expression (cache the value if so)
+                match &snapshot.repeat.metric {
+                    Metric::Eval(repeat_expression) => {
+                        let repeat_value = MetricState::evaluate_const_expression(
+                            &repeat_expression.parsed_expression,
+                        );
+                        if let MetricValue::Int(repeat_int) = repeat_value {
+                            snapshot
+                                .repeat
+                                .cached_value
+                                .borrow_mut()
+                                .replace(MetricValue::Int(repeat_int));
+                        } else {
+                            bail!(
+                                "Snapshot {} repeat expression '{}' must evaluate to int, not {:?}",
+                                action_name,
+                                repeat_expression.raw_expression,
+                                repeat_value
+                            );
+                        }
+                    }
+                    _ => unreachable!("ValueSource::try_from() only produces an Eval"),
+                }
+            }
+            // Make sure Error-level alerts have a file_bug field.
+            Action::Alert(alert) => {
+                if alert.severity == Severity::Error && alert.file_bug == None {
+                    bail!("Error severity requires file_bug field in {}", action_name);
                 }
             }
             _ => {}
@@ -153,8 +249,8 @@ pub(crate) fn validate_actions(actions: &ActionsSchema) -> Result<(), Error> {
 }
 
 /// Action that is triggered if a predicate is met.
-#[derive(Clone, Debug, Serialize, PartialEq)]
-pub struct Warning {
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+pub struct Alert {
     /// A wrapped expression to evaluate which determines if this action triggers.
     pub trigger: ValueSource,
     /// What to print if trigger is true.
@@ -163,34 +259,23 @@ pub struct Warning {
     pub file_bug: Option<String>,
     /// An optional tag to associate with this Action.
     pub tag: Option<String>,
+    /// Info, Warning, Error, with the same meanings as the log types. Error must have a file_bug:
+    /// field but that field is optional for Info and Warning.
+    pub severity: Severity,
 }
 
-impl<'de> Deserialize<'de> for Warning {
+impl<'de> Deserialize<'de> for ValueSource {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        #[derive(Debug, Deserialize)]
-        struct DeWarning {
-            trigger: String,
-            print: String,
-            file_bug: Option<String>,
-            tag: Option<String>,
-        }
-
-        let DeWarning { trigger: trigger_string, print, file_bug, tag } =
-            DeWarning::deserialize(deserializer)?;
-
-        // Parse value to ensure it is a valid expressions
-        let trigger =
-            ValueSource::try_from_expression(&trigger_string).map_err(serde::de::Error::custom)?;
-
-        Ok(Warning { trigger, print, file_bug, tag })
+        Ok(ValueSource::try_from_expression(&String::deserialize(deserializer)?)
+            .map_err(serde::de::Error::custom)?)
     }
 }
 
 /// Action that displays percentage of value.
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 pub struct Gauge {
     /// Value to surface.
     pub value: ValueSource,
@@ -200,30 +285,8 @@ pub struct Gauge {
     pub tag: Option<String>,
 }
 
-impl<'de> Deserialize<'de> for Gauge {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Debug, Deserialize)]
-        struct DeGauge {
-            value: String,
-            format: Option<String>,
-            tag: Option<String>,
-        }
-
-        let DeGauge { value: value_string, format, tag } = DeGauge::deserialize(deserializer)?;
-
-        // Parse value to ensure it is a valid expressions
-        let value =
-            ValueSource::try_from_expression(&value_string).map_err(serde::de::Error::custom)?;
-
-        Ok(Gauge { value, format, tag })
-    }
-}
-
 /// Action that displays percentage of value.
-#[derive(Clone, Debug, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 pub struct Snapshot {
     /// Take snapshot when this is true.
     pub trigger: ValueSource,
@@ -232,40 +295,6 @@ pub struct Snapshot {
     /// Sent in the crash report.
     pub signature: String,
     // There's no tag option because snapshot conditions are always news worth seeing.
-}
-
-impl<'de> Deserialize<'de> for Snapshot {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Debug, Deserialize)]
-        struct DeSnapshot {
-            trigger: String,
-            repeat: String,
-            signature: String,
-        }
-
-        let DeSnapshot { trigger: trigger_string, repeat: repeat_string, signature } =
-            DeSnapshot::deserialize(deserializer)?;
-
-        // Parse trigger and repeat to ensure they are valid expressions
-        let trigger =
-            ValueSource::try_from_expression(&trigger_string).map_err(serde::de::Error::custom)?;
-        let repeat_metric = Metric::Eval(
-            ExpressionContext::try_from(repeat_string.clone()).map_err(serde::de::Error::custom)?,
-        );
-        let repeat_value =
-            MetricValue::Int(evaluate_int_math(&repeat_string).map_err(serde::de::Error::custom)?);
-
-        // If the metric value cannot be converted to int, throw an error.
-        metric_value_to_int(repeat_value.clone()).map_err(serde::de::Error::custom)?;
-
-        let repeat =
-            ValueSource { metric: repeat_metric, cached_value: RefCell::new(Some(repeat_value)) };
-
-        Ok(Snapshot { trigger, repeat, signature })
-    }
 }
 
 impl Gauge {
@@ -290,7 +319,7 @@ impl Gauge {
 impl Action {
     pub fn get_tag(&self) -> Option<String> {
         match self {
-            Action::Warning(action) => action.tag.clone(),
+            Action::Alert(action) => action.tag.clone(),
             Action::Gauge(action) => action.tag.clone(),
             Action::Snapshot(_) => None,
         }
@@ -299,7 +328,24 @@ impl Action {
     /// Creates a [Warning] with a trigger evaluating to Bool(true) and its cache pre-populated.
     pub fn new_synthetic_warning(print: String) -> Action {
         let trigger_true = get_trigger_true();
-        Action::Warning(Warning { trigger: trigger_true, print, file_bug: None, tag: None })
+        Action::Alert(Alert {
+            trigger: trigger_true,
+            print,
+            file_bug: None,
+            tag: None,
+            severity: Severity::Warning,
+        })
+    }
+
+    pub fn new_synthetic_error(print: String, file_bug: String) -> Action {
+        let trigger_true = get_trigger_true();
+        Action::Alert(Alert {
+            trigger: trigger_true,
+            print,
+            file_bug: Some(file_bug),
+            tag: None,
+            severity: Severity::Error,
+        })
     }
 
     /// Creates a [Gauge] with the cache value pre-populated.
@@ -318,6 +364,30 @@ impl Action {
         };
         Action::Gauge(Gauge { value, format, tag })
     }
+
+    /// Returns true if any significant problem or notification is found.
+    /// If the trigger or value hasnn't been evaluated, returns false
+    pub(crate) fn has_reportable_issue(&self) -> bool {
+        let value = match self {
+            Action::Alert(alert) => &alert.trigger.cached_value,
+            Action::Snapshot(snapshot) => &snapshot.trigger.cached_value,
+            Action::Gauge(gauge) => &gauge.value.cached_value,
+        };
+        let reportable_on_true = match self {
+            Action::Gauge(_) => false,
+            Action::Snapshot(_) => true,
+            Action::Alert(alert) if alert.severity == Severity::Info => false,
+            Action::Alert(_) => true,
+        };
+        let result = match *value.borrow() {
+            Some(MetricValue::Bool(true)) if reportable_on_true => true,
+            Some(MetricValue::Problem(Problem::Missing(_))) => false,
+            Some(MetricValue::Problem(Problem::Ignore(_))) => false,
+            Some(MetricValue::Problem(_)) => true,
+            _ => false,
+        };
+        result
+    }
 }
 
 fn get_trigger_true() -> ValueSource {
@@ -330,6 +400,7 @@ fn get_trigger_true() -> ValueSource {
     }
 }
 
+/// Contains all Error, Warning, and Info generated while computing snapshots.
 pub type WarningVec = Vec<String>;
 
 impl ActionContext<'_> {
@@ -346,7 +417,7 @@ impl ActionContext<'_> {
         for (namespace, actions) in self.actions.iter() {
             for (name, action) in actions.iter() {
                 match action {
-                    Action::Warning(warning) => self.update_warnings(warning, namespace, name),
+                    Action::Alert(alert) => self.update_alerts(alert, namespace, name),
                     Action::Gauge(gauge) => self.update_gauges(gauge, namespace, name),
                     Action::Snapshot(snapshot) => self.update_snapshots(snapshot, namespace, name),
                 };
@@ -365,16 +436,19 @@ impl ActionContext<'_> {
                 }
             }
         }
-        (self.action_results.snapshots, self.action_results.warnings)
+        let mut alerts = vec![];
+        alerts.extend(self.action_results.errors);
+        alerts.extend(self.action_results.warnings);
+        alerts.extend(self.action_results.infos);
+        (self.action_results.snapshots, alerts)
     }
 
     /// Update warnings if condition is met.
-    fn update_warnings(&mut self, action: &Warning, namespace: &String, name: &String) {
+    fn update_alerts(&mut self, action: &Alert, namespace: &String, name: &String) {
         match self.metric_state.eval_action_metric(namespace, &action.trigger) {
             MetricValue::Bool(true) => {
                 if let Some(file_bug) = &action.file_bug {
-                    self.action_results
-                        .add_warning(format!("[BUG:{}] {}.", file_bug, action.print));
+                    self.action_results.add_error(format!("[BUG:{}] {}.", file_bug, action.print));
                 } else {
                     self.action_results.add_warning(format!("[WARNING] {}.", action.print));
                 }
@@ -382,19 +456,19 @@ impl ActionContext<'_> {
             MetricValue::Bool(false) => (),
             MetricValue::Problem(Problem::Ignore(_)) => (),
             MetricValue::Problem(Problem::Missing(reason)) => {
-                self.action_results.add_warning(format!(
+                self.action_results.add_info(format!(
                     "[MISSING] In config '{}::{}': (need boolean trigger) {:?}",
                     namespace, name, reason,
                 ));
             }
             MetricValue::Problem(problem) => {
-                self.action_results.add_warning(format!(
+                self.action_results.add_error(format!(
                     "[ERROR] In config '{}::{}': (need boolean trigger): {:?}",
                     namespace, name, problem,
                 ));
             }
             other => {
-                self.action_results.add_warning(format!(
+                self.action_results.add_error(format!(
                     "[DEBUG: BAD CONFIG] Unexpected value type in config '{}::{}' (need boolean trigger): {}",
                     namespace,
                     name,
@@ -417,7 +491,7 @@ impl ActionContext<'_> {
                         self.action_results.add_snapshot(output);
                     }
                     Err(ref bad_type) => {
-                        self.action_results.add_warning(format!(
+                        self.action_results.add_error(format!(
                             "Bad interval in config '{}::{}': {:?}",
                             namespace, name, bad_type,
                         ));
@@ -434,7 +508,7 @@ impl ActionContext<'_> {
                     "Snapshot trigger was not boolean in config '{}::{}': {:?}",
                     namespace, name, reason,
                 );
-                self.action_results.add_warning(format!(
+                self.action_results.add_info(format!(
                     "[MISSING] In config '{}::{}': {:?}",
                     namespace, name, reason,
                 ));
@@ -447,7 +521,7 @@ impl ActionContext<'_> {
                     name,
                     other,
                 );
-                self.action_results.add_warning(format!(
+                self.action_results.add_error(format!(
                     "[DEBUG: BAD CONFIG] Unexpected value type in config '{}::{}' (need boolean): {}",
                     namespace,
                     name,
@@ -510,55 +584,60 @@ mod test {
         let mut action_file = ActionsSchema::new();
         action_file.insert(
             "do_true".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("true").unwrap(),
                 print: "True was fired".to_string(),
                 file_bug: Some("Some>Monorail>Component".to_string()),
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
             "do_false".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("false").unwrap(),
                 print: "False was fired".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
             "do_true_array".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("true_array").unwrap(),
                 print: "True array was fired".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
             "do_false_array".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("false_array").unwrap(),
                 print: "False array was fired".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
 
         action_file.insert(
             "do_operation".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("0 < 10").unwrap(),
                 print: "Inequality triggered".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         actions.insert("file".to_string(), action_file);
         let no_data = Vec::new();
         let mut context = ActionContext::new(&metrics, &actions, &no_data, None);
         let results = context.process();
-        assert!(includes(results.get_warnings(), "[BUG:Some>Monorail>Component] True was fired."));
+        assert!(includes(results.get_errors(), "[BUG:Some>Monorail>Component] True was fired."));
         assert!(includes(results.get_warnings(), "[WARNING] Inequality triggered."));
         assert!(includes(results.get_warnings(), "[WARNING] True array was fired"));
         assert!(!includes(results.get_warnings(), "False was fired"));
@@ -660,7 +739,7 @@ mod test {
         assert_eq!(
             &vec!["[DEBUG: BAD DATA] Unable to deserialize Inspect contents for abcd2 to node hierarchy"
                 .to_string()],
-            action_context.action_results.get_warnings()
+            action_context.action_results.get_errors()
         );
     }
 
@@ -671,20 +750,22 @@ mod test {
         let mut action_file = ActionsSchema::new();
         action_file.insert(
             "time_1234".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("Now() == 1234").unwrap(),
                 print: "1234".to_string(),
                 tag: None,
                 file_bug: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
             "time_missing".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("Problem(Now())").unwrap(),
                 print: "missing".to_string(),
                 tag: None,
                 file_bug: None,
+                severity: Severity::Warning,
             }),
         );
         actions.insert("file".to_string(), action_file);
@@ -697,7 +778,7 @@ mod test {
 
         assert_eq!(&vec!["[WARNING] 1234.".to_string()], results_1234.get_warnings());
         assert!(results_no_time
-            .get_warnings()
+            .get_infos()
             .contains(&"[MISSING] In config \'file::time_1234\': (need boolean trigger) \"No valid time available\"".to_string()));
         assert!(results_no_time.get_warnings().contains(&"[WARNING] missing.".to_string()));
     }
@@ -737,14 +818,19 @@ mod test {
         tester!(foo_value, five_value, |s: &VT| s.is_empty());
         tester!(five_value, five_value, |s: &VT| s.is_empty());
         tester!(missing_value, five_value, |s: &VT| s.is_empty());
-        assert_eq!(action_context.action_results.warnings.len(), 5);
+        // Problem::Missing shows up in infos, not warnings
+        assert_eq!(action_context.action_results.infos.len(), 1);
+        assert_eq!(action_context.action_results.warnings.len(), 0);
+        assert_eq!(action_context.action_results.errors.len(), 4);
         // False trigger shouldn't add a result
         tester!(false_value, five_value, |s: &VT| s.is_empty());
         tester!(true_value, five_value, |s| s == &vec![snapshot_5_sig.clone()]);
         // We can have more than one of the same trigger in the results.
         tester!(true_value, five_value, |s| s
             == &vec![snapshot_5_sig.clone(), snapshot_5_sig.clone()]);
-        assert_eq!(action_context.action_results.warnings.len(), 5);
+        assert_eq!(action_context.action_results.infos.len(), 1);
+        assert_eq!(action_context.action_results.warnings.len(), 0);
+        assert_eq!(action_context.action_results.errors.len(), 4);
         let (snapshots, warnings) = action_context.into_snapshots();
         assert_eq!(snapshots.len(), 2);
         assert_eq!(warnings.len(), 5);
@@ -763,11 +849,12 @@ mod test {
         let mut action_file = ActionsSchema::new();
         action_file.insert(
             "true_warning".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("true").unwrap(),
                 print: "True was fired".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
@@ -802,12 +889,11 @@ mod test {
         let mut context = ActionContext::new(&metrics, &actions, &no_data, None);
         context.process();
 
-        // Ensure Warning caches correctly
-        if let Action::Warning(warning) = actions.get("file").unwrap().get("true_warning").unwrap()
-        {
+        // Ensure Alert caches correctly
+        if let Action::Alert(warning) = actions.get("file").unwrap().get("true_warning").unwrap() {
             assert_eq!(*warning.trigger.cached_value.borrow(), Some(MetricValue::Bool(true)));
         } else {
-            unreachable!("'true_warning' must be an Action::Warning")
+            unreachable!("'true_warning' must be an Action::Alert")
         }
 
         // Ensure Gauge caches correctly

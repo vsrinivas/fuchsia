@@ -337,6 +337,25 @@ integration_test!(
     "Everything worked as expected"
 );
 
+integration_test!(
+    bad_repeat_test,
+    vec!["bad_repeat.triage"],
+    vec![],
+    vec![],
+    1,
+    "Parsing file 'bad_repeat': Snapshot bad_repeat repeat expression 'Now()' must evaluate to \
+        int, not Problem(Missing: No valid time available)"
+);
+
+integration_test!(
+    missing_file_bug_test,
+    vec!["missing_file_bug.triage"],
+    vec![],
+    vec![],
+    1,
+    "Parsing file 'missing_file_bug': Error severity requires file_bug field in missing_file_bug"
+);
+
 integration_test!(log_tests, vec!["log_tests.triage"], vec![], vec![], 0, "");
 
 integration_test!(bundle_test, vec!["sample_bundle.json"], vec![], vec![], 0, "gauge: 120");

@@ -278,7 +278,7 @@ impl SamplerExecutor {
             .add(sampler_config.project_configs.len() as u64);
 
         let mut project_to_stats_map: HashMap<u32, Arc<ProjectSamplerStats>> = HashMap::new();
-        // TODO(42067): Create only one ArchiveReader for each unique poll rate so we
+        // TODO(fxbug.dev/42067): Create only one ArchiveReader for each unique poll rate so we
         // can avoid redundant snapshots.
         let project_sampler_futures =
             sampler_config.project_configs.into_iter().map(|project_config| {
@@ -340,7 +340,7 @@ impl SamplerExecutor {
             while let Some(sampler_result) = spawned_tasks.next().await {
                 match sampler_result {
                     Err(e) => {
-                        // TODO(42067): Consider restarting the failed sampler depending on
+                        // TODO(fxbug.dev/42067): Consider restarting the failed sampler depending on
                         // failure mode.
                         warn!("A spawned sampler has failed: {:?}", e);
                         execution_context_owned_stats.errorfully_exited_samplers.add(1);
@@ -524,7 +524,7 @@ impl ProjectSampler {
                         )));
                     }
                     ProjectSamplerEvent::RebootChannelClosed(e) => {
-                        // TODO(42067): Consider differentiating errors if
+                        // TODO(fxbug.dev/42067): Consider differentiating errors if
                         // we ever want to recover a sampler after a oneshot channel death.
                         return Err(format_err!(
                             concat!(
@@ -968,7 +968,7 @@ fn convert_inspect_histogram_to_cobalt_histogram(
             .map(|(index, bucket)| histogram_bucket_constructor(index, bucket.count))
             .collect::<Result<Vec<HistogramBucket>, Error>>(),
         _ => {
-            // TODO(42067): Does cobalt support floors or step counts that are
+            // TODO(fxbug.dev/42067): Does cobalt support floors or step counts that are
             // not ints? if so, we can support that as well with double arrays if the
             // actual counts are whole numbers.
             return Err(format_err!(
@@ -1055,8 +1055,8 @@ fn process_occurence(
         return Ok(None);
     }
 
-    // TODO(42067): Once fuchsia.cobalt is gone, we don't need to preserve
-    // occurence counts "fitting" into i64s.
+    // TODO(fxbug.dev/42067): Once fuchsia.cobalt is gone, we don't need to preserve
+    // occurrence counts "fitting" into i64s.
     Ok(Some(MetricEventPayload::Count(diff as u64)))
 }
 

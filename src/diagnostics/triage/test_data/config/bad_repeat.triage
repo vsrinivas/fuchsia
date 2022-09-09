@@ -1,0 +1,10 @@
+{
+    act: {
+        bad_repeat: {
+            type: "Snapshot",
+            signature: "whatever",
+            repeat: "Now()",
+            trigger: "False()",
+        },
+    },
+}

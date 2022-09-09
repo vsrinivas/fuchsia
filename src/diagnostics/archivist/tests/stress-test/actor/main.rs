@@ -52,7 +52,7 @@ fn reader(data: &mut WorkerData, _: SmallRng) -> BoxFuture<'_, Result<()>> {
             data.subscription.next().await.context("No next log")?.context("Error getting log")?;
         log.msg().context("Log doesn't have message")?;
 
-        // TODO(82134): Add log verification
+        // TODO(fxbug.dev/82134): Add log verification
 
         Ok(())
     }

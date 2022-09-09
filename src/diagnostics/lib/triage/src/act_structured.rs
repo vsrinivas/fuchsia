@@ -15,7 +15,7 @@ use {
         },
         plugins::{register_plugins, Plugin},
     },
-    crate::act::{Action, Actions, Gauge, Snapshot, Warning},
+    crate::act::{Action, Actions, Alert, Gauge, Snapshot},
     serde::{self, Serialize},
     std::collections::HashMap,
 };
@@ -57,20 +57,13 @@ impl TriageOutput {
         }
     }
 
-    /// Returns true if any triggered [Warning]s are generated while building the [TriageOutput]
-    /// false otherwise.
-    pub fn has_triggered_warning(&self) -> bool {
+    /// Returns true if any triggered [Warning]s or [Error]s are generated while building the
+    /// [TriageOutput], and false otherwise.
+    pub fn has_reportable_issues(&self) -> bool {
         for (_namespace, actions_map) in &self.actions {
             for (_name, action) in actions_map {
-                match action {
-                    Action::Warning(warning) => {
-                        if let Some(MetricValue::Bool(true)) =
-                            *warning.trigger.cached_value.borrow()
-                        {
-                            return true;
-                        }
-                    }
-                    _ => (),
+                if action.has_reportable_issue() {
+                    return true;
                 }
             }
         }
@@ -115,7 +108,7 @@ impl StructuredActionContext<'_> {
         for (namespace, actions) in self.actions.iter() {
             for (name, action) in actions.iter() {
                 match action {
-                    Action::Warning(warning) => self.update_warnings(warning, namespace, name),
+                    Action::Alert(alert) => self.update_alerts(alert, namespace, name),
                     Action::Gauge(gauge) => self.update_gauges(gauge, namespace, name),
                     Action::Snapshot(snapshot) => self.update_snapshots(snapshot, namespace, name),
                 };
@@ -136,13 +129,13 @@ impl StructuredActionContext<'_> {
         &self.triage_output
     }
 
-    /// Populate warnings.
-    fn update_warnings(&mut self, action: &Warning, namespace: &String, name: &String) {
+    /// Update alerts after ensuring their trigger is evaluated.
+    fn update_alerts(&mut self, action: &Alert, namespace: &String, name: &String) {
         self.metric_state.eval_action_metric(namespace, &action.trigger);
         self.triage_output.add_action(
             namespace.clone(),
             name.clone(),
-            Action::Warning(action.clone()),
+            Action::Alert(action.clone()),
         );
     }
 
@@ -195,7 +188,7 @@ mod test {
     use {
         super::*,
         crate::{
-            act::ActionsSchema,
+            act::{ActionsSchema, Severity},
             metrics::{ExpressionContext, Metric, Metrics, ValueSource},
         },
         std::{cell::RefCell, convert::TryFrom},
@@ -214,7 +207,7 @@ mod test {
     macro_rules! trigger_eq {
         ($results: expr, $file: expr, $name: expr, $eval: expr) => {{
             assert_eq!(
-                cast!($results.actions.get($file).unwrap().get($name).unwrap(), Action::Warning)
+                cast!($results.actions.get($file).unwrap().get($name).unwrap(), Action::Alert)
                     .trigger
                     .cached_value
                     .clone()
@@ -240,48 +233,53 @@ mod test {
         let mut action_file = ActionsSchema::new();
         action_file.insert(
             "do_true".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("true").unwrap(),
                 print: "True was fired".to_string(),
                 file_bug: Some("Some>Monorail>Component".to_string()),
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
             "do_false".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("false").unwrap(),
                 print: "False was fired".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
             "do_true_array".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("true_array").unwrap(),
                 print: "True array was fired".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
             "do_false_array".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("false_array").unwrap(),
                 print: "False array was fired".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
 
         action_file.insert(
             "do_operation".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("0 < 10").unwrap(),
                 print: "Inequality triggered".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         actions.insert("file".to_string(), action_file);
@@ -289,20 +287,20 @@ mod test {
         let mut context = StructuredActionContext::new(&metrics, &mut actions, &no_data, None);
         let results = context.process();
         assert_eq!(
-            cast!(results.actions.get("file").unwrap().get("do_true").unwrap(), Action::Warning)
+            cast!(results.actions.get("file").unwrap().get("do_true").unwrap(), Action::Alert)
                 .file_bug
                 .as_ref()
                 .unwrap(),
             "Some>Monorail>Component"
         );
         assert_eq!(
-            cast!(results.actions.get("file").unwrap().get("do_true").unwrap(), Action::Warning)
+            cast!(results.actions.get("file").unwrap().get("do_true").unwrap(), Action::Alert)
                 .print,
             "True was fired"
         );
         trigger_eq!(results, "file", "do_true", true);
         assert_eq!(
-            cast!(results.actions.get("file").unwrap().get("do_false").unwrap(), Action::Warning)
+            cast!(results.actions.get("file").unwrap().get("do_false").unwrap(), Action::Alert)
                 .print,
             "False was fired"
         );
@@ -310,7 +308,7 @@ mod test {
         assert_eq!(
             cast!(
                 results.actions.get("file").unwrap().get("do_true_array").unwrap(),
-                Action::Warning
+                Action::Alert
             )
             .print,
             "True array was fired"
@@ -319,18 +317,15 @@ mod test {
         assert_eq!(
             cast!(
                 results.actions.get("file").unwrap().get("do_false_array").unwrap(),
-                Action::Warning
+                Action::Alert
             )
             .print,
             "False array was fired"
         );
         trigger_eq!(results, "file", "do_false_array", false);
         assert_eq!(
-            cast!(
-                results.actions.get("file").unwrap().get("do_operation").unwrap(),
-                Action::Warning
-            )
-            .print,
+            cast!(results.actions.get("file").unwrap().get("do_operation").unwrap(), Action::Alert)
+                .print,
             "Inequality triggered"
         );
         trigger_eq!(results, "file", "do_operation", true);
@@ -547,11 +542,12 @@ mod test {
         let mut action_file = ActionsSchema::new();
         action_file.insert(
             "true_warning".to_string(),
-            Action::Warning(Warning {
+            Action::Alert(Alert {
                 trigger: ValueSource::try_from_expression("true").unwrap(),
                 print: "True was fired".to_string(),
                 file_bug: None,
                 tag: None,
+                severity: Severity::Warning,
             }),
         );
         action_file.insert(
@@ -586,12 +582,11 @@ mod test {
         let mut context = StructuredActionContext::new(&metrics, &mut actions, &no_data, None);
         context.process();
 
-        // Ensure Warning caches correctly
-        if let Action::Warning(warning) = actions.get("file").unwrap().get("true_warning").unwrap()
-        {
-            assert_eq!(*warning.trigger.cached_value.borrow(), Some(MetricValue::Bool(true)));
+        // Ensure Alert caches correctly
+        if let Action::Alert(alert) = actions.get("file").unwrap().get("true_warning").unwrap() {
+            assert_eq!(*alert.trigger.cached_value.borrow(), Some(MetricValue::Bool(true)));
         } else {
-            unreachable!("'true_warning' must be an Action::Warning")
+            unreachable!("'true_warning' must be an Action::Alert")
         }
 
         // Ensure Gauge caches correctly

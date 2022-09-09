@@ -2,7 +2,8 @@
     "actions": {
         "other": {
             "act1": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {
@@ -25,7 +26,8 @@
         },
         "sample": {
             "unhealthy": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {
@@ -48,7 +50,8 @@
                 "tag": null
             },
             "act2": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {
@@ -69,7 +72,8 @@
                 "tag": null
             },
             "some_disk": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {
@@ -90,7 +94,8 @@
                 "tag": null
             },
             "more_disk": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {

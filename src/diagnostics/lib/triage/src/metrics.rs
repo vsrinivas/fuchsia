@@ -506,15 +506,19 @@ impl<'a> MetricState<'a> {
 
     /// Evaluate an Expression which contains only base values, not referring to other Metrics.
     pub(crate) fn evaluate_math(expr: &str) -> MetricValue {
-        let parsed = match ExpressionContext::try_from(expr.to_string()) {
+        let tree = match ExpressionContext::try_from(expr.to_string()) {
             Ok(expr_context) => expr_context.parsed_expression,
             Err(err) => return syntax_error(format!("Failed to parse '{}': {}", expr, err)),
         };
+        Self::evaluate_const_expression(&tree)
+    }
+
+    pub(crate) fn evaluate_const_expression(tree: &ExpressionTree) -> MetricValue {
         let values = HashMap::new();
         let fetcher = Fetcher::TrialData(TrialDataFetcher::new(&values));
         let files = HashMap::new();
         let metric_state = MetricState::new(&files, fetcher, None);
-        metric_state.evaluate(&"".to_string(), &parsed)
+        metric_state.evaluate(&"".to_string(), &tree)
     }
 
     #[cfg(test)]

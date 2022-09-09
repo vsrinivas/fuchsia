@@ -2,7 +2,8 @@
     "actions": {
         "error_rate": {
             "error_rate_too_high": {
-                "type": "Warning",
+                "type": "Alert",
+                "severity": "Warning",
                 "trigger": {
                     "metric": {
                         "Eval": {

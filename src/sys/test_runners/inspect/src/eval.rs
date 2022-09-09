@@ -65,7 +65,13 @@ impl EvaluationContext {
 
         let result = triage_lib::analyze(&data_vec, &self.config_parse_result)
             .map_err(|e| EvaluationError::InternalFailure(e.to_string()))?;
-        match result.get_warnings() {
+        match [
+            result.get_infos().as_slice(),
+            result.get_warnings().as_slice(),
+            result.get_errors().as_slice(),
+        ]
+        .concat()
+        {
             list if list.len() == 0 => Ok(()),
             warnings => Err(EvaluationError::Failure {
                 reasons: warnings.join("\n"),
@@ -181,7 +187,11 @@ mod tests {
                         );
                     }
                     v => {
-                        assert!(false, "Expected an internal error, found {:?}", v);
+                        assert!(
+                            false,
+                            "Expected an internal error {}, found {:?}",
+                            expected_error, v
+                        );
                     }
                 },
             }

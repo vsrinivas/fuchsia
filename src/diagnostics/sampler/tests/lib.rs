@@ -193,7 +193,7 @@ async fn sampler_inspect_test() {
         .expect("got inspect data");
 
     let hierarchy = data.pop().expect("one result").payload.expect("payload is not none");
-    // TODO(42067): Introduce better fencing so we can
+    // TODO(fxbug.dev/42067): Introduce better fencing so we can
     // guarantee we fetch the hierarchy after the metrics were sampled
     // AND fully processed.
     assert_data_tree!(

@@ -6,7 +6,7 @@ use {
     crate::{
         act::{
             self,
-            Action::{Gauge, Snapshot, Warning},
+            Action::{Alert, Gauge, Snapshot},
             Actions, ActionsSchema,
         },
         metrics::{
@@ -232,8 +232,8 @@ impl ParseResult {
         for (_, action_set) in self.actions.iter() {
             for (_, action) in action_set.iter() {
                 match action {
-                    Warning(warning) => {
-                        *warning.trigger.cached_value.borrow_mut() = None;
+                    Alert(alert) => {
+                        *alert.trigger.cached_value.borrow_mut() = None;
                     }
                     Gauge(gauge) => {
                         *gauge.value.cached_value.borrow_mut() = None;
@@ -314,7 +314,7 @@ pub(crate) fn filter_actions(
 mod test {
     use {
         super::*,
-        crate::act::{Action, Warning},
+        crate::act::{Action, Alert, Severity},
         anyhow::Error,
         fidl_fuchsia_feedback::MAX_CRASH_SIGNATURE_LENGTH,
         maplit::hashmap,
@@ -387,11 +387,12 @@ mod test {
                 let trigger =  ValueSource::try_from_expression("a_trigger").unwrap();
 
                 $(
-                    let action = Action::Warning(Warning {
+                    let action = Action::Alert(Alert {
                         trigger: trigger.clone(),
                         print: $contents.to_string(),
                         tag: $tag,
                         file_bug: None,
+                        severity: Severity::Warning,
                     });
                     m.insert($key.to_string(), action);
                 )+
@@ -404,7 +405,7 @@ mod test {
     macro_rules! assert_has_action {
         ($result:expr, $key:expr, $contents:expr) => {
             match $result.get(&$key.to_string()) {
-                Some(Action::Warning(a)) => {
+                Some(Action::Alert(a)) => {
                     assert_eq!(a.print, $contents.to_string());
                 }
                 _ => {
