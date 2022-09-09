@@ -15,19 +15,9 @@ use super::Id;
 #[cfg_attr(test, derive(PartialEq, Eq))]
 pub(crate) enum NeighborHealth {
     Unknown,
-    // TODO(https://fxbug.dev/104556): Used in non-test code in watchdog
-    // implementation.
-    #[allow(dead_code)]
-    Stale {
-        last_observed: zx::Time,
-        last_healthy: Option<zx::Time>,
-    },
-    Healthy {
-        last_observed: zx::Time,
-    },
-    Unhealthy {
-        last_healthy: Option<zx::Time>,
-    },
+    Stale { last_observed: zx::Time, last_healthy: Option<zx::Time> },
+    Healthy { last_observed: zx::Time },
+    Unhealthy { last_healthy: Option<zx::Time> },
 }
 
 impl NeighborHealth {
@@ -75,10 +65,33 @@ pub(crate) struct NeighborState {
     health: NeighborHealth,
 }
 
+impl NeighborState {
+    #[cfg(test)]
+    pub(crate) const fn new(health: NeighborHealth) -> Self {
+        Self { health }
+    }
+}
+
 #[derive(Debug, Default)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
 pub struct InterfaceNeighborCache {
     neighbors: HashMap<fnet::IpAddress, NeighborState>,
+}
+
+impl InterfaceNeighborCache {
+    pub(crate) fn iter_health(
+        &self,
+    ) -> impl Iterator<Item = (&'_ fnet::IpAddress, &'_ NeighborHealth)> {
+        let Self { neighbors } = self;
+        neighbors.iter().map(|(n, NeighborState { health })| (n, health))
+    }
+}
+
+#[cfg(test)]
+impl FromIterator<(fnet::IpAddress, NeighborState)> for InterfaceNeighborCache {
+    fn from_iter<T: IntoIterator<Item = (fnet::IpAddress, NeighborState)>>(iter: T) -> Self {
+        Self { neighbors: FromIterator::from_iter(iter) }
+    }
 }
 
 /// Provides a cache of known neighbors and keeps track of their health.

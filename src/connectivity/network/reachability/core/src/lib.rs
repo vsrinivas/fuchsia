@@ -5,6 +5,7 @@
 mod inspect;
 mod neighbor_cache;
 mod ping;
+pub mod watchdog;
 
 use {
     crate::ping::Ping,
@@ -349,6 +350,7 @@ impl StateInfo {
 }
 
 /// Provides a view into state for a specific system interface.
+#[derive(Copy, Clone)]
 pub struct InterfaceView<'a> {
     pub properties: &'a fnet_interfaces_ext::Properties,
     pub routes: &'a [fnet_stack::ForwardingEntry],

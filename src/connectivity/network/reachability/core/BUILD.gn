@@ -23,6 +23,8 @@ rustc_library("lib") {
     "//src/connectivity/lib/ping",
     "//src/lib/diagnostics/inspect/contrib/rust",
     "//src/lib/diagnostics/inspect/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
@@ -30,12 +32,15 @@ rustc_library("lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
     "//src/connectivity/lib/net-declare",
     "//src/lib/fuchsia",
+    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [
@@ -43,6 +48,7 @@ rustc_library("lib") {
     "src/lib.rs",
     "src/neighbor_cache.rs",
     "src/ping.rs",
+    "src/watchdog.rs",
   ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
