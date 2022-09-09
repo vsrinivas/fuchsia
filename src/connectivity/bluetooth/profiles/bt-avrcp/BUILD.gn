@@ -87,7 +87,6 @@ rustc_binary("bin") {
     "src/peer_manager/target_delegate.rs",
     "src/profile.rs",
     "src/service.rs",
-    "src/tests/mod.rs",
     "src/types.rs",
   ]
 

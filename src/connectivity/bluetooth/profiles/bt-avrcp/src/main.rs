@@ -25,9 +25,6 @@ mod profile;
 mod service;
 mod types;
 
-#[cfg(test)]
-mod tests;
-
 use crate::{
     metrics::{MetricsNode, METRICS_NODE_NAME},
     peer_manager::PeerManager,
