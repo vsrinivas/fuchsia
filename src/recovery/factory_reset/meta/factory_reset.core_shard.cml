@@ -35,9 +35,8 @@
             source_availability: "unknown",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
-            as: "dev",
             to: "#factory_reset",
         },
     ],

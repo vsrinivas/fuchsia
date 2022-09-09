@@ -29,7 +29,7 @@
         // achievable via constructing topological paths, which means we need access to
         // the root of the device topology.
         {
-            directory: "dev",
+            directory: "dev-topological",
             rights: [ "rw*" ],
             path: "/dev",
         },
