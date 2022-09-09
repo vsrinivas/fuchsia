@@ -74,7 +74,8 @@ var (
 	mode                           bootserver.Mode
 	// TODO(ihuh): Remove when no longer used. This is not actually used
 	// anywhere. It is just here to hold the value of the --no-bind flag.
-	noBind bool
+	noBind   bool
+	logLevel = logger.InfoLevel
 
 	// errIncompleteTransfer represents a failure to transfer pave images
 	// to the device.
@@ -122,6 +123,7 @@ func init() {
 	flag.BoolVar(&useNetboot, "netboot", false, "use the netboot protocol")
 	flag.BoolVar(&useTftp, "tftp", true, "use the tftp protocol (default)")
 	flag.BoolVar(&nocolor, "nocolor", false, "disable ANSI color (false)")
+	flag.Var(&logLevel, "log-level", "log level, can be fatal, error, warning, info, debug, or trace (default info)")
 }
 
 // Creates a slice of FirmwareArgs from |args|.
@@ -435,7 +437,7 @@ func execute(ctx context.Context, cmdlineArgs []string) error {
 func main() {
 	flag.Parse()
 
-	log := logger.NewLogger(logger.InfoLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "bootserver ")
+	log := logger.NewLogger(logLevel, color.NewColor(color.ColorAuto), os.Stdout, os.Stderr, "bootserver ")
 	log.SetFlags(logger.Ltime | logger.Lmicroseconds | logger.Lshortfile)
 
 	ctx := logger.WithLogger(context.Background(), log)
