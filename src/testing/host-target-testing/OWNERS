@@ -1,2 +1,4 @@
+include /src/sys/pkg/OWNERS
 abarth@google.com
-etryzelaar@google.com
+
+# COMPONENT: Packages
