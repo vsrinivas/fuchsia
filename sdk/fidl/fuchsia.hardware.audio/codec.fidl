@@ -25,7 +25,7 @@ type CodecInfo = struct {
 // Not needed anymore since the functionality is available in the signal processing API defined
 // at //sdk/fidl/fuchsia.hardware.audio.signalprocessing. Use a `Gain` `Element` instead, see
 // //sdk/fidl/fuchsia.hardware.audio.signalprocessing/gain.fidl.
-@available(deprecated=9)
+@available(deprecated=9, removed=HEAD)
 type GainType = strict enum : uint8 {
     /// Gain specified in dB, for example -103.0dB or +3.2dB.
     DECIBELS = 1;
@@ -41,7 +41,7 @@ type GainType = strict enum : uint8 {
 // Not needed anymore since the functionality is available in the signal processing API defined
 // at //sdk/fidl/fuchsia.hardware.audio.signalprocessing. Use a `Gain` `Element` instead, see
 // //sdk/fidl/fuchsia.hardware.audio.signalprocessing/gain.fidl.
-@available(deprecated=9)
+@available(deprecated=9, removed=HEAD)
 type GainFormat = table {
     /// Specifies what the numbers for gain represent, e.g. a percentage. Required.
     1: type GainType;
@@ -167,7 +167,7 @@ protocol Codec {
     // Not needed anymore since the functionality is available in the signal processing API defined
     // at //sdk/fidl/fuchsia.hardware.audio.signalprocessing. Use a `Gain` `Element` instead, see
     // //sdk/fidl/fuchsia.hardware.audio.signalprocessing/gain.fidl.
-    @available(deprecated=9)
+    @available(deprecated=9, removed=HEAD)
     GetGainFormat() -> (struct {
         gain_format GainFormat;
     });
@@ -187,7 +187,7 @@ protocol Codec {
     // Not needed anymore since the functionality is available in the signal processing API defined
     // at //sdk/fidl/fuchsia.hardware.audio.signalprocessing. Use a `Gain` `Element` instead, see
     // //sdk/fidl/fuchsia.hardware.audio.signalprocessing/gain.fidl.
-    @available(deprecated=9)
+    @available(deprecated=9, removed=HEAD)
     WatchGainState() -> (struct {
         gain_state GainState;
     });
@@ -199,7 +199,7 @@ protocol Codec {
     // Not needed anymore since the functionality is available in the signal processing API defined
     // at //sdk/fidl/fuchsia.hardware.audio.signalprocessing. Use a `Gain` `Element` instead, see
     // //sdk/fidl/fuchsia.hardware.audio.signalprocessing/gain.fidl.
-    @available(deprecated=9)
+    @available(deprecated=9, removed=HEAD)
     SetGainState(struct {
         target_state GainState;
     });

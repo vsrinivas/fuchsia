@@ -130,12 +130,10 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
  private:
   // Internal implementaions have the same name but different signatures.
   using SimpleCodecServerInternal::GetDaiFormats;
-  using SimpleCodecServerInternal::GetGainFormat;
   using SimpleCodecServerInternal::GetInfo;
   using SimpleCodecServerInternal::IsBridgeable;
   using SimpleCodecServerInternal::Reset;
   using SimpleCodecServerInternal::SetDaiFormat;
-  using SimpleCodecServerInternal::SetGainState;
   using SimpleCodecServerInternal::Start;
   using SimpleCodecServerInternal::Stop;
 

@@ -524,75 +524,7 @@ void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
   callback(std::move(result));
 }
 
-template <class T>
-void SimpleCodecServerInternal<T>::GetGainFormat(Codec::GetGainFormatCallback callback) {
-  auto format = static_cast<T*>(this)->GetGainFormat();
-  audio_fidl::GainFormat format2;
-  format2.set_type(audio_fidl::GainType::DECIBELS);  // Only decibels in simple codec.
-  format2.set_min_gain(format.min_gain);
-  format2.set_max_gain(format.max_gain);
-  format2.set_gain_step(format.gain_step);
-  format2.set_can_mute(format.can_mute);
-  format2.set_can_agc(format.can_agc);
-  callback(std::move(format2));
-}
-
-template <class T>
-void SimpleCodecServerInternal<T>::WatchGainState(Codec::WatchGainStateCallback callback,
-                                                  SimpleCodecServerInstance<T>* instance) {
-  if (load_gain_state_first_time_) {
-    gain_state_ = static_cast<T*>(this)->GetGainState();
-  }
-  load_gain_state_first_time_ = false;
-
-  // Reply immediately if the gain state has been updated since the last call. Otherwise store the
-  // callback and reply the next time the gain state is updated. Only one hanging get may be
-  // outstanding at a time.
-  if (instance->gain_state_updated_) {
-    instance->gain_state_updated_ = false;
-
-    audio_fidl::GainState gain_state = {};
-    gain_state.set_muted(gain_state_.muted);
-    gain_state.set_agc_enabled(gain_state_.agc_enabled);
-    gain_state.set_gain_db(gain_state_.gain);
-    callback(std::move(gain_state));
-  } else if (!instance->gain_state_callback_) {
-    instance->gain_state_callback_.emplace(std::move(callback));
-  } else {
-    // The client called WatchGainState when another hanging get was pending.
-    instance->binding_.Unbind();
-    fbl::AutoLock lock(&instances_lock_);
-    instances_.erase(*instance);
-  }
-}
-
-template <class T>
-void SimpleCodecServerInternal<T>::SetGainState(audio_fidl::GainState state) {
-  gain_state_.gain = state.gain_db();
-  gain_state_.muted = state.muted();
-  gain_state_.agc_enabled = state.agc_enabled();
-  static_cast<T*>(this)->SetGainState(gain_state_);
-
-  fbl::AutoLock lock(&instances_lock_);
-  for (auto& iter : instances_) {
-    audio_fidl::GainState state2;
-    state.Clone(&state2);
-    iter.GainStateUpdated(std::move(state2));
-  }
-}
-
 // SimpleCodecServerInstance methods.
-template <class T>
-void SimpleCodecServerInstance<T>::GainStateUpdated(audio_fidl::GainState gain_state) {
-  if (gain_state_callback_) {
-    (*gain_state_callback_)(std::move(gain_state));
-    gain_state_callback_.reset();
-    gain_state_updated_ = false;
-  } else {
-    // WatchGainState will immediately reply with the latest gain state next the time it is called.
-    gain_state_updated_ = true;
-  }
-}
 
 template <class T>
 void SimpleCodecServerInstance<T>::SignalProcessingConnect(

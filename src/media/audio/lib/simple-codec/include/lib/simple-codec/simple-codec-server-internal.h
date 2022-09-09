@@ -61,10 +61,6 @@ class SimpleCodecServerInternal {
   void GetDaiFormats(Codec::GetDaiFormatsCallback callback);
   void SetDaiFormat(fuchsia::hardware::audio::DaiFormat format,
                     Codec::SetDaiFormatCallback callback);
-  void GetGainFormat(Codec::GetGainFormatCallback callback);
-  void WatchGainState(Codec::WatchGainStateCallback callback,
-                      SimpleCodecServerInstance<T>* instance);
-  void SetGainState(fuchsia::hardware::audio::GainState state);
   void GetPlugDetectCapabilities(Codec::GetPlugDetectCapabilitiesCallback callback);
   void WatchPlugState(Codec::WatchPlugStateCallback callback,
                       SimpleCodecServerInstance<T>* instance);
@@ -169,15 +165,6 @@ class SimpleCodecServerInstance
                     SetDaiFormatCallback callback) override {
     parent_->SetDaiFormat(std::move(format), std::move(callback));
   }
-  void GetGainFormat(GetGainFormatCallback callback) override {
-    parent_->GetGainFormat(std::move(callback));
-  }
-  void WatchGainState(WatchGainStateCallback callback) override {
-    parent_->WatchGainState(std::move(callback), this);
-  }
-  void SetGainState(fuchsia::hardware::audio::GainState state) override {
-    parent_->SetGainState(std::move(state));
-  }
   void GetPlugDetectCapabilities(GetPlugDetectCapabilitiesCallback callback) override {
     parent_->GetPlugDetectCapabilities(std::move(callback));
   }
@@ -189,9 +176,7 @@ class SimpleCodecServerInstance
   fidl::Binding<fuchsia::hardware::audio::Codec> binding_;
   std::optional<fidl::Binding<fuchsia::hardware::audio::signalprocessing::SignalProcessing>>
       signal_processing_binding_;
-  bool gain_state_updated_ = true;  // Return the current gain state on the first call.
   bool plug_state_updated_ = true;  // Return the current plug state on the first call.
-  std::optional<WatchGainStateCallback> gain_state_callback_;
 
   bool gain_updated_ = true;  // Return the current gain state on the first call.
   std::optional<

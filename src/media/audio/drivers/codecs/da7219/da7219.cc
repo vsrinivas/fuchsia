@@ -323,37 +323,6 @@ void Driver::Start(StartCompleter::Sync& completer) {
   completer.Reply({});  // Always started.
 }
 
-void Driver::GetGainFormat(GetGainFormatCompleter::Sync& completer) {
-  fidl::Arena arena;
-  auto gain_format = fuchsia_hardware_audio::wire::GainFormat::Builder(arena);
-  gain_format.type(fuchsia_hardware_audio::GainType::kDecibels)
-      .min_gain(0.0f)
-      .max_gain(0.0f)
-      .gain_step(0.0f)
-      .can_mute(false)
-      .can_agc(false);
-  completer.Reply(gain_format.Build());
-}
-
-void Driver::SetGainState(SetGainStateRequestView request, SetGainStateCompleter::Sync& completer) {
-  // No gain support and no reply required.
-}
-
-void Driver::WatchGainState(WatchGainStateCompleter::Sync& completer) {
-  // Only reply to the first watch request.
-  if (!gain_state_replied_) {
-    gain_state_replied_ = true;
-    fidl::Arena arena;
-    auto gain_state = fuchsia_hardware_audio::wire::GainState::Builder(arena);
-    gain_state.muted(false).agc_enabled(false).gain_db(0.0f);
-    completer.Reply(gain_state.Build());
-  } else if (!gain_state_completer_) {
-    gain_state_completer_.emplace(completer.ToAsync());
-  } else {
-    zxlogf(WARNING, "Watch request when watch is still in progress");
-  }
-}
-
 void Driver::GetHealthState(GetHealthStateCompleter::Sync& completer) { completer.Reply({}); }
 
 void Driver::IsBridgeable(IsBridgeableCompleter::Sync& completer) { completer.Reply(false); }

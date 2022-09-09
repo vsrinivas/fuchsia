@@ -83,10 +83,6 @@ class Driver : public Base,
   void GetDaiFormats(GetDaiFormatsCompleter::Sync& completer) override;
   void SetDaiFormat(SetDaiFormatRequestView request,
                     SetDaiFormatCompleter::Sync& completer) override;
-  void GetGainFormat(GetGainFormatCompleter::Sync& completer) override;
-  void WatchGainState(WatchGainStateCompleter::Sync& completer) override;
-  void SetGainState(SetGainStateRequestView request,
-                    SetGainStateCompleter::Sync& completer) override;
   void GetPlugDetectCapabilities(GetPlugDetectCapabilitiesCompleter::Sync& completer) override;
   void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override;
   void SignalProcessingConnect(SignalProcessingConnectRequestView request,
@@ -101,8 +97,6 @@ class Driver : public Base,
   zx::time plugged_time_;
   bool plug_state_updated_ = true;
   std::optional<WatchPlugStateCompleter::Async> plug_state_completer_;
-  bool gain_state_replied_ = false;
-  std::optional<WatchGainStateCompleter::Async> gain_state_completer_;
   bool bound_ = false;
 };
 

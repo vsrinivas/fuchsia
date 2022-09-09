@@ -1486,20 +1486,12 @@ mod tests {
                         ..PlugState::EMPTY
                     })?;
                 }
-                CodecRequest::SetGainState { target_state, control_handle: _ } => {
-                    if !with_signal {
-                        self.gain = target_state.gain_db;
-                    }
-                }
                 CodecRequest::SignalProcessingConnect { protocol, control_handle: _ } => {
                     if with_signal {
                         self.signal_stream = Some(protocol.into_stream()?);
                     } else {
                         let _ = protocol.close_with_epitaph(zx::Status::NOT_SUPPORTED);
                     }
-                }
-                CodecRequest::WatchGainState { responder } => {
-                    responder.send(GainState { gain_db: self.gain, ..GainState::EMPTY })?;
                 }
 
                 r => panic!("{:?} Not covered by test", r),
