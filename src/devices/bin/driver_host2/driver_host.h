@@ -17,37 +17,10 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>
 
+#include "src/devices/bin/driver_host2/driver.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
-class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
-               public fbl::RefCounted<Driver>,
-               public fbl::DoublyLinkedListable<fbl::RefPtr<Driver>> {
- public:
-  static zx::status<fbl::RefPtr<Driver>> Load(std::string url, zx::vmo vmo);
-
-  Driver(std::string url, void* library, const DriverRecordV1* record);
-  ~Driver() override;
-
-  const std::string& url() const { return url_; }
-  void set_binding(fidl::ServerBindingRef<fuchsia_driver_host::Driver> binding);
-
-  void Stop(StopRequest& request, StopCompleter::Sync& completer) override;
-
-  // Starts the driver.
-  zx::status<> Start(fuchsia_driver_framework::DriverStartArgs start_args,
-                     fdf::Dispatcher dispatcher);
-
- private:
-  std::string url_;
-  void* library_;
-  const DriverRecordV1* record_;
-  std::optional<void*> opaque_;
-  std::optional<fidl::ServerBindingRef<fuchsia_driver_host::Driver>> binding_;
-
-  // The initial dispatcher passed to the driver.
-  // This must be shutdown by before this driver object is destructed.
-  fdf::Dispatcher initial_dispatcher_;
-};
+namespace dfv2 {
 
 class DriverHost : public fidl::Server<fuchsia_driver_host::DriverHost> {
  public:
@@ -74,5 +47,7 @@ class DriverHost : public fidl::Server<fuchsia_driver_host::DriverHost> {
   std::mutex mutex_;
   fbl::DoublyLinkedList<fbl::RefPtr<Driver>> drivers_ __TA_GUARDED(mutex_);
 };
+
+}  // namespace dfv2
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_HOST_H_

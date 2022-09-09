@@ -131,7 +131,7 @@ class DriverHostTest : public testing::Test {
   async::Loop& loop() { return loop_; }
   async::Loop& second_loop() { return second_loop_; }
   fidl::Server<fdh::DriverHost>& driver_host() { return *driver_host_; }
-  void set_driver_host(std::unique_ptr<DriverHost> driver_host) {
+  void set_driver_host(std::unique_ptr<dfv2::DriverHost> driver_host) {
     driver_host_ = std::move(driver_host);
   }
 
@@ -216,7 +216,8 @@ class DriverHostTest : public testing::Test {
   inspect::Inspector inspector_;
   async::Loop second_loop_{&kAsyncLoopConfigNeverAttachToThread};
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
-  std::unique_ptr<DriverHost> driver_host_ = std::make_unique<DriverHost>(inspector_, loop_);
+  std::unique_ptr<dfv2::DriverHost> driver_host_ =
+      std::make_unique<dfv2::DriverHost>(inspector_, loop_);
   fs::SynchronousVfs vfs_{loop_.dispatcher()};
   fbl::RefPtr<fs::PseudoDir> svc_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 };

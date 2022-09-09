@@ -17,6 +17,26 @@ group("tests") {
   deps = [ ":driver-host2-test" ]
 }
 
+source_set("driver") {
+  sources = [
+    "driver.cc",
+    "driver.h",
+  ]
+
+  deps = [
+    "//sdk/lib/driver2:llcpp",
+    "//src/devices/lib/log",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp",
+    "//sdk/lib/driver2:llcpp",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "driver_host.cc",
@@ -24,6 +44,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    ":driver",
     "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp",
     "//sdk/lib/driver2:llcpp",

@@ -71,7 +71,7 @@ int main(int argc, char** argv) {
     return status_result.status_value();
   }
 
-  DriverHost driver_host(inspector, loop);
+  dfv2::DriverHost driver_host(inspector, loop);
   auto init = driver_host.PublishDriverHost(outgoing);
   if (init.is_error()) {
     return init.error_value();
