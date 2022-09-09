@@ -70,17 +70,11 @@ template("e2e_tests_pave") {
   assert(is_linux || is_mac, "system_tests are for linux/mac only")
 
   assert(
-      defined(invoker.release_builder) ||
-          defined(invoker.downgrade_release_builder) ||
+      defined(invoker.downgrade_release_builder) ||
           defined(invoker.downgrade_release_build_id),
       "downgrade_release_builder or downgrade_release_build_id must be defined for $target_name")
   assert(
-      !(defined(invoker.release_builder) &&
-            defined(invoker.downgrade_release_builder)),
-      "release_builder and downgrade_release_builder are mutually exclusive for $target_name")
-  assert(
-      !((defined(invoker.release_builder) ||
-             defined(invoker.downgrade_release_builder)) &&
+      !(defined(invoker.downgrade_release_builder) &&
             defined(invoker.downgrade_release_build_id)),
       "downgrade_release_builder and downgrade_release_build_id are mutually exclusive for $target_name")
 
