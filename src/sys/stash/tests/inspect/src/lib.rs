@@ -8,6 +8,7 @@ use {
     fuchsia_async::{self as fasync},
 };
 
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn stash_inspect() -> Result<(), Error> {
     // stash is started as an eager child of the test's top-level component.
@@ -25,6 +26,7 @@ async fn stash_inspect() -> Result<(), Error> {
     Ok(())
 }
 
+#[ignore]
 #[fasync::run_singlethreaded(test)]
 async fn stash_secure_inspect() -> Result<(), Error> {
     // stash_secure is started as an eager child of the test's top-level component.
