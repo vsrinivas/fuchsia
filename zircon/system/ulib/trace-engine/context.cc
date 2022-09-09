@@ -549,13 +549,12 @@ void trace_context::MarkTracingArtificiallyStopped() {
 
 void trace_context::NotifyRollingBufferFullLocked(uint32_t wrapped_count,
                                                   uint64_t durable_data_end) {
-  // The notification is handled on the engine's event loop as
-  // we need this done outside of the lock: Certain handlers
-  // (e.g., trace-benchmark) just want to immediately call
-  // |trace_engine_mark_buffer_saved()| which wants to reacquire
-  // the lock. Secondly, if we choose to wait until the buffer context is
-  // released before notifying the handler then we can't do so now as we
-  // still have a reference to the buffer context.
+  // The notification is handled on the engine's event loop as we need this done outside of the
+  // lock: Certain handlers just want to immediately call |trace_engine_mark_buffer_saved()| which
+  // wants to reacquire the lock. Secondly, if we choose to wait until the buffer context is
+  // released before notifying the handler then we can't do so now as we still have a reference to
+  // the buffer context.
+
   trace_engine_request_save_buffer(wrapped_count, durable_data_end);
 }
 

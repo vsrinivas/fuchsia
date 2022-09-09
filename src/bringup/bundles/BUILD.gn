@@ -39,7 +39,6 @@ group("debugging") {
     ":virtcon",
     "//build/validate:non_production_tag",
     "//src/bringup/bin/dlog",
-    "//src/bringup/bin/trace-benchmark",
   ]
 }
 
