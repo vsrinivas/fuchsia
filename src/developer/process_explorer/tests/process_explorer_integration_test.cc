@@ -15,9 +15,12 @@
 #include <fbl/unique_fd.h>
 #include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 
+#include "src/developer/process_explorer/utils.h"
 #include "src/lib/fsl/socket/strings.h"
 
-// NOLINTNEXTLINE
+namespace process_explorer {
+namespace {
+
 using namespace component_testing;
 
 class RealmBuilderTest : public gtest::RealLoopFixture {};
@@ -32,14 +35,53 @@ class LocalRootJobImpl : public fuchsia::kernel::RootJob, public LocalComponent 
     // job_ acts as the root job
     // job_ has two child processes
     job_ = CreateJob();
-    processes_.push_back(LaunchProcess(job_, "MockProcess1", {"/pkg/bin/mock_process"}));
-    processes_.push_back(LaunchProcess(job_, "MockProcess2", {"/pkg/bin/mock_process"}));
+    LaunchProcess(job_, "MockProcess1", {"/pkg/bin/mock_process"});
+    LaunchProcess(job_, "MockProcess2", {"/pkg/bin/mock_process"});
 
     callback(std::move(job_));
     called_ = true;
     quit_loop_();
   }
 
+  std::string ProcessesDataAsJson() {
+    FillPeerOwnerKoid(processes_);
+    std::string json = "{\"Processes\":[";
+    for (const auto& process : processes_) {
+      json.append("{\"koid\":").append(std::to_string(process.koid)).append(",");
+      json.append("\"name\":\"").append(process.name).append("\",");
+      json.append("\"objects\":[");
+      for (const auto& object : process.objects) {
+        json.append("{\"type\":").append(std::to_string(object.type));
+        json.append(",\"koid\":").append(std::to_string(object.koid));
+        json.append(",\"related_koid\":").append(std::to_string(object.related_koid));
+        json.append(",\"peer_owner_koid\":").append(std::to_string(object.peer_owner_koid));
+        json.append("},");
+      }
+      json.pop_back();
+      json.append("]},");
+    }
+    json.pop_back();
+    json.append("]}");
+
+    for (const auto& stdin : processes_stdin_) {
+      EXPECT_EQ(close(stdin.get()), 0);
+    }
+    return json;
+  }
+
+  // Override `Start` from `LocalComponent` class.
+  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
+    // Keep reference to `handles` in member variable.
+    // This class contains handles to the component's incoming
+    // and outgoing capabilities.
+    handles_ = std::move(handles);
+    EXPECT_EQ(handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)),
+              ZX_OK);
+  }
+
+  bool WasCalled() const { return called_; }
+
+ private:
   zx::job CreateJob() {
     zx_handle_t default_job = zx_job_default();
     zx_handle_t job;
@@ -49,13 +91,7 @@ class LocalRootJobImpl : public fuchsia::kernel::RootJob, public LocalComponent 
     return zx::job(job);
   }
 
-  struct ProcessInfo {
-    zx::process process;
-    fbl::unique_fd process_stdin;
-  };
-
-  ProcessInfo LaunchProcess(const zx::job& job, const std::string name,
-                            std::vector<const char*> argv) {
+  void LaunchProcess(const zx::job& job, const std::string name, std::vector<const char*> argv) {
     // fdio_spawn requires that argv has a nullptr in the end.
     std::vector<const char*> normalized_argv = argv;
     normalized_argv.push_back(nullptr);
@@ -97,96 +133,35 @@ class LocalRootJobImpl : public fuchsia::kernel::RootJob, public LocalComponent 
 
     char buffer[1];
     EXPECT_EQ(read(stdout_fd.get(), buffer, 1), 0);
-
-    ProcessInfo return_process;
-    return_process.process = std::move(process);
-    return_process.process_stdin = std::move(stdin_fd);
-    return return_process;
+    AddProcessToList(process.borrow(), name);
+    processes_stdin_.push_back(std::move(stdin_fd));
   }
 
-  std::string ProcessesDataAsJson() {
-    std::string json = "{\"Processes\":[";
-    for (const auto& process_info : processes_) {
-      zx::unowned_process process = process_info.process.borrow();
-      zx_info_handle_basic_t info;
-
-      if (auto status =
-              process->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-          status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to get process koid: " << zx_status_get_string(status);
-      }
-      json.append("{\"koid\":").append(std::to_string(info.koid)).append(",");
-
-      char process_name[ZX_MAX_NAME_LEN];
-      if (auto status = process->get_property(ZX_PROP_NAME, &process_name, sizeof(process_name));
-          status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to get process name: " << zx_status_get_string(status);
-      }
-
-      json.append("\"name\":\"").append(process_name).append("\",");
-
-      std::vector<zx_info_handle_extended_t> handles;
-      if (auto status = GetHandles(process->borrow(), &handles); status != ZX_OK) {
-        FX_LOGS(ERROR) << "Unable to get handles for process: " << zx_status_get_string(status);
-      }
-
-      json.append("\"objects\":[");
-
-      for (const auto& handle : handles) {
-        json.append("{\"type\":").append(std::to_string(handle.type));
-        json.append(",\"koid\":").append(std::to_string(handle.koid));
-        json.append(",\"related_koid\":").append(std::to_string(handle.related_koid));
-        json.append(",\"peer_owner_koid\":").append(std::to_string(handle.peer_owner_koid));
-        json.append("},");
-      }
-      json.pop_back();
-      json.append("]},");
+  void AddProcessToList(zx::unowned_process process, std::string name) {
+    zx_info_handle_basic_t info;
+    if (auto status =
+            process->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+        status != ZX_OK) {
+      FX_LOGS(ERROR) << "Failed to get process koid: " << zx_status_get_string(status);
     }
-    json.pop_back();
-    json.append("]}");
 
-    for (const auto& process : processes_) {
-      EXPECT_EQ(close(process.process_stdin.get()), 0);
+    std::vector<zx_info_handle_extended_t> handles;
+    if (auto status = GetHandles(process->borrow(), &handles); status != ZX_OK) {
+      FX_LOGS(ERROR) << "Unable to get handles for process: " << zx_status_get_string(status);
     }
-    return json;
-  }
 
-  zx_status_t GetHandles(zx::unowned_process process, std::vector<zx_info_handle_extended_t>* out) {
-    size_t avail = 8;
-
-    while (true) {
-      out->resize(avail);
-      auto size = avail * sizeof(zx_info_handle_extended_t);
-      size_t actual = 0;
-      if (auto status = process->get_info(ZX_INFO_HANDLE_TABLE, out->data(), size, &actual, &avail);
-          status != ZX_OK) {
-        return status;
-      }
-
-      if (actual < avail) {
-        avail *= 2u;
-        continue;
-      }
-      out->resize(actual);
-      return ZX_OK;
+    std::vector<KernelObject> process_objects;
+    for (const auto& handle : handles) {
+      process_objects.push_back(
+          {handle.type, handle.koid, handle.related_koid, handle.peer_owner_koid});
     }
+
+    processes_.push_back({info.koid, name, process_objects});
   }
 
-  // Override `Start` from `LocalComponent` class.
-  void Start(std::unique_ptr<LocalComponentHandles> handles) override {
-    // Keep reference to `handles` in member variable.
-    // This class contains handles to the component's incoming
-    // and outgoing capabilities.
-    handles_ = std::move(handles);
-    EXPECT_EQ(handles_->outgoing()->AddPublicService(bindings_.GetHandler(this, dispatcher_)),
-              ZX_OK);
-  }
-
-  bool WasCalled() const { return called_; }
-
- private:
   zx::job job_;
-  std::vector<ProcessInfo> processes_;
+  std::vector<fbl::unique_fd> processes_stdin_;
+  std::vector<Process> processes_;
   fit::closure quit_loop_;
   async_dispatcher_t* dispatcher_;
   fidl::BindingSet<fuchsia::kernel::RootJob> bindings_;
@@ -223,3 +198,6 @@ TEST_F(RealmBuilderTest, RouteServiceToComponent) {
   ASSERT_EQ(s, mock_root_job.ProcessesDataAsJson());
   EXPECT_TRUE(mock_root_job.WasCalled());
 }
+
+}  // namespace
+}  // namespace process_explorer

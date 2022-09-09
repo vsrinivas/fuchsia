@@ -11,7 +11,7 @@
 
 #include <task-utils/walker.h>
 
-#include "src/developer/process_explorer/writer.h"
+#include "src/developer/process_explorer/utils.h"
 #include "src/lib/fsl/socket/strings.h"
 
 namespace process_explorer {
@@ -69,26 +69,6 @@ class ProcessWalker : public TaskEnumerator {
 
  private:
   std::vector<Process> processes_;
-
-  zx_status_t GetHandles(zx::unowned_process process, std::vector<zx_info_handle_extended_t>* out) {
-    size_t avail = 8;
-
-    while (true) {
-      out->resize(avail);
-      auto size = avail * sizeof(zx_info_handle_extended_t);
-      size_t actual = 0;
-      if (auto status = process->get_info(ZX_INFO_HANDLE_TABLE, out->data(), size, &actual, &avail);
-          status != ZX_OK) {
-        return status;
-      }
-      if (actual < avail) {
-        avail *= 2u;
-        continue;
-      }
-      out->resize(actual);
-      return ZX_OK;
-    }
-  }
 };
 
 zx_status_t GetProcessesData(std::vector<Process>* processes_data) {
@@ -97,6 +77,12 @@ zx_status_t GetProcessesData(std::vector<Process>* processes_data) {
     FX_LOGS(ERROR) << "Unable to get processes data: " << zx_status_get_string(status);
     return status;
   }
+
+  // TODO(fxbug.dev/60170): Remove call to FillPeerOwnerKoid (and remove
+  // FillPeerOwnerKoid itself) after peer owner koids become populated by
+  // the kernel.
+  FillPeerOwnerKoid(*processes_data);
+
   return ZX_OK;
 }
 
@@ -110,14 +96,14 @@ Explorer::Explorer(std::unique_ptr<sys::ComponentContext> context)
 Explorer::~Explorer() = default;
 
 void Explorer::WriteJsonProcessesData(zx::socket socket) {
-  std::vector<Process> process_data;
-  if (auto status = GetProcessesData(&process_data); status != ZX_OK) {
+  std::vector<Process> processes_data;
+  if (auto status = GetProcessesData(&processes_data); status != ZX_OK) {
     // Returning immediately. Nothing will have been written on the socket which will let the client
     // know an error has occurred.
     return;
   }
 
-  const std::string json_string = WriteProcessesDataAsJson(process_data);
+  const std::string json_string = WriteProcessesDataAsJson(std::move(processes_data));
 
   // TODO(fxbug.dev/108528): change to asynchronous
   fsl::BlockingCopyFromString(json_string, socket);

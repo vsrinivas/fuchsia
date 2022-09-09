@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_PROCESS_EXPLORER_WRITER_H_
-#define SRC_DEVELOPER_PROCESS_EXPLORER_WRITER_H_
+#ifndef SRC_DEVELOPER_PROCESS_EXPLORER_UTILS_H_
+#define SRC_DEVELOPER_PROCESS_EXPLORER_UTILS_H_
 
+#include <lib/zx/process.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -49,6 +50,15 @@ struct Process {
 */
 std::string WriteProcessesDataAsJson(std::vector<Process> processes_data);
 
+// Returns an array of zx_info_handle_extended_t one for each handle in the Process at the moment of
+// the call.
+zx_status_t GetHandles(zx::unowned_process process, std::vector<zx_info_handle_extended_t>* out);
+
+// Finds the peer_owner_koid field for objects that have two ends (such as channels or sockets).
+// The function is only able to find the peer_owner_koid when each end of the object is
+// owned by a process at the time the processes are walked and their objects are retrieved.
+void FillPeerOwnerKoid(std::vector<Process>& processes_data);
+
 }  // namespace process_explorer
 
-#endif  // SRC_DEVELOPER_PROCESS_EXPLORER_WRITER_H_
+#endif  // SRC_DEVELOPER_PROCESS_EXPLORER_UTILS_H_

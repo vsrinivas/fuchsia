@@ -17,8 +17,8 @@ source_set("lib") {
   sources = [
     "process_explorer.cc",
     "process_explorer.h",
-    "writer.cc",
-    "writer.h",
+    "utils.cc",
+    "utils.h",
   ]
 
   deps = [
@@ -31,7 +31,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.process.explorer",
-    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
   ]
 }

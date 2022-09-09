@@ -3,10 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":process_explorer_tests" ]
+  deps = [
+    ":process_explorer_integration_tests",
+    ":process_explorer_unit_tests",
+  ]
 }
 
 executable("mock_process") {
@@ -20,9 +24,11 @@ executable("mock_process") {
 executable("integration_test") {
   testonly = true
   output_name = "process_explorer_integration_test"
+
   sources = [ "process_explorer_integration_test.cc" ]
 
   deps = [
+    "..:lib",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.process.explorer",
@@ -41,11 +47,26 @@ fuchsia_test_component("process_explorer_integration_test") {
   deps = [ ":integration_test" ]
 }
 
-# Run with `fx test process_explorer_tests`.
-fuchsia_test_package("process_explorer_tests") {
+# Run with `fx test process_explorer_integration_tests`.
+fuchsia_test_package("process_explorer_integration_tests") {
   test_components = [ ":process_explorer_integration_test" ]
+
   deps = [
     ":mock_process",
     "..:process_explorer_component",
   ]
+}
+
+test("process_explorer_unittest") {
+  sources = [ "utils_unittest.cc" ]
+
+  deps = [
+    "..:lib",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+# Run with `fx test process_explorer_unit_tests`.
+fuchsia_unittest_package("process_explorer_unit_tests") {
+  deps = [ ":process_explorer_unittest" ]
 }

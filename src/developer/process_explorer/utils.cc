@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/process_explorer/writer.h"
+#include "src/developer/process_explorer/utils.h"
+
+#include <unordered_map>
 
 #include "third_party/rapidjson/include/rapidjson/document.h"
 #include "third_party/rapidjson/include/rapidjson/rapidjson.h"
@@ -51,6 +53,47 @@ std::string WriteProcessesDataAsJson(std::vector<Process> processes_data) {
   json_document.Accept(writer);
 
   return std::string(buffer.GetString(), buffer.GetSize());
+}
+
+zx_status_t GetHandles(zx::unowned_process process, std::vector<zx_info_handle_extended_t>* out) {
+  size_t avail = 8;
+
+  while (true) {
+    out->resize(avail);
+    auto size = avail * sizeof(zx_info_handle_extended_t);
+    size_t actual = 0;
+    if (auto status = process->get_info(ZX_INFO_HANDLE_TABLE, out->data(), size, &actual, &avail);
+        status != ZX_OK) {
+      return status;
+    }
+    if (actual < avail) {
+      avail *= 2u;
+      continue;
+    }
+    out->resize(actual);
+    return ZX_OK;
+  }
+}
+
+void FillPeerOwnerKoid(std::vector<Process>& processes_data) {
+  std::unordered_map<zx_koid_t, zx_koid_t> object_to_process;
+  for (const Process& process : processes_data) {
+    for (const KernelObject& object : process.objects) {
+      if (object.related_koid != 0) {
+        object_to_process[object.related_koid] = process.koid;
+      }
+    }
+  }
+
+  for (Process& process : processes_data) {
+    for (KernelObject& object : process.objects) {
+      if (object.related_koid != 0) {
+        if (object_to_process.find(object.koid) == object_to_process.end())
+          continue;
+        object.peer_owner_koid = object_to_process[object.koid];
+      }
+    }
+  }
 }
 
 }  // namespace process_explorer
