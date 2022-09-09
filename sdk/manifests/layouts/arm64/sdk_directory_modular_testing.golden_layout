@@ -221,6 +221,7 @@ pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/proxy_controller.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/stub_controller.h
+pkg/fidl_cpp/include/lib/fidl/cpp/internal/unknown_interactions_table.h
 pkg/fidl_cpp/include/lib/fidl/cpp/internal/weak_stub_controller.h
 pkg/fidl_cpp/include/lib/fidl/cpp/member_connector.h
 pkg/fidl_cpp/include/lib/fidl/cpp/service_connector.h
@@ -234,8 +235,10 @@ pkg/fidl_cpp/internal/proxy.cc
 pkg/fidl_cpp/internal/proxy_controller.cc
 pkg/fidl_cpp/internal/stub.cc
 pkg/fidl_cpp/internal/stub_controller.cc
+pkg/fidl_cpp/internal/unknown_interactions_table.c
 pkg/fidl_cpp/internal/weak_stub_controller.cc
 pkg/fidl_cpp/meta.json
+pkg/fidl_cpp/unknown_interactions_hlcpp.cc
 pkg/fidl_cpp_base/clone.cc
 pkg/fidl_cpp_base/decoder.cc
 pkg/fidl_cpp_base/encoder.cc
