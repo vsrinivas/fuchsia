@@ -3,20 +3,58 @@
 // found in the LICENSE file.
 
 mod ctap_agent;
+mod ctap_device;
+mod ctap_hid;
 
 use {
-    anyhow::Error, fidl_fuchsia_identity_ctap as fidl_ctap, fuchsia_async as fasync,
-    fuchsia_component::server::ServiceFs, futures::prelude::*,
+    anyhow::{Context as _, Error},
+    fidl_fuchsia_identity_ctap as fidl_ctap, fuchsia_async as fasync,
+    fuchsia_component::server::ServiceFs,
+    futures::prelude::*,
 };
 
 pub use crate::ctap_agent::CtapAgent;
+pub use crate::ctap_device::CtapDevice;
+
+// An implementation of the Authenticator stream, which handles a stream of
+// AuthenticatorRequests.
+// TODO(fxb/108425): look for a device to talk to and check it's capabilities before executing
+// the request.
+pub async fn handle_request_for_stream(
+    _agent: &CtapAgent,
+    stream: fidl_ctap::AuthenticatorRequestStream,
+) -> Result<(), Error> {
+    stream
+        .map(|result| result.context("failed to handle request"))
+        .try_for_each(|request| async move {
+            match request {
+                fidl_ctap::AuthenticatorRequest::MakeCredential { responder, .. } => {
+                    responder.send(&mut Result::Err(fidl_ctap::CtapError::Unimplemented))?;
+                }
+
+                fidl_ctap::AuthenticatorRequest::GetAssertion { responder, .. } => {
+                    responder.send(&mut Result::Err(fidl_ctap::CtapError::Unimplemented))?;
+                }
+
+                fidl_ctap::AuthenticatorRequest::EnumerateKeys { responder } => {
+                    responder.send(&mut Result::Err(fidl_ctap::CtapError::Unimplemented))?;
+                }
+
+                fidl_ctap::AuthenticatorRequest::IdentifyKey { responder, .. } => {
+                    responder.send(&mut Result::Err(fidl_ctap::CtapError::Unimplemented))?;
+                }
+            }
+            Ok(())
+        })
+        .await
+}
 
 enum IncomingService {
     Authenticator(fidl_ctap::AuthenticatorRequestStream),
 }
 
-// [START main]
 #[fasync::run_singlethreaded]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(IncomingService::Authenticator);
@@ -31,10 +69,9 @@ async fn main() -> Result<(), Error> {
     // on each one.
     println!("Listening for incoming connections...");
     fs.for_each(|IncomingService::Authenticator(stream)| {
-        agent.handle_request_for_stream(stream).unwrap_or_else(|e| println!("{:?}", e))
+        handle_request_for_stream(&agent, stream).unwrap_or_else(|e| println!("{:?}", e))
     })
     .await;
 
     Ok(())
 }
-// [END main]
