@@ -147,6 +147,7 @@ fn from_serializable_suite(
                 common: Cow::Owned(from_serializable_common(root_path, case.common)),
             })
             .collect(),
+        summary_file_hint: Cow::Owned("".to_string()), // hack
         tags: serializable.tags,
     }
 }

@@ -106,7 +106,7 @@ async fn main() {
     let dir_reporter = match deprecated_output_directory {
         Some(path) => match run_test_suite_lib::output::DirectoryReporter::new(
             path.into(),
-            run_test_suite_lib::output::SchemaVersion::V1,
+            run_test_suite_lib::output::SchemaVersion::UnstablePrototype,
         ) {
             Ok(reporter) => Some(reporter),
             Err(e) => {
