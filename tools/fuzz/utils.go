@@ -5,7 +5,10 @@
 package fuzz
 
 import (
+	"fmt"
 	"io"
+	"os"
+	"path/filepath"
 
 	"github.com/golang/glog"
 )
@@ -40,4 +43,24 @@ func parallelMultiReader(readers ...io.Reader) io.ReadCloser {
 	}()
 
 	return r
+}
+
+func moveAllFiles(srcDir, dstDir string) error {
+	entries, err := os.ReadDir(srcDir)
+	if err != nil {
+		return fmt.Errorf("error reading dir %s: %s", srcDir, err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		oldPath := filepath.Join(srcDir, entry.Name())
+		newPath := filepath.Join(dstDir, entry.Name())
+		if err := os.Rename(oldPath, newPath); err != nil {
+			return fmt.Errorf("error renaming %s: %s", oldPath, err)
+		}
+	}
+
+	return nil
 }

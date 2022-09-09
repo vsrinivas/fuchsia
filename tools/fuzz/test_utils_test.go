@@ -13,6 +13,8 @@ import (
 	"os"
 	"strings"
 	"testing"
+
+	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
 const invalidPath = "/invalid/path"
@@ -77,3 +79,6 @@ func touchRandomFile(t *testing.T, path string) {
 		t.Fatalf("Error touching file %q: %s", path, err)
 	}
 }
+
+// Used to set cmp.Diff to be order-insensitive
+var sortSlicesOpt = cmpopts.SortSlices(func(a, b string) bool { return a < b })

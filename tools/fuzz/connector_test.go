@@ -150,18 +150,23 @@ func TestFfxRunPathRewriting(t *testing.T) {
 	defer c.Cleanup()
 
 	targetPath := cachePrefix + "/target/path"
-	out, err := c.FfxRun("", "fuzz", "try", "fuchsia-pkg://url", targetPath)
-	if err != nil {
+
+	tempDir := t.TempDir()
+	testcase := filepath.Join(tempDir, "testcase")
+	touchRandomFile(t, testcase)
+	if err := c.Put(testcase, targetPath); err != nil {
+		t.Fatalf("failed to put artifact: %s", err)
+	}
+
+	// Should fail if the input doesn't exist
+	if _, err := c.FfxRun("", "fuzz", "try", "url", invalidPath); err == nil {
+		t.Fatalf("unexpectedly succeeded trying an invalid file")
+	}
+
+	// Therefore it should succeed iff the translation was done
+	if _, err := c.FfxRun("", "fuzz", "try", "url",
+		path.Join(targetPath, "testcase")); err != nil {
 		t.Fatalf("error running ffx command: %s", err)
-	}
-
-	hostPath, err := c.cacheToHostPath(targetPath)
-	if err != nil {
-		t.Fatalf("error mapping cache path: %s", err)
-	}
-
-	if !strings.Contains(out, hostPath) {
-		t.Fatalf("missing translated host path (%q) in output: %q", hostPath, out)
 	}
 }
 
@@ -174,11 +179,11 @@ func TestFfxRunWithOutputDirectory(t *testing.T) {
 	defer c.Cleanup()
 
 	dir := t.TempDir()
-	if _, err := c.FfxRun(dir, "fuzz", "run"); err != nil {
+	if _, err := c.FfxRun(dir, "fuzz", "run", "url"); err != nil {
 		t.Fatalf("error running ffx command: %s", err)
 	}
 
-	if !fileExists(filepath.Join(dir, "crash-123")) {
+	if !fileExists(filepath.Join(dir, "artifacts", "crash-1312")) {
 		t.Fatalf("artifact not found in output dir %s", dir)
 	}
 }

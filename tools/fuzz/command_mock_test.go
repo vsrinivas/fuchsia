@@ -77,8 +77,8 @@ func (c *mockInstanceCmd) getOutput() ([]byte, error) {
 				fmt.Sprintf("running %v", c.args),
 				corpusLine,
 				"Running: "+corpusPath+"/testcase",
-				"==123==", // pid
-				"MS: ",    // mut
+				fmt.Sprintf("==%d==", mockFuzzerPid),
+				"MS: ", // mut
 				"Deadly signal",
 				artifactLine,
 			)

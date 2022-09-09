@@ -6,6 +6,8 @@ package fuzz
 
 import (
 	"bytes"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -221,23 +223,31 @@ func TestInstance(t *testing.T) {
 		t.Fatalf("expected error when running invalid fuzzer")
 	}
 
+	tmpDir := t.TempDir()
 	remotePath := "data/path/to/remoteFile"
-	if err := i.Get("foo/bar", remotePath, "/path/to/localFile"); err != nil {
+	if err := i.Get("foo/bar", remotePath, tmpDir); err != nil {
 		t.Fatalf("Error getting from instance: %s", err)
 	}
 
-	expected := []string{"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/remoteFile"}
+	expected := []transferCmd{
+		{"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/remoteFile",
+			tmpDir}}
 	got := i.Connector.(*mockConnector).PathsGot
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("incorrect file get list: %v", got)
 	}
 
+	tmpFile := filepath.Join(tmpDir, "secrets.ini")
+	if err := os.WriteFile(tmpFile, []byte("shh"), 0o600); err != nil {
+		t.Fatalf("error writing file: %s", err)
+	}
 	remotePath = "data/path/to/otherFile"
-	if err := i.Put("foo/bar", "/path/to/localFile", remotePath); err != nil {
+	if err := i.Put("foo/bar", tmpFile, remotePath); err != nil {
 		t.Fatalf("Error putting to instance: %s", err)
 	}
 
-	expected = []string{"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/otherFile"}
+	expected = []transferCmd{{tmpFile,
+		"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/path/to/otherFile"}}
 	got = i.Connector.(*mockConnector).PathsPut
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("incorrect file put list: %v", got)
@@ -274,7 +284,7 @@ func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
 		t.Fatalf("Error starting instance: %s", err)
 	}
 
-	hostArtifactDir := "/art/dir"
+	hostArtifactDir := t.TempDir()
 	var outBuf bytes.Buffer
 	args := []string{"-artifact_prefix=data/wow/x", "data/corpus"}
 	if err := i.RunFuzzer(&outBuf, "foo/bar", hostArtifactDir, args...); err != nil {
@@ -282,11 +292,12 @@ func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
 	}
 
 	out := outBuf.String()
-	if !strings.Contains(out, "/art/dir/xcrash-1312") {
+	if !strings.Contains(out, filepath.Join(hostArtifactDir, "xcrash-1312")) {
 		t.Fatalf("fuzzer output missing host artifact path: %q", out)
 	}
 
-	expected := []string{"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/wow/xcrash-1312"}
+	expected := []transferCmd{{"/tmp/r/sys/fuchsia.com:foo:0#meta:bar.cmx/wow/xcrash-1312",
+		hostArtifactDir}}
 	got := i.Connector.(*mockConnector).PathsGot
 	if !reflect.DeepEqual(got, expected) {
 		t.Fatalf("incorrect file get list: %v", got)

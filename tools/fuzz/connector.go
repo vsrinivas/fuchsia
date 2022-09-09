@@ -331,9 +331,20 @@ func (c *SSHConnector) fetchLiveCorpusIfNecessary(cacheDir string) error {
 		return fmt.Errorf("error reading marker file: %s", err)
 	}
 
-	if _, err := c.FfxRun("", "fuzz", "fetch", string(fuzzerUrl),
-		"-c", cacheDir); err != nil {
+	tmpDir, err := os.MkdirTemp("", "undercoat-ffx-output-")
+	if err != nil {
+		return fmt.Errorf("error creating tempdir: %s", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	if _, err := c.FfxRun(tmpDir, "fuzz", "fetch", string(fuzzerUrl)); err != nil {
 		return fmt.Errorf("error fetching live corpus: %s", err)
+	}
+
+	// Move all the files into the cache
+	corpusOutputDir := filepath.Join(tmpDir, "corpus")
+	if err := moveAllFiles(corpusOutputDir, cacheDir); err != nil {
+		return fmt.Errorf("error moving live corpus into place: %s", err)
 	}
 
 	return os.Remove(marker)
@@ -562,13 +573,33 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 	return nil
 }
 
-// FfxRun runs the specified command via ffx
+// Any command that will end up attaching to a fuzzer requires this.
+func ffxCommandRequiresOutputDir(args []string) bool {
+	return len(args) >= 2 && args[0] == "fuzz" && args[1] != "list"
+}
+
+// FfxRun runs the specified command to completion via ffx and returns its
+// output. `outputDir` is optional.
 func (c *SSHConnector) FfxRun(outputDir string, args ...string) (string, error) {
+	if ffxCommandRequiresOutputDir(args) && outputDir == "" {
+		// The caller is not interested in the output files, but ffx fuzz still
+		// requires a directory, so we will create a tempdir and clean it up
+		// afterwards.
+		tmpDir, err := os.MkdirTemp("", "undercoat-ffx-output-")
+		if err != nil {
+			return "", fmt.Errorf("error creating tempdir: %s", err)
+		}
+		outputDir = tmpDir
+		defer os.RemoveAll(tmpDir)
+	}
+
 	cmd, err := c.FfxCommand(outputDir, args...)
 	if err != nil {
 		return "", err
 	}
+
 	cmd.Stderr = nil // Let Output() buffer it
+
 	output, err := cmd.Output()
 	if err != nil {
 		if cmderr, ok := err.(*exec.ExitError); ok {
@@ -581,6 +612,8 @@ func (c *SSHConnector) FfxRun(outputDir string, args ...string) (string, error) 
 	return string(output), nil
 }
 
+// FfxCommand returns an exec.Cmd object that can be used to run the specified
+// command via ffx.
 func (c *SSHConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, error) {
 	// TODO(fxbug.dev/106110): Once we only support v2 fuzzer builds, we could
 	// safely connect earlier.
@@ -592,6 +625,11 @@ func (c *SSHConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, 
 
 	if err := c.initializeTmpDirIfNecessary(); err != nil {
 		return nil, fmt.Errorf("error initializing tmpdir: %s", err)
+	}
+
+	// Set output directory for any artifacts, etc.
+	if ffxCommandRequiresOutputDir(args) && !fileExists(outputDir) {
+		return nil, fmt.Errorf("output directory required for command: %s", args)
 	}
 
 	// Automatically translate any target paths to host paths
@@ -608,14 +646,12 @@ func (c *SSHConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, 
 	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
 	args = append([]string{"--target", addr}, args...)
 
+	if outputDir != "" {
+		args = append(args, "-o", outputDir)
+	}
+
 	cmd := NewCommand(c.ffxPath, args...)
 	cmd.Stderr = os.Stderr // TODO: save to buffer instead
-
-	if outputDir != "" {
-		// Set output directory for any artifacts (otherwise it defaults to the
-		// current working directory)
-		cmd.Dir = outputDir
-	}
 
 	return cmd, nil
 }

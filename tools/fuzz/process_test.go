@@ -153,7 +153,7 @@ func TestDoProcessMock(t *testing.T) {
 		// Consume any leading flags and their parameters
 		i := 0
 		params := make(map[string]string)
-		for i < len(args) {
+		for i < len(args)-1 {
 			if !strings.HasPrefix(args[i], "-") {
 				break
 			}
@@ -177,39 +177,29 @@ func TestDoProcessMock(t *testing.T) {
 				exitCode = 1
 			}
 		case "fuzz":
-			subcommand := args[0]
-			args = args[1:]
-			switch subcommand {
-			case "list":
-				out = `Available fuzzers:
-  fuchsia-pkg://fuchsia.com/ffx-fuzzers#meta/one.cm
-  fuchsia-pkg://fuchsia.com/ffx-fuzzers#meta/two.cm
-Exiting...
-`
-			case "run":
-				// Write fake artifact to cwd
-				if err := os.WriteFile("crash-123", []byte("data"), 0o600); err != nil {
+			stdout, outputDir := getFfxFuzzOutput(t, args)
+			out = stdout
+
+			// Perform any side-effect actions
+			switch args[0] {
+			case "minimize", "run":
+				// Write fake artifact to output directory
+				artifactDir := filepath.Join(outputDir, "artifacts")
+				if err := os.Mkdir(artifactDir, os.ModeDir|0o700); err != nil {
+					t.Fatalf("error making artifact dir: %s", err)
+				}
+				artifactPath := filepath.Join(artifactDir, "crash-1312")
+				if err := os.WriteFile(artifactPath, []byte("data"), 0o600); err != nil {
 					t.Fatalf("error writing artifact: %s", err)
 				}
-				out = "Input saved to './crash-123'"
-			case "try":
-				if len(args) < 2 {
-					t.Fatalf("`ffx fuzz try` needs both url and input")
-				}
-				out = fmt.Sprintf("Running input %s", args[1])
-			case "fetch":
-				if len(args) < 3 {
-					t.Fatalf("`ffx fuzz fetch` needs more args")
-				}
-				if args[0] != "fuzzer_url" && args[1] != "-c" {
-					t.Fatalf("`ffx fuzz fetch` has wrong args")
-				}
+			case "fetch", "merge":
 				// Fetch a fake live corpus into place
-				corpusPath := args[2]
-				touchRandomFile(t, filepath.Join(corpusPath, "a"))
-				touchRandomFile(t, filepath.Join(corpusPath, "b"))
-			default:
-				t.Fatalf("invalid ffx fuzz subcommand: %s", subcommand)
+				corpusDir := filepath.Join(outputDir, "corpus")
+				if err := os.Mkdir(corpusDir, os.ModeDir|0o700); err != nil {
+					t.Fatalf("error making live corpus dir: %s", err)
+				}
+				touchRandomFile(t, filepath.Join(corpusDir, "a"))
+				touchRandomFile(t, filepath.Join(corpusDir, "b"))
 			}
 		default:
 			t.Fatalf("invalid ffx command: %s", command)

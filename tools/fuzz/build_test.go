@@ -172,7 +172,7 @@ func TestLoadFuzzers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("missing expected fuzzer")
 	}
-	if f.isCFF() {
+	if f.isV2() {
 		t.Fatalf("incorrect version detection for fuzzer %s", f.Name)
 	}
 
@@ -180,7 +180,7 @@ func TestLoadFuzzers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("missing expected fuzzer")
 	}
-	if !f.isCFF() {
+	if !f.isV2() {
 		t.Fatalf("incorrect version detection for fuzzer %s", f.Name)
 	}
 }

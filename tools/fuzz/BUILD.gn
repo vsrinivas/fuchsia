@@ -27,6 +27,8 @@ go_library("lib") {
     "connector_mock_test.go",
     "connector_test.go",
     "e2e_test.go",
+    "ffx_command.go",
+    "ffx_fuzz_fake_test.go",
     "fs_interface.go",
     "fuzzer.go",
     "fuzzer_test.go",

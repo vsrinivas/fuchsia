@@ -24,7 +24,7 @@ import (
 )
 
 // To run this test:
-// - fx set core.x64 --with-base //bundles:tests --with-base //bundles:tools --fuzz-with asan
+// - fx set core.x64 --with-base //examples/fuzzers --with-base //bundles:tools --fuzz-with asan
 // - fx build
 // - cd tools/fuzz
 // - UNDERCOAT_E2E_TESTS=yes go test -v -logtostderr

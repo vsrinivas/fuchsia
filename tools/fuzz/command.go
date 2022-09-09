@@ -14,10 +14,9 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// TODO(fxbug.dev/45424): use timeout for all methods
-
 // An InstanceCmd represents a remote command to be run on an Instance
-// This interface is similar to that of os.exec.Cmd
+// This interface is a superset of os.exec.Cmd
+// TODO(fxbug.dev/45424): use timeout for all methods
 type InstanceCmd interface {
 	// Output runs the command and returns its combined output.
 	Output() ([]byte, error)
@@ -67,6 +66,8 @@ type InstanceCmd interface {
 	//
 	// Wait releases any resources associated with the InstanceCmd.
 	Wait() error
+
+	// The following methods are *not* included in exec.Cmd:
 
 	// SetTimeout sets a timeout that will be used for all blocking
 	// methods. If a method takes longer than the timeout duration to
