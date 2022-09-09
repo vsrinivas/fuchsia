@@ -88,6 +88,11 @@ protocol Volume {
         outgoing_directory server_end:fuchsia.io.Directory;
         options MountOptions;
     }) -> (struct {}) error zx.status;
+
+    // Set the limit in bytes on the volume.
+    SetLimit(struct {
+        bytes uint64;
+    }) -> (struct {}) error zx.status;
 };
 
 /// fuchsia.fxfs.Volumes is only used for creating volumes.  Other operations (e.g. enumeration and

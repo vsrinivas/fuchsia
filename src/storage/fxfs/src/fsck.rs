@@ -236,16 +236,22 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     if let Some(item) = expected.get() {
         fsck.error(FsckError::MissingAllocation(item.into()))?;
     }
+    let owner_allocated_bytes = allocator.get_owner_allocated_bytes();
     if expected_allocated_bytes != allocator.get_allocated_bytes()
-        || zip(expected_owner_allocated_bytes.iter(), allocator.get_owner_allocated_bytes().iter())
+        || zip(expected_owner_allocated_bytes.iter(), owner_allocated_bytes.iter())
             .filter(|((k1, v1), (k2, v2))| (*k1, *v1) != (*k2, *v2))
             .count()
             != 0
     {
         fsck.error(FsckError::AllocatedBytesMismatch(
             expected_owner_allocated_bytes.iter().map(|(k, v)| (*k, *v)).collect(),
-            allocator.get_owner_allocated_bytes().iter().map(|(k, v)| (*k, *v)).collect(),
+            owner_allocated_bytes.iter().map(|(k, v)| (*k, *v)).collect(),
         ))?;
+    }
+    for (k, v) in allocator.owner_byte_limits() {
+        if !owner_allocated_bytes.contains_key(&k) {
+            fsck.warning(FsckWarning::LimitForNonExistentStore(k, v))?;
+        }
     }
 
     // Every key in journal_file_offsets should map to an lsm tree (ObjectStore or Allocator).

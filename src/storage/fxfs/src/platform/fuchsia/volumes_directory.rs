@@ -8,7 +8,11 @@ use {
         errors::FxfsError,
         log::*,
         object_store::{
-            directory::ObjectDescriptor, transaction::LockKey, volume::RootVolume, ObjectStore,
+            allocator::Allocator,
+            directory::ObjectDescriptor,
+            transaction::{LockKey, Options},
+            volume::RootVolume,
+            ObjectStore,
         },
         platform::{
             fuchsia::{
@@ -313,8 +317,19 @@ impl VolumesDirectory {
                         .await
                         .map_err(map_to_raw_status),
                 )?,
+                VolumeRequest::SetLimit { responder, bytes } => responder.send(
+                    &mut self.handle_set_limit(store_id, bytes).await.map_err(map_to_raw_status),
+                )?,
             }
         }
+        Ok(())
+    }
+
+    async fn handle_set_limit(self: &Arc<Self>, store_id: u64, bytes: u64) -> Result<(), Error> {
+        let fs = self.root_volume.volume_directory().store().filesystem();
+        let mut transaction = fs.clone().new_transaction(&[], Options::default()).await?;
+        fs.allocator().set_bytes_limit(&mut transaction, store_id, bytes).await?;
+        transaction.commit().await?;
         Ok(())
     }
 
@@ -410,7 +425,9 @@ mod tests {
                 Crypt,
             },
             errors::FxfsError,
-            filesystem::FxFilesystem,
+            filesystem::{Filesystem, FxFilesystem},
+            fsck::fsck,
+            object_store::allocator::SimpleAllocator,
             object_store::volume::root_volume,
             platform::fuchsia::testing::open_file_checked,
             platform::fuchsia::volumes_directory::VolumesDirectory,
@@ -813,5 +830,80 @@ mod tests {
         admin_proxy.shutdown().await.expect("shutdown failed");
 
         assert!(volumes_directory.mounted_volumes.lock().unwrap().is_empty());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_byte_limit_persistence() {
+        const BYTES_LIMIT_1: u64 = 123456;
+        const BYTES_LIMIT_2: u64 = 456789;
+        const VOLUME_NAME: &str = "A";
+        let mut device = DeviceHolder::new(FakeDevice::new(8192, 512));
+        {
+            let filesystem = FxFilesystem::new_empty(device).await.unwrap();
+            let volumes_directory =
+                VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
+
+            volumes_directory
+                .create_volume(VOLUME_NAME, None)
+                .await
+                .expect("create unencrypted volume failed");
+
+            let (volume_proxy, volume_server_end) =
+                fidl::endpoints::create_proxy::<VolumeMarker>().expect("Create proxy to succeed");
+            volumes_directory.directory_node().clone().open(
+                ExecutionScope::new(),
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                0,
+                Path::validate_and_split(VOLUME_NAME).unwrap(),
+                volume_server_end.into_channel().into(),
+            );
+
+            volume_proxy.set_limit(BYTES_LIMIT_1).await.unwrap().expect("To set limits");
+            {
+                let limits = (filesystem.allocator() as Arc<SimpleAllocator>).owner_byte_limits();
+                assert_eq!(limits.len(), 1);
+                assert_eq!(limits[0].1, BYTES_LIMIT_1);
+            }
+
+            volume_proxy.set_limit(BYTES_LIMIT_2).await.unwrap().expect("To set limits");
+            {
+                let limits = (filesystem.allocator() as Arc<SimpleAllocator>).owner_byte_limits();
+                assert_eq!(limits.len(), 1);
+                assert_eq!(limits[0].1, BYTES_LIMIT_2);
+            }
+            std::mem::drop(volume_proxy);
+            volumes_directory.terminate().await;
+            std::mem::drop(volumes_directory);
+            filesystem.close().await.expect("close filesystem failed");
+            device = filesystem.take_device().await;
+        }
+        device.ensure_unique();
+        device.reopen(false);
+        {
+            let filesystem = FxFilesystem::open(device as DeviceHolder).await.unwrap();
+            fsck(&filesystem, None).await.expect("Fsck");
+            let volumes_directory =
+                VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
+            {
+                let limits = (filesystem.allocator() as Arc<SimpleAllocator>).owner_byte_limits();
+                assert_eq!(limits.len(), 1);
+                assert_eq!(limits[0].1, BYTES_LIMIT_2);
+            }
+            volumes_directory.remove_volume(VOLUME_NAME).await.expect("Volume deletion failed");
+            {
+                let limits = (filesystem.allocator() as Arc<SimpleAllocator>).owner_byte_limits();
+                assert_eq!(limits.len(), 0);
+            }
+            volumes_directory.terminate().await;
+            std::mem::drop(volumes_directory);
+            filesystem.close().await.expect("close filesystem failed");
+            device = filesystem.take_device().await;
+        }
+        device.ensure_unique();
+        device.reopen(false);
+        let filesystem = FxFilesystem::open(device as DeviceHolder).await.unwrap();
+        fsck(&filesystem, None).await.expect("Fsck");
+        let limits = (filesystem.allocator() as Arc<SimpleAllocator>).owner_byte_limits();
+        assert_eq!(limits.len(), 0);
     }
 }

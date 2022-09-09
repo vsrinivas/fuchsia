@@ -228,6 +228,10 @@ pub enum AllocatorMutation {
         device_range: Range<u64>,
         owner_object_id: u64,
     },
+    SetLimit {
+        owner_object_id: u64,
+        bytes: u64,
+    },
     /// Marks all extents with a given owner_object_id for deletion.
     /// Used to free space allocated to encrypted ObjectStore where we may not have the key.
     /// Note that the actual deletion time is undefined so this should never be used where an
@@ -238,6 +242,8 @@ pub enum AllocatorMutation {
 
 /// We need Ord and PartialOrd to support deduplication in the associative map used in handling
 /// transactions. Range<> doesn't provide a default for this.
+// TODO(fxbug.dev/108713): Prevent unsustainable growth of this function by wrapping contained
+// types that do not implement Ord.
 impl Ord for AllocatorMutation {
     fn cmp(&self, other: &Self) -> Ordering {
         match self {
@@ -262,6 +268,14 @@ impl Ord for AllocatorMutation {
                     .cmp(&device_range2.start)
                     .then(device_range.end.cmp(&device_range2.end))
                     .then(owner_object_id.cmp(owner_object_id2)),
+                _ => Ordering::Less,
+            },
+            Self::SetLimit { owner_object_id, bytes } => match other {
+                Self::Allocate { .. } => Ordering::Greater,
+                Self::Deallocate { .. } => Ordering::Greater,
+                Self::SetLimit { owner_object_id: owner_object_id2, bytes: bytes2 } => {
+                    owner_object_id.cmp(owner_object_id2).then(bytes.cmp(bytes2))
+                }
                 _ => Ordering::Less,
             },
             Self::MarkForDeletion(owner_object_id) => match other {

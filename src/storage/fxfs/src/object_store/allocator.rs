@@ -94,6 +94,15 @@ pub trait Allocator: ReservationOwner {
         device_range: Range<u64>,
     ) -> Result<(), Error>;
 
+    /// Sets the limits for an owner object in terms of usage.
+    /// TODO: Add an unset for volume deletion.
+    async fn set_bytes_limit(
+        &self,
+        transaction: &mut Transaction<'_>,
+        owner_object_id: u64,
+        bytes: u64,
+    ) -> Result<(), Error>;
+
     /// Marks allocations associated with a given |owner_object_id| for deletion.
     /// Does not necessarily perform the deletion stratight away but if this is the case,
     /// implementation should be invisible to the caller.
@@ -353,6 +362,9 @@ pub struct AllocatorInfo {
     pub allocated_bytes: BTreeMap<u64, u64>,
     /// Set of owner_object_id that we should ignore if found in layer files.
     pub marked_for_deletion: HashSet<u64>,
+    // The limit for the number of allocates bytes per `owner_object_id` whereas the value. If there
+    // is no limit present here for an `owner_object_id` assume it is max u64.
+    pub limit_bytes: BTreeMap<u64, u64>,
 }
 
 const MAX_ALLOCATOR_INFO_SERIALIZED_SIZE: usize = 131_072;
@@ -536,7 +548,7 @@ impl SimpleAllocator {
         if handle.get_size() > 0 {
             let serialized_info = handle.contents(MAX_ALLOCATOR_INFO_SERIALIZED_SIZE).await?;
             let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-            let (info, _version) = AllocatorInfo::deserialize_with_version(&mut cursor)?;
+            let (mut info, _version) = AllocatorInfo::deserialize_with_version(&mut cursor)?;
             let mut handles = Vec::new();
             let mut total_size = 0;
             for object_id in &info.layers {
@@ -576,6 +588,12 @@ impl SimpleAllocator {
                         }
                     };
                 }
+                // Merge in current data which has picked up the deltas on top of the snapshot.
+                info.limit_bytes.extend(inner.info.limit_bytes.iter());
+                // Don't continue tracking bytes for anything that has been marked for deletion.
+                for k in &inner.info.marked_for_deletion {
+                    info.limit_bytes.remove(k);
+                }
                 inner.info = info;
             }
             self.tree.append_layers(handles.into_boxed_slice()).await?;
@@ -594,6 +612,11 @@ impl SimpleAllocator {
         // The allocator tree needs to store a file for each of the layers in the tree, so we return
         // those, since nothing else references them.
         self.inner.lock().unwrap().info.layers.clone()
+    }
+
+    /// Returns all the current owner byte limits.
+    pub fn owner_byte_limits(&self) -> Vec<(u64, u64)> {
+        self.inner.lock().unwrap().info.limit_bytes.iter().map(|(k, v)| (*k, *v)).collect()
     }
 
     fn needs_sync(&self) -> bool {
@@ -777,6 +800,19 @@ impl Allocator for SimpleAllocator {
         let mutation = AllocatorMutation::Allocate { device_range, owner_object_id };
         self.reserved_allocations.insert(item).await.expect("Allocated over an in-use range.");
         transaction.add(self.object_id(), Mutation::Allocator(mutation));
+        Ok(())
+    }
+
+    async fn set_bytes_limit(
+        &self,
+        transaction: &mut Transaction<'_>,
+        owner_object_id: u64,
+        bytes: u64,
+    ) -> Result<(), Error> {
+        transaction.add(
+            self.object_id(),
+            Mutation::Allocator(AllocatorMutation::SetLimit { owner_object_id, bytes }),
+        );
         Ok(())
     }
 
@@ -981,6 +1017,7 @@ impl JournalingObject for SimpleAllocator {
                         );
                     }
                 }
+                inner.info.limit_bytes.remove(&owner_object_id);
             }
             Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
                 let item = AllocatorItem {
@@ -1054,6 +1091,13 @@ impl JournalingObject for SimpleAllocator {
                 let lower_bound = item.key.lower_bound_for_merge_into();
                 self.tree.merge_into(item, &lower_bound).await;
             }
+            Mutation::Allocator(AllocatorMutation::SetLimit { owner_object_id, bytes }) => {
+                // Journal replay is ordered and each of these calls is idempotent. So the last one
+                // will be respected, it doesn't matter if the value is already set, or gets changed
+                // multiple times during replay. When it gets opened it will be merged in with the
+                // snapshot.
+                self.inner.lock().unwrap().info.limit_bytes.insert(owner_object_id, bytes);
+            }
             Mutation::BeginFlush => {
                 {
                     // After we seal the tree, we will start adding mutations to the new mutable
@@ -1073,12 +1117,12 @@ impl JournalingObject for SimpleAllocator {
             Mutation::EndFlush => {
                 if context.mode.is_replay() {
                     self.tree.reset_immutable_layers();
+
                     // AllocatorInfo is written in the same transaction and will contain the count
                     // at the point BeginFlush was applied, so we need to adjust allocated_bytes so
                     // that it just covers the delta from that point.  Later, when we properly open
                     // the allocator, we'll add this back.
                     let mut inner = self.inner.lock().unwrap();
-                    //let allocated_bytes = inner.info.allocated_bytes;
                     let allocated_bytes: Vec<(u64, i64)> =
                         inner.info.allocated_bytes.iter().map(|(k, v)| (*k, *v as i64)).collect();
                     for (k, v) in allocated_bytes {
@@ -1871,5 +1915,35 @@ mod tests {
 
         // After committing, all but 40 bytes should remain allocated.
         assert_eq!(allocator.get_allocated_bytes(), 40);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_persist_bytes_limit() {
+        const LIMIT: u64 = 12345;
+        const OWNER_ID: u64 = 12;
+
+        let (fs, allocator, _) = test_fs().await;
+        {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            allocator
+                .set_bytes_limit(&mut transaction, OWNER_ID, LIMIT)
+                .await
+                .expect("Failed to set limit.");
+            assert!(allocator.inner.lock().unwrap().info.limit_bytes.get(&OWNER_ID).is_none());
+            transaction.commit().await.expect("Failed to commit transaction");
+            let bytes: u64 = *allocator
+                .inner
+                .lock()
+                .unwrap()
+                .info
+                .limit_bytes
+                .get(&OWNER_ID)
+                .expect("Failed to find limit");
+            assert_eq!(LIMIT, bytes);
+        }
     }
 }

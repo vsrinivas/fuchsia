@@ -721,6 +721,15 @@ mod tests {
             unreachable!();
         }
 
+        async fn set_bytes_limit(
+            &self,
+            _transaction: &mut Transaction<'_>,
+            _owner_object_id: u64,
+            _bytes: u64,
+        ) -> Result<(), Error> {
+            unreachable!();
+        }
+
         async fn mark_for_deletion(
             &self,
             _transaction: &mut Transaction<'_>,

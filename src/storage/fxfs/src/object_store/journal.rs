@@ -329,6 +329,9 @@ impl Journal {
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
                 return Ok(*owner_object_id != INVALID_OBJECT_ID);
             }
+            Mutation::Allocator(AllocatorMutation::SetLimit { owner_object_id, .. }) => {
+                return Ok(*owner_object_id != INVALID_OBJECT_ID);
+            }
             Mutation::BeginFlush => {}
             Mutation::EndFlush => {}
             Mutation::DeleteVolume => {}
