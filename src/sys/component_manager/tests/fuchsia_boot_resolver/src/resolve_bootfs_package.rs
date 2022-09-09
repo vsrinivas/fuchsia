@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-/// This module tests the property that pkg_resolver successfully
-/// services fuchsia.pkg.PackageResolver.Resolve FIDL requests for
-/// different types of packages when blobfs is in various intermediate states.
+/// This module tests the property that the FuchsiaBootResolver successfully
+/// resolves components that are encoded in a meta.far. This test is fully
+/// hermetic.
 use {
     component_manager_lib::{
         bootfs::BootfsSvc, builtin::fuchsia_boot_resolver::FuchsiaBootResolver,
@@ -47,7 +47,7 @@ async fn package_resolution() {
     assert_eq!(url.unwrap(), HELLO_WORLD_URL);
 
     let package_url = &package.as_ref().unwrap().url.as_ref().unwrap();
-    assert_eq!(package_url.clone().to_owned(), "fuchsia-boot:///hello_world".to_string());
+    assert_eq!(*package_url.to_owned(), "fuchsia-boot:///hello_world".to_string());
 
     let dir_proxy = package.unwrap().directory.unwrap().into_proxy().unwrap();
 
@@ -69,31 +69,6 @@ async fn package_resolution() {
             .unwrap(),
         1000,
         expected_bin.into_vec()
-    );
-
-    let mut expected_lib = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
-    expected_lib
-        .add(fio::DirentType::Directory, b".")
-        .add(fio::DirentType::File, b"ld.so.1")
-        .add(fio::DirentType::File, b"libasync-default.so")
-        .add(fio::DirentType::File, b"libbackend_fuchsia_globals.so")
-        .add(fio::DirentType::File, b"libc++.so.2")
-        .add(fio::DirentType::File, b"libc++abi.so.1")
-        .add(fio::DirentType::File, b"libfdio.so")
-        .add(fio::DirentType::File, b"libstd-e3c06c8874beb723.so")
-        .add(fio::DirentType::File, b"libsyslog.so")
-        .add(fio::DirentType::File, b"libtrace-engine.so")
-        .add(fio::DirentType::File, b"libunwind.so.1");
-
-    assert_read_dirents!(
-        fuchsia_fs::open_directory(
-            &dir_proxy,
-            Path::new("lib"),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE
-        )
-        .unwrap(),
-        1000,
-        expected_lib.into_vec()
     );
 
     let mut expected_meta = DirentsSameInodeBuilder::new(fio::INO_UNKNOWN);
