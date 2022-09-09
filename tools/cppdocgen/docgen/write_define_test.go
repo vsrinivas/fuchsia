@@ -21,14 +21,18 @@ func TestWriteDefine(t *testing.T) {
 	// Our header name should end up as "lib/test/myheader.h"
 	headerPath := "../../src/lib/test/myheader.h"
 
-	d := Define{
-		Location: clangdoc.Location{99, headerPath},
-		Name:     "FOO",
-		Value:    "(5)",
-		Description: []clangdoc.CommentInfo{
+	d := DefineGroup{
+		Defines: []*Define{
 			{
-				Kind: "TextComment",
-				Text: "This is the documentation for the thing.",
+				Location: clangdoc.Location{99, headerPath},
+				Name:     "FOO",
+				Value:    "(5)",
+				Description: []clangdoc.CommentInfo{
+					{
+						Kind: "TextComment",
+						Text: "This is the documentation for the thing.",
+					},
+				},
 			},
 		},
 	}
@@ -36,7 +40,7 @@ func TestWriteDefine(t *testing.T) {
 	index := makeEmptyIndex()
 
 	out := bytes.Buffer{}
-	writeDefineReference(settings, &index, d, &out)
+	writeDefineGroupSection(settings, &index, &d, &out)
 	expected :=
 		`## FOO macro {:#FOO}
 
@@ -53,9 +57,9 @@ This is the documentation for the thing.
 	}
 
 	// Do one with empty arguments
-	d.ParamString = "()"
+	d.Defines[0].ParamString = "()"
 	out = bytes.Buffer{}
-	writeDefineReference(settings, &index, d, &out)
+	writeDefineGroupSection(settings, &index, &d, &out)
 	expected =
 		`## FOO() macro {:#FOO}
 
@@ -72,9 +76,9 @@ This is the documentation for the thing.
 	}
 
 	// Nonempty arguments (title gets "...").
-	d.ParamString = "(a, b)"
+	d.Defines[0].ParamString = "(a, b)"
 	out = bytes.Buffer{}
-	writeDefineReference(settings, &index, d, &out)
+	writeDefineGroupSection(settings, &index, &d, &out)
 	expected =
 		`## FOO(…) macro {:#FOO}
 

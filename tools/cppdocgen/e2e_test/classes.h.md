@@ -10,7 +10,7 @@
 <span class="kwd">class</span> <span class="typ">BaseClass1</span> { <span class="com">...</span> };
 </pre>
 
-### BaseClass1::BaseClass1Function() {:#BaseClass1::BaseClass1Function}
+### BaseClass1::BaseClass1Function() {:#BaseClass1Function}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> BaseClass1::<b>BaseClass1Function</b>();
@@ -27,7 +27,7 @@ Complicated documentation for BaseClass1Function.
 <span class="kwd">class</span> <span class="typ">BaseClass2</span> { <span class="com">...</span> };
 </pre>
 
-### BaseClass2::BaseClass2Function() {:#BaseClass2::BaseClass2Function}
+### BaseClass2::BaseClass2Function() {:#BaseClass2Function}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> BaseClass2::<b>BaseClass2Function</b>();
@@ -50,7 +50,7 @@ Insightful documentation for BaseClass2Function.
 <span class="typ">int</span> <a href="classes.h.md#BaseClass1::BaseClass1Function"><b>BaseClass1Function</b></a>();
 </pre>
 
-### DerivedClass::BaseClass2Function() {:#DerivedClass::BaseClass2Function}
+### DerivedClass::BaseClass2Function() {:#BaseClass2Function}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> DerivedClass::<b>BaseClass2Function</b>();
@@ -80,25 +80,17 @@ This violates the style guide but should still work.
 
 End-of-line comment. Scary!
 
-### Constructor {:#SimpleTestClass::SimpleTestClass}
+### Constructor{:#SimpleTestClass::SimpleTestClass}
 
 <pre class="devsite-disable-click-to-copy">
 SimpleTestClass::<b>SimpleTestClass</b>();
-</pre>
-
-
-<pre class="devsite-disable-click-to-copy">
 SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a);
-</pre>
-
-
-<pre class="devsite-disable-click-to-copy">
 SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a,
                                  <span class="typ">int</span> b);
 </pre>
 
 
-### SimpleTestClass::TheFunction() {:#SimpleTestClass::TheFunction}
+### SimpleTestClass::TheFunction() {:#TheFunction}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> SimpleTestClass::<b>TheFunction</b>();
@@ -107,7 +99,7 @@ SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a,
 This is a documented pure virtual function.
 
 
-### SimpleTestClass::value() {:#SimpleTestClass::value}
+### SimpleTestClass::value() {:#value}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> SimpleTestClass::<b>value</b>();

@@ -16,11 +16,17 @@ import (
 type Header struct {
 	Name      string
 	Functions []*clangdoc.FunctionInfo
-	Records   []*clangdoc.RecordInfo
+
+	// Functions and defines with grouping rules applied.
+	FunctionGroups []*FunctionGroup
+	DefineGroups   []*DefineGroup
+
+	Records []*clangdoc.RecordInfo
 
 	// These two are extracted from the header source code.
 	Description []clangdoc.CommentInfo // Header-wide docstring.
-	Defines     []Define
+	Defines     []*Define
+	LineClasses []LineClass
 }
 
 // Returns the file name relative to the generated docs root directory containing the reference for
@@ -58,28 +64,21 @@ func WriteHeaderReference(settings WriteSettings, index *Index, h *Header, f io.
 
 	writeComment(headerComment, markdownHeading0, f)
 
-	// Don't sort the defines. Many defines have a sequence of numeric values that
-	// has some reasonable meaning, and alphabetizing the list makes things look weird.
-	for _, d := range h.Defines {
-		writeDefineReference(settings, index, d, f)
+	// Defines.
+	for _, d := range h.DefineGroups {
+		writeDefineGroupSection(settings, index, d, f)
 	}
 
 	// TODO other types and enums.
 
-	if len(h.Records) > 0 {
-		sort.Sort(recordByName(h.Records))
-		for _, r := range h.Records {
-			writeRecordReference(settings, index, r, f)
-		}
+	// Structs and classes.
+	sort.Sort(recordByName(h.Records))
+	for _, r := range h.Records {
+		writeRecordReference(settings, index, h, r, f)
 	}
 
-	if len(h.Functions) > 0 {
-		sort.Sort(functionByName(h.Functions))
-		for _, fn := range h.Functions {
-			writeFunctionSection(fn, f)
-			fmt.Fprintf(f, "\n")
-		}
-		fmt.Fprintf(f, "\n")
+	// Functions.
+	for _, g := range h.FunctionGroups {
+		writeFunctionGroupSection(g, f)
 	}
-
 }

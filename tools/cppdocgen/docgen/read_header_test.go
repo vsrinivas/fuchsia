@@ -47,13 +47,14 @@ func assertDocstringIs(t *testing.T, actual []clangdoc.CommentInfo, expected []s
 	}
 }
 
-func assertDefinesAre(t *testing.T, actual []Define, expected []Define) {
+func assertDefinesAre(t *testing.T, actual []*Define, expected []*Define) {
 	if !reflect.DeepEqual(actual, expected) {
 		t.Errorf("For defines, expected\n  %v\nGot\n  %v\n", expected, actual)
 		return
 	}
 }
 
+// This also tests line classifications.
 func TestParseHeaderWithHeaderDocstring(t *testing.T) {
 	contents := `// Copyright blah blah
 // Second line of copyright
@@ -88,7 +89,7 @@ int GetThing();
 		" It is nice",
 	})
 
-	expectedDefines := []Define{
+	expectedDefines := []*Define{
 		{Location: clangdoc.Location{LineNumber: 16, Filename: "filename.h"},
 			Name:        "FROMULATOR_MAX",
 			ParamString: "",
@@ -103,6 +104,46 @@ int GetThing();
 		},
 	}
 	assertDefinesAre(t, vals.Defines, expectedDefines)
+
+	// Corresponds to the classification of each line in the code block above.
+	expectedClasses := [...]LineClass{
+		Comment,
+		Comment,
+		Blank,
+		Preproc,
+		Preproc,
+		Blank,
+		Comment,
+		Comment,
+		Comment,
+		Blank,
+		Comment,
+		Blank,
+		Comment,
+		Comment,
+		Comment,
+		Preproc,
+		Blank,
+		Comment,
+		Preproc,
+		Code, // This should be preproc but we don't handle multiline defines yet.
+		Code, // This should be preproc but we don't handle multiline defines yet.
+		Blank,
+		Code,
+		Blank,
+		Preproc,
+		Blank}
+
+	if len(expectedClasses) != len(vals.Classes) {
+		t.Errorf("Expecting %d lines of header line classes, got %d\n",
+			len(expectedClasses), len(vals.Classes))
+	}
+	for i := range expectedClasses {
+		if expectedClasses[i] != vals.Classes[i] {
+			t.Errorf("Expected line index %d to be class %d, got %d\n",
+				i, expectedClasses[i], vals.Classes[i])
+		}
+	}
 }
 
 func TestParseHeaderWithNonDocstring(t *testing.T) {
@@ -144,7 +185,7 @@ func TestParseHeaderDefines(t *testing.T) {
 
 `
 	vals := ParseHeader(contents, "filename.h")
-	expectedDefines := []Define{
+	expectedDefines := []*Define{
 		// Note that "FOO" is not listed because it has no value.
 		{Location: clangdoc.Location{LineNumber: 6, Filename: "filename.h"},
 			Name:        "LAZ",

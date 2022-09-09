@@ -10,6 +10,76 @@ import (
 	"sort"
 )
 
+// The functions are grouped and these groups can only have one anchor. So we need to
+// process the function index by group to be able to link to the correct destination.
+//
+// Note that our current scheme doesn't handle overloading well. This will end up linking
+// only the first instance.
+type indexLink struct {
+	Name string
+	Link string
+}
+
+type indexLinkByName []indexLink
+
+func (links indexLinkByName) Len() int {
+	return len(links)
+}
+func (links indexLinkByName) Swap(i, j int) {
+	links[i], links[j] = links[j], links[i]
+}
+func (links indexLinkByName) Less(i, j int) bool {
+	return links[i].Name < links[j].Name
+}
+
+func writeFunctionIndex(index *Index, f io.Writer) {
+	fmt.Fprintf(f, "## Functions\n\n")
+
+	// Collect function info by group.
+	allFuncs := make([]indexLink, 0, len(index.Functions))
+	for _, header := range index.Headers {
+		for _, g := range header.FunctionGroups {
+			link := functionGroupLink(g)
+			for _, fn := range g.Funcs {
+				allFuncs = append(allFuncs, indexLink{Name: functionFullName(fn), Link: link})
+			}
+		}
+	}
+
+	sort.Sort(indexLinkByName(allFuncs))
+
+	for i, link := range allFuncs {
+		// Only print out the first function names if there are multiples.
+		if i == 0 || allFuncs[i-1].Name != link.Name {
+			fmt.Fprintf(f, "  - [%s](%s)\n", link.Name, link.Link)
+		}
+	}
+	fmt.Fprintf(f, "\n")
+}
+
+func writeDefineIndex(index *Index, f io.Writer) {
+	fmt.Fprintf(f, "## Macros\n\n")
+
+	// Collect define info by group.
+	allDefines := make([]indexLink, 0, len(index.Defines))
+	for _, header := range index.Headers {
+		for _, g := range header.DefineGroups {
+			link := defineGroupLink(*g)
+			for _, d := range g.Defines {
+				allDefines = append(allDefines, indexLink{Name: d.Name, Link: link})
+			}
+		}
+	}
+
+	sort.Sort(indexLinkByName(allDefines))
+
+	for _, link := range allDefines {
+		fmt.Fprintf(f, "  - [%s](%s)\n", link.Name, link.Link)
+	}
+
+	fmt.Fprintf(f, "\n")
+}
+
 func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 	fmt.Fprintf(f, "# %s\n\n", settings.LibName)
 
@@ -38,18 +108,10 @@ func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 	}
 
 	if len(index.Functions) > 0 {
-		fmt.Fprintf(f, "## Functions\n\n")
-		for _, fn := range index.AllFunctions() {
-			fmt.Fprintf(f, "  - [%s](%s)\n", functionFullName(fn), functionLink(fn))
-		}
-		fmt.Fprintf(f, "\n")
+		writeFunctionIndex(index, f)
 	}
 
 	if len(index.Defines) > 0 {
-		fmt.Fprintf(f, "## Macros\n\n")
-		for _, d := range index.AllDefines() {
-			fmt.Fprintf(f, "  - [%s](%s)\n", d.Name, defineLink(index, d))
-		}
-		fmt.Fprintf(f, "\n")
+		writeDefineIndex(index, f)
 	}
 }

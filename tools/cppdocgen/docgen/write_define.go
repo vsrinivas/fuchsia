@@ -10,7 +10,7 @@ import (
 )
 
 // Interface for sorting the record list by function name.
-type defineByName []Define
+type defineByName []*Define
 
 func (f defineByName) Len() int {
 	return len(f)
@@ -22,20 +22,24 @@ func (f defineByName) Less(i, j int) bool {
 	return f[i].Name < f[j].Name
 }
 
-func writeDefineReference(settings WriteSettings, index *Index, d Define, f io.Writer) {
+func writeDefineGroupSection(settings WriteSettings, index *Index, g *DefineGroup, f io.Writer) {
 	// Devsite uses {:#htmlId} to give the title a custom ID.
-	if len(d.ParamString) == 0 {
-		fmt.Fprintf(f, "## %s macro {:#%s}\n\n", d.Name, defineHtmlId(d))
-	} else if d.ParamString == "()" {
-		fmt.Fprintf(f, "## %s() macro {:#%s}\n\n", d.Name, defineHtmlId(d))
+	htmlId := defineGroupHtmlId(*g)
+	if len(g.ExplicitTitle) != 0 {
+		fmt.Fprintf(f, "## %s {:#%s}\n\n", g.ExplicitTitle, htmlId)
+	} else if len(g.Defines[0].ParamString) == 0 {
+		fmt.Fprintf(f, "## %s macro {:#%s}\n\n", g.Defines[0].Name, htmlId)
+	} else if g.Defines[0].ParamString == "()" {
+		fmt.Fprintf(f, "## %s() macro {:#%s}\n\n", g.Defines[0].Name, htmlId)
 	} else {
-		fmt.Fprintf(f, "## %s(…) macro {:#%s}\n\n", d.Name, defineHtmlId(d))
+		fmt.Fprintf(f, "## %s(…) macro {:#%s}\n\n", g.Defines[0].Name, htmlId)
 	}
 
-	fmt.Fprintf(f, "[Declaration source code](%s)\n\n", settings.locationSourceLink(d.Location))
+	fmt.Fprintf(f, "[Declaration source code](%s)\n\n",
+		settings.locationSourceLink(g.Defines[0].Location))
 
-	writeDefineDeclarationBlock(d, f)
-	writeComment(d.Description, markdownHeading2, f)
+	writeDefineDeclarationBlock(g.Defines, f)
+	writeComment(g.Defines[0].Description, markdownHeading2, f)
 }
 
 func defineHtmlId(d Define) string {
@@ -43,25 +47,36 @@ func defineHtmlId(d Define) string {
 	return d.Name
 }
 
+func defineGroupHtmlId(g DefineGroup) string {
+	// Devsite only supports one ID per heading, so just use the first.
+	return defineHtmlId(*g.Defines[0])
+}
+
 // This assumes the define destination will exist.
-func defineLink(index *Index, d Define) string {
+func defineLink(d Define) string {
 	return HeaderReferenceFile(d.Location.Filename) + "#" + defineHtmlId(d)
 }
 
-func writeDefineDeclarationBlock(d Define, f io.Writer) {
+func defineGroupLink(g DefineGroup) string {
+	return HeaderReferenceFile(g.Defines[0].Location.Filename) + "#" + defineGroupHtmlId(g)
+}
+
+func writeDefineDeclarationBlock(defines []*Define, f io.Writer) {
 	writePreHeader(f)
 
-	fmt.Fprintf(f, "<span class=\"kwd\">#define</span> <span class=\"lit\">%s</span>", d.Name)
-	if len(d.ParamString) > 0 {
-		fmt.Fprintf(f, "%s", d.ParamString)
-	}
+	for _, d := range defines {
+		fmt.Fprintf(f, "<span class=\"kwd\">#define</span> <span class=\"lit\">%s</span>", d.Name)
+		if len(d.ParamString) > 0 {
+			fmt.Fprintf(f, "%s", d.ParamString)
+		}
 
-	if len(d.Value) > 0 {
-		if d.Value[len(d.Value)-1] == byte('\\') {
-			// A multiline macro definition, replace the "\" with "...".
-			fmt.Fprintf(f, " %s...\n", d.Value[:len(d.Value)-1])
-		} else {
-			fmt.Fprintf(f, " %s\n", d.Value)
+		if len(d.Value) > 0 {
+			if d.Value[len(d.Value)-1] == byte('\\') {
+				// A multiline macro definition, replace the "\" with "...".
+				fmt.Fprintf(f, " %s...\n", d.Value[:len(d.Value)-1])
+			} else {
+				fmt.Fprintf(f, " %s\n", d.Value)
+			}
 		}
 	}
 

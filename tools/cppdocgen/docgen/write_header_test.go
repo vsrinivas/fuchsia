@@ -38,7 +38,10 @@ func TestWriteHeaderReference(t *testing.T) {
 
 	header := &Header{Name: headerPath,
 		Functions: []*clangdoc.FunctionInfo{fn},
-		Records:   []*clangdoc.RecordInfo{rec}}
+		FunctionGroups: []*FunctionGroup{
+			{Funcs: []*clangdoc.FunctionInfo{fn}},
+		},
+		Records: []*clangdoc.RecordInfo{rec}}
 	index.Headers[headerPath] = header
 
 	out := bytes.Buffer{}

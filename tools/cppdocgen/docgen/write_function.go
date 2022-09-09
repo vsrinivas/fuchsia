@@ -19,6 +19,14 @@ func functionEllipsesParens(fn *clangdoc.FunctionInfo) string {
 	}
 	return "(…)"
 }
+func functionGroupEllipsesParens(g *FunctionGroup) string {
+	for _, fn := range g.Funcs {
+		if len(fn.Params) > 0 {
+			return "(…)"
+		}
+	}
+	return "()"
+}
 
 // If linkDest is nonempty this will make the function name a link.
 func writeFunctionDeclaration(fn *clangdoc.FunctionInfo, namePrefix string, includeReturnType bool, linkDest string, f io.Writer) {
@@ -66,23 +74,36 @@ func writeFunctionDeclaration(fn *clangdoc.FunctionInfo, namePrefix string, incl
 // The |namePrefix| is prepended to the definition for defining class or namespace information.
 // This could be extracted from the function but this lets the caller decide which information to
 // include.
-func writeFunctionBody(fn *clangdoc.FunctionInfo, namePrefix string, includeReturnType bool, f io.Writer) {
+func writeFunctionGroupBody(g *FunctionGroup, namePrefix string, includeReturnType bool, f io.Writer) {
 	writePreHeader(f)
-	writeFunctionDeclaration(fn, namePrefix, includeReturnType, "", f)
+	for _, fn := range g.Funcs {
+		writeFunctionDeclaration(fn, namePrefix, includeReturnType, "", f)
+	}
 	writePreFooter(f)
 
-	writeComment(fn.Description, markdownHeading2, f)
+	// Any comment is on the first function in the group.
+	writeComment(g.Funcs[0].Description, markdownHeading2, f)
+}
+
+func functionGroupHtmlId(g *FunctionGroup) string {
+	// It seems devsite doesn't like more than one HTML ID for a heading. Until it is fixed
+	// or we can find a workaround, just use the first function's ID.
+	return functionHtmlId(g.Funcs[0])
 }
 
 // Writes the reference section for a standalone function.
-func writeFunctionSection(fn *clangdoc.FunctionInfo, f io.Writer) {
-	fmt.Fprintf(f, "## %s%s {:#%s}\n\n", fn.Name, functionEllipsesParens(fn), functionHtmlId(fn))
+func writeFunctionGroupSection(g *FunctionGroup, f io.Writer) {
+	if len(g.ExplicitTitle) != 0 {
+		fmt.Fprintf(f, "## %s {:#%s}\n\n", g.ExplicitTitle, functionGroupHtmlId(g))
+	} else {
+		fmt.Fprintf(f, "## %s%s {:#%s}\n\n", g.Funcs[0].Name, functionGroupEllipsesParens(g), functionGroupHtmlId(g))
+	}
 
 	// Include the qualified namespaces as a prefix.
-	writeFunctionBody(fn, functionScopePrefix(fn), true, f)
+	writeFunctionGroupBody(g, functionScopePrefix(g.Funcs[0]), true, f)
 }
 
-// Interface for sorting the function list by function name.
+// Interface for sorting a function list by function name.
 type functionByName []*clangdoc.FunctionInfo
 
 func (f functionByName) Len() int {
@@ -93,6 +114,23 @@ func (f functionByName) Swap(i, j int) {
 }
 func (f functionByName) Less(i, j int) bool {
 	return f[i].Name < f[j].Name
+}
+
+// Interface for sorting a function list by declaration location.
+type functionByLocation []*clangdoc.FunctionInfo
+
+func (f functionByLocation) Len() int {
+	return len(f)
+}
+func (f functionByLocation) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+func (f functionByLocation) Less(i, j int) bool {
+	// This assumes the file names are the same (since we're normally processing by file).
+	if len(f[i].Location) == 0 || len(f[j].Location) == 0 {
+		return len(f[i].Location) < len(f[j].Location)
+	}
+	return f[i].Location[0].LineNumber < f[j].Location[0].LineNumber
 }
 
 // Use for standalone functions. For member functions use memberFunctionHtmlId()
@@ -106,6 +144,9 @@ func functionHtmlId(f *clangdoc.FunctionInfo) string {
 
 func functionLink(f *clangdoc.FunctionInfo) string {
 	return HeaderReferenceFile(f.Location[0].Filename) + "#" + functionHtmlId(f)
+}
+func functionGroupLink(g *FunctionGroup) string {
+	return HeaderReferenceFile(g.Funcs[0].Location[0].Filename) + "#" + functionGroupHtmlId(g)
 }
 
 func functionScopePrefix(f *clangdoc.FunctionInfo) string {

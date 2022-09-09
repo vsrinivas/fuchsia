@@ -13,6 +13,15 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/cppdocgen/clangdoc"
 )
 
+type LineClass int
+
+const (
+	Blank LineClass = iota
+	Comment
+	Preproc
+	Code
+)
+
 type Define struct {
 	Location    clangdoc.Location
 	Name        string
@@ -21,12 +30,29 @@ type Define struct {
 	Description []clangdoc.CommentInfo
 }
 
+// Interface for sorting a define list by declaration location.
+type defineByLocation []*Define
+
+func (f defineByLocation) Len() int {
+	return len(f)
+}
+func (f defineByLocation) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+func (f defineByLocation) Less(i, j int) bool {
+	// This assumes the file names are the same (since we're normally processing by file).
+	return f[i].Location.LineNumber < f[j].Location.LineNumber
+}
+
 type HeaderValues struct {
 	// The per-header-file comment.
 	Description []clangdoc.CommentInfo
 
 	// Defines set in this header, in order they appear.
-	Defines []Define
+	Defines []*Define
+
+	// The classification of each line in the header.
+	Classes []LineClass
 }
 
 // Returns a bool indicating if this is preprocessor line, and if so also returns the contents of
@@ -126,7 +152,7 @@ func parsePreprocContents(contents string, comments []string, loc clangdoc.Locat
 		return // Ignore #defines with no value, assume they don't need docs.
 	}
 
-	vals.Defines = append(vals.Defines, Define{
+	vals.Defines = append(vals.Defines, &Define{
 		Location:    loc,
 		Name:        name,
 		ParamString: paramString,
@@ -135,7 +161,6 @@ func parsePreprocContents(contents string, comments []string, loc clangdoc.Locat
 	})
 
 	// TODO look for end-of-line comments here and use that if the |comments| are empty.
-
 }
 
 // The header contents are passed in as |h|, the filename is used only for the location reporting.
@@ -150,11 +175,14 @@ func ParseHeader(h string, filename string) (vals HeaderValues) {
 	// Set when there is a nonempty line that isn't handled by the preprocessor (# and //).
 	hasNonPreprocLine := false
 
-	for i, t := range strings.Split(h, "\n") {
+	lines := strings.Split(h, "\n")
+	vals.Classes = make([]LineClass, len(lines), len(lines))
+
+	for i, t := range lines {
 		t := strings.TrimSpace(t)
 
 		if len(t) == 0 && commentsAreDocstring && len(comments) > 0 && !foundHeaderDocstring && !hasNonPreprocLine {
-			// Got an empty like at the end of a docstring comment where we can accept
+			// Got an empty line at the end of a docstring comment where we can accept
 			// the header docstring. This indicates the end of the header docstring,
 			// consume it and clear the state.
 			vals.Description = commentsToDescription(comments)
@@ -178,6 +206,7 @@ func ParseHeader(h string, filename string) (vals HeaderValues) {
 			// Accumulate the current comment line.
 			commentsAreDocstring = isDocstring
 			comments = append(comments, contents)
+			vals.Classes[i] = Comment
 			continue
 		}
 
@@ -186,11 +215,13 @@ func ParseHeader(h string, filename string) (vals HeaderValues) {
 			loc := clangdoc.Location{LineNumber: i + 1, Filename: filename}
 			parsePreprocContents(contents, comments, loc, &vals)
 			comments = comments[0:0]
+			vals.Classes[i] = Preproc
 			continue
 		}
 
 		// Hit a non-comment line we don't care about, reset the comment state.
 		comments = comments[0:0]
+		vals.Classes[i] = Code
 		hasNonPreprocLine = true
 	}
 	return

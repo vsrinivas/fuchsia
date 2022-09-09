@@ -82,7 +82,7 @@ func writeBaseClassFunctions(index *Index, r *clangdoc.RecordInfo, headingLevel 
 	}
 }
 
-func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.RecordInfo, f io.Writer) {
+func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *clangdoc.RecordInfo, f io.Writer) {
 	fullName := recordFullName(r)
 	// Devsite uses {:#htmlId} to give the title a custom ID.
 	fmt.Fprintf(f, "## %s %s {:#%s}\n\n", fullName, r.TagType, recordHtmlId(index, r))
@@ -111,7 +111,9 @@ func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.Reco
 			funcs = append(funcs, fn)
 		}
 	}
-	sort.Sort(functionByName(funcs))
+
+	groupedFuncs := h.groupFunctions(funcs)
+	groupedCtors := h.groupFunctions(ctors)
 
 	// Collect the public records to output.
 	var dataMembers []clangdoc.MemberTypeInfo
@@ -136,11 +138,10 @@ func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.Reco
 		}
 	}
 
-	if len(ctors) > 0 {
-		fmt.Fprintf(f, "### Constructor {:#%s}\n\n", memberFunctionHtmlId(r, ctors[0]))
-		// TODO merge adjacent constructors with no blanks or comments between then.
-		for _, fn := range ctors {
-			writeFunctionBody(fn, namePrefix, false, f)
+	if len(groupedCtors) > 0 {
+		fmt.Fprintf(f, "### Constructor{:#%s}\n\n", memberFunctionHtmlId(r, ctors[0]))
+		for _, g := range groupedCtors {
+			writeFunctionGroupBody(g, namePrefix, false, f)
 			fmt.Fprintf(f, "\n")
 		}
 	}
@@ -164,12 +165,27 @@ func writeRecordReference(settings WriteSettings, index *Index, r *clangdoc.Reco
 	}
 
 	// Member functions.
-	for _, fn := range funcs {
-		if !seenFuncs[fn.IdentityKey()] {
+	for _, g := range groupedFuncs {
+		// Don't include functions that were included in the base class list above.
+		// If a section of functions includes both ones from the base class and not, include
+		// all of them.
+		hasNonBaseClass := false
+		for _, fn := range g.Funcs {
+			if !seenFuncs[fn.IdentityKey()] {
+				hasNonBaseClass = true
+			}
+		}
+
+		if hasNonBaseClass {
 			// Don't fully qualify the name since including namespaces looks too noisy.
 			// Just include the class name for clarity.
-			fmt.Fprintf(f, "### %s::%s%s {:#%s}\n\n", r.Name, fn.Name, functionEllipsesParens(fn), memberFunctionHtmlId(r, fn))
-			writeFunctionBody(fn, namePrefix, true, f)
+			if len(g.ExplicitTitle) != 0 {
+				fmt.Fprintf(f, "### %s {:#%s}\n\n", g.ExplicitTitle, functionGroupHtmlId(g))
+			} else {
+				fmt.Fprintf(f, "### %s::%s%s {:#%s}\n\n", r.Name, g.Funcs[0].Name, functionGroupEllipsesParens(g), functionGroupHtmlId(g))
+			}
+
+			writeFunctionGroupBody(g, namePrefix, true, f)
 			fmt.Fprintf(f, "\n")
 		}
 	}

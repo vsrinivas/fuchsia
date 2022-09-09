@@ -78,3 +78,58 @@ For user-friendliness:
     the top of the header documentation text.
 
   * Include the name of the library.
+
+### Grouping functions and defines into one heading
+
+Sometimes you will want some functions or defines to appear under the same
+heading. This can make similar functions much easier to follow.
+
+Two functions are implicitly grouped when they have the same name and no blank
+or comment lines separating their declarations. Any comment above the first
+function becomes the comment for all of them.
+
+```
+// Returns an iterator to the beginning of the container.
+iterator begin();
+const_iterator begin() const;
+```
+
+These same rules apply to constructors (which always have matching names).
+The difference is that constructors will always go under the same "construcors"
+heading, but there will be different sections within that if there are
+constructor variants with separate comments.
+
+```
+class MyClass {
+  // These two will ge grouped together and this will be the docstring for them.
+  MyClass();
+  MyClass(int a);
+  // This one will go in its own section with its own documentation.
+  MyClass(std::string a);
+```
+
+Functions (even with non-matching names) and #defines can also be grouped
+explicitly. To do this, list the items with no blank or comment lines separating
+them, provide a comment above the first item, and start that comment with a
+markdown heading 1 ("# ..."). The heading will become the title for all items in
+the group:
+
+```
+/// # ZX_RIGHT_... defines
+///
+/// These constants define the rights for objects.
+#define ZX_RIGHT_NONE 0
+#define ZX_RIGHT_DISINTEGRATE 1
+#define ZX_RIGHT_STAPLE 2
+
+/// # begin()/cbegin()
+///
+/// These functions return a (possibly const) iterator to the beginning of the
+/// container.
+iterator begin();
+const_iterator cbegin();
+```
+
+It is good practice to include as much of the name as practical in the title.
+This is what the user will be scanning for and it should match with the other
+titles which use the raw function/define names
