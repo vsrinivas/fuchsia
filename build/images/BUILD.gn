@@ -275,6 +275,10 @@ group("default-images") {
     deps += [ "size_checker:size_report.json" ]
   }
 
+  if (!bootfs_only) {
+    deps += [ "size_checker:run_product_size_checker" ]
+  }
+
   if (recovery_is_zedboot) {
     deps += [
       "//build/images/archive:paver-script",

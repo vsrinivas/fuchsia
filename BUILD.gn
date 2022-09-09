@@ -157,6 +157,7 @@ build_api_module("api") {
     ":platforms",
     ":prebuilt_binaries",
     ":prebuilt_package_flavors",
+    ":product_size_checker_output",
     ":rbe_config",
     ":sdk_archives",
     ":test_durations",
@@ -1215,6 +1216,19 @@ build_api_module("gerrit_size_report") {
 build_api_module("assembly_manifests") {
   testonly = true
   data_keys = [ "assembly_manifests" ]
+  deps = [ "//build/images:default-images" ]
+}
+
+# Contains information about 0 or 1 product size checker outputs produced by the build.
+#
+# Type: list(scope)
+#   size_breakdown
+#     Required: Path to the size breakdown text file.
+#   visualization
+#     Required: Path to the directory containing the size visualization.
+build_api_module("product_size_checker_output") {
+  testonly = true
+  data_keys = [ "product_size_checker_output" ]
   deps = [ "//build/images:default-images" ]
 }
 

@@ -55,7 +55,7 @@ struct VisualizationBlobNode {
 }
 
 /// Verifies that the product budget is not exceeded.
-pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
+pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
     let assembly_manifest: AssemblyManifest = read_config(&args.assembly_manifest)?;
     let blobfs_contents = match extract_blobfs_contents(&assembly_manifest) {
         Some(contents) => contents,
@@ -64,7 +64,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
                 "No blobfs image was found in {}",
                 args.assembly_manifest.to_string_lossy()
             );
-            return Ok(());
+            return Ok(true);
         }
     };
     let max_contents_size = blobfs_contents.maximum_contents_size;
@@ -96,7 +96,7 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
             ))?;
         let other_package_sizes = calculate_package_sizes(&other_blobfs_contents)?;
         print_size_diff(&package_sizes, &other_package_sizes);
-    } else if args.verbose || !contents_fit {
+    } else if args.verbose {
         println!("{}", PackageSizeInfos(&package_sizes));
         println!("Total size: {} bytes", total_blobfs_size);
     }
@@ -113,9 +113,9 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
         .context("writing gerrit report")?;
     }
 
-    if max_contents_size.is_none() {
+    if max_contents_size.is_none() && args.verbose {
         println!(
-            "\nSkipping size checks because maximum_contents_size is not specified for this product."
+            "Skipping size checks because maximum_contents_size is not specified for this product."
         );
     }
 
@@ -147,18 +147,23 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
             ),
         )
         .context("creating data.js for visualization")?;
-        println!("\nWrote visualization to {}", visualization_dir.join("index.html").display());
+        if args.verbose {
+            println!("Wrote visualization to {}", visualization_dir.join("index.html").display());
+        }
     }
 
-    if contents_fit {
-        Ok(())
-    } else {
-        Err(format_err!(
-            "BlobFS contents size ({}) exceeds max_contents_size ({})",
+    if !contents_fit {
+        println!(
+            "BlobFS contents size ({}) exceeds max_contents_size ({}).",
             total_blobfs_size,
             max_contents_size.unwrap(), // Value is always present when budget is exceeded.
-        ))
+        );
+        if !args.verbose {
+            println!("Run with --verbose to view the size breakdown of all packages and blobs, or run `fx size-check` in-tree.");
+        }
     }
+
+    Ok(contents_fit)
 }
 
 fn generate_visualization_tree(package_sizes: &Vec<PackageSizeInfo>) -> VisualizationRootNode {
@@ -546,7 +551,7 @@ test_base_package                                                            65 
     }
 
     #[test]
-    fn verify_product_budgets_with_overflow_test() {
+    fn verify_product_budgets_with_overflow_test() -> Result<()> {
         // Create assembly manifest file
         let test_fs = TestFs::new();
         test_fs.write(
@@ -643,10 +648,8 @@ test_base_package                                                            65 
             size_breakdown_output: None,
         };
 
-        let res = verify_product_budgets(product_size_check_args);
-        res.expect_err(
-            "Expecting error: BlobFS contents size (125) exceeds max_contents_size (120)",
-        );
+        assert!(!verify_product_budgets(product_size_check_args)?);
+        Ok(())
     }
 
     #[test]
@@ -747,7 +750,9 @@ test_base_package                                                            65 
             size_breakdown_output: None,
         };
 
-        verify_product_budgets(product_size_check_args)
+        let res = verify_product_budgets(product_size_check_args);
+        assert!(res?);
+        Ok(())
     }
 
     #[test]

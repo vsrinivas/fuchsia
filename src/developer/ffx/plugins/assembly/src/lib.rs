@@ -43,8 +43,12 @@ pub async fn assembly(cmd: AssemblyCommand) -> Result<()> {
                     .context("Package size checker")
             }
             SizeCheckOperationClass::Product(args) => {
+                // verify_product_budgets() returns a boolean that indicates whether the budget was
+                // exceeded or not. We don't intend to fail the build when budgets are exceeded so the
+                // returned value is dropped.
                 operations::size_check_product::verify_product_budgets(args)
                     .context("Product size checker")
+                    .map(|_| ())
             }
         },
     }
