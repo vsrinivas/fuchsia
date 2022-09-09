@@ -25,8 +25,6 @@ type MountPt struct {
 type NsJailCmdBuilder struct {
 	// Bin is the path to the NsJail binary. This is a required parameter.
 	Bin string
-	// Chroot is the path to a directory to set as the chroot.
-	Chroot string
 	// Cwd is the path to a directory to set as the working directory.
 	// Note that this does not add any required mount points, the caller
 	// is responsible for ensuring that the directory exists in the jail.
@@ -75,22 +73,6 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 		return nil, errors.New("NsJailCmdBuilder: Bin cannot be empty")
 	} else if len(subcmd) == 0 {
 		return nil, errors.New("NsJailCmdBuilder: subcmd cannot be empty")
-	}
-
-	// Nsjail has a chroot flag but unfortunately it mounts the root
-	// readonly, so we get around this by mounting it manually as
-	// writable. Additionally, this must be mounted first to allow
-	// for sub-mounts.
-	if n.Chroot != "" {
-		n.MountPoints = append(
-			[]*MountPt{
-				{
-					Src:      n.Chroot,
-					Dst:      "/",
-					Writable: true,
-				},
-			}, n.MountPoints...,
-		)
 	}
 
 	// Build the actual command invocation.

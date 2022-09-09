@@ -122,26 +122,6 @@ func TestBuild(t *testing.T) {
 			},
 		},
 		{
-			name: "Test chroot",
-			cmdBuilder: &NsJailCmdBuilder{
-				Bin:    "/path/to/nsjail",
-				Chroot: "/chroot",
-			},
-			subcmd: []string{"/foo/bar"},
-			want: []string{
-				"/path/to/nsjail",
-				"--keep_env",
-				"--disable_clone_newnet",
-				"--bindmount", "/chroot:/",
-				"--rlimit_as", "soft",
-				"--rlimit_fsize", "soft",
-				"--rlimit_nofile", "soft",
-				"--rlimit_nproc", "soft",
-				"--",
-				"/foo/bar",
-			},
-		},
-		{
 			name: "Test environment variables",
 			cmdBuilder: &NsJailCmdBuilder{
 				Bin: "/path/to/nsjail",

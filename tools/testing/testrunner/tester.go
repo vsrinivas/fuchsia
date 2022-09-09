@@ -220,26 +220,23 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 			testCmdBuilder.Env = append(testCmdBuilder.Env, key+"=/tmp")
 		}
 		// Set the root of the NsJail and the working directory.
-		// The working directory is expected to be a subdirectory of the root,
-		// and must be passed in as a relative path to the root.
+		// The working directory is expected to be a subdirectory of the root.
 		absRoot, err := filepath.Abs(t.nsjailRoot)
 		if err != nil {
 			testResult.FailReason = err.Error()
 			return testResult, nil
 		}
-		testCmdBuilder.Chroot = absRoot
+		testCmdBuilder.MountPoints = append(
+			testCmdBuilder.MountPoints,
+			&MountPt{Src: absRoot, Writable: true},
+		)
 
 		cwd, err := os.Getwd()
 		if err != nil {
 			testResult.FailReason = err.Error()
 			return testResult, nil
 		}
-		relCwd, err := filepath.Rel(absRoot, cwd)
-		if err != nil {
-			testResult.FailReason = err.Error()
-			return testResult, nil
-		}
-		testCmdBuilder.Cwd = relCwd
+		testCmdBuilder.Cwd = cwd
 
 		// Mount the testbed config and any serial sockets.
 		testbedConfigPath := os.Getenv(botanistconstants.TestbedConfigEnvKey)
