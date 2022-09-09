@@ -13,6 +13,7 @@ rustc_binary("bin") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan_rust",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace_rust",

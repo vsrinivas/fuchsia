@@ -143,7 +143,7 @@ impl Config {
         Some(index)
     }
 
-    fn get_backbone_netif_index_by_default_route(&self) -> Option<ot::NetifIndex> {
+    fn get_backbone_netif_index_by_wlan_availability(&self) -> Option<ot::NetifIndex> {
         let state = connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
             .expect("error connecting to StateMarker");
         let (watcher_client, watcher_server) =
@@ -160,20 +160,23 @@ impl Config {
                         fidl_fuchsia_net_interfaces::Properties {
                             id,
                             name,
-                            has_default_ipv4_route,
-                            has_default_ipv6_route,
+                            online,
+                            device_class,
                             ..
                         },
                     ) => {
                         info!(
-                            "NICID: {:?}, name: {:?}, DRv4: {:?}, DRv6: {:?}",
-                            id, name, has_default_ipv4_route, has_default_ipv6_route
+                            "NICID: {:?}, name: {:?}, online: {:?}, device_class: {:?}",
+                            id, name, online, device_class
                         );
-                        if let Some(has_route) = has_default_ipv4_route {
-                            // wlan router may disabled ipv6
-                            if has_route && name.unwrap().contains("wlan") {
-                                return Some(id.unwrap_or(0) as ot::NetifIndex);
-                            }
+                        if let (
+                            Some(fidl_fuchsia_net_interfaces::DeviceClass::Device(
+                                fidl_fuchsia_hardware_network::DeviceClass::Wlan,
+                            )),
+                            Some(true),
+                        ) = (device_class, online)
+                        {
+                            return Some(id.unwrap_or(0) as ot::NetifIndex);
                         }
                     }
                     fidl_fuchsia_net_interfaces::Event::Idle(
@@ -192,7 +195,7 @@ impl Config {
 
     fn get_backbone_netif_index(&self) -> Option<ot::NetifIndex> {
         if self.backbone_name.is_none() {
-            self.get_backbone_netif_index_by_default_route()
+            self.get_backbone_netif_index_by_wlan_availability()
         } else {
             self.get_backbone_netif_index_by_config()
         }
