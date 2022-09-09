@@ -13,6 +13,7 @@ use futures::lock::Mutex;
 use futures::{StreamExt, TryStreamExt};
 use std::sync::Arc;
 use test_case::test_case;
+use tracing;
 
 mod common;
 
@@ -31,6 +32,7 @@ impl Mocks for SetupTest {
                 let recorded_actions_clone = recorded_actions.clone();
                 fasync::Task::spawn(async move {
                     while let Ok(Some(req)) = stream.try_next().await {
+                        tracing::info!("Get a request.");
                         // Support future expansion of FIDL.
                         #[allow(unreachable_patterns)]
                         if let AdminRequest::Reboot {
@@ -38,8 +40,11 @@ impl Mocks for SetupTest {
                             responder,
                         } = req
                         {
+                            tracing::info!("Request has user reboot request.");
                             recorded_actions_clone.lock().await.push(Action::Reboot);
+                            tracing::info!("recorded_actions added Action::Reboot.");
                             responder.send(&mut Ok(())).unwrap();
+                            tracing::info!("Responder sent.");
                         }
                     }
                 })
@@ -51,20 +56,12 @@ impl Mocks for SetupTest {
     }
 }
 
-pub(crate) async fn verify_action_sequence(
-    expected_actions: Arc<Mutex<Vec<Action>>>,
-    actions: Vec<Action>,
-) -> bool {
-    let expected_actions = expected_actions.lock().await;
-    actions.eq(&*expected_actions)
-}
-
 const REBOOT_ACTION: [Action; 1] = [Action::Reboot];
 const NO_ACTIONS: [Action; 0] = [];
 
 #[test_case(true, &REBOOT_ACTION)]
 #[test_case(false, &NO_ACTIONS)]
-#[fuchsia::test]
+#[fuchsia::test(logging = true)]
 async fn test_setup(should_reboot: bool, test_actions: &[Action]) {
     let test_actions = test_actions.to_vec();
     let actions = Arc::new(Mutex::new(Vec::new()));
@@ -94,5 +91,7 @@ async fn test_setup(should_reboot: bool, test_actions: &[Action]) {
     assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
 
     // Verify expected actions were called.
-    assert!(verify_action_sequence(actions, test_actions).await);
+    assert_eq!(test_actions, *actions.lock().await);
+
+    let _ = instance.destroy().await;
 }
