@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/suspend/config.gni")
 import("//build/zbi/kernel_cmdline.gni")
 
 # This serves as an anchor point. By expressing a dependency on
@@ -44,6 +45,12 @@ kernel_cmdline("enable-suspend") {
     "vdso.ticks_get_force_syscall=true",
   ]
   deps = [ "//build/validate:non_production_tag" ]
+}
+
+group("enable-suspend-from-board") {
+  if (enable_suspend) {
+    deps = [ ":enable-suspend" ]
+  }
 }
 
 declare_args() {

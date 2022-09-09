@@ -77,6 +77,5 @@ board_package_labels += [
 platform_enable_user_pci = true
 userspace_pci_enable_msi_x = true
 
-if (enable_suspend) {
-  board_bootfs_labels += [ "//boards/kernel_cmdline:enable-suspend" ]
-}
+# This will enable suspend only if the enable_suspend flag is set to true
+board_bootfs_labels += [ "//boards/kernel_cmdline:enable-suspend-from-board" ]
