@@ -51,23 +51,19 @@ core_realm_shards +=
     [ "//src/virtualization/bin/guest_manager:termina_core_shard" ]
 
 # Add Bluetooth packages
-core_realm_shards += [
-  "//src/connectivity/bluetooth/profiles/bt-a2dp:eager_core_shard",
-  "//src/connectivity/bluetooth/profiles/bt-avrcp:bt-avrcp-core-shard",
-]
+core_realm_shards +=
+    [ "//src/connectivity/bluetooth/profiles/bt-a2dp:eager_core_shard" ]
 
-# To use the eager shard, cache the packages so they are available before network.
-legacy_cache_package_labels += [
+# To use the eager shard, the used should be in base
+legacy_base_package_labels += [
   "//src/connectivity/bluetooth/profiles/bt-a2dp:source-only",
-  "//src/connectivity/bluetooth/profiles/bt-avrcp-target",
-  "//src/connectivity/bluetooth/profiles/bt-avrcp",
 
   # TODO(fxbug.dev/79542): Demote to universe when sysui handles pairing+connecting
   "//src/connectivity/bluetooth/tools/bt-cli",
   "//src/connectivity/bluetooth/tools/bt-pairing-tool",
-
-  "//src/chromium:chrome_browser",
 ]
+
+legacy_cache_package_labels += [ "//src/chromium:chrome_browser" ]
 
 # Explicitly prefer wired networking on workstation
 legacy_base_package_labels -=
