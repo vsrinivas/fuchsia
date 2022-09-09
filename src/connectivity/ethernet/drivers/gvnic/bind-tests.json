@@ -1,0 +1,69 @@
+[
+    {
+        "name": "All Match",
+        "expected": "match",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.GOOGLE",
+            "fuchsia.BIND_PCI_DID": "0x0042",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    },
+    {
+        "name": "Wrong DID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.GOOGLE",
+            "fuchsia.BIND_PCI_DID": "0x0043",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    },
+    {
+        "name": "Missing DID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.GOOGLE",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    },
+    {
+        "name": "Wrong VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
+            "fuchsia.BIND_PCI_DID": "0x0042",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    },
+    {
+        "name": "Missing VID",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_DID": "0x0042",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    },
+    {
+        "name": "Wrong Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.GOOGLE",
+            "fuchsia.BIND_PCI_DID": "0x0042",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    },
+    {
+        "name": "Missing Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.GOOGLE",
+            "fuchsia.BIND_PCI_DID": "0x0042",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    }
+]

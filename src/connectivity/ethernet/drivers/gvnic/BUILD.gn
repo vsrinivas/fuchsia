@@ -13,6 +13,7 @@ group("tests") {
     ":bigendian-tests",
     ":circular_queue-tests",
     ":gvnic-tests",
+    ":gvnic_bind_test",
   ]
 }
 
@@ -20,6 +21,8 @@ driver_bind_rules("gvnic_bind") {
   rules = "gvnic.bind"
   header_output = "gvnic-bind.h"
   bind_output = "gvnic.bindbc"
+  tests = "bind-tests.json"
+  deps = [ "//src/devices/bind/fuchsia.pci" ]
 }
 
 fuchsia_driver("gvnic-driver") {

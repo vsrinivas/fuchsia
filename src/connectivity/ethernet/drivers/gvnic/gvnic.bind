@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO: Add bind rules here and delete this comment.
-// For more info see: https://fuchsia.dev/fuchsia-src/concepts/drivers/driver-binding
-false;
+using fuchsia.pci;
+
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.GOOGLE;
+fuchsia.BIND_PCI_DID == 0x0042;
+fuchsia.BIND_COMPOSITE == 1;
