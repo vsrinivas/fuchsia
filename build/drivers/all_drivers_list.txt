@@ -217,6 +217,7 @@
 //src/devices/tests/ddk-metadata-test:fuchsia_driver
 //src/devices/tests/ddk-power:ddk-power-test-child-driver
 //src/devices/tests/ddk-power:ddk-power-test-driver
+//src/devices/tests/ddk-topology-test:ddk-topology-test
 //src/devices/tests/device-group-test/drivers:device-group-driver
 //src/devices/tests/device-group-test/drivers:leaf-driver
 //src/devices/tests/device-group-test/drivers:root-driver
@@ -241,12 +242,12 @@
 //src/devices/tests/sysdev:sysdev-driver
 //src/devices/tests/v2/compat-globals/leaf:driver
 //src/devices/tests/v2/compat-globals/root:driver
+//src/devices/tests/v2/compat-runtime-v1/leaf:driver
+//src/devices/tests/v2/compat-runtime-v1/root:driver
 //src/devices/tests/v2/compat-runtime:root-driver
 //src/devices/tests/v2/compat-runtime:v1-driver
 //src/devices/tests/v2/compat/leaf:driver
 //src/devices/tests/v2/compat/root:driver
-//src/devices/tests/v2/compat-runtime-v1/leaf:driver
-//src/devices/tests/v2/compat-runtime-v1/root:driver
 //src/devices/tests/v2/composite:leaf_driver
 //src/devices/tests/v2/composite:root_driver
 //src/devices/tests/v2/ddk-init-test:driver

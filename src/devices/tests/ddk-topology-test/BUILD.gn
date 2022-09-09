@@ -1,0 +1,71 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/drivers/driver_manifest.gni")
+import("//build/rust/rustc_test.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":ddk-topology-test-package" ]
+}
+
+driver_bind_rules("ddk-topology-test-bind") {
+  header_output = "test-driver-bind.h"
+  bind_output = "test-driver-bind.bindbc"
+  rules = "test-driver.bind"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("ddk-topology-test") {
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [ "test-driver.cc" ]
+  deps = [
+    ":ddk-topology-test-bind",
+    "//sdk/lib/fdio",
+    "//sdk/lib/syslog/cpp:backend",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/lib/files",
+    "//zircon/system/ulib/sync",
+  ]
+}
+
+fuchsia_driver_component("ddk-topology-test-driver") {
+  deps = [ ":ddk-topology-test" ]
+  info = "ddk-topology-test-driver-info.json"
+  colocate = true
+}
+
+rustc_test("ddk_topology_test") {
+  edition = "2021"
+  source_root = "test.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
+    "//sdk/lib/device-watcher/rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "test.rs" ]
+}
+
+fuchsia_unittest_package("ddk-topology-test-package") {
+  package_name = "ddk-topology-test"
+  deps = [
+    ":ddk-topology-test-driver",
+    ":ddk_topology_test",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}
