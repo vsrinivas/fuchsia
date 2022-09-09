@@ -6,10 +6,7 @@
 
 #[cfg(test)]
 mod tests {
-
     use anyhow::Error;
-    use fuchsia_async as fasync;
-    use fuchsia_syslog;
     use tests_intl_timezone;
 
     /// Starts a dart program that uses Dart's idea of the system time zone to report time zone
@@ -20,15 +17,10 @@ mod tests {
     ///
     /// We do this twice, to ensure that runtime timezone changes are reflected in the time
     /// reported by the dart VM.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test(logging_tags = [
+        "e2e", "timezone", "dart", "check_reported_time_in_dart_vm",
+    ])]
     async fn check_reported_time_in_dart_vm() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&[
-            "e2e",
-            "timezone",
-            "dart",
-            "check_reported_time_in_dart_vm",
-        ])
-        .unwrap();
         tests_intl_timezone::check_reported_time_with_update(/*get_view=*/ false).await
     }
 } // tests

@@ -6,21 +6,13 @@
 
 #[cfg(test)]
 mod tests {
-
     use anyhow::Error;
-    use fuchsia_async as fasync;
-    use fuchsia_syslog;
     use tests_intl_timezone;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test(logging_tags = [
+        "e2e", "timezone", "flutter", "check_reported_time_in_flutter_vm",
+    ])]
     async fn check_reported_time_in_flutter_vm() -> Result<(), Error> {
-        fuchsia_syslog::init_with_tags(&[
-            "e2e",
-            "timezone",
-            "flutter",
-            "check_reported_time_in_flutter_vm",
-        ])
-        .unwrap();
         tests_intl_timezone::check_reported_time_with_update(/*get_view=*/ true).await
     }
 } // tests

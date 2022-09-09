@@ -15,7 +15,6 @@ use fuchsia_async::DurationExt;
 use fuchsia_component::client;
 use fuchsia_runtime as runtime;
 use fuchsia_scenic as scenic;
-use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
 use icu_data;
 use rust_icu_ucal as ucal;
@@ -23,6 +22,7 @@ use rust_icu_udat as udat;
 use rust_icu_uloc as uloc;
 use rust_icu_ustring as ustring;
 use std::convert::TryFrom;
+use tracing::*;
 
 fn intl_client() -> Result<fsettings::IntlProxy> {
     client::connect_to_protocol::<fsettings::IntlMarker>()
@@ -42,7 +42,7 @@ impl ScopedTimezone {
         let client = intl_client().with_context(|| "while creating intl client")?;
         let response =
             client.watch().await.with_context(|| "while creating intl client watcher")?;
-        fx_log_info!("setting timezone for test: {}", timezone);
+        info!("setting timezone for test: {}", timezone);
         let old_timezone = response.time_zone_id.unwrap().id;
         let setter = ScopedTimezone { timezone: old_timezone, client };
         setter.set_timezone(timezone).await?;
@@ -51,7 +51,7 @@ impl ScopedTimezone {
 
     /// Asynchronously set the timezone based to the supplied value.
     async fn set_timezone(&self, timezone: &str) -> Result<(), Error> {
-        fx_log_info!("setting timezone: {}", timezone);
+        info!("setting timezone: {}", timezone);
         let settings = fsettings::IntlSettings {
             time_zone_id: Some(fintl::TimeZoneId { id: timezone.to_string() }),
             locales: None,
@@ -74,7 +74,7 @@ impl Drop for ScopedTimezone {
         std::thread::spawn(move || {
             let mut executor = fasync::LocalExecutor::new().unwrap();
             executor.run_singlethreaded(async move {
-                fx_log_info!("restoring timezone: {}", &timezone);
+                info!("restoring timezone: {}", &timezone);
                 let client = intl_client().unwrap();
                 let settings = fsettings::IntlSettings {
                     time_zone_id: Some(fintl::TimeZoneId { id: timezone }),
@@ -88,7 +88,7 @@ impl Drop for ScopedTimezone {
             });
         });
         rx.recv().unwrap();
-        fx_log_info!("restored timezone: {}", &self.timezone);
+        info!("restored timezone: {}", &self.timezone);
     }
 }
 
@@ -101,10 +101,10 @@ fn connect_to_view_provider() -> Result<()> {
     let view_provider = client::connect_to_protocol::<ViewProviderMarker>();
     match view_provider {
         Err(_) => {
-            fx_log_debug!("could not connect to view provider.  This is expected in dart.")
+            debug!("could not connect to view provider.  This is expected in dart.")
         }
         Ok(ref view_provider) => {
-            fx_log_debug!("connected to view provider");
+            debug!("connected to view provider");
             let token_pair = scenic::ViewTokenPair::new()?;
             let mut viewref_pair = scenic::ViewRefPair::new()?;
 
@@ -159,7 +159,7 @@ async fn loop_until_matching_time(
 
     // Multiple attempts in case the test is run close to the turn of the hour.
     for attempt in 1..=MAX_ATTEMPTS {
-        fx_log_info!("Requesting some time, attempt: {}", attempt);
+        info!(%attempt, "Requesting some time");
         let out = echo
             .echo_string(Some("Gimme some time!"))
             .await
@@ -172,7 +172,7 @@ async fn loop_until_matching_time(
             break;
         }
 
-        fx_log_info!("Times do not match. VM time is {} and client time is {}", vm_time, date_time);
+        info!(%vm_time, %date_time, "Times do not match");
         if attempt == MAX_ATTEMPTS {
             let clock = runtime::duplicate_utc_clock_handle(zx::Rights::READ)
                 .map_err(|stat| anyhow::anyhow!("Error retreiving clock: {}", stat));
