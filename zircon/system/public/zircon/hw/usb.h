@@ -77,6 +77,9 @@ __BEGIN_CDECLS
 #define USB_SUBCLASS_DFU                    0x01
 #define USB_PROTOCOL_DFU                    0x02
 
+#define USB_SUBCLASS_ADB                    0x42
+#define USB_PROTOCOL_ADB                    0x01
+
 #define USB_SUBCLASS_VENDOR                 0xFF
 #define USB_PROTOCOL_TEST_FTDI              0x01
 #define USB_PROTOCOL_TEST_HID_ONE_ENDPOINT  0x02

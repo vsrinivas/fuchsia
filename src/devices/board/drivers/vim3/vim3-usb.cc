@@ -114,7 +114,6 @@ static const pbus_bti_t dwc2_btis[] = {
 };
 
 static const char kManufacturer[] = "Zircon";
-static const char kProduct[] = "CDC-Ethernet";
 static const char kSerial[] = "0123456789ABCDEF";
 
 // Metadata for DWC2 driver.
@@ -238,6 +237,13 @@ static const device_fragment_t dwc2_fragments[] = {
     {"dwc2-phy", std::size(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
+static bool is_adb_enabled(zx_device_t* parent) {
+  char flag[32];
+  zx_status_t status =
+      device_get_variable(parent, "driver.adb.enable", flag, sizeof(flag), nullptr);
+  return status == ZX_OK && (!strncmp(flag, "true", sizeof(flag)));
+}
+
 zx_status_t Vim3::UsbInit() {
   // Turn on clocks.
   auto status = clk_impl_.Enable(g12b_clk::G12B_CLK_USB);
@@ -273,14 +279,29 @@ zx_status_t Vim3::UsbInit() {
     return ZX_ERR_NO_MEMORY;
   }
 
-  config->vid = GOOGLE_USB_VID;
-  config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
-  std::strcpy(config->manufacturer, kManufacturer);
-  std::strcpy(config->serial, kSerial);
-  std::strcpy(config->product, kProduct);
-  config->functions[0].interface_class = USB_CLASS_COMM;
-  config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
-  config->functions[0].interface_protocol = 0;
+  bool enable_adb = is_adb_enabled(parent_);
+  if (!enable_adb) {
+    // USB CDC Ethernet
+    config->vid = GOOGLE_USB_VID;
+    config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
+    std::strncpy(config->manufacturer, kManufacturer, sizeof(kManufacturer));
+    std::strncpy(config->serial, kSerial, sizeof(kSerial));
+    std::strncpy(config->product, "CDC-Ethernet", sizeof("CDC-Ethernet"));
+    config->functions[0].interface_class = USB_CLASS_COMM;
+    config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
+    config->functions[0].interface_protocol = 0;
+  } else {
+    // USB ADB
+    config->vid = GOOGLE_USB_VID;
+    config->pid = GOOGLE_USB_ADB_PID;
+    std::strncpy(config->manufacturer, kManufacturer, sizeof(kManufacturer));
+    std::strncpy(config->serial, kSerial, sizeof(kSerial));
+    std::strncpy(config->product, "ADB", sizeof("ADB"));
+    config->functions[0].interface_class = USB_CLASS_VENDOR;
+    config->functions[0].interface_subclass = USB_SUBCLASS_ADB;
+    config->functions[0].interface_protocol = USB_PROTOCOL_ADB;
+  }
+
   usb_metadata[0].data_size = config_size;
   usb_metadata[0].data_buffer = reinterpret_cast<uint8_t*>(config);
 

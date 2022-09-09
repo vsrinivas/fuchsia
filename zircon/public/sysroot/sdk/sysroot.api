@@ -197,7 +197,7 @@
   "include/zircon/hw/debug/x86.h": "2fda1cb82f06574331945ddd3dda3696",
   "include/zircon/hw/gpt.h": "161c346998845e9ee9d51ec1dfd07621",
   "include/zircon/hw/pci.h": "76a29114bd88e6767cb5dbdd697b096e",
-  "include/zircon/hw/usb.h": "fb8368acf2d1674871206761e98546be",
+  "include/zircon/hw/usb.h": "76c23c6a3d2e8151b05718a6186a804d",
   "include/zircon/hw/usb/audio.h": "81bfbb8bf224709a747c3e905cf773c4",
   "include/zircon/hw/usb/cdc.h": "b9bdb2898f2faf65e5080dbd70f8d4f7",
   "include/zircon/hw/usb/dfu.h": "300c6c4d953a3315433861241b37a7f5",

@@ -25,4 +25,7 @@
 // USB Product ID for CDC Ethernet and Function Test composite device.
 #define GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID 0xA023
 
+// ADB Product ID
+#define GOOGLE_USB_ADB_PID 0xA025
+
 #endif  // SYSROOT_ZIRCON_DEVICE_USB_PERIPHERAL_H_
