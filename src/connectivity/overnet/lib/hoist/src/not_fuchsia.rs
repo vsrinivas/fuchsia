@@ -6,7 +6,6 @@
 
 use std::path::PathBuf;
 use {
-    crate::HOIST,
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::{create_proxy, create_proxy_and_stream},
     fidl_fuchsia_overnet::{
@@ -74,9 +73,9 @@ impl HostOvernet {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Hoist {
-    host_overnet: HostOvernet,
+    host_overnet: Arc<HostOvernet>,
     node: Arc<Router>,
 }
 
@@ -90,8 +89,9 @@ impl Hoist {
                 .set_node_id(node_id),
             Box::new(hard_coded_security_context()),
         )?;
+        let host_overnet = Arc::new(HostOvernet::new(node.clone())?);
 
-        Ok(Self { host_overnet: HostOvernet::new(node.clone())?, node: node.clone() })
+        Ok(Self { host_overnet, node })
     }
 
     pub fn node(&self) -> Arc<Router> {
@@ -104,8 +104,8 @@ impl Hoist {
     /// On a host platform it will use the environment variable ASCENDD to find the socket, or
     /// use a default address.
     #[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
-    pub fn start_default_link() -> Result<Task<()>, Error> {
-        Ok(Hoist::start_socket_link(
+    pub fn start_default_link(&self) -> Result<Task<()>, Error> {
+        Ok(self.start_socket_link(
             std::env::var_os("ASCENDD")
                 .map(PathBuf::from)
                 .context("No ASCENDD socket provided in environment")?,
@@ -116,11 +116,13 @@ impl Hoist {
     /// to a local ascendd socket. For a single use variant, see
     /// Hoist.run_single_ascendd_link.
     #[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
-    pub fn start_socket_link(sockpath: PathBuf) -> Task<()> {
+    pub fn start_socket_link(&self, sockpath: PathBuf) -> Task<()> {
+        let hoist = self.clone();
         Task::spawn(async move {
             let ascendd_path = sockpath.clone();
+            let hoist = hoist.clone();
             retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || async {
-                crate::hoist().run_single_ascendd_link(ascendd_path.clone()).await
+                hoist.clone().run_single_ascendd_link(ascendd_path.clone()).await
             })
             .await
         })
@@ -130,7 +132,7 @@ impl Hoist {
     /// unix socket a few times, but only running a single successful
     /// connection to completion. This function will timeout with an
     /// error after one second if no connection could be established.
-    pub async fn run_single_ascendd_link(&self, sockpath: PathBuf) -> Result<(), Error> {
+    pub async fn run_single_ascendd_link(self, sockpath: PathBuf) -> Result<(), Error> {
         const MAX_SINGLE_CONNECT_TIME: u64 = 1;
         let label = connection_label(Option::<String>::None);
 
@@ -161,6 +163,7 @@ impl Hoist {
         let (mut rx, mut tx) = uds.split();
 
         run_ascendd_connection(
+            &self,
             &mut rx,
             &mut tx,
             Some(label),
@@ -185,6 +188,7 @@ impl super::OvernetInstance for Hoist {
 }
 
 fn run_ascendd_connection<'a>(
+    hoist: &Hoist,
     rx: &'a mut (dyn AsyncRead + Unpin + Send),
     tx: &'a mut (dyn AsyncWrite + Unpin + Send),
     label: Option<String>,
@@ -200,7 +204,7 @@ fn run_ascendd_connection<'a>(
         ))
     });
 
-    run_stream_link(HOIST.node.clone(), rx, tx, Default::default(), config)
+    run_stream_link(hoist.node.clone(), rx, tx, Default::default(), config)
 }
 
 /// Retry a future until it succeeds or retries run out.

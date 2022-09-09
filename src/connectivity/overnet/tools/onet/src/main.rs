@@ -4,5 +4,5 @@
 
 #[fuchsia::main]
 async fn main() -> Result<(), anyhow::Error> {
-    onet_tool::run_onet(argh::from_env()).await
+    onet_tool::run_onet(hoist::init_hoist()?, argh::from_env()).await
 }

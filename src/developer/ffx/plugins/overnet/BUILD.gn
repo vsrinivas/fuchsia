@@ -4,14 +4,15 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ONET_TOOL = "//src/connectivity/overnet/lib/onet_tool"
-
 ffx_plugin("ffx_overnet_plugin") {
   version = "0.1.0"
   edition = "2021"
 
-  deps = [ ONET_TOOL ]
-  args_deps = [ ONET_TOOL ]
+  deps = [
+    "//src/connectivity/overnet/lib/hoist",
+    "//src/connectivity/overnet/lib/onet_tool",
+  ]
+  args_deps = [ "//src/connectivity/overnet/lib/onet_tool" ]
 
   args_sources = [ "src/args.rs" ]
 

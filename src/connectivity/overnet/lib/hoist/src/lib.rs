@@ -12,8 +12,9 @@ mod fuchsia;
 #[cfg(target_os = "fuchsia")]
 pub use fuchsia::Hoist;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use fidl_fuchsia_overnet::{MeshControllerProxy, ServiceConsumerProxy, ServicePublisherProxy};
+use once_cell::sync::OnceCell;
 
 #[cfg(target_os = "fuchsia")]
 pub mod logger {
@@ -24,7 +25,7 @@ pub mod logger {
     }
 }
 
-pub trait OvernetInstance: Sync + Send {
+pub trait OvernetInstance: std::fmt::Debug + Sync + Send {
     fn connect_as_service_consumer(&self) -> Result<ServiceConsumerProxy, Error>;
     fn connect_as_service_publisher(&self) -> Result<ServicePublisherProxy, Error>;
     fn connect_as_mesh_controller(&self) -> Result<MeshControllerProxy, Error>;
@@ -40,17 +41,29 @@ pub trait OvernetInstance: Sync + Send {
     }
 }
 
-lazy_static::lazy_static! {
-    static ref HOIST: Hoist = Hoist::new().unwrap();
-}
+static HOIST: OnceCell<Hoist> = OnceCell::new();
 
 pub fn hoist() -> &'static Hoist {
-    &HOIST
+    if cfg!(target_os = "fuchsia") {
+        // on fuchsia, we always have a global hoist to return.
+        HOIST.get_or_init(|| Hoist::new().unwrap())
+    } else {
+        // otherwise, don't return it until something sets it up.
+        HOIST.get().expect("Tried to get overnet hoist before it was initialized")
+    }
+}
+
+/// On non-fuchsia OS', call this at the start of the program to enable the global hoist.
+pub fn init_hoist() -> Result<&'static Hoist, Error> {
+    let hoist = Hoist::new()?;
+    HOIST
+        .set(hoist.clone())
+        .map_err(|_| anyhow::anyhow!("Tried to set global hoist more than once"))?;
+    HOIST.get().context("Failed to retrieve the hoist we created back from the cell we put it in")
 }
 
 #[cfg(test)]
 mod test {
-
     use super::*;
     use anyhow::Error;
     use fuchsia_async::{Task, TimeoutExt};
@@ -69,9 +82,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn one_bad_channel_doesnt_take_everything_down() {
+        let hoist = Hoist::new().unwrap();
         let (tx_complete, mut rx_complete) = oneshot::channel();
         let (tx_complete_ack, rx_complete_ack) = oneshot::channel();
-        let service_consumer1 = hoist().connect_as_service_consumer().unwrap();
+        let service_consumer1 = hoist.connect_as_service_consumer().unwrap();
         // we have one service consumer that fulfills contract by just listening for peers
         let _bg = Task::spawn(async move {
             loop {
@@ -87,7 +101,7 @@ mod test {
             }
         });
         // and in the main task we have a second one that breaks contract by doing two list_peers
-        let service_consumer2 = hoist().connect_as_service_consumer().unwrap();
+        let service_consumer2 = hoist.connect_as_service_consumer().unwrap();
         try_join(
             loop_on_list_peers_until_it_fails(&service_consumer2),
             loop_on_list_peers_until_it_fails(&service_consumer2),
@@ -101,7 +115,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn one_bad_link_doesnt_take_the_rest_down() {
-        let mesh_controller = &hoist().connect_as_mesh_controller().unwrap();
+        let hoist = Hoist::new().unwrap();
+        let mesh_controller = &hoist.connect_as_mesh_controller().unwrap();
         let (s1a, s1b) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         let (s2a, s2b) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         mesh_controller.attach_socket_link(s1a).unwrap();

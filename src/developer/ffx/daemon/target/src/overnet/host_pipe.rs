@@ -119,6 +119,8 @@ impl HostPipeChild {
             .spawn()
             .context("running target overnet pipe")?;
 
+        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+        // instead -- this one is very deeply embedded, but isn't used by tests (that I've found).
         let (pipe_rx, mut pipe_tx) = futures::AsyncReadExt::split(
             overnet_pipe(hoist::hoist()).context("creating local overnet pipe")?,
         );

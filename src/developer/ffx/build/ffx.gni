@@ -60,6 +60,7 @@ template("ffx") {
              ":" + suite_name + "_suite",
              "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
              "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+             "//src/connectivity/overnet/lib/hoist",
              "//src/developer/ffx/config:lib",
              "//src/developer/ffx/core:lib",
              "//src/developer/ffx/daemon:lib",

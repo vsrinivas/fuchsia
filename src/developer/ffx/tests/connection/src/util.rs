@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_test_proxy_stress::{StressorMarker, StressorProxy},
     fuchsia_async as fasync,
+    hoist::Hoist,
     std::path::{Path, PathBuf},
 };
 
@@ -28,6 +29,7 @@ struct LaunchedComponent {
 pub struct LaunchedComponentConnector {
     nodename: String,
     moniker: String,
+    hoist: Hoist,
     rcs_proxy: RemoteControlProxy,
     ascendd_path: PathBuf,
     daemon_tasks: Mutex<Vec<fasync::Task<Result<()>>>>,
@@ -68,7 +70,8 @@ impl LaunchedComponentConnector {
     /// Creates a new connection to the daemon and uses it to connect to the component
     /// running on target.
     pub async fn connect_via_new_daemon_connection(&self) -> Result<StressorProxy> {
-        let (rcs_proxy, daemon_task) = connect_to_rcs(&self.nodename, &self.ascendd_path).await?;
+        let (rcs_proxy, daemon_task) =
+            connect_to_rcs(&self.hoist, &self.nodename, &self.ascendd_path).await?;
         self.daemon_tasks.lock().await.push(daemon_task);
         Self::connect_with_rcs_proxy(&rcs_proxy, &self.moniker).await
     }
@@ -78,6 +81,7 @@ impl LaunchedComponentConnector {
 async fn launch(
     name: &str,
     nodename: &str,
+    hoist: &Hoist,
     isolate: &ffx_isolate::Isolate,
 ) -> Result<(LaunchedComponent, LaunchedComponentConnector)> {
     let moniker = format!("/core/ffx-laboratory:{}", name);
@@ -95,10 +99,11 @@ async fn launch(
             Err(anyhow!("Failed to start component: {:?}", output))
         } else {
             let ascendd_path = isolate.ascendd_path.to_owned();
-            let (rcs_proxy, daemon_task) = connect_to_rcs(nodename, &ascendd_path).await?;
+            let (rcs_proxy, daemon_task) = connect_to_rcs(hoist, nodename, &ascendd_path).await?;
             Ok(LaunchedComponentConnector {
                 nodename: nodename.to_string(),
                 moniker,
+                hoist: hoist.clone(),
                 rcs_proxy,
                 ascendd_path,
                 daemon_tasks: Mutex::new(vec![daemon_task]),
@@ -119,11 +124,12 @@ async fn launch(
 
 /// Connects to a daemon running on |ascendd_path| and uses it to connect to RCS on the target.
 async fn connect_to_rcs(
+    hoist: &Hoist,
     nodename: &str,
     ascendd_path: &Path,
 ) -> Result<(RemoteControlProxy, fasync::Task<Result<()>>)> {
     let (_node, daemon_proxy, daemon_fut) =
-        ffx_daemon::get_daemon_proxy_single_link(ascendd_path.to_owned(), None).await?;
+        ffx_daemon::get_daemon_proxy_single_link(hoist, ascendd_path.to_owned(), None).await?;
     let daemon_task = fasync::Task::spawn(daemon_fut);
     let rcs_proxy = ffx_target::get_remote_proxy(
         Some(nodename.to_string()),
@@ -141,6 +147,7 @@ where
     F: FnOnce(LaunchedComponentConnector) -> Fut + Send + 'static,
     Fut: futures::future::Future<Output = ()>,
 {
+    let hoist = Hoist::new().expect("creating hoist");
     let ffx_path = std::env::current_exe()
         .expect("get path")
         .canonicalize()
@@ -166,7 +173,7 @@ where
     isolate.ffx(&["target", "default", "set", &nodename]).await.expect("add target");
 
     let (launched_component, component_connector) =
-        launch(case_name, &nodename, &isolate).await.expect("launch component");
+        launch(case_name, &nodename, &hoist, &isolate).await.expect("launch component");
 
     // Spawn a new thread so that we can catch panics from the test. We check completion of
     // the thread using an mpsc channel, so that futures on the original executor continue

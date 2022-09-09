@@ -1122,6 +1122,7 @@ mod test {
         fidl_fuchsia_developer_remotecontrol::RemoteControlMarker,
         fidl_fuchsia_overnet_protocol::NodeId,
         futures::prelude::*,
+        hoist::Hoist,
         std::net::{Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6},
     };
 
@@ -1180,9 +1181,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_from_rcs_connection_internal_err() {
+        let local_hoist = Hoist::new().unwrap();
+
         // TODO(awdavies): Do some form of PartialEq implementation for
         // the RcsConnectionError enum to avoid the nested matches.
         let conn = RcsConnection::new_with_proxy(
+            &local_hoist,
             setup_fake_remote_control_service(true, "foo".to_owned()),
             &NodeId { id: 123 },
         );
@@ -1200,7 +1204,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_from_rcs_connection_nodename_none() {
+        let local_hoist = Hoist::new().unwrap();
+
         let conn = RcsConnection::new_with_proxy(
+            &local_hoist,
             setup_fake_remote_control_service(false, "".to_owned()),
             &NodeId { id: 123456 },
         );
@@ -1215,7 +1222,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_from_rcs_connection_no_err() {
+        let local_hoist = Hoist::new().unwrap();
+
         let conn = RcsConnection::new_with_proxy(
+            &local_hoist,
             setup_fake_remote_control_service(false, "foo".to_owned()),
             &NodeId { id: 1234 },
         );
@@ -1260,6 +1270,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_rcs_states() {
+        let local_hoist = Hoist::new().unwrap();
+
         for test in vec![
             RcsStateTest {
                 loop_started: true,
@@ -1293,6 +1305,7 @@ mod test {
             {
                 *t.state.borrow_mut() = if test.rcs_is_some {
                     TargetConnectionState::Rcs(RcsConnection::new_with_proxy(
+                        &local_hoist,
                         setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
                         &NodeId { id: 123 },
                     ))
@@ -1335,7 +1348,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_event_synthesis_wait() {
+        let local_hoist = Hoist::new().unwrap();
+
         let conn = RcsConnection::new_with_proxy(
+            &local_hoist,
             setup_fake_remote_control_service(false, "foo".to_owned()),
             &NodeId { id: 1234 },
         );
@@ -1354,8 +1370,11 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_event_fire() {
+        let local_hoist = Hoist::new().unwrap();
+
         let t = Target::new_named("balaowihf");
         let conn = RcsConnection::new_with_proxy(
+            &local_hoist,
             setup_fake_remote_control_service(false, "balaowihf".to_owned()),
             &NodeId { id: 1234 },
         );
@@ -1380,9 +1399,12 @@ mod test {
 
     #[test]
     fn test_target_connection_state_will_not_drop_rcs_on_mdns_events() {
+        let local_hoist = Hoist::new().unwrap();
+
         let t = Target::new_named("hello-kitty");
-        let rcs_state =
-            TargetConnectionState::Rcs(RcsConnection::new(&mut NodeId { id: 1234 }).unwrap());
+        let rcs_state = TargetConnectionState::Rcs(
+            RcsConnection::new(local_hoist.clone(), &mut NodeId { id: 1234 }).unwrap(),
+        );
         t.set_state(rcs_state.clone());
 
         // Attempt to set the state to TargetConnectionState::Mdns, this transition should fail, as in
@@ -1394,9 +1416,12 @@ mod test {
 
     #[test]
     fn test_target_connection_state_will_not_drop_rcs_on_manual_events() {
+        let local_hoist = Hoist::new().unwrap();
+
         let t = Target::new_named("hello-kitty");
-        let rcs_state =
-            TargetConnectionState::Rcs(RcsConnection::new(&mut NodeId { id: 1234 }).unwrap());
+        let rcs_state = TargetConnectionState::Rcs(
+            RcsConnection::new(local_hoist.clone(), &mut NodeId { id: 1234 }).unwrap(),
+        );
         t.set_state(rcs_state.clone());
 
         // Attempt to set the state to TargetConnectionState::Manual, this transition should fail, as in
@@ -1860,6 +1885,8 @@ mod test {
 
     #[test]
     fn test_update_connection_state_manual_disconnect() {
+        let local_hoist = Hoist::new().unwrap();
+
         let target = Target::new();
         target.addrs_insert_entry(TargetAddrEntry::new(
             ("::1".parse().unwrap(), 0).into(),
@@ -1874,6 +1901,7 @@ mod test {
         assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
 
         let conn = RcsConnection::new_with_proxy(
+            &local_hoist,
             setup_fake_remote_control_service(false, "abc".to_owned()),
             &NodeId { id: 1234 },
         );
@@ -1888,6 +1916,8 @@ mod test {
 
     #[test]
     fn test_update_connection_state_expired_ephemeral_disconnect() {
+        let local_hoist = Hoist::new().unwrap();
+
         let target = Target::new();
         target.addrs_insert_entry(TargetAddrEntry::new(
             ("::1".parse().unwrap(), 0).into(),
@@ -1902,6 +1932,7 @@ mod test {
         assert_matches!(target.get_connection_state(), TargetConnectionState::Disconnected);
 
         let conn = RcsConnection::new_with_proxy(
+            &local_hoist,
             setup_fake_remote_control_service(false, "abc".to_owned()),
             &NodeId { id: 1234 },
         );
@@ -1916,6 +1947,8 @@ mod test {
 
     #[test]
     fn test_update_connection_state_ephemeral_disconnect() {
+        let local_hoist = Hoist::new().unwrap();
+
         let target = Target::new();
         target.addrs_insert_entry(TargetAddrEntry::new(
             ("::1".parse().unwrap(), 0).into(),
@@ -1930,6 +1963,7 @@ mod test {
         assert_matches!(target.get_connection_state(), TargetConnectionState::Manual(_));
 
         let conn = RcsConnection::new_with_proxy(
+            &local_hoist,
             setup_fake_remote_control_service(false, "abc".to_owned()),
             &NodeId { id: 1234 },
         );

@@ -220,8 +220,11 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
     cmd: DoctorCommand,
     mut writer: W,
 ) -> Result<()> {
+    // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+    // instead.
+    let hoist = hoist::hoist();
     let ascendd_path = ffx_config::global_env().await?.get_ascendd_path()?;
-    let daemon_manager = DefaultDaemonManager::new(ascendd_path);
+    let daemon_manager = DefaultDaemonManager::new(hoist.clone(), ascendd_path);
     let delay = Duration::from_millis(cmd.retry_delay);
 
     let ffx: ffx_lib_args::Ffx = argh::from_env();

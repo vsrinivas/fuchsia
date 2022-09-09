@@ -1,13 +1,13 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 use {
     anyhow::{anyhow, Context, Result},
     async_trait::async_trait,
     ffx_daemon::{find_and_connect, is_daemon_running_at_path, spawn_daemon},
     fidl_fuchsia_developer_ffx::DaemonProxy,
     fuchsia_async::Timer,
+    hoist::Hoist,
     std::path::{Path, PathBuf},
     std::process::Command,
     std::time::Duration,
@@ -37,12 +37,13 @@ pub trait DaemonManager {
 }
 
 pub struct DefaultDaemonManager {
+    hoist: Hoist,
     socket_path: PathBuf,
 }
 
 impl DefaultDaemonManager {
-    pub fn new(socket_path: PathBuf) -> Self {
-        Self { socket_path }
+    pub fn new(hoist: Hoist, socket_path: PathBuf) -> Self {
+        Self { hoist, socket_path }
     }
 }
 
@@ -123,6 +124,6 @@ impl DaemonManager for DefaultDaemonManager {
     }
 
     async fn find_and_connect(&self) -> Result<DaemonProxy> {
-        find_and_connect(self.socket_path.clone()).await
+        find_and_connect(&self.hoist, self.socket_path.clone()).await
     }
 }

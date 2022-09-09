@@ -13,6 +13,7 @@ use {
     fuchsia_component,
 };
 
+#[derive(Debug, Clone)]
 pub struct Hoist;
 
 impl Hoist {
@@ -25,7 +26,7 @@ impl Hoist {
     /// On a fuchsia device this will likely do nothing, so that is the default implementation.
     /// On a host platform it will use the environment variable ASCENDD to find the socket, or
     /// use a default address.
-    pub fn start_default_link() -> Result<(), Error> {
+    pub fn start_default_link(&self) -> Result<(), Error> {
         Ok(())
     }
 }

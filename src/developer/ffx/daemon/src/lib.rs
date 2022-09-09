@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::prelude::*,
-    hoist::OvernetInstance,
+    hoist::{Hoist, OvernetInstance},
     std::path::{Path, PathBuf},
     std::pin::Pin,
     std::time::Duration,
@@ -24,8 +24,8 @@ pub use constants::LOG_FILE_PREFIX;
 
 pub use daemon::Daemon;
 
-async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
-    let svc = hoist::hoist().connect_as_service_consumer()?;
+async fn create_daemon_proxy(hoist: &Hoist, id: &mut NodeId) -> Result<DaemonProxy> {
+    let svc = hoist.connect_as_service_consumer()?;
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     svc.connect_to_service(id, DaemonMarker::PROTOCOL_NAME, s)?;
     let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
@@ -33,6 +33,7 @@ async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
 }
 
 pub async fn get_daemon_proxy_single_link(
+    hoist: &Hoist,
     socket_path: PathBuf,
     exclusions: Option<Vec<NodeId>>,
 ) -> Result<(NodeId, DaemonProxy, Pin<Box<impl Future<Output = Result<()>>>>), FfxError> {
@@ -41,9 +42,9 @@ pub async fn get_daemon_proxy_single_link(
     // - A timeout
     // - Getting a FIDL proxy over the link
 
-    let link = hoist::hoist().run_single_ascendd_link(socket_path.clone()).fuse();
+    let link = hoist.clone().run_single_ascendd_link(socket_path.clone()).fuse();
     let mut link = Box::pin(link);
-    let find = find_next_daemon(exclusions).fuse();
+    let find = find_next_daemon(hoist, exclusions).fuse();
     let mut find = Box::pin(find);
     let mut timeout = fuchsia_async::Timer::new(Duration::from_secs(5)).fuse();
 
@@ -59,8 +60,11 @@ pub async fn get_daemon_proxy_single_link(
     res.map(|(nodeid, proxy)| (nodeid, proxy, link))
 }
 
-async fn find_next_daemon<'a>(exclusions: Option<Vec<NodeId>>) -> Result<(NodeId, DaemonProxy)> {
-    let svc = hoist::hoist().connect_as_service_consumer()?;
+async fn find_next_daemon<'a>(
+    hoist: &Hoist,
+    exclusions: Option<Vec<NodeId>>,
+) -> Result<(NodeId, DaemonProxy)> {
+    let svc = hoist.connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
         for peer in peers.iter() {
@@ -83,7 +87,7 @@ async fn find_next_daemon<'a>(exclusions: Option<Vec<NodeId>>) -> Result<(NodeId
                 }
                 None => {}
             }
-            return create_daemon_proxy(&mut peer.id.clone())
+            return create_daemon_proxy(hoist, &mut peer.id.clone())
                 .await
                 .map(|proxy| (peer.id.clone(), proxy));
         }
@@ -91,11 +95,11 @@ async fn find_next_daemon<'a>(exclusions: Option<Vec<NodeId>>) -> Result<(NodeId
 }
 
 // Note that this function assumes the daemon has been started separately.
-pub async fn find_and_connect(socket_path: PathBuf) -> Result<DaemonProxy> {
+pub async fn find_and_connect(hoist: &Hoist, socket_path: PathBuf) -> Result<DaemonProxy> {
     // This function is due for deprecation/removal. It should only be used
     // currently by the doctor daemon_manager, which should instead learn to
     // understand the link state in future revisions.
-    get_daemon_proxy_single_link(socket_path, None)
+    get_daemon_proxy_single_link(hoist, socket_path, None)
         .await
         .map(|(_nodeid, proxy, link_fut)| {
             fuchsia_async::Task::local(link_fut.map(|_| ())).detach();

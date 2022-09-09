@@ -62,6 +62,7 @@ async fn reader_task(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    hoist::init_hoist()?;
     fuchsia_syslog::init_with_tags(&["overnet_debug_proxy"])?;
 
     let mut fs = ServiceFs::new_local();

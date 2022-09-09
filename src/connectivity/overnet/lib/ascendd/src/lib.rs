@@ -12,7 +12,7 @@ use async_net::unix::{UnixListener, UnixStream};
 use fuchsia_async::Task;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
-use hoist::hoist;
+use hoist::Hoist;
 use std::io::{ErrorKind::TimedOut, Write};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
@@ -53,10 +53,12 @@ pub struct Ascendd {
 impl Ascendd {
     pub async fn new(
         opt: Opt,
+        hoist: &Hoist,
         stdout: impl AsyncWrite + Unpin + Send + 'static,
     ) -> Result<Self, Error> {
-        let (sockpath, serial, incoming) = bind_listener(opt).await?;
-        Ok(Self { task: Task::spawn(run_ascendd(sockpath, serial, incoming, stdout)) })
+        let (sockpath, serial, incoming) = bind_listener(opt, hoist).await?;
+        let task = Task::spawn(run_ascendd(hoist.clone(), sockpath, serial, incoming, stdout));
+        Ok(Self { task })
     }
 }
 
@@ -90,7 +92,7 @@ pub fn run_stream<'a>(
     run_stream_link(node, rx, tx, Default::default(), config)
 }
 
-async fn bind_listener(opt: Opt) -> Result<(PathBuf, String, UnixListener), Error> {
+async fn bind_listener(opt: Opt, hoist: &Hoist) -> Result<(PathBuf, String, UnixListener), Error> {
     let Opt { sockpath, serial } = opt;
 
     let sockpath = sockpath.unwrap_or(default_ascendd_path());
@@ -99,7 +101,7 @@ async fn bind_listener(opt: Opt) -> Result<(PathBuf, String, UnixListener), Erro
     log::info!(
         "starting ascendd on {} with node id {:?}",
         sockpath.display(),
-        hoist().node().node_id()
+        hoist.node().node_id()
     );
 
     let incoming = loop {
@@ -143,20 +145,22 @@ fn write_pidfile(sockpath: &Path, pid: u32) -> anyhow::Result<()> {
 }
 
 async fn run_ascendd(
+    hoist: Hoist,
     sockpath: PathBuf,
     serial: String,
     incoming: UnixListener,
     stdout: impl AsyncWrite + Unpin + Send,
 ) -> Result<(), Error> {
-    let node = hoist().node();
+    let node = hoist.node();
     node.set_implementation(fidl_fuchsia_overnet_protocol::Implementation::Ascendd);
 
     log::info!("ascendd listening to socket {}", sockpath.display());
 
     let sockpath = &sockpath.to_str().context("Non-unicode in socket path")?.to_owned();
+    let hoist = &hoist;
 
     futures::future::try_join(
-        run_serial_link_handlers(Arc::downgrade(&hoist().node()), &serial, stdout),
+        run_serial_link_handlers(Arc::downgrade(&hoist.node()), &serial, stdout),
         async move {
             incoming
                 .incoming()
@@ -165,7 +169,7 @@ async fn run_ascendd(
                         Ok(stream) => {
                             let (mut rx, mut tx) = stream.split();
                             if let Err(e) = run_stream(
-                                hoist().node(),
+                                hoist.node(),
                                 &mut rx,
                                 &mut tx,
                                 None,

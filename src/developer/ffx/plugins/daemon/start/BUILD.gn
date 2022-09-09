@@ -8,6 +8,7 @@ ffx_plugin("ffx_daemon_start") {
   version = "0.1.0"
   edition = "2021"
   deps = [
+    "//src/connectivity/overnet/lib/hoist",
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/daemon:lib",
     "//third_party/rust_crates:anyhow",

@@ -13,6 +13,7 @@ if (is_host) {
 
     deps = [
       "//src/connectivity/overnet/lib/ascendd",
+      "//src/connectivity/overnet/lib/hoist",
       "//src/lib/fuchsia",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",

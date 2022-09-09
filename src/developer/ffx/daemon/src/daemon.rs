@@ -36,7 +36,7 @@ use {
         channel::mpsc::{Receiver, Sender},
         prelude::*,
     },
-    hoist::{hoist, OvernetInstance},
+    hoist::{Hoist, OvernetInstance},
     notify::{RecommendedWatcher, RecursiveMode, Watcher},
     protocols::{DaemonProtocolProvider, ProtocolError, ProtocolRegister},
     rcs::RcsConnection,
@@ -68,17 +68,18 @@ impl ConfigReader for DefaultConfigReader {
 }
 
 pub struct DaemonEventHandler {
+    hoist: Hoist,
     target_collection: Rc<TargetCollection>,
 }
 
 impl DaemonEventHandler {
-    fn new(target_collection: Rc<TargetCollection>) -> Self {
-        Self { target_collection }
+    fn new(hoist: Hoist, target_collection: Rc<TargetCollection>) -> Self {
+        Self { hoist, target_collection }
     }
 
     #[tracing::instrument(level = "info", skip(self))]
     async fn handle_overnet_peer(&self, node_id: u64) {
-        let rcs = match RcsConnection::new(&mut NodeId { id: node_id }) {
+        let rcs = match RcsConnection::new(self.hoist.clone(), &mut NodeId { id: node_id }) {
             Ok(rcs) => rcs,
             Err(e) => {
                 tracing::error!(
@@ -320,18 +321,17 @@ impl Daemon {
         }
     }
 
-    pub async fn start(&mut self) -> Result<()> {
+    pub async fn start(&mut self, hoist: &Hoist) -> Result<()> {
         let (quit_tx, quit_rx) = futures::channel::mpsc::channel(1);
-
         self.log_startup_info().await.context("Logging startup info")?;
 
-        self.start_protocols().await.context("Starting protocols")?;
-        self.start_discovery().await.context("Starting discovery")?;
-        self.start_ascendd().await.context("Starting ascendd")?;
+        self.start_protocols().await?;
+        self.start_discovery(hoist).await?;
+        self.start_ascendd(hoist).await?;
         let _socket_file_watcher =
             self.start_socket_watch(quit_tx.clone()).await.context("Starting socket watcher")?;
         self.start_target_expiry(Duration::from_secs(1));
-        self.serve(quit_tx, quit_rx).await.context("Serving clients")
+        self.serve(hoist, quit_tx, quit_rx).await.context("Serving clients")
     }
 
     async fn log_startup_info(&self) -> Result<()> {
@@ -393,24 +393,26 @@ impl Daemon {
     }
 
     /// Start all discovery tasks
-    async fn start_discovery(&mut self) -> Result<()> {
-        let daemon_event_handler = DaemonEventHandler::new(self.target_collection.clone());
+    async fn start_discovery(&mut self, hoist: &Hoist) -> Result<()> {
+        let daemon_event_handler =
+            DaemonEventHandler::new(hoist.clone(), self.target_collection.clone());
         self.event_queue.add_handler(daemon_event_handler).await;
 
         // TODO: these tasks could and probably should be managed by the daemon
         // instead of being detached.
-        Daemon::spawn_onet_discovery(self.event_queue.clone());
+        Daemon::spawn_onet_discovery(hoist, self.event_queue.clone());
         let discovery = zedboot_discovery(self.event_queue.clone()).await?;
         self.tasks.push(Rc::new(discovery));
         Ok(())
     }
 
-    async fn start_ascendd(&mut self) -> Result<()> {
+    async fn start_ascendd(&mut self, hoist: &Hoist) -> Result<()> {
         // Start the ascendd socket only after we have registered our protocols.
         tracing::info!("Starting ascendd");
 
         let ascendd = Ascendd::new(
             ascendd::Opt { sockpath: Some(self.socket_path.clone()), ..Default::default() },
+            &hoist,
             // TODO: this just prints serial output to stdout - ffx probably wants to take a more
             // nuanced approach here.
             blocking::Unblock::new(std::io::stdout()),
@@ -539,12 +541,13 @@ impl Daemon {
             .await
     }
 
-    fn spawn_onet_discovery(queue: events::Queue<DaemonEvent>) {
+    fn spawn_onet_discovery(hoist: &Hoist, queue: events::Queue<DaemonEvent>) {
+        let hoist = hoist.clone();
         fuchsia_async::Task::local(async move {
             let mut known_peers: HashSet<PeerSetElement> = Default::default();
 
             loop {
-                let svc = match hoist().connect_as_service_consumer() {
+                let svc = match hoist.connect_as_service_consumer() {
                     Ok(svc) => svc,
                     Err(err) => {
                         tracing::info!("Overnet setup failed: {}, will retry in 1s", err);
@@ -708,7 +711,12 @@ impl Daemon {
         Ok(())
     }
 
-    async fn serve(&self, quit_tx: Sender<()>, mut quit_rx: Receiver<()>) -> Result<()> {
+    async fn serve(
+        &self,
+        hoist: &Hoist,
+        quit_tx: Sender<()>,
+        mut quit_rx: Receiver<()>,
+    ) -> Result<()> {
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
         let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
         let mut stream = ServiceProviderRequestStream::from_channel(chan);
@@ -719,7 +727,7 @@ impl Daemon {
         );
 
         tracing::info!("Starting daemon overnet server");
-        hoist::hoist().publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
+        hoist.publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
 
         tracing::info!("Starting daemon serve loop");
 

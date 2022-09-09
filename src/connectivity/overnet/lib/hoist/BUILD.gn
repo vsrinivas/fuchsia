@@ -11,7 +11,7 @@ rustc_library("hoist") {
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:once_cell",
   ]
   non_rust_deps = [ "//third_party/boringssl" ]
 

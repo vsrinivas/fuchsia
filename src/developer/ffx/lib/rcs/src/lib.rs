@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_overnet_protocol::NodeId,
     futures::StreamExt,
     futures::TryFutureExt,
-    hoist::OvernetInstance as _,
+    hoist::{Hoist, OvernetInstance},
     selectors::VerboseError,
     std::hash::{Hash, Hasher},
     std::time::Duration,
@@ -23,6 +23,7 @@ use {
 
 #[derive(Debug, Clone)]
 pub struct RcsConnection {
+    pub hoist: Hoist,
     pub proxy: RemoteControlProxy,
     pub overnet_id: NodeId,
 }
@@ -45,29 +46,33 @@ impl PartialEq for RcsConnection {
 impl Eq for RcsConnection {}
 
 impl RcsConnection {
-    pub fn new(id: &mut NodeId) -> Result<Self> {
+    pub fn new(hoist: Hoist, id: &mut NodeId) -> Result<Self> {
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-        let _result = RcsConnection::connect_to_service(id, s)?;
+        let _result = RcsConnection::connect_to_service(&hoist, id, s)?;
         let proxy = RemoteControlProxy::new(
             fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?,
         );
 
-        Ok(Self { proxy, overnet_id: id.clone() })
+        Ok(Self { hoist, proxy, overnet_id: id.clone() })
     }
 
     pub fn copy_to_channel(&mut self, channel: fidl::Channel) -> Result<()> {
-        RcsConnection::connect_to_service(&mut self.overnet_id, channel)
+        RcsConnection::connect_to_service(&self.hoist, &mut self.overnet_id, channel)
     }
 
-    fn connect_to_service(overnet_id: &mut NodeId, channel: fidl::Channel) -> Result<()> {
-        let svc = hoist::hoist().connect_as_service_consumer()?;
+    fn connect_to_service(
+        hoist: &Hoist,
+        overnet_id: &mut NodeId,
+        channel: fidl::Channel,
+    ) -> Result<()> {
+        let svc = hoist.connect_as_service_consumer()?;
         svc.connect_to_service(overnet_id, RemoteControlMarker::PROTOCOL_NAME, channel)
             .map_err(|e| anyhow!("Error connecting to Rcs: {}", e))
     }
 
     // Primarily For testing.
-    pub fn new_with_proxy(proxy: RemoteControlProxy, id: &NodeId) -> Self {
-        Self { proxy, overnet_id: id.clone() }
+    pub fn new_with_proxy(hoist: &Hoist, proxy: RemoteControlProxy, id: &NodeId) -> Self {
+        Self { hoist: hoist.clone(), proxy, overnet_id: id.clone() }
     }
 }
 

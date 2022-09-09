@@ -183,13 +183,18 @@ impl Injector for Injection {
 }
 
 async fn init_daemon_proxy(context: EnvironmentContext) -> Result<DaemonProxy> {
+    // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+    // instead.
+    let hoist = hoist::hoist();
     let ascendd_path = context.load().await?.get_ascendd_path()?;
 
     if cfg!(not(test)) && !is_daemon_running_at_path(&ascendd_path) {
         ffx_daemon::spawn_daemon(&context).await?;
     }
-
-    let (nodeid, proxy, link) = get_daemon_proxy_single_link(ascendd_path.clone(), None).await?;
+    // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+    // instead.
+    let (nodeid, proxy, link) =
+        get_daemon_proxy_single_link(hoist, ascendd_path.clone(), None).await?;
 
     // Spawn off the link task, so that FIDL functions can be called (link IO makes progress).
     let link_task = fuchsia_async::Task::local(link.map(|_| ()));
@@ -250,7 +255,7 @@ async fn init_daemon_proxy(context: EnvironmentContext) -> Result<DaemonProxy> {
     }
 
     let (_nodeid, proxy, link) =
-        get_daemon_proxy_single_link(ascendd_path, Some(vec![nodeid])).await?;
+        get_daemon_proxy_single_link(hoist, ascendd_path, Some(vec![nodeid])).await?;
 
     fuchsia_async::Task::local(link.map(|_| ())).detach();
 
@@ -327,6 +332,12 @@ fn write_exit_code<T, W: Write>(res: &Result<T>, out: &mut W) -> Result<()> {
 
 async fn run() -> Result<()> {
     let app: Ffx = from_env();
+
+    // todo(fxb/108692) we should get this in the environment context instead and leave the global
+    // hoist() unset for ffx but I'm leaving the last couple uses of it in place for the sake of
+    // avoiding complicated merge conflicts with isolation. Once we're ready for that, this should be
+    // `let Hoist = hoist::Hoist::new()...`
+    hoist::init_hoist().context("initializing hoist")?;
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
@@ -487,6 +498,11 @@ mod test {
         let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
         let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
 
+        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
+        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
+        hoist::init_hoist().unwrap();
+
         // Start a listener that accepts and immediately closes the socket..
         let listener = UnixListener::bind(sockpath.to_owned()).unwrap();
         let _listen_task = Task::local(async move {
@@ -506,6 +522,11 @@ mod test {
         let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
         let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
 
+        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
+        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
+        hoist::init_hoist().unwrap();
+
         // Start a listener that never accepts the socket.
         let _listener = UnixListener::bind(sockpath.to_owned()).unwrap();
 
@@ -521,8 +542,9 @@ mod test {
             build_id: Some(build_id.to_owned()),
             ..VersionInfo::EMPTY
         };
+        let local_hoist = hoist::hoist();
         let daemon_hoist = Arc::new(hoist::Hoist::new().unwrap());
-        let _t = hoist::Hoist::start_socket_link(sockpath.clone());
+        let _t = local_hoist.start_socket_link(sockpath.clone());
 
         let (s, p) = fidl::Channel::create().unwrap();
         daemon_hoist.publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p)).unwrap();
@@ -592,6 +614,11 @@ mod test {
         let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
         let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
 
+        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
+        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
+        hoist::init_hoist().unwrap();
+
         let sockpath1 = sockpath.to_owned();
         let daemons_task = Task::local(async move {
             test_daemon(sockpath1.to_owned(), "testcurrenthash", 0).await;
@@ -611,6 +638,11 @@ mod test {
     async fn test_init_daemon_proxy_upgrade() {
         let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
         let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
+
+        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
+        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
+        hoist::init_hoist().unwrap();
 
         // Spawn two daemons, the first out of date, the second is up to date.
         let sockpath1 = sockpath.to_owned();
@@ -635,6 +667,11 @@ mod test {
         let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
         let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
 
+        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
+        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
+        hoist::init_hoist().unwrap();
+
         // Spawn two daemons, the first out of date, the second is up to date.
         let sockpath1 = sockpath.to_owned();
         let daemon_task = Task::local(async move {
@@ -655,6 +692,11 @@ mod test {
     async fn test_init_daemon_blocked_for_6s_timesout() {
         let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
         let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
+
+        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
+        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
+        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
+        hoist::init_hoist().unwrap();
 
         // Spawn two daemons, the first out of date, the second is up to date.
         let sockpath1 = sockpath.to_owned();

@@ -12,6 +12,7 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
+    "//src/connectivity/overnet/lib/hoist",
     "//src/connectivity/overnet/lib/onet_tool",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:anyhow",

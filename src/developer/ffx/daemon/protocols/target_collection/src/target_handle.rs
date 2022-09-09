@@ -235,7 +235,7 @@ mod tests {
     use fidl::prelude::*;
     use fidl_fuchsia_developer_remotecontrol as fidl_rcs;
     use fuchsia_async::Task;
-    use hoist::OvernetInstance;
+    use hoist::{Hoist, OvernetInstance};
     use protocols::testing::FakeDaemonBuilder;
     use rcs::RcsConnection;
     use std::net::{IpAddr, SocketAddr};
@@ -360,7 +360,8 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_open_rcs_valid() {
         const TEST_NODE_NAME: &'static str = "villete";
-        let hoist2 = hoist::Hoist::new().unwrap();
+        let local_hoist = Hoist::new().unwrap();
+        let hoist2 = Hoist::new().unwrap();
         let (rx2, tx2) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
         let (mut rx2, mut tx2) = (
             fidl::AsyncSocket::from_socket(rx2).unwrap(),
@@ -371,6 +372,7 @@ mod tests {
             fidl::AsyncSocket::from_socket(rx1).unwrap(),
             fidl::AsyncSocket::from_socket(tx1).unwrap(),
         );
+        let h1_hoist = local_hoist.clone();
         let _h1_task = Task::local(async move {
             let config = Box::new(move || {
                 Some(fidl_fuchsia_overnet_protocol::LinkConfig::Socket(
@@ -378,7 +380,7 @@ mod tests {
                 ))
             });
             stream_link::run_stream_link(
-                hoist::hoist().node(),
+                h1_hoist.node(),
                 &mut rx1,
                 &mut tx2,
                 Default::default(),
@@ -414,7 +416,7 @@ mod tests {
         let daemon = FakeDaemonBuilder::new().build();
         let cx = Context::new(daemon);
         let (client, server) = fidl::Channel::create().unwrap();
-        hoist::hoist()
+        local_hoist
             .connect_as_service_consumer()
             .unwrap()
             .connect_to_service(
@@ -426,6 +428,7 @@ mod tests {
         let rcs_proxy =
             fidl_rcs::RemoteControlProxy::new(fidl::AsyncChannel::from_channel(client).unwrap());
         let target = Target::from_rcs_connection(RcsConnection::new_with_proxy(
+            &local_hoist,
             rcs_proxy.clone(),
             &hoist2.node().node_id().into(),
         ))
