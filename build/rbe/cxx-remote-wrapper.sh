@@ -403,6 +403,27 @@ function cleanup() {
 }
 trap cleanup EXIT
 
+print_var() {
+  # Prints variable values to stdout.
+  # $1 is name of variable to display.
+  # The rest are array values.
+  if test "$#" -le 2
+  then
+    echo "$1: $2"
+  else
+    echo "$1:"
+    shift
+    for f in "$@"
+    do echo "  $f"
+    done
+  fi
+}
+
+debug_var() {
+  # With --verbose, prints variable values to stdout.
+  test "$verbose" = 0 || print_var "$@"
+}
+
 # Collect extra inputs to upload for remote execution.
 # Note: these paths are relative to the current working dir ($build_subdir),
 # so they need to be adjusted relative to $project_root below, before passing
@@ -484,6 +505,18 @@ test "${#extra_outputs[@]}" = 0 || {
 exec_root_flag=()
 [[ "$project_root" == "$default_project_root" ]] || \
   exec_root_flag=( "--exec_root=$project_root" )
+
+dump_vars() {
+  debug_var "build subdir" "$build_subdir"
+  debug_var "compiler" "$cc"
+  debug_var "primary source" "$first_source"
+  debug_var "primary output" "$output"
+  debug_var "C-preprocess strategy" "$cpreprocess_strategy"
+  debug_var "remote inputs" "${remote_inputs[@]}"
+  debug_var "extra outputs" "${extra_outputs[@]}"
+}
+
+dump_vars
 
 # --canonicalize_working_dir: coerce the output dir to a constant.
 #   This requires that the command be insensitive to output dir, and
