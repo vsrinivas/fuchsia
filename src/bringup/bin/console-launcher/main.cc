@@ -82,11 +82,6 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_pty::Device>> CreateVirtualConsole(
     FX_PLOGS(ERROR, result.status()) << "failed to create virtcon session";
     return zx::error(result.status());
   }
-  const fidl::WireResponse response = result.value();
-  if (response.status != ZX_OK) {
-    FX_PLOGS(ERROR, response.status) << "failed to create virtcon session";
-    return zx::error(response.status);
-  }
   return zx::ok(std::move(device_endpoints->client));
 }
 

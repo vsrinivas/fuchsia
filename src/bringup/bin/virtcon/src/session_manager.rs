@@ -8,7 +8,7 @@ use {
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_hardware_pty::DeviceMarker,
     fidl_fuchsia_virtualconsole::{SessionManagerRequest, SessionManagerRequestStream},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
     futures::{io::AsyncReadExt, prelude::*},
     pty::Pty,
     std::{cell::RefCell, fs::File, rc::Rc},
@@ -64,7 +64,7 @@ impl SessionManager {
                 let mut stream = SessionManagerRequestStream::from_channel(channel);
                 while let Some(request) = stream.try_next().await? {
                     match request {
-                        SessionManagerRequest::CreateSession { session, responder } => {
+                        SessionManagerRequest::CreateSession { session, control_handle: _ } => {
                             let id = {
                                 let mut next_session_id = next_session_id.borrow_mut();
                                 let id = *next_session_id;
@@ -72,18 +72,7 @@ impl SessionManager {
                                 id
                             };
                             let make_active = !keep_log_visible && id == first_session_id;
-                            match Self::create_session(session, &client, id, make_active).await {
-                                Ok(_) => {
-                                    responder
-                                        .send(zx::Status::OK.into_raw())
-                                        .context("error sending response")?;
-                                }
-                                _ => {
-                                    responder
-                                        .send(zx::Status::INTERNAL.into_raw())
-                                        .context("error sending response")?;
-                                }
-                            }
+                            let () = Self::create_session(session, &client, id, make_active).await;
                         }
                         SessionManagerRequest::HasPrimaryConnected { responder } => {
                             responder
@@ -104,8 +93,7 @@ impl SessionManager {
         client: &T,
         id: u32,
         make_active: bool,
-    ) -> Result<(), Error>
-    where
+    ) where
         <T as SessionManagerClient>::Listener: EventListener,
     {
         let client = client.clone();
@@ -145,9 +133,7 @@ impl SessionManager {
                 }
             }
         })
-        .detach();
-
-        Ok(())
+        .detach()
     }
 }
 
@@ -195,7 +181,7 @@ mod tests {
     async fn can_create_session() -> Result<(), Error> {
         let client = TestSessionManagerClient::default();
         let (_, server_end) = fidl::endpoints::create_endpoints()?;
-        let _ = SessionManager::create_session(server_end, &client, 0, false).await?;
+        let () = SessionManager::create_session(server_end, &client, 0, false).await;
         Ok(())
     }
 }

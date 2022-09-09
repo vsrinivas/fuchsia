@@ -3,20 +3,14 @@
 // found in the LICENSE file.
 library fuchsia.virtualconsole;
 
-using zx;
 using fuchsia.hardware.pty;
 
 /// Manages virtual console sessions.
 @discoverable
-@for_deprecated_c_bindings
 protocol SessionManager {
     /// Create a new virtual console session.
-    // TODO(fxbug.dev/33204): Remove response status and debug why this doesn't work async when we switch
-    // to new pty impl.
     CreateSession(resource struct {
         session server_end:fuchsia.hardware.pty.Device;
-    }) -> (struct {
-        status zx.status;
     });
 
     /// Returns true if virtcon currently has a display that it can display something on.
