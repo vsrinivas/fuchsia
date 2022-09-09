@@ -14,7 +14,6 @@ import 'package:args/args.dart';
 import 'package:logging/logging.dart';
 import 'package:meta/meta.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
-import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
 import 'summarize.dart' show summarizeFuchsiaPerfFiles, writeFuchsiaPerfJson;

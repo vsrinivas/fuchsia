@@ -94,7 +94,7 @@ void main() {
 
     _log.info('Running: dart-inspect-benchmarks');
     stopwatch.start();
-    final url = 'fuchsia-pkg://fuchsia.com/$_appName#meta/$_appName.cm';
+    const url = 'fuchsia-pkg://fuchsia.com/$_appName#meta/$_appName.cm';
     await helper.component.launch(url, null);
     stopwatch.stop();
     _log.info('Completed $_iterations iterations in '
