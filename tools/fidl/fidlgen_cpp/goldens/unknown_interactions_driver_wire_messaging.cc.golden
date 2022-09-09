@@ -1216,8 +1216,8 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsDriverP
     switch (msg.header()->ordinal) {
       default:
         auto* hdr = msg.header();
-        ::fidl::UnknownInteractionType unknown_interaction_type =
-            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        ::fidl::UnknownMethodType unknown_interaction_type =
+            ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
         if (::fidl::IsFlexibleInteraction(hdr) &&
             ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsDriverProtocol::kOpenness, unknown_interaction_type)) {
           if (event_handler()) {
@@ -1550,10 +1550,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
 
 const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::entries_end_ =
     &entries_[18];
-const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::unknown_interaction_handler_entry_ = {
+const ::fidl::internal::UnknownMethodHandlerEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::unknown_method_handler_entry_ = {
   .openness = ::fidl::internal::Openness::kOpen,
   .dispatch = [](void* interface, uint64_t method_ordinal,
-      ::fidl::UnknownInteractionType unknown_interaction_type, ::fidl::Transaction* txn) {
+      ::fidl::UnknownMethodType unknown_interaction_type, ::fidl::Transaction* txn) {
     ::fidl::UnknownMethodCompleter::Sync completer(txn);
     static_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>*>(interface)->handle_unknown_method(
         ::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsDriverProtocol> {
@@ -1563,7 +1563,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
           
       }, completer);
   },
-  .send_reply = ::fidl::internal::SendDriverUnknownInteractionReply,
+  .send_reply = ::fidl::internal::SendDriverUnknownMethodReply,
 };
 
 
@@ -1579,7 +1579,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-  &unknown_interaction_handler_entry_);
+  &unknown_method_handler_entry_);
 }
 
 void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsDriverProtocol>::dispatch_message(
@@ -2963,8 +2963,8 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarDri
     switch (msg.header()->ordinal) {
       default:
         auto* hdr = msg.header();
-        ::fidl::UnknownInteractionType unknown_interaction_type =
-            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        ::fidl::UnknownMethodType unknown_interaction_type =
+            ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
         if (::fidl::IsFlexibleInteraction(hdr) &&
             ::fidl::internal::CanHandleEvent(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::kOpenness, unknown_interaction_type)) {
           if (event_handler()) {
@@ -3161,10 +3161,10 @@ constexpr ::fidl::internal::MethodEntry fidl::internal::WireServerDispatcher<::t
 
 const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::entries_end_ =
     &entries_[10];
-const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::unknown_interaction_handler_entry_ = {
+const ::fidl::internal::UnknownMethodHandlerEntry fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::unknown_method_handler_entry_ = {
   .openness = ::fidl::internal::Openness::kAjar,
   .dispatch = [](void* interface, uint64_t method_ordinal,
-      ::fidl::UnknownInteractionType unknown_interaction_type, ::fidl::Transaction* txn) {
+      ::fidl::UnknownMethodType unknown_interaction_type, ::fidl::Transaction* txn) {
     ::fidl::UnknownMethodCompleter::Sync completer(txn);
     static_cast<::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>*>(interface)->handle_unknown_method(
         ::fidl::UnknownMethodMetadata<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol> {
@@ -3172,7 +3172,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
           
       }, completer);
   },
-  .send_reply = ::fidl::internal::SendDriverUnknownInteractionReply,
+  .send_reply = ::fidl::internal::SendDriverUnknownMethodReply,
 };
 
 
@@ -3188,7 +3188,7 @@ const ::fidl::internal::UnknownInteractionHandlerEntry fidl::internal::WireServe
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-  &unknown_interaction_handler_entry_);
+  &unknown_method_handler_entry_);
 }
 
 void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol>::dispatch_message(
@@ -4338,7 +4338,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::Dispatch(::fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-  &unknown_interaction_handler_entry_);
+  &unknown_method_handler_entry_);
 }
 
 void fdf::WireServer<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol>::dispatch_message(

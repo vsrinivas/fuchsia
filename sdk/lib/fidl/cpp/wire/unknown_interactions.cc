@@ -11,11 +11,11 @@
 
 namespace fidl::internal {
 
-UnknownInteractionReply UnknownInteractionReply::MakeReplyFor(
-    uint64_t method_ordinal, ::fidl::MessageDynamicFlags dynamic_flags) {
+UnknownMethodReply UnknownMethodReply::MakeReplyFor(uint64_t method_ordinal,
+                                                    ::fidl::MessageDynamicFlags dynamic_flags) {
   const fidl_union_tag_t kTransportErrTag = 3;
-  const zx_status_t kUnknownInteractionStatus = ZX_ERR_NOT_SUPPORTED;
-  UnknownInteractionReply reply{
+  const zx_status_t kUnknownMethodStatus = ZX_ERR_NOT_SUPPORTED;
+  UnknownMethodReply reply{
       .body{
           .tag = kTransportErrTag,
           .envelope =
@@ -27,14 +27,14 @@ UnknownInteractionReply UnknownInteractionReply::MakeReplyFor(
   };
   InitTxnHeader(&reply.header, 0, method_ordinal, dynamic_flags);
 
-  static_assert(sizeof(reply.body.envelope.inline_value) == sizeof(kUnknownInteractionStatus));
-  ::std::memcpy(reply.body.envelope.inline_value, &kUnknownInteractionStatus,
-                sizeof(kUnknownInteractionStatus));
+  static_assert(sizeof(reply.body.envelope.inline_value) == sizeof(kUnknownMethodStatus));
+  ::std::memcpy(reply.body.envelope.inline_value, &kUnknownMethodStatus,
+                sizeof(kUnknownMethodStatus));
 
   return reply;
 }
 
-void SendChannelUnknownInteractionReply(UnknownInteractionReply reply, ::fidl::Transaction *txn) {
+void SendChannelUnknownMethodReply(UnknownMethodReply reply, ::fidl::Transaction *txn) {
   auto message = ::fidl::OutgoingMessage::Create_InternalMayBreak(
       ::fidl::OutgoingMessage::InternalByteBackedConstructorArgs{
           .transport_vtable = &ChannelTransport::VTable,

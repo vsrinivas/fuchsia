@@ -9,7 +9,7 @@ namespace fidl {
 
 namespace internal {
 
-const UnknownInteractionHandlerEntry UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry{
+const UnknownMethodHandlerEntry UnknownMethodHandlerEntry::kClosedProtocolHandlerEntry{
     .openness = ::fidl::internal::Openness::kClosed,
     .dispatch = nullptr,
     .send_reply = nullptr,
@@ -48,23 +48,23 @@ const UnknownInteractionHandlerEntry UnknownInteractionHandlerEntry::kClosedProt
 void Dispatch(void* impl, ::fidl::IncomingHeaderAndMessage& msg,
               fidl::internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn,
               const MethodEntry* begin, const MethodEntry* end,
-              const UnknownInteractionHandlerEntry* unknown_interaction_handler) {
+              const UnknownMethodHandlerEntry* unknown_method_handler) {
   ::fidl::DispatchResult result = TryDispatch(impl, msg, storage_view, txn, begin, end);
   switch (result) {
     case ::fidl::DispatchResult::kNotFound: {
       auto* hdr = msg.header();
-      ::fidl::UnknownInteractionType unknown_interaction_type =
-          ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+      ::fidl::UnknownMethodType unknown_interaction_type =
+          ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
       if (::fidl::IsFlexibleInteraction(hdr) &&
-          ::fidl::internal::CanHandleMethod(unknown_interaction_handler->openness,
+          ::fidl::internal::CanHandleMethod(unknown_method_handler->openness,
                                             unknown_interaction_type)) {
-        if (unknown_interaction_type == ::fidl::UnknownInteractionType::kTwoWay) {
-          auto reply = ::fidl::internal::UnknownInteractionReply::MakeReplyFor(
+        if (unknown_interaction_type == ::fidl::UnknownMethodType::kTwoWay) {
+          auto reply = ::fidl::internal::UnknownMethodReply::MakeReplyFor(
               hdr->ordinal, ::fidl::MessageDynamicFlags::kFlexibleMethod);
-          (unknown_interaction_handler->send_reply)(reply, txn);
+          (unknown_method_handler->send_reply)(reply, txn);
         }
         std::move(msg).CloseHandles();
-        unknown_interaction_handler->dispatch(impl, hdr->ordinal, unknown_interaction_type, txn);
+        unknown_method_handler->dispatch(impl, hdr->ordinal, unknown_interaction_type, txn);
         break;
       }
       std::move(msg).CloseHandles();

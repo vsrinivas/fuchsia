@@ -78,20 +78,19 @@ struct MethodEntry {
 };
 
 // Defines a method entry for handling unknown interactions.
-struct UnknownInteractionHandlerEntry {
+struct UnknownMethodHandlerEntry {
   // Which kinds of unknown interactions can be handled by this handler.
   ::fidl::internal::Openness openness;
 
   // Function which handles unknown interactions.
   void (*dispatch)(void* interface, uint64_t method_ordinal,
-                   ::fidl::UnknownInteractionType unknown_interaction_type,
-                   ::fidl::Transaction* txn);
+                   ::fidl::UnknownMethodType unknown_interaction_type, ::fidl::Transaction* txn);
 
-  // Function which sends replies to two-way unknown interactions for this
-  // protocol's transport.
-  void (*send_reply)(::fidl::internal::UnknownInteractionReply reply, ::fidl::Transaction* txn);
+  // Function which sends replies to two-way unknown methods for this protocol's
+  // transport.
+  void (*send_reply)(::fidl::internal::UnknownMethodReply reply, ::fidl::Transaction* txn);
 
-  static const UnknownInteractionHandlerEntry kClosedProtocolHandlerEntry;
+  static const UnknownMethodHandlerEntry kClosedProtocolHandlerEntry;
 };
 
 // The compiler generates an array of MethodEntry for each protocol.
@@ -111,7 +110,7 @@ struct UnknownInteractionHandlerEntry {
 void Dispatch(void* impl, ::fidl::IncomingHeaderAndMessage& msg,
               fidl::internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn,
               const MethodEntry* begin, const MethodEntry* end,
-              const UnknownInteractionHandlerEntry* unknown_interaction_handler);
+              const UnknownMethodHandlerEntry* unknown_interaction_handler);
 
 // The common bits in a weak event sender, i.e. an event sender that allows the
 // transport to be destroyed from underneath it.

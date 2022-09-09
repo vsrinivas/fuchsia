@@ -151,7 +151,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::NaturalServerDispatcher<::t
 
 void fidl::internal::NaturalServerDispatcher<::test_union::TestProtocol>::Dispatch(::fidl::Server<::test_union::TestProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
-  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_interaction_handler_entry_);
+  ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_, &unknown_method_handler_entry_);
 }
 
 void fidl::Server<::test_union::TestProtocol>::dispatch_message(

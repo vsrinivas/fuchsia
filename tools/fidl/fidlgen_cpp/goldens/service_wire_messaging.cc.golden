@@ -120,7 +120,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_service::FirstProtocol>::Dispatch(::fidl::WireServer<::test_service::FirstProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &unknown_interaction_handler_entry_);
+                             &unknown_method_handler_entry_);
 }
 
 void fidl::WireServer<::test_service::FirstProtocol>::dispatch_message(
@@ -255,7 +255,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_service::SecondProtocol>::Dispatch(::fidl::WireServer<::test_service::SecondProtocol>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &unknown_interaction_handler_entry_);
+                             &unknown_method_handler_entry_);
 }
 
 void fidl::WireServer<::test_service::SecondProtocol>::dispatch_message(

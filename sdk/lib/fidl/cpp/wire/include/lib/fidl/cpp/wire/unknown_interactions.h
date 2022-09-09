@@ -12,18 +12,18 @@
 namespace fidl {
 
 // Identifies which kind of method an unknown interaction was.
-enum class UnknownInteractionType {
-  // Unknown interaction was for a one-way method.
+enum class UnknownMethodType {
+  // Unknown method was a one-way method.
   kOneWay,
-  // Unknown interaction was for a two-way method.
+  // Unknown method was a two-way method.
   kTwoWay,
 };
 
 namespace internal {
 
-// Returns the |UnknownInteractionType| of a message based on the |hdr|.
-inline UnknownInteractionType UnknownInteractionTypeFromHeader(const fidl_message_header_t* hdr) {
-  return hdr->txid == 0 ? UnknownInteractionType::kOneWay : UnknownInteractionType::kTwoWay;
+// Returns the |UnknownMethodType| of a message based on the |hdr|.
+inline UnknownMethodType UnknownMethodTypeFromHeader(const fidl_message_header_t* hdr) {
+  return hdr->txid == 0 ? UnknownMethodType::kOneWay : UnknownMethodType::kTwoWay;
 }
 
 // Openness of the protocol. Determines which unknown interactions can be
@@ -39,42 +39,42 @@ enum class Openness {
 };
 
 // Returns true if a protocol with the given |Openness| can handle a client-sent
-// unknown method with the given |UnknownInteractionType|.
-inline bool CanHandleMethod(Openness openness, UnknownInteractionType interaction_type) {
+// unknown method with the given |UnknownMethodType|.
+inline bool CanHandleMethod(Openness openness, UnknownMethodType interaction_type) {
   return openness == Openness::kOpen ||
-         (openness == Openness::kAjar && interaction_type == UnknownInteractionType::kOneWay);
+         (openness == Openness::kAjar && interaction_type == UnknownMethodType::kOneWay);
 }
 
 // Returns true if a protocol with the given |Openness| can handle a server-sent
-// unknown event with the given |UnknownInteractionType|.
+// unknown event with the given |UnknownMethodType|.
 //
 // Note: currently only one-way server-sent messages are defined, so this always
-// returns false if |UnknownInteractionType| is |kTwoWay|. The argument is
+// returns false if |UnknownMethodType| is |kTwoWay|. The argument is
 // included to simplify the generated event handler.
-inline bool CanHandleEvent(Openness openness, UnknownInteractionType interaction_type) {
-  return interaction_type == UnknownInteractionType::kOneWay &&
+inline bool CanHandleEvent(Openness openness, UnknownMethodType interaction_type) {
+  return interaction_type == UnknownMethodType::kOneWay &&
          (openness == Openness::kOpen || openness == Openness::kAjar);
 }
 
 // Represents the reply to a two-way unknown interaction. Used to build the
 // |OutgoingMessage| to send the unknown interaction response to the client.
-struct UnknownInteractionReply {
+struct UnknownMethodReply {
   fidl_message_header_t header;
   fidl_xunion_v2_t body;
 
-  // Build an UnknownInteractionReply for the given |method_oridnal|. The
+  // Build an UnknownMethodReply for the given |method_oridnal|. The
   // transaction ID is left as 0, and should be filled in by
   // |Transaction::Reply|.
-  static UnknownInteractionReply MakeReplyFor(uint64_t method_ordinal,
-                                              ::fidl::MessageDynamicFlags dynamic_flags);
+  static UnknownMethodReply MakeReplyFor(uint64_t method_ordinal,
+                                         ::fidl::MessageDynamicFlags dynamic_flags);
 };
 
 // Builds and sends an unknown interaction reply with the given value for the
 // Channel transport. This is used as part of the
-// |UnknownInteractionHandlerEntry| for protocols which use the Channel
+// |UnknownMethodHandlerEntry| for protocols which use the Channel
 // transport. For protocols using Driver transport, see
-// |SendDriverUnknownInteractionReply| in the fidl_driver library.
-void SendChannelUnknownInteractionReply(UnknownInteractionReply reply, ::fidl::Transaction* txn);
+// |SendDriverUnknownMethodReply| in the fidl_driver library.
+void SendChannelUnknownMethodReply(UnknownMethodReply reply, ::fidl::Transaction* txn);
 
 }  // namespace internal
 

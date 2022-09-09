@@ -12,10 +12,10 @@ namespace fidl::internal {
 
 // Builds and sends an unknown interaction reply with the given value for the
 // Driver transport. This is used as part of the
-// |UnknownInteractionHandlerEntry| for protocols which use the Driver
+// |UnknownMethodHandlerEntry| for protocols which use the Driver
 // transport. For protocols using Channel transport, see
-// |SendChannelUnknownInteractionReply|.
-void SendDriverUnknownInteractionReply(UnknownInteractionReply reply, ::fidl::Transaction* txn);
+// |SendChannelUnknownMethodReply|.
+void SendDriverUnknownMethodReply(UnknownMethodReply reply, ::fidl::Transaction* txn);
 
 }  // namespace fidl::internal
 

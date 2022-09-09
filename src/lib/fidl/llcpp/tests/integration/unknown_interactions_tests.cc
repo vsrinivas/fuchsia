@@ -1873,7 +1873,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleOneWay) {
         ::fidl::UnknownMethodCompleter::Sync& completer) override {
       ran_unknown_interaction_handler = true;
       EXPECT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
-      EXPECT_EQ(::fidl::UnknownInteractionType::kOneWay, metadata.unknown_interaction_type);
+      EXPECT_EQ(::fidl::UnknownMethodType::kOneWay, metadata.unknown_interaction_type);
     }
   };
   Server server;
@@ -1916,7 +1916,7 @@ TEST_F(UnknownInteractions, UnknownFlexibleTwoWay) {
         ::fidl::UnknownMethodCompleter::Sync& completer) override {
       ran_unknown_interaction_handler = true;
       EXPECT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
-      EXPECT_EQ(::fidl::UnknownInteractionType::kTwoWay, metadata.unknown_interaction_type);
+      EXPECT_EQ(::fidl::UnknownMethodType::kTwoWay, metadata.unknown_interaction_type);
     }
   };
   Server server;

@@ -114,7 +114,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_drivertwoway::TwoWay>::Dispatch(::fdf::WireServer<::test_drivertwoway::TwoWay>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                  internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &unknown_interaction_handler_entry_);
+                             &unknown_method_handler_entry_);
 }
 
 void fdf::WireServer<::test_drivertwoway::TwoWay>::dispatch_message(

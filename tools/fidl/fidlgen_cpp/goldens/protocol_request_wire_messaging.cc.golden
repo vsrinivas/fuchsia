@@ -36,7 +36,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocolrequest::Child>::Dispatch(::fidl::WireServer<::test_protocolrequest::Child>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                    internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &unknown_interaction_handler_entry_);
+                             &unknown_method_handler_entry_);
 }
 
 void fidl::WireServer<::test_protocolrequest::Child>::dispatch_message(
@@ -456,7 +456,7 @@ const ::fidl::internal::MethodEntry* fidl::internal::WireServerDispatcher<::test
 void fidl::internal::WireServerDispatcher<::test_protocolrequest::Parent>::Dispatch(::fidl::WireServer<::test_protocolrequest::Parent>* impl, ::fidl::IncomingHeaderAndMessage&& msg,
                                                                                     internal::MessageStorageViewBase* storage_view, ::fidl::Transaction* txn) {
   ::fidl::internal::Dispatch(impl, msg, storage_view, txn, entries_, entries_end_,
-                             &unknown_interaction_handler_entry_);
+                             &unknown_method_handler_entry_);
 }
 
 void fidl::WireServer<::test_protocolrequest::Parent>::dispatch_message(

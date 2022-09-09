@@ -113,8 +113,8 @@ class {{ .WireEventDispatcher }} final :
       default:
         {{ if .HandlesOneWayUnknownInteractions -}}
         auto* hdr = msg.header();
-        ::fidl::UnknownInteractionType unknown_interaction_type =
-            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        ::fidl::UnknownMethodType unknown_interaction_type =
+            ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
         if (::fidl::IsFlexibleInteraction(hdr) &&
             ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_interaction_type)) {
           if (event_handler()) {
@@ -244,8 +244,8 @@ class {{ .NaturalEventDispatcher }} final :
       default:
         {{ if .HandlesOneWayUnknownInteractions -}}
         auto* hdr = msg.header();
-        ::fidl::UnknownInteractionType unknown_interaction_type =
-            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        ::fidl::UnknownMethodType unknown_interaction_type =
+            ::fidl::internal::UnknownMethodTypeFromHeader(hdr);
         if (::fidl::IsFlexibleInteraction(hdr) &&
             ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_interaction_type)) {
           if (event_handler()) {

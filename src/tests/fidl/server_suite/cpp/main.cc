@@ -236,10 +236,10 @@ class OpenTargetServer : public fidl::Server<fidl_serversuite::OpenTarget> {
                              fidl::UnknownMethodCompleter::Sync& completer) override {
     fidl_serversuite::UnknownMethodType method_type;
     switch (metadata.unknown_interaction_type) {
-      case fidl::UnknownInteractionType::kOneWay:
+      case fidl::UnknownMethodType::kOneWay:
         method_type = fidl_serversuite::UnknownMethodType::kOneWay;
         break;
-      case fidl::UnknownInteractionType::kTwoWay:
+      case fidl::UnknownMethodType::kTwoWay:
         method_type = fidl_serversuite::UnknownMethodType::kTwoWay;
         break;
     }

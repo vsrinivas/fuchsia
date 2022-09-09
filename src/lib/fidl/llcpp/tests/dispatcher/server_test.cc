@@ -169,7 +169,7 @@ TEST(TryDispatchTestCase, MessageStatusNotOk) {
     MockTransaction txn;
     fidl::internal::Dispatch(
         nullptr, msg, nullptr, &txn, nullptr, nullptr,
-        &::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry);
+        &::fidl::internal::UnknownMethodHandlerEntry::kClosedProtocolHandlerEntry);
     EXPECT_TRUE(txn.errored());
   }
 }

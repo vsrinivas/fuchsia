@@ -9,7 +9,7 @@
 
 namespace fidl::internal {
 
-void SendDriverUnknownInteractionReply(UnknownInteractionReply reply, ::fidl::Transaction* txn) {
+void SendDriverUnknownMethodReply(UnknownMethodReply reply, ::fidl::Transaction* txn) {
   fdf::Arena arena('FIDL');
 
   void* arena_bytes = arena.Allocate(sizeof(reply));

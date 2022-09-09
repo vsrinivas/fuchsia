@@ -172,7 +172,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
-  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
+  static const ::fidl::internal::UnknownMethodHandlerEntry unknown_method_handler_entry_;
 };
 
 #endif  // __Fuchsia__
@@ -5335,7 +5335,7 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
-  static const ::fidl::internal::UnknownInteractionHandlerEntry unknown_interaction_handler_entry_;
+  static const ::fidl::internal::UnknownMethodHandlerEntry unknown_method_handler_entry_;
 };
 
 #endif  // __Fuchsia__
@@ -8084,8 +8084,8 @@ struct ::fidl::internal::WireServerDispatcher<::test_unknowninteractions::Unknow
  private:
   static const ::fidl::internal::MethodEntry entries_[];
   static const ::fidl::internal::MethodEntry* entries_end_;
-  static constexpr const ::fidl::internal::UnknownInteractionHandlerEntry& unknown_interaction_handler_entry_ =
-      ::fidl::internal::UnknownInteractionHandlerEntry::kClosedProtocolHandlerEntry;
+  static constexpr const ::fidl::internal::UnknownMethodHandlerEntry& unknown_method_handler_entry_ =
+      ::fidl::internal::UnknownMethodHandlerEntry::kClosedProtocolHandlerEntry;
 };
 
 #endif  // __Fuchsia__

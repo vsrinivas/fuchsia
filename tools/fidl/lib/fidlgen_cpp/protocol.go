@@ -414,14 +414,14 @@ func (p Protocol) OpennessValue() string {
 	}
 }
 
-// UnknownInteractionReplySender returns a string which refers to the function
-// to use to send the UnknownInteraction reply. This is used to fill the
-// send_reply field of UnknownInteractionHandlerEntry.
-func (p Protocol) UnknownInteractionReplySender() string {
+// UnknownMethodReplySender returns a string which refers to the function to use
+// to send the UnknownMethod reply. This is used to fill the send_reply field of
+// UnknownMethodHandlerEntry.
+func (p Protocol) UnknownMethodReplySender() string {
 	if p.Transport.Name == "Driver" {
-		return "::fidl::internal::SendDriverUnknownInteractionReply"
+		return "::fidl::internal::SendDriverUnknownMethodReply"
 	}
-	return "::fidl::internal::SendChannelUnknownInteractionReply"
+	return "::fidl::internal::SendChannelUnknownMethodReply"
 }
 
 // endpointTypeName formats endpoint type names for this protocol in the new C++ bindings.
