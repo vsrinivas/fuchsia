@@ -5,19 +5,10 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.media2") {
-  sources = [
-    "buffer_provider.fidl",
-    "connection_error.fidl",
-    "consumer.fidl",
-    "producer.fidl",
-    "stream_sink.fidl",
-    "timelines.fidl",
-    "transport_control.fidl",
-  ]
+  sources = [ "stream_sink.fidl" ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.mediastreams",
-    "//sdk/fidl/fuchsia.sysmem",
     "//zircon/vdso/zx",
   ]
 }

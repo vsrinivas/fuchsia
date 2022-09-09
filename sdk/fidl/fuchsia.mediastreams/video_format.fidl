@@ -8,6 +8,7 @@ using fuchsia.math;
 /// Describes a format used for video elementary streams without
 /// reference to compression. Where compression is supported, this
 /// type should be combined with a `Compression` struct.
+@available(removed=HEAD)
 type VideoFormat = struct {
     /// Describes the manner in which pixels are encoded.
     pixel_format PixelFormat;
@@ -37,6 +38,7 @@ type VideoFormat = struct {
 };
 
 /// Expresses the manner in which video pixels are encoded.
+@available(removed=HEAD)
 type PixelFormat = strict enum {
     INVALID = 0;
     R8G8B8A8 = 1;
@@ -57,6 +59,7 @@ type PixelFormat = strict enum {
 };
 
 /// Expresses the color space used to interpret video pixel values.
+@available(removed=HEAD)
 type ColorSpace = strict enum {
     INVALID = 0;
     SRGB = 1;

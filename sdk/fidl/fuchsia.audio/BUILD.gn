@@ -6,16 +6,11 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.audio") {
   sources = [
-    "consumer.fidl",
-    "consumer_creator.fidl",
-    "decoder.fidl",
     "gain.fidl",
-    "producer.fidl",
     "ring_buffer.fidl",
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.media2",
     "//sdk/fidl/fuchsia.mediastreams",
     "//zircon/vdso/zx",
   ]

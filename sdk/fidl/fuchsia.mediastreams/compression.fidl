@@ -4,9 +4,11 @@
 library fuchsia.mediastreams;
 
 /// An identifier for compression types.
+@available(removed=HEAD)
 alias CompressionType = string:256;
 
 /// Describes the compression applied to a stream.
+@available(removed=HEAD)
 type Compression = struct {
     /// The type of compression applied to the stream.
     type CompressionType;
@@ -17,24 +19,44 @@ type Compression = struct {
 };
 
 // TODO: Use mimetypes for these?
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_AAC string = "fuchsia.streams.aac";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_AACLATM string = "fuchsia.streams.aaclatm";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_AMRNB string = "fuchsia.streams.amrnb";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_AMRWB string = "fuchsia.streams.amrwb";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_APTX string = "fuchsia.streams.aptx";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_FLAC string = "fuchsia.streams.flac";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_GSMMS string = "fuchsia.streams.gsmms";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_MP3 string = "fuchsia.streams.mp3";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_PCMALAW string = "fuchsia.streams.pcmalaw";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_PCMMULAW string = "fuchsia.streams.pcmmulaw";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_SBC string = "fuchsia.streams.sbc";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_VORBIS string = "fuchsia.streams.vorbis";
+@available(removed=HEAD)
 const AUDIO_COMPRESSION_OPUS string = "fuchsia.streams.opus";
 
+@available(removed=HEAD)
 const VIDEO_COMPRESSION_H263 string = "fuchsia.streams.h263";
+@available(removed=HEAD)
 const VIDEO_COMPRESSION_H264 string = "fuchsia.streams.h264";
+@available(removed=HEAD)
 const VIDEO_COMPRESSION_MPEG4 string = "fuchsia.streams.mpeg4";
+@available(removed=HEAD)
 const VIDEO_COMPRESSION_THEORA string = "fuchsia.streams.theora";
+@available(removed=HEAD)
 const VIDEO_COMPRESSION_VP3 string = "fuchsia.streams.vp3";
+@available(removed=HEAD)
 const VIDEO_COMPRESSION_VP8 string = "fuchsia.streams.vp8";
+@available(removed=HEAD)
 const VIDEO_COMPRESSION_VP9 string = "fuchsia.streams.vp9";
