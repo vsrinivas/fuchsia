@@ -29,10 +29,6 @@ template("trace_provider_library") {
       configs += extra_configs
     }
 
-    # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-    # Consider switching to the C++ bindings. See linked bug for details.
-    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-
     # Not including fdio_connect.h.
     if (!defined(sdk_headers)) {
       sdk_headers = []
@@ -75,7 +71,7 @@ template("trace_provider_library") {
       deps = []
     }
     deps += [
-      "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_c",
+      "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_cpp",
       "//sdk/lib/fidl",
       "//sdk/lib/fidl_base",
       "//zircon/system/ulib/async:async-cpp",

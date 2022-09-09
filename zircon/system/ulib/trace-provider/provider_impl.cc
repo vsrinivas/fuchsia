@@ -4,15 +4,12 @@
 
 #include "provider_impl.h"
 
-#include <fuchsia/tracing/provider/c/fidl.h>
+#include <fidl/fuchsia.tracing.provider/cpp/wire.h>
 #include <lib/async/cpp/task.h>
-#include <lib/fidl/coding.h>
 #include <lib/zx/process.h>
 #include <stdio.h>
 #include <zircon/assert.h>
-#include <zircon/process.h>
 #include <zircon/status.h>
-#include <zircon/syscalls.h>
 
 #include <utility>
 
@@ -20,266 +17,106 @@
 #include "session.h"
 #include "utils.h"
 
-namespace trace {
-namespace internal {
+namespace trace::internal {
 
 constexpr bool kVerboseTraceErrors = false;
 
-TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher, zx::channel channel)
-    : dispatcher_(dispatcher), connection_(this, std::move(channel)) {}
+TraceProviderImpl::TraceProviderImpl(async_dispatcher_t* dispatcher,
+                                     fidl::ServerEnd<fuchsia_tracing_provider::Provider> server_end)
+    : dispatcher_(dispatcher) {
+  fidl::BindServer(dispatcher_, std::move(server_end), this,
+                   [](TraceProviderImpl* impl, fidl::UnbindInfo info,
+                      fidl::ServerEnd<fuchsia_tracing_provider::Provider> server_end) {
+                     if (!info.is_dispatcher_shutdown()) {
+                       fprintf(stderr, "TraceProvider: FIDL server unbound: info=%s\n",
+                               info.FormatDescription().c_str());
+                     }
+                     OnClose();
+                   });
+}
 
 TraceProviderImpl::~TraceProviderImpl() = default;
 
-void TraceProviderImpl::Initialize(trace_buffering_mode_t buffering_mode, zx::vmo buffer,
-                                   zx::fifo fifo, std::vector<std::string> categories) {
-  Session::InitializeEngine(dispatcher_, buffering_mode, std::move(buffer), std::move(fifo),
-                            std::move(categories));
+void TraceProviderImpl::Initialize(
+    fuchsia_tracing_provider::wire::ProviderInitializeRequest* request,
+    InitializeCompleter::Sync& completer) {
+  fuchsia_tracing_provider::wire::ProviderConfig& config = request->config;
+  std::vector<std::string> categories;
+  categories.reserve(config.categories.count());
+  for (const fidl::StringView& category : config.categories) {
+    categories.emplace_back(category.data(), category.size());
+  }
+  Session::InitializeEngine(
+      dispatcher_,
+      [buffering_mode = config.buffering_mode]() {
+        switch (buffering_mode) {
+          case fuchsia_tracing_provider::wire::BufferingMode::kOneshot:
+            return TRACE_BUFFERING_MODE_ONESHOT;
+          case fuchsia_tracing_provider::wire::BufferingMode::kCircular:
+            return TRACE_BUFFERING_MODE_CIRCULAR;
+          case fuchsia_tracing_provider::wire::BufferingMode::kStreaming:
+            return TRACE_BUFFERING_MODE_STREAMING;
+        }
+      }(),
+      std::move(config.buffer), std::move(config.fifo), categories);
 }
 
-void TraceProviderImpl::Start(trace_start_mode_t start_mode,
-                              std::vector<std::string> additional_categories) {
+void TraceProviderImpl::Start(fuchsia_tracing_provider::wire::ProviderStartRequest* request,
+                              StartCompleter::Sync& completer) {
+  const fuchsia_tracing_provider::wire::StartOptions& options = request->options;
   // TODO(fxbug.dev/22973): Add support for additional categories.
-  Session::StartEngine(start_mode);
+  Session::StartEngine([buffer_disposition = options.buffer_disposition]() {
+    switch (buffer_disposition) {
+      case fuchsia_tracing_provider::wire::BufferDisposition::kClearEntire:
+        return TRACE_START_CLEAR_ENTIRE_BUFFER;
+      case fuchsia_tracing_provider::wire::BufferDisposition::kClearNondurable:
+        return TRACE_START_CLEAR_NONDURABLE_BUFFER;
+      case fuchsia_tracing_provider::wire::BufferDisposition::kRetain:
+        return TRACE_START_RETAIN_BUFFER;
+    }
+  }());
 }
 
-void TraceProviderImpl::Stop() { Session::StopEngine(); }
+void TraceProviderImpl::Stop(StopCompleter::Sync& completer) { Session::StopEngine(); }
 
-void TraceProviderImpl::Terminate() { Session::TerminateEngine(); }
+void TraceProviderImpl::Terminate(TerminateCompleter::Sync& completer) { OnClose(); }
 
-void TraceProviderImpl::OnClose() { Terminate(); }
+void TraceProviderImpl::OnClose() { Session::TerminateEngine(); }
 
-TraceProviderImpl::Connection::Connection(TraceProviderImpl* impl, zx::channel channel)
-    : impl_(impl),
-      channel_(std::move(channel)),
-      wait_(this, channel_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED) {
-  zx_status_t status = wait_.Begin(impl_->dispatcher_);
-  if (status != ZX_OK) {
-    fprintf(stderr, "TraceProvider: begin wait failed: status=%d(%s)\n", status,
-            zx_status_get_string(status));
-    Close();
-  }
-}
-
-TraceProviderImpl::Connection::~Connection() { Close(); }
-
-void TraceProviderImpl::Connection::Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
-                                           zx_status_t status, const zx_packet_signal_t* signal) {
-  if (status == ZX_ERR_CANCELED) {
-    // The wait could be canceled if we're shutting down, e.g., the
-    // program is exiting.
-    return;
-  }
-
-  if (status != ZX_OK) {
-    fprintf(stderr, "TraceProvider: wait failed: status=%d(%s)\n", status,
-            zx_status_get_string(status));
-  } else if (signal->observed & ZX_CHANNEL_READABLE) {
-    if (ReadMessage()) {
-      zx_status_t status = wait_.Begin(dispatcher);
-      if (status == ZX_OK) {
-        return;
-      }
-      fprintf(stderr, "TraceProvider: Error re-registering channel wait: status=%d(%s)\n", status,
-              zx_status_get_string(status));
-    } else {
-      fprintf(stderr, "TraceProvider: received invalid FIDL message or failed to send reply\n");
-    }
-  } else {
-    ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
-  }
-
-  Close();
-}
-
-bool TraceProviderImpl::Connection::ReadMessage() {
-  FIDL_ALIGNDECL uint8_t buffer[16 * 1024];
-  uint32_t num_bytes = 0u;
-  constexpr uint32_t kNumHandles = 2;
-  zx_handle_info_t handles[kNumHandles];
-  uint32_t num_handles = 0u;
-  zx_status_t status =
-      channel_.read_etc(0u, buffer, handles, sizeof(buffer), kNumHandles, &num_bytes, &num_handles);
-  if (status != ZX_OK) {
-    fprintf(stderr, "TraceProvider: channel read failed: status=%d(%s)\n", status,
-            zx_status_get_string(status));
-    return false;
-  }
-
-  if (!DecodeAndDispatch(buffer, num_bytes, handles, num_handles)) {
-    fprintf(stderr, "TraceProvider: DecodeAndDispatch failed\n");
-    zx_handle_t closing_handles[kNumHandles];
-    for (uint32_t i = 0; i < num_handles; i++) {
-      closing_handles[i] = handles[i].handle;
-    }
-    zx_handle_close_many(closing_handles, num_handles);
-    return false;
-  }
-
-  return true;
-}
-
-bool TraceProviderImpl::Connection::DecodeAndDispatch(uint8_t* buffer, uint32_t num_bytes,
-                                                      zx_handle_info_t* handles,
-                                                      uint32_t num_handles) {
-  if (num_bytes < sizeof(fidl_message_header_t)) {
-    return false;
-  }
-
-  auto hdr = reinterpret_cast<fidl_message_header_t*>(buffer);
-  uint64_t ordinal = hdr->ordinal;
-  switch (ordinal) {
-    case fuchsia_tracing_provider_ProviderInitializeOrdinal: {
-      if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      uint32_t trimmed_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
-      if (unlikely(buffer == NULL)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      uint8_t* trimmed_bytes = (uint8_t*)buffer + sizeof(fidl_message_header_t);
-
-      zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderInitializeRequestMessageTable,
-                          trimmed_bytes, trimmed_num_bytes, handles, num_handles, nullptr);
-      if (status != ZX_OK) {
-        return false;
-      }
-
-      auto request =
-          reinterpret_cast<fuchsia_tracing_provider_ProviderInitializeRequestMessage*>(buffer);
-      const fuchsia_tracing_provider_ProviderConfig& config = request->config;
-      auto buffering_mode = config.buffering_mode;
-      auto buffer = zx::vmo(config.buffer);
-      auto fifo = zx::fifo(config.fifo);
-      std::vector<std::string> categories;
-      auto strings = reinterpret_cast<fidl_string_t*>(config.categories.data);
-      for (size_t i = 0; i < config.categories.count; i++) {
-        categories.push_back(std::string(strings[i].data, strings[i].size));
-      }
-      trace_buffering_mode_t trace_buffering_mode;
-      switch (buffering_mode) {
-        case fuchsia_tracing_provider_BufferingMode_ONESHOT:
-          trace_buffering_mode = TRACE_BUFFERING_MODE_ONESHOT;
-          break;
-        case fuchsia_tracing_provider_BufferingMode_CIRCULAR:
-          trace_buffering_mode = TRACE_BUFFERING_MODE_CIRCULAR;
-          break;
-        case fuchsia_tracing_provider_BufferingMode_STREAMING:
-          trace_buffering_mode = TRACE_BUFFERING_MODE_STREAMING;
-          break;
-        default:
-          return false;
-      }
-      impl_->Initialize(trace_buffering_mode, std::move(buffer), std::move(fifo),
-                        std::move(categories));
-      return true;
-    }
-    case fuchsia_tracing_provider_ProviderStartOrdinal: {
-      if (unlikely(num_bytes < sizeof(fidl_message_header_t))) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      uint32_t trimmed_num_bytes = num_bytes - (uint32_t)(sizeof(fidl_message_header_t));
-      if (unlikely(buffer == NULL)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      uint8_t* trimmed_bytes = (uint8_t*)buffer + sizeof(fidl_message_header_t);
-
-      zx_status_t status =
-          fidl_decode_etc(&fuchsia_tracing_provider_ProviderStartRequestMessageTable, trimmed_bytes,
-                          trimmed_num_bytes, handles, num_handles, nullptr);
-      if (status != ZX_OK) {
-        return false;
-      }
-
-      auto request =
-          reinterpret_cast<fuchsia_tracing_provider_ProviderStartRequestMessage*>(buffer);
-      const fuchsia_tracing_provider_StartOptions& options = request->options;
-      trace_start_mode_t start_mode;
-      switch (options.buffer_disposition) {
-        case fuchsia_tracing_provider_BufferDisposition_CLEAR_ENTIRE:
-          start_mode = TRACE_START_CLEAR_ENTIRE_BUFFER;
-          break;
-        case fuchsia_tracing_provider_BufferDisposition_CLEAR_NONDURABLE:
-          start_mode = TRACE_START_CLEAR_NONDURABLE_BUFFER;
-          break;
-        case fuchsia_tracing_provider_BufferDisposition_RETAIN:
-          start_mode = TRACE_START_RETAIN_BUFFER;
-          break;
-        default:
-          return false;
-      }
-      std::vector<std::string> categories;
-      auto strings = reinterpret_cast<fidl_string_t*>(options.additional_categories.data);
-      for (size_t i = 0; i < options.additional_categories.count; i++) {
-        categories.push_back(std::string(strings[i].data, strings[i].size));
-      }
-      impl_->Start(start_mode, std::move(categories));
-      return true;
-    }
-    case fuchsia_tracing_provider_ProviderStopOrdinal: {
-      // The method does not define a request payload, so the message should be a header only.
-      if (unlikely(num_bytes != sizeof(fidl_message_header_t))) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      impl_->Stop();
-      return true;
-    }
-    case fuchsia_tracing_provider_ProviderTerminateOrdinal: {
-      // The method does not define a request payload, so the message should be a header only.
-      if (unlikely(num_bytes != sizeof(fidl_message_header_t))) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      impl_->Terminate();
-      return true;
-    }
-    default:
-      return false;
-  }  // switch
-}
-
-void TraceProviderImpl::Connection::Close() {
-  if (channel_) {
-    wait_.Cancel();
-    channel_.reset();
-    impl_->OnClose();
-  }
-}
-
-}  // namespace internal
-}  // namespace trace
+}  // namespace trace::internal
 
 EXPORT trace_provider_t* trace_provider_create_with_name(zx_handle_t to_service_h,
                                                          async_dispatcher_t* dispatcher,
                                                          const char* name) {
-  zx::channel to_service(to_service_h);
+  const fidl::ClientEnd<fuchsia_tracing_provider::Registry> to_service{zx::channel{to_service_h}};
 
   ZX_DEBUG_ASSERT(to_service.is_valid());
   ZX_DEBUG_ASSERT(dispatcher);
 
   // Create the channel to which we will bind the trace provider.
-  zx::channel provider_client;
-  zx::channel provider_service;
-  zx_status_t status = zx::channel::create(0u, &provider_client, &provider_service);
-  if (status != ZX_OK) {
-    fprintf(stderr, "TraceProvider: channel create failed: status=%d(%s)\n", status,
-            zx_status_get_string(status));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Provider>();
+  if (endpoints.is_error()) {
+    fprintf(stderr, "TraceProvider: channel create failed: status=%d(%s)\n",
+            endpoints.status_value(), endpoints.status_string());
     return nullptr;
   }
 
   // Register the trace provider.
-  status = fuchsia_tracing_provider_RegistryRegisterProvider(
-      to_service.get(), provider_client.release(), trace::internal::GetPid(), name, strlen(name));
-  if (status != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(to_service)
+          ->RegisterProvider(std::move(endpoints->client), trace::internal::GetPid(),
+                             fidl::StringView::FromExternal(name));
+  if (!result.ok()) {
     if (trace::internal::kVerboseTraceErrors) {
-      fprintf(stderr, "TraceProvider: registry failed: status=%d(%s)\n", status,
-              zx_status_get_string(status));
+      fprintf(stderr, "TraceProvider: registry failed: result=%s\n",
+              result.FormatDescription().c_str());
     }
     return nullptr;
   }
   // Note: |to_service| can be closed now. Let it close as a consequence
   // of going out of scope.
 
-  return new trace::internal::TraceProviderImpl(dispatcher, std::move(provider_service));
+  return new trace::internal::TraceProviderImpl(dispatcher, std::move(endpoints->server));
 }
 
 EXPORT trace_provider_t* trace_provider_create(zx_handle_t to_service,
@@ -298,44 +135,42 @@ EXPORT trace_provider_t* trace_provider_create(zx_handle_t to_service,
 EXPORT trace_provider_t* trace_provider_create_synchronously(zx_handle_t to_service_h,
                                                              async_dispatcher_t* dispatcher,
                                                              const char* name,
-                                                             bool* out_manager_is_tracing_already) {
-  zx::channel to_service(to_service_h);
+                                                             bool* out_already_started) {
+  const fidl::ClientEnd<fuchsia_tracing_provider::Registry> to_service{zx::channel{to_service_h}};
 
   ZX_DEBUG_ASSERT(to_service.is_valid());
   ZX_DEBUG_ASSERT(dispatcher);
 
   // Create the channel to which we will bind the trace provider.
-  zx::channel provider_client;
-  zx::channel provider_service;
-  zx_status_t status = zx::channel::create(0u, &provider_client, &provider_service);
-  if (status != ZX_OK) {
-    fprintf(stderr, "TraceProvider: channel create failed: status=%d(%s)\n", status,
-            zx_status_get_string(status));
+  zx::status endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Provider>();
+  if (endpoints.is_error()) {
+    fprintf(stderr, "TraceProvider: channel create failed: status=%d(%s)\n",
+            endpoints.status_value(), endpoints.status_string());
     return nullptr;
   }
 
   // Register the trace provider.
-  zx_status_t registry_status;
-  bool manager_is_tracing_already;
-  status = fuchsia_tracing_provider_RegistryRegisterProviderSynchronously(
-      to_service.get(), provider_client.release(), trace::internal::GetPid(), name, strlen(name),
-      &registry_status, &manager_is_tracing_already);
-  if (status != ZX_OK) {
-    fprintf(stderr, "TraceProvider: RegisterProviderSynchronously failed: status=%d(%s)\n", status,
-            zx_status_get_string(status));
+  const fidl::WireResult result =
+      fidl::WireCall(to_service)
+          ->RegisterProviderSynchronously(std::move(endpoints->client), trace::internal::GetPid(),
+                                          fidl::StringView::FromExternal(name));
+  if (!result.ok()) {
+    fprintf(stderr, "TraceProvider: RegisterProviderSynchronously failed: result=%s\n",
+            result.FormatDescription().c_str());
     return nullptr;
   }
-  if (registry_status != ZX_OK) {
+  const fidl::WireResponse response = result.value();
+  if (const zx_status_t status = response.s; status != ZX_OK) {
     fprintf(stderr, "TraceProvider: registry failed: status=%d(%s)\n", status,
             zx_status_get_string(status));
-    return nullptr;
   }
   // Note: |to_service| can be closed now. Let it close as a consequence
   // of going out of scope.
 
-  if (out_manager_is_tracing_already)
-    *out_manager_is_tracing_already = manager_is_tracing_already;
-  return new trace::internal::TraceProviderImpl(dispatcher, std::move(provider_service));
+  if (out_already_started) {
+    *out_already_started = response.started;
+  }
+  return new trace::internal::TraceProviderImpl(dispatcher, std::move(endpoints->server));
 }
 
 EXPORT void trace_provider_destroy(trace_provider_t* provider) {
