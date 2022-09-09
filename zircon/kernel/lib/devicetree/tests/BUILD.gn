@@ -18,12 +18,20 @@ group("tests") {
   ]
 }
 
+source_set("test_helper") {
+  sources = [ "test_helper.cc" ]
+  public = [ "test_helper.h" ]
+  public_deps = [ "//sdk/lib/stdcompat" ]
+  deps = [ "//zircon/system/ulib/zxtest" ]
+}
+
 test("devicetree-tests") {
   sources = [
     "devicetree_tests.cc",
     "path_tests.cc",
   ]
   deps = [
+    ":test_helper",
     "//zircon/kernel/lib/devicetree",
     "//zircon/system/ulib/zxtest",
   ]
