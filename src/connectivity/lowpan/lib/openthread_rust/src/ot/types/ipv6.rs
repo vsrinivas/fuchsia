@@ -122,6 +122,11 @@ impl Ip6NetworkPrefix {
         octets.clone_from_slice(self.as_slice());
         octets
     }
+
+    /// Returns true is the given address is in this network prefix.
+    pub fn contains(&self, addr: &std::net::Ipv6Addr) -> bool {
+        self.0.m8 == addr.octets()[0..8]
+    }
 }
 
 impl From<[u8; 8]> for Ip6NetworkPrefix {
