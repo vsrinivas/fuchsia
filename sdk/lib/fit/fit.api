@@ -1,8 +1,8 @@
 {
   "pkg/fit/include/lib/fit/constructors_internal.h": "8bfa14d14273b96823adfd2ae9f002bd",
   "pkg/fit/include/lib/fit/defer.h": "848d5a2b9fbde5581fc412ee4428920e",
-  "pkg/fit/include/lib/fit/function.h": "3137460731eb269811ab5532be1155d8",
-  "pkg/fit/include/lib/fit/function_internal.h": "8c652eb83c5c990788fe764b0ff29874",
+  "pkg/fit/include/lib/fit/function.h": "125f204ab4693f0f9256854e2fa3bbcf",
+  "pkg/fit/include/lib/fit/function_internal.h": "ddbcf477f2c941f9059e62536ae00719",
   "pkg/fit/include/lib/fit/function_traits.h": "4db000fe2c2daba6d1b999c21c851da9",
   "pkg/fit/include/lib/fit/inline_any.h": "4dc3144bff0e1b33780e9c08ac75644b",
   "pkg/fit/include/lib/fit/inline_any_internal.h": "9da525319ec337760c48636be22734e9",

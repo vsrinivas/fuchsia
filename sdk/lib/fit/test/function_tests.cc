@@ -902,15 +902,19 @@ static_assert(std::is_same<Function<2 * sizeof(void*)>, Function<2 * sizeof(void
 
 // Also test the inline_function, callback, and inline_callback aliases.
 static_assert(
-    std::is_same_v<fit::inline_function<void(), 0>, fit::inline_function<void(), sizeof(void*)>>);
+    std::is_same_v<fit::inline_function<void(), 0>, fit::inline_function<void(), sizeof(void*)>>,
+    "");
 static_assert(
-    std::is_same_v<fit::inline_function<void(), 1>, fit::inline_function<void(), sizeof(void*)>>);
-static_assert(std::is_same_v<fit::callback<void(), 0>, fit::callback<void(), sizeof(void*)>>);
-static_assert(std::is_same_v<fit::callback<void(), 1>, fit::callback<void(), sizeof(void*)>>);
+    std::is_same_v<fit::inline_function<void(), 1>, fit::inline_function<void(), sizeof(void*)>>,
+    "");
+static_assert(std::is_same_v<fit::callback<void(), 0>, fit::callback<void(), sizeof(void*)>>, "");
+static_assert(std::is_same_v<fit::callback<void(), 1>, fit::callback<void(), sizeof(void*)>>, "");
 static_assert(
-    std::is_same_v<fit::inline_callback<void(), 0>, fit::inline_callback<void(), sizeof(void*)>>);
+    std::is_same_v<fit::inline_callback<void(), 0>, fit::inline_callback<void(), sizeof(void*)>>,
+    "");
 static_assert(
-    std::is_same_v<fit::inline_callback<void(), 1>, fit::inline_callback<void(), sizeof(void*)>>);
+    std::is_same_v<fit::inline_callback<void(), 1>, fit::inline_callback<void(), sizeof(void*)>>,
+    "");
 
 TEST(FunctionTests, rounding_function) {
   EXPECT_EQ(5, fit::internal::RoundUpToMultiple(0, 5));
@@ -921,6 +925,22 @@ TEST(FunctionTests, rounding_function) {
   EXPECT_EQ(10, fit::internal::RoundUpToMultiple(9, 5));
   EXPECT_EQ(10, fit::internal::RoundUpToMultiple(10, 5));
 }
+
+// Test that the alignment of function and callback is always alignof(max_align_t).
+static_assert(alignof(fit::function<void(), 0>) == alignof(max_align_t), "");
+static_assert(alignof(fit::function<void(), 1>) == alignof(max_align_t), "");
+static_assert(alignof(fit::function<int(), 4>) == alignof(max_align_t), "");
+static_assert(alignof(fit::function<bool(), 8>) == alignof(max_align_t), "");
+static_assert(alignof(fit::function<float(int), 9>) == alignof(max_align_t), "");
+static_assert(alignof(fit::inline_function<void(), 1>) == alignof(max_align_t), "");
+static_assert(alignof(fit::inline_function<void(), 9>) == alignof(max_align_t), "");
+static_assert(alignof(fit::callback<void(), 0>) == alignof(max_align_t), "");
+static_assert(alignof(fit::callback<void(), 1>) == alignof(max_align_t), "");
+static_assert(alignof(fit::callback<int(), 4>) == alignof(max_align_t), "");
+static_assert(alignof(fit::callback<bool(), 8>) == alignof(max_align_t), "");
+static_assert(alignof(fit::callback<float(int), 9>) == alignof(max_align_t), "");
+static_assert(alignof(fit::inline_callback<void(), 1>) == alignof(max_align_t), "");
+static_assert(alignof(fit::inline_callback<void(), 9>) == alignof(max_align_t), "");
 
 namespace test_copy_move_constructions {
 
