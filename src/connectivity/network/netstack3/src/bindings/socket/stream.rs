@@ -7,7 +7,7 @@
 use std::{
     convert::Infallible as Never,
     num::{NonZeroU16, NonZeroUsize},
-    ops::DerefMut as _,
+    ops::{ControlFlow, DerefMut as _},
 };
 
 use assert_matches::assert_matches;
@@ -181,12 +181,6 @@ impl IntoErrno for ConnectError {
     }
 }
 
-enum StreamProcessing {
-    Continue,
-    Shutdown,
-    Cloned(fposix_socket::StreamSocketRequestStream),
-}
-
 impl<I: IpSockAddrExt + IpExt, C> SocketWorker<I, C>
 where
     C: LockableContext,
@@ -214,11 +208,11 @@ where
                 };
 
                 match self.handle_request(request).await {
-                    StreamProcessing::Continue => {}
-                    StreamProcessing::Shutdown => {
+                    ControlFlow::Continue(None) => {}
+                    ControlFlow::Break(()) => {
                         request_stream.control_handle().shutdown();
                     }
-                    StreamProcessing::Cloned(new_request_stream) => {
+                    ControlFlow::Continue(Some(new_request_stream)) => {
                         futures.push(new_request_stream.into_future())
                     }
                 }
@@ -390,10 +384,16 @@ where
         }
     }
 
+    /// Returns a [`ControlFlow`] to indicate whether the parent stream should
+    /// continue being polled or dropped.
+    ///
+    /// If `Some(stream)` is returned in the `Continue` case, `stream` is a new
+    /// stream of events that should be polled concurrently with the parent
+    /// stream.
     async fn handle_request(
         &mut self,
         request: fposix_socket::StreamSocketRequest,
-    ) -> StreamProcessing {
+    ) -> ControlFlow<(), Option<fposix_socket::StreamSocketRequestStream>> {
         match request {
             fposix_socket::StreamSocketRequest::Bind { addr, responder } => {
                 responder_send!(responder, &mut self.bind(addr).await);
@@ -441,7 +441,7 @@ where
             }
             fposix_socket::StreamSocketRequest::Close { responder } => {
                 responder_send!(responder, &mut Ok(()));
-                return StreamProcessing::Shutdown;
+                return ControlFlow::Break(());
             }
             fposix_socket::StreamSocketRequest::GetConnectionInfo { responder: _ } => {
                 todo!("https://fxbug.dev/77623");
@@ -459,13 +459,13 @@ where
                 let channel = fidl::AsyncChannel::from_channel(object.into_channel())
                     .expect("failed to create async channel");
                 let events = fposix_socket::StreamSocketRequestStream::from_channel(channel);
-                return StreamProcessing::Cloned(events);
+                return ControlFlow::Continue(Some(events));
             }
             fposix_socket::StreamSocketRequest::Clone2 { request, control_handle: _ } => {
                 let channel = fidl::AsyncChannel::from_channel(request.into_channel())
                     .expect("failed to create async channel");
                 let events = fposix_socket::StreamSocketRequestStream::from_channel(channel);
-                return StreamProcessing::Cloned(events);
+                return ControlFlow::Continue(Some(events));
             }
             fposix_socket::StreamSocketRequest::GetAttr { responder } => {
                 responder_send!(
@@ -825,7 +825,7 @@ where
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
             }
         }
-        StreamProcessing::Continue
+        ControlFlow::Continue(None)
     }
 }
 
