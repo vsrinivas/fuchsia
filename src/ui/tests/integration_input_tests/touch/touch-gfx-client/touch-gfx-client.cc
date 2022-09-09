@@ -135,14 +135,19 @@ class TouchGfxClient : public fuchsia::ui::app::ViewProvider {
             }
             if (touch_input_listener_) {
               fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest request;
-              // The raw pointer event's coordinates are in pips (logical pixels). The test
-              // expects coordinates in physical pixels. The former is transformed into the latter
-              // with the scale factor provided in the metrics event.
-              request.set_local_x(event.input().pointer().x * metrics_.scale_x)
-                  .set_local_y(event.input().pointer().y * metrics_.scale_y)
-                  .set_time_received(zx_clock_get_monotonic())
-                  .set_component_name("touch-gfx-client");
-              touch_input_listener_->ReportTouchInput(std::move(request));
+              // Only report DOWN and MOVE events, for consistency with the
+              // flutter client.
+              if (phase == fuchsia::ui::input::PointerEventPhase::DOWN ||
+                  phase == fuchsia::ui::input::PointerEventPhase::MOVE) {
+                // The raw pointer event's coordinates are in pips (logical pixels). The test
+                // expects coordinates in physical pixels. The former is transformed into the latter
+                // with the scale factor provided in the metrics event.
+                request.set_local_x(event.input().pointer().x * metrics_.scale_x)
+                    .set_local_y(event.input().pointer().y * metrics_.scale_y)
+                    .set_time_received(zx_clock_get_monotonic())
+                    .set_component_name("touch-gfx-client");
+                touch_input_listener_->ReportTouchInput(std::move(request));
+              }
             }
             break;
           }

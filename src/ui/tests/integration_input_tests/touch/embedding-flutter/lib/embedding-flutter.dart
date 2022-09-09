@@ -16,7 +16,6 @@ import 'package:flutter/material.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:zircon/zircon.dart';
-import 'package:fidl_test_touch/fidl_async.dart' as test_touch;
 
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,20 +23,8 @@ Future<void> main(List<String> args) async {
   runApp(MaterialApp(debugShowCheckedModeBanner: false, home: TestApp()));
 }
 
-class _TestAppLauncherImpl extends test_touch.TestAppLauncher {
-  final Function _onLaunch;
-
-  _TestAppLauncherImpl(this._onLaunch);
-
-  @override
-  Future<void> launch(String debugName) {
-    return _onLaunch(debugName);
-  }
-}
-
 // Creates an app that changes color and calls test.touch.ResponseListenter.Respond when tapped.
-// Launches a child app that takes up the left half of the display when it receives a
-// test.touch.TestAppLauncher::Launch message.
+// Launches a child app that takes up the left half of the display on startup.
 class TestApp extends StatefulWidget {
   @override
   _TestAppState createState() => _TestAppState();
@@ -48,37 +35,22 @@ class _TestAppState extends State<TestApp> {
   static const _blue = Color.fromARGB(255, 0, 0, 255);
 
   final _context = ComponentContext.create();
-  final _binding = test_touch.TestAppLauncherBinding();
-  _TestAppLauncherImpl _testAppLauncher;
 
   final _connection = ValueNotifier<FuchsiaViewConnection>(null);
   final _responseListener = test_touch.TouchInputListenerProxy();
   final _backgroundColor = ValueNotifier(_blue);
 
   _TestAppState() {
-    _testAppLauncher = _TestAppLauncherImpl((String debugName) {
-      final completer = Completer();
-      _connection.value = FuchsiaViewConnection(_launchApp(debugName),
-          onViewStateChanged: (_, state) {
-        if (state && !completer.isCompleted) {
-          // Notify test that the child view is ready.
-          print('Child view ready');
-          completer.complete();
-        }
-      });
-      return completer.future;
-    });
-
-    _context.outgoing
-      ..addPublicService<test_touch.TestAppLauncher>(
-          (fidl.InterfaceRequest<test_touch.TestAppLauncher> serverEnd) =>
-              _binding.bind(_testAppLauncher, serverEnd),
-          test_touch.TestAppLauncher.$serviceName)
-      ..serveFromStartupInfo();
-
     Incoming.fromSvcPath()
       ..connectToService(_responseListener)
       ..close();
+
+    _connection.value = FuchsiaViewConnection(_launchApp('child-view'),
+        onViewStateChanged: (_, state) {
+      if (state) {
+        print('Child view ready');
+      }
+    });
 
     // We inspect the lower-level data packets, instead of using the higher-level gesture library.
     WidgetsBinding.instance.window.onPointerDataPacket =

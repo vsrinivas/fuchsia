@@ -17,7 +17,6 @@ dart_library("lib") {
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.test.input",
     "//sdk/fidl/fuchsia.ui.views",
-    "//src/ui/tests/integration_input_tests/touch:test.touch",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/args",
   ]

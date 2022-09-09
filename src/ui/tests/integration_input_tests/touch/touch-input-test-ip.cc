@@ -49,10 +49,9 @@
 
 #include <gtest/gtest.h>
 #include <src/lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
-#include <test/touch/cpp/fidl.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/ui/testing/ui_test_manager/ui_test_manager.h"
+#include "src/ui/testing/util/portable_ui_test.h"
 
 // This test exercises the touch input dispatch path from Input Pipeline to a Scenic client. It is a
 // multi-component test, and carefully avoids sleeping or polling for component coordination.
@@ -113,6 +112,7 @@ using GfxEvent = fuchsia::ui::gfx::Event;
 
 // Types imported for the realm_builder library.
 using component_testing::ChildRef;
+using component_testing::ConfigValue;
 using component_testing::LocalComponent;
 using component_testing::LocalComponentHandles;
 using component_testing::ParentRef;
@@ -134,9 +134,6 @@ constexpr zx::duration kTimeout = zx::min(5);
 // Maximum distance between two physical pixel coordinates so that they are considered equal.
 constexpr float kEpsilon = 0.5f;
 
-// Maximum distance between two view coordinates so that they are considered equal.
-constexpr auto kViewCoordinateEpsilon = 0.01;
-
 constexpr auto kTouchScreenMaxDim = 1000;
 constexpr auto kTouchScreenMinDim = -1000;
 constexpr auto kMoveEventCount = 5;
@@ -153,6 +150,34 @@ constexpr auto kDisplayHeight = 600;
 using time_utc = zx::basic_time<1>;
 
 constexpr auto kMockResponseListener = "response_listener";
+
+struct UIStackConfig {
+  bool use_scene_manager = false;
+  bool use_flatland = false;
+  int32_t display_rotation = 0;
+};
+
+std::vector<UIStackConfig> UIStackConfigsToTest() {
+  std::vector<UIStackConfig> configs;
+
+  // GFX x RP
+  configs.push_back({.use_scene_manager = false, .use_flatland = false, .display_rotation = 90});
+
+  // GFX x SM
+  configs.push_back({.use_scene_manager = true, .use_flatland = false, .display_rotation = 90});
+
+  return configs;
+}
+
+template <typename T>
+std::vector<std::tuple<T>> AsTuples(std::vector<T> v) {
+  std::vector<std::tuple<T>> result;
+  for (const auto& elt : v) {
+    result.push_back(elt);
+  }
+
+  return result;
+}
 
 enum class TapLocation { kTopLeft, kTopRight };
 
@@ -281,6 +306,8 @@ InjectSwipeParams GetDownwardSwipeParams() {
           .expected_events = std::move(expected_events)};
 }
 
+bool CompareDouble(double f0, double f1, double epsilon) { return std::abs(f0 - f1) <= epsilon; }
+
 // This component implements the test.touch.ResponseListener protocol
 // and the interface for a RealmBuilder LocalComponent. A LocalComponent
 // is a component that is implemented here in the test, as opposed to elsewhere
@@ -296,8 +323,7 @@ class ResponseListenerServer : public fuchsia::ui::test::input::TouchInputListen
   // |fuchsia::ui::test::input::TouchInputListener|
   void ReportTouchInput(
       fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest request) override {
-    FX_CHECK(respond_callback_) << "Expected touch response listener callback to be set.";
-    respond_callback_(std::move(request));
+    events_received_.push_back(std::move(request));
   }
 
   // |LocalComponent::Start|
@@ -314,52 +340,40 @@ class ResponseListenerServer : public fuchsia::ui::test::input::TouchInputListen
     local_handles_.emplace_back(std::move(local_handles));
   }
 
-  void SetRespondCallback(
-      fit::function<void(fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest)>
-          callback) {
-    respond_callback_ = std::move(callback);
+  const std::vector<fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest>&
+  events_received() {
+    return events_received_;
   }
 
  private:
   async_dispatcher_t* dispatcher_ = nullptr;
   std::vector<std::unique_ptr<LocalComponentHandles>> local_handles_;
   fidl::BindingSet<fuchsia::ui::test::input::TouchInputListener> bindings_;
-  fit::function<void(fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest)>
-      respond_callback_;
+  std::vector<fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest> events_received_;
 };
 
 template <typename... Ts>
-class TouchInputBase : public gtest::RealLoopFixture,
-                       public testing::WithParamInterface<
-                           std::tuple<ui_testing::UITestRealm::SceneOwnerType, Ts...>> {
+class TouchInputBase : public ui_testing::PortableUITest,
+                       public testing::WithParamInterface<std::tuple<UIStackConfig, Ts...>> {
  protected:
   ~TouchInputBase() override {
-    FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
+    FX_CHECK(touch_injection_request_count() > 0) << "injection expected but didn't happen.";
   }
 
+  std::string GetTestUIStackUrl() override { return "#meta/test-ui-stack.cm"; }
+
   void SetUp() override {
+    ui_testing::PortableUITest::SetUp();
+
     // Post a "just in case" quit task, if the test hangs.
     async::PostDelayedTask(
         dispatcher(),
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    ui_testing::UITestRealm::Config config;
-    config.scene_owner = std::get<0>(this->GetParam());
-    config.display_rotation = 90;
-    config.use_input = true;
-    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
-    config.exposed_client_services = {test::touch::TestAppLauncher::Name_};
-    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
-                                    fuchsia::accessibility::semantics::SemanticsManager::Name_};
-    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
-
-    // Assemble realm.
-    BuildRealm(this->GetTestComponents(), this->GetTestRoutes(), this->GetTestV2Components());
-
     // Get the display dimensions.
     FX_LOGS(INFO) << "Waiting for scenic display info";
-    scenic_ = realm_exposed_services()->template Connect<fuchsia::ui::scenic::Scenic>();
+    scenic_ = realm_root()->template Connect<fuchsia::ui::scenic::Scenic>();
     scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
       display_width_ = display_info.width_in_px;
       display_height_ = display_info.height_in_px;
@@ -370,14 +384,7 @@ class TouchInputBase : public gtest::RealLoopFixture,
 
     // Register input injection device.
     FX_LOGS(INFO) << "Registering input injection device";
-    RegisterInjectionDevice();
-
-    // Launch client view, and wait until it's rendering to proceed with the test.
-    FX_LOGS(INFO) << "Initializing scene";
-    ui_test_manager_->InitializeScene();
-    FX_LOGS(INFO) << "Waiting for client view to render";
-    RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
-    FX_LOGS(INFO) << "Client view has rendered";
+    RegisterTouchScreen();
   }
 
   // Subclass should implement this method to add components to the test realm
@@ -392,72 +399,30 @@ class TouchInputBase : public gtest::RealLoopFixture,
   // next to the base ones added.
   virtual std::vector<std::pair<ChildName, std::string>> GetTestV2Components() { return {}; }
 
-  // Calls test.touch.TestAppLauncher::Launch.
-  // Only works if we've already launched a client that serves test.touch.TestAppLauncher.
-  void LaunchEmbeddedClient(std::string debug_name) {
-    // Set up an empty session, only used for synchronization in this method.
-    auto session_pair = scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get());
-    session_ = std::make_unique<scenic::Session>(std::move(session_pair.first),
-                                                 std::move(session_pair.second));
-    session_->SetDebugName("empty-session-for-synchronization");
+  bool LastEventReceivedMatches(float expected_x, float expected_y, std::string component_name) {
+    const auto& events_received = response_listener_->events_received();
+    if (events_received.empty()) {
+      return false;
+    }
 
-    // Launch the embedded app.
-    auto test_app_launcher =
-        realm_exposed_services()->template Connect<test::touch::TestAppLauncher>();
-    bool child_launched = false;
-    test_app_launcher->Launch(std::move(debug_name), [&child_launched] { child_launched = true; });
-    RunLoopUntil([&child_launched] { return child_launched; });
+    const auto& last_event = events_received.back();
 
-    // Waits an extra frame to avoid any flakes from the child launching signal firing slightly
-    // early.
-    bool frame_presented = false;
-    session_->set_on_frame_presented_handler([&frame_presented](auto) { frame_presented = true; });
-    session_->Present2(/*when*/ zx::clock::get_monotonic().get(), /*span*/ 0, [](auto) {});
-    RunLoopUntil([&frame_presented] { return frame_presented; });
-    session_->set_on_frame_presented_handler([](auto) {});
-  }
+    auto pixel_scale = last_event.has_device_pixel_ratio() ? last_event.device_pixel_ratio() : 1;
 
-  // Helper method for checking the test.touch.ResponseListener response from the client app.
-  void SetResponseExpectations(float expected_x, float expected_y, std::string component_name,
-                               bool& injection_complete) {
-    response_listener()->SetRespondCallback(
-        [expected_x, expected_y, component_name, &injection_complete](
-            fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest request) {
-          FX_LOGS(INFO) << "Client received tap at (" << request.local_x() << ", "
-                        << request.local_y() << ").";
-          FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
-                        << ").";
+    auto actual_x = pixel_scale * last_event.local_x();
+    auto actual_y = pixel_scale * last_event.local_y();
 
-          FX_LOGS(INFO) << "Client Received Time (ns): " << request.time_received();
+    FX_LOGS(INFO) << "Expecting event for component " << component_name << " at (" << expected_x
+                  << ", " << expected_y << ")";
+    FX_LOGS(INFO) << "Received event for component " << component_name << " at (" << actual_x
+                  << ", " << actual_y << "), accounting for pixel scale of " << pixel_scale;
 
-          // Allow for minor rounding differences in coordinates.
-          EXPECT_NEAR(request.local_x(), expected_x, kViewCoordinateEpsilon);
-          EXPECT_NEAR(request.local_y(), expected_y, kViewCoordinateEpsilon);
-          EXPECT_EQ(request.component_name(), component_name);
-
-          injection_complete = true;
-        });
-  }
-
-  void RegisterInjectionDevice() {
-    FX_LOGS(INFO) << "Registering fake touch screen";
-    input_registry_ =
-        realm_exposed_services()->template Connect<fuchsia::ui::test::input::Registry>();
-    input_registry_.set_error_handler([](auto) { FX_LOGS(ERROR) << "Error from input helper"; });
-
-    bool touchscreen_registered = false;
-    fuchsia::ui::test::input::RegistryRegisterTouchScreenRequest request;
-    request.set_device(fake_touchscreen_.NewRequest());
-    input_registry_->RegisterTouchScreen(
-        std::move(request), [&touchscreen_registered]() { touchscreen_registered = true; });
-
-    RunLoopUntil([&touchscreen_registered] { return touchscreen_registered; });
-    FX_LOGS(INFO) << "Touchscreen registered";
+    return CompareDouble(actual_x, expected_x, pixel_scale) &&
+           CompareDouble(actual_y, expected_y, pixel_scale) &&
+           last_event.component_name() == component_name;
   }
 
   void InjectInput(TapLocation tap_location) {
-    fuchsia::ui::test::input::TouchScreenSimulateTapRequest tap_request;
-
     // The /config/data/display_rotation (90) specifies how many degrees to rotate the
     // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
     // the user observes the child view to rotate *clockwise* by that amount (90).
@@ -468,24 +433,15 @@ class TouchInputBase : public gtest::RealLoopFixture,
     switch (tap_location) {
       case TapLocation::kTopLeft:
         // center of top right quadrant -> ends up as center of top left quadrant
-        tap_request.mutable_tap_location()->x = 500;
-        tap_request.mutable_tap_location()->y = -500;
+        InjectTap(/* x = */ 500, /* y = */ -500);
         break;
       case TapLocation::kTopRight:
         // center of bottom right quadrant -> ends up as center of top right quadrant
-        tap_request.mutable_tap_location()->x = 500;
-        tap_request.mutable_tap_location()->y = 500;
+        InjectTap(/* x = */ 500, /* y = */ 500);
         break;
       default:
         FX_NOTREACHED();
     }
-
-    FX_LOGS(INFO) << "Injecting tap at (" << tap_request.tap_location().x << ", "
-                  << tap_request.tap_location().y << ")";
-    fake_touchscreen_->SimulateTap(std::move(tap_request), [this]() {
-      ++injection_count_;
-      FX_LOGS(INFO) << "*** Tap injected, count: " << injection_count_;
-    });
   }
 
   // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs. A swipe gesture is
@@ -522,15 +478,10 @@ class TouchInputBase : public gtest::RealLoopFixture,
     // Generate move events 50 pixels apart.
     swipe_request.set_move_event_count(kMoveEventCount);
 
-    FX_LOGS(INFO) << "Injecting swipe from (" << swipe_request.start_location().x << ", "
-                  << swipe_request.start_location().y << ") to (" << swipe_request.end_location().x
-                  << ", " << swipe_request.end_location().y
-                  << ") with move_event_count = " << swipe_request.move_event_count();
-
-    fake_touchscreen_->SimulateSwipe(std::move(swipe_request), [this]() {
-      injection_count_++;
-      FX_LOGS(INFO) << "*** Swipe injected";
-    });
+    InjectSwipe(/* start_x = */ begin_x, /* start_y = */ begin_y,
+                /* end_x = */ begin_x + x_dir * touchscreen_width,
+                /* end_y = */ begin_y + y_dir * touchscreen_height,
+                /* move_event_count = */ kMoveEventCount);
   }
 
   // Guaranteed to be initialized after SetUp().
@@ -539,54 +490,45 @@ class TouchInputBase : public gtest::RealLoopFixture,
 
   fuchsia::sys::ComponentControllerPtr& client_component() { return client_component_; }
 
-  sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
-  Realm* realm() { return realm_.get(); }
-
   ResponseListenerServer* response_listener() { return response_listener_.get(); }
 
  private:
-  void BuildRealm(const std::vector<std::pair<ChildName, LegacyUrl>>& components,
-                  const std::vector<Route>& routes,
-                  const std::vector<std::pair<ChildName, std::string>>& v2_components) {
-    FX_LOGS(INFO) << "Building realm";
-    realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
-
+  void ExtendRealm() override {
     // Key part of service setup: have this test component vend the
     // |ResponseListener| service in the constructed realm.
     response_listener_ = std::make_unique<ResponseListenerServer>(dispatcher());
-    realm()->AddLocalChild(kMockResponseListener, response_listener_.get());
+    realm_builder()->AddLocalChild(kMockResponseListener, response_listener_.get());
+
+    realm_builder()->AddRoute({.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+                               .source = kTestUIStackRef,
+                               .targets = {ParentRef()}});
+
+    // Use a display rotation of 90 degrees.
+    auto ui_stack_config = std::get<0>(this->GetParam());
+    realm_builder()->InitMutableConfigToEmpty(kTestUIStack);
+    realm_builder()->SetConfigValue(kTestUIStack, "use_scene_manager",
+                                    ConfigValue::Bool(ui_stack_config.use_scene_manager));
+    realm_builder()->SetConfigValue(kTestUIStack, "use_flatland",
+                                    ConfigValue::Bool(ui_stack_config.use_flatland));
+    realm_builder()->SetConfigValue(kTestUIStack, "display_rotation",
+                                    ConfigValue::Uint32(ui_stack_config.display_rotation));
 
     // Add components specific for this test case to the realm.
-    for (const auto& [name, component] : components) {
-      realm()->AddLegacyChild(name, component);
+    for (const auto& [name, component] : GetTestComponents()) {
+      realm_builder()->AddLegacyChild(name, component);
     }
 
-    for (const auto& [name, component] : v2_components) {
-      realm()->AddChild(name, component);
+    for (const auto& [name, component] : GetTestV2Components()) {
+      realm_builder()->AddChild(name, component);
     }
 
     // Add the necessary routing for each of the extra components added above.
-    for (const auto& route : routes) {
-      realm()->AddRoute(route);
+    for (const auto& route : GetTestRoutes()) {
+      realm_builder()->AddRoute(route);
     }
-
-    ui_test_manager_->BuildRealm();
-
-    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   }
 
-  std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
-  std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
-  std::unique_ptr<Realm> realm_;
-
   std::unique_ptr<ResponseListenerServer> response_listener_;
-
-  std::unique_ptr<scenic::Session> session_;
-
-  fuchsia::ui::test::input::RegistryPtr input_registry_;
-  fuchsia::ui::test::input::TouchScreenPtr fake_touchscreen_;
-
-  int injection_count_ = 0;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
   uint32_t display_width_ = 0;
@@ -623,9 +565,11 @@ class FlutterInputTestBase : public TouchInputBase<Ts...> {
             {.capabilities = {Protocol{fuchsia::logger::LogSink::Name_},
                               Protocol{fuchsia::sysmem::Allocator::Name_},
                               Protocol{fuchsia::tracing::provider::Registry::Name_},
-                              Protocol{fuchsia::ui::scenic::Scenic::Name_},
                               Protocol{fuchsia::vulkan::loader::Loader::Name_}},
              .source = ParentRef(),
+             .targets = {target}},
+            {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
+             .source = ui_testing::PortableUITest::kTestUIStackRef,
              .targets = {target}},
             {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
              .source = ChildRef{kMemoryPressureProvider},
@@ -649,45 +593,50 @@ class FlutterInputTestBase : public TouchInputBase<Ts...> {
 class FlutterInputTestIp : public FlutterInputTestBase<> {};
 
 INSTANTIATE_TEST_SUITE_P(FlutterInputTestIpParameterized, FlutterInputTestIp,
-                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+                         testing::ValuesIn(AsTuples(UIStackConfigsToTest())));
 
 TEST_P(FlutterInputTestIp, FlutterTap) {
-  bool injection_complete = false;
-  SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
-                          /*expected_y=*/static_cast<float>(display_width()) / 4.f,
-                          /*component_name=*/"one-flutter", injection_complete);
+  // Launch client view, and wait until it's rendering to proceed with the test.
+  FX_LOGS(INFO) << "Initializing scene";
+  LaunchClient();
+  FX_LOGS(INFO) << "Client launched";
 
   InjectInput(TapLocation::kTopLeft);
-  RunLoopUntil([&injection_complete] { return injection_complete; });
+  RunLoopUntil([this] {
+    return LastEventReceivedMatches(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
+                                    /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                                    "one-flutter");
+  });
 }
 
 class FlutterSwipeTest : public FlutterInputTestBase<InjectSwipeParams> {};
 
 INSTANTIATE_TEST_SUITE_P(
     FlutterSwipeTestParameterized, FlutterSwipeTest,
-    testing::Combine(testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                     ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
+    testing::Combine(testing::ValuesIn(UIStackConfigsToTest()),
                      testing::Values(GetRightSwipeParams(), GetDownwardSwipeParams(),
                                      GetLeftSwipeParams(), GetUpwardSwipeParams())));
 
 TEST_P(FlutterSwipeTest, SwipeTest) {
+  // Launch client view, and wait until it's rendering to proceed with the test.
+  FX_LOGS(INFO) << "Initializing scene";
+  LaunchClient();
+  FX_LOGS(INFO) << "Client launched";
+
   const auto& [direction, begin_x, begin_y, expected_events] = std::get<1>(GetParam());
-  std::vector<fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest> actual_events;
-  response_listener()->SetRespondCallback(
-      [&actual_events](auto touch) { actual_events.push_back(std::move(touch)); });
 
   // Inject a swipe on the display. As the child view is rotated by 90 degrees, the direction of the
   // swipe also gets rotated by 90 degrees.
   InjectEdgeToEdgeSwipe(direction, begin_x, begin_y);
 
   //  Client sends a response for 1 Down and |swipe_length| Move PointerEventPhase events.
-  RunLoopUntil([&actual_events] {
-    return actual_events.size() >= static_cast<uint32_t>(kMoveEventCount + 1);
+  RunLoopUntil([this] {
+    return response_listener()->events_received().size() >=
+           static_cast<uint32_t>(kMoveEventCount + 1);
   });
 
-  ASSERT_EQ(actual_events.size(), expected_events.size());
-  AssertSwipeEvents(actual_events, expected_events);
+  ASSERT_EQ(response_listener()->events_received().size(), expected_events.size());
+  AssertSwipeEvents(response_listener()->events_received(), expected_events);
 }
 
 template <typename... Ts>
@@ -706,7 +655,7 @@ class GfxInputTestIpBase : public TouchInputBase<Ts...> {
          .source = ChildRef{kMockResponseListener},
          .targets = {ChildRef{kCppGfxClient}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ParentRef(),
+         .source = ui_testing::PortableUITest::kTestUIStackRef,
          .targets = {ChildRef{kCppGfxClient}}},
     };
   }
@@ -718,57 +667,53 @@ class GfxInputTestIpBase : public TouchInputBase<Ts...> {
 
 class GfxInputTestIp : public GfxInputTestIpBase<> {};
 INSTANTIATE_TEST_SUITE_P(GfxInputTestIpParametized, GfxInputTestIp,
-                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+                         testing::ValuesIn(AsTuples(UIStackConfigsToTest())));
 
 TEST_P(GfxInputTestIp, CppGfxClientTap) {
-  bool injection_complete = false;
-  SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
-                          /*expected_y=*/static_cast<float>(display_width()) / 4.f,
-                          /*component_name=*/"touch-gfx-client", injection_complete);
+  // Launch client view, and wait until it's rendering to proceed with the test.
+  FX_LOGS(INFO) << "Initializing scene";
+  LaunchClient();
+  FX_LOGS(INFO) << "Client launched";
 
   InjectInput(TapLocation::kTopLeft);
-  RunLoopUntil([&injection_complete] { return injection_complete; });
+  RunLoopUntil([this] {
+    return LastEventReceivedMatches(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
+                                    /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                                    "touch-gfx-client");
+  });
 }
 
 class GfxSwipeTest : public GfxInputTestIpBase<InjectSwipeParams> {};
 
 INSTANTIATE_TEST_SUITE_P(
     GfxSwipeTestParameterized, GfxSwipeTest,
-    testing::Combine(testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                     ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
+    testing::Combine(testing::ValuesIn(UIStackConfigsToTest()),
                      testing::Values(GetRightSwipeParams(), GetDownwardSwipeParams(),
                                      GetLeftSwipeParams(), GetUpwardSwipeParams())));
 
 TEST_P(GfxSwipeTest, CppGFXClientSwipeTest) {
+  // Launch client view, and wait until it's rendering to proceed with the test.
+  FX_LOGS(INFO) << "Initializing scene";
+  LaunchClient();
+  FX_LOGS(INFO) << "Client launched";
+
   const auto& [direction, begin_x, begin_y, expected_events] = std::get<1>(GetParam());
-  std::vector<fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest> actual_events;
-  response_listener()->SetRespondCallback(
-      [&actual_events](auto touch) { actual_events.push_back(std::move(touch)); });
 
   // Inject a swipe on the display. As the child view is rotated by 90 degrees, the direction of the
   // swipe also gets rotated by 90 degrees.
   InjectEdgeToEdgeSwipe(direction, begin_x, begin_y);
 
-  //  Client sends a response for every PointerEventPhase event which includes 1 Add, 1 Down,
-  // |swipe_length| Move, 1 Up, 1 Remove.
-  RunLoopUntil([&actual_events] {
-    return actual_events.size() >= static_cast<uint32_t>(kMoveEventCount + 4);
+  //  Client sends a response for 1 Down and |swipe_length| Move PointerEventPhase events.
+  RunLoopUntil([this] {
+    FX_LOGS(INFO) << "Events received = " << response_listener()->events_received().size();
+    FX_LOGS(INFO) << "Events expected = " << kMoveEventCount + 1;
+    return response_listener()->events_received().size() >=
+           static_cast<uint32_t>(kMoveEventCount + 1);
   });
 
-  // Remove the first event received as it is a response sent for an Add event.
-  actual_events.erase(actual_events.begin());
-
-  std::vector<ExpectedSwipeEvent> mutable_expected_events = expected_events;
-
-  // The |ExpectedSwipeEvent| for Up and Remove PointerEventPhase will be the same as the last
-  // Move event.
-  auto last_touch_event = mutable_expected_events.back();
-  mutable_expected_events.push_back(last_touch_event);
-  mutable_expected_events.push_back(last_touch_event);
-
-  ASSERT_EQ(actual_events.size(), mutable_expected_events.size());
-  AssertSwipeEvents(actual_events, mutable_expected_events);
+  const auto& actual_events = response_listener()->events_received();
+  ASSERT_EQ(actual_events.size(), expected_events.size());
+  AssertSwipeEvents(actual_events, expected_events);
 }
 
 class WebEngineTestIp : public TouchInputBase<> {
@@ -831,38 +776,6 @@ class WebEngineTestIp : public TouchInputBase<> {
         dispatcher(), [this] { TryInject(); }, kTapRetryInterval);
   }
 
-  // Helper method for checking the test.touch.ResponseListener response from a web app.
-  void SetResponseExpectationsWeb(float expected_x, float expected_y,
-                                  std::string const& component_name, bool& injection_complete) {
-    response_listener()->SetRespondCallback(
-        [expected_x, expected_y, component_name, &injection_complete](
-            fuchsia::ui::test::input::TouchInputListenerReportTouchInputRequest pointer_data) {
-          // Convert Chromium's position, which is in logical pixels, to a position in physical
-          // pixels. Note that Chromium reports integer values, so this conversion introduces an
-          // error of up to `device_pixel_ratio`.
-          auto device_pixel_ratio = pointer_data.device_pixel_ratio();
-          auto chromium_x = pointer_data.local_x();
-          auto chromium_y = pointer_data.local_y();
-          auto device_x = chromium_x * device_pixel_ratio;
-          auto device_y = chromium_y * device_pixel_ratio;
-
-          FX_LOGS(INFO) << "Chromium reported tap at (" << chromium_x << ", " << chromium_y << ").";
-          FX_LOGS(INFO) << "Tap scaled to (" << device_x << ", " << device_y << ").";
-          FX_LOGS(INFO) << "Expected tap is at approximately (" << expected_x << ", " << expected_y
-                        << ").";
-
-          FX_LOGS(INFO) << "Chromium Received Time (ns): " << pointer_data.time_received();
-
-          // Allow for minor rounding differences in coordinates. As noted above, `device_x` and
-          // `device_y` may have an error of up to `device_pixel_ratio` physical pixels.
-          EXPECT_NEAR(device_x, expected_x, device_pixel_ratio);
-          EXPECT_NEAR(device_y, expected_y, device_pixel_ratio);
-          EXPECT_EQ(pointer_data.component_name(), component_name);
-
-          injection_complete = true;
-        });
-  }
-
   // Routes needed to setup Chromium client.
   static std::vector<Route> GetWebEngineRoutes(ChildRef target) {
     return {
@@ -884,7 +797,7 @@ class WebEngineTestIp : public TouchInputBase<> {
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::accessibility::semantics::SemanticsManager::Name_},
                           Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ParentRef(),
+         .source = kTestUIStackRef,
          .targets = {target}},
         {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
          .source = ChildRef{kWebContextProvider},
@@ -957,10 +870,14 @@ class WebEngineTestIp : public TouchInputBase<> {
 };
 
 INSTANTIATE_TEST_SUITE_P(WebEngineTestIpParameterized, WebEngineTestIp,
-                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+                         testing::ValuesIn(AsTuples(UIStackConfigsToTest())));
 
 TEST_P(WebEngineTestIp, ChromiumTap) {
+  // Launch client view, and wait until it's rendering to proceed with the test.
+  FX_LOGS(INFO) << "Initializing scene";
+  LaunchClient();
+  FX_LOGS(INFO) << "Client launched";
+
   // Note well: unlike one-flutter and cpp-gfx-client, the web app may be rendering before
   // it is hittable. Nonetheless, waiting for rendering is better than injecting the touch
   // immediately. In the event that the app is not hittable, `TryInject()` will retry.
@@ -977,13 +894,12 @@ TEST_P(WebEngineTestIp, ChromiumTap) {
     }
   };
 
-  bool injection_complete = false;
-  SetResponseExpectationsWeb(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
-                             /*expected_y=*/static_cast<float>(display_width()) / 4.f,
-                             /*component_name=*/"one-chromium", injection_complete);
-
   TryInject();
-  RunLoopUntil([&injection_complete] { return injection_complete; });
+  RunLoopUntil([this] {
+    return LastEventReceivedMatches(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
+                                    /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                                    /*component_name=*/"one-chromium");
+  });
 }
 
 // Tests that rely on Embedding Flutter component. It provides convenience
@@ -1000,15 +916,14 @@ class EmbeddingFlutterTestIp {
   // Routes needed for Embedding Flutter to run.
   static std::vector<Route> GetEmbeddingFlutterRoutes() {
     return {
-        {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_},
-                          Protocol{test::touch::TestAppLauncher::Name_}},
+        {.capabilities = {Protocol{fuchsia::ui::app::ViewProvider::Name_}},
          .source = ChildRef{kEmbeddingFlutter},
          .targets = {ParentRef()}},
         {.capabilities = {Protocol{fuchsia::ui::test::input::TouchInputListener::Name_}},
          .source = ChildRef{kMockResponseListener},
          .targets = {ChildRef{kEmbeddingFlutter}}},
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-         .source = ParentRef(),
+         .source = ui_testing::PortableUITest::kTestUIStackRef,
          .targets = {ChildRef{kEmbeddingFlutter}}},
 
         // Needed for Flutter runner.
@@ -1045,35 +960,35 @@ class FlutterInFlutterTestIp : public FlutterInputTestIp, public EmbeddingFlutte
 };
 
 INSTANTIATE_TEST_SUITE_P(FlutterInFlutterTestIpParameterized, FlutterInFlutterTestIp,
-                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+                         testing::ValuesIn(AsTuples(UIStackConfigsToTest())));
 
 TEST_P(FlutterInFlutterTestIp, FlutterInFlutterTap) {
-  // Launch the embedded app.
-  LaunchEmbeddedClient("one-flutter");
+  // Launch client view, and wait until it's rendering to proceed with the test.
+  FX_LOGS(INFO) << "Initializing scene";
+  LaunchClientWithEmbeddedView();
+  FX_LOGS(INFO) << "Client launched";
 
   // Embedded app takes up the left half of the screen. Expect response from it when injecting to
   // the left.
   {
-    bool injection_complete = false;
-    SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
-                            /*expected_y=*/static_cast<float>(display_width()) / 4.f,
-                            /*component_name=*/"one-flutter", injection_complete);
-
     InjectInput(TapLocation::kTopLeft);
-    RunLoopUntil([&injection_complete] { return injection_complete; });
+    RunLoopUntil([this] {
+      return LastEventReceivedMatches(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
+                                      /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                                      /*component_name=*/"one-flutter");
+    });
   }
 
   // Parent app takes up the right half of the screen. Expect response from it when injecting to
   // the right.
   {
-    bool injection_complete = false;
-    SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) * (3.f / 4.f),
-                            /*expected_y=*/static_cast<float>(display_width()) / 4.f,
-                            /*component_name=*/"embedding-flutter", injection_complete);
-
     InjectInput(TapLocation::kTopRight);
-    RunLoopUntil([&injection_complete] { return injection_complete; });
+    RunLoopUntil([this] {
+      return LastEventReceivedMatches(
+          /*expected_x=*/static_cast<float>(display_height()) * (3.f / 4.f),
+          /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+          /*component_name=*/"embedding-flutter");
+    });
   }
 }
 
@@ -1103,35 +1018,35 @@ class WebInFlutterTestIp : public WebEngineTestIp, public EmbeddingFlutterTestIp
 };
 
 INSTANTIATE_TEST_SUITE_P(WebInFlutterTestIpParameterized, WebInFlutterTestIp,
-                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+                         testing::ValuesIn(AsTuples(UIStackConfigsToTest())));
 
 TEST_P(WebInFlutterTestIp, WebInFlutterTap) {
-  // Launch the embedded app.
-  LaunchEmbeddedClient("one-chromium");
+  // Launch client view, and wait until it's rendering to proceed with the test.
+  FX_LOGS(INFO) << "Initializing scene";
+  LaunchClientWithEmbeddedView();
+  FX_LOGS(INFO) << "Client launched";
 
   // Parent app takes up the right half of the screen. Expect response from it when injecting to
   // the right.
   {
-    bool injection_complete = false;
-    SetResponseExpectations(/*expected_x=*/static_cast<float>(display_height()) * (3.f / 4.f),
-                            /*expected_y=*/static_cast<float>(display_width()) / 4.f,
-                            /*component_name=*/"embedding-flutter", injection_complete);
-
     InjectInput(TapLocation::kTopRight);
-    RunLoopUntil([&injection_complete] { return injection_complete; });
+    RunLoopUntil([this] {
+      return LastEventReceivedMatches(
+          /*expected_x=*/static_cast<float>(display_height()) * (3.f / 4.f),
+          /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+          /*component_name=*/"embedding-flutter");
+    });
   }
 
   // Embedded app takes up the left half of the screen. Expect response from it when injecting to
   // the left.
   {
-    bool injection_complete = false;
-    SetResponseExpectationsWeb(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
-                               /*expected_y=*/static_cast<float>(display_width()) / 4.f,
-                               /*component_name=*/"one-chromium", injection_complete);
-
     TryInject();
-    RunLoopUntil([&injection_complete] { return injection_complete; });
+    RunLoopUntil([this] {
+      return LastEventReceivedMatches(/*expected_x=*/static_cast<float>(display_height()) / 4.f,
+                                      /*expected_y=*/static_cast<float>(display_width()) / 4.f,
+                                      /*component_name=*/"one-chromium");
+    });
   }
 }
 

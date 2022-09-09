@@ -6,18 +6,11 @@ import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/flutter/config.gni")
 
-fidl("test.touch") {
-  sdk_category = "internal"
-  sources = [ "test_app_launcher.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
-}
-
 executable("touch-input-test-ip-bin") {
   testonly = true
   sources = [ "touch-input-test-ip.cc" ]
   output_name = "touch-input-test-ip"
   deps = [
-    ":test.touch",
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.buildinfo",
     "//sdk/fidl/fuchsia.cobalt",
@@ -55,7 +48,7 @@ executable("touch-input-test-ip-bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/ui/input/testing/fake_input_report_device",
-    "//src/ui/testing/ui_test_manager",
+    "//src/ui/testing/util",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -79,6 +72,10 @@ fuchsia_test_package("touch-input-test-ip") {
     "//src/fonts:font_provider_cm",
     "//src/testing/fidl/intl_property_manager:intl_property_manager_component",
     "//src/ui/bin/text:text_manager_comp",
+
+    # Include some default config (it doesn't matter which, since we're going to override it).
+    "//src/ui/testing/test_ui_stack:flatland_scene_manager_config",
+    "//src/ui/testing/test_ui_stack:test-ui-stack-component",
     "//src/ui/tests/integration_input_tests/touch/embedding-flutter:realm",
     "//src/ui/tests/integration_input_tests/touch/one-chromium:component",
     "//src/ui/tests/integration_input_tests/touch/one-flutter:realm",
@@ -105,7 +102,6 @@ executable("pointerinjector-config-test-bin") {
   sources = [ "pointerinjector-config-test.cc" ]
   output_name = "pointerinjector-config-test"
   deps = [
-    ":test.touch",
     "//sdk/fidl/fuchsia.hardware.display",
     "//sdk/fidl/fuchsia.input.injection",
     "//sdk/fidl/fuchsia.ui.scenic",
