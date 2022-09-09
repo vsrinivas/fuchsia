@@ -5,18 +5,18 @@
 // TODO(armansito): Remove this once a server channel can be killed using a Controller
 #![allow(unreachable_code)]
 
-use {
-    anyhow::Error,
-    fidl::endpoints,
-    fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy, ConnectionOptions},
-    fuchsia_bluetooth::{
-        error::Error as BTError,
-        types::{le::RemoteDevice, Uuid},
-    },
-    futures::prelude::*,
-    parking_lot::RwLock,
-    std::{convert::TryFrom, process::exit, sync::Arc},
+use anyhow::{format_err, Error};
+use fidl::{endpoints, endpoints::Proxy};
+use fidl_fuchsia_bluetooth_le::{
+    CentralEvent, CentralProxy, ConnectionOptions, ScanResultWatcherProxy,
 };
+use fuchsia_bluetooth::{
+    error::Error as BTError,
+    types::{le::Peer, le::RemoteDevice, Uuid},
+};
+use futures::prelude::*;
+use parking_lot::RwLock;
+use std::{convert::TryFrom, process::exit, sync::Arc};
 
 use crate::gatt::repl::start_gatt_loop;
 
@@ -60,6 +60,39 @@ impl CentralState {
         // scanning should continue if connection will not be attempted and
         // there are remaining scan results
         !(self.connect || self.remaining_scan_results.iter().any(|&n| n == 0))
+    }
+}
+
+pub async fn watch_scan_results(
+    state: CentralStatePtr,
+    result_watcher: ScanResultWatcherProxy,
+) -> Result<(), Error> {
+    if result_watcher.is_closed() {
+        return Err(format_err!("ScanResultWatcherProxy closed"));
+    }
+
+    loop {
+        let fidl_peers: Vec<fidl_fuchsia_bluetooth_le::Peer> = result_watcher
+            .watch()
+            .await
+            .map_err(|e| BTError::new(&format!("ScanResultWatcherProxy error: {}", e)))?;
+
+        for fidl_peer in fidl_peers {
+            let peer = Peer::try_from(fidl_peer)?;
+            eprintln!(" {}", peer);
+
+            if state.write().decrement_scan_count() {
+                continue;
+            }
+
+            if state.read().connect && peer.connectable {
+                // connect_peripheral will log errors, so the result can be ignored.
+                // TODO(fxbug.dev/108816): Use Central.Connect instead of deprecated Central.ConnectPeripheral.
+                let _ = connect_peripheral(&state, peer.id.to_string(), None).await;
+            }
+
+            return Ok(());
+        }
     }
 }
 

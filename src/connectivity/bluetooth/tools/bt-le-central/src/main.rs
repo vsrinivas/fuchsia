@@ -2,28 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy, ScanFilter},
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::{
-        assigned_numbers::find_service_uuid, error::Error as BTError, types::Uuid,
-    },
-    futures::future::Either::{Left, Right},
-    futures::{future, prelude::*},
-    getopts::Options,
-};
+use anyhow::{format_err, Context as _, Error};
+use fidl::endpoints;
+use fidl_fuchsia_bluetooth_le::{CentralMarker, Filter, ScanOptions, ScanResultWatcherMarker};
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::{assigned_numbers, error::Error as BTError, types::Uuid};
+use futures::{try_join, TryFutureExt};
+use getopts::Options;
+use std::str::FromStr;
 
 use crate::central::{connect_peripheral, listen_central_events, CentralState, CentralStatePtr};
 
 mod central;
 mod gatt;
 
-fn do_scan(
-    appname: &String,
-    args: &[String],
-    central: &CentralProxy,
-) -> (Option<u64>, bool, impl Future<Output = Result<(), Error>>) {
+/// Returns a bool indicating whether help was requested on success, otherwise returns an error.
+async fn do_scan(appname: &String, args: &[String], state: CentralStatePtr) -> Result<bool, Error> {
     let mut opts = Options::new();
 
     let _ = opts.optflag("h", "help", "");
@@ -41,12 +35,7 @@ fn do_scan(
     let _ = opts.optopt("n", "name-filter", "filter by device name", "NAME");
     let _ = opts.optopt("u", "uuid-filter", "filter by UUID", "UUID");
 
-    let matches = match opts.parse(args) {
-        Ok(m) => m,
-        Err(fail) => {
-            return (None, false, Left(future::ready(Err(fail.into()))));
-        }
-    };
+    let matches = opts.parse(args)?;
 
     if matches.opt_present("h") {
         let brief = format!(
@@ -55,79 +44,75 @@ fn do_scan(
             appname
         );
         print!("{}", opts.usage(&brief));
-        return (None, false, Left(future::ready(Err(BTError::new("invalid input").into()))));
+        return Ok(/*help=*/ true);
     }
 
-    let remaining_scan_results: Option<u64> = match matches.opt_str("s") {
+    state.write().remaining_scan_results = match matches.opt_str("s") {
         Some(num) => match num.parse() {
             Err(_) | Ok(0) => {
-                println!(
+                return Err(format_err!(
                     "{} is not a valid input \
                      - the value must be a positive non-zero number",
                     num
-                );
-                return (
-                    None,
-                    false,
-                    Left(future::ready(Err(BTError::new("invalid input").into()))),
-                );
+                ));
             }
             Ok(num) => Some(num),
         },
         None => None,
     };
 
-    let connect: bool = matches.opt_present("c");
+    state.write().connect = matches.opt_present("c");
 
-    if remaining_scan_results.is_some() && connect {
-        println!("Cannot use both -s and -c options at the same time");
-        return (None, false, Left(future::ready(Err(BTError::new("invalid input").into()))));
+    if state.read().remaining_scan_results.is_some() && state.read().connect {
+        return Err(format_err!("Cannot use both -s and -c options at the same time"));
     }
 
-    let uuids = match matches.opt_str("u") {
+    let uuid: Option<fidl_fuchsia_bluetooth::Uuid> = match matches.opt_str("u") {
         None => None,
         Some(val) => {
-            let uuids = find_service_uuid(&val)
-                .map(|sn| sn.number.to_string())
-                .or_else(|| if val.len() == 36 { Some(val.clone()) } else { None })
-                .map(|uuid| vec![uuid]);
+            // Try to find the UUID as an assigned number (name, abbreviation, number), and fall back to
+            // constructing a Uuid from a full UUID string.
+            let uuid: Option<Uuid> = assigned_numbers::find_service_uuid(&val).map_or_else(
+                || Uuid::from_str(val.as_str()).ok(),
+                |sn| Some(Uuid::new16(sn.number)),
+            );
 
-            if uuids.is_none() {
-                println!("invalid service UUID: {}", val);
-                return (
-                    None,
-                    false,
-                    Left(future::ready(Err(BTError::new("invalid input").into()))),
-                );
+            if uuid.is_none() {
+                return Err(format_err!("invalid service UUID: {}", val));
             }
 
-            uuids
+            uuid.map(Into::into)
         }
     };
 
     let name = matches.opt_str("n");
 
-    let mut filter = if uuids.is_some() || name.is_some() {
-        Some(ScanFilter {
-            service_uuids: uuids,
-            service_data_uuids: None,
-            manufacturer_identifier: None,
-            connectable: None,
-            name_substring: name,
-            max_path_loss: None,
-        })
-    } else {
-        None
-    };
+    let mut filters = Vec::<Filter>::new();
+    if uuid.is_some() {
+        filters.push(Filter { service_uuid: uuid, ..Filter::EMPTY });
+    }
+    if name.is_some() {
+        filters.push(Filter { name: name, ..Filter::EMPTY });
+    }
+    if filters.is_empty() {
+        // At least 1 filter must be specified, so pass an empty filter to match everything.
+        filters.push(Filter::EMPTY);
+    }
+    let scan_options = ScanOptions { filters: Some(filters), ..ScanOptions::EMPTY };
 
-    let fut = Right(central.start_scan(filter.as_mut()).map_err(|e| e.into()).and_then(|status| {
-        future::ready(match status.error {
-            None => Ok(()),
-            Some(e) => Err(BTError::from(*e).into()),
-        })
-    }));
+    let (result_watcher_client, result_watcher_server) =
+        endpoints::create_proxy::<ScanResultWatcherMarker>()
+            .context("failed to create ScanResultWatcher endpoints")?;
 
-    (remaining_scan_results, connect, fut)
+    let scan_fut = state
+        .write()
+        .get_svc()
+        .scan(scan_options, result_watcher_server)
+        .map_err(|e| format_err!("scan error: {:?}", e));
+
+    let watch_fut = central::watch_scan_results(state, result_watcher_client);
+
+    try_join!(scan_fut, watch_fut).map(|_| /*help=*/false)
 }
 
 async fn do_connect<'a>(state: CentralStatePtr, args: &'a [String]) -> Result<(), Error> {
@@ -180,17 +165,11 @@ fn main() -> Result<(), Error> {
     let command = &args[1];
     let fut = async {
         match command.as_str() {
-            "scan" => {
-                let fut = {
-                    let mut central = state.write();
-                    let (remaining_scan_results, connect, fut) =
-                        do_scan(appname, &args[2..], central.get_svc());
-                    central.remaining_scan_results = remaining_scan_results;
-                    central.connect = connect;
-                    fut
-                };
-                fut.await?
-            }
+            "scan" => match do_scan(appname, &args[2..], state.clone()).await {
+                Ok(/*help=*/ false) => (),
+                Ok(/*help=*/ true) => return Ok(()),
+                Err(e) => return Err(e),
+            },
             "connect" => do_connect(state.clone(), &args[2..]).await?,
             _ => {
                 println!("Invalid command: {}", command);
