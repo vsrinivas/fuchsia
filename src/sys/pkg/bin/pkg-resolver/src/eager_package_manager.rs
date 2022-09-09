@@ -437,19 +437,13 @@ impl<T: Resolver> EagerPackageManager<T> {
         url: &fpkg::PackageUrl,
     ) -> Result<(String, String), CupGetInfoError> {
         let pkg_url = UnpinnedAbsolutePackageUrl::parse(&url.url)?;
-        let package =
-            self.packages.get(&pkg_url).ok_or_else(|| CupGetInfoError::UnknownURL(pkg_url))?;
+        let package = self
+            .packages
+            .get(&pkg_url)
+            .ok_or_else(|| CupGetInfoError::UnknownURL(pkg_url.clone()))?;
         let cup = package.cup.as_ref().ok_or(CupGetInfoError::CupDataNotAvailable)?;
         let response = parse_omaha_response_from_cup(&cup)?;
-        let app = response
-            .apps
-            .iter()
-            .find(|app| {
-                app.update_check
-                    .as_ref()
-                    .and_then(|uc| uc.get_all_full_urls().find(|u| u.starts_with(&url.url)))
-                    .is_some()
-            })
+        let (app, _) = find_app_with_matching_url(&response, &pkg_url)
             .ok_or(CupGetInfoError::CupResponseURLNotFound)?;
         let version = app.get_manifest_version().ok_or(CupGetInfoError::CupDataMissingVersion)?;
         let channel = app.cohort.name.clone().ok_or(CupGetInfoError::CupDataMissingChannel)?;
@@ -1491,6 +1485,22 @@ mod tests {
                 .await,
             Err(CupGetInfoError::UnknownURL(_))
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cup_get_info_url_different_hostname() {
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+        let mut manager = TestEagerPackageManagerBuilder::default().build().await;
+        let cup: CupData = make_cup_data(&get_cup_response(
+            "fuchsia-pkg://real.host.name/",
+            format!("package?hash={TEST_HASH}"),
+            "1.2.3.4",
+        ));
+        manager.packages.get_mut(&url).unwrap().cup = Some(cup);
+        let (version, channel) =
+            manager.cup_get_info(&fpkg::PackageUrl { url: TEST_URL.into() }).await.unwrap();
+        assert_eq!(version, "1.2.3.4");
+        assert_eq!(channel, "stable");
     }
 
     #[fasync::run_singlethreaded(test)]
