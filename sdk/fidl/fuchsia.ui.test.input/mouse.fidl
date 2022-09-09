@@ -1,0 +1,56 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.test.input;
+
+/// A hardcoded number of max mouse buttons. This should be increased in the future
+/// if we ever see mice with more buttons.
+const MOUSE_MAX_NUM_BUTTONS uint32 = 32;
+
+/// Identifies various buttons on a standard mouse.
+type MouseButton = flexible enum {
+    /// "Left" mouse button.
+    FIRST = 0;
+
+    /// "Right" mouse button.
+    SECOND = 1;
+
+    /// "Third" mouse button.
+    THIRD = 2;
+};
+
+/// A tool to inject mouse events into Input Pipeline.
+///
+/// Please extend as necessary.
+protocol Mouse {
+    /// Injects an input report corresponding to the event specified.
+    ///
+    /// NOTE: the `movement` parameters have a range of [-1000, 1000],
+    /// and the `scroll` parameters have a range of [-100, 100].
+    SimulateMouseEvent(table {
+        /// Set of buttons that are currently pressed.
+        /// Must NOT contain duplicates.
+        1: pressed_buttons vector<MouseButton>:MOUSE_MAX_NUM_BUTTONS;
+
+        /// Relative X positional displacement.
+        2: movement_x int64;
+
+        /// Relative Y positional displacement.
+        3: movement_y int64;
+
+        /// Relative vertical scrolling displacement by detent.
+        4: scroll_v_detent int64;
+
+        /// Relative horizontal scrolling displacement by detent.
+        5: scroll_h_detent int64;
+
+        /// Recommended vertical scrolling displacement by physical pixel, it is
+        /// computed with accelerator, detent / mm to pixel ratio, etc.
+        6: scroll_v_physical_pixel float64;
+
+        /// Recommended horizontal scrolling displacement by physical pixel, it
+        /// is computed with accelerator, detent / mm to pixel ratio, etc.
+        7: scroll_h_physical_pixel float64;
+    }) -> ();
+};

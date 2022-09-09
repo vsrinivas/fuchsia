@@ -885,6 +885,7 @@ fidl/fuchsia.ui.scenic/session.fidl
 fidl/fuchsia.ui.scenic/snapshot.fidl
 fidl/fuchsia.ui.test.input/media_buttons.fidl
 fidl/fuchsia.ui.test.input/meta.json
+fidl/fuchsia.ui.test.input/mouse.fidl
 fidl/fuchsia.ui.test.input/overview.fidl
 fidl/fuchsia.ui.test.input/registry.fidl
 fidl/fuchsia.ui.test.input/text.fidl

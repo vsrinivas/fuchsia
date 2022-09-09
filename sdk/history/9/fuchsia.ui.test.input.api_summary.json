@@ -36,6 +36,12 @@
         "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest"
     },
     {
+        "declaration": "uint32",
+        "kind": "const",
+        "name": "fuchsia.ui.test.input/MOUSE_MAX_NUM_BUTTONS",
+        "value": "32"
+    },
+    {
         "declaration": "(fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest payload) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/MediaButtonsDevice.SimulateButtonPress"
@@ -54,6 +60,75 @@
         "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest"
     },
     {
+        "declaration": "(fuchsia.ui.test.input/MouseSimulateMouseEventRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Mouse.SimulateMouseEvent"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/Mouse"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseButton.FIRST",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseButton.SECOND",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseButton.THIRD",
+        "value": "2"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "enum",
+        "name": "fuchsia.ui.test.input/MouseButton",
+        "strictness": "flexible"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_x"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_y"
+    },
+    {
+        "declaration": "vector<fuchsia.ui.test.input/MouseButton>:32",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.pressed_buttons"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_h_detent"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_h_physical_pixel"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_v_detent"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_v_physical_pixel"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest"
+    },
+    {
         "declaration": "(fuchsia.ui.test.input/RegistryRegisterKeyboardRequest payload) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/Registry.RegisterKeyboard"
@@ -62,6 +137,11 @@
         "declaration": "(fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest payload) -> ()",
         "kind": "protocol/member",
         "name": "fuchsia.ui.test.input/Registry.RegisterMediaButtonsDevice"
+    },
+    {
+        "declaration": "(fuchsia.ui.test.input/RegistryRegisterMouseRequest payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/Registry.RegisterMouse"
     },
     {
         "declaration": "(fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest payload) -> ()",
@@ -90,6 +170,16 @@
     {
         "kind": "table",
         "name": "fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest",
+        "resourceness": "resource"
+    },
+    {
+        "declaration": "server_end:fuchsia.ui.test.input/Mouse",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/RegistryRegisterMouseRequest.device"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/RegistryRegisterMouseRequest",
         "resourceness": "resource"
     },
     {

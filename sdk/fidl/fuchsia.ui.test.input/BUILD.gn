@@ -9,6 +9,7 @@ fidl("fuchsia.ui.test.input") {
 
   sources = [
     "media_buttons.fidl",
+    "mouse.fidl",
     "overview.fidl",
     "registry.fidl",
     "text.fidl",

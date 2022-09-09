@@ -49,4 +49,17 @@ protocol Registry {
     RegisterKeyboard(resource table {
         1: device server_end:Keyboard;
     }) -> ();
+
+    /// Enables the client to inject mouse events using the corresponding
+    /// client end to `device`.
+    ///
+    /// Clients are allowed at most one in-flight call at a time. Subsequent
+    /// calls must wait until the acknowledgment returns. Non-compliance
+    /// results in channel closure.
+    ///
+    /// The `fuchsia.ui.test.input.Mouse` channel will remain open even
+    /// if the `Registry` connection closes.
+    RegisterMouse(resource table {
+        1: device server_end:Mouse;
+    }) -> ();
 };

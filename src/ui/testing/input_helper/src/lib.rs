@@ -188,6 +188,9 @@ pub async fn handle_registry_request_stream(
 
                 responder.send().expect("Failed to respond to RegisterKeyboard request");
             }
+            Ok(RegistryRequest::RegisterMouse { .. }) => {
+                error!("mouse support not implemented");
+            }
             Err(e) => {
                 error!("could not receive registry request: {:?}", e);
             }
