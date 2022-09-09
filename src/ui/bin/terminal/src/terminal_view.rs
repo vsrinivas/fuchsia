@@ -24,7 +24,6 @@ use {
     fidl_fuchsia_hardware_pty::WindowSize,
     fuchsia_async as fasync, fuchsia_trace as ftrace,
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
-    log::error,
     pty::Pty,
     std::{
         any::Any, cell::RefCell, convert::TryFrom, ffi::CStr, ffi::CString, fs::File,
@@ -40,6 +39,7 @@ use {
         Term,
     },
     terminal::{cell_size_from_cell_height, get_scale_factor, FontSet},
+    tracing::error,
 };
 
 // Font files.
