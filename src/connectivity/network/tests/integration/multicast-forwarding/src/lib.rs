@@ -188,6 +188,8 @@ impl<'a> MulticastForwardingNetwork<'a> {
         version: IpVersion,
         sandbox: &'a netemul::TestSandbox,
         router_realm: &'a netemul::TestRealm<'a>,
+        servers: Vec<Server>,
+        clients: Vec<Client>,
         options: MulticastForwardingNetworkOptions,
     ) -> MulticastForwardingNetwork<'a> {
         let MulticastForwardingNetworkOptions {
@@ -197,7 +199,7 @@ impl<'a> MulticastForwardingNetwork<'a> {
             packet_ttl: _,
         } = options;
         let multicast_socket_addr = create_socket_addr(IpAddrType::Multicast.address(version));
-        let servers: HashMap<_, _> = futures::stream::iter([Server::A, Server::B])
+        let servers: HashMap<_, _> = futures::stream::iter(servers)
             .then(|server| async move {
                 let device = create_router_connected_device::<E>(
                     format!("{}_{}", name, server.name()),
@@ -210,7 +212,7 @@ impl<'a> MulticastForwardingNetwork<'a> {
             })
             .collect()
             .await;
-        let clients: HashMap<_, _> = futures::stream::iter([Client::A, Client::B])
+        let clients: HashMap<_, _> = futures::stream::iter(clients)
             .then(|client| async move {
                 let device = create_router_connected_device::<E>(
                     format!("{}_{}", name, client.name()),
@@ -403,11 +405,11 @@ impl<'a> MulticastForwardingNetwork<'a> {
             std::iter::repeat(WAIT_BEFORE_RETRY_DURATION).take(MAX_ATTEMPTS),
             || async {
                 self.send_multicast_packet().await;
-                futures::stream::iter([Client::A, Client::B])
+                futures::stream::iter(self.clients.values())
                     .map(Ok)
-                    .try_for_each(|client| async move {
+                    .try_for_each(|device| async move {
                         let mut buf = [0u8; 1024];
-                        let socket = &self.get_client(client).socket;
+                        let socket = &device.socket;
                         socket
                             .recv_from(&mut buf[..])
                             .map_ok(Err)
@@ -976,6 +978,7 @@ struct MulticastForwardingTestOptions {
         packet_ttl: 1,
         ..MulticastForwardingNetworkOptions::default()
     },
+    vec![Server::A],
     MulticastForwardingTestOptions::default();
     "ttl same as route min ttl"
 )]
@@ -996,6 +999,7 @@ struct MulticastForwardingTestOptions {
         source_device: SourceDevice::Router(Server::A),
         ..MulticastForwardingNetworkOptions::default()
     },
+    vec![Server::A],
     MulticastForwardingTestOptions {
         route_source_address: DeviceAddress::Router(Server::A),
         ..MulticastForwardingTestOptions::default()
@@ -1018,6 +1022,7 @@ struct MulticastForwardingTestOptions {
         packet_ttl: 2,
         ..MulticastForwardingNetworkOptions::default()
     },
+    vec![Server::A],
     MulticastForwardingTestOptions::default();
     "ttl greater than and less than route min ttl"
 )]
@@ -1033,6 +1038,7 @@ struct MulticastForwardingTestOptions {
         source_device: SourceDevice::Server(Server::A),
         ..MulticastForwardingNetworkOptions::default()
     },
+    vec![Server::A, Server::B],
     MulticastForwardingTestOptions {
         route_source_address: DeviceAddress::Server(Server::A),
         route_input_interface: Server::B,
@@ -1053,6 +1059,7 @@ struct MulticastForwardingTestOptions {
         enable_multicast_forwarding: false,
         ..MulticastForwardingNetworkOptions::default()
     },
+    vec![Server::A],
     MulticastForwardingTestOptions::default();
     "multicast forwarding disabled"
 )]
@@ -1068,6 +1075,7 @@ struct MulticastForwardingTestOptions {
         }
     },
     MulticastForwardingNetworkOptions::default(),
+    vec![Server::A],
     MulticastForwardingTestOptions {
         controller_action: ControllerAction::Drop,
         ..MulticastForwardingTestOptions::default()
@@ -1086,6 +1094,7 @@ struct MulticastForwardingTestOptions {
         listen_from_router: true,
         ..MulticastForwardingNetworkOptions::default()
     },
+    vec![Server::A],
     MulticastForwardingTestOptions::default();
     "forwarded and delivered locally"
 )]
@@ -1102,6 +1111,7 @@ struct MulticastForwardingTestOptions {
         listen_from_router: true,
         ..MulticastForwardingNetworkOptions::default()
     },
+    vec![Server::A],
     MulticastForwardingTestOptions::default();
     "only delivered locally"
 )]
@@ -1118,6 +1128,7 @@ struct MulticastForwardingTestOptions {
         listen_from_router: true,
         ..MulticastForwardingNetworkOptions::default()
     },
+    vec![Server::A, Server::B],
     MulticastForwardingTestOptions {
         route_source_address: DeviceAddress::Server(Server::B),
         controller_action: ControllerAction::ExpectMissingRouteEvent,
@@ -1130,6 +1141,7 @@ async fn multicast_forwarding<E: netemul::Endpoint, I: net_types::ip::Ip>(
     case_name: &str,
     clients: HashMap<Client, ClientConfig>,
     network_options: MulticastForwardingNetworkOptions,
+    servers: Vec<Server>,
     options: MulticastForwardingTestOptions,
 ) {
     let MulticastForwardingTestOptions {
@@ -1145,6 +1157,8 @@ async fn multicast_forwarding<E: netemul::Endpoint, I: net_types::ip::Ip>(
         I::VERSION,
         &sandbox,
         &router_realm,
+        servers,
+        clients.keys().cloned().collect(),
         network_options,
     )
     .await;
@@ -1273,6 +1287,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: true,
     },
     Ok(()),
+    vec![Server::A],
     AddMulticastRouteTestOptions::default();
     "success"
 )]
@@ -1286,6 +1301,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Ok(()),
+    vec![Server::A, Server::B],
     AddMulticastRouteTestOptions {
         input_interface: Some(RouterInterface::Server(Server::B)),
         ..AddMulticastRouteTestOptions::default()
@@ -1299,6 +1315,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::InterfaceNotFound),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         input_interface: Some(RouterInterface::Other(1000)),
         ..AddMulticastRouteTestOptions::default()
@@ -1312,6 +1329,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::InterfaceNotFound),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         action: Some(RouteAction::OutgoingInterface(RouterInterface::Other(1000))),
         ..AddMulticastRouteTestOptions::default()
@@ -1325,6 +1343,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::InputCannotBeOutput),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         input_interface: Some(RouterInterface::Server(Server::A)),
         action: Some(RouteAction::OutgoingInterface(RouterInterface::Server(Server::A))),
@@ -1339,6 +1358,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::RequiredRouteFieldsMissing),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         action: Some(RouteAction::EmptyOutgoingInterfaces),
         ..AddMulticastRouteTestOptions::default()
@@ -1352,6 +1372,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::RequiredRouteFieldsMissing),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         input_interface: None,
         ..AddMulticastRouteTestOptions::default()
@@ -1365,6 +1386,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::RequiredRouteFieldsMissing),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         action: None,
         ..AddMulticastRouteTestOptions::default()
@@ -1378,6 +1400,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::InvalidAddress),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         source_address: DeviceAddress::Other(IpAddrType::Multicast),
         ..AddMulticastRouteTestOptions::default()
@@ -1391,6 +1414,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::InvalidAddress),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         source_address: DeviceAddress::Other(IpAddrType::Any),
         ..AddMulticastRouteTestOptions::default()
@@ -1404,6 +1428,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::InvalidAddress),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         source_address: DeviceAddress::Other(IpAddrType::LinkLocalUnicast),
         ..AddMulticastRouteTestOptions::default()
@@ -1417,6 +1442,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::InvalidAddress),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         destination_address: IpAddrType::Unicast,
         ..AddMulticastRouteTestOptions::default()
@@ -1430,6 +1456,7 @@ struct AddMulticastRouteTestOptions {
         expect_forwarded_packet: false,
     },
     Err(AddRouteError::InvalidAddress),
+    vec![Server::A],
     AddMulticastRouteTestOptions {
         destination_address: IpAddrType::LinkLocalMulticast,
         ..AddMulticastRouteTestOptions::default()
@@ -1441,6 +1468,7 @@ async fn add_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     case_name: &str,
     client: ClientConfig,
     expected_add_route_result: Result<(), AddRouteError>,
+    servers: Vec<Server>,
     options: AddMulticastRouteTestOptions,
 ) {
     let AddMulticastRouteTestOptions {
@@ -1458,6 +1486,8 @@ async fn add_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
         I::VERSION,
         &sandbox,
         &router_realm,
+        servers,
+        vec![Client::A],
         MulticastForwardingNetworkOptions::default(),
     )
     .await;
@@ -1527,6 +1557,8 @@ async fn multiple_multicast_controllers<E: netemul::Endpoint, I: net_types::ip::
         I::VERSION,
         &sandbox,
         &router_realm,
+        vec![Server::A],
+        vec![Client::A],
         MulticastForwardingNetworkOptions::default(),
     )
     .await;
@@ -1558,6 +1590,8 @@ async fn watch_routing_events_hanging<E: netemul::Endpoint, I: net_types::ip::Ip
         I::VERSION,
         &sandbox,
         &router_realm,
+        vec![Server::A],
+        vec![Client::A],
         MulticastForwardingNetworkOptions::default(),
     )
     .await;
@@ -1600,6 +1634,8 @@ async fn watch_routing_events_already_hanging<E: netemul::Endpoint, I: net_types
         I::VERSION,
         &sandbox,
         &router_realm,
+        vec![Server::A],
+        vec![Client::A],
         MulticastForwardingNetworkOptions::default(),
     )
     .await;
@@ -1642,6 +1678,8 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
         I::VERSION,
         &sandbox,
         &router_realm,
+        vec![Server::A, Server::B],
+        vec![Client::A],
         MulticastForwardingNetworkOptions::default(),
     )
     .await;
@@ -1705,6 +1743,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
     "success",
     DeviceAddress::Server(Server::A),
     IpAddrType::Multicast,
+    vec![Server::A],
     Ok(());
     "success"
 )]
@@ -1712,6 +1751,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
     "no_matching_route_for_source_address",
     DeviceAddress::Server(Server::B),
     IpAddrType::Multicast,
+    vec![Server::A, Server::B],
     Err(DelRouteError::NotFound);
     "no matching route for source address"
 )]
@@ -1719,6 +1759,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
     "no_matching_route_for_destination_address",
     DeviceAddress::Server(Server::A),
     IpAddrType::OtherMulticast,
+    vec![Server::A],
     Err(DelRouteError::NotFound);
     "no matching route for destination address"
 )]
@@ -1726,6 +1767,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
     "multicast_source_address",
     DeviceAddress::Other(IpAddrType::Multicast),
     IpAddrType::Multicast,
+    vec![Server::A],
     Err(DelRouteError::InvalidAddress);
     "multicast source address"
 )]
@@ -1733,6 +1775,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
     "any_source_address",
     DeviceAddress::Other(IpAddrType::Any),
     IpAddrType::Multicast,
+    vec![Server::A],
     Err(DelRouteError::InvalidAddress);
     "any source address"
 )]
@@ -1740,6 +1783,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
     "link_local_unicast_source_address",
     DeviceAddress::Other(IpAddrType::LinkLocalUnicast),
     IpAddrType::Multicast,
+    vec![Server::A],
     Err(DelRouteError::InvalidAddress);
     "link local unicast source address"
 )]
@@ -1747,6 +1791,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
     "unicast_destination_address",
     DeviceAddress::Server(Server::A),
     IpAddrType::Unicast,
+    vec![Server::A],
     Err(DelRouteError::InvalidAddress);
     "unicast destination address"
 )]
@@ -1754,6 +1799,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types:
     "link_local_multicast_destination_address",
     DeviceAddress::Server(Server::A),
     IpAddrType::LinkLocalMulticast,
+    vec![Server::A],
     Err(DelRouteError::InvalidAddress);
     "link local multicast destination address"
 )]
@@ -1762,6 +1808,7 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     case_name: &str,
     source_address: DeviceAddress,
     destination_address: IpAddrType,
+    servers: Vec<Server>,
     expected_del_route_result: Result<(), DelRouteError>,
 ) {
     let test_name = format!("{}_{}", name, case_name);
@@ -1772,6 +1819,8 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
         I::VERSION,
         &sandbox,
         &router_realm,
+        servers,
+        vec![Client::A],
         MulticastForwardingNetworkOptions::default(),
     )
     .await;
@@ -1808,6 +1857,7 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     "no_matching_route_for_source_address",
     DeviceAddress::Server(Server::B),
     IpAddrType::Multicast,
+    vec![Server::A, Server::B],
     GetRouteStatsError::NotFound;
     "no matching route for source address"
 )]
@@ -1815,6 +1865,7 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     "no_matching_route_for_destination_address",
     DeviceAddress::Server(Server::A),
     IpAddrType::OtherMulticast,
+    vec![Server::A],
     GetRouteStatsError::NotFound;
     "no matching route for destination address"
 )]
@@ -1822,6 +1873,7 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     "multicast_source_address",
     DeviceAddress::Other(IpAddrType::Multicast),
     IpAddrType::Multicast,
+    vec![Server::A],
     GetRouteStatsError::InvalidAddress;
     "multicast source address"
 )]
@@ -1829,6 +1881,7 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     "any_source_address",
     DeviceAddress::Other(IpAddrType::Any),
     IpAddrType::Multicast,
+    vec![Server::A],
     GetRouteStatsError::InvalidAddress;
     "any source address"
 )]
@@ -1836,6 +1889,7 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     "link_local_unicast_source_address",
     DeviceAddress::Other(IpAddrType::LinkLocalUnicast),
     IpAddrType::Multicast,
+    vec![Server::A],
     GetRouteStatsError::InvalidAddress;
     "link local unicast source address"
 )]
@@ -1843,6 +1897,7 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     "unicast_destination_address",
     DeviceAddress::Server(Server::A),
     IpAddrType::Unicast,
+    vec![Server::A],
     GetRouteStatsError::InvalidAddress;
     "unicast destination address"
 )]
@@ -1850,6 +1905,7 @@ async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     "link_local_multicast_destination_address",
     DeviceAddress::Server(Server::A),
     IpAddrType::LinkLocalMulticast,
+    vec![Server::A],
     GetRouteStatsError::InvalidAddress;
     "link local multicast destination address"
 )]
@@ -1858,6 +1914,7 @@ async fn get_route_stats_errors<E: netemul::Endpoint, I: net_types::ip::Ip>(
     case_name: &str,
     source_address: DeviceAddress,
     destination_address: IpAddrType,
+    servers: Vec<Server>,
     expected_error: GetRouteStatsError,
 ) {
     let test_name = format!("{}_{}", name, case_name);
@@ -1868,6 +1925,8 @@ async fn get_route_stats_errors<E: netemul::Endpoint, I: net_types::ip::Ip>(
         I::VERSION,
         &sandbox,
         &router_realm,
+        servers,
+        vec![Client::A],
         MulticastForwardingNetworkOptions::default(),
     )
     .await;
@@ -1892,6 +1951,8 @@ async fn get_route_stats<E: netemul::Endpoint, I: net_types::ip::Ip>(name: &str)
         I::VERSION,
         &sandbox,
         &router_realm,
+        vec![Server::A],
+        vec![Client::A],
         MulticastForwardingNetworkOptions::default(),
     )
     .await;
