@@ -242,6 +242,8 @@ template("scrutiny_verifiers") {
       }
       verifiers +=
           [ ":${invoker.assembly_image_name}_verify_capability_routes" ]
+    } else {
+      not_needed(invoker, [ "verify_routes_component_tree_config" ])
     }
 
     if (invoker.static_pkgs_goldens != []) {

@@ -155,8 +155,12 @@ declare_args() {
   # attempting to use capabilities they were not offered in the recovery
   # system. Generally new entries should not be added to this allowlist and acts
   # as a marker for future technical debt to clean up.
-  recovery_verify_routes_exceptions_allowlist =
-      "//src/security/policy/build/verify_routes_exceptions_allowlist.json5"
+  #
+  # The path to this list defaults to "" because most build configurations do
+  # perform recovery build verification. The canonical allowlist for build
+  # configurations that do perform recovery build verification is
+  # "//src/security/policy/build/verify_routes_exceptions_allowlist.json5".
+  recovery_verify_routes_exceptions_allowlist = ""
 
   # Same as fuchsia_verify_routes_exceptions_allowlist, except this allowlist
   # gets added in bootfs_only builds.
@@ -164,7 +168,12 @@ declare_args() {
 
   # Same as recovery_verify_routes_exceptions_allowlist, except this allowlist
   # gets added in bootfs_only builds.
-  recovery_verify_routes_exceptions_allowlist_bootfs = "//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"
+  #
+  # The path to this list defaults to "" because most build configurations do
+  # perform recovery build verification. The canonical allowlist for build
+  # configurations that do perform recovery build verification is
+  # "//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5".
+  recovery_verify_routes_exceptions_allowlist_bootfs = ""
 
   # Same as fuchsia_verify_routes_exceptions_allowlist, except these allowlists
   # get added according to product-specific configuration.
