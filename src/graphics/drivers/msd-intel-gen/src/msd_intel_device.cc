@@ -93,6 +93,11 @@ class MsdIntelDevice::TimestampRequest : public DeviceRequest {
   std::shared_ptr<magma::PlatformBuffer> buffer_;
 };
 
+class MsdIntelDevice::Topology : public magma_intel_gen_topology {
+ public:
+  std::vector<uint8_t> mask_data;
+};
+
 //////////////////////////////////////////////////////////////////////////////////////////////////
 
 std::unique_ptr<MsdIntelDevice> MsdIntelDevice::Create(void* device_handle,
@@ -113,6 +118,10 @@ std::unique_ptr<MsdIntelDevice> MsdIntelDevice::Create(void* device_handle,
 MsdIntelDevice::MsdIntelDevice() { magic_ = kMagic; }
 
 MsdIntelDevice::~MsdIntelDevice() { Destroy(); }
+
+std::pair<magma_intel_gen_topology*, uint8_t*> MsdIntelDevice::GetTopology() {
+  return {topology_.get(), topology_->mask_data.data()};
+}
 
 void MsdIntelDevice::Destroy() {
   DLOG("Destroy");
@@ -201,7 +210,13 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
       .set_valid(0)
       .WriteTo(register_io_.get());
 
-  QuerySliceInfo(&subslice_total_, &eu_total_);
+  topology_ = std::make_unique<Topology>();
+
+  if (DeviceId::is_gen12(device_id())) {
+    QuerySliceInfoGen12(&subslice_total_, &eu_total_, topology_.get());
+  } else {
+    QuerySliceInfoGen9(&subslice_total_, &eu_total_, topology_.get());
+  }
 
   interrupt_manager_ = InterruptManager::CreateShim(this);
   if (!interrupt_manager_)
@@ -890,7 +905,68 @@ uint32_t MsdIntelDevice::GetCurrentFrequency() {
   return 0;
 }
 
-void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out) {
+void MsdIntelDevice::QuerySliceInfoGen12(uint32_t* subslice_total_out, uint32_t* eu_total_out,
+                                         Topology* topology_out) {
+  // EU mask is shared amongst all subslices
+  std::bitset<registers::MirrorEuDisableGen12::kEuDisableBits> eu_disable_bits =
+      registers::MirrorEuDisableGen12::read(register_io());
+
+  // Expand each disable bit into two enable bits.
+  static_assert(registers::MirrorEuDisableGen12::kEuDisableBits * 2 <= 16);
+  uint16_t eu_enable_mask = 0;
+  {
+    std::bitset<registers::MirrorEuDisableGen12::kEuDisableBits> eu_enable_bits(
+        ~eu_disable_bits.to_ulong());
+
+    for (size_t i = 0; i < eu_enable_bits.size(); i++) {
+      uint8_t enable_bit = eu_enable_bits[i];
+      eu_enable_mask |= (enable_bit << (i * 2)) | (enable_bit << (i * 2 + 1));
+    }
+  }
+
+  topology_out->max_slice_count = 1;
+  topology_out->max_subslice_count = registers::MirrorDssEnable::kDssPerSlice;
+  topology_out->max_eu_count = registers::MirrorEuDisableGen12::kEusPerSubslice;
+
+  {
+    // Assume that the single slice is enabled.
+    constexpr uint8_t kSliceMask = 1 << 0;
+    topology_out->mask_data.push_back(kSliceMask);
+  }
+
+  std::vector<std::bitset<registers::MirrorDssEnable::kDssPerSlice>> dss_enable_masks =
+      registers::MirrorDssEnable::read(register_io());
+
+  uint32_t subslice_total = 0;
+
+  {
+    auto& dss_enable_mask = dss_enable_masks[0];  // subslice mask for the one enabled slice
+    subslice_total += dss_enable_mask.count();
+
+    DASSERT(dss_enable_mask.to_ulong() <= std::numeric_limits<uint8_t>::max());
+    topology_out->mask_data.push_back(static_cast<uint8_t>(dss_enable_mask.to_ulong()));
+
+    for (size_t i = 0; i < dss_enable_mask.count(); i++) {
+      topology_out->mask_data.push_back(eu_enable_mask & 0xFF);
+      topology_out->mask_data.push_back(eu_enable_mask >> 8);
+    }
+  }
+
+  topology_out->data_byte_count = magma::to_uint32(topology_out->mask_data.size());
+
+  if (subslice_total_out) {
+    *subslice_total_out = subslice_total;
+  }
+  if (eu_total_out) {
+    uint32_t eus_per_subslice = registers::MirrorEuDisableGen12::kEusPerSubslice -
+                                2u * static_cast<uint32_t>(eu_disable_bits.count());
+
+    *eu_total_out = subslice_total * eus_per_subslice;
+  }
+}
+
+void MsdIntelDevice::QuerySliceInfoGen9(uint32_t* subslice_total_out, uint32_t* eu_total_out,
+                                        Topology* topology_out) {
   uint32_t slice_enable_mask;
   uint32_t subslice_enable_mask;
 
@@ -905,9 +981,19 @@ void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_t
   *subslice_total_out = magma::to_uint32(slice_bitset.count() * subslice_bitset.count());
   *eu_total_out = 0;
 
+  topology_out->max_slice_count = registers::MirrorEuDisable::kMaxSliceCount;
+  topology_out->max_subslice_count = registers::MirrorEuDisable::kMaxSubsliceCount;
+  topology_out->max_eu_count = registers::MirrorEuDisable::kEuPerSubslice;
+
+  DASSERT(slice_enable_mask <= std::numeric_limits<uint8_t>::max());
+  topology_out->mask_data.push_back(static_cast<uint8_t>(slice_enable_mask));
+
   for (uint8_t slice = 0; slice < registers::MirrorEuDisable::kMaxSliceCount; slice++) {
     if ((slice_enable_mask & (1 << slice)) == 0)
       continue;  // skip disabled slice
+
+    DASSERT(subslice_enable_mask <= std::numeric_limits<uint8_t>::max());
+    topology_out->mask_data.push_back(static_cast<uint8_t>(subslice_enable_mask));
 
     std::vector<uint32_t> eu_disable_mask;
     registers::MirrorEuDisable::read(register_io_.get(), slice, eu_disable_mask);
@@ -918,12 +1004,18 @@ void MsdIntelDevice::QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_t
 
       DLOG("subslice %u eu_disable_mask 0x%x", subslice, eu_disable_mask[subslice]);
 
+      DASSERT(eu_disable_mask[subslice] <= std::numeric_limits<uint8_t>::max());
+      uint8_t eu_enable_mask = ~static_cast<uint8_t>(eu_disable_mask[subslice]);
+      topology_out->mask_data.push_back(eu_enable_mask);
+
       size_t eu_disable_count =
           std::bitset<registers::MirrorEuDisable::kEuPerSubslice>(eu_disable_mask[subslice])
               .count();
       *eu_total_out += registers::MirrorEuDisable::kEuPerSubslice - eu_disable_count;
     }
   }
+
+  topology_out->data_byte_count = magma::to_uint32(topology_out->mask_data.size());
 }
 
 magma::Status MsdIntelDevice::QueryTimestamp(std::unique_ptr<magma::PlatformBuffer> buffer) {
@@ -1018,6 +1110,34 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
         return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to dupe timestamp buffer");
 
       return MsdIntelDevice::cast(device)->QueryTimestamp(std::move(buffer)).get();
+    }
+
+    case kMagmaIntelGenQueryTopology: {
+      auto [topology, mask_data] = MsdIntelDevice::cast(device)->GetTopology();
+      if (!topology)
+        return DRET_MSG(MAGMA_STATUS_UNIMPLEMENTED, "topology not present");
+
+      size_t size = sizeof(magma_intel_gen_topology) + topology->data_byte_count;
+      auto buffer = magma::PlatformBuffer::Create(size, "topology");
+      if (!buffer)
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to create topology buffer");
+
+      {
+        void* ptr;
+        if (!buffer->MapCpu(&ptr))
+          return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to map topology buffer");
+
+        memcpy(ptr, topology, sizeof(magma_intel_gen_topology));
+        memcpy(reinterpret_cast<uint8_t*>(ptr) + sizeof(magma_intel_gen_topology), mask_data,
+               topology->data_byte_count);
+
+        buffer->UnmapCpu();
+      }
+
+      if (!buffer->duplicate_handle(result_buffer_out))
+        return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "failed to dupe topology buffer");
+
+      return MAGMA_STATUS_OK;
     }
 
     default:

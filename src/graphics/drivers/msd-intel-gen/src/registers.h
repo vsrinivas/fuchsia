@@ -5,6 +5,7 @@
 #ifndef REGISTERS_H
 #define REGISTERS_H
 
+#include <bitset>
 #include <vector>
 
 #include "device_id.h"
@@ -754,6 +755,50 @@ class MirrorEuDisable {
       eu_disable_mask_out.push_back(val & kSubsliceMask);
       val >>= kEuPerSubslice;
     }
+  }
+};
+
+// MIRROR_EU_DISABLE0
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part2-rev2_1.pdf
+// p.81
+class MirrorEuDisableGen12 {
+ public:
+  static constexpr uint32_t kOffset = 0x9134;
+
+  static constexpr uint32_t kEusPerSubslice = 16;
+  static constexpr uint32_t kEuDisableBits = kEusPerSubslice / 2;
+  static constexpr uint32_t kEuDisableBitMask = (1 << kEuDisableBits) - 1;
+
+  // EU disable bits are the same for every subslice.
+  static std::bitset<kEuDisableBits> read(magma::RegisterIo* register_io) {
+    uint32_t val = register_io->Read32(kOffset);
+
+    return std::bitset<kEuDisableBits>(val & kEuDisableBitMask);
+  }
+};
+
+// GEN12_GT_GEOMETRY_DSS_ENABLE
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-tgl-vol02c-commandreference-registers-part2-rev2_1.pdf
+// p.97
+class MirrorDssEnable {
+ public:
+  static constexpr uint32_t kOffset = 0x913C;
+
+  static constexpr uint32_t kDssPerSlice = 6;
+  static constexpr uint32_t kDssEnableMask = (1 << kDssPerSlice) - 1;
+  static constexpr uint32_t kMaxSlice = 32 / kDssPerSlice;
+
+  // Reads the dual-subslice enable masks.
+  static std::vector<std::bitset<kDssPerSlice>> read(magma::RegisterIo* register_io) {
+    uint32_t val = register_io->Read32(kOffset);
+
+    std::vector<std::bitset<kDssPerSlice>> dss_enable_masks;
+
+    for (uint32_t i = 0; i < kMaxSlice; i++) {
+      dss_enable_masks.push_back((val >> (i * kDssPerSlice)) & kDssEnableMask);
+    }
+
+    return dss_enable_masks;
   }
 };
 

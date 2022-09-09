@@ -393,20 +393,54 @@ class TestMsdIntelDevice : public testing::Test {
 
   void QuerySliceInfo() {
     magma::PlatformPciDevice* platform_device = TestPlatformPciDevice::GetInstance();
-    ASSERT_NE(platform_device, nullptr);
+    ASSERT_TRUE(platform_device);
 
     std::unique_ptr<MsdIntelDevice> device =
         MsdIntelDevice::Create(platform_device->GetDeviceHandle(), kEnableDeviceThread);
-    EXPECT_NE(device, nullptr);
+    ASSERT_TRUE(device);
 
-    uint32_t subslice_total = 0, eu_total = 0;
-    device->QuerySliceInfo(&subslice_total, &eu_total);
+    if (DeviceId::is_gen12(device->device_id())) {
+      EXPECT_EQ(5u, device->subslice_total());  // NUC11BNH
+      EXPECT_EQ(80u, device->eu_total());
 
-    EXPECT_EQ(3u, subslice_total);
-    // Expected values for eu_total are either 24 (for the Acer Switch
-    // Alpha 12) or 23 (for the Intel NUC).
-    if (eu_total != 24u)
-      EXPECT_EQ(23u, eu_total);
+      auto [topology, mask_data] = device->GetTopology();
+      ASSERT_TRUE(topology);
+
+      EXPECT_EQ(topology->max_slice_count, 1u);
+      EXPECT_EQ(topology->max_subslice_count, 6u);
+      EXPECT_EQ(topology->max_eu_count, 16u);
+      EXPECT_EQ(topology->data_byte_count, 1u + 1u + 5u * 2);
+
+      EXPECT_EQ(mask_data[0], 1);     // slice enable mask
+      EXPECT_EQ(mask_data[1], 0x1F);  // subslice enable mask
+
+      for (int i = 0; i < 5; i++) {
+        uint16_t eu_enable_mask;
+        memcpy(&eu_enable_mask, &mask_data[2 + i * 2], sizeof(uint16_t));
+        EXPECT_EQ(eu_enable_mask, 0xFFFF) << "index " << i;
+      }
+
+    } else {
+      EXPECT_EQ(3u, device->subslice_total());
+      if (device->eu_total() != 24)
+        EXPECT_EQ(23u, device->eu_total());
+
+      auto [topology, mask_data] = device->GetTopology();
+      ASSERT_TRUE(topology);
+
+      EXPECT_EQ(topology->max_slice_count, 3u);
+      EXPECT_EQ(topology->max_subslice_count, 4u);
+      EXPECT_EQ(topology->max_eu_count, 8u);
+      EXPECT_EQ(topology->data_byte_count, 1u + 1u + 3u);
+
+      EXPECT_EQ(mask_data[0], 0x1);  // slice enable mask
+      EXPECT_EQ(mask_data[1], 0x7);  // subslice enable mask
+
+      EXPECT_EQ(mask_data[2], 0xFF);  // subslice 0 EU mask
+      if (mask_data[3] != 0xFF)
+        EXPECT_EQ(mask_data[3], 0xFD);  // subslice 1 EU mask
+      EXPECT_EQ(mask_data[4], 0xFF);    // subslice 2 EU mask
+    }
   }
 
   void QueryTimestamp() {

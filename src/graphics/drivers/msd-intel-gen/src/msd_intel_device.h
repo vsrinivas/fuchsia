@@ -26,6 +26,8 @@
 #include "sequencer.h"
 #include "video_command_streamer.h"
 
+struct magma_intel_gen_topology;
+
 class MsdIntelDevice : public msd_device_t,
                        public EngineCommandStreamer::Owner,
                        public Gtt::Owner,
@@ -33,6 +35,14 @@ class MsdIntelDevice : public msd_device_t,
                        public MsdIntelConnection::Owner {
  public:
   using DeviceRequest = DeviceRequest<MsdIntelDevice>;
+
+  class BatchRequest;
+  class DestroyContextRequest;
+  class ReleaseBufferRequest;
+  class InterruptRequest;
+  class DumpRequest;
+  class TimestampRequest;
+  class Topology;
 
   // Creates a device for the given |device_handle| and returns ownership.
   // If |start_device_thread| is false, then StartDeviceThread should be called
@@ -49,6 +59,7 @@ class MsdIntelDevice : public msd_device_t,
   uint32_t revision() { return revision_; }
   uint32_t subslice_total() { return subslice_total_; }
   uint32_t eu_total() { return eu_total_; }
+  std::pair<magma_intel_gen_topology*, uint8_t*> GetTopology();
 
   static MsdIntelDevice* cast(msd_device_t* dev) {
     DASSERT(dev);
@@ -173,7 +184,10 @@ class MsdIntelDevice : public msd_device_t,
   int DeviceThreadLoop();
   static void InterruptCallback(void* data, uint32_t master_interrupt_control, uint64_t timestamp);
 
-  void QuerySliceInfo(uint32_t* subslice_total_out, uint32_t* eu_total_out);
+  void QuerySliceInfoGen9(uint32_t* subslice_total_out, uint32_t* eu_total_out,
+                          Topology* topology_out);
+  void QuerySliceInfoGen12(uint32_t* subslice_total_out, uint32_t* eu_total_out,
+                           Topology* topology_out);
 
   std::shared_ptr<MsdIntelContext> global_context() { return global_context_; }
 
@@ -191,6 +205,7 @@ class MsdIntelDevice : public msd_device_t,
   uint32_t revision_{};
   uint32_t subslice_total_{};
   uint32_t eu_total_{};
+  std::unique_ptr<Topology> topology_;
 
   std::thread device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;
@@ -211,13 +226,6 @@ class MsdIntelDevice : public msd_device_t,
   std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
   std::unique_ptr<InterruptManager> interrupt_manager_;
   std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
-
-  class BatchRequest;
-  class DestroyContextRequest;
-  class ReleaseBufferRequest;
-  class InterruptRequest;
-  class DumpRequest;
-  class TimestampRequest;
 
   // Thread-shared data members
   std::unique_ptr<magma::PlatformSemaphore> device_request_semaphore_;
