@@ -8,8 +8,8 @@
 #define ZIRCON_KERNEL_INCLUDE_LIB_KTRACE_H_
 
 #include <lib/fxt/serializer.h>
-#include <lib/ktrace/ktrace_internal.h>
 #include <lib/ktrace/string_ref.h>
+#include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <platform.h>
 #include <zircon/compiler.h>
@@ -17,8 +17,22 @@
 
 #include <ktl/atomic.h>
 
-// Declaration of the global singleton KTraceState
-extern internal::KTraceState KTRACE_STATE;
+namespace ktrace_thunks {
+
+template <typename... Args>
+void write_record(uint32_t effective_tag, uint64_t explicit_ts, Args... args);
+void write_record_tiny(uint32_t tag, uint32_t arg);
+void write_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always);
+ssize_t read_user(user_out_ptr<void> ptr, uint32_t off, size_t len);
+
+template <fxt::RefType name_type, fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
+void fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid, zx_obj_type_t obj_type,
+                       const fxt::StringRef<name_type>& name_arg,
+                       const fxt::Argument<arg_types, ref_types>&... args);
+
+void fxt_string_record(uint16_t index, const char* string, size_t string_length);
+
+}  // namespace ktrace_thunks
 
 // Specifies whether the trace applies to the current thread or cpu.
 enum class TraceContext {
@@ -61,15 +75,8 @@ inline constexpr uint64_t kRecordCurrentTimestamp = 0xffffffff'ffffffff;
 #define KTRACE_STRING_REF_CAT(a, b) a##b
 #define KTRACE_STRING_REF(string) KTRACE_STRING_REF_CAT(string, _stringref)
 
-// Determine if ktrace is enabled for the given tag.
-inline bool ktrace_enabled(uint32_t tag) { return KTRACE_STATE.tag_enabled(tag); }
-
 // Emits a tiny trace record.
-inline void ktrace_tiny(uint32_t tag, uint32_t arg) {
-  if (unlikely(ktrace_enabled(tag))) {
-    KTRACE_STATE.WriteRecordTiny(tag, arg);
-  }
-}
+inline void ktrace_tiny(uint32_t tag, uint32_t arg) { ktrace_thunks::write_record_tiny(tag, arg); }
 
 // Emits a new trace record in the given context. Compiles to no-op if |enabled|
 // is false.
@@ -80,11 +87,10 @@ inline void ktrace(TraceEnabled<enabled>, TraceContext context, uint32_t tag, ui
   if constexpr (!enabled) {
     return;
   }
+
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, explicit_ts, a, b, c, d);
-  }
+  ktrace_thunks::write_record(effective_tag, explicit_ts, a, b, c, d);
 }
 
 // Backwards-compatible API for existing users of unconditional thread-context
@@ -111,9 +117,7 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef*
   const uint32_t tag = TAG_PROBE_16(string_ref->GetId());
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp);
 }
 
 template <bool enabled>
@@ -125,9 +129,7 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef*
   const uint32_t tag = TAG_PROBE_24(string_ref->GetId());
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a, b);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp, a, b);
 }
 
 template <bool enabled>
@@ -139,9 +141,7 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef*
   const uint32_t tag = TAG_PROBE_24(string_ref->GetId());
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp, a);
 }
 
 template <bool enabled>
@@ -153,9 +153,7 @@ inline void ktrace_probe(TraceEnabled<enabled>, TraceContext context, StringRef*
   const uint32_t tag = TAG_PROBE_32(string_ref->GetId());
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a, b);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp, a, b);
 }
 
 template <bool enabled>
@@ -167,9 +165,7 @@ inline void ktrace_begin_duration(TraceEnabled<enabled>, TraceContext context, u
   const uint32_t tag = TAG_BEGIN_DURATION_16(string_ref->GetId(), group);
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp);
 }
 
 template <bool enabled>
@@ -182,9 +178,7 @@ inline void ktrace_end_duration(TraceEnabled<enabled>, TraceContext context, uin
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
 
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp);
 }
 
 template <bool enabled>
@@ -196,9 +190,7 @@ inline void ktrace_begin_duration(TraceEnabled<enabled>, TraceContext context, u
   const uint32_t tag = TAG_BEGIN_DURATION_32(string_ref->GetId(), group);
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a, b);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp, a, b);
 }
 
 template <bool enabled>
@@ -210,9 +202,7 @@ inline void ktrace_end_duration(TraceEnabled<enabled>, TraceContext context, uin
   const uint32_t tag = TAG_END_DURATION_32(string_ref->GetId(), group);
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, a, b);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp, a, b);
 }
 
 template <bool enabled>
@@ -224,9 +214,7 @@ inline void ktrace_flow_begin(TraceEnabled<enabled>, TraceContext context, uint3
   const uint32_t tag = TAG_FLOW_BEGIN(string_ref->GetId(), group);
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, flow_id, a);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp, flow_id, a);
 }
 
 template <bool enabled>
@@ -238,9 +226,7 @@ inline void ktrace_flow_end(TraceEnabled<enabled>, TraceContext context, uint32_
   const uint32_t tag = TAG_FLOW_END(string_ref->GetId(), group);
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, flow_id, a);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp, flow_id, a);
 }
 
 template <bool enabled>
@@ -252,9 +238,7 @@ inline void ktrace_flow_step(TraceEnabled<enabled>, TraceContext context, uint32
   const uint32_t tag = TAG_FLOW_STEP(string_ref->GetId(), group);
   const uint32_t effective_tag =
       KTRACE_TAG_FLAGS(tag, context == TraceContext::Thread ? 0 : KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(effective_tag))) {
-    KTRACE_STATE.WriteRecord(effective_tag, kRecordCurrentTimestamp, flow_id, a);
-  }
+  ktrace_thunks::write_record(effective_tag, kRecordCurrentTimestamp, flow_id, a);
 }
 
 template <bool enabled>
@@ -264,15 +248,13 @@ inline void ktrace_counter(TraceEnabled<enabled>, uint32_t group, StringRef* str
     return;
   }
   const uint32_t tag = KTRACE_TAG_FLAGS(TAG_COUNTER(string_ref->GetId(), group), KTRACE_FLAGS_CPU);
-  if (unlikely(ktrace_enabled(tag))) {
-    KTRACE_STATE.WriteRecord(tag, kRecordCurrentTimestamp, counter_id,
-                             static_cast<uint64_t>(value));
-  }
+  ktrace_thunks::write_record(tag, kRecordCurrentTimestamp, counter_id,
+                              static_cast<uint64_t>(value));
 }
 
 inline void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name,
                             bool always) {
-  KTRACE_STATE.WriteNameEtc(tag, id, arg, name, always);
+  ktrace_thunks::write_name_etc(tag, id, arg, name, always);
 }
 
 inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* name,
@@ -281,24 +263,18 @@ inline void ktrace_name(uint32_t tag, uint32_t id, uint32_t arg, const char* nam
 }
 
 inline ssize_t ktrace_read_user(user_out_ptr<void> ptr, uint32_t off, size_t len) {
-  return KTRACE_STATE.ReadUser(ptr, off, len);
+  return ktrace_thunks::read_user(ptr, off, len);
 }
 
 template <fxt::RefType name_type, fxt::ArgumentType... arg_types, fxt::RefType... ref_types>
-inline zx_status_t fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid,
-                                     zx_obj_type_t obj_type,
-                                     const fxt::StringRef<name_type>& name_arg,
-                                     const fxt::Argument<arg_types, ref_types>&... args) {
-  if (always || unlikely(ktrace_enabled(tag))) {
-    auto writer = KTRACE_STATE.make_fxt_writer(tag);
-    return fxt::WriteKernelObjectRecord(&writer, koid, obj_type, name_arg, args...);
-  }
-  return ZX_OK;
+inline void fxt_kernel_object(uint32_t tag, bool always, zx_koid_t koid, zx_obj_type_t obj_type,
+                              const fxt::StringRef<name_type>& name_arg,
+                              const fxt::Argument<arg_types, ref_types>&... args) {
+  ktrace_thunks::fxt_kernel_object(tag, always, koid, obj_type, name_arg, args...);
 }
 
-inline zx_status_t fxt_string_record(uint16_t index, const char* string, size_t string_length) {
-  auto writer = KTRACE_STATE.make_fxt_writer(TAG_PROBE_NAME);
-  return fxt::WriteStringRecord(&writer, index, string, string_length);
+inline void fxt_string_record(uint16_t index, const char* string, size_t string_length) {
+  ktrace_thunks::fxt_string_record(index, string, string_length);
 }
 
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr);

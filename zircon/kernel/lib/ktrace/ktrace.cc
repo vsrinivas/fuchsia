@@ -8,6 +8,7 @@
 #include <lib/boot-options/boot-options.h>
 #include <lib/fxt/fields.h>
 #include <lib/ktrace.h>
+#include <lib/ktrace/ktrace_internal.h>
 #include <lib/ktrace/string_ref.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
 #include <lib/zircon-internal/thread_annotations.h>
