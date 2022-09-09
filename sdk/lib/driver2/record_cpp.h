@@ -28,15 +28,13 @@ template <typename T>
 zx_status_t Start(EncodedDriverStartArgs encoded_start_args, fdf_dispatcher_t* dispatcher,
                   void** driver) {
   // Decode the incoming `msg`.
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
   auto wire_format_metadata =
       fidl::WireFormatMetadata::FromOpaque(encoded_start_args.wire_format_metadata);
-  fidl::unstable::DecodedMessage<fuchsia_driver_framework::wire::DriverStartArgs> decoded(
-      wire_format_metadata.wire_format_version(), encoded_start_args.msg);
-  if (!decoded.ok()) {
-    return decoded.status();
+  fitx::result start_args = fidl::InplaceDecode<fuchsia_driver_framework::wire::DriverStartArgs>(
+      fidl::EncodedMessage::FromEncodedCMessage(encoded_start_args.msg), wire_format_metadata);
+  if (!start_args.is_ok()) {
+    return start_args.error_value().status();
   }
-  auto start_args = decoded.PrimaryObject();
 
   // Bind the node.
   fidl::WireSharedClient<fuchsia_driver_framework::Node> node(
@@ -56,7 +54,7 @@ zx_status_t Start(EncodedDriverStartArgs encoded_start_args, fdf_dispatcher_t* d
   }
 
   // Create the driver.
-  auto self = T::Start(*start_args, fdf::UnownedDispatcher(dispatcher), std::move(node),
+  auto self = T::Start(**start_args, fdf::UnownedDispatcher(dispatcher), std::move(node),
                        std::move(*ns), std::move(*logger));
   if (self.is_error()) {
     return self.status_value();

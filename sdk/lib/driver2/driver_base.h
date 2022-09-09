@@ -201,22 +201,16 @@ class Record {
   static zx_status_t Start(EncodedDriverStartArgs encoded_start_args, fdf_dispatcher_t* dispatcher,
                            void** driver) {
     // Decode the incoming `msg`.
-    // TODO(fxbug.dev/45252): Use FIDL at rest.
     auto wire_format_metadata =
         fidl::WireFormatMetadata::FromOpaque(encoded_start_args.wire_format_metadata);
-    fidl::unstable::DecodedMessage<fuchsia_driver_framework::wire::DriverStartArgs> decoded(
-        wire_format_metadata.wire_format_version(), encoded_start_args.msg);
-    if (!decoded.ok()) {
-      return decoded.status();
+    fitx::result start_args = fidl::Decode<fuchsia_driver_framework::DriverStartArgs>(
+        fidl::EncodedMessage::FromEncodedCMessage(encoded_start_args.msg), wire_format_metadata);
+    if (!start_args.is_ok()) {
+      return start_args.error_value().status();
     }
 
-    fidl::DecodedValue<fuchsia_driver_framework::wire::DriverStartArgs> decoded_value =
-        decoded.Take();
-    auto natural_start_args = fidl::ToNatural(decoded_value.value());
-    decoded_value.Release();
-
     zx::status<std::unique_ptr<DriverBase>> created_driver =
-        Factory::CreateDriver(std::move(natural_start_args), fdf::UnownedDispatcher(dispatcher));
+        Factory::CreateDriver(std::move(*start_args), fdf::UnownedDispatcher(dispatcher));
 
     if (created_driver.is_error()) {
       return created_driver.status_value();
