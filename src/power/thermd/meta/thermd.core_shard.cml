@@ -25,11 +25,11 @@
             source_availability: "unknown",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-thermal",
             to: "#thermd",
-            subdir: "class/thermal",
+            subdir: "thermal",
         },
     ],
 }
