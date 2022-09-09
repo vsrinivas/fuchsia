@@ -125,7 +125,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:227
+From //build/security.gni:236
 
 ### avb_algorithm
 
@@ -222,7 +222,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:232
+From //build/security.gni:241
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -283,21 +283,21 @@ From //build/images/fvm.gni:53
 ### blobfs_capacity
 Maximum allowable contents for the /blob in a release mode build for
 both slot A and slot B of the system.
-Zero means no limit.
+False means no limit.
 
-**Current value for `target_cpu = "arm64"`:** `"10485760000"`
+**Current value for `target_cpu = "arm64"`:** `10485760000`
 
 From //boards/arm64.gni:12
 
-**Overridden from the default:** `"0"`
+**Overridden from the default:** `false`
 
 From //build/images/filesystem_limits.gni:15
 
-**Current value for `target_cpu = "x64"`:** `"10485760000"`
+**Current value for `target_cpu = "x64"`:** `10485760000`
 
 From //boards/x64.gni:14
 
-**Overridden from the default:** `"0"`
+**Overridden from the default:** `false`
 
 From //build/images/filesystem_limits.gni:15
 
@@ -374,7 +374,7 @@ From //boards/arm64.gni:21
 
 From //build/board.gni:32
 
-**Current value for `target_cpu = "x64"`:** `["//src/devices/bin/driver_host2", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/spi/drivers/intel-gspi", "//src/devices/tpm/drivers/tpm", "//src/devices/usb/drivers/xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/intel-i915-tgl", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98373", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/ctaphid", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//src/connectivity/ethernet/drivers/gvnic", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/serial/drivers/uart16550", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//zircon/third_party/dev/ethernet/e1000", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.gga", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/driver_host2"]`
+**Current value for `target_cpu = "x64"`:** `["//src/devices/bin/driver_host2", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/spi/drivers/intel-gspi", "//src/devices/tpm/drivers/tpm", "//src/devices/usb/drivers/xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/intel-i915-tgl", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98373", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/ctaphid", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:enable-suspend-from-board", "//src/connectivity/ethernet/drivers/gvnic", "//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/serial/drivers/uart16550", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//zircon/third_party/dev/ethernet/e1000", "//boards/kernel_cmdline:serial-legacy", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_fuchsia_drivers", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/ui/input/drivers/goldfish_sensor:sensor_driver", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.gga", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/driver_host2"]`
 
 From //boards/x64.gni:42
 
@@ -1070,9 +1070,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"socket"`
+**Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/5a47f3b6226451da8caca7d92d403c6834c98c1e/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2767,7 +2767,7 @@ From //build/security.gni:130
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:197
+From //build/security.gni:206
 
 ### fuchsia_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -2778,7 +2778,7 @@ routes in the fuchsia component tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:182
+From //build/security.gni:191
 
 ### fuchsia_verify_routes_exceptions_allowlist
 
@@ -2792,7 +2792,7 @@ gets added in bootfs_only builds.
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
 
-From //build/security.gni:163
+From //build/security.gni:167
 
 ### fuchsia_verify_routes_exceptions_allowlist_product
 Same as fuchsia_verify_routes_exceptions_allowlist, except these allowlists
@@ -2800,7 +2800,7 @@ get added according to product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:171
+From //build/security.gni:180
 
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional list of golden files for fuchsia.zbi bootFS file list. If
@@ -2866,7 +2866,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:237
+From //build/security.gni:246
 
 ### futex_tracing_enabled
 Enables kernel tracing of futex interactions
@@ -2999,7 +2999,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -4551,7 +4551,7 @@ Used to control whether board definitions include PMM checker options.
 
 **Current value (from the default):** `true`
 
-From //boards/kernel_cmdline/BUILD.gn:51
+From //boards/kernel_cmdline/BUILD.gn:58
 
 ### policy_labels
 Default policy_labels definition to ease with the transition away from
@@ -5685,7 +5685,7 @@ From //build/security.gni:135
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:205
+From //build/security.gni:214
 
 ### recovery_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -5696,21 +5696,36 @@ routes in the fuchsia component tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:189
+From //build/security.gni:198
 
 ### recovery_verify_routes_exceptions_allowlist
+An optional list of (capability, moniker) pairs that determine exceptions
+to the verify_route.gni build rule that prevents v2 components from
+attempting to use capabilities they were not offered in the recovery
+system. Generally new entries should not be added to this allowlist and acts
+as a marker for future technical debt to clean up.
 
-**Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist.json5"`
+The path to this list defaults to "" because most build configurations do
+perform recovery build verification. The canonical allowlist for build
+configurations that do perform recovery build verification is
+"//src/security/policy/build/verify_routes_exceptions_allowlist.json5".
 
-From //build/security.gni:159
+**Current value (from the default):** `""`
+
+From //build/security.gni:163
 
 ### recovery_verify_routes_exceptions_allowlist_bootfs
 Same as recovery_verify_routes_exceptions_allowlist, except this allowlist
 gets added in bootfs_only builds.
 
-**Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
+The path to this list defaults to "" because most build configurations do
+perform recovery build verification. The canonical allowlist for build
+configurations that do perform recovery build verification is
+"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5".
 
-From //build/security.gni:167
+**Current value (from the default):** `""`
+
+From //build/security.gni:176
 
 ### recovery_verify_routes_exceptions_allowlist_product
 Same as recovery_verify_routes_exceptions_allowlist, except these allowlists
@@ -5718,7 +5733,7 @@ get added according to product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:175
+From //build/security.gni:184
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -6436,12 +6451,12 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:218
+From //build/security.gni:227
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6705,7 +6720,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
 
