@@ -24,7 +24,7 @@
 #include "src/developer/forensics/crash_reports/queue.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot_collector.h"
 #include "src/developer/forensics/crash_reports/store.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
@@ -42,7 +42,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashReporter(async_dispatcher_t* dispatcher,
                 const std::shared_ptr<sys::ServiceDirectory>& services, timekeeper::Clock* clock,
                 const std::shared_ptr<InfoContext>& info_context, Config config,
-                CrashRegister* crash_register, LogTags* tags, SnapshotManager* snapshot_manager,
+                CrashRegister* crash_register, LogTags* tags, SnapshotCollector* snapshot_collector,
                 CrashServer* crash_server, Store* store);
 
   // The crash reporter should stop uploading crash reports and persist any future and pending crash
@@ -63,8 +63,9 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   CrashRegister* crash_register_;
   UtcClockReadyWatcher utc_clock_ready_watcher_;
   const UtcTimeProvider utc_provider_;
-  SnapshotManager* snapshot_manager_;
+  SnapshotCollector* snapshot_collector_;
   CrashServer* crash_server_;
+  SnapshotStore* snapshot_store_;
   Queue queue_;
 
   ProductQuotas product_quotas_;

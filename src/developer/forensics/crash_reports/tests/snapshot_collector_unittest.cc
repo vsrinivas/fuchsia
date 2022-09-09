@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot_collector.h"
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/function.h>
@@ -19,6 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/crash_reports/tests/scoped_test_store.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/gmatchers.h"
 #include "src/developer/forensics/testing/gpretty_printers.h"
@@ -47,23 +48,20 @@ const std::map<std::string, std::string> kDefaultAnnotations = {
 
 const std::string kDefaultArchiveKey = "snapshot.key";
 
-ManagedSnapshot AsManaged(Snapshot snapshot) {
-  FX_CHECK(std::holds_alternative<ManagedSnapshot>(snapshot));
-  return std::get<ManagedSnapshot>(snapshot);
-}
-
 MissingSnapshot AsMissing(Snapshot snapshot) {
   FX_CHECK(std::holds_alternative<MissingSnapshot>(snapshot));
   return std::get<MissingSnapshot>(snapshot);
 }
 
-class SnapshotManagerTest : public UnitTestFixture {
+class SnapshotCollectorTest : public UnitTestFixture {
  public:
-  SnapshotManagerTest()
+  SnapshotCollectorTest()
       : UnitTestFixture(),
         clock_(),
         executor_(dispatcher()),
-        snapshot_manager_(nullptr),
+        snapshot_collector_(nullptr),
+        store_(&annotation_manager_,
+               std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services())),
         path_(files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt")) {}
 
  protected:
@@ -74,9 +72,9 @@ class SnapshotManagerTest : public UnitTestFixture {
   void SetUpSnapshotManager(StorageSize max_annotations_size, StorageSize max_archives_size) {
     FX_CHECK(data_provider_server_);
     clock_.Set(zx::time(0u));
-    snapshot_manager_ = std::make_unique<SnapshotManager>(
-        dispatcher(), &clock_, data_provider_server_.get(), &annotation_manager_, kWindow, path_,
-        max_annotations_size, max_archives_size);
+    snapshot_collector_ =
+        std::make_unique<SnapshotCollector>(dispatcher(), &clock_, data_provider_server_.get(),
+                                            store_.GetStore().GetSnapshotStore(), kWindow);
   }
 
   std::set<std::string> ReadGarbageCollectedSnapshots() {
@@ -104,7 +102,7 @@ class SnapshotManagerTest : public UnitTestFixture {
   void ScheduleGetSnapshotUuidAndThen(const zx::duration timeout,
                                       ::fit::function<void(const std::string&)> and_then) {
     executor_.schedule_task(
-        snapshot_manager_->GetSnapshotUuid(timeout).and_then(std::move(and_then)).or_else([]() {
+        snapshot_collector_->GetSnapshotUuid(timeout).and_then(std::move(and_then)).or_else([]() {
           FX_CHECK(false);
         }));
   }
@@ -113,18 +111,23 @@ class SnapshotManagerTest : public UnitTestFixture {
 
   bool is_server_bound() { return data_provider_server_->IsBound(); }
 
+  Snapshot GetSnapshot(const std::string& uuid) {
+    return store_.GetStore().GetSnapshotStore()->GetSnapshot(uuid);
+  }
+
   timekeeper::TestClock clock_;
   async::Executor executor_;
-  std::unique_ptr<SnapshotManager> snapshot_manager_;
+  std::unique_ptr<SnapshotCollector> snapshot_collector_;
+  feedback::AnnotationManager annotation_manager_{dispatcher(), {}};
+  ScopedTestStore store_;
 
  private:
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
-  feedback::AnnotationManager annotation_manager_{dispatcher(), {}};
   files::ScopedTempDir tmp_dir_;
   std::string path_;
 };
 
-TEST_F(SnapshotManagerTest, Check_GetSnapshotUuid) {
+TEST_F(SnapshotCollectorTest, Check_GetSnapshotUuid) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
@@ -139,7 +142,7 @@ TEST_F(SnapshotManagerTest, Check_GetSnapshotUuid) {
   ASSERT_TRUE(uuid.has_value());
 }
 
-TEST_F(SnapshotManagerTest, Check_GetSnapshotUuidRequestsCombined) {
+TEST_F(SnapshotCollectorTest, Check_GetSnapshotUuidRequestsCombined) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
@@ -182,7 +185,7 @@ TEST_F(SnapshotManagerTest, Check_GetSnapshotUuidRequestsCombined) {
   EXPECT_NE(uuid1.value(), uuid2.value());
 }
 
-TEST_F(SnapshotManagerTest, Check_Release) {
+TEST_F(SnapshotCollectorTest, Check_RemoveRequest) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
@@ -192,26 +195,13 @@ TEST_F(SnapshotManagerTest, Check_Release) {
   RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid.has_value());
-  {
-    auto snapshot = AsManaged(snapshot_manager_->GetSnapshot(uuid.value()));
-    ASSERT_TRUE(snapshot.LockArchive());
-  }
 
-  snapshot_manager_->Release(uuid.value());
-  {
-    auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
-    EXPECT_THAT(snapshot.PresenceAnnotations(),
-                UnorderedElementsAreArray({
-                    Pair("debug.snapshot.error", "garbage collected"),
-                    Pair("debug.snapshot.present", "false"),
-                }));
-  }
-  EXPECT_THAT(ReadGarbageCollectedSnapshots(), UnorderedElementsAreArray({
-                                                   uuid.value(),
-                                               }));
+  // At this point the request should no longer have any blocked promises and calling RemoveRequest
+  // should not crash the program.
+  snapshot_collector_->RemoveRequest(uuid.value());
 }
 
-TEST_F(SnapshotManagerTest, Check_Timeout) {
+TEST_F(SnapshotCollectorTest, Check_Timeout) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
@@ -221,25 +211,25 @@ TEST_F(SnapshotManagerTest, Check_Timeout) {
   RunLoopFor(kWindow);
 
   ASSERT_TRUE(uuid.has_value());
-  auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
+  auto snapshot = AsMissing(GetSnapshot(uuid.value()));
   EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
                                                   Pair("debug.snapshot.error", "timeout"),
                                                   Pair("debug.snapshot.present", "false"),
                                               }));
 }
 
-TEST_F(SnapshotManagerTest, Check_Shutdown) {
+TEST_F(SnapshotCollectorTest, Check_Shutdown) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
   ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
-  snapshot_manager_->Shutdown();
+  snapshot_collector_->Shutdown();
   RunLoopUntilIdle();
 
   ASSERT_TRUE(uuid.has_value());
-  auto snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
+  auto snapshot = AsMissing(GetSnapshot(uuid.value()));
   EXPECT_THAT(snapshot.PresenceAnnotations(), IsSupersetOf({
                                                   Pair("debug.snapshot.error", "system shutdown"),
                                                   Pair("debug.snapshot.present", "false"),
@@ -251,7 +241,7 @@ TEST_F(SnapshotManagerTest, Check_Shutdown) {
   RunLoopUntilIdle();
 
   ASSERT_TRUE(uuid.has_value());
-  snapshot = AsMissing(snapshot_manager_->GetSnapshot(uuid.value()));
+  snapshot = AsMissing(GetSnapshot(uuid.value()));
   EXPECT_THAT(snapshot.PresenceAnnotations(), IsSupersetOf({
                                                   Pair("debug.snapshot.error", "system shutdown"),
                                                   Pair("debug.snapshot.present", "false"),

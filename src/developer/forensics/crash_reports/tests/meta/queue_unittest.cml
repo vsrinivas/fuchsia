@@ -5,20 +5,11 @@
     include: [
         "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
         "//src/sys/test_runners/gtest/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
         binary: "bin/queue_unittest_exe",
     },
-    use: [
-        {
-            storage: "cache",
-            path: "/cache",
-        },
-        {
-            storage: "tmp",
-            path: "/tmp",
-        },
-    ],
 }

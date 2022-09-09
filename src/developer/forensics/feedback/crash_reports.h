@@ -17,7 +17,7 @@
 #include "src/developer/forensics/crash_reports/info/info_context.h"
 #include "src/developer/forensics/crash_reports/info/main_service_info.h"
 #include "src/developer/forensics/crash_reports/log_tags.h"
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot_collector.h"
 #include "src/developer/forensics/crash_reports/store.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
@@ -32,7 +32,7 @@ class CrashReports {
     crash_reports::Config config;
     StorageSize snapshot_store_max_annotations_size;
     StorageSize snapshot_store_max_archives_size;
-    zx::duration snapshot_manager_window_duration;
+    zx::duration snapshot_collector_window_duration;
   };
 
   CrashReports(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
@@ -56,7 +56,7 @@ class CrashReports {
   crash_reports::LogTags tags_;
   crash_reports::CrashServer crash_server_;
   crash_reports::Store store_;
-  crash_reports::SnapshotManager snapshot_manager_;
+  crash_reports::SnapshotCollector snapshot_collector_;
   crash_reports::CrashRegister crash_register_;
   crash_reports::CrashReporter crash_reporter_;
 

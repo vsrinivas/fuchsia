@@ -13,7 +13,6 @@
 
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/sized_data.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
@@ -136,12 +135,17 @@ std::string ReadSnapshotUuid(const std::string& path) {
 
 }  // namespace
 
-Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info, const Store::Root& temp_root,
-             const Store::Root& persistent_root)
+Store::Store(LogTags* tags, std::shared_ptr<InfoContext> info,
+             feedback::AnnotationManager* annotation_manager, const Store::Root& temp_root,
+             const Store::Root& persistent_root,
+             const std::string& garbage_collected_snapshots_path, StorageSize max_annotations_size,
+             StorageSize max_archives_size)
     : tmp_metadata_(temp_root.dir, temp_root.max_size),
       cache_metadata_(persistent_root.dir, persistent_root.max_size),
       tags_(tags),
-      info_(std::move(info)) {
+      info_(std::move(info)),
+      snapshot_store_(annotation_manager, garbage_collected_snapshots_path, max_annotations_size,
+                      max_archives_size) {
   info_.LogMaxStoreSize(temp_root.max_size + persistent_root.max_size);
 
   // Clean up any empty directories in the store. This may happen if the component stops running
@@ -484,6 +488,8 @@ bool Store::MakeFreeSpace(const StoreMetadata& root_metadata, const StorageSize 
 
   return true;
 }
+
+SnapshotStore* Store::GetSnapshotStore() { return &snapshot_store_; }
 
 }  // namespace crash_reports
 }  // namespace forensics

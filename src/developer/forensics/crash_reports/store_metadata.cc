@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <filesystem>
 
+#include "src/lib/files/directory.h"
+
 namespace forensics {
 namespace crash_reports {
 

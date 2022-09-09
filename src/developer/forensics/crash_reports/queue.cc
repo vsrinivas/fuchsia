@@ -20,13 +20,13 @@ namespace crash_reports {
 
 Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
              std::shared_ptr<InfoContext> info_context, LogTags* tags, Store* store,
-             CrashServer* crash_server, SnapshotManager* snapshot_manager)
+             CrashServer* crash_server, SnapshotCollector* snapshot_collector)
     : dispatcher_(dispatcher),
       services_(services),
       tags_(tags),
       store_(store),
       crash_server_(crash_server),
-      snapshot_manager_(snapshot_manager),
+      snapshot_collector_(snapshot_collector),
       metrics_(std::move(info_context)) {
   FX_CHECK(dispatcher_);
   FX_CHECK(crash_server_);
@@ -234,7 +234,8 @@ void Queue::Upload() {
 
   metrics_.IncrementUploadAttempts(active_report_->report_id);
   crash_server_->MakeRequest(
-      *active_report_->report, snapshot_manager_->GetSnapshot(active_report_->snapshot_uuid),
+      *active_report_->report,
+      store_->GetSnapshotStore()->GetSnapshot(active_report_->snapshot_uuid),
       [this, add_to_store](CrashServer::UploadStatus status, std::string server_report_id) mutable {
         switch (status) {
           case CrashServer::UploadStatus::kSuccess:
@@ -298,7 +299,11 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
   }
 
   metrics_.Retire(pending_report, reason, server_report_id);
-  snapshot_manager_->Release(pending_report.snapshot_uuid);
+  if (const bool garbage_collected =
+          store_->GetSnapshotStore()->Release(pending_report.snapshot_uuid);
+      garbage_collected) {
+    snapshot_collector_->RemoveRequest(pending_report.snapshot_uuid);
+  }
   tags_->Unregister(pending_report.report_id);
   store_->Remove(pending_report.report_id);
 }

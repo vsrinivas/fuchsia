@@ -14,7 +14,9 @@
 #include "src/developer/forensics/crash_reports/log_tags.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
+#include "src/developer/forensics/crash_reports/snapshot_store.h"
 #include "src/developer/forensics/crash_reports/store_metadata.h"
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/utils/storage_size.h"
 
 namespace forensics {
@@ -35,9 +37,11 @@ class Store {
   //
   // Regardless of which is actually used, reports will be stored in a similar manner. For example,
   // if a report is filed for "foo" and it is determined that it will be stored under |temp_root|,
-  // that report will be stored in the filesytem under |temp_root|.dir/foo/<report ReportId>.
-  Store(LogTags* tags, std::shared_ptr<InfoContext> info_context, const Root& temp_root,
-        const Root& persistent_root);
+  // that report will be stored in the filesystem under |temp_root|.dir/foo/<report ReportId>.
+  Store(LogTags* tags, std::shared_ptr<InfoContext> info_context,
+        feedback::AnnotationManager* annotation_manager, const Root& temp_root,
+        const Root& persistent_root, const std::string& garbage_collected_snapshots_path,
+        StorageSize max_annotations_size, StorageSize max_archives_size);
 
   // Adds a report to the store and returns the ReportIds of any report garbage collected in the
   // process.
@@ -56,6 +60,8 @@ class Store {
   SnapshotUuid GetSnapshotUuid(ReportId id);
 
   bool Contains(ReportId id);
+
+  SnapshotStore* GetSnapshotStore();
 
  private:
   bool Add(ReportId report_id, const std::string& program_shortname, StorageSize report_size,
@@ -88,6 +94,7 @@ class Store {
   StoreMetadata cache_metadata_;
   LogTags* tags_;
   StoreInfo info_;
+  SnapshotStore snapshot_store_;
 };
 
 }  // namespace crash_reports

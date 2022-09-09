@@ -80,7 +80,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              timekeeper::Clock* clock,
                              const std::shared_ptr<InfoContext>& info_context, Config config,
                              CrashRegister* crash_register, LogTags* tags,
-                             SnapshotManager* snapshot_manager, CrashServer* crash_server,
+                             SnapshotCollector* snapshot_collector, CrashServer* crash_server,
                              Store* store)
     : dispatcher_(dispatcher),
       executor_(dispatcher),
@@ -89,9 +89,11 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       crash_register_(crash_register),
       utc_clock_ready_watcher_(dispatcher_, zx::unowned_clock(zx_utc_reference_get())),
       utc_provider_(&utc_clock_ready_watcher_, clock),
-      snapshot_manager_(snapshot_manager),
+      snapshot_collector_(snapshot_collector),
       crash_server_(crash_server),
-      queue_(dispatcher_, services_, info_context, tags_, store, crash_server_, snapshot_manager_),
+      snapshot_store_(store->GetSnapshotStore()),
+      queue_(dispatcher_, services_, info_context, tags_, store, crash_server_,
+             snapshot_collector_),
       product_quotas_(dispatcher_, clock, config.daily_per_product_quota,
                       feedback::kProductQuotasPath, &utc_clock_ready_watcher_),
       info_(info_context),
@@ -118,7 +120,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
 
 void CrashReporter::PersistAllCrashReports() {
   queue_.StopUploading();
-  snapshot_manager_->Shutdown();
+  snapshot_collector_->Shutdown();
 }
 
 void CrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
@@ -178,14 +180,14 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
   // Only generate a snapshot if the report won't be immediately archived in the filesystem in order
   // to save time during crash report creation.
   if (reporting_policy_watcher_->CurrentPolicy() != ReportingPolicy::kArchive) {
-    get_snapshot_uuid = snapshot_manager_->GetSnapshotUuid(kSnapshotTimeout);
+    get_snapshot_uuid = snapshot_collector_->GetSnapshotUuid(kSnapshotTimeout);
   }
 
   auto p =
       std::move(get_snapshot_uuid)
           .and_then([this, fidl_report = std::move(report), product = std::move(product), report_id,
                      is_hourly_snapshot, record_failure](const std::string& snapshot_uuid) mutable {
-            const auto snapshot = snapshot_manager_->GetSnapshot(snapshot_uuid);
+            const auto snapshot = snapshot_store_->GetSnapshot(snapshot_uuid);
             const auto current_time = utc_provider_.CurrentTime();
             auto report = MakeReport(std::move(fidl_report), report_id, snapshot_uuid, snapshot,
                                      current_time, std::move(product), is_hourly_snapshot);

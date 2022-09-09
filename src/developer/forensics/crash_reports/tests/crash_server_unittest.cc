@@ -15,8 +15,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/developer/forensics/crash_reports/constants.h"
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/testing/stubs/data_provider.h"
@@ -44,9 +43,6 @@ class CrashServerTest : public UnitTestFixture {
   CrashServerTest()
       : data_provider_server_(std::make_unique<stubs::DataProviderReturnsEmptySnapshot>()),
         annotation_manager_(dispatcher(), {}),
-        snapshot_manager_(dispatcher(), &clock_, data_provider_server_.get(), &annotation_manager_,
-                          zx::min(0), kGarbageCollectedSnapshotsPath, StorageSize::Bytes(0u),
-                          StorageSize::Bytes(0u)),
         tags_() {
     RunLoopUntilIdle();
   }
@@ -59,16 +55,22 @@ class CrashServerTest : public UnitTestFixture {
   }
 
   CrashServer& crash_server() { return *crash_server_; }
-  Snapshot GetSnapshot(const SnapshotUuid& uuid) { return snapshot_manager_.GetSnapshot(uuid); }
+  Snapshot GetSnapshot() {
+    // The presence annotations below are returned in the Snapshot from SnapshotStore::GetSnapshot
+    // whenever a snapshot is not persisted
+    return MissingSnapshot(annotation_manager_.ImmediatelyAvailable(),
+                           {
+                               {"debug.snapshot.error", "not persisted"},
+                               {"debug.snapshot.present", "false"},
+                           });
+  }
 
  private:
   sys::testing::ComponentContextProvider loader_context_provider_;
   std::unique_ptr<stubs::Loader> loader_server_;
 
-  timekeeper::TestClock clock_;
   std::unique_ptr<stubs::DataProviderBase> data_provider_server_;
   feedback::AnnotationManager annotation_manager_;
-  SnapshotManager snapshot_manager_;
   LogTags tags_;
   std::unique_ptr<CrashServer> crash_server_;
 };
@@ -78,7 +80,7 @@ TEST_F(CrashServerTest, Fails_OnError) {
 
   std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
   crash_server().MakeRequest(
-      kReport, GetSnapshot(kSnapshotUuid),
+      kReport, GetSnapshot(),
       [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
   RunLoopUntilIdle();
 
@@ -91,7 +93,7 @@ TEST_F(CrashServerTest, Fails_OnTimeout) {
 
   std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
   crash_server().MakeRequest(
-      kReport, GetSnapshot(kSnapshotUuid),
+      kReport, GetSnapshot(),
       [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
   RunLoopUntilIdle();
 
@@ -104,7 +106,7 @@ TEST_F(CrashServerTest, Fails_StatusCodeBelow200) {
 
   std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
   crash_server().MakeRequest(
-      kReport, GetSnapshot(kSnapshotUuid),
+      kReport, GetSnapshot(),
       [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
   RunLoopUntilIdle();
 
@@ -117,7 +119,7 @@ TEST_F(CrashServerTest, Fails_StatusCodeAbove203) {
 
   std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
   crash_server().MakeRequest(
-      kReport, GetSnapshot(kSnapshotUuid),
+      kReport, GetSnapshot(),
       [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
   RunLoopUntilIdle();
 
@@ -130,7 +132,7 @@ TEST_F(CrashServerTest, Fails_UploadThrottled) {
 
   std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
   crash_server().MakeRequest(
-      kReport, GetSnapshot(kSnapshotUuid),
+      kReport, GetSnapshot(),
       [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
   RunLoopUntilIdle();
 
@@ -148,7 +150,7 @@ TEST_F(CrashServerTest, ReadBodyOnSuccess) {
 
   std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
   std::optional<std::string> server_report_id;
-  crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid),
+  crash_server().MakeRequest(kReport, GetSnapshot(),
                              [&](CrashServer::UploadStatus status, std::string response) {
                                upload_status = status;
                                server_report_id = response;
@@ -164,7 +166,7 @@ TEST_F(CrashServerTest, ReadBodyOnSuccess) {
   upload_status = std::nullopt;
   server_report_id = std::nullopt;
 
-  crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid),
+  crash_server().MakeRequest(kReport, GetSnapshot(),
                              [&](CrashServer::UploadStatus status, std::string response) {
                                upload_status = status;
                                server_report_id = response;
@@ -180,7 +182,7 @@ TEST_F(CrashServerTest, ReadBodyOnSuccess) {
   upload_status = std::nullopt;
   server_report_id = std::nullopt;
 
-  crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid),
+  crash_server().MakeRequest(kReport, GetSnapshot(),
                              [&](CrashServer::UploadStatus status, std::string response) {
                                upload_status = status;
                                server_report_id = response;
@@ -196,7 +198,7 @@ TEST_F(CrashServerTest, ReadBodyOnSuccess) {
   upload_status = std::nullopt;
   server_report_id = std::nullopt;
 
-  crash_server().MakeRequest(kReport, GetSnapshot(kSnapshotUuid),
+  crash_server().MakeRequest(kReport, GetSnapshot(),
                              [&](CrashServer::UploadStatus status, std::string response) {
                                upload_status = status;
                                server_report_id = response;

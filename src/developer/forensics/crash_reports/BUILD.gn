@@ -86,7 +86,7 @@ source_set("crash_reporter") {
     ":report_id",
     ":report_util",
     ":reporting_policy_watcher",
-    ":snapshot_manager",
+    ":snapshot_collector",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
@@ -118,7 +118,7 @@ source_set("crash_server") {
     ":log_tags",
     ":report",
     ":sized_data_reader",
-    ":snapshot_manager",
+    ":snapshot_collector",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.net.http",
     "//sdk/lib/syslog/cpp",
@@ -218,8 +218,9 @@ source_set("report") {
   ]
 
   public_deps = [
+    ":annotation_map",
     ":report_id",
-    ":snapshot_manager",
+    ":snapshot",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:sized_data",
@@ -293,25 +294,33 @@ source_set("sized_data_reader") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
-source_set("snapshot_manager") {
+source_set("snapshot") {
   sources = [
     "snapshot.cc",
     "snapshot.h",
-    "snapshot_manager.cc",
-    "snapshot_manager.h",
-    "snapshot_store.cc",
-    "snapshot_store.h",
+  ]
+
+  public_deps = [
+    "//src/developer/forensics/feedback/annotations",
+    "//src/developer/forensics/utils:sized_data",
+  ]
+
+  deps = [ "//sdk/lib/syslog/cpp" ]
+}
+
+source_set("snapshot_collector") {
+  sources = [
+    "snapshot_collector.cc",
+    "snapshot_collector.h",
   ]
 
   public_deps = [
     ":annotation_map",
     ":constants",
-    "//sdk/fidl/fuchsia.feedback",
+    ":store",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//src/developer/forensics/feedback/annotations",
     "//src/developer/forensics/feedback_data:data_provider",
-    "//src/developer/forensics/utils:sized_data",
     "//src/developer/forensics/utils:storage_size",
     "//src/lib/timekeeper",
     "//zircon/system/ulib/async",
@@ -327,6 +336,8 @@ source_set("snapshot_manager") {
 
 source_set("store") {
   sources = [
+    "snapshot_store.cc",
+    "snapshot_store.h",
     "store.cc",
     "store.h",
     "store_metadata.cc",
@@ -343,6 +354,7 @@ source_set("store") {
   ]
 
   deps = [
+    ":constants",
     ":report_util",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",

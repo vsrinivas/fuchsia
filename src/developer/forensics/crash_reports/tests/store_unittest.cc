@@ -14,8 +14,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
+#include "src/developer/forensics/testing/scoped_memfs_manager.h"
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/developer/forensics/utils/sized_data.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -33,9 +36,9 @@ using inspect::testing::NodeMatches;
 using inspect::testing::PropertyList;
 using inspect::testing::StringIs;
 using inspect::testing::UintIs;
-using testing::IsEmpty;
-using testing::IsSupersetOf;
-using testing::UnorderedElementsAreArray;
+using ::testing::IsEmpty;
+using ::testing::IsSupersetOf;
+using ::testing::UnorderedElementsAreArray;
 
 SizedData MakeSizedData(const std::string& content) {
   return SizedData(content.begin(), content.end());
@@ -43,17 +46,21 @@ SizedData MakeSizedData(const std::string& content) {
 
 class StoreTest : public UnitTestFixture {
  public:
-  StoreTest() { MakeNewStore(StorageSize::Megabytes(1)); }
+  StoreTest() : annotation_manager_(dispatcher(), {}) { MakeNewStore(StorageSize::Megabytes(1)); }
 
  protected:
   void MakeNewStore(const StorageSize max_tmp_size,
-                    const StorageSize max_cache_size = StorageSize::Bytes(0)) {
+                    const StorageSize max_cache_size = StorageSize::Bytes(0),
+                    const StorageSize max_annotations_size = StorageSize::Megabytes(1),
+                    const StorageSize max_archives_size = StorageSize::Megabytes(1)) {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
     store_ =
-        std::make_unique<Store>(&tags_, info_context_,
+        std::make_unique<Store>(&tags_, info_context_, &annotation_manager_,
                                 /*temp_root=*/Store::Root{tmp_dir_.path(), max_tmp_size},
-                                /*persistent_root=*/Store::Root{cache_dir_.path(), max_cache_size});
+                                /*persistent_root=*/Store::Root{cache_dir_.path(), max_cache_size},
+                                files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
+                                max_annotations_size, max_archives_size);
   }
 
   std::optional<ReportId> Add(const std::string& program_shortname,
@@ -210,6 +217,7 @@ class StoreTest : public UnitTestFixture {
   files::ScopedTempDir tmp_dir_;
   files::ScopedTempDir cache_dir_;
   std::unique_ptr<Store> store_;
+  feedback::AnnotationManager annotation_manager_;
 
   ReportId next_report_id_{0};
 };
@@ -559,11 +567,16 @@ TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
     expected_report_size += v.size();
   }
 
-  const std::string cache_root = files::JoinPath(cache_dir_.path(), "delayed/path");
+  // Use directory that |scoped_mem_fs| can create using ScopedMemFsManager::Create, but |store_|
+  // can't create using files::CreateDirectory
+  const std::string cache_root = "/cache/delayed/path";
+  testing::ScopedMemFsManager scoped_mem_fs;
   store_ = std::make_unique<Store>(
-      &tags_, info_context_,
+      &tags_, info_context_, &annotation_manager_,
       /*temp_root=*/Store::Root{tmp_dir_.path(), StorageSize::Bytes(expected_report_size)},
-      /*persistent_root=*/Store::Root{cache_root, StorageSize::Bytes(expected_report_size)});
+      /*persistent_root=*/Store::Root{cache_root, StorageSize::Bytes(expected_report_size)},
+      files::JoinPath(tmp_dir_.path(), "garbage_collected_snapshots.txt"),
+      StorageSize::Bytes(expected_report_size), StorageSize::Bytes(expected_report_size));
 
   std::map<std::string, std::string> annotations;
   std::map<std::string, std::string> attachments;
@@ -588,7 +601,7 @@ TEST_F(StoreTest, UsesTmpUntilPersistentReady) {
   EXPECT_EQ(expected_minidump, minidump.value());
 
   // Create the cache directory so it can be used for the next report.
-  ASSERT_TRUE(files::CreateDirectory(cache_root));
+  scoped_mem_fs.Create(cache_root);
 
   // The second report should be placed under the cache directory.
   const auto cache_id = Add(expected_program_shortname, expected_annotations, expected_attachments,

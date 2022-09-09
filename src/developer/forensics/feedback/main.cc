@@ -95,7 +95,7 @@ int main() {
               .config = *crash_reports_config,
               .snapshot_store_max_annotations_size = kSnapshotAnnotationsMaxSize,
               .snapshot_store_max_archives_size = kSnapshotArchivesMaxSize,
-              .snapshot_manager_window_duration = kSnapshotSharedRequestWindow,
+              .snapshot_collector_window_duration = kSnapshotSharedRequestWindow,
           },
           FeedbackData::Options{
               .config = *feedback_data_config,

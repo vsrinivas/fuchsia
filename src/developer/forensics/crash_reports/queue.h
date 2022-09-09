@@ -20,7 +20,7 @@
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot_collector.h"
 #include "src/developer/forensics/crash_reports/store.h"
 #include "src/lib/fxl/macros.h"
 
@@ -32,7 +32,7 @@ class Queue {
  public:
   Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
         std::shared_ptr<InfoContext> info_context, LogTags* tags, Store* store,
-        CrashServer* crash_server, SnapshotManager* snapshot_manager);
+        CrashServer* crash_server, SnapshotCollector* snapshot_collector);
 
   // Watcher functions that allow the queue to react to external events, such as
   //  1) the reporting policy changing or
@@ -135,7 +135,7 @@ class Queue {
   LogTags* tags_;
   Store* store_;
   CrashServer* crash_server_;
-  SnapshotManager* snapshot_manager_;
+  SnapshotCollector* snapshot_collector_;
   UploadMetrics metrics_;
 
   async::TaskClosureMethod<Queue, &Queue::UnblockAllEveryFifteenMinutes>

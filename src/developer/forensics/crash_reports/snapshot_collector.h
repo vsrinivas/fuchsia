@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_MANAGER_H_
-#define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_MANAGER_H_
+#ifndef SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_COLLECTOR_H_
+#define SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_COLLECTOR_H_
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
@@ -19,51 +19,32 @@
 
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/crash_reports/snapshot_store.h"
-#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 #include "src/developer/forensics/feedback_data/data_provider.h"
-#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/timekeeper/clock.h"
 
 namespace forensics {
 namespace crash_reports {
 
-// Manages the collection, distribution, and lifetime of snapshots.
+// Manages the collection of snapshots.
 //
-// To limit memory usage, the managed snapshots' annotations/archives cannot exceed
-// |max_{annotations,archives}_size_| in size and snapshot manager will return the same Uuid to all
-// calls to GetUuid that occur within  |shared_request_window_| of a
-// fuchsia.feedback.DataProvider/GetSnapshot request.
-//
-// When space is constrained, SnapshotManager will drop the oldest annotations/archives it
-// manages. Additionally, SnapshotManager tracks the number of clients that have received a specific
-// Uuid from GetUuid and will automatically delete a snapshot when each client has called Release.
-class SnapshotManager {
+// To limit memory usage, SnapshotCollector will return the same Uuid to all calls to GetUuid that
+// occur within  |shared_request_window_| of a fuchsia.feedback.DataProvider/GetSnapshot request.
+class SnapshotCollector {
  public:
-  SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
-                  feedback_data::DataProviderInternal* data_provider,
-                  feedback::AnnotationManager* annotation_manager,
-                  zx::duration shared_request_window,
-                  const std::string& garbage_collected_snapshots_path,
-                  StorageSize max_annotations_size, StorageSize max_archives_size);
+  SnapshotCollector(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
+                    feedback_data::DataProviderInternal* data_provider,
+                    SnapshotStore* snapshot_store, zx::duration shared_request_window);
 
   // Returns a promise of a snapshot uuid for a snapshot that contains the most up-to-date system
   // data (a new snapshot will be created if all existing snapshots contain data that is
   // out-of-date). No uuid will be returned if |timeout| expires.
   ::fpromise::promise<SnapshotUuid> GetSnapshotUuid(zx::duration timeout);
 
-  // Returns the snapshot for |uuid|, if one exists. If no snapshot exists for |uuid| a snapshot
-  // containing annotations indicating the error will be returned.
-  //
-  // When a client no longer needs the data contained in a Snapshot, they should call Release to
-  // inform the SnapshotManager. If all clients call release, the SnapshotManager will voluntarily
-  // drop the Snapshot, freeing up space for new data.
-  Snapshot GetSnapshot(const SnapshotUuid& uuid);
-
-  // Tell SnapshotManager that a client no longer needs the snapshot for |uuid|. If the difference
-  // between the number of calls to GetUuid and Release reaches 0, the snapshot for |uuid| will be
-  // dropped by SnapshotManager.
-  void Release(const SnapshotUuid& uuid);
+  // Removes request for |uuid|. Check-fails that there are no blocked promises for the request.
+  // TODO(fxbug.dev/108830): Add internal accounting for number of parties interested in a request
+  // and make this a private function.
+  void RemoveRequest(const SnapshotUuid& uuid);
 
   // Shuts down the snapshot manager by cancelling any pending FIDL calls and provides waiting
   // clients with a UUID for a generic "shutdown" snapshot.
@@ -118,9 +99,9 @@ class SnapshotManager {
   timekeeper::Clock* clock_;
 
   feedback_data::DataProviderInternal* data_provider_;
+  SnapshotStore* snapshot_store_;
 
   zx::duration shared_request_window_;
-  SnapshotStore snapshot_store_;
 
   std::vector<std::unique_ptr<SnapshotRequest>> requests_;
 
@@ -130,4 +111,4 @@ class SnapshotManager {
 }  // namespace crash_reports
 }  // namespace forensics
 
-#endif  // SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_MANAGER_H_
+#endif  // SRC_DEVELOPER_FORENSICS_CRASH_REPORTS_SNAPSHOT_COLLECTOR_H_

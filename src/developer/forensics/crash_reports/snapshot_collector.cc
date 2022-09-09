@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/forensics/crash_reports/snapshot_manager.h"
+#include "src/developer/forensics/crash_reports/snapshot_collector.h"
 
 #include <lib/async/cpp/task.h>
 #include <lib/fpromise/bridge.h>
@@ -13,30 +13,22 @@
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/constants.h"
-#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/lib/uuid/uuid.h"
 
 namespace forensics {
 namespace crash_reports {
 
-SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
-                                 feedback_data::DataProviderInternal* data_provider,
-                                 feedback::AnnotationManager* annotation_manager,
-                                 zx::duration shared_request_window,
-                                 const std::string& garbage_collected_snapshots_path,
-                                 StorageSize max_annotations_size, StorageSize max_archives_size)
+SnapshotCollector::SnapshotCollector(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
+                                     feedback_data::DataProviderInternal* data_provider,
+                                     SnapshotStore* snapshot_store,
+                                     zx::duration shared_request_window)
     : dispatcher_(dispatcher),
       clock_(clock),
       data_provider_(data_provider),
-      shared_request_window_(shared_request_window),
-      snapshot_store_(annotation_manager, garbage_collected_snapshots_path, max_annotations_size,
-                      max_archives_size) {}
+      snapshot_store_(snapshot_store),
+      shared_request_window_(shared_request_window) {}
 
-Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
-  return snapshot_store_.GetSnapshot(uuid);
-}
-
-::fpromise::promise<SnapshotUuid> SnapshotManager::GetSnapshotUuid(zx::duration timeout) {
+::fpromise::promise<SnapshotUuid> SnapshotCollector::GetSnapshotUuid(zx::duration timeout) {
   const zx::time current_time{clock_->Now()};
 
   SnapshotUuid uuid;
@@ -47,7 +39,7 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
     uuid = MakeNewSnapshotRequest(current_time, timeout);
   }
 
-  snapshot_store_.IncrementClientCount(uuid);
+  snapshot_store_->IncrementClientCount(uuid);
 
   const zx::time deadline = current_time + timeout;
 
@@ -83,20 +75,18 @@ Snapshot SnapshotManager::GetSnapshot(const SnapshotUuid& uuid) {
       });
 }
 
-void SnapshotManager::Release(const SnapshotUuid& uuid) {
-  if (const bool garbage_collected = snapshot_store_.Release(uuid); garbage_collected) {
-    // No calls to GetUuid should be blocked.
-    if (auto request = FindSnapshotRequest(uuid); request) {
-      FX_CHECK(request->blocked_promises.empty());
-    }
-
-    requests_.erase(std::remove_if(
-        requests_.begin(), requests_.end(),
-        [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; }));
+void SnapshotCollector::RemoveRequest(const SnapshotUuid& uuid) {
+  // No calls to GetUuid should be blocked.
+  if (auto request = FindSnapshotRequest(uuid); request) {
+    FX_CHECK(request->blocked_promises.empty());
   }
+
+  requests_.erase(std::remove_if(
+      requests_.begin(), requests_.end(),
+      [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; }));
 }
 
-void SnapshotManager::Shutdown() {
+void SnapshotCollector::Shutdown() {
   // Unblock all pending promises to return |shutdown_snapshot_|.
   shutdown_ = true;
   for (auto& request : requests_) {
@@ -113,8 +103,8 @@ void SnapshotManager::Shutdown() {
   }
 }
 
-SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
-                                                     const zx::duration timeout) {
+SnapshotUuid SnapshotCollector::MakeNewSnapshotRequest(const zx::time start_time,
+                                                       const zx::duration timeout) {
   const auto uuid = uuid::Generate();
   requests_.emplace_back(std::unique_ptr<SnapshotRequest>(new SnapshotRequest{
       .uuid = uuid,
@@ -123,7 +113,7 @@ SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
       .delayed_get_snapshot = async::TaskClosure(),
   }));
 
-  snapshot_store_.StartSnapshot(uuid);
+  snapshot_store_->StartSnapshot(uuid);
 
   requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
     // Give 15s for the packaging of the snapshot and the round-trip between the client and
@@ -142,8 +132,8 @@ SnapshotUuid SnapshotManager::MakeNewSnapshotRequest(const zx::time start_time,
   return uuid;
 }
 
-void SnapshotManager::WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadline,
-                                      ::fpromise::suspended_task get_uuid_promise) {
+void SnapshotCollector::WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadline,
+                                        ::fpromise::suspended_task get_uuid_promise) {
   auto* request = FindSnapshotRequest(uuid);
   if (!request) {
     get_uuid_promise.resume_task();
@@ -174,16 +164,16 @@ void SnapshotManager::WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadlin
   }
 }
 
-void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid,
-                                           feedback::Annotations annotations,
-                                           fuchsia::feedback::Attachment archive) {
+void SnapshotCollector::CompleteWithSnapshot(const SnapshotUuid& uuid,
+                                             feedback::Annotations annotations,
+                                             fuchsia::feedback::Attachment archive) {
   auto* request = FindSnapshotRequest(uuid);
 
   // A pending request shouldn't be deleted.
   FX_CHECK(request);
   FX_CHECK(request->is_pending);
 
-  snapshot_store_.AddSnapshotData(uuid, std::move(annotations), std::move(archive));
+  snapshot_store_->AddSnapshotData(uuid, std::move(annotations), std::move(archive));
 
   // The request is completed and unblock all promises that need |annotations| and |archive|.
   request->is_pending = false;
@@ -195,11 +185,11 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid,
   request->blocked_promises.clear();
 }
 
-void SnapshotManager::EnforceSizeLimits() {
+void SnapshotCollector::EnforceSizeLimits() {
   std::vector<std::unique_ptr<SnapshotRequest>> surviving_requests;
   for (auto& request : requests_) {
     // If the request is pending or the size limits aren't exceeded, keep the request.
-    if (request->is_pending || !snapshot_store_.SizeLimitsExceeded()) {
+    if (request->is_pending || !snapshot_store_->SizeLimitsExceeded()) {
       surviving_requests.push_back(std::move(request));
 
       // Continue in order to keep the rest of the requests alive.
@@ -208,8 +198,8 @@ void SnapshotManager::EnforceSizeLimits() {
 
     // Tell SnapshotStore to free space if needed. Keep the request if at least part of the snapshot
     // data survives the garbage collection.
-    snapshot_store_.EnforceSizeLimits(request->uuid);
-    if (snapshot_store_.SnapshotExists(request->uuid)) {
+    snapshot_store_->EnforceSizeLimits(request->uuid);
+    if (snapshot_store_->SnapshotExists(request->uuid)) {
       surviving_requests.push_back(std::move(request));
     }
   }
@@ -217,7 +207,7 @@ void SnapshotManager::EnforceSizeLimits() {
   requests_.swap(surviving_requests);
 }
 
-bool SnapshotManager::UseLatestRequest() const {
+bool SnapshotCollector::UseLatestRequest() const {
   if (requests_.empty()) {
     return false;
   }
@@ -228,7 +218,8 @@ bool SnapshotManager::UseLatestRequest() const {
   return requests_.back()->delayed_get_snapshot.is_pending();
 }
 
-SnapshotManager::SnapshotRequest* SnapshotManager::FindSnapshotRequest(const SnapshotUuid& uuid) {
+SnapshotCollector::SnapshotRequest* SnapshotCollector::FindSnapshotRequest(
+    const SnapshotUuid& uuid) {
   auto request = std::find_if(
       requests_.begin(), requests_.end(),
       [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; });

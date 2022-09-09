@@ -74,6 +74,7 @@ executable("crash_reporter_unittest_exe") {
   ]
 
   deps = [
+    ":scoped_test_store",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.settings",
@@ -191,6 +192,7 @@ executable("queue_unittest_exe") {
   ]
 
   deps = [
+    ":scoped_test_store",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:network_watcher",
     "//src/developer/forensics/crash_reports:queue",
@@ -249,14 +251,15 @@ executable("sized_data_reader_unittest_exe") {
   ]
 }
 
-executable("snapshot_manager_unittest_exe") {
+executable("snapshot_collector_unittest_exe") {
   testonly = true
 
-  sources = [ "snapshot_manager_unittest.cc" ]
+  sources = [ "snapshot_collector_unittest.cc" ]
 
   deps = [
+    ":scoped_test_store",
     "//src/developer/forensics/crash_reports:errors",
-    "//src/developer/forensics/crash_reports:snapshot_manager",
+    "//src/developer/forensics/crash_reports:snapshot_collector",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -274,7 +277,8 @@ executable("snapshot_store_unittest_exe") {
   sources = [ "snapshot_store_unittest.cc" ]
 
   deps = [
-    "//src/developer/forensics/crash_reports:snapshot_manager",
+    "//src/developer/forensics/crash_reports:constants",
+    "//src/developer/forensics/crash_reports:store",
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -293,6 +297,7 @@ executable("store_unittest_exe") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:store",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:scoped_memfs_manager",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//src/developer/forensics/utils:sized_data",
     "//src/developer/forensics/utils:storage_size",
@@ -315,10 +320,29 @@ executable("store_metadata_unittest_exe") {
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:store",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:scoped_memfs_manager",
     "//src/developer/forensics/utils:storage_size",
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("scoped_test_store") {
+  sources = [
+    "scoped_test_store.cc",
+    "scoped_test_store.h",
+  ]
+
+  public_deps = [
+    "//src/developer/forensics/crash_reports:store",
+    "//src/developer/forensics/feedback/annotations:annotations",
+    "//src/developer/forensics/utils:storage_size",
+  ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:constants",
+    "//src/lib/files",
   ]
 }
 
@@ -357,7 +381,10 @@ fuchsia_component("crash_reporter_unittest") {
 
   manifest = "meta/crash_reporter_unittest.cml"
 
-  deps = [ ":crash_reporter_unittest_exe" ]
+  deps = [
+    ":crash_reporter_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_unittest_component("crash_server_unittest") {
@@ -388,7 +415,10 @@ fuchsia_component("queue_unittest") {
 
   manifest = "meta/queue_unittest.cml"
 
-  deps = [ ":queue_unittest_exe" ]
+  deps = [
+    ":queue_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
 }
 
 fuchsia_unittest_component("report_util_unittest") {
@@ -407,9 +437,9 @@ fuchsia_unittest_component("sized_data_reader_unittest") {
   deps = [ ":sized_data_reader_unittest_exe" ]
 }
 
-fuchsia_unittest_component("snapshot_manager_unittest") {
+fuchsia_unittest_component("snapshot_collector_unittest") {
   deps = [
-    ":snapshot_manager_unittest_exe",
+    ":snapshot_collector_unittest_exe",
     "//src/sys/test_runners:tmp_storage",
   ]
 }
@@ -456,7 +486,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":queue_unittest",
     ":report_util_unittest",
     ":sized_data_reader_unittest",
-    ":snapshot_manager_unittest",
+    ":snapshot_collector_unittest",
     ":snapshot_store_unittest",
     ":store_unittest",
     ":store_metadata_unittest",

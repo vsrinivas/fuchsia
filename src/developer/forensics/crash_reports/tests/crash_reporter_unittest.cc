@@ -28,6 +28,7 @@
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/info/info_context.h"
+#include "src/developer/forensics/crash_reports/tests/scoped_test_store.h"
 #include "src/developer/forensics/crash_reports/tests/stub_crash_server.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/constants.h"
@@ -143,13 +144,6 @@ class CrashReporterTest : public UnitTestFixture {
     info_context_ =
         std::make_shared<InfoContext>(&InspectRoot(), &clock_, dispatcher(), services());
     crash_register_ = std::make_unique<CrashRegister>(info_context_, RegisterJsonPath());
-    store_ = std::make_unique<Store>(
-        &tags_, info_context_,
-        /*temp_root=*/
-        crash_reports::Store::Root{crash_reports::kStoreTmpPath, crash_reports::kStoreMaxTmpSize},
-        /*persistent_root=*/
-        crash_reports::Store::Root{crash_reports::kStoreCachePath,
-                                   crash_reports::kStoreMaxCacheSize});
 
     SetUpCobaltServer(std::make_unique<stubs::CobaltLoggerFactory>());
     SetUpNetworkReachabilityProviderServer();
@@ -157,8 +151,6 @@ class CrashReporterTest : public UnitTestFixture {
   }
 
   void TearDown() override {
-    ASSERT_TRUE(files::DeletePath(kStoreTmpPath, /*recursive=*/true));
-    ASSERT_TRUE(files::DeletePath(kStoreCachePath, /*recursive=*/true));
     ASSERT_TRUE(files::DeletePath(feedback::kProductQuotasPath, /*recursive=*/true));
   }
 
@@ -185,16 +177,17 @@ class CrashReporterTest : public UnitTestFixture {
             {feedback::kDeviceFeedbackIdKey, kDefaultDeviceId},
             {feedback::kSystemUpdateChannelCurrentKey, kDefaultChannel},
         });
-    snapshot_manager_ = std::make_unique<SnapshotManager>(
-        dispatcher(), &clock_, data_provider_server_.get(), annotation_manager_.get(),
-        kSnapshotSharedRequestWindow, kGarbageCollectedSnapshotsPath, StorageSize::Gigabytes(1u),
-        StorageSize::Gigabytes(1u)),
+    store_ = std::make_unique<ScopedTestStore>(annotation_manager_.get(), info_context_);
+
+    snapshot_collector_ = std::make_unique<SnapshotCollector>(
+        dispatcher(), &clock_, data_provider_server_.get(), store_->GetStore().GetSnapshotStore(),
+        kSnapshotSharedRequestWindow),
     crash_server_ =
         std::make_unique<StubCrashServer>(dispatcher(), services(), upload_attempt_results);
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config, crash_register_.get(), &tags_,
-        snapshot_manager_.get(), crash_server_.get(), store_.get());
+        snapshot_collector_.get(), crash_server_.get(), &store_->GetStore());
     FX_CHECK(crash_reporter_);
   }
 
@@ -436,11 +429,11 @@ class CrashReporterTest : public UnitTestFixture {
 
  private:
   std::shared_ptr<InfoContext> info_context_;
-  std::unique_ptr<Store> store_;
+  std::unique_ptr<ScopedTestStore> store_;
 
  protected:
   std::unique_ptr<feedback::AnnotationManager> annotation_manager_;
-  std::unique_ptr<SnapshotManager> snapshot_manager_;
+  std::unique_ptr<SnapshotCollector> snapshot_collector_;
   std::unique_ptr<CrashRegister> crash_register_;
   std::unique_ptr<CrashReporter> crash_reporter_;
 };

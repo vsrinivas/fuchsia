@@ -22,19 +22,19 @@ CrashReports::CrashReports(async_dispatcher_t* dispatcher,
       tags_(),
       crash_server_(dispatcher, services, kCrashServerUrl, &tags_),
       store_(
-          &tags_, info_context_,
+          &tags_, info_context_, annotation_manager,
           /*temp_root=*/
           crash_reports::Store::Root{crash_reports::kStoreTmpPath, crash_reports::kStoreMaxTmpSize},
           /*persistent_root=*/
           crash_reports::Store::Root{crash_reports::kStoreCachePath,
-                                     crash_reports::kStoreMaxCacheSize}),
-      snapshot_manager_(dispatcher, clock, data_provider, annotation_manager,
-                        options.snapshot_manager_window_duration, kGarbageCollectedSnapshotsPath,
-                        options.snapshot_store_max_annotations_size,
-                        options.snapshot_store_max_archives_size),
+                                     crash_reports::kStoreMaxCacheSize},
+          kGarbageCollectedSnapshotsPath, options.snapshot_store_max_annotations_size,
+          options.snapshot_store_max_archives_size),
+      snapshot_collector_(dispatcher, clock, data_provider, store_.GetSnapshotStore(),
+                          options.snapshot_collector_window_duration),
       crash_register_(info_context_, kCrashRegisterPath),
       crash_reporter_(dispatcher, services, clock, info_context_, options.config, &crash_register_,
-                      &tags_, &snapshot_manager_, &crash_server_, &store_),
+                      &tags_, &snapshot_collector_, &crash_server_, &store_),
       info_(info_context_) {
   info_.ExposeConfig(options.config);
 }

@@ -50,7 +50,7 @@ class MainServiceTest : public UnitTestFixture {
                               .config = {},
                               .snapshot_store_max_annotations_size = StorageSize::Bytes(0),
                               .snapshot_store_max_archives_size = StorageSize::Bytes(0),
-                              .snapshot_manager_window_duration = zx::sec(0),
+                              .snapshot_collector_window_duration = zx::sec(0),
                           },
                           FeedbackData::Options{
                               .config{},
