@@ -86,6 +86,14 @@ impl SharedState {
         self.ag_features.contains(AgFeatures::THREE_WAY_CALLING)
             && self.hf_features.contains(HfFeatures::THREE_WAY_CALLING)
     }
+
+    #[cfg(test)]
+    pub fn load_with_set_ag_features(
+        config: HandsFreeFeatureSupport,
+        ag_features: AgFeatures,
+    ) -> Self {
+        Self { ag_features, ..SharedState::new(config) }
+    }
 }
 
 /// Serializes the AT commands and sends them through the provided RFCOMM channel

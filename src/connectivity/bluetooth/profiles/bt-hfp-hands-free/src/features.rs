@@ -6,6 +6,10 @@ use bitflags::bitflags;
 
 use crate::config::HandsFreeFeatureSupport;
 
+/// Codec IDs. See HFP 1.8, Section 10 / Appendix B.
+pub const CVSD: u8 = 0x01;
+pub const MSBC: u8 = 0x02;
+
 bitflags! {
     /// Bitmap defined in HFP v1.8, Section 4.35.1 for use with the "+BRSF" AT result code.
     #[derive(Default)]

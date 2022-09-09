@@ -7,7 +7,7 @@ use at_commands as at;
 
 use super::{Procedure, ProcedureMarker};
 
-use crate::features::AgFeatures;
+use crate::features::{AgFeatures, CVSD, MSBC};
 use crate::peer::service_level_connection::SharedState;
 
 /// This mode's behavior is to forward unsolicited result codes directly per
@@ -19,6 +19,7 @@ pub const INDICATOR_REPORTING_MODE: i64 = 3;
 #[derive(Debug)]
 pub enum Stages {
     Features,
+    CodecNegotiation,
     ListIndicators,
     EnableIndicators,
     IndicatorStatusUpdate,
@@ -67,9 +68,12 @@ impl Procedure for SlcInitProcedure {
                 match update[..] {
                     [at::Response::Success(at::Success::Brsf { features }), at::Response::Ok] => {
                         state.ag_features = AgFeatures::from_bits_truncate(features);
-                        // TODO (fxbug.dev/108596): Implement Codec Negotiation and respond appropriately
                         if state.supports_codec_negotiation() {
-                            return Ok(vec![at::Command::CindTest {}]);
+                            self.state = Stages::CodecNegotiation;
+                            // By default, we support the CVSD and MSBC codecs.
+                            return Ok(vec![at::Command::Bac {
+                                codecs: vec![CVSD.into(), MSBC.into()],
+                            }]);
                         } else {
                             self.state = Stages::ListIndicators;
                             return Ok(vec![at::Command::CindTest {}]);
@@ -84,6 +88,19 @@ impl Procedure for SlcInitProcedure {
                     }
                 }
             }
+            Stages::CodecNegotiation => match update[..] {
+                [at::Response::Ok] => {
+                    self.state = Stages::ListIndicators;
+                    return Ok(vec![at::Command::CindTest {}]);
+                }
+                _ => {
+                    return Err(format_err!(
+                        "Wrong responses at {:?} stage of SLCI with response(s): {:?}.",
+                        self.state,
+                        update
+                    ));
+                }
+            },
             Stages::ListIndicators => {
                 match update[..] {
                     // TODO(fxbug.dev/108331): Read additional indicators by parsing raw bytes instead of just checking for existence of raw bytes.
@@ -149,7 +166,6 @@ impl Procedure for SlcInitProcedure {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
 
     use crate::config::HandsFreeFeatureSupport;
@@ -212,6 +228,37 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn slci_codec_negotiation_properly_works() {
+        let mut procedure = SlcInitProcedure::new();
+        //wide band needed for codec negotiation.
+        let config = HandsFreeFeatureSupport {
+            wide_band_speech: true,
+            ..HandsFreeFeatureSupport::default()
+        };
+        let mut ag_features = AgFeatures::default();
+        ag_features.set(AgFeatures::CODEC_NEGOTIATION, true);
+        let mut state = SharedState::load_with_set_ag_features(config, ag_features);
+
+        assert!(!procedure.is_terminated());
+
+        let response1 = vec![
+            at::Response::Success(at::Success::Brsf { features: ag_features.bits() }),
+            at::Response::Ok,
+        ];
+        let expected_command1 = vec![at::Command::Bac { codecs: vec![CVSD.into(), MSBC.into()] }];
+
+        assert_eq!(procedure.ag_update(&mut state, &response1).unwrap(), expected_command1);
+        assert_matches!(procedure.state, Stages::CodecNegotiation);
+
+        let response2 = vec![at::Response::Ok];
+        let expected_command2 = vec![at::Command::CindTest {}];
+
+        assert_eq!(procedure.ag_update(&mut state, &response2).unwrap(), expected_command2);
+        assert_matches!(procedure.state, Stages::ListIndicators);
+        assert!(!procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
     fn error_when_incorrect_response_at_feature_stage() {
         let mut procedure = SlcInitProcedure::start_at_state(Stages::Features);
         let config = HandsFreeFeatureSupport::default();
@@ -221,6 +268,25 @@ mod tests {
 
         // Missing the accompanying Ok response so should result in error.
         let wrong_response = vec![at::Response::Success(at::Success::Brsf { features: 0 })];
+        assert_matches!(procedure.ag_update(&mut state, &wrong_response), Err(_));
+        assert!(!procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn error_when_incorrect_response_at_codec_negotiation_stage() {
+        let mut procedure = SlcInitProcedure::start_at_state(Stages::CodecNegotiation);
+        let config = HandsFreeFeatureSupport {
+            wide_band_speech: true,
+            ..HandsFreeFeatureSupport::default()
+        };
+        let mut ag_features = AgFeatures::default();
+        ag_features.set(AgFeatures::CODEC_NEGOTIATION, true);
+        let mut state = SharedState::load_with_set_ag_features(config, ag_features);
+
+        assert!(!procedure.is_terminated());
+
+        // Did not receive expected Ok response as should result in error..
+        let wrong_response = vec![at::Response::Success(at::Success::TestResponse {})];
         assert_matches!(procedure.ag_update(&mut state, &wrong_response), Err(_));
         assert!(!procedure.is_terminated());
     }
