@@ -8,9 +8,9 @@ use {
         self as fptr, TouchEvent, TouchInteractionId, TouchInteractionStatus, TouchResponse,
     },
     fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::channel::mpsc::UnboundedSender,
     std::{collections::HashMap, slice::Iter},
+    tracing::{error, info},
 };
 
 /// Generate a vector of responses to the input `TouchEvents`, as required by
@@ -107,7 +107,7 @@ pub fn spawn_touch_source_watcher(
                                     // Samples received after the interaction is granted are
                                     // immediately sent to the app.
                                     if let Err(e) = sender.unbounded_send(msg) {
-                                        fx_log_err!("Failed to send TouchEvent message for granted interaction: {}", e);
+                                        error!("Failed to send TouchEvent message for granted interaction: {}", e);
                                         return;
                                     }
                                 }
@@ -141,7 +141,7 @@ pub fn spawn_touch_source_watcher(
                                 fptr::TouchInteractionStatus::Granted => {
                                     for msg in buffered_messages {
                                         if let Err(e) = sender.unbounded_send(msg) {
-                                            fx_log_info!("Failed to send TouchEvent message for newly-granted interaction: {}", e);
+                                            info!("Failed to send TouchEvent message for newly-granted interaction: {}", e);
                                             return;
                                         }
                                     }
@@ -157,7 +157,7 @@ pub fn spawn_touch_source_watcher(
                     }
                 }
                 _ => {
-                    fx_log_info!("TouchSource connection closed");
+                    info!("TouchSource connection closed");
                     return;
                 }
             }

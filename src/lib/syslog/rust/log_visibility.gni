@@ -124,8 +124,6 @@ third_party_rust_crate_log_visibility = [
   "//src/sys/time/lib/httpdate-hyper:*",
   "//src/sys/full-resolver:*",
   "//src/ui/bin/terminal:*",
-  "//src/ui/examples/flatland-display:*",
-  "//src/ui/examples/flatland-view-provider:*",
   "//src/ui/input/text/text-edit-controller:*",
   "//src/ui/tests/scenic-stress-tests:*",
 ]

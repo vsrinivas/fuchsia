@@ -134,8 +134,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/ui/bin/shortcut:*",
   "//src/ui/bin/terminal:*",
   "//src/ui/bin/text:*",
-  "//src/ui/examples/flatland-display:*",
-  "//src/ui/examples/flatland-view-provider:*",
   "//src/ui/lib/input_pipeline:*",
   "//src/ui/lib/scene_management:*",
   "//src/ui/tools/tiles/flatland:*",

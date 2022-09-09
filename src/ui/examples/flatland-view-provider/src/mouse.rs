@@ -5,8 +5,8 @@
 use {
     crate::internal_message::*,
     fidl_fuchsia_ui_pointer as fptr, fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     futures::channel::mpsc::UnboundedSender,
+    tracing::{error, info},
 };
 
 pub fn spawn_mouse_source_watcher(
@@ -33,10 +33,10 @@ pub fn spawn_mouse_source_watcher(
                         // fields except for `id` are absent.  Furthermore, the documentation is
                         // insufficient to understand how to handle these fields, if present.
                         if let Some(new_device_info) = e.device_info.clone() {
-                            fx_log_info!(
-                                "Received new {:?} replacing {:?}",
-                                new_device_info,
-                                device_info
+                            info!(
+                                new = ?new_device_info,
+                                replacing = ?device_info,
+                                "Received device info",
                             );
 
                             device_info = Some(new_device_info);
@@ -44,10 +44,10 @@ pub fn spawn_mouse_source_watcher(
 
                         // Handle `view_parameters` field, if it exists.
                         if let Some(new_view_parameters) = e.view_parameters.clone() {
-                            fx_log_info!(
-                                "Received new {:?} replacing {:?}",
-                                new_view_parameters,
-                                view_parameters
+                            info!(
+                                new = ?new_view_parameters,
+                                replacing = ?view_parameters,
+                                "Received view parameters",
                             );
                             view_parameters = Some(new_view_parameters);
                         }
@@ -67,7 +67,7 @@ pub fn spawn_mouse_source_watcher(
                         {
                             // TODO(fxbug.dev/90972): Relative motion is currently ignored.
                             if let Some(relative_motion) = &relative_motion {
-                                fx_log_info!(
+                                info!(
                                     "fxbug.dev/90972: Relative motion ignored: {:?}",
                                     relative_motion
                                 );
@@ -87,7 +87,7 @@ pub fn spawn_mouse_source_watcher(
                                     scroll_h,
                                     pressed_buttons,
                                 }) {
-                                    fx_log_err!("Failed to send MouseEvent message: {}", e);
+                                    error!("Failed to send MouseEvent message: {}", e);
                                     return;
                                 }
                             } else {
@@ -99,16 +99,12 @@ pub fn spawn_mouse_source_watcher(
                         if let Some(fptr::MouseEventStreamInfo { device_id, status }) =
                             e.stream_info.clone()
                         {
-                            fx_log_info!(
-                                "Unhandled MouseEventStreamInfo (device_id={} status={:?})",
-                                device_id,
-                                status
-                            );
+                            info!(%device_id, ?status, "Unhandled MouseEventStreamInfo");
                         }
                     }
                 }
                 _ => {
-                    fx_log_info!("MouseSource connection closed");
+                    info!("MouseSource connection closed");
                     return;
                 }
             }

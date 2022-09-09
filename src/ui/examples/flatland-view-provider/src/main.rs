@@ -19,7 +19,6 @@ use {
         sysmem::minimum_row_bytes, sysmem::BufferCollectionAllocator, FrameUsage,
     },
     fuchsia_scenic::{BufferCollectionTokenPair, ViewRefPair},
-    fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_trace as trace, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{unbounded, UnboundedSender},
@@ -27,8 +26,8 @@ use {
         prelude::*,
     },
     internal_message::*,
-    log::*,
     std::convert::TryInto,
+    tracing::{error, info, warn},
 };
 
 const IMAGE_ID: fland::ContentId = fland::ContentId { value: 2 };
@@ -245,11 +244,11 @@ impl<'a> AppModel<'a> {
                             .expect("failed to send InternalMessage.");
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
-                        fx_log_info!("ParentViewportWatcher connection closed.");
+                        info!("ParentViewportWatcher connection closed.");
                         return; // from spawned task closure
                     }
                     Err(fidl_error) => {
-                        fx_log_warn!("ParentViewportWatcher GetLayout() error: {:?}", fidl_error);
+                        warn!("ParentViewportWatcher GetLayout() error: {:?}", fidl_error);
                         return; // from spawned task closure
                     }
                 }
@@ -276,11 +275,11 @@ impl<'a> AppModel<'a> {
                         error!("Missing required field FocusState.focused");
                     }
                     Err(fidl::Error::ClientChannelClosed { .. }) => {
-                        fx_log_info!("ViewRefFocused connection closed.");
+                        info!("ViewRefFocused connection closed.");
                         return; // from spawned task closure
                     }
                     Err(fidl_error) => {
-                        fx_log_warn!("ViewRefFocused GetLayout() error: {:?}", fidl_error);
+                        warn!("ViewRefFocused GetLayout() error: {:?}", fidl_error);
                         return; // from spawned task closure
                     }
                 }
@@ -391,7 +390,7 @@ fn setup_fidl_services(sender: UnboundedSender<InternalMessage>) {
                                 .expect("failed to send InternalMessage.");
                         }
                         unhandled_req => {
-                            fx_log_warn!("Unhandled ViewProvider request: {:?}", unhandled_req);
+                            warn!("Unhandled ViewProvider request: {:?}", unhandled_req);
                         }
                     };
                     future::ok(())
@@ -453,11 +452,9 @@ fn setup_handle_flatland_events(
     .detach();
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["flatland-view-provider-example"])]
 async fn main() {
     fuchsia_trace_provider::trace_provider_create_with_fdio();
-    fuchsia_syslog::init_with_tags(&["flatland-view-provider-example"])
-        .expect("failed to initialize logger");
 
     let (internal_sender, mut internal_receiver) = unbounded::<InternalMessage>();
 
@@ -469,7 +466,7 @@ async fn main() {
 
     let allocator = connect_to_protocol::<fland::AllocatorMarker>()
         .expect("error connecting to Scenic allocator");
-    fx_log_info!("Established connections to Flatland and Allocator");
+    info!("Established connections to Flatland and Allocator");
 
     setup_fidl_services(internal_sender.clone());
     setup_handle_flatland_events(flatland.take_event_stream(), internal_sender.clone());
@@ -528,11 +525,18 @@ async fn main() {
                     app.is_focused = is_focused;
                   }
                   InternalMessage::TouchEvent{timestamp, interaction: _, phase, position_in_viewport } => {
-                    fx_log_info!("Received TouchEvent ({},{}) time: {} phase: {:?}", position_in_viewport[0], position_in_viewport[1], timestamp, phase);
+                    info!(
+                        x = position_in_viewport[0], y = position_in_viewport[1], time = timestamp,
+                        ?phase, "Received TouchEvent"
+                    );
                   },
                   InternalMessage::MouseEvent{ timestamp, trace_flow_id: _, position_in_viewport,
                     scroll_v: _, scroll_h: _, pressed_buttons} => {
-                    fx_log_info!("Received MouseEvent time={} x={} y={} buttons={:?}", timestamp, position_in_viewport[0], position_in_viewport[1], pressed_buttons);
+                    info!(
+                        time = timestamp, x = position_in_viewport[0],
+                        y = position_in_viewport[1], buttons = ?pressed_buttons,
+                        "Received MouseEvent"
+                    );
                   },
                 }
             }
