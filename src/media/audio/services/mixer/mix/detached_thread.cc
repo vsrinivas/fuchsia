@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/services/common/logging.h"
+
 namespace media_audio {
 
 DetachedThreadPtr DetachedThread::Create() {
@@ -15,14 +17,6 @@ DetachedThreadPtr DetachedThread::Create() {
   };
 
   return std::make_shared<WithPublicCtor>();
-}
-
-void DetachedThread::AddConsumer(ConsumerStagePtr consumer) {
-  FX_CHECK(false) << "Consumers should never be assigned to the DetachedThread";
-}
-
-void DetachedThread::RemoveConsumer(ConsumerStagePtr consumer) {
-  FX_CHECK(false) << "Consumers should never be assigned to the DetachedThread";
 }
 
 }  // namespace media_audio

@@ -4,16 +4,30 @@
 
 #include "src/media/audio/services/mixer/mix/ring_buffer_producer_stage.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
 
 #include <algorithm>
 #include <optional>
 
 #include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 
 namespace media_audio {
+
+RingBufferProducerStage::RingBufferProducerStage(Format format, zx_koid_t reference_clock_koid,
+                                                 fzl::VmoMapper vmo_mapper, int64_t frame_count,
+                                                 SafeReadFrameFn safe_read_frame_fn)
+    : ProducerStage("RingBufferProducerStage", format, reference_clock_koid),
+      vmo_mapper_(std::move(vmo_mapper)),
+      frame_count_(frame_count),
+      safe_read_frame_fn_(std::move(safe_read_frame_fn)) {
+  FX_CHECK(vmo_mapper_.start());
+  FX_CHECK(vmo_mapper_.size() >= static_cast<uint64_t>(format.bytes_per_frame() * frame_count_));
+  FX_CHECK(safe_read_frame_fn_);
+}
 
 std::optional<PipelineStage::Packet> RingBufferProducerStage::ReadImpl(MixJobContext& ctx,
                                                                        Fixed start_frame,

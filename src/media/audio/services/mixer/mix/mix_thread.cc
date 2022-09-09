@@ -13,6 +13,7 @@
 
 #include <fbl/algorithm.h>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
 
 namespace media_audio {
@@ -197,8 +198,8 @@ void MixThread::RunLoop() {
 
     // The next mix job should happen at least one period in the future.
     FX_CHECK(next_job_time >= current_job_time + mix_period_)
-        << "next_job_time=" << next_job_time.get()
-        << ", current_job_time=" << current_job_time.get() << ", period=" << mix_period_.get();
+        << "next_job_time=" << next_job_time << ", current_job_time=" << current_job_time
+        << ", period=" << mix_period_;
 
     prior_job_time = current_job_time;
     current_job_time = next_job_time;
@@ -269,8 +270,8 @@ zx::time MixThread::RunMixJobs(const zx::time mono_start_time, const zx::time mo
       // that command. This must be at least one period in the future, otherwise the start command
       // should have happened already.
       FX_CHECK(*c.next_mix_job_start_time >= ref_deadline)
-          << "next_mix_job_start_time=" << c.next_mix_job_start_time->get()
-          << ", ref_deadline=" << ref_deadline.get();
+          << "next_mix_job_start_time=" << *c.next_mix_job_start_time
+          << ", ref_deadline=" << ref_deadline;
 
       // Translate the next start time back to the monotonic clock using a worst-case conservative
       // assumption that the reference clock is running at the fastest possible rate.

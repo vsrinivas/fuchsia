@@ -15,6 +15,10 @@
 
 namespace media_audio {
 
+SimplePacketQueueProducerStage::SimplePacketQueueProducerStage(Args args)
+    : ProducerStage(args.name, args.format, args.reference_clock_koid),
+      underflow_reporter_(std::move(args.underflow_reporter)) {}
+
 void SimplePacketQueueProducerStage::AdvanceSelfImpl(Fixed frame) {
   while (!pending_packet_queue_.empty()) {
     const auto& pending_packet = pending_packet_queue_.front();

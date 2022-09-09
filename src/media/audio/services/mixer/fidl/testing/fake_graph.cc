@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 
 namespace media_audio {

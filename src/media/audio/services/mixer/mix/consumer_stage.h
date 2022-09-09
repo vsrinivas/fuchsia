@@ -12,6 +12,7 @@
 #include <optional>
 #include <variant>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/thread_safe_queue.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
@@ -181,9 +182,15 @@ class ConsumerStage : public PipelineStage {
   }
 
   // Implements `PipelineStage`.
-  void AdvanceSelfImpl(Fixed frame) final;
-  void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) final;
-  std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
+  void AdvanceSelfImpl(Fixed frame) final {
+    UNREACHABLE << "Consumers cannot be advanced: there is no destination stream";
+  }
+  void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) final {
+    UNREACHABLE << "Consumers cannot be advanced: there is no destination stream";
+  }
+  std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final {
+    UNREACHABLE << "Consumers cannot be read: there is no destination stream";
+  }
 
   const fuchsia_audio_mixer::PipelineDirection pipeline_direction_;
   const zx::duration presentation_delay_;  // downstream or upstream delay

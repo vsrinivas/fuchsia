@@ -9,6 +9,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "src/media/audio/services/common/logging.h"
+
 namespace media_audio {
 
 namespace {

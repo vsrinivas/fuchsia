@@ -6,6 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/packet_queue_producer_node.h"
 
 namespace media_audio {
@@ -74,9 +75,7 @@ void StreamSinkProducerNode::DestroyChildDest(NodePtr child_dest) {
 }
 
 bool StreamSinkProducerNode::CanAcceptSource(NodePtr src) const {
-  // CanAcceptSource should not be called on meta nodes.
-  FX_CHECK(false);
-  __builtin_unreachable();
+  UNREACHABLE << "CanAcceptSource should not be called on meta nodes";
 }
 
 }  // namespace media_audio

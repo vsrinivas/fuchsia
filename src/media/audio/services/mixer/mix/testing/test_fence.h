@@ -10,6 +10,8 @@
 
 #include <optional>
 
+#include "src/media/audio/services/common/logging.h"
+
 namespace media_audio {
 
 class TestFence {

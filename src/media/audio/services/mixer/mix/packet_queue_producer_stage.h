@@ -86,18 +86,17 @@ class PacketQueueProducerStage : public ProducerStage {
 
     // Message queue for pending commands. Will be drained by each call to Advance or Read.
     std::shared_ptr<CommandQueue> command_queue;
+
+    // A callback to invoke when a packet underflows. Optional: can be nullptr.
+    // The duration estimates the packet's lateness relative to the system monotonic clock.
+    // TODO(fxbug.dev/87651): use fit::inline_function
+    fit::function<void(zx::duration)> underflow_reporter;
   };
 
   explicit PacketQueueProducerStage(Args args);
 
   // Implements `PipelineStage`.
   void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) final;
-
-  // Registers a callback to invoke when a packet underflows.
-  // The duration estimates the packet's lateness relative to the system monotonic clock.
-  void SetUnderflowReporter(std::function<void(zx::duration)> underflow_reporter) {
-    pending_packets_.SetUnderflowReporter(std::move(underflow_reporter));
-  }
 
  protected:
   // Implements `PipelineStage`.

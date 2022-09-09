@@ -16,6 +16,8 @@ source_set("common") {
     "base_fidl_server.h",
     "fidl_thread.cc",
     "fidl_thread.h",
+    "logging.cc",
+    "logging.h",
     "thread_checker.h",
   ]
 
@@ -30,6 +32,7 @@ source_set("common") {
     "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
   ]
 }
 

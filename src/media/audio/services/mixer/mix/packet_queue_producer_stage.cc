@@ -22,6 +22,7 @@ PacketQueueProducerStage::PacketQueueProducerStage(Args args)
           .name = args.name,
           .format = args.format,
           .reference_clock_koid = args.reference_clock_koid,
+          .underflow_reporter = std::move(args.underflow_reporter),
       }) {
   FX_CHECK(pending_commands_);
 }
@@ -124,11 +125,11 @@ void PacketQueueProducerStage::FlushPendingCommands() {
             << ffl::String::DecRational << "Start command arrived out-of-order: "
             << "prior command is {"
             << " start=" << last_pending_start_or_stop_->is_start
-            << " time=" << last_pending_start_or_stop_->presentation_time.get()
+            << " time=" << last_pending_start_or_stop_->presentation_time
             << " frame=" << last_pending_start_or_stop_->internal_frame << " },"
             << "new command is {"
-            << " start_time=" << cmd->start_presentation_time.get()
-            << " start_frame=" << cmd->start_frame << " }";
+            << " start_time=" << cmd->start_presentation_time << " start_frame=" << cmd->start_frame
+            << " }";
       }
 
       PendingStartOrStop pss{
@@ -152,7 +153,7 @@ void PacketQueueProducerStage::FlushPendingCommands() {
           << ffl::String::DecRational << "Stop command arrived out-of-order: "
           << "prior command is {"
           << " start=" << last_pending_start_or_stop_->is_start
-          << " time=" << last_pending_start_or_stop_->presentation_time.get()
+          << " time=" << last_pending_start_or_stop_->presentation_time
           << " frame=" << last_pending_start_or_stop_->internal_frame << " },"
           << "new command is { stop_frame=" << cmd->stop_frame << " }";
 

@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <vector>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/mix/testing/fake_pipeline_stage.h"
 

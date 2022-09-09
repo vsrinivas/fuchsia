@@ -131,8 +131,9 @@ class MixerSourceClockTest : public testing::Test {
                                        ? Sampler::Type::kSincSampler
                                        : Sampler::Type::kDefault);
     state_ = &sampler->state();
-    auto packet_queue = std::make_shared<SimplePacketQueueProducerStage>(
-        SimplePacketQueueProducerStage::Args{"packet_queue", kDefaultFormat, source_clock->koid()});
+    auto packet_queue =
+        std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+            "packet_queue", kDefaultFormat, source_clock->koid(), nullptr});
     packet_queue->UpdatePresentationTimeToFracFrame(
         direction_ == Direction::kRender ? client_ref_to_frac_frames_ : device_ref_to_frac_frames_);
 

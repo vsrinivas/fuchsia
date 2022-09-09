@@ -12,11 +12,52 @@
 #include <utility>
 
 #include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 
 namespace media_audio {
+
+SilencePaddingStage::SilencePaddingStage(Format format, zx_koid_t reference_clock_koid,
+                                         Fixed silence_frame_count,
+                                         bool round_down_fractional_frames)
+    : PipelineStage("SilencePaddingStage", format, reference_clock_koid),
+      // Round up to generate an integer number of frames.
+      silence_frame_count_(silence_frame_count.Ceiling()),
+      round_down_fractional_frames_(round_down_fractional_frames),
+      silence_buffer_(silence_frame_count_ * format.bytes_per_frame(), 0) {}
+
+void SilencePaddingStage::AddSource(PipelineStagePtr source, AddSourceOptions options) {
+  FX_CHECK(!source_) << "SilencePaddingStage does not support multiple sources";
+  FX_CHECK(source) << "SilencePaddingStage cannot add null source";
+  FX_CHECK(source->format() == format())
+      << "SilencePaddingStage format does not match with source format";
+  FX_CHECK(source->reference_clock_koid() == reference_clock_koid())
+      << "SilencePaddingStage clock does not match with source clock";
+  FX_CHECK(options.gain_ids.empty());
+  FX_CHECK(!options.clock_sync);
+  source_ = std::move(source);
+  if (source_) {
+    set_presentation_time_to_frac_frame(source_->presentation_time_to_frac_frame());
+  }
+}
+
+void SilencePaddingStage::RemoveSource(PipelineStagePtr source) {
+  FX_CHECK(source_) << "SilencePaddingStage source was not found";
+  FX_CHECK(source) << "SilencePaddingStage cannot remove null source";
+  FX_CHECK(source_ == source) << "SilencePaddingStage source " << source_->name()
+                              << " does not match with " << source->name();
+  source_ = nullptr;
+  set_presentation_time_to_frac_frame(std::nullopt);
+}
+
+void SilencePaddingStage::UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) {
+  set_presentation_time_to_frac_frame(f);
+  if (source_) {
+    source_->UpdatePresentationTimeToFracFrame(f);
+  }
+}
 
 void SilencePaddingStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
   if (source_) {

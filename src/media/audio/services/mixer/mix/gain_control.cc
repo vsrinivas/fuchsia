@@ -12,13 +12,14 @@
 #include <variant>
 
 #include "src/media/audio/lib/processing/gain.h"
+#include "src/media/audio/services/common/logging.h"
 
 namespace media_audio {
 
 void GainControl::Advance(zx::time reference_time) {
   FX_CHECK(!last_advanced_time_ || reference_time >= *last_advanced_time_)
-      << "Advance reference_time=" << reference_time.get()
-      << " < last_advanced_time=" << last_advanced_time_->get();
+      << "Advance reference_time=" << reference_time
+      << " < last_advanced_time=" << *last_advanced_time_;
 
   // Apply all scheduled commands up to and including `reference_time`.
   const auto begin = scheduled_commands_.begin();
@@ -58,16 +59,16 @@ std::optional<zx::time> GainControl::NextScheduledStateChange() const {
 void GainControl::ScheduleGain(zx::time reference_time, float gain_db,
                                std::optional<GainRamp> ramp) {
   if (last_advanced_time_ && reference_time < last_advanced_time_) {
-    FX_LOGS(WARNING) << "ScheduleGain at reference_time=" << reference_time.get()
-                     << " < last_advanced_time=" << last_advanced_time_->get();
+    FX_LOGS(WARNING) << "ScheduleGain at reference_time=" << reference_time
+                     << " < last_advanced_time=" << *last_advanced_time_;
   }
   scheduled_commands_.emplace(reference_time, GainCommand{gain_db, ramp});
 }
 
 void GainControl::ScheduleMute(zx::time reference_time, bool is_muted) {
   if (last_advanced_time_ && reference_time < last_advanced_time_) {
-    FX_LOGS(WARNING) << "ScheduleMute at reference_time=" << reference_time.get()
-                     << " < last_advanced_time=" << last_advanced_time_->get();
+    FX_LOGS(WARNING) << "ScheduleMute at reference_time=" << reference_time
+                     << " < last_advanced_time=" << *last_advanced_time_;
   }
   scheduled_commands_.emplace(reference_time, MuteCommand{is_muted});
 }

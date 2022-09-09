@@ -8,6 +8,7 @@
 #include <lib/trace/event.h>
 
 #include "src/media/audio/lib/clock/unadjustable_clock_wrapper.h"
+#include "src/media/audio/services/common/logging.h"
 
 namespace media_audio {
 

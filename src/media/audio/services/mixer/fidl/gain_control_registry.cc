@@ -8,6 +8,7 @@
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/gain_control.h"
 

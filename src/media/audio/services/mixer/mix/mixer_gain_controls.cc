@@ -11,6 +11,7 @@
 #include <unordered_set>
 #include <utility>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/gain_control.h"
 

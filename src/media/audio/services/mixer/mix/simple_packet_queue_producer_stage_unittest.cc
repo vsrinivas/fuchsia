@@ -34,6 +34,7 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
       : packet_queue_producer_stage_({
             .format = kFormat,
             .reference_clock_koid = DefaultClockKoid(),
+            .underflow_reporter = [this](auto duration) { ReportUnderflow(duration); },
         }) {
     packet_queue_producer_stage_.UpdatePresentationTimeToFracFrame(
         DefaultPresentationTimeToFracFrame(kFormat));
@@ -59,6 +60,8 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
     return released_packets_;
   }
 
+  void SetOnUnderflow(std::function<void(zx::duration)> f) { on_underflow_ = f; }
+
  private:
   struct Packet {
     explicit Packet(int64_t start, int64_t length)
@@ -82,9 +85,16 @@ class SimplePacketQueueProducerStageTest : public ::testing::Test {
     return it->second;
   }
 
+  void ReportUnderflow(zx::duration duration) {
+    if (on_underflow_) {
+      on_underflow_(duration);
+    }
+  }
+
   SimplePacketQueueProducerStage packet_queue_producer_stage_;
   std::map<int32_t, Packet> packets_;  // ordered map so iteration is deterministic
   std::vector<uint32_t> released_packets_;
+  std::function<void(zx::duration)> on_underflow_;
 };
 
 TEST_F(SimplePacketQueueProducerStageTest, Push) {
@@ -357,7 +367,7 @@ TEST_F(SimplePacketQueueProducerStageTest, ReportUnderflow) {
   EXPECT_TRUE(released_packets().empty());
 
   std::vector<zx::duration> reported_underflows;
-  packet_queue.SetUnderflowReporter(
+  SetOnUnderflow(
       [&reported_underflows](zx::duration duration) { reported_underflows.push_back(duration); });
 
   // This test uses 48k fps, so 10ms = 480 frames.

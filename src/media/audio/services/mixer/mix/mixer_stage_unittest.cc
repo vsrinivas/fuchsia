@@ -36,13 +36,15 @@ TEST(MixerStageTest, Advance) {
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Add some sources.
-  const auto source_1 = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source-1", kDefaultFormat, DefaultClockKoid()});
+  const auto source_1 =
+      std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+          "source-1", kDefaultFormat, DefaultClockKoid(), nullptr});
   source_1->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   mixer_stage.AddSource(source_1, {.clock_sync = DefaultClockSync(),
                                    .sampler = Sampler::Create(kDefaultFormat, kDefaultFormat)});
-  const auto source_2 = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source-2", kDefaultFormat, DefaultClockKoid()});
+  const auto source_2 =
+      std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+          "source-2", kDefaultFormat, DefaultClockKoid(), nullptr});
   source_2->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   mixer_stage.AddSource(source_2, {.clock_sync = DefaultClockSync(),
                                    .sampler = Sampler::Create(kDefaultFormat, kDefaultFormat)});
@@ -118,7 +120,7 @@ TEST(MixerStageTest, Read) {
 
     const auto source =
         std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-            "source-" + std::to_string(i), kDefaultFormat, DefaultClockKoid()});
+            "source-" + std::to_string(i), kDefaultFormat, DefaultClockKoid(), nullptr});
     source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
     mixer_stage.AddSource(source, {.clock_sync = DefaultClockSync(),
                                    .gain_ids = {gain_id},
@@ -190,13 +192,15 @@ TEST(MixerStageTest, ReadMoreThanMaxFrameCount) {
   mixer_stage.UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Add two sources, and push packets to each source with a gap in-between.
-  const auto source_1 = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source-1", kDefaultFormat, DefaultClockKoid()});
+  const auto source_1 =
+      std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+          "source-1", kDefaultFormat, DefaultClockKoid(), nullptr});
   source_1->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   mixer_stage.AddSource(source_1, {.clock_sync = DefaultClockSync(),
                                    .sampler = Sampler::Create(kDefaultFormat, kDefaultFormat)});
-  const auto source_2 = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source-2", kDefaultFormat, DefaultClockKoid()});
+  const auto source_2 =
+      std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+          "source-2", kDefaultFormat, DefaultClockKoid(), nullptr});
   source_2->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   mixer_stage.AddSource(source_2, {.clock_sync = DefaultClockSync(),
                                    .sampler = Sampler::Create(kDefaultFormat, kDefaultFormat)});
@@ -281,7 +285,7 @@ TEST(MixerStageTest, ReadSilent) {
   for (size_t i = 1; i <= source_count; ++i) {
     const auto source =
         std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-            "source-" + std::to_string(i), kDefaultFormat, DefaultClockKoid()});
+            "source-" + std::to_string(i), kDefaultFormat, DefaultClockKoid(), nullptr});
     source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
     mixer_stage.AddSource(source, {.clock_sync = DefaultClockSync(),
                                    .sampler = Sampler::Create(kDefaultFormat, kDefaultFormat)});
@@ -320,8 +324,9 @@ TEST(MixerStageTest, SetDestGains) {
   gain_controls.Add(gain_id_1, GainControl(DefaultClockKoid()));
   gain_controls.Get(gain_id_1).SetGain(ScaleToDb(10.0f));
 
-  const auto source_1 = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source-1", kDefaultFormat, DefaultClockKoid()});
+  const auto source_1 =
+      std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+          "source-1", kDefaultFormat, DefaultClockKoid(), nullptr});
   source_1->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   mixer_stage.AddSource(source_1, {.clock_sync = DefaultClockSync(),
                                    .gain_ids = {gain_id_1},
@@ -358,8 +363,9 @@ TEST(MixerStageTest, SetDestGains) {
   }
 
   // Add the second source with no gain controls.
-  const auto source_2 = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source-2", kDefaultFormat, DefaultClockKoid()});
+  const auto source_2 =
+      std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+          "source-2", kDefaultFormat, DefaultClockKoid(), nullptr});
   source_2->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
   mixer_stage.AddSource(source_2, {.clock_sync = DefaultClockSync(),
                                    .sampler = Sampler::Create(kDefaultFormat, kDefaultFormat)});

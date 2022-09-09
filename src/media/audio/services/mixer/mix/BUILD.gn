@@ -42,6 +42,7 @@ source_set("mix") {
     "packet_view.h",
     "pipeline_stage.cc",
     "pipeline_stage.h",
+    "producer_stage.cc",
     "producer_stage.h",
     "ptr_decls.h",
     "reusable_buffer.cc",

@@ -13,6 +13,7 @@
 #include <string_view>
 #include <unordered_set>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/thread.h"

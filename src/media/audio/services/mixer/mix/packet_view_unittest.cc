@@ -15,6 +15,7 @@
 
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/services/common/logging.h"
 
 namespace media_audio {
 

@@ -12,6 +12,7 @@
 #include <string>
 #include <unordered_set>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 

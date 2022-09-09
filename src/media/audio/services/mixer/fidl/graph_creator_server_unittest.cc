@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/lib/clock/testing/clock_test.h"
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
 #include "src/media/audio/services/mixer/fidl/synthetic_clock_server.h"
 

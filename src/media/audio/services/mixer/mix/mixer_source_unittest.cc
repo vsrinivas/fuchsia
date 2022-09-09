@@ -54,8 +54,9 @@ void TestAdvance(int64_t step_size = 1) {
       "source_clock", Clock::kMonotonicDomain, false,
       /*to_clock_mono=*/TimelineFunction(TimelineRate(static_cast<float>(step_size))));
 
-  const auto source = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source", kDefaultFormat, source_clock->koid()});
+  const auto source =
+      std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+          "source", kDefaultFormat, source_clock->koid(), nullptr});
   source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Push some packets.
@@ -120,8 +121,9 @@ void TestMix(int64_t step_size = 1) {
   mixer_gain_controls.Add(GainControlId{3}, GainControl(dest_clock->koid()));
   mixer_gain_controls.Advance(clock_snapshots, zx::time(0));
 
-  const auto source = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source", kDefaultFormat, source_clock->koid()});
+  const auto source =
+      std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+          "source", kDefaultFormat, source_clock->koid(), nullptr});
   source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   const int64_t dest_frame_count = 10;
@@ -186,7 +188,7 @@ TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
   mixer_gain_controls.Advance(DefaultClockSnapshots(), zx::time(0));
 
   const auto source = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source", kDefaultFormat, DefaultClockKoid()});
+      SimplePacketQueueProducerStage::Args{"source", kDefaultFormat, DefaultClockKoid(), nullptr});
   const auto presentation_time_to_frac_frame =
       TimelineFunction(TimelineRate(kOneFrame.raw_value(), 1));
 
@@ -268,7 +270,7 @@ TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
 
 TEST(MixerSourceTest, SetDestGains) {
   const auto source = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source", kDefaultFormat, DefaultClockKoid()});
+      SimplePacketQueueProducerStage::Args{"source", kDefaultFormat, DefaultClockKoid(), nullptr});
 
   MixerSource mixer_source(source,
                            {.clock_sync = DefaultClockSync(),

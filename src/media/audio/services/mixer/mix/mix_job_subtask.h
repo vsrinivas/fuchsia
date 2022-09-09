@@ -16,6 +16,8 @@
 
 #include <fbl/string_buffer.h>
 
+#include "src/media/audio/services/common/logging.h"
+
 namespace media_audio {
 
 // Collects metrics for a during subtask of a mix job.

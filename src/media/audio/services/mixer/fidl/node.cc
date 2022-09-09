@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/reachability.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/thread.h"

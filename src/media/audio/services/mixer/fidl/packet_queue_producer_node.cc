@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/services/common/logging.h"
+
 namespace media_audio {
 
 // static
@@ -28,18 +30,6 @@ std::shared_ptr<PacketQueueProducerNode> PacketQueueProducerNode::Create(Args ar
                                                std::move(args.parent));
   node->set_pipeline_stage_thread(args.detached_thread);
   return node;
-}
-
-NodePtr PacketQueueProducerNode::CreateNewChildSource() {
-  // CreateNewChildSource should not be called on ordinary nodes.
-  FX_CHECK(false);
-  __builtin_unreachable();
-}
-
-NodePtr PacketQueueProducerNode::CreateNewChildDest() {
-  // CreateNewChildDest should not be called on ordinary nodes.
-  FX_CHECK(false);
-  __builtin_unreachable();
 }
 
 bool PacketQueueProducerNode::CanAcceptSource(NodePtr src) const {

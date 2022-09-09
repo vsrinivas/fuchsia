@@ -27,11 +27,11 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
                                                const zx::duration period) {
   // There must be at least one full frame per period.
   FX_CHECK(format().integer_frames_per(period, ::media::TimelineRate::RoundingMode::Floor) > 0)
-      << "Invalid period=" << period.get();
+      << "Invalid period=" << period;
 
   // Time must advance.
   FX_CHECK(!last_mix_job_end_time_ || mix_job_start_time >= *last_mix_job_end_time_)
-      << "RunMixJob time went backwards: " << last_mix_job_end_time_->get() << " -> "
+      << "RunMixJob time went backwards: " << *last_mix_job_end_time_ << " -> "
       << mix_job_start_time.get();
   last_mix_job_end_time_ = mix_job_start_time + period;
 
@@ -49,7 +49,7 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
   // We iterate multiple times if the consumer stops within this mix period.
   auto t = start_consume_time;
   for (;;) {
-    FX_CHECK(t <= end_consume_time) << t.get() << " > " << end_consume_time.get();
+    FX_CHECK(t <= end_consume_time) << t << " > " << end_consume_time;
     FlushPendingCommandsUntil(t);
 
     if (t == end_consume_time) {
@@ -69,7 +69,7 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
     // We must be started at t. Clamp early if we stop before `end_consume_time`.
     auto& status = std::get<InternalStartedStatus>(internal_status_);
     FX_CHECK(t >= status.prior_cmd.start_presentation_time)
-        << t.get() << " < " << status.prior_cmd.start_presentation_time.get();
+        << t << " < " << status.prior_cmd.start_presentation_time;
 
     auto end = end_consume_time;
     if (status.next_stop_presentation_time) {
@@ -126,20 +126,6 @@ void ConsumerStage::UpdatePresentationTimeToFracFrame(std::optional<TimelineFunc
   }
 }
 
-void ConsumerStage::AdvanceSelfImpl(Fixed frame) {
-  FX_LOGS(FATAL) << "Consumers cannot be advanced: there is no destination stream";
-}
-
-void ConsumerStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
-  FX_LOGS(FATAL) << "Consumers cannot be advanced: there is no destination stream";
-}
-
-std::optional<PipelineStage::Packet> ConsumerStage::ReadImpl(MixJobContext& ctx, Fixed start_frame,
-                                                             int64_t frame_count) {
-  FX_LOGS(FATAL) << "Consumers cannot be read: there is no destination stream";
-  __builtin_unreachable();
-}
-
 void ConsumerStage::FlushPendingCommandsUntil(zx::time now) {
   for (;;) {
     auto cmd_or_null = pending_commands_->peek();
@@ -169,20 +155,20 @@ bool ConsumerStage::ApplyStartCommand(const StartCommand& cmd, zx::time now) {
     auto& prior_cmd = status->prior_cmd;
     FX_LOGS(FATAL) << "Duplicate start commands: "
                    << "prior command is {"
-                   << " start_time=" << prior_cmd.start_presentation_time.get()
+                   << " start_time=" << prior_cmd.start_presentation_time
                    << " start_frame=" << prior_cmd.start_frame << " },"
                    << "new command is {"
-                   << " start_time=" << cmd.start_presentation_time.get()
+                   << " start_time=" << cmd.start_presentation_time
                    << " start_frame=" << cmd.start_frame << " }";
   } else {
     auto& prior_cmd = std::get<InternalStoppedStatus>(internal_status_).prior_cmd;
     FX_CHECK(!prior_cmd || cmd.start_presentation_time > prior_cmd->stop_presentation_time)
         << ffl::String::DecRational << "Start command out-of-ourder: "
         << "prior command is {"
-        << " stop_time=" << prior_cmd->stop_presentation_time.get()
+        << " stop_time=" << prior_cmd->stop_presentation_time
         << " stop_frame=" << prior_cmd->stop_frame << " },"
         << "new command is {"
-        << " start_time=" << cmd.start_presentation_time.get() << " start_frame=" << cmd.start_frame
+        << " start_time=" << cmd.start_presentation_time << " start_frame=" << cmd.start_frame
         << " }";
   }
 

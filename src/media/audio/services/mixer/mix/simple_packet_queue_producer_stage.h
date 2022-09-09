@@ -37,16 +37,14 @@ class SimplePacketQueueProducerStage : public ProducerStage {
 
     // Reference clock of this stage's output stream.
     zx_koid_t reference_clock_koid;
+
+    // A callback to invoke when a packet underflows. Optional: can be nullptr.
+    // The duration estimates the packet's lateness relative to the system monotonic clock.
+    // TODO(fxbug.dev/87651): use fit::inline_function
+    fit::function<void(zx::duration)> underflow_reporter;
   };
 
-  explicit SimplePacketQueueProducerStage(Args args)
-      : ProducerStage(args.name, args.format, args.reference_clock_koid) {}
-
-  // Registers a callback to invoke when a packet underflows.
-  // The duration estimates the packet's lateness relative to the system monotonic clock.
-  void SetUnderflowReporter(fit::function<void(zx::duration)> underflow_reporter) {
-    underflow_reporter_ = std::move(underflow_reporter);
-  }
+  explicit SimplePacketQueueProducerStage(Args args);
 
   // Clears the queue.
   void clear() { pending_packet_queue_.clear(); }
@@ -91,7 +89,7 @@ class SimplePacketQueueProducerStage : public ProducerStage {
   std::deque<PendingPacket> pending_packet_queue_;
 
   size_t underflow_count_;
-  fit::function<void(zx::duration)> underflow_reporter_;
+  const fit::function<void(zx::duration)> underflow_reporter_;
 };
 
 }  // namespace media_audio

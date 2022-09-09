@@ -10,6 +10,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 

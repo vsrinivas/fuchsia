@@ -8,6 +8,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
+#include "src/media/audio/services/common/logging.h"
+
 namespace media_audio {
 
 // static

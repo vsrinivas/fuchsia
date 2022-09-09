@@ -6,11 +6,13 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_DETACHED_THREAD_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/profile.h>
 
 #include <memory>
 #include <string>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/thread.h"
 
@@ -32,11 +34,15 @@ class DetachedThread : public Thread {
   static inline constexpr ThreadId kId = kAnyThreadId;
 
   // Implementation of Thread.
-  ThreadId id() const override { return kId; }
-  std::string_view name() const override { return name_; }
-  const ThreadChecker& checker() const override { return checker_; }
-  void AddConsumer(ConsumerStagePtr consumer) override TA_REQ(checker());
-  void RemoveConsumer(ConsumerStagePtr consumer) override TA_REQ(checker());
+  ThreadId id() const final { return kId; }
+  std::string_view name() const final { return name_; }
+  const ThreadChecker& checker() const final { return checker_; }
+  void AddConsumer(ConsumerStagePtr consumer) final {
+    UNREACHABLE << "Consumers should never be assigned to the DetachedThread";
+  }
+  void RemoveConsumer(ConsumerStagePtr consumer) final {
+    UNREACHABLE << "Consumers should never be assigned to the DetachedThread";
+  }
 
  private:
   DetachedThread() = default;

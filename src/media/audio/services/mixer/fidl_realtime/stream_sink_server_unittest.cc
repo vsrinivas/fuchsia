@@ -13,6 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl_realtime/testing/test_stream_sink_server_and_client.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 

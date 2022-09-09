@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/graph_server.h"
 #include "src/media/audio/services/mixer/fidl/real_clock_factory.h"
 #include "src/media/audio/services/mixer/fidl/synthetic_clock_server.h"

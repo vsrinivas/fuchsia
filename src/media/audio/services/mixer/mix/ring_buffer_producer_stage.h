@@ -6,7 +6,6 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_RING_BUFFER_PRODUCER_STAGE_H_
 
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
 #include <functional>
@@ -27,15 +26,7 @@ class RingBufferProducerStage : public ProducerStage {
   using SafeReadFrameFn = std::function<int64_t()>;
 
   RingBufferProducerStage(Format format, zx_koid_t reference_clock_koid, fzl::VmoMapper vmo_mapper,
-                          int64_t frame_count, SafeReadFrameFn safe_read_frame_fn)
-      : ProducerStage("RingBufferProducerStage", format, reference_clock_koid),
-        vmo_mapper_(std::move(vmo_mapper)),
-        frame_count_(frame_count),
-        safe_read_frame_fn_(std::move(safe_read_frame_fn)) {
-    FX_CHECK(vmo_mapper_.start());
-    FX_CHECK(vmo_mapper_.size() >= static_cast<uint64_t>(format.bytes_per_frame() * frame_count_));
-    FX_CHECK(safe_read_frame_fn_);
-  }
+                          int64_t frame_count, SafeReadFrameFn safe_read_frame_fn);
 
   // Returns the ring buffer's size in frames.
   int64_t frame_count() const { return frame_count_; }

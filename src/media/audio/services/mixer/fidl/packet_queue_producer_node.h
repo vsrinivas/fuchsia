@@ -40,8 +40,12 @@ class PacketQueueProducerNode : public Node {
       : Node(name, /*is_meta=*/false, std::move(pipeline_stage), std::move(parent)) {}
 
   // Implementation of Node.
-  NodePtr CreateNewChildSource() final;
-  NodePtr CreateNewChildDest() final;
+  NodePtr CreateNewChildSource() final {
+    UNREACHABLE << "CreateNewChildSource should not be called on ordinary nodes";
+  }
+  NodePtr CreateNewChildDest() final {
+    UNREACHABLE << "CreateNewChildDest should not be called on ordinary nodes";
+  }
   bool CanAcceptSource(NodePtr src) const final;
 };
 

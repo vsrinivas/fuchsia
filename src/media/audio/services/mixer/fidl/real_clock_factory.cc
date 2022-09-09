@@ -8,6 +8,7 @@
 
 #include "src/media/audio/lib/clock/real_clock.h"
 #include "src/media/audio/lib/clock/real_timer.h"
+#include "src/media/audio/services/common/logging.h"
 
 namespace media_audio {
 

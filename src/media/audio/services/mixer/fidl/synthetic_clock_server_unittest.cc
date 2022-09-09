@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
 
 namespace media_audio {

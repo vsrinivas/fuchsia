@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/services/common/logging.h"
+
 namespace media_audio {
 
 zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>>
