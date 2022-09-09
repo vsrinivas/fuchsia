@@ -1,8 +1,8 @@
 # Time Zone Version Parrot
 
-The TZ Version Parrot showcases loading ICU time zone data (TZData) from various
+The TZ Version Parrot showcases loading ICU time zone data (tzdata) from various
 sources, then simply announces the release version (e.g. `2015d`, `2019a`) of
-the current TZData.
+the current tzdata.
 
 ## Building
 
@@ -42,9 +42,10 @@ the test components defined here, provide the package name to `fx test`:
 
 This example showcases the following cases:
 
-*  Initializing ICU with the system default TZData
-*  Initializing ICU with TZData from the build configuration (`icu_tzdata_config_data`)
-*  Initializing ICU with TZData from the local package (`resource`)
+*  Initializing ICU without tzdata files
+*  Initializing ICU with tzdata from the platform
 
-You can find the platform's TZDara `.res` files in
-[`//third_party/icu/tzres`](/third_party/icu/tzres).
+You can find the platform's tzdata `.res` files in
+[`//third_party/icu/tzres`](/third_party/icu/tzres). The
+[`tzdata-provider`](/src/intl/tzdata_provider) component provides these
+files via directory capabilities.

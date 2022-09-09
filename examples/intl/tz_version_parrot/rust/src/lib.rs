@@ -28,8 +28,8 @@ async fn no_tzdata_res_files() -> Result<(), Error> {
 #[fuchsia::test]
 async fn with_tzdata_res_files() -> Result<(), Error> {
     // [START loader_config_example]
-    const DEFAULT_TZDATA_DIR: &str = "/config/data/tzdata/icu/44/le";
-    const DEFAULT_TZREVISION_FILE_PATH: &str = "/config/data/tzdata/revision.txt";
+    const DEFAULT_TZDATA_DIR: &str = "/config/tzdata";
+    const DEFAULT_TZREVISION_FILE_PATH: &str = "/config/tzdata/revision.txt";
 
     // Load the ICU data
     let _loader = Loader::new_with_tz_resources_and_validation(
@@ -48,7 +48,7 @@ async fn with_tzdata_res_files() -> Result<(), Error> {
 
 #[fuchsia::test]
 async fn with_tzdata_res_files_wrong_revision() -> Result<(), Error> {
-    const DEFAULT_TZDATA_DIR: &str = "/config/data/tzdata/icu/44/le";
+    const DEFAULT_TZDATA_DIR: &str = "/config/tzdata";
     const LOCAL_TZREVISION_FILE_PATH: &str = "/pkg/data/newer_revision.txt";
 
     // Load the ICU data

@@ -5,7 +5,7 @@
     include: [
         "//src/sys/test_runners/rust/default.shard.cml",
 
-        // Depends on config_data which is a system capability.
+        // Depends on `tzdata-icu-44-le` which is a system capability.
         "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -16,17 +16,15 @@
         binary: "bin/tz_version_parrot_rust",
     },
 
-    // [START config_data]
+    // [START tzdata-capability]
     // Capabilities used by this component.
     use: [
-        // Map config-data for this package into namespace
         {
-            directory: "config-data",
+            directory: "tzdata-icu-44-le",
             rights: [ "r*" ],
-            path: "/config/data",
-            subdir: "tz_version_parrot",
+            path: "/config/tzdata",
         },
     ],
 
-    // [END config_data]
+    // [END tzdata-capability]
 }

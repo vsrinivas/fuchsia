@@ -36,9 +36,9 @@ TEST(TzVersionParrotTest, NoTzResFiles) {
 TEST(TzVersionParrotTest, WithTzResFiles) {
   // [START loader_config_example]
   // Default directory for timezone .res files
-  constexpr char kDefaultTzdataDir[] = "/config/data/tzdata/icu/44/le";
+  constexpr char kDefaultTzdataDir[] = "/config/tzdata";
   // Path to file containing the expected time zone database revision ID.
-  constexpr char kDefaultTzRevisionFilePath[] = "/config/data/tzdata/revision.txt";
+  constexpr char kDefaultTzRevisionFilePath[] = "/config/tzdata/revision.txt";
   ASSERT_TRUE(files::IsDirectory(kDefaultTzdataDir))
       << "Error: tzdata directory \"" << kDefaultTzdataDir << "\" doesn't exist.";
 
@@ -56,7 +56,7 @@ TEST(TzVersionParrotTest, WithTzResFiles) {
 
 TEST(TzVersionParrotTest, WithTzResFilesWrongRevision) {
   // Default directory for timezone .res files
-  constexpr char kDefaultTzdataDir[] = "/config/data/tzdata/icu/44/le";
+  constexpr char kDefaultTzdataDir[] = "/config/tzdata";
   // Path to file containing the expected time zone database revision ID.
   constexpr char kLocalTzRevisionFilePath[] = "/pkg/data/newer_revision.txt";
   ASSERT_TRUE(files::IsDirectory(kDefaultTzdataDir))

@@ -44,7 +44,6 @@ fuchsia_component("tz_version_parrot_rust") {
 fuchsia_test_package("tz-version-parrot-rust") {
   test_components = [ ":tz_version_parrot_rust" ]
   deps = [
-    "//examples/intl/tz_version_parrot:icu_tz_data_for_tz_version_parrot",
     "//examples/intl/tz_version_parrot:tz_version_parrot_resources",
 
     # [START icudata_resource]

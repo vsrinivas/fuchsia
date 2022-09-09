@@ -16,16 +16,7 @@ static_icu_data("revision") {
   output = "${target_gen_dir}/revision.txt"
 }
 
-# Template applies exactly the same tzdata settings for several sibling
-# packages.  The config name for target "foo" will be "icu_tzdata_for_foo".
-template("_default_icu_tzdata") {
-  icu_tzdata_config_data("icu_tzdata_for_" + target_name) {
-    forward_variables_from(invoker, "*")
-    for_pkg = target_name
-    data_version = "44"
-  }
-}
-
+# TODO(fxbug.dev/104685): Remove in favor of tzdata directory capability
 icu_tzdata_config_data("icu_tzdata_for_flutter_runner_tests") {
   for_pkg = "flutter_runner_tests"
   data_version = "44"
@@ -35,9 +26,21 @@ icu_tzdata_config_data("icu_tzdata_for_flutter_runner_tests") {
 # in out-of-tree, in Chromium.  The test must have this package available when
 # running in a Fuchsia environment, as it will attempt to load the appropriate
 # library.
+# TODO(fxbug.dev/104685): Remove in favor of tzdata directory capability
 icu_tzdata_config_data("icu_tzdata_for_chromium_base_unittests") {
   for_pkg = "base_unittests"
   data_version = "44"
+}
+
+# Template applies exactly the same tzdata settings for several sibling
+# packages.  The config name for target "foo" will be "icu_tzdata_for_foo".
+# TODO(fxbug.dev/104685): Remove in favor of tzdata directory capability
+template("_default_icu_tzdata") {
+  icu_tzdata_config_data("icu_tzdata_for_" + target_name) {
+    forward_variables_from(invoker, "*")
+    for_pkg = target_name
+    data_version = "44"
+  }
 }
 
 # All the runners use exactly the same configs, so the data should dedupe

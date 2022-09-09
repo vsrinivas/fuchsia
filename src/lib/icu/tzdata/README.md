@@ -4,24 +4,35 @@ This directory contains the GN templates that provide data files for packages
 and underlying programs that need to load IANA timezone data as provided by
 the [ICU](https://home.unicode.org) library.
 
-# Provide ICU time zone resource files to the given package
+## `icu_tzdata_resource`
 
-The files `metaZones.res`, `timezoneTypes.res`, and `zoneinfo64.res` will be
-made available in the namespace of the target component(s).
+NOTE: Most components should not use this rule to consume tzdata. Instead,
+use the [tzdata directory capability][icu-data] to get the latest tzdata
+provided by the platform.
 
-When using config-data, the data will be available at:
-`/config/data/tzdata/icu/{data_version}/{format}/`.
-
-There will also be a file at `/config/data/tzdata/revision.txt` containing the
-time zone database revision ID, e.g. `2019c`.
-
-When using resources, the data will be available at:
+This rule adds the files `metaZones.res`, `timezoneTypes.res`, and
+`zoneinfo64.res` to a package under the path 
 `/pkg/data/tzdata/icu/{data_version}/{format}/`.
 
 There will also be a file at `/pkg/data/tzdata/revision.txt` containing the
 time zone database revision ID, e.g. `2019c`.
 
+## `icu_tzdata_config_data`
+
+NOTE: This rule is deprecated. Use the [tzdata directory capability][icu-data]
+instead.
+
+This rule provides the tzdata files `metaZones.res`, `timezoneTypes.res`,
+and `zoneinfo64.res` to a component via [config-data] under the path
+`/config/data/tzdata/icu/{data_version}/{format}/`.
+
+There will also be a file at `/config/data/tzdata/revision.txt` containing the
+time zone database revision ID, e.g. `2019c`.
+
+## Common parameters
+
 Common parameters for GN templates:
+
 -  `data_version` (optional) \
    [string] The ICU version number of the time zone data. \
    Currently supported: { `"44"` } \
@@ -56,5 +67,8 @@ icu_tzdata_config_data("icu_tzdata_for_web_runner_test") {
 }
 ```
 
-This injects an additional file `/config/data/FUCHSIA_IN_TREE_TEST`
+`testonly = true` injects an additional file `/config/data/FUCHSIA_IN_TREE_TEST`
 or `/pkg/data/FUCHSIA_IN_TREE_TEST`.
+
+[config-data]: /docs/development/components/configuration/config_data.md
+[icu-data]: /docs/development/internationalization/icu_data.md

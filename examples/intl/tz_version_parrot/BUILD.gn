@@ -21,14 +21,6 @@ group("tests") {
   ]
 }
 
-# [START tzdata_config]
-# Build rule to provide system TZData for the given package
-icu_tzdata_config_data("icu_tz_data_for_tz_version_parrot") {
-  for_pkg = "tz_version_parrot"
-}
-
-# [END tzdata_config]
-
 # Locally packaged TZData resource
 resource("tz_version_parrot_resources") {
   sources = [ "newer_revision.txt" ]

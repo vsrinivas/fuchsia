@@ -7,6 +7,9 @@ import("//build/dist/resource.gni")
 
 # Provide ICU time zone files to the given package via config-data.
 #
+# NOTE: This rule is deprecated. Use the tzdata directory capability
+# instead. See /docs/development/internationalization/icu_data.md.
+#
 # The following files will be available in the component's namespace:
 #
 # * /config/data/tzdata/revision.txt
@@ -19,6 +22,8 @@ import("//build/dist/resource.gni")
 # * /config/data/FUCHSIA_IN_TREE_TEST
 #
 # Please see `README.md` for detailed documentation.
+#
+# TODO(fxbug.dev/104685): Remove in favor of tzdata directory capability
 template("icu_tzdata_config_data") {
   _resources_label = "_${target_name}_resources"
   config_data(_resources_label) {
