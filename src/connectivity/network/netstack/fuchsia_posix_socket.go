@@ -149,34 +149,6 @@ func transProtoToString(proto tcpip.TransportProtocolNumber) string {
 	}
 }
 
-func eventsToDatagramSignals(events waiter.EventMask) zx.Signals {
-	signals := zx.SignalNone
-	if events&waiter.EventIn != 0 {
-		signals |= zxsocket.SignalDatagramIncoming
-		events ^= waiter.EventIn
-	}
-	if events&waiter.EventErr != 0 {
-		signals |= zxsocket.SignalDatagramError
-		events ^= waiter.EventErr
-	}
-	if events != 0 {
-		panic(fmt.Sprintf("unexpected events=%b", events))
-	}
-	return signals
-}
-
-func eventsToStreamSignals(events waiter.EventMask) zx.Signals {
-	signals := zx.SignalNone
-	if events&waiter.EventIn != 0 {
-		signals |= zxsocket.SignalStreamIncoming
-		events ^= waiter.EventIn
-	}
-	if events != 0 {
-		panic(fmt.Sprintf("unexpected events=%b", events))
-	}
-	return signals
-}
-
 type signaler struct {
 	supported       waiter.EventMask
 	eventsToSignals func(waiter.EventMask) zx.Signals
@@ -345,8 +317,6 @@ type endpoint struct {
 	key uint64
 
 	ns *Netstack
-
-	pending signaler
 }
 
 func (ep *endpoint) incRef() {
@@ -1114,17 +1084,6 @@ func newEndpointWithSocket(
 		return nil, err
 	}
 
-	eventsToSignals := func() func(events waiter.EventMask) zx.Signals {
-		switch socketType {
-		case zx.SocketStream:
-			return eventsToStreamSignals
-		case zx.SocketDatagram:
-			return eventsToDatagramSignals
-		default:
-			panic(fmt.Sprintf("unknown socket type %d", socketType))
-		}
-	}()
-
 	eps := &endpointWithSocket{
 		endpoint: endpoint{
 			ep:         ep,
@@ -1132,11 +1091,6 @@ func newEndpointWithSocket(
 			transProto: transProto,
 			netProto:   netProto,
 			ns:         ns,
-			pending: signaler{
-				eventsToSignals: eventsToSignals,
-				readiness:       ep.Readiness,
-				signalPeer:      localS.Handle().SignalPeer,
-			},
 		},
 		local:   localS,
 		peer:    peerS,
@@ -1180,6 +1134,8 @@ type endpointWithEvent struct {
 	local, peer zx.Handle
 
 	entry waiter.Entry
+
+	pending signaler
 }
 
 func (ep *endpointWithEvent) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, error) {
@@ -1316,10 +1272,10 @@ func (s *streamSocketImpl) Listen(_ fidl.Context, backlog int16) (socket.StreamS
 	// fail above, so we register the callback only in the success case to avoid
 	// incorrectly handling events on connected sockets.
 	s.sharedState.onListen.Do(func() {
-		s.pending.supported = waiter.EventIn
+		s.sharedState.pending.supported = waiter.EventIn
 		var entry waiter.Entry
 		cb := func() {
-			err := s.pending.update()
+			err := s.sharedState.pending.update()
 			switch err := err.(type) {
 			case nil:
 				return
@@ -1334,7 +1290,7 @@ func (s *streamSocketImpl) Listen(_ fidl.Context, backlog int16) (socket.StreamS
 			}
 			panic(err)
 		}
-		entry = waiter.NewFunctionEntry(s.pending.supported, func(waiter.EventMask) {
+		entry = waiter.NewFunctionEntry(s.sharedState.pending.supported, func(waiter.EventMask) {
 			cb()
 		})
 		s.wq.EventRegister(&entry)
@@ -1465,7 +1421,7 @@ func (s *streamSocketImpl) accept(wantAddr bool) (posix.Errno, *tcpip.FullAddres
 		return tcpipErrorToCode(err), nil, streamSocketImpl{}, nil
 	}
 	{
-		if err := s.pending.update(); err != nil {
+		if err := s.sharedState.pending.update(); err != nil {
 			panic(err)
 		}
 	}
@@ -1960,6 +1916,58 @@ func (*nonStreamEndpoint) connect(ep *endpoint, address fidlnet.SocketAddress) t
 	return ep.connect(addr)
 }
 
+type datagramSocketError struct {
+	mu struct {
+		sync.Mutex
+		err        tcpip.Error
+		signalPeer func(zx.Signals, zx.Signals) error
+	}
+}
+
+func (e *datagramSocketError) set(err tcpip.Error) bool {
+	switch err.(type) {
+	case nil:
+		return false
+	case *tcpip.ErrConnectionRefused:
+		e.mu.Lock()
+		defer e.mu.Unlock()
+		if e.mu.err == nil {
+			e.setErrorSignalLocked(true)
+		} else {
+			if e.mu.err != err {
+				panic(fmt.Sprintf("overwriting error (%#v) with (%#v)", e.mu.err, err))
+			}
+		}
+		e.mu.err = err
+		return true
+	default:
+		return false
+	}
+}
+
+func (e *datagramSocketError) consume() tcpip.Error {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	consumed := e.mu.err
+	e.mu.err = nil
+	if consumed != nil {
+		e.setErrorSignalLocked(false)
+	}
+	return consumed
+}
+
+func (e *datagramSocketError) setErrorSignalLocked(setErr bool) {
+	var set, clear = zx.SignalNone, zx.SignalNone
+	if setErr {
+		set |= zxsocket.SignalDatagramError
+	} else {
+		clear |= zxsocket.SignalDatagramError
+	}
+	if err := e.mu.signalPeer(clear, set); err != nil {
+		panic(err)
+	}
+}
+
 // State shared across all copies of this socket. Collecting this state here lets us
 // allocate only once during initialization.
 type sharedDatagramSocketState struct {
@@ -1976,6 +1984,8 @@ type sharedDatagramSocketState struct {
 	}
 
 	localEDrainedCond sync.Cond
+
+	err datagramSocketError
 }
 
 type datagramSocketImpl struct {
@@ -2020,10 +2030,10 @@ func newDatagramSocketImpl(ns *Netstack, transProto tcpip.TransportProtocolNumbe
 		endpointWithSocket: eps,
 		sharedState:        &sharedDatagramSocketState{},
 	}
+	s.sharedState.err.mu.signalPeer = eps.local.Handle().SignalPeer
 
 	// Listen for errors so we can signal the client.
-	s.pending.supported = waiter.EventErr
-	s.sharedState.entry.Init(s, s.pending.supported)
+	s.sharedState.entry.Init(s, waiter.EventErr)
 	s.wq.EventRegister(&s.sharedState.entry)
 
 	// Initialize caches.
@@ -2051,13 +2061,13 @@ func (s *datagramSocketImpl) loopRead(ch chan<- struct{}) {
 		payloadBuf := buf[udpRxPreludeSize:]
 		w := tcpip.SliceWriter(payloadBuf)
 		res, err := s.ep.Read(&w, tcpip.ReadOptions{NeedRemoteAddr: true})
+		if stored := s.sharedState.err.set(err); stored {
+			continue
+		}
 		switch err.(type) {
 		case nil:
 		case *tcpip.ErrBadBuffer:
 			panic(fmt.Sprintf("unexpected short read from UDP endpoint"))
-		case *tcpip.ErrConnectionRefused:
-			// TODO(https://fxbug.dev/104640): Propagate ErrConnectionRefused to client.
-			_ = syslog.Warnf("UDP Endpoint.Read(): %s", err)
 		default:
 			if s.handleEndpointReadError(err, inCh, udp.ProtocolNumber) {
 				return
@@ -2165,14 +2175,17 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 			var r bytes.Reader
 			r.Reset(v)
 			lenPrev := len(v)
-			written, writeErr := s.ep.Write(&r, opts)
+			written, err := s.ep.Write(&r, opts)
+			if stored := s.sharedState.err.set(err); stored {
+				continue
+			}
 
-			if writeErr == nil {
+			if err == nil {
 				if int(written) != lenPrev {
 					panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", written, lenPrev))
 				}
 			} else {
-				switch writeErr.(type) {
+				switch err.(type) {
 				case *tcpip.ErrWouldBlock:
 					select {
 					case <-notifyCh:
@@ -2180,11 +2193,8 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 					case <-s.endpointWithSocket.closing:
 						return
 					}
-				case *tcpip.ErrConnectionRefused:
-					// TODO(https://fxbug.dev/104640): Propagate ErrConnectionRefused to client.
-					_ = syslog.Warnf("UDP Endpoint.Write(): %s", err)
 				default:
-					if s.handleEndpointWriteError(writeErr, udp.ProtocolNumber) {
+					if s.handleEndpointWriteError(err, udp.ProtocolNumber) {
 						return
 					}
 				}
@@ -2401,15 +2411,11 @@ func (s *datagramSocketImpl) blockUntilSocketDrained() {
 }
 
 func (s *datagramSocketImpl) NotifyEvent(waiter.EventMask) {
-	if err := s.pending.update(); err != nil {
-		panic(err)
-	}
+	s.sharedState.err.set(s.endpoint.ep.LastError())
 }
 
 func (s *datagramSocketImpl) GetError(fidl.Context) (socket.BaseSocketGetErrorResult, error) {
-	err := s.ep.LastError()
-	s.pending.mustUpdate()
-	if err != nil {
+	if err := s.sharedState.err.consume(); err != nil {
 		return socket.BaseSocketGetErrorResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.BaseSocketGetErrorResultWithResponse(socket.BaseSocketGetErrorResponse{}), nil
@@ -2648,9 +2654,6 @@ func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.Datagra
 	writeOpts.To = &addr
 	if epWithPreflight, ok := s.ep.(tcpip.EndpointWithPreflight); ok {
 		if err := epWithPreflight.Preflight(writeOpts); err != nil {
-			if err := s.pending.update(); err != nil {
-				panic(err)
-			}
 			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(err)), nil
 		}
 	} else {
@@ -3113,6 +3116,8 @@ type sharedStreamSocketState struct {
 
 	// err is used to store errors returned on the socket.
 	err streamSocketError
+
+	pending signaler
 }
 
 type streamSocketImpl struct {
@@ -3132,7 +3137,23 @@ func makeStreamSocketImpl(eps *endpointWithSocket) streamSocketImpl {
 	return streamSocketImpl{
 		endpointWithSocket: eps,
 		linger:             make(chan struct{}),
-		sharedState:        &sharedStreamSocketState{},
+		sharedState: &sharedStreamSocketState{
+			pending: signaler{
+				eventsToSignals: func(events waiter.EventMask) zx.Signals {
+					signals := zx.SignalNone
+					if events&waiter.EventIn != 0 {
+						signals |= zxsocket.SignalStreamIncoming
+						events ^= waiter.EventIn
+					}
+					if events != 0 {
+						panic(fmt.Sprintf("unexpected events=%b", events))
+					}
+					return signals
+				},
+				readiness:  eps.endpoint.ep.Readiness,
+				signalPeer: eps.local.Handle().SignalPeer,
+			},
+		},
 	}
 }
 
@@ -3758,15 +3779,29 @@ func makeSynchronousDatagramSocket(ep tcpip.Endpoint, netProto tcpip.NetworkProt
 				transProto: transProto,
 				netProto:   netProto,
 				ns:         ns,
-				pending: signaler{
-					supported:       waiter.EventIn | waiter.EventErr,
-					eventsToSignals: eventsToDatagramSignals,
-					readiness:       ep.Readiness,
-					signalPeer:      localE.SignalPeer,
-				},
 			},
 			local: localE,
 			peer:  peerE,
+			pending: signaler{
+				supported: waiter.EventIn | waiter.EventErr,
+				eventsToSignals: func(events waiter.EventMask) zx.Signals {
+					signals := zx.SignalNone
+					if events&waiter.EventIn != 0 {
+						signals |= zxsocket.SignalDatagramIncoming
+						events ^= waiter.EventIn
+					}
+					if events&waiter.EventErr != 0 {
+						signals |= zxsocket.SignalDatagramError
+						events ^= waiter.EventErr
+					}
+					if events != 0 {
+						panic(fmt.Sprintf("unexpected events=%b", events))
+					}
+					return signals
+				},
+				readiness:  ep.Readiness,
+				signalPeer: localE.SignalPeer,
+			},
 		},
 	}
 

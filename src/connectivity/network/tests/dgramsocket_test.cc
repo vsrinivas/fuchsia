@@ -440,10 +440,24 @@ class DatagramSocketErrBase {
     }
   }
 
+  static void PollForPollerr(const fbl::unique_fd& fd) {
+    pollfd pfd = {
+        .fd = fd.get(),
+    };
+    const int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+    ASSERT_GE(n, 0) << strerror(errno);
+    EXPECT_EQ(n, 1);
+    EXPECT_EQ(pfd.revents & POLLERR, POLLERR);
+  }
+
   static void TriggerICMPUnreachable(const fbl::unique_fd& fd) {
+    ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachableNoPoll(fd));
+    ASSERT_NO_FATAL_FAILURE(PollForPollerr(fd));
+  }
+
+  static void TriggerICMPUnreachableNoPoll(const fbl::unique_fd& fd) {
     fbl::unique_fd unused_fd;
-    ASSERT_TRUE(unused_fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
-    ASSERT_NO_FATAL_FAILURE(BindLoopback(unused_fd));
+    ASSERT_NO_FATAL_FAILURE(SetUpSocket(unused_fd, false));
     ASSERT_NO_FATAL_FAILURE(ConnectTo(fd, unused_fd));
     // Closing this socket ensures that `fd` ends up connected to an unbound port.
     EXPECT_EQ(close(unused_fd.release()), 0) << strerror(errno);
@@ -453,20 +467,9 @@ class DatagramSocketErrBase {
       constexpr char bytes[] = "b";
       ASSERT_EQ(send(fd.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
     }
-
-    {
-      // Expect a POLLERR to be signaled on the socket.
-      pollfd pfd = {
-          .fd = fd.get(),
-      };
-      const int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
-      ASSERT_GE(n, 0) << strerror(errno);
-      EXPECT_EQ(n, 1);
-      EXPECT_EQ(pfd.revents & POLLERR, POLLERR);
-    }
   }
 
-  static void CheckNoPendingEvents(fbl::unique_fd& fd) {
+  static void CheckNoPendingEvents(const fbl::unique_fd& fd) {
     {
       pollfd pfd = {
           .fd = fd.get(),
@@ -479,6 +482,124 @@ class DatagramSocketErrBase {
     }
   }
 };
+
+class DatagramSocketErrTest : public DatagramSocketErrBase, public testing::Test {
+ protected:
+  void SetUp() override {
+    ASSERT_NO_FATAL_FAILURE(SetUpSocket(sendfd_, false));
+    ASSERT_NO_FATAL_FAILURE(SetUpSocket(recvfd_, false));
+  }
+
+  void TearDown() override {
+    EXPECT_EQ(close(sendfd_.release()), 0) << strerror(errno);
+    EXPECT_EQ(close(recvfd_.release()), 0) << strerror(errno);
+  }
+
+  const fbl::unique_fd& sendfd() const { return sendfd_; }
+
+  const fbl::unique_fd& recvfd() const { return recvfd_; }
+
+ private:
+  fbl::unique_fd sendfd_;
+  fbl::unique_fd recvfd_;
+};
+
+TEST_F(DatagramSocketErrTest, IcmpErrorsPropagatedDuringIOSpamSend) {
+  // Under the hood, Fuchsia sends datagram payloads using an asynchronous loop routine[1]
+  // that consumes errors surfaced by the networking library used internally by the Netstack.
+  // This test validates that those errors are correctly propagated to the client (rather than
+  // dropped on the floor) by triggering an ICMP error while the loop routine is processing a
+  // heavy load of outgoing payloads.
+  //
+  // The goal is to exercise and validate the following scenario:
+  //
+  //   1) Client sends payload on a socket
+  //   2) ICMP error arrives
+  //   3) Loop routine asynchronously enqueues payload into the Netstack and consumes
+  //      the ICMP error
+  //   4) The error is propagated to the client and the payload is successfully sent
+  //
+  // [1]: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket
+  sockaddr_in addr;
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(recvfd().get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(sockaddr_in));
+
+  // Trigger an ICMP error _without_ waiting for POLLERR. This makes it possible
+  // for a `send` below to enqueue a payload into the zircon socket before the error
+  // is signaled on the socket.
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachableNoPoll(sendfd()));
+
+  size_t total_errors = 0;
+  size_t total_sent = 0;
+  constexpr char buf[] = "b";
+  while (total_errors == 0 || total_sent == 0) {
+    ssize_t res =
+        sendto(sendfd().get(), buf, sizeof(buf), 0, reinterpret_cast<sockaddr*>(&addr), addrlen);
+    if (res < 0) {
+      total_errors++;
+      EXPECT_EQ(errno, ECONNREFUSED);
+    } else {
+      total_sent++;
+      EXPECT_EQ(res, ssize_t(sizeof(buf)));
+    }
+  }
+
+  EXPECT_EQ(total_errors, static_cast<size_t>(1));
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(sendfd()));
+
+  // Expect that the loop routine successfully sent all outgoing packets in addition
+  // to returning the error.
+  for (size_t i = 0; i < total_sent; i++) {
+    char recv_buf[sizeof(buf) + 1];
+    EXPECT_EQ(read(recvfd().get(), recv_buf, sizeof(recv_buf)), ssize_t(sizeof(buf)))
+        << strerror(errno);
+    EXPECT_EQ(std::string_view(recv_buf, sizeof(buf)), std::string_view(buf, sizeof(buf)));
+  }
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(recvfd()));
+}
+
+TEST_F(DatagramSocketErrTest, IcmpErrorsPropagatedDuringIOSpamRecv) {
+  // Under the hood, Fuchsia receives datagram payloads using an asynchronous loop routine[1]
+  // that consumes errors surfaced by the networking library used internally by the Netstack.
+  // This test validates that those errors are correctly propagated to the client (rather than
+  // dropped on the floor) by triggering an ICMP error while the loop routine is processing a
+  // heavy load of incoming payloads.
+  //
+  // The goal is to exercise and validate the following scenario:
+  //
+  //   1) ICMP error arrives on a socket
+  //   2) Payload arrives on a socket
+  //   3) Loop routine dequeues payload from the Netstack, consuming the ICMP error
+  //   4) Both the payload and the error are propagated to the client
+  //
+  // [1]: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0109_socket_datagram_socket
+  ASSERT_NO_FATAL_FAILURE(ConnectTo(sendfd(), recvfd()));
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(recvfd()));
+  ASSERT_NO_FATAL_FAILURE(ConnectTo(recvfd(), sendfd()));
+  constexpr char buf[] = "b";
+  EXPECT_EQ(send(sendfd().get(), buf, sizeof(buf), 0), ssize_t(sizeof(buf))) << strerror(errno);
+
+  size_t total_errors = 0;
+  size_t total_received = 0;
+  char recv_buf[sizeof(buf) + 1];
+  while (total_errors == 0 || total_received == 0) {
+    ssize_t res = read(recvfd().get(), recv_buf, sizeof(recv_buf));
+    if (res < 0) {
+      total_errors++;
+      EXPECT_EQ(errno, ECONNREFUSED);
+    } else {
+      total_received++;
+      EXPECT_EQ(res, ssize_t(sizeof(buf)));
+      EXPECT_EQ(std::string_view(recv_buf, sizeof(buf)), std::string_view(buf, sizeof(buf)));
+    }
+  }
+
+  EXPECT_EQ(total_errors, static_cast<size_t>(1));
+  EXPECT_EQ(total_received, static_cast<size_t>(1));
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(recvfd()));
+}
 
 std::string nonBlockingToString(bool nonblocking) {
   if (nonblocking) {
