@@ -45,6 +45,9 @@ rustc_binary("fxfs_crypt") {
     "//third_party/rust_crates:futures",
   ]
   sources = [ "src/main.rs" ]
+
+  # Optimize for size
+  configs += [ "//build/config/rust:bootfs" ]
 }
 
 fuchsia_component("fxfs-crypt") {

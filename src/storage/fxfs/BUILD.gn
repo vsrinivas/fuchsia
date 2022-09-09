@@ -226,9 +226,9 @@ rustc_binary("fxfs") {
   ]
   sources = [ "src/main.rs" ]
 
-  if (is_fuchsia) {
-    features = [ "tracing" ]
-  }
+  # Optimize for size
+  configs += [ "//build/config/rust:bootfs" ]
+  features = [ "tracing" ]
 }
 
 fuchsia_component("fxfs_component") {
