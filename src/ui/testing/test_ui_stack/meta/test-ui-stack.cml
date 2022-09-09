@@ -81,5 +81,6 @@
     config: {
         use_scene_manager: { type: "bool" },
         use_flatland: { type: "bool" },
+        display_rotation: { type: "uint32" },
     },
 }

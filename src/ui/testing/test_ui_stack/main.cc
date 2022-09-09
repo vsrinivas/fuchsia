@@ -58,6 +58,7 @@ int run_test_ui_stack(int argc, const char** argv) {
                            : ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
   config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
   config.use_input = true;
+  config.display_rotation = test_ui_stack_config.display_rotation();
 
   // Build test realm.
   ui_testing::UITestRealm realm(config);
