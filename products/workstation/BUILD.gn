@@ -11,7 +11,7 @@ assert(
 workstation_platform_config = {
   build_type = "eng"
   identity = {
-    password_pinweaver = "allowed"
+    password_pinweaver = "required"
   }
 }
 
