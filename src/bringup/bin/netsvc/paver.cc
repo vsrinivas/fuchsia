@@ -111,6 +111,7 @@ int Paver::StreamBuffer() {
     ClearBufferRef(kBufferRefWorker);
 
     paver_svc_ = {};
+    fshost_admin_svc_ = {};
 
     if (result != 0) {
       printf("netsvc: copy exited prematurely (%d): expect paver errors\n", result);
@@ -419,6 +420,7 @@ int Paver::MonitorBuffer() {
   auto cleanup = fit::defer([this, &result]() {
     ClearBufferRef(kBufferRefWorker);
     paver_svc_ = {};
+    fshost_admin_svc_ = {};
 
     if (result != 0) {
       printf("netsvc: copy exited prematurely (%d): expect paver errors\n", result);
@@ -450,6 +452,11 @@ int Paver::MonitorBuffer() {
 
   zx::vmo dup;
   auto status = buffer_mapper_.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  if (status != ZX_OK) {
+    exit_code_.store(status);
+    return 0;
+  }
+  status = dup.set_prop_content_size(buffer_mapper_.size());
   if (status != ZX_OK) {
     exit_code_.store(status);
     return 0;
@@ -493,9 +500,9 @@ int Paver::MonitorBuffer() {
   // Blocks until paving is complete.
   switch (command_) {
     case Command::kDataFile: {
-      auto res =
-          data_sink->WriteDataFile(fidl::StringView(path_, strlen(path_)), std::move(buffer));
-      status = res.status() == ZX_OK ? res.value().status : res.status();
+      auto res = fshost_admin_svc_->WriteDataFile(fidl::StringView(path_, strlen(path_)),
+                                                  std::move(buffer.vmo));
+      status = res.status() == ZX_OK ? (res.ok() ? ZX_OK : res->error_value()) : res.status();
       break;
     }
     case Command::kFirmware:
@@ -654,9 +661,19 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size, zx::duratio
             fidl::DiscoverableProtocolName<fuchsia_paver::Paver>);
     return TFTP_ERR_IO;
   }
+  auto fshost = service::ConnectAt<fuchsia_fshost::Admin>(svc_root_);
+  if (fshost.is_error()) {
+    fprintf(stderr, "netsvc: Unable to open /svc/%s.\n",
+            fidl::DiscoverableProtocolName<fuchsia_fshost::Admin>);
+    return TFTP_ERR_IO;
+  }
 
   paver_svc_ = fidl::BindSyncClient(std::move(*paver));
-  auto svc_cleanup = fit::defer([&]() { paver_svc_ = {}; });
+  fshost_admin_svc_ = fidl::BindSyncClient(std::move(*fshost));
+  auto svc_cleanup = fit::defer([&]() {
+    fshost_admin_svc_ = {};
+    paver_svc_ = {};
+  });
 
   size_ = size;
 

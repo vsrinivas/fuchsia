@@ -5,6 +5,7 @@
 #ifndef SRC_BRINGUP_BIN_NETSVC_PAVER_H_
 #define SRC_BRINGUP_BIN_NETSVC_PAVER_H_
 
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/netboot/netboot.h>
@@ -112,6 +113,7 @@ class Paver : public PaverInterface {
   fbl::unique_fd devfs_root_;
 
   fidl::WireSyncClient<fuchsia_paver::Paver> paver_svc_;
+  fidl::WireSyncClient<fuchsia_fshost::Admin> fshost_admin_svc_;
 
   fuchsia_paver::wire::Configuration configuration_;
   // Only meaningful when command == Command::kAsset.

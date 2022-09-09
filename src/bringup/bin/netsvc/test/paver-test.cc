@@ -421,15 +421,13 @@ TEST_F(PaverTest, WriteZirconAWithABRSupportedTwice) {
 
 TEST_F(PaverTest, WriteSshAuth) {
   size_t size = sizeof(kFakeData);
-  fake_svc_.fake_paver().set_expected_payload_size(size);
   ASSERT_EQ(paver_.OpenWrite(NB_SSHAUTH_FILENAME, size, zx::duration::infinite()), TFTP_NO_ERROR);
   ASSERT_EQ(paver_.Write(kFakeData, &size, 0), TFTP_NO_ERROR);
   ASSERT_EQ(size, sizeof(kFakeData));
   Wait();
   paver_.Close();
   ASSERT_OK(paver_.exit_code());
-  ValidateCommandTrace(fake_svc_.fake_paver().GetCommandTrace(),
-                       {paver_test::Command::kWriteDataFile});
+  ASSERT_EQ(fake_svc_.fake_fshost().data_file_path(), "ssh/authorized_keys");
 }
 
 TEST_F(PaverTest, WriteFvm) {

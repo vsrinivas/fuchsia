@@ -45,6 +45,7 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.device.NameProvider",
+                "fuchsia.fshost.Admin",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.kernel.Counter",

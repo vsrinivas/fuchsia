@@ -5,6 +5,8 @@
 #define SRC_BRINGUP_BIN_NETSVC_TEST_PAVER_TEST_COMMON_H_
 
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
+#include <fidl/fuchsia.fshost/cpp/wire_test_base.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -35,6 +37,32 @@
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/storage/testing/fake-paver.h"
 
+class FakeFshost : public fidl::testing::WireTestBase<fuchsia_fshost::Admin> {
+ public:
+  zx_status_t Connect(async_dispatcher_t* dispatcher,
+                      fidl::ServerEnd<fuchsia_fshost::Admin> request) {
+    dispatcher_ = dispatcher;
+    return fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_fshost::Admin>>(
+        dispatcher, std::move(request), this);
+  }
+
+  void WriteDataFile(WriteDataFileRequestView request,
+                     WriteDataFileCompleter::Sync& completer) override {
+    data_file_path_ = request->filename.get();
+    completer.ReplySuccess();
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    FAIL("Unexpected call to fuchsia.fshost.Admin: %s", name.c_str());
+  }
+
+  const std::string& data_file_path() const { return data_file_path_; }
+
+ private:
+  async_dispatcher_t* dispatcher_ = nullptr;
+  std::string data_file_path_;
+};
+
 class FakeSvc {
  public:
   explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
@@ -44,6 +72,11 @@ class FakeSvc {
         fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fuchsia_paver::Paver> request) {
           return fake_paver_.Connect(dispatcher_, std::move(request));
         }));
+    root_dir->AddEntry(
+        fidl::DiscoverableProtocolName<fuchsia_fshost::Admin>,
+        fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fuchsia_fshost::Admin> request) {
+          return fake_fshost_.Connect(dispatcher_, std::move(request));
+        }));
 
     zx::status server_end = fidl::CreateEndpoints(&svc_local_);
     ASSERT_OK(server_end.status_value());
@@ -51,12 +84,14 @@ class FakeSvc {
   }
 
   paver_test::FakePaver& fake_paver() { return fake_paver_; }
+  FakeFshost& fake_fshost() { return fake_fshost_; }
   fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
 
  private:
   async_dispatcher_t* dispatcher_;
   fs::SynchronousVfs vfs_;
   paver_test::FakePaver fake_paver_;
+  FakeFshost fake_fshost_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 

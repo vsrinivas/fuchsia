@@ -154,7 +154,9 @@ void AdminServer::GetDevicePath(GetDevicePathRequestView request,
 
 void AdminServer::WriteDataFile(WriteDataFileRequestView request,
                                 WriteDataFileCompleter::Sync& completer) {
-  if (!config_.fvm_ramdisk()) {
+  // Recovery builds set `fvm_ramdisk`, Zedboot builds set `netboot`.  Either way, the data volume
+  // won't be automatically mounted in this configuration, which is all we need to ensure.
+  if (!config_.fvm_ramdisk() && !config_.netboot()) {
     FX_LOGS(INFO) << "Can't WriteDataFile from a non-recovery build; fvm_ramdisk must be set.";
     completer.ReplyError(ZX_ERR_BAD_STATE);
     return;
