@@ -96,7 +96,7 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
         writer_->WriteSilence(start_frame, packet_start_frame - start_frame);
       }
 
-      writer_->WritePacket(packet_start_frame, packet->length(), packet->payload());
+      writer_->WriteData(packet_start_frame, packet->length(), packet->payload());
       start_frame = packet->end().Ceiling();
     }
 
@@ -236,6 +236,7 @@ bool ConsumerStage::ApplyStopCommand(const StopCommand& cmd, zx::time now) {
           },
   };
   UpdatePresentationTimeToFracFrame(std::nullopt);
+  writer_->End();
   if (cmd.callback) {
     cmd.callback();
   }

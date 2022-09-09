@@ -46,6 +46,7 @@ TEST(ConsumerStageTest, SourceIsEmpty) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(true, 0, 48, nullptr)));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, SourceHasPackets) {
@@ -70,6 +71,7 @@ TEST(ConsumerStageTest, SourceHasPackets) {
                                                FieldsAre(true, 96, 48, nullptr),             //
                                                FieldsAre(false, 144, 48, payload3->data()),  //
                                                FieldsAre(true, 192, 48, nullptr)));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, SourceHasPacketAtFractionalOffset) {
@@ -91,6 +93,7 @@ TEST(ConsumerStageTest, SourceHasPacketAtFractionalOffset) {
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(true, 0, 11, nullptr),            //
                                                FieldsAre(false, 11, 5, payload0->data()),  //
                                                FieldsAre(false, 16, 32, payload1->data())));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, StartDuringJob) {
@@ -110,6 +113,7 @@ TEST(ConsumerStageTest, StartDuringJob) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 48, 48, payload1->data())));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, StartAtEndOfJob) {
@@ -127,6 +131,7 @@ TEST(ConsumerStageTest, StartAtEndOfJob) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
   EXPECT_THAT(w.writer->packets(), ElementsAre());
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, StartAfterJob) {
@@ -144,6 +149,7 @@ TEST(ConsumerStageTest, StartAfterJob) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_THAT(status, VariantWith<StoppedStatus>(FieldsAre(zx::time(0) + zx::msec(3))));
   EXPECT_THAT(w.writer->packets(), ElementsAre());
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, StopDuringJob) {
@@ -164,6 +170,7 @@ TEST(ConsumerStageTest, StopDuringJob) {
 
   // Since we stop at frame 48 (1ms), there should be silence after packet0.
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 0, 48, payload0->data())));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre(48));
 }
 
 TEST(ConsumerStageTest, StopAtEndOfJob) {
@@ -181,6 +188,7 @@ TEST(ConsumerStageTest, StopAtEndOfJob) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StoppedStatus>(status));
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 0, 48, payload0->data())));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre(48));
 }
 
 TEST(ConsumerStageTest, StopAfterJob) {
@@ -198,6 +206,7 @@ TEST(ConsumerStageTest, StopAfterJob) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 0, 48, payload0->data())));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, StartAndStopDuringJob) {
@@ -219,9 +228,10 @@ TEST(ConsumerStageTest, StartAndStopDuringJob) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_THAT(status, VariantWith<StoppedStatus>(FieldsAre(std::nullopt)));
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 48, 48, payload1->data())));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre(96));
 }
 
-TEST(ConsumerStageTest, StopInSecondJub) {
+TEST(ConsumerStageTest, StopInSecondJob) {
   ConsumerStageWrapper w(kFormat, /*presentation_delay=*/zx::nsec(0));
 
   // pt0 is the presentation time consumed by RunMixJob(ctx, 0, period). Since we consume one
@@ -239,6 +249,7 @@ TEST(ConsumerStageTest, StopInSecondJub) {
     auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
     EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
     EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 0, 48, payload0->data())));
+    EXPECT_THAT(w.writer->end_calls(), ElementsAre());
     w.writer->packets().clear();
   }
 
@@ -246,6 +257,7 @@ TEST(ConsumerStageTest, StopInSecondJub) {
     auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0) + period, period);
     EXPECT_THAT(status, VariantWith<StoppedStatus>(FieldsAre(std::nullopt)));
     EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 48, 2, payload1->data())));
+    EXPECT_THAT(w.writer->end_calls(), ElementsAre(50));
   }
 }
 
@@ -303,6 +315,7 @@ TEST(ConsumerStageTest, RemoveSource) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(true, 0, 48, nullptr)));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, OutputPipelineWithDelay) {
@@ -318,6 +331,7 @@ TEST(ConsumerStageTest, OutputPipelineWithDelay) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 0, 48, payload0->data())));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 TEST(ConsumerStageTest, InputPipelineWithDelay) {
@@ -333,6 +347,7 @@ TEST(ConsumerStageTest, InputPipelineWithDelay) {
   auto status = w.consumer->RunMixJob(DefaultCtx(), zx::time(0), period);
   EXPECT_TRUE(std::holds_alternative<StartedStatus>(status));
   EXPECT_THAT(w.writer->packets(), ElementsAre(FieldsAre(false, 0, 48, payload0->data())));
+  EXPECT_THAT(w.writer->end_calls(), ElementsAre());
 }
 
 }  // namespace
