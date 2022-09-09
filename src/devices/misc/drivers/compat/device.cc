@@ -231,12 +231,18 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
   }
   device->topological_path_ += device->name_;
 
+  if (driver()) {
+    device->device_id_ = driver()->GetNextDeviceId();
+  }
+
   device->dev_vnode_ = fbl::MakeRefCounted<DevfsVnode>(device->ZxDevice());
+
+  auto outgoing_name = device->OutgoingName();
 
   std::optional<ServiceOffersV1> service_offers;
   if (zx_args->outgoing_dir_channel != ZX_HANDLE_INVALID) {
     service_offers = ServiceOffersV1(
-        device->name_,
+        outgoing_name,
         fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(zx_args->outgoing_dir_channel)),
         MakeFidlServiceOffers(zx_args));
 
@@ -247,12 +253,11 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     if (client_end.is_error()) {
       return client_end.status_value();
     }
-    service_offers = ServiceOffersV1(device->name_, std::move(*client_end), {});
+    service_offers = ServiceOffersV1(outgoing_name, std::move(*client_end), {});
   }
 
-  device->device_server_ =
-      DeviceServer(std::string(zx_args->name), zx_args->proto_id, device->topological_path_,
-                   MetadataMap(), std::move(service_offers));
+  device->device_server_ = DeviceServer(outgoing_name, zx_args->proto_id, device->topological_path_,
+                                        MetadataMap(), std::move(service_offers));
 
   // Add the metadata from add_args:
   for (size_t i = 0; i < zx_args->metadata_count; i++) {
@@ -293,8 +298,8 @@ fpromise::promise<void, zx_status_t> Device::Export() {
     options |= fuchsia_device_fs::wire::ExportOptions::kInvisible;
   }
 
-  auto devfs_status = driver()->ExportToDevfsSync(options, dev_vnode(), name_, topological_path_,
-                                                  device_server_.proto_id());
+  auto devfs_status = driver()->ExportToDevfsSync(options, dev_vnode(), OutgoingName(),
+                                                  topological_path_, device_server_.proto_id());
   if (devfs_status.is_error()) {
     FDF_LOG(INFO, "Device %s failed to add to devfs: %s", topological_path_.c_str(),
             devfs_status.status_string());
@@ -576,6 +581,10 @@ void Device::InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodeProperty
   if (!found) {
     properties_.emplace_back(arena_).set_key(arena_, key).set_value(arena_, value);
   }
+}
+
+std::string Device::OutgoingName() {
+  return std::string(name_).append("-").append(std::to_string(device_id_));
 }
 
 zx_status_t Device::GetProtocol(uint32_t proto_id, void* out) const {

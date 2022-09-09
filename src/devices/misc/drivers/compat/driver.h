@@ -64,7 +64,7 @@ class Driver {
   // the device from devfs when it goes out of scope.
   zx::status<fit::deferred_callback> ExportToDevfsSync(
       fuchsia_device_fs::wire::ExportOptions options, fbl::RefPtr<fs::Vnode> dev_node,
-      std::string_view name, std::string_view topological_path, uint32_t proto_id);
+      std::string name, std::string_view topological_path, uint32_t proto_id);
 
   Device& GetDevice() { return device_; }
   const driver::Namespace& driver_namespace() { return ns_; }
@@ -73,6 +73,8 @@ class Driver {
   driver::Logger& logger() { return logger_; }
   const driver::DevfsExporter& devfs_exporter() const { return devfs_exporter_; }
   component::OutgoingDirectory& outgoing() { return outgoing_; }
+
+  uint32_t GetNextDeviceId() { return next_device_id_++; }
 
  private:
   // Run the driver at `driver_path`.
@@ -122,6 +124,10 @@ class Driver {
   const std::string url_;
   driver::Logger inner_logger_;
   Device device_;
+
+  // The next unique device id for devices. Starts at 1 because `device_` has id zero.
+  uint32_t next_device_id_ = 1;
+
   // TODO(fxbug.dev/93333): remove this once we have proper composite support.
   Sysmem sysmem_;
 

@@ -127,6 +127,8 @@ class Device : public std::enable_shared_from_this<Device>,
   void InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodePropertyKey key,
                               fuchsia_driver_framework::wire::NodePropertyValue value);
 
+  std::string OutgoingName();
+
   // This arena backs `properties_`.
   // This should be declared before any objects it backs so it is destructed last.
   fidl::Arena<512> arena_;
@@ -140,6 +142,9 @@ class Device : public std::enable_shared_from_this<Device>,
 
   std::string topological_path_;
   const std::string name_;
+  // A unique id for the device.
+  uint32_t device_id_ = 0;
+
   driver::Logger& logger_;
   async_dispatcher_t* const dispatcher_;
   uint32_t device_flags_ = 0;

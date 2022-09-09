@@ -653,19 +653,19 @@ zx::status<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t d
 
 zx::status<fit::deferred_callback> Driver::ExportToDevfsSync(
     fuchsia_device_fs::wire::ExportOptions options, fbl::RefPtr<fs::Vnode> dev_node,
-    std::string_view name, std::string_view topological_path, uint32_t proto_id) {
+    std::string name, std::string_view topological_path, uint32_t proto_id) {
   zx_status_t add_status = devfs_dir_->AddEntry(name, dev_node);
   if (add_status != ZX_OK) {
     return zx::error(add_status);
   }
+  zx_status_t status = devfs_exporter_.ExportSync(name, topological_path, options, proto_id);
+
   // If this goes out of scope, close the devfs connection.
-  auto auto_remove = [this, name = std::string(name), dev_node]() {
-    (void)outgoing_.RemoveProtocol(name);
+  auto auto_remove = [this, name = std::move(name), dev_node]() {
     devfs_vfs_->CloseAllConnectionsForVnode(*dev_node, {});
     devfs_dir_->RemoveEntry(name);
   };
 
-  zx_status_t status = devfs_exporter_.ExportSync(name, topological_path, options, proto_id);
   if (status != ZX_OK) {
     return zx::error(status);
   }

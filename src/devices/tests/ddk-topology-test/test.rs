@@ -14,9 +14,14 @@ async fn do_test(dfv2: bool) -> Result<(), Error> {
     builder.driver_test_realm_setup().await?;
 
     let instance = builder.build().await?;
+    let root_driver = match dfv2 {
+        true => "fuchsia-boot:///#meta/test-parent-sys.cm",
+        false => "fuchsia-boot:///#driver/test-parent-sys.so",
+    };
     instance
         .driver_test_realm_start(fdt::RealmArgs {
             use_driver_framework_v2: Some(dfv2),
+            root_driver: Some(root_driver.to_string()),
             ..fdt::RealmArgs::EMPTY
         })
         .await?;
@@ -48,7 +53,6 @@ async fn toplogy_test() -> Result<(), Error> {
 }
 
 #[fuchsia::test]
-#[ignore] // TODO(fxbug.dev/107288): Fix this test and then enable it.
 async fn toplogy_test_dfv2() -> Result<(), Error> {
     do_test(true).await
 }
