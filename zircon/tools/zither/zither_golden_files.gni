@@ -1,0 +1,106 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/golden_files.gni")
+import("//zircon/tools/zither/zither_library.gni")
+
+# `zither_golden_files()` is a wrapper around `golden_files()`, where the
+# outputs to check against the provided goldens are implicitly given by a
+# zither backend.
+#
+# Parameters:
+#
+#  * library
+#    - Required: The label of a zither library, necessarily defined earlier in
+#      the same file (for `get_target_outputs` purposes).
+#    - Type: label
+#
+#  * backend
+#    - Required: The zither backend to test against the provided goldens. Must
+#      be one of `supported_zither_backend_names`.
+#    - Type: string
+#
+#  * goldens
+#    - Required: The list of golden files to test the backend against. For each
+#      golden, it is expected that the backend produces a file of the same
+#      basename: each such pair will be tested. Each golden is required to
+#      match an output, but each output is not required to match a golden.
+#    - Type: list(relative path)
+#
+template("zither_golden_files") {
+  assert(defined(invoker.library),
+         "zither_golden_files(\"$target_name\") requires `library`")
+  assert(defined(invoker.backend),
+         "zither_golden_files(\"$target_name\") requires `backend`")
+  assert(defined(invoker.backend),
+         "zither_golden_files(\"$target_name\") requires `goldens`")
+
+  assert(
+      supported_zither_backends + [ invoker.backend ] - [ invoker.backend ] !=
+          supported_zither_backends,
+      "zither_golden_files(\"$target_name\"): unsupported `backend`: ${invoker.backend}")
+
+  if (current_toolchain == default_toolchain) {
+    # An internal means of accessing a backend's outputs.
+    backend_gen_label = "${invoker.library}.${invoker.backend}.gen"
+    backend_outputs = get_target_outputs(backend_gen_label)
+
+    golden_files(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      deps = [ backend_gen_label ]
+
+      # Avoids being sensitive to changes in the go/format package that would
+      # cause this check to fail and block rolling the Go version.
+      # TODO(https://fxbug.dev/107996): Consider other options for making this
+      # test insensitive to Go formatter changes.
+      ignore_space_change = true
+
+      # Cross-reference the given goldens with the backend outputs by name to
+      # figure out the intended golden comparisons.
+      unmatched = []
+      comparisons = []
+      foreach(golden, invoker.goldens) {
+        match = false
+        foreach(output, backend_outputs) {
+          if (!match &&
+              get_path_info(golden, "file") == get_path_info(output, "file")) {
+            comparisons += [
+              {
+                golden = golden
+                candidate = output
+              },
+            ]
+            match = true
+          }
+        }
+        if (!match) {
+          unmatched += [ golden ]
+        }
+      }
+      assert(
+          unmatched == [],
+          "Could not match the following goldens with zither outputs: $unmatched")
+    }
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      deps = [ ":$target_name($default_toolchain)" ]
+    }
+    not_needed(invoker,
+               "*",
+               [
+                 "testonly",
+                 "visibility",
+               ])
+  }
+}
