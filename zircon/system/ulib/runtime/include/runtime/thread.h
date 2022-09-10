@@ -4,10 +4,10 @@
 
 #pragma once
 
-#include <zircon/compiler.h>
-#include <zircon/types.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <zircon/compiler.h>
+#include <zircon/types.h>
 
 __BEGIN_CDECLS
 
@@ -26,7 +26,10 @@ typedef struct {
 // any functions except zxr_thread_create or zxr_thread_adopt.
 // If detached is true, then it's as if zxr_thread_detach were called
 // immediately after this returns (but it's more efficient, and can
-// never fail with ZX_ERR_BAD_STATE).
+// never fail with ZX_ERR_BAD_STATE). If detached is false and create
+// succeeds, either zxr_thread_join or zxr_thread_detach MUST be called
+// at some point in the future to ensure resources are released when or
+// after the thread exits.
 zx_status_t zxr_thread_create(zx_handle_t proc_self, const char* name, bool detached,
                               zxr_thread_t* thread);
 
@@ -70,10 +73,8 @@ bool zxr_thread_detached(zxr_thread_t* thread);
 // zx_vmar_unmap(vmar, addr, len) first, but in a way that permits
 // unmapping the caller's own stack.  Iff it has been detached, then
 // (*if_detached)(if_detached_arg) is called before unmapping the stack.
-__NO_RETURN void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread,
-                                                   void (*if_detached)(void*),
-                                                   void* if_detached_arg,
-                                                   zx_handle_t vmar,
+__NO_RETURN void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, void (*if_detached)(void*),
+                                                   void* if_detached_arg, zx_handle_t vmar,
                                                    uintptr_t addr, size_t len);
 
 // Destroy a thread structure that is either created but unstarted or is
@@ -86,12 +87,16 @@ __NO_RETURN void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread,
 zx_status_t zxr_thread_destroy(zxr_thread_t* thread);
 
 // Get the zx_handle_t corresponding to the given thread.
-// WARNING:
-// This is intended for debuggers and so on. Holding this wrong could
-// break internal invariants of zxr_thread_t.  It is unsafe to call this
-// function from a different thread once this thread is started, if it might
-// exit.  The returned handle is not a duplicate, and must be duplicated if the caller
-// intends to hold it after zxr_thread_start() is called.
+// The returned handled is valid as long as the thread is joinable OR alive
+// and may be used by the local thread without external synchronization.
+// Note, however, that it is only guaranteed to be safe to use the returned
+// handle from a remote thread before zxr_thread_join() or zxr_thread_detach()
+// is called, or when some external synchronization is used to guarantee the
+// thread is still alive at the time the handle is used. Otherwise, the handle
+// could become invalid when the joined or detached thread exits.
+// The returned handle is not a duplicate, and should be duplicated to avoid
+// the potential for invalid handle use if the caller intends to use it on a
+// different thread after zxr_thread_join() or zxr_thread_detach() is called.
 zx_handle_t zxr_thread_get_handle(zxr_thread_t* thread);
 
 __END_CDECLS

@@ -26,6 +26,7 @@ enum {
   JOINED,
   EXITING,
   DONE,
+  FREED,
 };
 
 union zxr_internal_thread_t {
@@ -66,22 +67,21 @@ static bool claim_thread(zxr_internal_thread_t* thread, int new_state, int* old_
       *old_state, new_state, std::memory_order_acq_rel, std::memory_order_acquire);
 }
 
-// Extract the handle from the thread structure.  This must only be called by the thread
-// itself (i.e., this is not thread-safe).
-static zx_handle_t take_handle(zxr_internal_thread_t* thread) {
+// Extract the handle from the thread structure. Synchronizes with readers by
+// setting the state to FREED and checks the given expected state for consistency.
+static zx_handle_t take_handle(zxr_internal_thread_t* thread, int expected_state) {
   zx_handle_t tmp = thread->handle;
   thread->handle = ZX_HANDLE_INVALID;
+
+  if (!thread->atomic_state().compare_exchange_strong(
+          expected_state, FREED, std::memory_order_acq_rel, std::memory_order_acquire)) {
+    CRASH_WITH_UNIQUE_BACKTRACE();
+  }
+
   return tmp;
 }
 
 static _Noreturn void exit_non_detached(zxr_internal_thread_t* thread) {
-  // As soon as thread->state has changed to to DONE, a caller of zxr_thread_join
-  // might complete and deallocate the memory containing the thread descriptor.
-  // Hence it's no longer safe to touch *thread or read anything out of it.
-  // Therefore we must extract the thread handle before that transition
-  // happens.
-  zx_handle_t handle = take_handle(thread);
-
   // Wake the _zx_futex_wait in zxr_thread_join (below), and then die.
   // This has to be done with the special four-in-one vDSO call because
   // as soon as the state transitions to DONE, the joiner is free to unmap
@@ -90,7 +90,7 @@ static _Noreturn void exit_non_detached(zxr_internal_thread_t* thread) {
   // is reused for something else and our futex_wake tickles somebody
   // completely unrelated, well, that's why futex_wait can always have
   // spurious wakeups.
-  _zx_futex_wake_handle_close_thread_exit(&thread->state, 1, DONE, handle);
+  _zx_futex_wake_handle_close_thread_exit(&thread->state, 1, DONE, ZX_HANDLE_INVALID);
   CRASH_WITH_UNIQUE_BACKTRACE();
 }
 
@@ -124,7 +124,7 @@ _Noreturn void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, void (*if
   switch (old_state) {
     case DETACHED: {
       (*if_detached)(if_detached_arg);
-      zx_handle_t handle = take_handle(to_internal(thread));
+      const zx_handle_t handle = take_handle(to_internal(thread), EXITING);
       _zx_vmar_unmap_handle_close_thread_exit(vmar, addr, len, handle);
       break;
     }
@@ -223,7 +223,12 @@ zx_status_t zxr_thread_join(zxr_thread_t* external_thread) {
     }
   }
 
-  // The thread has already closed its own handle.
+  // Take the handle and synchronize with readers.
+  const zx_handle_t handle = take_handle(thread, DONE);
+  if (handle == ZX_HANDLE_INVALID || zx_handle_close(handle) != ZX_OK) {
+    CRASH_WITH_UNIQUE_BACKTRACE();
+  }
+
   return ZX_OK;
 }
 
@@ -271,7 +276,12 @@ bool zxr_thread_detached(zxr_thread_t* thread) {
   return state == DETACHED;
 }
 
-zx_handle_t zxr_thread_get_handle(zxr_thread_t* thread) { return to_internal(thread)->handle; }
+zx_handle_t zxr_thread_get_handle(zxr_thread_t* thread) {
+  // Synchronize with writers before reading handle.
+  const int state = to_internal(thread)->atomic_state().load(std::memory_order_acquire);
+  (void)state;
+  return to_internal(thread)->handle;
+}
 
 zx_status_t zxr_thread_adopt(zx_handle_t handle, zxr_thread_t* thread) {
   initialize_thread(to_internal(thread), handle, false);

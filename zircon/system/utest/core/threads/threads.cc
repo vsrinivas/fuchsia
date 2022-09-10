@@ -227,7 +227,11 @@ TEST(Threads, Basics) {
   zx_handle_t thread_h;
   ASSERT_TRUE(start_thread(threads_test_sleep_fn, (void*)zx_deadline_after(ZX_MSEC(100)), &thread,
                            &thread_h));
+  EXPECT_NE(zxr_thread_get_handle(&thread), ZX_HANDLE_INVALID);
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
+  EXPECT_NE(zxr_thread_get_handle(&thread), ZX_HANDLE_INVALID);
+  ASSERT_EQ(zxr_thread_join(&thread), ZX_OK);
+  EXPECT_EQ(zxr_thread_get_handle(&thread), ZX_HANDLE_INVALID);
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
@@ -251,15 +255,18 @@ TEST(Threads, Detach) {
   // We're not detached yet
   ASSERT_FALSE(zxr_thread_detached(&thread));
 
+  EXPECT_NE(zxr_thread_get_handle(&thread), ZX_HANDLE_INVALID);
+
   ASSERT_EQ(zxr_thread_detach(&thread), ZX_OK);
   ASSERT_TRUE(zxr_thread_detached(&thread));
+
+  EXPECT_NE(zxr_thread_get_handle(&thread), ZX_HANDLE_INVALID);
 
   // Tell thread to exit
   ASSERT_EQ(zx_object_signal(event, 0, ZX_USER_SIGNAL_0), ZX_OK);
 
   // Wait for thread to exit
   ASSERT_EQ(zx_object_wait_one(thread_h, ZX_THREAD_TERMINATED, ZX_TIME_INFINITE, NULL), ZX_OK);
-
   ASSERT_EQ(zx_handle_close(thread_h), ZX_OK);
 }
 
