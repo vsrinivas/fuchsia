@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	ethernetext "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlext/fuchsia/hardware/ethernet"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
@@ -1190,6 +1191,7 @@ func TestNetworkEndpointStatsInspectImpl(t *testing.T) {
 func TestNeighborTableInspectImpl(t *testing.T) {
 	addGoleakCheck(t)
 
+	someTime := tcpip.MonotonicTime{}
 	impl := neighborTableInspectImpl{
 		name: neighborsLabel,
 		value: map[string]stack.NeighborEntry{
@@ -1197,13 +1199,13 @@ func TestNeighborTableInspectImpl(t *testing.T) {
 				Addr:      ipv4Addr,
 				LinkAddr:  "\x0a\x00\x00\x00\x00\x01",
 				State:     stack.Reachable,
-				UpdatedAt: time.Unix(0, 1),
+				UpdatedAt: someTime.Add(1 * time.Nanosecond),
 			},
 			ipv6Addr.String(): {
 				Addr:      ipv6Addr,
 				LinkAddr:  "\x0a\x00\x00\x00\x00\x02",
 				State:     stack.Stale,
-				UpdatedAt: time.Unix(0, 2),
+				UpdatedAt: someTime.Add(2 * time.Nanosecond),
 			},
 		},
 	}
@@ -1239,6 +1241,7 @@ func TestNeighborTableInspectImpl(t *testing.T) {
 func TestNeighborInfoInspectImpl(t *testing.T) {
 	addGoleakCheck(t)
 
+	someTime := tcpip.MonotonicTime{}
 	tests := []struct {
 		name     string
 		neighbor stack.NeighborEntry
@@ -1249,7 +1252,7 @@ func TestNeighborInfoInspectImpl(t *testing.T) {
 				Addr:      ipv4Addr,
 				LinkAddr:  "\x0a\x00\x00\x00\x00\x01",
 				State:     stack.Reachable,
-				UpdatedAt: time.Unix(0, 1),
+				UpdatedAt: someTime.Add(1 * time.Nanosecond),
 			},
 		},
 		{
@@ -1258,7 +1261,7 @@ func TestNeighborInfoInspectImpl(t *testing.T) {
 				Addr:      ipv6Addr,
 				LinkAddr:  "\x0a\x00\x00\x00\x00\x02",
 				State:     stack.Stale,
-				UpdatedAt: time.Unix(0, 2),
+				UpdatedAt: someTime.Add(2 * time.Nanosecond),
 			},
 		},
 	}
@@ -1283,7 +1286,7 @@ func TestNeighborInfoInspectImpl(t *testing.T) {
 						{Key: "State", Value: inspect.PropertyValueWithStr(test.neighbor.State.String())},
 					},
 					Metrics: []inspect.Metric{
-						{Key: "Last updated", Value: inspect.MetricValueWithIntValue(test.neighbor.UpdatedAt.UnixNano())},
+						{Key: "Last updated", Value: inspect.MetricValueWithIntValue(int64(fidlconv.ToZxTime(test.neighbor.UpdatedAt)))},
 					},
 				},
 				impl.ReadData(),

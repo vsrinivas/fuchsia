@@ -8,6 +8,7 @@ package fidlconv
 
 import (
 	"fmt"
+	"syscall/zx"
 
 	"fidl/fuchsia/net"
 	"fidl/fuchsia/net/multicast/admin"
@@ -232,4 +233,9 @@ func ToStackMulticastRoute(route admin.Route) (tcpipstack.MulticastRoute, bool) 
 		ExpectedInputInterface: tcpip.NICID(route.ExpectedInputInterface),
 		OutgoingInterfaces:     outgoingInterfaces,
 	}, true
+}
+
+// TODO(https://fxbug.dev/99434): Replace usages with `Clock.Elapsed` when available.
+func ToZxTime(t tcpip.MonotonicTime) zx.Time {
+	return zx.Time(t.Sub(tcpip.MonotonicTime{}))
 }

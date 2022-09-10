@@ -17,6 +17,7 @@ import (
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dhcp"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
@@ -1080,7 +1081,7 @@ func (impl *neighborInfoInspectImpl) ReadData() inspect.Object {
 			{Key: "State", Value: inspect.PropertyValueWithStr(impl.value.State.String())},
 		},
 		Metrics: []inspect.Metric{
-			{Key: "Last updated", Value: inspect.MetricValueWithIntValue(impl.value.UpdatedAt.UnixNano())},
+			{Key: "Last updated", Value: inspect.MetricValueWithIntValue(int64(fidlconv.ToZxTime(impl.value.UpdatedAt)))},
 		},
 	}
 }

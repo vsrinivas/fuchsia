@@ -498,7 +498,7 @@ func (it *neighborEntryIterator) GetNext(ctx fidl.Context) ([]neighbor.EntryIter
 }
 
 func updateEntry(e *neighbor.Entry, n stack.NeighborEntry) {
-	e.SetUpdatedAt(n.UpdatedAt.UnixNano())
+	e.SetUpdatedAt(int64(fidlconv.ToZxTime(n.UpdatedAt)))
 	if len(n.LinkAddr) != 0 {
 		e.SetMac(fidlconv.ToNetMacAddress(n.LinkAddr))
 	}
