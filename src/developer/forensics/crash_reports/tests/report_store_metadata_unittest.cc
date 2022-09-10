@@ -13,7 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/files/directory.h"
+#include "src/developer/forensics/testing/scoped_memfs_manager.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
@@ -21,10 +21,10 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
-using testing::UnorderedElementsAreArray;
+using ::testing::UnorderedElementsAreArray;
 namespace fs = std::filesystem;
 
-class ReportStoreMetadataTest : public testing::Test {
+class ReportStoreMetadataTest : public ::testing::Test {
  public:
   ReportStoreMetadataTest() : metadata_(tmp_dir_.path(), StorageSize::Megabytes(1u)) {}
 
@@ -190,14 +190,13 @@ TEST_F(ReportStoreMetadataTest, AddAndDelete) {
 }
 
 TEST_F(ReportStoreMetadataTest, RecreateFromFilesystem_FailsInitially) {
-  ReportStoreMetadata metadata("/tmp/delayed/path", StorageSize::Gigabytes(1u));
+  testing::ScopedMemFsManager scoped_mem_fs;
+  ReportStoreMetadata metadata("/cache/delayed/path", StorageSize::Gigabytes(1u));
   ASSERT_FALSE(metadata.IsDirectoryUsable());
 
-  ASSERT_TRUE(files::CreateDirectory("/tmp/delayed/path"));
+  scoped_mem_fs.Create("/cache/delayed/path");
   metadata.RecreateFromFilesystem();
   EXPECT_TRUE(metadata.IsDirectoryUsable());
-
-  ASSERT_TRUE(files::DeletePath("/tmp/delayed", /*recursive=*/true));
 }
 
 }  // namespace

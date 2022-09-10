@@ -29,10 +29,8 @@ bool ReportStoreMetadata::RecreateFromFilesystem() {
   report_metadata_.clear();
   program_metadata_.clear();
 
-  std::error_code error_code;
-  if (!fs::is_directory(report_store_root_) &&
-      !fs::create_directory(report_store_root_, error_code)) {
-    FX_LOGS(WARNING) << "Failed to create " << report_store_root_ << " " << error_code;
+  if (!files::IsDirectory(report_store_root_) && !files::CreateDirectory(report_store_root_)) {
+    FX_LOGS(WARNING) << "Failed to create " << report_store_root_;
     is_directory_usable_ = false;
     return false;
   }
