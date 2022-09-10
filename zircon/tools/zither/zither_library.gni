@@ -7,14 +7,36 @@ import("//build/config/clang/clang.gni")
 import("//build/cpp/library_headers.gni")
 import("//build/go/go_library.gni")
 
-# TODO(fxbug.dev/91102, fxbug.dev/93393): also "asm", "cpp", and "rust".
+# TODO(fxbug.dev/91102, fxbug.dev/93393): "cpp", and "rust".
 supported_zither_backends = [
   # C data layout bindings.
   "c",
 
   # Go data layout bindings.
   "go",
+
+  # Assembly data layout bindings.
+  "asm",
 ]
+
+# Information on supported backends, accessible via
+# `supported_zither_backend_info[ "$backend" ]`.
+#
+# Each backend scope contains the following:
+#
+# TODO(joshuaseaton): Also specify formatters here in a way that both
+# `_zither()` and `golden_files()` can grok.
+supported_zither_backend_info = {
+  c = {
+    _library_template = "_zither_c_family_library"
+  }
+  asm = {
+    _library_template = "_zither_c_family_library"
+  }
+  go = {
+    _library_template = "_zither_go_library"
+  }
+}
 
 _clang_format = "$clang_prefix/clang-format"
 _clang_format_config = "//.clang-format"
@@ -147,7 +169,7 @@ template("_zither") {
 #    - Usual GN meanings.
 #
 
-template("_zither_c_library") {
+template("_zither_c_family_library") {
   main_target = target_name
   zither_target = "$target_name.gen"
 
@@ -171,8 +193,8 @@ template("_zither_c_library") {
                              "deps",
                              "fidl_ir",
                              "generated_files",
+                             "backend",
                            ])
-    backend = "c"
   }
 
   library_headers(main_target) {
@@ -192,6 +214,8 @@ template("_zither_c_library") {
 }
 
 template("_zither_go_library") {
+  assert(invoker.backend == "go")
+
   main_target = target_name
   zither_target = "$target_name.gen"
 
@@ -251,11 +275,16 @@ template("_zither_go_library") {
 #   * C backend: ${target_name}.c
 #     Public: a C library target (e.g., a source set or static library), whose
 #     generated headers are of the form `<${NAMEPATH}/${filename}>` for each
-#     of basename of the associated FIDL source files.
+#     basename of the associated FIDL source files.
 #
 #   * Go backend: ${target_name}.go
 #     Public: a `go_library()` with a package name of ${NAMEPATH} (which is
 #     written to pkg_name.txt alongside the bindings).
+#
+#   * Assembly backend: ${target_name}.asm
+#     Public: an assembly library target (e.g., a source set), whose generated
+#     headers are of the form `<${NAMEPATH}/${filename}>` for each basename of
+#     the associated FIDL source files.
 #
 # TODO(fxbug.dev/51002): Actually, FIDL convention prefers to preserve the
 # '.'s in the library name for header paths. Follow this.
@@ -314,12 +343,16 @@ template("zither_library") {
   output_subdir = string_replace(library_name, ".", "/")
 
   foreach(backend, supported_zither_backends) {
-    target("_zither_${backend}_library", "${target_name}.${backend}") {
+    backend_info = {
+    }  # Clear from previous iteration.
+    backend_info = supported_zither_backend_info[backend]
+    target(backend_info._library_template, "${target_name}.${backend}") {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "visibility",
                                "fidl_ir",
+                               "backend",
                                "output_subdir",
                              ])
 

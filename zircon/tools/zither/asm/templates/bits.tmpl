@@ -1,0 +1,18 @@
+{{- define "GenerateAsmBits" -}}
+
+{{ range .Comments }}
+//{{ . }}
+{{- end }}
+
+{{ $bits := . }}
+{{ range .Members }}
+{{- if .Comments }}
+{{ range .Comments }}
+//{{ . }}
+{{- end }}
+{{- end }}
+{{ $name := MemberName $bits . }}
+#define {{ $name }}_SHIFT ({{ .Index }})
+#define {{ $name }} (1 << {{ $name }}_SHIFT)
+{{- end }}
+{{ end }}

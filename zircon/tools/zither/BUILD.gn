@@ -36,6 +36,7 @@ if (is_host) {
     sources = [ "main.go" ]
     deps = [
       ":common",
+      "asm",
       "c",
       "go",
       "//tools/fidl/lib/fidlgen",
@@ -158,10 +159,14 @@ template("zither_golden_test") {
     output_dir = "$target_gen_dir/${target_name}-${case.backend}"
 
     # Now verify that the bindings give valid code.
-    if (case.backend == "c") {
+    if (case.backend == "c" || case.backend == "asm") {
       create_source_target = "${compilation_check_target}.create_source"
 
-      source = "$output_dir/compile-check.c"
+      suffix = case.backend
+      if (case.backend == "asm") {
+        suffix = "S"
+      }
+      source = "$output_dir/compile-check.$suffix"
       action(create_source_target) {
         visibility = [ ":*" ]
         testonly = true
@@ -257,6 +262,10 @@ zither_golden_test("constants") {
       files = [ "constants.h" ]
     },
     {
+      backend = "asm"
+      files = [ "constants.h" ]
+    },
+    {
       backend = "go"
       files = [
         "constants.go",
@@ -274,6 +283,10 @@ zither_golden_test("enums") {
   cases = [
     {
       backend = "c"
+      files = [ "enums.h" ]
+    },
+    {
+      backend = "asm"
       files = [ "enums.h" ]
     },
     {
@@ -297,6 +310,10 @@ zither_golden_test("bits") {
       files = [ "bits.h" ]
     },
     {
+      backend = "asm"
+      files = [ "bits.h" ]
+    },
+    {
       backend = "go"
       files = [
         "bits.go",
@@ -314,6 +331,10 @@ zither_golden_test("structs") {
   cases = [
     {
       backend = "c"
+      files = [ "structs.h" ]
+    },
+    {
+      backend = "asm"
       files = [ "structs.h" ]
     },
     {
@@ -338,6 +359,14 @@ zither_golden_test("multifile") {
   cases = [
     {
       backend = "c"
+      files = [
+        "a.h",
+        "b.h",
+        "c.h",
+      ]
+    },
+    {
+      backend = "asm"
       files = [
         "a.h",
         "b.h",

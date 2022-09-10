@@ -17,13 +17,15 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither"
+	"go.fuchsia.dev/fuchsia/zircon/tools/zither/asm"
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither/c"
 	"go.fuchsia.dev/fuchsia/zircon/tools/zither/golang"
 )
 
 const (
-	cBackend  string = "c"
-	goBackend string = "go"
+	cBackend   string = "c"
+	goBackend  string = "go"
+	asmBackend string = "asm"
 )
 
 var supportedBackends = []string{cBackend, goBackend}
@@ -58,11 +60,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	cf := fidlgen.NewFormatter(flags.clangFormat, flags.clangFormatArgs...)
+
 	var gen generator
 	switch flags.backend {
 	case cBackend:
-		cf := fidlgen.NewFormatter(flags.clangFormat, flags.clangFormatArgs...)
 		gen = c.NewGenerator(cf)
+	case asmBackend:
+		gen = asm.NewGenerator(cf)
 	case goBackend:
 		gen = golang.NewGenerator(goFormatter{})
 	default:

@@ -31,6 +31,22 @@ type with a name of `LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname}_t)`;
 `LowerSnakeCase(${id1}_${id2}_..._${idn}_${declname})_t`, with an
 obvious mapping of members.
 
+### Assembly
+* One header `<${id1}/${id2}/.../${idn}/${idn}/${filename}.h>` is generated
+per original FIDL source file, containing the bindings for the declarations
+defined there.
+* A constant declaration yields a preprocessor variable of name
+`UpperSnakeCase(${id1}_${id2}_..._${idn}_${declname})`;
+* An enum member yields a preprocessor variable of name
+  `UpperSnakeCase(${id1}_${id2}_..._${idn}_${parent_name}_${member_name})`
+* A bits member yields two preprocessor variables:
+  - `UpperSnakeCase(${id1}_${id2}_..._${idn}_${parent_name}_${member_name})`
+  - `UpperSnakeCase(${id1}_${id2}_..._${idn}_${parent_name}_${member_name})_SHIFT`
+* A struct declaration yields a preprocessor variable
+  `UpperSnakeCase(${id1}_${id2}_..._${idn}_${declname})_SIZEOF` (giving the
+  size of the struct), while each member yields a
+  `UpperSnakeCase(${id1}_${id2}_..._${idn}_${declname})` giving its offset.
+
 ### Go
 * The generated (nested) package name is `${id1}/.../${idn}`, which is also
 written to a text file `pkg_name.txt`.

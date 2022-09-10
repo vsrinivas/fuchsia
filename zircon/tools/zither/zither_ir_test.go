@@ -604,6 +604,7 @@ type StructWithArrayMembers = struct {
 			Name:     fidlgen.MustReadName("example/EmptyStruct"),
 			Comments: []string{" This is a struct."},
 		},
+		Size: 1,
 	}
 
 	enum := Enum{
@@ -631,7 +632,10 @@ type StructWithArrayMembers = struct {
 	expected := []Struct{
 		emptyStruct,
 		{
-			decl: decl{Name: fidlgen.MustReadName("example/BasicStruct")},
+			decl: decl{
+				Name: fidlgen.MustReadName("example/BasicStruct"),
+			},
+			Size: 40,
 			Members: []StructMember{
 				{
 					member: member{
@@ -642,6 +646,7 @@ type StructWithArrayMembers = struct {
 						Type: "int64",
 						Kind: TypeKindInteger,
 					},
+					Offset: 0,
 				},
 				{
 					member: member{Name: "u64"},
@@ -649,6 +654,7 @@ type StructWithArrayMembers = struct {
 						Type: "uint64",
 						Kind: TypeKindInteger,
 					},
+					Offset: 8,
 				},
 				{
 					member: member{Name: "i32"},
@@ -656,6 +662,7 @@ type StructWithArrayMembers = struct {
 						Type: "int32",
 						Kind: TypeKindInteger,
 					},
+					Offset: 16,
 				},
 				{
 					member: member{Name: "u32"},
@@ -663,6 +670,7 @@ type StructWithArrayMembers = struct {
 						Type: "uint32",
 						Kind: TypeKindInteger,
 					},
+					Offset: 20,
 				},
 				{
 					member: member{Name: "i16"},
@@ -670,6 +678,7 @@ type StructWithArrayMembers = struct {
 						Type: "int16",
 						Kind: TypeKindInteger,
 					},
+					Offset: 24,
 				},
 				{
 					member: member{Name: "u16"},
@@ -677,6 +686,7 @@ type StructWithArrayMembers = struct {
 						Type: "uint16",
 						Kind: TypeKindInteger,
 					},
+					Offset: 26,
 				},
 				{
 					member: member{Name: "i8"},
@@ -684,6 +694,7 @@ type StructWithArrayMembers = struct {
 						Type: "int8",
 						Kind: TypeKindInteger,
 					},
+					Offset: 28,
 				},
 				{
 					member: member{Name: "u8"},
@@ -691,6 +702,7 @@ type StructWithArrayMembers = struct {
 						Type: "uint8",
 						Kind: TypeKindInteger,
 					},
+					Offset: 29,
 				},
 				{
 					member: member{Name: "b"},
@@ -698,6 +710,7 @@ type StructWithArrayMembers = struct {
 						Type: "bool",
 						Kind: TypeKindBool,
 					},
+					Offset: 30,
 				},
 				{
 					member: member{Name: "e"},
@@ -706,6 +719,7 @@ type StructWithArrayMembers = struct {
 						Kind: TypeKindEnum,
 						Decl: &enum,
 					},
+					Offset: 32,
 				},
 				{
 					member: member{Name: "bits"},
@@ -714,6 +728,7 @@ type StructWithArrayMembers = struct {
 						Kind: TypeKindBits,
 						Decl: &bits,
 					},
+					Offset: 34,
 				},
 				{
 					member: member{Name: "empty"},
@@ -722,11 +737,13 @@ type StructWithArrayMembers = struct {
 						Kind: TypeKindStruct,
 						Decl: &emptyStruct,
 					},
+					Offset: 36,
 				},
 			},
 		},
 		{
 			decl: decl{Name: fidlgen.MustReadName("example/StructWithArrayMembers")},
+			Size: 24,
 			Members: []StructMember{
 				{
 					member: member{Name: "u8s"},
@@ -738,6 +755,7 @@ type StructWithArrayMembers = struct {
 						},
 						ElementCount: &ten,
 					},
+					Offset: 0,
 				},
 				{
 					member: member{Name: "empties"},
@@ -750,6 +768,7 @@ type StructWithArrayMembers = struct {
 						},
 						ElementCount: &six,
 					},
+					Offset: 10,
 				},
 				{
 					member: member{Name: "nested"},
@@ -765,6 +784,7 @@ type StructWithArrayMembers = struct {
 						},
 						ElementCount: &four,
 					},
+					Offset: 16,
 				},
 			},
 		},

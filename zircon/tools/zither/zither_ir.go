@@ -600,6 +600,9 @@ func deriveType(typ fidlgen.Type, decls declMap, typeKinds map[TypeKind]struct{}
 type Struct struct {
 	decl
 
+	// Size is the size of the struct, including padding.
+	Size int
+
 	// Members is the list of the members of the layout.
 	Members []StructMember
 }
@@ -610,6 +613,9 @@ type StructMember struct {
 
 	// Type describes the type of the member.
 	Type TypeDescriptor
+
+	// Offset is the offset of the field.
+	Offset int
 }
 
 func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struct{}) (*Struct, error) {
@@ -617,7 +623,10 @@ func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struc
 		return nil, fmt.Errorf("anonymous structs are not allowed: %s", strct.Name)
 	}
 
-	s := &Struct{decl: newDecl(strct)}
+	s := &Struct{
+		decl: newDecl(strct),
+		Size: strct.TypeShapeV2.InlineSize,
+	}
 	for _, member := range strct.Members {
 		typ, err := deriveType(member.Type, decls, typeKinds)
 		if err != nil {
@@ -626,6 +635,7 @@ func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struc
 		s.Members = append(s.Members, StructMember{
 			member: newMember(member),
 			Type:   *typ,
+			Offset: member.FieldShapeV2.Offset,
 		})
 	}
 	return s, nil

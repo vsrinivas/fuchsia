@@ -1,0 +1,6 @@
+{{- define "GenerateAsmConst" -}}
+{{ range .Comments }}
+//{{ . }}
+{{- end }}
+#define {{ UpperCaseWithUnderscores .}} {{ ConstValue . }} {{ if .Expression }}  // {{ .Expression }} {{ end }}
+{{ end }}

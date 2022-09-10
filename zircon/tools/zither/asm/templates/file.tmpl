@@ -1,0 +1,43 @@
+{{- define "GenerateAsmFile" -}}
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+{{/* TODO(fxbug.dev/51002): Give source-relative path to library. */}}
+// DO NOT EDIT.
+// Generated from FIDL library `{{ .Library.String }}` by zither, a Fuchsia platform tool.
+
+{{ $guard := HeaderGuard . }}
+#ifndef {{ $guard }}
+#define {{ $guard }}
+
+{{/*
+    TODO(fxbug.dev/106538) We are not protected against cyclic includes here.
+    Either we need to generate headers differently or appeal to a FIDL feature
+    that does not yet exist in order to restrict what sort of FIDL gets
+    processed by zither.
+*/}}
+{{ range $name, $unused := .Deps }}
+#include "{{ $name }}.h"
+{{ end }}
+
+{{ range .Decls }}
+
+{{ if .IsConst }}
+{{ template "GenerateAsmConst" .AsConst }}
+
+{{ else if .IsEnum }}
+{{ template "GenerateAsmEnum" .AsEnum }}
+
+{{ else if .IsBits }}
+{{ template "GenerateAsmBits" .AsBits }}
+
+{{ else if .IsStruct }}
+{{ template "GenerateAsmStruct" .AsStruct }}
+
+{{ end }}
+{{ end }}
+
+#endif  // {{ $guard }}
+
+{{ end }}
