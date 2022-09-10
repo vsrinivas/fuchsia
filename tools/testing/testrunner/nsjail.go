@@ -7,6 +7,7 @@ package testrunner
 import (
 	"errors"
 	"fmt"
+	"sort"
 )
 
 // MountPt describes the source, destination, and permissions for a
@@ -18,6 +19,8 @@ type MountPt struct {
 	Dst string
 	// Writable sets the mount points to rw (default is readonly).
 	Writable bool
+	// UseTmpfs mounts Dst as a tmpfs.
+	UseTmpfs bool
 }
 
 // NsJailCmdBuilder facilitates the construction of an NsJail command line
@@ -46,8 +49,9 @@ type NsJailCmdBuilder struct {
 // Adding to this should be avoided if possible.
 func (n *NsJailCmdBuilder) AddDefaultMounts() {
 	n.MountPoints = append(n.MountPoints, []*MountPt{
-		// Many host tests run emulators, which requires KVM.
+		// Many host tests run emulators, which requires KVM and TUN/TAP.
 		{Src: "/dev/kvm"},
+		{Src: "/dev/net/tun"},
 		// /bin/bash, in turn, is dynamically linked and requires that we mount the
 		// system linker.
 		{Src: "/lib"},
@@ -63,6 +67,26 @@ func (n *NsJailCmdBuilder) AddDefaultMounts() {
 		// Some host tests utilize ssh-keygen to generate key pairs, which reads
 		// /etc/passwd to figure out the current username.
 		{Src: "/etc/passwd"},
+		// The Vulkan vkreadback host tests rely on libvulkan and mesa drivers
+		// from the host, so mount the appropriate directories.
+		{Src: "/usr/lib"},
+		{Src: "/usr/share/vulkan"},
+		// Some tests attempt to resolve domain names, which requires DNS config.
+		{Src: "/etc/nsswitch.conf"},
+		{Src: "/etc/resolv.conf"},
+		// Some tests attempt to make https connections, which requires SSL
+		// certs.
+		{Src: "/etc/ssl/certs"},
+		// Network conformance tests use TCL.
+		{Src: "/usr/share/tcltk"},
+		// netstack_streamsocket_c_api_test requires the presence of
+		// /etc/host.conf because they call getaddrinfo on localhost.
+		{Src: "/etc/host.conf"},
+		// Some tests use awk, which then hops through a symlink into
+		// /etc/alternatives to resolve to gawk.
+		{Src: "/etc/alternatives/awk"},
+		// fvdl_intree_test_tuntap reads /etc/hosts.
+		{Src: "/etc/hosts"},
 	}...)
 }
 
@@ -83,18 +107,33 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 	if n.Cwd != "" {
 		cmd = append(cmd, "--cwd", n.Cwd)
 	}
+	// Validate mount points and fill in any missing destinations.
+	mountByDst := map[string]*MountPt{}
+	var dsts []string
 	for _, mountPt := range n.MountPoints {
-		if mountPt.Src == "" {
-			return nil, errors.New("NsJailCmdBuilder: Src cannot be empty in a mount point")
+		if mountPt.Src == "" && !mountPt.UseTmpfs {
+			return nil, errors.New("NsJailCmdBuilder: Src can only be empty if using a tmpfs mount")
 		}
 		if mountPt.Dst == "" {
 			mountPt.Dst = mountPt.Src
 		}
+		dsts = append(dsts, mountPt.Dst)
+		mountByDst[mountPt.Dst] = mountPt
+	}
+
+	// Sort the mount destinations lexicographically to ensure that parent
+	// directories are mounted before their children are.
+	sort.Strings(dsts)
+
+	// Add the mount points to the command.
+	for _, dst := range dsts {
+		mountPt := mountByDst[dst]
 		if mountPt.Writable {
 			cmd = append(cmd, "--bindmount", fmt.Sprintf("%s:%s", mountPt.Src, mountPt.Dst))
+		} else if mountPt.UseTmpfs {
+			cmd = append(cmd, "--tmpfsmount", mountPt.Dst)
 		} else {
 			cmd = append(cmd, "--bindmount_ro", fmt.Sprintf("%s:%s", mountPt.Src, mountPt.Dst))
-
 		}
 	}
 
