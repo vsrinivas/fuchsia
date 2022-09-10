@@ -39,8 +39,11 @@ test_list = [
   # "input_latency_benchmarks_test",
 ]
 
-if (host_os == "linux" && target_cpu == "x64" && !is_asan) {
-  test_list += [ "starnix_benchmarks_test" ]
+if (target_cpu == "x64" && !is_asan) {
+  test_list += [ "direct_mode_benchmarks_test" ]
+  if (host_os == "linux") {
+    test_list += [ "starnix_benchmarks_test" ]
+  }
 }
 
 foreach(target_name, test_list) {
@@ -177,6 +180,7 @@ if (is_host) {
     "fuchsia.flatland_latency.txt",
     "fuchsia.input_latency.simplest_app.txt",
     "fuchsia.kernel.boot.txt",
+    "fuchsia.microbenchmarks.direct_mode.txt",
     "fuchsia.microbenchmarks.tracing.txt",
     "fuchsia.microbenchmarks.tracing_categories_disabled.txt",
     "fuchsia.microbenchmarks.starnix.txt",
@@ -271,9 +275,12 @@ group("package_deps") {
     "//src/storage/bin/start-storage-benchmark:start-storage-benchmark",
   ]
 
-  if (host_os == "linux" && target_cpu == "x64" && !is_asan) {
-    public_deps +=
-        [ "//src/tests/microbenchmarks:starnix_microbenchmarks_perftestmode" ]
+  if (target_cpu == "x64" && !is_asan) {
+    public_deps += [ "//src/tests/microbenchmarks:direct_mode_microbenchmarks" ]
+    if (host_os == "linux") {
+      public_deps +=
+          [ "//src/tests/microbenchmarks:starnix_microbenchmarks_perftestmode" ]
+    }
   }
 }
 

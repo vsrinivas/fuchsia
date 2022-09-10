@@ -201,6 +201,22 @@ fuchsia_shell_package("fuchsia_microbenchmarks_perftestmode") {
   ]
 }
 
+fuchsia_unittest_package("direct_mode_microbenchmarks") {
+  manifest = "meta/direct_mode_microbenchmarks.cml"
+
+  deps = [
+    ":bin",
+    ":context_switch_overhead_helper",
+    ":get_info_helper",
+    ":no_op_executable",
+    "//src/lib/direct-mode:bin",
+  ]
+
+  test_specs = {
+    environments = guest_envs
+  }
+}
+
 if (is_linux) {
   host_test("fuchsia_microbenchmarks_host_unittestmode") {
     binary_path = "$root_out_dir/fuchsia_microbenchmarks"
@@ -266,7 +282,10 @@ group("tests") {
   ]
   if (host_os == "linux") {
     deps += [ ":fuchsia_microbenchmarks_host_unittestmode($host_toolchain)" ]
-    if (target_cpu == "x64" && !is_asan) {
+  }
+  if (target_cpu == "x64" && !is_asan) {
+    deps += [ ":direct_mode_microbenchmarks" ]
+    if (host_os == "linux") {
       deps += [
         ":starnix_microbenchmarks_perftestmode",
         ":starnix_microbenchmarks_unittestmode",

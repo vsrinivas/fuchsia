@@ -43,3 +43,31 @@ There are two ways to run fuchsia_microbenchmarks:
   `run-test-component fuchsia-pkg://fuchsia.com/fuchsia_microbenchmarks#meta/fuchsia_microbenchmarks.cmx`.
 
 [Fuchsiaperf format]: /docs/development/performance/fuchsiaperf_format.md
+
+
+## Direct Mode Microbenchmarks
+
+<!-- TODO(fxbug.dev/95763): Update the link below once the RFC lands. -->
+[Direct mode][direct-mode] is a way to run unmodified Fuchsia binaries under
+Virtualization. These binaries have direct access to Zircon syscalls and can be
+agnostic to whether they are running under direct mode.
+
+The direct mode microbenchmarks are intended to be used to compare performance
+of direct mode to regular execution. This can help us guide optimisations, as
+well as to highlight regressions, while we develop direct mode.
+
+To run the benchmarks as a unit test, use:
+
+`ffx test run fuchsia-pkg://fuchsia.com/direct_mode_microbenchmarks#meta/direct_mode_microbenchmarks.cm`
+
+Or, as a performance test, use:
+
+`ffx test run fuchsia-pkg://fuchsia.com/direct_mode_microbenchmarks#meta/direct_mode_microbenchmarks.cm -- -p`
+
+Or, as a quick performance test, use:
+
+`ffx test run fuchsia-pkg://fuchsia.com/direct_mode_microbenchmarks#meta/direct_mode_microbenchmarks.cm -- -p --runs 5`
+
+<!-- Links -->
+
+[direct-mode]: https://fuchsia-review.googlesource.com/c/fuchsia/+/684845
