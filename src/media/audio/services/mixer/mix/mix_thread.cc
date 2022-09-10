@@ -81,12 +81,8 @@ void MixThread::AddConsumer(ConsumerStagePtr consumer) {
   FX_CHECK(FindConsumer(consumer) == consumers_.end())
       << "cannot add Consumer twice: " << consumer->name();
 
-  // Since we don't know if this consumer is actually started, pretend it's about to start, which
-  // wakes the loop and tries to run a mix job on the consumer, which will tell us the consumer's
-  // actual status.
-  consumers_.push_back({.consumer = consumer});
+  consumers_.push_back({.consumer = std::move(consumer), .maybe_started = false});
   ReSortConsumers();
-  NotifyConsumerStarting(consumer);
 }
 
 void MixThread::RemoveConsumer(ConsumerStagePtr consumer) {

@@ -88,7 +88,8 @@ class MixThread : public Thread {
   void Shutdown() TA_REQ(checker());
 
   // Notifies this thread that `consumer` is about to start running. This should be called
-  // immediately after a StartCommand is sent to `consumer`.
+  // immediately after a StartCommand is sent to `consumer`, and also after AddConsumer if the
+  // consumer may have been previously started.
   void NotifyConsumerStarting(ConsumerStagePtr consumer) TA_REQ(checker());
 
   // Re-sorts the consumers. This should be called after the topological order changes, i.e. any

@@ -73,6 +73,7 @@ TEST_F(MixThreadRunMixJobsTest, RunAfterDeadline) {
                          mono_clock()->koid());
   c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
   thread().AddConsumer(c.consumer);
+  thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(mono_clock());
 
   // Try various cases where we try to run the first mix job past its deadline.
@@ -95,6 +96,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerUnstarted) {
   ConsumerStageWrapper c(kFormat, /*presentation_delay=*/zx::nsec(0), PipelineDirection::kOutput,
                          mono_clock()->koid());
   thread().AddConsumer(c.consumer);
+  thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(mono_clock());
 
   // Not started and has no queued StartCommand.
@@ -118,6 +120,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStartCommandQueued) {
       .start_frame = 3 * kPeriodFrames,
   });
   thread().AddConsumer(c.consumer);
+  thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(mono_clock());
 
   // Not started, but there's a queued StartCommand. The actual timeline should be:
@@ -154,6 +157,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStarted) {
   auto payload0 = c.PushPacket(Fixed(0), kPeriodFrames);
   auto payload1 = c.PushPacket(Fixed(kPeriodFrames), kPeriodFrames);
   thread().AddConsumer(c.consumer);
+  thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(mono_clock());
 
   // First job writes the first packet.
@@ -192,6 +196,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStartedNonMonotonicClock) {
                          clock->koid());
   c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
   thread().AddConsumer(c.consumer);
+  thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(clock);
 
   // Since kConsumerPeriod contains 4795.2 frames, every 5th mix job should write an extra frame.
@@ -229,6 +234,7 @@ TEST_F(MixThreadRunMixJobsTest, OneConsumerStopsDuringJob) {
   c.command_queue->push(StartCommand{.start_presentation_time = pt0, .start_frame = 0});
   c.command_queue->push(StopCommand{.stop_frame = 1});
   thread().AddConsumer(c.consumer);
+  thread().NotifyConsumerStarting(c.consumer);
   thread().AddClock(mono_clock());
 
   // First job writes 1 frame then stops.
@@ -268,6 +274,9 @@ TEST_F(MixThreadRunMixJobsTest, MultipleConsumers) {
   thread().AddConsumer(c1.consumer);
   thread().AddConsumer(c0.consumer);
   thread().AddConsumer(c2.consumer);
+  thread().NotifyConsumerStarting(c1.consumer);
+  thread().NotifyConsumerStarting(c0.consumer);
+  thread().NotifyConsumerStarting(c2.consumer);
   thread().AddClock(mono_clock());
 
   // First mix job should write one packet of silence to each consumer, in order {c0,c1,c2}.
@@ -337,6 +346,8 @@ TEST_F(MixThreadRunLoopTest, AddStartedConsumers) {
     ScopedThreadChecker checker(thread().checker());
     thread().AddConsumer(c0.consumer);
     thread().AddConsumer(c1.consumer);
+    thread().NotifyConsumerStarting(c0.consumer);
+    thread().NotifyConsumerStarting(c1.consumer);
     thread().AddClock(mono_clock());
   });
 
@@ -368,6 +379,7 @@ TEST_F(MixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
   task_queue().Push(thread().id(), [this, &c0] {
     ScopedThreadChecker checker(thread().checker());
     thread().AddConsumer(c0.consumer);
+    thread().NotifyConsumerStarting(c0.consumer);
     thread().AddClock(mono_clock());
   });
   EXPECT_THAT(c0.writer->packets(), ElementsAre());
@@ -400,6 +412,7 @@ TEST_F(MixThreadRunLoopTest, AddRemoveUnstartedConsumers) {
     ScopedThreadChecker checker(thread().checker());
     thread().RemoveConsumer(c0.consumer);
     thread().AddConsumer(c1.consumer);
+    thread().NotifyConsumerStarting(c1.consumer);
   });
   EXPECT_THAT(c0.writer->packets(), ElementsAre());
   EXPECT_THAT(c1.writer->packets(), ElementsAre());
