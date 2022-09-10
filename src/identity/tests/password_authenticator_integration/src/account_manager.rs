@@ -193,7 +193,7 @@ impl TestEnv {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::directory("dev"))
+                    .capability(Capability::directory("dev-topological"))
                     .from(Ref::child("driver_test_realm"))
                     .to(&password_authenticator),
             )

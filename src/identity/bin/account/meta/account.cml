@@ -14,7 +14,7 @@
     ],
     offer: [
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
             to: "#password_authenticator",
         },
