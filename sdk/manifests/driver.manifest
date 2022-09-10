@@ -42,6 +42,8 @@ sdk://pkg/driver_runtime_shared_lib
 sdk://pkg/fdio
 sdk://pkg/fidl
 sdk://pkg/fidl_base
+sdk://pkg/fidl_cpp_base_v2
+sdk://pkg/fidl_cpp_v2
 sdk://pkg/fidl_cpp_wire
 sdk://pkg/fidl_driver_transport
 sdk://pkg/fit

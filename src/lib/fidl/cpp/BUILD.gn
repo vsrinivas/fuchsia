@@ -20,6 +20,8 @@ sdk_source_set("cpp_base") {
   build_as_static = true
 
   public = [
+    "include/lib/fidl/cpp/internal/natural_types.h",
+    "include/lib/fidl/cpp/internal/transport_err.h",
     "include/lib/fidl/cpp/natural_coding_traits.h",
     "include/lib/fidl/cpp/natural_decoder.h",
     "include/lib/fidl/cpp/natural_encoder.h",

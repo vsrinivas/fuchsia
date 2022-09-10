@@ -623,6 +623,7 @@ sdk("driver") {
     "//src/devices/bin/driver_runtime:driver_runtime_sdk",
     "//src/devices/lib/mmio:mmio_sdk",
     "//src/graphics/lib/magma:magma_client_sdk",
+    "//src/lib/fidl/cpp:cpp_sdk",
     "//zircon/system/ulib/hwreg:hwreg_sdk_sdk",
   ]
 }
