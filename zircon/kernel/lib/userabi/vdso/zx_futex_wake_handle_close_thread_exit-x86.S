@@ -27,11 +27,15 @@ syscall_entry_begin zx_futex_wake_handle_close_thread_exit
     test %eax, %eax
     jnz .Lfutex_wake_fail
 
+    test %ebx, %ebx
+    jz .Lthread_exit
+
     mov %ebx, %edi
     zircon_syscall ZX_SYS_handle_close, zx_handle_close, zx_futex_wake_handle_close_thread_exit
     test %eax, %eax
     jnz .Lhandle_close_fail
 
+.Lthread_exit:
     zircon_syscall ZX_SYS_thread_exit, zx_thread_exit, zx_futex_wake_handle_close_thread_exit
 
     // It should be impossible to get here.

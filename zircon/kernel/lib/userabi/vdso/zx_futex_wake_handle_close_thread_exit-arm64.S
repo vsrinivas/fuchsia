@@ -26,10 +26,12 @@ syscall_entry_begin zx_futex_wake_handle_close_thread_exit
     zircon_syscall ZX_SYS_futex_wake, zx_futex_wake, zx_futex_wake_handle_close_thread_exit
     cbnz x0, .Lfutex_wake_fail
 
+    cbz w19, .Lthread_exit
     mov w0, w19
     zircon_syscall ZX_SYS_handle_close, zx_handle_close, zx_futex_wake_handle_close_thread_exit
     cbnz x0, .Lhandle_close_fail
 
+.Lthread_exit:
     zircon_syscall ZX_SYS_thread_exit, zx_thread_exit, zx_futex_wake_handle_close_thread_exit
 
     // It should be impossible to get here.
