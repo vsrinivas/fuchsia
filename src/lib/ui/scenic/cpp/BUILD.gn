@@ -6,8 +6,6 @@ source_set("cpp") {
   sources = [
     "host_memory.cc",
     "host_memory.h",
-    "mesh_utils.cc",
-    "mesh_utils.h",
   ]
 
   public_deps = [
