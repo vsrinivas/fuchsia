@@ -30,16 +30,17 @@ const (
 	targetDirName   = "targets"
 
 	// Names of directories to be uploaded to in GCS.
-	assemblyInputArchivesDirName = "assembly"
-	assemblyManifestsDirName     = "assembly_manifests"
-	buildAPIDirName              = "build_api"
-	buildidDirName               = "buildid"
-	debugDirName                 = "debug"
-	hostTestDirName              = "host_tests"
-	imageDirName                 = "images"
-	packageDirName               = "packages"
-	sdkArchivesDirName           = "sdk"
-	toolDirName                  = "tools"
+	assemblyInputArchivesDirName    = "assembly"
+	assemblyManifestsDirName        = "assembly_manifests"
+	productSizeCheckerOutputDirName = "product_size_checker"
+	buildAPIDirName                 = "build_api"
+	buildidDirName                  = "buildid"
+	debugDirName                    = "debug"
+	hostTestDirName                 = "host_tests"
+	imageDirName                    = "images"
+	packageDirName                  = "packages"
+	sdkArchivesDirName              = "sdk"
+	toolDirName                     = "tools"
 
 	// A record of all of the fuchsia debug symbols processed.
 	// This is eventually consumed by crash reporting infrastructure.
@@ -241,8 +242,14 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	tools := artifactory.ToolUploads(m, path.Join(cmd.namespace, toolDirName))
 	uploads = append(uploads, tools...)
 
-	assembly_manifests := artifactory.AssemblyManifestsUploads(m, path.Join(cmd.namespace, assemblyManifestsDirName))
-	uploads = append(uploads, assembly_manifests...)
+	assemblyManifests := artifactory.AssemblyManifestsUploads(m, path.Join(cmd.namespace, assemblyManifestsDirName))
+	uploads = append(uploads, assemblyManifests...)
+
+	productSizeCheckerUploads, err := artifactory.ProductSizeCheckerOutputUploads(m, path.Join(cmd.namespace, productSizeCheckerOutputDirName))
+	if err != nil {
+		return err
+	}
+	uploads = append(uploads, productSizeCheckerUploads...)
 
 	debugBinaries, buildIDsToLabels, buildIDs, err := artifactory.DebugBinaryUploads(ctx, m, debugDirName, buildidDirName)
 	if err != nil {

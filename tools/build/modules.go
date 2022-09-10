@@ -29,6 +29,7 @@ type Modules struct {
 	binaries                 []Binary
 	checkoutArtifacts        []CheckoutArtifact
 	clippyTargets            []ClippyTarget
+	productSizeCheckerOutput []ProductSizeCheckerOutput
 	generatedSources         []string
 	images                   []Image
 	packageManifestsLocation []string
@@ -48,26 +49,27 @@ func NewModules(buildDir string) (*Modules, error) {
 	m := &Modules{buildDir: buildDir}
 
 	manifests := map[string]interface{}{
-		"api.json":                        &m.apis,
-		"archives.json":                   &m.archives,
-		"args.json":                       &m.args,
-		"assembly_input_archives.json":    &m.assemblyInputArchives,
-		"assembly_manifests.json":         &m.assemblyManifests,
-		"binaries.json":                   &m.binaries,
-		"checkout_artifacts.json":         &m.checkoutArtifacts,
-		"clippy_target_mapping.json":      &m.clippyTargets,
-		"generated_sources.json":          &m.generatedSources,
-		imageManifestName:                 &m.images,
-		"all_package_manifest_paths.json": &m.packageManifestsLocation,
-		"package-repositories.json":       &m.packageRepositories,
-		"platforms.json":                  &m.platforms,
-		"prebuilt_binaries.json":          &m.prebuiltBinarySets,
-		"sdk_archives.json":               &m.sdkArchives,
-		"tests.json":                      &m.testSpecs,
-		"test_durations.json":             &m.testDurations,
-		"test_list_location.json":         &m.testListLocation,
-		"tool_paths.json":                 &m.tools,
-		"zbi_tests.json":                  &m.zbiTests,
+		"api.json":                         &m.apis,
+		"archives.json":                    &m.archives,
+		"args.json":                        &m.args,
+		"assembly_input_archives.json":     &m.assemblyInputArchives,
+		"assembly_manifests.json":          &m.assemblyManifests,
+		"product_size_checker_output.json": &m.productSizeCheckerOutput,
+		"binaries.json":                    &m.binaries,
+		"checkout_artifacts.json":          &m.checkoutArtifacts,
+		"clippy_target_mapping.json":       &m.clippyTargets,
+		"generated_sources.json":           &m.generatedSources,
+		imageManifestName:                  &m.images,
+		"all_package_manifest_paths.json":  &m.packageManifestsLocation,
+		"package-repositories.json":        &m.packageRepositories,
+		"platforms.json":                   &m.platforms,
+		"prebuilt_binaries.json":           &m.prebuiltBinarySets,
+		"sdk_archives.json":                &m.sdkArchives,
+		"tests.json":                       &m.testSpecs,
+		"test_durations.json":              &m.testDurations,
+		"test_list_location.json":          &m.testListLocation,
+		"tool_paths.json":                  &m.tools,
+		"zbi_tests.json":                   &m.zbiTests,
 	}
 	for manifest, dest := range manifests {
 		path := filepath.Join(buildDir, manifest)
@@ -146,6 +148,10 @@ func (m Modules) Platforms() []DimensionSet {
 // registered in the build.
 func (m Modules) PrebuiltBinarySets() []PrebuiltBinarySet {
 	return m.prebuiltBinarySets
+}
+
+func (m Modules) ProductSizeCheckerOutput() []ProductSizeCheckerOutput {
+	return m.productSizeCheckerOutput
 }
 
 func (m Modules) SDKArchives() []SDKArchive {
