@@ -20,11 +20,6 @@ bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node);
 // Converts floating point to a string and strips trailing zeros.
 std::string FormatFloat(float input);
 
-// Get the set of nodes to exclude when traversing the tree from a particular
-// node.
-std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
-                                     SemanticsSource* semantics_source);
-
 // Returns true if the given node's parent 'contains all the same information'.
 // That is, returns true iff `parent_node`
 // - is not null,

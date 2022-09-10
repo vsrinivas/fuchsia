@@ -201,6 +201,76 @@ TEST_F(LinearNavigationActionTest, PreviousActionPerformed) {
   EXPECT_EQ(mock_speaker()->node_ids()[0], kRootNodeId);
 }
 
+TEST_F(LinearNavigationActionTest, LinearNavigationSkipsRedundantNodes) {
+  Node root_node = CreateTestNode(0u, "root");
+  root_node.set_child_ids({1u, 4u});
+
+  Node node_1 = CreateTestNode(1u, "repeated node");
+  node_1.set_child_ids({2u});
+
+  Node node_2 = CreateTestNode(2u, "repeated node");
+  node_2.set_child_ids({3u});
+
+  Node node_3 = CreateTestNode(3u, "repeated node");
+
+  Node node_4 = CreateTestNode(4u, "non repeated node");
+
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(root_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node_1));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node_2));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node_3));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node_4));
+
+  // Focus the root node.
+  mock_a11y_focus_manager()->UpdateA11yFocus(mock_semantic_provider()->koid(), kRootNodeId);
+
+  // Navigate forward.
+  {
+    a11y::LinearNavigationAction action(action_context(), mock_screen_reader_context(),
+                                        kNextAction);
+    a11y::GestureContext gesture_context;
+    gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+    action.Run(gesture_context);
+    RunLoopUntilIdle();
+
+    // We end up on node 1.
+    EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+    ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+    EXPECT_EQ(mock_speaker()->node_ids().back(), 1u);
+  }
+
+  // Navigate forward.
+  {
+    a11y::LinearNavigationAction action(action_context(), mock_screen_reader_context(),
+                                        kNextAction);
+    a11y::GestureContext gesture_context;
+    gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+    action.Run(gesture_context);
+    RunLoopUntilIdle();
+
+    // Nodes 2 and 3 are skipped, we end up on node 4.
+    EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+    ASSERT_EQ(mock_speaker()->node_ids().size(), 2u);
+    EXPECT_EQ(mock_speaker()->node_ids().back(), 4u);
+  }
+
+  // Navigate backward.
+  {
+    a11y::LinearNavigationAction action(action_context(), mock_screen_reader_context(),
+                                        kPreviousAction);
+    a11y::GestureContext gesture_context;
+    gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+    action.Run(gesture_context);
+    RunLoopUntilIdle();
+
+    // Nodes 2 and 3 are skipped, we end up back on node 1.
+    EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+    ASSERT_EQ(mock_speaker()->node_ids().size(), 3u);
+    EXPECT_EQ(mock_speaker()->node_ids().back(), 1u);
+  }
+}
+
 TEST_F(LinearNavigationActionTest, NextActionEntersTable) {
   Node root_node = CreateTestNode(0u, "root");
   root_node.set_child_ids({1u});
