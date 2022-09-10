@@ -39,6 +39,8 @@ library_headers("create_with_type") {
 # these two libraries.
 library_headers("inception") {
   headers = [
+    "lib/zxio/cpp/cmsg.h",
+    "lib/zxio/cpp/dgram_cache.h",
     "lib/zxio/cpp/inception.h",
     "lib/zxio/cpp/socket_address.h",
   ]
@@ -74,8 +76,10 @@ config("zxio_config") {
 
 source_set("zxio") {
   sources = [
+    "cmsg.cc",
     "create.cc",
     "debuglog.cc",
+    "dgram_cache.cc",
     "get_vmo.cc",
     "inception.cc",
     "null.cc",

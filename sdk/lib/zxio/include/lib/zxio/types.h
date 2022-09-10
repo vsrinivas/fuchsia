@@ -105,7 +105,7 @@ typedef struct zxio_tag {
 // Storage for the |zxio_ops_t| implementation.
 // All |zxio_t| implementations must fit within this space.
 typedef struct zxio_private {
-  uint64_t reserved[8];
+  uint64_t reserved[26];
 } zxio_private_t;
 
 // The storage backing a |zxio_t|.

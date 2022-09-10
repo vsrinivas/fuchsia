@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/zx/debuglog.h>
+#include <lib/zxio/cpp/dgram_cache.h>
 #include <lib/zxio/ops.h>
 #include <threads.h>
 #include <zircon/compiler.h>
@@ -53,6 +54,8 @@ using zxio_datagram_socket_t = struct zxio_datagram_socket {
   zxio_t io;
   zxio_pipe_t pipe;
   const zxio_datagram_prelude_size_t prelude_size;
+  DestinationCache dest_cache;
+  RequestedCmsgCache cmsg_cache;
   fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
 };
 
