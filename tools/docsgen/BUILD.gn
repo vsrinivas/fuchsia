@@ -4,8 +4,6 @@
 
 import("//build/compiled_action.gni")
 import("//build/config/build_api_module.gni")
-import("//build/dart/dart.gni")
-import("//build/dart/dart_packages.gni")
 import("//build/python/python_binary.gni")
 import("//build/python/python_host_test.gni")
 import("//build/sdk/sdk_documentation.gni")
@@ -13,74 +11,6 @@ import("//build/sdk/sdk_documentation.gni")
 group("docsgen") {
   testonly = true
   deps = [ ":generated_docs" ]
-}
-
-_dartdoc_transforms_script_target = "dartdoc_transforms"
-python_binary(_dartdoc_transforms_script_target) {
-  main_source = "//build/dart/gen_reference_docs.py"
-  output_name = "gen_reference_docs.pyz"
-  sources = [ "//build/dart/generate_dart_toc.py" ]
-  deps = [ "//third_party/pyyaml:yaml" ]
-}
-
-# See dartdoc_transforms.py for more information
-action("dart_sdk_docs") {
-  script_output = get_target_outputs(":${_dartdoc_transforms_script_target}")
-  script = script_output[0]
-  metadata = {
-    # Record metadata for the //tools/docsgen build API.
-    generated_docset = [
-      {
-        name = "dartdoc"
-        archive = {
-          origin_file =
-              rebase_path("$host_out_dir/obj/tools/docsgen/dartdoc_out.zip",
-                          root_build_dir)
-          base_folder = "dartdoc"
-        }
-        dest_folder = "sdk/dart"
-      },
-    ]
-  }
-  inputs = [
-    "//sdk/dart",
-    "//analysis_options.yaml",
-    "${prebuilt_dart_sdk}/bin/dart",
-  ]
-
-  # Generate in a subdir so it's isolated from other targets in this file.
-  # Otherwise dart commands can try to read outputs from other targets, which is
-  # racy.
-  _gen_dir = "${target_gen_dir}/dartdoc"
-
-  outputs = [
-    "$target_out_dir/dartdoc_out.zip",
-    "$_gen_dir/.dart_tool/package_config.json",
-    "$_gen_dir/lib/lib.dart",
-    "$_gen_dir/pubspec.lock",
-    "$_gen_dir/pubspec.yaml",
-  ]
-  depfile = "$target_out_dir/$target_name.d"
-
-  args = [
-    "--delete-artifact-files",
-    "--run-toc",
-    "--zipped-result",
-    "--gen-dir",
-    rebase_path(_gen_dir, root_build_dir),
-    "--out-dir",
-    rebase_path("$target_out_dir/__untraced_dartdoc_output__", _gen_dir),
-    "--prebuilts-dir",
-    rebase_path("${prebuilt_dart_sdk}/bin", _gen_dir),
-    "--dep-file",
-    rebase_path(depfile, root_build_dir),
-  ]
-
-  foreach(pkg, dart_packages_list) {
-    args += [ rebase_path(pkg, root_build_dir) ]
-  }
-
-  deps = [ ":${_dartdoc_transforms_script_target}" ] + dart_packages_list
 }
 
 _fidldoc_transforms_script_target = "fidldoc_transforms"
@@ -285,10 +215,6 @@ compiled_action("invoke_cmldoc") {
 
 # Set up targets and files for sdk_documentation and build_api_module.
 ref_docs = [
-  {
-    target = ":dart_sdk_docs($host_toolchain)"
-    file = "dartdoc_out.zip"
-  },
   {
     target = ":invoke_clidoc($host_toolchain)"
     file = "clidoc_out.tar.gz"

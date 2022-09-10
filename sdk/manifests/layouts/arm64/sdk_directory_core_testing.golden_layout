@@ -6,7 +6,6 @@ arch/arm64/lib/libfdio.so
 docs/all_drivers_doc.yaml
 docs/clidoc_out.tar.gz
 docs/cmldoc_out/index.md
-docs/dartdoc_out.zip
 docs/fidldoc.zip
 docs/helpdoc_out.tar.gz
 docs/metadata_schemas.json
