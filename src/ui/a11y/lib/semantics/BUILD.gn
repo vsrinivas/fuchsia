@@ -14,6 +14,7 @@ source_set("semantics") {
     "semantics_event_listener.h",
     "semantics_event_manager.h",
     "semantics_source.h",
+    "typedefs.h",
   ]
 
   public_deps = [

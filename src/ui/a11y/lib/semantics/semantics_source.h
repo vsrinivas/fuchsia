@@ -12,6 +12,7 @@
 
 #include <optional>
 
+#include "src/ui/a11y/lib/semantics/typedefs.h"
 #include "src/ui/a11y/lib/semantics/util/semantic_transform.h"
 
 namespace a11y {
@@ -47,14 +48,13 @@ class SemanticsSource {
                                                                        uint32_t node_id) const = 0;
 
   // Returns the next node in traversal-order neighbors relative to the node with id |node_id|.
-  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(
-      zx_koid_t koid, uint32_t node_id,
-      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const = 0;
+  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(zx_koid_t koid,
+                                                                     uint32_t node_id,
+                                                                     NodeFilter filter) const = 0;
 
   // Returns the previous node in traversal-order neighbors relative to the node with id |node_id|.
   virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(
-      zx_koid_t koid, uint32_t node_id,
-      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const = 0;
+      zx_koid_t koid, uint32_t node_id, NodeFilter filter) const = 0;
 
   // Performs a hit test at the point specified by |local_point| within the view corresponding to
   // |koid|. If no such view is found, this function will return without attempting a hit test.

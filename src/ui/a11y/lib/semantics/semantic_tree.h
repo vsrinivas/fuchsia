@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "src/ui/a11y/lib/semantics/semantics_event.h"
+#include "src/ui/a11y/lib/semantics/typedefs.h"
 #include "src/ui/a11y/lib/semantics/util/semantic_transform.h"
 
 namespace a11y {
@@ -95,15 +96,13 @@ class SemanticTree {
 
   // Returns the next node for which |filter| returns true (in depth first manner) from the node
   // with |node_id|, or nullptr if none exists.
-  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(
-      const uint32_t node_id,
-      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const;
+  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(const uint32_t node_id,
+                                                                     NodeFilter filter) const;
 
   // Returns the previous node for which |filter| returns true (in depth first manner) from the node
   // with |node_id|, or nullptr if none exists.
-  virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(
-      const uint32_t node_id,
-      fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const;
+  virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(const uint32_t node_id,
+                                                                         NodeFilter filter) const;
 
   // Returns the parent node of the node with |node_id| if found, nullptr otherwise.
   virtual const fuchsia::accessibility::semantics::Node* GetParentNode(

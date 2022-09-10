@@ -14,6 +14,7 @@
 
 #include "src/lib/fxl/strings/concatenate.h"
 #include "src/lib/fxl/strings/string_printf.h"
+#include "src/ui/a11y/lib/semantics/typedefs.h"
 
 namespace a11y {
 namespace {
@@ -217,9 +218,7 @@ const Node* SemanticTree::GetNode(const uint32_t node_id) const {
   return &it->second;
 }
 
-const Node* SemanticTree::GetNextNode(
-    const uint32_t node_id,
-    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
+const Node* SemanticTree::GetNextNode(const uint32_t node_id, NodeFilter filter) const {
   if (nodes_.find(node_id) == nodes_.end()) {
     return nullptr;
   }
@@ -263,9 +262,7 @@ const Node* SemanticTree::GetNextNode(
   return nullptr;
 }
 
-const Node* SemanticTree::GetPreviousNode(
-    const uint32_t node_id,
-    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
+const Node* SemanticTree::GetPreviousNode(const uint32_t node_id, NodeFilter filter) const {
   if (nodes_.find(node_id) == nodes_.end()) {
     return nullptr;
   }

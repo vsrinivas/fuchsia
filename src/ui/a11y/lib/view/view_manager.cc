@@ -206,9 +206,9 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetParentNode(zx_koi
   return tree_weak_ptr->GetParentNode(node_id);
 }
 
-const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(
-    zx_koid_t koid, uint32_t node_id,
-    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
+const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(zx_koid_t koid,
+                                                                        uint32_t node_id,
+                                                                        NodeFilter filter) const {
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {
@@ -220,8 +220,7 @@ const fuchsia::accessibility::semantics::Node* ViewManager::GetNextNode(
 }
 
 const fuchsia::accessibility::semantics::Node* ViewManager::GetPreviousNode(
-    zx_koid_t koid, uint32_t node_id,
-    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
+    zx_koid_t koid, uint32_t node_id, NodeFilter filter) const {
   auto tree_weak_ptr = GetTreeByKoid(koid);
 
   if (!tree_weak_ptr) {

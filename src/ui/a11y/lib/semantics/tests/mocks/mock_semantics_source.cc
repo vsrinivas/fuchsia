@@ -72,8 +72,7 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetParentNod
 }
 
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
-    zx_koid_t koid, uint32_t node_id,
-    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
+    zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const {
   if (get_next_node_should_fail_) {
     return nullptr;
   }
@@ -99,8 +98,7 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
 }
 
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetPreviousNode(
-    zx_koid_t koid, uint32_t node_id,
-    fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const {
+    zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const {
   if (get_previous_node_should_fail_) {
     return nullptr;
   }
