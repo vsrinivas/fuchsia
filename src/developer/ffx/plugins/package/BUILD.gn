@@ -12,6 +12,7 @@ ffx_plugin("ffx_package") {
     "archive:ffx_package_archive",
     "build:ffx_package_build",
     "download:ffx_package_download",
+    "far:ffx_package_far",
   ]
 
   args_sources = [ "src/args.rs" ]

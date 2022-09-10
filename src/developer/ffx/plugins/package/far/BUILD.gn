@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/developer/ffx/build/ffx_plugin.gni")
+
+ffx_plugin("ffx_package_far") {
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = true
+  deps = [
+    "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/lib/writer:lib",
+    "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    "//src/sys/pkg/lib/fuchsia-hash",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:humansize",
+    "//third_party/rust_crates:prettytable-rs",
+    "//third_party/rust_crates:serde",
+  ]
+  test_deps = [
+    "//third_party/rust_crates:mockall",
+    "//third_party/rust_crates:tempfile",
+  ]
+  args_sources = [ "src/args.rs" ]
+  sources = [
+    "src/cat.rs",
+    "src/extract.rs",
+    "src/lib.rs",
+    "src/list.rs",
+  ]
+}
