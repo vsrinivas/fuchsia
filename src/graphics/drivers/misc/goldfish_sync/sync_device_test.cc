@@ -247,7 +247,7 @@ TEST_F(SyncDeviceTest, TriggerHostWait) {
   ASSERT_TRUE(endpoints.is_ok());
   ASSERT_OK(dut->CreateTimeline(std::move(endpoints->server)));
 
-  auto tl = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient tl{std::move(endpoints->client)};
 
   uint64_t kGlSyncHandle = 0xabcd'1234'5678'90abUL;
   uint64_t kSyncThreadHandle = 0xdcba'9876'5432'01feUL;
@@ -552,7 +552,7 @@ TEST_F(SyncDeviceTest, TriggerHostWaitAndSignalFence) {
   ASSERT_TRUE(endpoints.is_ok());
   ASSERT_OK(dut->CreateTimeline(std::move(endpoints->server)));
 
-  auto tl = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient tl{std::move(endpoints->client)};
 
   uint64_t kGlSyncHandle = 0xabcd'1234'5678'90abUL;
   uint64_t kSyncThreadHandle = 0xdcba'9876'5432'01feUL;

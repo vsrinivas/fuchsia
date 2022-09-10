@@ -22,7 +22,7 @@
 void ZxSocketInfoStream(int fd, zx_info_socket_t& out_info) {
   fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
   ASSERT_OK(fdio_fd_clone(fd, client_end.channel().reset_and_get_address()));
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient client{std::move(client_end)};
 
   auto response = client->DescribeDeprecated();
   ASSERT_OK(response.status());
@@ -36,7 +36,7 @@ void ZxSocketInfoStream(int fd, zx_info_socket_t& out_info) {
 void ZxSocketInfoDgram(int fd, zx_info_socket_t& out_info) {
   fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client_end;
   ASSERT_OK(fdio_fd_clone(fd, client_end.channel().reset_and_get_address()));
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient client{std::move(client_end)};
 
   auto response = client->DescribeDeprecated();
   ASSERT_OK(response.status());

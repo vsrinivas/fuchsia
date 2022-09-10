@@ -36,7 +36,7 @@ class PayloadStreamerTest : public zxtest::Test {
     auto stream = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
     ASSERT_OK(stream.status_value());
     streamer_.emplace(std::move(stream->server), std::move(src));
-    client_ = fidl::BindSyncClient(std::move(stream->client));
+    client_ = fidl::WireSyncClient(std::move(stream->client));
     loop_.StartThread("payload-stream-test-loop");
   }
 

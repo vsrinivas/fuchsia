@@ -225,7 +225,7 @@ std::optional<fidl::ServerBindingRef<fidl_proto>> fidl_server;
 fidl_server = fidl::BindServer<fidl::WireServer<fidl_proto>>(
     loop.dispatcher(), std::move(endpoints->server), test_dev);
 loop.StartThread("thread-name");
-auto fidl_client = fidl::BindSyncClient(std::move(endpoints->client));
+fidl::WireSyncClient fidl_client{std::move(endpoints->client)};
 // fidl_client can be used synchronously.
 ```
 

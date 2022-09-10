@@ -95,7 +95,7 @@ class HealthCheckServiceTest : public testing::Test {
     EXPECT_EQ(setup_.vfs()->Serve(svc_, endpoints->server.TakeChannel(),
                                   fs::VnodeConnectionOptions::ReadWrite()),
               ZX_OK);
-    return fidl::BindSyncClient(std::move(endpoints->client));
+    return fidl::WireSyncClient(std::move(endpoints->client));
   }
 
   BlobfsTestSetupWithThread setup_;

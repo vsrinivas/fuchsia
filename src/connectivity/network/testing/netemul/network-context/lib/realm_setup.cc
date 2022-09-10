@@ -19,7 +19,7 @@ zx::status<fbl::unique_fd> StartDriverTestRealm() {
   if (client_end.is_error()) {
     return zx::error(client_end.status_value());
   }
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireSyncClient client{std::move(client_end.value())};
   fidl::WireResult fidl_result = client->Start(fuchsia_driver_test::wire::RealmArgs());
   if (!fidl_result.ok()) {
     return zx::error(fidl_result.status());

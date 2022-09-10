@@ -101,7 +101,7 @@ zx::status<> StartFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir, zx:
   auto startup_client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
   if (startup_client_end.is_error())
     return startup_client_end.take_error();
-  auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+  fidl::WireSyncClient startup_client{std::move(*startup_client_end)};
 
   auto start_options_or = options.as_start_options();
   if (start_options_or.is_error())

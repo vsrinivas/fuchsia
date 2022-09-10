@@ -48,7 +48,7 @@ TEST_F(DriverTestRealmTest, DriversExist) {
   zx_handle_t handle;
   ASSERT_EQ(ZX_OK, fdio_fd_clone(out.get(), &handle));
   auto client =
-      fidl::BindSyncClient(fidl::ClientEnd<fuchsia_hardware_sample::Echo>(zx::channel(handle)));
+      fidl::WireSyncClient(fidl::ClientEnd<fuchsia_hardware_sample::Echo>(zx::channel(handle)));
 
   // Send a FIDL request.
   std::string_view sent_string = "hello";

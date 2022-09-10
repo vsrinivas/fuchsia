@@ -77,7 +77,7 @@ TEST(NetStreamTest, RaceClose) {
 
   fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
   ASSERT_OK(fdio_fd_transfer(fd.release(), client_end.channel().reset_and_get_address()));
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient client{std::move(client_end)};
 
   sync_completion_t completion;
 
@@ -106,7 +106,7 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
 
   fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
   ASSERT_OK(fdio_fd_transfer(fd.release(), client_end.channel().reset_and_get_address()));
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient client{std::move(client_end)};
 
   auto response = client->DescribeDeprecated();
   ASSERT_OK(response.status());
@@ -310,7 +310,7 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
 
   fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
   ASSERT_OK(fdio_fd_transfer(connfd.release(), client_end.channel().reset_and_get_address()));
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient client{std::move(client_end)};
 
   auto response = client->DescribeDeprecated();
   ASSERT_OK(response.status());

@@ -33,7 +33,7 @@ zx::status<ResolvedProcess> ResolveName(std::string_view name) {
   if (client.is_error()) {
     return client.take_error();
   }
-  auto resolver = fidl::BindSyncClient(*std::move(client));
+  fidl::WireSyncClient resolver{*std::move(client)};
   auto response = resolver->Resolve(fidl::StringView::FromExternal(name));
 
   zx_status_t status = response.status();

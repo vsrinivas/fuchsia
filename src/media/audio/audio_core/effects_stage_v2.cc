@@ -387,7 +387,7 @@ EffectsStageV2::EffectsStageV2(fuchsia_audio_effects::wire::ProcessorConfigurati
       source_(SilencePaddingStream::WrapIfNeeded(std::move(source),
                                                  Fixed(config.outputs()[0].ring_out_frames()),
                                                  /*fractional_gaps_round_down=*/false)),
-      processor_(fidl::BindSyncClient(std::move(config.processor()))),
+      processor_(fidl::WireSyncClient(std::move(config.processor()))),
       fidl_buffers_(FidlBuffers::Create(config.inputs()[0].buffer(), config.outputs()[0].buffer())),
       max_frames_per_call_(config.max_frames_per_call()),
       block_size_frames_(config.block_size_frames()),

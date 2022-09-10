@@ -138,7 +138,7 @@ TEST_F(ServerTest, ConnectsToDefaultMember) {
   zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
-  fidl::WireSyncClient<Echo> client = fidl::BindSyncClient(std::move(connect_result.value()));
+  fidl::WireSyncClient client{std::move(connect_result.value())};
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
@@ -168,7 +168,7 @@ TEST_F(ServerTest, ConnectsToOtherMember) {
   zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
-  fidl::WireSyncClient<Echo> client = fidl::BindSyncClient(std::move(connect_result.value()));
+  fidl::WireSyncClient client{std::move(connect_result.value())};
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 

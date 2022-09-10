@@ -15,7 +15,7 @@ TEST(NonbindableTest, DriversExist) {
     // Connect to DriverTestRealm.
     auto client_end = service::Connect<fuchsia_driver_test::Realm>();
     ASSERT_EQ(client_end.status_value(), ZX_OK);
-    auto client = fidl::BindSyncClient(std::move(*client_end));
+    fidl::WireSyncClient client{std::move(*client_end)};
 
     // Start the DriverTestRealm with correct arguments.
     fidl::Arena arena;

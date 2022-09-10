@@ -536,7 +536,7 @@ zx_status_t OpteeClient::InitRpmbClient() {
     return client_end.status_value();
   }
 
-  rpmb_client_ = fidl::BindSyncClient(std::move(*client_end));
+  rpmb_client_ = fidl::WireSyncClient(std::move(*client_end));
 
   return ZX_OK;
 }

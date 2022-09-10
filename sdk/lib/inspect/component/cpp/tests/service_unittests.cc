@@ -358,7 +358,7 @@ TEST_F(InspectServiceTest, ReadFromComponentInspector) {
   auto client_end = service::ConnectAt<fuchsia_component::Binder>(*svc);
   ASSERT_TRUE(client_end.is_ok());
 
-  fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient(std::move(*client_end));
 
   auto context = sys::ComponentContext::Create();
   fuchsia::diagnostics::ArchiveAccessorPtr accessor;

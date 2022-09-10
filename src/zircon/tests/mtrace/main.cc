@@ -27,7 +27,7 @@ zx::status<zx::resource> GetRootResource() {
   }
 
   fidl::WireSyncClient<fuchsia_boot::RootResource> client =
-      fidl::BindSyncClient(std::move(client_end.value()));
+      fidl::WireSyncClient(std::move(client_end.value()));
   fidl::WireResult<fuchsia_boot::RootResource::Get> result = client->Get();
   if (result.status() != ZX_OK) {
     printf("mtrace: Could not retrieve RootResource: %s\n", zx_status_get_string(result.status()));

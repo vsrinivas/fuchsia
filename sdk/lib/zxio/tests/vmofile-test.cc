@@ -22,7 +22,7 @@ class VmoFileNonZeroOffsetTest : public zxtest::Test {
     zx::status client_end = fidl::CreateEndpoints(&server_);
     ASSERT_OK(client_end.status_value());
 
-    ASSERT_OK(zxio_vmofile_init(&storage, fidl::BindSyncClient(std::move(client_end).value()),
+    ASSERT_OK(zxio_vmofile_init(&storage, fidl::WireSyncClient(std::move(client_end).value()),
                                 std::move(backing), /* offset */ 4, /* length */ len,
                                 /* seek */ 3));
     io = &storage.io;
@@ -121,7 +121,7 @@ TEST(VmoFileTest, GetExact) {
   ASSERT_OK(ends.status_value());
 
   zxio_storage_t storage;
-  ASSERT_OK(zxio_vmofile_init(&storage, fidl::BindSyncClient(std::move(ends->client)),
+  ASSERT_OK(zxio_vmofile_init(&storage, fidl::WireSyncClient(std::move(ends->client)),
                               std::move(backing), /* offset */ 0, /* length */ len, /* seek */ 3));
   zxio_t* io = &storage.io;
 

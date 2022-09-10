@@ -43,7 +43,7 @@ class Device : public DeviceParent {
       return echo_client.status_value();
     }
 
-    auto client = fidl::BindSyncClient(std::move(*echo_client));
+    fidl::WireSyncClient client{std::move(*echo_client)};
 
     constexpr std::string_view kInput = "Test String";
 

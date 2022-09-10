@@ -226,7 +226,7 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   EXPECT_EQ(ctrl_regs->handle, kChildDriverHandle);
 
   // Test availability of the FIDL channel communication.
-  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client{std::move(endpoints->client)};
 
   // Bind server side:
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);

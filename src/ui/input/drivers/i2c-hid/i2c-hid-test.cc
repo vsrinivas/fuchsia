@@ -337,7 +337,7 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
   ASSERT_OK(endpoints.status_value());
   endpoints->server.reset();
   device_ = new I2cHidbus(fake_ddk::kFakeParent,
-                          acpi::Client::Create(fidl::BindSyncClient(std::move(endpoints->client))));
+                          acpi::Client::Create(fidl::WireSyncClient(std::move(endpoints->client))));
   channel_ = ddk::I2cChannel(std::move(i2c_endpoints->client));
 
   fake_i2c_hid_.SetHidDescriptorFailure(ZX_ERR_TIMED_OUT);

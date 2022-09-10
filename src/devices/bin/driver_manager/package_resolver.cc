@@ -62,7 +62,7 @@ zx_status_t PackageResolver::ConnectToResolverService() {
   if (client_end.is_error()) {
     return client_end.error_value();
   }
-  resolver_client_ = fidl::BindSyncClient(std::move(*client_end));
+  resolver_client_ = fidl::WireSyncClient(std::move(*client_end));
   return ZX_OK;
 }
 
@@ -110,7 +110,7 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
       }
     }
   }
-  return zx::ok(fidl::BindSyncClient(std::move(endpoints->client)));
+  return zx::ok(fidl::WireSyncClient(std::move(endpoints->client)));
 }
 
 zx::status<zx::vmo> PackageResolver::LoadDriver(
@@ -135,7 +135,7 @@ zx::status<zx::vmo> PackageResolver::LoadDriver(
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  auto file_client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient file_client{std::move(endpoints->client)};
   fidl::WireResult file_res = file_client->GetBackingMemory(kDriverVmoFlags);
   if (!file_res.ok()) {
     LOGF(ERROR, "Failed to get driver vmo: %s", file_res.FormatDescription().c_str());

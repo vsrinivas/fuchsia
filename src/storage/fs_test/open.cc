@@ -47,7 +47,7 @@ zx_status_t OpenFileWithCreate(const fidl::ClientEnd<fio::Directory>& dir,
                                             fidl::StringView::FromExternal(path),
                                             std::move(child_endpoints->server));
   EXPECT_EQ(open_res.status(), ZX_OK);
-  auto child = fidl::BindSyncClient(std::move(child_endpoints->client));
+  fidl::WireSyncClient child{std::move(child_endpoints->client)};
 
   class EventHandler : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
    public:

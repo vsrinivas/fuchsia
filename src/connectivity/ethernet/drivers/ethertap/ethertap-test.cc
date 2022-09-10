@@ -87,7 +87,7 @@ TEST_F(EthertapTests, TestMulticastFilterParamsAreSorted) {
 
   ASSERT_NO_FATAL_FAILURE(OpenDevice("tap-device"));
 
-  fidl::WireSyncClient<Protocol> client = fidl::BindSyncClient(std::move(requester_side_));
+  fidl::WireSyncClient client{std::move(requester_side_)};
   eth::TapDevice* dev = tap_device()->GetDeviceContext<eth::TapDevice>();
   std::independent_bits_engine<std::default_random_engine, CHAR_BIT, uint8_t> rnd(0);
 

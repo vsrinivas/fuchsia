@@ -199,7 +199,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
     return 0;
   }
   fidl::WireSyncClient<fuchsia_paver::BootManager> boot_manager =
-      fidl::BindSyncClient(std::move(endpoints->client));
+      fidl::WireSyncClient(std::move(endpoints->client));
 
   // First find out whether or not ABR is supported.
   {
@@ -308,7 +308,7 @@ zx_status_t Paver::ClearSysconfig() {
     return status_find_sysconfig.status();
   }
 
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client{std::move(endpoints->client)};
 
   auto wipe_result = client->Wipe();
   auto wipe_status =
@@ -495,7 +495,7 @@ int Paver::MonitorBuffer() {
     exit_code_.store(res.status());
     return 0;
   }
-  fidl::WireSyncClient data_sink = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient data_sink{std::move(endpoints->client)};
 
   // Blocks until paving is complete.
   switch (command_) {
@@ -668,8 +668,8 @@ tftp_status Paver::OpenWrite(std::string_view filename, size_t size, zx::duratio
     return TFTP_ERR_IO;
   }
 
-  paver_svc_ = fidl::BindSyncClient(std::move(*paver));
-  fshost_admin_svc_ = fidl::BindSyncClient(std::move(*fshost));
+  paver_svc_ = fidl::WireSyncClient(std::move(*paver));
+  fshost_admin_svc_ = fidl::WireSyncClient(std::move(*fshost));
   auto svc_cleanup = fit::defer([&]() {
     fshost_admin_svc_ = {};
     paver_svc_ = {};

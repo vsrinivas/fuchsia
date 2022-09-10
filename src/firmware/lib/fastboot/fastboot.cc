@@ -227,7 +227,7 @@ zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver(
     return zx::error(paver_svc.error_value());
   }
 
-  return zx::ok(fidl::BindSyncClient(std::move(*paver_svc)));
+  return zx::ok(fidl::WireSyncClient(std::move(*paver_svc)));
 }
 
 fuchsia_mem::wire::Buffer Fastboot::GetWireBufferFromDownload() {
@@ -297,7 +297,7 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
   auto [data_sink_local, data_sink_remote] = std::move(*data_sink_endpoints);
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)paver_client_res.value()->FindDataSink(std::move(data_sink_remote));
-  auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
+  fidl::WireSyncClient data_sink{std::move(data_sink_local)};
 
   FlashPartitionInfo info = GetPartitionInfo(args[1]);
   if (info.partition == "bootloader") {
@@ -383,7 +383,7 @@ zx::status<fidl::WireSyncClient<fuchsia_paver::BootManager>> Fastboot::FindBootM
     return zx::error(res.status());
   }
 
-  return zx::ok(fidl::BindSyncClient(std::move(endpoints->client)));
+  return zx::ok(fidl::WireSyncClient(std::move(endpoints->client)));
 }
 
 zx::status<> Fastboot::SetActive(const std::string& command, Transport* transport) {
@@ -429,7 +429,7 @@ Fastboot::ConnectToPowerStateControl() {
     return zx::error(connect_result.status_value());
   }
 
-  return zx::ok(fidl::BindSyncClient(std::move(connect_result.value())));
+  return zx::ok(fidl::WireSyncClient(std::move(connect_result.value())));
 }
 
 zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) {
@@ -520,7 +520,7 @@ zx::status<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
                         zx::error(connect_result.status_value()));
   }
 
-  auto fshost_admin = fidl::BindSyncClient(std::move(connect_result.value()));
+  fidl::WireSyncClient fshost_admin{std::move(connect_result.value())};
   auto resp = fshost_admin->WriteDataFile(
       fidl::StringView::FromExternal(sshd_host::kAuthorizedKeyPathInData),
       download_vmo_mapper_.Release());

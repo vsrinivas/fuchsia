@@ -30,7 +30,7 @@ TEST(NamespaceTest, PathTraversalEscapeFails) {
   auto [component_controller_client, component_controller_server] =
       std::move(*component_controller_endpoints);
 
-  auto launcher = fidl::BindSyncClient(std::move(*launcher_end));
+  fidl::WireSyncClient launcher{std::move(*launcher_end)};
   fidl::WireResult create_component_result =
       launcher->CreateComponent(std::move(launch_info), std::move(component_controller_server));
   ASSERT_EQ(ZX_OK, create_component_result.status());

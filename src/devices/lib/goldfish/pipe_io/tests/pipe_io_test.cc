@@ -35,7 +35,7 @@ class PipeIoTest : public ::testing::Test {
     binding_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &pipe_);
     EXPECT_TRUE(binding_.has_value());
 
-    pipe_client_ = fidl::BindSyncClient(std::move(endpoints->client));
+    pipe_client_ = fidl::WireSyncClient(std::move(endpoints->client));
     io_ = std::make_unique<PipeIo>(std::move(pipe_client_), "pipe");
   }
 
@@ -318,7 +318,7 @@ class PipeAutoReaderTest : public gtest::TestLoopFixture {
     binding_ = fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &pipe_);
     EXPECT_TRUE(binding_.has_value());
 
-    pipe_client_ = fidl::BindSyncClient(std::move(endpoints->client));
+    pipe_client_ = fidl::WireSyncClient(std::move(endpoints->client));
 
     loop_.StartThread("pipe-io-server");
   }

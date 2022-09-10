@@ -32,7 +32,7 @@ zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
     return connect_result.take_error();
   }
 
-  fidl::WireSyncClient<Echo> client = fidl::BindSyncClient(std::move(connect_result.value()));
+  fidl::WireSyncClient client{std::move(connect_result.value())};
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   if (!echo_result.ok()) {
     std::cerr << "failed to make EchoString call to member protocol regular_echo of EchoService: "

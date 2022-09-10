@@ -23,7 +23,7 @@ static constexpr char kTestProductName[] = "Builtin Headphone Jack";
 
 fidl::WireSyncClient<fuchsia_hardware_audio::Dai> GetDaiClient(
     fidl::ClientEnd<fuchsia_hardware_audio::DaiConnector> client) {
-  auto client_wrap = fidl::BindSyncClient(std::move(client));
+  fidl::WireSyncClient client_wrap{std::move(client)};
   if (!client_wrap.is_valid()) {
     return {};
   }

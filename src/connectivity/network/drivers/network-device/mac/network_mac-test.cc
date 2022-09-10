@@ -71,7 +71,7 @@ class MacDeviceTest : public ::testing::Test {
       return zx::error(status);
     }
 
-    return zx::ok(fidl::BindSyncClient(std::move(client_end)));
+    return zx::ok(fidl::WireSyncClient(std::move(client_end)));
   }
 
  protected:

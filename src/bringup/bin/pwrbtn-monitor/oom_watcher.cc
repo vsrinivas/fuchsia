@@ -23,7 +23,7 @@ zx_status_t OomWatcher::WatchForOom(async_dispatcher_t* dispatcher, zx::event oo
 void OomWatcher::OnOOM(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal) {
   printf("pwrbtn-monitor: received kernel OOM signal\n");
-  auto sync_client = fidl::BindSyncClient(std::move(pwr_ctl_));
+  fidl::WireSyncClient sync_client{std::move(pwr_ctl_)};
   fidl::WireResult r_status = sync_client->Reboot(statecontrol_fidl::RebootReason::kOutOfMemory);
   if (r_status.status() || r_status->is_error()) {
     printf("pwrbtn-monitor: got error trying reboot: %s\n", r_status.FormatDescription().c_str());

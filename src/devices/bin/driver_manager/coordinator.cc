@@ -772,7 +772,7 @@ zx_status_t Coordinator::SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi) {
     LOGF(ERROR, "Failed to connect to fuchsia.boot::Items: %s", result.status_string());
     return result.error_value();
   } else {
-    items = fidl::BindSyncClient(std::move(result).value());
+    items = fidl::WireSyncClient(std::move(result).value());
   }
 
   // Driver metadata that the driver framework generally expects to be present.

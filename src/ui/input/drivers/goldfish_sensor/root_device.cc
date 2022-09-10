@@ -85,7 +85,7 @@ zx_status_t RootDevice::Setup(const std::map<uint64_t, InputDeviceInfo>& input_d
            zx_status_get_string(status));
     return status;
   }
-  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client{std::move(endpoints->client)};
 
   auto_reader_ =
       std::make_unique<PipeAutoReader>(std::move(client), kPipeName, pipe_io_loop_.dispatcher(),

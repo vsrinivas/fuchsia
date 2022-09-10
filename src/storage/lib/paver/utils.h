@@ -40,7 +40,7 @@ class BlockWatcherPauser {
  private:
   // Create a new Pauser. This should immediately be followed by a call to Pause().
   explicit BlockWatcherPauser(fidl::ClientEnd<fuchsia_fshost::BlockWatcher> chan)
-      : watcher_(fidl::BindSyncClient(std::move(chan))), valid_(false) {}
+      : watcher_(fidl::WireSyncClient(std::move(chan))), valid_(false) {}
   zx::status<> Pause();
 
   fidl::WireSyncClient<fuchsia_fshost::BlockWatcher> watcher_;

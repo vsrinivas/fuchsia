@@ -137,7 +137,7 @@ class BlockDeviceController {
     zx::channel cache_control;
     ASSERT_OK(fdio_get_service_handle(fd.release(), cache_control.reset_and_get_address()));
 
-    cachecontrol_ = fidl::BindSyncClient<usb_peripheral_block::Device>(std::move(cache_control));
+    cachecontrol_ = fidl::WireSyncClient<usb_peripheral_block::Device>(std::move(cache_control));
   }
 
   void EnableWritebackCache() {

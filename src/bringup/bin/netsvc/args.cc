@@ -40,7 +40,7 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
     return -1;
   }
 
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireSyncClient client{std::move(client_end.value())};
   fidl::WireResult string_resp = client->GetString(fidl::StringView{"netsvc.interface"});
   if (string_resp.ok()) {
     auto& value = string_resp->value;

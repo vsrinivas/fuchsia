@@ -59,7 +59,7 @@ TEST(DependencyInjection, Load) {
   auto client_end = ddk.FidlClient<fuchsia_gpu_magma::DependencyInjection>();
   EXPECT_EQ(ZX_OK, loop.StartThread("memory-pressure-thread"));
 
-  auto client = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient client{std::move(client_end)};
 
   fidl::InterfaceHandle<fuchsia::memorypressure::Provider> provider_handle;
   auto request = provider_handle.NewRequest();

@@ -1338,7 +1338,7 @@ zx_status_t zxio_synchronous_datagram_socket_init(
   auto zs = new (storage) zxio_synchronous_datagram_socket_t{
       .io = storage->io,
       .event = std::move(event),
-      .client = fidl::BindSyncClient(std::move(client)),
+      .client = fidl::WireSyncClient(std::move(client)),
   };
   zxio_init(&zs->io, &zxio_synchronous_datagram_socket_ops);
   return ZX_OK;
@@ -1428,7 +1428,7 @@ zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::socket socket
       .io = {},
       .pipe = {},
       .prelude_size = prelude_size,
-      .client = fidl::BindSyncClient(std::move(client)),
+      .client = fidl::WireSyncClient(std::move(client)),
   };
   zxio_init(&zs->io, &zxio_datagram_socket_ops);
   return zxio_pipe_init(reinterpret_cast<zxio_storage_t*>(&zs->pipe), std::move(socket), info);
@@ -1642,7 +1642,7 @@ zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
       .pipe = {},
       .state_lock = {},
       .state = state,
-      .client = fidl::BindSyncClient(std::move(client)),
+      .client = fidl::WireSyncClient(std::move(client)),
   };
   zxio_init(&zs->io, &zxio_stream_socket_ops);
   return zxio_pipe_init(reinterpret_cast<zxio_storage_t*>(&zs->pipe), std::move(socket), info);
@@ -1829,7 +1829,7 @@ zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
   auto zs = new (storage) zxio_raw_socket_t{
       .io = storage->io,
       .event = std::move(event),
-      .client = fidl::BindSyncClient(std::move(client)),
+      .client = fidl::WireSyncClient(std::move(client)),
   };
   zxio_init(&zs->io, &zxio_raw_socket_ops);
   return ZX_OK;
@@ -1990,7 +1990,7 @@ zx_status_t zxio_packet_socket_init(zxio_storage_t* storage, zx::eventpair event
   auto zs = new (storage) zxio_packet_socket_t{
       .io = storage->io,
       .event = std::move(event),
-      .client = fidl::BindSyncClient(std::move(client)),
+      .client = fidl::WireSyncClient(std::move(client)),
   };
   zxio_init(&zs->io, &zxio_packet_socket_ops);
   return ZX_OK;

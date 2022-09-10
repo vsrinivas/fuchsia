@@ -311,7 +311,7 @@ zx::status<typename FidlService::ServiceClient> OpenServiceAt(
 // zx::status<fidl::ClientEnd<Echo>> connect_result = service.ConnectFoo();
 // ASSERT_TRUE(connect_result.is_ok());
 //
-// fidl::WireSyncClient<Echo> client = fidl::BindSyncClient(connect_result.take_value());
+// fidl::WireSyncClient<Echo> client{connect_result.take_value()};
 // ```
 template <typename FidlService>
 zx::status<typename FidlService::ServiceClient> OpenServiceAt(

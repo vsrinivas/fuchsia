@@ -43,7 +43,7 @@ class Device : public DeviceParent {
       return endpoints.status_value();
     }
 
-    auto client = fidl::BindSyncClient(std::move(endpoints->client));
+    fidl::WireSyncClient client{std::move(endpoints->client)};
 
     auto status = DdkConnectFidlProtocol(std::move(endpoints->server));
     if (status != ZX_OK) {

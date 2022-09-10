@@ -458,7 +458,7 @@ zx_status_t bind_simple_pci_display(zx_device_t* dev, const char* name, uint32_t
     return status;
   }
 
-  auto sysmem = fidl::BindSyncClient(std::move(sysmem_endpoints->client));
+  fidl::WireSyncClient sysmem{std::move(sysmem_endpoints->client)};
 
   mmio_buffer_t mmio;
   // map framebuffer window
@@ -517,7 +517,7 @@ zx_status_t bind_simple_fidl_pci_display(zx_device_t* dev, const char* name, uin
   }
 
   fidl::WireSyncClient<fuchsia_hardware_sysmem::Sysmem> sysmem =
-      fidl::BindSyncClient(std::move(sysmem_endpoints->client));
+      fidl::WireSyncClient(std::move(sysmem_endpoints->client));
 
   fidl::WireResult<fuchsia_hardware_pci::Device::GetBar> bar_result = pci->GetBar(bar);
   if (!bar_result.ok()) {

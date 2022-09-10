@@ -128,7 +128,7 @@ TEST_F(ClientTest, ConnectsToDefault) {
   zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
-  fidl::WireSyncClient<Echo> client = fidl::BindSyncClient(std::move(connect_result.value()));
+  fidl::WireSyncClient client{std::move(connect_result.value())};
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
@@ -149,7 +149,7 @@ TEST_F(ClientTest, ConnectsToOther) {
   zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_bar();
   ASSERT_TRUE(connect_result.is_ok());
 
-  fidl::WireSyncClient<Echo> client = fidl::BindSyncClient(std::move(connect_result.value()));
+  fidl::WireSyncClient client{std::move(connect_result.value())};
   fidl::WireResult<Echo::EchoString> echo_result = client->EchoString(fidl::StringView("hello"));
   ASSERT_TRUE(echo_result.ok());
 
@@ -256,7 +256,7 @@ TEST_F(ClientTest, CloneServiceDirectory) {
   auto client_end = component::ConnectAt<Echo>(
       *svc_clone, (std::string(EchoService::Name) + "/default/foo").c_str());
   ASSERT_OK(client_end.status_value());
-  auto echo = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient echo{std::move(*client_end)};
   auto result = echo->EchoString("foo");
   ASSERT_OK(result.status());
   ASSERT_STREQ(std::string(result.value().response.data(), result.value().response.size()).c_str(),

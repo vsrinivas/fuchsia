@@ -83,7 +83,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   // No crash reports should have been filed.
   auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
   ASSERT_EQ(client_end.status_value(), ZX_OK);
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
   auto res = client->WatchFile();
   ASSERT_EQ(res.status(), ZX_OK);
   ASSERT_EQ(res.value().num_filed, 0ul);
@@ -164,7 +164,7 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   // treats this as a first boot and just silently reformats.
   auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
   ASSERT_EQ(client_end.status_value(), ZX_OK);
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
   auto res = client->WatchFile();
   ASSERT_EQ(res.status(), ZX_OK);
   // Crash reporting is only enabled for minfs.

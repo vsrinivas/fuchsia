@@ -76,7 +76,7 @@ zx::status<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> expos
   auto startup_client_end = service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
   if (startup_client_end.is_error())
     return startup_client_end.take_error();
-  auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+  fidl::WireSyncClient startup_client{std::move(*startup_client_end)};
 
   auto res = startup_client->Format(std::move(*device), options.as_format_options());
   if (!res.ok())

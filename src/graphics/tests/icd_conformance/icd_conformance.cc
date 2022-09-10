@@ -154,7 +154,7 @@ TEST(IcdConformance, SharedLibraries) {
   auto svc = service::OpenServiceRoot();
   auto client_end = service::ConnectAt<fuchsia_vulkan_loader::Loader>(*svc);
 
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
 
   auto manifest_fs_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(ZX_OK, manifest_fs_endpoints.status_value());

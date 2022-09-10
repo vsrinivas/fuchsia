@@ -285,7 +285,7 @@ FormatFxfsAndInitDataVolume(fidl::ClientEnd<fuchsia_hardware_block::Block> block
         << "Failed to connect to startup service at " << kStartupServicePath;
     return startup_client_end.take_error();
   }
-  auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
+  fidl::WireSyncClient startup_client{std::move(*startup_client_end)};
   const fs_management::MkfsOptions options;
   auto res = startup_client->Format(std::move(block_device), options.as_format_options());
   if (!res.ok()) {

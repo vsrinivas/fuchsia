@@ -25,7 +25,7 @@ zx::status<typename fidl::WireSyncClient<T>>& get_client() {
       if (status != ZX_OK) {
         return zx::error(status);
       }
-      return zx::ok(fidl::BindSyncClient(std::move(endpoints->client)));
+      return zx::ok(fidl::WireSyncClient(std::move(endpoints->client)));
     }();
   });
   return client;

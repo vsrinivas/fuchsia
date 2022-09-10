@@ -31,7 +31,7 @@ class ScopedInterpreter {
     }
     loop_.StartThread("shell worker");
 
-    client_ = fidl::BindSyncClient(std::move(endpoints->client));
+    client_ = fidl::WireSyncClient(std::move(endpoints->client));
   }
 
   ~ScopedInterpreter() {

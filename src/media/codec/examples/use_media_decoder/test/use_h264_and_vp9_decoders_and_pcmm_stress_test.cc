@@ -156,7 +156,7 @@ const std::string& GetBoardName() {
     auto client_end = service::Connect<fuchsia_sysinfo::SysInfo>();
     ZX_ASSERT(client_end.is_ok());
 
-    auto sysinfo = fidl::BindSyncClient(std::move(client_end.value()));
+    fidl::WireSyncClient sysinfo{std::move(client_end.value())};
     auto result = sysinfo->GetBoardName();
     ZX_ASSERT(result.ok());
     ZX_ASSERT(result.value().status == ZX_OK);
@@ -197,7 +197,7 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_se
   if (!client_end.is_ok()) {
     return zx::error(client_end.status_value());
   }
-  auto allocator = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireSyncClient allocator{std::move(client_end.value())};
   auto result = allocator->SetDebugClientInfo(
       fidl::StringView::FromExternal("use_h264_and_vp9_decoders_and_pcmm_stress_test"), 0u);
   ZX_ASSERT(result.ok());
@@ -248,7 +248,7 @@ void stress_pcmm(std::vector<zx::vmo>& vmos, std::mutex& vmos_lock,
     auto& [collection_client, collection_server] = endpoints.value();
     auto allocate_result = allocator->AllocateNonSharedCollection(std::move(collection_server));
     ZX_ASSERT(allocate_result.ok());
-    auto collection = fidl::BindSyncClient(std::move(collection_client));
+    fidl::WireSyncClient collection{std::move(collection_client)};
     auto sync_result = collection->Sync();
     ZX_ASSERT(sync_result.ok());
     uint32_t chunk_count = get_random() % (kMaxChunksPerBuffer - 1) + 1;

@@ -41,7 +41,7 @@ void MagmaDependencyInjectionDevice::SetMemoryPressureProvider(
   pressure_server_ = fidl::BindServer<fidl::WireServer<fuchsia_memorypressure::Watcher>>(
       server_loop_.dispatcher(), std::move(endpoints->server), this);
 
-  auto provider = fidl::BindSyncClient(std::move(request->provider));
+  fidl::WireSyncClient provider{std::move(request->provider)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)provider->RegisterWatcher(std::move(endpoints->client));
 }

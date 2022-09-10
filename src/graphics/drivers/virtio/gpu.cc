@@ -613,7 +613,7 @@ zx_status_t GpuDevice::Init() {
     return status;
   }
 
-  sysmem_ = fidl::BindSyncClient(std::move(endpoints->client));
+  sysmem_ = fidl::WireSyncClient(std::move(endpoints->client));
 
   DeviceReset();
 

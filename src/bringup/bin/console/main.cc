@@ -25,7 +25,7 @@ zx::resource GetDebugResource() {
     return {};
   }
 
-  auto client = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireSyncClient client{std::move(client_end.value())};
   auto result = client->Get();
   if (result.status() != ZX_OK) {
     printf("console: Could not retrieve DebugResource: %s\n",
@@ -43,7 +43,7 @@ zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> lis
     return client_end.status_value();
   }
 
-  auto log = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireSyncClient log{std::move(client_end.value())};
   std::vector<fidl::StringView> tags;
   for (auto& tag : allowed_log_tags) {
     tags.emplace_back(fidl::StringView::FromExternal(tag));
@@ -76,7 +76,7 @@ int main(int argc, const char** argv) {
   if (boot_args.is_error()) {
     return boot_args.status_value();
   }
-  const auto boot_args_client = fidl::BindSyncClient(*std::move(boot_args));
+  const fidl::WireSyncClient boot_args_client{*std::move(boot_args)};
 
   Options opts;
   status = ParseArgs(console_config::Config::TakeFromStartupHandle(), boot_args_client, &opts);

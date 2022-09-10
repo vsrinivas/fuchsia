@@ -16,7 +16,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
   auto realm_client_end = service::Connect<fuchsia_component::Realm>();
   if (realm_client_end.is_error())
     return realm_client_end.take_error();
-  auto realm = fidl::BindSyncClient(std::move(*realm_client_end));
+  fidl::WireSyncClient realm{std::move(*realm_client_end)};
 
   fidl::ClientEnd<fuchsia_io::Directory> client_end;
   fuchsia_component_decl::wire::ChildRef child_ref{
@@ -77,7 +77,7 @@ zx::status<> DestroyFsComponent(std::string_view component_child_name,
   auto realm_client_end = service::Connect<fuchsia_component::Realm>();
   if (realm_client_end.is_error())
     return realm_client_end.take_error();
-  auto realm = fidl::BindSyncClient(std::move(*realm_client_end));
+  fidl::WireSyncClient realm{std::move(*realm_client_end)};
 
   fuchsia_component_decl::wire::ChildRef child_ref{
       .name = fidl::StringView::FromExternal(component_child_name),

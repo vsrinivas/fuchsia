@@ -38,7 +38,7 @@ class DirentIteratorImpl {
       return result.status();
     }
     new (iterator)
-        DirentIteratorImpl(directory, fidl::BindSyncClient(std::move(iterator_ends->client)));
+        DirentIteratorImpl(directory, fidl::WireSyncClient(std::move(iterator_ends->client)));
     return ZX_OK;
   }
 

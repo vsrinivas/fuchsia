@@ -132,7 +132,7 @@ TEST_F(MigrationTest, MigratesZxcryptMinfs) {
   // No crash reports should have been filed.
   auto client_end = service::Connect<fuchsia_feedback_testing::FakeCrashReporterQuerier>();
   ASSERT_EQ(client_end.status_value(), ZX_OK);
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
   auto res = client->WatchFile();
   ASSERT_EQ(res.status(), ZX_OK);
   ASSERT_EQ(res->num_filed, 0ul);

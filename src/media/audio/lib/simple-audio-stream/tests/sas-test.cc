@@ -32,7 +32,7 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
 
 fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
     fidl::ClientEnd<audio_fidl::StreamConfigConnector> client) {
-  auto client_wrap = fidl::BindSyncClient(std::move(client));
+  fidl::WireSyncClient client_wrap{std::move(client)};
   if (!client_wrap.is_valid()) {
     return {};
   }
@@ -659,7 +659,7 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectState) {
   ASSERT_NOT_NULL(server);
 
   // We get 2 clients from the one FIDL channel acquired via FidlClient().
-  auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::StreamConfigConnector>());
+  fidl::WireSyncClient client_wrap{ddk_.FidlClient<audio_fidl::StreamConfigConnector>()};
   ASSERT_TRUE(client_wrap.is_valid());
   auto endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(endpoints1.is_ok());
@@ -700,7 +700,7 @@ TEST_F(SimpleAudioTest, WatchPlugDetectAndCloseStreamBeforeReply) {
   ASSERT_NOT_NULL(server);
 
   // We get 2 clients from the one FIDL channel acquired via FidlClient().
-  auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::StreamConfigConnector>());
+  fidl::WireSyncClient client_wrap{ddk_.FidlClient<audio_fidl::StreamConfigConnector>()};
   ASSERT_TRUE(client_wrap.is_valid());
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
@@ -765,7 +765,7 @@ TEST_F(SimpleAudioTest, MultipleChannelsPlugDetectNotify) {
   auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::StreamConfigConnector>());
+  fidl::WireSyncClient client_wrap{ddk_.FidlClient<audio_fidl::StreamConfigConnector>()};
   ASSERT_TRUE(client_wrap.is_valid());
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
@@ -816,7 +816,7 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainState) {
   auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::StreamConfigConnector>());
+  fidl::WireSyncClient client_wrap{ddk_.FidlClient<audio_fidl::StreamConfigConnector>()};
   ASSERT_TRUE(client_wrap.is_valid());
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
@@ -846,7 +846,7 @@ TEST_F(SimpleAudioTest, MultipleChannelsGainStateNotify) {
   auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::StreamConfigConnector>());
+  fidl::WireSyncClient client_wrap{ddk_.FidlClient<audio_fidl::StreamConfigConnector>()};
   ASSERT_TRUE(client_wrap.is_valid());
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());
@@ -1231,7 +1231,7 @@ TEST_F(SimpleAudioTest, NonPrivileged) {
   auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
   ASSERT_NOT_NULL(server);
 
-  auto client_wrap = fidl::BindSyncClient(ddk_.FidlClient<audio_fidl::StreamConfigConnector>());
+  fidl::WireSyncClient client_wrap{ddk_.FidlClient<audio_fidl::StreamConfigConnector>()};
   ASSERT_TRUE(client_wrap.is_valid());
   auto stream_endpoints1 = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ASSERT_TRUE(stream_endpoints1.is_ok());

@@ -222,7 +222,7 @@ TEST(RamNandTest, Unlink) {
   auto config = BuildConfig();
   ASSERT_OK(device->Bind(config));
 
-  auto client = fidl::BindSyncClient(ddk.FidlClient<fuchsia_hardware_nand::RamNand>());
+  fidl::WireSyncClient client{ddk.FidlClient<fuchsia_hardware_nand::RamNand>()};
   {
     auto result = client->Unlink();
     ASSERT_OK(result.status());

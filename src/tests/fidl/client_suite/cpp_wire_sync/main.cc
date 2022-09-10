@@ -24,7 +24,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallTwoWayNoPayload(CallTwoWayNoPayloadRequestView request,
                            CallTwoWayNoPayloadCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->TwoWayNoPayload();
     if (result.ok()) {
       completer.Reply(
@@ -39,7 +39,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallStrictOneWay(CallStrictOneWayRequestView request,
                         CallStrictOneWayCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->StrictOneWay();
     if (result.ok()) {
       completer.Reply(fidl_clientsuite::wire::EmptyResultClassification::WithSuccess(
@@ -52,7 +52,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallFlexibleOneWay(CallFlexibleOneWayRequestView request,
                           CallFlexibleOneWayCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->FlexibleOneWay();
     if (result.ok()) {
       completer.Reply(fidl_clientsuite::wire::EmptyResultClassification::WithSuccess(
@@ -65,7 +65,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallStrictTwoWay(CallStrictTwoWayRequestView request,
                         CallStrictTwoWayCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->StrictTwoWay();
     if (result.ok()) {
       completer.Reply(fidl_clientsuite::wire::EmptyResultClassification::WithSuccess(
@@ -78,7 +78,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallStrictTwoWayErr(CallStrictTwoWayErrRequestView request,
                            CallStrictTwoWayErrCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->StrictTwoWayErr();
     if (result.ok()) {
       if (result.value().is_ok()) {
@@ -97,7 +97,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallFlexibleTwoWay(CallFlexibleTwoWayRequestView request,
                           CallFlexibleTwoWayCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->FlexibleTwoWay();
     if (result.ok()) {
       completer.Reply(fidl_clientsuite::wire::EmptyResultClassification::WithSuccess(
@@ -110,7 +110,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallFlexibleTwoWayFields(CallFlexibleTwoWayFieldsRequestView request,
                                 CallFlexibleTwoWayFieldsCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->FlexibleTwoWayFields();
     if (result.ok()) {
       completer.Reply(
@@ -125,7 +125,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallFlexibleTwoWayErr(CallFlexibleTwoWayErrRequestView request,
                              CallFlexibleTwoWayErrCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->FlexibleTwoWayErr();
     if (result.ok()) {
       if (result.value().is_ok()) {
@@ -144,7 +144,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
 
   void CallFlexibleTwoWayFieldsErr(CallFlexibleTwoWayFieldsErrRequestView request,
                                    CallFlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
-    auto client = fidl::WireSyncClient(std::move(request->target));
+    fidl::WireSyncClient client{std::move(request->target)};
     auto result = client->FlexibleTwoWayFieldsErr();
     if (result.ok()) {
       if (result.value().is_ok()) {

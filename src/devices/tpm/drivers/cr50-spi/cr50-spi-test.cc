@@ -61,7 +61,7 @@ class Cr50SpiTest : public zxtest::Test,
     auto client = fidl::CreateEndpoints(&server);
     ZX_ASSERT(client.is_ok());
     fidl::BindServer(loop_.dispatcher(), std::move(server), this);
-    return fidl::BindSyncClient(std::move(*client));
+    return fidl::WireSyncClient(std::move(*client));
   }
 
   void Exchange(fidl::VectorView<uint8_t> transmit, fidl::VectorView<uint8_t>* receive) {

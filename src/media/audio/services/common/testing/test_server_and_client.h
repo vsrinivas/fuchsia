@@ -20,7 +20,7 @@ std::pair<fidl::WireSyncClient<ProtocolT>, fidl::ServerEnd<ProtocolT>> CreateCli
   if (!endpoints.is_ok()) {
     FX_PLOGS(FATAL, endpoints.status_value()) << "fidl::CreateEndpoints failed";
   }
-  return std::make_pair(fidl::BindSyncClient(std::move(endpoints->client)),
+  return std::make_pair(fidl::WireSyncClient(std::move(endpoints->client)),
                         std::move(endpoints->server));
 }
 

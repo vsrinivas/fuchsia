@@ -31,7 +31,7 @@ zx_status_t get_root_job(zx::job* root_job) {
     return client_end.error_value();
   }
 
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
   auto result = client->Get();
   if (!result.ok()) {
     return result.status();

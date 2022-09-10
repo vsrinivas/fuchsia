@@ -57,7 +57,7 @@ zx_status_t AudioDeviceStream::Open() {
     printf("service::Connect failed with error %s\n", client_end.status_string());
     return client_end.status_value();
   }
-  auto client = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireSyncClient client{std::move(client_end.value())};
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
   ZX_ASSERT(endpoints.is_ok());

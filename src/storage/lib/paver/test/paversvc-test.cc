@@ -255,7 +255,7 @@ PaverServiceTest::PaverServiceTest()
   zx::channel client, server;
   ASSERT_OK(zx::channel::create(0, &client, &server));
 
-  client_ = fidl::BindSyncClient<fuchsia_paver::Paver>(std::move(client));
+  client_ = fidl::WireSyncClient<fuchsia_paver::Paver>(std::move(client));
 
   ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
 
@@ -315,7 +315,7 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
 
     auto result = client_->FindBootManager(std::move(remote));
     ASSERT_OK(result.status());
-    boot_manager_ = fidl::BindSyncClient<fuchsia_paver::BootManager>(std::move(local));
+    boot_manager_ = fidl::WireSyncClient<fuchsia_paver::BootManager>(std::move(local));
   }
 
   void FindDataSink() {
@@ -324,7 +324,7 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
 
     auto result = client_->FindDataSink(std::move(remote));
     ASSERT_OK(result.status());
-    data_sink_ = fidl::BindSyncClient<fuchsia_paver::DataSink>(std::move(local));
+    data_sink_ = fidl::WireSyncClient<fuchsia_paver::DataSink>(std::move(local));
   }
 
   void FindSysconfig() {
@@ -333,7 +333,7 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
 
     auto result = client_->FindSysconfig(std::move(remote));
     ASSERT_OK(result.status());
-    sysconfig_ = fidl::BindSyncClient<fuchsia_paver::Sysconfig>(std::move(local));
+    sysconfig_ = fidl::WireSyncClient<fuchsia_paver::Sysconfig>(std::move(local));
   }
 
   void SetAbr(const AbrData& data) {
@@ -1911,7 +1911,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
 
     auto result = client_->UseBlockDevice(std::move(block_device), std::move(remote));
     ASSERT_OK(result.status());
-    data_sink_ = fidl::BindSyncClient<fuchsia_paver::DynamicDataSink>(std::move(local));
+    data_sink_ = fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>(std::move(local));
   }
 
   IsolatedDevmgr devmgr_;
@@ -2142,7 +2142,7 @@ TEST_F(PaverServiceLuisTest, WriteDataFileIgnoreDataPartitionFromOtherBlockDevic
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
   ASSERT_OK(client_->UseBlockDevice(std::move(gpt_chan), std::move(remote)));
-  auto data_sink = fidl::BindSyncClient(std::move(local));
+  fidl::WireSyncClient data_sink{std::move(local)};
 
   fuchsia_mem::wire::Buffer payload;
   CreatePayload(kPagesPerBlock, &payload);
@@ -2187,7 +2187,7 @@ TEST_F(PaverServiceLuisTest, WriteOpaqueVolume) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
   ASSERT_OK(client_->UseBlockDevice(std::move(gpt_chan), std::move(remote)));
-  auto data_sink = fidl::BindSyncClient(std::move(local));
+  fidl::WireSyncClient data_sink{std::move(local)};
 
   // Create a payload
   constexpr size_t kPayloadSize = 2048;

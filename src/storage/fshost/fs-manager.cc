@@ -425,7 +425,7 @@ void FileReport(std::string program_name, fbl::String report_reason) {
                            << client_end.status_string();
           return;
         }
-        auto client = fidl::BindSyncClient(std::move(*client_end));
+        fidl::WireSyncClient client{std::move(*client_end)};
 
         fidl::Arena allocator;
         auto report = fuchsia_feedback::wire::CrashReport::Builder(allocator)

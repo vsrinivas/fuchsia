@@ -105,14 +105,14 @@ int main(int argc, char** argv) {
                 zx_status_get_string(status));
 
   fidl::WireSyncClient sync_manager =
-      fidl::BindSyncClient(std::move(sync_manager_endpoints->client));
+      fidl::WireSyncClient(std::move(sync_manager_endpoints->client));
   {
     fidl::Status result =
         sync_manager->BusSubscribe(kBusName, kTestClientName, std::move(bus_endpoints->server));
     ZX_ASSERT_MSG(result.status() == ZX_OK, "error getting bus: %s", result.status_string());
   }
 
-  fidl::WireSyncClient bus = fidl::BindSyncClient(std::move(bus_endpoints->client));
+  fidl::WireSyncClient bus{std::move(bus_endpoints->client)};
   {
     std::array<fidl::StringView, 1> clients = {fidl::StringView(kTestServerName)};
     fidl::Status result = bus->WaitForClients(

@@ -17,7 +17,7 @@ using App = gtest::TestLoopFixture;
 
 fidl::WireSyncClient<fuchsia_shell::Shell> Client() {
   fidl::ClientEnd client_end = std::move(fidl::CreateEndpoints<fuchsia_shell::Shell>()->client);
-  return fidl::BindSyncClient(std::move(client_end));
+  return fidl::WireSyncClient(std::move(client_end));
 }
 
 TEST_F(App, BogusArgs) {

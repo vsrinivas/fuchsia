@@ -52,7 +52,7 @@ zx_status_t PowerButtonMonitor::SendPoweroff() {
            zx_status_get_string(connect_result.status_value()));
     return connect_result.status_value();
   }
-  auto admin_client = fidl::BindSyncClient(std::move(connect_result.value()));
+  fidl::WireSyncClient admin_client{std::move(connect_result.value())};
   auto resp = admin_client->Poweroff();
 
   // Check if there was any transport error, note that we don't actually wait

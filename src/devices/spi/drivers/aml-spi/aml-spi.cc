@@ -671,7 +671,7 @@ zx_status_t AmlSpi::Create(void* ctx, zx_device_t* device) {
     }
 
     reset.Connect(std::move(reset_server));
-    reset_fidl_client = fidl::BindSyncClient(std::move(reset_client));
+    reset_fidl_client = fidl::WireSyncClient(std::move(reset_client));
   }
 
   zx::interrupt interrupt;

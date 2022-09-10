@@ -54,7 +54,7 @@ int main(int argc, char** argv) {
     fprintf(stderr, "Failed to connect to Realm FIDL: %d", client_end.error_value());
     return client_end.status_value();
   }
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
 
   // Start the DriverTestRealm with correct arguments.
   fidl::Arena arena;

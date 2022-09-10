@@ -209,7 +209,7 @@ void FakePaver::WriteVolumes(WriteVolumesRequestView request,
     completer.Reply(status);
     return;
   }
-  fidl::WireSyncClient stream = fidl::BindSyncClient(std::move(request->payload));
+  fidl::WireSyncClient stream{std::move(request->payload)};
   auto result = stream->RegisterVmo(std::move(vmo));
   status = result.ok() ? result.value().status : result.status();
   if (status != ZX_OK) {

@@ -265,7 +265,7 @@ zx_status_t RealMain(Flags flags) {
     ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
     return paver_svc.error_value();
   }
-  auto paver_client = fidl::BindSyncClient(std::move(*paver_svc));
+  fidl::WireSyncClient paver_client{std::move(*paver_svc)};
 
   switch (flags.cmd) {
     case Command::kFvm: {
@@ -290,7 +290,7 @@ zx_status_t RealMain(Flags flags) {
       loop.StartThread("payload-stream");
 
       auto result =
-          fidl::BindSyncClient(std::move(data_sink_local))->WriteVolumes(std::move(client));
+          fidl::WireSyncClient(std::move(data_sink_local))->WriteVolumes(std::move(client));
       zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to write volumes: %s\n", zx_status_get_string(status));
@@ -322,7 +322,7 @@ zx_status_t RealMain(Flags flags) {
         (void)paver_client->FindDataSink(std::move(data_sink_remote));
       }
 
-      auto result = fidl::BindSyncClient(std::move(data_sink_local))->WipeVolume();
+      auto result = fidl::WireSyncClient(std::move(data_sink_local))->WipeVolume();
       zx_status_t status;
       if (!result.ok()) {
         status = result.status();
@@ -356,7 +356,7 @@ zx_status_t RealMain(Flags flags) {
         return block_result.error_value().error;
       }
 
-      auto result = fidl::BindSyncClient(std::move(data_sink_local))->InitializePartitionTables();
+      auto result = fidl::WireSyncClient(std::move(data_sink_local))->InitializePartitionTables();
       zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to initialize partition tables: %s\n", zx_status_get_string(status));
@@ -385,7 +385,7 @@ zx_status_t RealMain(Flags flags) {
         return block_result.error_value().error;
       }
 
-      auto result = fidl::BindSyncClient(std::move(data_sink_local))->WipePartitionTables();
+      auto result = fidl::WireSyncClient(std::move(data_sink_local))->WipePartitionTables();
       zx_status_t status = result.ok() ? result.value().status : result.status();
       if (status != ZX_OK) {
         ERROR("Failed to wipe partition tables: %s\n", zx_status_get_string(status));
@@ -413,7 +413,7 @@ zx_status_t RealMain(Flags flags) {
 
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)paver_client->FindDataSink(std::move(data_sink_remote));
-  auto data_sink = fidl::BindSyncClient(std::move(data_sink_local));
+  fidl::WireSyncClient data_sink{std::move(data_sink_local)};
 
   switch (flags.cmd) {
     case Command::kDataFile: {

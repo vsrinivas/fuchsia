@@ -33,7 +33,7 @@ class MinfsComponentTest : public testing::Test {
 
     auto realm_client_end = service::Connect<fuchsia_component::Realm>();
     ASSERT_EQ(realm_client_end.status_value(), ZX_OK);
-    realm_ = fidl::BindSyncClient(std::move(*realm_client_end));
+    realm_ = fidl::WireSyncClient(std::move(*realm_client_end));
 
     fidl::Arena allocator;
     fuchsia_component_decl::wire::CollectionRef collection_ref{.name = "fs-collection"};
@@ -60,7 +60,7 @@ class MinfsComponentTest : public testing::Test {
     auto startup_client_end =
         service::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir_.borrow());
     ASSERT_EQ(startup_client_end.status_value(), ZX_OK);
-    startup_client_ = fidl::BindSyncClient(std::move(*startup_client_end));
+    startup_client_ = fidl::WireSyncClient(std::move(*startup_client_end));
   }
 
   void TearDown() override {
@@ -114,7 +114,7 @@ TEST_F(MinfsComponentTest, FormatCheckStart) {
 
   auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);
-  auto admin_client = fidl::BindSyncClient(std::move(*admin_client_end));
+  fidl::WireSyncClient admin_client{std::move(*admin_client_end)};
 
   auto shutdown_res = admin_client->Shutdown();
   ASSERT_EQ(shutdown_res.status(), ZX_OK);
@@ -142,7 +142,7 @@ TEST_F(MinfsComponentTest, RequestsBeforeStartupAreQueuedAndServicedAfter) {
 
   auto admin_client_end = service::ConnectAt<fuchsia_fs::Admin>(exposed_dir());
   ASSERT_EQ(admin_client_end.status_value(), ZX_OK);
-  auto admin_client = fidl::BindSyncClient(std::move(*admin_client_end));
+  fidl::WireSyncClient admin_client{std::move(*admin_client_end)};
 
   auto shutdown_res = admin_client->Shutdown();
   ASSERT_EQ(shutdown_res.status(), ZX_OK);

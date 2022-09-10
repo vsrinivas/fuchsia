@@ -356,7 +356,7 @@ TEST_F(Tcs3400Test, GetInputReports) {
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
   zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
-  fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
+  fidl::WireSyncClient reader{std::move(*reader_client_end)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();
@@ -473,7 +473,7 @@ TEST_F(Tcs3400Test, GetMultipleInputReports) {
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
   zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
-  fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
+  fidl::WireSyncClient reader{std::move(*reader_client_end)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();
@@ -533,7 +533,7 @@ TEST_F(Tcs3400Test, GetInputReportsMultipleReaders) {
     fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
     zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
     ASSERT_OK(reader_client_end.status_value());
-    reader = fidl::BindSyncClient(std::move(*reader_client_end));
+    reader = fidl::WireSyncClient(std::move(*reader_client_end));
     // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
     (void)client->GetInputReportsReader(std::move(reader_server));
     device_->WaitForNextReader();
@@ -584,7 +584,7 @@ TEST_F(Tcs3400Test, InputReportSaturated) {
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
   zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
-  fidl::WireSyncClient reader = fidl::BindSyncClient(std::move(*reader_client_end));
+  fidl::WireSyncClient reader{std::move(*reader_client_end)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)client->GetInputReportsReader(std::move(reader_server));
   device_->WaitForNextReader();

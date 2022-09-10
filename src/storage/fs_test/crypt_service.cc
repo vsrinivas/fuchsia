@@ -24,7 +24,7 @@ zx::status<> SetUpCryptWithRandomKeys(
                    << management_service_or.status_string();
     return management_service_or.take_error();
   } else {
-    client = fidl::BindSyncClient(*std::move(management_service_or));
+    client = fidl::WireSyncClient(*std::move(management_service_or));
   }
   unsigned char key[32];
   zx_cprng_draw(key, sizeof(key));

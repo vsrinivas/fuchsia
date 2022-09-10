@@ -15,7 +15,7 @@ int main() {
     FX_SLOG(ERROR, "Failed to connect to Realm FIDL", KV("error", client_end.error_value()));
     return 1;
   }
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
 
   fidl::Arena arena;
   auto wire_result = client->Start(fuchsia_driver_test::wire::RealmArgs(arena));

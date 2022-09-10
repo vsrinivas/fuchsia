@@ -365,7 +365,7 @@ TEST_F(Da7219Test, PlugDetectNoMicrophoneWatchBeforeReset) {
 
   auto input_codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
   EXPECT_TRUE(input_codec_endpoints.is_ok());
-  auto input_codec = fidl::WireSyncClient(std::move(input_codec_endpoints->client));
+  fidl::WireSyncClient input_codec{std::move(input_codec_endpoints->client)};
 
   [[maybe_unused]] auto unused =
       input_codec_connector->Connect(std::move(input_codec_endpoints->server));
@@ -434,7 +434,7 @@ TEST_F(Da7219Test, PlugDetectWithMicrophoneWatchBeforeReset) {
 
   auto input_codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
   EXPECT_TRUE(input_codec_endpoints.is_ok());
-  auto input_codec = fidl::WireSyncClient(std::move(input_codec_endpoints->client));
+  fidl::WireSyncClient input_codec{std::move(input_codec_endpoints->client)};
 
   [[maybe_unused]] auto unused =
       input_codec_connector->Connect(std::move(input_codec_endpoints->server));

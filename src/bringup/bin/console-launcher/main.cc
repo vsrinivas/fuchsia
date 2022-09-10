@@ -179,7 +179,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
                                    zx::channel channel, const std::string& term,
                                    const std::optional<std::string>& cmd) {
   fidl::WireSyncClient client =
-      fidl::BindSyncClient(fidl::ClientEnd<fuchsia_io::Node>(std::move(channel)));
+      fidl::WireSyncClient(fidl::ClientEnd<fuchsia_io::Node>(std::move(channel)));
 
   while (true) {
     zx::status node = fidl::CreateEndpoints<fuchsia_io::Node>();
@@ -373,7 +373,7 @@ int main(int argv, char** argc) {
             << fidl::DiscoverableProtocolName<fuchsia_virtualconsole::SessionManager>;
         return virtcon.status_value();
       }
-      fidl::WireSyncClient client = fidl::BindSyncClient(std::move(virtcon.value()));
+      fidl::WireSyncClient client{std::move(virtcon.value())};
 
       if (args.virtual_console_need_debuglog) {
         zx::status session = CreateVirtualConsole(client);

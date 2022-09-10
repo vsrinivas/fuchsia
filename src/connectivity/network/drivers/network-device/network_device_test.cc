@@ -68,7 +68,7 @@ class NetDeviceDriverTest : public ::testing::Test {
       auto [client_end, server_end] = std::move(*endpoints);
       fidl::BindServer(loop_.dispatcher(), std::move(server_end),
                        parent_->GetLatestChild()->GetDeviceContext<NetworkDevice>());
-      return zx::ok(fidl::BindSyncClient(std::move(client_end)));
+      return zx::ok(fidl::WireSyncClient(std::move(client_end)));
     }();
     if (client.is_error()) {
       return client.take_error();
@@ -79,7 +79,7 @@ class NetDeviceDriverTest : public ::testing::Test {
       return zx::error(status);
     }
 
-    return zx::ok(fidl::BindSyncClient(std::move(client_end)));
+    return zx::ok(fidl::WireSyncClient(std::move(client_end)));
   }
 
   const FakeNetworkDeviceImpl& device_impl() const { return device_impl_; }
@@ -101,7 +101,7 @@ class NetDeviceDriverTest : public ::testing::Test {
         status != ZX_OK) {
       return zx::error(status);
     }
-    fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
+    fidl::WireSyncClient watcher{std::move(client_end)};
     for (;;) {
       fidl::WireResult result = watcher->Watch();
       if (!result.ok()) {
@@ -185,13 +185,13 @@ TEST_F(NetDeviceDriverTest, TestWatcherDestruction) {
   ASSERT_OK(port_endpoints.status_value());
   auto [port_client_end, port_server_end] = std::move(*port_endpoints);
   ASSERT_OK(netdevice->GetPort(port_id, std::move(port_server_end)).status());
-  auto port = fidl::BindSyncClient(std::move(port_client_end));
+  fidl::WireSyncClient port{std::move(port_client_end)};
 
   zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(*endpoints);
   ASSERT_OK(port->GetStatusWatcher(std::move(server_end), 1).status());
-  fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient watcher{std::move(client_end)};
   ASSERT_OK(watcher->WatchStatus().status());
   UnbindAndRelease();
   // Watcher, port, and netdevice should all observe channel closure.

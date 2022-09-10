@@ -162,7 +162,7 @@ class NetworkDeviceTest : public ::testing::Test {
     EXPECT_OK(endpoints.status_value());
     auto [client_end, server_end] = std::move(*endpoints);
     EXPECT_OK(device_->Bind(std::move(server_end)));
-    return fidl::BindSyncClient(std::move(client_end));
+    return fidl::WireSyncClient(std::move(client_end));
   }
 
   netdev::wire::PortId GetSaltedPortId(uint8_t base_port_id) {
@@ -195,7 +195,7 @@ class NetworkDeviceTest : public ::testing::Test {
     if (result.status() != ZX_OK) {
       return zx::error(result.status());
     }
-    return zx::ok(fidl::BindSyncClient(std::move(client_end)));
+    return zx::ok(fidl::WireSyncClient(std::move(client_end)));
   }
 
   zx_status_t CreateDevice() {
@@ -1223,7 +1223,7 @@ TEST_F(NetworkDeviceTest, ObserveStatus) {
   zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(*endpoints);
-  fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient watcher{std::move(client_end)};
 
   zx::status port = OpenPort(kPort13);
   ASSERT_OK(port.status_value());
@@ -2032,7 +2032,7 @@ TEST_F(NetworkDeviceTest, PortGetMac) {
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(*endpoints);
   ASSERT_OK(port->GetMac(std::move(server_end)).status());
-  auto mac = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient mac{std::move(client_end)};
   fidl::WireResult result = mac->GetUnicastAddress();
   ASSERT_OK(result.status());
   fuchsia_net::wire::MacAddress& addr = result.value().address;
@@ -2267,7 +2267,7 @@ TEST_F(NetworkDeviceTest, PortWatcher) {
     std::optional<netdev::wire::PortId> port_id;
   };
 
-  auto watch_next = [watcher = fidl::BindSyncClient(std::move(endpoints->client))]() mutable {
+  auto watch_next = [watcher = fidl::WireSyncClient(std::move(endpoints->client))]() mutable {
     return std::async([&watcher]() -> zx::status<PortEvent> {
       fidl::WireResult watch = watcher->Watch();
       if (!watch.ok()) {
@@ -2783,7 +2783,7 @@ TEST_F(NetworkDeviceTest, CanUpdatePortStatusWithinSetActive) {
     constexpr uint32_t kWatcherBuffer = 3;
     ASSERT_OK(port->GetStatusWatcher(std::move(server_end.value()), kWatcherBuffer).status());
   }
-  fidl::WireSyncClient watcher = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient watcher{std::move(client_end)};
 
   {
     fidl::WireResult result = watcher->WatchStatus();
@@ -2863,7 +2863,7 @@ TEST_F(NetworkDeviceTest, CloneDevice) {
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(endpoints.value());
   ASSERT_OK(connection1->Clone(std::move(server_end)).status());
-  fidl::WireSyncClient connection2 = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient connection2{std::move(client_end)};
   fidl::WireResult result = connection2->GetInfo();
   ASSERT_OK(result.status());
   ASSERT_EQ(result.value().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
@@ -2878,7 +2878,7 @@ TEST_F(NetworkDeviceTest, ClonePort) {
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(endpoints.value());
   ASSERT_OK(connection1->Clone(std::move(server_end)).status());
-  fidl::WireSyncClient connection2 = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient connection2{std::move(client_end)};
 
   netdev::wire::PortId salted_id1, salted_id2;
   {
@@ -2905,7 +2905,7 @@ TEST_F(NetworkDeviceTest, PortGetDevice) {
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(endpoints.value());
   ASSERT_OK(port_connection->GetDevice(std::move(server_end)).status());
-  fidl::WireSyncClient device_connection = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient device_connection{std::move(client_end)};
   fidl::WireResult result = device_connection->GetInfo();
   ASSERT_OK(result.status());
   ASSERT_EQ(result.value().info.min_rx_buffer_length(), impl_.info().min_rx_buffer_length);
@@ -3092,7 +3092,7 @@ TEST_F(NetworkDeviceTest, LogDebugInfoToSyslog) {
   auto [client_end, server_end] = std::move(endpoints.value());
   ASSERT_OK(port_connection->GetDiagnostics(std::move(server_end)).status());
 
-  fidl::WireSyncClient diagnostics = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient diagnostics{std::move(client_end)};
   ASSERT_OK(diagnostics->LogDebugInfoToSyslog().status());
   EXPECT_TRUE(bt_requested);
 }

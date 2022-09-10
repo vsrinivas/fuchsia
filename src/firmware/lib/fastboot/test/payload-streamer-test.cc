@@ -20,7 +20,7 @@ TEST(PayloadStreamerTest, RegisterVmo) {
   auto [client_end, server_end] = std::move(*streamer_endpoints);
 
   fidl::WireSyncClient<fuchsia_paver::PayloadStream> client =
-      fidl::BindSyncClient(std::move(client_end));
+      fidl::WireSyncClient(std::move(client_end));
 
   // Launch thread which implements interface.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -41,7 +41,7 @@ TEST(PayloadStreamerTest, RegisterVmoAgainErrorsOut) {
   auto [client_end, server_end] = std::move(*streamer_endpoints);
 
   fidl::WireSyncClient<fuchsia_paver::PayloadStream> client =
-      fidl::BindSyncClient(std::move(client_end));
+      fidl::WireSyncClient(std::move(client_end));
 
   // Launch thread which implements interface.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -72,7 +72,7 @@ TEST(PayloadStreamerTest, ReadData) {
   auto [client_end, server_end] = std::move(*streamer_endpoints);
 
   fidl::WireSyncClient<fuchsia_paver::PayloadStream> client =
-      fidl::BindSyncClient(std::move(client_end));
+      fidl::WireSyncClient(std::move(client_end));
 
   // Launch thread which implements interface.
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

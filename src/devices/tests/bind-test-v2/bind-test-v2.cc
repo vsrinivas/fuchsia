@@ -53,7 +53,7 @@ class BindCompilerV2Test : public gtest::TestLoopFixture {
     zx::status root_device_client_end =
         fdio_cpp::FdioCaller(std::move(out)).take_as<fuchsia_device_test::RootDevice>();
     ASSERT_EQ(root_device_client_end.status_value(), ZX_OK);
-    auto root_device = fidl::BindSyncClient(std::move(*root_device_client_end));
+    fidl::WireSyncClient root_device{std::move(*root_device_client_end)};
 
     auto endpoints = fidl::CreateEndpoints<fuchsia_device::Controller>();
     ASSERT_EQ(ZX_OK, endpoints.status_value());

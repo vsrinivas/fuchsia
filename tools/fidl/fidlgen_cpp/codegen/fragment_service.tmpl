@@ -43,8 +43,7 @@ class {{ .Name }} final {
     {{- end }}
     {{- range .Members }}
   {{ "" }}
-    // Connects to the member protocol "{{ .Name }}".
-    // Returns a |{{ .ClientEnd }}| on success,
+    // Connects |client_end| to the member protocol "{{ .Name }}".
     //
     // # Errors
     //
@@ -53,7 +52,7 @@ class {{ .Name }} final {
     //
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
-    // the reciprical |ClientEnd| for the |ServerEnd| passed into this method.
+    // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
     ::zx::status<> connect_{{ .Name }}({{ .ClientEnd }} client_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
@@ -62,10 +61,6 @@ class {{ .Name }} final {
     }
 
     // Connects to the member protocol "{{ .Name }}".
-    // Returns a |{{ .ClientEnd }}| on success,
-    // which can be used with |fidl::BindSyncClient| to create a synchronous
-    // client, or |{{ .ProtocolTransport.Namespace }}::WireClient| or |{{ .ProtocolTransport.Namespace }}::WireSharedClient| to
-    // create a client that supports both asynchronous and synchronous operations.
     //
     // # Errors
     //
@@ -76,7 +71,7 @@ class {{ .Name }} final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
-    ::zx::status<typename {{ .ClientEnd }}> connect_{{ .Name }}() {
+    ::zx::status<{{ .ClientEnd }}> connect_{{ .Name }}() {
       auto endpoints = {{ .CreateEndpoints }}();
       if (endpoints.is_error()) {
         return endpoints.take_error();

@@ -119,7 +119,7 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_dr
   if (!client_end.is_ok()) {
     return zx::error(client_end.status_value());
   }
-  auto connector = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireSyncClient connector{std::move(client_end.value())};
 
   auto allocator_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::Allocator>();
   EXPECT_OK(allocator_endpoints);
@@ -133,7 +133,7 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_dr
     return zx::error(connect_result.status());
   }
 
-  auto allocator = fidl::BindSyncClient(std::move(allocator_endpoints->client));
+  fidl::WireSyncClient allocator{std::move(allocator_endpoints->client)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
   return zx::ok(std::move(allocator));
@@ -145,7 +145,7 @@ zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_se
   if (!client_end.is_ok()) {
     return zx::error(client_end.status_value());
   }
-  auto allocator = fidl::BindSyncClient(std::move(client_end.value()));
+  fidl::WireSyncClient allocator{std::move(client_end.value())};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)allocator->SetDebugClientInfo(fidl::StringView::FromExternal(current_test_name), 0u);
   return zx::ok(std::move(allocator));
@@ -186,7 +186,7 @@ zx_status_t verify_connectivity(fidl::WireSyncClient<fuchsia_sysmem::Allocator>&
     return result.status();
   }
 
-  auto collection = fidl::BindSyncClient(std::move(collection_client_end));
+  fidl::WireSyncClient collection{std::move(collection_client_end)};
   auto sync_result = collection->Sync();
   EXPECT_OK(sync_result);
   if (!sync_result.ok()) {
@@ -246,7 +246,7 @@ make_single_participant_collection() {
     return zx::error(bind_result.status());
   }
 
-  auto collection = fidl::BindSyncClient(std::move(collection_client_end));
+  fidl::WireSyncClient collection{std::move(collection_client_end)};
 
   SetDefaultCollectionName(collection);
 
@@ -259,7 +259,7 @@ fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_initial_token
   ZX_ASSERT(token_endpoints_0.is_ok());
   auto [token_client_0, token_server_0] = std::move(*token_endpoints_0);
   ZX_ASSERT(allocator->AllocateSharedCollection(std::move(token_server_0)).ok());
-  auto token = fidl::BindSyncClient(std::move(token_client_0));
+  fidl::WireSyncClient token{std::move(token_client_0)};
   auto wire_result = token->Sync();
   ZX_ASSERT(wire_result.ok());
   return token;
@@ -277,7 +277,7 @@ std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> create_clien
       ZX_ASSERT(token_endpoints.is_ok());
       auto [token_client_endpoint, token_server_endpoint] = std::move(*token_endpoints);
       ZX_ASSERT(cur_token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_endpoint)).ok());
-      next_token = fidl::BindSyncClient(std::move(token_client_endpoint));
+      next_token = fidl::WireSyncClient(std::move(token_client_endpoint));
     }
     auto collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
     ZX_ASSERT(collection_endpoints.is_ok());
@@ -287,7 +287,7 @@ std::vector<fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>> create_clien
         allocator
             ->BindSharedCollection(cur_token.TakeClientEnd(), std::move(collection_server_endpoint))
             .ok());
-    auto collection_client = fidl::BindSyncClient(std::move(collection_client_endpoint));
+    fidl::WireSyncClient collection_client{std::move(collection_client_endpoint)};
     SetDefaultCollectionName(collection_client, fbl::StringPrintf("%u", i));
     if (i < client_count - 1) {
       // Ensure next_token is usable.
@@ -306,7 +306,7 @@ fidl::WireSyncClient<fuchsia_sysmem::BufferCollectionToken> create_token_under_t
   auto [token_b_client, token_b_server] = std::move(*token_endpoints);
   auto duplicate_result = token_a->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_b_server));
   ZX_ASSERT(duplicate_result.ok());
-  auto token_b = fidl::BindSyncClient(std::move(token_b_client));
+  fidl::WireSyncClient token_b{std::move(token_b_client)};
   auto sync_result = token_b->Sync();
   ZX_ASSERT(sync_result.ok());
   return token_b;
@@ -330,7 +330,7 @@ fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> convert_token_to_collecti
   auto result =
       allocator->BindSharedCollection(token.TakeClientEnd(), std::move(collection_server));
   ZX_ASSERT(result.ok());
-  return fidl::BindSyncClient(std::move(collection_client));
+  return fidl::WireSyncClient(std::move(collection_client));
 }
 
 void set_picky_constraints(fidl::WireSyncClient<fuchsia_sysmem::BufferCollection>& collection,
@@ -365,7 +365,7 @@ const std::string& GetBoardName() {
     auto client_end = service::Connect<fuchsia_sysinfo::SysInfo>();
     ZX_ASSERT(client_end.is_ok());
 
-    auto sysinfo = fidl::BindSyncClient(std::move(client_end.value()));
+    fidl::WireSyncClient sysinfo{std::move(client_end.value())};
     auto result = sysinfo->GetBoardName();
     ZX_ASSERT(result.ok());
     ZX_ASSERT(result.value().status == ZX_OK);
@@ -677,7 +677,7 @@ bool AttachTokenSucceeds(
   // test is single proc, so both clients are coming from this client
   // process - normally the two clients would be in separate processes with
   // token_client_2 transferred to another participant).
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
   EXPECT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
   IF_FAILURES_RETURN_FALSE();
 
@@ -687,7 +687,7 @@ bool AttachTokenSucceeds(
   EXPECT_OK(collection_endpoints_1);
   IF_FAILURES_RETURN_FALSE();
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   EXPECT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   EXPECT_OK(
@@ -773,7 +773,7 @@ bool AttachTokenSucceeds(
   EXPECT_OK(collection_endpoints_2);
   IF_FAILURES_RETURN_FALSE();
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+  fidl::WireSyncClient collection_2{std::move(collection_client_2)};
 
   // Just because we can, perform this sync as late as possible, just before
   // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
@@ -849,7 +849,7 @@ bool AttachTokenSucceeds(
     EXPECT_OK(collection_endpoints_3);
     IF_FAILURES_RETURN();
     auto [collection_client_3, collection_server_3] = std::move(*collection_endpoints_3);
-    collection_3 = fidl::BindSyncClient(std::move(collection_client_3));
+    collection_3 = fidl::WireSyncClient(std::move(collection_client_3));
 
     EXPECT_OK(allocator_2->BindSharedCollection(std::move(token_client_3),
                                                 std::move(collection_server_3)));
@@ -1088,14 +1088,14 @@ TEST(Sysmem, VerifyBufferCollectionToken) {
   auto token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints);
   auto [token_client, token_server] = std::move(*token_endpoints);
-  auto token = fidl::BindSyncClient(std::move(token_client));
+  fidl::WireSyncClient token{std::move(token_client)};
 
   ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server)));
 
   auto token2_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token2_endpoints);
   auto [token2_client, token2_server] = std::move(*token2_endpoints);
-  auto token2 = fidl::BindSyncClient(std::move(token2_client));
+  fidl::WireSyncClient token2{std::move(token2_client)};
 
   ASSERT_OK(token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token2_server)));
 
@@ -1313,7 +1313,7 @@ TEST(Sysmem, AttachLifetimeTracking) {
   ASSERT_OK(attached_collection_endpoints);
   auto [attached_collection_client, attached_collection_server] =
       std::move(*attached_collection_endpoints);
-  auto attached_collection = fidl::BindSyncClient(std::move(attached_collection_client));
+  fidl::WireSyncClient attached_collection{std::move(attached_collection_client)};
 
   auto allocator = connect_to_sysmem_driver();
   ASSERT_OK(allocator);
@@ -1568,7 +1568,7 @@ TEST(Sysmem, NoToken) {
   zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints);
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
-  auto collection = fidl::BindSyncClient(std::move(collection_client_end));
+  fidl::WireSyncClient collection{std::move(collection_client_end)};
 
   ASSERT_OK(allocator->AllocateNonSharedCollection(std::move(collection_server_end)));
 
@@ -1630,7 +1630,7 @@ TEST(Sysmem, NoSync) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   ASSERT_OK(allocator_1->AllocateSharedCollection(std::move(token_server_1)));
 
@@ -1659,7 +1659,7 @@ TEST(Sysmem, NoSync) {
 
     ASSERT_OK(allocator_1->BindSharedCollection(std::move(token_client_3),
                                                 std::move(collection_server_3)));
-    collection_3 = fidl::BindSyncClient(std::move(collection_client_3));
+    collection_3 = fidl::WireSyncClient(std::move(collection_client_3));
 
     const char* kCollectionName = "TestCollection";
     // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -1669,12 +1669,12 @@ TEST(Sysmem, NoSync) {
   auto token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_2);
   auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
-  auto token_2 = fidl::BindSyncClient(std::move(token_client_2));
+  fidl::WireSyncClient token_2{std::move(token_client_2)};
 
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   const char* kClient2Name = "TestClient2";
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -1705,7 +1705,7 @@ TEST(Sysmem, MultipleParticipants) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   // Client 1 creates a token and new LogicalBufferCollection using
   // AllocateSharedCollection().
@@ -1732,7 +1732,7 @@ TEST(Sysmem, MultipleParticipants) {
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -1814,7 +1814,7 @@ TEST(Sysmem, MultipleParticipants) {
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+  fidl::WireSyncClient collection_2{std::move(collection_client_2)};
 
   // Just because we can, perform this sync as late as possible, just before
   // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
@@ -1841,7 +1841,7 @@ TEST(Sysmem, MultipleParticipants) {
   auto collection_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_3);
   auto [collection_client_3, collection_server_3] = std::move(*collection_endpoints_3);
-  auto collection_3 = fidl::BindSyncClient(std::move(collection_client_3));
+  fidl::WireSyncClient collection_3{std::move(collection_client_3)};
 
   ASSERT_NE(token_client_3.channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -1991,7 +1991,7 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server_1)));
 
@@ -2004,7 +2004,7 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -2067,7 +2067,7 @@ TEST(Sysmem, ComplicatedFormatModifiers) {
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+  fidl::WireSyncClient collection_2{std::move(collection_client_2)};
 
   ASSERT_OK(collection_1->Sync());
 
@@ -2094,7 +2094,7 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server_1)));
 
@@ -2107,7 +2107,7 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -2158,7 +2158,7 @@ TEST(Sysmem, MultipleParticipantsColorspaceRanking) {
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+  fidl::WireSyncClient collection_2{std::move(collection_client_2)};
 
   ASSERT_OK(collection_1->Sync());
 
@@ -2310,7 +2310,7 @@ TEST(Sysmem, DuplicateSync) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server_1)));
 
@@ -2324,7 +2324,7 @@ TEST(Sysmem, DuplicateSync) {
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -2352,9 +2352,9 @@ TEST(Sysmem, DuplicateSync) {
 
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_endpoints_2->client));
+  fidl::WireSyncClient collection_2{std::move(collection_endpoints_2->client)};
 
-  auto token_2 = fidl::BindSyncClient(std::move(token_client_2));
+  fidl::WireSyncClient token_2{std::move(token_client_2)};
   // Remove write from last token
   zx_rights_t rights_attenuation_masks_2[] = {ZX_RIGHT_SAME_RIGHTS,
                                               ZX_DEFAULT_VMO_RIGHTS & ~ZX_RIGHT_WRITE};
@@ -2371,11 +2371,11 @@ TEST(Sysmem, DuplicateSync) {
 
   auto collection_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_3);
-  auto collection_3 = fidl::BindSyncClient(std::move(collection_endpoints_3->client));
+  fidl::WireSyncClient collection_3{std::move(collection_endpoints_3->client)};
 
   auto collection_endpoints_4 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_4);
-  auto collection_4 = fidl::BindSyncClient(std::move(collection_endpoints_4->client));
+  fidl::WireSyncClient collection_4{std::move(collection_endpoints_4->client)};
 
   ASSERT_NE(duplicate_result_2->tokens[0].channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(allocator->BindSharedCollection(std::move(duplicate_result_2->tokens[0]),
@@ -2424,7 +2424,7 @@ TEST(Sysmem, CloseWithOutstandingWait) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   ASSERT_OK(allocator_1->AllocateSharedCollection(std::move(token_server_1)));
 
@@ -2437,7 +2437,7 @@ TEST(Sysmem, CloseWithOutstandingWait) {
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -2475,7 +2475,7 @@ TEST(Sysmem, CloseWithOutstandingWait) {
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+  fidl::WireSyncClient collection_2{std::move(collection_client_2)};
 
   ASSERT_OK(collection_1->Sync());
 
@@ -2496,7 +2496,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   // Client 1 creates a token and new LogicalBufferCollection using
   // AllocateSharedCollection().
@@ -2515,7 +2515,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -2556,7 +2556,7 @@ TEST(Sysmem, ConstraintsRetainedBeyondCleanClose) {
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+  fidl::WireSyncClient collection_2{std::move(collection_client_2)};
 
   // Just because we can, perform this sync as late as possible, just before
   // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
@@ -2763,7 +2763,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   ASSERT_OK(allocator_1->AllocateSharedCollection(std::move(token_server_1)));
 
@@ -2776,7 +2776,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -2815,7 +2815,7 @@ TEST(Sysmem, CpuUsageAndNoBufferMemoryConstraints) {
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+  fidl::WireSyncClient collection_2{std::move(collection_client_2)};
 
   ASSERT_OK(collection_1->Sync());
 
@@ -3054,7 +3054,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   // Client 1 creates a token and new LogicalBufferCollection using
   // AllocateSharedCollection().
@@ -3073,7 +3073,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_1);
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-  auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+  fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
   ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
   ASSERT_OK(
@@ -3118,7 +3118,7 @@ TEST(Sysmem, NoneUsageWithSeparateOtherUsageSucceeds) {
   auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints_2);
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-  auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+  fidl::WireSyncClient collection_2{std::move(collection_client_2)};
 
   // Just because we can, perform this sync as late as possible, just before
   // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
@@ -3246,14 +3246,14 @@ TEST(Sysmem, CloseToken) {
   auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_1);
   auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-  auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+  fidl::WireSyncClient token_1{std::move(token_client_1)};
 
   ASSERT_OK(allocator->AllocateSharedCollection(std::move(token_server_1)));
 
   auto token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   ASSERT_OK(token_endpoints_2);
   auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
-  auto token_2 = fidl::BindSyncClient(std::move(token_client_2));
+  fidl::WireSyncClient token_2{std::move(token_client_2)};
 
   ASSERT_OK(token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2)));
 
@@ -3944,7 +3944,7 @@ TEST(Sysmem, TooManyFormats) {
   ASSERT_OK(allocator->BindSharedCollection(std::move(token_client_end),
                                             std::move(collection_server_end)));
 
-  auto collection = fidl::BindSyncClient(std::move(collection_client_end));
+  fidl::WireSyncClient collection{std::move(collection_client_end)};
 
   fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
   constraints.usage.cpu =
@@ -3982,7 +3982,7 @@ TEST(Sysmem, TooManyBuffers) {
   zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   ASSERT_OK(collection_endpoints);
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
-  auto collection = fidl::BindSyncClient(std::move(collection_client_end));
+  fidl::WireSyncClient collection{std::move(collection_client_end)};
 
   ASSERT_OK(allocator->AllocateNonSharedCollection(std::move(collection_server_end)));
 
@@ -4355,7 +4355,7 @@ TEST(Sysmem, SetDispensable) {
     auto token_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
     ASSERT_OK(token_endpoints_1);
     auto [token_client_1, token_server_1] = std::move(*token_endpoints_1);
-    auto token_1 = fidl::BindSyncClient(std::move(token_client_1));
+    fidl::WireSyncClient token_1{std::move(token_client_1)};
 
     // Client 1 creates a token and new LogicalBufferCollection using
     // AllocateSharedCollection().
@@ -4364,7 +4364,7 @@ TEST(Sysmem, SetDispensable) {
     auto token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
     ASSERT_OK(token_endpoints_2);
     auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
-    auto token_2 = fidl::BindSyncClient(std::move(token_client_2));
+    fidl::WireSyncClient token_2{std::move(token_client_2)};
 
     // Client 1 duplicates its token and gives the duplicate to client 2 (this
     // test is single proc, so both clients are coming from this client
@@ -4380,7 +4380,7 @@ TEST(Sysmem, SetDispensable) {
     auto collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
     ASSERT_OK(collection_endpoints_1);
     auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
-    auto collection_1 = fidl::BindSyncClient(std::move(collection_client_1));
+    fidl::WireSyncClient collection_1{std::move(collection_client_1)};
 
     ASSERT_NE(token_1.client_end().channel().get(), ZX_HANDLE_INVALID, "");
     ASSERT_OK(
@@ -4417,7 +4417,7 @@ TEST(Sysmem, SetDispensable) {
     auto collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
     ASSERT_OK(collection_endpoints_2);
     auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
-    auto collection_2 = fidl::BindSyncClient(std::move(collection_client_2));
+    fidl::WireSyncClient collection_2{std::move(collection_client_2)};
     ;
 
     // Just because we can, perform this sync as late as possible, just before

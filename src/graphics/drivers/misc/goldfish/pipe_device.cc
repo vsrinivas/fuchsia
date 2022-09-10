@@ -375,7 +375,7 @@ zx_status_t PipeDevice::ConnectToSysmem() {
   if (status != ZX_OK) {
     return status;
   }
-  sysmem_ = fidl::BindSyncClient(std::move(endpoints->client));
+  sysmem_ = fidl::WireSyncClient(std::move(endpoints->client));
   return ZX_OK;
 }
 

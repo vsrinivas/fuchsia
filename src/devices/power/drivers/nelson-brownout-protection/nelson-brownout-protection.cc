@@ -32,7 +32,7 @@ zx_status_t CodecClientAgl::Init(ddk::CodecProtocolClient codec_proto) {
     zxlogf(ERROR, "Failed to create codec endpoints: %s", codec_endpoints.status_string());
     return codec_endpoints.status_value();
   }
-  auto codec = fidl::BindSyncClient(std::move(codec_endpoints->client));
+  fidl::WireSyncClient codec{std::move(codec_endpoints->client)};
 
   zx_status_t status = codec_proto.Connect(codec_endpoints->server.TakeChannel());
   if (status != ZX_OK) {
@@ -52,7 +52,7 @@ zx_status_t CodecClientAgl::Init(ddk::CodecProtocolClient codec_proto) {
     zxlogf(ERROR, "Failed to call signal processing connect: %s", signal_connect.status_string());
     return signal_connect.status();
   }
-  signal_processing_ = fidl::BindSyncClient(std::move(signal_endpoints->client));
+  signal_processing_ = fidl::WireSyncClient(std::move(signal_endpoints->client));
   auto elements = signal_processing_->GetElements();
   if (!elements.ok()) {
     zxlogf(ERROR, "Failed to call signal processing get element: %s", elements.status_string());
@@ -106,7 +106,7 @@ zx_status_t NelsonBrownoutProtection::Create(void* ctx, zx_device_t* parent) {
     return power_sensor_endpoints.status_value();
   }
   fidl::WireSyncClient power_sensor_client =
-      fidl::BindSyncClient(std::move(power_sensor_endpoints->client));
+      fidl::WireSyncClient(std::move(power_sensor_endpoints->client));
 
   zx_status_t status = power_sensor.ConnectServer(power_sensor_endpoints->server.TakeChannel());
   if (status != ZX_OK) {

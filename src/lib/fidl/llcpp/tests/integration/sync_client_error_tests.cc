@@ -24,7 +24,7 @@ namespace test = ::llcpptest_protocol_test;
 TEST(SyncClientErrorTest, PeerClosed) {
   zx::status endpoints = fidl::CreateEndpoints<test::EnumMethods>();
   ASSERT_OK(endpoints.status_value());
-  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client{std::move(endpoints->client)};
   endpoints->server.reset();
   auto result = client->SendEnum(test::wire::MyError::kBadError);
   EXPECT_STATUS(ZX_ERR_PEER_CLOSED, result.status());
@@ -34,7 +34,7 @@ TEST(SyncClientErrorTest, PeerClosed) {
 TEST(SyncClientErrorTest, EncodeError) {
   zx::status endpoints = fidl::CreateEndpoints<test::EnumMethods>();
   ASSERT_OK(endpoints.status_value());
-  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client{std::move(endpoints->client)};
   endpoints->server.reset();
   // Send the number 42 as |MyError|, will fail validation at send time.
   uint32_t bad_error = 42;
@@ -74,7 +74,7 @@ TEST(SyncClientErrorTest, DecodeError) {
     ASSERT_OK(endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
                                                 sizeof(message), nullptr, 0));
   }};
-  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client{std::move(endpoints->client)};
   auto result = client->GetEnum();
   replier.join();
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());
@@ -114,7 +114,7 @@ TEST(SyncClientErrorTest, DecodeErrorWithErrorSyntax) {
     ASSERT_OK(endpoints->server.channel().write(0, reinterpret_cast<void*>(&message),
                                                 sizeof(message), nullptr, 0));
   }};
-  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client{std::move(endpoints->client)};
   auto result = client->ManyArgsCustomError(true);
   replier.join();
   EXPECT_STATUS(ZX_ERR_INVALID_ARGS, result.status());

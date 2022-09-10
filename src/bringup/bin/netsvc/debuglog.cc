@@ -208,7 +208,7 @@ zx_status_t debuglog_init(async_dispatcher_t* dispatcher) {
   if (log_client_end.is_error()) {
     return log_client_end.status_value();
   }
-  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(log_client_end.value()));
+  fidl::WireSyncClient client{std::move(log_client_end.value())};
 
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_logger::LogListenerSafe>();
   if (endpoints.is_error()) {

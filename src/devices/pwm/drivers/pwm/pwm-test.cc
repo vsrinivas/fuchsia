@@ -110,7 +110,7 @@ class PwmDeviceTest : public zxtest::Test {
         loop_.dispatcher(), std::move(endpoints->server), pwm_);
     loop_.StartThread("pwm-fidl-test");
 
-    client_ = fidl::BindSyncClient(std::move(endpoints->client));
+    client_ = fidl::WireSyncClient(std::move(endpoints->client));
     ASSERT_TRUE(client_.client_end().is_valid());
   }
 

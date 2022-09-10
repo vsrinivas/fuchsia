@@ -29,7 +29,7 @@ constexpr float kTestGainStep = 2.f;
 
 fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
     fidl::ClientEnd<audio_fidl::StreamConfigConnector> client) {
-  auto client_wrap = fidl::BindSyncClient(std::move(client));
+  fidl::WireSyncClient client_wrap{std::move(client)};
   if (!client_wrap.is_valid()) {
     return {};
   }

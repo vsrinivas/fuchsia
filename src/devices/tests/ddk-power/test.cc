@@ -110,7 +110,7 @@ class PowerTestCase : public zxtest::Test {
               devmgr.Connect(
                   fidl::DiscoverableProtocolName<fuchsia_device_manager::SystemStateTransition>,
                   connection->server.TakeHandle()));
-    auto system_state_transition_client = fidl::BindSyncClient(std::move(connection->client));
+    fidl::WireSyncClient system_state_transition_client{std::move(connection->client)};
     auto resp = system_state_transition_client->SetTerminationSystemState(state);
     ASSERT_OK(resp.status());
     ASSERT_FALSE(resp->is_error());

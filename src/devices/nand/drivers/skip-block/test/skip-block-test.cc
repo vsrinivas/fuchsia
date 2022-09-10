@@ -198,7 +198,7 @@ class SkipBlockTest : public zxtest::Test {
             return static_cast<MockDevice*>(ctx)->MessageOp(msg, txn);
           },
           endpoints->server.TakeChannel());
-      client_ = fidl::BindSyncClient(std::move(endpoints->client));
+      client_ = fidl::WireSyncClient(std::move(endpoints->client));
     }
   }
 

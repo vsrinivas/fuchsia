@@ -261,7 +261,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
       if (response.is_error()) {
         return response.error_value();
       }
-      return zxio_vmofile_init(storage, fidl::BindSyncClient(std::move(control)),
+      return zxio_vmofile_init(storage, fidl::WireSyncClient(std::move(control)),
                                std::move(file.vmo), file.offset, file.length,
                                response.value()->offset_from_start);
     }

@@ -467,7 +467,7 @@ zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> DriverLoad
     return endpoints.take_error();
   }
 
-  auto driver_index = fidl::BindSyncClient(std::move(*driver_index_client));
+  fidl::WireSyncClient driver_index{std::move(*driver_index_client)};
   auto info_result = driver_index->GetDriverInfo(filter, std::move(endpoints->server));
 
   // There are still some environments where we can't connect to DriverIndex.
@@ -476,7 +476,7 @@ zx::status<std::vector<fuchsia_driver_development::wire::DriverInfo>> DriverLoad
     return zx::error(info_result.status());
   }
 
-  auto iterator = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient iterator{std::move(endpoints->client)};
   for (;;) {
     auto next_result = iterator->GetNext();
     if (!next_result.ok()) {
@@ -514,7 +514,7 @@ std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
     return drivers;
   }
 
-  auto driver_index = fidl::BindSyncClient(std::move(*driver_index_client));
+  fidl::WireSyncClient driver_index{std::move(*driver_index_client)};
   auto info_result = driver_index->GetDriverInfo(fidl::VectorView<fidl::StringView>(),
                                                  std::move(endpoints->server));
 
@@ -524,7 +524,7 @@ std::vector<const Driver*> DriverLoader::GetAllDriverIndexDrivers() {
     return drivers;
   }
 
-  auto iterator = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient iterator{std::move(endpoints->client)};
   for (;;) {
     auto next_result = iterator->GetNext();
     if (!next_result.ok()) {

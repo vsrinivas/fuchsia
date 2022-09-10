@@ -398,7 +398,7 @@ void AmlCpuTestFixture::SetUp() {
   ASSERT_OK(endpoints.status_value());
 
   ASSERT_OK(thermal_.Init(std::move(endpoints->server)));
-  ThermalSyncClient thermal_client = fidl::BindSyncClient(std::move(endpoints->client));
+  ThermalSyncClient thermal_client = fidl::WireSyncClient(std::move(endpoints->client));
 
   dut_ = std::make_unique<AmlCpuTest>(std::move(thermal_client));
   ASSERT_OK(dut_->Init());

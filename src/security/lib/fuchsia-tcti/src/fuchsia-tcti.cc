@@ -41,7 +41,7 @@ opaque_ctx_t* fuchsia_tpm_init(void) {
     FX_LOGS(ERROR) << "Failed to connect to fuchsia.tpm.Transmit protocol.";
     return nullptr;
   }
-  auto command_service = fidl::BindSyncClient(std::move(*command));
+  fidl::WireSyncClient command_service{std::move(*command)};
   if (!command_service.is_valid()) {
     FX_LOGS(ERROR) << "fuchsia.tpm.Transmit protocol is not valid.";
     return nullptr;
@@ -61,7 +61,8 @@ int fuchsia_tpm_send(opaque_ctx_t* opaque_context, int command_code, const uint8
   fbl::AutoLock auto_lock(&context->mutex);
 
   std::vector<uint8_t> command_copy(in_buffer, in_buffer + len);
-  auto result = context->command_service->Transmit(fidl::VectorView<uint8_t>::FromExternal(command_copy.data(), command_copy.size()));
+  auto result = context->command_service->Transmit(
+      fidl::VectorView<uint8_t>::FromExternal(command_copy.data(), command_copy.size()));
   if (!result.ok()) {
     FX_LOGS(ERROR) << "Failed to send command: " << result.error();
     return 1;

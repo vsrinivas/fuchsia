@@ -88,7 +88,7 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
   bti_client_end =
       fdio_cpp::FdioCaller(std::move(fd)).take_as<fuchsia_hardware_btitest::BtiDevice>();
   ASSERT_OK(bti_client_end.status_value());
-  client = fidl::BindSyncClient(std::move(*bti_client_end));
+  client = fidl::WireSyncClient(std::move(*bti_client_end));
 
   uint64_t koid2;
   {

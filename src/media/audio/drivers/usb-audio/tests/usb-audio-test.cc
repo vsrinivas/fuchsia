@@ -36,7 +36,7 @@ audio_fidl::wire::PcmFormat GetDefaultPcmFormat() {
 
 fidl::WireSyncClient<audio_fidl::StreamConfig> GetStreamClient(
     fidl::ClientEnd<audio_fidl::StreamConfigConnector> client) {
-  auto client_wrap = fidl::BindSyncClient(std::move(client));
+  fidl::WireSyncClient client_wrap{std::move(client)};
   if (!client_wrap.is_valid()) {
     return {};
   }
@@ -374,7 +374,7 @@ TEST(UsbAudioTest, MultipleStreamConfigClients) {
   ASSERT_OK(fake_device.Bind());
   ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
 
-  auto client_wrap = fidl::BindSyncClient(tester.FidlClient<audio_fidl::StreamConfigConnector>());
+  fidl::WireSyncClient client_wrap{tester.FidlClient<audio_fidl::StreamConfigConnector>()};
   {
     auto endpoints = fidl::CreateEndpoints<audio_fidl::StreamConfig>();
     ASSERT_TRUE(endpoints.is_ok());

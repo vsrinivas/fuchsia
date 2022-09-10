@@ -256,7 +256,7 @@ class DeviceTest : public zxtest::Test {
   auto& get_fidl() {
     if (!fidl_.is_valid()) {
       fidl_ =
-          fidl::BindSyncClient<fuchsia_hardware_usb_device::Device>(std::move(ddk_.FidlClient()));
+          fidl::WireSyncClient<fuchsia_hardware_usb_device::Device>(std::move(ddk_.FidlClient()));
     }
     return fidl_;
   }

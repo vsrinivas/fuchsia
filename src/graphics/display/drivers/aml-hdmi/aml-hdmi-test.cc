@@ -99,7 +99,7 @@ class AmlHdmiTest : public zxtest::Test {
     ASSERT_NOT_NULL(dut_);
     ASSERT_OK(dut_->InitTest());
 
-    hdmi_client_ = fidl::BindSyncClient(
+    hdmi_client_ = fidl::WireSyncClient(
         fidl::ClientEnd<fuchsia_hardware_hdmi::Hdmi>(std::move(dut_->GetMessengerChannel())));
   }
 

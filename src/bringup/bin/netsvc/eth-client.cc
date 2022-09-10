@@ -20,7 +20,7 @@ zx::status<std::unique_ptr<EthClient>> EthClient::Create(
     async_dispatcher_t* dispatcher, fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end,
     zx::vmo io_vmo, void* io_mem, fit::closure on_rx, fit::closure on_status,
     fit::closure on_closed) {
-  fidl::WireSyncClient eth = fidl::BindSyncClient(std::move(client_end));
+  fidl::WireSyncClient eth{std::move(client_end)};
 
   fidl::WireResult r = eth->GetFifos();
   if (!r.ok()) {

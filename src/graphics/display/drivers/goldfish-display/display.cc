@@ -104,7 +104,7 @@ zx_status_t Display::Bind() {
     return status;
   }
 
-  pipe_ = fidl::BindSyncClient(std::move(endpoints->client));
+  pipe_ = fidl::WireSyncClient(std::move(endpoints->client));
   if (!pipe_.is_valid()) {
     zxlogf(ERROR, "%s: no pipe protocol", kTag);
     return ZX_ERR_NOT_SUPPORTED;
@@ -124,7 +124,7 @@ zx_status_t Display::Bind() {
     return status;
   }
 
-  auto pipe_client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient pipe_client{std::move(endpoints->client)};
 
   rc_ = std::make_unique<RenderControl>();
   status = rc_->InitRcPipe(std::move(pipe_client));

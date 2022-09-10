@@ -374,7 +374,7 @@ TEST_F(MultipleDeviceTestCase, ComponentLifecycleStop) {
   ASSERT_OK(devmgr::ComponentLifecycleServer::Create(
       coordinator_loop()->dispatcher(), &coordinator(), std::move(lifecycle_endpoints->server),
       std::move(suspend_callback)));
-  auto client = fidl::BindSyncClient(std::move(lifecycle_endpoints->client));
+  fidl::WireSyncClient client{std::move(lifecycle_endpoints->client)};
   auto result = client->Stop();
   ASSERT_OK(result.status());
   event.wait_one(ZX_USER_SIGNAL_0, zx::time::infinite(), nullptr);

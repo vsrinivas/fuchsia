@@ -153,13 +153,13 @@ when typed channels are used, leading to more succinct code.
 
 #### Sync clients
 
-You may use `fidl::BindSyncClient` to convert a `fidl::ClientEnd` into the
-corresponding `SyncClient` for the protocol. This has the advantage of avoiding
-having to spell out the protocol type twice (one in `ClientEnd` and then in
-`MyProtocol::SyncClient`).
+You may use `fidl::WireSyncClient` to convert a `fidl::ClientEnd` into the
+corresponding synchronous client for the protocol. This has the advantage of
+avoiding having to spell out the protocol type twice (one in `ClientEnd` and
+then in the synchronous client class).
 
 ```
-auto bar = fidl::BindSyncClient(std::move(bar_ends->client));
+fidl::WireSyncClient bar{std::move(bar_ends->client)};
 ```
 
 ### Scenario 3: connecting to a protocol

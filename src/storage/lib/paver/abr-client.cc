@@ -150,7 +150,7 @@ zx::status<Configuration> QueryBootConfig(const fbl::unique_fd& devfs_root,
   if (!client_end.is_ok()) {
     return client_end.take_error();
   }
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
   std::array<fidl::StringView, 2> arguments{
       fidl::StringView{"zvb.current_slot"},
       fidl::StringView{"zvb.boot-partition-uuid"},

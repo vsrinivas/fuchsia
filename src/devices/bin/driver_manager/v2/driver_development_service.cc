@@ -197,7 +197,7 @@ void DriverDevelopmentService::GetDriverInfo(GetDriverInfoRequestView request,
     return;
   }
 
-  auto driver_index = fidl::BindSyncClient(std::move(*driver_index_client));
+  fidl::WireSyncClient driver_index{std::move(*driver_index_client)};
   auto info_result =
       driver_index->GetDriverInfo(std::move(request->driver_filter), std::move(request->iterator));
   if (!info_result.ok()) {

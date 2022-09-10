@@ -33,7 +33,7 @@ static const fuchsia_component_decl::wire::ChildRef kFshostChildRef{
 void FshostIntegrationTest::SetUp() {
   auto realm_client_end = service::Connect<fuchsia_component::Realm>();
   ASSERT_EQ(realm_client_end.status_value(), ZX_OK);
-  realm_ = fidl::BindSyncClient(std::move(*realm_client_end));
+  realm_ = fidl::WireSyncClient(std::move(*realm_client_end));
 
   fidl::Arena allocator;
   auto child_decl = fuchsia_component_decl::wire::Child::Builder(allocator)
@@ -50,12 +50,12 @@ void FshostIntegrationTest::SetUp() {
   ASSERT_EQ(exposed_endpoints.status_value(), ZX_OK);
   auto open_res = realm_->OpenExposedDir(kFshostChildRef, std::move(exposed_endpoints->server));
   ASSERT_TRUE(open_res.ok() && !open_res->is_error());
-  exposed_dir_ = fidl::BindSyncClient(std::move(exposed_endpoints->client));
+  exposed_dir_ = fidl::WireSyncClient(std::move(exposed_endpoints->client));
 
   auto watcher_client_end =
       service::ConnectAt<fuchsia_fshost::BlockWatcher>(exposed_dir_.client_end());
   ASSERT_EQ(watcher_client_end.status_value(), ZX_OK);
-  block_watcher_ = fidl::BindSyncClient(std::move(*watcher_client_end));
+  block_watcher_ = fidl::WireSyncClient(std::move(*watcher_client_end));
 }
 
 void FshostIntegrationTest::TearDown() {

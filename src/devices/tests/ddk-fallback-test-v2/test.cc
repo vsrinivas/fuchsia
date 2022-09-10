@@ -26,7 +26,7 @@ int main(int argc, char **argv) {
   if (!client_end.is_ok()) {
     return 1;
   }
-  auto client = fidl::BindSyncClient(std::move(*client_end));
+  fidl::WireSyncClient client{std::move(*client_end)};
 
   fidl::Arena allocator;
   auto response = client->Start(fuchsia_driver_test::wire::RealmArgs(allocator));

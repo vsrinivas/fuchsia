@@ -161,7 +161,7 @@ class HidDevTest : public zxtest::Test {
 
  protected:
   fidl::WireSyncClient<fuchsia_input_report::InputDevice> GetSyncClient() {
-    return fidl::BindSyncClient(ddk_.FidlClient<fuchsia_input_report::InputDevice>());
+    return fidl::WireSyncClient(ddk_.FidlClient<fuchsia_input_report::InputDevice>());
   }
 
   SaveInspectVmoBind ddk_;

@@ -47,7 +47,7 @@ USBVirtualBusBase::USBVirtualBusBase() {
   zx::channel virtual_bus;
   ASSERT_OK(fdio_get_service_handle(fd.release(), virtual_bus.reset_and_get_address()));
   virtual_bus_ =
-      fidl::BindSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>(std::move(virtual_bus));
+      fidl::WireSyncClient<fuchsia_hardware_usb_virtual_bus::Bus>(std::move(virtual_bus));
 
   auto enable_result = virtual_bus_->Enable();
   ASSERT_NO_FATAL_FAILURE(ValidateResult(enable_result));
@@ -64,7 +64,7 @@ USBVirtualBusBase::USBVirtualBusBase() {
   zx::channel peripheral;
   ASSERT_OK(fdio_get_service_handle(fd.release(), peripheral.reset_and_get_address()));
   peripheral_ =
-      fidl::BindSyncClient<fuchsia_hardware_usb_peripheral::Device>(std::move(peripheral));
+      fidl::WireSyncClient<fuchsia_hardware_usb_peripheral::Device>(std::move(peripheral));
 
   ASSERT_NO_FATAL_FAILURE(ClearPeripheralDeviceFunctions());
 }

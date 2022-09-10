@@ -169,7 +169,7 @@ zx_status_t CallEcho() {
   }
 
   // We turn the client side of the endpoint pair into a synchronous client.
-  auto client = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client{std::move(endpoints->client)};
 
   // The following method allows us to connect to the protocol we desire. This
   // works by providing the server end of our endpoint pair to the framework. It

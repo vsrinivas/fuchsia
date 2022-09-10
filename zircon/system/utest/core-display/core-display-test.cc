@@ -104,7 +104,7 @@ void CoreDisplayTest::SetUp() {
   const fidl::WireResponse response = result.value();
   ASSERT_OK(response.s);
 
-  dc_client_ = fidl::BindSyncClient(std::move(dc_endpoints->client));
+  dc_client_ = fidl::WireSyncClient(std::move(dc_endpoints->client));
 
   class EventHandler : public fidl::WireSyncEventHandler<fhd::Controller> {
    public:
@@ -139,7 +139,7 @@ void CoreDisplayTest::SetUp() {
   // get sysmem
   zx::status sysmem_allocator = service::Connect<sysmem::Allocator>();
   ASSERT_TRUE(sysmem_allocator.is_ok(), "%s", sysmem_allocator.status_string());
-  sysmem_allocator_ = fidl::BindSyncClient(std::move(sysmem_allocator.value()));
+  sysmem_allocator_ = fidl::WireSyncClient(std::move(sysmem_allocator.value()));
 }
 
 void CoreDisplayTest::TearDown() {
@@ -171,7 +171,7 @@ void CoreDisplayTest::CreateToken() {
       sysmem_allocator_->AllocateSharedCollection(std::move(endpoints->server));
   ASSERT_TRUE(result.ok(), "%s", result.status_string());
 
-  token_ = fidl::BindSyncClient(std::move(endpoints->client));
+  token_ = fidl::WireSyncClient(std::move(endpoints->client));
 }
 
 void CoreDisplayTest::DuplicateAndImportToken() {
@@ -244,7 +244,7 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-  collection_ = fidl::BindSyncClient(std::move(endpoints->client));
+  collection_ = fidl::WireSyncClient(std::move(endpoints->client));
   {
     const fidl::WireResult result = collection_->SetConstraints(true, constraints);
     ASSERT_TRUE(result.ok(), "%s", result.status_string());

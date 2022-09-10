@@ -245,7 +245,7 @@ class PipeDeviceTest : public zxtest::Test {
         fidl::BindServer(async_loop_.dispatcher(), std::move(endpoints->server), dut_child_.get());
     EXPECT_TRUE(binding_.has_value());
 
-    client_ = fidl::BindSyncClient(std::move(endpoints->client));
+    client_ = fidl::WireSyncClient(std::move(endpoints->client));
   }
 
   // |zxtest::Test|

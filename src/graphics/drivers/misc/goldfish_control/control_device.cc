@@ -104,7 +104,7 @@ zx_status_t Control::Init() {
     zxlogf(ERROR, "%s: failed to connect to FIDL fragment: %s", kTag, zx_status_get_string(status));
     return status;
   }
-  pipe_ = fidl::BindSyncClient(std::move(pipe_endpoints->client));
+  pipe_ = fidl::WireSyncClient(std::move(pipe_endpoints->client));
 
   auto address_space_endpoints =
       fidl::CreateEndpoints<fuchsia_hardware_goldfish::AddressSpaceDevice>();
@@ -121,7 +121,7 @@ zx_status_t Control::Init() {
            zx_status_get_string(status));
     return status;
   }
-  address_space_ = fidl::BindSyncClient(std::move(address_space_endpoints->client));
+  address_space_ = fidl::WireSyncClient(std::move(address_space_endpoints->client));
 
   auto sync_endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncDevice>();
   if (sync_endpoints.is_error()) {
@@ -135,7 +135,7 @@ zx_status_t Control::Init() {
            zx_status_get_string(status));
     return status;
   }
-  sync_ = fidl::BindSyncClient(std::move(sync_endpoints->client));
+  sync_ = fidl::WireSyncClient(std::move(sync_endpoints->client));
 
   return ZX_OK;
 }

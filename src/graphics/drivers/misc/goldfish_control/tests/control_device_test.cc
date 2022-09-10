@@ -384,7 +384,7 @@ class ControlDeviceTest : public testing::Test {
 
     loop_.StartThread("goldfish-control-device-fidl-server");
 
-    fidl_client_ = fidl::BindSyncClient(std::move(endpoints->client));
+    fidl_client_ = fidl::WireSyncClient(std::move(endpoints->client));
   }
 
   void TearDown() override {

@@ -14,7 +14,7 @@ namespace fshost {
 // static
 std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
   return std::make_shared<FshostBootArgs>(
-      fidl::BindSyncClient([]() -> fidl::ClientEnd<fuchsia_boot::Arguments> {
+      fidl::WireSyncClient([]() -> fidl::ClientEnd<fuchsia_boot::Arguments> {
         zx::status local = service::Connect<fuchsia_boot::Arguments>();
         if (local.is_error()) {
           // This service might be missing if we're running in a test environment. Log

@@ -86,7 +86,7 @@ class PtyTestCase : public zxtest::Test {
     ASSERT_OK(endpoints.status_value());
     ASSERT_OK(
         vfs_.Serve(svc_, endpoints->server.TakeChannel(), fs::VnodeConnectionOptions::ReadWrite()));
-    *client = fidl::BindSyncClient(std::move(endpoints->client));
+    *client = fidl::WireSyncClient(std::move(endpoints->client));
   }
 
  private:

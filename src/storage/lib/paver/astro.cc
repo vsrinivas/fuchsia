@@ -37,7 +37,7 @@ fidl::WireSyncClient<fuchsia_boot::Arguments> OpenBootArgumentClient(
     return {};
   }
 
-  return {fidl::BindSyncClient(std::move(*local))};
+  return {fidl::WireSyncClient(std::move(*local))};
 }
 
 bool GetBool(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, ::fidl::StringView key,

@@ -48,7 +48,7 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
   zx::channel channel;
   fdio_get_service_handle(dev_fd.release(), channel.reset_and_get_address());
   auto* client = static_cast<fidl::WireSyncClient<virtualbustest::BusTest>*>(cookie);
-  *client = fidl::BindSyncClient<virtualbustest::BusTest>(std::move(channel));
+  *client = fidl::WireSyncClient<virtualbustest::BusTest>(std::move(channel));
   return ZX_ERR_STOP;
 }
 

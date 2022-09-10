@@ -553,9 +553,9 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseDaiChannel) {
   loop.StartThread("test-server");
 
   auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_audio::Dai>();
-  auto client_wrap = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client_wrap{std::move(endpoints->client)};
   ASSERT_OK(client_wrap->Connect(std::move(endpoints2->server)));
-  auto client = fidl::BindSyncClient(std::move(endpoints2->client));
+  fidl::WireSyncClient client{std::move(endpoints2->client)};
 
   auto supported_formats_ring_buffer = client->GetRingBufferFormats();
   ASSERT_OK(supported_formats_ring_buffer.status());
@@ -604,9 +604,9 @@ TEST_F(AmlG12TdmDaiTest, ClientCloseRingBufferChannel) {
   loop.StartThread("test-server");
 
   auto endpoints2 = fidl::CreateEndpoints<fuchsia_hardware_audio::Dai>();
-  auto client_wrap = fidl::BindSyncClient(std::move(endpoints->client));
+  fidl::WireSyncClient client_wrap{std::move(endpoints->client)};
   ASSERT_OK(client_wrap->Connect(std::move(endpoints2->server)));
-  auto client = fidl::BindSyncClient(std::move(endpoints2->client));
+  fidl::WireSyncClient client{std::move(endpoints2->client)};
 
   auto supported_formats_ring_buffer = client->GetRingBufferFormats();
   ASSERT_OK(supported_formats_ring_buffer.status());

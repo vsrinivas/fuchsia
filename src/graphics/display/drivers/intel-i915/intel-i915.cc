@@ -2082,7 +2082,7 @@ zx_status_t Controller::Init() {
     return status;
   }
 
-  sysmem_ = fidl::BindSyncClient(std::move(endpoints->client));
+  sysmem_ = fidl::WireSyncClient(std::move(endpoints->client));
 
   status = ZX_ERR_NOT_FOUND;
   if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
