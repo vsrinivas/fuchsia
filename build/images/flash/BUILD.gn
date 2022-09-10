@@ -44,7 +44,6 @@ if (use_gigaboot) {
           type = "blk"
         },
       ]
-      image_paths = [ "IMAGE_ESP_RAW=fuchsia.esp.blk" ]
     }
   }
   flash_image_deps += [ ":esp" ]
@@ -70,36 +69,6 @@ foreach(firmware, firmware_prebuilts) {
     bootserver_arg = "--firmware-${firmware.type}"
   }
 
-  # By convention image_paths shell variables are upper-case. There must
-  # be a better way to do this but I'm not sure what it is.
-  upper_name = name
-  upper_name = string_replace(upper_name, "a", "A")
-  upper_name = string_replace(upper_name, "b", "B")
-  upper_name = string_replace(upper_name, "c", "C")
-  upper_name = string_replace(upper_name, "d", "D")
-  upper_name = string_replace(upper_name, "e", "E")
-  upper_name = string_replace(upper_name, "f", "F")
-  upper_name = string_replace(upper_name, "g", "G")
-  upper_name = string_replace(upper_name, "h", "H")
-  upper_name = string_replace(upper_name, "i", "I")
-  upper_name = string_replace(upper_name, "j", "J")
-  upper_name = string_replace(upper_name, "k", "K")
-  upper_name = string_replace(upper_name, "l", "L")
-  upper_name = string_replace(upper_name, "m", "M")
-  upper_name = string_replace(upper_name, "n", "N")
-  upper_name = string_replace(upper_name, "o", "O")
-  upper_name = string_replace(upper_name, "p", "P")
-  upper_name = string_replace(upper_name, "q", "Q")
-  upper_name = string_replace(upper_name, "r", "R")
-  upper_name = string_replace(upper_name, "s", "S")
-  upper_name = string_replace(upper_name, "t", "T")
-  upper_name = string_replace(upper_name, "u", "U")
-  upper_name = string_replace(upper_name, "v", "V")
-  upper_name = string_replace(upper_name, "w", "W")
-  upper_name = string_replace(upper_name, "x", "X")
-  upper_name = string_replace(upper_name, "y", "Y")
-  upper_name = string_replace(upper_name, "z", "Z")
-
   copy(name) {
     testonly = true
     sources = [ "${firmware.path}${firmware_prebuilts_path_suffix}" ]
@@ -121,7 +90,6 @@ foreach(firmware, firmware_prebuilts) {
           }
         },
       ]
-      image_paths = [ "IMAGE_${upper_name}=$name.img" ]
     }
   }
 
@@ -264,7 +232,6 @@ action("flash_script") {
         type = "script"
       },
     ]
-    image_paths = [ "IMAGE_FLASH_SH=netboot.sh" ]
   }
 }
 

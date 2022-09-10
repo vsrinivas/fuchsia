@@ -103,7 +103,6 @@ assembled_system("zedboot_assembly") {
 
   metadata = {
     images = []
-    image_paths = []
     update_target = []
 
     images += [
@@ -128,10 +127,6 @@ assembled_system("zedboot_assembly") {
     if (custom_signing_script == "" && !use_vboot) {
       update_target += [ "zedboot=zedboot.zbi" ]
     }
-    image_paths += [ "IMAGE_ZEDBOOT_ZBI=zedboot.zbi" ]
-    if (use_zedboot_as_recovery) {
-      image_paths += [ "IMAGE_ZIRCONR_ZBI=zedboot.zbi" ]
-    }
 
     # Optionally include the signed images.
     if (custom_signing_script != "" || use_vboot) {
@@ -155,7 +150,6 @@ assembled_system("zedboot_assembly") {
       update_target += [ "zedboot.signed=zedboot.zbi.signed" ]
       if (use_zedboot_as_recovery) {
         mkzedboot_mode = [ "vboot" ]
-        image_paths += [ "IMAGE_ZIRCONR_SIGNEDZBI=zedboot.zbi.signed" ]
       }
     }
 
@@ -178,8 +172,6 @@ assembled_system("zedboot_assembly") {
         },
       ]
       if (use_zedboot_as_recovery) {
-        image_paths += [ "IMAGE_VBMETAR_RAW=zedboot.vbmeta" ]
-
         # Only include zedboot as recovery.vbmeta if zedboot is used as recovery
         update_target += [ "recovery.vbmeta=zedboot.vbmeta" ]
       }
@@ -205,7 +197,6 @@ if (target_cpu != "arm64" && !use_vboot) {
           type = "blk"
         },
       ]
-      image_paths = [ "IMAGE_ZEDBOOT_ESP=zedboot.esp.blk" ]
     }
   }
 }

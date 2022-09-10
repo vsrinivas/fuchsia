@@ -9,7 +9,7 @@
 ## See 'fx testgen --help' for more help
 
 DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-source "${DEVSHELL_DIR}/lib/image_build_vars.sh" || exit $?
+source "${DEVSHELL_DIR}/lib/vars.sh" || exit $?
 
 fx-config-read
 fx-command-exec host-tool testgen "$@"

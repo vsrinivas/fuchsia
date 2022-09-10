@@ -11,7 +11,6 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/fx-cmd-locator.sh"
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/fx-mkzedboot.sh"
-  "tools/devshell/lib/image_build_vars.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/platform.sh"
 )

@@ -777,6 +777,18 @@ function fx-run-ninja {
   fx-try-locked "${full_cmdline[@]}"
 }
 
+function fx-get-image {
+  fx-command-run list-build-artifacts --name "$1" --type "$2" --expect-one images
+}
+
+function fx-get-zbi {
+  fx-get-image "$1" zbi
+}
+
+function fx-get-qemu-kernel {
+  fx-get-image qemu-kernel kernel
+}
+
 function fx-zbi {
   "${FUCHSIA_BUILD_DIR}/$(fx-command-run list-build-artifacts --name zbi --expect-one tools)" --compressed="$FUCHSIA_ZBI_COMPRESSION" "$@"
 }

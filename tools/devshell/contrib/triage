@@ -55,8 +55,7 @@ set -e
 trap 'echo "Triage found a problem!"' ERR
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"\
-/../lib/image_build_vars.sh
-
+/../lib/vars.sh
 # Defaults.
 config_paths=( )
 testit=""

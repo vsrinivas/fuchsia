@@ -17,7 +17,7 @@
 
 set -e
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
 build=true
 while [[ $# -ge 1 ]]; do
@@ -45,7 +45,7 @@ if [[ -n "$name" ]]; then
 fi
 
 if "$build"; then
-  fx-command-run build "${IMAGE_NETBOOT_ZBI}" netboot.sh
+  fx-command-run build $(fx-command-run list-build-artifacts netboot)
 fi
 
 netboot_script="${FUCHSIA_BUILD_DIR}/netboot.sh"
@@ -65,9 +65,9 @@ tmpdir="${FUCHSIA_BUILD_DIR}.netboot.tmp"
 mkdir "${tmpdir}"
 trap 'rm -rf "${tmpdir}"' EXIT
 
-# The script uses the ${IMAGE_NETBOOT_ZBI} relative path, relative to its own
-# location.  So copy the script into a temporary location next to the location
-# where we'll write the temporary copy of ${IMAGE_NETBOOT_ZBI}.
+# netboot.sh refers to the netboot ZBI by a relative path, so copy the script
+# into a temporary location next to the location where we'll write the
+# temporary copy of the ZBI.
 cp "${netboot_script}" "${tmpdir}"
 
 # XXX(raggi): the following is quite undesirable, as it takes internal
@@ -78,9 +78,10 @@ cp "${HOST_OUT_DIR}/bootserver" "${tmpdir}/host_x64/bootserver"
 
 # Make a temporary image that adds in the ~/.ssh/fuchsia_authorized_keys file.
 # Netboot doesn't require special compression. fxbug.dev/43305 for more info.
+netboot_zbi=$(fx-get-zbi netboot)
 fx-zbi-default-compression \
-  -o "${tmpdir}/${IMAGE_NETBOOT_ZBI}" \
-  "${FUCHSIA_BUILD_DIR}/${IMAGE_NETBOOT_ZBI}" \
+  -o "${tmpdir}/${netboot_zbi}" \
+  "${FUCHSIA_BUILD_DIR}/${netboot_zbi}" \
   "--entry=data/ssh/authorized_keys=${authkeys_path}"
 
 # Now run the copied script, which will use the temporary ZBI.

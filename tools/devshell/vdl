@@ -9,7 +9,7 @@
 set -e
 
 DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
-source "${DEVSHELL_DIR}"/lib/image_build_vars.sh || exit $?
+source "${DEVSHELL_DIR}"/lib/vars.sh || exit $?
 
 echo
 fx-info "The Fuchsia emulator is improving and will soon be launched in ffx. Want to be an early adopter?"

@@ -6,13 +6,13 @@
 #### CATEGORY=Run, inspect and debug
 ### start fuchsia in qemu via netboot
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/image_build_vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
 qemu_dir="${PREBUILT_QEMU_DIR}/bin"
 
 "${FUCHSIA_DIR}/zircon/scripts/run-zircon" \
   -a "${FUCHSIA_ARCH}" \
   -q "${qemu_dir}" \
-  -t "${FUCHSIA_BUILD_DIR}/${IMAGE_QEMU_KERNEL_RAW}" \
-  -z "${FUCHSIA_BUILD_DIR}/${IMAGE_NETBOOT_ZBI}" \
+  -t "${FUCHSIA_BUILD_DIR}/$(fx-get-qemu-kernel)" \
+  -z "${FUCHSIA_BUILD_DIR}/$(fx-get-zbi "netboot")" \
   "$@"

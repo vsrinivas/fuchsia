@@ -53,16 +53,7 @@ write_file(board_name_file, "${board_name}")
 ### Zircon Boot Images
 ###
 
-# Used to populate image_paths.sh with the right values to point to the QEMU kernel.
-group("qemu-kernel") {
-  metadata = {
-    image_paths = [ "IMAGE_QEMU_KERNEL_RAW=" +
-                    rebase_path(files.qemu_kernel, root_build_dir) ]
-  }
-  deps = [ labels.qemu_kernel ]
-}
-
-default_image_deps += [ ":qemu-kernel" ]
+default_image_deps += [ labels.qemu_kernel ]
 
 # This action runs a script that checks all vtables in fuchsia binaries are
 # in readonly data.
@@ -160,7 +151,6 @@ if (gpt_image != "") {
           type = "bin"
         },
       ]
-      image_paths = [ "IMAGE_GPT=gpt.bin" ]
     }
   }
 
@@ -314,12 +304,4 @@ group("default-images") {
   if (build_usb_installer) {
     deps += [ "//build/images/installer" ]
   }
-}
-
-generated_file("image_paths") {
-  testonly = true
-  outputs = [ "$root_build_dir/image_paths.sh" ]
-  output_conversion = "list lines"
-  data_keys = [ "image_paths" ]
-  deps = [ ":images" ]
 }

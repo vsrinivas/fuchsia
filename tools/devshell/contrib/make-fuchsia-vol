@@ -9,7 +9,7 @@
 ##   -include-keys add the keys from ~/.ssh/fuchsia_authorized_keys
 ##                 to the Zircon ZBI as authorized_keys
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/image_build_vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
 fx-config-read
 
@@ -34,7 +34,7 @@ if [ "${include_keys}" == 1 ]; then
     exit 1
   }
   fx-zbi -o "${FUCHSIA_BUILD_DIR}/fuchsia-extra-keys.zbi" \
-    "${FUCHSIA_BUILD_DIR}/${IMAGE_ZIRCONA_ZBI}" --replace \
+    "${FUCHSIA_BUILD_DIR}/$(fx-get-zbi zircon-a)" --replace \
     --entry "data/ssh/authorized_keys=${authkeys_path}"
 
   keys_args+=(--zbi "${FUCHSIA_BUILD_DIR}/fuchsia-extra-keys.zbi")

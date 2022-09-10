@@ -15,7 +15,6 @@ BT_FILE_DEPS=(
   "tools/devshell/lib/fx-flash.sh"
   "tools/devshell/lib/fx-optional-features.sh"
   "tools/devshell/lib/fx-remote.sh"
-  "tools/devshell/lib/image_build_vars.sh"
   "tools/devshell/lib/platform.sh"
   "tools/devshell/lib/vars.sh"
   "tools/devshell/lib/verify-default-keys.sh"

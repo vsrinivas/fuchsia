@@ -387,23 +387,6 @@ if (is_fuchsia) {
         },
       ]
 
-      # Declare the paths to the images.
-      image_paths = [
-        "IMAGE_DATA_RAW=${_rebased_files.minfs}",
-        "IMAGE_BLOB_RAW=${_rebased_files.blobfs}",
-        "IMAGE_ZIRCONA_ZBI=fuchsia.zbi",
-        "IMAGE_FVM_RAW=${_rebased_files.fvm}",
-        "IMAGE_FVM_SPARSE=${_rebased_files.fvm_sparse}",
-        "IMAGE_FVM_BLOB_SPARSE=${_rebased_files.fvm_blob_sparse}",
-
-        # TODO(mcgrathr): The complete ZBI can be used with a separate
-        # kernel too, the kernel image in it will just be ignored.  So
-        # just use the primary ZBI for this until all uses are
-        # converted to using the ZBI alone.  Then remove this as
-        # IMAGE_BOOT_RAM variable should no longer be in use.
-        "IMAGE_BOOT_RAM=fuchsia.zbi",
-      ]
-
       # Optionally add the signed images.
       if (custom_signing_script != "" || use_vboot) {
         images += [
@@ -424,7 +407,6 @@ if (is_fuchsia) {
             }
           },
         ]
-        image_paths += [ "IMAGE_ZIRCONA_SIGNEDZBI=fuchsia.zbi.signed" ]
       }
 
       # Optionally add the vbmeta image.
@@ -448,7 +430,6 @@ if (is_fuchsia) {
             }
           },
         ]
-        image_paths += [ "IMAGE_VBMETAA_RAW=fuchsia.vbmeta" ]
       }
 
       # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
@@ -480,7 +461,6 @@ if (is_fuchsia) {
             fastboot_flash = [ fvm_partition ]
           },
         ]
-        image_paths += [ "IMAGE_FVM_FASTBOOT=${_rebased_files.fvm_fastboot}" ]
       }
     }
   }
@@ -615,16 +595,6 @@ if (is_fuchsia) {
           path = "netboot.zbi"
           type = "zbi"
         },
-      ]
-      image_paths = [
-        "IMAGE_NETBOOT_ZBI=netboot.zbi",
-
-        # TODO(mcgrathr): The complete ZBI can be used with a separate kernel
-        # too, the kernel image in it will just be ignored.  So just use the
-        # primary ZBI for this until all uses are converted to using the ZBI
-        # alone.  Then remove this as IMAGE_BOOT_RAM variable should no
-        # longer be in use.
-        "IMAGE_NETBOOT_RAM=netboot.zbi",
       ]
     }
   }
