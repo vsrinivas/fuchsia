@@ -25,6 +25,17 @@ std::string FormatFloat(float input);
 std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
                                      SemanticsSource* semantics_source);
 
+// Returns true if the given node's parent 'contains all the same information'.
+// That is, returns true iff `parent_node`
+// - is not null,
+// - has a label, and
+// - has the same label as `node`, and
+// - is describable (in particular, it's not a container), and
+// - has no other children, and
+// - has a set of actions that is a superset of `node`'s.
+bool SameInformationAsParent(const fuchsia::accessibility::semantics::Node* node,
+                             const fuchsia::accessibility::semantics::Node* parent_node);
+
 // Returns a list of all container IDs that are ancestors of the given node,
 // sorted 'deepest-last'. Will not include the node itself.
 std::vector<const fuchsia::accessibility::semantics::Node*> GetContainerNodes(

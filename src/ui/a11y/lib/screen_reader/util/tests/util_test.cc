@@ -512,6 +512,149 @@ TEST(ScreenReaderUtilTest, GetNodesToExcludeDifferentActionsNoLabel) {
   }
 }
 
+TEST(ScreenReaderUtilTest, SameInformationAsParentLinearMotifPresent) {
+  const fuchsia::accessibility::semantics::Node root_node = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(0u);
+    *(node.mutable_child_ids()) = {1u, 2u};
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_1 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(1u);
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_2 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(2u);
+    *(node.mutable_child_ids()) = {3u};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_3 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(3u);
+    *(node.mutable_child_ids()) = {4u};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_4 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(4u);
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  // Nodes 2, 3, and 4 are all a part of the same linear motif, so calling
+  // SameInformationAsParent() on nodes 3 and 4 should return true.
+  EXPECT_FALSE(a11y::SameInformationAsParent(&node_2, &node_1));
+  EXPECT_TRUE(a11y::SameInformationAsParent(&node_3, &node_2));
+  EXPECT_TRUE(a11y::SameInformationAsParent(&node_4, &node_3));
+}
+
+TEST(ScreenReaderUtilTest, SameInformationAsParentDifferentLabels) {
+  const fuchsia::accessibility::semantics::Node node_1 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(1u);
+    *(node.mutable_child_ids()) = {2u};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_2 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(2u);
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("different label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  EXPECT_FALSE(a11y::SameInformationAsParent(&node_2, &node_1));
+}
+
+TEST(ScreenReaderUtilTest, SameInformationAsParentMultipleChildren) {
+  const fuchsia::accessibility::semantics::Node node_1 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(1u);
+    *(node.mutable_child_ids()) = {2u, 3u};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_2 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(2u);
+    *(node.mutable_child_ids()) = {};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_3 = [&node_2]() {
+    fuchsia::accessibility::semantics::Node node;
+    node_2.Clone(&node);
+    node.set_node_id(3u);
+    return node;
+  }();
+
+  EXPECT_FALSE(a11y::SameInformationAsParent(&node_2, &node_1));
+  EXPECT_FALSE(a11y::SameInformationAsParent(&node_3, &node_1));
+}
+
+TEST(ScreenReaderUtilTest, SameInformationAsParentDifferentActions) {
+  const fuchsia::accessibility::semantics::Node node_1 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(1u);
+    *(node.mutable_child_ids()) = {2u};
+    *(node.mutable_actions()) = {fuchsia::accessibility::semantics::Action::SECONDARY};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_2 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(2u);
+    *(node.mutable_child_ids()) = {3u};
+    *(node.mutable_actions()) = {fuchsia::accessibility::semantics::Action::DEFAULT,
+                                 fuchsia::accessibility::semantics::Action::SET_VALUE};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  const fuchsia::accessibility::semantics::Node node_3 = []() {
+    fuchsia::accessibility::semantics::Node node;
+    node.set_node_id(3u);
+    *(node.mutable_actions()) = {fuchsia::accessibility::semantics::Action::DEFAULT};
+    fuchsia::accessibility::semantics::Attributes attributes;
+    attributes.set_label("label");
+    node.set_attributes(std::move(attributes));
+    return node;
+  }();
+
+  EXPECT_FALSE(a11y::SameInformationAsParent(&node_2, &node_1));
+  EXPECT_TRUE(a11y::SameInformationAsParent(&node_3, &node_2));
+}
+
 TEST(ScreenReaderUtilTest, GetSliderValueRangeValueOnly) {
   fuchsia::accessibility::semantics::Node node;
   fuchsia::accessibility::semantics::States states;

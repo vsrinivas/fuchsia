@@ -74,16 +74,24 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                                                                  uint32_t node_id) const override;
 
   // |SemanticsSource|
-  const fuchsia::accessibility::semantics::Node* GetNextNode(zx_koid_t koid, uint32_t node_id,
-                                                             NodeFilter filter) const override;
+  const fuchsia::accessibility::semantics::Node* GetNextNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const override;
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetNextNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilterWithParent filter) const override;
 
   // |SemanticsSource|
   const fuchsia::accessibility::semantics::Node* GetParentNode(zx_koid_t koid,
                                                                uint32_t node_id) const override;
 
   // |SemanticsSource|
-  const fuchsia::accessibility::semantics::Node* GetPreviousNode(zx_koid_t koid, uint32_t node_id,
-                                                                 NodeFilter filter) const override;
+  const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const override;
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilterWithParent filter) const override;
 
   // |SemanticsSource|
   bool ViewHasVisibleVirtualkeyboard(zx_koid_t view_ref_koid) override;

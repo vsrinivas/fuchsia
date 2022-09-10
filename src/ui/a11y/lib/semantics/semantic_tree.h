@@ -92,21 +92,29 @@ class SemanticTree {
   }
 
   // Returns the node with |node_id|, nullptr otherwise.
-  const fuchsia::accessibility::semantics::Node* GetNode(const uint32_t node_id) const;
+  const fuchsia::accessibility::semantics::Node* GetNode(uint32_t node_id) const;
 
   // Returns the next node for which |filter| returns true (in depth first manner) from the node
   // with |node_id|, or nullptr if none exists.
-  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(const uint32_t node_id,
-                                                                     NodeFilter filter) const;
+  // Note: Currently O(N). TODO(fxbug.dev/109128): improve this.
+  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(uint32_t node_id,
+                                                                     a11y::NodeFilter filter) const;
+
+  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(
+      uint32_t node_id, a11y::NodeFilterWithParent filter) const;
 
   // Returns the previous node for which |filter| returns true (in depth first manner) from the node
   // with |node_id|, or nullptr if none exists.
-  virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(const uint32_t node_id,
-                                                                         NodeFilter filter) const;
+  // Note: Currently O(N). TODO(fxbug.dev/109128): improve this.
+  virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      uint32_t node_id, a11y::NodeFilter filter) const;
+
+  virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      uint32_t node_id, a11y::NodeFilterWithParent filter) const;
 
   // Returns the parent node of the node with |node_id| if found, nullptr otherwise.
-  virtual const fuchsia::accessibility::semantics::Node* GetParentNode(
-      const uint32_t node_id) const;
+  // Currently O(N). TODO(fxbug.dev/108397): improve this.
+  virtual const fuchsia::accessibility::semantics::Node* GetParentNode(uint32_t node_id) const;
 
   // Returns a SemanticTransform to transform node-local coordinates to
   // view logical space.

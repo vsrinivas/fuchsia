@@ -69,17 +69,24 @@ class MockSemanticsSource : public a11y::SemanticsSource {
   // |SemanticsSource|
   const fuchsia::accessibility::semantics::Node* GetSemanticNode(zx_koid_t koid,
                                                                  uint32_t node_id) const override;
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetNextNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const override;
 
   // |SemanticsSource|
-  const fuchsia::accessibility::semantics::Node* GetNextNode(zx_koid_t koid, uint32_t node_id,
-                                                             a11y::NodeFilter filter) const override;
+  const fuchsia::accessibility::semantics::Node* GetNextNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilterWithParent filter) const override;
 
   // |SemanticsSource|
   const fuchsia::accessibility::semantics::Node* GetParentNode(zx_koid_t koid,
                                                                uint32_t node_id) const override;
   // |SemanticsSource|
-  const fuchsia::accessibility::semantics::Node* GetPreviousNode(zx_koid_t koid, uint32_t node_id,
-                                                                 a11y::NodeFilter filter) const override;
+  const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const override;
+
+  // |SemanticsSource|
+  const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilterWithParent filter) const override;
 
   // Sets result of hit test on view corresponding to |koid|.
   void SetHitTestResult(zx_koid_t koid, fuchsia::accessibility::semantics::Hit hit_test_result);

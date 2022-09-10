@@ -9,6 +9,14 @@
 
 namespace a11y {
 using NodeFilter = fit::function<bool(const fuchsia::accessibility::semantics::Node*)>;
+
+// Same as NodeFilter, but takes a pointer to the node's parent along with the node.
+// This saves us a costly call to 'GetParentNode'.
+// TODO(fxbug.dev/108397) Cache parent nodes so that 'GetParentNode' is less costly.
+using NodeFilterWithParent =
+    fit::function<bool(const fuchsia::accessibility::semantics::Node* node,
+                       const fuchsia::accessibility::semantics::Node* parent)>;
+
 }  // namespace a11y
 
 #endif  // SRC_UI_A11Y_LIB_SEMANTICS_TYPEDEFS_H_

@@ -12,24 +12,44 @@ MockSemanticTree::MockSemanticTree() {
   next_node_called_on_ = UINT_MAX;
 }
 
-const fuchsia::accessibility::semantics::Node* MockSemanticTree::GetPreviousNode(
-    uint32_t node_id, a11y::NodeFilter filter) const {
+const fuchsia::accessibility::semantics::Node* MockSemanticTree::GetPreviousNodeImpl(
+    uint32_t node_id) const {
   auto* mock_semantic_tree_ptr = const_cast<MockSemanticTree*>(this);
   mock_semantic_tree_ptr->previous_node_called_on_ = node_id;
   mock_semantic_tree_ptr->get_previous_node_called_ = true;
   return previous_node_result_;
 }
 
+const fuchsia::accessibility::semantics::Node* MockSemanticTree::GetPreviousNode(
+    uint32_t node_id, a11y::NodeFilter filter) const {
+  return GetPreviousNodeImpl(node_id);
+}
+
+const fuchsia::accessibility::semantics::Node* MockSemanticTree::GetPreviousNode(
+    uint32_t node_id, a11y::NodeFilterWithParent filter) const {
+  return GetPreviousNodeImpl(node_id);
+}
+
 void MockSemanticTree::SetPreviousNode(fuchsia::accessibility::semantics::Node* node) {
   previous_node_result_ = node;
 }
 
-const fuchsia::accessibility::semantics::Node* MockSemanticTree::GetNextNode(
-    uint32_t node_id, a11y::NodeFilter filter) const {
+const fuchsia::accessibility::semantics::Node* MockSemanticTree::GetNextNodeImpl(
+    uint32_t node_id) const {
   auto* mock_semantic_tree_ptr = const_cast<MockSemanticTree*>(this);
   mock_semantic_tree_ptr->next_node_called_on_ = node_id;
   mock_semantic_tree_ptr->get_next_node_called_ = true;
   return next_node_result_;
+}
+
+const fuchsia::accessibility::semantics::Node* MockSemanticTree::GetNextNode(
+    uint32_t node_id, a11y::NodeFilter filter) const {
+  return GetNextNodeImpl(node_id);
+}
+
+const fuchsia::accessibility::semantics::Node* MockSemanticTree::GetNextNode(
+    uint32_t node_id, a11y::NodeFilterWithParent filter) const {
+  return GetNextNodeImpl(node_id);
 }
 
 void MockSemanticTree::SetNextNode(fuchsia::accessibility::semantics::Node* node) {

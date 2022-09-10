@@ -97,6 +97,17 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
   return it == nodes.end() ? nullptr : &(it->second);
 }
 
+const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetNextNode(
+    zx_koid_t koid, uint32_t node_id, a11y::NodeFilterWithParent filter) const {
+  FX_CHECK(!get_parent_node_should_fail_) << "Unsupported mock configuration";
+
+  return GetNextNode(koid, node_id,
+                     [this, koid, filter = std::move(filter)](
+                         const fuchsia::accessibility::semantics::Node* node) {
+                       return filter(node, GetParentNode(koid, node->node_id()));
+                     });
+}
+
 const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetPreviousNode(
     zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const {
   if (get_previous_node_should_fail_) {
@@ -124,6 +135,17 @@ const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetPreviousN
   }
 
   return nullptr;
+}
+
+const fuchsia::accessibility::semantics::Node* MockSemanticsSource::GetPreviousNode(
+    zx_koid_t koid, uint32_t node_id, a11y::NodeFilterWithParent filter) const {
+  FX_CHECK(!get_parent_node_should_fail_) << "Unsupported mock configuration";
+
+  return GetPreviousNode(koid, node_id,
+                         [this, koid, filter = std::move(filter)](
+                             const fuchsia::accessibility::semantics::Node* node) {
+                           return filter(node, GetParentNode(koid, node->node_id()));
+                         });
 }
 
 void MockSemanticsSource::SetHitTestResult(zx_koid_t koid,

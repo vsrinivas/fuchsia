@@ -43,18 +43,30 @@ class SemanticsSource {
       zx_koid_t koid, uint32_t node_id) const = 0;
 
   // Returns the parent of the node with id |node_id|. Returns nullptr if the
-  // intput node is the root.
+  // input node is the root.
+  // Currently O(N). TODO(fxbug.dev/108397): improve this.
   virtual const fuchsia::accessibility::semantics::Node* GetParentNode(zx_koid_t koid,
                                                                        uint32_t node_id) const = 0;
 
   // Returns the next node in traversal-order neighbors relative to the node with id |node_id|.
-  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(zx_koid_t koid,
-                                                                     uint32_t node_id,
-                                                                     NodeFilter filter) const = 0;
+  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const = 0;
+
+  // Returns the next node in traversal-order neighbors relative to the node with id |node_id|.
+  // This version provides both the node and its parent to the 'filter' function, for convenience.
+  virtual const fuchsia::accessibility::semantics::Node* GetNextNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilterWithParent filter) const = 0;
 
   // Returns the previous node in traversal-order neighbors relative to the node with id |node_id|.
+  // Note: Currently O(N). TODO(fxbug.dev/109128): improve this.
   virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(
-      zx_koid_t koid, uint32_t node_id, NodeFilter filter) const = 0;
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilter filter) const = 0;
+
+  // Returns the previous node in traversal-order neighbors relative to the node with id |node_id|.
+  // This version provides both the node and its parent to the 'filter' function, for convenience.
+  // Note: Currently O(N). TODO(fxbug.dev/109128): improve this.
+  virtual const fuchsia::accessibility::semantics::Node* GetPreviousNode(
+      zx_koid_t koid, uint32_t node_id, a11y::NodeFilterWithParent filter) const = 0;
 
   // Performs a hit test at the point specified by |local_point| within the view corresponding to
   // |koid|. If no such view is found, this function will return without attempting a hit test.

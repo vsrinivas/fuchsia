@@ -218,28 +218,40 @@ const Node* SemanticTree::GetNode(const uint32_t node_id) const {
   return &it->second;
 }
 
-const Node* SemanticTree::GetNextNode(const uint32_t node_id, NodeFilter filter) const {
+const Node* SemanticTree::GetNextNode(const uint32_t node_id, a11y::NodeFilter filter) const {
+  return GetNextNode(node_id, [&filter](const fuchsia::accessibility::semantics::Node* node,
+                                        const fuchsia::accessibility::semantics::Node* parent) {
+    return filter(node);
+  });
+}
+
+const Node* SemanticTree::GetNextNode(const uint32_t node_id,
+                                      a11y::NodeFilterWithParent filter) const {
   if (nodes_.find(node_id) == nodes_.end()) {
     return nullptr;
   }
 
-  std::stack<uint32_t> nodes_to_visit;
+  // <node's ID, parent's ID>
+  // We keep track of the node's parent's ID just so that we can pass it to `filter`.
+  std::stack<std::pair<uint32_t, std::optional<uint32_t>>> nodes_to_visit;
 
   bool found_node = false;
 
   // Start traversal from the root node.
-  nodes_to_visit.push(kRootNodeId);
+  nodes_to_visit.emplace(kRootNodeId, std::nullopt);
 
   while (!nodes_to_visit.empty()) {
-    auto current_node_id = nodes_to_visit.top();
+    auto current_node_id = nodes_to_visit.top().first;
+    auto parent_node_id = nodes_to_visit.top().second;
     nodes_to_visit.pop();
 
     FX_DCHECK(nodes_.find(current_node_id) != nodes_.end())
         << "Nonexistent node id " << current_node_id << " encountered in tree traversal.";
 
     auto current_node = GetNode(current_node_id);
+    auto parent_node = parent_node_id.has_value() ? GetNode(*parent_node_id) : nullptr;
 
-    if (found_node && filter(current_node)) {
+    if (found_node && filter(current_node, parent_node)) {
       return current_node;
     }
 
@@ -255,27 +267,38 @@ const Node* SemanticTree::GetNextNode(const uint32_t node_id, NodeFilter filter)
     for (auto reverse_iterator = current_node->child_ids().rbegin();
          reverse_iterator != current_node->child_ids().rend(); ++reverse_iterator) {
       const auto child_id = *reverse_iterator;
-      nodes_to_visit.push(child_id);
+      nodes_to_visit.emplace(child_id, current_node_id);
     }
   }
 
   return nullptr;
 }
 
-const Node* SemanticTree::GetPreviousNode(const uint32_t node_id, NodeFilter filter) const {
+const Node* SemanticTree::GetPreviousNode(const uint32_t node_id, a11y::NodeFilter filter) const {
+  return GetPreviousNode(node_id, [&filter](const fuchsia::accessibility::semantics::Node* node,
+                                            const fuchsia::accessibility::semantics::Node* parent) {
+    return filter(node);
+  });
+}
+
+const Node* SemanticTree::GetPreviousNode(const uint32_t node_id,
+                                          a11y::NodeFilterWithParent filter) const {
   if (nodes_.find(node_id) == nodes_.end()) {
     return nullptr;
   }
 
-  std::stack<uint32_t> nodes_to_visit;
+  // <node's ID, parent's ID>
+  // We keep track of the node's parent's ID just so that we can pass it to `filter`.
+  std::stack<std::pair<uint32_t, std::optional<uint32_t>>> nodes_to_visit;
 
   // Start traversal from the root node.
-  nodes_to_visit.push(kRootNodeId);
+  nodes_to_visit.emplace(kRootNodeId, kRootNodeId);
 
   const Node* previous_returnable_node = nullptr;
 
   while (!nodes_to_visit.empty()) {
-    auto current_node_id = nodes_to_visit.top();
+    auto current_node_id = nodes_to_visit.top().first;
+    auto parent_node_id = nodes_to_visit.top().second;
     nodes_to_visit.pop();
 
     if (current_node_id == node_id) {
@@ -286,8 +309,9 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id, NodeFilter fil
         << "Nonexistent node id " << current_node_id << " encountered in tree traversal.";
 
     auto current_node = GetNode(current_node_id);
+    auto parent_node = parent_node_id.has_value() ? GetNode(*parent_node_id) : nullptr;
 
-    if (filter(current_node)) {
+    if (filter(current_node, parent_node)) {
       previous_returnable_node = current_node;
     }
 
@@ -299,7 +323,7 @@ const Node* SemanticTree::GetPreviousNode(const uint32_t node_id, NodeFilter fil
     for (auto reverse_iterator = current_node->child_ids().rbegin();
          reverse_iterator != current_node->child_ids().rend(); ++reverse_iterator) {
       const auto child_id = *reverse_iterator;
-      nodes_to_visit.push(child_id);
+      nodes_to_visit.emplace(child_id, current_node_id);
     }
   }
 

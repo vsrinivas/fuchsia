@@ -224,6 +224,42 @@ std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
   return nodes_to_exclude;
 }
 
+bool SameInformationAsParent(const fuchsia::accessibility::semantics::Node* node,
+                             const fuchsia::accessibility::semantics::Node* parent_node) {
+  FX_DCHECK(node) << "Node should not be null";
+
+  if (!parent_node) {
+    return false;
+  }
+
+  if (!node->has_attributes() || !node->attributes().has_label() ||
+      node->attributes().label().empty()) {
+    return false;
+  }
+  if (!parent_node->has_attributes() || !parent_node->attributes().has_label() ||
+      parent_node->attributes().label().empty()) {
+    return false;
+  }
+
+  if (node->attributes().label() != parent_node->attributes().label()) {
+    return false;
+  }
+
+  if (!NodeIsDescribable(parent_node)) {
+    return false;
+  }
+
+  if (parent_node->has_child_ids() && parent_node->child_ids().size() != 1) {
+    return false;
+  }
+
+  if (!NodeHasSubsetOfActions(node, parent_node)) {
+    return false;
+  }
+
+  return true;
+}
+
 bool NodeIsSlider(const fuchsia::accessibility::semantics::Node* node) {
   FX_DCHECK(node);
 
