@@ -55,14 +55,17 @@ fpromise::result<uint32_t> ExploreAction::SelectDescribableNodePromise(zx_koid_t
   }
 
   auto node_to_return = hit_test_result_node;
-  while (node_to_return && !NodeIsDescribable(node_to_return)) {
+  while (node_to_return) {
     FX_DCHECK(node_to_return->has_node_id());
-    node_to_return =
+    auto node_parent =
         action_context_->semantics_source->GetParentNode(view_koid, node_to_return->node_id());
-  }
 
-  if (node_to_return && node_to_return->has_node_id()) {
-    return fpromise::ok(node_to_return->node_id());
+    if (NodeIsDescribable(node_to_return) &&
+        !SameInformationAsParent(node_to_return, node_parent)) {
+      return fpromise::ok(node_to_return->node_id());
+    }
+
+    node_to_return = node_parent;
   }
 
   FX_LOGS(WARNING) << "No describable ancestor found for node " << hit_test_result_node->node_id();

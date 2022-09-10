@@ -190,6 +190,48 @@ TEST_F(ExploreActionTest, HitTestNodeNotDescribable) {
   EXPECT_EQ(mock_speaker()->node_ids()[0], 0u);
 }
 
+TEST_F(ExploreActionTest, IgnoresRedundantNodes) {
+  Node root_node = CreateTestNode(0u, "root");
+  root_node.set_child_ids({1u});
+
+  Node node_1 = CreateTestNode(1u, "repeated node");
+  node_1.set_child_ids({2u});
+
+  Node node_2 = CreateTestNode(2u, "repeated node");
+  node_2.set_child_ids({3u});
+
+  Node node_3 = CreateTestNode(3u, "repeated node");
+
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(),
+                                              std::move(root_node));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node_1));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node_2));
+  mock_semantics_source()->CreateSemanticNode(mock_semantic_provider()->koid(), std::move(node_3));
+
+  // Hit node_3.
+  a11y::ExploreAction explore_action(action_context(), mock_screen_reader_context());
+  a11y::GestureContext gesture_context;
+  gesture_context.view_ref_koid = mock_semantic_provider()->koid();
+  // Note that x and y are set just for completeness of the data type. the semantic provider is
+  // responsible for returning what was the hit based on these numbers.
+  gesture_context.current_pointer_locations[0].local_point.x = 10;
+  gesture_context.current_pointer_locations[0].local_point.y = 10;
+
+  // Set hit test result.
+  fuchsia::accessibility::semantics::Hit hit;
+  hit.set_node_id(3u);
+  mock_semantics_source()->SetHitTestResult(mock_semantic_provider()->koid(), std::move(hit));
+
+  explore_action.Run(gesture_context);
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_a11y_focus_manager()->IsSetA11yFocusCalled());
+  EXPECT_TRUE(mock_speaker()->ReceivedSpeak());
+  ASSERT_EQ(mock_speaker()->node_ids().size(), 1u);
+  // We walk up to node 1 because nodes 2 and 3 are rendundant.
+  EXPECT_EQ(mock_speaker()->node_ids()[0], 1u);
+}
+
 TEST_F(ExploreActionTest, ContinuousExploreSpeaksNodeWhenA11yFocusIsDifferent) {
   a11y::ExploreAction explore_action(action_context(), mock_screen_reader_context());
   a11y::GestureContext gesture_context;
