@@ -351,11 +351,14 @@ void NetdeviceMigration::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_lis
           auto* netdev = static_cast<NetdeviceMigration*>(ctx);
           Netbuf op(netbuf, netdev->netbuf_size_);
           result.id = *(op.private_storage());
-          netdev->netdevice_.CompleteTx(&result, 1);
+          // Return the buffers to the netbuf_pool before signalling that the transaction is
+          // complete. This ensures that if the netbuf_pool was empty, we can handle requests
+          // that arrive immediately after.
           {
             std::lock_guard tx_lock(netdev->tx_lock_);
             netdev->netbuf_pool_.push(std::move(op));
           }
+          netdev->netdevice_.CompleteTx(&result, 1);
         },
         this);
   }
