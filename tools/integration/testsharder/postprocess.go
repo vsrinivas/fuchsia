@@ -47,14 +47,6 @@ const (
 	expectedDurationTagKey = "expected_duration_milliseconds"
 )
 
-// MultiplyShards will return an error that unwraps to this if a multiplier's
-// "name" field does not compile to a valid regex.
-var errInvalidMultiplierRegex = fmt.Errorf("invalid multiplier regex")
-
-// MultiplyShards will return an error that unwraps to this if a multiplier
-// matches too many tests.
-var errTooManyMultiplierMatches = fmt.Errorf("a multiplier cannot match more than %d tests", maxMatchesPerMultiplier)
-
 // ApplyModifiers will return an error that unwraps to this if multiple default
 // test modifiers are provided.
 var errMultipleDefaultModifiers = fmt.Errorf("too many default modifiers, only one is allowed")
@@ -115,112 +107,91 @@ func envsEqual(env1, env2 build.Environment) bool {
 	return environmentName(env1) == environmentName(env2)
 }
 
-// MultiplyShards appends new shards to shards where each new shard contains one test
-// repeated multiple times according to the specifications in multipliers.
+// SplitOutMultipliers appends new shards to shards where each new shard contains one test
+// repeated multiple times according to the TotalRuns for the test. Multiplier modifiers
+// should already be applied to the shards beforehand using ApplyModifiers().
 // It also removes all multiplied tests from the input shards.
-func MultiplyShards(
+func SplitOutMultipliers(
 	ctx context.Context,
 	shards []*Shard,
-	multipliers []ModifierMatch,
 	testDurations TestDurationsMap,
 	// TODO(olivernewman): Use the adjusted target duration calculated by
 	// WithTargetDuration instead of the original target duration.
 	targetDuration time.Duration,
 	targetTestCount int,
 ) []*Shard {
-	for _, multiplier := range multipliers {
-		if multiplier.Modifier.TotalRuns < 0 {
-			continue
-		}
-		type multiplierMatch struct {
-			shardIdx int
-			test     Test
-			testIdx  int
-		}
-		var matches []*multiplierMatch
+	shardIdxToMatches := make([]map[int]struct{}, len(shards))
 
-		for si, shard := range shards {
-			for ti, test := range shard.Tests {
-				// An empty environment matches all environments.
-				if !envsEqual(multiplier.Env, build.Environment{}) && !envsEqual(multiplier.Env, shard.Env) {
-					continue
-				}
-
-				match := &multiplierMatch{shardIdx: si, test: test, testIdx: ti}
-				if multiplier.Test == test.Name {
-					matches = append(matches, match)
-				} else {
-					continue
-				}
-
-				if multiplier.Modifier.TotalRuns > 0 {
-					match.test.Runs = multiplier.Modifier.TotalRuns
-				} else if targetDuration > 0 {
+	for si, shard := range shards {
+		shardIdxToMatches[si] = make(map[int]struct{})
+		for ti, test := range shard.Tests {
+			if test.RunAlgorithm != StopOnFailure {
+				continue
+			}
+			if test.Runs == 0 {
+				if targetDuration > 0 {
 					// We both cap the number of runs and apply a safety factor because
 					// we want to keep the total runs to a reasonable number
 					// in case the test takes longer than expected. We're conservative because
 					// if a shard exceeds its timeout, it's really painful for users.
 					expectedDuration := testDurations.Get(test).MedianDuration
-					match.test.Runs = min(
+					test.Runs = min(
 						int(float64(targetDuration)/float64(expectedDuration)),
 						multipliedTestMaxRuns,
 					)
-					if match.test.Runs == 0 {
+					if test.Runs == 0 {
 						// In the case where the TotalRuns is not set and the targetDuration is
 						// less than the expectedDuration, the calculated runs will be 0, but we
 						// still want to run the test so we should set the runs to 1.
-						match.test.Runs = 1
+						test.Runs = 1
 					}
 				} else if targetTestCount > 0 {
-					match.test.Runs = targetTestCount
+					test.Runs = min(targetTestCount, multipliedTestMaxRuns)
 				} else {
-					match.test.Runs = 1
+					test.Runs = 1
 				}
-				match.test.RunAlgorithm = StopOnFailure
-				match.test.StopRepeatingAfterSecs = int(targetDuration.Seconds())
 			}
+			test.StopRepeatingAfterSecs = int(targetDuration.Seconds())
+			shard.Tests[ti] = test
+			shardIdxToMatches[si][ti] = struct{}{}
 		}
+	}
 
-		shardIdxToTestIdx := make([][]int, len(shards))
-		for _, m := range matches {
+	for si := len(shards) - 1; si >= 0; si-- {
+		shard := shards[si]
+		matches := shardIdxToMatches[si]
+		// Remove the multiplied tests from the other shard. It's wasteful to run it in
+		// different shards.
+		// If entire shard is empty (every test is matched to a multiplier), remove it.
+		shardRemoved := false
+		if len(matches) == len(shard.Tests) {
+			copy(shards[si:], shards[si+1:])
+			shards = shards[:len(shards)-1]
+			shardRemoved = true
+		}
+		for ti := len(shard.Tests) - 1; ti >= 0; ti-- {
+			if _, ok := matches[ti]; !ok {
+				// If there is no match associated with this test,
+				// leave it in the original shard and don't multiply.
+				continue
+			}
+			test := shard.Tests[ti]
 			// If a test is multiplied, it doesn't matter if it was originally
 			// in an affected shard or not and it's confusing for it to have
 			// two prefixes. So don't include the "affected" prefix.
-			shardName := strings.TrimPrefix(shards[m.shardIdx].Name, AffectedShardPrefix)
-			// If the test was already multiplied by another modifier, keep the same
-			// multiplier shard but prefer the lower number of runs.
-			alreadyMultiplied := strings.HasPrefix(shardName, MultipliedShardPrefix)
-			if alreadyMultiplied {
-				test := shards[m.shardIdx].Tests[m.testIdx]
-				shards[m.shardIdx].Tests[m.testIdx].Runs = min(test.Runs, m.test.Runs)
-			} else {
-				shards = append(shards, &Shard{
-					Name:  MultipliedShardPrefix + shardName + "-" + normalizeTestName(m.test.Name),
-					Tests: []Test{m.test},
-					Env:   shards[m.shardIdx].Env,
-				})
-				shardIdxToTestIdx[m.shardIdx] = append(shardIdxToTestIdx[m.shardIdx], m.testIdx)
-			}
-		}
-		// Remove the multiplied tests from the other shard. It's wasteful to run it in
-		// different shards.
-		shrunkShards := 0
-		for si, tis := range shardIdxToTestIdx {
-			shard := shards[si-shrunkShards]
-			// If entire shard is empty, remove it.
-			if len(tis) == len(shard.Tests) {
-				copy(shards[si-shrunkShards:], shards[si-shrunkShards+1:])
-				shards = shards[:len(shards)-1]
-				shrunkShards++
+			shardName := strings.TrimPrefix(shard.Name, AffectedShardPrefix)
+			shards = append(shards, &Shard{
+				Name:  MultipliedShardPrefix + shardName + "-" + normalizeTestName(test.Name),
+				Tests: []Test{test},
+				Env:   shard.Env,
+			})
+			if shardRemoved {
 				continue
 			}
 			// Remove individual tests from the shard.
-			shrunk := 0
-			for _, ti := range tis {
-				copy(shard.Tests[ti-shrunk:], shard.Tests[ti-shrunk+1:])
-				shard.Tests = shard.Tests[:len(shard.Tests)-1]
-				shrunk++
-			}
+			copy(shard.Tests[ti:], shard.Tests[ti+1:])
+			shard.Tests = shard.Tests[:len(shard.Tests)-1]
+
 		}
 	}
 
@@ -247,13 +218,14 @@ func AddExpectedDurationTags(shards []*Shard, testDurations TestDurationsMap) []
 
 // ApplyModifiers applies the given test modifiers to tests in the given shards.
 func ApplyModifiers(shards []*Shard, modMatches []ModifierMatch) ([]*Shard, error) {
-	defaultModMatch := ModifierMatch{Modifier: TestModifier{}}
+	defaultModMatch := ModifierMatch{Modifier: TestModifier{TotalRuns: -1}}
 	modsPerEnv := make(map[string]ModifierMatch)
 	for _, modMatch := range modMatches {
 		if modMatch.Test == "" {
 			if _, ok := modsPerEnv[environmentName(modMatch.Env)]; ok {
 				return nil, errMultipleDefaultModifiers
 			}
+			modMatch.Modifier.TotalRuns = -1
 			modsPerEnv[environmentName(modMatch.Env)] = modMatch
 		}
 	}
@@ -335,6 +307,13 @@ func MarkShardsSkipped(shards []*Shard) ([]*Shard, error) {
 		})
 	}
 	return newShards, nil
+}
+
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func min(a, b int) int {

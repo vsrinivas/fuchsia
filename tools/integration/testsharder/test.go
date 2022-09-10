@@ -55,12 +55,21 @@ type Test struct {
 }
 
 func (t *Test) applyModifier(m TestModifier) {
-	if m.MaxAttempts > 0 {
+	// Only apply MaxAttempts if the test is not already set to be multiplied.
+	if m.MaxAttempts > 0 && t.RunAlgorithm != StopOnFailure {
 		t.Runs = m.MaxAttempts
-		if t.Runs > 1 {
-			t.RunAlgorithm = StopOnSuccess
+		t.RunAlgorithm = StopOnSuccess
+	}
+	if m.TotalRuns >= 0 {
+		if t.RunAlgorithm == StopOnFailure {
+			numRuns := min(t.Runs, m.TotalRuns)
+			if numRuns <= 0 {
+				numRuns = max(t.Runs, m.TotalRuns)
+			}
+			t.Runs = numRuns
 		} else {
-			t.RunAlgorithm = ""
+			t.Runs = m.TotalRuns
+			t.RunAlgorithm = StopOnFailure
 		}
 	}
 	if m.Affected {
@@ -70,7 +79,7 @@ func (t *Test) applyModifier(m TestModifier) {
 
 func (t *Test) minRequiredRuns() int {
 	if t.RunAlgorithm == KeepGoing || t.RunAlgorithm == StopOnFailure {
-		return t.Runs
+		return max(t.Runs, 1)
 	}
 	return 1
 }

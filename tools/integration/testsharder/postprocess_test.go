@@ -34,7 +34,7 @@ func affectedShard(env build.Environment, os string, ids ...int) *Shard {
 	}
 }
 
-func TestMultiplyShards(t *testing.T) {
+func TestSplitOutMultipliers(t *testing.T) {
 	env1 := build.Environment{
 		Dimensions: build.DimensionSet{DeviceType: "QEMU"},
 		Tags:       []string{},
@@ -101,8 +101,8 @@ func TestMultiplyShards(t *testing.T) {
 				makeModifierMatch(1, build.Environment{}, 5),
 			},
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 5, 0),
 				multShard(env2, "fuchsia", 1, 5, 0),
+				multShard(env1, "fuchsia", 1, 5, 0),
 			},
 		},
 		{
@@ -120,9 +120,9 @@ func TestMultiplyShards(t *testing.T) {
 			expected: []*Shard{
 				shard(env2, "fuchsia", 2, 4),
 				// We multiplied the test with id 1 five times from the first two shards.
-				multShard(env1, "fuchsia", 1, 5, 0),
-				multShard(env2, "fuchsia", 1, 5, 0),
 				multShard(env3, "linux", 3, 3, 0),
+				multShard(env2, "fuchsia", 1, 5, 0),
+				multShard(env1, "fuchsia", 1, 5, 0),
 			},
 		},
 		{
@@ -244,10 +244,13 @@ func TestMultiplyShards(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actual := MultiplyShards(
+			shards, err := ApplyModifiers(tc.shards, tc.multipliers)
+			if err != nil {
+				t.Fatalf("got unexpected error: %s", err)
+			}
+			actual := SplitOutMultipliers(
 				context.Background(),
-				tc.shards,
-				tc.multipliers,
+				shards,
 				tc.testDurations,
 				tc.targetDuration,
 				tc.targetTestCount,
@@ -338,6 +341,7 @@ func TestApplyModifiers(t *testing.T) {
 			Env:  env,
 			Modifier: TestModifier{
 				Affected:    affected,
+				TotalRuns:   -1,
 				MaxAttempts: maxAttempts,
 			},
 		}
@@ -390,8 +394,8 @@ func TestApplyModifiers(t *testing.T) {
 				shard(env2, "linux", 1, 2, 3),
 			},
 			modifiers: []ModifierMatch{
-				{Modifier: TestModifier{Name: "*", Affected: true}},
-				{Modifier: TestModifier{Name: "*", Affected: true}},
+				{Modifier: TestModifier{Name: "*", TotalRuns: -1, Affected: true}},
+				{Modifier: TestModifier{Name: "*", TotalRuns: -1, Affected: true}},
 			},
 			err: errMultipleDefaultModifiers,
 		},
@@ -620,13 +624,6 @@ func TestMarkShardsSkipped(t *testing.T) {
 			assertEqual(t, tc.expected, got)
 		})
 	}
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
 
 // assertShardsContainTests checks that the input shards are the same as

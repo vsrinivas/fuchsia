@@ -22,6 +22,14 @@ const (
 	x64     = "x64"
 )
 
+// matchModifiersToTests will return an error that unwraps to this if a multiplier's
+// "name" field does not compile to a valid regex.
+var errInvalidMultiplierRegex = fmt.Errorf("invalid multiplier regex")
+
+// matchModifiersToTests will return an error that unwraps to this if a multiplier
+// matches too many tests.
+var errTooManyMultiplierMatches = fmt.Errorf("a multiplier cannot match more than %d tests", maxMatchesPerMultiplier)
+
 // TestModifier is the specification for a single test and the number of
 // times it should be run.
 type TestModifier struct {
@@ -112,8 +120,10 @@ func AffectedModifiers(testSpecs []build.TestSpec, affectedTestsPath string, max
 				continue
 			}
 			// Only x64 Linux VMs are plentiful, don't multiply affected tests that
-			// would require any other type of bot.
-			if spec.CPU != x64 || (spec.OS != fuchsia && spec.OS != linux) {
+			// would require any other type of bot. Also, don't multiply isolated tests
+			// because they are expected to be the only test running in its shard and
+			// should only run once.
+			if spec.CPU != x64 || (spec.OS != fuchsia && spec.OS != linux) || spec.Isolated {
 				ret = append(ret, ModifierMatch{
 					Test: name,
 					Modifier: TestModifier{

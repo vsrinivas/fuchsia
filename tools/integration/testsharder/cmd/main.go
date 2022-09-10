@@ -185,7 +185,10 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		return err
 	}
 
-	shards = testsharder.MultiplyShards(ctx, shards, modifiers, testDurations, targetDuration, flags.targetTestCount)
+	// At this point, each test in each shard should be updated to tell
+	// whether they are affected and whether they should be multiplied with
+	// the max number of runs to run.
+	shards = testsharder.SplitOutMultipliers(ctx, shards, testDurations, targetDuration, flags.targetTestCount)
 
 	// Remove the multiplied shards from the set of shards to analyze for
 	// affected tests, as we want to run these shards regardless of whether
