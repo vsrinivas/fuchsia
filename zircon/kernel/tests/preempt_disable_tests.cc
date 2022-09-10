@@ -567,14 +567,20 @@ static bool test_evaluate_timeslice_extension() {
   }
   ASSERT_TRUE(preemption_state.PreemptIsEnabled());
 
-  static constexpr zx_duration_t kEpsilon = ZX_MSEC(1);
+  // In the tests below, the current thread will defer preemption for
+  // kEpsilonDuration and sleep for kEpsilonDuration.  The only requirement for
+  // correctness is that this value is greater than zero.  We use the value 1 to
+  // minimize test runtime.
+  static constexpr zx_duration_t kEpsilonDuration = 1;
 
   // See that the timeslice extension expires.
   {
-    AutoExpiringPreemptDisabler guard(kEpsilon);
-    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    AutoExpiringPreemptDisabler guard(kEpsilonDuration);
+    // Note, we cannot reliably assert that preemption is disabled at this point
+    // because a preemption request may have already occurred and
+    // kEpsilonDuration may have already elapsed.
     Thread::Current::Reschedule();
-    Thread::Current::SleepRelative(kEpsilon);
+    Thread::Current::SleepRelative(kEpsilonDuration);
     EXPECT_TRUE(preemption_state.EvaluateTimesliceExtension());
     EXPECT_TRUE(preemption_state.PreemptIsEnabled());
   }
@@ -582,11 +588,11 @@ static bool test_evaluate_timeslice_extension() {
 
   // AutoPreemptDisabler inside an expired AutoExpiringPreemptDisabler.
   {
-    AutoExpiringPreemptDisabler guard1(kEpsilon);
+    AutoExpiringPreemptDisabler guard1(kEpsilonDuration);
     AutoPreemptDisabler guard2;
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
     Thread::Current::Reschedule();
-    Thread::Current::SleepRelative(kEpsilon);
+    Thread::Current::SleepRelative(kEpsilonDuration);
     EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
     // Still false because of the APD.
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
@@ -595,11 +601,11 @@ static bool test_evaluate_timeslice_extension() {
 
   // AutoEagerReschedDisabler inside an expired AutoExpiringPreemptDisabler.
   {
-    AutoExpiringPreemptDisabler guard1(kEpsilon);
+    AutoExpiringPreemptDisabler guard1(kEpsilonDuration);
     AutoEagerReschedDisabler guard2;
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
     Thread::Current::Reschedule();
-    Thread::Current::SleepRelative(kEpsilon);
+    Thread::Current::SleepRelative(kEpsilonDuration);
     EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
     // Still false because of the AERD.
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
