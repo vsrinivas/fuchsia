@@ -179,8 +179,7 @@ template("zircon_toolchain") {
     if (cxx_rbe_exec_strategy == "remote") {
       compiler_prefix += " --exec_strategy=remote"
     } else if (cxx_rbe_exec_strategy == "remote_local_fallback") {
-      compiler_prefix +=
-          " --exec_strategy=remote_local_fallback --remote_update_cache=false"
+      compiler_prefix += " --exec_strategy=remote_local_fallback"
     } else if (cxx_rbe_exec_strategy == "local") {
       compiler_prefix += " --exec_strategy=local --remote_update_cache=false"
     } else if (cxx_rbe_exec_strategy == "racing") {
