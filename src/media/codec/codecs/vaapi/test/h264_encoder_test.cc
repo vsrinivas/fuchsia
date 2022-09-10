@@ -359,8 +359,8 @@ TEST(H264Encoder, Init) {
     CodecRunnerApp<NoAdapter, CodecAdapterVaApiEncoder> runner_app;
     runner_app.Init();
     fidl::InterfaceHandle<fuchsia::io::Directory> outgoing_directory;
-    EXPECT_EQ(ZX_OK, runner_app.component_context()->outgoing()->Serve(
-                         outgoing_directory.NewRequest().TakeChannel()));
+    EXPECT_EQ(ZX_OK,
+              runner_app.component_context()->outgoing()->Serve(outgoing_directory.NewRequest()));
     EXPECT_EQ(ZX_OK, fdio_service_connect_at(outgoing_directory.channel().get(), "svc",
                                              directory_request.TakeChannel().release()));
     runner_app.Run();

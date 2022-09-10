@@ -65,15 +65,18 @@ class ComponentContext final {
   explicit ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                             async_dispatcher_t* dispatcher = nullptr);
 
+#if __Fuchsia_API_level__ < 10
+  ComponentContext(std::shared_ptr<ServiceDirectory> svc, zx::channel outgoing_directory_request,
+                   async_dispatcher_t* dispatcher = nullptr);
+#else
   // Creates a component context that uses |svc| for incoming services and immediately
   // binds the local outgoing directory implementation to |outgoing_directory_request|. Callers
   // SHOULD make all modifications to |outgoing()| before |dispatcher| starts processing incoming
   // requests. Exceptions to this guideline are rare.
-  ComponentContext(std::shared_ptr<ServiceDirectory> svc, zx::channel outgoing_directory_request,
-                   async_dispatcher_t* dispatcher = nullptr);
   ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                    fidl::InterfaceRequest<fuchsia::io::Directory> outgoing_directory_request,
                    async_dispatcher_t* dispatcher = nullptr);
+#endif
 
   ~ComponentContext();
 

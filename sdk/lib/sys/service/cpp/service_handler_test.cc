@@ -38,7 +38,7 @@ TEST(ServiceHandlerTest, ConnectAndInvoke) {
   ASSERT_EQ(ZX_OK, status);
 
   fidl::InterfaceHandle<fuchsia::io::Directory> root;
-  status = outgoing.Serve(root.NewRequest().TakeChannel(), loop.dispatcher());
+  status = outgoing.Serve(root.NewRequest(), loop.dispatcher());
   ASSERT_EQ(ZX_OK, status);
 
   // Setup client.

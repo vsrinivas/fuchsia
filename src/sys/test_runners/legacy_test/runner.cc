@@ -137,7 +137,7 @@ void Runner::Start(
 
   auto test_component = std::make_unique<TestComponent>(
       TestComponentArgs{.legacy_url = std::move(args.legacy_url),
-                        .outgoing_dir = start_info.mutable_outgoing_dir()->TakeChannel(),
+                        .outgoing_dir = std::move(*start_info.mutable_outgoing_dir()),
                         .parent_env = std::move(env_proxy),
                         .parent_env_svc = std::move(env_svc),
                         .test_component_svc = std::move(args.test_component_svc),

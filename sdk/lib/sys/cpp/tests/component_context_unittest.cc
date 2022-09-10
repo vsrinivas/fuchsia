@@ -14,14 +14,9 @@
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 class ComponentContextTest : public gtest::RealLoopFixture {
- public:
-  void SetUp() override {
-    ASSERT_EQ(ZX_OK, zx::channel::create(0, &outgoing_client_, &outgoing_server_));
-  }
-
  protected:
   void QueryEcho() {
-    fdio_service_connect_at(outgoing_client_.get(), "svc/test.placeholders.Echo",
+    fdio_service_connect_at(outgoing_client_.channel().get(), "svc/test.placeholders.Echo",
                             echo_client_.NewRequest(dispatcher()).TakeChannel().release());
 
     echo_client_->EchoString("hello", [this](fidl::StringPtr value) { echo_result_ = *value; });
@@ -31,8 +26,7 @@ class ComponentContextTest : public gtest::RealLoopFixture {
     ASSERT_EQ(ZX_OK, context_->outgoing()->AddPublicService(echo_impl_.GetHandler(dispatcher())));
   }
 
-  zx::channel outgoing_client_;
-  zx::channel outgoing_server_;
+  fidl::InterfaceHandle<fuchsia::io::Directory> outgoing_client_;
   std::unique_ptr<sys::ComponentContext> context_;
 
   EchoImpl echo_impl_;
@@ -41,13 +35,15 @@ class ComponentContextTest : public gtest::RealLoopFixture {
 };
 
 TEST_F(ComponentContextTest, ServeInConstructor) {
+  fidl::InterfaceRequest request = outgoing_client_.NewRequest();
+  
   // Try connecting to a service and call it before it's published.
   QueryEcho();
 
   // Starts serving outgoing directory immediately. Will process Echo request
   // the next time async loop will run.
   context_ = std::make_unique<sys::ComponentContext>(sys::ServiceDirectory::CreateFromNamespace(),
-                                                     std::move(outgoing_server_));
+                                                     std::move(request));
 
   // Now publish the service. It's not too late as long as the run loop hasn't
   // run after ComponentContext creation.
@@ -60,6 +56,8 @@ TEST_F(ComponentContextTest, ServeInConstructor) {
 }
 
 TEST_F(ComponentContextTest, DelayedServe) {
+  fidl::InterfaceRequest request = outgoing_client_.NewRequest();
+  
   // Doesn't start serving outgoing directory.
   context_ = std::make_unique<sys::ComponentContext>(sys::ServiceDirectory::CreateFromNamespace());
 
@@ -69,7 +67,7 @@ TEST_F(ComponentContextTest, DelayedServe) {
 
   // Now publish the service and start serving the directory.
   PublishEcho();
-  context_->outgoing()->Serve(std::move(outgoing_server_));
+  context_->outgoing()->Serve(std::move(request));
 
   RunLoopUntilIdle();
 

@@ -22,7 +22,7 @@ using ComponentController = fuchsia::component::runner::ComponentController;
 
 struct TestComponentArgs {
   std::string legacy_url;
-  zx::channel outgoing_dir;
+  fidl::InterfaceRequest<fuchsia::io::Directory> outgoing_dir;
   fuchsia::sys::EnvironmentPtr parent_env;
   std::shared_ptr<sys::ServiceDirectory> parent_env_svc;
   std::shared_ptr<sys::ServiceDirectory> test_component_svc;

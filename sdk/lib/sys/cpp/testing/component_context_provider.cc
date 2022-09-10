@@ -17,9 +17,14 @@ ComponentContextProvider::ComponentContextProvider(async_dispatcher_t* dispatche
   // remove this handle from namespace so that no one is using it.
   zx_take_startup_handle(PA_DIRECTORY_REQUEST);
 
-  component_context_ = std::make_unique<sys::ComponentContext>(
-      svc_provider_->service_directory(),
-      outgoing_directory_ptr_.NewRequest(dispatcher).TakeChannel(), dispatcher);
+  component_context_ = std::make_unique<sys::ComponentContext>(svc_provider_->service_directory(),
+                                                               outgoing_directory_ptr_
+                                                                   .NewRequest(dispatcher)
+#if __Fuchsia_API_level__ < 10
+                                                                   .TakeChannel()
+#endif
+                                                                   ,
+                                                               dispatcher);
 
   zx::channel request;
   public_service_directory_ = sys::ServiceDirectory::CreateWithRequest(&request);

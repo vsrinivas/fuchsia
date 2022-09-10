@@ -55,6 +55,7 @@ OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexc
   return *this;
 }
 
+#if __Fuchsia_API_level__ < 10
 zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
                                      async_dispatcher_t* dispatcher) {
   if (!directory_request.is_valid()) {
@@ -64,14 +65,29 @@ zx_status_t OutgoingDirectory::Serve(zx::channel directory_request,
       fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
       std::move(directory_request), dispatcher);
 }
+#else
 zx_status_t OutgoingDirectory::Serve(
     fidl::InterfaceRequest<fuchsia::io::Directory> directory_request,
     async_dispatcher_t* dispatcher) {
-  return Serve(directory_request.TakeChannel(), dispatcher);
+  if (!directory_request.is_valid()) {
+    return ZX_ERR_BAD_HANDLE;
+  }
+  return root_->Serve(
+      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
+      directory_request.TakeChannel(), dispatcher);
 }
+#endif
 
 zx_status_t OutgoingDirectory::ServeFromStartupInfo(async_dispatcher_t* dispatcher) {
-  return Serve(zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)), dispatcher);
+  zx::channel directory_request{zx_take_startup_handle(PA_DIRECTORY_REQUEST)};
+  return Serve(
+#if __Fuchsia_API_level__ < 10
+      std::move(directory_request)
+#else
+      fidl::InterfaceRequest<fuchsia::io::Directory>(std::move(directory_request))
+#endif
+          ,
+      dispatcher);
 }
 
 vfs::PseudoDir* OutgoingDirectory::GetOrCreateDirectory(const std::string& name) {

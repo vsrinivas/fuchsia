@@ -60,7 +60,9 @@ class OutgoingDirectory final {
   // Outgoing objects cannot be copied.
   OutgoingDirectory(const OutgoingDirectory&) = delete;
   OutgoingDirectory& operator=(const OutgoingDirectory&) = delete;
-
+#if __Fuchsia_API_level__ < 10
+  zx_status_t Serve(zx::channel directory_request, async_dispatcher_t* dispatcher = nullptr);
+#else
   // Starts serving the outgoing directory on the given channel.
   //
   // This object will implement the |fuchsia.io.Directory| interface using this
@@ -76,9 +78,9 @@ class OutgoingDirectory final {
   // ZX_ERR_ACCESS_DENIED: |directory_request| has insufficient rights.
   //
   // TODO: Document more errors.
-  zx_status_t Serve(zx::channel directory_request, async_dispatcher_t* dispatcher = nullptr);
   zx_status_t Serve(fidl::InterfaceRequest<fuchsia::io::Directory> directory_request,
                     async_dispatcher_t* dispatcher = nullptr);
+#endif
 
   // Starts serving the outgoing directory on the channel provided to this
   // process at startup as |PA_DIRECTORY_REQUEST|.

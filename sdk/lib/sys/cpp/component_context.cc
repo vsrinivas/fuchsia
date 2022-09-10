@@ -15,18 +15,20 @@ ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                                    async_dispatcher_t* dispatcher)
     : svc_(std::move(svc)), outgoing_(std::make_shared<OutgoingDirectory>()) {}
 
+#if __Fuchsia_API_level__ < 10
 ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                                    zx::channel directory_request, async_dispatcher_t* dispatcher)
     : ComponentContext(svc, dispatcher) {
   outgoing_->Serve(std::move(directory_request), dispatcher);
 }
-
+#else
 ComponentContext::ComponentContext(std::shared_ptr<ServiceDirectory> svc,
                                    fidl::InterfaceRequest<fuchsia::io::Directory> directory_request,
                                    async_dispatcher_t* dispatcher)
     : ComponentContext(svc, dispatcher) {
   outgoing_->Serve(std::move(directory_request), dispatcher);
 }
+#endif
 
 ComponentContext::~ComponentContext() = default;
 
