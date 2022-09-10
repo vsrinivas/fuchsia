@@ -5,4 +5,10 @@
 declare_args() {
   # Identifier for the Core SDK.
   sdk_id = ""
+
+  # Whether to cross-compile SDK tools for all supported host toolchains,
+  # rather than just the current host toolchains.
+  # For example, if this is true then for instance if building on linux x64 then
+  # you'll also build SDK host tools for linux arm64.
+  sdk_cross_compile_host_tools = true
 }
