@@ -14,13 +14,29 @@ use anyhow::{anyhow, Context, Result};
 ///   images directory.
 pub fn convert_bundle_to_configs(
     bundle: pbms::VirtualDeviceProduct,
+    device_name: Option<String>,
 ) -> Result<EmulatorConfiguration> {
     let mut emulator_configuration: EmulatorConfiguration = EmulatorConfiguration::default();
 
-    // There is currently one device and one version of the spec. When that
-    // changes this will need to be expanded.
-    let virtual_device = match &bundle.virtual_devices()[0] {
-        sdk_metadata::VirtualDevice::V1(v) => v,
+    // Determine the correct device name from the user, or default to the first one listed in the
+    // product bundle.
+    let virtual_device = match device_name {
+        // If no device_name is given, choose the first virtual device listed in the productbundle.
+        None => match &bundle.virtual_devices()[0] {
+            sdk_metadata::VirtualDevice::V1(v) => v,
+        },
+
+        // Otherwise, find the virtual device by name in the product bundle.
+        Some(device_name) => {
+            let vd = bundle
+                .virtual_devices()
+                .iter()
+                .find(|vd| vd.name() == device_name)
+                .ok_or(anyhow!("The device is not found in the product bundle"))?;
+            match vd {
+                sdk_metadata::VirtualDevice::V1(v) => v,
+            }
+        }
     };
 
     // Map the product and device specifications to the Device, and Guest configs.
@@ -132,7 +148,7 @@ mod tests {
             vec![VirtualDevice::V1(device.to_owned())],
             sdk_root.to_owned(),
         );
-        let config = convert_bundle_to_configs(bundle).expect("convert_bundle_to_configs");
+        let config = convert_bundle_to_configs(bundle, None).expect("convert_bundle_to_configs");
         assert_eq!(config.device.audio, device.hardware.audio);
         assert_eq!(config.device.cpu.architecture, device.hardware.cpu.arch);
         assert_eq!(config.device.memory, device.hardware.memory);
@@ -183,7 +199,7 @@ mod tests {
             sdk_root.to_owned(),
         );
         let mut config =
-            convert_bundle_to_configs(bundle).expect("convert_bundle_to_configs again");
+            convert_bundle_to_configs(bundle, None).expect("convert_bundle_to_configs again");
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{editor::edit_configuration, pbm::make_configs};
+use crate::editor::edit_configuration;
+use crate::pbm::{list_virtual_devices, make_configs};
 use anyhow::Result;
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
@@ -17,6 +18,19 @@ mod pbm;
 
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()> {
+    // If device name is list, list the available virtual devices and return.
+    if Some(String::from("list")) == cmd.device {
+        match list_virtual_devices(&cmd).await {
+            Ok(devices) => {
+                println!("Valid virtual device specifications are: {:?}", devices);
+                return Ok(());
+            }
+            Err(e) => {
+                ffx_bail!("{:?}", e.context("Listing available virtual device specifications"))
+            }
+        };
+    }
+
     let emulator_configuration = match make_configs(&cmd).await {
         Ok(config) => config,
         Err(e) => {

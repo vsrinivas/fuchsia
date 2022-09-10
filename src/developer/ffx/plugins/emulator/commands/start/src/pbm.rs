@@ -18,22 +18,24 @@ use ffx_emulator_config::{
 use ffx_emulator_start_args::StartCommand;
 use std::{collections::hash_map::DefaultHasher, env, hash::Hasher, path::PathBuf, time::Duration};
 
+/// Lists the virtual device spec names in the specified product.
+pub(crate) async fn list_virtual_devices(cmd: &StartCommand) -> Result<Vec<String>> {
+    let bundle: pbms::VirtualDeviceProduct =
+        pbms::VirtualDeviceProduct::new(&cmd.product_bundle).await?;
+    Ok(bundle.device_refs().clone())
+}
+
 /// Create a RuntimeConfiguration based on the command line args.
 pub(crate) async fn make_configs(cmd: &StartCommand) -> Result<EmulatorConfiguration> {
     let bundle: pbms::VirtualDeviceProduct =
         pbms::VirtualDeviceProduct::new(&cmd.product_bundle).await?;
     if cmd.verbose {
-        println!(
-            "Found PBM {:?}, device_refs {:?}, virtual_device {:?}.",
-            bundle.name(),
-            bundle.device_refs(),
-            bundle.virtual_devices()[0],
-        );
+        println!("Found PBM {:?}, device_refs {:?}", bundle.name(), bundle.device_refs(),);
     }
 
     // Apply the values from the manifest to an emulation configuration.
-    let mut emu_config =
-        convert_bundle_to_configs(bundle).context("problem with convert_bundle_to_configs")?;
+    let mut emu_config = convert_bundle_to_configs(bundle, cmd.device.clone())
+        .context("problem with convert_bundle_to_configs")?;
 
     // HostConfig values that come from the OS environment.
     emu_config.host.os = std::env::consts::OS.to_string().into();

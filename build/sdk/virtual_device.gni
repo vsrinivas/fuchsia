@@ -26,6 +26,13 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #   output(optional)
 #     Location to write the output manifest
 #
+#   description(optional)
+#     The description of this virtual device. Defaults to the value in the
+#       GN variable `board_description`.
+#
+#   memory(optional) the memory object which matches the schema. The default is
+#       { quantity = 8192 units = "megabytes" }.
+#
 #   testonly (optional)
 #   visibility (optional)
 #     Standard GN meaning.
@@ -53,7 +60,7 @@ template("virtual_device_specification") {
   # Schema ID must match the schema file.
   schema_id = "http://fuchsia.com/schemas/sdk/${schema_file}"
 
-  template_output = "${target_out_dir}/emulator_flags.json.template"
+  template_output = "${target_out_dir}/${target_name}_flags.json.template"
   template_target = "${target_name}_copy_template_file"
 
   emu_window_size = {
@@ -73,12 +80,28 @@ template("virtual_device_specification") {
     emu_window_size.height = emu_window_size_height
   }
 
+  _description = board_description
+  if (defined(invoker.description)) {
+    _description = invoker.description
+  }
+
+  _memory = {
+  }
+  if (defined(invoker.memory)) {
+    _memory = invoker.memory
+  } else {
+    _memory = {
+      quantity = 8192
+      units = "megabytes"
+    }
+  }
+
   file_contents = {
     schema_id = schema_id
     data = {
       type = "virtual_device"
       name = invoker.name
-      description = board_description
+      description = _description
       hardware = {
         cpu = {
           arch = target_cpu
@@ -92,10 +115,7 @@ template("virtual_device_specification") {
           pointing_device = "touch"
         }
         window_size = emu_window_size
-        memory = {
-          quantity = 8192
-          units = "megabytes"
-        }
+        memory = _memory
         storage = {
           quantity = 2
           units = "gigabytes"
@@ -115,7 +135,7 @@ template("virtual_device_specification") {
   if (defined(invoker.output)) {
     file = invoker.output
   } else {
-    file = "${target_gen_dir}/virtual_device.json"
+    file = "${target_gen_dir}/${target_name}.json"
   }
   generator_target = "${target_name}_json_generator"
 

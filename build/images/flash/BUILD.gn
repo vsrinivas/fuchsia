@@ -547,6 +547,10 @@ compatible_devices = []
 
 # Virtual device manifest should only be generated for emu compatible boards.
 if (board_is_emu) {
+  if (!defined(virtual_device_labels)) {
+    virtual_device_labels = []
+  }
+
   # Append '-emu' to the end of the device_name in order to make it unique for
   # cases where the board is compatible with a physical and virtual device.
   device_name = "${board_name}-emu"
@@ -554,12 +558,30 @@ if (board_is_emu) {
     device_name = "${virtual_device_name_prefix}-${device_name}"
   }
 
-  virtual_device_specification("virtual_device_specification") {
+  # Add the recommended configuration first. This is the default
+  # used unless a specific device is requested.
+  virtual_device_labels += [ ":virtual_device_specification_recommended" ]
+  virtual_device_specification("virtual_device_specification_recommended") {
     testonly = true
-    name = device_name
-    output = "$root_build_dir/virtual_device.json"
+    name = "${device_name}-recommended"
+    description = "Recommended configuration for running this product"
+    output = "$root_build_dir/virtual_device_recommended.json"
   }
-  compatible_devices += [ device_name ]
+  compatible_devices += [ "${device_name}-recommended" ]
+
+  # Add the Minimum configuration
+  virtual_device_labels += [ ":virtual_device_specification_min" ]
+  virtual_device_specification("virtual_device_specification_min") {
+    testonly = true
+    name = "${device_name}-min"
+    description = "Minimum configuration for running this product"
+    output = "$root_build_dir/virtual_device_min.json"
+    memory = {
+      quantity = 2048
+      units = "megabytes"
+    }
+  }
+  compatible_devices += [ "${device_name}-min" ]
 }
 
 # Physical device manifest should only be generated for physical boards.
@@ -581,7 +603,7 @@ product_metadata("product_metadata") {
   deps = []
 
   if (board_is_emu) {
-    deps += [ ":virtual_device_specification" ]
+    deps += virtual_device_labels
     emu_manifest = {
       if (use_bringup_assembly) {
         initial_ramdisk = "bringup.zbi"
