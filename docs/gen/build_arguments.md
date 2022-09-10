@@ -1155,7 +1155,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:85
+From //build/toolchain/rbe.gni:89
 
 **Current value for `target_cpu = "x64"`:** `false`
 
@@ -1163,7 +1163,7 @@ From //out/not-default/args.gn:5
 
 **Overridden from the default:** `false`
 
-From //build/toolchain/rbe.gni:85
+From //build/toolchain/rbe.gni:89
 
 ### cxx_rbe_exec_strategy
 One of:
@@ -1177,15 +1177,15 @@ One of:
 
   * "remote_local_fallback": Execute action remotely first.
         If that fails, run locally instead.  The locally produced
-        results is not uploaded to the remote cache.
+        result are not uploaded to the remote cache.
 
   * "racing": Race local vs. remote execution, take the first to finish.
 
   (There are other rewrapper options that are not exposed.)
 
-**Current value (from the default):** `"remote"`
+**Current value (from the default):** `"remote_local_fallback"`
 
-From //build/toolchain/rbe.gni:103
+From //build/toolchain/rbe.gni:107
 
 ### dart_aot_debug_build_cfg
 Builds the component in a non-product AOT build. This will
@@ -5864,7 +5864,7 @@ One of:
 
 **Current value (from the default):** `"none"`
 
-From //build/toolchain/rbe.gni:77
+From //build/toolchain/rbe.gni:81
 
 ### rust_rbe_enable
 Set to true to enable distributed compilation of Rust using RBE.
@@ -5895,13 +5895,17 @@ One of:
         locally on cache miss.  The locally produced result is
         not uploaded to the remote cache.
 
+  * "remote_local_fallback": Execute action remotely first.
+        If that fails, run locally instead.  The locally produced
+        results are not uploaded to the remote cache.
+
   * "racing": Race local vs. remote execution, take the first to finish.
 
   (There are other rewrapper options that are not exposed.)
 
 **Current value (from the default):** `"remote"`
 
-From //build/toolchain/rbe.gni:51
+From //build/toolchain/rbe.gni:55
 
 ### rust_toolchain_triple_suffix
 Sets the fuchsia toolchain target triple suffix (after arch)
@@ -6039,6 +6043,16 @@ From //products/bringup.gni:74
 **Overridden from the default:** `[]`
 
 From //BUILD.gn:89
+
+### sdk_cross_compile_host_tools
+Whether to cross-compile SDK tools for all supported host toolchains,
+rather than just the current host toolchains.
+For example, if this is true then for instance if building on linux x64 then
+you'll also build SDK host tools for linux arm64.
+
+**Current value (from the default):** `true`
+
+From //sdk/config.gni:13
 
 ### sdk_id
 Identifier for the Core SDK.
