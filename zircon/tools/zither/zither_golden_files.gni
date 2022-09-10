@@ -46,20 +46,17 @@ template("zither_golden_files") {
     backend_gen_label = "${invoker.library}.${invoker.backend}.gen"
     backend_outputs = get_target_outputs(backend_gen_label)
 
+    backend_info = supported_zither_backend_info[invoker.backend]
+
     golden_files(target_name) {
       forward_variables_from(invoker,
                              [
                                "testonly",
                                "visibility",
                              ])
+      forward_variables_from(backend_info, [ "formatter" ])
 
       deps = [ backend_gen_label ]
-
-      # Avoids being sensitive to changes in the go/format package that would
-      # cause this check to fail and block rolling the Go version.
-      # TODO(https://fxbug.dev/107996): Consider other options for making this
-      # test insensitive to Go formatter changes.
-      ignore_space_change = true
 
       # Cross-reference the given goldens with the backend outputs by name to
       # figure out the intended golden comparisons.

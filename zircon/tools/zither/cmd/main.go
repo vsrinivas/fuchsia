@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"go/format"
 	"os"
 	"strings"
 
@@ -32,12 +31,12 @@ var supportedBackends = []string{cBackend, goBackend}
 
 // Flag values, grouped into a struct to be kept out of the global namespace.
 var flags struct {
-	irFile          string
-	backend         string
-	outputManifest  string
-	outputDir       string
-	clangFormat     string
-	clangFormatArgs flagmisc.StringsValue
+	irFile         string
+	backend        string
+	outputManifest string
+	outputDir      string
+	formatter      string
+	formatterArgs  flagmisc.StringsValue
 }
 
 func init() {
@@ -45,8 +44,8 @@ func init() {
 	flag.StringVar(&flags.backend, "backend", "", "The zither backend.\nSupported values: \""+strings.Join(supportedBackends, "\", \"")+"\"")
 	flag.StringVar(&flags.outputManifest, "output-manifest", "", "A path to which a JSON list of the binding output files will be written, if specified. This list excludes the output manifest")
 	flag.StringVar(&flags.outputDir, "output-dir", "", "The directory to which the bindings will be written. (The layout is backend-specific.)")
-	flag.StringVar(&flags.clangFormat, "clang-format", "", "The path to `clang-format`, used to format bindings in the appropriate backends")
-	flag.Var(&flags.clangFormatArgs, "clang-format-args", "Arguments to pass to `clang-format`, when used")
+	flag.StringVar(&flags.formatter, "formatter", "", "The path to a (stdin-to-stdout) formatter, used to format bindings in the appropriate backends")
+	flag.Var(&flags.formatterArgs, "formatter-args", "Arguments to pass to the formatter")
 }
 
 func main() {
@@ -60,16 +59,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	cf := fidlgen.NewFormatter(flags.clangFormat, flags.clangFormatArgs...)
-
+	f := fidlgen.NewFormatter(flags.formatter, flags.formatterArgs...)
 	var gen generator
 	switch flags.backend {
 	case cBackend:
-		gen = c.NewGenerator(cf)
+		gen = c.NewGenerator(f)
 	case asmBackend:
-		gen = asm.NewGenerator(cf)
+		gen = asm.NewGenerator(f)
 	case goBackend:
-		gen = golang.NewGenerator(goFormatter{})
+		gen = golang.NewGenerator(f)
 	default:
 		logger.Errorf(ctx, "unrecognized `-backend` value: %q", flags.backend)
 		os.Exit(1)
@@ -126,10 +124,4 @@ func execute(ctx context.Context, gen generator, ir fidlgen.Root, outputDir, out
 	}
 
 	return nil
-}
-
-type goFormatter struct{}
-
-func (f goFormatter) Format(source []byte) ([]byte, error) {
-	return format.Source(source)
 }

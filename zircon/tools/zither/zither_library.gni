@@ -19,27 +19,49 @@ supported_zither_backends = [
   "asm",
 ]
 
+_clang_format = {
+  script = "$clang_prefix/clang-format"
+  inputs = [ "//.clang-format" ]
+  args = [ "--style=file:" + rebase_path(inputs[0], root_build_dir) ]
+}
+
 # Information on supported backends, accessible via
 # `supported_zither_backend_info[ "$backend" ]`.
 #
 # Each backend scope contains the following:
 #
-# TODO(joshuaseaton): Also specify formatters here in a way that both
-# `_zither()` and `golden_files()` can grok.
+#  * formatter
+#    - Optional: A formatting specification for Zither outputs. The shape and
+#      semantics of this parameter are identical to the `formatter` parameter
+#      of `golden_files()`. While `formatter.extensions` is not consumed by
+#      Zither - it makes sure to only format the appropriate files - it is
+#      consumed in zither_golden_files() for the formatting of goldens outside
+#      of Zither.
+#    - Type: scope
+#
 supported_zither_backend_info = {
   c = {
+    formatter = _clang_format
+
     _library_template = "_zither_c_family_library"
   }
   asm = {
+    formatter = _clang_format
+
     _library_template = "_zither_c_family_library"
   }
   go = {
+    formatter = {
+      script = "//prebuilt/third_party/go/$host_platform/bin/gofmt"
+
+      # The go backend emits both go and text files; restrict the use of the
+      # formatter to the go files.
+      extensions = [ "go" ]
+    }
+
     _library_template = "_zither_go_library"
   }
 }
-
-_clang_format = "$clang_prefix/clang-format"
-_clang_format_config = "//.clang-format"
 
 # Internal Zither invocation helper template used by `zither_library()`.
 #
@@ -62,6 +84,10 @@ _clang_format_config = "//.clang-format"
 #      start with "$output_dir/".
 #    - Type: list(path)
 #
+#  * formatter
+#    - Optional: See `supported_zither_backend_info`.
+#    - Type: scope.
+#
 #  * testonly, visibility, deps
 #    - Usual GN meanings. `deps` is just expected to contain whatever produced
 #      the FIDL IR file.
@@ -74,6 +100,7 @@ template("_zither") {
                              "backend",
                              "fidl_ir",
                              "output_dir",
+                             "formatter",
                            ])
 
     main_target = target_name
@@ -94,11 +121,7 @@ template("_zither") {
 
       tool = "//zircon/tools/zither"
 
-      inputs = [
-        fidl_ir,
-        _clang_format,
-        _clang_format_config,
-      ]
+      inputs = [ fidl_ir ]
       outputs = generated_files + [ output_manifest ]
       args = [
         "-ir",
@@ -109,11 +132,21 @@ template("_zither") {
         rebase_path(output_manifest, root_build_dir),
         "-output-dir",
         rebase_path(output_dir, root_build_dir),
-        "-clang-format",
-        rebase_path(_clang_format, root_build_dir),
-        "-clang-format-args",
-        "--style=file:" + rebase_path(_clang_format_config, root_build_dir),
       ]
+
+      if (defined(formatter)) {
+        inputs += [ formatter.script ]
+        args += [
+          "-formatter",
+          rebase_path(formatter.script, root_build_dir),
+        ]
+        if (defined(formatter.args)) {
+          args += [ "-formatter-args" ] + formatter.args
+        }
+        if (defined(formatter.inputs)) {
+          inputs += formatter.inputs
+        }
+      }
     }
 
     # Ensures that the outputs were fully specified above.
@@ -162,7 +195,7 @@ template("_zither") {
 #      for entries.
 #    - Type: relative path
 #
-#  * fidl_ir, output_dir
+#  * fidl_ir, output_dir, formatter
 #    - Same as `_zither()`.
 #
 #  * testonly, visibility, deps
@@ -194,6 +227,7 @@ template("_zither_c_family_library") {
                              "fidl_ir",
                              "generated_files",
                              "backend",
+                             "formatter",
                            ])
   }
 
@@ -239,6 +273,7 @@ template("_zither_go_library") {
                              "deps",
                              "fidl_ir",
                              "generated_files",
+                             "formatter",
                            ])
     backend = "go"
   }
@@ -355,6 +390,7 @@ template("zither_library") {
                                "backend",
                                "output_subdir",
                              ])
+      forward_variables_from(backend_info, [ "formatter" ])
 
       # Zither will only be invoked in the default toolchain.
       output_dir = "$default_target_gen_dir/${target_name}-${backend}"
