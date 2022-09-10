@@ -14,6 +14,7 @@ import("//tools/cmc/build/cmc.gni")
 #             data_filesystem_format is mandatory.  The following options are also supported:
 #
 #     bootfs_only - if set, the blob and data partitions will not get mounted.
+#     use_rust_port - if set, use the rust port of fshost instead of the cpp version.
 #
 #   testonly - the component will only be used for testing
 template("fshost_cml") {
@@ -22,12 +23,16 @@ template("fshost_cml") {
     sources = [
       "//src/storage/fshost/meta/base_fshost.cml",
       "//src/storage/fshost/meta/config.cml",
-      "//src/storage/fshost/meta/cpp_fshost.cml",
     ]
     if (!defined(invoker.testonly) || !invoker.testonly) {
       sources += [ "//src/storage/fshost/meta/real_fshost.cml" ]
     }
     options = invoker.options
+    if (defined(options.use_rust_port) && options.use_rust_port) {
+      sources += [ "//src/storage/fshost/meta/rust_fshost.cml" ]
+    } else {
+      sources += [ "//src/storage/fshost/meta/cpp_fshost.cml" ]
+    }
     if (!defined(options.bootfs_only) || !options.bootfs_only) {
       if (options.data_filesystem_format == "minfs") {
         sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
@@ -79,14 +84,25 @@ template("fshost_component_and_config") {
   # The config
   generated_fshost_config(_config_target) {
     options = {
-      forward_variables_from(invoker.options, "*", [ "bootfs_only" ])
+      forward_variables_from(invoker.options,
+                             "*",
+                             [
+                               "bootfs_only",
+                               "use_rust_port",
+                             ])
     }
   }
 
   # The component
   fuchsia_component(_component_target) {
     forward_variables_from(invoker, [ "testonly" ])
-    deps = [ "//src/storage/fshost" ]
+    forward_variables_from(invoker.options, [ "use_rust_port" ])
+    deps = []
+    if (defined(use_rust_port) && use_rust_port) {
+      deps += [ "//src/storage/fshost-rust" ]
+    } else {
+      deps += [ "//src/storage/fshost" ]
+    }
     cm_label = ":$_manifest_target"
   }
 

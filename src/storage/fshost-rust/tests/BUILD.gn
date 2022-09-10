@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/storage/fshost/fshost.gni")
 import("//src/storage/fshost/generated_fshost_config.gni")
 import("//src/storage/testing/driver_test_realm.gni")
 import("//tools/cmc/build/cmc.gni")
@@ -115,27 +116,11 @@ template("fshost_integration_test") {
   }
 }
 
-cmc_merge("test-fshost-rust.cml") {
-  sources = [
-    "//src/storage/fshost/meta/base_fshost.cml",
-    "//src/storage/fshost/meta/config.cml",
-    "//src/storage/fshost/meta/core_fshost.cml",
-    "//src/storage/fshost/meta/fxfs_fshost.cml",
-    "//src/storage/fshost/meta/rust_fshost.cml",
-  ]
-}
-
-fuchsia_component("test-fshost-rust") {
+fshost_component_and_config("test-fshost-rust") {
   testonly = true
-  manifest_outputs = get_target_outputs(":test-fshost-rust.cml")
-  manifest = manifest_outputs[0]
-  manifest_deps = [ ":test-fshost-rust.cml" ]
-  deps = [
-    ":config",
-    "..:fshost-rust",
-    "//src/storage/fxfs:fxfs_component",
-    "//src/storage/fxfs-crypt",
-  ]
+  options = default_integration_test_options
+  options.data_filesystem_format = "fxfs"
+  options.use_rust_port = true
 }
 
 fshost_integration_test("fshost-cpp-integration-test-fxfs") {
@@ -196,10 +181,6 @@ fuchsia_test_package("fshost_integration_tests") {
     ":fshost-rust-integration-test",
   ]
   deps = [ "//src/storage/testing:storage_driver_test_realm" ]
-}
-
-generated_fshost_config("config") {
-  component_name = "test-fshost-rust"
 }
 
 group("tests") {
