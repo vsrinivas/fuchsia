@@ -48,6 +48,13 @@ import("//build/testing/config.gni")
 #          contained paths must be given relative to `root_build_dir`.
 #        - Type: list(string)
 #
+#      * extensions
+#        - Optional: The list of file extensions to which the formatter should
+#          be restricted in application. An empty list is taken to mean that
+#          the formatter should be applied to every golden.
+#        - Type: list(string)
+#        - Default: []
+#
 #      * inputs
 #        - Optional: Any additional files that serve as inputs to the
 #          formatting invocation. The formatter itself need not be listed here.
@@ -127,45 +134,55 @@ template("golden_files") {
     golden = rebase_path(comparison.golden, root_build_dir)
     candidate = rebase_path(comparison.candidate, root_build_dir)
 
+    formatted_golden = ""  # Clear from previous iteration.
     if (defined(formatter)) {
-      format_golden_target = "_golden_files.$target_name.format.$golden"
-      formatted_golden = "$formatted_goldens_dir/$source_relative_golden"
-      action(format_golden_target) {
-        forward_variables_from(invoker, [ "testonly" ])
-        visibility = [ ":$main_target" ]
-
-        depfile = "$target_gen_dir/$target_name.d"
-        outputs = [ formatted_golden ]
-
-        inputs = [ formatter.script ]
-        if (defined(formatter.inputs)) {
-          inputs += formatter.inputs
-        }
-
-        forward_variables_from(invoker,
-                               [
-                                 "deps",
-                                 "public_deps",
-                               ])
-        if (defined(formatter.deps)) {
-          if (!defined(deps)) {
-            deps = []
-          }
-          deps += formatter.deps
-        }
-
-        script = "//build/testing/format_golden.sh"
-        args = [
-          rebase_path(depfile, root_build_dir),
-          golden,
-          rebase_path(formatted_golden, root_build_dir),
-          rebase_path(formatter.script, root_build_dir),
-        ]
-        if (defined(formatter.args)) {
-          args += formatter.args
-        }
+      extensions = []  # Clear from previous iteration.
+      if (defined(formatter.extensions)) {
+        extensions = formatter.extensions
       }
-      verify_deps += [ ":$format_golden_target" ]
+
+      golden_ext = get_path_info(golden, "extension")
+      if (extensions + [ golden_ext ] - [ golden_ext ] != extensions ||
+          extensions == []) {
+        format_golden_target = "_golden_files.$target_name.format.$golden"
+        formatted_golden = "$formatted_goldens_dir/$source_relative_golden"
+        action(format_golden_target) {
+          forward_variables_from(invoker, [ "testonly" ])
+          visibility = [ ":$main_target" ]
+
+          depfile = "$target_gen_dir/$target_name.d"
+          outputs = [ formatted_golden ]
+
+          inputs = [ formatter.script ]
+          if (defined(formatter.inputs)) {
+            inputs += formatter.inputs
+          }
+
+          forward_variables_from(invoker,
+                                 [
+                                   "deps",
+                                   "public_deps",
+                                 ])
+          if (defined(formatter.deps)) {
+            if (!defined(deps)) {
+              deps = []
+            }
+            deps += formatter.deps
+          }
+
+          script = "//build/testing/format_golden.sh"
+          args = [
+            rebase_path(depfile, root_build_dir),
+            golden,
+            rebase_path(formatted_golden, root_build_dir),
+            rebase_path(formatter.script, root_build_dir),
+          ]
+          if (defined(formatter.args)) {
+            args += formatter.args
+          }
+        }
+        verify_deps += [ ":$format_golden_target" ]
+      }
     }
 
     comparison_json_contents += [
@@ -176,7 +193,7 @@ template("golden_files") {
         # We don't want to supply the formatted golden under the `golden` key
         # as the diff script needs to know the original location in order to
         # auto-update it when a diff is detected.
-        if (defined(formatted_golden)) {
+        if (formatted_golden != "") {
           formatted_golden = rebase_path(formatted_golden, root_build_dir)
         }
       },
