@@ -49,7 +49,7 @@ static inline zxr_internal_thread_t* to_internal(zxr_thread_t* external) {
 }
 
 zx_status_t zxr_thread_destroy(zxr_thread_t* thread) {
-  zx_handle_t handle = to_internal(thread)->handle;
+  const zx_handle_t handle = to_internal(thread)->handle;
   to_internal(thread)->handle = ZX_HANDLE_INVALID;
   return handle == ZX_HANDLE_INVALID ? ZX_OK : _zx_handle_close(handle);
 }
@@ -70,7 +70,7 @@ static bool claim_thread(zxr_internal_thread_t* thread, int new_state, int* old_
 // Extract the handle from the thread structure. Synchronizes with readers by
 // setting the state to FREED and checks the given expected state for consistency.
 static zx_handle_t take_handle(zxr_internal_thread_t* thread, int expected_state) {
-  zx_handle_t tmp = thread->handle;
+  const zx_handle_t tmp = thread->handle;
   thread->handle = ZX_HANDLE_INVALID;
 
   if (!thread->atomic_state().compare_exchange_strong(
@@ -95,11 +95,11 @@ static _Noreturn void exit_non_detached(zxr_internal_thread_t* thread) {
 }
 
 static _Noreturn void thread_trampoline(uintptr_t ctx, uintptr_t arg) {
-  zxr_internal_thread_t* thread = (zxr_internal_thread_t*)ctx;
+  zxr_internal_thread_t* thread = reinterpret_cast<zxr_internal_thread_t*>(ctx);
 
-  thread->entry((void*)arg);
+  thread->entry(reinterpret_cast<void*>(arg));
 
-  int old_state = begin_exit(thread);
+  const int old_state = begin_exit(thread);
   switch (old_state) {
     case JOINABLE:
       // Nobody's watching right now, but they might start watching as we
@@ -120,7 +120,7 @@ _Noreturn void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, void (*if
                                                  void* if_detached_arg,
 
                                                  zx_handle_t vmar, uintptr_t addr, size_t len) {
-  int old_state = begin_exit(to_internal(thread));
+  const int old_state = begin_exit(to_internal(thread));
   switch (old_state) {
     case DETACHED: {
       (*if_detached)(if_detached_arg);
@@ -142,24 +142,26 @@ _Noreturn void zxr_thread_exit_unmap_if_detached(zxr_thread_t* thread, void (*if
 // Local implementation so libruntime does not depend on libc.
 static size_t local_strlen(const char* s) {
   size_t len = 0;
-  while (*s++ != '\0')
+  while (*s++ != '\0') {
     ++len;
+  }
   return len;
 }
 
 static void initialize_thread(zxr_internal_thread_t* thread, zx_handle_t handle, bool detached) {
-  *thread = (zxr_internal_thread_t){
-      .handle = handle,
-  };
+  *thread = zxr_internal_thread_t{.handle = handle};
   thread->atomic_state().store(detached ? DETACHED : JOINABLE, std::memory_order_release);
 }
 
 zx_status_t zxr_thread_create(zx_handle_t process, const char* name, bool detached,
                               zxr_thread_t* thread) {
   initialize_thread(to_internal(thread), ZX_HANDLE_INVALID, detached);
-  if (name == NULL)
+
+  if (name == nullptr) {
     name = "";
-  size_t name_length = local_strlen(name) + 1;
+  }
+  const size_t name_length = local_strlen(name) + 1;
+
   return _zx_thread_create(process, name, name_length, 0, &to_internal(thread)->handle);
 }
 
@@ -168,14 +170,16 @@ zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t 
   to_internal(thread)->entry = entry;
 
   // compute the starting address of the stack
-  uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(stack_addr, stack_size);
+  const uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(stack_addr, stack_size);
 
   // kick off the new thread
-  zx_status_t status = _zx_thread_start(to_internal(thread)->handle, (uintptr_t)thread_trampoline,
-                                        sp, (uintptr_t)thread, (uintptr_t)arg);
-
-  if (status != ZX_OK)
+  const zx_status_t status =
+      _zx_thread_start(to_internal(thread)->handle, reinterpret_cast<uintptr_t>(thread_trampoline),
+                       sp, reinterpret_cast<uintptr_t>(thread), reinterpret_cast<uintptr_t>(arg));
+  if (status != ZX_OK) {
     zxr_thread_destroy(thread);
+  }
+
   return status;
 }
 
@@ -251,7 +255,7 @@ zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
         // which will return soon due to the thread being actively shutting down,
         // and then return ZX_ERR_BAD_STATE to tell the caller that they
         // must manually perform any post-join work.
-        zx_status_t ret = zxr_thread_join(thread);
+        const zx_status_t ret = zxr_thread_join(thread);
         if (unlikely(ret != ZX_OK)) {
           if (unlikely(ret != ZX_ERR_INVALID_ARGS)) {
             CRASH_WITH_UNIQUE_BACKTRACE();
@@ -272,7 +276,7 @@ zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
 }
 
 bool zxr_thread_detached(zxr_thread_t* thread) {
-  int state = to_internal(thread)->atomic_state().load(std::memory_order_acquire);
+  const int state = to_internal(thread)->atomic_state().load(std::memory_order_acquire);
   return state == DETACHED;
 }
 
