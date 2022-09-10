@@ -30,7 +30,6 @@
                 "fuchsia.net.interfaces.State",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.posix.socket.Provider",
-                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.scenic.Scenic",
