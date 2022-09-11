@@ -7,51 +7,7 @@ model in Fuchsia.
 
 [TOC]
 
-## Transition steps
-
-Switching to using the MBMQ model can be done incrementally.  There
-are some dependencies between the following steps, but some of them
-could be reordered or done in parallel:
-
-*   Implement most of the new kernel primitives, including MsgQueues,
-    MBOs, CallersRefs and CalleesRefs.  Channels will be modified so
-    that they can contain both legacy messages (those sent with
-    `zx_channel_write()`) and MBO messages (those sent with
-    `zx_channel_send()`).  MsgQueues will be added as a new object
-    type, separate from Zircon ports.
-
-*   Switch processes over to using MsgQueues instead of Zircon ports.
-    An initial conversion can replace uses of `zx_object_wait_async()`
-    with `zx_object_wait_async_mbo()`, but a later version should use
-    `zx_object_set_msgqueue()` for waiting on channels, which should
-    give some performance improvements.
-
-*   Change all server processes to accept requests via both MBO
-    messages and legacy messages.  Servers will send replies via
-    either legacy messages or MBOs (using `zx_mbo_send_reply()`)
-    depending on the request type.  This work can be made easier using
-    the "legacy reply mode" for CalleesRefs described below.
-
-*   Switch client code over to sending requests via MBOs instead of
-    via legacy messages.  Change `zx_channel_call()` to send requests
-    via MBOs.
-
-*   The ability of servers to accept requests via legacy messages can
-    now be dropped.
-
-*   Legacy channel messages can be removed.
-
-*   Zircon ports can be removed.
-
-*   The transaction ID (`txid`) field can be removed from FIDL
-    messages, because we no longer need it for matching up replies
-    with requests.
-
-See ["Shareable channels"](shareable-channels.md) for some further
-steps that could be taken if we decided to make channels
-unidirectional and shareable.
-
-## Interoperation between legacy messages and MBO messages
+## Two-way interoperation between legacy messages and MBO messages
 
 As a transitional measure, we can extend the MBMQ model so that legacy
 programs and MBO-aware programs can interoperate.
@@ -116,6 +72,47 @@ in the channel.  The reason for this is that if the kernel did store
 back-references for send-only messages in the channel, this would be a
 memory leak: they would accumulate and never be freed until the
 channel was freed.
+
+## Transition steps
+
+*   First, implement the new kernel primitives, including MsgQueues,
+    MBOs, CallersRefs and CalleesRefs.  MsgQueues will be added as a
+    new object type, separate from Zircon ports.  The two-way
+    interoperation described above will be implemented.  Channels will
+    be modified so that they can contain both legacy messages and MBO
+    messages.
+
+*   We then have flexibility in the order in which we convert code to
+    using the MBMQ primitives.  We will need to:
+
+    *   Switch processes over to using MsgQueues instead of Zircon
+        ports.  An initial conversion can replace uses of
+        `zx_object_wait_async()` with `zx_object_wait_async_mbo()`,
+        but a later version should use `zx_object_set_msgqueue()` for
+        waiting on channels, which should give some performance
+        improvements.
+
+    *   Change server code to accept requests via MBO messages.
+
+    *   Change client code to send requests via MBO messages.
+
+*   Cleanup: Once the codebase has been converted to using MBO
+    messages, various things can be removed:
+
+    *   The kernel's support for legacy messages can be removed.  The
+        interoperation support can be removed.  The `txid` mapping on
+        channels, used for `zx_channel_call()` and for legacy message
+        interoperation, can be removed.
+
+    *   Zircon ports can be removed from the kernel.
+
+    *   The transaction ID (`txid`) field can be removed from FIDL
+        messages, because we no longer need it for matching up replies
+        with requests or for distinguishing send-only requests.
+
+See ["Shareable channels"](shareable-channels.md) for some further
+steps that could be taken if we decided to make channels
+unidirectional and shareable.
 
 ## Alternative transition plan
 
