@@ -51,7 +51,29 @@ See ["Shareable channels"](shareable-channels.md) for some further
 steps that could be taken if we decided to make channels
 unidirectional and shareable.
 
-## Legacy reply mode for CalleesRefs
+## Interoperation between legacy messages and MBO messages
+
+As a transitional measure, we can extend the MBMQ model so that legacy
+programs and MBO-aware programs can interoperate.
+
+This means that:
+
+*   Legacy messages (those sent with `zx_channel_write()`) can coexist
+    on the same channel with MBO messages (those sent with
+    `zx_channel_send()`).
+*   Legacy clients can send requests to MBO-aware servers and get
+    replies back.
+*   MBO-aware clients can send requests to legacy servers and get
+    replies back.
+
+Allowing interoperability in both directions in this way should make
+the transition easier: it allows for a more gradual transition.
+
+We can implement the interoperability support in the kernel, which
+means that MBO-aware programs will not need to be aware of legacy
+messages.
+
+### Case 1: Legacy client, MBO-aware server
 
 To simplify the work of converting servers to accept requests via both
 MBOs and legacy messages, we can temporarily extend CalleesRefs with a
@@ -70,6 +92,30 @@ server-side code for conditionalising based on whether a request was
 an MBO or a legacy message.  The conditionalising only needs to be
 done once, in the kernel's IPC implementation, rather than for each
 set of FIDL language bindings.
+
+### Case 2: MBO-aware client, legacy server
+
+The case of handling interoperation so that an MBO-aware client can
+send requests to a legacy server would be implemented in the kernel
+using reply routing logic that is similar to what is implemented for
+`zx_channel_call()` already.
+
+In this case, an MBO-aware client uses `zx_channel_send()` to send an
+MBO-based request message to a server.  The server reads the request
+using `zx_channel_read()`.  This use of the legacy `zx_channel_read()`
+call to read an MBO-based request is treated specially by the kernel.
+It reads the `txid` (transaction ID) field from the message, and if
+`txid` is non-zero, it records (in the channel data structure) that
+any reply sent on the server's channel endpoint with that `txid` with
+`zx_channel_write()` should be routed back to the MBO.
+
+This relies on the current property that `txid` is zero for send-only
+FIDL request messages (requests where no reply is expected).  When
+`txid` is zero, the kernel will not store a back-reference to the MBO
+in the channel.  The reason for this is that if the kernel did store
+back-references for send-only messages in the channel, this would be a
+memory leak: they would accumulate and never be freed until the
+channel was freed.
 
 ## Alternative transition plan
 
