@@ -43,12 +43,6 @@ source_set("factory_source") {
   ]
 }
 
-fuchsia_component("component") {
-  manifest = "meta/codec_factory.cmx"
-  deps = [ ":factory" ]
-  component_name = "codec_factory"
-}
-
 fuchsia_component("component_v2") {
   manifest = "meta/codec_factory_v2.cml"
   deps = [ ":factory" ]

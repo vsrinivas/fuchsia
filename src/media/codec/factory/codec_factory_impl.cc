@@ -29,15 +29,6 @@ namespace {
 // For HW-based codecs, we discover their "LocalCodecFactory" by watching for
 // their device and sending the server end of a (local) CodecFactory to the
 // driver.
-const std::string kIsolateUrlFfmpeg =
-    "fuchsia-pkg://fuchsia.com/codec_runner_sw_ffmpeg#meta/"
-    "codec_runner_sw_ffmpeg.cmx";
-const std::string kIsolateUrlSbc =
-    "fuchsia-pkg://fuchsia.com/codec_runner_sw_sbc#meta/"
-    "codec_runner_sw_sbc.cmx";
-const std::string kIsolateUrlAac =
-    "fuchsia-pkg://fuchsia.com/codec_runner_sw_aac#meta/"
-    "codec_runner_sw_aac.cmx";
 
 const std::string kIsolateRelativeUrlSbc = "#meta/codec_runner_sw_sbc.cm";
 const std::string kIsolateRelativeUrlAac = "#meta/codec_runner_sw_aac.cm";
@@ -58,7 +49,6 @@ struct EncoderSupportSpec {
 };
 
 const EncoderSupportSpec kSbcEncoderSupportSpec = {
-    .isolate_url = kIsolateUrlSbc,
     .isolate_url_v2 = kIsolateRelativeUrlSbc,
     .mime_types = {"audio/pcm"},
     .supports_settings =
@@ -66,7 +56,6 @@ const EncoderSupportSpec kSbcEncoderSupportSpec = {
 };
 
 const EncoderSupportSpec kAacEncoderSupportSpec = {
-    .isolate_url = kIsolateUrlAac,
     .isolate_url_v2 = kIsolateRelativeUrlAac,
     .mime_types = {"audio/pcm"},
     .supports_settings =
@@ -85,13 +74,11 @@ struct DecoderSupportSpec {
 };
 
 const DecoderSupportSpec kFfmpegSupportSpec = {
-    .isolate_url = kIsolateUrlFfmpeg,
     .isolate_url_v2 = kIsolateRelativeUrlFfmpeg,
     .mime_types = {"video/h264"},
 };
 
 const DecoderSupportSpec kSbcDecoderSuportSpec = {
-    .isolate_url = kIsolateUrlSbc,
     .isolate_url_v2 = kIsolateRelativeUrlSbc,
     .mime_types = {"audio/sbc"},
 };

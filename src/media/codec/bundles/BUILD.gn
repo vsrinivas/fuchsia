@@ -4,12 +4,7 @@
 
 group("services") {
   testonly = true
-  deps = [
-    "//src/media/codec/bundles:codec_factory",
-    "//src/media/codec/bundles:codec_sw_aac",
-    "//src/media/codec/bundles:codec_sw_ffmpeg",
-    "//src/media/codec/bundles:codec_sw_sbc",
-  ]
+  deps = [ "//src/media/codec/bundles:codec_factory" ]
 }
 
 group("tools") {
@@ -33,16 +28,4 @@ group("config") {
 
 group("codec_factory") {
   public_deps = [ "//src/media/codec:codec_factory" ]
-}
-
-group("codec_sw_aac") {
-  public_deps = [ "//src/media/codec:codec_runner_sw_aac" ]
-}
-
-group("codec_sw_sbc") {
-  public_deps = [ "//src/media/codec:codec_runner_sw_sbc" ]
-}
-
-group("codec_sw_ffmpeg") {
-  public_deps = [ "//src/media/codec:codec_runner_sw_ffmpeg" ]
 }
