@@ -119,14 +119,22 @@ unidirectional and shareable.
 An alternative transition plan would be to split up the features
 provided by the MBMQ model and adopt these features separately.
 
-For example, we could implement MsgQueues, including the ability to
-redirect channels to MsgQueues, without implementing MBOs and
-CalleesRefs -- or we could add that functionality to Zircon ports.
-This would give us the ability to combine `zx_port_wait()` and
-`zx_channel_read()` into a single syscall (giving some performance
-benefits) and to preserve message ordering across channels.  It would
-not give us the other benefits, including shareability of channels,
-allowing large messages, and providing memory accounting for messages.
+For example:
+
+*   We could implement MsgQueues, including the ability to redirect
+    channels to MsgQueues, without implementing MBOs and CalleesRefs.
+    This would give us the ability to combine `zx_port_wait()` and
+    `zx_channel_read()` into a single syscall (giving some performance
+    benefits) and to preserve message ordering across channels.  It
+    would not give us the other benefits, including shareability of
+    channels, allowing large messages, and providing memory accounting
+    for messages.
+
+    Another version of this would be to add that functionality to
+    Zircon ports rather than adding MsgQueues as a replacement for
+    ports.
+
+*   We could implement MBOs without implementing MsgQueues.
 
 This approach is more incremental and could be easier in some ways,
 but it could also make it harder to get to a better overall solution.
