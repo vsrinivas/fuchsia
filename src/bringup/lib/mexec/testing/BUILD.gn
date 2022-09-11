@@ -28,6 +28,7 @@ source_set("zbi-test-entry") {
     "//src/bringup/lib/mexec",
     "//src/lib/zbitl",
     "//src/zircon/testing/standalone-test",
+    "//zircon/system/ulib/zx",
   ]
 
   data_deps =

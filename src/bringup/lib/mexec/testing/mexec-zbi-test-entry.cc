@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zx/time.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -16,6 +17,11 @@ int main(int argc, char** argv) {
   }
 
   printf("%s: Booting test ZBI via mexec...\n", argv[0]);
+
+  // TODO(fxbug.dev/107535): This is a short-term band-aid to address the
+  // likely issue of this program mexec'ing before the secondary CPUs have
+  // been brought up.
+  zx::nanosleep(zx::deadline_after(zx::sec(3)));
 
   zx_status_t status = mexec::BootZbi(zx::unowned_resource{test.root_resource()},
                                       std::move(test.kernel_zbi()), std::move(test.data_zbi()));
