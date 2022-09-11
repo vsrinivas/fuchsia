@@ -7,3 +7,4 @@ Contents:
 
 *   [Core model](mbmq-model.md)
 *   [Transition plan](transition-plan.md)
+*   [Shareable channels](shareable-channels.md)

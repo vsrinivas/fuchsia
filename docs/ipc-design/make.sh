@@ -4,7 +4,7 @@
 
 set -eu
 
-inputs="index.md mbmq-model.md transition-plan.md"
+inputs="index.md mbmq-model.md transition-plan.md shareable-channels.md"
 
 for input in $inputs; do
     output="$(basename $input .md).html"
