@@ -28,6 +28,7 @@ use {
         capability_source::ComponentCapability, component_instance::ComponentInstanceInterface,
         error::AvailabilityRoutingError, route_capability, route_storage_and_backing_directory,
     },
+    anyhow::anyhow,
     cm_moniker::{InstancedExtendedMoniker, InstancedRelativeMoniker},
     cm_rust::{ExposeDecl, UseDecl, UseStorageDecl},
     cm_util::channel,
@@ -35,7 +36,7 @@ use {
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     futures::lock::Mutex,
     std::sync::Arc,
-    tracing::{debug, warn},
+    tracing::{debug, info, warn},
 };
 
 pub type RouteRequest = ::routing::RouteRequest;
@@ -59,7 +60,31 @@ pub(super) async fn route_and_open_capability(
                 .await
         }
         _ => {
-            let (route_source, _route) = route_capability(route_request, target).await?;
+            let optional_use = route_request.target_use_optional();
+            let (route_source, _route) =
+                route_capability(route_request, target).await.map_err(|err| {
+                    if optional_use {
+                        match err {
+                            RoutingError::AvailabilityRoutingError(_) => {
+                                // `err` is already an AvailabilityRoutingError.
+                                // Return it as-is.
+                                err
+                            }
+                            _ => {
+                                // Wrap the error, to surface the target's
+                                // optional usage.
+                                RoutingError::AvailabilityRoutingError(
+                                    AvailabilityRoutingError::FailedToRouteToOptionalTarget {
+                                        reason: Some(anyhow!(err).into()),
+                                    },
+                                )
+                            }
+                        }
+                    } else {
+                        // Not an optional `use` so return the error as-is.
+                        err
+                    }
+                })?;
             open_capability_at_source(OpenRequest::new(route_source, target, open_options)).await
         }
     }
@@ -364,37 +389,65 @@ pub async fn report_routing_failure(
         ModelError::RoutingError { err } => err.to_string(),
         _ => err.to_string(),
     };
-    let log_as_debug = matches!(
-        err,
-        // If the route failed because the capability is intentionally not provided, then this
-        // failure is expected and the warn level is unwarranted, so use the debug level in this
-        // case.
-        ModelError::RoutingError {
-            err: RoutingError::AvailabilityRoutingError(
-                AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
-            ),
-        }
-    );
     target
         .with_logger_as_default(|| {
-            if log_as_debug {
-                debug!(
-                    "Failed to route {} `{}` with target component `{}`: {}\n{}",
-                    cap.type_name(),
-                    cap.source_id(),
-                    &target.abs_moniker,
-                    &err_str,
-                    ROUTE_ERROR_HELP
-                );
-            } else {
-                warn!(
-                    "Failed to route {} `{}` with target component `{}`: {}\n{}",
-                    cap.type_name(),
-                    cap.source_id(),
-                    &target.abs_moniker,
-                    &err_str,
-                    ROUTE_ERROR_HELP
-                );
+            match err {
+                ModelError::RoutingError {
+                    err:
+                        RoutingError::AvailabilityRoutingError(
+                            AvailabilityRoutingError::OfferFromVoidToOptionalTarget,
+                        ),
+                } => {
+                    // If the route failed because the capability is
+                    // intentionally not provided, then this failure is expected
+                    // and the warn level is unwarranted, so use the debug level
+                    // in this case.
+                    debug!(
+                        "Optional {} `{}` was not available for target component `{}`: {}\n{}",
+                        cap.type_name(),
+                        cap.source_id(),
+                        &target.abs_moniker,
+                        &err_str,
+                        ROUTE_ERROR_HELP
+                    );
+                }
+                ModelError::RoutingError {
+                    err:
+                        RoutingError::AvailabilityRoutingError(
+                            AvailabilityRoutingError::FailedToRouteToOptionalTarget { .. },
+                        ),
+                } => {
+                    // If the target declared the capability as optional, but
+                    // the capability could not be routed (such as if the source
+                    // component is not available) the component _should_
+                    // tolerate the missing optional capability. However, this
+                    // should be logged. Developers are encouraged to change how
+                    // they build and/or assemble different product
+                    // configurations so declared routes are always end-to-end
+                    // complete routes.
+                    // TODO(fxbug.dev/109112): if we change the log for
+                    // `Required` capabilities to `error!()`, consider also
+                    // changing this log for `Optional` to `warn!()`.
+                    info!(
+                        "Optional {} `{}` was not available for target component `{}`: {}\n{}",
+                        cap.type_name(),
+                        cap.source_id(),
+                        &target.abs_moniker,
+                        &err_str,
+                        ROUTE_ERROR_HELP
+                    );
+                }
+                _ => {
+                    // TODO(fxbug.dev/109112): consider changing this to `error!()`
+                    warn!(
+                        "Required {} `{}` was not available for target component `{}`: {}\n{}",
+                        cap.type_name(),
+                        cap.source_id(),
+                        &target.abs_moniker,
+                        &err_str,
+                        ROUTE_ERROR_HELP
+                    );
+                }
             }
         })
         .await

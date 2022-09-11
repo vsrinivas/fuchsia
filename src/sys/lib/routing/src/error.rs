@@ -678,7 +678,7 @@ impl RightsRoutingError {
 }
 
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
-#[derive(Debug, Error, Clone, PartialEq)]
+#[derive(Debug, Error, Clone)]
 pub enum AvailabilityRoutingError {
     #[error("Availability of offer is optional, but target requires the capability")]
     OptionalOfferToRequiredTarget,
@@ -688,4 +688,25 @@ pub enum AvailabilityRoutingError {
 
     #[error("Offer uses void source, so the route cannot be completed")]
     OfferFromVoidToOptionalTarget,
+
+    #[error("Target optionally uses capability that was not available: {reason:?}")]
+    FailedToRouteToOptionalTarget {
+        #[cfg_attr(feature = "serde", serde(skip))]
+        reason: Option<ClonableError>,
+    },
+}
+
+impl PartialEq for AvailabilityRoutingError {
+    fn eq(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Self::OptionalOfferToRequiredTarget, Self::OptionalOfferToRequiredTarget)
+            | (Self::OfferFromVoidToRequiredTarget, Self::OfferFromVoidToRequiredTarget)
+            | (Self::OfferFromVoidToOptionalTarget, Self::OfferFromVoidToOptionalTarget) => true,
+            (
+                Self::FailedToRouteToOptionalTarget { reason: Some(self_reason) },
+                Self::FailedToRouteToOptionalTarget { reason: Some(other_reason) },
+            ) => self_reason.to_string() == other_reason.to_string(),
+            _ => false,
+        }
+    }
 }

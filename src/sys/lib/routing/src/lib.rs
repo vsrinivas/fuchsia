@@ -56,6 +56,7 @@ use {
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     from_enum::FromEnum,
+    log::warn,
     moniker::{AbsoluteMoniker, ChildMoniker, RelativeMonikerBase},
     std::{
         path::{Path, PathBuf},
@@ -88,6 +89,32 @@ pub enum RouteRequest {
     UseProtocol(UseProtocolDecl),
     UseService(UseServiceDecl),
     UseStorage(UseStorageDecl),
+}
+
+impl RouteRequest {
+    /// Return `true` if the RouteRequest is a `use` capability declaration, and
+    /// the `availability` is `optional` (the target declares that it does not
+    /// require the capability).
+    pub fn target_use_optional(&self) -> bool {
+        use crate::RouteRequest::*;
+        match self {
+            UseDirectory(UseDirectoryDecl { availability, .. })
+            | UseEvent(UseEventDecl { availability, .. })
+            | UseEventStream(UseEventStreamDecl { availability, .. })
+            | UseProtocol(UseProtocolDecl { availability, .. })
+            | UseService(UseServiceDecl { availability, .. })
+            | UseStorage(UseStorageDecl { availability, .. }) => {
+                *availability == Availability::Optional
+            }
+
+            ExposeDirectory(_)
+            | ExposeProtocol(_)
+            | ExposeService(_)
+            | Resolver(_)
+            | Runner(_)
+            | StorageBackingDirectory(_) => false,
+        }
+    }
 }
 
 /// The data returned after successfully routing a capability to its source.
@@ -294,31 +321,36 @@ where
     match use_decl.source {
         UseSource::Debug => {
             // Find the component instance in which the debug capability was registered with the environment.
-            let (env_component_instance, env_name, registration_decl) =
-                match target.environment().get_debug_capability(&use_decl.source_name)? {
-                    Some((
-                        ExtendedInstanceInterface::Component(env_component_instance),
-                        env_name,
-                        reg,
-                    )) => (env_component_instance, env_name, reg),
-                    Some((ExtendedInstanceInterface::AboveRoot(_), _, _)) => {
-                        // Root environment.
-                        return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
-                            moniker: target.abs_moniker().clone(),
-                            capability_name: use_decl.source_name.clone(),
-                            capability_type: DebugRegistration::TYPE.to_string(),
-                        }
-                        .into());
+            let (env_component_instance, env_name, registration_decl) = match target
+                .environment()
+                .get_debug_capability(&use_decl.source_name)
+                .map_err(|e| {
+                    warn!("route_protocol error 1, use_decl={use_decl:?}: {e}");
+                    e
+                })? {
+                Some((
+                    ExtendedInstanceInterface::Component(env_component_instance),
+                    env_name,
+                    reg,
+                )) => (env_component_instance, env_name, reg),
+                Some((ExtendedInstanceInterface::AboveRoot(_), _, _)) => {
+                    // Root environment.
+                    return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
+                        moniker: target.abs_moniker().clone(),
+                        capability_name: use_decl.source_name.clone(),
+                        capability_type: DebugRegistration::TYPE.to_string(),
                     }
-                    None => {
-                        return Err(RoutingError::UseFromEnvironmentNotFound {
-                            moniker: target.abs_moniker().clone(),
-                            capability_name: use_decl.source_name.clone(),
-                            capability_type: DebugRegistration::TYPE.to_string(),
-                        }
-                        .into());
+                    .into());
+                }
+                None => {
+                    return Err(RoutingError::UseFromEnvironmentNotFound {
+                        moniker: target.abs_moniker().clone(),
+                        capability_name: use_decl.source_name.clone(),
+                        capability_type: DebugRegistration::TYPE.to_string(),
                     }
-                };
+                    .into());
+                }
+            };
             let env_name = env_name.expect(&format!(
                 "Environment name in component `{}` not found when routing `{}`.",
                 target.abs_moniker(),
@@ -339,14 +371,23 @@ where
                     &mut availability_visitor,
                     mapper,
                 )
-                .await?;
+                .await
+                .map_err(|e| {
+                    warn!("route_protocol error 2, use_decl={use_decl:?}: {e}");
+                    e
+                })?;
 
-            target.try_get_policy_checker()?.can_route_debug_capability(
-                &source,
-                &env_moniker,
-                &env_name,
-                target.abs_moniker(),
-            )?;
+            target
+                .try_get_policy_checker()
+                .map_err(|e| {
+                    warn!("route_protocol error 3, use_decl={use_decl:?}: {e}");
+                    e
+                })?
+                .can_route_debug_capability(&source, &env_moniker, &env_name, target.abs_moniker())
+                .map_err(|e| {
+                    warn!("route_protocol error 4, use_decl={use_decl:?}: {e}");
+                    e
+                })?;
             return Ok(RouteSource::Protocol(source));
         }
         UseSource::Self_ => {

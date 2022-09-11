@@ -42,7 +42,7 @@ When the above command is run, you can see the component framework error message
 with `fx log`. The `Echo` protocol request fails due to a routing error:
 
 ```
-[echo_client] WARNING: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/core/ffx-laboratory:echo_realm/echo_client`:
+[echo_client] WARNING: Required protocol `fidl.examples.routing.echo.Echo` was not available for target component `/core/ffx-laboratory:echo_realm/echo_client`:
 A `use from parent` declaration was found at `/core/ffx-laboratory:echo_realm/echo_client` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
 ```
 
