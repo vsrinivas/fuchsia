@@ -39,16 +39,6 @@ could be reordered or done in parallel:
 *   The ability of servers to accept requests via legacy messages can
     now be dropped.
 
-*   Convert users of FIDL event messages to use a separate channel for
-    sending events.
-
-*   Channels can now be made unidirectional.
-
-*   Channels can be made shareable.  That is, we can allow channel
-    handles to be duplicated.  We might want to hold off on this, or
-    allow it selectively, if there are concerns about FIDL protocols
-    that assume they have only one client process.
-
 *   Legacy channel messages can be removed.
 
 *   Zircon ports can be removed.
@@ -56,6 +46,10 @@ could be reordered or done in parallel:
 *   The transaction ID (`txid`) field can be removed from FIDL
     messages, because we no longer need it for matching up replies
     with requests.
+
+See ["Shareable channels"](shareable-channels.md) for some further
+steps that could be taken if we decided to make channels
+unidirectional and shareable.
 
 ## Legacy reply mode for CalleesRefs
 

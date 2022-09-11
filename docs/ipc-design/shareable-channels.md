@@ -71,7 +71,7 @@ be sent.
 At the same time, the MBMQ model is compatible with bidirectional
 channels.
 
-## FIDL events
+## Handling FIDL events
 
 FIDL event messages are sent on Zircon channels in the same direction
 as reply messages.  If we wanted to change channels to be
@@ -121,3 +121,19 @@ code uses FIDL event messages (rather than using request messages on a
 separate channel) for that reason.  However, the MBMQ model allows the
 message ordering to be preserved across channels, as described in
 ["Preserving message ordering"](mbmq-model.md).
+
+## Transition steps
+
+If we wanted to switch channels to be unidirectional and shareable,
+there are some additional steps that could be done after those
+described in the ["Transition plan"](transition-plan.md) section:
+
+*   Convert users of FIDL event messages to use a separate channel for
+    sending events, as described above.
+
+*   Channels can now be made unidirectional.
+
+*   Channels can be made shareable.  That is, we can allow channel
+    handles to be duplicated.  We might want to hold off on this, or
+    allow it selectively, if there are concerns about FIDL protocols
+    that assume they have only one client process.
