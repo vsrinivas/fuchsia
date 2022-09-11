@@ -337,7 +337,7 @@ The graph also does not show the cases where the MBO is deallocated.
     difference is that rather than sending the notification by sending
     a port packet to a port, the new syscall sends the notification as
     a reply on the given MBO.  The notification is returned as if by
-    an invocation of `zx_cmd_send_reply()`, enqueuing the MBO onto its
+    an invocation of `zx_mbo_send_reply()`, enqueuing the MBO onto its
     associated reply queue.
 
     This means that waiting for a signal on an object is like making a
