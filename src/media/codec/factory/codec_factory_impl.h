@@ -19,7 +19,8 @@
 class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
  public:
   static void CreateSelfOwned(CodecFactoryApp* app, sys::ComponentContext* component_context,
-                              fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
+                              fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request,
+                              bool is_v2);
 
   // See .fidl file comments.
   void CreateDecoder(fuchsia::mediacodec::CreateDecoder_Params params,
@@ -33,7 +34,7 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
 
  private:
   CodecFactoryImpl(CodecFactoryApp* app, sys::ComponentContext* component_context,
-                   fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request);
+                   fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request, bool is_v2);
   void OwnSelf(std::shared_ptr<CodecFactoryImpl> self);
   void AttachLifetimeTrackingEventpairDownstream(
       const fuchsia::mediacodec::CodecFactoryPtr* factory);
@@ -58,6 +59,7 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
   std::shared_ptr<CodecFactoryImpl> self_;
 
   std::vector<zx::eventpair> lifetime_tracking_;
+  bool is_v2_;
 };
 
 #endif  // SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_

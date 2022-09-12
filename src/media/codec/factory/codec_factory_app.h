@@ -77,6 +77,7 @@ class CodecFactoryApp {
   void PublishService();
   void PostDiscoveryQueueProcessing();
   void ProcessDiscoveryQueue();
+  bool IsV2();
   void IdledCodecDiscovery();
   // Remove a magma codec from the discovery queue and codec lists and ensure
   // the discovery queue is processed correctly.

@@ -14,7 +14,7 @@ enum class IsolateType {
   kMagma,
 };
 
-void ForwardToIsolate(std::string component_url, IsolateType type,
+void ForwardToIsolate(std::string component_url, bool is_v2, IsolateType type,
                       sys::ComponentContext* component_context,
                       fit::function<void(fuchsia::mediacodec::CodecFactoryPtr)> connect_func,
                       fit::function<void(void)> failure_func);
