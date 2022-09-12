@@ -63,11 +63,11 @@ impl TextEditController {
         let options = ftext::TextFieldOptions::EMPTY;
 
         let id = self.inner.lock().await.id.clone();
-        log::info!("Registering text field '{}'", id);
+        tracing::info!(%id, "Registering text field");
         let _ = text_edit_server
             .register_focused_text_field(field_client_end, session_server_end, options)
             .await?;
-        log::info!("Registered text field '{}'", id);
+        tracing::info!(%id, "Registered text field");
 
         self.inner.lock().await.session = Some(session_client_end.into_proxy()?);
         let self_ = self.clone();
@@ -75,7 +75,7 @@ impl TextEditController {
         let field_host_stream = _field_host_end.into_stream()?;
         let field_handler_future = field_host_stream
             .try_for_each(move |req| {
-                log::info!("TextFieldRequest: {}", req.method_name());
+                tracing::info!("TextFieldRequest: {}", req.method_name());
                 let self_ = self_.clone();
 
                 async move {
@@ -166,7 +166,7 @@ impl TextEditController {
             })
             .map(|result| {
                 if let Err(e) = result {
-                    log::error!("Controller loop failed with error: {:?}", e);
+                    tracing::error!("Controller loop failed with error: {:?}", e);
                 }
             });
         fasync::Task::local(field_handler_future).detach();
@@ -427,7 +427,7 @@ mod tests {
             let self_ = self.clone();
             let fut = stream
                 .try_for_each_concurrent(2, move |request| {
-                    log::info!("TextEditServer_Request: {}", request.method_name());
+                    tracing::info!("TextEditServer_Request: {}", request.method_name());
                     let self_ = self_.clone();
                     async move {
                         match request {
@@ -446,7 +446,7 @@ mod tests {
                     }
                 })
                 .await;
-            log::info!("Finished Server::run");
+            tracing::info!("Finished Server::run");
         }
 
         async fn register_field(
@@ -466,7 +466,7 @@ mod tests {
             let proxy_ = proxy.clone();
             let session_future = server_session.into_stream().expect("into_stream").try_for_each(
                 move |req: ftext::TextEditServerSessionRequest| {
-                    log::info!("{:#?}", &req);
+                    tracing::info!("{:#?}", &req);
                     let self_ = self_.clone();
                     let proxy_ = proxy_.clone();
                     async move {
