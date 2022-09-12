@@ -130,6 +130,7 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
     inspect::UintProperty bus_clock_frequency;
     inspect::UintProperty adj_delay;
     inspect::UintProperty delay_lines;
+    std::vector<inspect::Node> tuning_results_nodes;
     std::vector<inspect::StringProperty> tuning_results;
     inspect::UintProperty max_delay;
     inspect::UintProperty longest_window_start;

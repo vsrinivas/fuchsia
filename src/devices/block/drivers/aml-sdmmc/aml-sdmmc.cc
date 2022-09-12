@@ -1220,7 +1220,9 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
 
     const std::string results = adj_delay_results[i].ToString();
 
-    inspect_.tuning_results.push_back(inspect_.root.CreateString(property_name, results));
+    inspect::Node node = inspect_.root.CreateChild(property_name);
+    inspect_.tuning_results.push_back(node.CreateString("tuning_results", results));
+    inspect_.tuning_results_nodes.push_back(std::move(node));
 
     // Add a leading zero so that fx iquery show-file sorts the results properly.
     AML_SDMMC_INFO("Tuning results [%02u]: %s", i, results.c_str());
