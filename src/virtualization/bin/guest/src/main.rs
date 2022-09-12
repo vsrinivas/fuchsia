@@ -48,17 +48,8 @@ async fn main() -> Result<(), Error> {
             let guest = services::connect_to_guest(serial_args.guest_type).await?;
             serial::handle_serial(guest).await
         }
-        SubCommands::List(..) => {
-            let supported_guests = vec![
-                arguments::GuestType::Zircon,
-                arguments::GuestType::Debian,
-                arguments::GuestType::Termina,
-            ];
-            let mut managers = Vec::new();
-            for guest_type in supported_guests {
-                managers.push((guest_type.to_string(), services::connect_to_manager(guest_type)?));
-            }
-            let output = list::handle_list(&managers).await?;
+        SubCommands::List(list_args) => {
+            let output = list::handle_list(&list_args).await?;
             println!("{}", output);
             Ok(())
         }

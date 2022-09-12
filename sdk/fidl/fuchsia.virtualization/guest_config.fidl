@@ -82,7 +82,8 @@ type MagmaDevice = struct {
     memory uint64 = 17179869184;
 };
 
-/// The configuration required to start up a guest.
+/// The configuration required to start up a guest. When adding a new field, consider updating
+/// fuchsia.virtualization.GuestDescriptor which is an informational snapshot of this table.
 type GuestConfig = resource table {
     /// Type of kernel to load. Cannot be changed from the command-line.
     1: kernel_type KernelType;

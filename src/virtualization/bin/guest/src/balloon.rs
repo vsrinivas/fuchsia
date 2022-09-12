@@ -31,7 +31,7 @@ pub async fn connect_to_balloon_controller(
 ) -> Result<BalloonControllerProxy, Error> {
     let guest_manager = services::connect_to_manager(guest_type)?;
     let guest_info = guest_manager.get_guest_info().await?;
-    if guest_info.guest_status == GuestStatus::Started {
+    if guest_info.guest_status.expect("guest status should be set") == GuestStatus::Running {
         let (guest_endpoint, guest_server_end) = fidl::endpoints::create_proxy::<GuestMarker>()
             .map_err(|err| anyhow!("failed to create guest proxy: {}", err))?;
         guest_manager

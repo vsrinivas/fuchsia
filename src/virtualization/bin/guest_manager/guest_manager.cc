@@ -36,6 +36,9 @@ uint8_t GetDefaultNumCpus() {
 
 }  // namespace
 
+using ::fuchsia::virtualization::GuestDescriptor;
+using ::fuchsia::virtualization::GuestStatus;
+
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                            std::string config_pkg_dir_path, std::string config_path)
     : context_(context),
@@ -74,7 +77,7 @@ void GuestManager::LaunchGuest(
     fuchsia::virtualization::GuestConfig user_config,
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
     fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) {
-  if (guest_started_) {
+  if (is_guest_started()) {
     callback(fpromise::error(ZX_ERR_ALREADY_EXISTS));
     return;
   }
@@ -123,7 +126,13 @@ void GuestManager::LaunchGuest(
   // bring up all virtio devices and query guest_config via the
   // fuchsia::virtualization::GuestConfigProvider::Get. Note that this must happen after the
   // config is finalized.
-  guest_started_ = true;
+
+  // Once this VMM starts running there's no way to stop it, so for now the only state is RUNNING.
+  // TODO(fxbug.dev/104989): Implement granular states once Stop/Start works.
+  state_ = GuestStatus::RUNNING;
+
+  start_time_ = zx::clock::get_monotonic();
+  SnapshotConfig(guest_config_);
   context_->svc()->Connect(std::move(controller));
 
   OnGuestLaunched();
@@ -133,9 +142,9 @@ void GuestManager::LaunchGuest(
 void GuestManager::ConnectToGuest(
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
     fuchsia::virtualization::GuestManager::ConnectToGuestCallback callback) {
-  if (guest_started_) {
+  if (is_guest_started()) {
     context_->svc()->Connect(std::move(controller));
-    callback(fuchsia::virtualization::GuestManager_ConnectToGuest_Result::WithResponse({}));
+    callback(fpromise::ok());
   } else {
     FX_LOGS(ERROR) << "Failed to connect to guest. Guest is not running";
     callback(fpromise::error(ZX_ERR_UNAVAILABLE));
@@ -144,13 +153,48 @@ void GuestManager::ConnectToGuest(
 
 void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
   fuchsia::virtualization::GuestInfo info;
-  if (guest_started_) {
-    info.guest_status = ::fuchsia::virtualization::GuestStatus::STARTED;
-  } else {
-    info.guest_status = ::fuchsia::virtualization::GuestStatus::NOT_STARTED;
+  info.set_guest_status(state_);
+
+  switch (state_) {
+    case GuestStatus::STARTING:
+    case GuestStatus::RUNNING:
+    case GuestStatus::STOPPING: {
+      GuestDescriptor descriptor;
+      FX_CHECK(guest_descriptor_.Clone(&descriptor) == ZX_OK);
+      info.set_guest_descriptor(std::move(descriptor));
+      info.set_uptime((zx::clock::get_monotonic() - start_time_).to_nsecs());
+      break;
+    }
+    case GuestStatus::STOPPED: {
+      info.set_uptime((stop_time_ - start_time_).to_nsecs());
+      if (last_error_.has_value()) {
+        info.set_stop_error(last_error_.value());
+      }
+      break;
+    }
+    case GuestStatus::NOT_STARTED: {
+      // Do nothing.
+      break;
+    }
   }
 
   callback(std::move(info));
+}
+
+void GuestManager::SnapshotConfig(const fuchsia::virtualization::GuestConfig& config) {
+  guest_descriptor_.set_num_cpus(config.cpus());
+  guest_descriptor_.set_guest_memory(config.guest_memory());
+
+  guest_descriptor_.set_wayland(config.has_wayland_device());
+  guest_descriptor_.set_magma(config.has_magma_device());
+
+  guest_descriptor_.set_network(config.has_default_net() && config.default_net());
+  guest_descriptor_.set_balloon(config.has_virtio_balloon() && config.virtio_balloon());
+  guest_descriptor_.set_console(config.has_virtio_console() && config.virtio_console());
+  guest_descriptor_.set_gpu(config.has_virtio_gpu() && config.virtio_gpu());
+  guest_descriptor_.set_rng(config.has_virtio_rng() && config.virtio_rng());
+  guest_descriptor_.set_vsock(config.has_virtio_vsock() && config.virtio_vsock());
+  guest_descriptor_.set_sound(config.has_virtio_sound() && config.virtio_sound());
 }
 
 // |fuchsia::virtualization::GuestConfigProvider|

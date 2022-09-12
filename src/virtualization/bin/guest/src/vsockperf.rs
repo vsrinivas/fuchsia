@@ -445,7 +445,7 @@ async fn run_latency_test(mut socket: fasync::Socket, result: &mut String) -> Re
 pub async fn run_micro_benchmark(guest_type: arguments::GuestType) -> Result<(), Error> {
     let guest_manager = services::connect_to_manager(guest_type)?;
     let guest_info = guest_manager.get_guest_info().await?;
-    if guest_info.guest_status != GuestStatus::Started {
+    if guest_info.guest_status.unwrap() != GuestStatus::Running {
         return Err(anyhow!(zx::Status::NOT_CONNECTED));
     }
 

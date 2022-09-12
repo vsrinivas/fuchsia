@@ -55,12 +55,25 @@ impl GuestType {
             GuestType::Termina => "//src/virtualization/bundles:termina",
         }
     }
+
     pub fn gn_core_shard_label(&self) -> &'static str {
         match self {
             GuestType::Zircon => "//src/virtualization/bundles:zircon_core_shards",
             GuestType::Debian => "//src/virtualization/bundles:debian_core_shards",
             GuestType::Termina => "//src/virtualization/bundles:termina_core_shards",
         }
+    }
+
+    pub fn package_url(&self) -> &'static str {
+        match self {
+            GuestType::Zircon => "fuchsia-pkg://fuchsia.com/zircon_guest#meta/zircon_guest.cm",
+            GuestType::Debian => "fuchsia-pkg://fuchsia.com/debian_guest#meta/debian_guest.cm",
+            GuestType::Termina => "fuchsia-pkg://fuchsia.com/termina_guest#meta/termina_guest.cm",
+        }
+    }
+
+    pub fn all_guests() -> Vec<GuestType> {
+        vec![GuestType::Debian, GuestType::Termina, GuestType::Zircon]
     }
 }
 
@@ -117,9 +130,13 @@ pub struct SerialArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// List existing guest environments. Usage: guest list
+/// List available guest environments. Usage: guest list [guest-type]
 #[argh(subcommand, name = "list")]
-pub struct ListArgs {}
+pub struct ListArgs {
+    #[argh(positional)]
+    /// optional guest type to get detailed information about
+    pub guest_type: Option<GuestType>,
+}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Create a socat connection on the specified port. Usage: guest socat guest-type port

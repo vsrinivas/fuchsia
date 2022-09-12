@@ -13,6 +13,8 @@
 
 namespace {
 
+using ::fuchsia::virtualization::GuestDescriptor;
+
 class GuestManagerTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override { TestLoopFixture::SetUp(); }
@@ -111,7 +113,11 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
   GuestManager manager(dispatcher(), provider_.context(), "/pkg/", "data/configs/valid_guest.cfg");
 
   manager.GetGuestInfo([&get_callback_called](auto info) {
-    ASSERT_EQ(info.guest_status, fuchsia::virtualization::GuestStatus::NOT_STARTED);
+    ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::NOT_STARTED);
+    ASSERT_FALSE(info.has_uptime());
+    ASSERT_FALSE(info.has_guest_descriptor());
+    ASSERT_FALSE(info.has_stop_error());
+
     get_callback_called = true;
   });
   ASSERT_TRUE(get_callback_called);
@@ -126,9 +132,44 @@ TEST_F(GuestManagerTest, LaunchAndGetInfo) {
                       });
   ASSERT_TRUE(launch_callback_called);
 
+  // TODO(fxbug.dev/104989): Capture config from LaunchGuest once this FIDL protocol is removed.
+  fuchsia::virtualization::GuestConfig finalized_config;
   get_callback_called = false;
-  manager.GetGuestInfo([&get_callback_called](auto info) {
-    ASSERT_EQ(info.guest_status, fuchsia::virtualization::GuestStatus::STARTED);
+  manager.Get(
+      [&finalized_config, &get_callback_called](fuchsia::virtualization::GuestConfig config) {
+        finalized_config = std::move(config);
+        get_callback_called = true;
+      });
+  ASSERT_TRUE(get_callback_called);
+
+  get_callback_called = false;
+  manager.GetGuestInfo([&finalized_config, &get_callback_called](auto info) {
+    ASSERT_EQ(info.guest_status(), fuchsia::virtualization::GuestStatus::RUNNING);
+    ASSERT_GT(info.uptime(), 0);
+    ASSERT_FALSE(info.has_stop_error());
+
+    const GuestDescriptor& guest_descriptor = info.guest_descriptor();
+    ASSERT_EQ(guest_descriptor.guest_memory(), finalized_config.guest_memory());
+    ASSERT_EQ(guest_descriptor.num_cpus(), finalized_config.cpus());
+
+    ASSERT_EQ(guest_descriptor.wayland(), finalized_config.has_wayland_device());
+    ASSERT_EQ(guest_descriptor.magma(), finalized_config.has_magma_device());
+
+    ASSERT_EQ(guest_descriptor.network(),
+              finalized_config.has_default_net() && finalized_config.default_net());
+    ASSERT_EQ(guest_descriptor.balloon(),
+              finalized_config.has_virtio_balloon() && finalized_config.virtio_balloon());
+    ASSERT_EQ(guest_descriptor.console(),
+              finalized_config.has_virtio_console() && finalized_config.virtio_console());
+    ASSERT_EQ(guest_descriptor.gpu(),
+              finalized_config.has_virtio_gpu() && finalized_config.virtio_gpu());
+    ASSERT_EQ(guest_descriptor.rng(),
+              finalized_config.has_virtio_rng() && finalized_config.virtio_rng());
+    ASSERT_EQ(guest_descriptor.vsock(),
+              finalized_config.has_virtio_vsock() && finalized_config.virtio_vsock());
+    ASSERT_EQ(guest_descriptor.sound(),
+              finalized_config.has_virtio_sound() && finalized_config.virtio_sound());
+
     get_callback_called = true;
   });
   ASSERT_TRUE(get_callback_called);
