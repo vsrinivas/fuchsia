@@ -14,7 +14,6 @@ use {
         exposed_dir::ExposedDir,
         hooks::{Event, EventPayload, Hooks},
         namespace::IncomingNamespace,
-        ns_dir::NamespaceDir,
         routing::{
             self, route_and_open_capability, OpenOptions, OpenResourceError, OpenRunnerOptions,
             RouteRequest, RoutingError,
@@ -523,38 +522,7 @@ impl ComponentInstance {
                     None
                 };
 
-                let (exposed_dir, expose_server) = fidl::endpoints::create_endpoints().unwrap();
-                r.get_exposed_dir().open(
-                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-                    fio::MODE_TYPE_DIRECTORY,
-                    vfs::path::Path::dot(),
-                    expose_server,
-                );
-                let exposed_dir = exposed_dir.into_channel();
-                let exposed_dir =
-                    fidl::endpoints::ClientEnd::<fio::DirectoryMarker>::new(exposed_dir);
-
-                let (ns_dir, ns_server) = fidl::endpoints::create_endpoints().unwrap();
-                r.get_ns_dir().open(
-                    fio::OpenFlags::RIGHT_READABLE
-                        | fio::OpenFlags::RIGHT_WRITABLE
-                        | fio::OpenFlags::RIGHT_EXECUTABLE,
-                    fio::MODE_TYPE_DIRECTORY,
-                    vfs::path::Path::dot(),
-                    ns_server,
-                );
-                let ns_dir = ns_dir.into_channel();
-                let ns_dir = fidl::endpoints::ClientEnd::<fio::DirectoryMarker>::new(ns_dir);
-
-                Some(Box::new(fsys::ResolvedState {
-                    uses,
-                    exposes,
-                    config,
-                    pkg_dir,
-                    started,
-                    exposed_dir,
-                    ns_dir,
-                }))
+                Some(Box::new(fsys::ResolvedState { uses, exposes, config, pkg_dir, started }))
             }
             _ => None,
         }
@@ -1445,8 +1413,6 @@ pub struct ResolvedInstanceState {
     environments: HashMap<String, Arc<Environment>>,
     /// Hosts a directory mapping the component's exposed capabilities.
     exposed_dir: ExposedDir,
-    /// Hosts a directory mapping the component's namespace.
-    ns_dir: NamespaceDir,
     /// Namespace creator used for debug purposes (RealmQuery).
     debug_ns: IncomingNamespace,
     /// Contains information about the package, if one exists
@@ -1482,12 +1448,6 @@ impl ResolvedInstanceState {
             WeakComponentInstance::new(&component),
             decl.clone(),
         )?;
-        let ns_dir = NamespaceDir::new(
-            ExecutionScope::new(),
-            WeakComponentInstance::new(&component),
-            decl.clone(),
-            package.clone().map(|p| p.package_dir),
-        )?;
         let debug_ns = IncomingNamespace::new(package.clone());
         let mut state = Self {
             execution_scope: ExecutionScope::new(),
@@ -1496,7 +1456,6 @@ impl ResolvedInstanceState {
             next_dynamic_instance_id: 1,
             environments: Self::instantiate_environments(component, &decl),
             exposed_dir,
-            ns_dir,
             debug_ns,
             package,
             config,
@@ -1562,11 +1521,6 @@ impl ResolvedInstanceState {
     /// Returns the exposed directory bound to this instance.
     pub fn get_exposed_dir(&self) -> &ExposedDir {
         &self.exposed_dir
-    }
-
-    /// Returns the namespace directory of this instance.
-    pub fn get_ns_dir(&self) -> &NamespaceDir {
-        &self.ns_dir
     }
 
     /// Returns the debug namespace creator for this instance.

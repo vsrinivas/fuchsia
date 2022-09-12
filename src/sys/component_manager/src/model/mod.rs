@@ -23,7 +23,6 @@ pub(crate) mod storage;
 mod addable_directory;
 mod dir_tree;
 mod exposed_dir;
-mod ns_dir;
 
 #[cfg(test)]
 mod tests;

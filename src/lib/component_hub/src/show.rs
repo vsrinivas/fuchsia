@@ -546,14 +546,6 @@ mod tests {
         let (temp_dir_runtime, runtime_dir) = create_runtime_dir();
         let (temp_dir_appmgr_out, appmgr_out_dir) = create_appmgr_out();
 
-        // The exposed dir is not used by this library.
-        let (exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
-        let (appmgr_exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
-
-        // The namespace dir is not used by this library.
-        let (ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
-        let (appmgr_ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
-
         let query = serve_realm_query(HashMap::from([
             (
                 "./my_foo".to_string(),
@@ -592,8 +584,6 @@ mod tests {
                             runtime_dir: Some(runtime_dir),
                             start_reason: "Debugging Workflow".to_string(),
                         })),
-                        exposed_dir,
-                        ns_dir,
                     })),
                 ),
             ),
@@ -616,8 +606,6 @@ mod tests {
                             runtime_dir: None,
                             start_reason: "Debugging Workflow".to_string(),
                         })),
-                        exposed_dir: appmgr_exposed_dir,
-                        ns_dir: appmgr_ns_dir,
                     })),
                 ),
             ),
