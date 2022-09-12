@@ -434,10 +434,8 @@ impl<I: Ip> EventContext<IpDeviceEvent<DeviceId, I>> for BindingsNonSyncCtxImpl 
                     device,
                     InterfaceUpdate::AddressAdded {
                         addr: addr.into(),
-                        initial_state: interfaces_watcher::AddressState {
-                            valid_until: zx::Time::INFINITE,
-                            assignment_state: state,
-                        },
+                        assignment_state: state,
+                        valid_until: zx::Time::INFINITE,
                     },
                 );
                 self.notify_address_update(device, addr.addr().into(), state);

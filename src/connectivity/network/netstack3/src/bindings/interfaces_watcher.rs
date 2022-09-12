@@ -187,7 +187,7 @@ impl Watcher {
 #[derive(Debug)]
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub enum InterfaceUpdate {
-    AddressAdded { addr: AddrSubnetEither, initial_state: AddressState },
+    AddressAdded { addr: AddrSubnetEither, assignment_state: IpAddressState, valid_until: zx::Time },
     AddressAssignmentStateChanged { addr: IpAddr, new_state: IpAddressState },
     AddressRemoved(IpAddr),
     DefaultRouteChanged { version: IpVersion, has_default_route: bool },
@@ -225,7 +225,13 @@ struct AddressProperties {
 #[cfg_attr(test, derive(Clone, Eq, PartialEq))]
 pub struct AddressState {
     pub valid_until: zx::Time,
-    pub assignment_state: IpAddressState,
+    // Whether or not the Address should be published to clients. This is a
+    // rough proxy of the address's [`IpAddressState`]: `Assigned` addresses are
+    // visible whereas `Tentative` addresses are not. Note that when addresses
+    // become `Unavailable` they should retain their previous visibility:
+    // visible if the address was previously `Assigned` and invisible if
+    // previously `Tentative`.
+    pub visible: bool,
 }
 
 #[derive(Debug)]
@@ -445,40 +451,40 @@ impl Worker {
                     .get_mut(&id)
                     .ok_or_else(|| WorkerError::UpdateNonexistentInterface(id))?;
                 match event {
-                    InterfaceUpdate::AddressAdded {
-                        addr,
-                        initial_state: AddressState { assignment_state, valid_until },
-                    } => {
+                    InterfaceUpdate::AddressAdded { addr, assignment_state, valid_until } => {
                         let (addr, prefix_len) = addr.addr_prefix();
                         let addr = *addr;
+                        let visible = match assignment_state {
+                            IpAddressState::Assigned | IpAddressState::Unavailable => true,
+                            IpAddressState::Tentative => false,
+                        };
                         match addresses.insert(
                             addr,
                             AddressProperties {
                                 prefix_len,
-                                state: AddressState { assignment_state, valid_until },
+                                state: AddressState { visible, valid_until },
                             },
                         ) {
                             Some(AddressProperties { .. }) => {
                                 Err(WorkerError::AssignExistingAddr { interface: id, addr })
                             }
-                            None => match assignment_state {
-                                IpAddressState::Assigned | IpAddressState::Unavailable => {
+                            None => {
+                                if visible {
                                     Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                                         id: Some(id),
                                         addresses: Some(Self::collect_addresses(addresses)),
                                         ..finterfaces::Properties::EMPTY
                                     })))
+                                } else {
+                                    Ok(None)
                                 }
-                                // Tentative addresses are not visible on the
-                                // API.
-                                IpAddressState::Tentative => Ok(None),
-                            },
+                            }
                         }
                     }
                     InterfaceUpdate::AddressAssignmentStateChanged { addr, new_state } => {
                         let AddressProperties {
                             prefix_len: _,
-                            state: AddressState { assignment_state, valid_until: _ },
+                            state: AddressState { visible, valid_until: _ },
                         } = addresses.get_mut(&addr).ok_or_else(|| {
                             WorkerError::UpdateStateOnNonexistentAddr {
                                 interface: id,
@@ -486,19 +492,20 @@ impl Worker {
                                 state: new_state,
                             }
                         })?;
-                        match new_state {
-                            // Don't exposes changes to `Unavailable` on the
-                            // API. The client already gets an `OnlineChanged`
-                            // event when the interface is disabled, so an
-                            // address update would be redundant.
-                            IpAddressState::Unavailable => return Ok(None),
-                            IpAddressState::Assigned | IpAddressState::Tentative => {
-                                if new_state == *assignment_state {
-                                    return Ok(None);
-                                }
-                                *assignment_state = new_state;
-                            }
+                        let new_visibility = match new_state {
+                            IpAddressState::Assigned => true,
+                            IpAddressState::Tentative => false,
+                            // Keep the old visibility when addresses become
+                            // `Unavailable`. If the address was `Assigned`, it
+                            // will remain visible, and if the address was
+                            // `Tentative` it will remain invisible.
+                            IpAddressState::Unavailable => *visible,
+                        };
+
+                        if *visible == new_visibility {
+                            return Ok(None);
                         }
+                        *visible = new_visibility;
                         Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                             id: Some(id),
                             addresses: Some(Self::collect_addresses(addresses)),
@@ -508,18 +515,18 @@ impl Worker {
                     InterfaceUpdate::AddressRemoved(addr) => match addresses.remove(&addr) {
                         Some(AddressProperties {
                             prefix_len: _,
-                            state: AddressState { assignment_state, valid_until: _ },
-                        }) => match assignment_state {
-                            IpAddressState::Assigned | IpAddressState::Unavailable => {
+                            state: AddressState { visible, valid_until: _ },
+                        }) => {
+                            if visible {
                                 Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
                                     id: Some(id),
                                     addresses: (Some(Self::collect_addresses(addresses))),
                                     ..finterfaces::Properties::EMPTY
                                 })))
+                            } else {
+                                Ok(None)
                             }
-                            // Tentative addresses are not visible on the API.
-                            IpAddressState::Tentative => Ok(None),
-                        },
+                        }
                         None => Err(WorkerError::UnassignNonexistentAddr { interface: id, addr }),
                     },
                     InterfaceUpdate::DefaultRouteChanged {
@@ -568,14 +575,10 @@ impl Worker {
             .filter_map(
                 |(
                     addr,
-                    AddressProperties {
-                        prefix_len,
-                        state: AddressState { valid_until, assignment_state },
-                    },
+                    AddressProperties { prefix_len, state: AddressState { valid_until, visible } },
                 )| {
-                    // Don't show `Tentative` addresses.
-                    match assignment_state {
-                        IpAddressState::Assigned | IpAddressState::Unavailable => Some(
+                    if *visible {
+                        Some(
                             finterfaces_ext::Address {
                                 addr: fnet::Subnet {
                                     addr: addr.into_fidl(),
@@ -584,8 +587,9 @@ impl Worker {
                                 valid_until: valid_until.into_nanos(),
                             }
                             .into(),
-                        ),
-                        IpAddressState::Tentative => None,
+                        )
+                    } else {
+                        None
                     }
                 },
             )
@@ -780,10 +784,8 @@ mod tests {
             (
                 InterfaceUpdate::AddressAdded {
                     addr: addr1.clone(),
-                    initial_state: AddressState {
-                        valid_until: ADDR_VALID_UNTIL,
-                        assignment_state: IpAddressState::Assigned,
-                    },
+                    assignment_state: IpAddressState::Assigned,
+                    valid_until: ADDR_VALID_UNTIL,
                 },
                 finterfaces::Event::Changed(finterfaces::Properties {
                     addresses: Some(vec![finterfaces_ext::Address {
@@ -995,14 +997,13 @@ mod tests {
         );
     }
 
-    #[test]
-    fn consume_changed_address_added() {
+    #[test_case(IpAddressState::Assigned; "assigned")]
+    #[test_case(IpAddressState::Unavailable; "unavailable")]
+    fn consume_changed_address_added(assignment_state: IpAddressState) {
         let addr = AddrSubnetEither::V6(
             AddrSubnet::new(*Ipv6::LOOPBACK_IPV6_ADDRESS, Ipv6Addr::BYTES * 8).unwrap(),
         );
         let valid_until = zx::Time::from_nanos(1234);
-        let address_state =
-            AddressState { valid_until, assignment_state: IpAddressState::Assigned };
         let (id, initial_state) = iface1_initial_state();
 
         let mut state = HashMap::from([(id, initial_state)]);
@@ -1011,7 +1012,8 @@ mod tests {
             id,
             event: InterfaceUpdate::AddressAdded {
                 addr: addr.clone(),
-                initial_state: address_state.clone(),
+                assignment_state,
+                valid_until,
             },
         };
 
@@ -1034,7 +1036,10 @@ mod tests {
         // Check state is updated.
         assert_eq!(
             state.get(&id).expect("missing interface entry").addresses.get(&*ip_addr),
-            Some(&AddressProperties { prefix_len, state: address_state })
+            Some(&AddressProperties {
+                prefix_len,
+                state: AddressState { valid_until: valid_until, visible: true }
+            })
         );
         // Can't add again.
         assert_eq!(
@@ -1049,8 +1054,6 @@ mod tests {
             AddrSubnet::new(*Ipv6::LOOPBACK_IPV6_ADDRESS, Ipv6Addr::BYTES * 8).unwrap(),
         );
         let valid_until = zx::Time::from_nanos(1234);
-        let address_state =
-            AddressState { valid_until, assignment_state: IpAddressState::Tentative };
         let (id, initial_state) = iface1_initial_state();
 
         let mut state = HashMap::from([(id, initial_state)]);
@@ -1059,7 +1062,8 @@ mod tests {
             id,
             event: InterfaceUpdate::AddressAdded {
                 addr: addr.clone(),
-                initial_state: address_state.clone(),
+                assignment_state: IpAddressState::Tentative,
+                valid_until: valid_until,
             },
         };
 
@@ -1069,7 +1073,10 @@ mod tests {
         // Check state is updated.
         assert_eq!(
             state.get(&id).expect("missing interface entry").addresses.get(&*ip_addr),
-            Some(&AddressProperties { prefix_len, state: address_state })
+            Some(&AddressProperties {
+                prefix_len,
+                state: AddressState { valid_until, visible: false }
+            })
         );
 
         let event =
@@ -1081,31 +1088,63 @@ mod tests {
         assert_eq!(state.get(&id).expect("missing interface entry").addresses.get(&*ip_addr), None);
     }
 
-    #[test]
-    fn consume_changed_address_state_change() {
+    #[test_case(false; "no_changes_to_unavailable")]
+    #[test_case(true; "intersperse_changes_to_unavailable")]
+    fn consume_changed_address_state_change(intersperse_unavailable: bool) {
         let subnet = AddrSubnetEither::<net_types::SpecifiedAddr<_>>::V6(
             AddrSubnet::new(*Ipv6::LOOPBACK_IPV6_ADDRESS, Ipv6Addr::BYTES * 8).unwrap(),
         );
         let (addr, prefix_len) = subnet.addr_prefix();
         let addr = *addr;
         let valid_until = zx::Time::from_nanos(1234);
-        let address_properties = AddressProperties {
-            prefix_len,
-            state: AddressState { valid_until, assignment_state: IpAddressState::Tentative },
-        };
+        let address_properties =
+            AddressProperties { prefix_len, state: AddressState { valid_until, visible: false } };
         let (id, initial_state) = iface1_initial_state();
         let initial_state = InterfaceState {
             addresses: HashMap::from([(addr, address_properties)]),
             ..initial_state
         };
+        // When `intersperse_unavailable` is `true` a state change to
+        // Unavailable is injected between all state changes: e.g.
+        // Tentative -> Assigned becomes Tentative -> Unavailable -> Assigned.
+        // This allows us to verify that changes to Unavailable do not influence
+        // the events observed by the client.
+        let maybe_change_state_to_unavailable = |state: &mut HashMap<u64, InterfaceState>| {
+            if !intersperse_unavailable {
+                return;
+            }
+            let event = InterfaceEvent::Changed {
+                id,
+                event: InterfaceUpdate::AddressAssignmentStateChanged {
+                    addr,
+                    new_state: IpAddressState::Unavailable,
+                },
+            };
+            let old_state = state
+                .get(&id)
+                .expect("missing_interface entry")
+                .addresses
+                .get(&addr)
+                .expect("missing address entry")
+                .clone();
+            // Changing state to Unavailable should never generate an event.
+            assert_eq!(Worker::consume_event(state, event), Ok(None));
+            // Check state is not updated.
+            assert_eq!(
+                state.get(&id).expect("missing interface entry").addresses.get(&addr),
+                Some(&old_state)
+            );
+        };
 
-        // Tentative address does not show up initially.
+        // Invisible address does not show up initially.
         assert_eq!(
             Worker::collect_addresses::<finterfaces::Address>(&initial_state.addresses),
             vec![]
         );
 
         let mut state = HashMap::from([(id, initial_state)]);
+
+        maybe_change_state_to_unavailable(&mut state);
 
         let event = InterfaceEvent::Changed {
             id,
@@ -1134,11 +1173,124 @@ mod tests {
             state.get(&id).expect("missing interface entry").addresses.get(&addr),
             Some(&AddressProperties {
                 prefix_len,
-                state: AddressState { valid_until, assignment_state: IpAddressState::Assigned },
+                state: AddressState { valid_until, visible: true },
             })
         );
+
+        maybe_change_state_to_unavailable(&mut state);
+
         // Sending again will not produce an event, because no change.
         assert_eq!(Worker::consume_event(&mut state, event), Ok(None));
+
+        maybe_change_state_to_unavailable(&mut state);
+
+        // Switch the state back to tentative, which will trigger removal.
+        let event = InterfaceEvent::Changed {
+            id,
+            event: InterfaceUpdate::AddressAssignmentStateChanged {
+                addr,
+                new_state: IpAddressState::Tentative,
+            },
+        };
+        assert_eq!(
+            Worker::consume_event(&mut state, event.clone()),
+            Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
+                id: Some(id),
+                addresses: Some(Vec::new()),
+                ..finterfaces::Properties::EMPTY
+            })))
+        );
+
+        // Check state is updated.
+        assert_eq!(
+            state.get(&id).expect("missing interface entry").addresses.get(&addr),
+            Some(&AddressProperties {
+                prefix_len,
+                state: AddressState { valid_until, visible: false },
+            })
+        );
+
+        maybe_change_state_to_unavailable(&mut state);
+
+        // Sending again will not produce an event, because no change.
+        assert_eq!(Worker::consume_event(&mut state, event), Ok(None));
+
+        maybe_change_state_to_unavailable(&mut state);
+    }
+
+    #[test_case(IpAddressState::Assigned; "assigned")]
+    #[test_case(IpAddressState::Unavailable; "unavailable")]
+    fn consume_changed_start_unavailable(new_state: IpAddressState) {
+        let addr = AddrSubnetEither::V6(
+            AddrSubnet::new(*Ipv6::LOOPBACK_IPV6_ADDRESS, Ipv6Addr::BYTES * 8).unwrap(),
+        );
+        let valid_until = zx::Time::from_nanos(1234);
+        let (id, initial_state) = iface1_initial_state();
+
+        let mut state = HashMap::from([(id, initial_state)]);
+
+        let event = InterfaceEvent::Changed {
+            id,
+            event: InterfaceUpdate::AddressAdded {
+                addr: addr.clone(),
+                assignment_state: IpAddressState::Unavailable,
+                valid_until,
+            },
+        };
+
+        // Add address.
+        assert_eq!(
+            Worker::consume_event(&mut state, event.clone()),
+            Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
+                id: Some(id),
+                addresses: Some(vec![finterfaces_ext::Address {
+                    addr: addr.clone().into_fidl(),
+                    valid_until: valid_until.into_nanos()
+                }
+                .into()]),
+                ..finterfaces::Properties::EMPTY
+            })))
+        );
+
+        let (ip_addr, prefix_len) = addr.addr_prefix();
+
+        // Check state is updated.
+        assert_eq!(
+            state.get(&id).expect("missing interface entry").addresses.get(&*ip_addr),
+            Some(&AddressProperties {
+                prefix_len,
+                state: AddressState { valid_until: valid_until, visible: true }
+            })
+        );
+
+        // Send an event to change the state.
+        let event = InterfaceEvent::Changed {
+            id,
+            event: InterfaceUpdate::AddressAssignmentStateChanged { addr: *addr.addr(), new_state },
+        };
+
+        let (expected_visibility, expected_event) = match new_state {
+            // Changing from `Unavailable` to `Unavailable` is a No-Op.
+            IpAddressState::Unavailable |
+            // Changing from `Unavailable` to `Assigned` does not change the
+            // address visibility and should not generate events.
+            IpAddressState::Assigned => (true, None),
+            // Changing from `Unavailable` to `Tentative` makes the address
+            // invisible and should generate an event with the address missing.
+            IpAddressState::Tentative => (false, Some(finterfaces::Event::Changed(finterfaces::Properties {
+                id: Some(id),
+                addresses: Some(Vec::new()),
+                ..finterfaces::Properties::EMPTY
+            }))),
+        };
+        assert_eq!(Worker::consume_event(&mut state, event), Ok(expected_event));
+        assert_eq!(
+            state.get(&id).expect("missing interface entry").addresses.get(&addr.addr()),
+            Some(&AddressProperties {
+                prefix_len,
+                state: AddressState { valid_until, visible: expected_visibility },
+            })
+        );
     }
 
     #[test]
@@ -1146,10 +1298,7 @@ mod tests {
         let addr = (*Ipv6::LOOPBACK_IPV6_ADDRESS).into();
         let address_properties = AddressProperties {
             prefix_len: Ipv6Addr::BYTES * 8,
-            state: AddressState {
-                valid_until: zx::Time::INFINITE,
-                assignment_state: IpAddressState::Assigned,
-            },
+            state: AddressState { valid_until: zx::Time::INFINITE, visible: true },
         };
         let (id, initial_state) = iface1_initial_state();
         let initial_state = InterfaceState {
@@ -1160,7 +1309,7 @@ mod tests {
 
         let event = InterfaceEvent::Changed { id, event: InterfaceUpdate::AddressRemoved(addr) };
 
-        // Add address.
+        // Remove address.
         assert_eq!(
             Worker::consume_event(&mut state, event.clone()),
             Ok(Some(finterfaces::Event::Changed(finterfaces::Properties {
@@ -1413,10 +1562,8 @@ mod tests {
                 producer
                     .notify(InterfaceUpdate::AddressAdded {
                         addr: addr.try_into_core().expect("invalid address"),
-                        initial_state: AddressState {
-                            valid_until: zx::Time::INFINITE,
-                            assignment_state: IpAddressState::Assigned,
-                        },
+                        assignment_state: IpAddressState::Assigned,
+                        valid_until: zx::Time::INFINITE,
                     })
                     .expect("failed to notify");
                 expect.push(addr);
