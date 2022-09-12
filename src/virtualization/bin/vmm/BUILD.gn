@@ -74,6 +74,8 @@ source_set("lib") {
     "virtio_device.h",
     "virtio_pci.cc",
     "virtio_pci.h",
+    "vmm.cc",
+    "vmm.h",
     "zircon.cc",
     "zircon.h",
   ]

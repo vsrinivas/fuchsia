@@ -423,7 +423,7 @@ fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::ConnectToBall
                                     zx::deadline_after(zx::sec(20)));
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to get balloon controller";
-    return fitx::error(fuchsia::virtualization::GuestError::BALLOON_NOT_PRESENT);
+    return fitx::error(fuchsia::virtualization::GuestError::DEVICE_NOT_PRESENT);
   }
 
   if (status != ZX_OK) {
@@ -451,7 +451,7 @@ fitx::result<::fuchsia::virtualization::GuestError> EnclosedGuest::GetHostVsockE
                                     zx::deadline_after(zx::sec(20)));
   if (!success) {
     FX_LOGS(ERROR) << "Timed out waiting to get host vsock endpoint";
-    return fitx::error(fuchsia::virtualization::GuestError::VSOCK_NOT_PRESENT);
+    return fitx::error(fuchsia::virtualization::GuestError::DEVICE_NOT_PRESENT);
   }
 
   if (status != ZX_OK) {

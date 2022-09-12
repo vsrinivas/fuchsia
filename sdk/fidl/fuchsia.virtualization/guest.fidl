@@ -9,19 +9,39 @@ type GuestError = strict enum {
     /// Catch all VMM error.
     INTERNAL_ERROR = 1;
 
-    /// Devices that expose endpoints via the guest client API must be enabled via the config to
-    /// be used.
-    VSOCK_NOT_PRESENT = 2;
-    BALLOON_NOT_PRESENT = 3;
+    /// A device endpoint was requested via the guest client API, but the device isn't enabled.
+    DEVICE_NOT_PRESENT = 2;
 
-    /// Stop was called by the guest manager, forcing the guest to exit.
-    SHUTDOWN_FORCED = 4;
+    /// The config failed VMM validation for reasons such as a missing required field.
+    BAD_CONFIG = 3;
 
-    /// Run was called on an already running guest.
-    ALREADY_RUNNING = 5;
+    /// The VMM failed to initialize the guest object, usually due to capability routing issues
+    /// or memory layout problems.
+    GUEST_INITIALIZATION_FAILURE = 4;
 
-    /// Run was called before a guest was created.
-    NOT_CREATED = 6;
+    /// The VMM failed to initialize a device.
+    DEVICE_INITIALIZATION_FAILURE = 5;
+
+    /// The VMM failed to start a device, usually because the device component returned a failure.
+    DEVICE_START_FAILURE = 6;
+
+    /// Two or more devices have attempted to register overlapping memory ranges.
+    DEVICE_MEMORY_OVERLAP = 7;
+
+    /// Failed to connect to a required service. Check the routing in the manifest.
+    FAILED_SERVICE_CONNECT = 8;
+
+    /// Failed to add a public service.
+    DUPLICATE_PUBLIC_SERVICES = 9;
+
+    /// General error when loading the guest kernel.
+    KERNEL_LOAD_FAILURE = 10;
+
+    /// Error when starting a VCPU.
+    VCPU_START_FAILURE = 11;
+
+    /// A VCPU encountered a fatal error while running.
+    VCPU_RUNTIME_FAILURE = 12;
 };
 
 /// The guest control plane allowing for creating, starting, and stopping the guest.

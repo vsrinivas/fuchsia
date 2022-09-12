@@ -57,7 +57,7 @@ void GuestImpl::GetHostVsockEndpoint(
     callback(fpromise::ok());
   } else {
     FX_LOGS(WARNING) << "Attempted to get HostVsockEndpoint, but the vsock device is not present";
-    callback(fpromise::error(fuchsia::virtualization::GuestError::VSOCK_NOT_PRESENT));
+    callback(fpromise::error(fuchsia::virtualization::GuestError::DEVICE_NOT_PRESENT));
   }
 }
 
@@ -69,6 +69,6 @@ void GuestImpl::GetBalloonController(
     callback(fpromise::ok());
   } else {
     FX_LOGS(WARNING) << "Attempted to get BalloonController, but the balloon device is not present";
-    callback(fpromise::error(fuchsia::virtualization::GuestError::BALLOON_NOT_PRESENT));
+    callback(fpromise::error(fuchsia::virtualization::GuestError::DEVICE_NOT_PRESENT));
   }
 }
