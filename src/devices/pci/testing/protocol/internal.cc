@@ -4,7 +4,14 @@
 
 #include "src/devices/pci/testing/protocol/internal.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/fake-resource/resource.h>
 #include <lib/stdcompat/bit.h>
+#include <lib/sync/completion.h>
+#include <zircon/syscalls/resource.h>
 
 namespace pci {
 
@@ -38,7 +45,11 @@ zx_status_t FakePciProtocolInternal::FakePciProtocolInternal::PciGetBar(uint32_t
     out_res->result.vmo = bar.vmo->get();
   } else {
     out_res->result.io.address = 0;
-    out_res->result.io.resource = bar.vmo->get();
+    zx_handle_t fake_root_resource;
+    fake_root_resource_create(&fake_root_resource);
+    char name[] = "fake IO";
+    return zx_resource_create(fake_root_resource, ZX_RSRC_KIND_IOPORT, out_res->result.io.address,
+                              out_res->size, name, sizeof(name), &out_res->result.io.resource);
   }
   return ZX_OK;
 }
@@ -318,6 +329,15 @@ __EXPORT zx_status_t FakePciProtocolInternal::CommonCapabilitySearch(uint8_t id,
   }
 
   return ZX_ERR_NOT_FOUND;
+}
+
+void RunAsync(async::Loop& loop, fit::closure f) {
+  sync_completion_t completion;
+  async::PostTask(loop.dispatcher(), [&] {
+    f();
+    sync_completion_signal(&completion);
+  });
+  sync_completion_wait(&completion, ZX_TIME_INFINITE);
 }
 
 }  // namespace pci

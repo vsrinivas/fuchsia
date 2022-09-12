@@ -41,7 +41,6 @@ fuchsia_driver_component("virtio_block") {
     ":virtio_block_bind",
   ]
   info = "virtio_block-info.json"
-  colocate = true
 }
 
 source_set("block_lib") {

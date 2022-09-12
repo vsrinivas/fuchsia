@@ -4,6 +4,9 @@
 
 #include "src/graphics/display/drivers/intel-i915/gtt.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mmio-ptr/fake.h>
 #include <lib/zircon-internal/align.h>
@@ -20,8 +23,9 @@ constexpr size_t kPageSize = PAGE_SIZE;
 // Initialize the GTT to the smallest allowed size (which is 2MB with the |gtt_size| bits of the
 // graphics control register set to 0x01.
 constexpr size_t kTableSize = (1 << 21);
-void Configure2MbGtt(pci::FakePciProtocol* pci) {
-  pci->PciWriteConfig16(registers::GmchGfxControl::kAddr, 0x40);
+void Configure2MbGtt(ddk::Pci& pci) {
+  zx_status_t status = pci.WriteConfig16(registers::GmchGfxControl::kAddr, 0x40);
+  EXPECT_EQ(ZX_OK, status);
 }
 
 fdf::MmioBuffer MakeMmioBuffer(uint8_t* buffer, size_t size) {
@@ -33,28 +37,40 @@ fdf::MmioBuffer MakeMmioBuffer(uint8_t* buffer, size_t size) {
   });
 }
 
-TEST(GttTest, InitWithZeroSizeGtt) {
-  pci::FakePciProtocol pci;
+class GttTest : public testing::Test {
+ public:
+  GttTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
+  void SetUp() override {
+    loop_.StartThread("pci-fidl-server-thread");
+    pci_ = fake_pci_.SetUpFidlServer(loop_);
+  }
+
+  async::Loop loop_;
+  ddk::Pci pci_;
+  pci::FakePciProtocol fake_pci_;
+};
+
+TEST_F(GttTest, InitWithZeroSizeGtt) {
   uint8_t buffer = 0;
   fdf::MmioBuffer mmio = MakeMmioBuffer(&buffer, 0);
 
   i915::Gtt gtt;
-  EXPECT_EQ(ZX_ERR_INTERNAL, gtt.Init(pci.get_pci(), std::move(mmio), 0));
+  EXPECT_EQ(ZX_ERR_INTERNAL, gtt.Init(pci_, std::move(mmio), 0));
 
   // No MMIO writes should have occurred.
   EXPECT_EQ(0, buffer);
 }
 
-TEST(GttTest, InitGtt) {
-  pci::FakePciProtocol pci;
-  Configure2MbGtt(&pci);
+TEST_F(GttTest, InitGtt) {
+  Configure2MbGtt(pci_);
 
   auto buffer = std::make_unique<uint8_t[]>(kTableSize);
   memset(buffer.get(), 0, kTableSize);
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
-  EXPECT_EQ(ZX_OK, gtt.Init(pci.get_pci(), std::move(mmio), 0));
+  EXPECT_EQ(ZX_OK, gtt.Init(pci_, std::move(mmio), 0));
 
   // The table should contain 2MB / sizeof(uint64_t) 64-bit entries that map to the fake scratch
   // buffer. The "+ 1" marks bit 0 as 1 which denotes that's the page is present.
@@ -72,9 +88,8 @@ TEST(GttTest, InitGtt) {
   EXPECT_EQ(kPageSize, region->size());
 }
 
-TEST(GttTest, InitGttWithFramebufferOffset) {
-  pci::FakePciProtocol pci;
-  Configure2MbGtt(&pci);
+TEST_F(GttTest, InitGttWithFramebufferOffset) {
+  Configure2MbGtt(pci_);
 
   // Treat the first 1024 bytes as the bootloader framebuffer region and initialize it to garbage.
   constexpr size_t kFbOffset = 1024;
@@ -85,7 +100,7 @@ TEST(GttTest, InitGttWithFramebufferOffset) {
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
-  EXPECT_EQ(ZX_OK, gtt.Init(pci.get_pci(), std::move(mmio), kFbOffset));
+  EXPECT_EQ(ZX_OK, gtt.Init(pci_, std::move(mmio), kFbOffset));
 
   // The first page-aligned region of addresses should remain unmodified.
   for (unsigned i = 0; i < kFbPages; i++) {
@@ -108,14 +123,13 @@ TEST(GttTest, InitGttWithFramebufferOffset) {
   EXPECT_EQ(kPageSize, region->size());
 }
 
-TEST(GttTest, SetupForMexec) {
-  pci::FakePciProtocol pci;
-  Configure2MbGtt(&pci);
+TEST_F(GttTest, SetupForMexec) {
+  Configure2MbGtt(pci_);
   auto buffer = std::make_unique<uint8_t[]>(kTableSize);
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
-  EXPECT_EQ(ZX_OK, gtt.Init(pci.get_pci(), std::move(mmio), 0));
+  EXPECT_EQ(ZX_OK, gtt.Init(pci_, std::move(mmio), 0));
 
   // Assign an arbitrary page-aligned number as the stolen framebuffer address.
   constexpr uintptr_t kStolenFbMemory = kPageSize * 2;

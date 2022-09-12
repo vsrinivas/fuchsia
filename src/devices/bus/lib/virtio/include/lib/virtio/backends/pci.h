@@ -100,9 +100,9 @@ class PciLegacyIoInterface : public LegacyIoInterface {
 class PciLegacyBackend : public PciBackend {
  public:
   PciLegacyBackend(ddk::Pci pci, pci_device_info_t info)
-      : PciBackend(pci, info), legacy_io_(PciLegacyIoInterface::Get()) {}
+      : PciBackend(std::move(pci), info), legacy_io_(PciLegacyIoInterface::Get()) {}
   PciLegacyBackend(ddk::Pci pci, pci_device_info_t info, LegacyIoInterface* interface)
-      : PciBackend(pci, info), legacy_io_(interface) {}
+      : PciBackend(std::move(pci), info), legacy_io_(interface) {}
   PciLegacyBackend(const PciLegacyBackend&) = delete;
   PciLegacyBackend& operator=(const PciLegacyBackend&) = delete;
   ~PciLegacyBackend() override = default;
@@ -149,7 +149,7 @@ class PciLegacyBackend : public PciBackend {
 // PciModernBackend is for v1.0+ Virtio using MMIO mapped bars and PCI capabilities.
 class PciModernBackend : public PciBackend {
  public:
-  PciModernBackend(ddk::Pci pci, pci_device_info_t info) : PciBackend(pci, info) {}
+  PciModernBackend(ddk::Pci pci, pci_device_info_t info) : PciBackend(std::move(pci), info) {}
   // The dtor handles cleanup of allocated bars because we cannot tear down
   // the mappings safely while the virtio device is being used by a driver.
   ~PciModernBackend() override = default;

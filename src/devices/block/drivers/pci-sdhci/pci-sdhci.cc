@@ -100,13 +100,13 @@ zx_status_t PciSdhci::Bind(void* /* unused */, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI, &dev->pci_);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: could not get PCI protocol: %s", kTag, zx_status_get_string(status));
-    return status;
+  dev->pci_ = ddk::Pci(parent, "pci");
+  if (!dev->pci_.is_valid()) {
+    zxlogf(ERROR, "%s: could not get PCI protocol", kTag);
+    return ZX_ERR_INTERNAL;
   }
 
-  status = dev->pci_.SetBusMastering(true);
+  zx_status_t status = dev->pci_.SetBusMastering(true);
   if (status < 0) {
     zxlogf(ERROR, "%s: error in enable bus master: %s", kTag, zx_status_get_string(status));
     return status;

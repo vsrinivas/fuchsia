@@ -103,7 +103,6 @@ template("simple_fuchsia_driver") {
     component_name = "simple.${driver_name}"
     deps = [ ":simple.${driver_name}-driver" ]
     info = "simple.${driver_name}-info.json"
-    colocate = true
     root_resource = true
     fallback = is_fallback
 

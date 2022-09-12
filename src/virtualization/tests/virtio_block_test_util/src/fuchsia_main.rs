@@ -71,7 +71,7 @@ async fn get_class_path_from_topological(
 async fn open_block_device(pci_bus: u8, pci_device: u8) -> Result<File, anyhow::Error> {
     // The filename is in the format pci-<bus>:<device>.<function>. The function
     // is always zero for virtio block devices.
-    let topo_path = format!("/dev/pci-{:02}:{:02}.0/virtio-block/block", pci_bus, pci_device);
+    let topo_path = format!("/dev/pci-{:02}:{:02}.0-fidl/virtio-block/block", pci_bus, pci_device);
 
     let class_path = get_class_path_from_topological(topo_path).await?;
     let file = OpenOptions::new().read(true).write(true).open(&class_path)?;

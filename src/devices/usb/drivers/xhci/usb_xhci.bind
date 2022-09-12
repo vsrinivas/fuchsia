@@ -8,7 +8,7 @@ using fuchsia.pci.serial.usb;
 using fuchsia.platform;
 using fuchsia.driver.framework;
 
-if fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE {
+if fuchsia.BIND_FIDL_PROTOCOL == fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE {
   // PCI binding support.
   fuchsia.BIND_PCI_CLASS == fuchsia.pci.BIND_PCI_CLASS.SERIAL_BUS_CONTROLLER;
   fuchsia.BIND_PCI_SUBCLASS == fuchsia.pci.serial.BIND_PCI_SUBCLASS.USB;

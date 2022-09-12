@@ -20,6 +20,8 @@ test("virtio-backend-test") {
     "//src/devices/pci/testing:pci-protocol-fake",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
   ]
 

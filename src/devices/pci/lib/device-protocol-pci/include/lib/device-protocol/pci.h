@@ -21,6 +21,7 @@ __END_CDECLS
 
 #ifdef __cplusplus
 
+#include <fidl/fuchsia.hardware.pci/cpp/wire.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 
 #include <optional>
@@ -40,15 +41,38 @@ class Pci {
   static constexpr char kFragmentName[] = "pci";
   Pci() = default;
 
-  // These constructors are deprecated and will be removed soon.
-  explicit Pci(const pci_protocol_t& proto) : client_(ddk::PciProtocolClient(&proto)) {}
-  explicit Pci(ddk::PciProtocolClient client) : client_(client) {}
+  explicit Pci(zx_device_t* parent) {
+    zx::channel local, remote;
+    ZX_ASSERT(zx::channel::create(0, &local, &remote) == ZX_OK);
+    zx_status_t status =
+        device_connect_fidl_protocol(parent, "fuchsia.hardware.pci.Device", remote.release());
 
-  explicit Pci(zx_device_t* parent) : client_(ddk::PciProtocolClient(parent)) {}
+    if (status == ZX_OK) {
+      client_ =
+          fidl::WireSyncClient(fidl::ClientEnd<fuchsia_hardware_pci::Device>(std::move(local)));
+    }
+  }
+
+  explicit Pci(fidl::ClientEnd<fuchsia_hardware_pci::Device> client_end) {
+    client_ = fidl::WireSyncClient(std::move(client_end));
+  }
 
   // Prefer Pci::FromFragment(parent) to construct.
-  Pci(zx_device_t* parent, const char* fragment_name)
-      : client_(ddk::PciProtocolClient(parent, fragment_name)) {}
+  Pci(zx_device_t* parent, const char* fragment_name) {
+    zx::channel local, remote;
+    ZX_ASSERT(zx::channel::create(0, &local, &remote) == ZX_OK);
+    zx_status_t status = device_connect_fragment_fidl_protocol(
+        parent, fragment_name, fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
+        remote.release());
+
+    if (status == ZX_OK) {
+      client_ = fidl::WireSyncClient<fuchsia_hardware_pci::Device>(
+          fidl::ClientEnd<fuchsia_hardware_pci::Device>(std::move(local)));
+    }
+  }
+
+  Pci(Pci&& other) = default;
+  Pci& operator=(Pci&& other) = default;
 
   // Check Pci.is_valid() (on the PciProtocolClient) after calling to check for proper
   // initialization. This can fail if the composite device does not expose the "pci" interface.
@@ -96,7 +120,7 @@ class Pci {
  private:
   zx_status_t MapMmioInternal(uint32_t bar_Id, uint32_t cache_policy, zx::vmo* out_vmo) const;
 
-  ddk::PciProtocolClient client_;
+  fidl::WireSyncClient<fuchsia_hardware_pci::Device> client_;
 };
 
 }  // namespace ddk

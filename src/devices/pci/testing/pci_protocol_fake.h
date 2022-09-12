@@ -3,7 +3,15 @@
 // found in the LICENSE file.
 #ifndef SRC_DEVICES_PCI_TESTING_PCI_PROTOCOL_FAKE_H_
 #define SRC_DEVICES_PCI_TESTING_PCI_PROTOCOL_FAKE_H_
+
+#include <fidl/fuchsia.hardware.pci/cpp/wire_test_base.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/device-protocol/pci.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/errors.h>
@@ -25,7 +33,8 @@ namespace pci {
 // use and it has been written in mind to validate correctness of the
 // configuration space whenever possible as well as to behave similarly to the
 // actual PciProtocol driver proved by the userspace PCI Bus Driver.
-class FakePciProtocol : public FakePciProtocolInternal {
+class FakePciProtocol : public FakePciProtocolInternal,
+                        public fidl::testing::WireTestBase<fuchsia_hardware_pci::Device> {
  public:
   // Add an interrupt for the specified PCI interrupt mode. A reference to the
   // interrupt object created is returned.
@@ -113,9 +122,48 @@ class FakePciProtocol : public FakePciProtocolInternal {
   // testing.
   std::optional<bool> GetBusMasterEnabled() const { return bus_master_en(); }
 
-  // Reset all interrnal state of the fake PciProtocol.
+  // Reset all internal state of the fake PciProtocol.
   void Reset() { reset(); }
+
+  // FIDL methods
+  void GetBar(GetBarRequestView request, GetBarCompleter::Sync& completer) override;
+  void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;
+  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
+  void WriteConfig8(WriteConfig8RequestView request,
+                    WriteConfig8Completer::Sync& completer) override;
+  void WriteConfig16(WriteConfig16RequestView request,
+                     WriteConfig16Completer::Sync& completer) override;
+  void WriteConfig32(WriteConfig32RequestView request,
+                     WriteConfig32Completer::Sync& completer) override;
+  void ReadConfig8(ReadConfig8RequestView request, ReadConfig8Completer::Sync& completer) override;
+  void ReadConfig16(ReadConfig16RequestView request,
+                    ReadConfig16Completer::Sync& completer) override;
+  void ReadConfig32(ReadConfig32RequestView request,
+                    ReadConfig32Completer::Sync& completer) override;
+  void GetInterruptModes(GetInterruptModesCompleter::Sync& completer) override;
+  void SetInterruptMode(SetInterruptModeRequestView request,
+                        SetInterruptModeCompleter::Sync& completer) override;
+  void MapInterrupt(MapInterruptRequestView request,
+                    MapInterruptCompleter::Sync& completer) override;
+  void GetCapabilities(GetCapabilitiesRequestView request,
+                       GetCapabilitiesCompleter::Sync& completer) override;
+  void SetBusMastering(SetBusMasteringRequestView request,
+                       SetBusMasteringCompleter::Sync& completer) override;
+  void ResetDevice(ResetDeviceCompleter::Sync& completer) override;
+  void AckInterrupt(AckInterruptCompleter::Sync& completer) override;
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  // Convenience method to set up a FIDL server in tests.
+  ddk::Pci SetUpFidlServer(async::Loop& loop);
 };
+
+// Any test code which calls a helper method on FakePciProtocol must be executed
+// an async task, because FakePciProtocol is a FIDL server running on another
+// thread.
+void RunAsync(async::Loop& loop, fit::closure f);
 
 }  // namespace pci
 

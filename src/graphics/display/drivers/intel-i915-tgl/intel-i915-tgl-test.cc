@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mmio-ptr/fake.h>
@@ -111,12 +112,23 @@ class TglIntegrationTest : public ::testing::Test {
 
     parent_ = MockDevice::FakeRootParent();
     parent_->AddProtocol(ZX_PROTOCOL_SYSMEM, sysmem_.proto_ops(), &sysmem_, "sysmem");
-    parent_->AddProtocol(ZX_PROTOCOL_PCI, pci_.get_protocol().ops, pci_.get_protocol().ctx, "pci");
+
+    parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
+        [this](zx::channel channel) {
+          fidl::BindServer(loop_.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_pci::Device>(std::move(channel)),
+                           &pci_);
+          return ZX_OK;
+        },
+        "pci");
+    loop_.StartThread("pci-fidl-server-thread");
   }
 
   MockDevice* parent() const { return parent_.get(); }
 
  private:
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
   // Emulated parent protocols.
   pci::FakePciProtocol pci_;
   FakeSysmem sysmem_;

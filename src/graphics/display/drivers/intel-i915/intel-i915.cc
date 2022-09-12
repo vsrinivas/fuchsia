@@ -2084,10 +2084,10 @@ zx_status_t Controller::Init() {
 
   sysmem_ = fidl::WireSyncClient(std::move(endpoints->client));
 
-  status = ZX_ERR_NOT_FOUND;
-  if ((status = device_get_fragment_protocol(parent(), "pci", ZX_PROTOCOL_PCI, &pci_)) != ZX_OK) {
-    zxlogf(ERROR, "Could not get Display PCI protocol: %s", zx_status_get_string(status));
-    return status;
+  pci_ = ddk::Pci(parent(), "pci");
+  if (!pci_.is_valid()) {
+    zxlogf(ERROR, "Could not get Display PCI protocol");
+    return ZX_ERR_INTERNAL;
   }
 
   pci_.ReadConfig16(PCI_CONFIG_DEVICE_ID, &device_id_);

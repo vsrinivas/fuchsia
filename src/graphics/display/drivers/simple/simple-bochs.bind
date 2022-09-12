@@ -4,7 +4,7 @@
 
 using fuchsia.pci;
 
-fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_FIDL_PROTOCOL == fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE;
 
 // QEMU_GFX_VID
 fuchsia.BIND_PCI_VID == 0x1234;

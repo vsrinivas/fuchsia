@@ -2,29 +2,48 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/fit/function.h>
 #include <lib/mmio/mmio.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/object.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/pci.h>
+#include <zircon/system/public/zircon/syscalls.h>
 
 #include <zxtest/zxtest.h>
 
-#include "fuchsia/hardware/pci/c/banjo.h"
 #include "src/devices/pci/testing/pci_protocol_fake.h"
-#include "zircon/system/public/zircon/syscalls.h"
 
 class FakePciProtocolTests : public zxtest::Test {
  protected:
   void SetUp() final {
     fake_pci_.Reset();
-    pci_ = fake_pci_.get_pci();
+
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_pci::Device>();
+    ASSERT_OK(endpoints.status_value());
+
+    fidl::BindServer(loop_.dispatcher(),
+                     fidl::ServerEnd<fuchsia_hardware_pci::Device>(endpoints->server.TakeChannel()),
+                     &fake_pci_);
+
+    pci_ = ddk::Pci(std::move(endpoints->client));
+    ASSERT_TRUE(pci_.is_valid());
+
+    loop_.StartThread("pci-fidl-server-thread");
   }
   pci::FakePciProtocol& fake_pci() { return fake_pci_; }
   ddk::Pci& pci() { return pci_; }
+
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 
  private:
   pci::FakePciProtocol fake_pci_;
@@ -35,7 +54,8 @@ TEST_F(FakePciProtocolTests, CreateBar) {
   zx::vmo vmo;
   size_t size = 8193;
   ASSERT_OK(zx::vmo::create(size, 0, &vmo));
-  fake_pci().CreateBar(0, size, true);
+
+  pci::RunAsync(loop_, [&] { fake_pci().CreateBar(0, size, true); });
 
   pci_bar_t bar;
   pci().GetBar(0, &bar);
@@ -44,11 +64,11 @@ TEST_F(FakePciProtocolTests, CreateBar) {
 
 TEST_F(FakePciProtocolTests, ResetDevice) {
   uint32_t reset_cnt = 0;
-  ASSERT_EQ(reset_cnt++, fake_pci().GetResetCount());
+  pci::RunAsync(loop_, [&] { ASSERT_EQ(reset_cnt++, fake_pci().GetResetCount()); });
   ASSERT_OK(pci().ResetDevice());
-  ASSERT_EQ(reset_cnt++, fake_pci().GetResetCount());
+  pci::RunAsync(loop_, [&] { ASSERT_EQ(reset_cnt++, fake_pci().GetResetCount()); });
   ASSERT_OK(pci().ResetDevice());
-  ASSERT_EQ(reset_cnt++, fake_pci().GetResetCount());
+  pci::RunAsync(loop_, [&] { ASSERT_EQ(reset_cnt++, fake_pci().GetResetCount()); });
 }
 
 TEST_F(FakePciProtocolTests, GetBti) {
@@ -63,13 +83,13 @@ TEST_F(FakePciProtocolTests, GetBti) {
 
 TEST_F(FakePciProtocolTests, SetBusMastering) {
   // If enable has never been called there should be no value.
-  ASSERT_FALSE(fake_pci().GetBusMasterEnabled().has_value());
+  pci::RunAsync(loop_, [&] { ASSERT_FALSE(fake_pci().GetBusMasterEnabled().has_value()); });
 
   ASSERT_OK(pci().SetBusMastering(true));
-  ASSERT_TRUE(fake_pci().GetBusMasterEnabled().value());
+  pci::RunAsync(loop_, [&] { ASSERT_TRUE(fake_pci().GetBusMasterEnabled().value()); });
 
   ASSERT_OK(pci().SetBusMastering(false));
-  ASSERT_FALSE(fake_pci().GetBusMasterEnabled().value());
+  pci::RunAsync(loop_, [&] { ASSERT_FALSE(fake_pci().GetBusMasterEnabled().value()); });
 }
 
 TEST_F(FakePciProtocolTests, GetDeviceInfo) {
@@ -92,7 +112,7 @@ TEST_F(FakePciProtocolTests, GetDeviceInfo) {
       .func_id = 0x9,
   };
 
-  fake_pci().SetDeviceInfo(expected);
+  pci::RunAsync(loop_, [&] { fake_pci().SetDeviceInfo(expected); });
   ASSERT_OK(pci().GetDeviceInfo(&actual));
   ASSERT_EQ(0, memcmp(&expected, &actual, sizeof(expected)));
 
@@ -120,68 +140,80 @@ TEST_F(FakePciProtocolTests, GetInterruptModes) {
   ASSERT_EQ(0, modes.msi_count);
   ASSERT_EQ(0, modes.msix_count);
 
-  fake_pci().AddLegacyInterrupt();
+  pci::RunAsync(loop_, [&] { fake_pci().AddLegacyInterrupt(); });
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(1, modes.has_legacy);
 
   // MSI supports interrupt configuration via powers of two, so ensure that we
   // round down if not enough have been added.
-  fake_pci().AddMsiInterrupt();
+  pci::RunAsync(loop_, [&] { fake_pci().AddMsiInterrupt(); });
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(1, modes.msi_count);
-  fake_pci().AddMsiInterrupt();
+  pci::RunAsync(loop_, [&] { fake_pci().AddMsiInterrupt(); });
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(2, modes.msi_count);
-  fake_pci().AddMsiInterrupt();
+  pci::RunAsync(loop_, [&] { fake_pci().AddMsiInterrupt(); });
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(2, modes.msi_count);
-  fake_pci().AddMsiInterrupt();
+  pci::RunAsync(loop_, [&] { fake_pci().AddMsiInterrupt(); });
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(4, modes.msi_count);
 
   // MSI-X doesn't care about alignment, so any value should work.
-  fake_pci().AddMsixInterrupt();
+  pci::RunAsync(loop_, [&] { fake_pci().AddMsixInterrupt(); });
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(1, modes.msix_count);
-  fake_pci().AddMsixInterrupt();
+  pci::RunAsync(loop_, [&] { fake_pci().AddMsixInterrupt(); });
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(2, modes.msix_count);
-  fake_pci().AddMsixInterrupt();
+  pci::RunAsync(loop_, [&] { fake_pci().AddMsixInterrupt(); });
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(3, modes.msix_count);
 }
 
 TEST_F(FakePciProtocolTests, SetInterruptMode) {
-  fake_pci().AddLegacyInterrupt();
-  fake_pci().AddMsiInterrupt();
-  fake_pci().AddMsiInterrupt();
-  fake_pci().AddMsiInterrupt();
-  fake_pci().AddMsiInterrupt();
-  fake_pci().AddMsixInterrupt();
-  fake_pci().AddMsixInterrupt();
+  pci::RunAsync(loop_, [&] {
+    fake_pci().AddLegacyInterrupt();
+    fake_pci().AddMsiInterrupt();
+    fake_pci().AddMsiInterrupt();
+    fake_pci().AddMsiInterrupt();
+    fake_pci().AddMsiInterrupt();
+    fake_pci().AddMsixInterrupt();
+    fake_pci().AddMsixInterrupt();
+  });
 
   pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY;
   ASSERT_OK(pci().SetInterruptMode(mode, 1));
-  ASSERT_EQ(1, fake_pci().GetIrqCount());
-  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  pci::RunAsync(loop_, [&] {
+    ASSERT_EQ(1, fake_pci().GetIrqCount());
+    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  });
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetInterruptMode(mode, 2));
 
   mode = PCI_INTERRUPT_MODE_MSI;
   ASSERT_OK(pci().SetInterruptMode(mode, 1));
-  ASSERT_EQ(1, fake_pci().GetIrqCount());
-  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  pci::RunAsync(loop_, [&] {
+    ASSERT_EQ(1, fake_pci().GetIrqCount());
+    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  });
 
   ASSERT_OK(pci().SetInterruptMode(mode, 2));
-  ASSERT_EQ(2, fake_pci().GetIrqCount());
-  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  pci::RunAsync(loop_, [&] {
+    ASSERT_EQ(2, fake_pci().GetIrqCount());
+    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  });
 
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetInterruptMode(mode, 3));
-  ASSERT_EQ(2, fake_pci().GetIrqCount());
-  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  pci::RunAsync(loop_, [&] {
+    ASSERT_EQ(2, fake_pci().GetIrqCount());
+    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  });
 
   ASSERT_OK(pci().SetInterruptMode(mode, 4));
-  ASSERT_EQ(4, fake_pci().GetIrqCount());
-  ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  pci::RunAsync(loop_, [&] {
+    ASSERT_EQ(4, fake_pci().GetIrqCount());
+    ASSERT_EQ(mode, fake_pci().GetIrqMode());
+  });
 }
 
 namespace {
@@ -189,9 +221,10 @@ namespace {
 // returned for comparison by tests later. Its koid should match the koid of the
 // duplicated handle returned by MapInterrupt.
 template <typename T>
-bool MatchKoids(const zx::object<T>& first, const zx::object<T>& second) {
+bool MatchKoids(zx_handle_t first, const zx::object<T>& second) {
   zx_info_handle_basic finfo{}, sinfo{};
-  ZX_ASSERT(first.get_info(ZX_INFO_HANDLE_BASIC, &finfo, sizeof(finfo), nullptr, nullptr) == ZX_OK);
+  ZX_ASSERT(zx_object_get_info(first, ZX_INFO_HANDLE_BASIC, &finfo, sizeof(finfo), nullptr,
+                               nullptr) == ZX_OK);
   ZX_ASSERT(second.get_info(ZX_INFO_HANDLE_BASIC, &sinfo, sizeof(sinfo), nullptr, nullptr) ==
             ZX_OK);
 
@@ -205,12 +238,15 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   // mapped still. In the fake though, it's fine to do so. Switching IRQ modes
   // is not something drivers do in practice, so it's fine if they encounter
   // ZX_ERR_BAD_STATE at runtime if documentation details it.
-  zx::interrupt& legacy = fake_pci().AddLegacyInterrupt();
-  zx::interrupt& msi0 = fake_pci().AddMsiInterrupt();
-  zx::interrupt& msi1 = fake_pci().AddMsiInterrupt();
-  zx::interrupt& msix0 = fake_pci().AddMsixInterrupt();
-  zx::interrupt& msix1 = fake_pci().AddMsixInterrupt();
-  zx::interrupt& msix2 = fake_pci().AddMsixInterrupt();
+  zx_handle_t legacy, msi0, msi1, msix0, msix1, msix2;
+  pci::RunAsync(loop_, [&] {
+    legacy = fake_pci().AddLegacyInterrupt().get();
+    msi0 = fake_pci().AddMsiInterrupt().get();
+    msi1 = fake_pci().AddMsiInterrupt().get();
+    msix0 = fake_pci().AddMsixInterrupt().get();
+    msix1 = fake_pci().AddMsixInterrupt().get();
+    msix2 = fake_pci().AddMsixInterrupt().get();
+  });
 
   zx::interrupt interrupt{};
   uint32_t irq_cnt = 1;
@@ -288,10 +324,12 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
 }
 
 TEST_F(FakePciProtocolTests, VerifyAllocatedMsis) {
-  fake_pci().AddLegacyInterrupt();
-  fake_pci().AddMsiInterrupt();
-  fake_pci().AddMsiInterrupt();
-  fake_pci().AddMsixInterrupt();
+  pci::RunAsync(loop_, [&] {
+    fake_pci().AddLegacyInterrupt();
+    fake_pci().AddMsiInterrupt();
+    fake_pci().AddMsiInterrupt();
+    fake_pci().AddMsixInterrupt();
+  });
 
   zx::interrupt zero, one;
   ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_MSI, 2));
@@ -315,19 +353,20 @@ TEST_F(FakePciProtocolTests, VerifyAllocatedMsis) {
 }
 
 TEST_F(FakePciProtocolTests, ConfigRW) {
-  auto config = fake_pci().GetConfigVmo();
+  zx::unowned_vmo config;
+  pci::RunAsync(loop_, [&] { config = fake_pci().GetConfigVmo(); });
 
   // Verify the header space range. Reads can read the header [0, 63], but
   // writes cannot. All IO must fit within the config space [0, 255].
   uint8_t val8;
-  ASSERT_DEATH([&]() { pci().WriteConfig8(0, 0xFF); });
-  ASSERT_NO_DEATH([&]() { pci().ReadConfig8(0, &val8); });
-  ASSERT_DEATH([&]() { pci().WriteConfig8(PCI_CONFIG_HEADER_SIZE - 1, 0xFF); });
-  ASSERT_NO_DEATH([&]() { pci().ReadConfig8(PCI_CONFIG_HEADER_SIZE - 1, &val8); });
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, pci().WriteConfig8(0, 0xFF));
+  ASSERT_EQ(ZX_OK, pci().ReadConfig8(0, &val8));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, pci().WriteConfig8(PCI_CONFIG_HEADER_SIZE - 1, 0xFF));
+  ASSERT_EQ(ZX_OK, pci().ReadConfig8(PCI_CONFIG_HEADER_SIZE - 1, &val8));
   // The ensures we also verify that offset + read/write size is within bounds.
   uint32_t val32;
-  ASSERT_DEATH([&]() { pci().WriteConfig32(PCI_BASE_CONFIG_SIZE - 2, 0xFF); });
-  ASSERT_DEATH([&]() { pci().ReadConfig32(PCI_BASE_CONFIG_SIZE - 2, &val32); });
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, pci().WriteConfig32(PCI_BASE_CONFIG_SIZE - 2, 0xFF));
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, pci().ReadConfig32(PCI_BASE_CONFIG_SIZE - 2, &val32));
 
   for (uint16_t off = PCI_CONFIG_HEADER_SIZE; off < PCI_BASE_CONFIG_SIZE; off++) {
     uint8_t val8;
@@ -364,12 +403,14 @@ TEST_F(FakePciProtocolTests, GetBar) {
 
   uint32_t bar_id = 3;
   size_t size = 256;
-  ASSERT_NO_DEATH([&]() { fake_pci().CreateBar(bar_id, size, true); });
+  pci::RunAsync(loop_,
+                [&] { ASSERT_NO_DEATH([&]() { fake_pci().CreateBar(bar_id, size, true); }); });
   // Verify that the VMO we got back via the protocol method matches the setup
   // and that the other fields are correct.
   ASSERT_OK(pci().GetBar(bar_id, &bar));
   zx::vmo proto(bar.result.vmo);
-  zx::vmo& borrowed = fake_pci().GetBar(bar_id);
+  zx_handle_t borrowed;
+  pci::RunAsync(loop_, [&] { borrowed = fake_pci().GetBar(bar_id).get(); });
   ASSERT_TRUE(MatchKoids(borrowed, proto));
   ASSERT_EQ(bar_id, bar.bar_id);
   ASSERT_EQ(size, bar.size);
@@ -377,8 +418,10 @@ TEST_F(FakePciProtocolTests, GetBar) {
 
 TEST_F(FakePciProtocolTests, BarTypes) {
   size_t page_size = zx_system_get_page_size();
-  fake_pci().CreateBar(0, page_size, true);
-  fake_pci().CreateBar(1, page_size, false);
+  pci::RunAsync(loop_, [&] {
+    fake_pci().CreateBar(0, page_size, true);
+    fake_pci().CreateBar(1, page_size, false);
+  });
 
   pci_bar_t bar;
   ASSERT_OK(pci().GetBar(0, &bar));
@@ -390,40 +433,48 @@ TEST_F(FakePciProtocolTests, BarTypes) {
 TEST_F(FakePciProtocolTests, MapMmio) {
   const uint32_t bar_id = 0;
   const uint64_t bar_size = 256;
-  fake_pci().CreateBar(bar_id, bar_size, true);
-  zx::vmo& borrowed = fake_pci().GetBar(bar_id);
+  zx_handle_t borrowed;
+  pci::RunAsync(loop_, [&] {
+    fake_pci().CreateBar(bar_id, bar_size, true);
+    borrowed = fake_pci().GetBar(bar_id).get();
+  });
 
   // Ensure that our fake implementation / backend for the BAR methods still works with
   // the MapMmio helper method added to device-protocol.
-  ddk::Pci dp_pci = fake_pci().get_pci();
   std::optional<fdf::MmioBuffer> mmio = std::nullopt;
-  ASSERT_OK(dp_pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
+  ASSERT_OK(pci().MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
   ASSERT_TRUE(MatchKoids(borrowed, *mmio->get_vmo()));
 }
 
 TEST_F(FakePciProtocolTests, Capabilities) {
-  // Try invalid capabilities.
-  ASSERT_DEATH([&]() { fake_pci().AddCapability(0, PCI_CONFIG_HEADER_SIZE, 16); });
-  ASSERT_DEATH([&]() {
-    fake_pci().AddCapability(PCI_CAPABILITY_ID_FLATTENING_PORTAL_BRIDGE + 1, PCI_CONFIG_HEADER_SIZE,
-                             16);
+  pci::RunAsync(loop_, [&] {
+    // Try invalid capabilities.
+    ASSERT_DEATH([&]() { fake_pci().AddCapability(0, PCI_CONFIG_HEADER_SIZE, 16); });
+    ASSERT_DEATH([&]() {
+      fake_pci().AddCapability(PCI_CAPABILITY_ID_FLATTENING_PORTAL_BRIDGE + 1,
+                               PCI_CONFIG_HEADER_SIZE, 16);
+    });
+
+    // Try invalid locations.
+    ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(PCI_CONFIG_HEADER_SIZE - 16, 32); });
+    ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(PCI_BASE_CONFIG_SIZE - 16, 32); });
+
+    // Overlap tests.
+    ASSERT_NO_DEATH([&]() { fake_pci().AddVendorCapability(0xB0, 16); });
+    ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0 + 8, 16); });
+    ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0 - 8, 16); });
+    ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0, 32); });
   });
-
-  // Try invalid locations.
-  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(PCI_CONFIG_HEADER_SIZE - 16, 32); });
-  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(PCI_BASE_CONFIG_SIZE - 16, 32); });
-
-  // Overlap tests.
-  ASSERT_NO_DEATH([&]() { fake_pci().AddVendorCapability(0xB0, 16); });
-  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0 + 8, 16); });
-  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0 - 8, 16); });
-  ASSERT_DEATH([&]() { fake_pci().AddVendorCapability(0xB0, 32); });
 }
 
 TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
-  auto config = fake_pci().GetConfigVmo();
-  // The first capability should set up the capabilities pointer.
-  fake_pci().AddVendorCapability(0x50, 6);
+  zx::unowned_vmo config;
+  pci::RunAsync(loop_, [&] {
+    config = fake_pci().GetConfigVmo();
+    // The first capability should set up the capabilities pointer.
+    fake_pci().AddVendorCapability(0x50, 6);
+  });
+
   uint8_t offset1 = 0;
   ASSERT_OK(pci().GetFirstCapability(PCI_CAPABILITY_ID_VENDOR, &offset1));
   uint8_t val;
@@ -435,7 +486,7 @@ TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
   ASSERT_EQ(6, val);
 
   // After adding the new capability we need to check that the previous next pointer was set up.
-  fake_pci().AddVendorCapability(0x60, 8);
+  pci::RunAsync(loop_, [&] { fake_pci().AddVendorCapability(0x60, 8); });
   config->read(&val, 0x51, sizeof(val));
   ASSERT_EQ(val, 0x60);
 
@@ -444,8 +495,10 @@ TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
   ASSERT_OK(pci().GetNextCapability(PCI_CAPABILITY_ID_VENDOR, offset1, &offset2));
   ASSERT_EQ(0x60, offset2);
 
-  fake_pci().AddPciExpressCapability(0x70);
-  fake_pci().AddVendorCapability(0xB0, 16);
+  pci::RunAsync(loop_, [&] {
+    fake_pci().AddPciExpressCapability(0x70);
+    fake_pci().AddVendorCapability(0xB0, 16);
+  });
 
   ASSERT_OK(pci().GetFirstCapability(PCI_CAPABILITY_ID_PCI_EXPRESS, &offset1));
   ASSERT_EQ(0x70, offset1);

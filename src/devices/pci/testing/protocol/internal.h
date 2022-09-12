@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fake-bti/bti.h>
+#include <zircon/errors.h>
 #include <zircon/hw/pci.h>
 
 #include <ddktl/device.h>
@@ -69,11 +70,8 @@ class FakePciProtocolInternal
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
 
   // Returns a |pci_protocol_t| suitable for use with the C api, or passing to a
-  // ddk::PciProtocolClient. New code should use get_pci() instead.
+  // ddk::PciProtocolClient.
   const pci_protocol_t& get_protocol() { return protocol_; }
-
-  // Returns a |ddk::Pci| client. Prefer this to get_protocol().
-  ddk::Pci get_pci() { return ddk::Pci(ddk::PciProtocolClient(&protocol_)); }
 
  protected:
   struct FakeBar {
@@ -120,19 +118,25 @@ class FakePciProtocolInternal
  private:
   template <typename T>
   zx_status_t ReadConfig(uint16_t offset, T* out_value) {
-    ZX_ASSERT_MSG(offset + sizeof(T) <= PCI_BASE_CONFIG_SIZE,
-                  "FakePciProtocol: PciReadConfig reads must fit in the range [%#x, %#x] (offset "
-                  "= %#x, io width = %#lx).",
-                  0, PCI_BASE_CONFIG_SIZE - 1, offset, sizeof(T));
+    if (!(offset + sizeof(T) <= PCI_BASE_CONFIG_SIZE)) {
+      printf(
+          "FakePciProtocol: PciReadConfig reads must fit in the range [%#x, %#x] (offset "
+          "= %#x, io width = %#lx).\n",
+          0, PCI_BASE_CONFIG_SIZE - 1, offset, sizeof(T));
+      return ZX_ERR_OUT_OF_RANGE;
+    }
     return config_.read(out_value, offset, sizeof(T));
   }
 
   template <typename T>
   zx_status_t WriteConfig(uint16_t offset, T value) {
-    ZX_ASSERT_MSG(offset >= PCI_CONFIG_HEADER_SIZE && offset + sizeof(T) <= PCI_BASE_CONFIG_SIZE,
-                  "FakePciProtocol: PciWriteConfig writes must fit in the range [%#x, %#x] (offset "
-                  "= %#x, io width = %#lx).",
-                  PCI_CONFIG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, offset, sizeof(T));
+    if (!(offset >= PCI_CONFIG_HEADER_SIZE && offset + sizeof(T) <= PCI_BASE_CONFIG_SIZE)) {
+      printf(
+          "FakePciProtocol: PciWriteConfig writes must fit in the range [%#x, %#x] (offset "
+          "= %#x, io width = %#lx).\n",
+          PCI_CONFIG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, offset, sizeof(T));
+      return ZX_ERR_OUT_OF_RANGE;
+    }
     return config_.write(&value, offset, sizeof(T));
   }
 

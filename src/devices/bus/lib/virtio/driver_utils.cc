@@ -51,9 +51,9 @@ zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBacken
   uint8_t offset = 0;
   bool is_modern = (pci.GetFirstCapability(PCI_CAPABILITY_ID_VENDOR, &offset) == ZX_OK);
   if (is_modern) {
-    backend = std::make_unique<virtio::PciModernBackend>(pci, info);
+    backend = std::make_unique<virtio::PciModernBackend>(std::move(pci), info);
   } else {
-    backend = std::make_unique<virtio::PciLegacyBackend>(pci, info);
+    backend = std::make_unique<virtio::PciLegacyBackend>(std::move(pci), info);
   }
   zxlogf(TRACE, "virtio %02x:%02x.%1x using %s PCI backend", info.bus_id, info.dev_id, info.func_id,
          (is_modern) ? "modern" : "legacy");

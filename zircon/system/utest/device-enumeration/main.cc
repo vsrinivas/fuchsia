@@ -623,15 +623,15 @@ TEST_F(DeviceEnumerationTest, EveTest) {
 
 TEST_F(DeviceEnumerationTest, NucTest) {
   static const char* kDevicePaths[] = {
-      "pci-00:02.0/intel_i915/intel-gpu-core",
-      "pci-00:02.0/intel_i915/intel-display-controller/display-controller",
-      "pci-00:14.0/xhci/usb-bus",
-      "pci-00:15.0/i2c-bus-9d60",
-      "pci-00:15.1/i2c-bus-9d61",
-      "pci-00:17.0/ahci",
+      "pci-00:02.0-fidl/intel_i915/intel-gpu-core",
+      "pci-00:02.0-fidl/intel_i915/intel-display-controller/display-controller",
+      "pci-00:14.0-fidl/xhci/usb-bus",
+      "pci-00:15.0-fidl/i2c-bus-9d60",
+      "pci-00:15.1-fidl/i2c-bus-9d61",
+      "pci-00:17.0-fidl/ahci",
       // TODO(fxbug.dev/84037): Temporarily removed.
-      // "pci-00:1f.3/intel-hda-000",
-      // "pci-00:1f.3/intel-hda-controller",
+      // "pci-00:1f.3-fidl/intel-hda-000",
+      // "pci-00:1f.3-fidl/intel-hda-controller",
       "pci-00:1f.6/e1000",
   };
 
@@ -679,10 +679,11 @@ TEST_F(DeviceEnumerationTest, VisaliaTest) {
 
 TEST_F(DeviceEnumerationTest, AtlasTest) {
   static const char* kDevicePaths[] = {
-      "pci-01:00.0/iwlwifi-wlanphyimpl",       "pci-01:00.0/iwlwifi-wlanphyimpl/wlanphy",
-      "pci-00:19.2/i2c-bus-9d64/i2c/i2c-3-26",  // Codec headphones.
-      "acpi-MAXL-composite/MAX98373",           // Codec left speaker.
-      "acpi-MAXR-composite/MAX98373",           // Codec right speaker.
+      "pci-01:00.0/iwlwifi-wlanphyimpl",
+      "pci-01:00.0/iwlwifi-wlanphyimpl/wlanphy",
+      "pci-00:19.2-fidl/i2c-bus-9d64/i2c/i2c-3-26",  // Codec headphones.
+      "acpi-MAXL-composite/MAX98373",                // Codec left speaker.
+      "acpi-MAXR-composite/MAX98373",                // Codec right speaker.
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -710,8 +711,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   static const char* kDevicePaths[] = {
       "class/sysmem/000",
 
-      "pci-00:00.0",
-      "pci-00:1f.2/ahci",
+      "pci-00:00.0-fidl",
+      "pci-00:1f.2-fidl/ahci",
 
       "sys/platform/platform-passthrough/acpi",
       "sys/platform/platform-passthrough/acpi/acpi-pwrbtn",
@@ -727,9 +728,9 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   printf("INFO: AEMU board detected. Test enumerating AEMU-specific devices.\n");
 
   static const char* kAemuDevicePaths[] = {
-      "pci-00:01.0/virtio-input",
-      "pci-00:02.0/virtio-input",
-      "pci-00:0b.0/goldfish-address-space",
+      "pci-00:01.0-fidl/virtio-input",
+      "pci-00:02.0-fidl/virtio-input",
+      "pci-00:0b.0-fidl/goldfish-address-space",
 
       "acpi-GFPP-composite",
       // Verify goldfish pipe root device created.

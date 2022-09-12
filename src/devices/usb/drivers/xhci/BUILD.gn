@@ -77,7 +77,6 @@ fuchsia_driver_component("xhci") {
     ":usb_xhci_bind",
     ":xhci-driver",
   ]
-  colocate = true
   uses_profiles = true
 }
 

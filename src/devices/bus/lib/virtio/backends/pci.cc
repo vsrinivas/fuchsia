@@ -22,7 +22,7 @@
 
 namespace virtio {
 
-PciBackend::PciBackend(ddk::Pci pci, pci_device_info_t info) : pci_(pci), info_(info) {
+PciBackend::PciBackend(ddk::Pci pci, pci_device_info_t info) : pci_(std::move(pci)), info_(info) {
   snprintf(tag_, sizeof(tag_), "pci[%02x:%02x.%1x]", info_.bus_id, info_.dev_id, info_.func_id);
 }
 
@@ -32,18 +32,18 @@ zx_status_t PciBackend::Bind() {
 
   st = zx::port::create(/*options=*/ZX_PORT_BIND_TO_INTERRUPT, &wait_port_);
   if (st != ZX_OK) {
-    zxlogf(ERROR, "%s: cannot create wait port: %d", tag(), st);
+    zxlogf(ERROR, "%s: cannot create wait port: %s", tag(), zx_status_get_string(st));
     return st;
   }
 
   // enable bus mastering
   if ((st = pci().SetBusMastering(true)) != ZX_OK) {
-    zxlogf(ERROR, "%s: cannot enable bus master %d", tag(), st);
+    zxlogf(ERROR, "%s: cannot enable bus master: %s", tag(), zx_status_get_string(st));
     return st;
   }
 
   if ((st = ConfigureInterruptMode()) != ZX_OK) {
-    zxlogf(ERROR, "%s: cannot configure IRQs %d", tag(), st);
+    zxlogf(ERROR, "%s: cannot configure IRQs: %s", tag(), zx_status_get_string(st));
     return st;
   }
 

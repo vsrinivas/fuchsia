@@ -91,7 +91,6 @@ fuchsia_driver_component("intel-i915-tgl") {
   component_name = "intel-i915-tgl"
   deps = [ ":intel-i915-tgl-driver" ]
   info = "intel-i915-tgl-info.json"
-  colocate = true
   root_resource = true
   uses_profiles = true
   uses_sysmem = true

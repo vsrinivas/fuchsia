@@ -12,12 +12,18 @@ library_headers("pci-protocol-fake-headers") {
 }
 
 source_set("pci-protocol-fake") {
-  sources = [ "protocol/internal.cc" ]
+  sources = [
+    "protocol/fidl.cc",
+    "protocol/internal.cc",
+  ]
   public_deps = [
     ":pci-protocol-fake-headers",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-resource",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
   ]
   deps = [ "//sdk/lib/stdcompat" ]
@@ -30,6 +36,8 @@ test("pci-protocol-fake-test") {
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/pci/testing:pci-protocol-fake",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/zxtest",
   ]
 

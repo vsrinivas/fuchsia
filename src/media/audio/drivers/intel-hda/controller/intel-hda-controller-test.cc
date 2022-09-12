@@ -39,20 +39,34 @@ class HdaControllerTest : public zxtest::Test {
     regs_ = reinterpret_cast<hda_all_registers_t*>(vaddr);
     regs_->regs.vmaj = 0x01;
     regs_->regs.vmin = 0x00;
+
+    config_vmo_ = pci_.GetConfigVmo();
+
     parent_ = MockDevice::FakeRootParent();
-    parent_->AddProtocol(ZX_PROTOCOL_PCI, pci_.get_protocol().ops, pci_.get_protocol().ctx, "pci");
+    parent_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
+        [this](zx::channel channel) {
+          fidl::BindServer(loop_.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_pci::Device>(std::move(channel)),
+                           &pci_);
+          return ZX_OK;
+        },
+        "pci");
+    loop_.StartThread("pci-fidl-server-thread");
   }
 
   MockDevice* parent() const { return parent_.get(); }
-  pci::FakePciProtocol& pci() { return pci_; }
   hda_all_registers_t* regs() { return regs_; }
+  zx::unowned_vmo& config() { return config_vmo_; }
 
  private:
   static constexpr size_t kHdaBar0Size = 0x4000;
 
+  async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
   pci::FakePciProtocol pci_;
   std::shared_ptr<MockDevice> parent_;
   hda_all_registers_t* regs_;
+  zx::unowned_vmo config_vmo_;
 };
 
 TEST_F(HdaControllerTest, HardwareResetMiscellaneousBackboneDynamicClockGatingEnable) {
@@ -61,18 +75,17 @@ TEST_F(HdaControllerTest, HardwareResetMiscellaneousBackboneDynamicClockGatingEn
   auto acpi_client = mock_acpi.CreateClient(acpi_async_loop.dispatcher());
   TestIntelHDAController controller(std::move(acpi_client.value()));
 
-  auto config = pci().GetConfigVmo();
   ASSERT_OK(controller.SetupPCIDevice(parent()));
 
   // Before resetting the controller HW the BDCGE bit is not set.
   uint32_t val = 0;
-  config->read(&val, kPciRegCgctl, sizeof(uint32_t));
+  config()->read(&val, kPciRegCgctl, sizeof(uint32_t));
   ASSERT_EQ(val, 0);
 
   ASSERT_OK(controller.ResetControllerHardware());
 
   // After resetting the controller HW the BDCGE bit is set.
-  config->read(&val, kPciRegCgctl, sizeof(uint32_t));
+  config()->read(&val, kPciRegCgctl, sizeof(uint32_t));
   ASSERT_EQ(val, kPciRegCgctlBitMaskMiscbdcge);
 }
 

@@ -41,7 +41,6 @@ fuchsia_driver_component("pci-sdhci") {
     ":pci-sdhci-driver",
   ]
   info = "pci-sdhci-info.json"
-  colocate = true
 }
 
 group("tests") {

@@ -6,8 +6,10 @@
 
 #include <fidl/fuchsia.hardware.goldfish/cpp/common_types.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
+#include <fidl/fuchsia.hardware.pci/cpp/wire_test_base.h>
 #include <fuchsia/hardware/pci/cpp/banjo-mock.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mmio-ptr/fake.h>
 #include <lib/zx/channel.h>
@@ -99,40 +101,75 @@ class VmoMapping {
   void* ptr_ = nullptr;
 };
 
+class FakePci : public fidl::testing::WireTestBase<fuchsia_hardware_pci::Device> {
+ public:
+  void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override {
+    ASSERT_OK(fake_bti_create(out_bti_.reset_and_get_address()));
+    completer.ReplySuccess(std::move(out_bti_));
+  }
+
+  void GetBar(GetBarRequestView request, GetBarCompleter::Sync& completer) override {
+    constexpr size_t kCtrlSize = 4096u;
+    constexpr size_t kAreaSize = 128 * 4096u;
+
+    if (request->bar_id == PCI_CONTROL_BAR_ID) {
+      zx::vmo vmo_control;
+      ASSERT_OK(zx::vmo::create(kCtrlSize, 0u, &vmo_control));
+      ASSERT_OK(vmo_control.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_control_));
+
+      completer.ReplySuccess(
+          {.bar_id = 0,
+           .size = kCtrlSize,
+           .result = fuchsia_hardware_pci::wire::BarResult::WithVmo(std::move(vmo_control))});
+    } else if (request->bar_id == PCI_AREA_BAR_ID) {
+      zx::vmo vmo_area;
+      ASSERT_OK(zx::vmo::create(kAreaSize, 0u, &vmo_area));
+
+      completer.ReplySuccess(
+          {.bar_id = 1,
+           .size = kAreaSize,
+           .result = fuchsia_hardware_pci::wire::BarResult::WithVmo(std::move(vmo_area))});
+    } else {
+      completer.ReplyError(ZX_ERR_NOT_FOUND);
+    }
+  }
+
+  std::unique_ptr<VmoMapping> MapControlRegisters() const {
+    return std::make_unique<VmoMapping>(vmo_control_, /*size=*/sizeof(Registers), /*offset=*/0);
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+ private:
+  zx::bti out_bti_;
+  zx::vmo vmo_control_;
+};
+
 }  // namespace
 
 class AddressSpaceDeviceTest : public zxtest::Test {
  public:
-  AddressSpaceDeviceTest() : async_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  AddressSpaceDeviceTest()
+      : async_loop_(&kAsyncLoopConfigNeverAttachToThread),
+        pci_loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   // |zxtest::Test|
   void SetUp() override {
     fake_root_ = MockDevice::FakeRootParent();
-    zx::bti out_bti;
-    ASSERT_OK(fake_bti_create(out_bti.reset_and_get_address()));
 
-    constexpr size_t kCtrlSize = 4096u;
-    constexpr size_t kAreaSize = 128 * 4096u;
-    zx::vmo vmo_control, vmo_area;
-    ASSERT_OK(zx::vmo::create(kCtrlSize, 0u, &vmo_control));
-    ASSERT_OK(zx::vmo::create(kAreaSize, 0u, &vmo_area));
-    ASSERT_OK(vmo_control.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_control_));
+    fake_root_->AddFidlProtocol(
+        fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
+        [this](zx::channel channel) {
+          fidl::BindServer(pci_loop_.dispatcher(),
+                           fidl::ServerEnd<fuchsia_hardware_pci::Device>(std::move(channel)),
+                           &fake_pci_);
+          return ZX_OK;
+        },
+        "pci");
 
-    // Simulate expected PCI banjo methods.
-    mock_pci_.ExpectGetBti(ZX_OK, 0 /*index*/, std::move(out_bti))
-        .ExpectGetBar(ZX_OK, PCI_CONTROL_BAR_ID,
-                      pci_bar_t{.bar_id = 0,
-                                .size = kCtrlSize,
-                                .type = PCI_BAR_TYPE_MMIO,
-                                .result = {.vmo = vmo_control.release()}})
-        .ExpectGetBar(ZX_OK, PCI_AREA_BAR_ID,
-                      pci_bar_t{.bar_id = 1,
-                                .size = kAreaSize,
-                                .type = PCI_BAR_TYPE_MMIO,
-                                .result = {.vmo = vmo_area.release()}});
-
-    fake_root_->AddProtocol(ZX_PROTOCOL_PCI, mock_pci_.GetProto()->ops, mock_pci_.GetProto()->ctx,
-                            "pci");
+    pci_loop_.StartThread("pci-fidl-server-thread");
 
     std::unique_ptr<AddressSpaceDevice> dut(
         new AddressSpaceDevice(fake_root_.get(), async_loop_.dispatcher()));
@@ -145,9 +182,19 @@ class AddressSpaceDeviceTest : public zxtest::Test {
     device_async_remove(dut_->zxdev());
     ASSERT_OK(mock_ddk::ReleaseFlaggedDevices(fake_root_.get()));
   }
-
   std::unique_ptr<VmoMapping> MapControlRegisters() const {
-    return std::make_unique<VmoMapping>(vmo_control_, /*size=*/sizeof(Registers), /*offset=*/0);
+    std::unique_ptr<VmoMapping> ret;
+
+    // Have to run this code in the pci_loop's async dispatcher because fake_pci
+    // is bound to it as a FIDL server.
+    sync_completion_t completion;
+    async::PostTask(pci_loop_.dispatcher(), [&] {
+      ret = fake_pci_.MapControlRegisters();
+      sync_completion_signal(&completion);
+    });
+    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+
+    return ret;
   }
 
   template <typename T>
@@ -157,10 +204,10 @@ class AddressSpaceDeviceTest : public zxtest::Test {
 
  protected:
   async::Loop async_loop_;
-  ddk::MockPci mock_pci_;
+  async::Loop pci_loop_;
+  FakePci fake_pci_;
   std::shared_ptr<MockDevice> fake_root_;
   AddressSpaceDevice* dut_;
-  zx::vmo vmo_control_;
 };
 
 TEST_F(AddressSpaceDeviceTest, Bind) {

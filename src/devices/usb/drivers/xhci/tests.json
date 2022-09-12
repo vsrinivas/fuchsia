@@ -23,7 +23,7 @@
     },
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE",
             "fuchsia.BIND_PCI_CLASS": "fuchsia.pci.BIND_PCI_CLASS.SERIAL_BUS_CONTROLLER",
             "fuchsia.BIND_PCI_SUBCLASS": "fuchsia.pci.serial.BIND_PCI_SUBCLASS.USB",
             "fuchsia.BIND_PCI_INTERFACE": "fuchsia.pci.serial.usb.BIND_PCI_INTERFACE.XHCI",

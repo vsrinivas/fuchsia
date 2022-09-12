@@ -12,7 +12,7 @@
     },
     use: [
         {
-            // For /dev/class/gpu, /dev/class/gpu-performance-counters, and /dev/pci-00:02.0/intel_i915/intel-gpu-core
+            // For /dev/class/gpu, /dev/class/gpu-performance-counters, and /dev/pci-00:02.0-fidl/intel_i915/intel-gpu-core
             directory: "dev",
             rights: [ "r*" ],
             path: "/dev",

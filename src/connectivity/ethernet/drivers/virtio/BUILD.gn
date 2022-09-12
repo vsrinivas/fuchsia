@@ -52,7 +52,6 @@ fuchsia_driver_component("virtio_ethernet") {
   ]
 
   info = "virtio_ethernet-info.json"
-  colocate = true
 }
 
 test("virtio-ethernet-test") {

@@ -40,7 +40,7 @@ zx_status_t Nvme::Bind(void* ctx, zx_device_t* dev) {
     return status;
   }
 
-  auto driver = std::make_unique<Nvme>(dev, pci, std::move(*buffer));
+  auto driver = std::make_unique<Nvme>(dev, std::move(pci), std::move(*buffer));
   status = driver->InitPciAndDispatcher();
   if (status != ZX_OK) {
     return status;

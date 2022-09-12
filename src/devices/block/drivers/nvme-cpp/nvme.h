@@ -33,7 +33,7 @@ using DeviceType = ddk::Device<Nvme, ddk::Initializable, ddk::Unbindable>;
 class Nvme : public DeviceType {
  public:
   explicit Nvme(zx_device_t* parent, ddk::Pci pci, fdf::MmioBuffer buffer)
-      : DeviceType(parent), pci_(pci), mmio_(std::move(buffer)) {}
+      : DeviceType(parent), pci_(std::move(pci)), mmio_(std::move(buffer)) {}
   virtual ~Nvme() = default;
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);

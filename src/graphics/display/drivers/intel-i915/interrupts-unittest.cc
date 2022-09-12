@@ -4,8 +4,13 @@
 
 #include "src/graphics/display/drivers/intel-i915/interrupts.h"
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/async-loop/loop.h>
+#include <lib/async/cpp/task.h>
 #include <lib/ddk/driver.h>
 #include <lib/mmio-ptr/fake.h>
+#include <lib/sync/completion.h>
 
 #include <vector>
 
@@ -22,14 +27,27 @@ void NopPipeVsyncCb(registers::Pipe, zx_time_t) {}
 void NopHotplugCb(registers::Ddi, bool) {}
 void NopIrqCb(void*, uint32_t, uint64_t) {}
 
-zx_status_t InitInterrupts(i915::Interrupts* i, zx_device_t* dev, pci::FakePciProtocol* pci,
+zx_status_t InitInterrupts(i915::Interrupts* i, zx_device_t* dev, ddk::Pci& pci,
                            fdf::MmioBuffer* mmio) {
-  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, pci->get_pci(), mmio,
-                 i915::GetDdis(i915::kTestDeviceDid));
+  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, pci, mmio, i915::GetDdis(i915::kTestDeviceDid));
 }
 
+class InterruptTest : public testing::Test {
+ public:
+  InterruptTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
+  void SetUp() override {
+    loop_.StartThread("pci-fidl-server-thread");
+    pci_ = fake_pci_.SetUpFidlServer(loop_);
+  }
+
+  async::Loop loop_;
+  ddk::Pci pci_;
+  pci::FakePciProtocol fake_pci_;
+};
+
 // Test interrupt initialization with both MSI and Legacy interrupt modes.
-TEST(InterruptTest, Init) {
+TEST_F(InterruptTest, Init) {
   constexpr uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
   std::vector<uint32_t> regs(kMinimumRegCount);
   fdf::MmioBuffer mmio_space({
@@ -38,24 +56,29 @@ TEST(InterruptTest, Init) {
       .size = regs.size() * sizeof(uint32_t),
       .vmo = ZX_HANDLE_INVALID,
   });
-  pci::FakePciProtocol pci;
   std::shared_ptr<MockDevice> parent = MockDevice::FakeRootParent();
 
   i915::Interrupts interrupts;
-  EXPECT_EQ(ZX_ERR_INTERNAL, InitInterrupts(&interrupts, parent.get(), &pci, &mmio_space));
+  EXPECT_EQ(ZX_ERR_INTERNAL, InitInterrupts(&interrupts, parent.get(), pci_, &mmio_space));
 
-  pci.AddLegacyInterrupt();
-  EXPECT_EQ(ZX_OK, InitInterrupts(&interrupts, parent.get(), &pci, &mmio_space));
-  EXPECT_EQ(1u, pci.GetIrqCount());
-  EXPECT_EQ(PCI_INTERRUPT_MODE_LEGACY, pci.GetIrqMode());
+  pci::RunAsync(loop_, [&] { fake_pci_.AddLegacyInterrupt(); });
+  EXPECT_EQ(ZX_OK, InitInterrupts(&interrupts, parent.get(), pci_, &mmio_space));
 
-  pci.AddMsiInterrupt();
-  EXPECT_EQ(ZX_OK, InitInterrupts(&interrupts, parent.get(), &pci, &mmio_space));
-  EXPECT_EQ(1u, pci.GetIrqCount());
-  EXPECT_EQ(PCI_INTERRUPT_MODE_MSI, pci.GetIrqMode());
+  pci::RunAsync(loop_, [&] {
+    EXPECT_EQ(1u, fake_pci_.GetIrqCount());
+    EXPECT_EQ(PCI_INTERRUPT_MODE_LEGACY, fake_pci_.GetIrqMode());
+    fake_pci_.AddMsiInterrupt();
+  });
+
+  EXPECT_EQ(ZX_OK, InitInterrupts(&interrupts, parent.get(), pci_, &mmio_space));
+
+  pci::RunAsync(loop_, [&] {
+    EXPECT_EQ(1u, fake_pci_.GetIrqCount());
+    EXPECT_EQ(PCI_INTERRUPT_MODE_MSI, fake_pci_.GetIrqMode());
+  });
 }
 
-TEST(InterruptTest, SetInterruptCallback) {
+TEST_F(InterruptTest, SetInterruptCallback) {
   i915::Interrupts interrupts;
 
   intel_gpu_core_interrupt_t callback = {.callback = NopIrqCb, .ctx = nullptr};
