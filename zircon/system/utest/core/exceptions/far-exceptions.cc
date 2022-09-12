@@ -111,7 +111,8 @@ TEST(ExceptionsTest, InstructionAbort) {
   EXPECT_EQ(report.header.type, ZX_EXCP_FATAL_PAGE_FAULT);
   ASSERT_EQ(GetEC(report.context.arch.u.arm_64.esr),
             arch::ArmExceptionSyndromeRegister::ExceptionClass::kInstructionAbortLowerEl);
-  ASSERT_EQ(report.context.arch.u.arm_64.far, pc);
+  constexpr uintptr_t kTagShift = 56;
+  ASSERT_EQ(report.context.arch.u.arm_64.far, pc & (~(UINT64_C(0xff) << kTagShift)));
   ASSERT_NE(report.context.arch.u.arm_64.far, 0);
 }
 
