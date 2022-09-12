@@ -1,10 +1,11 @@
 # View System
 
-One of Scenic's primary responsibilities is being the arbiter of all [Views](/docs/glossary#view)
-used to compose UI in a running Fuchsia system.
+One of Scenic's primary responsibilities is being the arbiter of all
+[Views](/docs/glossary#view) used to compose UI in a running Fuchsia system.
 
-The set of Scenic APIs which [UI Clients](/docs/concepts/ui/ui-client.md) use to create,
-destroy, and modify Views are together called the "View System".
+The set of Scenic APIs which [UI Clients](/docs/concepts/ui/ui-client.md) use
+to create, destroy, and modify Views are together called the
+[View System](/docs/contribute/governance/rfcs/0147_view_system.md).
 
 ## View
 

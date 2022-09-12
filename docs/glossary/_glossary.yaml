@@ -1259,10 +1259,10 @@ href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
   area: ["Component Framework", "System"]
 
 - term: "Scenic"
-  short_description: "A system service that composes graphical objects from multiple
-  processes into a shared scene graph."
+  short_description: "Scenic is Fuchsia's system compositor, which composes graphical
+  objects from multiple components into a shared scene graph."
   full_description: "Scenic includes views, input, compositor, and GPU services."
-  see_also: [""]
+  see_also: ["<a href=\"/docs/concepts/ui/scenic\">Scenic concepts</a>"]
   related_guides: [""]
   area: ["UI"]
 
@@ -1436,7 +1436,7 @@ href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
   client."
   full_description: "The region a Scenic client can draw in, and the coordinate system input events
   are delivered in. <code>Views</code> can be referred to cross-process by their associated <a href=\"docs/glossary#viewref\">ViewRef</a>."
-  see_also: ["<a href=\"/docs/development/graphics/scenic/concepts/view_bounds\">View bounds</a"]
+  see_also: ["<a href=\"/docs/concepts/ui/scenic/views\">View System</a>"]
   related_guides: [""]
   area: ["UI", "HCI"]
 
