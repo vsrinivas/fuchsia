@@ -19,13 +19,13 @@ use {
     fuchsia_async as fasync, fuchsia_component as component,
     fuchsia_component::client::{connect_to_protocol, launch, App},
     fuchsia_scenic::{self as scenic, flatland},
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     futures::{
         channel::mpsc::{unbounded, UnboundedSender},
         future,
         prelude::*,
     },
     std::{collections::BTreeMap, convert::TryInto},
+    tracing::{error, info, warn},
 };
 
 const ROOT_TRANSFORM_ID: flatland::TransformId = flatland::TransformId { value: u64::MAX };
@@ -183,7 +183,7 @@ impl Service {
                             .expect("failed to send MessageInternal.");
                     }
                     Err(fidl_error) => {
-                        fx_log_warn!("graph link GetLayout() error: {:?}", fidl_error);
+                        warn!("graph link GetLayout() error: {:?}", fidl_error);
                         return; // from spawned task closure
                     }
                 }
@@ -302,7 +302,7 @@ impl Service {
                         .expect("failed to send MessageInternal");
                 }
                 Err(e) => {
-                    fx_log_err!("error when requesting ViewRef from ChildViewWatcher: {}", e);
+                    error!("error when requesting ViewRef from ChildViewWatcher: {}", e);
                 }
             }
         })
@@ -317,7 +317,7 @@ impl Service {
         _provider: ClientEnd<ui_app::ViewProviderMarker>,
         _responder: ControllerAddTileFromViewProviderResponder,
     ) {
-        fx_log_err!("AddTileFromViewProvider is not implemented (and probably will not be).");
+        error!("AddTileFromViewProvider is not implemented (and probably will not be).");
     }
 
     fn remove_tile(&mut self, key: u32) {
@@ -345,7 +345,7 @@ impl Service {
 
             self.relayout();
         } else {
-            fx_log_warn!("RemoveTile: Tried to remove non-existent tile with key {:?}", key)
+            warn!(?key, "RemoveTile: Tried to remove non-existent tile");
         }
     }
 
@@ -367,12 +367,12 @@ impl Service {
             &mut sizes.iter_mut(),
             &mut focusabilities,
         ) {
-            fx_log_warn!("ListTiles: fidl response error: {:?}", e);
+            warn!("ListTiles: fidl response error: {:?}", e);
         }
     }
 
     fn quit(&mut self, _control_handle: ControllerControlHandle) {
-        fx_log_info!("received Quit message");
+        info!("received Quit message");
         std::process::exit(0);
     }
 
@@ -470,17 +470,15 @@ fn setup_handle_flatland_events(
     .detach();
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["tiles-flatland"])]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["tiles-flatland"]).expect("failed to initialize logger");
-
     let (internal_sender, mut internal_receiver) = unbounded::<MessageInternal>();
 
     let flatland_display = connect_to_protocol::<flatland::FlatlandDisplayMarker>()
         .expect("error connecting to Flatland display");
     let flatland_session = connect_to_protocol::<flatland::FlatlandMarker>()
         .expect("error connecting to Flatland session");
-    fx_log_info!("Established connections to Flatland display and session");
+    info!("Established connections to Flatland display and session");
 
     setup_fidl_services(internal_sender.clone());
     setup_handle_flatland_events(flatland_session.take_event_stream(), internal_sender.clone());
@@ -502,7 +500,7 @@ async fn main() -> Result<(), Error> {
                         internal_sender.clone(),
                         responder,
                     ) {
-                        fx_log_info!("error in add_tile_from_url(): {:?}", e);
+                        info!("error in add_tile_from_url(): {:?}", e);
                     }
                 }
                 ControllerRequest::AddTileFromViewProvider { url, provider, responder } => {
@@ -530,7 +528,7 @@ async fn main() -> Result<(), Error> {
                 }
                 flatland::FlatlandEvent::OnFramePresented { .. } => {}
                 flatland::FlatlandEvent::OnError { error } => {
-                    fx_log_err!("OnPresentProcessed({:?})", error);
+                    error!("OnPresentProcessed({:?})", error);
                 }
             },
             MessageInternal::ParentViewportWatcherGetLayout(layout_info) => {
@@ -545,8 +543,8 @@ async fn main() -> Result<(), Error> {
                 fasync::Task::local(async move {
                     match result.await {
                         Ok(Ok(())) => {}
-                        Ok(Err(e)) => fx_log_err!("Error while requesting focus on child {:?}", e),
-                        Err(e) => fx_log_err!("FIDL error while requesting focus on child {:?}", e),
+                        Ok(Err(e)) => error!("Error while requesting focus on child {:?}", e),
+                        Err(e) => error!("FIDL error while requesting focus on child {:?}", e),
                     }
                 })
                 .detach();
@@ -557,7 +555,7 @@ async fn main() -> Result<(), Error> {
         }
     }
 
-    fx_log_info!("Exiting tiles-flatland, goodbye.");
+    info!("Exiting tiles-flatland, goodbye.");
 
     Ok(())
 }
