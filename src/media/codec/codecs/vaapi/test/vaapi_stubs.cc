@@ -241,3 +241,12 @@ const char *vaErrorStr(VAStatus error_status) {
 }
 
 VADisplay vaGetDisplayMagma(magma_device_t device) { return &vaGetDisplayMagmaReturn; }
+
+VAMessageCallback vaSetErrorCallback(VADisplay dpy, VAMessageCallback callback,
+                                     void *user_context) {
+  return nullptr;
+}
+
+VAMessageCallback vaSetInfoCallback(VADisplay dpy, VAMessageCallback callback, void *user_context) {
+  return nullptr;
+}

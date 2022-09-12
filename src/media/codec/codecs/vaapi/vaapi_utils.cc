@@ -5,6 +5,7 @@
 #include "vaapi_utils.h"
 
 #include <lib/fdio/directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
 
@@ -14,6 +15,14 @@
 
 namespace {
 std::unique_ptr<VADisplayWrapper> display_wrapper;
+}
+
+static void libva_error_callback(void* user_context, const char* message) {
+  FX_SLOG(ERROR, "libva error", KV("error_message", message));
+}
+
+static void libva_info_callback(void* user_context, const char* message) {
+  FX_SLOG(INFO, "libva message", KV("message", message));
 }
 
 // static
@@ -84,8 +93,10 @@ bool VADisplayWrapper::Initialize() {
   if (!display_)
     return false;
 
-  int major_ver, minor_ver;
+  vaSetErrorCallback(display_, libva_error_callback, nullptr);
+  vaSetInfoCallback(display_, libva_info_callback, nullptr);
 
+  int major_ver, minor_ver;
   VAStatus va_status = vaInitialize(display_, &major_ver, &minor_ver);
   if (va_status != VA_STATUS_SUCCESS) {
     return false;
