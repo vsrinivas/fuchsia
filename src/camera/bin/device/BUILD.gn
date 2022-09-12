@@ -43,6 +43,7 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",
@@ -75,7 +76,7 @@ executable("camera_device_bin") {
 }
 
 fuchsia_package_with_single_component("camera_device") {
-  manifest = "meta/camera_device.cmx"
+  manifest = "meta/camera_device.cml"
   deps = [ ":camera_device_bin" ]
 }
 

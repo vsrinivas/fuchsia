@@ -5,6 +5,7 @@
 #include "src/camera/bin/device_watcher/device_instance.h"
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
 #include <lib/sys/service/cpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
@@ -13,19 +14,16 @@
 #include "lib/fit/function.h"
 #include "lib/sys/cpp/service_directory.h"
 
-// Known path for the camera_device package manifest.
-constexpr auto kCameraDeviceUrl = "fuchsia-pkg://fuchsia.com/camera_device#meta/camera_device.cmx";
-
-// Arbitrary string identifying the camera device protocol. The protocol does not have a fixed name
-// because it is not marked as [Discoverable].
-constexpr auto kCameraPublishedServiceName = "PublishedCameraService";
+namespace camera {
 
 fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::Create(
-    const fuchsia::sys::LauncherPtr& launcher,
-    fidl::InterfaceHandle<fuchsia::hardware::camera::Device> camera,
-    fit::closure on_component_unavailable, async_dispatcher_t* dispatcher) {
+    fuchsia::hardware::camera::DeviceHandle camera, const fuchsia::component::RealmPtr& realm,
+    async_dispatcher_t* dispatcher, const std::string& collection_name,
+    const std::string& child_name, const std::string& url) {
   auto instance = std::make_unique<DeviceInstance>();
   instance->dispatcher_ = dispatcher;
+  instance->name_ = child_name;
+  instance->collection_name_ = collection_name;
 
   // Bind the camera channel.
   zx_status_t status = instance->camera_.Bind(std::move(camera), instance->dispatcher_);
@@ -33,89 +31,33 @@ fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> DeviceInstance::C
     FX_PLOGS(ERROR, status);
     return fpromise::error(status);
   }
-
-  // Add the camera controller as an injected service.
-  fidl::InterfaceRequestHandler<fuchsia::camera2::hal::Controller> handler =
-      fit::bind_member(instance.get(), &DeviceInstance::OnControllerRequested);
-  status = instance->injected_services_dir_.AddEntry(
-      fuchsia::camera2::hal::Controller::Name_, std::make_unique<vfs::Service>(std::move(handler)));
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fpromise::error(status);
-  }
-  auto additional_services = std::make_unique<fuchsia::sys::ServiceList>();
-  additional_services->names.push_back(fuchsia::camera2::hal::Controller::Name_);
-
-  // Bind the injected services directory to the given channel.
-  fidl::InterfaceHandle<fuchsia::io::Directory> injected_services_dir_channel;
-  status = instance->injected_services_dir_.Serve(
-      fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
-      injected_services_dir_channel.NewRequest().TakeChannel());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status);
-    return fpromise::error(status);
-  }
-
-  // Create a service directory into which the component will publish services.
-  fidl::InterfaceRequest<fuchsia::io::Directory> directory_request;
-  instance->published_services_ = sys::ServiceDirectory::CreateWithRequest(&directory_request);
-
-  // Launch the Device component using the injected services channel.
-  fuchsia::sys::LaunchInfo launch_info{};
-  launch_info.url = kCameraDeviceUrl;
-  launch_info.arguments = {kCameraPublishedServiceName};
-  launch_info.directory_request = std::move(directory_request);
-  launch_info.additional_services = std::move(additional_services);
-  launch_info.additional_services->host_directory = std::move(injected_services_dir_channel);
-  launcher->CreateComponent(std::move(launch_info),
-                            instance->component_controller_.NewRequest(instance->dispatcher_));
-
-  // Bind component event handlers.
-  instance->component_controller_.events().OnDirectoryReady =
-      fit::bind_member(instance.get(), &DeviceInstance::OnServicesReady);
-  instance->component_controller_.events().OnTerminated =
-      [callback = on_component_unavailable.share()](int64_t return_code,
-                                                    fuchsia::sys::TerminationReason reason) {
-        FX_LOGS(WARNING) << "Camera Device Component exited with code " << return_code
-                         << " and reason " << static_cast<uint32_t>(reason);
-        callback();
-      };
-
-  // Bind error handlers.
-  instance->component_controller_.set_error_handler(
-      [callback = on_component_unavailable.share()](zx_status_t status) {
-        FX_PLOGS(WARNING, status) << "Component controller disconnected.";
-        // Invoke the callback here since OnTerminated won't be called.
-        callback();
-      });
   instance->camera_.set_error_handler([instance = instance.get()](zx_status_t status) {
     FX_PLOGS(WARNING, status) << "Camera device server disconnected.";
     instance->camera_ = nullptr;
   });
 
+  // Launch the child device.
+  fuchsia::component::decl::CollectionRef collection;
+  collection.name = collection_name;
+  fuchsia::component::decl::Child child;
+  child.set_name(child_name);
+  child.set_url(url);
+  child.set_startup(fuchsia::component::decl::StartupMode::LAZY);
+  fuchsia::component::CreateChildArgs args;
+  fuchsia::component::Realm::CreateChildCallback cb =
+      [child_name](fuchsia::component::Realm_CreateChild_Result result) {
+        if (result.is_err()) {
+          FX_LOGS(ERROR) << "Failed to create camera device child. Result: "
+                         << static_cast<long>(result.err());
+          ZX_ASSERT(false);  // Should never happen.
+        }
+        FX_LOGS(INFO) << "Created camera device child: " << child_name;
+      };
+  realm->CreateChild(std::move(collection), std::move(child), std::move(args), std::move(cb));
+
+  // TODO(b/244178394) - Need to have handlers/callbacks for child component exits or crashes.
+
   return fpromise::ok(std::move(instance));
 }
 
-void DeviceInstance::OnCameraRequested(fidl::InterfaceRequest<fuchsia::camera3::Device> request) {
-  if (!services_ready_) {
-    pending_requests_.push_back(std::move(request));
-    return;
-  }
-  published_services_->Connect(std::move(request), kCameraPublishedServiceName);
-}
-
-void DeviceInstance::OnServicesReady() {
-  services_ready_ = true;
-  for (auto& request : pending_requests_) {
-    OnCameraRequested(std::move(request));
-  }
-}
-
-void DeviceInstance::OnControllerRequested(
-    fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request) {
-  if (!camera_) {
-    request.Close(ZX_ERR_UNAVAILABLE);
-    return;
-  }
-  camera_->GetChannel2(std::move(request));
-}
+}  // namespace camera

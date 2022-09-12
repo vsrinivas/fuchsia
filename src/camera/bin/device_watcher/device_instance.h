@@ -7,6 +7,7 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
@@ -19,25 +20,25 @@
 #include <lib/vfs/cpp/service.h>
 #include <zircon/status.h>
 
+namespace camera {
+
 // Represents a launched device process.
 class DeviceInstance {
  public:
   static fpromise::result<std::unique_ptr<DeviceInstance>, zx_status_t> Create(
-      const fuchsia::sys::LauncherPtr& launcher, fuchsia::hardware::camera::DeviceHandle camera,
-      fit::closure on_component_unavailable, async_dispatcher_t* dispatcher);
-  void OnCameraRequested(fidl::InterfaceRequest<fuchsia::camera3::Device> request);
+      fuchsia::hardware::camera::DeviceHandle camera, const fuchsia::component::RealmPtr& realm,
+      async_dispatcher_t* dispatcher, const std::string& collection_name,
+      const std::string& child_name, const std::string& url);
+  const std::string& name() { return name_; }
+  const std::string& collection_name() { return collection_name_; }
 
  private:
-  void OnServicesReady();
-  void OnControllerRequested(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request);
-
   async_dispatcher_t* dispatcher_;
+  std::string name_;
+  std::string collection_name_;
   fuchsia::hardware::camera::DevicePtr camera_;
-  vfs::PseudoDir injected_services_dir_;
-  std::shared_ptr<sys::ServiceDirectory> published_services_;
-  fuchsia::sys::ComponentControllerPtr component_controller_;
-  bool services_ready_ = false;
-  std::vector<fidl::InterfaceRequest<fuchsia::camera3::Device>> pending_requests_;
 };
+
+}  // namespace camera
 
 #endif  // SRC_CAMERA_BIN_DEVICE_WATCHER_DEVICE_INSTANCE_H_

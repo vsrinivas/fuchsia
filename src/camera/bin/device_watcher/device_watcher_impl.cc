@@ -6,8 +6,13 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <fuchsia/camera3/cpp/fidl.h>
+#include <fuchsia/component/cpp/fidl.h>
+#include <fuchsia/component/decl/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -17,20 +22,132 @@
 #include <iterator>
 #include <limits>
 
+#include "src/camera/bin/device_watcher/device_instance.h"
+
+namespace camera {
+
+// TODO(b/239427378) - Fake values for now. Need to replace with real vendor ID and real product ID
+// fetched from device.
+constexpr uint16_t kFakeInfoReturnVendorId = 0x1212;
+constexpr uint16_t kFakeInfoReturnProductId = 0x9898;
+
+using DeviceHandle = fuchsia::hardware::camera::DeviceHandle;
+
+static std::string GetCameraFullPath(const std::string& path) {
+  return std::string(kCameraPath) + "/" + path;
+}
+
+static fpromise::result<DeviceHandle, zx_status_t> GetCameraHandle(const std::string& full_path) {
+  DeviceHandle camera;
+  zx_status_t status =
+      fdio_service_connect(full_path.c_str(), camera.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status);
+    return fpromise::error(status);
+  }
+  return fpromise::ok(std::move(camera));
+}
+
+static fpromise::result<CameraType, zx_status_t> IdentifyCameraType(const std::string& full_path) {
+  // TODO(b/241695322) - Need better way to determine camera type.
+  //
+  // This method is using a rather odd way to determine which type of camera device DeviceWatcher is
+  // talking to:
+  //
+  // IdentifyCameraType() uses a distinct behavioral difference between the only MIPI/CSI driver and
+  // the only USB camera driver.
+  //
+  // The only supported MIPI/CSI device driver is the Sherlock controller. This driver's
+  // GetChannel2 call replies with a handle for its fuchsia.camera2.hal FIDL service.
+  //
+  // The only supported USB camera driver is the UVC video driver. This driver's GetChannel2 call
+  // replies with ZX_ERR_NOT_SUPPORTED.
+  //
+  // The complicating factor is that the connection failure with GetChannel2 does not become visible
+  // to the client until the handle is used to make a FIDL call. Therefore, an probe call (using
+  // GetDeviceInfo) is executed to see if the handle is viable or not.
+  //
+  // The upshot is that this is a very odd and unintuitive way to identify a device type when the
+  // drivers should really be able to identify themselves properly. Also, trying to identify a
+  // driver type using an error behavior seems fraught with chances to mis-identify. And finally, it
+  // assumes an awful lot about the current population of camera drivers. Therefore, we suggest that
+  // this detection method be replaced with a more proper and formal identification method ASAP.
+  auto result = GetCameraHandle(full_path);
+  if (result.is_error()) {
+    FX_PLOGS(INFO, result.error()) << "Couldn't get camera from " << full_path
+                                   << ". This device will not be exposed to clients.";
+    zx_status_t status = result.error();
+    return fpromise::error(status);
+  }
+  auto dev_handle = result.take_value();
+
+  // TODO(ernesthua) - This may be worth revising to be async later when there are multiple cameras,
+  // multilple streams or multiple clients.
+  fuchsia::hardware::camera::DeviceSyncPtr dev;
+  dev.Bind(std::move(dev_handle));
+  fuchsia::camera2::hal::ControllerSyncPtr ctrl;
+  auto status = dev->GetChannel2(ctrl.NewRequest());
+  if (status == ZX_OK) {
+    fuchsia::camera2::DeviceInfo device_info;
+    if (ctrl->GetDeviceInfo(&device_info) == ZX_OK) {
+      return fpromise::ok(kCameraTypeMipiCsi);
+    } else {
+      return fpromise::ok(kCameraTypeUvc);
+    }
+  }
+  return fpromise::error(status);
+}
+
 fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherImpl::Create(
-    fuchsia::sys::LauncherHandle launcher, async_dispatcher_t* dispatcher) {
+    std::unique_ptr<sys::ComponentContext> context, fuchsia::component::RealmHandle realm,
+    async_dispatcher_t* dispatcher) {
   auto server = std::make_unique<DeviceWatcherImpl>();
 
+  server->context_ = std::move(context);
   server->dispatcher_ = dispatcher;
 
-  ZX_ASSERT(server->launcher_.Bind(std::move(launcher), server->dispatcher_) == ZX_OK);
-
+  ZX_ASSERT(server->realm_.Bind(std::move(realm), server->dispatcher_) == ZX_OK);
   return fpromise::ok(std::move(server));
 }
 
-fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
-    fuchsia::hardware::camera::DeviceHandle camera) {
-  FX_LOGS(DEBUG) << "AddDevice(...)";
+void DeviceWatcherImpl::AddDeviceByPath(const std::string& path) {
+  FX_LOGS(INFO) << "AddDevice: " << std::string(kCameraPath) << "/" << path;
+  auto full_path = GetCameraFullPath(path);
+  auto type_result = IdentifyCameraType(full_path);
+  if (type_result.is_error()) {
+    FX_PLOGS(INFO, type_result.error()) << "Couldn't get camera type from " << full_path
+                                        << ". This device will not be exposed to clients.";
+    return;
+  }
+  auto camera_type = type_result.take_value();
+  auto handle_result = GetCameraHandle(full_path);
+  if (handle_result.is_error()) {
+    FX_PLOGS(INFO, handle_result.error()) << "Couldn't get camera from " << full_path
+                                          << ". This device will not be exposed to clients.";
+    return;
+  }
+  fpromise::result<PersistentDeviceId, zx_status_t> add_result;
+  switch (camera_type) {
+    case kCameraTypeMipiCsi:
+      add_result = AddMipiCsiDevice(handle_result.take_value(), path);
+      break;
+    case kCameraTypeUvc:
+      add_result = AddUvcDevice(handle_result.take_value(), path);
+      break;
+    default:
+      ZX_ASSERT(false);  // Should never happen
+  }
+  if (add_result.is_error()) {
+    FX_PLOGS(WARNING, add_result.error()) << "Failed to add camera from " << full_path
+                                          << ". This device will not be exposed to clients.";
+    return;
+  }
+}
+
+fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddMipiCsiDevice(
+    DeviceHandle camera, const std::string& path) {
+  FX_LOGS(INFO) << "AddMipiCsiDevice(" << path.c_str() << ")";
+
   fuchsia::hardware::camera::DeviceSyncPtr dev;
   dev.Bind(std::move(camera));
   fuchsia::camera2::hal::ControllerSyncPtr ctrl;
@@ -52,9 +169,48 @@ fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
 
   // Close the controller handle and launch the instance.
   ctrl = nullptr;
-  auto result = DeviceInstance::Create(
-      launcher_, dev.Unbind(), [this, persistent_id]() { devices_.erase(persistent_id); },
-      dispatcher_);
+
+  // Launch the camera device instance.
+  std::string collection_name = std::string(kMipiCsiDeviceInstanceCollectionName);
+  std::string instance_name = std::string(kMipiCsiDeviceInstanceNamePrefix) + path;
+  std::string url(kMipiCsiDeviceInstanceUrl);
+  auto result = DeviceInstance::Create(dev.Unbind(), realm_, dispatcher_, collection_name,
+                                       instance_name, url);
+  if (result.is_error()) {
+    FX_PLOGS(ERROR, result.error()) << "Failed to launch device instance.";
+    return fpromise::error(result.error());
+  }
+  auto instance = result.take_value();
+
+  devices_[persistent_id] = {.id = device_id_next_, .instance = std::move(instance)};
+  FX_LOGS(DEBUG) << "Added device " << persistent_id << " as device ID " << device_id_next_;
+  ++device_id_next_;
+
+  return fpromise::ok(persistent_id);
+}
+
+fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddUvcDevice(
+    DeviceHandle camera, const std::string& path) {
+  FX_LOGS(INFO) << "AddUvcDevice(" << path.c_str() << ")";
+  fuchsia::hardware::camera::DeviceSyncPtr dev;
+  dev.Bind(std::move(camera));
+
+  fuchsia::camera2::DeviceInfo info_return;  // FAKE
+  info_return.set_vendor_id(kFakeInfoReturnVendorId);
+  info_return.set_product_id(kFakeInfoReturnProductId);
+
+  // TODO(fxbug.dev/43565): This generates the same ID for multiple instances of the same device. It
+  // should be made unique by incorporating a truly unique value such as the bus ID.
+  constexpr uint32_t kVendorShift = 16;
+  PersistentDeviceId persistent_id =
+      (static_cast<uint64_t>(info_return.vendor_id()) << kVendorShift) | info_return.product_id();
+
+  // Launch the camera device instance.
+  std::string collection_name = std::string(kUvcDeviceInstanceCollectionName);
+  std::string instance_name = std::string(kUvcDeviceInstanceNamePrefix) + path;
+  std::string url(kUvcDeviceInstanceUrl);
+  auto result = DeviceInstance::Create(dev.Unbind(), realm_, dispatcher_, collection_name,
+                                       instance_name, url);
   if (result.is_error()) {
     FX_PLOGS(ERROR, result.error()) << "Failed to launch device instance.";
     return fpromise::error(result.error());
@@ -100,6 +256,31 @@ void DeviceWatcherImpl::OnNewRequest(
   clients_[client_id_next_] = std::move(client);
   FX_LOGS(DEBUG) << "DeviceWatcher client " << client_id_next_ << " connected.";
   ++client_id_next_;
+}
+
+void DeviceWatcherImpl::ConnectDynamicChild(
+    fidl::InterfaceRequest<fuchsia::camera3::Device> request, const UniqueDevice& unique_device) {
+  fuchsia::component::decl::ChildRef child;
+  child.name = unique_device.instance->name();
+  child.collection = unique_device.instance->collection_name();
+
+  fidl::InterfaceHandle<fuchsia::io::Directory> exposed_dir;
+  realm_->OpenExposedDir(
+      child, exposed_dir.NewRequest(),
+      [exposed_dir = std::move(exposed_dir), request = std::move(request)](
+          fuchsia::component::Realm_OpenExposedDir_Result result) mutable {
+        if (result.is_err()) {
+          FX_LOGS(ERROR) << "Failed to connect to exposed directory. Result: "
+                         << static_cast<long>(result.err());
+
+          // TODO(b/241604541) - Need a more graceful recovery here.
+          ZX_ASSERT(false);
+        }
+        std::shared_ptr<sys::ServiceDirectory> svc_dir =
+            std::make_shared<sys::ServiceDirectory>(sys::ServiceDirectory(std::move(exposed_dir)));
+        // Connect to the service on behalf of client.
+        svc_dir->Connect(std::move(request), "fuchsia.camera3.Device");
+      });
 }
 
 DeviceWatcherImpl::Client::Client(DeviceWatcherImpl& watcher) : watcher_(watcher), binding_(this) {}
@@ -157,7 +338,7 @@ static std::optional<std::vector<fuchsia::camera3::WatchDevicesEvent>> BuildEven
   std::set<TransientDeviceId> added;
   std::set<TransientDeviceId> removed;
 
-  // Exisitng = Known && Sent
+  // Existing = Known && Sent
   std::set_intersection(last_known.begin(), last_known.end(), last_sent.value().begin(),
                         last_sent.value().end(), std::inserter(existing, existing.begin()));
 
@@ -223,13 +404,17 @@ void DeviceWatcherImpl::Client::ConnectToDevice(
     return;
   }
 
+  // Find the UniqueDevice to connect to.
   const auto& devices = watcher_.devices_;
-  auto device = std::find_if(devices.begin(), devices.end(),
-                             [=](const auto& it) { return it.second.id == id; });
-  if (device == devices.end()) {
+  auto unique_device = std::find_if(devices.begin(), devices.end(),
+                                    [=](const auto& it) { return it.second.id == id; });
+  if (unique_device == devices.end()) {
     request.Close(ZX_ERR_NOT_FOUND);
     return;
   }
 
-  device->second.instance->OnCameraRequested(std::move(request));
+  // Create and connect to dynamic child instance.
+  watcher_.ConnectDynamicChild(std::move(request), unique_device->second);
 }
+
+}  // namespace camera
