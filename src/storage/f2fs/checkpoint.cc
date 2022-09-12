@@ -93,7 +93,7 @@ void F2fs::AddOrphanInode(VnodeF2fs *vnode) {
   GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kOrphanIno, vnode->GetKey());
 #ifdef __Fuchsia__
   if (vnode->IsDir()) {
-    vnode->Notify(vnode->GetNameView(), fuchsia_io::wire::WatchEvent::kDeleted);
+    vnode->Notify(".", fuchsia_io::wire::WatchEvent::kDeleted);
   }
 #endif  // __Fuchsia__
   if (vnode->ClearDirty()) {

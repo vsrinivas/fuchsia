@@ -160,9 +160,10 @@ pub struct SingleNameEventProducer {
 
 impl SingleNameEventProducer {
     /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of
-    /// type `WatchEvent::Deleted`.
-    pub fn deleted(name: &str) -> Self {
-        Self::new(fio::WatchMask::DELETED, fio::WatchEvent::Deleted, name)
+    /// type `WatchEvent::Deleted`. Deleted refers to the directory the watcher itself is on, and
+    /// therefore statically refers to itself as ".".
+    pub fn deleted() -> Self {
+        Self::new(fio::WatchMask::DELETED, fio::WatchEvent::Deleted, ".")
     }
 
     /// Constructs a new [`SingleNameEventProducer`] that will produce an event for one name of

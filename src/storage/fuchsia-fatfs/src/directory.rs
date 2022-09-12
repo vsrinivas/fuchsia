@@ -587,6 +587,7 @@ impl Node for FatDirectory {
     fn did_delete(&self) {
         let mut data = self.data.write().unwrap();
         data.parent.take();
+        data.watchers.send_event(&mut SingleNameEventProducer::deleted());
         data.deleted = true;
     }
 

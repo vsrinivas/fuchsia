@@ -295,7 +295,7 @@ TEST_P(WatcherTest, DirectoryDeleted) {
 
     WatchBuffer wb = {};
     ASSERT_NO_FATAL_FAILURE(
-        CheckForEvent(&wb, endpoints->client, "dir", fio::wire::WatchEvent::kDeleted));
+        CheckForEvent(&wb, endpoints->client, ".", fio::wire::WatchEvent::kDeleted));
   }
 
   closedir(dir);
@@ -316,7 +316,7 @@ TEST_P(WatcherTest, DirectoryDeleted) {
 
   WatchBuffer wb = {};
   ASSERT_NO_FATAL_FAILURE(
-      CheckForEvent(&wb, endpoints->client, "dir", fio::wire::WatchEvent::kDeleted));
+      CheckForEvent(&wb, endpoints->client, ".", fio::wire::WatchEvent::kDeleted));
 
   closedir(dir);
 }

@@ -65,8 +65,8 @@ pub(super) async fn run<WatcherEvents>(
             },
             o_event = watcher_events.next() => match o_event {
                 Some(event) => match event {
-                    WatcherEvent::Deleted(name) => {
-                        watchers.send_event(&mut SingleNameEventProducer::deleted(&name));
+                    WatcherEvent::Deleted => {
+                        watchers.send_event(&mut SingleNameEventProducer::deleted());
                     },
                     WatcherEvent::Added(names) => {
                         watchers.send_event(&mut StaticVecEventProducer::added(names));

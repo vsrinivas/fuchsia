@@ -161,13 +161,13 @@ impl FxVolume {
     }
 
     /// Marks the given directory deleted.
-    pub fn mark_directory_deleted(&self, object_id: u64, name: &str) {
+    pub fn mark_directory_deleted(&self, object_id: u64) {
         if let Some(node) = self.cache.get(object_id) {
             // It's possible that node is a placeholder, in which case we don't need to wait for it
             // to be resolved because it should be blocked behind the locks that are held by the
             // caller, and once they're dropped, it'll be found to be deleted via the tree.
             if let Ok(dir) = node.into_any().downcast::<FxDirectory>() {
-                dir.set_deleted(name);
+                dir.set_deleted();
             }
         }
     }

@@ -257,6 +257,12 @@ zx::status<> VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
       oc = open_count();
     }
 
+#ifdef __Fuchsia__
+    // Regardless of whether there are still open connections, we need to notify potential watchers
+    // that this node is being deleted.
+    Notify(std::string_view("."), fuchsia_io::wire::WatchEvent::kDeleted);
+#endif  // __Fuchsia__
+
     if (oc == 0) {
       // No need to flush/retain dirty cache or the reservations for unlinked
       // inode.

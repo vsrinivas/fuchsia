@@ -151,11 +151,15 @@ const INO_UNKNOWN uint64 = 0xFFFFFFFFFFFFFFFF;
 ///   char name[];
 /// };
 /// ```
-/// Where names are NOT null-terminated.
+/// Where names are NOT null-terminated. The name is the relative
+/// path to the entry the event is refering to. It will be empty if
+/// the event isn't referencing a particular entry (e.g. for the
+/// `IDLE` event).
 protocol DirectoryWatcher {};
 
 type WatchEvent = strict enum : uint8 {
-    /// Indicates the directory being watched has been deleted.
+    /// Indicates the directory being watched has been deleted. The name returned for this event
+    /// will be `.` (dot), as it is refering to the directory itself.
     DELETED = 0;
     /// Indicates a node has been created (either new or moved) into a directory.
     ADDED = 1;
@@ -163,7 +167,8 @@ type WatchEvent = strict enum : uint8 {
     REMOVED = 2;
     /// Identifies a node already existed in the directory when watching started.
     EXISTING = 3;
-    /// Identifies that no more `EXISTING` events will be sent.
+    /// Identifies that no more `EXISTING` events will be sent. The name returned for this event
+    /// will be empty, as it is not refering to a specific entry.
     IDLE = 4;
 };
 

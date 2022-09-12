@@ -82,9 +82,9 @@ impl FxDirectory {
         self.directory.is_deleted()
     }
 
-    pub fn set_deleted(&self, name: &str) {
+    pub fn set_deleted(&self) {
         self.directory.set_deleted();
-        self.watchers.lock().unwrap().send_event(&mut SingleNameEventProducer::deleted(name));
+        self.watchers.lock().unwrap().send_event(&mut SingleNameEventProducer::deleted());
     }
 
     /// Acquires a transaction with the appropriate locks to unlink |name|. Returns the transaction,
@@ -372,7 +372,7 @@ impl MutableDirectory for FxDirectory {
                 transaction
                     .commit_with_callback(|_| {
                         self.did_remove(name);
-                        self.volume().mark_directory_deleted(id, name);
+                        self.volume().mark_directory_deleted(id);
                     })
                     .await
                     .map_err(map_to_status)?;
@@ -534,7 +534,7 @@ impl MutableDirectory for FxDirectory {
                     ReplacedChild::Directory(id) => {
                         self.did_remove(dst);
                         self.did_add(dst);
-                        self.volume().mark_directory_deleted(id, dst);
+                        self.volume().mark_directory_deleted(id);
                     }
                 }
             })

@@ -146,7 +146,6 @@ fs_test_suite("fatfs") {
     max_file_size = 4294967295
     is_slow = true
     sectors_per_cluster = 2
-    supports_watch_event_deleted = false
   }
 
   omit_components = [

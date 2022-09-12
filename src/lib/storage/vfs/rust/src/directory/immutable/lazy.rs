@@ -42,10 +42,9 @@ use {
 /// documentation of the [`lazy`] constructor.
 #[derive(Debug)]
 pub enum WatcherEvent {
-    /// A directory itself has been removed.  Not all files systems will be able to support this
-    /// event..  All the currently attached watchers will receive a WATCH_EVENT_DELETED event.
-    /// `name` is the name of the directory in it's parent listing.
-    Deleted(String),
+    /// The directory itself has been removed.  All the currently attached watchers will receive a
+    /// WATCH_EVENT_DELETED event.
+    Deleted,
     /// One or more entries have been added to the directory.  All the currently attached watchers
     /// will receive a WATCH_EVENT_ADDED event.
     Added(Vec<String>),
