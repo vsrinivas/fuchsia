@@ -82,6 +82,8 @@ type StreamError = strict enum : uint32 {
 type AudioCompressedFormat = flexible union {
     1: aac AudioCompressedFormatAac;
     2: sbc AudioCompressedFormatSbc;
+    @available(added=HEAD)
+    3: cvsd AudioCompressedFormatCvsd;
 };
 
 type AudioBitrateMode = strict enum {
@@ -97,6 +99,12 @@ type AudioBitrateMode = strict enum {
 type AudioCompressedFormatAac = struct {};
 
 type AudioCompressedFormatSbc = struct {};
+
+/// AudioCompressedFormatCvsd contains no fields for now since we will be
+/// using the parameter values recommended by Bluetooth Core Spec v5.3
+/// section 9.2.
+@available(added=HEAD)
+type AudioCompressedFormatCvsd = table {};
 
 /// AudioPcmMode
 ///
@@ -625,6 +633,12 @@ type HevcEncoderSettings = table {
     3: gop_size uint32;
 };
 
+/// Settings for CVSD Encoders. It contains no fields for now since we will be
+/// using the parameter values recommended by Bluetooth Core Spec v5.3
+/// section 9.2.
+@available(added=HEAD)
+type CvsdEncoderSettings = table {};
+
 /// Settings for encoders that tell them how to encode raw
 /// formats.
 type EncoderSettings = flexible union {
@@ -632,6 +646,8 @@ type EncoderSettings = flexible union {
     2: aac AacEncoderSettings;
     3: h264 H264EncoderSettings;
     4: hevc HevcEncoderSettings;
+    @available(added=HEAD)
+    5: cvsd CvsdEncoderSettings;
 };
 
 /// FormatDetails
