@@ -29,7 +29,10 @@ test("udp_serde_benchmarks") {
 }
 
 test("socket_benchmarks") {
-  sources = [ "socket_benchmarks.cc" ]
+  sources = [
+    "../os.h",
+    "socket_benchmarks.cc",
+  ]
 
   deps = [
     "//sdk/lib/syslog/cpp",

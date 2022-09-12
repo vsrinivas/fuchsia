@@ -13,6 +13,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/connectivity/network/tests/os.h"
+
 #if defined(__Fuchsia__)
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/fdio/fd.h>
@@ -186,78 +188,78 @@ void fill_stream_send_buf(int fd, int peer_fd, ssize_t* out_bytes_written) {
   ASSERT_EQ(rcvbuf_optlen, sizeof(rcvbuf_opt));
 
   ssize_t total_bytes_written = 0;
-#if defined(__linux__)
-  // If the send buffer is smaller than the receive buffer, the code below will
-  // not work because the first write will not be enough to fill the receive
-  // buffer.
-  ASSERT_GE(sndbuf_opt, rcvbuf_opt);
-  // Write enough bytes at once to fill the receive buffer.
-  {
-    const std::vector<uint8_t> buf(rcvbuf_opt);
-    const ssize_t bytes_written = write(fd, buf.data(), buf.size());
-    ASSERT_GE(bytes_written, 0u) << strerror(errno);
-    ASSERT_EQ(bytes_written, ssize_t(buf.size()));
-    total_bytes_written += bytes_written;
-  }
-
-  // Wait for the bytes to be available; afterwards the receive buffer will be full.
-  while (true) {
-    int available_bytes;
-    ASSERT_EQ(ioctl(peer_fd, FIONREAD, &available_bytes), 0) << strerror(errno);
-    ASSERT_LE(available_bytes, rcvbuf_opt);
-    if (available_bytes == rcvbuf_opt) {
-      break;
+  if (!kIsFuchsia) {
+    // If the send buffer is smaller than the receive buffer, the code below will
+    // not work because the first write will not be enough to fill the receive
+    // buffer.
+    ASSERT_GE(sndbuf_opt, rcvbuf_opt);
+    // Write enough bytes at once to fill the receive buffer.
+    {
+      const std::vector<uint8_t> buf(rcvbuf_opt);
+      const ssize_t bytes_written = write(fd, buf.data(), buf.size());
+      ASSERT_GE(bytes_written, 0u) << strerror(errno);
+      ASSERT_EQ(bytes_written, ssize_t(buf.size()));
+      total_bytes_written += bytes_written;
     }
-  }
 
-  // Finally the send buffer can be filled with certainty.
-  {
-    const std::vector<uint8_t> buf(sndbuf_opt);
-    const ssize_t bytes_written = write(fd, buf.data(), buf.size());
-    ASSERT_GE(bytes_written, 0u) << strerror(errno);
-    ASSERT_EQ(bytes_written, ssize_t(buf.size()));
-    total_bytes_written += bytes_written;
-  }
-#else
-  // On Fuchsia, it may take a while for a written packet to land in the netstack's send buffer
-  // because of the asynchronous copy from the zircon socket to the send buffer. So we use a small
-  // timeout which was empirically tested to ensure no flakiness is introduced.
-  timeval original_tv;
-  socklen_t tv_len = sizeof(original_tv);
-  ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &original_tv, &tv_len), 0) << strerror(errno);
-  ASSERT_EQ(tv_len, sizeof(original_tv));
-  const timeval tv = {
-      .tv_sec = 0,
-      .tv_usec = 1 << 14,  // ~16ms
-  };
-  ASSERT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
-
-  const std::vector<uint8_t> buf(sndbuf_opt + rcvbuf_opt);
-  // Clocks sometimes jump in infrastructure, which can cause the timeout set above to expire
-  // prematurely. Fortunately such jumps are rarely seen in quick succession - if we repeatedly
-  // reach the blocking condition we can be reasonably sure that the intended amount of time truly
-  // did elapse. Care is taken to reset the counter if data is written, as we are looking for a
-  // streak of blocking condition observances.
-  for (int i = 0; i < 1 << 6; i++) {
-    ssize_t size;
-    while ((size = write(fd, buf.data(), buf.size())) > 0) {
-      total_bytes_written += size;
-
-      i = 0;
+    // Wait for the bytes to be available; afterwards the receive buffer will be full.
+    while (true) {
+      int available_bytes;
+      ASSERT_EQ(ioctl(peer_fd, FIONREAD, &available_bytes), 0) << strerror(errno);
+      ASSERT_LE(available_bytes, rcvbuf_opt);
+      if (available_bytes == rcvbuf_opt) {
+        break;
+      }
     }
-    ASSERT_EQ(size, -1);
-    EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+
+    // Finally the send buffer can be filled with certainty.
+    {
+      const std::vector<uint8_t> buf(sndbuf_opt);
+      const ssize_t bytes_written = write(fd, buf.data(), buf.size());
+      ASSERT_GE(bytes_written, 0u) << strerror(errno);
+      ASSERT_EQ(bytes_written, ssize_t(buf.size()));
+      total_bytes_written += bytes_written;
+    }
+  } else {
+    // On Fuchsia, it may take a while for a written packet to land in the netstack's send buffer
+    // because of the asynchronous copy from the zircon socket to the send buffer. So we use a small
+    // timeout which was empirically tested to ensure no flakiness is introduced.
+    timeval original_tv;
+    socklen_t tv_len = sizeof(original_tv);
+    ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &original_tv, &tv_len), 0) << strerror(errno);
+    ASSERT_EQ(tv_len, sizeof(original_tv));
+    const timeval tv = {
+        .tv_sec = 0,
+        .tv_usec = 1 << 14,  // ~16ms
+    };
+    ASSERT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv)), 0) << strerror(errno);
+
+    const std::vector<uint8_t> buf(sndbuf_opt + rcvbuf_opt);
+    // Clocks sometimes jump in infrastructure, which can cause the timeout set above to expire
+    // prematurely. Fortunately such jumps are rarely seen in quick succession - if we repeatedly
+    // reach the blocking condition we can be reasonably sure that the intended amount of time truly
+    // did elapse. Care is taken to reset the counter if data is written, as we are looking for a
+    // streak of blocking condition observances.
+    for (int i = 0; i < 1 << 6; i++) {
+      ssize_t size;
+      while ((size = write(fd, buf.data(), buf.size())) > 0) {
+        total_bytes_written += size;
+
+        i = 0;
+      }
+      ASSERT_EQ(size, -1);
+      EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+    }
+    ASSERT_GT(total_bytes_written, 0);
+    ASSERT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &original_tv, tv_len), 0) << strerror(errno);
   }
-  ASSERT_GT(total_bytes_written, 0);
-  ASSERT_EQ(setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &original_tv, tv_len), 0) << strerror(errno);
-#endif
   if (out_bytes_written != nullptr) {
     *out_bytes_written = total_bytes_written;
   }
 }
 
-#if !defined(__Fuchsia__)
 fit::deferred_action<std::function<void()>> DisableSigPipe(bool is_write) {
+#if !defined(__Fuchsia__)
   struct sigaction act = {};
   act.sa_handler = SIG_IGN;
   struct sigaction oldact;
@@ -269,20 +271,11 @@ fit::deferred_action<std::function<void()>> DisableSigPipe(bool is_write) {
       EXPECT_EQ(sigaction(SIGPIPE, &oldact, nullptr), 0) << strerror(errno);
     }
   };
+#else
+  std::function<void()> ret = []() {};
+#endif
   return fit::defer(ret);
 }
-
-bool IsRoot() {
-  uid_t ruid, euid, suid;
-  EXPECT_EQ(getresuid(&ruid, &euid, &suid), 0) << strerror(errno);
-  gid_t rgid, egid, sgid;
-  EXPECT_EQ(getresgid(&rgid, &egid, &sgid), 0) << strerror(errno);
-  auto uids = {ruid, euid, suid};
-  auto gids = {rgid, egid, sgid};
-  return std::all_of(std::begin(uids), std::end(uids), [](uid_t uid) { return uid == 0; }) &&
-         std::all_of(std::begin(gids), std::end(gids), [](gid_t gid) { return gid == 0; });
-}
-#endif
 
 ssize_t VectorizedIOMethod::ExecuteIO(const int fd, iovec* iov, size_t len) const {
   msghdr msg = {
@@ -435,8 +428,7 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
 
   auto confirmWrite = [&]() {
     char buffer[1];
-#if defined(__Fuchsia__)
-    if (!datagram) {
+    if (kIsFuchsia && !datagram) {
       switch (io_method.Op()) {
         case IOMethod::Op::WRITE:
         case IOMethod::Op::SEND:
@@ -464,7 +456,6 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
           FAIL() << "unexpected method " << io_method.IOMethodToString();
       }
     }
-#endif
     // Nothing was sent. This is not obvious in the vectorized case.
     EXPECT_EQ(recv(other.get(), buffer, sizeof(buffer), 0), -1);
     EXPECT_EQ(errno, EAGAIN) << strerror(errno);
@@ -477,8 +468,7 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
   }
 
   [&]() {
-#if defined(__Fuchsia__)
-    if (!datagram) {
+    if (kIsFuchsia && !datagram) {
       switch (io_method.Op()) {
         case IOMethod::Op::READ:
         case IOMethod::Op::RECV:
@@ -499,7 +489,6 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
           return;
       }
     }
-#endif
     EXPECT_EQ(ExecuteIO(fd.get(), nullptr, 1), -1);
     EXPECT_EQ(errno, EFAULT) << strerror(errno);
   }();
@@ -518,12 +507,11 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
       switch (io_method.Op()) {
         case IOMethod::Op::READV:
         case IOMethod::Op::RECVMSG:
-#if defined(__Fuchsia__)
           // Fuchsia consumed one byte above.
-#else
-          // An additional byte of space was provided in the ExecuteIO closure.
-          space += 1;
-#endif
+          if (!kIsFuchsia) {
+            // An additional byte of space was provided in the ExecuteIO closure.
+            space += 1;
+          }
           [[fallthrough]];
         case IOMethod::Op::READ:
         case IOMethod::Op::RECV:
@@ -545,15 +533,13 @@ void DoNullPtrIO(const fbl::unique_fd& fd, const fbl::unique_fd& other, IOMethod
   switch (io_method.Op()) {
     case IOMethod::Op::WRITEV:
     case IOMethod::Op::SENDMSG:
-#if defined(__Fuchsia__)
-      if (!datagram) {
+      if (kIsFuchsia && !datagram) {
         // Fuchsia doesn't comply because zircon sockets do not implement atomic vector
         // operations, so these vector operations report success on the byte provided in the
         // ExecuteIO closure.
         EXPECT_EQ(ExecuteIO(fd.get(), nullptr, 1), 1) << strerror(errno);
         break;
       }
-#endif
       [[fallthrough]];
     case IOMethod::Op::READ:
     case IOMethod::Op::RECV:

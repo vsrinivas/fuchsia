@@ -9,7 +9,7 @@
 #include <netinet/udp.h>
 #include <sys/socket.h>
 
-#ifdef __linux__
+#if defined(__linux__)
 #include <sys/syscall.h>
 
 #include <linux/capability.h>
@@ -20,9 +20,11 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "os.h"
+
 namespace {
 
-#ifdef __linux__
+#if defined(__linux__)
 #define SKIP_IF_CANT_ACCESS_RAW_SOCKETS()                                              \
   do {                                                                                 \
     struct __user_cap_header_struct header = {_LINUX_CAPABILITY_VERSION_3, 0};         \
@@ -59,9 +61,9 @@ TEST(RawSocketTest, UnsupportedOps) {
 TEST(RawSocketTest, SendToDifferentProtocolV6) {
   SKIP_IF_CANT_ACCESS_RAW_SOCKETS();
 
-#ifdef __Fuchsia__
-  GTEST_SKIP() << "Does not pass on fuchsia (https://gvisor.dev/issue/6422)";
-#endif  // __Fuchsia__
+  if (kIsFuchsia) {
+    GTEST_SKIP() << "Does not pass on fuchsia (https://gvisor.dev/issue/6422)";
+  }
 
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
@@ -199,8 +201,7 @@ TEST(RawSocketTest, SendtoRecvfromV6) {
   fbl::unique_fd rawfd;
   ASSERT_TRUE(rawfd = fbl::unique_fd(socket(AF_INET6, SOCK_RAW, IPPROTO_UDP))) << strerror(errno);
 
-#ifdef __linux__
-  {
+  if (!kIsFuchsia) {
     // Fuchsia does not require checksumming if the packet is looped back but
     // Linux always does so we ask the netstack to populate the checksum on
     // Linux.
@@ -208,7 +209,6 @@ TEST(RawSocketTest, SendtoRecvfromV6) {
     ASSERT_EQ(setsockopt(rawfd.get(), IPPROTO_IPV6, IPV6_CHECKSUM, &offset, sizeof(offset)), 0)
         << strerror(errno);
   }
-#endif
   ASSERT_EQ(sendto(rawfd.get(), raw_udp_buf, sizeof(raw_udp_buf), 0,
                    reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
             ssize_t(sizeof(raw_udp_buf)))
@@ -488,10 +488,8 @@ TEST_P(RawSocketTest, SockOptIPHdrIncl) {
 
   int opt;
   socklen_t optlen = sizeof(opt);
-// TODO(https://fxbug.deb/90810): Don't support IP_HDRINCL on raw IPv6 sockets.
-#ifndef __Fuchsia__
-  if (family == AF_INET) {
-#endif  // __Fuchsia__
+  // TODO(https://fxbug.deb/90810): Don't support IP_HDRINCL on raw IPv6 sockets.
+  if (kIsFuchsia || family == AF_INET) {
     ASSERT_EQ(getsockopt(fd().get(), SOL_IP, IP_HDRINCL, &opt, &optlen), 0) << strerror(errno);
     ASSERT_EQ(optlen, sizeof(opt));
     EXPECT_EQ(opt, protocol == IPPROTO_RAW);
@@ -501,12 +499,10 @@ TEST_P(RawSocketTest, SockOptIPHdrIncl) {
     ASSERT_EQ(getsockopt(fd().get(), SOL_IP, IP_HDRINCL, &opt, &optlen), 0) << strerror(errno);
     ASSERT_EQ(optlen, sizeof(opt));
     EXPECT_EQ(opt, yes);
-#ifndef __Fuchsia__
   } else {
     ASSERT_EQ(getsockopt(fd().get(), SOL_IP, IP_HDRINCL, &opt, &optlen), -1);
     EXPECT_EQ(errno, ENOPROTOOPT) << strerror(errno);
   }
-#endif  // __Fuchsia__
 }
 
 INSTANTIATE_TEST_SUITE_P(AllRawSocketTests, RawSocketTest,

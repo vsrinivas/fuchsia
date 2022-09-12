@@ -13,6 +13,8 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "src/connectivity/network/tests/os.h"
+
 namespace {
 
 // This is the device name we expect to get from the device name provider,
@@ -49,11 +51,11 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET) {
   //
   // TODO(https://fxbug.dev/46817, https://gvisor.dev/issues/1988): Set errno to the
   // same value as linux when a remote is unroutable.
-#if defined(__linux__)
-  ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
-#else
-  ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
-#endif
+  if (!kIsFuchsia) {
+    ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
+  } else {
+    ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
+  }
 
   ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
@@ -83,11 +85,11 @@ TEST(ExternalNetworkTest, ConnectToNonRoutableINET6) {
   //
   // TODO(https://fxbug.dev/46817): Set errno to the same value as linux when a
   // remote is unroutable.
-#if defined(__linux__)
-  ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
-#else
-  ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
-#endif
+  if (!kIsFuchsia) {
+    ASSERT_TRUE(errno == EINPROGRESS || errno == ENETUNREACH) << strerror(errno);
+  } else {
+    ASSERT_EQ(errno, EHOSTUNREACH) << strerror(errno);
+  }
 
   ASSERT_EQ(close(fd.release()), 0) << strerror(errno);
 }
@@ -125,11 +127,11 @@ TEST(ExternalNetworkTest, ConnectToRoutableNonexistentINET) {
 
   EXPECT_EQ(connect(fd.get(), reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)), -1);
   // TODO: write some netlink to find a routable but unassigned address when we're running on Linux.
-#if defined(__linux__)
-  EXPECT_EQ(errno, ETIMEDOUT) << strerror(errno);
-#else
-  EXPECT_EQ(errno, EHOSTUNREACH) << strerror(errno);
-#endif
+  if (!kIsFuchsia) {
+    EXPECT_EQ(errno, ETIMEDOUT) << strerror(errno);
+  } else {
+    EXPECT_EQ(errno, EHOSTUNREACH) << strerror(errno);
+  }
 
   EXPECT_EQ(close(fd.release()), 0) << strerror(errno);
 }
@@ -188,38 +190,39 @@ TEST(ExternalNetworkTest, IoctlGetInterfaceAddresses) {
     const char* name;
     const char* addr;
   };
-#if defined(__linux__)
-  // On Linux, only verify the loopback interface, because we don't know which
-  // interfaces will exist when this test is run on host (as opposed to when it
-  // runs in an emulated network environment on Fuchsia).
-  const struct ifaddr expected[] = {
-      {
-          .name = "lo",
-          .addr = "127.0.0.1",
-      },
-  };
-  ASSERT_GE(ifc.ifc_len, static_cast<int>(std::size(expected) * sizeof(struct ifreq)));
-#else
-  const struct ifaddr expected[] = {
-      // The loopback interface should always be present on Fuchsia.
-      {
-          .name = "lo",
-          .addr = "127.0.0.1",
-      },
-      // This interface with two static addresses is configured in the emulated
-      // network environment in which this test is run. This configuration is in
-      // this component manifest: meta/test.cml.
-      {
-          .name = "device",
-          .addr = "192.168.0.1",
-      },
-      {
-          .name = "device",
-          .addr = "192.168.0.2",
-      },
-  };
-  ASSERT_EQ(ifc.ifc_len, static_cast<int>(std::size(expected) * sizeof(struct ifreq)));
-#endif
+  std::vector<ifaddr> expected;
+  if (!kIsFuchsia) {
+    // On host, only verify the loopback interface, because we don't know which
+    // interfaces will exist when this test is run on host (as opposed to when it
+    // runs in an emulated network environment on Fuchsia).
+    expected = {
+        {
+            .name = "lo",
+            .addr = "127.0.0.1",
+        },
+    };
+    ASSERT_GE(ifc.ifc_len, static_cast<int>(std::size(expected) * sizeof(struct ifreq)));
+  } else {
+    expected = {
+        // The loopback interface should always be present on Fuchsia.
+        {
+            .name = "lo",
+            .addr = "127.0.0.1",
+        },
+        // This interface with two static addresses is configured in the emulated
+        // network environment in which this test is run. This configuration is in
+        // this component manifest: meta/test.cml.
+        {
+            .name = "device",
+            .addr = "192.168.0.1",
+        },
+        {
+            .name = "device",
+            .addr = "192.168.0.2",
+        },
+    };
+    ASSERT_EQ(ifc.ifc_len, static_cast<int>(std::size(expected) * sizeof(struct ifreq)));
+  }
   ASSERT_EQ(ifc.ifc_req, nullptr);
 
   // Get the interface configuration information.

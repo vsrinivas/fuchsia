@@ -19,6 +19,7 @@ test("netstack_bsdsocket_c_api_test") {
     "bsdsocket_test.cc",
     "if_nameindex_test.cc",
     "no_network_test.cc",
+    "os.h",
     "util.cc",
     "util.h",
   ]
@@ -40,6 +41,7 @@ test("netstack_bsdsocket_c_api_test") {
 test("netstack_dgramsocket_c_api_test") {
   sources = [
     "dgramsocket_test.cc",
+    "os.h",
     "util.cc",
     "util.h",
   ]
@@ -79,6 +81,7 @@ test("netstack_if_nameindex_c_api_test") {
 
 test("netstack_streamsocket_c_api_test") {
   sources = [
+    "os.h",
     "streamsocket_test.cc",
     "util.cc",
     "util.h",
@@ -101,6 +104,7 @@ test("netstack_streamsocket_c_api_test") {
 test("netstack_fuchsia_c_api_test") {
   sources = [
     "fdio_test.cc",
+    "os.h",
     "util.cc",
     "util.h",
   ]
@@ -126,7 +130,10 @@ test("netstack_packetsocket_c_api_test") {
 }
 
 test("netstack_rawsocket_c_api_test") {
-  sources = [ "rawsocket_test.cc" ]
+  sources = [
+    "os.h",
+    "rawsocket_test.cc",
+  ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",

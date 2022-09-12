@@ -25,6 +25,7 @@
 #include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
 #endif
 
+#include "os.h"
 #include "util.h"
 
 // TODO(C++20): Remove this; std::chrono::duration defines operator<< in c++20. See
@@ -113,7 +114,6 @@ void SetUpBoundAndConnectedDatagramSockets(const SocketDomain& domain, fbl::uniq
       << strerror(errno);
 }
 
-#if defined(__linux__)
 void ExpectNoPollin(int fd) {
   pollfd pfd = {
       .fd = fd,
@@ -123,7 +123,6 @@ void ExpectNoPollin(int fd) {
   ASSERT_GE(n, 0) << strerror(errno);
   ASSERT_EQ(n, 0);
 }
-#endif
 
 template <typename T>
 void SendWithCmsg(int sock, char* buf, size_t buf_size, int cmsg_level, int cmsg_type,
@@ -217,12 +216,6 @@ TEST(LocalhostTest, DatagramSocketAtOOBMark) {
 }
 
 TEST(LocalhostTest, BindToDevice) {
-#if !defined(__Fuchsia__)
-  if (!IsRoot()) {
-    GTEST_SKIP() << "This test requires root";
-  }
-#endif
-
   fbl::unique_fd fd;
   ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
 
@@ -244,12 +237,19 @@ TEST(LocalhostTest, BindToDevice) {
 
   const char set_dev_unknown[] = "loblahblahblah";
   // Bind to "lo" without null termination but with accurate length should work.
-  EXPECT_EQ(setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, set_dev_unknown, 2), 0)
-      << strerror(errno);
+  {
+    int ret = setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, set_dev_unknown, 2);
+    if (kIsFuchsia) {
+      EXPECT_EQ(ret, 0) << strerror(errno);
+    } else {
+      // We may get EPERM if we lack sufficient privileges.
+      EXPECT_TRUE(ret == 0 || errno == EPERM) << strerror(errno);
+    }
+  }
 
   // Bind to unknown name should fail.
   EXPECT_EQ(
-      setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, "loblahblahblah", sizeof(set_dev_unknown)),
+      setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, set_dev_unknown, sizeof(set_dev_unknown)),
       -1);
   EXPECT_EQ(errno, ENODEV) << strerror(errno);
 
@@ -1456,11 +1456,11 @@ TEST(IoctlTest, IoctlGetInterfaceFlags) {
   // Don't check strict equality of `ifr_ntof.ifr_flags` with expected flag
   // values, except on Fuchsia, because gVisor does not set all the interface
   // flags that Linux does.
-#if defined(__Fuchsia__)
-  uint16_t expected_flags = IFF_UP | IFF_LOOPBACK | IFF_RUNNING | IFF_MULTICAST;
-  ASSERT_EQ(ifr_ntof.ifr_flags, expected_flags)
-      << std::bitset<16>(ifr_ntof.ifr_flags) << ", " << std::bitset<16>(expected_flags);
-#endif
+  if (kIsFuchsia) {
+    uint16_t expected_flags = IFF_UP | IFF_LOOPBACK | IFF_RUNNING | IFF_MULTICAST;
+    ASSERT_EQ(ifr_ntof.ifr_flags, expected_flags)
+        << std::bitset<16>(ifr_ntof.ifr_flags) << ", " << std::bitset<16>(expected_flags);
+  }
 }
 
 TEST(IoctlTest, IoctlGetInterfaceAddressesNullIfConf) {
@@ -1754,14 +1754,12 @@ TEST_P(IOSendingZeroBytesMethodTest, ZeroLengthPayload) {
   }
   EXPECT_EQ(io_method.ExecuteIO(connected().get(), data, 0), 0) << strerror(errno);
 
-#if defined(__linux__)
   // TODO(https://fxbug.dev/103497): Match Linux behavior when calling `writev` with zero length
   // payloads.
-  if (io_method.Op() == IOMethod::Op::WRITEV) {
+  if (!kIsFuchsia && io_method.Op() == IOMethod::Op::WRITEV) {
     ASSERT_NO_FATAL_FAILURE(ExpectNoPollin(bound().get()));
     return;
   }
-#endif
 
   EXPECT_EQ(read(bound().get(), buf, sizeof(buf)), 0);
 }
@@ -1839,14 +1837,12 @@ TEST_P(VectorizedIOSendingZeroBytesMethodTest, ZeroLengthPayload) {
 
   EXPECT_EQ(io_method.ExecuteIO(connected().get(), iov_ptr, iov_size), 0) << strerror(errno);
 
-#if defined(__linux__)
   // TODO(https://fxbug.dev/103497): Match Linux behavior when calling `writev` with zero length
   // payloads.
-  if (io_method.Op() == VectorizedIOMethod::Op::WRITEV) {
+  if (!kIsFuchsia && io_method.Op() == VectorizedIOMethod::Op::WRITEV) {
     ASSERT_NO_FATAL_FAILURE(ExpectNoPollin(bound().get()));
     return;
   }
-#endif
 
   EXPECT_EQ(read(bound().get(), buf, sizeof(buf)), 0);
 }
@@ -2075,20 +2071,20 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageMinimumValidSize) {
   // A control message can be truncated if there is at least enough space to store the cmsghdr.
   char control[sizeof(cmsghdr)];
   ASSERT_NO_FATAL_FAILURE(SendAndCheckReceivedMessage(control, sizeof(cmsghdr), [](msghdr& msghdr) {
-#if defined(__Fuchsia__)
-    // TODO(https://fxbug.dev/86146): Add support for truncated control messages (MSG_CTRUNC).
-    EXPECT_EQ(msghdr.msg_controllen, 0u);
-    EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
-#else
-    ASSERT_EQ(msghdr.msg_controllen, sizeof(control));
-    EXPECT_EQ(msghdr.msg_flags, MSG_CTRUNC);
-    cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
-    ASSERT_NE(cmsg, nullptr);
-    EXPECT_EQ(cmsg->cmsg_len, sizeof(control));
-    auto const& cmsg_sockopt = std::get<1>(GetParam());
-    EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
-    EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
-#endif
+    if (kIsFuchsia) {
+      // TODO(https://fxbug.dev/86146): Add support for truncated control messages (MSG_CTRUNC).
+      EXPECT_EQ(msghdr.msg_controllen, 0u);
+      EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
+    } else {
+      ASSERT_EQ(msghdr.msg_controllen, sizeof(control));
+      EXPECT_EQ(msghdr.msg_flags, MSG_CTRUNC);
+      cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+      ASSERT_NE(cmsg, nullptr);
+      EXPECT_EQ(cmsg->cmsg_len, sizeof(control));
+      auto const& cmsg_sockopt = std::get<1>(GetParam());
+      EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
+      EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
+    }
   }));
 }
 
@@ -2097,19 +2093,19 @@ TEST_P(NetDatagramSocketsCmsgRecvTest, TruncatedMessageByOneByte) {
   char control[CMSG_LEN(cmsg_sockopt.cmsg_size) - 1];
   ASSERT_NO_FATAL_FAILURE(
       SendAndCheckReceivedMessage(control, socklen_t(sizeof(control)), [&](msghdr& msghdr) {
-#if defined(__Fuchsia__)
-        // TODO(https://fxbug.dev/86146): Add support for truncated control messages (MSG_CTRUNC).
-        EXPECT_EQ(msghdr.msg_controllen, 0u);
-        EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
-#else
-    ASSERT_EQ(msghdr.msg_controllen, sizeof(control));
-    EXPECT_EQ(msghdr.msg_flags, MSG_CTRUNC);
-    cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
-    ASSERT_NE(cmsg, nullptr);
-    EXPECT_EQ(cmsg->cmsg_len, sizeof(control));
-    EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
-    EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
-#endif
+        if (kIsFuchsia) {
+          // TODO(https://fxbug.dev/86146): Add support for truncated control messages (MSG_CTRUNC).
+          EXPECT_EQ(msghdr.msg_controllen, 0u);
+          EXPECT_EQ(CMSG_FIRSTHDR(&msghdr), nullptr);
+        } else {
+          ASSERT_EQ(msghdr.msg_controllen, sizeof(control));
+          EXPECT_EQ(msghdr.msg_flags, MSG_CTRUNC);
+          cmsghdr* cmsg = CMSG_FIRSTHDR(&msghdr);
+          ASSERT_NE(cmsg, nullptr);
+          EXPECT_EQ(cmsg->cmsg_len, sizeof(control));
+          EXPECT_EQ(cmsg->cmsg_level, cmsg_sockopt.cmsg.level);
+          EXPECT_EQ(cmsg->cmsg_type, cmsg_sockopt.cmsg.type);
+        }
       }));
 }
 
@@ -2717,14 +2713,13 @@ TEST_P(NetDatagramSocketsCmsgIpTosTest, SendCmsg) {
         EXPECT_EQ(cmsg->cmsg_type, IP_TOS);
         uint8_t recv_tos;
         memcpy(&recv_tos, CMSG_DATA(cmsg), sizeof(recv_tos));
-#if defined(__Fuchsia__)
-        // TODO(https://fxbug.dev/21106): Support sending SOL_IP -> IP_TOS control message.
-        (void)tos;
-        constexpr uint8_t kDefaultTOS = 0;
-        EXPECT_EQ(recv_tos, kDefaultTOS);
-#else
-        EXPECT_EQ(recv_tos, tos);
-#endif
+        if (kIsFuchsia) {
+          // TODO(https://fxbug.dev/21106): Support sending SOL_IP -> IP_TOS control message.
+          constexpr uint8_t kDefaultTOS = 0;
+          EXPECT_EQ(recv_tos, kDefaultTOS);
+        } else {
+          EXPECT_EQ(recv_tos, tos);
+        }
         EXPECT_EQ(CMSG_NXTHDR(&recv_msghdr, cmsg), nullptr);
       }));
 }
@@ -3556,9 +3551,9 @@ class DatagramSendSemanticsCloseInstance : public DatagramSendSemanticsTestInsta
 };
 
 TEST_P(DatagramLinearizedSendSemanticsTest, Close) {
-#if defined(__linux__)
-  GTEST_SKIP() << "Linux does not guarantee linearized send semantics with respect to close().";
-#endif
+  if (!kIsFuchsia) {
+    GTEST_SKIP() << "Linux does not guarantee linearized send semantics with respect to close().";
+  }
 
   ASSERT_NO_FATAL_FAILURE(
       ValidateLinearizedSendSemantics<DatagramSendSemanticsCloseInstance>(GetParam()));
@@ -3643,11 +3638,11 @@ TEST_P(DatagramLinearizedSendSemanticsTest, Ipv6Only) {
   if (GetParam().Get() != AF_INET6) {
     GTEST_SKIP() << "IPV6_V6ONLY can only be used on AF_INET6 sockets.";
   }
-// TODO(https://fxbug.dev/96108): Remove this test after setting IPV6_V6ONLY after bind is
-// disallowed on Fuchsia.
-#if defined(__linux__)
-  GTEST_SKIP() << "Linux does not support setting IPV6_V6ONLY after a socket has been bound.";
-#endif
+  // TODO(https://fxbug.dev/96108): Remove this test after setting IPV6_V6ONLY after bind is
+  // disallowed on Fuchsia.
+  if (!kIsFuchsia) {
+    GTEST_SKIP() << "Linux does not support setting IPV6_V6ONLY after a socket has been bound.";
+  }
 
   ASSERT_NO_FATAL_FAILURE(
       ValidateLinearizedSendSemantics<DatagramSendSemanticsIpv6OnlyInstance>(GetParam()));
@@ -3657,11 +3652,11 @@ TEST_P(DatagramCachedSendSemanticsTest, Ipv6Only) {
   if (GetParam().Get() != AF_INET6) {
     GTEST_SKIP() << "IPV6_V6ONLY can only be used on AF_INET6 sockets.";
   }
-// TODO(https://fxbug.dev/96108): Remove this test after setting IPV6_V6ONLY after bind is
-// disallowed on Fuchsia.
-#if defined(__linux__)
-  GTEST_SKIP() << "Linux does not support setting IPV6_V6ONLY after a socket has been bound.";
-#endif
+  // TODO(https://fxbug.dev/96108): Remove this test after setting IPV6_V6ONLY after bind is
+  // disallowed on Fuchsia.
+  if (!kIsFuchsia) {
+    GTEST_SKIP() << "Linux does not support setting IPV6_V6ONLY after a socket has been bound.";
+  }
 
   ASSERT_NO_FATAL_FAILURE(
       ValidateCachedSendSemantics<DatagramSendSemanticsIpv6OnlyInstance>(GetParam()));

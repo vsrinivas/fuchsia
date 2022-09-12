@@ -8,11 +8,7 @@
 #include <ifaddrs.h>
 #include <stdbool.h>
 
-#ifdef __Fuchsia__
 #define UDP_SERDE_EXPORT __attribute__((visibility("default")))
-#else
-#define UDP_SERDE_EXPORT
-#endif
 
 // `udp_serde` exposes methods for serializing and deserializing FIDL messages
 // used in the Fast UDP protocol. These methods serialize using a custom wire

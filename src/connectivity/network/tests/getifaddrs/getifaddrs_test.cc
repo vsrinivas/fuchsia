@@ -5,6 +5,8 @@
 #include <arpa/inet.h>
 #include <errno.h>
 #include <ifaddrs.h>
+
+#include "src/connectivity/network/tests/os.h"
 // <net/if.h> doesn't contain the full list of interface flags on Linux.
 #if defined(__linux__)
 #include <linux/if.h>
@@ -54,12 +56,12 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
   };
   const size_t lo_addrs_count = want_ifaddrs.size();
 
-#if defined(__Fuchsia__)
-  want_ifaddrs.push_back(std::make_tuple("ep1", "192.168.0.1", 20, 0, IFF_UP | IFF_RUNNING));
-  want_ifaddrs.push_back(std::make_tuple("ep2", "192.168.0.2", 15, 0, IFF_UP | IFF_RUNNING));
-  want_ifaddrs.push_back(std::make_tuple("ep3", "fe80::1", 64, 4, IFF_UP | IFF_RUNNING));
-  want_ifaddrs.push_back(std::make_tuple("ep4", "1234::5:6:7:8", 120, 0, IFF_UP | IFF_RUNNING));
-#endif
+  if (kIsFuchsia) {
+    want_ifaddrs.push_back(std::make_tuple("ep1", "192.168.0.1", 20, 0, IFF_UP | IFF_RUNNING));
+    want_ifaddrs.push_back(std::make_tuple("ep2", "192.168.0.2", 15, 0, IFF_UP | IFF_RUNNING));
+    want_ifaddrs.push_back(std::make_tuple("ep3", "fe80::1", 64, 4, IFF_UP | IFF_RUNNING));
+    want_ifaddrs.push_back(std::make_tuple("ep4", "1234::5:6:7:8", 120, 0, IFF_UP | IFF_RUNNING));
+  }
 
   std::vector<InterfaceAddress> unknown_link_local_addrs, other_addrs;
   constexpr size_t link_local_addrs_per_external_interface = 1;
@@ -70,12 +72,10 @@ TEST(GetIfAddrsTest, GetIfAddrsTest) {
   ASSERT_EQ(getifaddrs(&ifaddr), 0) << strerror(errno);
   for (auto it = ifaddr; it != nullptr; it = it->ifa_next) {
     const auto if_name = std::string(it->ifa_name);
-#if defined(__linux__)
     // Only loopback is consistent on host environments.
-    if (if_name != "lo") {
+    if (!kIsFuchsia && if_name != "lo") {
       continue;
     }
-#endif
 
     switch (it->ifa_addr->sa_family) {
       case AF_INET: {

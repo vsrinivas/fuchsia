@@ -10,14 +10,16 @@
 
 #include <gtest/gtest.h>
 
+#include "os.h"
+
 namespace {
 
 class NoNetworkTest : public testing::Test {
  protected:
   void SetUp() override {
-#if !defined(__Fuchsia__)
-    GTEST_SKIP() << "NoNetworkTest can only run in a loopback-only environment";
-#endif
+    if (!kIsFuchsia) {
+      GTEST_SKIP() << "NoNetworkTest can only run in a loopback-only environment";
+    }
   }
 };
 

@@ -8,7 +8,10 @@ import("//build/test.gni")
 test("test") {
   output_name = "getifaddrs-test"
   if (is_linux || is_fuchsia) {
-    sources = [ "getifaddrs_test.cc" ]
+    sources = [
+      "../os.h",
+      "getifaddrs_test.cc",
+    ]
   }
   deps = [
     "//src/lib/fxl/test:gtest_main",

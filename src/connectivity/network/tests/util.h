@@ -110,7 +110,6 @@ void AssertBlocked(const std::future<T>& fut) {
   }
 }
 
-#if !defined(__Fuchsia__)
 // DisableSigPipe is typically invoked on Linux, in cases where the caller
 // expects to perform stream socket writes on an unconnected socket. In such
 // cases, SIGPIPE is expected on Linux. This returns a fit::deferred_action object
@@ -119,10 +118,6 @@ void AssertBlocked(const std::future<T>& fut) {
 // send{,to,msg} support the MSG_NOSIGNAL flag to suppress this behaviour, but
 // write and writev do not.
 fit::deferred_action<std::function<void()>> DisableSigPipe(bool is_write);
-
-// Returns whether the current process has root privileges.
-bool IsRoot();
-#endif
 
 // Returns a sockaddr_in holding an IPv4 loopback address with the provided port.
 sockaddr_in LoopbackSockaddrV4(in_port_t port);

@@ -21,6 +21,7 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#include "os.h"
 #include "util.h"
 
 namespace {
@@ -172,14 +173,13 @@ class SocketOptionTestBase : public testing::Test {
   void TearDown() override { EXPECT_EQ(close(sock_.release()), 0) << strerror(errno); }
 
   bool IsOptionLevelSupportedByDomain(int level) const {
-#if defined(__Fuchsia__)
-    // TODO(https://gvisor.dev/issues/6389): Remove once Fuchsia returns an error
-    // when setting/getting IPv6 options on an IPv4 socket.
-    return true;
-#else
+    if (kIsFuchsia) {
+      // TODO(https://gvisor.dev/issues/6389): Remove once Fuchsia returns an error
+      // when setting/getting IPv6 options on an IPv4 socket.
+      return true;
+    }
     // IPv6 options are only supported on AF_INET6 sockets.
     return sock_domain_.which() == SocketDomain::Which::IPv6 || level != IPPROTO_IPV6;
-#endif
   }
 
   fbl::unique_fd const& sock() const { return sock_; }
@@ -435,33 +435,41 @@ INSTANTIATE_TEST_SUITE_P(
                              .valid_values = kBooleanOptionValidValues,
                              .invalid_values = {},
                          },
-                         IntSocketOption {
-                           .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_MULTICAST_LOOP),
-                           .is_boolean = true, .default_value = 1,
-#if defined(__Fuchsia__)
-                           .valid_values = kBooleanOptionValidValues, .invalid_values = {},
-#else
-                           // On Linux, this option only accepts 0 or 1. This is one of a kind.
-                           // There seem to be no good reasons for it, so it should probably be
-                           // fixed in Linux rather than in Fuchsia.
-                           // https://github.com/torvalds/linux/blob/eec4df26e24/net/ipv6/ipv6_sockglue.c#L758
-                               .valid_values = {0, 1}, .invalid_values = {-2, -1, 2, 15, 255, 256},
-#endif
-                         },
-                         IntSocketOption {
-                           .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_TCLASS),
-                           .is_boolean = false, .default_value = 0,
-#if defined(__Fuchsia__)
-                           // TODO(https://gvisor.dev/issues/6389): Remove once Fuchsia treats
-                           // IPV6_TCLASS differently than IP_TOS. See CheckSkipECN test.
-                               .valid_values = {0x04, 0xC0, 0xFC},
-#else
-                           // -1 is not tested here, it is a special value which resets the traffic
-                           // class to its default value.
+                         []() {
+                           IntSocketOption opt = {
+                               .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_MULTICAST_LOOP),
+                               .is_boolean = true,
+                               .default_value = 1,
+                               .valid_values = kBooleanOptionValidValues,
+                               .invalid_values = {},
+                           };
+                           if (!kIsFuchsia) {
+                             // On Linux, this option only accepts 0 or 1. This is one of a kind.
+                             // There seem to be no good reasons for it, so it should probably be
+                             // fixed in Linux rather than in Fuchsia.
+                             // https://github.com/torvalds/linux/blob/eec4df26e24/net/ipv6/ipv6_sockglue.c#L758
+                             opt.valid_values = {0, 1};
+                             opt.invalid_values = {-2, -1, 2, 15, 255, 256};
+                           }
+                           return opt;
+                         }(),
+                         []() {
+                           IntSocketOption opt = {
+                               .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_TCLASS),
+                               .is_boolean = false,
+                               .default_value = 0,
+                               // -1 is not tested here, it is a special value which resets the
+                               // traffic class to its default value.
                                .valid_values = {0, 1, 2, 15, 255},
-#endif
-                           .invalid_values = {-2, 256},
-                         },
+                               .invalid_values = {-2, 256},
+                           };
+                           if (kIsFuchsia) {
+                             // TODO(https://gvisor.dev/issues/6389): Remove once Fuchsia treats
+                             // IPV6_TCLASS differently than IP_TOS. See CheckSkipECN test.
+                             opt.valid_values = {0x04, 0xC0, 0xFC};
+                           }
+                           return opt;
+                         }(),
                          IntSocketOption{
                              .option = STRINGIFIED_SOCKOPT(IPPROTO_IPV6, IPV6_RECVTCLASS),
                              .is_boolean = true,
@@ -777,17 +785,15 @@ TEST_P(SocketOptsTest, CheckSkipECN) {
   SockOption t = GetTOSOption();
   EXPECT_EQ(setsockopt(s.get(), t.level, t.option, &set, set_sz), 0) << strerror(errno);
   int expect = static_cast<uint8_t>(set);
-  if (IsTCP()
-#if !defined(__Fuchsia__)
-      // gvisor-netstack`s implemention of setsockopt(..IPV6_TCLASS..)
-      // clears the ECN bits from the TCLASS value. This keeps gvisor
-      // in parity with the Linux test-hosts that run a custom kernel.
-      // But that is not the behavior of vanilla Linux kernels.
-      // This #if can be removed when we migrate away from gvisor-netstack.
-      && !IsIPv6()
-#endif
-  ) {
-    expect &= ~INET_ECN_MASK;
+  if (IsTCP()) {
+    if (kIsFuchsia || !IsIPv6()) {
+      // gvisor-netstack`s implementation of setsockopt(..IPV6_TCLASS..) clears
+      // the ECN bits from the TCLASS value. This keeps gvisor in parity with
+      // the Linux test-hosts that run a custom kernel. But that is not the
+      // behavior of vanilla Linux kernels. This can be removed when we migrate
+      // away from gvisor-netstack.
+      expect &= ~INET_ECN_MASK;
+    }
   }
   int get = -1;
   socklen_t get_sz = sizeof(get);
@@ -1161,11 +1167,9 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   const int on = true;
   auto const& [type, multicast] = GetParam();
 
-#if defined(__Fuchsia__)
-  if (multicast && type.which() == SocketType::Which::Stream) {
+  if (kIsFuchsia && multicast && type.which() == SocketType::Which::Stream) {
     GTEST_SKIP() << "Cannot bind a TCP socket to a multicast address on Fuchsia";
   }
-#endif
 
   sockaddr_in addr = LoopbackSockaddrV4(0);
   if (multicast) {
@@ -1177,11 +1181,10 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
   fbl::unique_fd s1;
   ASSERT_TRUE(s1 = fbl::unique_fd(socket(AF_INET, type.Get(), 0))) << strerror(errno);
 
-// TODO(https://gvisor.dev/issue/3839): Remove this.
-#if defined(__Fuchsia__)
-  // Must outlive the block below.
+  // TODO(https://gvisor.dev/issue/3839): Remove this when binding to multicast works without group
+  // membership. Must outlive the block below.
   fbl::unique_fd s;
-  if (type.which() != SocketType::Which::Dgram && multicast) {
+  if (kIsFuchsia && type.which() != SocketType::Which::Dgram && multicast) {
     ASSERT_EQ(bind(s1.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), -1);
     ASSERT_EQ(errno, EADDRNOTAVAIL) << strerror(errno);
     ASSERT_TRUE(s = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))) << strerror(errno);
@@ -1196,7 +1199,6 @@ TEST_P(ReuseTest, AllowsAddressReuse) {
     ASSERT_EQ(setsockopt(s.get(), SOL_IP, IP_ADD_MEMBERSHIP, &param, sizeof(param)), 0)
         << strerror(errno);
   }
-#endif
 
   ASSERT_EQ(setsockopt(s1.get(), SOL_SOCKET, SO_REUSEPORT, &on, sizeof(on)), 0) << strerror(errno);
   ASSERT_EQ(bind(s1.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
@@ -1406,15 +1408,13 @@ TEST_P(ReadAfterShutdownTest, Success) {
   const auto& [domain, socket_type, which_end, shutdown_type, read_type, read_socket_state] =
       GetParam();
 
-#ifdef __Fuchsia__
-  if (socket_type.which() == SocketType::Which::Dgram && read_type == ReadType::Blocking &&
-      shutdown_type.which() == ShutdownType::Which::Read && which_end == ShutdownEnd::Local &&
-      read_socket_state == ReadSocketState::NoPendingData) {
+  if (kIsFuchsia && socket_type.which() == SocketType::Which::Dgram &&
+      read_type == ReadType::Blocking && shutdown_type.which() == ShutdownType::Which::Read &&
+      which_end == ShutdownEnd::Local && read_socket_state == ReadSocketState::NoPendingData) {
     // TODO(https://fxbug.dev/42041): Support blocking reads after shutdown for dgram sockets.
     GTEST_SKIP() << "Blocking dgram reads with no pending data hang on Fuchsia when the socket "
                     "is shutdown with SHUT_RD";
   }
-#endif
 
   fbl::unique_fd remote;
   fbl::unique_fd local;
@@ -1716,14 +1716,12 @@ TEST_P(SocketKindTest, IoctlFIONREAD) {
   int num_readable;
   int res = ioctl(recvfd.get(), FIONREAD, &num_readable);
 
-#ifdef __Fuchsia__
-  if (socket_type.which() == SocketType::Which::Dgram) {
+  if (kIsFuchsia && socket_type.which() == SocketType::Which::Dgram) {
     // TODO(https://fxbug.dev/42040): Support FIONREAD on Fuchsia.
     ASSERT_EQ(res, -1);
     EXPECT_EQ(errno, ENOTTY) << strerror(errno);
     return;
   }
-#endif
 
   ASSERT_EQ(res, 0) << strerror(errno);
   ASSERT_GE(num_readable, 0);
@@ -1885,14 +1883,13 @@ using DomainProtocol = std::tuple<SocketDomain, int>;
 class IcmpSocketTest : public testing::TestWithParam<DomainProtocol> {
  protected:
   void SetUp() override {
-#if !defined(__Fuchsia__)
-    if (!IsRoot()) {
-      GTEST_SKIP() << "This test requires root";
-    }
-#endif
     auto const& [domain, protocol] = GetParam();
-    ASSERT_TRUE(fd_ = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, protocol)))
-        << strerror(errno);
+    fd_ = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, protocol));
+    if (!kIsFuchsia && !fd_.is_valid()) {
+      ASSERT_EQ(errno, EACCES) << strerror(errno);
+      GTEST_SKIP() << "This test requires elevated privileges";
+    }
+    ASSERT_TRUE(fd_) << strerror(errno);
   }
 
   const fbl::unique_fd& fd() const { return fd_; }

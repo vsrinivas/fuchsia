@@ -11,7 +11,7 @@
 
 #include <netpacket/packet.h>
 
-#ifdef __linux__
+#if defined(__linux__)
 #include <sys/syscall.h>
 
 #include <linux/capability.h>
@@ -39,7 +39,7 @@ using ::testing::Values;
 class PacketSocketTest : public testing::Test {
  protected:
   static void SetUpTestSuite() {
-#ifdef __linux__
+#if defined(__linux__)
     struct __user_cap_header_struct header = {_LINUX_CAPABILITY_VERSION_3, 0};
     struct __user_cap_data_struct caps[_LINUX_CAPABILITY_U32S_3] = {};
     auto ret = syscall(SYS_capget, &header, &caps);

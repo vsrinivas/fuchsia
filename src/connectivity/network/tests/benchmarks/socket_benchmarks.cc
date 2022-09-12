@@ -16,6 +16,7 @@
 #include <fbl/unique_fd.h>
 #include <perftest/perftest.h>
 
+#include "src/connectivity/network/tests/os.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace {
@@ -341,17 +342,17 @@ void RegisterTests() {
   }
 
   auto register_ping = [&network_to_string]() {
-#if !defined(__Fuchsia__)
-    // When running on not-Fuchsia, we may not be permitted to create ICMP sockets.
-    if (int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP); fd < 0) {
-      if (errno == EACCES) {
-        std::cout << "ICMP sockets are not permitted; skipping ping benchmarks" << std::endl;
-        return;
+    if (!kIsFuchsia) {
+      // When running on not-Fuchsia, we may not be permitted to create ICMP sockets.
+      if (int fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP); fd < 0) {
+        if (errno == EACCES) {
+          std::cout << "ICMP sockets are not permitted; skipping ping benchmarks" << std::endl;
+          return;
+        }
+      } else {
+        CHECK_ZERO_ERRNO(close(fd));
       }
-    } else {
-      CHECK_ZERO_ERRNO(close(fd));
     }
-#endif
 
     constexpr char kPingTestNameFmt[] = "PingLatency/%s";
     perftest::RegisterTest(

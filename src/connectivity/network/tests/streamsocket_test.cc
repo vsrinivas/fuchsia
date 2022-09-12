@@ -14,6 +14,7 @@
 #include <sys/ioctl.h>
 
 #include <array>
+#include <cerrno>
 #include <future>
 #include <latch>
 #include <variant>
@@ -22,6 +23,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/connectivity/network/tests/os.h"
 #include "util.h"
 
 #if defined(__Fuchsia__)
@@ -197,14 +199,14 @@ TEST_F(NetStreamSocketsTest, BlockingAcceptWrite) {
 
 TEST_F(NetStreamSocketsTest, SocketAtOOBMark) {
   int result = sockatmark(client().get());
-#if defined(__Fuchsia__)
-  // sockatmark is not supported on Fuchsia.
-  EXPECT_EQ(result, -1);
-  // TODO(https://fxbug.dev/84632): This should be ENOSYS, not ENOTTY.
-  EXPECT_EQ(errno, ENOTTY) << strerror(errno);
-#else   //  defined(__Fuchsia__)
-  EXPECT_EQ(result, 0) << strerror(errno);
-#endif  // defined(__Fuchsia__)
+  if (kIsFuchsia) {
+    // sockatmark is not supported on Fuchsia.
+    EXPECT_EQ(result, -1);
+    // TODO(https://fxbug.dev/84632): This should be ENOSYS, not ENOTTY.
+    EXPECT_EQ(errno, ENOTTY) << strerror(errno);
+  } else {
+    EXPECT_EQ(result, 0) << strerror(errno);
+  }
 }
 
 TEST_F(NetStreamSocketsTest, Sendmmsg) {
@@ -213,14 +215,14 @@ TEST_F(NetStreamSocketsTest, Sendmmsg) {
       .msg_len = 0,
   };
   int result = sendmmsg(client().get(), &header, 0u, 0u);
-#if defined(__Fuchsia__)
-  // Fuchsia does not support sendmmsg().
-  // TODO(https://fxbug.dev/45262, https://fxbug.dev/42678): Implement sendmmsg().
-  EXPECT_EQ(result, -1);
-  EXPECT_EQ(errno, ENOSYS) << strerror(errno);
-#else   // defined(__Fuchsia__)
-  EXPECT_EQ(result, 0) << strerror(errno);
-#endif  // defined(__Fuchsia__)
+  if (kIsFuchsia) {
+    // Fuchsia does not support sendmmsg().
+    // TODO(https://fxbug.dev/45262, https://fxbug.dev/42678): Implement sendmmsg().
+    EXPECT_EQ(result, -1);
+    EXPECT_EQ(errno, ENOSYS) << strerror(errno);
+  } else {
+    EXPECT_EQ(result, 0) << strerror(errno);
+  }
 }
 
 TEST_F(NetStreamSocketsTest, Recvmmsg) {
@@ -230,13 +232,13 @@ TEST_F(NetStreamSocketsTest, Recvmmsg) {
   };
   int result = recvmmsg(client().get(), &header, 1u, MSG_DONTWAIT, nullptr);
   EXPECT_EQ(result, -1);
-#if __Fuchsia__
-  // Fuchsia does not support recvmmsg().
-  // TODO(https://fxbug.dev/45260): Implement recvmmsg().
-  EXPECT_EQ(errno, ENOSYS) << strerror(errno);
-#else   // __Fuchsia__
-  EXPECT_EQ(errno, EAGAIN) << strerror(errno);
-#endif  // __Fuchsia__
+  if (kIsFuchsia) {
+    // Fuchsia does not support recvmmsg().
+    // TODO(https://fxbug.dev/45260): Implement recvmmsg().
+    EXPECT_EQ(errno, ENOSYS) << strerror(errno);
+  } else {
+    EXPECT_EQ(errno, EAGAIN) << strerror(errno);
+  }
 }
 
 TEST_F(NetStreamSocketsTest, BlockingAcceptDupWrite) {
@@ -463,9 +465,7 @@ void TestListenWhileConnect(const IOMethod& io_method, void (*stopListen)(fbl::u
     }
 
     bool is_write = io_method.isWrite();
-#if !defined(__Fuchsia__)
     auto undo = DisableSigPipe(is_write);
-#endif
 
     if (is_write) {
       ASSERT_EQ(io_method.ExecuteIO(fd, &c, sizeof(c)), -1);
@@ -579,9 +579,7 @@ TEST_P(ConnectingIOTest, BlockedIO) {
     }
     return op.ExecuteIO(test_client.get(), recvbuf, sizeof(recvbuf));
   };
-#if !defined(__Fuchsia__)
   auto undo = DisableSigPipe(is_write);
-#endif
 
   EXPECT_EQ(ExecuteIO(), -1);
   if (is_write) {
@@ -740,20 +738,19 @@ TEST_P(TimeoutSockoptsTest, TimeoutSockopts) {
     socklen_t optlen = too_small;
     // TODO: Decide if we want to match Linux's behaviour. It writes to only
     // the first optlen bytes of the timeval.
-    EXPECT_EQ(getsockopt(socket_fd.get(), SOL_SOCKET, optname, &actual_tv, &optlen),
-#if defined(__Fuchsia__)
-              -1);
-    EXPECT_EQ(errno, EINVAL) << strerror(errno);
-#else
-              0)
-        << strerror(errno);
-    EXPECT_EQ(optlen, too_small);
-    EXPECT_EQ(memcmp(&actual_tv, &expected_tv, too_small), 0);
-    const char* tv = reinterpret_cast<char*>(&actual_tv);
-    for (size_t i = too_small; i < sizeof(actual_tv); i++) {
-      EXPECT_EQ(tv[i], kGarbage);
+    int ret = getsockopt(socket_fd.get(), SOL_SOCKET, optname, &actual_tv, &optlen);
+    if (kIsFuchsia) {
+      EXPECT_EQ(ret, -1);
+      EXPECT_EQ(errno, EINVAL) << strerror(errno);
+    } else {
+      EXPECT_EQ(ret, 0) << strerror(errno);
+      EXPECT_EQ(optlen, too_small);
+      EXPECT_EQ(memcmp(&actual_tv, &expected_tv, too_small), 0);
+      const char* tv = reinterpret_cast<char*>(&actual_tv);
+      for (size_t i = too_small; i < sizeof(actual_tv); i++) {
+        EXPECT_EQ(tv[i], kGarbage);
+      }
     }
-#endif
   }
 
   // Setting it without enough space should fail gracefully.
@@ -1095,34 +1092,40 @@ TEST(NetStreamTest, GetTcpInfo) {
     ASSERT_EQ(getsockopt(fd.get(), SOL_TCP, TCP_INFO, &info, &info_len), 0) << strerror(errno);
     ASSERT_EQ(sizeof(tcp_info), info_len);
 
+    if (kIsFuchsia) {
+      // Unsupported fields are intentionally initialized with garbage for explicitness.
+      constexpr int kGarbage = 0xff;
+      uint32_t initialization;
+      memset(&initialization, kGarbage, sizeof(initialization));
+
+      ASSERT_NE(info.tcpi_state, initialization);
+      ASSERT_NE(info.tcpi_ca_state, initialization);
+      ASSERT_NE(info.tcpi_rto, initialization);
+      ASSERT_NE(info.tcpi_rtt, initialization);
+      ASSERT_NE(info.tcpi_rttvar, initialization);
+      ASSERT_NE(info.tcpi_snd_ssthresh, initialization);
+      ASSERT_NE(info.tcpi_snd_cwnd, initialization);
+// TODO(https://fxbug.dev/64200): our Linux sysroot is too old to know about this field.
 #if defined(__Fuchsia__)
-    // Unsupported fields are intentionally initialized with garbage for explicitness.
-    constexpr int kGarbage = 0xff;
-    uint32_t initialization;
-    memset(&initialization, kGarbage, sizeof(initialization));
-
-    ASSERT_NE(info.tcpi_state, initialization);
-    ASSERT_NE(info.tcpi_ca_state, initialization);
-    ASSERT_NE(info.tcpi_rto, initialization);
-    ASSERT_NE(info.tcpi_rtt, initialization);
-    ASSERT_NE(info.tcpi_rttvar, initialization);
-    ASSERT_NE(info.tcpi_snd_ssthresh, initialization);
-    ASSERT_NE(info.tcpi_snd_cwnd, initialization);
-    ASSERT_NE(info.tcpi_reord_seen, initialization);
-
-    tcp_info expected;
-    memset(&expected, kGarbage, sizeof(expected));
-    expected.tcpi_state = info.tcpi_state;
-    expected.tcpi_ca_state = info.tcpi_ca_state;
-    expected.tcpi_rto = info.tcpi_rto;
-    expected.tcpi_rtt = info.tcpi_rtt;
-    expected.tcpi_rttvar = info.tcpi_rttvar;
-    expected.tcpi_snd_ssthresh = info.tcpi_snd_ssthresh;
-    expected.tcpi_snd_cwnd = info.tcpi_snd_cwnd;
-    expected.tcpi_reord_seen = info.tcpi_reord_seen;
-
-    ASSERT_EQ(memcmp(&info, &expected, sizeof(tcp_info)), 0);
+      ASSERT_NE(info.tcpi_reord_seen, initialization);
 #endif
+
+      tcp_info expected;
+      memset(&expected, kGarbage, sizeof(expected));
+      expected.tcpi_state = info.tcpi_state;
+      expected.tcpi_ca_state = info.tcpi_ca_state;
+      expected.tcpi_rto = info.tcpi_rto;
+      expected.tcpi_rtt = info.tcpi_rtt;
+      expected.tcpi_rttvar = info.tcpi_rttvar;
+      expected.tcpi_snd_ssthresh = info.tcpi_snd_ssthresh;
+      expected.tcpi_snd_cwnd = info.tcpi_snd_cwnd;
+// TODO(https://fxbug.dev/64200): our Linux sysroot is too old to know about this field.
+#if defined(__Fuchsia__)
+      expected.tcpi_reord_seen = info.tcpi_reord_seen;
+#endif
+
+      ASSERT_EQ(memcmp(&info, &expected, sizeof(tcp_info)), 0);
+    }
   }
 
   // Test that we can partially retrieve TCP_INFO.
@@ -1188,12 +1191,10 @@ TEST(NetStreamTest, GetSocketAcceptConn) {
   // (https://cs.opensource.google/gvisor/gvisor/+/master:pkg/tcpip/transport/tcp/accept.go;l=742-762;drc=58b9bdfc21e792c5d529ec9f4ab0b2f2cd1ee082),
   // which is merely notified when tcp.endpoint.shutdown is called
   // (https://cs.opensource.google/gvisor/gvisor/+/master:pkg/tcpip/transport/tcp/endpoint.go;l=2493;drc=58b9bdfc21e792c5d529ec9f4ab0b2f2cd1ee082).
-#if !defined(__Fuchsia__)
-  {
+  if (kIsFuchsia) {
     SCOPED_TRACE("shutdown-read");
     ASSERT_NO_FATAL_FAILURE(assert_so_accept_conn_eq(0));
   }
-#endif
 }
 
 // Test socket reads on disconnected stream sockets.
@@ -1249,12 +1250,10 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
 
   bool is_write = io_method.isWrite();
 
-#if defined(__Fuchsia__)
-  if (is_write) {
+  if (kIsFuchsia && is_write) {
     GTEST_SKIP() << "TODO(https://fxbug.dev/60337): Enable socket write methods after we are able "
                     "to deterministically block on socket writes.";
   }
-#endif
 
   // If linger is enabled, closing the socket will cause a TCP RST (by definition).
   bool close_rst = linger_enabled;
@@ -1316,9 +1315,7 @@ TEST_P(BlockedIOTest, CloseWhileBlocked) {
   }
   ASSERT_EQ(fut.wait_for(kTimeout), std::future_status::ready);
 
-#if !defined(__Fuchsia__)
   auto undo = DisableSigPipe(is_write);
-#endif
 
   char c;
   switch (close_target) {
@@ -1457,26 +1454,26 @@ TEST_P(ConnectAcrossIpVersionTest, ConnectReturnsError) {
   auto [addr, addrlen] = LoopbackSockaddrAndSocklenForDomain(other_domain);
   ASSERT_EQ(connect(fd().get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), -1);
 
-#if defined(__linux__)
-  if (preexisting_err) {
-    // TODO(https://fxbug.dev/108729): Match Linux by returning async errors before
-    // address errors.
-    ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
-  } else {
-    // TODO(https://fxbug.dev/108665): Match Linux by returning divergent errors between
-    // IP versions.
-    switch (domain.which()) {
-      case SocketDomain::Which::IPv4:
-        ASSERT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
-        break;
-      case SocketDomain::Which::IPv6:
-        ASSERT_EQ(errno, EINVAL) << strerror(errno);
-        break;
+  if (!kIsFuchsia) {
+    if (preexisting_err) {
+      // TODO(https://fxbug.dev/108729): Match Linux by returning async errors before
+      // address errors.
+      ASSERT_EQ(errno, ECONNREFUSED) << strerror(errno);
+    } else {
+      // TODO(https://fxbug.dev/108665): Match Linux by returning divergent errors between
+      // IP versions.
+      switch (domain.which()) {
+        case SocketDomain::Which::IPv4:
+          ASSERT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
+          break;
+        case SocketDomain::Which::IPv6:
+          ASSERT_EQ(errno, EINVAL) << strerror(errno);
+          break;
+      }
     }
+  } else {
+    ASSERT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
   }
-#else
-  ASSERT_EQ(errno, EAFNOSUPPORT) << strerror(errno);
-#endif
 }
 
 INSTANTIATE_TEST_SUITE_P(
@@ -1581,14 +1578,15 @@ TEST(NetStreamTest, ConnectTwice) {
   ASSERT_EQ(listen(listener.get(), 0), 0) << strerror(errno);
 
   // TODO(https://fxbug.dev/61594): decide if we want to match Linux's behaviour.
-  ASSERT_EQ(connect(client.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)),
-#if defined(__linux__)
-            0)
-      << strerror(errno);
-#else
-            -1);
-  ASSERT_EQ(errno, ECONNABORTED) << strerror(errno);
-#endif
+  {
+    int ret = connect(client.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr));
+    if (kIsFuchsia) {
+      ASSERT_EQ(ret, -1);
+      ASSERT_EQ(errno, ECONNABORTED) << strerror(errno);
+    } else {
+      ASSERT_EQ(ret, 0);
+    }
+  }
 
   EXPECT_EQ(close(listener.release()), 0) << strerror(errno);
   EXPECT_EQ(close(client.release()), 0) << strerror(errno);
@@ -1619,15 +1617,13 @@ TEST(NetStreamTest, ConnectCloseRace) {
 
         ASSERT_EQ(connect(client.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)),
                   -1);
-        ASSERT_TRUE(errno == EINPROGRESS
-#if !defined(__Fuchsia__)
-                    // Linux could return ECONNREFUSED if it processes the incoming RST before
-                    // connect system
-                    // call returns.
-                    || errno == ECONNREFUSED
-#endif
-                    )
-            << strerror(errno);
+        if (kIsFuchsia) {
+          ASSERT_EQ(errno, EINPROGRESS) << strerror(errno);
+        } else {
+          // Linux could return ECONNREFUSED if it processes the incoming RST
+          // before connect system call returns.
+          ASSERT_TRUE(errno == EINPROGRESS || errno == ECONNREFUSED) << strerror(errno);
+        }
         EXPECT_EQ(close(client.release()), 0) << strerror(errno);
       }
     });
@@ -1738,32 +1734,32 @@ TEST_P(HangupTest, DuringConnect) {
                 .fd = connecting_client.get(),
                 .events = std::numeric_limits<decltype(pfd.events)>::max(),
             };
-#if !defined(__Fuchsia__)
-            int n = poll(&pfd, 1, 0);
-            EXPECT_GE(n, 0) << strerror(errno);
-            EXPECT_EQ(n, 1);
-            EXPECT_EQ(pfd.revents, POLLOUT | POLLWRNORM | POLLHUP | POLLERR);
-#else
-            // TODO(https://fxbug.dev/81448): Poll for POLLIN and POLLRDHUP to show their absence.
-            // Can't be polled now because these events are asserted synchronously, and they might
-            // be ready before the other expected events are asserted.
-            pfd.events ^= (POLLIN | POLLRDHUP);
-            // TODO(https://fxbug.dev/85279): Remove the poll timeout.
-            int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
-            EXPECT_GE(n, 0) << strerror(errno);
-            EXPECT_EQ(n, 1);
-            // TODO(https://fxbug.dev/73258): Add POLLWRNORM to the expectations.
-            EXPECT_EQ(pfd.revents, POLLOUT | POLLHUP | POLLERR);
-#endif
+            if (!kIsFuchsia) {
+              int n = poll(&pfd, 1, 0);
+              EXPECT_GE(n, 0) << strerror(errno);
+              EXPECT_EQ(n, 1);
+              EXPECT_EQ(pfd.revents, POLLOUT | POLLWRNORM | POLLHUP | POLLERR);
+            } else {
+              // TODO(https://fxbug.dev/81448): Poll for POLLIN and POLLRDHUP to show their absence.
+              // Can't be polled now because these events are asserted synchronously, and they might
+              // be ready before the other expected events are asserted.
+              pfd.events ^= (POLLIN | POLLRDHUP);
+              // TODO(https://fxbug.dev/85279): Remove the poll timeout.
+              int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+              EXPECT_GE(n, 0) << strerror(errno);
+              EXPECT_EQ(n, 1);
+              // TODO(https://fxbug.dev/73258): Add POLLWRNORM to the expectations.
+              EXPECT_EQ(pfd.revents, POLLOUT | POLLHUP | POLLERR);
+            }
           }
 
           EXPECT_EQ(connect(connecting_client.get(), addr, addr_len), -1);
-#if !defined(__Fuchsia__)
-          EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
-#else
-          // TODO(https://fxbug.dev/61594): Fuchsia doesn't allow never-connected socket reuse.
-          EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
-#endif
+          if (!kIsFuchsia) {
+            EXPECT_EQ(errno, EINPROGRESS) << strerror(errno);
+          } else {
+            // TODO(https://fxbug.dev/61594): Fuchsia doesn't allow never-connected socket reuse.
+            EXPECT_EQ(errno, ECONNRESET) << strerror(errno);
+          }
           // connect result was consumed by the connect call.
           ASSERT_NO_FATAL_FAILURE(ExpectLastError(connecting_client, 0));
 
@@ -1799,24 +1795,24 @@ TEST_P(HangupTest, DuringConnect) {
               .fd = listener.get(),
               .events = std::numeric_limits<decltype(pfd.events)>::max(),
           };
-#if !defined(__Fuchsia__)
-          int n = poll(&pfd, 1, 0);
-          EXPECT_GE(n, 0) << strerror(errno);
-          EXPECT_EQ(n, 1);
-          EXPECT_EQ(pfd.revents, POLLOUT | POLLWRNORM | POLLHUP);
-#else
-          // TODO(https://fxbug.dev/81448): Poll for POLLIN and POLLRDHUP to show their absence.
-          // Can't be polled now because these events are asserted synchronously, and they might
-          // be ready before the other expected events are asserted.
-          pfd.events ^= (POLLIN | POLLRDHUP);
-          // TODO(https://fxbug.dev/85279): Remove the poll timeout.
-          int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
-          EXPECT_GE(n, 0) << strerror(errno);
-          EXPECT_EQ(n, 1);
-          // TODO(https://fxbug.dev/85283): Remove POLLERR from the expectations.
-          // TODO(https://fxbug.dev/73258): Add POLLWRNORM to the expectations.
-          EXPECT_EQ(pfd.revents, POLLOUT | POLLHUP | POLLERR);
-#endif
+          if (!kIsFuchsia) {
+            int n = poll(&pfd, 1, 0);
+            EXPECT_GE(n, 0) << strerror(errno);
+            EXPECT_EQ(n, 1);
+            EXPECT_EQ(pfd.revents, POLLOUT | POLLWRNORM | POLLHUP);
+          } else {
+            // TODO(https://fxbug.dev/81448): Poll for POLLIN and POLLRDHUP to show their absence.
+            // Can't be polled now because these events are asserted synchronously, and they might
+            // be ready before the other expected events are asserted.
+            pfd.events ^= (POLLIN | POLLRDHUP);
+            // TODO(https://fxbug.dev/85279): Remove the poll timeout.
+            int n = poll(&pfd, 1, std::chrono::milliseconds(kTimeout).count());
+            EXPECT_GE(n, 0) << strerror(errno);
+            EXPECT_EQ(n, 1);
+            // TODO(https://fxbug.dev/85283): Remove POLLERR from the expectations.
+            // TODO(https://fxbug.dev/73258): Add POLLWRNORM to the expectations.
+            EXPECT_EQ(pfd.revents, POLLOUT | POLLHUP | POLLERR);
+          }
           break;
         }
       }
@@ -1828,7 +1824,6 @@ TEST_P(HangupTest, DuringConnect) {
       } expectations[] = {
           {
               .fd = established_client,
-#if defined(__Fuchsia__)
               // We're doing the wrong thing here. Broadly what seems to be happening:
               // - closing the listener causes a RST to be sent
               // - when RST is received, the endpoint moves to an error state
@@ -1842,12 +1837,8 @@ TEST_P(HangupTest, DuringConnect) {
               //
               // Since the call to tcpip.Endpoint.Connect does the wrong thing, this is likely a
               // gVisor bug.
-              .connect_result = ECONNRESET,
-              .last_error = 0,
-#else
-              .connect_result = EISCONN,
-              .last_error = ECONNRESET,
-#endif
+              .connect_result = kIsFuchsia ? ECONNRESET : EISCONN,
+              .last_error = kIsFuchsia ? 0 : ECONNRESET,
           },
           {
               .fd = connecting_client,
@@ -1988,11 +1979,11 @@ TEST(LocalhostTest, AcceptAfterReset) {
 TEST(LocalhostTest, RaceLocalPeerClose) {
   fbl::unique_fd listener;
   ASSERT_TRUE(listener = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
-#if !defined(__Fuchsia__)
-  // Make the listener non-blocking so that we can let accept system call return
-  // below when there are no acceptable connections.
-  ASSERT_NO_FATAL_FAILURE(SetBlocking(listener.get(), false));
-#endif
+  if (!kIsFuchsia) {
+    // Make the listener non-blocking so that we can let accept system call return
+    // below when there are no acceptable connections.
+    ASSERT_NO_FATAL_FAILURE(SetBlocking(listener.get(), false));
+  }
   sockaddr_in addr = LoopbackSockaddrV4(0);
   ASSERT_EQ(bind(listener.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
       << strerror(errno);
@@ -2008,46 +1999,43 @@ TEST(LocalhostTest, RaceLocalPeerClose) {
   // Run many iterations in parallel in order to increase load on Netstack and increase the
   // probability we'll hit the problem.
   for (auto& t : threads) {
-    t =
-        std::thread([&] {
-          fbl::unique_fd peer;
-          ASSERT_TRUE(peer = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+    t = std::thread([&] {
+      fbl::unique_fd peer;
+      ASSERT_TRUE(peer = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
 
-          // Connect and immediately close a peer with linger. This causes the network-initiated
-          // close that will race with the accepted connection close below. Linger is necessary
-          // because we need a TCP RST to force a full teardown, tickling Netstack the right way to
-          // cause a bad race.
-          linger opt = {
-              .l_onoff = 1,
-              .l_linger = 0,
-          };
-          EXPECT_EQ(setsockopt(peer.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
-              << strerror(errno);
-          ASSERT_EQ(connect(peer.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
-              << strerror(errno);
-          EXPECT_EQ(close(peer.release()), 0) << strerror(errno);
+      // Connect and immediately close a peer with linger. This causes the network-initiated
+      // close that will race with the accepted connection close below. Linger is necessary
+      // because we need a TCP RST to force a full teardown, tickling Netstack the right way to
+      // cause a bad race.
+      linger opt = {
+          .l_onoff = 1,
+          .l_linger = 0,
+      };
+      EXPECT_EQ(setsockopt(peer.get(), SOL_SOCKET, SO_LINGER, &opt, sizeof(opt)), 0)
+          << strerror(errno);
+      ASSERT_EQ(connect(peer.get(), reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)), 0)
+          << strerror(errno);
+      EXPECT_EQ(close(peer.release()), 0) << strerror(errno);
 
-          // Accept the connection and close it, adding new racing signal (operating on `close`) to
-          // Netstack.
-          auto local = fbl::unique_fd(accept(listener.get(), nullptr, nullptr));
-          if (!local.is_valid()) {
-#if !defined(__Fuchsia__)
-            // We get EAGAIN when there are no pending acceptable connections. Though the peer
-            // connect was a blocking call, it can return before the final ACK is sent out causing
-            // the RST from linger0+close to be sent out before the final ACK. This would result in
-            // that connection to be not completed and hence not added to the acceptable queue.
-            //
-            // The above race does not currently exist on Fuchsia where the final ACK would always
-            // be sent out over lo before connect() call returns.
-            ASSERT_EQ(errno, EAGAIN)
-#else
-            FAIL()
-#endif
-                << strerror(errno);
-          } else {
-            EXPECT_EQ(close(local.release()), 0) << strerror(errno);
-          }
-        });
+      // Accept the connection and close it, adding new racing signal (operating on `close`) to
+      // Netstack.
+      auto local = fbl::unique_fd(accept(listener.get(), nullptr, nullptr));
+      if (!local.is_valid()) {
+        if (kIsFuchsia) {
+          FAIL() << strerror(errno);
+        }
+        // We get EAGAIN when there are no pending acceptable connections. Though the peer
+        // connect was a blocking call, it can return before the final ACK is sent out causing
+        // the RST from linger0+close to be sent out before the final ACK. This would result in
+        // that connection to be not completed and hence not added to the acceptable queue.
+        //
+        // The above race does not currently exist on Fuchsia where the final ACK would always
+        // be sent out over lo before connect() call returns.
+        ASSERT_EQ(errno, EAGAIN) << strerror(errno);
+      } else {
+        EXPECT_EQ(close(local.release()), 0) << strerror(errno);
+      }
+    });
   }
 
   for (auto& t : threads) {
@@ -2110,9 +2098,7 @@ TEST_P(IOMethodTest, UnconnectedSocketIO) {
   IOMethod io_method = GetParam();
   char buffer[1];
   bool is_write = io_method.isWrite();
-#if !defined(__Fuchsia__)
   auto undo = DisableSigPipe(is_write);
-#endif
   ASSERT_EQ(io_method.ExecuteIO(sockfd.get(), buffer, sizeof(buffer)), -1);
   if (is_write) {
     ASSERT_EQ(errno, EPIPE) << strerror(errno);
@@ -2133,9 +2119,7 @@ TEST_P(IOMethodTest, ListenerSocketIO) {
   IOMethod io_method = GetParam();
   char buffer[1];
   bool is_write = io_method.isWrite();
-#if !defined(__Fuchsia__)
   auto undo = DisableSigPipe(is_write);
-#endif
   ASSERT_EQ(io_method.ExecuteIO(listener.get(), buffer, sizeof(buffer)), -1);
   if (is_write) {
     ASSERT_EQ(errno, EPIPE) << strerror(errno);

@@ -7,7 +7,10 @@ import("//build/test.gni")
 
 test("bin") {
   output_name = "external_network_client"
-  sources = [ "main.cc" ]
+  sources = [
+    "../os.h",
+    "main.cc",
+  ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
