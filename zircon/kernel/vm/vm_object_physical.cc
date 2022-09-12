@@ -299,9 +299,6 @@ zx_status_t VmObjectPhysical::CacheOp(const uint64_t offset, const uint64_t len,
   }
 
   // Check if this physical VMO is present in the physmap.
-  // TODO(fxbug.dev/33855): Consider whether to keep or remove op_range
-  // for cache ops for phsyical VMOs. If we keep, possibly we'd
-  // want to obtain a mapping somehow here instead of failing.
   if (unlikely(!is_physmap_phys_addr(base_))) {
     return ZX_ERR_NOT_SUPPORTED;
   }
