@@ -7,7 +7,6 @@ import argparse
 import filecmp
 import json
 import os
-import re
 import shutil
 import sys
 
@@ -29,23 +28,6 @@ cp {candidate} \\
 ```
 Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
 """)
-
-
-def compare(candidate, golden, ignore_space_change):
-    if ignore_space_change:
-        with open(candidate, 'r') as candidate:
-            with open(golden, 'r') as golden:
-                candidate = candidate.readlines()
-                golden = golden.readlines()
-                if candidate == golden:
-                    return True
-                normalize_spaces = lambda lines: [
-                    re.sub(r'\s+', ' ', line) for line in lines
-                ]
-                candidate = normalize_spaces(candidate)
-                golden = normalize_spaces(golden)
-                return candidate == golden
-    return filecmp.cmp(candidate, golden)
 
 
 def main():
@@ -72,10 +54,6 @@ def main():
         '--warn',
         help='Whether API changes should only cause warnings',
         action='store_true')
-    parser.add_argument(
-        '--ignore-space-change',
-        help='Whether to ignore changes in the amount of white space',
-        action='store_true')
     args = parser.parse_args()
 
     with open(args.comparisons) as f:
@@ -95,8 +73,8 @@ def main():
             inputs.append(formatted_golden)
 
         if os.path.exists(golden):
-            current_comparison_failed = not compare(
-                candidate, formatted_golden or golden, args.ignore_space_change)
+            current_comparison_failed = not filecmp.cmp(
+                candidate, formatted_golden or golden)
         else:
             current_comparison_failed = True
 

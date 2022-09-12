@@ -69,11 +69,6 @@ import("//build/testing/config.gni")
 #    - Type: bool
 #    - Default: false
 #
-#  * ignore_space_change
-#    - Optional: If true, ignores changes in the amount of white space.
-#    - Type: bool
-#    - Default: false
-#
 #  * visibility, testonly, deps, public_deps
 #    - Optional: Usual GN meanings.
 #
@@ -255,12 +250,6 @@ template("golden_files") {
         defined(invoker.warn_on_changes) && invoker.warn_on_changes
     if (warn_on_changes) {
       args += [ "--warn" ]
-    }
-
-    ignore_space_change =
-        defined(invoker.ignore_space_change) && invoker.ignore_space_change
-    if (ignore_space_change) {
-      args += [ "--ignore-space-change" ]
     }
 
     metadata = {
