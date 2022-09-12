@@ -381,6 +381,46 @@ mod tests {
             }]
         );
 
+        // Component Manager serves the exposed dir with the `bar` protocol
+        let exposed_dir = resolved.exposed_dir.into_proxy().unwrap();
+        let entries = fuchsia_fs::directory::readdir(&exposed_dir).await.unwrap();
+        assert_eq!(
+            entries,
+            vec![fuchsia_fs::directory::DirEntry {
+                name: "bar".to_string(),
+                kind: fuchsia_fs::directory::DirentKind::Unknown
+            }]
+        );
+
+        // Component Manager serves the namespace dir with the `foo` protocol.
+        let ns_dir = resolved.ns_dir.into_proxy().unwrap();
+        let entries = fuchsia_fs::directory::readdir(&ns_dir).await.unwrap();
+        assert_eq!(
+            entries,
+            vec![
+                fuchsia_fs::directory::DirEntry {
+                    name: "pkg".to_string(),
+                    kind: fuchsia_fs::directory::DirentKind::Directory
+                },
+                fuchsia_fs::directory::DirEntry {
+                    name: "svc".to_string(),
+                    kind: fuchsia_fs::directory::DirentKind::Directory
+                },
+            ]
+        );
+        let svc_dir =
+            fuchsia_fs::directory::open_directory(&ns_dir, "svc", fio::OpenFlags::RIGHT_READABLE)
+                .await
+                .unwrap();
+        let entries = fuchsia_fs::directory::readdir(&svc_dir).await.unwrap();
+        assert_eq!(
+            entries,
+            vec![fuchsia_fs::directory::DirEntry {
+                name: "foo".to_string(),
+                kind: fuchsia_fs::directory::DirentKind::Unknown
+            }]
+        );
+
         // Test runners don't provide an out dir or a runtime dir
         assert!(started.out_dir.is_none());
         assert!(started.runtime_dir.is_none());

@@ -179,23 +179,23 @@ ZirconComponentManager::ZirconComponentManager(SystemInterface* system_interface
       if (info.state != fuchsia::sys2::InstanceState::STARTED || info.moniker.empty()) {
         continue;
       }
-      fuchsia::sys2::RealmQuery_GetInstanceDirectories_Result instance_dirs_res;
-      realm_query->GetInstanceDirectories(info.moniker, &instance_dirs_res);
-      if (!instance_dirs_res.is_response() || !instance_dirs_res.response().resolved_dirs ||
-          !instance_dirs_res.response().resolved_dirs->started_dirs ||
-          !instance_dirs_res.response().resolved_dirs->started_dirs->runtime_dir) {
+      fuchsia::sys2::RealmQuery_GetInstanceInfo_Result instace_info_res;
+      realm_query->GetInstanceInfo(info.moniker, &instace_info_res);
+      if (!instace_info_res.is_response() || !instace_info_res.response().resolved ||
+          !instace_info_res.response().resolved->started ||
+          !instace_info_res.response().resolved->started->runtime_dir) {
         continue;
       }
       // Remove the "." at the beginning of the moniker. It's safe because moniker is not empty.
       std::string moniker = info.moniker.substr(1);
-      ReadElfJobId(
-          std::move(instance_dirs_res.response().resolved_dirs->started_dirs->runtime_dir), moniker,
-          [weak_this = weak_factory_.GetWeakPtr(), moniker, url = std::move(info.url),
-           deferred_ready](zx_koid_t job_id) {
-            if (weak_this && job_id != ZX_KOID_INVALID) {
-              weak_this->running_component_info_[job_id] = {.moniker = moniker, .url = url};
-            }
-          });
+      ReadElfJobId(std::move(instace_info_res.response().resolved->started->runtime_dir), moniker,
+                   [weak_this = weak_factory_.GetWeakPtr(), moniker, url = std::move(info.url),
+                    deferred_ready](zx_koid_t job_id) {
+                     if (weak_this && job_id != ZX_KOID_INVALID) {
+                       weak_this->running_component_info_[job_id] = {.moniker = moniker,
+                                                                     .url = url};
+                     }
+                   });
     }
   }
 }

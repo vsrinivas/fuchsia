@@ -89,6 +89,58 @@ pub async fn query_echo_server_child() {
         ]
     );
 
+    let exposed_dir = resolved.exposed_dir.into_proxy().unwrap();
+    let entries = fuchsia_fs::directory::readdir(&exposed_dir).await.unwrap();
+    assert_eq!(
+        entries,
+        vec![
+            fuchsia_fs::directory::DirEntry {
+                name: "fidl.examples.routing.echo.Echo".to_string(),
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
+            },
+            fuchsia_fs::directory::DirEntry {
+                name: "fuchsia.component.Binder".to_string(),
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
+            },
+            fuchsia_fs::directory::DirEntry {
+                name: "hub".to_string(),
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
+            }
+        ]
+    );
+
+    let ns_dir = resolved.ns_dir.into_proxy().unwrap();
+    let entries = fuchsia_fs::directory::readdir(&ns_dir).await.unwrap();
+    assert_eq!(
+        entries,
+        vec![
+            fuchsia_fs::directory::DirEntry {
+                name: "pkg".to_string(),
+                kind: fuchsia_fs::directory::DirentKind::Directory,
+            },
+            fuchsia_fs::directory::DirEntry {
+                name: "svc".to_string(),
+                kind: fuchsia_fs::directory::DirentKind::Directory,
+            }
+        ]
+    );
+
+    let svc_dir = fuchsia_fs::directory::open_directory(
+        &ns_dir,
+        "svc",
+        fuchsia_fs::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    .unwrap();
+    let entries = fuchsia_fs::directory::readdir(&svc_dir).await.unwrap();
+    assert_eq!(
+        entries,
+        vec![fuchsia_fs::directory::DirEntry {
+            name: "fuchsia.logger.LogSink".to_string(),
+            kind: fuchsia_fs::directory::DirentKind::Unknown,
+        }]
+    );
+
     let started = resolved.started.unwrap();
 
     let out_dir = started.out_dir.unwrap();

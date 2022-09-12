@@ -44,7 +44,7 @@ type InstanceInfo = struct {
     state InstanceState;
 };
 
-/// The information available because the component instance is in resolved state.
+/// The detailed resolved state of a component instance
 type ResolvedState = resource struct {
     /// All `use` declarations as defined in the component manifest.
     uses vector<fuchsia.component.decl.Use>:MAX;
@@ -57,12 +57,19 @@ type ResolvedState = resource struct {
 
     /// The package directory containing the component manifest, if one exists.
     /// This directory has the same permissions given by the package resolver
-    /// (most likely RX permissions).
+    /// (most likely RO permissions).
     pkg_dir client_end:<fuchsia.io.Directory, optional>;
 
-    /// The information available because the component instance is in started state.
-    /// If this object does not exist, the instance is not started.
+    /// The execution state of this instance.
     started box<StartedState>;
+
+    /// The directory containing all capabilities exposed by the component.
+    /// This directory has RW permissions.
+    exposed_dir client_end:<fuchsia.io.Directory>;
+
+    /// The directory representing the component's namespace.
+    /// This directory has RW permissions.
+    ns_dir client_end:<fuchsia.io.Directory>;
 };
 
 /// The detailed started state of a component instance
@@ -125,6 +132,8 @@ type RealmQueryError = flexible enum {
 @discoverable
 protocol RealmQuery {
     /// Gets the detailed information of a particular instance identified by its moniker.
+    /// This response contains handles to resources of the instance. As a result, component manager
+    /// pays a non-trivial cost when this method is invoked.
     GetInstanceInfo(struct {
         moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
     }) -> (resource struct {

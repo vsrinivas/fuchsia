@@ -172,6 +172,7 @@ template("component_manager") {
     "src/model/mod.rs",
     "src/model/model.rs",
     "src/model/namespace.rs",
+    "src/model/ns_dir.rs",
     "src/model/resolver.rs",
     "src/model/routing/error.rs",
     "src/model/routing/mod.rs",
