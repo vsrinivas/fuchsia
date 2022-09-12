@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fidl_examples_routing_echo as fecho, fuchsia_component_test::ScopedInstance, log::*};
+use {
+    fidl_fidl_examples_routing_echo as fecho, fuchsia_component_test::ScopedInstance, tracing::*,
+};
 
 #[fuchsia::test]
 async fn core_proxy() {

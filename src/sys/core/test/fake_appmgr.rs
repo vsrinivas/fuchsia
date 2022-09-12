@@ -11,7 +11,7 @@
 
 use {
     fidl_fidl_examples_routing_echo as fecho, fuchsia_component::client,
-    fuchsia_component::server::ServiceFs, futures::prelude::*, log::*,
+    fuchsia_component::server::ServiceFs, futures::prelude::*, tracing::*,
 };
 
 enum IncomingRequest {
