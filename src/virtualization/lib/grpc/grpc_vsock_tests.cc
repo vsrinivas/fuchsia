@@ -4,7 +4,8 @@
 
 #include <lib/async/cpp/executor.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/virtualization/testing/fake_manager.h>
+#include <lib/virtualization/testing/fake_guest_vsock.h>
+#include <lib/virtualization/testing/fake_host_vsock.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"

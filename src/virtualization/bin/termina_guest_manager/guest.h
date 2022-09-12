@@ -150,7 +150,6 @@ class Guest : public vm_tools::StartupListener::Service,
   std::unique_ptr<vm_tools::container::Garcon::Stub> garcon_;
   CrashListener crash_listener_;
   LogCollector log_collector_;
-  fuchsia::sys::LauncherPtr launcher_;
   std::optional<std::vector<::fuchsia::virtualization::Listener>> vsock_listeners_;
 
   // A flow ID used to track the time from the time the VM is created until

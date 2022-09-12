@@ -17,15 +17,12 @@ fidl("fuchsia.virtualization") {
     "guest_config.fidl",
     "guest_manager.fidl",
     "linux_manager.fidl",
-    "manager.fidl",
-    "realm.fidl",
     "vsock.fidl",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.wayland",
   ]
 }

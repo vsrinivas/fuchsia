@@ -10,8 +10,6 @@ source_set("testing") {
     "fake_guest_vsock.h",
     "fake_host_vsock.cc",
     "fake_host_vsock.h",
-    "fake_manager.cc",
-    "fake_manager.h",
   ]
 
   deps = [
