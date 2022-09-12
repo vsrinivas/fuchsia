@@ -173,19 +173,10 @@ magma_status_t magma_import_semaphore(magma_connection_t connection, uint32_t se
   return MAGMA_STATUS_OK;
 }
 
-magma_status_t magma_map_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer,
-                                    uint64_t gpu_va, uint64_t page_offset, uint64_t page_count,
-                                    uint64_t map_flags) {
-  return MAGMA_STATUS_OK;
-}
-
 magma_status_t magma_map_buffer(magma_connection_t connection, uint64_t hw_va,
                                 magma_buffer_t buffer, uint64_t offset, uint64_t length,
                                 uint64_t map_flags) {
   return MAGMA_STATUS_OK;
-}
-
-void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer, uint64_t gpu_va) {
 }
 
 void magma_unmap_buffer(magma_connection_t connection, uint64_t hw_va, magma_buffer_t buffer) {}

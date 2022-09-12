@@ -248,15 +248,6 @@ protocol Primary {
     /// observed, but not necessarily completed.
     Flush() -> ();
 
-    /// DEPRECATED.
-    MapBufferGpu(struct {
-        buffer_id ObjectId;
-        gpu_va uint64;
-        page_offset uint64;
-        page_count uint64;
-        flags MapFlags;
-    });
-
     /// Maps a page range onto the hardware in the connection's address space at address `hw_va`.
     /// `flags` is a set of flags from MapFlags that specify how the hardware can access the buffer.
     MapBuffer(table {
@@ -269,12 +260,6 @@ protocol Primary {
         3: flags MapFlags;
     });
 
-    /// DEPRECATED.
-    UnmapBufferGpu(struct {
-        buffer_id ObjectId;
-        gpu_va uint64;
-    });
-
     /// Releases the mapping at address `hw_va` from the hardware for the given `buffer_id`.
     /// Buffers will also be implicitly unmapped when released.
     UnmapBuffer(table {
@@ -283,14 +268,6 @@ protocol Primary {
 
         /// Required.
         2: buffer_id ObjectId;
-    });
-
-    /// DEPRECATED.
-    BufferRangeOp(struct {
-        buffer_id ObjectId;
-        op BufferOp;
-        offset uint64;
-        length uint64;
     });
 
     /// Perform an operation on a range of the buffer.

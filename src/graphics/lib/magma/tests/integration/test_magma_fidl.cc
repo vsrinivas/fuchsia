@@ -265,43 +265,6 @@ TEST_F(TestMagmaFidl, CreateDestroyContext) {
   }
 }
 
-TEST_F(TestMagmaFidl, MapUnmapGpu) {
-  uint64_t buffer_id;
-
-  {
-    zx::vmo vmo;
-    ASSERT_EQ(ZX_OK, zx::vmo::create(4 /*size*/, 0 /*options*/, &vmo));
-    buffer_id = fsl::GetKoid(vmo.get());
-    auto wire_result = primary_->ImportObject2(
-        std::move(vmo), fuchsia_gpu_magma::wire::ObjectType::kBuffer, buffer_id);
-    EXPECT_TRUE(wire_result.ok());
-    EXPECT_FALSE(CheckForUnbind());
-  }
-
-  constexpr uint64_t kGpuAddress = 0x1000;
-
-  {
-    constexpr fuchsia_gpu_magma::wire::MapFlags flags =
-        fuchsia_gpu_magma::wire::MapFlags::kRead | fuchsia_gpu_magma::wire::MapFlags::kWrite |
-        fuchsia_gpu_magma::wire::MapFlags::kExecute | fuchsia_gpu_magma::wire::MapFlags::kGrowable;
-    auto wire_result =
-        primary_->MapBufferGpu(buffer_id, kGpuAddress, 0 /*page_offset*/, 1 /*page_count*/, flags);
-    EXPECT_TRUE(wire_result.ok());
-    EXPECT_FALSE(CheckForUnbind());
-  }
-
-  {
-    auto wire_result = primary_->UnmapBufferGpu(buffer_id, kGpuAddress);
-    EXPECT_TRUE(wire_result.ok());
-    // Unmap not implemented on Intel
-    if (vendor_id() == 0x8086) {
-      EXPECT_TRUE(CheckForUnbind());
-    } else {
-      EXPECT_FALSE(CheckForUnbind());
-    }
-  }
-}
-
 TEST_F(TestMagmaFidl, MapUnmap) {
   fuchsia_gpu_magma::wire::BufferRange range;
 
@@ -420,7 +383,7 @@ TEST_F(TestMagmaFidl, ExecuteImmediateCommands) {
   }
 }
 
-TEST_F(TestMagmaFidl, BufferRangeOp) {
+TEST_F(TestMagmaFidl, BufferRangeOp2) {
   // Not implemented for Intel or VSI
   if (vendor_id() == 0x8086 || vendor_id() == 0x10001) {
     GTEST_SKIP();
@@ -430,6 +393,7 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
   uint64_t size = kPageCount * page_size();
   uint64_t buffer_id;
   zx::vmo vmo;
+  fuchsia_gpu_magma::wire::BufferRange range;
 
   {
     ASSERT_EQ(ZX_OK, zx::vmo::create(size, 0 /*options*/, &vmo));
@@ -442,6 +406,8 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
         std::move(vmo_dupe), fuchsia_gpu_magma::wire::ObjectType::kBuffer, buffer_id);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
+
+    range = {.buffer_id = fsl::GetKoid(vmo.get()), .offset = 0, .size = size};
   }
 
   {
@@ -451,15 +417,18 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
   }
 
   {
-    auto wire_result = primary_->MapBufferGpu(buffer_id, 0x1000 /*gpu_address*/, 0 /*page_offset*/,
-                                              kPageCount, fuchsia_gpu_magma::wire::MapFlags::kRead);
+    fidl::Arena allocator;
+    auto builder = fuchsia_gpu_magma::wire::PrimaryMapBufferRequest::Builder(allocator);
+    builder.hw_va(0x1000).range(range).flags(fuchsia_gpu_magma::wire::MapFlags::kRead);
+
+    auto wire_result = primary_->MapBuffer(builder.Build());
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
 
   {
-    auto wire_result = primary_->BufferRangeOp(
-        buffer_id, fuchsia_gpu_magma::wire::BufferOp::kPopulateTables, 0 /*start_bytes*/, size);
+    auto wire_result =
+        primary_->BufferRangeOp2(fuchsia_gpu_magma::wire::BufferOp::kPopulateTables, range);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -472,8 +441,8 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
   }
 
   {
-    auto wire_result = primary_->BufferRangeOp(
-        buffer_id, fuchsia_gpu_magma::wire::BufferOp::kDepopulateTables, 0 /*start_bytes*/, size);
+    auto wire_result =
+        primary_->BufferRangeOp2(fuchsia_gpu_magma::wire::BufferOp::kDepopulateTables, range);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_FALSE(CheckForUnbind());
   }
@@ -488,8 +457,7 @@ TEST_F(TestMagmaFidl, BufferRangeOp) {
   // Check invalid range op
   {
     constexpr auto kInvalidBufferRangeOp = fuchsia_gpu_magma::BufferOp(1000);
-    auto wire_result =
-        primary_->BufferRangeOp(buffer_id, kInvalidBufferRangeOp, 0 /*start_bytes*/, size);
+    auto wire_result = primary_->BufferRangeOp2(kInvalidBufferRangeOp, range);
     EXPECT_TRUE(wire_result.ok());
     EXPECT_TRUE(CheckForUnbind());
   }

@@ -148,17 +148,8 @@ class ZirconPlatformConnection : public fidl::WireServer<fuchsia_gpu_magma::Prim
   void ExecuteCommand(ExecuteCommandRequestView request,
                       ExecuteCommandCompleter::Sync& completer) override;
   void Flush(FlushCompleter::Sync& _completer) override;
-  // DEPRECATED
-  void MapBufferGpu(MapBufferGpuRequestView request,
-                    MapBufferGpuCompleter::Sync& _completer) override;
   void MapBuffer(MapBufferRequestView request, MapBufferCompleter::Sync& _completer) override;
-  // DEPRECATED
-  void UnmapBufferGpu(UnmapBufferGpuRequestView request,
-                      UnmapBufferGpuCompleter::Sync& _completer) override;
   void UnmapBuffer(UnmapBufferRequestView request, UnmapBufferCompleter::Sync& _completer) override;
-  // DEPRECATED
-  void BufferRangeOp(BufferRangeOpRequestView request,
-                     BufferRangeOpCompleter::Sync& completer) override;
   void BufferRangeOp2(BufferRangeOp2RequestView request,
                       BufferRangeOp2Completer::Sync& completer) override;
   void EnablePerformanceCounterAccess(

@@ -122,36 +122,6 @@ MAGMA_EXPORT magma_status_t magma_get_buffer_cache_policy(
     magma_cache_policy_t* cache_policy_out);
 
 ///
-/// \brief DEPRECATED. Maps a number of pages from the given buffer onto the GPU in the connection's
-///        address space at the given address. Depending on the MSD this may automatically commit
-///        and populate that range.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param page_offset Offset into the buffer in pages.
-/// \param page_count Number of pages to map.
-/// \param gpu_va Destination GPU virtual address for the mapping.
-/// \param map_flags A valid MAGMA_GPU_MAP_FLAGS value.
-///
-MAGMA_EXPORT magma_status_t magma_map_buffer_gpu(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    uint64_t page_offset,
-    uint64_t page_count,
-    uint64_t gpu_va,
-    uint64_t map_flags);
-
-///
-/// \brief DEPRECATED. Releases the mapping at the given address from the GPU.
-/// \param connection An open connection.
-/// \param buffer A valid buffer.
-/// \param gpu_va A GPU virtual address associated with an existing mapping of the given buffer.
-///
-MAGMA_EXPORT void magma_unmap_buffer_gpu(
-    magma_connection_t connection,
-    magma_buffer_t buffer,
-    uint64_t gpu_va);
-
-///
 /// \brief Exports the given buffer, returning a handle that may be imported into another
 ///        connection.
 /// \param connection An open connection.
