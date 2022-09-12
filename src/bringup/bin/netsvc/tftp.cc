@@ -123,7 +123,6 @@ tftp_status transport_send(void* data, size_t len, void* transport_cookie) {
 int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
   transport_info_t& transport_info = *reinterpret_cast<transport_info_t*>(transport_cookie);
   transport_info.timeout_ms = timeout_ms;
-  kick_timeout_task(transport_info);
   return 0;
 }
 

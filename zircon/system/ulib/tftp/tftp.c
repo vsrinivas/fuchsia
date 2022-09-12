@@ -691,6 +691,7 @@ tftp_status tftp_handle_data(tftp_session* session, tftp_msg* msg, size_t msg_le
       ret = session->file_interface.write(buf, &wr, off, cookie);
       if (ret < 0) {
         xprintf("Error writing: %d\n", ret);
+        set_error(session, TFTP_ERR_CODE_UNDEF, resp, resp_len, "internal error: write failed");
         return ret;
       }
       session->metrics.inorder_bytes += wr;
