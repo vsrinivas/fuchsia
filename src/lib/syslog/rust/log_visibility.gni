@@ -105,7 +105,6 @@ third_party_rust_crate_log_visibility = [
   "//src/storage/stress-tests/genericfs:*",
   "//src/storage/stress-tests/utils:*",
   "//src/sys/base-resolver:*",
-  "//src/sys/component_manager/tests/binder:*",
   "//src/sys/lib/fidl-fuchsia-pkg-ext:*",
   "//src/sys/lib/fuchsia-zbi:*",
   "//src/sys/lib/legacy_component:*",
