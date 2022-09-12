@@ -100,7 +100,7 @@ where
         protocol_state: &ProtocolState,
     ) -> BoxFuture<'_, CheckTiming> {
         let check_timing = IsolatedPolicy::compute_next_update_time(
-            &PolicyData::builder().use_timesource(&self.time_source).build(),
+            &PolicyData::builder().current_time(self.time_source.now()).build(),
             apps,
             scheduling,
             protocol_state,
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn test_compute_next_update_time() {
         let policy_data =
-            PolicyData::builder().use_timesource(&MockTimeSource::new_from_now()).build();
+            PolicyData::builder().current_time(MockTimeSource::new_from_now().now()).build();
         let update_check_schedule = UpdateCheckSchedule::default();
         let result = IsolatedPolicy::compute_next_update_time(
             &policy_data,

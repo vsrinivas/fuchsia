@@ -17,49 +17,14 @@ pub use mock::MockPolicyEngine;
 mod stub;
 pub use stub::StubPolicy;
 pub use stub::StubPolicyEngine;
+use typed_builder::TypedBuilder;
 
 /// Data about the local system that's needed to fulfill Policy questions
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, TypedBuilder)]
 pub struct PolicyData {
     /// The current time at the start of the update
+    #[builder(setter(into))]
     pub current_time: ComplexTime,
-}
-
-impl PolicyData {
-    /// Create and return a new builder for PolicyData.
-    pub fn builder() -> PolicyDataBuilder {
-        PolicyDataBuilder::default()
-    }
-}
-
-/// The PolicyDataBuilder uses the typestate pattern.  The builder cannot be built until the time
-/// has been specified (which changes the type of the builder).
-#[derive(Debug, Default)]
-pub struct PolicyDataBuilder;
-
-/// The PolicyDataBuilder, once it has time set.
-pub struct PolicyDataBuilderWithTime {
-    current_time: ComplexTime,
-}
-
-impl PolicyDataBuilder {
-    /// Use a `TimeSource` to set the `current_time`.
-    pub fn use_timesource<T: TimeSource>(self, timesource: &T) -> PolicyDataBuilderWithTime {
-        PolicyDataBuilderWithTime { current_time: timesource.now() }
-    }
-
-    /// Set the `current_time` explicitly from a given ComplexTime.
-    pub fn time(self, current_time: ComplexTime) -> PolicyDataBuilderWithTime {
-        PolicyDataBuilderWithTime { current_time }
-    }
-}
-
-/// These are the operations that can be performed once the time has been set.
-impl PolicyDataBuilderWithTime {
-    /// Construct the PolicyData
-    pub fn build(self) -> PolicyData {
-        PolicyData { current_time: self.current_time }
-    }
 }
 
 /// Reasons why a check can/cannot be performed at this time
@@ -198,7 +163,7 @@ mod test {
     #[test]
     pub fn test_policy_data_builder_with_system_time() {
         let current_time = MockTimeSource::new_from_now().now();
-        let policy_data = PolicyData::builder().time(current_time).build();
+        let policy_data = PolicyData::builder().current_time(current_time).build();
         assert_eq!(policy_data.current_time, current_time);
     }
 
@@ -206,7 +171,7 @@ mod test {
     pub fn test_policy_data_builder_with_clock() {
         let source = MockTimeSource::new_from_now();
         let current_time = source.now();
-        let policy_data = PolicyData::builder().use_timesource(&source).build();
+        let policy_data = PolicyData::builder().current_time(source.now()).build();
         assert_eq!(policy_data.current_time, current_time);
     }
 }
