@@ -214,7 +214,7 @@ PciBus::PciBus(Guest* guest, InterruptController* interrupt_controller)
       mmio_base_(kPciMmioBarPhysBase) {}
 
 zx_status_t PciBus::Init(async_dispatcher_t* dispatcher) {
-  zx_status_t status = Connect(&root_complex_, dispatcher, false);
+  zx_status_t status = Connect(&root_complex_, dispatcher);
   if (status != ZX_OK) {
     return status;
   }
@@ -248,7 +248,7 @@ void PciBus::set_config_addr(uint32_t addr) {
   config_addr_ = addr;
 }
 
-zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher, bool skip_bell) {
+zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher) {
   if (next_open_slot_ >= kPciMaxDevices) {
     FX_LOGS(ERROR) << "No PCI device slots available";
     return ZX_ERR_OUT_OF_RANGE;
@@ -279,7 +279,7 @@ zx_status_t PciBus::Connect(PciDevice* device, async_dispatcher_t* dispatcher, b
   device->command_ = kPciCommandIoEnable | kPciCommandMemEnable;
   device->global_irq_ = kPciGlobalIrqAssigments[slot];
   device_[slot] = device;
-  return device->SetupBarTraps(guest_, skip_bell, dispatcher);
+  return device->SetupBarTraps(guest_, dispatcher);
 }
 
 // PCI LOCAL BUS SPECIFICATION, REV. 3.0 Section 6.1: All PCI devices must
@@ -668,9 +668,9 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
   }
 }
 
-zx_status_t PciDevice::SetupBarTraps(Guest* guest, bool skip_bell, async_dispatcher_t* dispatcher) {
+zx_status_t PciDevice::SetupBarTraps(Guest* guest, async_dispatcher_t* dispatcher) {
   for (PciBar& bar : bars_) {
-    if (skip_bell && bar.trap_type() == TrapType::MMIO_BELL) {
+    if (bar.trap_type() == TrapType::MMIO_BELL) {
       continue;
     }
 

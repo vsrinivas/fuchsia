@@ -205,7 +205,7 @@ class PciDevice {
   zx_status_t AddCapability(cpp20::span<const uint8_t> payload);
 
   // Setup traps and handlers for accesses to BAR regions.
-  zx_status_t SetupBarTraps(Guest* guest, bool skip_bell, async_dispatcher_t* dispatcher);
+  zx_status_t SetupBarTraps(Guest* guest, async_dispatcher_t* dispatcher);
 
   zx_status_t ReadConfigWord(uint8_t reg, uint32_t* value) const;
 
@@ -288,8 +288,8 @@ class PciBus : public PlatformDevice {
   //
   // This method is *not* thread-safe and must only be called during
   // initialization.
-  zx_status_t Connect(PciDevice* device, async_dispatcher_t* dispatcher,
-                      bool skip_bell = false) __TA_NO_THREAD_SAFETY_ANALYSIS;
+  zx_status_t Connect(PciDevice* device,
+                      async_dispatcher_t* dispatcher) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   // Access devices via the ECAM region.
   //
