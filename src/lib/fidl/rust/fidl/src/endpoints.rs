@@ -11,10 +11,10 @@ use {
     },
     fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
     futures::{self, Future, FutureExt, Stream, TryFutureExt, TryStream, TryStreamExt},
-    log::error,
     std::convert::From,
     std::marker::{PhantomData, Unpin},
     std::sync::Arc,
+    tracing::error,
 };
 
 #[cfg(target_os = "fuchsia")]

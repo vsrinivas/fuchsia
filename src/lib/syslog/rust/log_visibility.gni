@@ -80,7 +80,6 @@ third_party_rust_crate_log_visibility = [
   "//src/devices/bin/driver-index:*",
   "//src/diagnostics/archivist:*",
   "//src/lib/cobalt/rust:*",
-  "//src/lib/fidl/rust/fidl:*",
   "//src/lib/fuchsia-component-test/tests:*",
   "//src/lib/gcs:*",
   "//src/lib/process_builder:*",
