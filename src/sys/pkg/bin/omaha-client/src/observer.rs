@@ -76,7 +76,7 @@ where
 
     pub fn start_handling_crash_reports(&mut self) -> LocalBoxFuture<'static, ()> {
         self.start_handling_crash_reports_impl(
-            || fuchsia_component::client::connect_to_protocol::<CrashReporterMarker>(),
+            fuchsia_component::client::connect_to_protocol::<CrashReporterMarker>,
             StandardTimeSource,
         )
     }
@@ -248,7 +248,7 @@ where
         self.target_version = response
             .apps
             .into_iter()
-            .nth(0)
+            .next()
             .and_then(|app| app.update_check)
             .and_then(|update_check| update_check.manifest)
             .map(|manifest| manifest.version);

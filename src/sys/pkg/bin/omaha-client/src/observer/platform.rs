@@ -132,7 +132,7 @@ mod test {
         },
     };
 
-    static TARGET_VERSION: &'static str = "some-ver";
+    static TARGET_VERSION: &str = "some-ver";
 
     fn assert_emit_inspect(event: Event<'_>, child: TreeAssertion) {
         let inspector = Inspector::new();

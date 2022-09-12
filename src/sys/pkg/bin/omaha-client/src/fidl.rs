@@ -531,7 +531,7 @@ where
                 None => None,
             };
             let (channel_name, appid) = match default_channel_cfg {
-                Some(cfg) => (Some(cfg.name), cfg.appid.clone()),
+                Some(cfg) => (Some(cfg.name), cfg.appid),
                 None => (None, None),
             };
             if let Some(name) = &channel_name {
@@ -572,7 +572,7 @@ where
             {
                 let mut app_set = app_set.lock().await;
                 if let Some(id) = &appid {
-                    if id != &app_set.get_system_app_id() {
+                    if id != app_set.get_system_app_id() {
                         warn!("Changing app id to: {}", id);
                     }
                 }
@@ -818,7 +818,7 @@ mod stub {
         }
 
         pub fn with_current_channel(mut self, current_channel: Option<String>) -> Self {
-            self.current_channel = current_channel.into();
+            self.current_channel = current_channel;
             self
         }
 
@@ -833,7 +833,7 @@ mod stub {
                 FuchsiaAppSet::new(App::builder().id("id").version([1, 0]).build())
             });
             let app_set = Rc::new(Mutex::new(app_set));
-            let time_source = self.time_source.unwrap_or(MockTimeSource::new_from_now());
+            let time_source = self.time_source.unwrap_or_else(MockTimeSource::new_from_now);
             // A state machine with only stub implementations never yields from a poll.
             // Configure the state machine to schedule automatic update checks in the future and
             // block timers forever so we can control when update checks happen.
@@ -853,8 +853,10 @@ mod stub {
             let inspector = Inspector::new();
             let root = inspector.root();
 
-            let apps_node = self.apps_node.unwrap_or(AppsNode::new(root.create_child("apps")));
-            let state_node = self.state_node.unwrap_or(StateNode::new(root.create_child("state")));
+            let apps_node =
+                self.apps_node.unwrap_or_else(|| AppsNode::new(root.create_child("apps")));
+            let state_node =
+                self.state_node.unwrap_or_else(|| StateNode::new(root.create_child("state")));
             let state_machine_control = match self.state_machine_control {
                 Some(mock) => MockOrRealStateMachineController::Mock(mock),
                 None => MockOrRealStateMachineController::Real(state_machine_control),
@@ -933,7 +935,7 @@ mod stub {
             check_options: &CheckOptions,
         ) -> BoxFuture<'_, CheckDecision> {
             future::ready(CheckDecision::Ok(RequestParams {
-                source: check_options.source.clone(),
+                source: check_options.source,
                 use_configured_proxies: true,
                 ..RequestParams::default()
             }))
@@ -997,7 +999,7 @@ mod tests {
             let MonitorRequest::OnState { state, responder } =
                 request_stream.next().await.unwrap().unwrap();
             responder.send().unwrap();
-            v.push(state.into());
+            v.push(state);
         }
         v
     }
@@ -1568,7 +1570,7 @@ mod tests {
         let fidl = FidlServerBuilder::new().build().await;
         let proxy = spawn_fidl_server::<ManagerMarker>(fidl, IncomingServices::Manager);
         let result = proxy.perform_pending_reboot().await.unwrap();
-        assert_eq!(result, false);
+        assert!(!result);
     }
 
     async fn assert_fidl_server_calls_reboot(

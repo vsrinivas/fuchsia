@@ -6,7 +6,7 @@ use fuchsia_url::PinnedAbsolutePackageUrl;
 use omaha_client::{cup_ecdsa::RequestMetadata, installer::Plan, protocol::request::InstallSource};
 use std::fmt;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum UpdatePackageUrl {
     /// The pinned fuchsia update package URL, e.g. fuchsia-pkg://fuchsia.com/update/0?hash=...
     System(PinnedAbsolutePackageUrl),
@@ -23,7 +23,7 @@ impl fmt::Display for UpdatePackageUrl {
     }
 }
 
-#[derive(Debug, Default, PartialEq)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub struct FuchsiaInstallPlan {
     pub update_package_urls: Vec<UpdatePackageUrl>,
     pub install_source: InstallSource,

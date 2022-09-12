@@ -103,7 +103,7 @@ pub enum FuchsiaInstallError {
     Failure(#[from] anyhow::Error),
 
     #[error("FIDL error")]
-    FIDL(#[from] fidl::Error),
+    Fidl(#[from] fidl::Error),
 
     /// System update installer error.
     #[error("start update installer failed")]
@@ -170,7 +170,7 @@ where
         let proxy = self.installer_connector.connect().map_err(FuchsiaInstallError::Connect)?;
         let (reboot_controller, reboot_controller_server_end) =
             fidl::endpoints::create_proxy::<RebootControllerMarker>()
-                .map_err(FuchsiaInstallError::FIDL)?;
+                .map_err(FuchsiaInstallError::Fidl)?;
 
         self.reboot_controller = Some(reboot_controller);
 
@@ -267,7 +267,7 @@ where
             for (i, url) in install_plan.update_package_urls.iter().enumerate() {
                 app_results.push(match url {
                     UpdatePackageUrl::System(url) => self
-                        .perform_install_system_update(&url, &install_plan.install_source, observer)
+                        .perform_install_system_update(url, &install_plan.install_source, observer)
                         .await
                         .into(),
                     UpdatePackageUrl::Package(url) => {
@@ -275,7 +275,7 @@ where
                             AppInstallResult::Deferred
                         } else {
                             let result =
-                                self.perform_install_eager_package(&url, install_plan).await.into();
+                                self.perform_install_eager_package(url, install_plan).await.into();
                             if let Some(observer) = observer {
                                 observer
                                     .receive_progress(
@@ -437,11 +437,11 @@ fn try_create_install_plan_impl(
     }
     Ok(FuchsiaInstallPlan {
         update_package_urls,
-        install_source: request_params.source.clone(),
+        install_source: request_params.source,
         urgent_update,
         omaha_response: response_bytes,
         request_metadata: request_metadata.cloned(),
-        ecdsa_signature: ecdsa_signature.clone(),
+        ecdsa_signature,
     })
 }
 
@@ -519,7 +519,7 @@ mod tests {
         type Proxy = T;
 
         fn connect(&self) -> Result<Self::Proxy, anyhow::Error> {
-            self.proxy.clone().ok_or(anyhow::anyhow!("no proxy available"))
+            self.proxy.clone().ok_or_else(|| anyhow::anyhow!("no proxy available"))
         }
     }
 
@@ -565,7 +565,7 @@ mod tests {
         let installer_fut = async move {
             let (install_result, app_install_results) =
                 installer.perform_install(&plan, Some(&observer)).await;
-            assert_eq!(install_result.urgent_update, false);
+            assert!(!install_result.urgent_update);
             assert_matches!(
                 app_install_results.as_slice(),
                 &[AppInstallResult::Installed, AppInstallResult::Deferred]
@@ -589,8 +589,8 @@ mod tests {
                     } = options.try_into().unwrap();
                     assert_eq!(initiator, Initiator::User);
                     assert_matches!(reboot_controller, Some(_));
-                    assert_eq!(should_write_recovery, true);
-                    assert_eq!(allow_attach_to_existing_attempt, true);
+                    assert!(should_write_recovery);
+                    assert!(allow_attach_to_existing_attempt);
                     responder
                         .send(&mut Ok("00000000-0000-0000-0000-000000000001".to_owned()))
                         .unwrap();
@@ -671,7 +671,7 @@ mod tests {
         let installer_fut = async move {
             let (install_result, app_install_results) =
                 installer.perform_install(&plan, Some(&observer)).await;
-            assert_eq!(install_result.urgent_update, false);
+            assert!(!install_result.urgent_update);
             assert_matches!(app_install_results.as_slice(), &[AppInstallResult::Installed]);
             assert_matches!(installer.reboot_controller, None);
         };
@@ -866,7 +866,7 @@ mod tests {
             vec![UpdatePackageUrl::System(TEST_URL.parse().unwrap())],
         );
         assert_eq!(install_plan.install_source, request_params.source);
-        assert_eq!(install_plan.urgent_update, false);
+        assert!(!install_plan.urgent_update);
         assert_eq!(install_plan.omaha_response, vec![1, 2, 3]);
         assert_eq!(
             install_plan.request_metadata,
@@ -1244,7 +1244,7 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(install_plan.urgent_update, true);
+        assert!(install_plan.urgent_update);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1278,6 +1278,6 @@ mod tests {
             .await
             .unwrap();
 
-        assert_eq!(install_plan.urgent_update, false);
+        assert!(!install_plan.urgent_update);
     }
 }

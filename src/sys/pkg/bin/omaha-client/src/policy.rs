@@ -133,7 +133,7 @@ impl Policy for FuchsiaPolicy {
 
                     // In all other cases (there is at least a monotonic time), add the fuzz_interval to
                     // the last time and use that.
-                    last_update_time @ _ => {
+                    last_update_time => {
                         info!("Using Standard logic.");
                         CheckTiming::builder()
                             .time(last_update_time + interval)
@@ -326,7 +326,7 @@ impl<T> FuchsiaPolicyEngineBuilderWithTime<T> {
         let (metrics, receiver) = CobaltMetricsReporter::new_mock();
 
         // Send the metrics to an open receiver to avoid logspam.
-        fuchsia_async::Task::spawn(async move { receiver.for_each(|_| async move { () }).await })
+        fuchsia_async::Task::spawn(async move { receiver.for_each(|_| async move {}).await })
             .detach();
 
         self.metrics_reporter(metrics)
@@ -374,14 +374,7 @@ where
             let policy_data =
                 FuchsiaComputeNextUpdateTimePolicyData::from_policy_engine(self).await;
 
-            let timing = FuchsiaPolicy::compute_next_update_time(
-                &policy_data,
-                apps,
-                scheduling,
-                protocol_state,
-            );
-
-            timing
+            FuchsiaPolicy::compute_next_update_time(&policy_data, apps, scheduling, protocol_state)
         }
         .boxed()
     }
@@ -435,7 +428,7 @@ where
                 self.waiting_for_reboot_time = Some(self.time_source.now());
             }
 
-            let decision = FuchsiaPolicy::reboot_allowed(
+            FuchsiaPolicy::reboot_allowed(
                 &FuchsiaRebootPolicyData::new(
                     *self.ui_activity.lock().await,
                     self.time_source.now(),
@@ -444,9 +437,7 @@ where
                     install_result.urgent_update,
                 ),
                 check_options,
-            );
-
-            decision
+            )
         }
         .boxed()
     }
@@ -521,7 +512,7 @@ where
     // Wait a few times that before assuming the default to be extra sure the request is stuck.
     const TIMEOUT: Duration = Duration::from_secs(5);
 
-    async move { Some(provider_fn().ok()?.get().await.ok()?) }
+    async move { provider_fn().ok()?.get().await.ok() }
         .on_timeout(TIMEOUT, || {
             // Prevent unexpected hangs from blocking updates.
             error!("Timed out reading update opt-out preference.");
@@ -697,7 +688,7 @@ mod tests {
     use zx::HandleBased;
 
     // We do periodic update check roughly every hour.
-    const PERIODIC_INTERVAL_FOR_TEST: Duration = Duration::from_secs(1 * 60 * 60);
+    const PERIODIC_INTERVAL_FOR_TEST: Duration = Duration::from_secs(60 * 60);
     // Wait at least one minute before checking for updates after startup.
     const STARTUP_DELAY_FOR_TEST: Duration = Duration::from_secs(60);
     // Wait 5 minutes before retrying after failed update checks.
@@ -1362,7 +1353,7 @@ mod tests {
             assert_eq!(
                 decision,
                 CheckDecision::Ok(RequestParams {
-                    source: check_options.source.clone(),
+                    source: check_options.source,
                     use_configured_proxies: true,
                     disable_updates: false,
                     offer_update_if_same_version: false,
@@ -1760,13 +1751,10 @@ mod tests {
             true,
             false,
         );
-        assert_eq!(
-            FuchsiaPolicy::reboot_allowed(
-                &policy_data,
-                &CheckOptions { source: InstallSource::OnDemand },
-            ),
-            true
-        );
+        assert!(FuchsiaPolicy::reboot_allowed(
+            &policy_data,
+            &CheckOptions { source: InstallSource::OnDemand },
+        ),);
     }
     #[test]
     fn test_reboot_allowed_when_urgent_update_true() {
@@ -1779,13 +1767,10 @@ mod tests {
             false,
             true,
         );
-        assert_eq!(
-            FuchsiaPolicy::reboot_allowed(
-                &policy_data,
-                &CheckOptions { source: InstallSource::ScheduledTask },
-            ),
-            true
-        );
+        assert!(FuchsiaPolicy::reboot_allowed(
+            &policy_data,
+            &CheckOptions { source: InstallSource::ScheduledTask },
+        ),);
     }
 
     #[test]
@@ -1794,7 +1779,7 @@ mod tests {
         let now = mock_time.now();
         let policy_data =
             FuchsiaRebootPolicyData::new(UiActivityState::new(), now, now, true, false);
-        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
+        assert!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()));
     }
 
     #[test]
@@ -1808,7 +1793,7 @@ mod tests {
             true,
             false,
         );
-        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
+        assert!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()));
     }
 
     #[test]
@@ -1822,7 +1807,7 @@ mod tests {
             true,
             false,
         );
-        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
+        assert!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()));
     }
 
     #[test]
@@ -1836,7 +1821,7 @@ mod tests {
             false,
             false,
         );
-        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), true);
+        assert!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()));
     }
 
     #[test]
@@ -1850,7 +1835,7 @@ mod tests {
             true,
             false,
         );
-        assert_eq!(FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()), false);
+        assert!(!FuchsiaPolicy::reboot_allowed(&policy_data, &CheckOptions::default()));
     }
 
     #[fasync::run_singlethreaded(test)]

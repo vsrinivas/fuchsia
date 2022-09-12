@@ -134,8 +134,7 @@ impl ClientConfiguration {
         let mut app_set = FuchsiaAppSet::new(app);
 
         let eager_package_configs = EagerPackageConfigs::from_namespace();
-        let platform_config =
-            get_config(&version, eager_package_configs.as_ref().ok(), service_url);
+        let platform_config = get_config(version, eager_package_configs.as_ref().ok(), service_url);
 
         match eager_package_configs {
             Ok(eager_package_configs) => {
@@ -182,7 +181,7 @@ impl ClientConfiguration {
                 Self::get_eager_package_version_and_channel(&package, &cup).await;
 
             let appid = match channel_config.as_ref().and_then(|c| c.appid.as_ref()) {
-                Some(appid) => &appid,
+                Some(appid) => appid,
                 None => {
                     error!("no appid for package '{}'", package.url);
                     ""
@@ -271,8 +270,8 @@ pub fn get_config(
 ) -> Config {
     // If eager_package_configs defines a service_url and vbmeta does too,
     // vbmeta should override the value in eager_package_configs.
-    let service_url: Option<String> =
-        vbmeta_service_url.or(eager_package_configs.map(|epc| epc.server.service_url.clone()));
+    let service_url: Option<String> = vbmeta_service_url
+        .or_else(|| eager_package_configs.map(|epc| epc.server.service_url.clone()));
 
     // This file does not exist in production, it is only used in integration/e2e testing.
     let service_url = service_url.unwrap_or_else(|| {

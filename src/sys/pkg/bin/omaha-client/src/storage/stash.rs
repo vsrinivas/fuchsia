@@ -24,7 +24,7 @@ pub enum StashError {
     Failure(#[from] anyhow::Error),
 
     #[error("FIDL error")]
-    FIDL(#[from] fidl::Error),
+    Fidl(#[from] fidl::Error),
 
     #[error("Stash not available")]
     NotAvailable,
