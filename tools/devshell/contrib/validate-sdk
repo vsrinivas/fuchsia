@@ -1,0 +1,158 @@
+#!/bin/bash
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Build
+### Attempt to build a few known SDK-based OOT repos based on a core SDK
+### produced from the local Fuchsia tree
+##
+## This command attempts to build some known SDK-based OOT repos with an SDK
+## produced with the local Fuchsia tree and build configuration.
+##
+## Usage: fx validate-sdk [[REPO/CLNUM/PATCHSET] ...]
+##
+## It first runs the equivalent of 'fx build sdk:core sdk:driver'
+##
+## Then for each SDK-based repo from the list:
+##                 sdk-samples/getting-started
+##                 sdk-samples/drivers
+##                 fortune-teller
+##    it will clone the corresponding repo and attempt to build it with
+## the local SDK produced by 'fx build sdk:core sdk:driver'
+##
+## Given that some of these repos, like getting-started and drivers, only
+## update their SDK every few weeks, there will likely be a WIP roller CL
+## that you may want to patch before attempting to build.
+## If you want to patch a CL from these repos before validating the SDK,
+## you can use the [REPO/CL/PATCHSET] syntax:
+##
+##       Examples:
+##          fx validate-sdk
+##          fx validate-sdk drivers/715716/9 getting-started/691515/11
+##
+
+source "${FUCHSIA_DIR}/tools/devshell/lib/style.sh" || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+
+set -e -o pipefail
+
+fx-config-read
+
+# keep both in sync, as associatie arrays are not well supported in the
+# version of Bash that ships with MacOS
+declare -a REPO_NAMES=( "drivers" "getting-started" "fortune-teller" )
+declare -a REPOS=(
+    "https://fuchsia.googlesource.com/sdk-samples/drivers"
+    "https://fuchsia.googlesource.com/sdk-samples/getting-started"
+    "https://fuchsia.googlesource.com/sdk-samples/fortune-teller"
+  )
+
+readonly REPOS REPO_NAMES
+
+function create_sdk {
+  fx-command-run build sdk:core sdk:driver
+}
+
+
+function is_valid_repo_name {
+  for r in "${REPO_NAMES[@]}"; do
+    if [[ "$r" == "$k" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+function validate_patches {
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" =~ ^([a-z-]+)\/([0-9]+)\/([0-9]+)$ ]]; then
+      k="${BASH_REMATCH[1]}"
+      cl="${BASH_REMATCH[2]}"
+      ps="${BASH_REMATCH[3]}"
+      if ! is_valid_repo_name "$k"; then
+        fx-error "Invalid repo name '$k' in patch spec. Must be one of ${REPO_NAMES[@]}"
+        exit 1
+      fi
+    else
+      fx-error "Invalid patch spec, must be REPO_NAME/CL_NUM/PATCHSET: $1"
+      exit 1
+    fi
+    shift
+  done
+}
+
+function get_patches {
+  local repo_key="$1"
+  shift
+  local patches=()
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" =~ ^${repo_key}\/([0-9]+)\/([0-9]+)$ ]]; then
+      cl="${BASH_REMATCH[1]}"
+      ps="${BASH_REMATCH[2]}"
+      patches+=( "${cl}" "${ps}" )
+    fi
+    shift
+  done
+  echo "${patches[@]}"
+}
+
+function clone {
+  local git_url="$1"
+  local tmp_dir="$2"
+
+  git clone "$git_url" "$tmp_dir"
+  git -C "$tmp_dir" submodule update --recursive --init
+}
+
+function patch {
+  local git_url="$1"
+  local tmp_dir="$2"
+  local cl_num="$3"
+  local cl_patchset="$4"
+
+  local cl_tail="${cl_num:(-2)}"
+  git -C "$tmp_dir" fetch "$git_url" \
+    "refs/changes/${cl_tail}/${cl_num}/${cl_patchset}"
+  git -C "$tmp_dir" checkout FETCH_HEAD --recurse-submodules
+}
+
+function build_sample {
+  local repo_key="$1"
+  local tmp_dir="$2"
+
+  local build_dir="$FUCHSIA_BUILD_DIR"
+
+  cd "$tmp_dir"
+  scripts/bootstrap.sh
+  LOCAL_FUCHSIA_PLATFORM_BUILD="$FUCHSIA_BUILD_DIR" tools/bazel build --config=fuchsia_x64 src:samples_repository
+}
+
+
+function main {
+  validate_patches "$@"
+
+  fx-info "*** Creating the SDK..."
+  create_sdk
+
+  local i=0
+  for repo_key in "${REPO_NAMES[@]}"; do
+    local repo_url="${REPOS[$i]}"
+    i=$((i+1))
+    local tmp_dir="$(mktemp -d)"
+
+    fx-info "*** Attempting to build $repo_key..."
+    trap "rm -Rf ${tmp_dir}" EXIT
+    clone "$repo_url" "$tmp_dir"
+
+    local patches=( $(get_patches "$repo_key" "$@" ) )
+    for (( pi=0; pi<${#patches[@]}; pi+=2 )); do
+      patch "$repo_url" "$tmp_dir" "${patches[$pi]}" "${patches[$pi+1]}"
+    done
+
+    build_sample "$repo_key" "$tmp_dir"
+
+  done
+}
+
+main "$@"
