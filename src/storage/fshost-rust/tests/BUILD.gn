@@ -67,7 +67,6 @@ template("fshost_integration_test") {
       "//src/storage/fs_test:test_crypt_service",
       "//src/storage/fxfs:fuchsia.fxfs_rust",
       "//src/storage/fxfs:fxfs_component",
-      "//src/storage/fxfs:test_fxfs_component_manifest_shard",
       "//src/storage/fxfs-crypt",
       "//src/storage/testing/rust:storage-isolated-driver-manager",
       "//third_party/rust_crates:anyhow",

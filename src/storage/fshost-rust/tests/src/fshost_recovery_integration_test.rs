@@ -183,17 +183,14 @@ async fn write_data_file_common(fixture: TestFixture) {
     assert_eq!(&contents[..], PAYLOAD);
 }
 
-// TODO(fxbug.dev/108645): These test cases have to be serialized, since they rely on non-hermetic
-// dependencies (static children of the test component) and interact with each other if run in
-// parallel.
-
 #[fuchsia::test]
-async fn write_data_file() {
-    println!("Running with an unformatted data partition...");
+async fn write_data_file_unformatted() {
     let fixture = TestFixtureBuilder::default().with_ramdisk().build().await;
     write_data_file_common(fixture).await;
+}
 
-    println!("Running with a formatted data partition...");
+#[fuchsia::test]
+async fn write_data_file_formatted() {
     let fixture = TestFixtureBuilder::default().format_data().with_ramdisk().build().await;
     write_data_file_common(fixture).await;
 }
