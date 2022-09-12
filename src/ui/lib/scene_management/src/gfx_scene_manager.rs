@@ -4,7 +4,7 @@
 
 use {
     crate::display_metrics::{DisplayMetrics, ViewingDistance},
-    crate::graphics_utils::{ImageResource, ScreenCoordinates, ScreenSize},
+    crate::graphics_utils::ScreenSize,
     crate::pointerinjector_config::{
         InjectorViewportHangingGet, InjectorViewportPublisher, InjectorViewportSpec,
         InjectorViewportSubscriber,
@@ -52,7 +52,7 @@ pub struct GfxSceneManager {
     /// The id of the compositor used for the scene's layer stack.
     pub compositor_id: u32,
 
-    /// The root node of the scene. Views & the cursor are added as children of this node.
+    /// The root node of the scene. Views are added as children of this node.
     pub root_node: scenic::EntityNode,
 
     /// The size of the display, as determined when [`GfxSceneManager::new()`] was called.
@@ -149,12 +149,6 @@ pub struct GfxSceneManager {
     /// configure input-pipeline handlers for pointer events.
     context_view_ref: ui_views::ViewRef,
     target_view_ref: ui_views::ViewRef,
-
-    /// The node for the cursor. It is optional in case a scene doesn't render a cursor.
-    cursor_node: Option<scenic::EntityNode>,
-
-    /// The shapenode for the cursor. It is optional in case a scene doesn't render a cursor.
-    cursor_shape: Option<scenic::ShapeNode>,
 
     /// The resources used to construct the scene. If these are dropped, they will be removed
     /// from Scenic, so they must be kept alive for the lifetime of `GfxSceneManager`.
@@ -334,32 +328,12 @@ impl SceneManager for GfxSceneManager {
         )
     }
 
-    fn set_cursor_position(&mut self, position: input_pipeline::Position) {
-        let location = ScreenCoordinates::from_pixels(position.x, position.y, self.display_metrics);
-        if self.cursor_node.is_none() {
-            // We don't already have a cursor node so let's make one with the default cursor
-            if let Err(error) = self.set_cursor_image("/pkg/data/cursor.png") {
-                fx_log_warn!("Failed to load image cursor: {:?}", error);
-                self.set_cursor_shape(self.get_default_cursor());
-            }
-        }
-
-        let (x, y) = location.pips();
-        self.cursor_node().set_translation(x, y, GfxSceneManager::CURSOR_DEPTH);
-        GfxSceneManager::request_present(&self.presentation_sender);
+    fn set_cursor_position(&mut self, _position: input_pipeline::Position) {
+        fx_log_err!("Cursor is not supported on GFX");
     }
 
-    fn set_cursor_visibility(&mut self, visible: bool) {
-        if let Some(shape) = self.cursor_shape.as_ref() {
-            // Safe to unwrap as cursor shape can only exist if there is a cursor node.
-            let node = self.cursor_node.as_ref().unwrap();
-            if visible {
-                node.add_child(shape);
-            } else {
-                node.remove_child(shape);
-            }
-            GfxSceneManager::request_present(&self.presentation_sender);
-        }
+    fn set_cursor_visibility(&mut self, _visible: bool) {
+        fx_log_err!("Cursor is not supported on GFX");
     }
 
     fn get_pointerinjection_display_size(&self) -> Size {
@@ -382,8 +356,6 @@ impl GfxSceneManager {
     /// Note: -1000 is hardcoded in a lot of other locations, so don't change
     /// this unless you're sure it's safe. TODO(fxbug.dev/24474).
     const VIEW_BOUNDS_DEPTH: f32 = -1000.0;
-    /// The depth at which to draw the cursor in order to ensure it's on top of everything else
-    const CURSOR_DEPTH: f32 = GfxSceneManager::VIEW_BOUNDS_DEPTH - 1.0;
 
     /// Creates a new SceneManager.
     ///
@@ -620,8 +592,6 @@ impl GfxSceneManager {
             target_view_ref,
             display_metrics,
             should_flip_viewport_dimensions,
-            cursor_node: None,
-            cursor_shape: None,
             _resources: resources,
         })
     }
@@ -873,19 +843,6 @@ impl GfxSceneManager {
         }
     }
 
-    /// Gets the `EntityNode` for the cursor or creates one if it doesn't exist yet.
-    ///
-    /// # Returns
-    /// The [`scenic::EntityNode`] that contains the cursor.
-    fn cursor_node(&mut self) -> &scenic::EntityNode {
-        if self.cursor_node.is_none() {
-            self.cursor_node = Some(scenic::EntityNode::new(self.session.clone()));
-            self.root_node.add_child(self.cursor_node.as_ref().unwrap());
-        }
-
-        self.cursor_node.as_ref().unwrap()
-    }
-
     /// Requests that all previously enqueued operations are presented.
     fn request_present(presentation_sender: &PresentationSender) {
         presentation_sender
@@ -903,80 +860,6 @@ impl GfxSceneManager {
             .unbounded_send(PresentationMessage::RequestPresentWithPingback(sender))
             .expect("failed to send RequestPresentWithPingback message");
         _ = receiver.await;
-    }
-
-    /// Sets the image to use for the scene's cursor.
-    ///
-    /// # Parameters
-    /// - `image_path`: The path to the image to be used for the cursor.
-    ///
-    /// # Notes
-    /// Due to a current limitation in the `Scenic` api this should only be called once and must be
-    /// called *before* `set_cursor_location`.
-    fn set_cursor_image(&mut self, image_path: &str) -> Result<(), Error> {
-        let image = ImageResource::new(image_path, self.session())?;
-        let cursor_rect = scenic::Rectangle::new(self.session(), image.width, image.height);
-        let cursor_shape = scenic::ShapeNode::new(self.session());
-        cursor_shape.set_shape(&cursor_rect);
-        cursor_shape.set_material(&image.material);
-        cursor_shape.set_translation(image.width / 2.0, image.height / 2.0, 0.0);
-
-        self.set_cursor_shape(cursor_shape);
-        Ok(())
-    }
-
-    /// Allows the client to customize the look of the cursor by supplying their own ShapeNode
-    ///
-    /// # Parameters
-    /// - `shape`: The [`scenic::ShapeNode`] to be used as the cursor.
-    ///
-    /// # Notes
-    /// Due to a current limitation in the `Scenic` api this should only be called once and must be
-    /// called *before* `set_cursor_location`.
-    fn set_cursor_shape(&mut self, shape: scenic::ShapeNode) {
-        if !self.cursor_shape.is_none() {
-            let current_shape = self.cursor_shape.as_ref().unwrap();
-            let node = self.cursor_node.as_ref().unwrap();
-            node.remove_child(current_shape);
-        }
-
-        self.cursor_node().add_child(&shape);
-        self.cursor_shape = Some(shape);
-        GfxSceneManager::request_present(&self.presentation_sender);
-    }
-
-    /// Creates a default cursor shape for use with the client hasn't created a custom cursor
-    ///
-    /// # Returns
-    /// The [`scenic::ShapeNode`] to be used as the cursor.
-    fn get_default_cursor(&self) -> scenic::ShapeNode {
-        const CURSOR_DEFAULT_WIDTH: f32 = 20.0;
-        const CURSOR_DEFAULT_HEIGHT: f32 = 20.0;
-
-        let cursor_rect = scenic::RoundedRectangle::new(
-            self.session(),
-            CURSOR_DEFAULT_WIDTH,
-            CURSOR_DEFAULT_HEIGHT,
-            0.0,
-            CURSOR_DEFAULT_WIDTH / 2.0,
-            CURSOR_DEFAULT_WIDTH / 2.0,
-            CURSOR_DEFAULT_WIDTH / 2.0,
-        );
-        let cursor_shape = scenic::ShapeNode::new(self.session());
-        cursor_shape.set_shape(&cursor_rect);
-
-        // Adjust position so that the upper left corner matches the pointer location
-        cursor_shape.set_translation(CURSOR_DEFAULT_WIDTH / 2.0, CURSOR_DEFAULT_HEIGHT / 2.0, 0.0);
-
-        let material = scenic::Material::new(self.session());
-        material.set_color(ui_gfx::ColorRgba { red: 255, green: 0, blue: 255, alpha: 255 });
-        cursor_shape.set_material(&material);
-
-        cursor_shape
-    }
-
-    fn session(&self) -> scenic::SessionPtr {
-        return self.session.clone();
     }
 
     async fn update_viewport(&self) {

@@ -69,11 +69,6 @@ rustc_binary("scene_manager_bin") {
   ]
 }
 
-resource("cursor") {
-  sources = [ "resources/cursor.png" ]
-  outputs = [ "data/cursor.png" ]
-}
-
 fuchsia_component_manifest("manifest") {
   component_name = "scene_manager"
   manifest = "meta/scene_manager.cml"
@@ -94,10 +89,7 @@ group("scene_manager_component_for_test") {
 }
 
 fuchsia_package("scene_manager") {
-  deps = [
-    ":cursor",
-    ":scene_manager_component",
-  ]
+  deps = [ ":scene_manager_component" ]
 }
 
 fuchsia_unittest_package("scene_manager_tests") {

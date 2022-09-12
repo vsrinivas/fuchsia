@@ -13,7 +13,6 @@ rustc_library("scene_management") {
   deps = [
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility_rust",
     "//sdk/fidl/fuchsia.accessibility.scene:fuchsia.accessibility.scene_rust",
-    "//sdk/fidl/fuchsia.images:fuchsia.images_rust",
     "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_rust",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
@@ -38,7 +37,6 @@ rustc_library("scene_management") {
     "//third_party/rust_crates:libm",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:png",
   ]
 
   sources = [
