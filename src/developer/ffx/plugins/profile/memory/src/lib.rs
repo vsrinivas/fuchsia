@@ -47,7 +47,7 @@ pub async fn print_output(
     cmd: &MemoryCommand,
     writer: &mut Writer,
 ) -> Result<()> {
-    if cmd.print_json_from_memory_monitor {
+    if cmd.debug_json {
         let raw_data = get_raw_data(monitor_proxy).await?;
         writeln!(writer, "{}", String::from_utf8(raw_data)?)?;
         Ok(())
