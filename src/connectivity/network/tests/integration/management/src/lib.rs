@@ -432,7 +432,6 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                         id,
                         fidl_fuchsia_net_interfaces_ext::Properties { online, addresses, .. },
                     )| {
-                        // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
                         (*id != wlan_ap_id
                             && *online
                             && addresses.iter().any(
@@ -447,7 +446,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                                     net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => false,
                                 },
                             ))
-                        .then(|| *id)
+                        .then_some(*id)
                     },
                 )
             },

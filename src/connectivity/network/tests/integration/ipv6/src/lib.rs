@@ -401,12 +401,9 @@ async fn slaac_with_privacy_extensions<E: netemul::Endpoint>(
                      }| {
                         match addr {
                             net::IpAddress::Ipv4(net::Ipv4Address { .. }) => None,
-                            net::IpAddress::Ipv6(net::Ipv6Address { addr }) => {
-                                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-                                ipv6_consts::PREFIX
-                                    .contains(&net_types_ip::Ipv6Addr::from_bytes(addr))
-                                    .then(|| ())
-                            }
+                            net::IpAddress::Ipv6(net::Ipv6Address { addr }) => ipv6_consts::PREFIX
+                                .contains(&net_types_ip::Ipv6Addr::from_bytes(addr))
+                                .then_some(()),
                         }
                     },
                 )

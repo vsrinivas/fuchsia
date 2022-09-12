@@ -301,8 +301,7 @@ async fn test_add_remove_interface<N: Netstack, E: netemul::Endpoint>(name: &str
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
         &mut if_map,
-        // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-        |if_map| if_map.contains_key(&id).then(|| ()),
+        |if_map| if_map.contains_key(&id).then_some(()),
     )
     .await
     .expect("observe interface addition");
@@ -312,8 +311,7 @@ async fn test_add_remove_interface<N: Netstack, E: netemul::Endpoint>(name: &str
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
         &mut if_map,
-        // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-        |if_map| (!if_map.contains_key(&id)).then(|| ()),
+        |if_map| (!if_map.contains_key(&id)).then_some(()),
     )
     .await
     .expect("observe interface addition");
@@ -367,8 +365,7 @@ async fn test_close_interface<N: Netstack, E: netemul::Endpoint>(
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
         &mut if_map,
-        // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-        |if_map| if_map.contains_key(&id).then(|| ()),
+        |if_map| if_map.contains_key(&id).then_some(()),
     )
     .await
     .expect("observe interface addition");
@@ -379,10 +376,7 @@ async fn test_close_interface<N: Netstack, E: netemul::Endpoint>(
     let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
         fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
         &mut if_map,
-        |if_map| {
-            // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-            (!if_map.contains_key(&id)).then(|| ())
-        },
+        |if_map| (!if_map.contains_key(&id)).then_some(()),
     )
     .await
     .expect("observe interface removal");
@@ -434,8 +428,7 @@ async fn test_down_close_race<N: Netstack, E: netemul::Endpoint>(name: &str) {
             |if_map| {
                 let &fidl_fuchsia_net_interfaces_ext::Properties { online, .. } =
                     if_map.get(&id)?;
-                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-                online.then(|| ())
+                online.then_some(())
             },
         )
         .await
@@ -451,10 +444,7 @@ async fn test_down_close_race<N: Netstack, E: netemul::Endpoint>(name: &str) {
         let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
-            |if_map| {
-                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-                (!if_map.contains_key(&id)).then(|| ())
-            },
+            |if_map| (!if_map.contains_key(&id)).then_some(()),
         )
         .await
         .expect("observe interface removal");
@@ -566,10 +556,7 @@ async fn test_close_data_race<N: Netstack, E: netemul::Endpoint>(name: &str) {
         let iface_dropped = fidl_fuchsia_net_interfaces_ext::wait_interface(
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
-            |if_map| {
-                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-                (!if_map.contains_key(&id)).then(|| ())
-            },
+            |if_map| (!if_map.contains_key(&id)).then_some(()),
         );
 
         let (io_result, iface_dropped, ()) =

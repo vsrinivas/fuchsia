@@ -426,10 +426,7 @@ impl<'a> TestRealm<'a> {
         let () = fnet_interfaces_ext::wait_interface_with_id(
             fnet_interfaces_ext::event_stream_from_state(&interface_state)?,
             &mut fnet_interfaces_ext::InterfaceState::Unknown(interface.id()),
-            |&fnet_interfaces_ext::Properties { online, .. }| {
-                // TODO(https://github.com/rust-lang/rust/issues/80967): use bool::then_some.
-                online.then(|| ())
-            },
+            |&fnet_interfaces_ext::Properties { online, .. }| online.then_some(()),
         )
         .await
         .context("failed to observe interface up")?;
