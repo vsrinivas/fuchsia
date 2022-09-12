@@ -70,7 +70,7 @@ required for running the test suite.
             --target-rustcflags $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
         " \
        --rustc-args "
-            -C panic=abort 
+            -C panic=abort
             -Zpanic_abort_tests
         " \
    )
@@ -155,12 +155,12 @@ environments.
             --target-rustcflags $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/lib
             --target-rustcflags -L
             --target-rustcflags $DEV_ROOT/sdk/arch/{{ '<var>' }}x64|a64{{ '</var>' }}/sysroot/lib
-        " \ 
+        " \
         --rustc-args "
             -C debuginfo=2
-            -C opt-level=0 
-            -C strip=none 
-            -C panic=abort 
+            -C opt-level=0
+            -C strip=none
+            -C panic=abort
             -Zpanic_abort_tests
        " \
     )
