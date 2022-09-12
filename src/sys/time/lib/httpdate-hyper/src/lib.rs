@@ -264,11 +264,11 @@ mod test {
         Body, Response, Server, StatusCode,
     };
     use lazy_static::lazy_static;
-    use log::warn;
     use std::{
         convert::Infallible,
         net::{Ipv6Addr, SocketAddr},
     };
+    use tracing::warn;
 
     lazy_static! {
         static ref TEST_CERT_CHAIN: Vec<rustls::Certificate> =

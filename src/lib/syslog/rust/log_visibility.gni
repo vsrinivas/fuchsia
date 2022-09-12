@@ -120,7 +120,6 @@ third_party_rust_crate_log_visibility = [
   "//src/sys/pkg/lib/isolated-swd:*",
   "//src/sys/pkg/lib/tuf:*",
   "//src/sys/run_test_suite:*",
-  "//src/sys/time/lib/httpdate-hyper:*",
   "//src/sys/full-resolver:*",
   "//src/ui/input/text/text-edit-controller:*",
   "//src/ui/tests/scenic-stress-tests:*",
