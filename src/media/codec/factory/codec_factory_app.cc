@@ -27,7 +27,6 @@ namespace {
 constexpr char kDeviceClass[] = "/dev/class/media-codec";
 constexpr char kGpuDeviceClass[] = "/dev/class/gpu";
 const char* kLogTag = "CodecFactoryApp";
-const char kRealmSvc[] = "fuchsia.component.Realm";
 
 const std::string kAllSwDecoderMimeTypes[] = {
     "video/h264",  // VIDEO_ENCODING_H264
@@ -69,24 +68,6 @@ CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher, ProdOrTest prod
   DiscoverMediaCodecDriversAndListenForMoreAsync();
 }
 
-bool CodecFactoryApp::IsV2() {
-  DIR* dir = opendir("/svc");
-  if (!dir) {
-    return false;
-  }
-
-  struct dirent* ent;
-  std::string svc_name = std::string(kRealmSvc);
-  while ((ent = readdir(dir)) != nullptr) {
-    if (svc_name == ent->d_name) {
-      closedir(dir);
-      return true;
-    }
-  }
-  closedir(dir);
-  return false;
-}
-
 void CodecFactoryApp::PublishService() {
   // We delay doing this until we're completely ready to add services.
   // We _rely_ on the driver to either fail the channel or send OnCodecList().
@@ -96,8 +77,7 @@ void CodecFactoryApp::PublishService() {
           [this](fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
             // The CodecFactoryImpl is self-owned and will self-delete when the
             // channel closes or an error occurs.
-            CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request),
-                                              this->IsV2());
+            CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request));
           });
   // else this codec_factory is useless
   ZX_ASSERT(status == ZX_OK);
@@ -312,10 +292,6 @@ void CodecFactoryApp::TeardownMagmaCodec(
 }
 
 void CodecFactoryApp::DiscoverMagmaCodecDriversAndListenForMoreAsync() {
-  if (!IsV2()) {
-    // Magma codec components can only be launched as V2.
-    return;
-  }
   num_codec_discoveries_in_flight_++;
   gpu_device_watcher_ = fsl::DeviceWatcher::CreateWithIdleCallback(
       kGpuDeviceClass,
@@ -349,7 +325,7 @@ void CodecFactoryApp::DiscoverMagmaCodecDriversAndListenForMoreAsync() {
                 }
                 discovery_entry->component_url = icd_entry.component_url();
                 ForwardToIsolate(
-                    icd_entry.component_url(), true, IsolateType::kMagma, startup_context_.get(),
+                    icd_entry.component_url(), IsolateType::kMagma, startup_context_.get(),
                     [this, magma_device, device_path](fuchsia::mediacodec::CodecFactoryPtr ptr) {
                       auto it = std::find_if(
                           device_discovery_queue_.begin(), device_discovery_queue_.end(),
