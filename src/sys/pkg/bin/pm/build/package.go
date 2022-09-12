@@ -235,7 +235,7 @@ func writeABIRevision(cfg *Config, manifest *Manifest) error {
 	}
 
 	if manifestABIRevision == nil && cfg.PkgABIRevision == 0 {
-		return fmt.Errorf("ABI revision is required")
+		return fmt.Errorf("the Fuchsia SDK version must be specified with either the -api-level or -abi-revision arguments, or manually creating meta/fuchsia.abi/abi-revision in the package directory")
 	}
 
 	var abiRevision uint64
