@@ -423,7 +423,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
             .await
             .unwrap_or_else(|e| panic!("add host virtual device {}: {:?}", path.display(), e));
         let () = host.set_link_up(true).await.expect("set host link up");
-        let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
+        let host_id = fidl_fuchsia_net_interfaces_ext::wait_interface(
             fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
             &mut if_map,
             |if_map| {
@@ -447,7 +447,7 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
                                     net::IpAddress::Ipv6(net::Ipv6Address { addr: _ }) => false,
                                 },
                             ))
-                        .then(|| ())
+                        .then(|| *id)
                     },
                 )
             },
@@ -467,8 +467,23 @@ async fn test_wlan_ap_dhcp_server<E: netemul::Endpoint, M: Manager>(name: &str) 
         let () = wlan_ap.set_link_up(true).await.expect("set wlan ap link up");
         let () = check_dhcp_status(&dhcp_server, true).await;
         // Remove the interface, the DHCP server should be stopped.
-        std::mem::drop(wlan_ap);
+        drop(wlan_ap);
         let () = check_dhcp_status(&dhcp_server, false).await;
+
+        // Remove the host endpoint from the network and wait for the interface
+        // to be removed from the netstack.
+        //
+        // This is necessary to ensure this function can be called multiple
+        // times and observe DHCP address acquisition on a new interface each
+        // time.
+        drop(host);
+        let () = fidl_fuchsia_net_interfaces_ext::wait_interface(
+            fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone()),
+            &mut if_map,
+            |if_map| (!if_map.contains_key(&host_id)).then_some(()),
+        )
+        .await
+        .expect("wait for host interface to be removed");
     }
 
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");

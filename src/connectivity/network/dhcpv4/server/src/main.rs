@@ -569,7 +569,7 @@ where
             Ok(Err(error)) => {
                 // There was an error handling the server sockets. Disable the
                 // server.
-                error!("Server encountered an error: {}. Stopping server.", error);
+                error!("Server encountered an error: {:?}. Stopping server.", error);
                 let () = server.borrow_mut().disable();
                 Ok(())
             }
