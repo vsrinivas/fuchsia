@@ -17,6 +17,18 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
+func stringSliceEquals(lhs []string, rhs []string) bool {
+	if len(lhs) != len(rhs) {
+		return false
+	}
+	for i, v := range lhs {
+		if v != rhs[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // The easiest way to make a fake key is to just generate a real one.
 func generatePublicKey(t *testing.T) ssh.PublicKey {
 	privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -199,5 +211,174 @@ func TestPaveMode(t *testing.T) {
 		if len(outputs[1]) != 0 {
 			t.Errorf("Unexpected extra command")
 		}
+	}
+}
+
+func checkDoesNotSupportLogLevel(t *testing.T, contents string) {
+	dir := t.TempDir()
+	bootserverPath := filepath.Join(dir, "bootserver.sh")
+	if err := os.WriteFile(bootserverPath, []byte(contents), 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	options := []BuildPaverOption{Stdout(&output)}
+
+	paver, err := NewBuildPaver(bootserverPath, dir, options...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := paver.Pave(context.Background(), "a-fake-device-name"); err != nil {
+		t.Fatal(err)
+	}
+
+	outputs := strings.Split(output.String(), "\n")
+	actualZedbootPaverArgs := strings.Split(outputs[0], " ")
+	actualPaverArgs := strings.Split(outputs[1], " ")
+
+	expectedZedbootPaverArgs := []string{
+		bootserverPath,
+		"--images", filepath.Join(dir, "images.json"),
+		"--mode", "pave-zedboot",
+		"--allow-zedboot-version-mismatch",
+		"-1",
+		"-n", "a-fake-device-name",
+	}
+	if !stringSliceEquals(actualZedbootPaverArgs, expectedZedbootPaverArgs) {
+		t.Fatalf("expected args %v, got %v", expectedZedbootPaverArgs, actualZedbootPaverArgs)
+	}
+
+	expectedPaverArgs := []string{
+		bootserverPath,
+		"--images", filepath.Join(dir, "images.json"),
+		"--mode", "pave",
+		"--fail-fast-if-version-mismatch",
+		"-1",
+		"-n", "a-fake-device-name",
+	}
+	if !stringSliceEquals(actualPaverArgs, expectedPaverArgs) {
+		t.Fatalf("expected args %v, got %v", expectedPaverArgs, actualPaverArgs)
+	}
+}
+
+// Check old bootserver with the expected error message does not pass log-level.
+func TestDoesNotSupportsLogLevel(t *testing.T) {
+	checkDoesNotSupportLogLevel(t,
+		`#!/bin/sh
+		lhs="$@"
+		rhs="-log-level debug"
+		if [ "$lhs" = "$rhs" ]; then
+			echo "flag provided but not defined: -log-level" 1>&2
+			echo "Usage of /tmp/ota-tests/8803577180649075905/images/bootserver:" 1>&2
+			exit 2
+		fi
+		echo "$0 $@"`)
+}
+
+// Check we don't pass -log-level if we get an unexpected exit code.
+func TestDoesNotSupportLogLevelWithUnexpectedExitCode(t *testing.T) {
+	checkDoesNotSupportLogLevel(t,
+		`#!/bin/sh
+		echo "$0 $@"`)
+
+	checkDoesNotSupportLogLevel(t,
+		`#!/bin/sh
+		lhs="$@"
+		rhs="-log-level debug"
+		if [ "$lhs" = "$rhs" ]; then
+			echo "cannot specify a bootserver mode without an image manifest [--images]" 1>&2
+			exit 0
+		fi
+		echo "$0 $@"`)
+
+	checkDoesNotSupportLogLevel(t,
+		`#!/bin/sh
+		lhs="$@"
+		rhs="-log-level debug"
+		if [ "$lhs" = "$rhs" ]; then
+			echo "cannot specify a bootserver mode without an image manifest [--images]" 1>&2
+			exit 3
+		fi
+		echo "$0 $@"`)
+}
+
+func TestDoesNotSupportLogLevelWithUnexpectedStderr(t *testing.T) {
+	checkDoesNotSupportLogLevel(t,
+		`#!/bin/sh
+		lhs="$@"
+		rhs="-log-level debug"
+		if [ "$lhs" = "$rhs" ]; then
+			exit 2
+		fi
+		echo "$0 $@"`)
+
+	checkDoesNotSupportLogLevel(t,
+		`#!/bin/sh
+		lhs="$@"
+		rhs="-log-level debug"
+		if [ "$lhs" = "$rhs" ]; then
+			echo "unknown flag -log-level" 1>&2
+			exit 2
+		fi
+		echo "$0 $@"`)
+}
+
+func TestSupportsLogLevel(t *testing.T) {
+	contents := `#!/bin/sh
+	lhs="$@"
+	rhs="-log-level debug"
+	if [ "$lhs" = "$rhs" ]; then
+		echo "cannot specify a bootserver mode without an image manifest [--images]" 1>&2
+		exit 1
+	fi
+	echo "$0 $@"`
+
+	dir := t.TempDir()
+	bootserverPath := filepath.Join(dir, "bootserver.sh")
+	if err := os.WriteFile(bootserverPath, []byte(contents), 0o700); err != nil {
+		t.Fatal(err)
+	}
+
+	var output bytes.Buffer
+	options := []BuildPaverOption{Stdout(&output)}
+
+	paver, err := NewBuildPaver(bootserverPath, dir, options...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := paver.Pave(context.Background(), "a-fake-device-name"); err != nil {
+		t.Fatal(err)
+	}
+
+	outputs := strings.Split(output.String(), "\n")
+	actualZedbootPaverArgs := strings.Split(outputs[0], " ")
+	actualPaverArgs := strings.Split(outputs[1], " ")
+
+	expectedZedbootPaverArgs := []string{
+		bootserverPath,
+		"--images", filepath.Join(dir, "images.json"),
+		"--mode", "pave-zedboot",
+		"--allow-zedboot-version-mismatch",
+		"-1",
+		"-n", "a-fake-device-name",
+		"-log-level", "debug",
+	}
+	if !stringSliceEquals(actualZedbootPaverArgs, expectedZedbootPaverArgs) {
+		t.Fatalf("expected args %v, got %v", expectedZedbootPaverArgs, actualZedbootPaverArgs)
+	}
+
+	expectedPaverArgs := []string{
+		bootserverPath,
+		"--images", filepath.Join(dir, "images.json"),
+		"--mode", "pave",
+		"--fail-fast-if-version-mismatch",
+		"-1",
+		"-n", "a-fake-device-name",
+		"-log-level", "debug",
+	}
+	if !stringSliceEquals(actualPaverArgs, expectedPaverArgs) {
+		t.Fatalf("expected args %v, got %v", expectedPaverArgs, actualPaverArgs)
 	}
 }

@@ -5,12 +5,14 @@
 package paver
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"golang.org/x/crypto/ssh"
@@ -176,6 +178,16 @@ func (p *BuildPaver) runPave(ctx context.Context, deviceName string, args ...str
 	if deviceName != "" {
 		args = append(args, "-n", deviceName)
 	}
+
+	supportsLogLevel, err := supportsLogLevel(ctx, path)
+	if err != nil {
+		return err
+	}
+
+	if supportsLogLevel {
+		args = append(args, "-log-level", "debug")
+	}
+
 	logger.Infof(ctx, "running: %s %q", path, args)
 	cmd := exec.CommandContext(ctx, path, args...)
 	if p.stdout != nil {
@@ -187,4 +199,59 @@ func (p *BuildPaver) runPave(ctx context.Context, deviceName string, args ...str
 	cmdRet := cmd.Run()
 	logger.Infof(ctx, "finished running %s %q: %q", path, args, cmdRet)
 	return cmdRet
+}
+
+// Check if bootserver supports `-log-level` by running `bootserver -log-level
+// debug`. The bootserver supports the flag if:
+//
+//   - the process provides an exit code of 1.
+//   - the process's stderr ends with "cannot specify a bootserver mode without
+//     an image manifest [--images]\n".
+//
+// If the bootserver does not support the flag if:
+//
+// * the process provides an exit code of 2.
+// * the stderr starts with "flag provide but not defined: -log-level".
+//
+// Anything else will be treated as the bootserver does not support
+// `-log-level`, in case any of the output changes.
+func supportsLogLevel(ctx context.Context, bootserverPath string) (bool, error) {
+	args := []string{"-log-level", "debug"}
+	cmd := exec.CommandContext(ctx, bootserverPath, args...)
+
+	var stderr bytes.Buffer
+	cmd.Stdout = nil
+	cmd.Stderr = &stderr
+
+	err := cmd.Run()
+	if err == nil {
+		logger.Warningf(ctx, "unexpected success running %v, assuming does not support -log-level", args)
+		return false, nil
+	}
+
+	if exitErr, ok := err.(*exec.ExitError); ok {
+		if exitErr.ExitCode() == 1 {
+			if strings.HasSuffix(stderr.String(), "cannot specify a bootserver mode without an image manifest [--images]\n") {
+				return true, nil
+			}
+
+			logger.Warningf(ctx, "was unable to parse stderr, assuming bootserver does not support -log-level: %s", stderr.String())
+			return false, nil
+		}
+
+		if exitErr.ExitCode() == 2 {
+			if !strings.HasPrefix(stderr.String(), "flag provided but not defined: -log-level") {
+				logger.Warningf(ctx, "was unable to parse stderr, assuming bootserver does not support -log-level: %s", stderr.String())
+			}
+
+			return false, nil
+		}
+	}
+
+	if len(stderr.String()) == 0 {
+		logger.Warningf(ctx, "unexpected result running %v, assuming does not support -log-level: %v", args, err)
+	} else {
+		logger.Warningf(ctx, "unexpected result running %v, assuming does not support -log-level: %v: stderr: %v", args, err, stderr.String())
+	}
+	return false, nil
 }
