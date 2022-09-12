@@ -39,7 +39,7 @@ func TestBuild(t *testing.T) {
 			subcmd: []string{"/foo/bar"},
 			want: []string{
 				"/path/to/nsjail",
-				"--keep_env",
+				"--disable_clone_newcgroup",
 				"--rlimit_as", "soft",
 				"--rlimit_fsize", "soft",
 				"--rlimit_nofile", "soft",
@@ -56,7 +56,7 @@ func TestBuild(t *testing.T) {
 			subcmd: []string{"/foo/bar"},
 			want: []string{
 				"/path/to/nsjail",
-				"--keep_env",
+				"--disable_clone_newcgroup",
 				"--disable_clone_newnet",
 				"--rlimit_as", "soft",
 				"--rlimit_fsize", "soft",
@@ -92,7 +92,7 @@ func TestBuild(t *testing.T) {
 			subcmd: []string{"/foo/bar"},
 			want: []string{
 				"/path/to/nsjail",
-				"--keep_env",
+				"--disable_clone_newcgroup",
 				"--disable_clone_newnet",
 				"--tmpfsmount", "/i/am/temporary",
 				"--bindmount_ro", "/root/name:/jail/name",
@@ -115,7 +115,7 @@ func TestBuild(t *testing.T) {
 			subcmd: []string{"/foo/bar"},
 			want: []string{
 				"/path/to/nsjail",
-				"--keep_env",
+				"--disable_clone_newcgroup",
 				"--disable_clone_newnet",
 				"--cwd", "/cwd",
 				"--rlimit_as", "soft",
@@ -130,18 +130,42 @@ func TestBuild(t *testing.T) {
 			name: "Test environment variables",
 			cmdBuilder: &NsJailCmdBuilder{
 				Bin: "/path/to/nsjail",
-				Env: []string{"TEST=test"},
+				Env: map[string]string{
+					"TEST": "test",
+				},
 			},
 			subcmd: []string{"/foo/bar"},
 			want: []string{
 				"/path/to/nsjail",
-				"--keep_env",
+				"--disable_clone_newcgroup",
 				"--disable_clone_newnet",
 				"--rlimit_as", "soft",
 				"--rlimit_fsize", "soft",
 				"--rlimit_nofile", "soft",
 				"--rlimit_nproc", "soft",
 				"--env", "TEST=test",
+				"--",
+				"/foo/bar",
+			},
+		},
+		{
+			name: "Test symlinks",
+			cmdBuilder: &NsJailCmdBuilder{
+				Bin: "/path/to/nsjail",
+				Symlinks: map[string]string{
+					"/bin/bash": "/bin/sh",
+				},
+			},
+			subcmd: []string{"/foo/bar"},
+			want: []string{
+				"/path/to/nsjail",
+				"--disable_clone_newcgroup",
+				"--disable_clone_newnet",
+				"--symlink", "/bin/bash:/bin/sh",
+				"--rlimit_as", "soft",
+				"--rlimit_fsize", "soft",
+				"--rlimit_nofile", "soft",
+				"--rlimit_nproc", "soft",
 				"--",
 				"/foo/bar",
 			},

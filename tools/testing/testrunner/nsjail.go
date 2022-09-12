@@ -7,7 +7,9 @@ package testrunner
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
+	"strings"
 )
 
 // MountPt describes the source, destination, and permissions for a
@@ -32,16 +34,15 @@ type NsJailCmdBuilder struct {
 	// Note that this does not add any required mount points, the caller
 	// is responsible for ensuring that the directory exists in the jail.
 	Cwd string
-	// Env is a set of additional environment variables to pass into
-	// the jail. Takes the form of a list of key=value strings.
-	// This set of environment variables is appended to the calling process'
-	// environment, and overrides any duplicate values
-	Env []string
+	// Env is a set of environment variables to pass into the sandbox.
+	Env map[string]string
 	// IsolateNetwork indicates whether we should use a network namespace.
 	IsolateNetwork bool
 	// MountPoints is a list of locations on the current filesystem that
 	// should be mounted into the NsJail.
 	MountPoints []*MountPt
+	// Symlinks is a map of target:linkName pairs to symlink in the sandbox.
+	Symlinks map[string]string
 }
 
 // AddDefaultMounts adds a set of mounts used by existing host tests.
@@ -90,6 +91,25 @@ func (n *NsJailCmdBuilder) AddDefaultMounts() {
 	}...)
 }
 
+// ForwardEnv forwards the current process' environment to the sandbox, but
+// also allows for certain environment variables to be overridden (which the
+// --keep-env flag of nsjail does not support).
+func (n *NsJailCmdBuilder) ForwardEnv(overrides map[string]string) {
+	if n.Env == nil {
+		n.Env = make(map[string]string)
+	}
+	for _, pair := range os.Environ() {
+		elems := strings.Split(pair, "=")
+		key := elems[0]
+		val := elems[1]
+		if override, exists := overrides[key]; exists {
+			n.Env[key] = override
+		} else {
+			n.Env[key] = val
+		}
+	}
+}
+
 // Build takes the given subcmd and wraps it in the appropriate NsJail invocation.
 func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 	// Validate the command.
@@ -100,7 +120,7 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 	}
 
 	// Build the actual command invocation.
-	cmd := []string{n.Bin, "--keep_env"}
+	cmd := []string{n.Bin, "--disable_clone_newcgroup"}
 	if !n.IsolateNetwork {
 		cmd = append(cmd, "--disable_clone_newnet")
 	}
@@ -137,6 +157,10 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 		}
 	}
 
+	for target, linkName := range n.Symlinks {
+		cmd = append(cmd, "--symlink", fmt.Sprintf("%s:%s", target, linkName))
+	}
+
 	// Overwrite some default nsjail rlimits with our system soft maximums as
 	// the defaults are too restrictive. We should probably tune this a bit
 	// more in the future to absolute values.
@@ -148,9 +172,17 @@ func (n *NsJailCmdBuilder) Build(subcmd []string) ([]string, error) {
 		"--rlimit_nproc", "soft",
 	)
 
-	for _, v := range n.Env {
-		cmd = append(cmd, "--env", v)
+	// Sort the environment variables to guarantee stable ordering.
+	var envKeys []string
+	for k := range n.Env {
+		envKeys = append(envKeys, k)
 	}
+	sort.Strings(envKeys)
+	// Add the environment variables to the command.
+	for _, k := range envKeys {
+		cmd = append(cmd, "--env", fmt.Sprintf("%s=%s", k, n.Env[k]))
+	}
+
 	cmd = append(cmd, "--")
 	cmd = append(cmd, subcmd...)
 	return cmd, nil

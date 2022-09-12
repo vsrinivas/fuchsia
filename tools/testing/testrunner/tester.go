@@ -215,10 +215,17 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 				Writable: true,
 			},
 		)
-		// Override all of the temp variables set by the environment library.
-		for _, key := range environment.TempDirEnvVars() {
-			testCmdBuilder.Env = append(testCmdBuilder.Env, key+"=/tmp")
+
+		// Construct the sandbox's environment by forwarding the current env
+		// but overriding the TempDirEnvVars with /tmp.
+		envOverrides := map[string]string{
+			"TMPDIR": "/tmp",
 		}
+		for _, key := range environment.TempDirEnvVars() {
+			envOverrides[key] = "/tmp"
+		}
+		testCmdBuilder.ForwardEnv(envOverrides)
+
 		// Set the root of the NsJail and the working directory.
 		// The working directory is expected to be a subdirectory of the root.
 		absRoot, err := filepath.Abs(t.nsjailRoot)
