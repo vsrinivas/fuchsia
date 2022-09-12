@@ -18,7 +18,7 @@ and can be used with the source tree and the SDK. For more information see the
 [Fuchsia developer extension page][extension-install].
 
 <img class="vscode-image vscode-image-center"
-     alt="This figure shows the image of the fuchisa developer extension in the Visual Studio Code marketplace"
+     alt="This figure shows the image of the fuchsia developer extension in the Visual Studio Code marketplace"
      src="images/extensions/extension-page.png">
 
 ## Community contributed extensions
