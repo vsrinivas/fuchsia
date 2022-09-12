@@ -1383,12 +1383,12 @@ async fn replace_retained_packages(
     let (client_end, stream) =
         fidl::endpoints::create_request_stream().context("creating request stream")?;
     let replace_resp = retained_packages.replace(client_end);
-    let () = fidl_fuchsia_pkg_ext::serve_fidl_iterator(
+    let () = fidl_fuchsia_pkg_ext::serve_fidl_iterator_from_slice(
+        stream,
         hashes
             .into_iter()
             .map(|hash| fidl_fuchsia_pkg_ext::BlobId::from(hash).into())
             .collect::<Vec<_>>(),
-        stream,
     )
     .await
     .unwrap_or_else(|e| {

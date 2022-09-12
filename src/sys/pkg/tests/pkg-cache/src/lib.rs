@@ -15,7 +15,7 @@ use {
         NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy, RetainedPackagesMarker,
         RetainedPackagesProxy,
     },
-    fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId},
+    fidl_fuchsia_pkg_ext::{serve_fidl_iterator_from_slice, BlobId},
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async as fasync,
@@ -209,7 +209,7 @@ pub async fn replace_retained_packages(
     let (iterator_client_end, iterator_stream) =
         fidl::endpoints::create_request_stream::<BlobIdIteratorMarker>().unwrap();
     let serve_iterator_fut = async {
-        serve_fidl_iterator(packages, iterator_stream).await.unwrap();
+        serve_fidl_iterator_from_slice(iterator_stream, packages).await.unwrap();
     };
     let (replace_retained_result, ()) =
         futures::join!(proxy.replace(iterator_client_end), serve_iterator_fut);

@@ -63,7 +63,7 @@ mod tests {
     use {
         super::*,
         assert_matches::assert_matches,
-        fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId},
+        fidl_fuchsia_pkg_ext::{serve_fidl_iterator_from_slice, BlobId},
         fuchsia_hash::Hash,
         futures::Future,
     };
@@ -79,7 +79,7 @@ mod tests {
         let (iterator_client_end, iterator_stream) =
             fidl::endpoints::create_request_stream::<BlobIdIteratorMarker>()?;
         Ok((
-            async { serve_fidl_iterator(packages, iterator_stream).await.unwrap() },
+            async { serve_fidl_iterator_from_slice(iterator_stream, packages).await.unwrap() },
             iterator_client_end,
         ))
     }

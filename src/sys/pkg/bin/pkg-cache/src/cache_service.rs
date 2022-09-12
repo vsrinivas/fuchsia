@@ -19,7 +19,7 @@ use {
         NeededBlobsRequestStream, PackageCacheRequest, PackageCacheRequestStream,
         PackageIndexEntry, PackageIndexIteratorRequestStream,
     },
-    fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId, BlobInfo},
+    fidl_fuchsia_pkg_ext::{serve_fidl_iterator_from_slice, BlobId, BlobInfo},
     fuchsia_async::Task,
     fuchsia_cobalt_builders::MetricEventExt,
     fuchsia_hash::Hash,
@@ -1028,7 +1028,7 @@ async fn serve_base_package_index(
         })
         .collect::<Vec<PackageIndexEntry>>();
     package_entries.sort_unstable_by(|a, b| a.package_url.url.cmp(&b.package_url.url));
-    serve_fidl_iterator(package_entries, stream).await.unwrap_or_else(|e| {
+    serve_fidl_iterator_from_slice(stream, package_entries).await.unwrap_or_else(|e| {
         fx_log_err!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
     })
 }
@@ -1051,7 +1051,7 @@ async fn serve_cache_package_index(
             .collect::<Vec<PackageIndexEntry>>(),
         None => vec![],
     };
-    serve_fidl_iterator(package_entries, stream).await.unwrap_or_else(|e| {
+    serve_fidl_iterator_from_slice(stream, package_entries).await.unwrap_or_else(|e| {
         fx_log_err!("error serving PackageIndexIteratorRequestStream protocol: {:#}", anyhow!(e))
     })
 }
@@ -1062,7 +1062,7 @@ async fn serve_blob_info_iterator(
     items: impl AsMut<[fidl_fuchsia_pkg::BlobInfo]>,
     stream: BlobInfoIteratorRequestStream,
 ) {
-    serve_fidl_iterator(items, stream).await.unwrap_or_else(|e| {
+    serve_fidl_iterator_from_slice(stream, items).await.unwrap_or_else(|e| {
         fx_log_err!("error serving BlobInfoIteratorRequestStream protocol: {:#}", anyhow!(e))
     })
 }

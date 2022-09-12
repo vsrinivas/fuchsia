@@ -26,4 +26,4 @@ pub use crate::base_package_index::BasePackageIndex;
 pub mod cache;
 
 mod serve_fidl_iterator;
-pub use serve_fidl_iterator::serve_fidl_iterator;
+pub use serve_fidl_iterator::{serve_fidl_iterator_from_slice, serve_fidl_iterator_from_stream};
