@@ -19,38 +19,11 @@ build_api_module("cts_artifacts") {
   deps = [ "//sdk/ctf" ]
 }
 
-generated_file("generated_test_manifest") {
-  testonly = true
-  outputs = [ "$root_out_dir/cts/test_manifest.json" ]
-  output_conversion = "json"
-  data_keys = [ "test_manifest" ]
-  deps = [
-    "//sdk/cts/examples:tests",
-    "//sdk/cts/tests",
-  ]
-
-  metadata = {
-    cts_artifacts = [ "cts/test_manifest.json" ]
-  }
-}
-
-generated_file("generated_host_test_manifest") {
-  testonly = true
-  outputs = [ "$root_out_dir/cts/host_test_manifest.json" ]
-  output_conversion = "json"
-  data_keys = [ "host_test_manifest" ]
-  deps = [ "//sdk/ctf/examples/host_tool:tests($host_toolchain)" ]
-
-  metadata = {
-    cts_artifacts = [ "cts/host_test_manifest.json" ]
-  }
-}
-
 group("test_manifest") {
   testonly = true
   deps = [
-    ":generated_host_test_manifest",
-    ":generated_test_manifest",
+    "//sdk/ctf:generated_host_test_manifest",
+    "//sdk/ctf:generated_test_manifest",
   ]
 }
 
