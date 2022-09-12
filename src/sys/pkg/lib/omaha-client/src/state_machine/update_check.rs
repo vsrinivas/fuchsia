@@ -54,8 +54,8 @@ impl Context {
         // between-check wall time for reporting, and this is a reasonable-enough proxy.
         Context {
             schedule: UpdateCheckSchedule::builder()
-                .last_time(last_update_time)
-                .last_check_time(last_update_time)
+                .last_update_time(last_update_time)
+                .last_update_check_time(last_update_time)
                 .build(),
             state: ProtocolState {
                 server_dictated_poll_interval,
@@ -212,7 +212,7 @@ mod tests {
             let server_dictated_poll_interval = Some(Duration::from_micros(56789));
             let consecutive_failed_update_checks = 1234;
             let context = Context {
-                schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
+                schedule: UpdateCheckSchedule::builder().last_update_time(last_update_time).build(),
                 state: ProtocolState {
                     server_dictated_poll_interval,
                     consecutive_failed_update_checks,
@@ -236,7 +236,7 @@ mod tests {
             storage.set_int(CONSECUTIVE_FAILED_UPDATE_CHECKS, 1234).await.unwrap();
 
             let context = Context {
-                schedule: UpdateCheckSchedule::builder().last_time(last_update_time).build(),
+                schedule: UpdateCheckSchedule::builder().last_update_time(last_update_time).build(),
                 state: ProtocolState {
                     server_dictated_poll_interval: None,
                     consecutive_failed_update_checks: 0,

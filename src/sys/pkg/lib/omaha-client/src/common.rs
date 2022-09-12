@@ -169,19 +169,22 @@ pub struct CheckOptions {
 }
 
 /// This describes the data around the scheduling of update checks
-#[derive(Clone, Copy, Default, PartialEq)]
+#[derive(Clone, Copy, Default, PartialEq, TypedBuilder)]
 pub struct UpdateCheckSchedule {
     // TODO(fxb/64804): Theoretically last_update_time and last_update_check_time
     // do not need to coexist and we can do all the reporting we want via
     // last_update_time. However, the last update check metric doesn't (as currently
     // worded) match up with what last_update_time actually records.
     /// When the last update check was attempted (start time of the check process).
+    #[builder(default, setter(into))]
     pub last_update_time: Option<PartialComplexTime>,
 
     /// When the last update check was attempted.
+    #[builder(default, setter(into))]
     pub last_update_check_time: Option<PartialComplexTime>,
 
     /// When the next update should happen.
+    #[builder(default, setter(into))]
     pub next_update_time: Option<CheckTiming>,
 }
 
@@ -201,57 +204,9 @@ pub struct CheckTiming {
     pub minimum_wait: Option<Duration>,
 }
 
-impl UpdateCheckSchedule {
-    pub fn builder() -> ScheduleBuilder {
-        ScheduleBuilder::default()
-    }
-}
-
 impl CheckTiming {
     pub fn builder() -> CheckTimingBuilder {
         CheckTimingBuilder::default()
-    }
-}
-
-/// This is a builder for the UpdateCheckSchedule.
-#[derive(Clone, Debug, Default)]
-pub struct ScheduleBuilder {
-    last_time: Option<PartialComplexTime>,
-    last_check_time: Option<PartialComplexTime>,
-    next_timing: Option<CheckTiming>,
-}
-
-impl ScheduleBuilder {
-    /// Set the last_update_time for the UpdateCheckSchedule that's to be built.
-    /// This method takes both ComplexTime and Option<ComplexTime>.
-    pub fn last_time(mut self, last_update_time: impl Into<Option<PartialComplexTime>>) -> Self {
-        self.last_time = last_update_time.into();
-        self
-    }
-
-    /// Set the last_check_time for the under-construction UpdateCheckSchedule.
-    /// This method takes both ComplexTime and Option<ComplexTime>.
-    pub fn last_check_time(
-        mut self,
-        last_check_time: impl Into<Option<PartialComplexTime>>,
-    ) -> Self {
-        self.last_check_time = last_check_time.into();
-        self
-    }
-
-    /// Set the CheckTiming for the next update check to use.
-    pub fn next_timing(mut self, next_timing: impl Into<Option<CheckTiming>>) -> Self {
-        self.next_timing = next_timing.into();
-        self
-    }
-
-    /// Build the UpdateCheckSchedule.
-    pub fn build(self) -> UpdateCheckSchedule {
-        UpdateCheckSchedule {
-            last_update_time: self.last_time,
-            last_update_check_time: self.last_check_time,
-            next_update_time: self.next_timing,
-        }
     }
 }
 
@@ -764,8 +719,8 @@ mod tests {
             format!(
                 "{:?}",
                 UpdateCheckSchedule::builder()
-                    .last_time(last)
-                    .next_timing(CheckTiming::builder().time(next).build())
+                    .last_update_time(last)
+                    .next_update_time(CheckTiming::builder().time(next).build())
                     .build()
             )
         );
@@ -777,10 +732,10 @@ mod tests {
         let now = PartialComplexTime::from(mock_time.now());
         assert_eq!(
             UpdateCheckSchedule::builder()
-                .last_time(PartialComplexTime::from(
+                .last_update_time(PartialComplexTime::from(
                     SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
                 ))
-                .next_timing(
+                .next_update_time(
                     CheckTiming::builder().time(now).minimum_wait(Duration::from_secs(100)).build()
                 )
                 .build(),
@@ -802,10 +757,10 @@ mod tests {
         let next_time = PartialComplexTime::from(MockTimeSource::new_from_now().now());
         assert_eq!(
             UpdateCheckSchedule::builder()
-                .last_time(Some(PartialComplexTime::from(
+                .last_update_time(Some(PartialComplexTime::from(
                     SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
                 )))
-                .next_timing(Some(
+                .next_update_time(Some(
                     CheckTiming::builder()
                         .time(next_time)
                         .minimum_wait(Some(Duration::from_secs(100)))
@@ -829,7 +784,7 @@ mod tests {
     fn test_update_check_schedule_builder_subset_fields() {
         assert_eq!(
             UpdateCheckSchedule::builder()
-                .last_time(PartialComplexTime::from(
+                .last_update_time(PartialComplexTime::from(
                     SystemTime::UNIX_EPOCH + Duration::from_secs(100000)
                 ))
                 .build(),
@@ -844,7 +799,7 @@ mod tests {
         let next_time = PartialComplexTime::from(MockTimeSource::new_from_now().now());
         assert_eq!(
             UpdateCheckSchedule::builder()
-                .next_timing(
+                .next_update_time(
                     CheckTiming::builder()
                         .time(next_time)
                         .minimum_wait(Duration::from_secs(5))

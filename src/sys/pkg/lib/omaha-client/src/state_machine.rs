@@ -2124,8 +2124,8 @@ mod tests {
 
             // The resultant schedule should only contain the timestamp of the above update check.
             let expected_schedule = UpdateCheckSchedule::builder()
-                .last_time(mock_time.now())
-                .last_check_time(mock_time.now())
+                .last_update_time(mock_time.now())
+                .last_update_check_time(mock_time.now())
                 .build();
 
             assert_eq!(actual_schedules, vec![expected_schedule]);

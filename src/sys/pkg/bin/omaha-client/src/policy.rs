@@ -802,7 +802,7 @@ mod tests {
             // The current context:
             //   - the last update was recently in the past
             let last_update_time = now - Duration::from_secs(1234);
-            let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
+            let schedule = UpdateCheckSchedule::builder().last_update_time(last_update_time).build();
             // Set up the state for this check:
             //  - the time is "now"
             let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now)
@@ -916,7 +916,7 @@ mod tests {
         // The current context:
         //   - the last update was recently in the past
         let last_update_time = now - Duration::from_secs(1234);
-        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
+        let schedule = UpdateCheckSchedule::builder().last_update_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
         let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
@@ -987,7 +987,7 @@ mod tests {
         //   - the last update was far in the past (a bit over a day)
         //   - persisted times will not have monotonic components.
         let last_update_time = PartialComplexTime::Wall(now.wall - Duration::from_secs(100000));
-        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
+        let schedule = UpdateCheckSchedule::builder().last_update_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
         let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
@@ -1038,7 +1038,7 @@ mod tests {
         //   - the last update was far in the future (a bit over 12 days)
         //   - persisted times will not have monotonic components.
         let last_update_time = PartialComplexTime::Wall(now.wall - Duration::from_secs(100000));
-        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
+        let schedule = UpdateCheckSchedule::builder().last_update_time(last_update_time).build();
         // Set up the state for this check:
         //  - the time is "now"
         let policy_data = ComputeNextUpdateTimePolicyDataBuilder::new(now).build();
@@ -1084,7 +1084,7 @@ mod tests {
         //   - the last update was in the past
         //   - there is 1 failed update check, which moves the policy to "fast" retries
         let last_update_time = now - Duration::from_secs(10);
-        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
+        let schedule = UpdateCheckSchedule::builder().last_update_time(last_update_time).build();
         let protocol_state =
             ProtocolState { consecutive_failed_update_checks: 1, ..Default::default() };
         // Set up the state for this check:
@@ -1120,7 +1120,7 @@ mod tests {
         //   - the last update was in the past
         //   - there are 4 failed update checks, which moves the policy from fast retries to slow
         let last_update_time = now - Duration::from_secs(10);
-        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
+        let schedule = UpdateCheckSchedule::builder().last_update_time(last_update_time).build();
         let protocol_state =
             ProtocolState { consecutive_failed_update_checks: 4, ..Default::default() };
         // Set up the state for this check:
@@ -1154,8 +1154,9 @@ mod tests {
         // TODO: This should be changed to there being a next_update_time (which is in the past, and
         //       likely to be "before" the last_update_check by the duration it takes to perform an
         //       update check)
-        let schedule =
-            UpdateCheckSchedule::builder().last_time(now - Duration::from_secs(1234)).build();
+        let schedule = UpdateCheckSchedule::builder()
+            .last_update_time(now - Duration::from_secs(1234))
+            .build();
         let server_dictated_poll_interval = Duration::from_secs(5678);
         let protocol_state = ProtocolState {
             server_dictated_poll_interval: Some(server_dictated_poll_interval),
@@ -1186,7 +1187,7 @@ mod tests {
         // The current context:
         //   - the last update was recently in the past
         let last_update_time = now - Duration::from_secs(1234);
-        let schedule = UpdateCheckSchedule::builder().last_time(last_update_time).build();
+        let schedule = UpdateCheckSchedule::builder().last_update_time(last_update_time).build();
         // Set up the state for this check:
         //  - custom policy config
         let periodic_interval = Duration::from_secs(9999);
@@ -1230,8 +1231,8 @@ mod tests {
         let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
-            .last_time(last_update_time)
-            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .last_update_time(last_update_time)
+            .next_update_time(CheckTiming::builder().time(next_update_time).build())
             .build();
         // Set up the state for this check:
         //  - the time is "now"
@@ -1270,8 +1271,8 @@ mod tests {
         let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST + Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
-            .last_time(last_update_time)
-            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .last_update_time(last_update_time)
+            .next_update_time(CheckTiming::builder().time(next_update_time).build())
             .build();
         // Set up the state for this check:
         //  - the time is "now"
@@ -1301,8 +1302,8 @@ mod tests {
         let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
-            .last_time(last_update_time)
-            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .last_update_time(last_update_time)
+            .next_update_time(CheckTiming::builder().time(next_update_time).build())
             .build();
         // Set up the state for this check:
         //  - the time is "now"
@@ -1337,8 +1338,8 @@ mod tests {
         let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
-            .last_time(last_update_time)
-            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .last_update_time(last_update_time)
+            .next_update_time(CheckTiming::builder().time(next_update_time).build())
             .build();
         let mut policy_engine = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
             .time_source(mock_time.clone())
@@ -1386,8 +1387,8 @@ mod tests {
         let last_update_time = now - Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
-            .last_time(last_update_time)
-            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .last_update_time(last_update_time)
+            .next_update_time(CheckTiming::builder().time(next_update_time).build())
             .build();
         let mut policy_engine = FuchsiaPolicyEngineBuilder::new(PolicyConfig::default())
             .time_source(mock_time)
@@ -1416,8 +1417,8 @@ mod tests {
         let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
-            .last_time(last_update_time)
-            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .last_update_time(last_update_time)
+            .next_update_time(CheckTiming::builder().time(next_update_time).build())
             .build();
         // Set up the state for this check:
         //  - the time is "now"
@@ -1468,8 +1469,8 @@ mod tests {
         let last_update_time = now - PERIODIC_INTERVAL_FOR_TEST - Duration::from_secs(1);
         let next_update_time = last_update_time + PERIODIC_INTERVAL_FOR_TEST;
         let schedule = UpdateCheckSchedule::builder()
-            .last_time(last_update_time)
-            .next_timing(CheckTiming::builder().time(next_update_time).build())
+            .last_update_time(last_update_time)
+            .next_update_time(CheckTiming::builder().time(next_update_time).build())
             .build();
 
         // Execute the policy check
