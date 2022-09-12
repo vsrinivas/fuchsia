@@ -21,8 +21,6 @@
         {
             protocol: [
                 "fuchsia.logger.LogSink",
-                "fuchsia.memorypressure.Provider",
-                "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.scenic.Scenic",

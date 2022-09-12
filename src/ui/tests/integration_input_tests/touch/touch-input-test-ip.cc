@@ -543,8 +543,6 @@ class FlutterInputTestBase : public TouchInputBase<Ts...> {
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
         std::make_pair(kFlutterRealm, kFlutterRealmUrl),
-        std::make_pair(kMemoryPressureProvider, kMemoryPressureProviderUrl),
-        std::make_pair(kNetstack, kNetstackUrl),
     };
   }
 
@@ -570,24 +568,11 @@ class FlutterInputTestBase : public TouchInputBase<Ts...> {
              .targets = {target}},
             {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
              .source = ui_testing::PortableUITest::kTestUIStackRef,
-             .targets = {target}},
-            {.capabilities = {Protocol{fuchsia::memorypressure::Provider::Name_}},
-             .source = ChildRef{kMemoryPressureProvider},
-             .targets = {target}},
-            {.capabilities = {Protocol{fuchsia::posix::socket::Provider::Name_}},
-             .source = ChildRef{kNetstack},
              .targets = {target}}};
   }
 
   static constexpr auto kFlutterRealm = "flutter_realm";
   static constexpr auto kFlutterRealmUrl = "#meta/one-flutter-realm.cm";
-
- private:
-  static constexpr auto kMemoryPressureProvider = "memory_pressure_provider";
-  static constexpr auto kMemoryPressureProviderUrl = "#meta/memory_monitor.cm";
-
-  static constexpr auto kNetstack = "netstack";
-  static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 };
 
 class FlutterInputTestIp : public FlutterInputTestBase<> {};
