@@ -19,7 +19,7 @@ mod pbm;
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()> {
     // If device name is list, list the available virtual devices and return.
-    if Some(String::from("list")) == cmd.device {
+    if cmd.device_list {
         match list_virtual_devices(&cmd).await {
             Ok(devices) => {
                 println!("Valid virtual device specifications are: {:?}", devices);

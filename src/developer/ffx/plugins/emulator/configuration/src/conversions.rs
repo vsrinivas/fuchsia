@@ -148,7 +148,8 @@ mod tests {
             vec![VirtualDevice::V1(device.to_owned())],
             sdk_root.to_owned(),
         );
-        let config = convert_bundle_to_configs(bundle, None).expect("convert_bundle_to_configs");
+        let config = convert_bundle_to_configs(bundle, /*device_name=*/ None)
+            .expect("convert_bundle_to_configs");
         assert_eq!(config.device.audio, device.hardware.audio);
         assert_eq!(config.device.cpu.architecture, device.hardware.cpu.arch);
         assert_eq!(config.device.memory, device.hardware.memory);
@@ -198,8 +199,8 @@ mod tests {
             vec![VirtualDevice::V1(device.to_owned())],
             sdk_root.to_owned(),
         );
-        let mut config =
-            convert_bundle_to_configs(bundle, None).expect("convert_bundle_to_configs again");
+        let mut config = convert_bundle_to_configs(bundle, /*device_name=*/ None)
+            .expect("convert_bundle_to_configs again");
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);

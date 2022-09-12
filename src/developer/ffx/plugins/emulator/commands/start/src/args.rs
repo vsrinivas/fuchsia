@@ -131,9 +131,12 @@ pub struct StartCommand {
 
     /// specify the virtual device specification to use from the product bundle. If no device is
     /// specified then the first device listed in the PBM is used.
-    /// To see a list of the available specifications, use `--device list`.
     #[argh(option)]
     pub device: Option<String>,
+
+    /// print the list of available virtual devices.
+    #[argh(switch)]
+    pub device_list: bool,
 
     /// reuse a persistent emulator's state when starting up. If an emulator with the same name as
     /// this instance has been previously started and then stopped without cleanup, this instance
