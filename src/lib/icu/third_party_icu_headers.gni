@@ -1,0 +1,92 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # The GN files for the ICU library are located in this directory.
+  # Some Fuchsia builds use a different value here.
+  icu_root = "//third_party/icu"
+}
+
+# Generates an include file that includes all needed third_party/icu
+# headers, and presents them as a build target.
+#
+# To use, do the following:
+#
+# - In your BUILD file:
+#
+#   import("//src/lib/icu/third_party_icu_headers.gni")
+#
+#   third_party_icu_headers("some_headers") {
+#     headers = [
+#       "third_party/icu/foo/bar/baz.h",
+#     ]
+#   }
+#
+#   source_set("your_library") {
+#     # ...
+#     deps = [ ":some_headers" ]
+#     # ...
+#   }
+#
+# - In your source file:
+#
+#   #include "your/source/file/directory/some_headers.h"
+#
+# This will produce a file `some_headers.h` in
+#
+#   "${target_gen_dir}/your/source/file/directory/some_headers.h"
+#
+# which consists of only includes of the named headers, but with the initial
+# "third_party/icu" substituted with the content of `$icu_root`. If
+# the value was set to `icu_root = "//other_dir/icu", the resulting file
+# content would be:
+#
+#   #include "other_dir/icu/foo/bar/baz.h"
+#
+# for each header listed in the `headers` parameter.
+#
+# This allows us to place the library `//third_party/icu` into a different
+# directory, in a way that is transparent to the library users, so long as
+# the headers are declared using `third_party_icu_headers`.
+#
+# We use this approach because we must vary the path to the ICU library to
+# account for issues in our build process for some products.  The key variable
+# is $icu_root, which determines where the build system will look for the ICU
+# library. However, since the header files are also included in our source
+# files, and their names vary with the choice of the ICU library location, we
+# must fix up those include paths as well. Since there is no elegant way to do
+# this in source directly, we generate the appropriate headers and include
+# those.
+#
+# Args:
+#
+#    headers: list(target): a list of headers from "third_party/icu" that you
+#             need to include.
+template("third_party_icu_headers") {
+  # icu_root
+  # generate a stub include file
+  # make the include file into a source set.
+  source_set("${target_name}") {
+    forward_variables_from(invoker, [ "headers" ])
+
+    # Writes out the header file contents during the analysis phase.
+    _contents = []
+
+    # "//third_party/icu" --> "third_party/icu"
+    _icu_dir = string_replace(icu_root, "//", "", 1)
+    foreach(_header, headers) {
+      # #include "third_party/icu/blah" --> #include "${icu_root}/blah"
+      _fixed_header_path =
+          string_replace(_header, "third_party/icu", _icu_dir, 1)
+      _contents += [ "#include \"${_fixed_header_path}\"" ]
+    }
+    _header_name = "${target_gen_dir}/${target_name}.h"
+    write_file(_header_name, _contents, "list lines")
+
+    sources = [ _header_name ]
+
+    # This dep will be inherited by all users.
+    public_deps = [ "${icu_root}:icu" ]
+  }
+}
