@@ -10,12 +10,10 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext::{IntoExt as _, NetTypesIpAddressExt};
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack as fnet_stack;
-use fidl_fuchsia_net_stack_ext::{exec_fidl, FidlReturn as _};
 use fidl_fuchsia_netemul as fnetemul;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon as zx;
 
-use anyhow::Context as _;
 use futures::{FutureExt as _, StreamExt as _, TryStreamExt as _};
 use net_declare::{fidl_mac, fidl_subnet, std_ip_v4, std_ip_v6, std_socket_addr};
 use netemul::RealmUdpSocket as _;
@@ -221,8 +219,12 @@ async fn add_del_interface_address_deprecated<N: Netstack>(
     let id = iface.id();
 
     if enable_interface {
-        let () =
-            stack.enable_interface_deprecated(id).await.squash_result().expect("enable interface");
+        // Ethernet Devices start enabled in Netstack3.
+        let expect_enable = N::VERSION != NetstackVersion::Netstack3;
+        assert_eq!(
+            expect_enable,
+            iface.control().enable().await.expect("send enable").expect("enable interface")
+        );
         let () = iface.set_link_up(true).await.expect("bring device up");
         fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
             fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
@@ -542,8 +544,6 @@ async fn add_remove_address_on_loopback<N: Netstack>(name: &str) {
 async fn disable_interface_loopback<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let stack =
-        realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
     let interface_state = realm
         .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
@@ -575,31 +575,16 @@ async fn disable_interface_loopback<N: Netstack>(name: &str) {
         ))) => ()
     );
 
-    match N::VERSION {
-        NetstackVersion::Netstack2 => {
-            let debug = realm
-                .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
-                .expect("connect to protocol");
+    let debug = realm
+        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
+        .expect("connect to protocol");
 
-            let (control, server_end) =
-                fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-                    .expect("create proxy");
-            let () = debug.get_admin(loopback_id, server_end).expect("get admin");
+    let (control, server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
+    let () = debug.get_admin(loopback_id, server_end).expect("get admin");
 
-            let did_disable = control.disable().await.expect("send disable").expect("disable");
-            assert!(did_disable);
-        }
-        NetstackVersion::Netstack3 => {
-            // TODO(https://fxbug.dev/92767): Remove this when N3 implements Control.
-            let () =
-                exec_fidl!(stack.disable_interface_deprecated(loopback_id), "disable interface")
-                    .unwrap();
-        }
-        NetstackVersion::ProdNetstack2 => panic!("unexpectedly got ProdNetstack2 variant"),
-        NetstackVersion::Netstack2WithFastUdp => {
-            panic!("unexpectedly got Netstack2WithFastUdp variant")
-        }
-    }
+    let did_disable = control.disable().await.expect("send disable").expect("disable");
+    assert!(did_disable);
 
     let () = assert_matches::assert_matches!(stream.try_next().await,
         Ok(Some(fidl_fuchsia_net_interfaces::Event::Changed(

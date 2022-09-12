@@ -129,10 +129,14 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         let iface = ep.into_interface_in_realm(&realm).await.expect("add device to stack");
         let id = iface.id();
 
+        // Ethernet Devices start enabled in Netstack3.
+        let expect_enable = N::VERSION != NetstackVersion::Netstack3;
+        assert_eq!(
+            expect_enable,
+            iface.control().enable().await.expect("send enable").expect("enable interface")
+        );
         // TODO(https://fxbug.dev/20989#c5): netstack3 doesn't allow addresses to be added while
         // link is down.
-        let () =
-            stack.enable_interface_deprecated(id).await.squash_result().expect("enable interface");
         let () = iface.set_link_up(true).await.expect("bring device up");
 
         fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(

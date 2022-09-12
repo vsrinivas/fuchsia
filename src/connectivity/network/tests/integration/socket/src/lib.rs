@@ -12,6 +12,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
+use fidl_fuchsia_netemul_network as fnetemul_network;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async::{
@@ -1469,12 +1470,13 @@ async fn join_network<'a, E: netemul::Endpoint, N: Netstack, S: Into<Cow<'a, str
     let interface =
         endpoint.into_interface_in_realm(realm).await.context("failed to add endpoint")?;
     interface.set_link_up(true).await.expect("failed to start endpoint");
-    interface
-        .stack()
-        .enable_interface_deprecated(interface.id())
-        .await
-        .squash_result()
-        .context("failed to enable interface")?;
+    // Ethernet Devices start enabled in Netstack3.
+    let expect_enable = !(E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap
+        && N::VERSION == NetstackVersion::Netstack3);
+    assert_eq!(
+        expect_enable,
+        interface.control().enable().await.expect("send enable").expect("enable interface")
+    );
     // Netstack3 won't add an address to an interface that's offline, so wait
     // for it to come up before proceeding.
     let interface_state = realm
