@@ -441,12 +441,28 @@ impl<T: Resolver> EagerPackageManager<T> {
             .packages
             .get(&pkg_url)
             .ok_or_else(|| CupGetInfoError::UnknownURL(pkg_url.clone()))?;
-        let cup = package.cup.as_ref().ok_or(CupGetInfoError::CupDataNotAvailable)?;
-        let response = parse_omaha_response_from_cup(&cup)?;
-        let (app, _) = find_app_with_matching_url(&response, &pkg_url)
-            .ok_or(CupGetInfoError::CupResponseURLNotFound)?;
-        let version = app.get_manifest_version().ok_or(CupGetInfoError::CupDataMissingVersion)?;
-        let channel = app.cohort.name.clone().ok_or(CupGetInfoError::CupDataMissingChannel)?;
+
+        let (version, channel) = match package.cup.as_ref() {
+            Some(cup) => {
+                let response = parse_omaha_response_from_cup(&cup)?;
+                let (app, _) = find_app_with_matching_url(&response, &pkg_url)
+                    .ok_or(CupGetInfoError::CupResponseURLNotFound)?;
+                (
+                    app.get_manifest_version().ok_or(CupGetInfoError::CupDataMissingVersion)?,
+                    app.cohort.name.clone().ok_or(CupGetInfoError::CupDataMissingChannel)?,
+                )
+            }
+            None => {
+                if package.package_directory.is_none() {
+                    return Err(CupGetInfoError::CupDataNotAvailable);
+                }
+                // If we're using the fallback version of a package (i.e. did not
+                // recover from CUP but there is still a package directory), we're
+                // using the minimum required version of a package rather than the
+                // version present in the CUP response manifest.
+                (package.minimum_required_version.to_string(), "".to_string())
+            }
+        };
         Ok((version, channel))
     }
 }
@@ -1525,6 +1541,36 @@ mod tests {
                 .await,
             Err(CupGetInfoError::CupResponseURLNotFound)
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cup_get_info_fallback() {
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+
+        let cache_packages = CachePackages::from_entries(vec![TEST_PINNED_URL.parse().unwrap()]);
+        let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
+
+        let _handle = fasync::Task::spawn(handle_pkg_cache(pkg_cache_stream)).detach();
+
+        let manager = TestEagerPackageManagerBuilder::default()
+            .config(EagerPackageConfigs {
+                packages: vec![EagerPackageConfig {
+                    url,
+                    executable: true,
+                    public_keys: make_default_public_keys_for_test(),
+                    minimum_required_version: [2, 0, 0, 0].into(),
+                }],
+            })
+            .pkg_cache(pkg_cache)
+            .cache_packages(cache_packages)
+            .build()
+            .await;
+
+        let (version, channel) =
+            manager.cup_get_info(&fpkg::PackageUrl { url: TEST_URL.into() }).await.unwrap();
+
+        assert_eq!(version, "2.0.0.0");
+        assert_eq!(channel, "");
     }
 
     #[fasync::run_singlethreaded(test)]
