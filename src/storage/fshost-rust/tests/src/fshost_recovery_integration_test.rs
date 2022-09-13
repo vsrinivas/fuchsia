@@ -13,6 +13,7 @@ use {
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_fshost as fshost,
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
+    fidl_fuchsia_hardware_block_volume::VolumeMarker,
     fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger,
     fs_management::{filesystem::Filesystem, Fxfs, Minfs},
     fuchsia_component::client::connect_to_protocol_at_path,
@@ -88,7 +89,7 @@ async fn create_hermetic_crypt_service(
     realm
 }
 
-async fn write_data_file_common(fixture: TestFixture) {
+async fn write_data_file_common(fixture: TestFixture, expected_volume_size: u64) {
     const PAYLOAD: &[u8] = b"top secret stuff";
 
     {
@@ -181,16 +182,30 @@ async fn write_data_file_common(fixture: TestFixture) {
     .expect("open_file failed");
     let contents = fuchsia_fs::file::read(&file).await.expect("read failed");
     assert_eq!(&contents[..], PAYLOAD);
+
+    if DATA_FILESYSTEM_FORMAT != "minfs" {
+        let volume = connect_to_protocol_at_path::<VolumeMarker>(&data_path).unwrap();
+        let (status, manager_info, info) = volume.get_volume_info().await.expect("get info failed");
+        assert_eq!(status, zx::Status::OK.into_raw());
+        let manager_info = manager_info.unwrap();
+        let info = info.unwrap();
+        assert_eq!(expected_volume_size, info.partition_slice_count * manager_info.slice_size);
+    }
 }
 
 #[fuchsia::test]
 async fn write_data_file_unformatted() {
     let fixture = TestFixtureBuilder::default().with_ramdisk().build().await;
-    write_data_file_common(fixture).await;
+    // Matches the configured value in //src/storage/fshost/fshost.gni in
+    // default_integration_test_options, which fshost will use when reformatting the volume.
+    const EXPECTED_VOLUME_SIZE: u64 = 117440512;
+    write_data_file_common(fixture, EXPECTED_VOLUME_SIZE).await;
 }
 
 #[fuchsia::test]
 async fn write_data_file_formatted() {
     let fixture = TestFixtureBuilder::default().format_data().with_ramdisk().build().await;
-    write_data_file_common(fixture).await;
+    // Matches the value we configured the volume to in TestFixture.
+    const EXPECTED_VOLUME_SIZE: u64 = 16 * 1024 * 1024;
+    write_data_file_common(fixture, EXPECTED_VOLUME_SIZE).await;
 }

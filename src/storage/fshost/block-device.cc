@@ -60,6 +60,7 @@
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
 #include "src/storage/fshost/fxfs.h"
+#include "src/storage/fshost/utils.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
@@ -966,112 +967,17 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
 
   fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(
       device.channel().borrow());
-
-  auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
-  if (query_result.status() != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to query FVM information: "
-                   << zx_status_get_string(query_result.status());
-    return query_result.status();
+  uint64_t target_bytes = device_config_->data_max_bytes();
+  if (format == fs_management::kDiskFormatF2fs) {
+    // f2fs always requires at least a certain size.
+    target_bytes = std::max(target_bytes, kDefaultF2fsMinBytes);
   }
-
-  if (query_result.value().status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to query FVM information: "
-                   << zx_status_get_string(query_result.value().status);
-    return query_result.value().status;
-  }
-
-  const uint64_t slice_size = query_result.value().manager->slice_size;
-
-  // Free all the existing slices.
-  uint64_t slice = 1;
-  // The -1 here is because of zxcrypt; zxcrypt will offset all slices by 1 to account for its
-  // header.  zxcrypt isn't present in all cases, but that won't matter since minfs shouldn't be
-  // using a slice so high.
-  while (slice < fvm::kMaxVSlices - 1) {
-    auto query_result = fidl::WireCall(volume_client)
-                            ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(&slice, 1));
-    if (query_result.status() != ZX_OK) {
-      FX_LOGS(ERROR) << "Unable to query slices (slice: " << slice << ", max: " << fvm::kMaxVSlices
-                     << "): " << zx_status_get_string(query_result.status());
-      return query_result.status();
-    }
-
-    if (query_result.value().status != ZX_OK) {
-      FX_LOGS(ERROR) << "Unable to query slices (slice: " << slice << ", max: " << fvm::kMaxVSlices
-                     << "): " << zx_status_get_string(query_result.value().status);
-      return query_result.value().status;
-    }
-
-    if (query_result.value().response_count == 0) {
-      break;
-    }
-
-    for (uint64_t i = 0; i < query_result.value().response_count; ++i) {
-      if (query_result.value().response[i].allocated) {
-        auto shrink_result =
-            fidl::WireCall(volume_client)->Shrink(slice, query_result.value().response[i].count);
-        if (zx_status_t status =
-                shrink_result.status() == ZX_OK ? shrink_result->status : shrink_result.status();
-            status != ZX_OK) {
-          FX_LOGS(ERROR) << "Unable to shrink partition: " << zx_status_get_string(status);
-          return status;
-        }
-      }
-      slice += query_result.value().response[i].count;
-    }
-  }
-
-  uint64_t slice_count = device_config_->data_max_bytes() / slice_size;
-
-  if (slice_count == 0) {
-    auto query_result = fidl::WireCall(volume_client)->GetVolumeInfo();
-    if (query_result.status() != ZX_OK)
-      return query_result.status();
-    if (query_result.value().status != ZX_OK)
-      return query_result.value().status;
-    // If a size is not specified, limit the size of the data partition so as not to use up all
-    // FVM's space (thus limiting blobfs growth).  10% or 24MiB (whichever is larger) should be
-    // enough.
-    // Due to reserved and over-provisoned area of f2fs, it needs volume size at least 100 MiB.
-    const uint64_t slices_available = query_result.value().manager->slice_count -
-                                      query_result.value().manager->assigned_slice_count;
-    const uint64_t min_slices = format == fs_management::kDiskFormatF2fs
-                                    ? fbl::round_up(kDefaultF2fsMinBytes, slice_size) / slice_size
-                                    : 2;
-    if (slices_available < min_slices) {
-      FX_LOGS(ERROR) << "Not enough space for " << DiskFormatString(format) << " partition";
-      return ZX_ERR_NO_SPACE;
-    }
-    uint64_t slice_target = kDefaultMinfsMaxBytes;
-    if (format == fs_management::kDiskFormatF2fs) {
-      slice_target = kDefaultF2fsMinBytes;
-    }
-    if (slices_available * slice_size < slice_target) {
-      FX_LOGS(WARNING) << "Only " << slices_available << " slices available for "
-                       << DiskFormatString(format)
-                       << " partition; some functionality may be missing.";
-    }
-    slice_count = std::min(slices_available,
-                           std::max<uint64_t>(query_result.value().manager->slice_count / 10,
-                                              slice_target / slice_size));
-  }
-  if (topological_path_.find("zxcrypt") != std::string::npos) {
-    // Account for the slice zxcrypt uses.
-    --slice_count;
-  }
-  FX_LOGS(INFO) << "Allocating " << slice_count << " slices (" << slice_count * slice_size
-                << " bytes) for " << DiskFormatString(format) << " partition";
-
-  auto extend_result =
-      fidl::WireCall(volume_client)
-          ->Extend(1,
-                   slice_count - 1);  // Another -1 here because we get the first slice for free.
-  if (zx_status_t status =
-          extend_result.status() == ZX_OK ? extend_result->status : extend_result.status();
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Unable to extend partition (slice_count: " << slice_count
-                   << "): " << zx_status_get_string(status);
-    return status;
+  const bool inside_zxcrypt = (topological_path_.find("zxcrypt") != std::string::npos);
+  FX_LOGS(INFO) << "Resizing data volume, target = " << target_bytes << " bytes";
+  auto result = ResizeVolume(volume_client, target_bytes, inside_zxcrypt);
+  if (result.is_error()) {
+    FX_PLOGS(ERROR, result.status_value()) << "Failed to resize data volume";
+    return result.status_value();
   }
 
   if (format == fs_management::kDiskFormatFxfs) {

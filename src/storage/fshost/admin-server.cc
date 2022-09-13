@@ -32,6 +32,7 @@
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fxfs.h"
+#include "src/storage/fshost/utils.h"
 
 namespace fshost {
 
@@ -223,6 +224,7 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
   FX_LOGS(INFO) << "Using data path " << GetTopologicalPath(partition->get());
 
   auto detected_format = fs_management::DetectDiskFormat(partition->get());
+  bool inside_zxcrypt = false;
   if (format != fs_management::kDiskFormatFxfs && !config_.no_zxcrypt()) {
     // For non-Fxfs configurations, we expect zxcrypt to be present and have already been formatted
     // (if needed) by the block watcher.
@@ -239,6 +241,7 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
       completer.ReplyError(partition.status_value());
       return;
     }
+    inside_zxcrypt = true;
   }
   std::string partition_path = GetTopologicalPath(partition->get());
   FX_LOGS(INFO) << "Using data partition at " << partition_path << ", has format "
@@ -248,6 +251,29 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
   fidl::ClientEnd<fuchsia_io::Directory> data_root;
   if (detected_format != format) {
     FX_LOGS(INFO) << "Data partition is not in expected format; reformatting";
+    if (format != fs_management::kDiskFormatMinfs) {
+      // Minfs is FVM-aware and will grow as needed, but other filesystems require a pre-allocation.
+      zx::channel block_device;
+      if (zx_status_t status =
+              fdio_fd_clone(partition->get(), block_device.reset_and_get_address());
+          status != ZX_OK) {
+        completer.ReplyError(status);
+        return;
+      }
+      fidl::ClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(std::move(block_device));
+      uint64_t target_size = config_.data_max_bytes();
+      if (format == fs_management::kDiskFormatF2fs) {
+        // f2fs always requires at least a certain size.
+        target_size = std::max(target_size, kDefaultF2fsMinBytes);
+      }
+      FX_LOGS(INFO) << "Resizing data volume, target = " << target_size << " bytes";
+      if (zx::status status = ResizeVolume(volume_client, target_size, inside_zxcrypt);
+          status.is_error()) {
+        FX_PLOGS(ERROR, status.status_value()) << "Failed to resize volume";
+        completer.ReplyError(status.status_value());
+        return;
+      }
+    }
     if (format == fs_management::kDiskFormatFxfs) {
       zx::channel block_device;
       if (zx_status_t status =

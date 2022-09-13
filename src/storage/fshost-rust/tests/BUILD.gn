@@ -140,6 +140,7 @@ fshost_integration_test("fshost-cpp-integration-test-fxfs-recovery") {
   source_root = "src/fshost_recovery_integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:either",
   ]
@@ -152,6 +153,7 @@ fshost_integration_test("fshost-cpp-integration-test-minfs-recovery") {
   source_root = "src/fshost_recovery_integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//src/lib/fuchsia-fs",
     "//third_party/rust_crates:either",
   ]
