@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections::hash_map::DefaultHasher;
 use std::convert::TryFrom;
+use std::hash::{Hash, Hasher};
 
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
@@ -90,7 +92,35 @@ impl TryFrom<AudioRequest> for Job {
                 }
             }
             AudioRequest::Watch { responder } => {
-                Ok(watch::Work::new_job(SettingType::Audio, responder))
+                let mut hasher = DefaultHasher::new();
+                "audio_watch".hash(&mut hasher);
+                // Because we increment the modification counters stored in AudioInfo for
+                // every change, clients would be notified for every change, even if the
+                // streams are identical. A custom change function is used here so only
+                // stream changes trigger the Watch notification.
+                Ok(watch::Work::new_job_with_change_function(
+                    SettingType::Audio,
+                    responder,
+                    watch::ChangeFunction::new(
+                        hasher.finish(),
+                        Box::new(move |old: &SettingInfo, new: &SettingInfo| match (old, new) {
+                            (SettingInfo::Audio(old_info), SettingInfo::Audio(new_info)) => {
+                                let mut old_streams = old_info.streams.iter();
+                                let new_streams = new_info.streams.iter();
+                                for new_stream in new_streams {
+                                    let old_stream = old_streams
+                                        .find(|stream| stream.stream_type == new_stream.stream_type)
+                                        .expect("stream type should be found in existing streams");
+                                    if old_stream != new_stream {
+                                        return true;
+                                    }
+                                }
+                                false
+                            }
+                            _ => false,
+                        }),
+                    ),
+                ))
             }
             _ => {
                 fx_log_warn!("Received a call to an unsupported API: {:?}", item);

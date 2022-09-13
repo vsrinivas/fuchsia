@@ -215,6 +215,36 @@ async fn test_consecutive_volume_changes() {
     verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
 }
 
+// Verifies that clients aren't notified for duplicate audio changes.
+#[fuchsia::test]
+async fn test_deduped_volume_changes() {
+    let (audio_request_sender, _audio_request_receiver) =
+        futures::channel::mpsc::channel::<AudioCoreRequest>(1);
+
+    let audio_test = AudioTest::create();
+    let instance = audio_test
+        .create_realm(audio_request_sender, vec![AudioRenderUsage::Media])
+        .await
+        .expect("setting up test realm");
+
+    {
+        let set_client = AudioTest::connect_to_audio_marker(&instance);
+
+        // Get the initial value.
+        let _ = set_client.watch().await;
+        let fut = set_client.watch();
+
+        // Make a second identical request. This should do nothing.
+        set_volume(&set_client, vec![DEFAULT_MEDIA_STREAM_SETTINGS]).await;
+
+        // Make a third, different request. This should show up in the watch.
+        set_volume(&set_client, vec![CHANGED_MEDIA_STREAM_SETTINGS_2]).await;
+
+        let settings = fut.await.expect("watch completed");
+        verify_audio_stream(&settings, CHANGED_MEDIA_STREAM_SETTINGS_2);
+    }
+}
+
 // Verifies that changing one stream's volume does not affect the volume of other streams.
 #[fuchsia::test]
 async fn test_volume_not_overwritten() {
