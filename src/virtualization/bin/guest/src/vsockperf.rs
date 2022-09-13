@@ -476,7 +476,7 @@ pub async fn run_micro_benchmark(guest_type: arguments::GuestType) -> Result<(),
         .get_console()
         .await
         .map_err(|err| anyhow!("failed to get a get_console response: {}", err))?
-        .map_err(|err| anyhow!("get_console failed with: {}", zx::Status::from_raw(err)))?;
+        .map_err(|err| anyhow!("get_console failed with: {:?}", err))?;
 
     // Start the micro benchmark utility on the guest which will begin by opening the necessary
     // connections.

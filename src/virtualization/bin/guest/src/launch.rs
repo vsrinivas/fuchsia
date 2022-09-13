@@ -4,8 +4,7 @@
 use {
     crate::arguments,
     crate::services,
-    anyhow::anyhow,
-    anyhow::{Context, Error},
+    anyhow::{anyhow, Context, Error},
     fidl_fuchsia_virtualization::{GuestConfig, GuestMarker, GuestProxy},
     fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
 };
@@ -64,16 +63,9 @@ impl GuestLaunch {
     pub async fn run(&self) -> Result<(), Error> {
         // Set up serial output (grab a zx_socket)
         // Returns a QueryResponseFuture containing ANOTHER future
-        let guest_serial_response = self
-            .guest
-            .get_serial()
-            .await?
-            .map_err(|status| anyhow!(zx_status::Status::from_raw(status)))?;
-        let guest_console_response = self
-            .guest
-            .get_console()
-            .await?
-            .map_err(|status| anyhow!(zx_status::Status::from_raw(status)))?;
+        let guest_serial_response = self.guest.get_serial().await?;
+        let guest_console_response =
+            self.guest.get_console().await?.map_err(|err| anyhow!(format!("{:?}", err)))?;
 
         // Turn this stream socket into a a rust stream of data
         let guest_serial_sock = fasync::Socket::from_socket(guest_serial_response)?;
@@ -108,36 +100,12 @@ impl GuestLaunch {
 mod test {
     use {
         super::*,
-        assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
+        fidl_fuchsia_virtualization::GuestError,
         fuchsia_zircon::{self as zx},
         futures::future::join,
         futures::StreamExt,
     };
-
-    #[fasync::run_until_stalled(test)]
-    async fn launch_invalid_serial_returns_error() {
-        let (guest_proxy, mut guest_stream) = create_proxy_and_stream::<GuestMarker>().unwrap();
-
-        let guest = GuestLaunch { guest: guest_proxy };
-
-        let server = async move {
-            let serial_responder = guest_stream
-                .next()
-                .await
-                .expect("Failed to read from stream")
-                .expect("Failed to parse request")
-                .into_get_serial()
-                .expect("Unexpected call to Guest Proxy");
-            serial_responder
-                .send(&mut Err(zx_status::Status::INTERNAL.into_raw()))
-                .expect("Failed to send request to proxy");
-        };
-
-        let client = guest.run();
-        let (_, client_res) = join(server, client).await;
-        assert_matches!(client_res.unwrap_err().downcast(), Ok(zx_status::Status::INTERNAL));
-    }
 
     #[fasync::run_until_stalled(test)]
     async fn launch_invalid_console_returns_error() {
@@ -155,9 +123,7 @@ mod test {
                 .expect("Failed to parse request")
                 .into_get_serial()
                 .expect("Unexpected call to Guest Proxy");
-            serial_responder
-                .send(&mut Ok(serial_launch_sock))
-                .expect("Failed to send request to proxy");
+            serial_responder.send(serial_launch_sock).expect("Failed to send request to proxy");
 
             let console_responder = guest_stream
                 .next()
@@ -167,12 +133,12 @@ mod test {
                 .into_get_console()
                 .expect("Unexpected call to Guest Proxy");
             console_responder
-                .send(&mut Err(zx_status::Status::INTERNAL.into_raw()))
+                .send(&mut Err(GuestError::DeviceNotPresent))
                 .expect("Failed to send request to proxy");
         };
 
         let client = guest.run();
         let (_, client_res) = join(server, client).await;
-        assert_matches!(client_res.unwrap_err().downcast(), Ok(zx_status::Status::INTERNAL));
+        assert!(client_res.is_err());
     }
 }

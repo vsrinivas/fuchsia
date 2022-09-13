@@ -522,7 +522,7 @@ fitx::result<GuestError> Vmm::AddPublicServices(sys::ComponentContext* context) 
 
 void Vmm::GetSerial(GetSerialCallback callback) {
   FX_CHECK(client_serial_socket_.is_valid());
-  callback(fpromise::ok(DuplicateSocket(client_serial_socket_)));
+  callback(DuplicateSocket(client_serial_socket_));
 }
 
 void Vmm::GetConsole(GetConsoleCallback callback) {
@@ -530,9 +530,8 @@ void Vmm::GetConsole(GetConsoleCallback callback) {
     FX_CHECK(client_serial_socket_.is_valid());
     callback(fpromise::ok(DuplicateSocket(client_console_socket_)));
   } else {
-    // TODO(fxbug.dev/104989): Convert to GuestError, return DEVICE_NOT_PRESENT.
     FX_LOGS(WARNING) << "Attempted to get console socket, but the console device is not present";
-    callback(fpromise::error(ZX_ERR_UNAVAILABLE));
+    callback(fpromise::error(GuestError::DEVICE_NOT_PRESENT));
   }
 }
 

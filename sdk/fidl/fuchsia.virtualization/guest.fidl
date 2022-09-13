@@ -74,10 +74,10 @@ protocol Guest {
     /// are determined by each guest, but will typically be a read/write socket
     /// with a shell.
     ///
-    /// Returns ZX_ERR_UNAVAILABLE if the guest has no configured console.
+    /// Returns error DEVICE_NOT_PRESENT if the guest was started without a console device.
     GetConsole() -> (resource struct {
         socket zx.handle:SOCKET;
-    }) error zx.status;
+    }) error GuestError;
 
     /// Get the socket for low-level guest debug logs.
     ///
@@ -86,7 +86,7 @@ protocol Guest {
     /// with the guest kernel's serial logs.
     GetSerial() -> (resource struct {
         socket zx.handle:SOCKET;
-    }) error zx.status;
+    });
 
     /// Get the vsock endpoint for the guest.
     ///
@@ -95,14 +95,14 @@ protocol Guest {
     /// starts so that they are immediately available, set them via the guest config instead of
     /// using this endpoint.
     ///
-    /// Returns error VSOCK_NOT_PRESENT if the guest was started without a vsock device.
+    /// Returns error DEVICE_NOT_PRESENT if the guest was started without a vsock device.
     GetHostVsockEndpoint(resource struct {
         endpoint server_end:HostVsockEndpoint;
     }) -> (struct {}) error GuestError;
 
     /// Get the balloon controller endpoint for the guest.
     ///
-    /// Returns error BALLOON_NOT_PRESENT if the guest was started without a balloon device.
+    /// Returns error DEVICE_NOT_PRESENT if the guest was started without a balloon device.
     GetBalloonController(resource struct {
         controller server_end:BalloonController;
     }) -> (struct {}) error GuestError;

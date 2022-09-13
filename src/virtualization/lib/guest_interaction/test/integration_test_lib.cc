@@ -146,7 +146,8 @@ void GuestInteractionTest::SetUp() {
       break;
     }
     case fuchsia::virtualization::Guest_GetConsole_Result::Tag::kErr:
-      FAIL() << zx_status_get_string(result.err());
+      FAIL() << "fuchsia.virtualization/Guest.GetConsole error: "
+             << static_cast<int32_t>(result.err());
     case fuchsia::virtualization::Guest_GetConsole_Result::Tag::Invalid:
       FAIL() << "fuchsia.virtualization/Guest.GetConsole: invalid FIDL tag";
   }

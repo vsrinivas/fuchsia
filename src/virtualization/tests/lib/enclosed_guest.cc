@@ -330,11 +330,10 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
 
   // Connect to guest serial, and log it to the logger.
   logger.Start("Connecting to guest serial", zx::sec(10));
-  std::optional<fuchsia::virtualization::Guest_GetSerial_Result> get_serial_result;
+  std::optional<zx::socket> get_serial_result;
 
-  guest_->GetSerial([&get_serial_result](fuchsia::virtualization::Guest_GetSerial_Result result) {
-    get_serial_result = std::move(result);
-  });
+  guest_->GetSerial(
+      [&get_serial_result](zx::socket socket) { get_serial_result = std::move(socket); });
 
   bool success = RunLoopUntil(
       [&guest_error, &get_serial_result] {
@@ -350,12 +349,7 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
                    << zx_status_get_string(guest_error.value());
     return guest_error.value();
   }
-
-  if (get_serial_result->is_err()) {
-    FX_PLOGS(ERROR, get_serial_result->err()) << "Failed to connect to guest's serial";
-    return get_serial_result->err();
-  }
-  serial_logger_.emplace(&Logger::Get(), std::move(get_serial_result->response().socket));
+  serial_logger_.emplace(&Logger::Get(), std::move(get_serial_result.value()));
 
   // Connect to guest console.
   logger.Start("Connecting to guest console", zx::sec(10));
@@ -379,8 +373,9 @@ zx_status_t EnclosedGuest::LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> 
     return guest_error.value();
   }
   if (get_console_result->is_err()) {
-    FX_PLOGS(ERROR, get_console_result->err()) << "Failed to open guest console";
-    return get_console_result->err();
+    FX_LOGS(ERROR) << "Failed to open guest console"
+                   << static_cast<int32_t>(get_console_result->err());
+    return ZX_ERR_INTERNAL;
   }
   console_.emplace(std::make_unique<ZxSocket>(std::move(get_console_result->response().socket)));
 
