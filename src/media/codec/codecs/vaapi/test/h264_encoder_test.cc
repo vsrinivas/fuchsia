@@ -57,6 +57,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
     buffer_collection.settings.image_format_constraints =
         output_constraints.image_format_constraints.at(0);
+    buffer_collection.buffer_count = output_constraints.min_buffer_count_for_camping;
     codec_adapter_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
     codec_adapter_->CoreCodecMidStreamOutputBufferReConfigFinish();
   }

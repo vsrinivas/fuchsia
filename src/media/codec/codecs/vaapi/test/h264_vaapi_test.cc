@@ -147,6 +147,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     buffer_collection.settings.image_format_constraints =
         output_constraints.image_format_constraints.at(0);
     buffer_collection.settings.has_image_format_constraints = true;
+    buffer_collection.buffer_count = output_constraints.min_buffer_count_for_camping;
     EXPECT_FALSE(
         buffer_collection.settings.image_format_constraints.pixel_format.has_format_modifier);
     codec_adapter_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);

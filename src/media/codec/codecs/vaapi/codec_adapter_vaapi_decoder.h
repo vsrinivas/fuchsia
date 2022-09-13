@@ -82,6 +82,12 @@ class SurfaceBufferManager {
   // constructed objects as their return values.
   virtual void StopAllWaits() = 0;
 
+  // Given the new picture size, return the dimensions of the surface needed to hold the new picture
+  // size. This function will use historic data of the picture size, meaning that if a surface size
+  // can not decrease, due to Intel media driver requirements, this function will take that into
+  // consideration when returning a required surface size.
+  virtual gfx::Size GetRequiredSurfaceSize(const gfx::Size& picture_size) = 0;
+
   // Updates the picture size of the current stream. If the surfaces that are currently under
   // management are too small to handle the new picture size, OnSurfaceGenerationUpdatedLocked()
   // will be called to generate new surfaces that will be able to hold the new picture size.
@@ -283,6 +289,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
 
   void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override {
     buffer_settings_[port] = std::nullopt;
+    buffer_counts_[port] = std::nullopt;
+
     if (port != kOutputPort) {
       // We don't do anything with input buffers.
       return;
@@ -445,14 +453,20 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             // here (via a-priori knowledge of the potential stream dimensions), an
             // initiator is free to do so.
             //
-            // Before the client has picked a format_modifier, we use the picture size of the first
-            // frame as our required width and height. Once the client has picked a format_modifier,
-            // surfaces are constructed and their size must not shrink otherwise we will encounter
-            // decoding errors. If new constraints are requested, we must use the DBP surface size
-            // as our required width and height to ensure this condition is met.
-            gfx::Size required_size = static_cast<bool>(surface_buffer_manager_)
-                                          ? surface_buffer_manager_->GetDPBSurfaceSize()
-                                          : media_decoder_->GetPicSize();
+            // When sending constraints the first time, |surface_buffer_manager_| will not be
+            // constructed since we have not determined a format modifier yet until the first time
+            // CoreCodecMidStreamOutputBufferReConfigFinish() is called. Because of this we have not
+            // picked any surface size and we will just advertise the aligned picture_size of the
+            // first frame. Once a format modifier is selected, |surface_buffer_manager_| will be
+            // constructed along with the DPB surfaces. Once these surfaces are constructed, we can
+            // not allow the surface size to become smaller than the current DPB size, and therefore
+            // will have get the surface size using GetRequiredSurfaceSize() for the current coded
+            // picture size to ensure this condition is met.
+            gfx::Size pic_size = media_decoder_->GetPicSize();
+            gfx::Size required_size =
+                static_cast<bool>(surface_buffer_manager_)
+                    ? surface_buffer_manager_->GetRequiredSurfaceSize(pic_size)
+                    : pic_size;
             constraints.required_min_coded_width = required_size.width();
             constraints.required_max_coded_width = required_size.width();
             constraints.required_min_coded_height = required_size.height();
@@ -502,6 +516,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       CodecPort port,
       const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) override {
     buffer_settings_[port] = buffer_collection_info.settings;
+    buffer_counts_[port] = buffer_collection_info.buffer_count;
 
     if (port == CodecPort::kOutputPort) {
       ZX_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
@@ -700,14 +715,15 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   AvccProcessor avcc_processor_;
 
   std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
+  std::optional<uint32_t> buffer_counts_[kPortCount];
 
   // Initially this value is std::nullopt meaning that there has been no format modifier set by the
-  // client. When no format modifier has been set, this codec will advertise all available format
-  // modifiers for the given codec via CoreCodecGetBufferCollectionConstraints(). Once the client
-  // sets a format modifier, it can not be changed. Any future calls to
-  // CoreCodecGetBufferCollectionConstraints() will only advertise the format modifier selected by
-  // the client since the format modifier can not be changed during a mid stream output buffer
-  // reconfiguration or at any other part in the codec's lifecycle.
+  // client. When no format modifier has been set, this codec will advertise all available
+  // format modifiers for the given codec via CoreCodecGetBufferCollectionConstraints(). Once
+  // the client sets a format modifier, it can not be changed. Any future calls to
+  // CoreCodecGetBufferCollectionConstraints() will only advertise the format modifier selected
+  // by the client since the format modifier can not be changed during a mid stream output
+  // buffer reconfiguration or at any other part in the codec's lifecycle.
   std::optional<uint64_t> output_buffer_format_modifier_{};
 
   // Since CoreCodecInit() is called after SetDriverDiagnostics() we need to save a pointer to the

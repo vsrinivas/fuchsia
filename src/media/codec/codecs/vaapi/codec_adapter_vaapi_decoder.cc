@@ -321,7 +321,31 @@ class LinearBufferManager : public SurfaceBufferManager {
 
   void StopAllWaits() override { output_buffer_pool_.StopAllWaits(); }
 
+  gfx::Size GetRequiredSurfaceSize(const gfx::Size& picture_size) override {
+    std::lock_guard<std::mutex> guard(surface_lock_);
+    return GetRequiredSurfaceSizeLocked(picture_size);
+  }
+
  protected:
+  gfx::Size GetRequiredSurfaceSizeLocked(const gfx::Size& picture_size) FXL_REQUIRE(surface_lock_) {
+    // Given the new picture size and the current surface size, create a surface size that will
+    // allow us to hold decoded picture without shrinking the dimensions of the current DPB surface.
+    // Since media-driver does not allow the surfaces to become smaller, ensure that the surface
+    // dimensions are always at least equal to what they were before this function call.
+    uint32_t unaligned_surface_width =
+        safemath::checked_cast<uint32_t>(std::max(picture_size.width(), dpb_surface_size_.width()));
+    uint32_t unaligned_surface_height = safemath::checked_cast<uint32_t>(
+        std::max(picture_size.height(), dpb_surface_size_.height()));
+
+    uint32_t aligned_surface_width = fbl::round_up(
+        unaligned_surface_width, CodecAdapterVaApiDecoder::kLinearSurfaceWidthAlignment);
+    uint32_t aligned_surface_height = fbl::round_up(
+        unaligned_surface_height, CodecAdapterVaApiDecoder::kLinearSurfaceHeightAlignment);
+
+    return {safemath::checked_cast<int>(aligned_surface_width),
+            safemath::checked_cast<int>(aligned_surface_height)};
+  }
+
   void OnSurfaceGenerationUpdatedLocked(size_t num_of_surfaces)
       FXL_REQUIRE(surface_lock_) override {
     // Clear all existing DPB surfaces that are not currently allocated to a reference frame. Any
@@ -334,15 +358,7 @@ class LinearBufferManager : public SurfaceBufferManager {
     // allow us to hold decoded picture without shrinking the dimensions of the current DPB surface.
     // Since media-driver does not allow the surfaces to become smaller, ensure that the surface
     // dimensions are always at least equal to what they were before this function call.
-    int new_surface_width = std::max(coded_picture_size_.width(), dpb_surface_size_.width());
-    int new_surface_height = std::max(coded_picture_size_.height(), dpb_surface_size_.height());
-
-    dpb_surface_size_.set_width(
-        static_cast<int>(fbl::round_up(static_cast<uint32_t>(new_surface_width),
-                                       CodecAdapterVaApiDecoder::kLinearSurfaceWidthAlignment)));
-    dpb_surface_size_.set_height(
-        static_cast<int>(fbl::round_up(static_cast<uint32_t>(new_surface_height),
-                                       CodecAdapterVaApiDecoder::kLinearSurfaceHeightAlignment)));
+    dpb_surface_size_ = GetRequiredSurfaceSizeLocked(coded_picture_size_);
 
     // Create the new number for requested DBP surfaces at the picture size.
     //
@@ -630,7 +646,31 @@ class TiledBufferManager : public SurfaceBufferManager {
 
   void StopAllWaits() override { output_buffer_pool_.StopAllWaits(); }
 
+  gfx::Size GetRequiredSurfaceSize(const gfx::Size& picture_size) override {
+    std::lock_guard<std::mutex> guard(surface_lock_);
+    return GetRequiredSurfaceSizeLocked(picture_size);
+  }
+
  protected:
+  gfx::Size GetRequiredSurfaceSizeLocked(const gfx::Size& picture_size) FXL_REQUIRE(surface_lock_) {
+    // Given the new picture size and the current surface size, create a surface size that will
+    // allow us to hold decoded picture without shrinking the dimensions of the current DPB surface.
+    // Since media-driver does not allow the surfaces to become smaller, ensure that the surface
+    // dimensions are always at least equal to what they were before this function call.
+    uint32_t unaligned_surface_width =
+        safemath::checked_cast<uint32_t>(std::max(picture_size.width(), dpb_surface_size_.width()));
+    uint32_t unaligned_surface_height = safemath::checked_cast<uint32_t>(
+        std::max(picture_size.height(), dpb_surface_size_.height()));
+
+    uint32_t aligned_surface_width = fbl::round_up(
+        unaligned_surface_width, CodecAdapterVaApiDecoder::kTileSurfaceWidthAlignment);
+    uint32_t aligned_surface_height = fbl::round_up(
+        unaligned_surface_height, CodecAdapterVaApiDecoder::kTileSurfaceHeightAlignment);
+
+    return {safemath::checked_cast<int>(aligned_surface_width),
+            safemath::checked_cast<int>(aligned_surface_height)};
+  }
+
   void OnSurfaceGenerationUpdatedLocked(size_t num_of_surfaces)
       FXL_REQUIRE(surface_lock_) override {
     // This will call vaDestroySurface on all surfaces held by this data structure. Don't need to
@@ -851,23 +891,6 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
         mid_stream_output_buffer_reconfig_finish_ = false;
       }
 
-      // When triggered the first time, |surface_buffer_manager_| will not be constructed since we
-      // have not determined a format modifier yet until the first time
-      // CoreCodecMidStreamOutputBufferReConfigFinish() is called. Because of this we have not
-      // picked any surface size and we will just advertise the aligned picture_size of the first
-      // frame. Once a format modifier is selected, |surface_buffer_manager_| will be constructed
-      // along with the DPB surfaces. Once these surfaces are constructed, we can not allow the
-      // surface size to become smaller than the current DPB size, and therefore will have to update
-      // the picture size before calling onCoreCodecMidStreamOutputConstraintsChange() so that we
-      // can send constraints that reflect the size of the current DPB.
-      bool first_mid_stream_call = !static_cast<bool>(surface_buffer_manager_);
-      gfx::Size pic_size = media_decoder_->GetPicSize();
-
-      if (!first_mid_stream_call) {
-        surface_buffer_manager_->UpdatePictureSize(pic_size,
-                                                   media_decoder_->GetRequiredNumOfPictures());
-      }
-
       // Trigger a mid stream output constraints change
       // TODO(fxbug.dev/102737): We always request a output reconfiguration. This may or may not
       // be needed.
@@ -883,6 +906,8 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
       if (!output_re_config_required) {
         events_->onCoreCodecOutputFormatChange();
       }
+
+      gfx::Size pic_size = media_decoder_->GetPicSize();
 
       if (!context_id_) {
         // TODO(stefanbossbaly): Currently is it unknown why vaCreateContext needs the picture_size.
@@ -923,15 +948,15 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
         }
       }
 
-      // If this is the first frame, we now know what format modifier the sysmem participants have
-      // selected and |surface_buffer_manager_| is now constructed. Inform |surface_buffer_manager_|
-      // of what the current picture size.
-      //
-      // TODO(fxbug.dev/108778): If sysmem returns more buffers than required, use them.
-      if (first_mid_stream_call) {
-        surface_buffer_manager_->UpdatePictureSize(pic_size,
-                                                   media_decoder_->GetRequiredNumOfPictures());
-      }
+      // Inform |surface_buffer_manager_| of what the current picture size. It is also possible for
+      // the participants of sysmem to specify more than the min buffer count required by the
+      // decoder, so use the buffer_count returned for the output buffer collection.
+      ZX_ASSERT(buffer_counts_[kOutputPort]);
+      ZX_DEBUG_ASSERT_MSG(
+          buffer_counts_[kOutputPort].value() >= media_decoder_->GetRequiredNumOfPictures(),
+          "buffer_count (%u) < Required Number of Pictures (%zu)",
+          buffer_counts_[kOutputPort].value(), media_decoder_->GetRequiredNumOfPictures());
+      surface_buffer_manager_->UpdatePictureSize(pic_size, buffer_counts_[kOutputPort].value());
 
       TRACE_INSTANT("codec_runner", "Configuration Change", TRACE_SCOPE_PROCESS, "pic_width",
                     TA_INT32(pic_size.width()), "pic_height", TA_INT32(pic_size.height()));

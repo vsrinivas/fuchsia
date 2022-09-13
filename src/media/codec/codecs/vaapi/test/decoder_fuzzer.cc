@@ -113,6 +113,7 @@ void VaapiFuzzerTestFixture::CodecAndStreamInit(std::string mime_type) {
   // Set the codec output format to either linear or tiled depending on the fuzzer
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
   buffer_collection.settings.has_image_format_constraints = true;
+  buffer_collection.buffer_count = output_constraints.min_buffer_count_for_camping;
 
   switch (output_image_format_) {
     case ImageFormat::kLinear: {
