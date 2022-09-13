@@ -82,7 +82,7 @@ func ConstType(c zither.Const) string {
 	case zither.TypeKindBool, zither.TypeKindInteger, zither.TypeKindString:
 		return c.Type
 	case zither.TypeKindEnum, zither.TypeKindBits:
-		return fidlgen.MustReadName(c.Type).DeclarationName()
+		return zither.UpperCamelCase(c.Element.Decl)
 	default:
 		panic(fmt.Sprintf("%s has unknown constant kind: %s", c.Name, c.Type))
 	}
@@ -126,7 +126,7 @@ func structMemberType(desc zither.TypeDescriptor) string {
 		return desc.Type
 	case zither.TypeKindEnum, zither.TypeKindBits, zither.TypeKindStruct:
 		layout, _ := fidlgen.MustReadName(desc.Type).SplitMember()
-		return layout.DeclarationName()
+		return fidlgen.ToUpperCamelCase(layout.DeclarationName())
 	case zither.TypeKindArray:
 		return fmt.Sprintf("[%d]", *desc.ElementCount) + structMemberType(*desc.ElementType)
 	default:

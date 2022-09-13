@@ -28,7 +28,7 @@ func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("AsmTemplates", templates, formatter, template.FuncMap{
 		"MemberName":               MemberName,
 		"HeaderGuard":              c.HeaderGuard,
-		"UpperCaseWithUnderscores": zither.UpperCaseWithUnderscores,
+		"UpperCaseWithUnderscores": c.UpperCaseWithUnderscores,
 		"ConstValue":               ConstValue,
 	})
 	return &Generator{*gen}
@@ -58,7 +58,7 @@ func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string)
 //
 
 func MemberName(decl zither.Decl, member zither.Member) string {
-	return zither.UpperCaseWithUnderscores(decl) + "_" + zither.UpperCaseWithUnderscores(member)
+	return c.UpperCaseWithUnderscores(decl) + "_" + c.UpperCaseWithUnderscores(member)
 }
 
 func ConstValue(cnst zither.Const) string {
@@ -73,7 +73,7 @@ func ConstValue(cnst zither.Const) string {
 			}
 			return fmt.Sprintf("(%#b)", val)
 		}
-		return zither.UpperCaseWithUnderscores(cnst.Element.Decl)
+		return c.UpperCaseWithUnderscores(cnst.Element.Decl)
 	}
 
 	switch cnst.Kind {

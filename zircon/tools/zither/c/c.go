@@ -26,14 +26,14 @@ type Generator struct {
 
 func NewGenerator(formatter fidlgen.Formatter) *Generator {
 	gen := fidlgen.NewGenerator("CTemplates", templates, formatter, template.FuncMap{
+		"LowerCaseWithUnderscores": LowerCaseWithUnderscores,
+		"UpperCaseWithUnderscores": UpperCaseWithUnderscores,
 		"Append":                   Append,
 		"PrimitiveTypeName":        PrimitiveTypeName,
 		"HeaderGuard":              HeaderGuard,
 		"StandardIncludes":         StandardIncludes,
 		"TypeName":                 TypeName,
 		"ConstMemberName":          ConstMemberName,
-		"LowerCaseWithUnderscores": zither.LowerCaseWithUnderscores,
-		"UpperCaseWithUnderscores": zither.UpperCaseWithUnderscores,
 		"ConstValue":               ConstValue,
 		"EnumMemberValue":          EnumMemberValue,
 		"BitsMemberValue":          BitsMemberValue,
@@ -65,6 +65,24 @@ func (gen *Generator) Generate(summaries []zither.FileSummary, outputDir string)
 // Template functions.
 //
 
+// LowerCaseWithUnderscores is a wrapper around the zither-defined utility that
+// also includes the library name.
+func LowerCaseWithUnderscores(el zither.Element) string {
+	decl, ok := el.(zither.Decl)
+	if ok {
+		libParts := decl.GetName().LibraryName().Parts()
+		prefix := fidlgen.ToSnakeCase(strings.Join(libParts, "_"))
+		return prefix + "_" + zither.LowerCaseWithUnderscores(el)
+	}
+	return zither.LowerCaseWithUnderscores(el)
+}
+
+// UpperCaseWithUnderscores is a wrapper around the zither-defined utility that
+// also includes the library name.
+func UpperCaseWithUnderscores(el zither.Element) string {
+	return strings.ToUpper(LowerCaseWithUnderscores(el))
+}
+
 func Append(s, t string) string { return s + t }
 
 // PrimitiveTypeName returns the C type name for a given a primitive FIDL type.
@@ -81,11 +99,11 @@ func PrimitiveTypeName(typ fidlgen.PrimitiveSubtype) string {
 }
 
 func TypeName(decl zither.Decl) string {
-	return zither.LowerCaseWithUnderscores(decl) + "_t"
+	return LowerCaseWithUnderscores(decl) + "_t"
 }
 
 func ConstMemberName(parent zither.Decl, member zither.Member) string {
-	return zither.UpperCaseWithUnderscores(parent) + "_" + zither.UpperCaseWithUnderscores(member)
+	return UpperCaseWithUnderscores(parent) + "_" + UpperCaseWithUnderscores(member)
 }
 
 // HeaderGuard returns the header guard preprocessor variable for a given file.
@@ -122,7 +140,7 @@ func ConstValue(c zither.Const) string {
 			}
 			return fmt.Sprintf("((%s)(%su))", TypeName(c.Element.Decl), fmt.Sprintf("%#b", val))
 		}
-		return zither.UpperCaseWithUnderscores(c.Element.Decl)
+		return UpperCaseWithUnderscores(c.Element.Decl)
 	}
 
 	switch c.Kind {

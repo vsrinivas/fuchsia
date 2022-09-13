@@ -13,8 +13,7 @@ import (
 func LowerCaseWithUnderscores(el Element) string {
 	decl, ok := el.(Decl)
 	if ok {
-		parts := append(decl.GetName().LibraryName().Parts(), decl.GetName().DeclarationName())
-		return fidlgen.ToSnakeCase(strings.Join(parts, "_"))
+		return fidlgen.ToSnakeCase(decl.GetName().DeclarationName())
 	}
 	return fidlgen.ToSnakeCase(el.(Member).GetName())
 }
