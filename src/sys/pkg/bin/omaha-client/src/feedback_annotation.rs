@@ -56,6 +56,7 @@ async fn publish_ids_to_feedback_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app_set::{AppIdSource, AppMetadata};
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_feedback::ComponentDataRegisterRequest;
     use fuchsia_async as fasync;
@@ -70,6 +71,7 @@ mod tests {
                 .version([1, 2])
                 .extra_fields([("product_id".to_string(), "some-prod-id".to_string())])
                 .build(),
+            AppMetadata { appid_source: AppIdSource::VbMetadata },
         )));
 
         let (proxy, mut stream) = create_proxy_and_stream::<ComponentDataRegisterMarker>().unwrap();

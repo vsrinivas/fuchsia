@@ -10,8 +10,7 @@ use fuchsia_component::server::ServiceFs;
 use futures::{lock::Mutex, prelude::*, stream::FuturesUnordered};
 use http_request::FuchsiaHyperHttpRequest;
 use omaha_client::{
-    app_set::AppSet as _, cup_ecdsa::StandardCupv2Handler, state_machine::StateMachineBuilder,
-    time::StandardTimeSource,
+    cup_ecdsa::StandardCupv2Handler, state_machine::StateMachineBuilder, time::StandardTimeSource,
 };
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -80,7 +79,7 @@ async fn main_inner() -> Result<(), Error> {
     let configuration_node = inspect::ConfigurationNode::new(root.create_child("configuration"));
     configuration_node.set(&platform_config);
     let apps_node = inspect::AppsNode::new(root.create_child("apps"));
-    apps_node.set(&app_set.get_apps());
+    apps_node.set(&app_set);
     let state_node = inspect::StateNode::new(root.create_child("state"));
     let schedule_node = inspect::ScheduleNode::new(root.create_child("schedule"));
     let protocol_state_node = inspect::ProtocolStateNode::new(root.create_child("protocol_state"));

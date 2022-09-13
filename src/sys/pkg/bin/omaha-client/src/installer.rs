@@ -449,6 +449,7 @@ fn try_create_install_plan_impl(
 mod tests {
     use {
         super::*,
+        crate::app_set::{AppIdSource, AppMetadata},
         assert_matches::assert_matches,
         fidl_fuchsia_pkg::{CupRequest, CupRequestStream},
         fidl_fuchsia_update_installer::{
@@ -533,7 +534,8 @@ mod tests {
         let (cup_proxy, cup_stream) =
             fidl::endpoints::create_proxy_and_stream::<CupMarker>().unwrap();
         let app = omaha_client::common::App::builder().id("system_id").version([1]).build();
-        let app_set = Rc::new(AsyncMutex::new(FuchsiaAppSet::new(app)));
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
+        let app_set = Rc::new(AsyncMutex::new(FuchsiaAppSet::new(app, app_metadata)));
         let installer = FuchsiaInstaller {
             installer_connector: MockConnector::new(installer_proxy),
             cup_connector: MockConnector::new(cup_proxy),
@@ -545,7 +547,8 @@ mod tests {
 
     fn new_installer() -> FuchsiaInstaller<ServiceReconnector<InstallerMarker>> {
         let app = omaha_client::common::App::builder().id("system_id").version([1]).build();
-        let app_set = Rc::new(AsyncMutex::new(FuchsiaAppSet::new(app)));
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
+        let app_set = Rc::new(AsyncMutex::new(FuchsiaAppSet::new(app, app_metadata)));
         FuchsiaInstaller::new(app_set)
     }
 

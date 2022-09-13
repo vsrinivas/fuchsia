@@ -7,14 +7,29 @@ use {
     omaha_client::{app_set::AppSet, common::App},
 };
 
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub enum AppIdSource {
+    VbMetadata,
+    ChannelConfig,
+    ConfigData,
+    DefaultEmpty,
+}
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone)]
+pub struct AppMetadata {
+    // The source from which the app's ID was derived.
+    pub appid_source: AppIdSource,
+}
+
 pub struct FuchsiaAppSet {
     system_app: App,
+    system_app_metadata: AppMetadata,
     eager_packages: Vec<EagerPackage>,
 }
 
 impl FuchsiaAppSet {
-    pub fn new(system_app: App) -> Self {
-        Self { system_app, eager_packages: vec![] }
+    pub fn new(system_app: App, system_app_metadata: AppMetadata) -> Self {
+        Self { system_app, system_app_metadata, eager_packages: vec![] }
     }
 
     pub fn add_eager_package(&mut self, package: EagerPackage) {
@@ -41,6 +56,10 @@ impl FuchsiaAppSet {
     /// Set the cohort hint of system app to |channel| and |id|.
     pub fn set_system_target_channel(&mut self, channel: Option<String>, id: Option<String>) {
         self.system_app.set_target_channel(channel, id);
+    }
+
+    pub fn get_system_app_metadata(&self) -> &AppMetadata {
+        &self.system_app_metadata
     }
 }
 
@@ -81,7 +100,8 @@ mod tests {
     #[test]
     fn test_get_apps() {
         let app = App::builder().id("some_id").version([0, 1]).build();
-        let mut app_set = FuchsiaAppSet::new(app.clone());
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
+        let mut app_set = FuchsiaAppSet::new(app.clone(), app_metadata);
         assert_eq!(app_set.get_apps(), vec![app.clone()]);
 
         let eager_package_app = App::builder().id("package_id").version([5]).build();
@@ -93,7 +113,8 @@ mod tests {
     #[test]
     fn test_iter_mut_apps() {
         let app = App::builder().id("id1").version([1]).build();
-        let mut app_set = FuchsiaAppSet::new(app);
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
+        let mut app_set = FuchsiaAppSet::new(app, app_metadata);
         let eager_package = EagerPackage {
             app: App::builder().id("package_id").version([5]).build(),
             channel_configs: None,

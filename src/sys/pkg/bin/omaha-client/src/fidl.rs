@@ -582,8 +582,7 @@ where
             }
             storage.commit_or_log().await;
         }
-        let app_vec = app_set.lock().await.get_apps();
-        server.borrow().apps_node.set(&app_vec);
+        server.borrow().apps_node.set(&*app_set.lock().await);
     }
 
     /// The state change callback from StateMachine.
@@ -635,8 +634,7 @@ where
 
                 // The state machine might make changes to apps only at the end of an update,
                 // update the apps node in inspect.
-                let apps = app_set.lock().await.get_apps();
-                server.borrow().apps_node.set(&apps);
+                server.borrow().apps_node.set(&*app_set.lock().await);
             }
             state_machine::State::CheckingForUpdates(install_source) => {
                 let attempt_options = match install_source {
@@ -696,6 +694,7 @@ pub use stub::{
 #[cfg(test)]
 mod stub {
     use super::*;
+    use crate::app_set::{AppIdSource, AppMetadata};
     use crate::{
         api_metrics::StubApiMetricsReporter,
         configuration,
@@ -830,7 +829,10 @@ mod stub {
                 config.omaha_public_keys.as_ref().map(StandardCupv2Handler::new);
 
             let app_set = self.app_set.unwrap_or_else(|| {
-                FuchsiaAppSet::new(App::builder().id("id").version([1, 0]).build())
+                FuchsiaAppSet::new(
+                    App::builder().id("id").version([1, 0]).build(),
+                    AppMetadata { appid_source: AppIdSource::VbMetadata },
+                )
             });
             let app_set = Rc::new(Mutex::new(app_set));
             let time_source = self.time_source.unwrap_or_else(MockTimeSource::new_from_now);
@@ -966,6 +968,7 @@ mod stub {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app_set::{AppIdSource, AppMetadata};
     use assert_matches::assert_matches;
     use channel_config::ChannelConfig;
     use fidl::endpoints::{create_proxy_and_stream, create_request_stream};
@@ -1263,6 +1266,7 @@ mod tests {
                 .version([1, 0])
                 .cohort(Cohort { name: "current-channel".to_string().into(), ..Cohort::default() })
                 .build(),
+            AppMetadata { appid_source: AppIdSource::VbMetadata },
         );
         let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
@@ -1325,6 +1329,7 @@ mod tests {
                 .version([1, 0])
                 .cohort(Cohort { name: "current-channel".to_string().into(), ..Cohort::default() })
                 .build(),
+            AppMetadata { appid_source: AppIdSource::VbMetadata },
         );
         let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
@@ -1355,12 +1360,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_get_target() {
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
         let app_set = FuchsiaAppSet::new(
             App::builder()
                 .id("id")
                 .version([1, 0])
                 .cohort(Cohort::from_hint("target-channel"))
                 .build(),
+            app_metadata,
         );
         let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
@@ -1429,12 +1436,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_target_no_op() {
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
         let app_set = FuchsiaAppSet::new(
             App::builder()
                 .id("id")
                 .version([1, 0])
                 .cohort(Cohort::from_hint("target-channel"))
                 .build(),
+            app_metadata,
         );
         let fidl = FidlServerBuilder::new().with_app_set(app_set).build().await;
 
@@ -1501,6 +1510,7 @@ mod tests {
                 root: {
                     apps: {
                         apps: format!("{:?}", app_set.lock().await.get_apps()),
+                        apps_metadata: "[(\"id\", AppMetadata { appid_source: VbMetadata })]".to_string(),
                     }
                 }
             );
@@ -1532,6 +1542,7 @@ mod tests {
             root: {
                 apps: {
                     apps: format!("{:?}", app_set.lock().await.get_apps()),
+                    apps_metadata: "[(\"id\", AppMetadata { appid_source: VbMetadata })]".to_string(),
                 }
             }
         );

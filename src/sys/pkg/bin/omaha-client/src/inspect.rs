@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{fidl::State, policy::PolicyConfig};
+use crate::{app_set::FuchsiaAppSet, fidl::State, policy::PolicyConfig};
 use chrono::{DateTime, Utc};
 use fuchsia_inspect::{Node, Property, StringProperty};
 use omaha_client::{
-    common::{App, ProtocolState, UpdateCheckSchedule},
+    app_set::AppSet,
+    common::{ProtocolState, UpdateCheckSchedule},
     configuration::{Config, Updater},
     protocol::request::OS,
     state_machine::{update_check, UpdateCheckError},
@@ -100,19 +101,27 @@ impl OmahaNode {
         self.service_url.set(service_url);
     }
 }
-
 pub struct AppsNode {
     _node: Node,
     apps: StringProperty,
+    apps_metadata: StringProperty,
 }
 
 impl AppsNode {
     pub fn new(apps_node: Node) -> Self {
-        AppsNode { apps: apps_node.create_string("apps", ""), _node: apps_node }
+        AppsNode {
+            apps: apps_node.create_string("apps", ""),
+            apps_metadata: apps_node.create_string("apps_metadata", ""),
+            _node: apps_node,
+        }
     }
 
-    pub fn set(&self, apps: &[App]) {
-        self.apps.set(&format!("{:?}", apps));
+    pub fn set(&self, appset: &FuchsiaAppSet) {
+        self.apps.set(&format!("{:?}", appset.get_apps()));
+        self.apps_metadata.set(&format!(
+            "{:?}",
+            [(appset.get_system_app_id(), appset.get_system_app_metadata())]
+        ));
     }
 }
 
@@ -210,11 +219,14 @@ impl PolicyConfigNode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::configuration::get_config;
+    use crate::{
+        app_set::{AppIdSource, AppMetadata},
+        configuration::get_config,
+    };
     use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_data_tree, Inspector};
     use omaha_client::{
-        common::UserCounting,
+        common::{App, UserCounting},
         protocol::{request::InstallSource, Cohort},
         state_machine,
     };
@@ -252,17 +264,18 @@ mod tests {
     fn test_apps_node() {
         let inspector = Inspector::new();
         let node = AppsNode::new(inspector.root().create_child("apps"));
-        let apps = vec![
-            App::builder().id("id").version([1, 0]).build(),
-            App::builder().id("id_2").version([1, 2, 4]).cohort(Cohort::new("cohort")).build(),
-        ];
-        node.set(&apps);
+        let app =
+            App::builder().id("id_2").version([1, 2, 4]).cohort(Cohort::new("cohort")).build();
+        let fas =
+            FuchsiaAppSet::new(app.clone(), AppMetadata { appid_source: AppIdSource::VbMetadata });
+        node.set(&fas);
 
         assert_data_tree!(
             inspector,
             root: {
                 apps: {
-                    apps: format!("{:?}", apps),
+                    apps: format!("[{:?}]", app),
+                    apps_metadata: "[(\"id_2\", AppMetadata { appid_source: VbMetadata })]".to_string(),
                 }
             }
         );

@@ -50,6 +50,7 @@ async fn notify_cobalt_current_software_distribution_impl(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app_set::{AppIdSource, AppMetadata};
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_cobalt::SystemDataUpdaterRequest;
     use fuchsia_async as fasync;
@@ -58,12 +59,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_notify_cobalt() {
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
         let app_set = Rc::new(Mutex::new(FuchsiaAppSet::new(
             App::builder()
                 .id("id")
                 .version([1, 2])
                 .cohort(Cohort { name: Some("current-channel".to_string()), ..Cohort::default() })
                 .build(),
+            app_metadata,
         )));
 
         let (proxy, mut stream) = create_proxy_and_stream::<SystemDataUpdaterMarker>().unwrap();

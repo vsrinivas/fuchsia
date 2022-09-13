@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::app_set::{EagerPackage, FuchsiaAppSet};
+use crate::app_set::{AppIdSource, AppMetadata, EagerPackage, FuchsiaAppSet};
 use anyhow::{anyhow, Error};
 use channel_config::{ChannelConfig, ChannelConfigs};
 use eager_package_config::omaha_client::{EagerPackageConfig, EagerPackageConfigs};
@@ -39,7 +39,6 @@ pub struct ChannelData {
     pub source: ChannelSource,
     pub name: Option<String>,
     pub config: Option<ChannelConfig>,
-    pub appid: String,
 }
 
 /// The source of the channel configuration.
@@ -50,24 +49,27 @@ pub enum ChannelSource {
     VbMeta,
 }
 
-fn get_appid(vbmeta_appid: Option<String>, channel_config: &Option<ChannelConfig>) -> String {
+fn get_appid(
+    vbmeta_appid: Option<String>,
+    channel_config: &Option<ChannelConfig>,
+) -> (String, AppIdSource) {
     if let Some(appid) = vbmeta_appid {
-        return appid;
+        return (appid, AppIdSource::VbMetadata);
     }
 
     // If no appid in vbmeta, look up the appid of the channel from the channel config.
     if let Some(config) = channel_config {
         if let Some(appid) = &config.appid {
-            return appid.clone();
+            return (appid.clone(), AppIdSource::ChannelConfig);
         }
     }
 
     // If no appid in the channel configs, then attempt to read from config data.
     match fs::read_to_string("/config/data/omaha_app_id") {
-        Ok(id) => id,
+        Ok(id) => (id, AppIdSource::ConfigData),
         Err(e) => {
             error!("Unable to read omaha app id from config/data: {:?}", e);
-            String::new()
+            (String::new(), AppIdSource::DefaultEmpty)
         }
     }
 }
@@ -110,7 +112,7 @@ impl ClientConfiguration {
             None
         };
 
-        let appid = get_appid(vbmeta_appid, &channel_config);
+        let (appid, appid_source) = get_appid(vbmeta_appid, &channel_config);
 
         // Construct the Fuchsia system app.
         let mut extra_fields: Vec<(String, String)> =
@@ -131,7 +133,7 @@ impl ClientConfiguration {
             })
             .extra_fields(HashMap::from_iter(extra_fields.into_iter()))
             .build();
-        let mut app_set = FuchsiaAppSet::new(app);
+        let mut app_set = FuchsiaAppSet::new(app, AppMetadata { appid_source: appid_source });
 
         let eager_package_configs = EagerPackageConfigs::from_namespace();
         let platform_config = get_config(version, eager_package_configs.as_ref().ok(), service_url);
@@ -164,7 +166,6 @@ impl ClientConfiguration {
                 source: channel_source,
                 name: channel_name,
                 config: channel_config,
-                appid,
             },
         }
     }
@@ -332,6 +333,7 @@ impl VbMetaData {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app_set::AppMetadata;
     use eager_package_config::omaha_client::{EagerPackageConfig, OmahaServer};
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_boot::ArgumentsRequest;
@@ -463,7 +465,6 @@ mod tests {
         assert_eq!(channel_data.source, ChannelSource::Default);
         assert_eq!(channel_data.name, Some("some-channel".to_string()));
         assert_eq!(channel_data.config, Some(channel_config));
-        assert_eq!(channel_data.appid, "some-appid");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -523,7 +524,6 @@ mod tests {
         assert_eq!(config.channel_data.source, ChannelSource::VbMeta);
         assert_eq!(config.channel_data.name, Some("vbmeta-channel".to_string()));
         assert_eq!(config.channel_data.config, None);
-        assert_eq!(config.channel_data.appid, "vbmeta-appid");
         let apps = config.app_set.get_apps();
         assert_eq!(apps.len(), 1);
         assert_eq!(apps[0].id, "vbmeta-appid");
@@ -618,7 +618,8 @@ mod tests {
     async fn test_add_eager_packages() {
         let platform_config = get_config("1.0.0.0", None, None);
         let system_app = App::builder().id("system_app_id").version([1]).build();
-        let mut app_set = FuchsiaAppSet::new(system_app.clone());
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
+        let mut app_set = FuchsiaAppSet::new(system_app.clone(), app_metadata);
 
         let public_keys = PublicKeys {
             latest: PublicKeyAndId {
@@ -705,7 +706,8 @@ mod tests {
         assert_eq!(app_set.get_apps(), vec![system_app.clone(), package_app, package2_app]);
 
         // now with CUP
-        let mut app_set = FuchsiaAppSet::new(system_app.clone());
+        let app_metadata = AppMetadata { appid_source: AppIdSource::VbMetadata };
+        let mut app_set = FuchsiaAppSet::new(system_app.clone(), app_metadata);
         let (proxy, mut stream) = create_proxy_and_stream::<CupMarker>().unwrap();
         let stream_fut = async move {
             while let Some(request) = stream.next().await {
