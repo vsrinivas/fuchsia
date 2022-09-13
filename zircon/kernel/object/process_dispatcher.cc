@@ -290,6 +290,12 @@ void ProcessDispatcher::Exit(int64_t retcode) {
     if (state_ != State::DYING) {
       DEBUG_ASSERT(retcode_ == 0);
       retcode_ = retcode;
+      if (critical_to_job_ && critical_to_job_ == GetRootJobDispatcher()) {
+        char pname[ZX_MAX_NAME_LEN];
+        get_name(pname);
+        printf("KERN: process '%s' (%lu) critical to root job exited %ld\n", pname, get_koid(),
+               retcode);
+      }
     }
 
     // enter the dying state, which should kill all threads
@@ -317,6 +323,12 @@ void ProcessDispatcher::Kill(int64_t retcode) {
     if (state_ != State::DYING) {
       DEBUG_ASSERT(retcode_ == 0);
       retcode_ = retcode;
+      if (critical_to_job_ && critical_to_job_ == GetRootJobDispatcher()) {
+        char pname[ZX_MAX_NAME_LEN];
+        get_name(pname);
+        printf("KERN: process '%s' (%lu) critical to root job killed with %ld\n", pname, get_koid(),
+               retcode);
+      }
     }
 
     // if we have no threads, enter the dead state directly
@@ -557,6 +569,11 @@ void ProcessDispatcher::FinishDeadTransition() {
   if (kill_job) {
     kill_job->CriticalProcessKill(fbl::RefPtr<ProcessDispatcher>(this));
   }
+}
+
+bool ProcessDispatcher::CriticalToRootJob() const {
+  Guard<CriticalMutex> guard{get_lock()};
+  return critical_to_job_ == GetRootJobDispatcher();
 }
 
 void ProcessDispatcher::GetInfo(zx_info_process_t* info) const {

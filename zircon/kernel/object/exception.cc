@@ -15,10 +15,14 @@
 #include <zircon/types.h>
 
 #include <arch/exception.h>
+#include <ktl/array.h>
+#include <ktl/move.h>
 #include <object/exception_dispatcher.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
+
+#include <ktl/enforce.h>
 
 #define LOCAL_TRACE 0
 #define TRACE_EXCEPTIONS 1
@@ -240,6 +244,19 @@ zx_status_t dispatch_user_exception(uint exception_type,
   // From now until the exception is resolved the thread is in an exception.
   ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
 
+  constexpr auto get_name = [](auto* task) -> ktl::array<char, ZX_MAX_NAME_LEN> {
+    char name[ZX_MAX_NAME_LEN];
+    task->get_name(name);
+    return ktl::to_array(name);
+  };
+
+  auto dump_context = [&](const auto& pname) {
+    printf("KERN: %s in user thread '%s' (%lu) in process '%s'\n",
+           excp_type_to_string(exception_type), get_name(thread).data(), thread->get_koid(),
+           pname.data());
+    arch_dump_exception_context(arch_context);
+  };
+
   bool processed = false;
   zx_status_t status;
   {
@@ -254,29 +271,35 @@ zx_status_t dispatch_user_exception(uint exception_type,
     return ZX_OK;
   }
 
-  // If the thread wasn't resumed or explicitly killed, kill the whole process.
-  if (status != ZX_ERR_INTERNAL_INTR_KILLED) {
-    auto process = thread->process();
-
-    char pname[ZX_MAX_NAME_LEN];
-    process->get_name(pname);
-
 #if TRACE_EXCEPTIONS
-    // If no handlers even saw the exception, dump some info. Normally at least
-    // crashsvc will handle the exception and make a smarter decision about what
-    // to do with it, but in case it doesn't, dump some info to the kernel logs.
-    if (!processed) {
-      char tname[ZX_MAX_NAME_LEN];
-      thread->get_name(tname);
-      printf("KERN: exception_handler_worker returned %d\n", status);
-      printf("KERN: %s in user thread '%s' in process '%s'\n", excp_type_to_string(exception_type),
-             tname, pname);
-
-      arch_dump_exception_context(arch_context);
-    }
+  constexpr bool kTraceExceptions = true;
+#else
+  constexpr bool kTraceExceptions = false;
 #endif
 
-    printf("KERN: terminating process '%s' (%lu)\n", pname, process->get_koid());
+  // If the thread wasn't resumed or explicitly killed, kill the whole process.
+  // If the process is critical to the root job, any fatal exception merits
+  // logging all the details available whether the handler decided to kill the
+  // process, or no handler processed it at all.
+  ProcessDispatcher* process = thread->process();
+  if (status == ZX_ERR_INTERNAL_INTR_KILLED) {
+    if (process->CriticalToRootJob()) {
+      printf("KERN: fatal exception in process critical to root job!\n");
+      dump_context(get_name(process));
+    }
+  } else {
+    auto pname = get_name(process);
+
+    if (!processed && (kTraceExceptions || process->CriticalToRootJob())) {
+      // If no handlers even saw the exception, dump some info. Normally at
+      // least crashsvc will handle the exception and make a smarter decision
+      // about what to do with it, but in case it doesn't, dump some info to
+      // the kernel logs.
+      printf("KERN: exception_handler_worker returned %d\n", status);
+      dump_context(pname);
+    }
+
+    printf("KERN: terminating process '%s' (%lu)\n", pname.data(), process->get_koid());
     process->Kill(ZX_TASK_RETCODE_EXCEPTION_KILL);
   }
 

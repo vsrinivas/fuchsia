@@ -25,7 +25,9 @@
 
 static Executor gExecutor;
 
-fbl::RefPtr<JobDispatcher> GetRootJobDispatcher() { return gExecutor.GetRootJobDispatcher(); }
+const fbl::RefPtr<JobDispatcher>& GetRootJobDispatcher() {
+  return gExecutor.GetRootJobDispatcher();
+}
 
 Handle* GetRootJobHandle() { return gExecutor.GetRootJobHandle(); }
 
