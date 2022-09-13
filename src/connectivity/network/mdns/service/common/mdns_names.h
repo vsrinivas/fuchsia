@@ -40,11 +40,10 @@ struct MdnsNames {
   static std::string InstanceFullName(const std::string& instance_name,
                                       const std::string& service_name);
 
-  // Extracts the simple instance name from an instance full name given the
-  // name of the service. Returns true and deposits the instance name if
-  // successful, return false if not.
-  static bool ExtractInstanceName(const std::string& instance_full_name,
-                                  const std::string& service_name, std::string* instance_name);
+  // Parses an instance full name to extract the simple instance name and the simple service
+  // name.
+  static bool SplitInstanceFullName(const std::string& instance_full_name,
+                                    std::string* instance_name_out, std::string* service_name_out);
 
   // Determines if |name| is a local service name matching |service_name| or
   // a subtype of |service_name|. If |name| does specify a subtype, the

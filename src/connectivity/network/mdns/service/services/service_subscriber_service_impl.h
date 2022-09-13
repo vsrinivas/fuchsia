@@ -27,6 +27,10 @@ class ServiceSubscriberServiceImpl
       std::string service, fuchsia::net::mdns::ServiceSubscriptionOptions options,
       fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriptionListener> listener) override;
 
+  void SubscribeToAllServices(
+      fuchsia::net::mdns::ServiceSubscriptionOptions options,
+      fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriptionListener> listener) override;
+
  private:
   class Subscriber : public Mdns::Subscriber {
    public:

@@ -17,7 +17,7 @@ static const std::string kTcpSuffix = "._tcp.";
 static const std::string kUdpSuffix = "._udp.";
 
 static constexpr size_t kMaxHostNameLength = 253 - 6;  // 6 for local domain.
-static constexpr size_t kMaxServiceNameLength = 22;
+static constexpr size_t kMaxServiceFirstLabelLength = 16;
 static constexpr size_t kMaxTextStringLength = 255;
 static constexpr size_t kMaxLabelLength = 63;
 
@@ -94,6 +94,24 @@ class Parser {
     return true;
   }
 
+  // Matches a service name, including the trailing '_tcp.' or '_udp.'.
+  bool MatchServiceName(std::string* service_name_out = nullptr) {
+    size_t initial_pos = pos_;
+
+    if (MatchDnsLabel() && str_[initial_pos] == '_' &&
+        pos_ - initial_pos <= kMaxServiceFirstLabelLength &&
+        (Match(kTcpSuffix) || Match(kUdpSuffix))) {
+      if (service_name_out) {
+        *service_name_out = str_.substr(initial_pos, pos_ - initial_pos);
+      }
+
+      return true;
+    }
+
+    pos_ = initial_pos;
+    return false;
+  }
+
   // Resets the position to the start of the string.
   void Restart() { pos_ = 0; }
 
@@ -147,16 +165,18 @@ std::string MdnsNames::InstanceFullName(const std::string& instance_name,
 }
 
 // static
-bool MdnsNames::ExtractInstanceName(const std::string& instance_full_name,
-                                    const std::string& service_name, std::string* instance_name) {
-  FX_DCHECK(IsValidServiceName(service_name));
-  FX_DCHECK(instance_name);
+bool MdnsNames::SplitInstanceFullName(const std::string& instance_full_name,
+                                      std::string* instance_name_out,
+                                      std::string* service_name_out) {
+  FX_DCHECK(instance_name_out);
+  FX_DCHECK(service_name_out);
 
   // instance_name "." service_name kLocalDomainName
 
   Parser parser(instance_full_name);
-  return parser.MatchDnsLabel(instance_name) && parser.Match(kLabelSeparator) &&
-         parser.Match(service_name) && parser.Match(kLocalDomainName) && parser.MatchEnd();
+  return parser.MatchDnsLabel(instance_name_out) && parser.Match(kLabelSeparator) &&
+         parser.MatchServiceName(service_name_out) && parser.Match(kLocalDomainName) &&
+         parser.MatchEnd();
 }
 
 // static
@@ -205,14 +225,8 @@ bool MdnsNames::IsValidServiceName(const std::string& service_name) {
   // A service name is two labels, both terminated with '.'. The first label
   // must be [1..16] characters, and the first character must be '_'. The
   // second label must be "_tcp" or "_udp".
-  if (service_name.empty() || service_name.length() > kMaxServiceNameLength ||
-      service_name[0] != '_') {
-    return false;
-  }
-
   Parser parser(service_name);
-  return parser.MatchDnsLabel() && (parser.Match(kTcpSuffix) || parser.Match(kUdpSuffix)) &&
-         parser.MatchEnd();
+  return parser.MatchServiceName() && parser.MatchEnd();
 }
 
 // static

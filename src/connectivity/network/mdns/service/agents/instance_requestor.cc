@@ -32,6 +32,17 @@ InstanceRequestor::InstanceRequestor(MdnsAgent::Owner* owner, const std::string&
       include_local_proxies_(include_local_proxies),
       question_(std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
 
+InstanceRequestor::InstanceRequestor(MdnsAgent::Owner* owner, Media media, IpVersions ip_versions,
+                                     bool include_local, bool include_local_proxies)
+    : MdnsAgent(owner),
+      service_name_(""),
+      service_full_name_(MdnsNames::kAnyServiceFullName),
+      media_(media),
+      ip_versions_(ip_versions),
+      include_local_(include_local),
+      include_local_proxies_(include_local_proxies),
+      question_(std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
+
 void InstanceRequestor::AddSubscriber(Mdns::Subscriber* subscriber) {
   subscribers_.insert(subscriber);
   if (started()) {
@@ -59,7 +70,8 @@ void InstanceRequestor::ReceiveResource(const DnsResource& resource, MdnsResourc
 
   switch (resource.type_) {
     case DnsType::kPtr:
-      if (resource.name_.dotted_string_ == service_full_name_) {
+      if (resource.name_.dotted_string_ == service_full_name_ ||
+          service_full_name_ == MdnsNames::kAnyServiceFullName) {
         ReceivePtrResource(resource, section);
       }
       break;
@@ -122,14 +134,14 @@ void InstanceRequestor::EndOfMessage() {
     if (instance_info.new_) {
       instance_info.new_ = false;
       for (auto subscriber : subscribers) {
-        subscriber->InstanceDiscovered(service_name_, instance_info.instance_name_,
+        subscriber->InstanceDiscovered(instance_info.service_name_, instance_info.instance_name_,
                                        Addresses(target_info, instance_info.port_),
                                        instance_info.text_, instance_info.srv_priority_,
                                        instance_info.srv_weight_, instance_info.target_);
       }
     } else {
       for (auto subscriber : subscribers) {
-        subscriber->InstanceChanged(service_name_, instance_info.instance_name_,
+        subscriber->InstanceChanged(instance_info.service_name_, instance_info.instance_name_,
                                     Addresses(target_info, instance_info.port_),
                                     instance_info.text_, instance_info.srv_priority_,
                                     instance_info.srv_weight_, instance_info.target_);
@@ -168,7 +180,7 @@ void InstanceRequestor::ReportAllDiscoveries(Mdns::Subscriber* subscriber) {
       continue;
     }
 
-    subscriber->InstanceDiscovered(service_name_, instance_info.instance_name_,
+    subscriber->InstanceDiscovered(instance_info.service_name_, instance_info.instance_name_,
                                    Addresses(target_info, instance_info.port_), instance_info.text_,
                                    instance_info.srv_priority_, instance_info.srv_weight_,
                                    instance_info.target_);
@@ -198,7 +210,8 @@ void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
   const std::string& instance_full_name = resource.ptr_.pointer_domain_name_.dotted_string_;
 
   std::string instance_name;
-  if (!MdnsNames::ExtractInstanceName(instance_full_name, service_name_, &instance_name)) {
+  std::string service_name;
+  if (!MdnsNames::SplitInstanceFullName(instance_full_name, &instance_name, &service_name)) {
     return;
   }
 
@@ -211,6 +224,7 @@ void InstanceRequestor::ReceivePtrResource(const DnsResource& resource,
     auto [iter, inserted] =
         instance_infos_by_full_name_.emplace(instance_full_name, InstanceInfo{});
     FX_DCHECK(inserted);
+    iter->second.service_name_ = service_name;
     iter->second.instance_name_ = instance_name;
   }
 
@@ -323,7 +337,7 @@ void InstanceRequestor::RemoveInstance(const std::string& instance_full_name) {
   auto iter = instance_infos_by_full_name_.find(instance_full_name);
   if (iter != instance_infos_by_full_name_.end()) {
     for (auto subscriber : subscribers_) {
-      subscriber->InstanceLost(service_name_, iter->second.instance_name_);
+      subscriber->InstanceLost(iter->second.service_name_, iter->second.instance_name_);
     }
 
     instance_infos_by_full_name_.erase(iter);
@@ -346,16 +360,19 @@ void InstanceRequestor::OnAddLocalServiceInstance(const Mdns::ServiceInstance& i
     return;
   }
 
-  if (instance.service_name_ != service_name_) {
+  if (instance.service_name_ != service_name_ &&
+      service_full_name_ != MdnsNames::kAnyServiceFullName) {
     return;
   }
 
   FX_DCHECK(!instance.addresses_.empty());
 
-  auto instance_full_name = MdnsNames::InstanceFullName(instance.instance_name_, service_name_);
+  auto instance_full_name =
+      MdnsNames::InstanceFullName(instance.instance_name_, instance.service_name_);
   auto [instance_iter, inserted] =
       instance_infos_by_full_name_.insert(std::make_pair(instance_full_name, InstanceInfo()));
   auto& instance_info = instance_iter->second;
+  instance_info.service_name_ = instance.service_name_;
   instance_info.instance_name_ = instance.instance_name_;
   instance_info.target_ = instance.target_name_;
   instance_info.target_full_name_ = MdnsNames::HostFullName(instance.target_name_);
@@ -382,7 +399,8 @@ void InstanceRequestor::OnChangeLocalServiceInstance(const Mdns::ServiceInstance
     return;
   }
 
-  if (instance.service_name_ != service_name_) {
+  if (instance.service_name_ != service_name_ &&
+      service_full_name_ != MdnsNames::kAnyServiceFullName) {
     return;
   }
 
@@ -448,11 +466,11 @@ void InstanceRequestor::OnRemoveLocalServiceInstance(const std::string& service_
     return;
   }
 
-  if (service_name_ != service_name_) {
+  if (service_name != service_name_ && service_full_name_ != MdnsNames::kAnyServiceFullName) {
     return;
   }
 
-  RemoveInstance(MdnsNames::InstanceFullName(instance_name, service_name_));
+  RemoveInstance(MdnsNames::InstanceFullName(instance_name, service_name));
 
   EndOfMessage();
 }

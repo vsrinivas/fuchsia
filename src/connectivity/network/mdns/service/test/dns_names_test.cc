@@ -37,46 +37,46 @@ TEST(MdnsNamesTest, LocalInstanceFullName) {
             MdnsNames::InstanceFullName("My Egg Timer", "_fuchsia._udp."));
 }
 
-// Tests |ExtractInstanceName|.
-TEST(MdnsNamesTest, ExtractInstanceName) {
+// Tests |SplitInstanceFullName|.
+TEST(MdnsNamesTest, SplitInstanceFullName) {
   std::string instance_name;
+  std::string service_name;
 
-  EXPECT_TRUE(MdnsNames::ExtractInstanceName("Acme Splotchamatic._printer._tcp.local.",
-                                             "_printer._tcp.", &instance_name));
+  EXPECT_TRUE(MdnsNames::SplitInstanceFullName("Acme Splotchamatic._printer._tcp.local.",
+                                               &instance_name, &service_name));
   EXPECT_EQ("Acme Splotchamatic", instance_name);
+  EXPECT_EQ("_printer._tcp.", service_name);
 
-  EXPECT_TRUE(MdnsNames::ExtractInstanceName("My Egg Timer._fuchsia._udp.local.", "_fuchsia._udp.",
-                                             &instance_name));
+  EXPECT_TRUE(MdnsNames::SplitInstanceFullName("My Egg Timer._fuchsia._udp.local.", &instance_name,
+                                               &service_name));
   EXPECT_EQ("My Egg Timer", instance_name);
-
-  // Wrong service type.
-  EXPECT_FALSE(MdnsNames::ExtractInstanceName("Acme Splotchamatic._printer._tcp.local.",
-                                              "_fuchsia._udp.", &instance_name));
+  EXPECT_EQ("_fuchsia._udp.", service_name);
 
   // No local suffix.
-  EXPECT_FALSE(MdnsNames::ExtractInstanceName("Acme Splotchamatic._printer._tcp.", "_printer._tcp.",
-                                              &instance_name));
+  EXPECT_FALSE(MdnsNames::SplitInstanceFullName("Acme Splotchamatic._printer._tcp.", &instance_name,
+                                                &service_name));
 
   // Just a service name.
   EXPECT_FALSE(
-      MdnsNames::ExtractInstanceName("_printer._tcp.local.", "_printer._tcp.", &instance_name));
+      MdnsNames::SplitInstanceFullName("_printer._tcp.local.", &instance_name, &service_name));
 
   // Zero-length instance name.
   EXPECT_FALSE(
-      MdnsNames::ExtractInstanceName("._printer._tcp.local.", "_printer._tcp.", &instance_name));
+      MdnsNames::SplitInstanceFullName("._printer._tcp.local.", &instance_name, &service_name));
 
   // Instance name almost too long.
-  EXPECT_TRUE(MdnsNames::ExtractInstanceName(
+  EXPECT_TRUE(MdnsNames::SplitInstanceFullName(
       "012345678901234567890123456789012345678901234567890123456789012._"
       "printer._tcp.local.",
-      "_printer._tcp.", &instance_name));
+      &instance_name, &service_name));
   EXPECT_EQ("012345678901234567890123456789012345678901234567890123456789012", instance_name);
+  EXPECT_EQ("_printer._tcp.", service_name);
 
   // Instance name too long.
-  EXPECT_FALSE(MdnsNames::ExtractInstanceName(
+  EXPECT_FALSE(MdnsNames::SplitInstanceFullName(
       "0123456789012345678901234567890123456789012345678901234567890123._"
       "printer._tcp.local.",
-      "_printer._tcp.", &instance_name));
+      &instance_name, &service_name));
 }
 
 // Tests |MatchServiceName|.

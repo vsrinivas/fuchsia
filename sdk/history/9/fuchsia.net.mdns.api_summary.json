@@ -688,6 +688,11 @@
         "name": "fuchsia.net.mdns/ServiceSubscriber"
     },
     {
+        "declaration": "(fuchsia.net.mdns/ServiceSubscriptionOptions options,client_end:fuchsia.net.mdns/ServiceSubscriptionListener listener)",
+        "kind": "protocol/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriber2.SubscribeToAllServices"
+    },
+    {
         "declaration": "(string:22 service,fuchsia.net.mdns/ServiceSubscriptionOptions options,client_end:fuchsia.net.mdns/ServiceSubscriptionListener listener)",
         "kind": "protocol/member",
         "name": "fuchsia.net.mdns/ServiceSubscriber2.SubscribeToService"

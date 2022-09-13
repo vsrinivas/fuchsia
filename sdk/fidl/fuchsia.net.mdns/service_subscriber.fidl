@@ -21,6 +21,16 @@ protocol ServiceSubscriber2 {
         options ServiceSubscriptionOptions;
         listener client_end:ServiceSubscriptionListener;
     });
+
+    /// Subscribes to all services. The subscription lasts until `subscriber` is unbound.
+    ///
+    /// + request `options` options to be applied to the subscription.
+    /// + request `listener` client end of the `ServiceSubscriptionListener` channel.
+    @available(added=9)
+    SubscribeToAllServices(resource struct {
+        options ServiceSubscriptionOptions;
+        listener client_end:ServiceSubscriptionListener;
+    });
 };
 
 /// Options for `ServiceSubscriber.SubscribeToService`.

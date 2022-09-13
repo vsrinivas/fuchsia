@@ -291,6 +291,12 @@ class Mdns : public MdnsAgent::Owner {
   void SubscribeToService(const std::string& service_name, Media media, IpVersions ip_versions,
                           bool include_local, bool include_local_proxies, Subscriber* subscriber);
 
+  // Subscribes to all services. The subscription is cancelled when the subscriber is deleted or its
+  // |Unsubscribe| method is called. Multiple subscriptions may be created for a all services. Must
+  // not be called before |Start|'s ready callback is called.
+  void SubscribeToAllServices(Media media, IpVersions ip_versions, bool include_local,
+                              bool include_local_proxies, Subscriber* subscriber);
+
   // Publishes a service instance. Returns false if and only if the instance was
   // already published locally. The instance is unpublished when the publisher
   // is deleted or its |Unpublish| method is called. Must not be called before

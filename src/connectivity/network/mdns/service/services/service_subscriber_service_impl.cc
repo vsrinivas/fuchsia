@@ -45,6 +45,27 @@ void ServiceSubscriberServiceImpl::SubscribeToService(
   service_instance_subscribers_by_id_.emplace(id, std::move(subscriber));
 }
 
+void ServiceSubscriberServiceImpl::SubscribeToAllServices(
+    fuchsia::net::mdns::ServiceSubscriptionOptions options,
+    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriptionListener> listener_handle) {
+  Media media = options.has_media() ? fidl::To<Media>(options.media()) : Media::kBoth;
+  IpVersions ip_versions =
+      options.has_ip_versions() ? fidl::To<IpVersions>(options.ip_versions()) : IpVersions::kBoth;
+
+  size_t id = next_service_instance_subscriber_id_++;
+  auto subscriber = std::make_unique<Subscriber>(
+      std::move(listener_handle), [this, id]() { service_instance_subscribers_by_id_.erase(id); });
+
+  bool include_local = !options.has_exclude_local() || !options.exclude_local();
+  bool include_local_proxies =
+      !options.has_exclude_local_proxies() || !options.exclude_local_proxies();
+
+  mdns().SubscribeToAllServices(media, ip_versions, include_local, include_local_proxies,
+                                subscriber.get());
+
+  service_instance_subscribers_by_id_.emplace(id, std::move(subscriber));
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // ServiceSubscriberServiceImpl::Subscriber implementation
 

@@ -121,6 +121,7 @@ constexpr char kHostFullName[] = "test2host.local.";
 constexpr char kHostName[] = "test2host";
 constexpr char kServiceName[] = "_testservice._tcp.";
 constexpr char kServiceFullName[] = "_testservice._tcp.local.";
+constexpr char kAnyServiceFullName[] = "_services._dns-sd._udp.local.";
 constexpr char kInstanceName[] = "testinstance";
 constexpr char kInstanceFullName[] = "testinstance._testservice._tcp.local.";
 const inet::IpPort kPort = inet::IpPort::From_uint16_t(1234);
@@ -615,6 +616,42 @@ TEST_F(InstanceRequestorTest, LocalProxyInstance) {
   under_test.OnAddLocalServiceInstance(
       ServiceInstance(kServiceName, kInstanceName, kLocalHostName, kSocketAddresses, kText),
       kFromLocalHost);
+  subscriber.ExpectNoOther();
+}
+
+// Tests the behavior of a requestor for any service when a response is received.
+TEST_F(InstanceRequestorTest, AnyResponse) {
+  InstanceRequestor under_test(this, Media::kBoth, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
+  SetAgent(under_test);
+
+  Subscriber subscriber;
+  under_test.AddSubscriber(&subscriber);
+
+  under_test.Start(kLocalHostFullName);
+
+  // Expect a PTR question on start.
+  auto message = ExpectOutboundMessage(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+  ExpectQuestion(message.get(), kAnyServiceFullName, DnsType::kPtr);
+  ExpectNoOtherQuestionOrResource(message.get());
+  ExpectPostTaskForTime(kMinDelay, kMinDelay);
+  ExpectNoOther();
+
+  subscriber.ExpectQueryCalled(DnsType::kPtr);
+  subscriber.ExpectNoOther();
+
+  ReplyAddress sender_address(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100), 1, Media::kWireless, IpVersions::kV4);
+  ReceivePublication(under_test, kHostFullName, kServiceName, kInstanceName, kPort, kText,
+                     sender_address);
+
+  auto params = subscriber.ExpectInstanceDiscoveredCalled();
+  EXPECT_EQ(ServiceInstance(kServiceName, kInstanceName, kHostName,
+                            {inet::SocketAddress(sender_address.socket_address().address(), kPort)},
+                            kText, 0, 0),
+            *params);
+
   subscriber.ExpectNoOther();
 }
 

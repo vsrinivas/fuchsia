@@ -226,6 +226,35 @@ void Mdns::SubscribeToService(const std::string& service_name, Media media, IpVe
   }
 }
 
+void Mdns::SubscribeToAllServices(Media media, IpVersions ip_versions, bool include_local,
+                                  bool include_local_proxies, Subscriber* subscriber) {
+  FX_DCHECK(subscriber);
+  FX_DCHECK(state_ == State::kActive);
+
+  std::shared_ptr<InstanceRequestor> agent;
+  RequestorKey key("", media, ip_versions);
+
+  auto iter = instance_requestors_by_key_.find(key);
+  if (iter == instance_requestors_by_key_.end()) {
+    agent = std::make_shared<InstanceRequestor>(this, media, ip_versions, include_local,
+                                                include_local_proxies);
+
+    instance_requestors_by_key_.emplace(key, agent);
+    agent->SetOnQuitCallback([this, key]() { instance_requestors_by_key_.erase(key); });
+
+    subscriber->Connect(agent);
+
+    // Add the subscriber before calling AddAgent (which starts the agent), so the subscriber will
+    // be notified of the first query.
+    agent->AddSubscriber(subscriber);
+    AddAgent(agent);
+  } else {
+    agent = iter->second;
+    subscriber->Connect(agent);
+    agent->AddSubscriber(subscriber);
+  }
+}
+
 bool Mdns::PublishServiceInstance(std::string host_name, std::vector<inet::IpAddress> addresses,
                                   std::string service_name, std::string instance_name, Media media,
                                   IpVersions ip_versions, bool perform_probe,
