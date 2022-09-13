@@ -145,8 +145,21 @@ void Device::DestroyIface(DestroyIfaceRequestView request, fdf::Arena &arena,
 
 void Device::SetCountry(SetCountryRequestView request, fdf::Arena &arena,
                         SetCountryCompleter::Sync &completer) {
-  NXPF_ERR("Not supported");
-  completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
+  const uint8_t(&country)[2] = request->country.alpha2().data_;
+
+  // Bss index shouldn't matter here, set it to zero.
+  IoctlRequest<mlan_ds_misc_cfg> ioctl_request(
+      MLAN_IOCTL_MISC_CFG, MLAN_ACT_SET, 0,
+      mlan_ds_misc_cfg{.sub_command = MLAN_OID_MISC_COUNTRY_CODE,
+                       .param{.country_code{.country_code{country[0], country[1], '\0'}}}});
+
+  IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&ioctl_request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to set country '%c%c': %d", country[0], country[1], io_status);
+    completer.buffer(arena).ReplyError(ZX_ERR_INTERNAL);
+    return;
+  }
+  completer.buffer(arena).ReplySuccess();
 }
 
 void Device::GetCountry(fdf::Arena &arena, GetCountryCompleter::Sync &completer) {
