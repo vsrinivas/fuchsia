@@ -89,7 +89,11 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
       case RENDER_COMMAND_STREAMER:
         return 0x2000;
       case VIDEO_COMMAND_STREAMER:
-        return 0x12000;
+        if (DeviceId::is_gen12(device_id())) {
+          return 0x1C0000;
+        } else {
+          return 0x12000;
+        }
     }
     return 0;
   }
@@ -249,8 +253,15 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() +
                                     registers::HardwareStatusPageAddress::kOffset),
               engine_cs_->hardware_status_page()->gpu_addr());
-    EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset),
-              0x80008000u);
+
+    if (DeviceId::is_gen12(device_id())) {
+      EXPECT_NE(register_io()->Read32(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset) &
+                    registers::GraphicsMode::kExeclistDisableLegacyGen11,
+                0u);
+    } else {
+      EXPECT_EQ(register_io()->Read32(engine_cs_->mmio_base() + registers::GraphicsMode::kOffset),
+                0x80008000u);
+    }
   }
 
   void RenderInit() {
@@ -454,15 +465,19 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
   void Reset() {
     class Hook : public magma::RegisterIo::Hook {
      public:
-      Hook(magma::RegisterIo* register_io, EngineCommandStreamerId id)
-          : register_io_(register_io), id_(id) {}
+      Hook(magma::RegisterIo* register_io, EngineCommandStreamerId id, uint32_t device_id)
+          : register_io_(register_io), id_(id), device_id_(device_id) {}
 
       constexpr uint32_t mask(EngineCommandStreamerId id) {
         switch (id) {
           case RENDER_COMMAND_STREAMER:
             return 1 << registers::GraphicsDeviceResetControl::kRcsResetBit;
           case VIDEO_COMMAND_STREAMER:
-            return 1 << registers::GraphicsDeviceResetControl::kVcsResetBit;
+            if (DeviceId::is_gen12(device_id_)) {
+              return 1 << registers::GraphicsDeviceResetControl::kVcs0ResetBitGen12;
+            } else {
+              return 1 << registers::GraphicsDeviceResetControl::kVcsResetBit;
+            }
         }
         return 0;
       }
@@ -471,6 +486,7 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
         switch (offset) {
           case EngineCommandStreamer::kRenderEngineMmioBase + registers::ResetControl::kOffset:
           case EngineCommandStreamer::kVideoEngineMmioBase + registers::ResetControl::kOffset:
+          case EngineCommandStreamer::kVideoEngineMmioBaseGen12 + registers::ResetControl::kOffset:
             // set ready for reset bit
             if (val & 0x00010001) {
               val = register_io_->mmio()->Read32(offset) | 0x2;
@@ -493,9 +509,11 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
      private:
       magma::RegisterIo* register_io_;
       EngineCommandStreamerId id_;
+      uint32_t device_id_;
     };
 
-    register_io_->InstallHook(std::make_unique<Hook>(register_io_.get(), engine_cs_->id()));
+    register_io_->InstallHook(
+        std::make_unique<Hook>(register_io_.get(), engine_cs_->id(), device_id()));
 
     EXPECT_TRUE(engine_cs_->Reset());
   }
@@ -598,11 +616,12 @@ TEST_P(TestEngineCommandStreamer, MoveBatchToInflight) {
 
 TEST_P(TestEngineCommandStreamer, MappingRelease) { TestEngineCommandStreamer::MappingRelease(); }
 
-// TODO(fxbug.dev/82881) - add gen12
 INSTANTIATE_TEST_SUITE_P(
     TestEngineCommandStreamer, TestEngineCommandStreamer,
     testing::Values(TestParam{.id = RENDER_COMMAND_STREAMER, .device_id = 0x5916},
-                    TestParam{.id = VIDEO_COMMAND_STREAMER, .device_id = 0x5916}),
+                    TestParam{.id = VIDEO_COMMAND_STREAMER, .device_id = 0x5916},
+                    TestParam{.id = RENDER_COMMAND_STREAMER, .device_id = 0x9A49},
+                    TestParam{.id = VIDEO_COMMAND_STREAMER, .device_id = 0x9A49}),
     [](const testing::TestParamInfo<TestEngineCommandStreamer::ParamType>& info) {
       std::string name;
       switch (info.param.id) {

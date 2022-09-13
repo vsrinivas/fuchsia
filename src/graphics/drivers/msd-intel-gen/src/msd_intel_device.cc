@@ -781,15 +781,15 @@ bool MsdIntelDevice::InitContextForEngine(MsdIntelContext* context,
   // TODO(fxbug.dev/80906): any workarounds or cache config for VCS?
   if (command_streamer->id() == RENDER_COMMAND_STREAMER) {
     if (DeviceId::is_gen9(device_id_)) {
-      // TODO(fxbug.dev/82881) - workarounds for gen12
+      // TODO(fxbug.dev/109211) - workarounds for gen12
       if (!command_streamer->InitContextWorkarounds(context))
         return DRETF(false, "failed to init workarounds");
 
-      // TODO(fxbug.dev/82881) - cache config for gen12
+      // TODO(fxbug.dev/109212) - cache config for gen12
       if (!command_streamer->InitContextCacheConfig(context))
         return DRETF(false, "failed to init cache config");
 
-      // TODO(fxbug.dev/82881) - indirect context for gen12
+      // TODO(fxbug.dev/109213) - indirect context for gen12
       command_streamer->InitIndirectContext(context, indirect_context_batch_);
     }
   }
