@@ -1,6 +1,7 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 library fuchsia.recovery.ui;
 
 using zx;
@@ -20,7 +21,7 @@ protocol ProgressRenderer {
     ///
     /// The return value is used for flow control, and implementers should acknowledge receipt of
     /// each message in order to continue receiving future messages.
-    @available(deprecated=9)
+    @available(deprecated=8)
     Render(struct {
         status Status;
         percent_complete float32;
@@ -33,7 +34,7 @@ protocol ProgressRenderer {
     ///
     /// The return value is used for flow control, and implementers should acknowledge receipt of
     /// each message in order to continue receiving future messages.
-    @available(added=9)
+    @available(added=8)
     Render2(table {
         1: status Status;
         /// Optional, only used with status ACTIVE
