@@ -36,11 +36,16 @@ impl MockMetricEventLogger {
 
 pub struct MockMetricEventLoggerFactory {
     loggers: Mutex<Vec<Arc<MockMetricEventLogger>>>,
+    project_id: u32,
 }
 
 impl MockMetricEventLoggerFactory {
     pub fn new() -> Self {
-        Self { loggers: Mutex::new(vec![]) }
+        Self::with_id(cobalt_sw_delivery_registry::PROJECT_ID)
+    }
+
+    pub fn with_id(id: u32) -> Self {
+        Self { loggers: Mutex::new(vec![]), project_id: id }
     }
 
     pub async fn run_logger_factory(
@@ -54,10 +59,7 @@ impl MockMetricEventLoggerFactory {
                     logger,
                     responder,
                 } => {
-                    assert_eq!(
-                        project_spec.project_id,
-                        Some(cobalt_sw_delivery_registry::PROJECT_ID)
-                    );
+                    assert_eq!(project_spec.project_id, Some(self.project_id));
                     let mock_logger = Arc::new(MockMetricEventLogger::new());
                     self.loggers.lock().push(mock_logger.clone());
                     fasync::Task::spawn(mock_logger.run_logger(logger.into_stream().unwrap()))
