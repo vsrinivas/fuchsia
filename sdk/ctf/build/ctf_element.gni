@@ -3,62 +3,17 @@
 # found in the LICENSE file.
 
 import("//sdk/ctf/build/allowed_ctf_deps.gni")
+import("//sdk/ctf/build/verify_deps_in_sdk.gni")
 
 # Defines a CTF element.
 #
 # Ensures that dependencies are allowed in CTF. This template should not be used
 # directly, but through the other CTF templates.
 template("ctf_element") {
-  assert(defined(invoker.deps))
-  assert(defined(invoker.invoker_label))
-
-  fully_qualified_deps = []
-  foreach(dep, invoker.deps) {
-    fully_qualified_deps += [ get_label_info(dep, "label_no_toolchain") ]
-  }
-
-  action(target_name) {
+  verify_deps_in_sdk(target_name) {
     forward_variables_from(invoker, "*")
-
-    inputs = []
-    foreach(sdk, ALLOWED_CTS_SDKS) {
-      sdk_manifest_copy = sdk + "_copy($target_toolchain)"
-      sdk_manifest = get_label_info(sdk_manifest_copy, "root_out_dir") +
-                     "/sdk/manifest/" + get_label_info(sdk, "name")
-      deps += [ sdk_manifest_copy ]
-      inputs += [ sdk_manifest ]
-    }
-
-    metadata = {
-      # expect_includes are not relevant for dependency verification, so disarm
-      # them here to avoid spurious include errors.
-      expect_includes_barrier = []
-    }
-
-    testonly = true
-
-    script = "//sdk/ctf/build/scripts/verify_cts_deps.py"
-
-    # GN requires an action to output a file. This file is written, but not used.
-    outputs = [ "${target_gen_dir}/${target_name}_DEPFILE" ]
-
-    args = [
-      "--root_build_dir",
-      rebase_path(root_build_dir, root_build_dir),
-      "--output",
-      rebase_path(outputs[0], root_build_dir),
-      "--invoker_label",
-      invoker_label,
-      "--deps",
-    ]
-    args += fully_qualified_deps
-    args += [ "--allowed_cts_deps" ]
-    args += ALLOWED_CTS_DEPS
-    args += ALLOWED_RUST_DEPS
-    args += ALLOWED_EXPERIMENTAL_FIDL
-    args += [ "--allowed_cts_dirs" ]
-    args += ALLOWED_CTS_DIRS
-    args += [ "--sdk_manifests" ]
-    args += rebase_path(inputs, root_build_dir)
+    allowed_deps =
+        ALLOWED_CTS_DEPS + ALLOWED_RUST_DEPS + ALLOWED_EXPERIMENTAL_FIDL
+    allowed_dirs = ALLOWED_CTS_DIRS
   }
 }

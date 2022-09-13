@@ -8,10 +8,10 @@ import json
 import os
 import unittest
 
-from verify_cts_deps import VerifyCtsDeps
+from verify_deps_in_sdk import VerifyDepsInSDK
 
 
-class CtsVerifyDepsTests(unittest.TestCase):
+class VerifyDepsInSDKTests(unittest.TestCase):
 
     def create_empty_sdk_manifest(self, root_build_dir, manifest_name):
         manifest_path = root_build_dir + '/sdk/manifest/'
@@ -25,92 +25,93 @@ class CtsVerifyDepsTests(unittest.TestCase):
         return sdk_manifest
 
     def test_init(self):
-        cts_file = 'test.this_is_cts'
-        invoker_label = "//sdk/ctf/build:verify_cts_deps_test"
+        output_file = 'test.unused'
+        invoker_label = "//sdk/ctf/build:verify_deps_in_sdk_test"
         deps = ['//zircon/system/ulib/zxtest:zxtest']
-        allowed_cts_dirs = ['//sdk/*']
+        allowed_dirs = ['//sdk/*']
 
         with TemporaryDirectory() as root_build_dir:
             sdk_manifests = [
                 self.create_empty_sdk_manifest(root_build_dir, "core")
             ]
             try:
-                VerifyCtsDeps(
-                    root_build_dir, cts_file, invoker_label, deps, deps,
-                    allowed_cts_dirs, sdk_manifests)
+                VerifyDepsInSDK(
+                    root_build_dir, output_file, invoker_label, deps, deps,
+                    allowed_dirs, sdk_manifests)
             except Exception as e:
                 self.assertTrue(False, e)
 
             with self.assertRaises(ValueError):
-                VerifyCtsDeps(
-                    '', cts_file, invoker_label, deps, deps, allowed_cts_dirs,
+                VerifyDepsInSDK(
+                    '', output_file, invoker_label, deps, deps, allowed_dirs,
                     sdk_manifests)
             with self.assertRaises(ValueError):
-                VerifyCtsDeps(
-                    '/this/path/doesnt/exist', cts_file, invoker_label, deps,
-                    deps, allowed_cts_dirs, sdk_manifests)
+                VerifyDepsInSDK(
+                    '/this/path/doesnt/exist', output_file, invoker_label, deps,
+                    deps, allowed_dirs, sdk_manifests)
             with self.assertRaises(ValueError):
-                VerifyCtsDeps(
-                    root_build_dir, '', invoker_label, deps, deps,
-                    allowed_cts_dirs, sdk_manifests)
-            with self.assertRaises(ValueError):
-                VerifyCtsDeps(
-                    root_build_dir, cts_file, '', deps, deps, allowed_cts_dirs,
+                VerifyDepsInSDK(
+                    root_build_dir, '', invoker_label, deps, deps, allowed_dirs,
                     sdk_manifests)
             with self.assertRaises(ValueError):
-                VerifyCtsDeps(
-                    root_build_dir, cts_file, invoker_label, [], deps,
-                    allowed_cts_dirs, sdk_manifests)
-            with self.assertRaises(ValueError):
-                VerifyCtsDeps(
-                    root_build_dir, cts_file, invoker_label, deps, [],
-                    allowed_cts_dirs, sdk_manifests)
-            with self.assertRaises(ValueError):
-                VerifyCtsDeps(
-                    root_build_dir, cts_file, invoker_label, deps, deps, [],
+                VerifyDepsInSDK(
+                    root_build_dir, output_file, '', deps, deps, allowed_dirs,
                     sdk_manifests)
             with self.assertRaises(ValueError):
-                VerifyCtsDeps(
-                    root_build_dir, cts_file, invoker_label, deps, deps,
-                    allowed_cts_dirs, ['/this/path/doesnt/exist'])
+                VerifyDepsInSDK(
+                    root_build_dir, output_file, invoker_label, [], deps,
+                    allowed_dirs, sdk_manifests)
+            with self.assertRaises(ValueError):
+                VerifyDepsInSDK(
+                    root_build_dir, output_file, invoker_label, deps, [],
+                    allowed_dirs, sdk_manifests)
+            with self.assertRaises(ValueError):
+                VerifyDepsInSDK(
+                    root_build_dir, output_file, invoker_label, deps, deps, [],
+                    sdk_manifests)
+            with self.assertRaises(ValueError):
+                VerifyDepsInSDK(
+                    root_build_dir, output_file, invoker_label, deps, deps,
+                    allowed_dirs, ['/this/path/doesnt/exist'])
 
-    def test_get_file_path(self):
-        cts_file = 'test.this_is_cts'
-        invoker_label = "//sdk/ctf/build:verify_cts_deps_test"
+    def test_get_ctf_file_path(self):
+        output_file = 'test.unused'
+        invoker_label = "//sdk/ctf/build:verify_deps_in_sdk_test"
         deps = ['//zircon/system/ulib/zxtest:zxtest']
-        allowed_cts_dirs = ['//sdk/*']
+        allowed_dirs = ['//sdk/*']
         with TemporaryDirectory() as root_build_dir:
             sdk_manifests = [
                 self.create_empty_sdk_manifest(root_build_dir, "core")
             ]
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, deps,
-                allowed_cts_dirs, sdk_manifests)
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, deps,
+                allowed_dirs, sdk_manifests)
 
             dep = '//zircon/system/ulib/zxtest:zxtest'
             self.assertEqual(
                 root_build_dir +
                 '/cts/zircon/system/ulib/zxtest/zxtest.this_is_ctf',
-                ctf_element.get_file_path(dep))
+                ctf_element.get_ctf_file_path(dep))
 
             dep = '//zircon/system/ulib/zxtest'
             self.assertEqual(
                 root_build_dir +
                 '/cts/zircon/system/ulib/zxtest/zxtest.this_is_ctf',
-                ctf_element.get_file_path(dep))
+                ctf_element.get_ctf_file_path(dep))
 
             dep = '//sdk'
             self.assertEqual(
                 root_build_dir + '/cts/sdk/sdk.this_is_ctf',
-                ctf_element.get_file_path(dep))
+                ctf_element.get_ctf_file_path(dep))
 
-    def test_verify_dep_in_sdk(self):
-        cts_file = 'test.this_is_cts'
-        invoker_label = "//sdk/ctf/build:verify_cts_deps_test"
-        allowed_cts_deps = ['//zircon/system/ulib/zxtest:zxtest']
-        allowed_cts_dirs = ['//third_party/dart-pkg/pub/*']
+    def test_verify_deps_in_sdk(self):
+        output_file = 'test.unused'
+        invoker_label = "//sdk/ctf/build:verify_deps_in_sdk_test"
+        allowed_deps = ['//zircon/system/ulib/zxtest:zxtest']
+        allowed_dirs = ['//third_party/dart-pkg/pub/*']
         deps = [
-            '//sdk/fidl/fuchsia.io', '//sdk/lib/fdio:fdio',
+            '//sdk/fidl/fuchsia.io',
+            '//sdk/lib/fdio:fdio',
             '//sdk/lib/private_atom:private_atom'
         ]
 
@@ -150,7 +151,7 @@ class CtsVerifyDepsTests(unittest.TestCase):
             "gn-label":
                 "//sdk/lib/private_atom:private_atom(//build/toolchain:fuchsia:x64)",
             "id":
-                "sdk://fidl/fuchsia.io",
+                "sdk://fidl/private_atom",
             "meta":
                 "fidl/fuchsia.io/meta.json",
             "type":
@@ -162,50 +163,38 @@ class CtsVerifyDepsTests(unittest.TestCase):
             sdk_manifest = self.create_empty_sdk_manifest(
                 root_build_dir, "core")
 
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, [sdk_manifest])
-            self.assertFalse(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/fdio:fdio'))
+            deps = ['//sdk/lib/fdio:fdio']
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, [sdk_manifest])
+            self.assertEqual(deps, ctf_element.verify_deps_in_sdk(deps))
 
         with TemporaryDirectory() as root_build_dir:
             sdk_manifest = self.create_empty_sdk_manifest(
                 root_build_dir, "core")
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, [sdk_manifest])
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, [sdk_manifest])
 
+            deps = [
+                '//sdk/lib/fdio:fdio',
+                '//sdk/fidl/fuchsia.io:fuchsia.io',
+                '//sdk/lib/private_atom',
+            ]
             manifest['atoms'].append(fdio_atom)
             with open(sdk_manifest, 'w') as f:
                 json.dump(manifest, f)
-            self.assertTrue(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/fdio:fdio'))
-            self.assertFalse(
-                ctf_element.verify_dep_in_sdk('//sdk/fidl/fuchsia.io'))
-            self.assertFalse(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/private_atom'))
+            self.assertEqual(deps[1:], ctf_element.verify_deps_in_sdk(deps))
 
             manifest['atoms'].append(fuchsia_io_atom)
             with open(sdk_manifest, 'w') as f:
                 json.dump(manifest, f)
-            self.assertTrue(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/fdio:fdio'))
-            self.assertTrue(
-                ctf_element.verify_dep_in_sdk(
-                    '//sdk/fidl/fuchsia.io:fuchsia.io'))
-            self.assertFalse(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/private_atom'))
+            self.assertEqual(deps[2:], ctf_element.verify_deps_in_sdk(deps))
 
             manifest['atoms'].append(fuchsia_git_atom)
             with open(sdk_manifest, 'w') as f:
                 json.dump(manifest, f)
-            self.assertTrue(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/fdio:fdio'))
-            self.assertTrue(
-                ctf_element.verify_dep_in_sdk(
-                    '//sdk/fidl/fuchsia.io:fuchsia.io'))
-            self.assertFalse(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/private_atom'))
+            self.assertEqual(deps[2:], ctf_element.verify_deps_in_sdk(deps))
 
             manifest['atoms'] = []
 
@@ -220,61 +209,60 @@ class CtsVerifyDepsTests(unittest.TestCase):
             with open(manifest2, 'w') as f:
                 json.dump(manifest, f)
 
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, [manifest1, manifest2])
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, [manifest1, manifest2])
 
-            self.assertTrue(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/fdio:fdio'))
-            self.assertTrue(
-                ctf_element.verify_dep_in_sdk(
-                    '//sdk/fidl/fuchsia.io:fuchsia.io'))
-            self.assertFalse(
-                ctf_element.verify_dep_in_sdk('//sdk/lib/private_atom'))
+            deps = [
+                '//sdk/lib/fdio:fdio',
+                '//sdk/fidl/fuchsia.io:fuchsia.io',
+                '//sdk/lib/private_atom',
+            ]
+            self.assertEqual(deps[2:], ctf_element.verify_deps_in_sdk(deps))
 
     def test_verify_deps(self):
-        cts_file = 'test.this_is_cts'
-        invoker_label = "//sdk/ctf/build:verify_cts_deps_test"
-        allowed_cts_deps = ['//zircon/system/ulib/zxtest:zxtest']
-        allowed_cts_dirs = ['//sdk/*']
+        output_file = 'test.unused'
+        invoker_label = "//sdk/ctf/build:verify_deps_in_sdk_test"
+        allowed_deps = ['//zircon/system/ulib/zxtest:zxtest']
+        allowed_dirs = ['//sdk/*']
 
         with TemporaryDirectory() as root_build_dir:
             sdk_manifests = [
                 self.create_empty_sdk_manifest(root_build_dir, "core")
             ]
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, allowed_cts_deps,
-                allowed_cts_deps, allowed_cts_dirs, sdk_manifests)
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, allowed_deps,
+                allowed_deps, allowed_dirs, sdk_manifests)
             self.assertListEqual(ctf_element.verify_deps(), [])
 
-            deps = ['//this/dep/isnt/allowed/in:cts']
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, sdk_manifests)
+            deps = ['//this/dep/isnt/from/an:sdk']
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, sdk_manifests)
             self.assertListEqual(ctf_element.verify_deps(), deps)
 
             deps = [
-                '//this/dep/isnt/allowed/in:cts',
-                '//this/dep/isnt/allowed/in:cts2',
+                '//this/dep/isnt/from/an:sdk',
+                '//this/dep/isnt/from/an:sdk2',
             ]
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, sdk_manifests)
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, sdk_manifests)
             self.assertListEqual(ctf_element.verify_deps(), deps)
 
             deps = ['//sdk/this/is/a/real:target']
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, sdk_manifests)
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, sdk_manifests)
             self.assertListEqual(ctf_element.verify_deps(), [])
 
             deps = [
                 '//sdk/this/is/a/real:target',
                 '//zircon/system/ulib/zxtest:zxtest',
             ]
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, sdk_manifests)
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, sdk_manifests)
             self.assertListEqual(ctf_element.verify_deps(), [])
 
             deps = [
@@ -304,43 +292,43 @@ class CtsVerifyDepsTests(unittest.TestCase):
             }
             with open(sdk_manifests[0], 'w') as sdk_manifest:
                 json.dump(manifest, sdk_manifest)
-            allowed_cts_dirs = ['//third_party/dart-pkg/pub/*']
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, sdk_manifests)
+            allowed_dirs = ['//third_party/dart-pkg/pub/*']
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, sdk_manifests)
             self.assertListEqual(ctf_element.verify_deps(), [])
 
-    def test_create_cts_dep_file(self):
-        invoker_label = "//sdk/ctf/build:verify_cts_deps_test"
+    def test_create_output_file(self):
+        invoker_label = "//sdk/ctf/build:verify_deps_in_sdk_test"
         deps = ['//sdk:sdk', '//zircon/system/ulib/zxtest:zxtest']
-        allowed_cts_deps = ['//zircon/system/ulib/zxtest:zxtest']
-        allowed_cts_dirs = ['//sdk/*']
+        allowed_deps = ['//zircon/system/ulib/zxtest:zxtest']
+        allowed_dirs = ['//sdk/*']
 
         with TemporaryDirectory() as root_build_dir:
-            cts_file = root_build_dir + '/create_cts_dep_file.this_is_cts'
+            output_file = root_build_dir + '/create_output_file.unused'
             sdk_manifests = [
                 self.create_empty_sdk_manifest(root_build_dir, "core")
             ]
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, sdk_manifests)
-            ctf_element.create_cts_dep_file()
-            self.assertTrue(os.path.exists(cts_file))
-            with open(cts_file) as f:
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, sdk_manifests)
+            ctf_element.create_output_file()
+            self.assertTrue(os.path.exists(output_file))
+            with open(output_file) as f:
                 lines = [line.strip() for line in f.readlines()]
                 self.assertListEqual(deps, lines)
 
         with TemporaryDirectory() as root_build_dir:
-            cts_file = root_build_dir + '/cts/create_cts_dep_file.this_is_cts'
+            output_file = root_build_dir + '/cts/create_output_file.unused'
             sdk_manifests = [
                 self.create_empty_sdk_manifest(root_build_dir, "core")
             ]
-            ctf_element = VerifyCtsDeps(
-                root_build_dir, cts_file, invoker_label, deps, allowed_cts_deps,
-                allowed_cts_dirs, sdk_manifests)
-            ctf_element.create_cts_dep_file()
-            self.assertTrue(os.path.exists(cts_file))
-            with open(cts_file) as f:
+            ctf_element = VerifyDepsInSDK(
+                root_build_dir, output_file, invoker_label, deps, allowed_deps,
+                allowed_dirs, sdk_manifests)
+            ctf_element.create_output_file()
+            self.assertTrue(os.path.exists(output_file))
+            with open(output_file) as f:
                 lines = [line.strip() for line in f.readlines()]
                 self.assertListEqual(deps, lines)
 

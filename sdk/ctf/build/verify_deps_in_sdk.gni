@@ -1,0 +1,89 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This list should be kept up to date with the public and partner SDKs in //sdk:sdk.
+ALLOWED_SDKS = [
+  "//sdk:core",
+  "//sdk:e2e_testing",
+  "//sdk:modular_testing",
+]
+
+# Verifies dependencies are released in an SDK.
+#
+# Ensures that dependencies exist in a public SDK's generated manifest. Allow lists can
+# be passed to permit specific dependencies or directories.
+#
+# Parameters
+#
+#   invoker_label (required)
+#     The label of the invoking target. This is used to print a helpful error message.
+#     e.g. "The following dependencies of $invoker_label cannot be used."
+#     type: string
+#   allowed_deps (optional)
+#     A list of non-SDK dependencies that are allowed to be used.
+#     type: list
+#   allowed_dirs (optional)
+#     A list of directories where all dependencies in those directories are allowed.
+#     Useful for allowing all third_party dependencies.
+#     e.g. [ "//third_party/rust_crates/*" ]
+#     type: list
+#   deps (required)
+template("verify_deps_in_sdk") {
+  assert(defined(invoker.deps))
+  assert(defined(invoker.invoker_label))
+  assert(!defined(invoker.public_deps),
+         "All dependencies should be added to \"deps\"")
+
+  fully_qualified_deps = []
+  foreach(dep, invoker.deps) {
+    fully_qualified_deps += [ get_label_info(dep, "label_no_toolchain") ]
+  }
+
+  action(target_name) {
+    forward_variables_from(invoker, "*")
+
+    inputs = []
+    foreach(sdk, ALLOWED_SDKS) {
+      sdk_manifest_copy = sdk + "_copy($target_toolchain)"
+      sdk_manifest = get_label_info(sdk_manifest_copy, "root_out_dir") +
+                     "/sdk/manifest/" + get_label_info(sdk, "name")
+      deps += [ sdk_manifest_copy ]
+      inputs += [ sdk_manifest ]
+    }
+
+    metadata = {
+      # expect_includes are not relevant for dependency verification, so disarm
+      # them here to avoid spurious include errors.
+      expect_includes_barrier = []
+    }
+
+    testonly = true
+
+    script = "//sdk/ctf/build/scripts/verify_deps_in_sdk.py"
+
+    # GN requires an action to output a file. This file is written, but not used.
+    outputs = [ "${target_gen_dir}/${target_name}.unused" ]
+
+    args = [
+      "--root_build_dir",
+      rebase_path(root_build_dir, root_build_dir),
+      "--output",
+      rebase_path(outputs[0], root_build_dir),
+      "--invoker_label",
+      invoker_label,
+      "--deps",
+    ]
+    args += fully_qualified_deps
+    if (defined(allowed_deps)) {
+      args += [ "--allowed_deps" ]
+      args += allowed_deps
+    }
+    if (defined(allowed_dirs)) {
+      args += [ "--allowed_dirs" ]
+      args += allowed_dirs
+    }
+    args += [ "--sdk_manifests" ]
+    args += rebase_path(inputs, root_build_dir)
+  }
+}

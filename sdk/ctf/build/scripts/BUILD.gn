@@ -33,9 +33,9 @@ if (is_host) {
     libraries = [ "//third_party/parameterized" ]
   }
 
-  python_host_test("verify_cts_deps_test") {
-    main_source = "verify_cts_deps_test.py"
-    sources = [ "verify_cts_deps.py" ]
+  python_host_test("verify_deps_in_sdk_test") {
+    main_source = "verify_deps_in_sdk_test.py"
+    sources = [ "verify_deps_in_sdk.py" ]
   }
 }
 
@@ -43,7 +43,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":fidl_api_mapper_test($host_toolchain)",
-    ":verify_cts_deps_test($host_toolchain)",
+    ":verify_deps_in_sdk_test($host_toolchain)",
     "verify_release:tests",
   ]
 }

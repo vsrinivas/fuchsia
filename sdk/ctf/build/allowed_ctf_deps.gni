@@ -53,10 +53,3 @@ ALLOWED_CTS_DIRS = [
   "//prebuilt/cts/*",
   "//third_party/dart-pkg/pub/*",
 ]
-
-# This list should be kept up to date with the public and partner SDKs in //sdk:sdk.
-ALLOWED_CTS_SDKS = [
-  "//sdk:core",
-  "//sdk:e2e_testing",
-  "//sdk:modular_testing",
-]
