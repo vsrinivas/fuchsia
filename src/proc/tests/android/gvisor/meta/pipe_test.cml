@@ -5,6 +5,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/pipe_test",
-        args: [ "--gunit_filter=-*StatFS*:*.Flags/named*" ],
+        args: [ "--gunit_filter=-Pipes/PipeTest.Flags/namedblocking:Pipes/PipeTest.Flags/namednonblocking" ],
     },
 }
