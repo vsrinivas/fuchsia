@@ -10,7 +10,6 @@ use {
     fidl_fuchsia_power_battery_test::BatterySimulatorProxy,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog as syslog,
     futures::{
         channel::mpsc::{channel, SendError},
         Sink, SinkExt, Stream, StreamExt, TryFutureExt,
@@ -20,7 +19,6 @@ use {
     std::{fmt, thread, time::Duration},
 };
 
-static LOG_TAG: &str = "battery_simulator";
 static PROMPT: &str = "\x1b[34mbattman>\x1b[0m ";
 
 // ParseResult is used to convey the parsed commands input by user
@@ -343,9 +341,8 @@ async fn run_repl(service: BatterySimulatorProxy) -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["battery_simulator"])]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&[LOG_TAG]).expect("Can't init logger - batsim main");
     println!("Welcome to the Battery Simulator. Type help and <Enter> to see all the options!");
     let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>()?;
     let repl = run_repl(battery_simulator)
@@ -363,7 +360,7 @@ async fn main() -> Result<(), Error> {
 mod tests {
     use super::*;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_disconnect() {
         // Connect to service
         let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
@@ -378,7 +375,7 @@ mod tests {
         assert!(res.is_ok(), "Failed to reconnect");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_battery_percentage() {
         // Connect to service
         let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
@@ -396,7 +393,7 @@ mod tests {
         assert!(res.is_ok(), "Failed to reconnect");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_battery_status() {
         // Connect to service
         let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
@@ -414,7 +411,7 @@ mod tests {
         assert!(res.is_ok(), "Failed to reconnect");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_charge_status() {
         // Connect to service
         let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
@@ -432,7 +429,7 @@ mod tests {
         assert!(res.is_ok(), "Failed to reconnect");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_charge_source() {
         // Connect to service
         let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();
@@ -450,7 +447,7 @@ mod tests {
         assert!(res.is_ok(), "Failed to reconnect");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_set_level_status() {
         // Connect to service
         let battery_simulator = connect_to_protocol::<spower::BatterySimulatorMarker>().unwrap();

@@ -79,8 +79,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/lib/ui/keymaps:*",
   "//src/media/sessions:*",
   "//src/media/stream_processors/test:*",
-  "//src/power/battery-manager:*",
-  "//src/power/battery-manager/battery-cli:*",
   "//src/power/power-manager:*",
   "//src/power/shutdown-shim/tests:*",
   "//src/power/temperature-logger:*",

@@ -6,11 +6,10 @@ use {
     anyhow::Error,
     fidl::endpoints::Proxy,
     fidl_fuchsia_hardware_power as hpower, fidl_fuchsia_power_battery as fpower,
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_debug, fx_log_err},
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{lock::Mutex, TryStreamExt},
     std::sync::{Arc, RwLock},
+    tracing::{debug, error},
 };
 
 #[derive(Debug, PartialEq)]
@@ -93,7 +92,7 @@ impl BatteryManager {
     // Adds watcher
     pub async fn add_watcher(&self, watcher: fpower::BatteryInfoWatcherProxy) {
         let mut watchers = self.watchers.lock().await;
-        fx_log_debug!("::manager:: adding watcher: {:?} [{:?}]", watcher, watchers.len());
+        debug!("::manager:: adding watcher: {:?} [{:?}]", watcher, watchers.len());
         watchers.push(watcher)
     }
 
@@ -103,22 +102,18 @@ impl BatteryManager {
         power_info: hpower::SourceInfo,
         battery_info: Option<hpower::BatteryInfo>,
     ) -> Result<(), anyhow::Error> {
-        fx_log_debug!(
-            "update_status with power info: {:#?} and battery info: {:#?}",
-            &power_info,
-            &battery_info
-        );
+        debug!(?power_info, ?battery_info, "update_status",);
 
         match self.update_battery_info(power_info, battery_info) {
             Ok(StatusUpdateResult::Notify) => {
-                fx_log_debug!("::manager:: update status changed - NOTIFY");
+                debug!("::manager:: update status changed - NOTIFY");
                 let info = self.get_battery_info_copy();
                 let watchers = self.watchers.clone();
-                fx_log_debug!("::manager:: run watchers {:?} with info {:?}", &watchers, &info);
+                debug!("::manager:: run watchers {:?} with info {:?}", &watchers, &info);
                 BatteryManager::run_watchers(watchers.clone(), info.clone());
             }
             Ok(StatusUpdateResult::DoNotNotify) => {
-                fx_log_debug!("::manager:: update status unchanged - skipping NOTIFY");
+                debug!("::manager:: update status unchanged - skipping NOTIFY");
             }
             Err(e) => return Err(e),
         }
@@ -130,17 +125,17 @@ impl BatteryManager {
         watchers: Arc<Mutex<Vec<fpower::BatteryInfoWatcherProxy>>>,
         info: fpower::BatteryInfo,
     ) {
-        fx_log_debug!("::manager:: run watchers...");
+        debug!("::manager:: run watchers...");
         fasync::Task::spawn(async move {
             let watchers = {
                 let mut watchers = watchers.lock().await;
                 watchers.retain(|w| !w.is_closed());
                 watchers.clone()
             };
-            fx_log_debug!("::manager:: run watchers [{:?}]", &watchers.len());
+            debug!("::manager:: run watchers [{:?}]", &watchers.len());
             for w in &watchers {
                 if let Err(e) = w.on_change_battery_info(info.clone().into()).await {
-                    fx_log_err!("failed to send battery info to watcher {:?}", e);
+                    error!("failed to send battery info to watcher {:?}", e);
                 }
             }
         })
@@ -154,7 +149,7 @@ impl BatteryManager {
     ) -> Result<StatusUpdateResult, anyhow::Error> {
         let now = get_current_time();
         let old_battery_info = self.get_battery_info_copy();
-        fx_log_debug!("::battery_manager:: old battery info: {:?}", &old_battery_info);
+        debug!("::battery_manager:: old battery info: {:?}", &old_battery_info);
 
         let mut new_battery_info = self.battery_info.write().unwrap();
 
@@ -179,11 +174,7 @@ impl BatteryManager {
                 "updating battery info with non-battery power source"
             );
 
-            fx_log_debug!(
-                "::battery_manager:: update with hpower info p:{:?} b:{:?}",
-                &power_info,
-                &bi
-            );
+            debug!(?power_info, ?bi, "::battery_manager:: update with hpower info");
 
             // check battery online and update accordingly
             if power_info.state & hpower::POWER_STATE_ONLINE != 0 {
@@ -296,37 +287,34 @@ impl BatteryManager {
         &self,
         stream: fpower::BatteryManagerRequestStream,
     ) -> Result<(), Error> {
-        stream.try_for_each_concurrent(None, move |request| {
-            async move {
-                match request {
-                    fpower::BatteryManagerRequest::GetBatteryInfo { responder, .. } => {
-                        let info = self.get_battery_info_copy();
-        fx_log_debug!(
-                            "::battery_manager_request:: handle GetBatteryInfo request with info: {:?}",
-                            &info
-                        );
-                        responder.send(info)?;
+        stream
+            .try_for_each_concurrent(None, move |request| {
+                async move {
+                    match request {
+                        fpower::BatteryManagerRequest::GetBatteryInfo { responder, .. } => {
+                            let info = self.get_battery_info_copy();
+                            debug!(
+                                ?info,
+                                "::battery_manager_request:: handle GetBatteryInfo request"
+                            );
+                            responder.send(info)?;
+                        }
+                        fpower::BatteryManagerRequest::Watch { watcher, .. } => {
+                            let watcher = watcher.into_proxy()?;
+                            debug!("::battery_manager_request:: handle Watch request");
+                            self.add_watcher(watcher.clone()).await;
 
+                            // make sure watcher has current battery info
+                            let info = self.get_battery_info_copy();
+
+                            debug!(?info, "::battery_manager_request:: callback on new watcher");
+                            watcher.on_change_battery_info(info).await?;
+                        }
                     }
-                    fpower::BatteryManagerRequest::Watch { watcher, .. } => {
-                        let watcher = watcher.into_proxy()?;
-                        fx_log_debug!( "::battery_manager_request:: handle Watch request");
-                        self.add_watcher(watcher.clone()).await;
-
-                        // make sure watcher has current battery info
-                        let info = self.get_battery_info_copy();
-
-        fx_log_debug!(
-                            "::battery_manager_request:: callback on new watcher with info {:?}",
-                            &info
-                        );
-                        watcher.on_change_battery_info(info).await?;
-                    }
+                    Ok(())
                 }
-                Ok(())
-            }
-        })
-        .await?;
+            })
+            .await?;
 
         Ok(())
     }
@@ -421,7 +409,7 @@ mod tests {
         join(serve_fut, request_fut).await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_run_watchers_channel_closed() {
         let battery_manager = BatteryManager::new();
         let mut battery_info: fpower::BatteryInfo = battery_manager.get_battery_info_copy();
@@ -498,7 +486,7 @@ mod tests {
         join3(serve1_fut, serve2_fut, request_fut).await;
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn update_battery_info() {
         let nanos_in_one_hour = zx::Duration::from_hours(1);
 

@@ -13,22 +13,19 @@ use {
     fidl_fuchsia_power_battery::BatteryManagerRequestStream,
     fidl_fuchsia_power_battery_test as spower, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{self as syslog, fx_log_err, fx_log_info},
     futures::prelude::*,
     std::sync::{Arc, Weak},
+    tracing::{error, info},
 };
-
-static LOG_TAG: &str = "battery_manager";
 
 enum IncomingService {
     BatteryManager(BatteryManagerRequestStream),
     BatterySimulator(spower::BatterySimulatorRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["battery_manager"])]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&[LOG_TAG]).expect("Can't init logger");
-    fx_log_info!("starting up");
+    info!("starting up");
 
     let mut fs = ServiceFs::new();
 
@@ -42,7 +39,7 @@ async fn main() -> Result<(), Error> {
     ));
 
     fasync::Task::spawn(f.unwrap_or_else(|e| {
-        fx_log_err!("watch_power_device failed {:?}", e);
+        error!("watch_power_device failed {:?}", e);
     }))
     .detach();
 
@@ -61,7 +58,7 @@ async fn main() -> Result<(), Error> {
                 IncomingService::BatteryManager(stream) => {
                     let res = battery_manager.serve(stream).await;
                     if let Err(e) = res {
-                        fx_log_err!("BatteryManager failed {}", e);
+                        error!("BatteryManager failed {}", e);
                     }
                 }
                 IncomingService::BatterySimulator(stream) => {
@@ -109,7 +106,7 @@ async fn main() -> Result<(), Error> {
                         .await;
 
                     if let Err(e) = res {
-                        fx_log_err!("BatterySimulator failed {}", e);
+                        error!("BatterySimulator failed {}", e);
                     }
                 }
             }
@@ -117,6 +114,6 @@ async fn main() -> Result<(), Error> {
     })
     .await;
 
-    fx_log_info!("stopping battery_manager");
+    info!("stopping battery_manager");
     Ok(())
 }
