@@ -275,26 +275,6 @@ def main():
         'CGO_CPPFLAGS': cflags_joined,
         'CGO_CXXFLAGS': cflags_joined,
         'CGO_LDFLAGS': ldflags_joined,
-        # From https://go.dev/doc/go1.18#go-command:
-        #
-        #   The go command now embeds version control information in binaries.
-        #   It includes the currently checked-out revision, commit time, and a
-        #   flag indicating whether edited or untracked files are present.
-        #   Version control information is embedded if the go command is invoked
-        #   in a directory within a Git, Mercurial, Fossil, or Bazaar
-        #   repository, and the main package and its containing main module are
-        #   in the same repository. This information may be omitted using the
-        #   flag -buildvcs=false.
-        #
-        # At the time of writing, we are in the process of upgrading from go1.17
-        # to go1.18, so our `go` command does not yet understand the
-        # `-buildvcs=false` setting. Unfortunately we have a number of build
-        # targets that declare the git index as an input, and git likes to
-        # refresh the index on certain operations. Setting this environment
-        # variable suppresses the index refresh behavior, and should allow us to
-        # upgrade to go1.18 without breaking build convergence. See also
-        # https://fxbug.dev/93875 for this issue popping up elsewhere.
-        'GIT_OPTIONAL_LOCKS': '0',
     }
 
     # Infra sets $TMPDIR which is cleaned between builds.
@@ -340,6 +320,9 @@ def main():
         cmd += ['-ldflags=-buildid=']
 
     cmd += [
+        # Omit version control information so that binaries are deterministic
+        # based on their source code and don't change on each commit.
+        '-buildvcs=false',
         '-pkgdir',
         os.path.join(project_path, 'pkg'),
         '-o',
