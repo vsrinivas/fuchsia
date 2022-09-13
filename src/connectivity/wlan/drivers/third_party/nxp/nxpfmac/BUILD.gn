@@ -90,11 +90,6 @@ driver_bind_rules("nxpfmac_sdio_bind") {
   deps = [ "//src/devices/bind/fuchsia.nxp.platform" ]
 }
 
-resource("nxpfmac-firmware-sd8987") {
-  sources = [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/firmware/sdsd8987_combo.bin" ]
-  outputs = [ "lib/firmware/nxpfmac/sdsd8987_combo.bin" ]
-}
-
 # Driver module for the nxpfmac driver.
 fuchsia_driver("nxpfmac_sdio-driver") {
   output_name = "nxpfmac_sdio"
@@ -121,30 +116,31 @@ fuchsia_driver_component("nxpfmac_sdio") {
   colocate = true
 }
 
-fuchsia_driver_package("nxpfmac_driver") {
-  if (internal_access) {
-    deps = [ ":nxpfmac-firmware-sd8987" ]
-  }
-  driver_components = [ ":nxpfmac_sdio" ]
-  visibility += [ "*" ]
-}
-
-all_fw_files = []
+all_fw_files = [
+  "sdsd8987_combo.bin",
+  "txpower_WW.bin",
+  "txpower_US.bin",
+  "WlanCalData_sd8987.conf",
+]
 
 foreach(fw_file, all_fw_files) {
   resource("nxpfmac-firmware-" + fw_file) {
-    sources = [ "//prebuilt/connectivity/wlan/firmware/nxp/nxpfmac/" + fw_file ]
+    sources =
+        [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/firmware/" +
+          fw_file ]
     outputs = [ "lib/firmware/nxpfmac/" + fw_file ]
   }
 }
 
-fuchsia_system_package("nxpfmac") {
-  deps = [ ":nxpfmac_sdio-driver" ]
-  foreach(fw_file, all_fw_files) {
-    deps += [ ":nxpfmac-firmware-" + fw_file ]
+fuchsia_driver_package("nxpfmac_driver") {
+  deps = []
+  if (internal_access) {
+    foreach(fw_file, all_fw_files) {
+      deps += [ ":nxpfmac-firmware-" + fw_file ]
+    }
   }
+  driver_components = [ ":nxpfmac_sdio" ]
   visibility += [ "*" ]
-  allowed_in_extra_deps = true
 }
 
 group("tests") {

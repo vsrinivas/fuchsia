@@ -28,6 +28,9 @@
 namespace wlan::nxpfmac {
 
 constexpr char kFirmwarePath[] = "nxpfmac/sdsd8987_combo.bin";
+constexpr char kTxPwrWWPath[] = "nxpfmac/txpower_WW.bin";
+// constexpr char kTxPwrUSPath[] = "nxpfmac/txpower_US.bin";
+constexpr char kWlanCalDataPath[] = "nxpfmac/WlanCalData_sd8987.conf";
 
 Device::Device(zx_device_t *parent) : DeviceType(parent) {}
 
@@ -219,12 +222,40 @@ zx_status_t Device::InitFirmware() {
     return status;
   }
 
+  std::vector<uint8_t> tx_power_data;
+  status = LoadFirmwareData(kTxPwrWWPath, &tx_power_data);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to load calibration data from '%s': %s", kTxPwrWWPath,
+             zx_status_get_string(status));
+    return status;
+  }
+
+  std::vector<uint8_t> calibration_data;
+  status = LoadFirmwareData(kWlanCalDataPath, &calibration_data);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to load calibration data from '%s': %s", kWlanCalDataPath,
+             zx_status_get_string(status));
+    return status;
+  }
+
+  mlan_init_param init_param = {
+      .ptxpwr_data_buf = tx_power_data.data(),
+      .txpwr_data_len = static_cast<uint32_t>(tx_power_data.size()),
+      .pcal_data_buf = calibration_data.data(),
+      .cal_data_len = static_cast<uint32_t>(calibration_data.size()),
+  };
+  mlan_status ml_status = mlan_set_init_param(mlan_adapter_, &init_param);
+  if (ml_status != MLAN_STATUS_SUCCESS) {
+    NXPF_ERR("mlan_set_init_param failed: %d", ml_status);
+    return ZX_ERR_INTERNAL;
+  }
+
   mlan_fw_image fw = {
       .pfw_buf = firmware_data.data(),
       .fw_len = static_cast<uint32_t>(firmware_data.size()),
       .fw_reload = false,
   };
-  mlan_status ml_status = mlan_dnld_fw(mlan_adapter_, &fw);
+  ml_status = mlan_dnld_fw(mlan_adapter_, &fw);
   if (ml_status != MLAN_STATUS_SUCCESS) {
     NXPF_ERR("mlan_dnld_fw failed: %d", ml_status);
     return ZX_ERR_INTERNAL;
