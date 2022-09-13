@@ -13,7 +13,7 @@ use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fuchsia_zircon as zx;
 use itertools::Itertools as _;
 use std::collections::HashMap;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 
 /// The minimum amount of time for a device counter to be stuck in the same
 /// value for the device to be considered unhealthy.
@@ -37,7 +37,9 @@ pub enum Error {
     #[error("Operation timed out")]
     Timeout,
     #[error("FIDL error {0}")]
-    Fidl(fidl::Error),
+    Fidl(#[from] fidl::Error),
+    #[error("Unsupported operation")]
+    NotSupported,
 }
 
 #[derive(Debug)]
@@ -205,6 +207,7 @@ where
     }
 
     pub async fn check_interface_state(&mut self, now: zx::Time, sys: &S, view: InterfaceView<'_>) {
+        debug!(view = ?view, "poll interface state");
         let Self { interfaces, system_health_status, _marker: _ } = self;
 
         let interface = view.properties.id;
@@ -268,6 +271,8 @@ where
         let InterfaceDiagnosticsState { diagnostics, rx, tx, updated_at, health } = diag_state;
         let interface = *interface;
 
+        debug!(iface = interface, "evaluate interface state");
+
         let mut neighbors = neighbors.as_ref()?.iter_health();
 
         let found_healthy_gateway = neighbors
@@ -284,7 +289,15 @@ where
                     return itertools::FoldWhile::Continue(found_healthy_gateway);
                 }
 
-                if is_healthy_gateway(health, now) {
+                let healthy = is_healthy_gateway(health, now);
+                debug!(
+                    iface = interface,
+                    neighbor = ?fidl_fuchsia_net_ext::IpAddress::from(neighbor.clone()),
+                    healthy,
+                    "router check"
+                );
+
+                if healthy {
                     return itertools::FoldWhile::Done(Some(true));
                 }
 
@@ -296,6 +309,7 @@ where
             // If there are no gateways or there's at least one healthy gateway,
             // there's no action to be taken.
             None | Some(true) => {
+                debug!(iface = interface, "neighbors are healthy");
                 return None;
             }
             // If we found at least one gateway and they're all unhealthy,
@@ -320,6 +334,13 @@ where
                         "failed to read counters for interface, no action will be taken"
                     );
                 }
+                return None;
+            }
+            Err(Error::NotSupported) => {
+                error!(
+                    iface = interface,
+                    "failed to read counters for interface, no action will be taken"
+                );
                 return None;
             }
         };
@@ -354,6 +375,8 @@ where
             return action;
         }
 
+        debug!(iface = interface, rx = rx_frames, tx = tx_frames, "counters are healthy");
+
         // Counters are not stalled, mark the interface as healthy.
         *health = match health {
             HealthStatus::Unhealthy { last_action } => {
@@ -365,6 +388,14 @@ where
         };
 
         None
+    }
+
+    pub fn handle_interface_removed(&mut self, interface: InterfaceId) {
+        let Self { interfaces, system_health_status: _, _marker: _ } = self;
+        match interfaces.remove(&interface) {
+            Some(InterfaceState { .. }) => (),
+            None => error!(iface = interface, "attempted to remove unknown interface"),
+        }
     }
 }
 

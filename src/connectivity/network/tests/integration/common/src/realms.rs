@@ -512,6 +512,12 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                     fnetemul::Capability::ChildDep(protocol_dep::<fnet_neighbor::ViewMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_debug::InterfacesMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<fnet_debug::DiagnosticsMarker>(
+                        constants::netstack::COMPONENT_NAME,
+                    )),
                 ])),
                 eager: Some(true),
                 ..fnetemul::ChildDef::EMPTY

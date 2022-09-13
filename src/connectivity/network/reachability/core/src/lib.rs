@@ -350,7 +350,7 @@ impl StateInfo {
 }
 
 /// Provides a view into state for a specific system interface.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct InterfaceView<'a> {
     pub properties: &'a fnet_interfaces_ext::Properties,
     pub routes: &'a [fnet_stack::ForwardingEntry],

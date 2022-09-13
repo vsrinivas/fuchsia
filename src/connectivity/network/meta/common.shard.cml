@@ -138,7 +138,11 @@
             to: [ "#dhcpd" ],
         },
         {
-            protocol: [ "fuchsia.net.neighbor.View" ],
+            protocol: [
+                "fuchsia.net.debug.Diagnostics",
+                "fuchsia.net.debug.Interfaces",
+                "fuchsia.net.neighbor.View",
+            ],
             from: "#netstack",
             to: [ "#reachability" ],
         },

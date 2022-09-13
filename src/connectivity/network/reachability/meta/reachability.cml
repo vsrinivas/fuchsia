@@ -13,6 +13,8 @@
     use: [
         {
             protocol: [
+                "fuchsia.net.debug.Diagnostics",
+                "fuchsia.net.debug.Interfaces",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.neighbor.View",
                 "fuchsia.net.stack.Stack",
