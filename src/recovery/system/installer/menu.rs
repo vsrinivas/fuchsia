@@ -14,12 +14,15 @@ const CONST_WARN_MESSAGE: &str = "Installing Fuchsia will WIPE YOUR DISK!\nDo yo
 
 const CONST_PROGRESS_HEADLINE: &str = "Installing Fuchsia, Please Wait";
 
+const CONST_SUCCESS_HEADLINE: &str = "Install Complete";
+
 const CONST_ERR_HEADLINE: &str = "ERROR Cannot Install Fuchsia:";
 const CONST_ERR_USER_DECLINE: &str = "User declined";
 const CONST_ERR_NO_DISK: &str = "No available disks";
 const CONST_ERR_UNEXPECTED_EVENT: &str = "Unexpected event";
 const CONST_ERR_UNEXPECTED_INPUT: &str = "Unexpected input event";
-const CONST_ERR_RESTART: &str = "Please restart your computer";
+
+const CONST_RESTART_REQUEST: &str = "Please restart your computer";
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum MenuState {
@@ -27,6 +30,7 @@ pub enum MenuState {
     SelectDisk,
     Warning,
     Progress,
+    Success,
     Error,
 }
 
@@ -36,6 +40,7 @@ pub enum MenuEvent {
     Enter,
     GotBlockDevices(Vec<BlockDevice>),
     ProgressUpdate(String),
+    Success,
     Error(String),
 }
 
@@ -51,6 +56,7 @@ pub enum MenuButtonType {
     Yes,
     No,
     Disk(BlockDevice),
+    Restart,
     None,
 }
 
@@ -61,6 +67,7 @@ impl MenuButtonType {
             MenuButtonType::Yes => "Yes",
             MenuButtonType::No => "No",
             MenuButtonType::Disk(ref dev) => &dev.topo_path,
+            MenuButtonType::Restart => "Restart",
             MenuButtonType::None => "???",
         }
     }
@@ -155,12 +162,14 @@ impl MenuStateMachine {
                     self.message = String::from(update);
                     MenuState::Progress
                 }
+                MenuEvent::Success => MenuState::Success,
                 MenuEvent::Error(error_msg) => {
                     self.message = create_error_message(&error_msg);
                     MenuState::Error
                 }
                 _ => MenuState::Progress,
             },
+            MenuState::Success => MenuState::Success,
             MenuState::Error => MenuState::Error,
         };
 
@@ -226,8 +235,17 @@ impl MenuStateMachine {
                 self.buttons.clear();
                 self.heading = String::from(CONST_PROGRESS_HEADLINE);
             }
+            MenuState::Success => {
+                self.buttons.clear();
+                self.buttons.push(MenuButton::new(true, MenuButtonType::Restart));
+                self.selected_button_index = 0;
+                self.heading = String::from(CONST_SUCCESS_HEADLINE);
+                self.message = String::from(CONST_RESTART_REQUEST);
+            }
             MenuState::Error => {
                 self.buttons.clear();
+                self.buttons.push(MenuButton::new(true, MenuButtonType::Restart));
+                self.selected_button_index = 0;
                 self.heading = String::from(CONST_ERR_HEADLINE);
             }
         };
@@ -293,7 +311,7 @@ impl MenuButton {
 }
 
 fn create_error_message(error: &str) -> String {
-    format!("{}\n{}", error, CONST_ERR_RESTART)
+    format!("{}\n{}", error, CONST_RESTART_REQUEST)
 }
 
 fn installation_method_buttons() -> Vec<MenuButton> {
@@ -436,7 +454,7 @@ mod tests {
         let heading = menu.get_heading();
         assert_eq!(heading, CONST_ERR_HEADLINE);
         let message = menu.get_message();
-        assert_eq!(message, format!("{}\n{}", CONST_ERR_USER_DECLINE, CONST_ERR_RESTART));
+        assert_eq!(message, format!("{}\n{}", CONST_ERR_USER_DECLINE, CONST_RESTART_REQUEST));
         Ok(())
     }
 
@@ -452,7 +470,7 @@ mod tests {
         let heading = menu.get_heading();
         assert_eq!(heading, CONST_ERR_HEADLINE);
         let message = menu.get_message();
-        assert_eq!(message, format!("{}\n{}", CONST_ERR_NO_DISK, CONST_ERR_RESTART));
+        assert_eq!(message, format!("{}\n{}", CONST_ERR_NO_DISK, CONST_RESTART_REQUEST));
         let buttons = menu.get_buttons();
         assert_eq!(buttons.len(), 0);
         Ok(())

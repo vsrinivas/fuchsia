@@ -7,6 +7,7 @@ use {
     anyhow::{anyhow, Context, Error},
     fdio,
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
+    fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, RebootReason},
     fidl_fuchsia_paver::{
         BootManagerMarker, Configuration, DynamicDataSinkProxy, PaverMarker, PaverProxy,
     },
@@ -77,6 +78,18 @@ pub async fn get_bootloader_type() -> Result<BootloaderType, Error> {
     } else {
         Err(Error::new(zx::Status::from_raw(status)))
     }
+}
+
+/// Restart the machine.
+pub async fn restart() {
+    let proxy = fuchsia_component::client::connect_to_protocol::<AdminMarker>()
+        .expect("Could not connect to 'fuchsia.hardware.power.statecontrol.Admin' service");
+
+    proxy
+        .reboot(RebootReason::UserRequest)
+        .await
+        .expect("Failed to reboot")
+        .expect("Failed to reboot");
 }
 
 /// Set the active boot configuration for the newly-installed system. We always boot from the "A"

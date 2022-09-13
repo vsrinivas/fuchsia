@@ -17,6 +17,7 @@
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.fshost.BlockWatcher",
+                "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.paver.Paver",
                 "fuchsia.sysinfo.SysInfo",
             ],

@@ -38,7 +38,7 @@ use menu::{Key, MenuButtonType, MenuEvent, MenuState, MenuStateMachine};
 
 pub mod installer;
 use installer::{
-    find_install_source, get_bootloader_type, paver_connect, set_active_configuration,
+    find_install_source, get_bootloader_type, paver_connect, restart, set_active_configuration,
     BootloaderType,
 };
 use recovery_util::block::{get_block_device, get_block_devices, BlockDevice};
@@ -50,6 +50,7 @@ const INSTALLER_HEADLINE: &'static str = "Fuchsia Workstation Installer";
 
 const BG_COLOR: Color = Color { r: 238, g: 23, b: 128, a: 255 };
 const WARN_BG_COLOR: Color = Color { r: 158, g: 11, b: 0, a: 255 };
+const SUCCESS_BG_COLOR: Color = Color { r: 79, g: 194, b: 50, a: 255 };
 const TEXT_COLOR: Color = Color::new(); // Black
 const SELECTED_BUTTON_COLOR: Color = Color::white();
 
@@ -70,6 +71,7 @@ enum InstallerMessages {
     GotInstallDestinations(Vec<BlockDevice>),
     GotBlockDevices(Vec<BlockDevice>),
     ProgressUpdate(String),
+    Success,
 }
 
 /// Installer
@@ -287,6 +289,10 @@ impl InstallerViewAssistant {
                         ))
                         .detach();
                     }
+                    MenuButtonType::Restart => {
+                        // Restart the machine.
+                        fasync::Task::local(restart()).detach();
+                    }
                     _ => {
                         self.menu_state_machine.handle_event(MenuEvent::Enter);
                     }
@@ -312,6 +318,9 @@ impl InstallerViewAssistant {
             }
             InstallerMessages::ProgressUpdate(string) => {
                 self.menu_state_machine.handle_event(MenuEvent::ProgressUpdate(string.clone()));
+            }
+            InstallerMessages::Success => {
+                self.menu_state_machine.handle_event(MenuEvent::Success);
             }
         }
 
@@ -479,6 +488,7 @@ fn menu_state_to_background_color(state: MenuState) -> Color {
     match state {
         MenuState::Warning => WARN_BG_COLOR,
         MenuState::Error => WARN_BG_COLOR,
+        MenuState::Success => SUCCESS_BG_COLOR,
         _ => BG_COLOR,
     }
 }
@@ -499,6 +509,8 @@ fn menu_state_to_button_text_size(state: MenuState, screen_size: Size) -> f32 {
         MenuState::SelectInstall => base / 20.0,
         MenuState::SelectDisk => base / 33.0,
         MenuState::Warning => base / 20.0,
+        MenuState::Error => base / 20.0,
+        MenuState::Success => base / 20.0,
         _ => 0.0,
     }
 }
@@ -588,19 +600,14 @@ async fn fuchsia_install(
         Ok(_) => {
             app_sender.queue_message(
                 MessageTarget::View(view_key),
-                make_message(InstallerMessages::ProgressUpdate(String::from(
-                    "Success! Please restart your computer",
-                ))),
+                make_message(InstallerMessages::Success),
             );
         }
         Err(e) => {
             tracing::error!("Error while installing: {:#}", e);
             app_sender.queue_message(
                 MessageTarget::View(view_key),
-                make_message(InstallerMessages::Error(String::from(format!(
-                    "Error {}, please restart",
-                    e
-                )))),
+                make_message(InstallerMessages::Error(e.to_string())),
             );
         }
     }
