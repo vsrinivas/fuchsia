@@ -29,6 +29,13 @@ class Memfs : public fs::ManagedVfs {
   static zx_status_t Create(async_dispatcher_t* dispatcher, std::string_view fs_name,
                             std::unique_ptr<Memfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root);
 
+  struct Options {
+    uint64_t max_file_size = uint64_t{512} * 1024 * 1024;
+  };
+  static zx_status_t CreateWithOptions(async_dispatcher_t* dispatcher, std::string_view fs_name,
+                                       Options options, std::unique_ptr<Memfs>* out_vfs,
+                                       fbl::RefPtr<VnodeDir>* out_root);
+
   ~Memfs();
 
   // Creates a VnodeVmo under |parent| with |name| which is backed by |vmo|.

@@ -11,7 +11,7 @@ namespace memfs {
 
 class VnodeFile final : public Vnode {
  public:
-  explicit VnodeFile(PlatformVfs* vfs);
+  VnodeFile(PlatformVfs* vfs, uint64_t max_file_size);
   ~VnodeFile() override;
 
   fs::VnodeProtocolSet GetProtocols() const final;
@@ -33,6 +33,7 @@ class VnodeFile final : public Vnode {
   // [start, round_up(end, PAGE_SIZE)).
   void ZeroTail(size_t start, size_t end);
 
+  const uint64_t max_file_size_;
   zx::vmo vmo_;
 };
 

@@ -67,9 +67,15 @@ zx::status<fs::FilesystemInfo> Memfs::GetFilesystemInfo() {
 
 zx_status_t Memfs::Create(async_dispatcher_t* dispatcher, std::string_view fs_name,
                           std::unique_ptr<memfs::Memfs>* out_vfs, fbl::RefPtr<VnodeDir>* out_root) {
+  return CreateWithOptions(dispatcher, fs_name, Options(), out_vfs, out_root);
+}
+
+zx_status_t Memfs::CreateWithOptions(async_dispatcher_t* dispatcher, std::string_view fs_name,
+                                     Memfs::Options options, std::unique_ptr<memfs::Memfs>* out_vfs,
+                                     fbl::RefPtr<VnodeDir>* out_root) {
   auto fs = std::unique_ptr<memfs::Memfs>(new memfs::Memfs(dispatcher));
 
-  fbl::RefPtr<VnodeDir> root = fbl::MakeRefCounted<VnodeDir>(fs.get());
+  fbl::RefPtr<VnodeDir> root = fbl::MakeRefCounted<VnodeDir>(fs.get(), options.max_file_size);
   std::unique_ptr<Dnode> dn = Dnode::Create(fs_name, root);
   root->dnode_ = dn.get();
   root->dnode_parent_ = dn.get()->GetParent();

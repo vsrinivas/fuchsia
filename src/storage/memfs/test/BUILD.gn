@@ -120,9 +120,29 @@ fuchsia_unittest_package("memfs-legacy-tests") {
   deps = [ ":memfs-legacy-test" ]
 }
 
+executable("memfs-component-test") {
+  testonly = true
+  sources = [ "component-tests.cc" ]
+  deps = [
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_unittest_package("memfs-component-tests") {
+  manifest = "meta/memfs-component-tests.cml"
+  deps = [
+    ":memfs-component-test",
+    "//src/storage/memfs:memfs_component",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
+    ":memfs-component-tests",
     ":memfs-fs-tests",
     ":memfs-inotify-test",
     ":memfs-inotify-test-pkg",

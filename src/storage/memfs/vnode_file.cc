@@ -9,10 +9,8 @@
 
 namespace memfs {
 
-// Artificially cap the maximum in-memory file size to 512MB.
-constexpr size_t kMemfsMaxFileSize{static_cast<size_t>(512) * 1024 * 1024};
-
-VnodeFile::VnodeFile(PlatformVfs* vfs) : Vnode(vfs) {}
+VnodeFile::VnodeFile(PlatformVfs* vfs, uint64_t max_file_size)
+    : Vnode(vfs), max_file_size_(max_file_size) {}
 
 VnodeFile::~VnodeFile() = default;
 
@@ -80,7 +78,7 @@ zx_status_t VnodeFile::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol
 }
 
 zx_status_t VnodeFile::Truncate(size_t length) {
-  if (length > kMemfsMaxFileSize) {
+  if (length > max_file_size_) {
     return ZX_ERR_INVALID_ARGS;
   }
   zx_status_t status = CreateBackingStoreIfNeeded();
@@ -114,7 +112,7 @@ zx_status_t VnodeFile::CreateBackingStoreIfNeeded() {
     return ZX_OK;
   }
   zx::vmo vmo;
-  zx_status_t status = zx::vmo::create(kMemfsMaxFileSize, 0, &vmo);
+  zx_status_t status = zx::vmo::create(max_file_size_, 0, &vmo);
   if (status != ZX_OK) {
     return status;
   }
@@ -148,7 +146,7 @@ void VnodeFile::ZeroTail(size_t start, size_t end) {
     memset(buf, 0, ppage_size);
     ZX_ASSERT(vmo_.write(buf, start, ppage_size) == ZX_OK);
   }
-  end = std::min(fbl::round_up(end, kPageSize), kMemfsMaxFileSize);
+  end = std::min(fbl::round_up(end, kPageSize), max_file_size_);
   uint64_t decommit_offset = fbl::round_up(start, kPageSize);
   uint64_t decommit_length = end - decommit_offset;
 

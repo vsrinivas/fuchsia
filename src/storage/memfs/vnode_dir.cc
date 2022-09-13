@@ -12,7 +12,8 @@
 
 namespace memfs {
 
-VnodeDir::VnodeDir(PlatformVfs* vfs) : Vnode(vfs) {
+VnodeDir::VnodeDir(PlatformVfs* vfs, uint64_t max_file_size)
+    : Vnode(vfs), max_file_size_(max_file_size) {
   link_count_ = 1;  // Implied '.'
 }
 
@@ -107,9 +108,9 @@ zx_status_t VnodeDir::Create(std::string_view name, uint32_t mode, fbl::RefPtr<f
   {
     std::lock_guard lock(mutex_);
     if (S_ISDIR(mode)) {
-      vn = fbl::AdoptRef(new (&ac) memfs::VnodeDir(vfs()));
+      vn = fbl::AdoptRef(new (&ac) memfs::VnodeDir(vfs(), max_file_size_));
     } else {
-      vn = fbl::AdoptRef(new (&ac) memfs::VnodeFile(vfs()));
+      vn = fbl::AdoptRef(new (&ac) memfs::VnodeFile(vfs(), max_file_size_));
     }
   }
 
