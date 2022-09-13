@@ -114,7 +114,7 @@ impl From<keyboard_binding::KeyboardDeviceDescriptor> for InputDeviceDescriptor 
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq)]
 pub enum InputDeviceType {
     Keyboard,
     ConsumerControls,

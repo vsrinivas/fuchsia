@@ -17,7 +17,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as inspect,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt},
     icu_data,
@@ -35,6 +35,8 @@ use {
         touch_injector_handler::TouchInjectorHandler,
     },
     scene_management::{self, SceneManager},
+    std::collections::HashSet,
+    std::iter::FromIterator,
     std::rc::Rc,
     std::sync::Arc,
 };
@@ -77,13 +79,16 @@ pub async fn handle_input(
 ) -> Result<InputPipeline, Error> {
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
+
+    // TODO(https://fxbug.dev/98692): Get supported devices from structured config.
+    let supported_input_devices = vec![
+        input_pipeline::input_device::InputDeviceType::Mouse,
+        input_pipeline::input_device::InputDeviceType::Touch,
+        input_pipeline::input_device::InputDeviceType::Keyboard,
+        input_pipeline::input_device::InputDeviceType::ConsumerControls,
+    ];
     let input_pipeline = InputPipeline::new(
-        vec![
-            input_device::InputDeviceType::Mouse,
-            input_device::InputDeviceType::Touch,
-            input_device::InputDeviceType::Keyboard,
-            input_device::InputDeviceType::ConsumerControls,
-        ],
+        supported_input_devices.clone(),
         build_input_pipeline_assembly(
             use_flatland,
             scene_manager,
@@ -92,6 +97,7 @@ pub async fn handle_input(
             display_ownership_event,
             factory_reset_handler.clone(),
             media_buttons_handler.clone(),
+            HashSet::from_iter(supported_input_devices.iter()),
             focus_chain_publisher,
         )
         .await,
@@ -207,6 +213,7 @@ async fn build_input_pipeline_assembly(
     display_ownership_event: zx::Event,
     factory_reset_handler: Rc<FactoryResetHandler>,
     media_buttons_handler: Rc<MediaButtonsHandler>,
+    supported_input_devices: HashSet<&input_device::InputDeviceType>,
     focus_chain_publisher: FocusChainProviderPublisher,
 ) -> InputPipelineAssembly {
     let mut assembly = InputPipelineAssembly::new();
@@ -215,95 +222,114 @@ async fn build_input_pipeline_assembly(
         // Keep this handler first because it keeps performance measurement counters
         // for the rest of the pipeline at entry.
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
-        // Add as early as possible, but not before inspect handlers.
-        assembly = add_chromebook_keyboard_handler(assembly);
-        assembly = assembly.add_display_ownership(display_ownership_event);
-        assembly = add_modifier_handler(assembly);
-        // Add the text settings handler early in the pipeline to use the
-        // keymap settings in the remainder of the pipeline.
-        assembly = add_text_settings_handler(assembly);
-        assembly = add_keyboard_handler(assembly);
-        assembly = add_keymap_handler(assembly);
-        assembly = assembly.add_autorepeater();
-        assembly = add_dead_keys_handler(assembly, icu_data_loader);
-        assembly = add_immersive_mode_shortcut_handler(assembly);
 
-        // Shortcut needs to go before IME.
-        assembly = add_shortcut_handler(assembly).await;
-        assembly = add_ime(assembly).await;
+        if supported_input_devices.contains(&input_device::InputDeviceType::Keyboard) {
+            fx_log_info!("Registering keyboard-related input handlers.");
 
-        // Add factory reset handler before media buttons handler.
-        assembly = assembly.add_handler(factory_reset_handler);
-        assembly = assembly.add_handler(media_buttons_handler);
+            // Add as early as possible, but not before inspect handlers.
+            assembly = add_chromebook_keyboard_handler(assembly);
 
-        // Add the click-drag handler before the mouse handler, to allow
-        // the click-drag handler to filter events seen by the mouse
-        // handler.
-        assembly = add_click_drag_handler(assembly);
+            // Display ownership deals with keyboard events.
+            assembly = assembly.add_display_ownership(display_ownership_event);
+            assembly = add_modifier_handler(assembly);
 
-        // Add the touchpad gestures handler after the click-drag handler,
-        // since the gestures handler creates mouse events but already
-        // disambiguates between click and drag gestures.
-        assembly = add_touchpad_gestures_handler(assembly, node);
+            // Add the text settings handler early in the pipeline to use the
+            // keymap settings in the remainder of the pipeline.
+            assembly = add_text_settings_handler(assembly);
+            assembly = add_keyboard_handler(assembly);
+            assembly = add_keymap_handler(assembly);
+            assembly = assembly.add_autorepeater();
+            assembly = add_dead_keys_handler(assembly, icu_data_loader);
+            assembly = add_immersive_mode_shortcut_handler(assembly);
 
-        // Add handler to scale pointer motion based on speed of sensor
-        // motion. This allows touchpads and mice to be easily used for
-        // both precise pointing, and quick motion across the width
-        // (or height) of the screen.
-        //
-        // This handler must come before the PointerMotionDisplayScaleHandler.
-        // Otherwise the display scale will be applied quadratically in some
-        // cases.
-        assembly = add_pointer_sensor_scale_handler(assembly);
+            // Shortcut needs to go before IME.
+            assembly = add_shortcut_handler(assembly).await;
+            assembly = add_ime(assembly).await;
 
-        // Add handler to scale pointer motion on high-DPI displays.
-        //
-        // * This handler is added _after_ the click-drag handler, since the
-        //   motion denoising done by click drag handler is a property solely
-        //   of the trackpad, and not of the display.
-        //
-        // * This handler is added _before_ the mouse handler, since _all_
-        //   mouse events should be scaled.
-        let pointer_scale =
-            scene_manager.lock().await.get_display_metrics().physical_pixel_ratio().max(1.0);
-        assembly = add_pointer_display_scale_handler(assembly, pointer_scale);
-
-        assembly = add_touchscreen_handler(scene_manager.clone(), assembly).await;
-        if use_flatland {
-            assembly = add_mouse_handler(scene_manager.clone(), assembly, sender).await;
-        } else {
-            // We don't have mouse support for GFX. But that's okay,
-            // because the devices still using GFX don't support mice
-            // anyway.
+            // Forward focus to Shortcut Manager.
+            // This requires `fuchsia.ui.focus.FocusChainListenerRegistry`
+            assembly = assembly.add_focus_listener(focus_chain_publisher);
         }
 
-        // Keep this handler last because it keeps performance measurement counters
-        // for the rest of the pipeline at exit.  We compare these values to the
-        // values at entry.
-        assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
+        if supported_input_devices.contains(&input_device::InputDeviceType::ConsumerControls) {
+            fx_log_info!("Registering consumer controls-related input handlers.");
 
-        // Forward focus.
-        // This requires `fuchsia.ui.focus.FocusChainListenerRegistry`
-        assembly = assembly.add_focus_listener(focus_chain_publisher);
-    }
+            // Add factory reset handler before media buttons handler.
+            assembly = assembly.add_handler(factory_reset_handler);
+            assembly = assembly.add_handler(media_buttons_handler);
+        }
 
-    {
-        let scene_manager = scene_manager.clone();
-        fasync::Task::spawn(async move {
-            while let Some(message) = receiver.next().await {
-                let mut scene_manager = scene_manager.lock().await;
-                match message {
-                    CursorMessage::SetPosition(position) => {
-                        scene_manager.set_cursor_position(position)
-                    }
-                    CursorMessage::SetVisibility(visible) => {
-                        scene_manager.set_cursor_visibility(visible)
+        if supported_input_devices.contains(&input_device::InputDeviceType::Mouse) {
+            fx_log_info!("Registering mouse-related input handlers.");
+
+            // Add the click-drag handler before the mouse handler, to allow
+            // the click-drag handler to filter events seen by the mouse
+            // handler.
+            assembly = add_click_drag_handler(assembly);
+
+            // Add the touchpad gestures handler after the click-drag handler,
+            // since the gestures handler creates mouse events but already
+            // disambiguates between click and drag gestures.
+            assembly = add_touchpad_gestures_handler(assembly, node);
+
+            // Add handler to scale pointer motion based on speed of sensor
+            // motion. This allows touchpads and mice to be easily used for
+            // both precise pointing, and quick motion across the width
+            // (or height) of the screen.
+            //
+            // This handler must come before the PointerMotionDisplayScaleHandler.
+            // Otherwise the display scale will be applied quadratically in some
+            // cases.
+            assembly = add_pointer_sensor_scale_handler(assembly);
+
+            // Add handler to scale pointer motion on high-DPI displays.
+            //
+            // * This handler is added _after_ the click-drag handler, since the
+            //   motion denoising done by click drag handler is a property solely
+            //   of the trackpad, and not of the display.
+            //
+            // * This handler is added _before_ the mouse handler, since _all_
+            //   mouse events should be scaled.
+            let pointer_scale =
+                scene_manager.lock().await.get_display_metrics().physical_pixel_ratio().max(1.0);
+            assembly = add_pointer_display_scale_handler(assembly, pointer_scale);
+
+            if use_flatland {
+                assembly = add_mouse_handler(scene_manager.clone(), assembly, sender).await;
+            } else {
+                // We don't have mouse support for GFX. But that's okay,
+                // because the devices still using GFX don't support mice
+                // anyway.
+            }
+
+            let scene_manager = scene_manager.clone();
+            fasync::Task::spawn(async move {
+                while let Some(message) = receiver.next().await {
+                    let mut scene_manager = scene_manager.lock().await;
+                    match message {
+                        CursorMessage::SetPosition(position) => {
+                            scene_manager.set_cursor_position(position)
+                        }
+                        CursorMessage::SetVisibility(visible) => {
+                            scene_manager.set_cursor_visibility(visible)
+                        }
                     }
                 }
-            }
-        })
-        .detach();
+            })
+            .detach();
+        }
+
+        if supported_input_devices.contains(&input_device::InputDeviceType::Touch) {
+            fx_log_info!("Registering touchscreen-related input handlers.");
+
+            assembly = add_touchscreen_handler(scene_manager.clone(), assembly).await;
+        }
     }
+
+    // Keep this handler last because it keeps performance measurement counters
+    // for the rest of the pipeline at exit.  We compare these values to the
+    // values at entry.
+    assembly = add_inspect_handler(node.create_child("input_pipeline_exit"), assembly);
 
     assembly
 }
