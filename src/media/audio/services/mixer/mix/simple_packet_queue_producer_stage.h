@@ -17,8 +17,8 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/thread_safe_queue.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
+#include "src/media/audio/services/mixer/mix/old_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
-#include "src/media/audio/services/mixer/mix/producer_stage.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 
 namespace media_audio {
