@@ -169,7 +169,7 @@ pub struct CheckOptions {
 }
 
 /// This describes the data around the scheduling of update checks
-#[derive(Clone, Copy, Default, PartialEq, TypedBuilder)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, TypedBuilder)]
 pub struct UpdateCheckSchedule {
     // TODO(fxb/64804): Theoretically last_update_time and last_update_check_time
     // do not need to coexist and we can do all the reporting we want via
@@ -192,56 +192,18 @@ pub struct UpdateCheckSchedule {
 ///
 /// This exists as a separate type mostly so that it can be moved around atomically, in a little bit
 /// neater fashion than it could be if it was a tuple of `(PartialComplexTime, Option<Duration>)`.
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, TypedBuilder)]
 pub struct CheckTiming {
     /// The upper time bounds on when it should be performed (expressed as along those timelines
     /// that are valid based on currently known time quality).
+    #[builder(setter(into))]
     pub time: PartialComplexTime,
 
     /// The minimum wait until the next check, regardless of the wall or monotonic time it should be
     /// performed at.  This is handled separately as it creates a lower bound vs. the upper bound(s)
     /// that the `time` field provides.
+    #[builder(default, setter(strip_option))]
     pub minimum_wait: Option<Duration>,
-}
-
-impl CheckTiming {
-    pub fn builder() -> CheckTimingBuilder {
-        CheckTimingBuilder::default()
-    }
-}
-
-/// This is a builder for the `CheckTiming` struct.
-///
-/// It uses a type-state to ensure that the time of the check has been set before allowing the
-/// construction of the `CheckTiming` itself.
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
-pub struct CheckTimingBuilder;
-
-/// This is the internal type-state for ensuring the time has been set.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CheckTimingBuilderWithTime {
-    time: PartialComplexTime,
-    minimum_wait: Option<Duration>,
-}
-
-impl CheckTimingBuilder {
-    /// The time of the next check must be set in order to construct the `CheckTiming` type.
-    pub fn time(self, time: impl Into<PartialComplexTime>) -> CheckTimingBuilderWithTime {
-        CheckTimingBuilderWithTime { time: time.into(), minimum_wait: None }
-    }
-}
-
-impl CheckTimingBuilderWithTime {
-    /// Set the minimum wait until the next check.
-    pub fn minimum_wait(mut self, minimum_wait: impl Into<Option<Duration>>) -> Self {
-        self.minimum_wait = minimum_wait.into();
-        self
-    }
-
-    /// Build the CheckTiming.
-    pub fn build(self) -> CheckTiming {
-        CheckTiming { time: self.time, minimum_wait: self.minimum_wait }
-    }
 }
 
 /// Helper struct that provides a nicer format for Debug printing `Option` by dropping the
@@ -763,7 +725,7 @@ mod tests {
                 .next_update_time(Some(
                     CheckTiming::builder()
                         .time(next_time)
-                        .minimum_wait(Some(Duration::from_secs(100)))
+                        .minimum_wait(Duration::from_secs(100))
                         .build()
                 ))
                 .build(),
