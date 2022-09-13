@@ -8,6 +8,7 @@ use {
     self::constants::{FVM_MAGIC, GPT_MAGIC},
     anyhow::{anyhow, Error},
     async_trait::async_trait,
+    device_watcher::wait_for_device_topo_path,
     fidl::endpoints::{create_endpoints, Proxy},
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_hardware_block::BlockProxy,
@@ -47,6 +48,11 @@ pub trait Device: Send + Sync {
 
     /// Returns a proxy for the device.
     fn proxy(&self) -> Result<BlockProxy, Error>;
+
+    /// Returns a new Device, which is a child of this device with the specified suffix. This
+    /// function will return when the device is available. This function assumes the child device
+    /// will show up in /dev/class/block.
+    async fn get_child(&self, suffix: &str) -> Result<Box<dyn Device>, Error>;
 }
 
 /// A block device.
@@ -166,6 +172,19 @@ impl Device for BlockDevice {
         let (client, server) = create_endpoints()?;
         self.volume_proxy.clone(OpenFlags::CLONE_SAME_RIGHTS, server)?;
         Ok(BlockProxy::new(fidl::AsyncChannel::from_channel(client.into_channel())?))
+    }
+
+    async fn get_child(&self, suffix: &str) -> Result<Box<dyn Device>, Error> {
+        let dev_class_block = fuchsia_fs::directory::open_in_namespace(
+            "/dev/class/block",
+            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+        )?;
+        let child_path = wait_for_device_topo_path(
+            &dev_class_block,
+            &format!("{}{}", self.topological_path, suffix),
+        )
+        .await?;
+        Ok(Box::new(BlockDevice::new(format!("/dev/class/block/{}", child_path)).await?))
     }
 }
 

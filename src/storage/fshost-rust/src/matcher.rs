@@ -51,7 +51,7 @@ pub struct Matchers {
 impl Matchers {
     /// Create a new set of matchers. This essentially describes the expected partition layout for
     /// a device.
-    pub fn new(config: fshost_config::Config) -> Self {
+    pub fn new(config: &fshost_config::Config) -> Self {
         let mut matchers = Vec::<Box<dyn Matcher>>::new();
 
         if config.bootpart {
@@ -350,6 +350,7 @@ mod tests {
         std::sync::Mutex,
     };
 
+    #[derive(Clone)]
     struct MockDevice {
         block_flags: u32,
         is_nand: bool,
@@ -423,6 +424,9 @@ mod tests {
                 .unwrap_or_else(|| panic!("Unexpected call to partition_type")))
         }
         fn proxy(&self) -> Result<BlockProxy, Error> {
+            unreachable!()
+        }
+        async fn get_child(&self, _suffix: &str) -> Result<Box<dyn Device>, Error> {
             unreachable!()
         }
     }
@@ -505,12 +509,12 @@ mod tests {
         let mut mock_device = MockDevice::new().set_block_flags(BLOCK_FLAG_BOOTPART);
 
         // Check no match when disabled in config.
-        assert!(!Matchers::new(fshost_config::Config { bootpart: false, ..default_config() })
+        assert!(!Matchers::new(&fshost_config::Config { bootpart: false, ..default_config() })
             .match_device(&mut mock_device, &mut MockEnv::new())
             .await
             .expect("match_device failed"));
 
-        assert!(Matchers::new(default_config())
+        assert!(Matchers::new(&default_config())
             .match_device(
                 &mut mock_device,
                 &mut MockEnv::new().expect_attach_driver(BOOTPART_DRIVER_PATH)
@@ -525,12 +529,12 @@ mod tests {
         let mut env = MockEnv::new().expect_attach_driver(NAND_BROKER_DRIVER_PATH);
 
         // Default shouldn't match.
-        assert!(!Matchers::new(default_config())
+        assert!(!Matchers::new(&default_config())
             .match_device(&mut device, &mut env)
             .await
             .expect("match_device failed"));
 
-        assert!(Matchers::new(fshost_config::Config { nand: true, ..default_config() })
+        assert!(Matchers::new(&fshost_config::Config { nand: true, ..default_config() })
             .match_device(&mut device, &mut env)
             .await
             .expect("match_device failed"));
@@ -542,7 +546,7 @@ mod tests {
 
         // Check no match when disabled in config.
         let mut device = MockDevice::new().set_content_format(ContentFormat::Gpt);
-        assert!(!Matchers::new(fshost_config::Config {
+        assert!(!Matchers::new(&fshost_config::Config {
             blobfs: false,
             data: false,
             gpt: false,
@@ -552,7 +556,7 @@ mod tests {
         .await
         .expect("match_device failed"));
 
-        let mut matchers = Matchers::new(default_config());
+        let mut matchers = Matchers::new(&default_config());
         assert!(matchers.match_device(&mut device, &mut env).await.expect("match_device failed"));
 
         // More GPT devices should not get matched.
@@ -560,7 +564,7 @@ mod tests {
 
         // The gpt_all config should allow multiple GPT devices to be matched.
         let mut matchers =
-            Matchers::new(fshost_config::Config { gpt_all: true, ..default_config() });
+            Matchers::new(&fshost_config::Config { gpt_all: true, ..default_config() });
         let mut env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
         assert!(matchers.match_device(&mut device, &mut env).await.expect("match_device failed"));
         let mut env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
@@ -579,7 +583,7 @@ mod tests {
         let mut fvm_device = MockDevice::new().set_content_format(ContentFormat::Fvm);
         let mut env = MockEnv::new().expect_attach_driver(FVM_DRIVER_PATH).expect_mount_blobfs();
 
-        let mut matchers = Matchers::new(default_config());
+        let mut matchers = Matchers::new(&default_config());
 
         // Attach the first GPT device.
         assert!(matchers
@@ -618,7 +622,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_data_matcher() {
-        let mut matchers = Matchers::new(default_config());
+        let mut matchers = Matchers::new(&default_config());
 
         // Attach FVM device.
         assert!(matchers
@@ -629,7 +633,7 @@ mod tests {
             .await
             .expect("match_device failed"));
 
-        // Check that data is mounted.
+        // Check that the data partition is mounted.
         assert!(matchers
             .match_device(
                 &mut MockDevice::new()

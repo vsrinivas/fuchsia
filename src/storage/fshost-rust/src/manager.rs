@@ -21,7 +21,7 @@ pub struct Manager<E> {
 impl<E: Environment> Manager<E> {
     pub fn new(
         shutdown_rx: mpsc::Receiver<service::FshostShutdownResponder>,
-        config: fshost_config::Config,
+        config: &fshost_config::Config,
         environment: E,
     ) -> Self {
         Manager { shutdown_rx, matcher: matcher::Matchers::new(config), environment }

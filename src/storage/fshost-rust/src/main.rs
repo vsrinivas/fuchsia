@@ -24,6 +24,7 @@ mod manager;
 mod matcher;
 mod service;
 mod watcher;
+mod zxcrypt;
 
 #[fuchsia::main]
 async fn main() -> Result<()> {
@@ -40,7 +41,7 @@ async fn main() -> Result<()> {
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<service::FshostShutdownResponder>(1);
     let (watcher, device_stream) = watcher::Watcher::new().await?;
 
-    let mut env = FshostEnvironment::new();
+    let mut env = FshostEnvironment::new(&config);
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
             fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(),
@@ -66,7 +67,7 @@ async fn main() -> Result<()> {
 
     // Run the main loop of fshost, handling devices as they appear according to our filesystem
     // policy.
-    let mut fs_manager = manager::Manager::new(shutdown_rx, config, env);
+    let mut fs_manager = manager::Manager::new(shutdown_rx, &config, env);
     let shutdown_responder = fs_manager.device_handler(device_stream).await?;
 
     log::info!("shutdown signal received");

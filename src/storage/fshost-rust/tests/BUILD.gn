@@ -115,7 +115,14 @@ template("fshost_integration_test") {
   }
 }
 
-fshost_component_and_config("test-fshost-rust") {
+fshost_component_and_config("test-fshost-rust-minfs") {
+  testonly = true
+  options = default_integration_test_options
+  options.data_filesystem_format = "minfs"
+  options.use_rust_port = true
+}
+
+fshost_component_and_config("test-fshost-rust-fxfs") {
   testonly = true
   options = default_integration_test_options
   options.data_filesystem_format = "fxfs"
@@ -160,8 +167,14 @@ fshost_integration_test("fshost-cpp-integration-test-minfs-recovery") {
   data_filesystem_format = "minfs"
 }
 
-fshost_integration_test("fshost-rust-integration-test") {
-  fshost_target = ":test-fshost-rust"
+fshost_integration_test("fshost-rust-integration-test-minfs") {
+  fshost_target = ":test-fshost-rust-minfs"
+  source_root = "src/fshost_integration_test.rs"
+  data_filesystem_format = "minfs"
+}
+
+fshost_integration_test("fshost-rust-integration-test-fxfs") {
+  fshost_target = ":test-fshost-rust-fxfs"
   source_root = "src/fshost_integration_test.rs"
   data_filesystem_format = "fxfs"
 }
@@ -179,7 +192,8 @@ fuchsia_test_package("fshost_integration_tests") {
     ":fshost-cpp-integration-test-minfs",
     ":fshost-cpp-integration-test-fxfs-recovery",
     ":fshost-cpp-integration-test-minfs-recovery",
-    ":fshost-rust-integration-test",
+    ":fshost-rust-integration-test-fxfs",
+    ":fshost-rust-integration-test-minfs",
   ]
   deps = [ "//src/storage/testing:storage_driver_test_realm" ]
 }

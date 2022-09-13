@@ -548,10 +548,16 @@ fuchsia_component("fshost_rust_component") {
   cm_label = ":fshost_manifest"
   deps = [
     ":fshost_rust",
-    "//src/storage/fxfs:fxfs_component",
-    "//src/storage/fxfs-crypt",
+    "//src/storage/bin/blobfs:blobfs-component",
+    "//src/storage/bin/minfs:minfs-component",
     "//src/storage/memfs:memfs_component",
   ]
+  if (data_filesystem_format == "fxfs") {
+    deps += [
+      "//src/storage/fxfs:fxfs_component",
+      "//src/storage/fxfs-crypt",
+    ]
+  }
 }
 
 group("bootfs") {
