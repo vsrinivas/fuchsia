@@ -5,6 +5,7 @@
 use {
     event_queue::Event, fidl_fuchsia_update as fidl, proptest::prelude::*,
     proptest_derive::Arbitrary, std::convert::TryFrom, thiserror::Error,
+    typed_builder::TypedBuilder,
 };
 
 /// Wrapper type for [`fidl_fuchsia_update::State`] which works with
@@ -342,18 +343,12 @@ pub enum CheckOptionsDecodeError {
 ///
 /// Use [`TryFrom`] (or [`TryInto`]) to convert the fidl type and this one, and
 /// [`From`] (or [`Into`]) to convert back to the fidl type.
-#[derive(Clone, Debug, PartialEq, Arbitrary)]
+#[derive(Clone, Debug, PartialEq, Arbitrary, TypedBuilder)]
 pub struct CheckOptions {
     pub initiator: Initiator,
-    pub allow_attaching_to_existing_update_check: bool,
-}
 
-impl CheckOptions {
-    /// Create a `[CheckOptionsBuilder]` for constructing a new
-    /// `[CheckOptions]`.
-    pub fn builder() -> CheckOptionsBuilder {
-        CheckOptionsBuilder
-    }
+    #[builder(default)]
+    pub allow_attaching_to_existing_update_check: bool,
 }
 
 impl TryFrom<fidl::CheckOptions> for CheckOptions {
@@ -377,50 +372,6 @@ impl From<CheckOptions> for fidl::CheckOptions {
                 o.allow_attaching_to_existing_update_check,
             ),
             ..Self::EMPTY
-        }
-    }
-}
-
-/// A builder for constructing a new [`CheckOptions`]
-#[derive(Clone, Debug, PartialEq, Default)]
-pub struct CheckOptionsBuilder;
-
-/// A builder for constructing a new [`CheckOptions`] with initiator already
-/// set.
-#[derive(Clone, Debug, PartialEq)]
-pub struct CheckOptionsBuilderWithInitiator {
-    initiator: Initiator,
-    allow_attaching_to_existing_update_check: bool,
-}
-
-impl CheckOptionsBuilder {
-    /// Create a `[CheckOptionsBuilder]` for constructing a new
-    /// `[CheckOptions]`.
-    pub fn new() -> Self {
-        Self
-    }
-
-    /// Set the initiator of the update.
-    pub fn initiator(self, initiator: Initiator) -> CheckOptionsBuilderWithInitiator {
-        CheckOptionsBuilderWithInitiator {
-            initiator,
-            allow_attaching_to_existing_update_check: false,
-        }
-    }
-}
-
-impl CheckOptionsBuilderWithInitiator {
-    /// Set the allow_attaching_to_existing_update_check flag.
-    pub fn allow_attaching_to_existing_update_check(mut self, allow: bool) -> Self {
-        self.allow_attaching_to_existing_update_check = allow;
-        self
-    }
-
-    /// Build the [`CheckOptions`].
-    pub fn build(self) -> CheckOptions {
-        CheckOptions {
-            initiator: self.initiator,
-            allow_attaching_to_existing_update_check: self.allow_attaching_to_existing_update_check,
         }
     }
 }

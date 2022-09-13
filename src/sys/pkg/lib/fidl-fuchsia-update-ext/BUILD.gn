@@ -16,6 +16,7 @@ rustc_library("fidl-fuchsia-update-ext") {
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:typed-builder",
   ]
 
   sources = [
