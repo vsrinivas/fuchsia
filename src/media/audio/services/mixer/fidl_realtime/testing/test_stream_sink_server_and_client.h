@@ -24,13 +24,7 @@ class TestStreamSinkServerAndClient {
                                 uint64_t payload_buffer_size, const Format& format,
                                 TimelineRate media_ticks_per_ns)
       : thread_(thread) {
-    zx::vmo vmo;
-    EXPECT_EQ(zx::vmo::create(payload_buffer_size, 0, &vmo), ZX_OK);
-
-    auto buffer_result = MemoryMappedBuffer::Create(vmo, false);
-    EXPECT_TRUE(buffer_result.is_ok()) << buffer_result.status_string();
-
-    payload_buffer_ = *buffer_result;
+    payload_buffer_ = MemoryMappedBuffer::CreateOrDie(payload_buffer_size, true);
     wrapper_ = std::make_unique<TestServerAndClient<StreamSinkServer>>(
         thread, StreamSinkServer::Args{
                     .format = format,

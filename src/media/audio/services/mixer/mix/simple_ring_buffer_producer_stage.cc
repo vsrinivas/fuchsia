@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/mix/ring_buffer_producer_stage.h"
+#include "src/media/audio/services/mixer/mix/simple_ring_buffer_producer_stage.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/vmo.h>
@@ -17,21 +17,26 @@
 
 namespace media_audio {
 
-RingBufferProducerStage::RingBufferProducerStage(Format format, zx_koid_t reference_clock_koid,
-                                                 fzl::VmoMapper vmo_mapper, int64_t frame_count,
-                                                 SafeReadFrameFn safe_read_frame_fn)
-    : ProducerStage("RingBufferProducerStage", format, reference_clock_koid),
-      vmo_mapper_(std::move(vmo_mapper)),
+SimpleRingBufferProducerStage::SimpleRingBufferProducerStage(
+    Format format, zx_koid_t reference_clock_koid, std::shared_ptr<MemoryMappedBuffer> buffer,
+    int64_t frame_count, SafeReadFrameFn safe_read_frame_fn)
+    : PipelineStage("SimpleRingBufferProducerStage", format, reference_clock_koid),
+      buffer_(std::move(buffer)),
       frame_count_(frame_count),
       safe_read_frame_fn_(std::move(safe_read_frame_fn)) {
-  FX_CHECK(vmo_mapper_.start());
-  FX_CHECK(vmo_mapper_.size() >= static_cast<uint64_t>(format.bytes_per_frame() * frame_count_));
+  FX_CHECK(buffer_);
+  FX_CHECK(buffer_->size() >= static_cast<uint64_t>(format.bytes_per_frame() * frame_count_));
   FX_CHECK(safe_read_frame_fn_);
 }
 
-std::optional<PipelineStage::Packet> RingBufferProducerStage::ReadImpl(MixJobContext& ctx,
-                                                                       Fixed start_frame,
-                                                                       int64_t frame_count) {
+void SimpleRingBufferProducerStage::UpdatePresentationTimeToFracFrame(
+    std::optional<TimelineFunction> f) {
+  set_presentation_time_to_frac_frame(f);
+}
+
+std::optional<PipelineStage::Packet> SimpleRingBufferProducerStage::ReadImpl(MixJobContext& ctx,
+                                                                             Fixed start_frame,
+                                                                             int64_t frame_count) {
   const int64_t requested_start_frame = start_frame.Floor();
   const int64_t requested_end_frame = requested_start_frame + frame_count;
 
@@ -59,8 +64,8 @@ std::optional<PipelineStage::Packet> RingBufferProducerStage::ReadImpl(MixJobCon
   }
 
   const int64_t packet_frame_count = relative_end_frame - relative_start_frame;
-  void* packet_payload = reinterpret_cast<uint8_t*>(vmo_mapper_.start()) +
-                         relative_start_frame * format().bytes_per_frame();
+  void* packet_payload =
+      buffer_->offset(static_cast<size_t>(relative_start_frame * format().bytes_per_frame()));
 
   // Ring buffers are synchronized only by time, which means there may not be a synchronization
   // happens-before edge connecting the last writer with the current reader, which means we must

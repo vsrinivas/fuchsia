@@ -13,6 +13,7 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 
 namespace media_audio {
 
@@ -31,6 +32,11 @@ std::shared_ptr<ClockSynchronizer> DefaultClockSync();
 
 // A TimelineFunction that defines t=0 to be the presentation time for frame 0.
 TimelineFunction DefaultPresentationTimeToFracFrame(const Format& format);
+
+// Constructs a SimplePacketQueueProducerStage with the given `format`, DefaultClockKoid(), and
+// optional `name`. The returned queue can be mutated via its `push` and `clear` methods.
+std::shared_ptr<SimplePacketQueueProducerStage> MakeDefaultPacketQueue(
+    const Format& format, std::string_view name = "DefaultPacketQueue");
 
 }  // namespace media_audio
 

@@ -21,15 +21,15 @@ std::shared_ptr<StreamSinkProducerNode> StreamSinkProducerNode::Create(Args args
   return std::make_shared<WithPublicCtor>(std::move(args));
 }
 
-void StreamSinkProducerNode::Start(PacketQueueProducerStage::StartCommand cmd) const {
-  for (auto& [node, queue] : command_queues_) {
-    queue->push(cmd);
+void StreamSinkProducerNode::Start(ProducerStage::StartCommand cmd) const {
+  for (auto& [node, queues] : command_queues_) {
+    queues.start_stop->push(cmd);
   }
 }
 
-void StreamSinkProducerNode::Stop(PacketQueueProducerStage::StopCommand cmd) const {
-  for (auto& [node, queue] : command_queues_) {
-    queue->push(cmd);
+void StreamSinkProducerNode::Stop(ProducerStage::StopCommand cmd) const {
+  for (auto& [node, queues] : command_queues_) {
+    queues.start_stop->push(cmd);
   }
 }
 
@@ -39,13 +39,17 @@ NodePtr StreamSinkProducerNode::CreateNewChildSource() {
 }
 
 NodePtr StreamSinkProducerNode::CreateNewChildDest() {
-  auto command_queue = std::make_shared<CommandQueue>();
+  CommandQueues queues{
+      .start_stop = std::make_shared<StartStopCommandQueue>(),
+      .packet = std::make_shared<PacketCommandQueue>(),
+  };
 
   // Attach the writer end.
-  stream_sink_server_->thread().PostTask([server = stream_sink_server_, command_queue]() {
-    ScopedThreadChecker checker(server->thread().checker());
-    server->AddProducerQueue(command_queue);
-  });
+  stream_sink_server_->thread().PostTask(
+      [server = stream_sink_server_, command_queue = queues.packet]() {
+        ScopedThreadChecker checker(server->thread().checker());
+        server->AddProducerQueue(command_queue);
+      });
 
   // Create the reader end.
   auto node = PacketQueueProducerNode::Create({
@@ -53,11 +57,12 @@ NodePtr StreamSinkProducerNode::CreateNewChildDest() {
       .parent = shared_from_this(),
       .format = stream_sink_server_->format(),
       .reference_clock_koid = reference_clock_koid_,
-      .command_queue = command_queue,
+      .start_stop_command_queue = queues.start_stop,
+      .packet_command_queue = queues.packet,
       .detached_thread = detached_thread_,
   });
 
-  command_queues_[node] = command_queue;
+  command_queues_[node] = std::move(queues);
   return node;
 }
 
@@ -65,11 +70,11 @@ void StreamSinkProducerNode::DestroyChildDest(NodePtr child_dest) {
   auto it = command_queues_.find(child_dest);
   FX_CHECK(it != command_queues_.end());
 
-  auto command_queue = it->second;
-  stream_sink_server_->thread().PostTask([server = stream_sink_server_, command_queue]() {
-    ScopedThreadChecker checker(server->thread().checker());
-    server->RemoveProducerQueue(command_queue);
-  });
+  stream_sink_server_->thread().PostTask(
+      [server = stream_sink_server_, command_queue = it->second.packet]() {
+        ScopedThreadChecker checker(server->thread().checker());
+        server->RemoveProducerQueue(command_queue);
+      });
 
   command_queues_.erase(it);
 }

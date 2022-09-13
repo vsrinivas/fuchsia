@@ -23,11 +23,7 @@ struct ConsumerStageWrapper {
                            fuchsia_audio_mixer::PipelineDirection::kOutput,
                        zx_koid_t reference_clock_koid = DefaultClockKoid())
       : format(f) {
-    packet_queue =
-        std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-            .format = format,
-            .reference_clock_koid = reference_clock_koid,
-        });
+    packet_queue = MakeDefaultPacketQueue(format),
     command_queue = std::make_shared<ConsumerStage::CommandQueue>();
     writer = std::make_shared<FakeConsumerStageWriter>();
     consumer = std::make_shared<ConsumerStage>(ConsumerStage::Args{

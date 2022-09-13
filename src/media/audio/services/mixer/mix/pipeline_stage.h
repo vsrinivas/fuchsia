@@ -284,7 +284,7 @@ class PipelineStage {
   //   ```
   //   auto packet = source->Read(frame, frame_count);
   //   auto start_frame = packet->start().Ceiling();
-  //   return ForwardPacketWithModifiedStart(std::move(packet), start_frame);
+  //   return ForwardPacket(std::move(packet), start_frame);
   //   ```
   //
   // If `start_frame` is not specified, the packet is forwarded unchanged.

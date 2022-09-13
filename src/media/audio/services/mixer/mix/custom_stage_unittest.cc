@@ -201,13 +201,6 @@ PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr
   return custom_stage;
 }
 
-std::shared_ptr<SimplePacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
-  return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-      .format = format,
-      .reference_clock_koid = DefaultClockKoid(),
-  });
-}
-
 std::vector<float> ToVector(void* payload, size_t sample_start_idx, size_t sample_end_idx) {
   float* p = static_cast<float*>(payload);
   return std::vector<float>(p + sample_start_idx, p + sample_end_idx);
@@ -335,7 +328,7 @@ class CustomStageTest : public testing::Test {
     const Format input_format = Format::CreateOrDie(info.config.inputs()[0].format());
     const Format output_format = Format::CreateOrDie(info.config.outputs()[0].format());
 
-    auto producer_stage = MakePacketQueueProducerStage(input_format);
+    auto producer_stage = MakeDefaultPacketQueue(input_format);
     auto custom_stage = MakeCustomStage(std::move(info.config), producer_stage);
 
     // Push one packet of the requested size.
@@ -453,7 +446,7 @@ TEST_F(CustomStageTest, AddOneWithSourceOffset) {
     });
 
     const Format source_format = Format::CreateOrDie(info.config.inputs()[0].format());
-    auto producer_stage = MakePacketQueueProducerStage(source_format);
+    auto producer_stage = MakeDefaultPacketQueue(source_format);
     auto custom_stage = MakeCustomStage(info.config, producer_stage);
 
     // Push one packet with `source_offset`.
@@ -512,7 +505,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBuffer) {
 
   // Push one 480 frames packet.
   const Format source_format = Format::CreateOrDie(info.config.inputs()[0].format());
-  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(info.config, producer_stage);
 
   std::vector<float> packet_payload(480, 1.0f);
@@ -564,7 +557,7 @@ TEST_F(CustomStageTest, AddOneWithReadSmallerThanProcessingBufferAndSourceOffset
 
   // Push one 480 frames packet starting at frame 720.
   const Format source_format = Format::CreateOrDie(info.config.inputs()[0].format());
-  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(info.config, producer_stage);
 
   std::vector<float> packet_payload(480, 1.0f);
@@ -825,7 +818,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyMoreThanMaxFramesPerCall) {
       .latency_frames = 102,
   });
   const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
-  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
 
   // Push the packet.
@@ -863,7 +856,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadOnePacketWithOffset) {
       .latency_frames = 2,
   });
   const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
-  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
 
   // Push the packet.
@@ -940,7 +933,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyReadTwoPacketsWithGaps) {
       .latency_frames = 2,
   });
   const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
-  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
 
   // Push two packets with a gap of 10 frames in between.
@@ -1023,7 +1016,7 @@ TEST_F(CustomStageTest, AddOneWithLatencyAndRingout) {
       .ring_out_frames = 15,
   });
   const Format source_format = Format::CreateOrDie(processor_info.config.inputs()[0].format());
-  auto producer_stage = MakePacketQueueProducerStage(source_format);
+  auto producer_stage = MakeDefaultPacketQueue(source_format);
   auto custom_stage = MakeCustomStage(std::move(processor_info.config), producer_stage);
 
   // Push a single frame of impulse at frame 10.
@@ -1121,7 +1114,7 @@ TEST_F(CustomStageTest, Metrics) {
   const auto input_channels = info.config.inputs()[0].format().channel_count;
 
   // Enqueue one packet in the source packet queue.
-  auto producer_stage = MakePacketQueueProducerStage(input_format);
+  auto producer_stage = MakeDefaultPacketQueue(input_format);
   auto custom_stage = MakeCustomStage(std::move(info.config), producer_stage);
 
   constexpr auto kPacketFrames = 480;

@@ -37,10 +37,7 @@ std::shared_ptr<SilencePaddingStage> MakeSilencePaddingStage(
 }
 
 std::shared_ptr<SimplePacketQueueProducerStage> MakePacketQueueProducerStage() {
-  return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-      .format = kFormat,
-      .reference_clock_koid = DefaultClockKoid(),
-  });
+  return MakeDefaultPacketQueue(kFormat);
 }
 
 void ExpectNullPacket(const std::optional<PipelineStage::Packet>& packet) {

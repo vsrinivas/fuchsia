@@ -56,7 +56,10 @@ void TestAdvance(int64_t step_size = 1) {
 
   const auto source =
       std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-          "source", kDefaultFormat, source_clock->koid(), nullptr});
+          .name = "source",
+          .format = kDefaultFormat,
+          .reference_clock_koid = source_clock->koid(),
+      });
   source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   // Push some packets.
@@ -123,7 +126,10 @@ void TestMix(int64_t step_size = 1) {
 
   const auto source =
       std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-          "source", kDefaultFormat, source_clock->koid(), nullptr});
+          .name = "source",
+          .format = kDefaultFormat,
+          .reference_clock_koid = source_clock->koid(),
+      });
   source->UpdatePresentationTimeToFracFrame(kDefaultPresentationTimeToFracFrame);
 
   const int64_t dest_frame_count = 10;
@@ -187,8 +193,7 @@ TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
   mixer_gain_controls.Add(GainControlId{3}, GainControl(DefaultClockKoid()));
   mixer_gain_controls.Advance(DefaultClockSnapshots(), zx::time(0));
 
-  const auto source = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source", kDefaultFormat, DefaultClockKoid(), nullptr});
+  const auto source = MakeDefaultPacketQueue(kDefaultFormat);
   const auto presentation_time_to_frac_frame =
       TimelineFunction(TimelineRate(kOneFrame.raw_value(), 1));
 
@@ -269,8 +274,7 @@ TEST(MixerSourceTest, PrepareSourceGainForNextMix) {
 }
 
 TEST(MixerSourceTest, SetDestGains) {
-  const auto source = std::make_shared<SimplePacketQueueProducerStage>(
-      SimplePacketQueueProducerStage::Args{"source", kDefaultFormat, DefaultClockKoid(), nullptr});
+  const auto source = MakeDefaultPacketQueue(kDefaultFormat);
 
   MixerSource mixer_source(source,
                            {.clock_sync = DefaultClockSync(),

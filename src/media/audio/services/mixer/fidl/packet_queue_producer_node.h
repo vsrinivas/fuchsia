@@ -6,7 +6,8 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_PACKET_QUEUE_PRODUCER_NODE_H_
 
 #include "src/media/audio/services/mixer/fidl/node.h"
-#include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"
+#include "src/media/audio/services/mixer/mix/producer_stage.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 
 namespace media_audio {
 
@@ -26,8 +27,9 @@ class PacketQueueProducerNode : public Node {
     // Reference clock of this nodes's destination stream.
     zx_koid_t reference_clock_koid;
 
-    // Message queue for communicating with a PacketQueueProducerStage.
-    std::shared_ptr<PacketQueueProducerStage::CommandQueue> command_queue;
+    // Message queues for communicating with a packet-queue-based producer.
+    std::shared_ptr<ProducerStage::CommandQueue> start_stop_command_queue;
+    std::shared_ptr<SimplePacketQueueProducerStage::CommandQueue> packet_command_queue;
 
     // On creation, the node is initially assigned to this DetachedThread.
     DetachedThreadPtr detached_thread;

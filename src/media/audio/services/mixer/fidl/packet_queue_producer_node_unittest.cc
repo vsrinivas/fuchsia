@@ -25,7 +25,8 @@ TEST_F(PacketQueueProducerNodeTest, CreateEdgeCannotAcceptSource) {
   auto producer = PacketQueueProducerNode::Create({
       .format = kFormat,
       .reference_clock_koid = 0,
-      .command_queue = std::make_shared<PacketQueueProducerStage::CommandQueue>(),
+      .start_stop_command_queue = std::make_shared<ProducerStage::CommandQueue>(),
+      .packet_command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>(),
       .detached_thread = detached_thread_,
   });
 
@@ -46,11 +47,14 @@ TEST_F(PacketQueueProducerNodeTest, CreateEdgeCannotAcceptSource) {
 TEST_F(PacketQueueProducerNodeTest, CreateEdgeSuccess) {
   constexpr zx_koid_t kReferenceClockKoid = 42;
 
-  auto command_queue = std::make_shared<PacketQueueProducerStage::CommandQueue>();
+  auto start_stop_command_queue = std::make_shared<ProducerStage::CommandQueue>();
+  auto packet_command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>();
+
   auto producer = PacketQueueProducerNode::Create({
       .format = kFormat,
       .reference_clock_koid = kReferenceClockKoid,
-      .command_queue = command_queue,
+      .start_stop_command_queue = start_stop_command_queue,
+      .packet_command_queue = packet_command_queue,
       .detached_thread = detached_thread_,
   });
 
@@ -81,7 +85,7 @@ TEST_F(PacketQueueProducerNodeTest, CreateEdgeSuccess) {
 
   // Send a Start command.
   // This starts the producer's internal frame timeline.
-  command_queue->push(PacketQueueProducerStage::StartCommand{
+  start_stop_command_queue->push(ProducerStage::StartCommand{
       .start_presentation_time = zx::time(0),
       .start_frame = Fixed(0),
   });
@@ -92,7 +96,7 @@ TEST_F(PacketQueueProducerNodeTest, CreateEdgeSuccess) {
 
   // Send a PushPacket command.
   std::vector<float> payload(10, 0.0f);
-  command_queue->push(PacketQueueProducerStage::PushPacketCommand{
+  packet_command_queue->push(SimplePacketQueueProducerStage::PushPacketCommand{
       .packet = PacketView({
           .format = kFormat,
           .start = Fixed(0),
@@ -101,7 +105,7 @@ TEST_F(PacketQueueProducerNodeTest, CreateEdgeSuccess) {
       }),
   });
 
-  // Verify those commands were received by the PacketQueueProducerStage.
+  // Verify those commands were received by the ProducerStage.
   {
     const auto packet = producer->pipeline_stage()->Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(packet);

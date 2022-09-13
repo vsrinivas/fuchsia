@@ -14,13 +14,13 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/base_fidl_server.h"
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
-#include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 
 namespace media_audio {
 
 class StreamSinkServer : public BaseFidlServer<StreamSinkServer, fuchsia_media2::StreamSink> {
  public:
-  using CommandQueue = PacketQueueProducerStage::CommandQueue;
+  using CommandQueue = SimplePacketQueueProducerStage::CommandQueue;
 
   struct Args {
     // Format of packets sent to this StreamSink.

@@ -18,11 +18,18 @@ std::shared_ptr<PacketQueueProducerNode> PacketQueueProducerNode::Create(Args ar
         : PacketQueueProducerNode(name, std::move(pipeline_stage), std::move(parent)) {}
   };
 
-  auto pipeline_stage = std::make_shared<PacketQueueProducerStage>(PacketQueueProducerStage::Args{
+  auto pipeline_stage = std::make_shared<ProducerStage>(ProducerStage::Args{
       .name = args.name,
       .format = args.format,
       .reference_clock_koid = args.reference_clock_koid,
-      .command_queue = std::move(args.command_queue),
+      .command_queue = std::move(args.start_stop_command_queue),
+      .internal_source =
+          std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+              .name = args.name,
+              .format = args.format,
+              .reference_clock_koid = args.reference_clock_koid,
+              .command_queue = std::move(args.packet_command_queue),
+          }),
   });
   pipeline_stage->set_thread(args.detached_thread);
 

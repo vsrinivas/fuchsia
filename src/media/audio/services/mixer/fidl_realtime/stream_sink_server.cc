@@ -115,8 +115,8 @@ void StreamSinkServer::PutPacket(PutPacketRequestView request,
 
   // Drop the fence after all queues are done with the packet.
   ForEachQueueWithDuplicateFence(std::move(request->release_fence), [packet](auto& q, auto fence) {
-    q.push(
-        PacketQueueProducerStage::PushPacketCommand{.packet = packet, .fence = std::move(fence)});
+    q.push(SimplePacketQueueProducerStage::PushPacketCommand{.packet = packet,
+                                                             .fence = std::move(fence)});
   });
 }
 
@@ -138,7 +138,7 @@ void StreamSinkServer::Clear(ClearRequestView request, ClearCompleter::Sync& com
 
   // Drop the fence after all queues have been cleared.
   ForEachQueueWithDuplicateFence(std::move(request->completion_fence), [](auto& q, auto fence) {
-    q.push(PacketQueueProducerStage::ClearCommand{.fence = std::move(fence)});
+    q.push(SimplePacketQueueProducerStage::ClearCommand{.fence = std::move(fence)});
   });
 }
 

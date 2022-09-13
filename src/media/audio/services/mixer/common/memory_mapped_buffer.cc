@@ -68,4 +68,17 @@ zx::status<std::shared_ptr<MemoryMappedBuffer>> MemoryMappedBuffer::Create(const
   return zx::ok(std::make_shared<WithPublicCtor>(std::move(mapper), ContentSize(vmo)));
 }
 
+// static
+std::shared_ptr<MemoryMappedBuffer> MemoryMappedBuffer::CreateOrDie(size_t size, bool writable) {
+  zx::vmo vmo;
+  if (auto status = zx::vmo::create(size, 0, &vmo); status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "zx::vmo::create failed";
+  }
+
+  auto buffer_result = Create(vmo, writable);
+  FX_CHECK(buffer_result.is_ok()) << "MemoryMappedBuffer::Create failed: "
+                                  << buffer_result.status_string();
+  return *buffer_result;
+}
+
 }  // namespace media_audio

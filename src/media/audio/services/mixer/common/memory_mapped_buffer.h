@@ -20,6 +20,10 @@ class MemoryMappedBuffer {
   // Creates a MemoryMappedBuffer from the given VMO.
   static zx::status<std::shared_ptr<MemoryMappedBuffer>> Create(const zx::vmo& vmo, bool writable);
 
+  // Creates a MemoryMappedBuffer with the given size, crashing if the buffer cannot be created.
+  // Intended for uses in tests.
+  static std::shared_ptr<MemoryMappedBuffer> CreateOrDie(size_t size, bool writable);
+
   // Returns the start address of the buffer.
   void* start() const { return mapper_.start(); }
 

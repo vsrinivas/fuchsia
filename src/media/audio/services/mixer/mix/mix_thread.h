@@ -100,7 +100,6 @@ class MixThread : public Thread {
   // Adds/removes a clock. A clock should be added when it is used by any mix job controlled by this
   // thread, and removed when it's no longer needed by any mix jobs.
   void AddClock(std::shared_ptr<const Clock> clock) TA_REQ(checker()) {
-    FX_LOGS(INFO) << "XXX(DO NOT SUBMIT): AddClock " << clock->koid();
     clocks_.AddClock(std::move(clock));
   }
   void RemoveClock(std::shared_ptr<const Clock> clock) TA_REQ(checker()) {

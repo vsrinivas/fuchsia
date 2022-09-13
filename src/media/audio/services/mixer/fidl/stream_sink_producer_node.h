@@ -7,12 +7,14 @@
 
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
+#include "src/media/audio/services/mixer/mix/producer_stage.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 
 namespace media_audio {
 
 // This is a meta node driven by a StreamSinkServer. Since this is a producer, it has no child
 // source nodes. The child destination nodes are all PacketQueueProducerNodes. Packets received by
-// the StreamSink are copied to every child over a CommandQueue.
+// the StreamSink are copied to every child over command queues.
 class StreamSinkProducerNode : public Node,
                                public std::enable_shared_from_this<StreamSinkProducerNode> {
  public:
@@ -32,14 +34,15 @@ class StreamSinkProducerNode : public Node,
 
   static std::shared_ptr<StreamSinkProducerNode> Create(Args args);
 
-  // Starts this producer. The command is forwarded to each outgoing CommandQueue.
-  void Start(PacketQueueProducerStage::StartCommand cmd) const;
+  // Starts this producer. The command is forwarded to each outgoing command queue.
+  void Start(ProducerStage::StartCommand cmd) const;
 
-  // Stops this producer. The command is forwarded to each outgoing CommandQueue.
-  void Stop(PacketQueueProducerStage::StopCommand cmd) const;
+  // Stops this producer. The command is forwarded to each outgoing command queue.
+  void Stop(ProducerStage::StopCommand cmd) const;
 
  private:
-  using CommandQueue = PacketQueueProducerStage::CommandQueue;
+  using StartStopCommandQueue = ProducerStage::CommandQueue;
+  using PacketCommandQueue = SimplePacketQueueProducerStage::CommandQueue;
 
   StreamSinkProducerNode(Args args)
       : Node(args.name, /*is_meta=*/true, /*pipeline_stage=*/nullptr, /*parent=*/nullptr),
@@ -58,7 +61,11 @@ class StreamSinkProducerNode : public Node,
   const DetachedThreadPtr detached_thread_;
 
   int64_t num_links_ = 0;
-  std::unordered_map<NodePtr, std::shared_ptr<CommandQueue>> command_queues_;
+  struct CommandQueues {
+    std::shared_ptr<StartStopCommandQueue> start_stop;
+    std::shared_ptr<PacketCommandQueue> packet;
+  };
+  std::unordered_map<NodePtr, CommandQueues> command_queues_;
 };
 
 }  // namespace media_audio

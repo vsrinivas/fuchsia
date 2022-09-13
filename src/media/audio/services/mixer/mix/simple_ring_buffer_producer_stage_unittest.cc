@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/mix/ring_buffer_producer_stage.h"
+#include "src/media/audio/services/mixer/mix/simple_ring_buffer_producer_stage.h"
 
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/time.h>
@@ -27,36 +27,36 @@ using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
 const int64_t kFrameCount = 480;
 
-class RingBufferProducerStageTest : public ::testing::Test {
+class SimpleRingBufferProducerStageTest : public ::testing::Test {
  public:
-  RingBufferProducerStageTest() {
-    fzl::VmoMapper vmo_mapper_;
-    const auto status =
-        vmo_mapper_.CreateAndMap(zx_system_get_page_size(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
-    FX_CHECK(status == ZX_OK);
-    ring_buffer_producer_stage_.emplace(kFormat, DefaultClockKoid(), std::move(vmo_mapper_),
-                                        kFrameCount, [this]() { return safe_read_frame_; });
+  SimpleRingBufferProducerStageTest() {
+    ring_buffer_producer_stage_.emplace(
+        kFormat, DefaultClockKoid(),
+        MemoryMappedBuffer::CreateOrDie(zx_system_get_page_size(), true), kFrameCount,
+        [this]() { return safe_read_frame_; });
     ring_buffer_producer_stage_->UpdatePresentationTimeToFracFrame(
         DefaultPresentationTimeToFracFrame(kFormat));
   }
 
-  RingBufferProducerStage& ring_buffer_producer_stage() { return *ring_buffer_producer_stage_; }
+  SimpleRingBufferProducerStage& ring_buffer_producer_stage() {
+    return *ring_buffer_producer_stage_;
+  }
 
   void SetSafeReadFrame(int64_t safe_read_frame) { safe_read_frame_ = safe_read_frame; }
 
  private:
-  std::optional<RingBufferProducerStage> ring_buffer_producer_stage_;
+  std::optional<SimpleRingBufferProducerStage> ring_buffer_producer_stage_;
   int64_t safe_read_frame_ = -1;
 };
 
-TEST_F(RingBufferProducerStageTest, ReadBeyondSafeReadFrame) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadBeyondSafeReadFrame) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   const auto packet = ring_buffer.Read(DefaultCtx(), Fixed(0), 1);
   EXPECT_FALSE(packet.has_value());
 }
 
-TEST_F(RingBufferProducerStageTest, ReadFullyExpiredPacket) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadFullyExpiredPacket) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // Advance the safe read frame just before frame 960.
@@ -67,7 +67,7 @@ TEST_F(RingBufferProducerStageTest, ReadFullyExpiredPacket) {
   EXPECT_FALSE(packet.has_value());
 }
 
-TEST_F(RingBufferProducerStageTest, ReadNotYetAvailablePacket) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadNotYetAvailablePacket) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // Advance the safe read frame just before frame 480.
@@ -78,7 +78,7 @@ TEST_F(RingBufferProducerStageTest, ReadNotYetAvailablePacket) {
   EXPECT_FALSE(packet.has_value());
 }
 
-TEST_F(RingBufferProducerStageTest, ReadFullyAvailableRegion) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadFullyAvailableRegion) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // Advance the safe read frame just before frame 48.
@@ -91,7 +91,7 @@ TEST_F(RingBufferProducerStageTest, ReadFullyAvailableRegion) {
   EXPECT_EQ(packet->length(), 48);
 }
 
-TEST_F(RingBufferProducerStageTest, ReadPartiallyAvailableRegion) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadPartiallyAvailableRegion) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // Advance the safe read frame just before frame 48.
@@ -104,7 +104,7 @@ TEST_F(RingBufferProducerStageTest, ReadPartiallyAvailableRegion) {
   EXPECT_EQ(packet->length(), 48);
 }
 
-TEST_F(RingBufferProducerStageTest, ReadSkipsExpiredFrames) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadSkipsExpiredFrames) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // Advance the safe read frame just before frame 480 + 48 to wrap around the ring.
@@ -117,7 +117,7 @@ TEST_F(RingBufferProducerStageTest, ReadSkipsExpiredFrames) {
   EXPECT_EQ(packet->length(), 48);
 }
 
-TEST_F(RingBufferProducerStageTest, ReadAfterTruncatePacketAtEndOfTheRing) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadAfterTruncatePacketAtEndOfTheRing) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // Advance the safe read frame just before frame 480 + 48 to wrap around the ring.
@@ -139,7 +139,7 @@ TEST_F(RingBufferProducerStageTest, ReadAfterTruncatePacketAtEndOfTheRing) {
   }
 }
 
-TEST_F(RingBufferProducerStageTest, ReadNegativeFrames) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadNegativeFrames) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // Advance the safe read frame just before frame -480.
@@ -152,7 +152,7 @@ TEST_F(RingBufferProducerStageTest, ReadNegativeFrames) {
   EXPECT_EQ(packet->length(), 10);
 }
 
-TEST_F(RingBufferProducerStageTest, ReadNegativeThroughPositiveFrames) {
+TEST_F(SimpleRingBufferProducerStageTest, ReadNegativeThroughPositiveFrames) {
   auto& ring_buffer = ring_buffer_producer_stage();
 
   // First 5 frames should be available and returned.

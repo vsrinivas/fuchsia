@@ -17,17 +17,32 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/thread_safe_queue.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
-#include "src/media/audio/services/mixer/mix/old_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
+#include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 
 namespace media_audio {
 
-// A ProducerStage driven by a single-threaded packet queue. The packet queue can be mutated with
-// `push` and `clear` methods. This simple ProducerStage is used in tests and also as an
-// implementation detail of the more complex PacketQueueProducerStage.
-class SimplePacketQueueProducerStage : public ProducerStage {
+// A ProducerStage driven by a packet queue. This is a "simple" producer because it does not handle
+// Start or Stop commands. This is intended to be embedded within a ProducerStage, but can also be
+// used in isolation in tests.
+class SimplePacketQueueProducerStage : public PipelineStage {
  public:
+  struct PushPacketCommand {
+    PacketView packet;
+    // Closed after `packet` is fully consumed.
+    zx::eventpair fence;
+  };
+
+  struct ClearCommand {
+    // Closed after the queue is cleared. If the queue was not empty, this fence does not occur
+    // until all queued packets are released.
+    zx::eventpair fence;
+  };
+
+  using Command = std::variant<PushPacketCommand, ClearCommand>;
+  using CommandQueue = ThreadSafeQueue<Command>;
+
   struct Args {
     // Name of this stage.
     std::string_view name;
@@ -38,6 +53,11 @@ class SimplePacketQueueProducerStage : public ProducerStage {
     // Reference clock of this stage's output stream.
     zx_koid_t reference_clock_koid;
 
+    // Message queue for pending commands. Will be drained by each call to Advance or Read. If this
+    // field is nullptr, the queue can be driven by calls to `clear`, `empty`, and `push` -- this is
+    // primarily useful in unit tests.
+    std::shared_ptr<CommandQueue> command_queue;
+
     // A callback to invoke when a packet underflows. Optional: can be nullptr.
     // The duration estimates the packet's lateness relative to the system monotonic clock.
     // TODO(fxbug.dev/87651): use fit::inline_function
@@ -46,24 +66,35 @@ class SimplePacketQueueProducerStage : public ProducerStage {
 
   explicit SimplePacketQueueProducerStage(Args args);
 
-  // Clears the queue.
-  void clear() { pending_packet_queue_.clear(); }
+  // Implements `PipelineStage`.
+  void AddSource(PipelineStagePtr source, AddSourceOptions options) final {
+    UNREACHABLE << "SimplePacketQueueProducerStage should not have a source";
+  }
+  void RemoveSource(PipelineStagePtr source) final {
+    UNREACHABLE << "SimplePacketQueueProducerStage should not have a source";
+  }
+  void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) final;
 
-  // Returns whether the queue is empty or not.
-  bool empty() const { return pending_packet_queue_.empty(); }
+  // Clears the queue.
+  //
+  // REQUIRED: `Args::command_queue` was not specified.
+  void clear();
+
+  // Reports whether the queue is empty or not.
+  //
+  // REQUIRED: `Args::command_queue` was not specified.
+  bool empty() const;
 
   // Pushes a `packet` into the queue. `fence` will be closed after the packet is fully consumed.
-  void push(PacketView packet, zx::eventpair fence = zx::eventpair()) {
-    pending_packet_queue_.emplace_back(packet, std::move(fence));
-  }
+  //
+  // REQUIRED: `Args::command_queue` was not specified.
+  void push(PacketView packet, zx::eventpair fence = zx::eventpair());
 
  protected:
   // Implements `PipelineStage`.
   void AdvanceSelfImpl(Fixed frame) final;
+  void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) final {}
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
-
-  // For access to AdvanceSelfImpl.
-  friend class PacketQueueProducerStage;
 
  private:
   class PendingPacket : public PacketView {
@@ -84,12 +115,14 @@ class SimplePacketQueueProducerStage : public ProducerStage {
     bool seen_in_read_ = false;
   };
 
+  void FlushPendingCommands();
   void ReportUnderflow(Fixed underlow_frame_count);
 
-  std::deque<PendingPacket> pending_packet_queue_;
-
-  size_t underflow_count_;
+  const std::shared_ptr<CommandQueue> pending_commands_;
   const fit::function<void(zx::duration)> underflow_reporter_;
+
+  std::deque<PendingPacket> pending_packet_queue_;
+  size_t underflow_count_;
 };
 
 }  // namespace media_audio

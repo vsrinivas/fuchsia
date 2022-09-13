@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"
+#include "src/media/audio/services/mixer/mix/producer_stage.h"
 
 #include <lib/zx/time.h>
 
@@ -17,6 +17,8 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
+#include "src/media/audio/services/mixer/mix/simple_ring_buffer_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 
@@ -28,22 +30,30 @@ using ::testing::ElementsAre;
 
 const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 48000});
 
-class PacketQueueProducerStageTest : public ::testing::Test {
+// The majority of test cases use a packet queue for the internal source because packet queues are
+// easier to setup than ring buffers.
+class ProducerStageTestWithPacketQueue : public ::testing::Test {
  public:
-  PacketQueueProducerStageTest()
-      : command_queue_(std::make_shared<PacketQueueProducerStage::CommandQueue>()),
-        packet_queue_producer_stage_({
+  ProducerStageTestWithPacketQueue()
+      : start_stop_command_queue_(std::make_shared<ProducerStage::CommandQueue>()),
+        packet_command_queue_(std::make_shared<SimplePacketQueueProducerStage::CommandQueue>()),
+        producer_stage_({
             .format = kFormat,
             .reference_clock_koid = DefaultClockKoid(),
-            .command_queue = command_queue_,
+            .command_queue = start_stop_command_queue_,
+            .internal_source = std::make_shared<SimplePacketQueueProducerStage>(
+                SimplePacketQueueProducerStage::Args{
+                    .format = kFormat,
+                    .reference_clock_koid = DefaultClockKoid(),
+                    .command_queue = packet_command_queue_,
+                }),
         }) {
-    packet_queue_producer_stage_.UpdatePresentationTimeToFracFrame(
-        DefaultPresentationTimeToFracFrame(kFormat));
+    producer_stage_.UpdatePresentationTimeToFracFrame(DefaultPresentationTimeToFracFrame(kFormat));
   }
 
   const void* SendPushPacketCommand(uint32_t packet_id, int64_t start = 0, int64_t length = 1) {
     auto& packet = NewPacket(packet_id, start, length);
-    command_queue_->push(PacketQueueProducerStage::PushPacketCommand{
+    packet_command_queue_->push(SimplePacketQueueProducerStage::PushPacketCommand{
         .packet = packet.view,
         .fence = packet.fence.Take(),
     });
@@ -51,12 +61,13 @@ class PacketQueueProducerStageTest : public ::testing::Test {
   }
 
   void SendClearCommand(zx::eventpair fence) {
-    command_queue_->push(PacketQueueProducerStage::ClearCommand{.fence = std::move(fence)});
+    packet_command_queue_->push(
+        SimplePacketQueueProducerStage::ClearCommand{.fence = std::move(fence)});
   }
 
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame,
                         std::function<void()> callback = nullptr) {
-    command_queue_->push(PacketQueueProducerStage::StartCommand{
+    start_stop_command_queue_->push(ProducerStage::StartCommand{
         .start_presentation_time = start_presentation_time,
         .start_frame = start_frame,
         .callback = std::move(callback),
@@ -64,13 +75,13 @@ class PacketQueueProducerStageTest : public ::testing::Test {
   }
 
   void SendStopCommand(Fixed stop_frame, std::function<void()> callback = nullptr) {
-    command_queue_->push(PacketQueueProducerStage::StopCommand{
+    start_stop_command_queue_->push(ProducerStage::StopCommand{
         .stop_frame = stop_frame,
         .callback = std::move(callback),
     });
   }
 
-  PacketQueueProducerStage& packet_queue_producer_stage() { return packet_queue_producer_stage_; }
+  ProducerStage& producer_stage() { return producer_stage_; }
 
   const std::vector<uint32_t>& released_packets() {
     for (auto& [id, packet] : packets_) {
@@ -108,14 +119,15 @@ class PacketQueueProducerStageTest : public ::testing::Test {
     return it->second;
   }
 
-  std::shared_ptr<PacketQueueProducerStage::CommandQueue> command_queue_;
-  PacketQueueProducerStage packet_queue_producer_stage_;
+  std::shared_ptr<ProducerStage::CommandQueue> start_stop_command_queue_;
+  std::shared_ptr<SimplePacketQueueProducerStage::CommandQueue> packet_command_queue_;
+  ProducerStage producer_stage_;
   std::map<int32_t, Packet> packets_;  // ordered map so iteration is deterministic
   std::vector<uint32_t> released_packets_;
 };
 
-TEST_F(PacketQueueProducerStageTest, ReadWhileStarted) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, ReadWhileStarted) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // Start the Producer at t=0.
@@ -130,7 +142,7 @@ TEST_F(PacketQueueProducerStageTest, ReadWhileStarted) {
   // Pop the first two packets.
   {
     // Packet #0
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -141,7 +153,7 @@ TEST_F(PacketQueueProducerStageTest, ReadWhileStarted) {
 
   {
     // Packet #1
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(20), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(20), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(20, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -155,7 +167,7 @@ TEST_F(PacketQueueProducerStageTest, ReadWhileStarted) {
 
   {
     // Packet #2
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(40), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(40), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(40, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -165,8 +177,8 @@ TEST_F(PacketQueueProducerStageTest, ReadWhileStarted) {
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
 }
 
-TEST_F(PacketQueueProducerStageTest, ReadAfterClearWhileStarted) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, ReadAfterClearWhileStarted) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // Start the Producer at t=0.
@@ -186,7 +198,7 @@ TEST_F(PacketQueueProducerStageTest, ReadAfterClearWhileStarted) {
   {
     // Start reading at packet #2 but allow up through packet #3.
     // This should return packet #3.
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(40), 40);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(40), 40);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(60, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -198,7 +210,7 @@ TEST_F(PacketQueueProducerStageTest, ReadAfterClearWhileStarted) {
 
   {
     // Packet #5.
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(80), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(80), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(80, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -207,8 +219,8 @@ TEST_F(PacketQueueProducerStageTest, ReadAfterClearWhileStarted) {
   }
 }
 
-TEST_F(PacketQueueProducerStageTest, AdvanceWhileStarted) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, AdvanceWhileStarted) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // Start the Producer at t=0.
@@ -224,16 +236,16 @@ TEST_F(PacketQueueProducerStageTest, AdvanceWhileStarted) {
   EXPECT_TRUE(released_packets().empty());
 
   // Advancing past the second packet should release the first two packets.
-  packet_queue.Advance(DefaultCtx(), Fixed(40));
+  producer.Advance(DefaultCtx(), Fixed(40));
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
 
   // Finally advance past the third packet.
-  packet_queue.Advance(DefaultCtx(), Fixed(60));
+  producer.Advance(DefaultCtx(), Fixed(60));
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
 }
 
-TEST_F(PacketQueueProducerStageTest, ReadWhileStopped) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, ReadWhileStopped) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // Push a packets onto the command queue.
@@ -242,14 +254,14 @@ TEST_F(PacketQueueProducerStageTest, ReadWhileStopped) {
   EXPECT_TRUE(released_packets().empty());
 
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_FALSE(buffer);
   }
   EXPECT_TRUE(released_packets().empty());
 }
 
-TEST_F(PacketQueueProducerStageTest, AdvanceWhileStopped) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, AdvanceWhileStopped) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // Push a packet onto the command queue.
@@ -258,7 +270,7 @@ TEST_F(PacketQueueProducerStageTest, AdvanceWhileStopped) {
 
   // Advance past that packet.
   // Since we never sent a Start command, that packet wasn't released.
-  packet_queue.Advance(DefaultCtx(), Fixed(20));
+  producer.Advance(DefaultCtx(), Fixed(20));
   EXPECT_TRUE(released_packets().empty());
 
   // Now start the Producer at t=0.
@@ -266,13 +278,13 @@ TEST_F(PacketQueueProducerStageTest, AdvanceWhileStopped) {
   SendStartCommand(zx::time(0), Fixed(0));
 
   // Advance again. Since the Producer is started, the packet should be released.
-  packet_queue.Advance(DefaultCtx(), Fixed(21));
+  producer.Advance(DefaultCtx(), Fixed(21));
   EXPECT_THAT(released_packets(), ElementsAre(0));
 
   // Now that we're started, we can Push and Read.
   SendPushPacketCommand(1, 20, 20);
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(21), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(21), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(21, buffer->start());
     EXPECT_EQ(19, buffer->length());
@@ -281,8 +293,8 @@ TEST_F(PacketQueueProducerStageTest, AdvanceWhileStopped) {
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
 }
 
-TEST_F(PacketQueueProducerStageTest, StartAfterRead) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, StartAfterRead) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // Start the Producer at t=1ms. For this test case, we want the internal
@@ -295,7 +307,7 @@ TEST_F(PacketQueueProducerStageTest, StartAfterRead) {
   SendPushPacketCommand(0, 0, 100);
   EXPECT_TRUE(released_packets().empty());
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 100);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 100);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(48, buffer->start());
     EXPECT_EQ(52, buffer->length());
@@ -304,8 +316,8 @@ TEST_F(PacketQueueProducerStageTest, StartAfterRead) {
   EXPECT_THAT(released_packets(), ElementsAre(0));
 }
 
-TEST_F(PacketQueueProducerStageTest, StopAfterRead) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, StopAfterRead) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // Start the Producer at t=0.
@@ -318,7 +330,7 @@ TEST_F(PacketQueueProducerStageTest, StopAfterRead) {
   SendStopCommand(Fixed(50));
   EXPECT_TRUE(released_packets().empty());
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 100);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 100);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(50, buffer->length());
@@ -329,8 +341,8 @@ TEST_F(PacketQueueProducerStageTest, StopAfterRead) {
   EXPECT_TRUE(released_packets().empty());
 }
 
-TEST_F(PacketQueueProducerStageTest, StartAndStopAfterRead) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, StartAndStopAfterRead) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // Start the Producer at t=1ms. For this test case, we want the internal
@@ -344,7 +356,7 @@ TEST_F(PacketQueueProducerStageTest, StartAndStopAfterRead) {
   SendStopCommand(Fixed(50));
   EXPECT_TRUE(released_packets().empty());
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 100);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 100);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(48, buffer->start());
     EXPECT_EQ(2, buffer->length());
@@ -355,8 +367,8 @@ TEST_F(PacketQueueProducerStageTest, StartAndStopAfterRead) {
   EXPECT_TRUE(released_packets().empty());
 }
 
-TEST_F(PacketQueueProducerStageTest, StartStopCallbacks) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, StartStopCallbacks) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   bool done1 = false;
@@ -381,20 +393,20 @@ TEST_F(PacketQueueProducerStageTest, StartStopCallbacks) {
   SendStopCommand(Fixed(100), [&done4]() mutable { done4 = true; });
 
   // Advancing to frame 10 should Start and Stop.
-  packet_queue.Advance(DefaultCtx(), Fixed(10));
+  producer.Advance(DefaultCtx(), Fixed(10));
   EXPECT_TRUE(done1);
   EXPECT_TRUE(done2);
 
   // Advancing to frame 48 should Start.
-  packet_queue.Advance(DefaultCtx(), Fixed(48));
+  producer.Advance(DefaultCtx(), Fixed(48));
   EXPECT_TRUE(done3);
 
   // Advancing to frame 100 should Stop.
-  packet_queue.Advance(DefaultCtx(), Fixed(100));
+  producer.Advance(DefaultCtx(), Fixed(100));
   EXPECT_TRUE(done4);
 }
 
-TEST_F(PacketQueueProducerStageTest, InternalFramesOffsetBehind) {
+TEST_F(ProducerStageTestWithPacketQueue, InternalFramesOffsetBehind) {
   // Start the Producer at t=1ms with internal frame 0. This makes the
   // internal and downstream frame timelines offset by 1ms, or 48 frames
   // at 48kHz. Reading downstream frame 48 is equivalent to reading
@@ -403,9 +415,9 @@ TEST_F(PacketQueueProducerStageTest, InternalFramesOffsetBehind) {
   TestInternalFramesOffsetBehind();
 }
 
-TEST_F(PacketQueueProducerStageTest, DownstreamFramesOffsetAhead) {
+TEST_F(ProducerStageTestWithPacketQueue, DownstreamFramesOffsetAhead) {
   // Offset the downstream frame timeline so that t=0ms is downstream frame 48.
-  packet_queue_producer_stage().UpdatePresentationTimeToFracFrame(
+  producer_stage().UpdatePresentationTimeToFracFrame(
       TimelineFunction(Fixed(48).raw_value(), 0, kFormat.frac_frames_per_ns()));
 
   // Start the Producer at t=0ms with internal frame 0. This makes the
@@ -416,8 +428,8 @@ TEST_F(PacketQueueProducerStageTest, DownstreamFramesOffsetAhead) {
   TestInternalFramesOffsetBehind();
 }
 
-void PacketQueueProducerStageTest::TestInternalFramesOffsetBehind() {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+void ProducerStageTestWithPacketQueue::TestInternalFramesOffsetBehind() {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // These push commands use internal frames.
@@ -429,7 +441,7 @@ void PacketQueueProducerStageTest::TestInternalFramesOffsetBehind() {
   // that downstream frame 0 is equivalent to internal frame -48, so this
   // returns nothing.
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_FALSE(buffer);
   }
   EXPECT_TRUE(released_packets().empty());
@@ -437,7 +449,7 @@ void PacketQueueProducerStageTest::TestInternalFramesOffsetBehind() {
   // Downstream frame 48 is equivalent to internal frame 0, so this
   // returns the first packet.
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(48), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(48), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(48, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -447,7 +459,7 @@ void PacketQueueProducerStageTest::TestInternalFramesOffsetBehind() {
   EXPECT_THAT(released_packets(), ElementsAre(0));
 }
 
-TEST_F(PacketQueueProducerStageTest, InternalFramesOffsetAhead) {
+TEST_F(ProducerStageTestWithPacketQueue, InternalFramesOffsetAhead) {
   // Start the Producer at t=0ms with internal frame 48. This makes the
   // internal and downstream frame timelines offset by 48 frames, or 1ms
   // at 48kHz. Reading downstream frame 0 is equivalent to reading internal
@@ -456,9 +468,9 @@ TEST_F(PacketQueueProducerStageTest, InternalFramesOffsetAhead) {
   TestInternalFramesOffsetAhead();
 }
 
-TEST_F(PacketQueueProducerStageTest, DownstreamFramesOffsetBehind) {
+TEST_F(ProducerStageTestWithPacketQueue, DownstreamFramesOffsetBehind) {
   // Offset the downstream frame timeline so that t=0ms is downstream frame -48.
-  packet_queue_producer_stage().UpdatePresentationTimeToFracFrame(
+  producer_stage().UpdatePresentationTimeToFracFrame(
       TimelineFunction(Fixed(-48).raw_value(), 0, kFormat.frac_frames_per_ns()));
 
   // TestInternalFramesOffsetAhead requires that we start the Producer by
@@ -470,8 +482,8 @@ TEST_F(PacketQueueProducerStageTest, DownstreamFramesOffsetBehind) {
   TestInternalFramesOffsetAhead();
 }
 
-void PacketQueueProducerStageTest::TestInternalFramesOffsetAhead() {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+void ProducerStageTestWithPacketQueue::TestInternalFramesOffsetAhead() {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // These push commands use internal frames.
@@ -483,7 +495,7 @@ void PacketQueueProducerStageTest::TestInternalFramesOffsetAhead() {
   // that downstream frame 0 is equivalent to internal frame 48, so this
   // returns the second packet.
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -493,8 +505,8 @@ void PacketQueueProducerStageTest::TestInternalFramesOffsetAhead() {
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
 }
 
-TEST_F(PacketQueueProducerStageTest, DownstreamFramesUpdatedAfterPush) {
-  PacketQueueProducerStage& packet_queue = packet_queue_producer_stage();
+TEST_F(ProducerStageTestWithPacketQueue, DownstreamFramesUpdatedAfterPush) {
+  ProducerStage& producer = producer_stage();
   EXPECT_TRUE(released_packets().empty());
 
   // This test is equivalent to DownstreamFramesOffsetBehind except that the
@@ -505,13 +517,13 @@ TEST_F(PacketQueueProducerStageTest, DownstreamFramesUpdatedAfterPush) {
   SendPushPacketCommand(0, 0, 20);
   const void* payload_1 = SendPushPacketCommand(1, 48, 20);
 
-  packet_queue.UpdatePresentationTimeToFracFrame(
+  producer.UpdatePresentationTimeToFracFrame(
       TimelineFunction(Fixed(-48).raw_value(), 0, kFormat.frac_frames_per_ns()));
 
   // Downstream frame 0 is equivalent to internal frame 48, so this
   // returns the second packet.
   {
-    const auto buffer = packet_queue.Read(DefaultCtx(), Fixed(0), 20);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 20);
     ASSERT_TRUE(buffer);
     EXPECT_EQ(0, buffer->start());
     EXPECT_EQ(20, buffer->length());
@@ -519,6 +531,106 @@ TEST_F(PacketQueueProducerStageTest, DownstreamFramesUpdatedAfterPush) {
     EXPECT_EQ(payload_1, buffer->payload());
   }
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
+}
+
+// To ensure compatibility, we also run a few simple tests using a ring buffer internal source.
+class ProducerStageTestWithRingBuffer : public ::testing::Test {
+ public:
+  static inline const int64_t kRingBufferFrames = 100;
+
+  ProducerStageTestWithRingBuffer()
+      : start_stop_command_queue_(std::make_shared<ProducerStage::CommandQueue>()),
+        buffer_(MemoryMappedBuffer::CreateOrDie(zx_system_get_page_size(), true)),
+        producer_stage_({
+            .format = kFormat,
+            .reference_clock_koid = DefaultClockKoid(),
+            .command_queue = start_stop_command_queue_,
+            .internal_source = std::make_shared<SimpleRingBufferProducerStage>(
+                kFormat, DefaultClockKoid(), buffer_, kRingBufferFrames,
+                [this]() { return safe_read_frame_; }),
+        }) {
+    producer_stage_.UpdatePresentationTimeToFracFrame(DefaultPresentationTimeToFracFrame(kFormat));
+  }
+
+  void SendStartCommand(zx::time start_presentation_time, Fixed start_frame,
+                        std::function<void()> callback = nullptr) {
+    start_stop_command_queue_->push(ProducerStage::StartCommand{
+        .start_presentation_time = start_presentation_time,
+        .start_frame = start_frame,
+        .callback = std::move(callback),
+    });
+  }
+
+  void SendStopCommand(Fixed stop_frame, std::function<void()> callback = nullptr) {
+    start_stop_command_queue_->push(ProducerStage::StopCommand{
+        .stop_frame = stop_frame,
+        .callback = std::move(callback),
+    });
+  }
+
+  ProducerStage& producer_stage() { return producer_stage_; }
+
+  void* RingBufferAt(int64_t frame) {
+    return buffer_->offset((frame % kRingBufferFrames) * kFormat.bytes_per_frame());
+  }
+
+  void set_safe_read_frame(int64_t frame) { safe_read_frame_ = frame; }
+
+ private:
+  std::shared_ptr<ProducerStage::CommandQueue> start_stop_command_queue_;
+  std::shared_ptr<MemoryMappedBuffer> buffer_;
+  ProducerStage producer_stage_;
+  int64_t safe_read_frame_ = kRingBufferFrames;
+};
+
+TEST_F(ProducerStageTestWithRingBuffer, ReadWhileStarted) {
+  ProducerStage& producer = producer_stage();
+
+  // The internal frame timeline is ahead by 10 frames.
+  SendStartCommand(zx::time(0), Fixed(10));
+
+  // Requesting dowstream frame 0 should return internal frame 10.
+  {
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 10);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->start(), 0);
+    EXPECT_EQ(buffer->length(), 10);
+    EXPECT_EQ(buffer->end(), 10);
+    EXPECT_EQ(buffer->payload(), RingBufferAt(10));
+  }
+
+  // Requesting dowstream frame 110 should return internal frame 120.
+  {
+    set_safe_read_frame(130);
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(110), 10);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->start(), 110);
+    EXPECT_EQ(buffer->length(), 10);
+    EXPECT_EQ(buffer->end(), 120);
+    EXPECT_EQ(buffer->payload(), RingBufferAt(120));
+    // This is intended to test wrap-around.
+    static_assert(110 > kRingBufferFrames);
+  }
+}
+
+TEST_F(ProducerStageTestWithRingBuffer, StartAndStopAfterRead) {
+  ProducerStage& producer = producer_stage();
+
+  // Start the Producer at t=1ms. For this test case, we want the internal
+  // and downstream frame timelines to be identical, so start the internal
+  // frames at 48 (1ms at 48kHz) so that t=0 corresponds to frame 0.
+  SendStartCommand(zx::time(0) + zx::msec(1), Fixed(48));
+  SendStopCommand(Fixed(50));
+
+  // Since the Producer starts at frame 48, but stops at frame 50, we should read just 2 frames.
+  {
+    const auto buffer = producer.Read(DefaultCtx(), Fixed(0), 100);
+    ASSERT_TRUE(buffer);
+    EXPECT_EQ(buffer->start(), 48);
+    EXPECT_EQ(buffer->length(), 2);
+    EXPECT_EQ(buffer->end(), 50);
+    EXPECT_EQ(buffer->payload(), RingBufferAt(48));
+  }
 }
 
 }  // namespace

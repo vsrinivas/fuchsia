@@ -49,4 +49,13 @@ TimelineFunction DefaultPresentationTimeToFracFrame(const Format& format) {
   return TimelineFunction(0, 0, format.frac_frames_per_ns());
 }
 
+std::shared_ptr<SimplePacketQueueProducerStage> MakeDefaultPacketQueue(const Format& format,
+                                                                       std::string_view name) {
+  return std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+      .name = name,
+      .format = format,
+      .reference_clock_koid = DefaultClockKoid(),
+  });
+}
+
 }  // namespace media_audio

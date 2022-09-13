@@ -15,15 +15,16 @@
 
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl_realtime/testing/test_stream_sink_server_and_client.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 
 namespace media_audio {
 namespace {
 
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
-using CommandQueue = PacketQueueProducerStage::CommandQueue;
-using ClearCommand = PacketQueueProducerStage::ClearCommand;
-using PushPacketCommand = PacketQueueProducerStage::PushPacketCommand;
+using CommandQueue = SimplePacketQueueProducerStage::CommandQueue;
+using ClearCommand = SimplePacketQueueProducerStage::ClearCommand;
+using PushPacketCommand = SimplePacketQueueProducerStage::PushPacketCommand;
 
 // These tests work best if we use a format with >= 2 bytes per frame to ensure we compute frame
 // counts correctly. Other than that constraint, the specific choice of format does not matter.

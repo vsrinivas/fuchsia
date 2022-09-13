@@ -16,10 +16,33 @@
 namespace media_audio {
 
 SimplePacketQueueProducerStage::SimplePacketQueueProducerStage(Args args)
-    : ProducerStage(args.name, args.format, args.reference_clock_koid),
+    : PipelineStage(args.name, args.format, args.reference_clock_koid),
+      pending_commands_(std::move(args.command_queue)),
       underflow_reporter_(std::move(args.underflow_reporter)) {}
 
+void SimplePacketQueueProducerStage::clear() {
+  FX_CHECK(!pending_commands_);
+  pending_packet_queue_.clear();
+}
+
+bool SimplePacketQueueProducerStage::empty() const {
+  FX_CHECK(!pending_commands_);
+  return pending_packet_queue_.empty();
+}
+
+void SimplePacketQueueProducerStage::push(PacketView packet, zx::eventpair fence) {
+  FX_CHECK(!pending_commands_);
+  pending_packet_queue_.emplace_back(packet, std::move(fence));
+}
+
+void SimplePacketQueueProducerStage::UpdatePresentationTimeToFracFrame(
+    std::optional<TimelineFunction> f) {
+  set_presentation_time_to_frac_frame(f);
+}
+
 void SimplePacketQueueProducerStage::AdvanceSelfImpl(Fixed frame) {
+  FlushPendingCommands();
+
   while (!pending_packet_queue_.empty()) {
     const auto& pending_packet = pending_packet_queue_.front();
     if (pending_packet.end() > frame) {
@@ -32,6 +55,8 @@ void SimplePacketQueueProducerStage::AdvanceSelfImpl(Fixed frame) {
 std::optional<PipelineStage::Packet> SimplePacketQueueProducerStage::ReadImpl(MixJobContext& ctx,
                                                                               Fixed start_frame,
                                                                               int64_t frame_count) {
+  FlushPendingCommands();
+
   // Clean up pending packets before `start_frame`.
   while (!pending_packet_queue_.empty()) {
     auto& pending_packet = pending_packet_queue_.front();
@@ -58,6 +83,30 @@ std::optional<PipelineStage::Packet> SimplePacketQueueProducerStage::ReadImpl(Mi
     return MakeUncachedPacket(intersect->start(), intersect->length(), intersect->payload());
   }
   return std::nullopt;
+}
+
+void SimplePacketQueueProducerStage::FlushPendingCommands() {
+  if (!pending_commands_) {
+    return;
+  }
+
+  for (;;) {
+    auto cmd_or_null = pending_commands_->pop();
+    if (!cmd_or_null) {
+      break;
+    }
+
+    if (auto* cmd = std::get_if<PushPacketCommand>(&*cmd_or_null); cmd) {
+      pending_packet_queue_.emplace_back(cmd->packet, std::move(cmd->fence));
+
+    } else if (std::holds_alternative<ClearCommand>(*cmd_or_null)) {
+      // The fence is cleared when `cmd_or_null` is destructed.
+      pending_packet_queue_.clear();
+
+    } else {
+      FX_CHECK(false) << "unhandled Command variant";
+    }
+  }
 }
 
 void SimplePacketQueueProducerStage::ReportUnderflow(Fixed underlow_frame_count) {
