@@ -44,11 +44,9 @@ ffx_action("run_product_size_checker") {
     product_size_checker_output = [
       {
         visualization =
-            rebase_path("$target_out_dir/product_size_checker/visualization",
-                        root_build_dir)
-        size_breakdown = rebase_path(
-                "$target_out_dir/product_size_checker/size_breakdown.txt",
-                root_build_dir)
+            rebase_path("$target_out_dir/visualization", root_build_dir)
+        size_breakdown =
+            rebase_path("$target_out_dir/size_breakdown.txt", root_build_dir)
       },
     ]
   }
