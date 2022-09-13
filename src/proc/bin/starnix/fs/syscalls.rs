@@ -668,7 +668,7 @@ pub fn sys_fchown(
     owner: u32,
     group: u32,
 ) -> Result<(), Errno> {
-    let file = current_task.files.get(fd)?;
+    let file = current_task.files.get_unless_opath(fd)?;
     // TODO(security): Needs permission check
     file.name.entry.node.chown(maybe_uid(owner), maybe_uid(group));
     Ok(())

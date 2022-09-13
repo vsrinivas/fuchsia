@@ -45,7 +45,7 @@ gvisor_tests = [
   "chdir_test",
   "chmod_test",
 
-  # "chown_test",
+  "chown_test",
   "chroot_test",
   "clock_getres_test",
   "clock_gettime_test",
