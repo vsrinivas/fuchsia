@@ -42,6 +42,7 @@ source_set("debug") {
 # The nxpfmac core sources.
 source_set("core") {
   sources = [
+    "client_connection.cc",
     "device.cc",
     "event_handler.cc",
     "ioctl_adapter.cc",

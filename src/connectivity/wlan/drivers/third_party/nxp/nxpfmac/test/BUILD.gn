@@ -13,6 +13,7 @@ source_set("mlan_mocks") {
 
 test("nxpfmac_test") {
   sources = [
+    "client_connection_test.cc",
     "event_handler_test.cc",
     "ioctl_adapter_test.cc",
     "scanner_test.cc",
