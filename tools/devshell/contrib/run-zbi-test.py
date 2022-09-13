@@ -19,7 +19,7 @@ def find_bootserver(build_dir):
         tool_paths = json.load(file)
     bootservers = [
         os.path.join(build_dir, tool['path']) for tool in tool_paths if (
-            tool['name'] == 'bootserver_new' and tool['cpu'] == host_cpu and
+            tool['name'] == 'bootserver' and tool['cpu'] == host_cpu and
             tool['os'] == host_os)
     ]
     if bootservers:
