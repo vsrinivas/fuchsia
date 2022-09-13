@@ -40,7 +40,7 @@ class CodecAdapterVp9 : public AmlogicCodecAdapter, public Vp9Decoder::FrameData
   ~CodecAdapterVp9();
 
   void SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) override;
-  std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+  std::optional<media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation>
   CoreCodecMetricsImplementation() override;
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
   bool IsCoreCodecMappedBufferUseful(CodecPort port) override;

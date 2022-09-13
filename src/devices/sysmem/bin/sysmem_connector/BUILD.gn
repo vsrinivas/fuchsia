@@ -13,6 +13,7 @@ executable("sysmem_connector_executable") {
   ]
 
   deps = [
+    "//sdk/fidl/fuchsia.metrics",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",

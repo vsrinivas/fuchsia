@@ -6,14 +6,20 @@ import("//build/components.gni")
 
 source_set("metrics_buffer") {
   sources = [
+    "metrics.h",
     "metrics_buffer.cc",
     "metrics_buffer.h",
+    "metrics_impl.cc",
+    "metrics_impl.h",
   ]
   public_deps = [
-    "//src/lib/cobalt/cpp:cobalt_event_builder",
-    "//src/lib/cobalt/cpp:cobalt_logger",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp_conversion",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/syslog",
 
     # Only for <ddk/debug.h>'s severity levels.
@@ -37,9 +43,9 @@ executable("metrics_buffer_unittests") {
 
   deps = [
     ":metrics_buffer",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_cpp_wire",
+    "//sdk/fidl/fuchsia.metrics",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp_wire",
     "//sdk/lib/fdio:fdio",
-    "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

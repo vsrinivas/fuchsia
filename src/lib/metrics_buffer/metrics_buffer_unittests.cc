@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.cobalt/cpp/markers.h>
-#include <fidl/fuchsia.cobalt/cpp/wire.h>
+#include <fidl/fuchsia.metrics/cpp/markers.h>
+#include <fidl/fuchsia.metrics/cpp/wire.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
@@ -13,10 +14,12 @@
 #include <zircon/types.h>
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include <gtest/gtest.h>
 
+#include "lib/sync/completion.h"
 #include "lib/sys/cpp/service_directory.h"
 #include "log.h"
 #include "src/lib/metrics_buffer/metrics_buffer.h"
@@ -30,22 +33,22 @@ class ServerAndClient {
     zx_status_t status = loop_.StartThread("MetricsBufferTest");
     ZX_ASSERT(status == ZX_OK);
     fidl::InterfaceHandle<fuchsia::io::Directory> aux_service_directory;
-    zx::event server_create_done;
-    status = zx::event::create(0, &server_create_done);
-    ZX_ASSERT(status == ZX_OK);
+    sync_completion_t server_create_done;
     status = async::PostTask(dispatcher_, [this, &aux_service_directory, &server_create_done] {
       outgoing_aux_service_directory_parent_.emplace();
       zx_status_t status =
-          outgoing_aux_service_directory_parent_->AddPublicService<fuchsia::cobalt::LoggerFactory>(
-              [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
-                fidl::ServerEnd<fuchsia_cobalt::LoggerFactory> llcpp_server_end(
-                    request.TakeChannel());
-                auto logger_factory = std::unique_ptr<LoggerFactory>(new LoggerFactory(this));
-                // Ignore the result - logger_factory will be destroyed and the channel will be
-                // closed on error.
-                fidl::BindServer<LoggerFactory>(loop_.dispatcher(), std::move(llcpp_server_end),
-                                                std::move(logger_factory));
-              });
+          outgoing_aux_service_directory_parent_
+              ->AddPublicService<fuchsia::metrics::MetricEventLoggerFactory>(
+                  [this](
+                      fidl::InterfaceRequest<fuchsia::metrics::MetricEventLoggerFactory> request) {
+                    fidl::ServerEnd<fuchsia_metrics::MetricEventLoggerFactory> llcpp_server_end(
+                        request.TakeChannel());
+                    auto logger_factory = std::make_unique<MetricEventLoggerFactory>(this);
+                    // Ignore the result - logger_factory will be destroyed and the channel will be
+                    // closed on error.
+                    fidl::BindServer<MetricEventLoggerFactory>(
+                        loop_.dispatcher(), std::move(llcpp_server_end), std::move(logger_factory));
+                  });
       outgoing_aux_service_directory_ =
           outgoing_aux_service_directory_parent_->GetOrCreateDirectory("svc");
       ZX_ASSERT(outgoing_aux_service_directory_);
@@ -54,13 +57,10 @@ class ServerAndClient {
               fuchsia::io::OpenFlags::DIRECTORY,
           aux_service_directory.NewRequest().TakeChannel(), dispatcher_);
       ZX_ASSERT(status == ZX_OK);
-      status = server_create_done.signal(0, ZX_EVENT_SIGNALED);
-      ZX_ASSERT(status == ZX_OK);
+      sync_completion_signal(&server_create_done);
     });
     ZX_ASSERT(status == ZX_OK);
-    zx_signals_t pending;
-    status = server_create_done.wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), &pending);
-    ZX_ASSERT(status == ZX_OK);
+    sync_completion_wait(&server_create_done, ZX_TIME_INFINITE);
 
     // Client end
     ZX_ASSERT(!aux_service_directory_);
@@ -87,7 +87,7 @@ class ServerAndClient {
 
   void WaitUntilEventCountAtLeast(uint32_t count) {
     while (true) {
-      int64_t actual_count;
+      uint64_t actual_count;
       {  // scope lock
         std::lock_guard<std::mutex> lock(lock_);
         actual_count = event_count_;
@@ -114,12 +114,12 @@ class ServerAndClient {
     return aggregated_events_count_;
   }
 
-  int64_t max_count_per_aggregated_event() {
+  uint64_t max_count_per_aggregated_event() {
     std::lock_guard<std::mutex> lock(lock_);
     return max_count_per_aggregated_event_;
   }
 
-  int64_t event_count() {
+  uint64_t event_count() {
     std::lock_guard<std::mutex> lock(lock_);
     return event_count_;
   }
@@ -135,8 +135,7 @@ class ServerAndClient {
     uint32_t project_id = 0;
     uint32_t metric_id = 0;
     std::vector<uint32_t> event_codes;
-    int64_t count = 0;
-    int64_t period_duration_micros = 0;
+    uint64_t count = 0;
   };
   const LastEvent GetLastEvent() {
     std::lock_guard<std::mutex> lock(lock_);
@@ -154,14 +153,12 @@ class ServerAndClient {
   }
 
   void RecordAggregatedEvent(uint32_t project_id, uint32_t metric_id,
-                             std::vector<uint32_t> event_codes, int64_t count,
-                             int64_t period_duration_micros) {
+                             std::vector<uint32_t> event_codes, uint64_t count) {
     std::lock_guard<std::mutex> lock(lock_);
     last_event_.project_id = project_id;
     last_event_.metric_id = metric_id;
-    last_event_.event_codes = event_codes;
+    last_event_.event_codes = std::move(event_codes);
     last_event_.count = count;
-    last_event_.period_duration_micros = period_duration_micros;
     ++aggregated_events_count_;
     max_count_per_aggregated_event_ = std::max(max_count_per_aggregated_event_, count);
     // This must go last, as the test is relying on >= release semantics here.
@@ -174,100 +171,80 @@ class ServerAndClient {
   }
 
  protected:
-  class LoggerFactory : public fidl::WireServer<fuchsia_cobalt::LoggerFactory> {
+  class MetricEventLoggerFactory
+      : public fidl::WireServer<fuchsia_metrics::MetricEventLoggerFactory> {
    public:
-    LoggerFactory(ServerAndClient* parent) : parent_(parent) {}
-    void CreateLoggerFromProjectId(CreateLoggerFromProjectIdRequestView request,
-                                   CreateLoggerFromProjectIdCompleter::Sync& completer) override {
+    explicit MetricEventLoggerFactory(ServerAndClient* parent) : parent_(parent) {}
+
+    void CreateMetricEventLogger(CreateMetricEventLoggerRequestView request,
+                                 CreateMetricEventLoggerCompleter::Sync& completer) override {
       parent_->IncLoggerFactoryMessageCount();
-      auto logger = std::unique_ptr<Logger>(new Logger(parent_, request->project_id));
-      // ~logger on channel close
-      fidl::BindServer<Logger>(parent_->dispatcher_, std::move(request->logger), std::move(logger));
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
+      auto logger =
+          std::make_unique<MetricEventLogger>(parent_, request->project_spec.project_id());
+      fidl::BindServer<MetricEventLogger>(parent_->dispatcher_, std::move(request->logger),
+                                          std::move(logger));
+      completer.ReplySuccess();
     }
 
-    void CreateLoggerSimpleFromProjectId(
-        CreateLoggerSimpleFromProjectIdRequestView request,
-        CreateLoggerSimpleFromProjectIdCompleter::Sync& completer) override {
+    void CreateMetricEventLoggerWithExperiments(
+        CreateMetricEventLoggerWithExperimentsRequestView request,
+        CreateMetricEventLoggerWithExperimentsCompleter::Sync& completer) override {
       ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
-    }
-
-    void CreateLoggerFromProjectSpec(
-        CreateLoggerFromProjectSpecRequestView request,
-        CreateLoggerFromProjectSpecCompleter::Sync& completer) override {
-      ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
+      completer.ReplySuccess();
     }
 
    private:
     ServerAndClient* parent_ = nullptr;
   };
-  class Logger : public fidl::WireServer<fuchsia_cobalt::Logger> {
+
+  class MetricEventLogger : public fidl::WireServer<fuchsia_metrics::MetricEventLogger> {
    public:
-    Logger(ServerAndClient* parent, uint32_t project_id)
+    MetricEventLogger(ServerAndClient* parent, uint32_t project_id)
         : parent_(parent), project_id_(project_id) {}
-    void LogEvent(LogEventRequestView request, LogEventCompleter::Sync& completer) override {
+
+    void LogOccurrence(LogOccurrenceRequestView request,
+                       LogOccurrenceCompleter::Sync& completer) override {
       ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
+      completer.ReplySuccess();
     }
-    void LogEventCount(LogEventCountRequestView request,
-                       LogEventCountCompleter::Sync& completer) override {
+
+    void LogInteger(LogIntegerRequestView request, LogIntegerCompleter::Sync& completer) override {
       ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
+      completer.ReplySuccess();
     }
-    void LogElapsedTime(LogElapsedTimeRequestView request,
-                        LogElapsedTimeCompleter::Sync& completer) override {
+
+    void LogIntegerHistogram(LogIntegerHistogramRequestView request,
+                             LogIntegerHistogramCompleter::Sync& completer) override {
       ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
+      completer.ReplySuccess();
     }
-    void LogFrameRate(LogFrameRateRequestView request,
-                      LogFrameRateCompleter::Sync& completer) override {
+
+    void LogString(LogStringRequestView request, LogStringCompleter::Sync& completer) override {
       ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
+      completer.ReplySuccess();
     }
-    void LogMemoryUsage(LogMemoryUsageRequestView request,
-                        LogMemoryUsageCompleter::Sync& completer) override {
-      ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
-    }
-    void StartTimer(StartTimerRequestView request, StartTimerCompleter::Sync& completer) override {
-      ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
-    }
-    void EndTimer(EndTimerRequestView request, EndTimerCompleter::Sync& completer) override {
-      ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
-    }
-    void LogIntHistogram(LogIntHistogramRequestView request,
-                         LogIntHistogramCompleter::Sync& completer) override {
-      ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
-    }
+
     void LogCustomEvent(LogCustomEventRequestView request,
                         LogCustomEventCompleter::Sync& completer) override {
       ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
+      completer.ReplySuccess();
     }
-    void LogCobaltEvent(LogCobaltEventRequestView request,
-                        LogCobaltEventCompleter::Sync& completer) override {
-      ZX_ASSERT_MSG(false, "message not expected");
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
-    }
-    void LogCobaltEvents(LogCobaltEventsRequestView request,
-                         LogCobaltEventsCompleter::Sync& completer) override {
+
+    void LogMetricEvents(LogMetricEventsRequestView request,
+                         LogMetricEventsCompleter::Sync& completer) override {
       parent_->IncLoggerMessageCount();
       for (auto& event : request->events) {
         parent_->RecordAggregatedEvent(
             project_id_, event.metric_id,
             std::vector<uint32_t>(event.event_codes.begin(), event.event_codes.end()),
-            event.payload.event_count().count, event.payload.event_count().period_duration_micros);
+            event.payload.count());
       }
-      completer.Reply(fuchsia_cobalt::wire::Status::kOk);
+      completer.ReplySuccess();
     }
 
    private:
     ServerAndClient* parent_ = nullptr;
+    fuchsia_metrics::wire::ProjectSpec project_spec_;
     uint32_t project_id_ = 0;
   };
 
@@ -276,9 +253,9 @@ class ServerAndClient {
   uint32_t logger_message_count_ = 0;
   // the "count" of delivered aggregated events doesn't matter for this counter
   uint32_t aggregated_events_count_ = 0;
-  int64_t max_count_per_aggregated_event_ = 0;
+  uint64_t max_count_per_aggregated_event_ = 0;
   // the "count" of all delivered aggregated events is summed here
-  int64_t event_count_ = 0;
+  uint64_t event_count_ = 0;
   LastEvent last_event_;
 
   // server end
@@ -325,7 +302,6 @@ TEST_F(MetricsBufferTest, Direct) {
   EXPECT_EQ(12u, e.metric_id);
   EXPECT_EQ(std::vector<uint32_t>({1, 2, 3}), e.event_codes);
   EXPECT_EQ(1u, e.count);
-  EXPECT_EQ(0u, e.period_duration_micros);
 
   metrics_buffer->LogEvent(13, {3, 2, 1});
   s.WaitUntilEventCountAtLeast(2);
@@ -334,10 +310,9 @@ TEST_F(MetricsBufferTest, Direct) {
   EXPECT_EQ(13u, e.metric_id);
   EXPECT_EQ(std::vector<uint32_t>({3, 2, 1}), e.event_codes);
   EXPECT_EQ(1u, e.count);
-  EXPECT_EQ(0u, e.period_duration_micros);
 
   zx::nanosleep(zx::deadline_after(zx::msec(10)));
-  EXPECT_EQ(2LL, s.event_count());
+  EXPECT_EQ(2u, s.event_count());
   auto last_event = s.GetLastEvent();
   EXPECT_EQ(13u, last_event.metric_id);
   EXPECT_EQ(std::vector<uint32_t>({3, 2, 1}), last_event.event_codes);
@@ -357,18 +332,16 @@ TEST_F(MetricsBufferTest, ViaMetricBuffer) {
   EXPECT_EQ(12u, e.metric_id);
   EXPECT_EQ(std::vector<uint32_t>({1u}), e.event_codes);
   EXPECT_EQ(1u, e.count);
-  EXPECT_EQ(0u, e.period_duration_micros);
 
   metric_buffer.LogEvent({2u, 1u});
   s.WaitUntilEventCountAtLeast(2);
   zx::nanosleep(zx::deadline_after(zx::msec(10)));
-  EXPECT_EQ(2LL, s.event_count());
+  EXPECT_EQ(2u, s.event_count());
   e = s.GetLastEvent();
   EXPECT_EQ(42u, e.project_id);
   EXPECT_EQ(12u, e.metric_id);
   EXPECT_EQ(std::vector<uint32_t>({2u, 1u}), e.event_codes);
   EXPECT_EQ(1u, e.count);
-  EXPECT_EQ(0u, e.period_duration_micros);
 }
 
 TEST_F(MetricsBufferTest, BatchingHappens) {
@@ -417,7 +390,6 @@ TEST_F(MetricsBufferTest, BatchingHappens) {
     EXPECT_EQ(12u, e.metric_id);
     EXPECT_EQ(std::vector<uint32_t>({1u}), e.event_codes);
     EXPECT_GE(e.count, 1u);
-    EXPECT_EQ(0u, e.period_duration_micros);
     break;
   }
   printf("success: %u went around again: %u\n", success_count, failure_count);

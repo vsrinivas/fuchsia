@@ -12,8 +12,8 @@
 #include <memory>
 #include <unordered_map>
 
-#include <src/lib/cobalt/cpp/cobalt_event_builder.h>
-#include <src/lib/cobalt/cpp/cobalt_logger.h>
+#include "fidl/fuchsia.io/cpp/markers.h"
+#include "src/lib/metrics_buffer/metrics_impl.h"
 
 namespace cobalt {
 
@@ -46,7 +46,7 @@ class MetricBuffer {
 // Methods of this class can be called on any thread.
 class MetricsBuffer final : public std::enable_shared_from_this<MetricsBuffer> {
  public:
-  // Initially a nop instance, so unit tests don't need to wire up cobalt.  Call
+  // Initially a noop instance, so unit tests don't need to wire up cobalt.  Call
   // SetServiceDirectory() to enable and start logging.
   static std::shared_ptr<MetricsBuffer> Create(uint32_t project_id);
 
@@ -57,10 +57,10 @@ class MetricsBuffer final : public std::enable_shared_from_this<MetricsBuffer> {
 
   ~MetricsBuffer() __TA_EXCLUDES(lock_);
 
-  // Set the ServiceDirectory from which to get fuchsia.cobalt.LoggerFactory.  This can be nullptr.
-  // This can be called again, regardless of whether there was already a previous ServiceDirectory.
-  // Previously-queued events may be lost (especially recently-queued events) when switching to a
-  // new ServiceDirectory.
+  // Set the ServiceDirectory from which to get fuchsia.metrics.MetricEventLoggerFactory.  This can
+  // be nullptr. This can be called again, regardless of whether there was already a previous
+  // ServiceDirectory. Previously-queued events may be lost (especially recently-queued events) when
+  // switching to a new ServiceDirectory.
   void SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> service_directory)
       __TA_EXCLUDES(lock_);
 
@@ -122,13 +122,13 @@ class MetricsBuffer final : public std::enable_shared_from_this<MetricsBuffer> {
 
   const uint32_t project_id_{};
 
-  // We have a separate async::Loop for each instance of cobalt::CobaltLogger, because CobaltLogger
-  // requires that no async tasks posted by CobaltLogger out-live the CobaltLogger.  The easiest way
-  // to achieve that is to give CobaltLogger its own async::Loop and Quit(), JoinThreads(),
-  // Shutdown() that async::Loop before destroying the CobaltLogger.
+  // We have a separate async::Loop for each instance of cobalt::MetricsImpl, because MetricsImpl
+  // requires that no async tasks posted by MetricsImpl out-live the MetricsImpl.  The easiest way
+  // to achieve that is to give MetricsImpl its own async::Loop and Quit(), JoinThreads(),
+  // Shutdown() that async::Loop before destroying the MetricsImpl.
   std::unique_ptr<async::Loop> loop_;
 
-  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger_ __TA_GUARDED(lock_);
+  std::unique_ptr<cobalt::MetricsImpl> cobalt_logger_ __TA_GUARDED(lock_);
 
   zx::time last_flushed_ __TA_GUARDED(lock_) = zx::time::infinite_past();
 

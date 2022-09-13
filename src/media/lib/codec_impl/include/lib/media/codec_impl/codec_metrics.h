@@ -12,8 +12,6 @@
 #include <memory>
 #include <unordered_map>
 
-#include <src/lib/cobalt/cpp/cobalt_event_builder.h>
-#include <src/lib/cobalt/cpp/cobalt_logger.h>
 #include <src/lib/metrics_buffer/metrics_buffer.h>
 
 #include <src/media/lib/metrics/metrics.cb.h>
@@ -27,16 +25,16 @@ class CodecMetrics final {
   // A nop instance so unit tests don't need to wire up cobalt.
   CodecMetrics();
 
-  // !service_directory is ok.  If !service_directory, the instance will be a nop instance until
+  // !service_directory is ok.  If !service_directory, the instance will be a noop instance until
   // SetServiceDirectory() is called.
   CodecMetrics(std::shared_ptr<sys::ServiceDirectory> service_directory);
 
   ~CodecMetrics();
 
-  // Set the ServiceDirectory from which to get fuchsia.cobalt.LoggerFactory.  This can be nullptr.
-  // This can be called again, regardless of whether there was already a previous ServiceDirectory.
-  // Previously-queued events may be lost (especially recently-queued events) when switching to a
-  // new ServiceDirectory.
+  // Set the ServiceDirectory from which to get fuchsia.metrics.MetricEventLoggerFactory.  This can
+  // be nullptr. This can be called again, regardless of whether there was already a previous
+  // ServiceDirectory. Previously-queued events may be lost (especially recently-queued events) when
+  // switching to a new ServiceDirectory.
   void SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> service_directory);
 
   // Log the event as EVENT_COUNT, with period_duration_micros 0, possibly aggregating with any
@@ -46,8 +44,9 @@ class CodecMetrics final {
   // No attempt is made to flush pending events before driver exit or suspend, since this driver
   // isn't expected to unbind very often, if ever, and if we're suspending already then it's
   // unlikely that the pending cobalt events would be persisted anyway.
-  void LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
-                media_metrics::StreamProcessorEvents2MetricDimensionEvent event);
+  void LogEvent(
+      media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation implementation,
+      media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event);
 
  private:
   std::shared_ptr<cobalt::MetricsBuffer> metrics_buffer_;

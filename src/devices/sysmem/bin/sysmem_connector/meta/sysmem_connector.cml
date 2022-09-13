@@ -14,7 +14,7 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],

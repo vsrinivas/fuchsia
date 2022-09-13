@@ -161,9 +161,10 @@ void CodecAdapterVp9::SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) {
   codec_diagnostics_ = codec_diagnostics->CreateDriverCodec("VP9");
 }
 
-std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+std::optional<media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation>
 CodecAdapterVp9::CoreCodecMetricsImplementation() {
-  return media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderVp9;
+  return media_metrics::
+      StreamProcessorEvents2MigratedMetricDimensionImplementation_AmlogicDecoderVp9;
 }
 
 bool CodecAdapterVp9::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
@@ -538,7 +539,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
       // Log here instead of in AllocateStreamBuffer() because video_ doesn't know which codec this
       // is about.
       events_->onCoreCodecLogEvent(
-          media_metrics::StreamProcessorEvents2MetricDimensionEvent::AllocationError);
+          media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent::AllocationError);
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
     }

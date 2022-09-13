@@ -9,7 +9,7 @@
 SysmemMetrics::SysmemMetrics()
     : metrics_buffer_(cobalt::MetricsBuffer::Create(sysmem_metrics::kProjectId)),
       unused_page_check_(
-          metrics_buffer_->CreateMetricBuffer(sysmem_metrics::kUnusedPageCheckOldMetricId)) {}
+          metrics_buffer_->CreateMetricBuffer(sysmem_metrics::kUnusedPageCheckMetricId)) {}
 
 cobalt::MetricsBuffer& SysmemMetrics::metrics_buffer() { return *metrics_buffer_; }
 
@@ -23,14 +23,14 @@ void SysmemMetrics::LogUnusedPageCheckCounts(uint32_t succeeded_count, uint32_t 
   }
   if (failed_count) {
     unused_page_check_.LogEventCount(
-        {sysmem_metrics::UnusedPageCheckOldMetricDimensionEvent_PatternCheckFailed}, failed_count);
+        {sysmem_metrics::UnusedPageCheckMetricDimensionEvent_PatternCheckFailed}, failed_count);
   }
 
   zx::time now = zx::clock::get_monotonic();
   if ((now >= unused_page_check_last_flush_time_ + kUnusedPageCheckFlushSuccessPeriod) &&
       unused_page_check_pending_success_count_) {
     unused_page_check_.LogEventCount(
-        {sysmem_metrics::UnusedPageCheckOldMetricDimensionEvent_PatternCheckOk},
+        {sysmem_metrics::UnusedPageCheckMetricDimensionEvent_PatternCheckOk},
         unused_page_check_pending_success_count_);
     unused_page_check_pending_success_count_ = 0;
     unused_page_check_last_flush_time_ = now;

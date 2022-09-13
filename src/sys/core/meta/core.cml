@@ -894,7 +894,6 @@
             from: "#cobalt",
             to: [
                 "#sampler",
-                "#sysmem_connector",
                 "#timekeeper",
             ],
         },
@@ -907,6 +906,7 @@
                 "#pkg-resolver",
                 "#sampler",
                 "#session-manager",
+                "#sysmem_connector",
             ],
         },
         {
