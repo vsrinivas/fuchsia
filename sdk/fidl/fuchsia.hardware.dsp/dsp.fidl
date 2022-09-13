@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.dsp;
+
+using zx;
+
+// The discoverable annotation is required, otherwise the protocol bindings
+// will not have a name string generated.
+@discoverable
+protocol DspDevice {
+    /// Load DSP firmware.
+    /// |fw_name| : The name of the firmware to load.
+    /// error a zx_status value indicating failure. One of the following:
+    /// `ZX_ERR_NOT_FOUND` if the firmware does not exist.
+    LoadFirmware(struct {
+        fw_name string:zx.MAX_NAME_LEN;
+    }) -> (struct {}) error zx.status;
+
+    /// Start DSP.
+    /// error a zx_status value indicating failure. Two of the following:
+    /// `ZX_ERR_BAD_STATE` if the DSP firmware fails to load, execute the DSP start command.
+    /// `ZX_ERR_OUT_OF_RANGE` if the execution of the smcc command started by the DSP fails.
+    Start() -> (struct {}) error zx.status;
+
+    /// Stop DSP.
+    /// error a zx_status value indicating failure. Two of the following:
+    /// `ZX_ERR_BAD_STATE` if DSP is not started, execute DSP stop.
+    /// `ZX_ERR_OUT_OF_RANGE` if the execution of the smcc command stopped by the DSP fails.
+    Stop() -> (struct {}) error zx.status;
+};

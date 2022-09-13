@@ -51,6 +51,12 @@
 #define A5_MAILBOX_IRQCTRL_BASE 0xfe007020
 #define A5_MAILBOX_IRQCTRL_LENGTH 0x40
 
+// dsp
+#define A5_DSPA_BASE 0xfe340018
+#define A5_DSPA_BASE_LENGTH 0x114
+#define A5_DSP_SRAM_BASE 0xf7030000
+#define A5_DSP_SRAM_BASE_LENGTH 0x1d0000
+
 // Peripherals - datasheet is nondescript about this section, but it contains
 //  top level ethernet control and temp sensor registers
 

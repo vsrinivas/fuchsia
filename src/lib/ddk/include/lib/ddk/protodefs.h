@@ -176,5 +176,6 @@ DDK_PROTOCOL_DEF(TPM,                     160, "tpm", 0)
 DDK_PROTOCOL_DEF(CHROMEOS_ACPI,           161, "chromeos-acpi", 0)
 DDK_PROTOCOL_DEF(CTAP,                    162, "ctap", 0)
 DDK_PROTOCOL_DEF(AML_MAILBOX,             163, "aml-mailbox", 0)
+DDK_PROTOCOL_DEF(AML_DSP,                 164, "aml-dsp", 0)
 #undef DDK_PROTOCOL_DEF
 #endif

@@ -179,6 +179,20 @@ driver_bind_rules("av400-buttons-bind") {
   ]
 }
 
+driver_bind_rules("av400-dsp-bind") {
+  rules = "av400-dsp.bind"
+  header_output = "av400-dsp-bind.h"
+  bind_output = "av400-dsp-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.mailbox",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
 fuchsia_driver("av400-driver") {
   output_name = "av400"
   configs += [
@@ -190,6 +204,7 @@ fuchsia_driver("av400-driver") {
     "av400-buttons.cc",
     "av400-clk.cc",
     "av400-cpu.cc",
+    "av400-dsp.cc",
     "av400-emmc.cc",
     "av400-eth.cc",
     "av400-gpio.cc",
@@ -213,6 +228,7 @@ fuchsia_driver("av400-driver") {
     ":av400-bind",
     ":av400-buttons-bind_header",
     ":av400-cpu-bind_header",
+    ":av400-dsp-bind_header",
     ":av400-emmc-bind_header",
     ":av400-power-domain-bind_header",
     ":av400-power-regulator-bind_header",

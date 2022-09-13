@@ -161,6 +161,11 @@ int Av400::Thread() {
     init_txn_->Reply(status);
     return status;
   }
+  if ((status = DspInit()) != ZX_OK) {
+    zxlogf(ERROR, "DspInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
   init_txn_->Reply(status);
   return ZX_OK;
 }

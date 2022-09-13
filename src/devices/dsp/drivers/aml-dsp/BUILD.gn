@@ -1,0 +1,52 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("aml_dsp_bind") {
+  rules = "aml_dsp.bind"
+  header_output = "aml_dsp_bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+fuchsia_driver("aml-dsp-driver") {
+  output_name = "aml-dsp"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [ "aml-dsp.cc" ]
+  deps = [
+    ":aml_dsp_bind",
+    "//sdk/banjo/fuchsia.hardware.clock:fuchsia.hardware.clock_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.dsp:fuchsia.hardware.dsp_cpp",
+    "//sdk/fidl/fuchsia.hardware.mailbox:fuchsia.hardware.mailbox_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/sync",
+  ]
+}
+
+fuchsia_driver_component("aml-dsp") {
+  component_name = "aml-dsp"
+  deps = [ ":aml-dsp-driver" ]
+  info = "aml-dsp-info.json"
+}

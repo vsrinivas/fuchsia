@@ -1,0 +1,11 @@
+{
+    "short_description": "AMLogic Dsp driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "A5"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}
