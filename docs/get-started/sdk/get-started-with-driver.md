@@ -249,7 +249,7 @@ Do the following:
 1. Register the `workstation-packages` package repository to the target device:
 
    ```posix-terminal
-   tools/ffx target repository register -r workstation-packages --alias fuchsia.com
+   tools/ffx target repository register -r workstation-packages --alias fuchsia.com --alias chromium.org
    ```
 
    This command exits silently without output.
