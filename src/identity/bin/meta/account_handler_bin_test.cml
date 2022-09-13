@@ -10,32 +10,10 @@
     program: {
         binary: "bin/account_handler_bin_test",
     },
-    children: [
-        {
-            name: "stash",
-            url: "#meta/stash.cm",
-        },
-    ],
     use: [
         {
             storage: "tmp",
             path: "/tmp",
-        },
-        {
-            protocol: "fuchsia.stash.Store",
-            from: "#stash",
-        },
-    ],
-    offer: [
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: "#stash",
-        },
-        {
-            storage: "data",
-            from: "parent",
-            to: "#stash",
         },
     ],
 }

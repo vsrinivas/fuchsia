@@ -24,10 +24,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.stash.Store",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
         },
         {
             storage: "data",
@@ -44,7 +41,6 @@
                 "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
                 "fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism",
                 "fuchsia.logger.LogSink",
-                "fuchsia.stash.Store",
             ],
             from: "parent",
             to: "#account_handlers",

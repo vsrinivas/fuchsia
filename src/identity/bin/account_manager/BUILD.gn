@@ -15,7 +15,6 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
     "//sdk/fidl/fuchsia.identity.internal:fuchsia.identity.internal_rust",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//src/identity/lib/account_common",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",

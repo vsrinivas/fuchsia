@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 //! This file contains a data type for pre-authentication state, which is
-//! mutable per-account data that is readable when an account is locked. It also
-//! contains two implementations for persistence of the data, one Stash-based
-//! and one in-memory fake store, for use with tests.
+//! mutable per-account data that is readable when an account is locked.
 
 use {
     account_common::AccountId,

@@ -26,11 +26,6 @@ Persona channels may only be obtained from an Account channel.
   definitions from this crate
 * */identity/lib/identity_common* - Account Handler uses the TaskGroup type from
   this crate
-* */identity/lib/token_manager* - Account Manager uses the TokenManager library
-  to perform the authentication token management and implement the
-  fuchsia.auth.TokenManager FIDL protocol
-* *fuchsia.stash.Store* - The persistent Account Handler uses stash to store
-  pre-authentication data such as what authentication mechanisms are enrolled.
 
 
 ## Design

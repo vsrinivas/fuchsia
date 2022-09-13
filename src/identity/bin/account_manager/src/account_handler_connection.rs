@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_component_decl::{Child, CollectionRef, StartupMode},
     fidl_fuchsia_identity_account::{Error as ApiError, Lifetime},
     fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy},
-    fidl_fuchsia_stash::StoreMarker,
     fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
     futures::prelude::*,
@@ -101,10 +100,7 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
         // We append account id to the account_prefix to get a unique instance
         // name for each account.
         let account_handler_name = ACCOUNT_PREFIX.to_string() + &account_id.to_canonical_string();
-        let mut fs_for_account_handler = ServiceFs::new();
-        if lifetime == Lifetime::Persistent {
-            fs_for_account_handler.add_proxy_service::<StoreMarker, _>();
-        }
+        let fs_for_account_handler = ServiceFs::new();
 
         let realm = client::connect_to_protocol::<RealmMarker>()
             .context("failed to connect to fuchsia.component.Realm")

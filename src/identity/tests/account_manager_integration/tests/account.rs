@@ -11,7 +11,6 @@ use {
         Error as ApiError, Lifetime,
     },
     fidl_fuchsia_logger::LogSinkMarker,
-    fidl_fuchsia_stash::StoreMarker,
     fidl_fuchsia_sys2 as fsys2,
     fidl_fuchsia_tracing_provider::RegistryMarker,
     fuchsia_async::{DurationExt, TimeoutExt},
@@ -30,7 +29,6 @@ const ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID: &str =
     "#meta/dev_authenticator_always_fail_authentication.cm";
 
 const ACCOUNT_MANAGER_URL: &'static str = "#meta/account_manager.cm";
-const STASH_URL: &'static str = "#meta/stash.cm";
 
 const ACCOUNT_MANAGER_COMPONENT_NAME: &'static str = "account_manager";
 
@@ -125,7 +123,6 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
     let builder = RealmBuilder::new().await?;
     let account_manager =
         builder.add_child("account_manager", ACCOUNT_MANAGER_URL, ChildOptions::new()).await?;
-    let stash = builder.add_child("stash", STASH_URL, ChildOptions::new()).await?;
     let dev_authenticator_always_succeed = builder
         .add_child(
             "dev_authenticator_always_succeed",
@@ -138,14 +135,6 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
             "dev_authenticator_always_fail_authentication",
             ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID,
             ChildOptions::new(),
-        )
-        .await?;
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<StoreMarker>())
-                .from(&stash)
-                .to(&account_manager),
         )
         .await?;
     builder
@@ -174,7 +163,6 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
                 .capability(Capability::protocol::<LogSinkMarker>())
                 .from(Ref::parent())
                 .to(&account_manager)
-                .to(&stash)
                 .to(&dev_authenticator_always_fail_authentication)
                 .to(&dev_authenticator_always_succeed),
         )
@@ -184,8 +172,7 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
             Route::new()
                 .capability(Capability::storage("data"))
                 .from(Ref::parent())
-                .to(&account_manager)
-                .to(&stash),
+                .to(&account_manager),
         )
         .await?;
     builder

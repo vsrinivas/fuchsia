@@ -546,6 +546,7 @@ impl AccountHandler {
             }
             Lifecycle::Initialized { account, pre_auth_state } => {
                 let _ = account.task_group().cancel().await; // Ignore AlreadyCancelled error
+
                 // TODO(apsbhatia): Explore better alternatives to avoid cloning here.
                 let new_state = Lifecycle::Locked { pre_auth_state: pre_auth_state.clone() };
                 *state_lock = new_state;

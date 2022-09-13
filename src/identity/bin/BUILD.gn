@@ -46,8 +46,6 @@ fuchsia_test_package("identity_bin_unittests") {
     ":account_manager_test",
     ":dev_authenticator_test",
   ]
-
-  deps = [ "//src/sys/stash:stash_v2" ]
 }
 
 # Account system should be included in products that require platform-level

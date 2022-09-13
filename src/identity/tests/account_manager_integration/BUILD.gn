@@ -20,7 +20,6 @@ rustc_test("test") {
   deps = [
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_rust",
     "//src/lib/fidl/rust/fidl",
@@ -49,7 +48,6 @@ fuchsia_test_package("account_manager_integration_test") {
     "//src/identity/bin/account_manager:account_manager_component",
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_fail_authentication",
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_succeed",
-    "//src/sys/stash:stash_v2",
   ]
   test_components = [ ":account_manager_integration_test_component" ]
 }
