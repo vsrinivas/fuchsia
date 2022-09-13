@@ -13,12 +13,12 @@ use {
     },
     fuchsia_async as fasync,
     futures::{prelude::*, stream::FuturesUnordered, StreamExt},
-    log::{error, info, warn},
     std::collections::{HashMap, HashSet},
     std::convert::TryInto,
     std::io::Write,
     std::path::PathBuf,
     std::time::Duration,
+    tracing::{error, info, warn},
 };
 
 mod artifacts;

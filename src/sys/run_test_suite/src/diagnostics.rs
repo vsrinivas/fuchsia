@@ -9,8 +9,8 @@ use {
     fidl_fuchsia_test_manager::LogsIteratorOption,
     fuchsia_async as fasync,
     futures::{Future, FutureExt, Stream, TryStreamExt},
-    log::warn,
     std::{io::Write, time::Duration},
+    tracing::warn,
 };
 
 /// Configuration for display of text-based (unstructured)

@@ -10,8 +10,8 @@ use {
         future::join_all,
         stream::{FuturesUnordered, StreamExt, TryStreamExt},
     },
-    log::{debug, warn},
     std::{collections::VecDeque, io::Write, path::PathBuf},
+    tracing::{debug, warn},
 };
 
 /// Copy an artifact reported over a socket.

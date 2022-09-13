@@ -8,7 +8,6 @@ use crate::output::{
 };
 use async_trait::async_trait;
 use fuchsia_async as fasync;
-use log::error;
 use parking_lot::Mutex;
 use std::{
     collections::HashMap,
@@ -16,6 +15,7 @@ use std::{
     sync::{atomic::AtomicU32, Arc},
     time::Duration,
 };
+use tracing::error;
 
 mod writer;
 pub use writer::ShellWriterView;
