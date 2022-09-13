@@ -107,7 +107,9 @@ class SdkCompatibilityError(Exception):
             f" from the SDK:\n{self.missing_goldens}\n"
             f"If you have approval to make this change, follow the instructions"
             f" below based on where you encountered this message:\n"
-            f"  - in CQ: rebuild with '//sdk/ctf:verify_idk_deps' in your local build args.\n"
+            f"  - in CQ: rebuild locally with the same CPU architecture (x64/arm64)\n"
+            f"           as this builder and add '//sdk/ctf:verify_idk_deps' into\n"
+            f"           your local build args.\n"
             f"  - in your local build: run the following command: {cmd}\n")
 
 
