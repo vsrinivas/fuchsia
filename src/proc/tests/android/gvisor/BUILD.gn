@@ -120,8 +120,7 @@ gvisor_tests = [
   "stat_test",
   "statfs_test",
   "symlink_test",
-
-  # "tgkill_test",
+  "tgkill_test",
   "time_test",
   "timerfd_test",
   "uidgid_test",
