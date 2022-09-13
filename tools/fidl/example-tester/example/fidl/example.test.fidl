@@ -1,0 +1,17 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.exampletester;
+
+// This is an extremely simple FIDL protocol, with a single method that can be used to calculate
+// the sum of two small positive numbers.
+@discoverable
+protocol Simple {
+    /// Adds two unsigned integers together.
+    Add(struct {
+        augend uint8;
+        addend uint8;
+    }) -> (struct {
+        sum uint16;
+    });
+};

@@ -1,4 +1,4 @@
-# FIDL examples
+ w# FIDL examples
 
 This directory contains example code for using FIDL. `fuchsia.examples` contains
 FIDL definitions used in the various bindings-specific example directories for

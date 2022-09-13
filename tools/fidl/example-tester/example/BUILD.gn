@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+fuchsia_component_manifest("client_manifest") {
+  component_name = "example_tester_example_client"
+  manifest = "//tools/fidl/example-tester/example/meta/client.cml"
+}
+
+fuchsia_structured_config_values("client_config_values") {
+  cm_label = ":client_manifest"
+  values = {
+    do_in_process = false
+    augend = 1
+    addend = 2
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "//tools/fidl/example-tester/example/rust:tests" ]
+}

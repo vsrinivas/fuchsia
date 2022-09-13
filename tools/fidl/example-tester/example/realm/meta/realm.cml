@@ -1,0 +1,45 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "client",
+            url: "#meta/client.cm",
+        },
+        {
+            name: "proxy",
+            url: "#meta/proxy.cm",
+        },
+        {
+            name: "server",
+            url: "#meta/server.cm",
+        },
+    ],
+    offer: [
+        // Route the protocol under test from the server to the proxy.
+        {
+            protocol: "test.exampletester.Simple",
+            from: "#server",
+            to: "#proxy",
+        },
+
+        // Route the protocol under test from the proxy to the client.
+        {
+            protocol: "test.exampletester.Simple",
+            from: "#proxy",
+            to: "#client",
+        },
+
+        // Route logging support to all children.
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#client",
+                "#proxy",
+                "#server",
+            ],
+        },
+    ],
+}
