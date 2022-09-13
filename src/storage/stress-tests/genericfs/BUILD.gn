@@ -14,6 +14,7 @@ rustc_test("stressor-bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//src/lib/diagnostics/log/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -26,8 +27,8 @@ rustc_test("stressor-bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:either",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [

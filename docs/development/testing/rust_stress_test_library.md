@@ -190,15 +190,9 @@ The main function of a stress test is straightforward, since most of the logic i
 implemented in the Environment and Actors. Use the main function to collect command-line
 arguments (if any), initialize logging and set log severity.
 
-Note: The stress test library offers a `StdoutLogger` that prints all logs to stdout. This
-functionality can be used by any stress test that runs as a legacy (cmx) component.
-
 ```rust
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
-    // Print all logs to stdout.
-    stress_test::StdoutLogger::init();
-
     // Create the environment
     let env = FilesystemEnvironment::new();
 

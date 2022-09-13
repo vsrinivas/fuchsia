@@ -9,11 +9,8 @@ mod session;
 mod session_actor;
 
 use {
-    argh::FromArgs,
-    environment::ScenicEnvironment,
-    fuchsia_async as fasync,
-    log::LevelFilter,
-    stress_test::{run_test, StdoutLogger},
+    argh::FromArgs, environment::ScenicEnvironment, fuchsia_async as fasync, stress_test::run_test,
+    tracing::Level,
 };
 
 #[derive(Clone, Debug, FromArgs)]
@@ -25,7 +22,7 @@ pub struct Args {
 
     /// filter logging by level (off, error, warn, info, debug, trace)
     #[argh(option, short = 'l')]
-    log_filter: Option<LevelFilter>,
+    log_filter: Option<Level>,
 
     /// controls delay between each touch operation (down, up)
     #[argh(option, short = 'd', default = "1")]
@@ -49,8 +46,10 @@ async fn test() {
     // Get arguments from command line
     let args: Args = argh::from_env();
 
-    // Initialize logging
-    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Info));
+    match args.log_filter {
+        Some(filter) => diagnostics_log::init!(&[], diagnostics_log::interest(filter)),
+        None => diagnostics_log::init!(),
+    }
 
     // Setup the scenic environment
     let env = ScenicEnvironment::new(args).await;

@@ -16,9 +16,9 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
-    log::LevelFilter,
     std::sync::Arc,
-    stress_test::{run_test, StdoutLogger},
+    stress_test::run_test,
+    tracing::Level,
 };
 
 #[derive(Clone, Debug, FromArgs)]
@@ -34,7 +34,7 @@ pub struct Args {
 
     /// filter logging by level (off, error, warn, info, debug, trace)
     #[argh(option, short = 'l')]
-    log_filter: Option<LevelFilter>,
+    log_filter: Option<Level>,
 
     /// size of one block of the ramdisk (in bytes)
     #[argh(option, default = "512")]
@@ -72,7 +72,10 @@ pub struct Args {
 async fn test() {
     let args: Args = argh::from_env();
 
-    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Info));
+    match args.log_filter {
+        Some(filter) => diagnostics_log::init!(&[], diagnostics_log::interest(filter)),
+        None => diagnostics_log::init!(),
+    }
 
     match args.target_filesystem.as_str() {
         "fxfs" => {

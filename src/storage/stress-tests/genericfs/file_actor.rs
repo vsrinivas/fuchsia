@@ -6,9 +6,9 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
-    log::info,
     storage_stress_test_utils::{data::FileFactory, io::Directory},
     stress_test::actor::{Actor, ActorError},
+    tracing::info,
 };
 
 // TODO(fxbug.dev/67497): This actor is very basic. At the moment, this is fine, since this is a

@@ -7,10 +7,10 @@ use {
     crate::vslice::{VSliceRange, VSliceRanges},
     async_trait::async_trait,
     fuchsia_zircon::Status,
-    log::{debug, info},
     rand::{prelude::IteratorRandom, rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     std::collections::HashMap,
     stress_test::actor::{Actor, ActorError},
+    tracing::{debug, info},
 };
 
 #[derive(Clone, Debug)]
@@ -138,7 +138,7 @@ impl VolumeActor {
     }
 
     async fn append(&mut self, index: usize, append_range: VSliceRange) -> Result<(), Status> {
-        debug!("Append Range = {:?}", append_range);
+        debug!(?append_range);
 
         match self.volume.extend(append_range.start, append_range.len()).await {
             Ok(()) => {}
@@ -162,7 +162,7 @@ impl VolumeActor {
     }
 
     async fn new_range(&mut self, new_range: VSliceRange) -> Result<(), Status> {
-        debug!("New Range = {:?}", new_range);
+        debug!(?new_range);
 
         match self.volume.extend(new_range.start, new_range.len()).await {
             Ok(()) => {}
@@ -184,7 +184,7 @@ impl VolumeActor {
     }
 
     async fn truncate(&mut self, index: usize, subrange: VSliceRange) -> Result<(), Status> {
-        debug!("Truncate Range = {:?}", subrange);
+        debug!(truncate_range = ?subrange);
 
         // Shrinking from offset 0 is forbidden
         if subrange.start == 0 {
@@ -223,7 +223,7 @@ impl VolumeActor {
     async fn verify(&mut self, index: usize) -> Result<(), Status> {
         let range = self.vslice_ranges.get_mut(index);
 
-        debug!("Verify Range = {:?}", range);
+        debug!(verify_range = ?range);
 
         // Perform verification on each slice
         for slice_offset in range.start..range.end {
@@ -270,7 +270,7 @@ impl Actor for VolumeActor {
             // The environment verifies that an intentional crash occurred
             // and will panic if that is not the case.
             Err(s) => {
-                info!("Volume actor got status {} during operation {:?}", s, operation);
+                info!(status = %s, ?operation, "Volume actor got unexpected status");
 
                 // Record this operation as pending.
                 // We will attempt to redo it when the connection is restored.

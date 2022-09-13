@@ -9,11 +9,8 @@ mod instance_actor;
 mod read_actor;
 
 use {
-    crate::environment::BlobfsEnvironment,
-    argh::FromArgs,
-    fuchsia_async as fasync,
-    log::LevelFilter,
-    stress_test::{run_test, StdoutLogger},
+    crate::environment::BlobfsEnvironment, argh::FromArgs, fuchsia_async as fasync,
+    stress_test::run_test, tracing::Level,
 };
 
 #[derive(Clone, Debug, FromArgs)]
@@ -29,7 +26,7 @@ pub struct Args {
 
     /// filter logging by level (off, error, warn, info, debug, trace)
     #[argh(option, short = 'l')]
-    log_filter: Option<LevelFilter>,
+    log_filter: Option<Level>,
 
     /// size of one block of the ramdisk (in bytes)
     #[argh(option, default = "512")]
@@ -68,7 +65,10 @@ async fn test() {
     let args: Args = argh::from_env();
 
     // Initialize logging
-    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Info));
+    match args.log_filter {
+        Some(filter) => diagnostics_log::init!(&[], diagnostics_log::interest(filter)),
+        None => diagnostics_log::init!(),
+    }
 
     // Setup the blobfs environment
     let env = BlobfsEnvironment::new(args).await;

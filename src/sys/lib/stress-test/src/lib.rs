@@ -16,49 +16,10 @@ use {
         stream::FuturesUnordered,
         StreamExt,
     },
-    log::{error, info, set_logger, set_max_level, LevelFilter},
     rand::{rngs::SmallRng, Rng, SeedableRng},
-    std::{
-        io::{stdout, Write},
-        time::Duration,
-    },
+    std::time::Duration,
+    tracing::{error, info},
 };
-
-// A simple logger that prints to stdout
-pub struct StdoutLogger;
-
-impl StdoutLogger {
-    pub fn init(filter: LevelFilter) {
-        set_logger(&StdoutLogger).expect("Failed to set StdoutLogger as global logger");
-        set_max_level(filter);
-    }
-}
-
-impl log::Log for StdoutLogger {
-    fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
-        true
-    }
-
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            match record.level() {
-                log::Level::Info => {
-                    println!("{}", record.args());
-                }
-                log::Level::Error => {
-                    eprintln!("{}: {}", record.level(), record.args());
-                }
-                _ => {
-                    println!("{}: {}", record.level(), record.args());
-                }
-            }
-        }
-    }
-
-    fn flush(&self) {
-        stdout().flush().unwrap();
-    }
-}
 
 /// Use entropy to generate a random seed
 pub fn random_seed() -> u64 {
@@ -129,7 +90,7 @@ pub async fn run_test<E: 'static + Environment>(mut env: E) {
                 // The counter/timer task returned.
                 // The target operation count was hit or the timer expired.
                 // The test has completed.
-                info!("Stress test has completed because of {}!", reason);
+                info!(%reason, "Stress test has completed!");
                 for abort in runner_abort {
                     abort.abort();
                 }

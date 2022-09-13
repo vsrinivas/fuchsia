@@ -9,11 +9,8 @@ pub mod volume_actor;
 pub mod vslice;
 
 use {
-    argh::FromArgs,
-    environment::FvmEnvironment,
-    fuchsia_async as fasync,
-    log::LevelFilter,
-    stress_test::{run_test, StdoutLogger},
+    argh::FromArgs, environment::FvmEnvironment, fuchsia_async as fasync, stress_test::run_test,
+    tracing::Level,
 };
 
 #[derive(Clone, Debug, FromArgs)]
@@ -33,7 +30,7 @@ pub struct Args {
 
     /// filter logging by level (off, error, warn, info, debug, trace)
     #[argh(option, short = 'l')]
-    log_filter: Option<LevelFilter>,
+    log_filter: Option<Level>,
 
     /// number of volumes in FVM.
     /// each volume operates on a different thread and will perform
@@ -80,7 +77,10 @@ async fn test() {
     let args: Args = argh::from_env();
 
     // Initialize logging
-    StdoutLogger::init(args.log_filter.unwrap_or(LevelFilter::Info));
+    match args.log_filter {
+        Some(filter) => diagnostics_log::init!(&[], diagnostics_log::interest(filter)),
+        None => diagnostics_log::init!(),
+    }
 
     // Setup the fvm environment
     let env = FvmEnvironment::new(args).await;

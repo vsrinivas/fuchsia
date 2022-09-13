@@ -19,6 +19,7 @@ rustc_test("scenic-stressor-bin") {
     "//sdk/fidl/fuchsia.ui.pointerinjector:fuchsia.ui.pointerinjector_rust",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_rust",
     "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
+    "//src/lib/diagnostics/log/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
@@ -28,8 +29,8 @@ rustc_test("scenic-stressor-bin") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [

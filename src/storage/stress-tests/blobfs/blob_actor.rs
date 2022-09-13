@@ -7,9 +7,9 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_merkle::MerkleTree,
     fuchsia_zircon::Status,
-    log::info,
     storage_stress_test_utils::{data::FileFactory, io::Directory},
     stress_test::actor::{Actor, ActorError},
+    tracing::info,
 };
 
 // Performs operations on blobs expected to exist on disk

@@ -19,8 +19,8 @@ rustc_library("utils") {
     "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/testing/rust:storage-isolated-driver-manager",
-    "//third_party/rust_crates:log",  # for recording messages
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing",  # for recording messages
   ]
 
   sources = [

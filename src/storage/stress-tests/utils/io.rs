@@ -6,8 +6,8 @@ use {
     fidl_fuchsia_io as fio,
     fuchsia_fs::{directory::*, file::*, node::OpenError},
     fuchsia_zircon::{Event, Status},
-    log::debug,
     std::path::Path,
+    tracing::debug,
 };
 
 // A convenience wrapper over a FIDL DirectoryProxy.
@@ -26,7 +26,7 @@ impl Directory {
         match fuchsia_fs::directory::open_in_namespace(path, flags) {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
-                debug!("from_namespace {} failed: {}", path, s);
+                debug!(%path, status = %s, "from_namespace failed");
                 Err(s)
             }
             Err(OpenError::SendOpenRequest(e)) => {
@@ -51,7 +51,7 @@ impl Directory {
         match fuchsia_fs::directory::open_directory(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
-                debug!("open_directory({},{:?}) failed: {}", filename, flags, s);
+                debug!(%filename, ?flags, status = %s, "open_directory failed");
                 Err(s)
             }
             Err(OpenError::SendOpenRequest(e)) => {
@@ -71,7 +71,7 @@ impl Directory {
         match fuchsia_fs::directory::open_file(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(File { proxy }),
             Err(OpenError::OpenError(s)) => {
-                debug!("open_file({},{:?}) failed: {}", filename, flags, s);
+                debug!(%filename, ?flags, status = %s, "open_file failed");
                 Err(s)
             }
             Err(OpenError::SendOpenRequest(e)) => {
@@ -95,7 +95,7 @@ impl Directory {
         match fuchsia_fs::directory::create_directory(&self.proxy, filename, flags).await {
             Ok(proxy) => Ok(Directory { proxy }),
             Err(OpenError::OpenError(s)) => {
-                debug!("create_directory({},{:?}) failed: {}", filename, flags, s);
+                debug!(%filename, ?flags, status = %s, "create_directory failed");
                 Err(s)
             }
             Err(OpenError::SendOpenRequest(e)) => {

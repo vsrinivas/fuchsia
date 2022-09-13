@@ -5,10 +5,10 @@
 use {
     async_trait::async_trait,
     fuchsia_zircon::Status,
-    log::{debug, info},
     rand::{rngs::SmallRng, seq::SliceRandom, Rng},
     storage_stress_test_utils::io::Directory,
     stress_test::actor::{Actor, ActorError},
+    tracing::{debug, info},
 };
 
 // An actor responsible for deleting blobs randomly

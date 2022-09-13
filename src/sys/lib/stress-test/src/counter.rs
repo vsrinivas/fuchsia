@@ -5,8 +5,8 @@
 use {
     fuchsia_async::Task,
     futures::{channel::mpsc, StreamExt},
-    log::debug,
     std::collections::HashMap,
+    tracing::debug,
 };
 
 /// An unbounded mpsc channel connecting each runner to the counter thread.
@@ -44,7 +44,7 @@ pub fn start_counter(target: u64) -> (Task<()>, CounterTx) {
             // Update global count
             total += 1;
 
-            debug!("Counters -> [total:{}] {:?}", total, count_map);
+            debug!(%total, ?count_map, "Counters");
         }
     });
     (task, tx)

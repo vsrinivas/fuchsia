@@ -14,7 +14,7 @@ use thiserror::Error;
 use tracing::{
     span::{Attributes, Id, Record as TracingRecord},
     subscriber::Subscriber,
-    Event, Metadata,
+    Event, Level, Metadata,
 };
 use tracing_core::span::Current;
 use tracing_log::LogTracer;
@@ -79,6 +79,18 @@ impl<'a> Default for PublishOptions<'a> {
     fn default() -> Self {
         Self { interest: Interest::EMPTY, tags: None }
     }
+}
+
+/// Converts a tracing level filter to diagnostics interest.
+pub fn interest(filter: Level) -> Interest {
+    let min_severity = match filter {
+        Level::TRACE => Some(Severity::Trace),
+        Level::DEBUG => Some(Severity::Debug),
+        Level::INFO => Some(Severity::Info),
+        Level::WARN => Some(Severity::Warn),
+        Level::ERROR => Some(Severity::Error),
+    };
+    Interest { min_severity, ..Interest::EMPTY }
 }
 
 /// Creates a publisher and installs it as the global default.

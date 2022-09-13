@@ -12,8 +12,8 @@ use {
         future::{AbortHandle, Abortable, Aborted},
         lock::Mutex,
     },
-    log::debug,
     std::{sync::Arc, time::Duration},
+    tracing::debug,
 };
 
 /// The thread that runs an actor indefinitely
@@ -55,13 +55,16 @@ impl ActorRunner {
             loop {
                 if let Some(delay) = self.delay {
                     debug!(
-                        "[{}][{}][{}] Sleeping for {:?}",
-                        generation, self.name, local_count, delay
+                        %generation,
+                        name = %self.name,
+                        %local_count,
+                        sleep_duration = ?delay,
+                        "Sleeping"
                     );
                     Timer::new(Time::after(delay.into())).await;
                 }
 
-                debug!("[{}][{}][{}] Performing...", generation, self.name, local_count);
+                debug!(%generation, name = %self.name, %local_count, "Performing...");
 
                 // Lock on the actor and perform. This prevents the environment from
                 // modifying the actor until the operation is complete.
@@ -74,7 +77,7 @@ impl ActorRunner {
                     Ok(()) => {
                         // Count this iteration towards the global count
                         let _ = counter_tx.unbounded_send(self.name.clone());
-                        debug!("[{}][{}][{}] Done!", generation, self.name, local_count);
+                        debug!(%generation, name = %self.name, %local_count, "Done!");
                     }
                     Err(ActorError::DoNotCount) => {
                         // Do not count this iteration towards global count
@@ -82,8 +85,8 @@ impl ActorRunner {
                     Err(ActorError::ResetEnvironment) => {
                         // Actor needs environment to be reset. Stop the runner
                         debug!(
-                            "[{}][{}][{}] Reset Environment!",
-                            generation, self.name, local_count
+                            %generation, name = %self.name, %local_count,
+                            "Reset Environment!"
                         );
                         return (self, generation);
                     }

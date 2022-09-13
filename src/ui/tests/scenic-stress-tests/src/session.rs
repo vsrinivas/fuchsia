@@ -5,8 +5,8 @@
 use {
     fidl::endpoints::*, fidl_fuchsia_ui_gfx as fgfx, fidl_fuchsia_ui_scenic as fscenic,
     fidl_fuchsia_ui_views as fviews, fuchsia_async as fasync, fuchsia_scenic as scenic,
-    futures::StreamExt, log::debug, rand::prelude::SliceRandom, rand::rngs::SmallRng, rand::Rng,
-    std::sync::Arc,
+    futures::StreamExt, rand::prelude::SliceRandom, rand::rngs::SmallRng, rand::Rng,
+    std::sync::Arc, tracing::debug,
 };
 
 pub const DISPLAY_WIDTH: u16 = 1024;
