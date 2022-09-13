@@ -25,6 +25,7 @@ rustc_binary("bin") {
     "//src/lib/mundane:mundane",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/security/tee/rust",
     "//third_party/boringssl/rust/boringssl-sys",
     "//third_party/rust_crates:aes-gcm",
     "//third_party/rust_crates:anyhow",
@@ -57,8 +58,6 @@ rustc_binary("bin") {
     "src/kms_asymmetric_key.rs",
     "src/kms_sealing_key.rs",
     "src/main.rs",
-    "src/tee/mod.rs",
-    "src/tee/tee_client_api.rs",
   ]
 }
 

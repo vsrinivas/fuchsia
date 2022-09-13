@@ -10,10 +10,10 @@ use self::keysafe::*;
 use crate::crypto_provider::{
     AsymmetricProviderKey, CryptoProvider, CryptoProviderError, ProviderKey, SealingProviderKey,
 };
-use crate::tee::*;
 use boringssl_sys::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
 use byteorder::{ByteOrder, LittleEndian};
 use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, KeyProvider};
+use tee::*;
 
 /// We use 1024 for default output buffer size since all outputs from Keysafe is
 /// currently less than 1024 bytes.

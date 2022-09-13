@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -19,7 +19,7 @@ fi
 readonly FUCHSIA_HOME=$1
 
 bindgen ${FUCHSIA_HOME}/zircon/system/ulib/tee-client-api/include/tee-client-api/tee_client_api.h \
-  -o tee_client_api.rs --no-layout-tests -- \
+  -o src/tee_client_api.rs --no-layout-tests -- \
   -I${FUCHSIA_HOME}/zircon/system/public -I${FUCHSIA_HOME}/zircon/system/ulib/tee-client-api/include
 
 TMP="$(mktemp)"
@@ -27,7 +27,7 @@ TMP="$(mktemp)"
 # Prepend copyright comment, #[allow] for various warnings we don't care about,
 # and a line telling Rust to link against tee-client-api.
 cat >> "$TMP" <<EOF
-// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -41,5 +41,5 @@ extern "C" {}
 
 EOF
 
-cat tee_client_api.rs >> "$TMP"
-mv "$TMP" tee_client_api.rs
+cat src/tee_client_api.rs >> "$TMP"
+mv "$TMP" src/tee_client_api.rs

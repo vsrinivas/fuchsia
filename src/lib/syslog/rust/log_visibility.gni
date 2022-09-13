@@ -89,6 +89,7 @@ third_party_rust_crate_log_visibility = [
   "//src/media/stream_processors/test:*",
   "//src/power/power-manager:*",
   "//src/security/kms:*",
+  "//src/security/tee/rust:*",
   "//src/security/scrutiny/framework:*",
   "//src/security/scrutiny/frontend:*",
   "//src/security/scrutiny/plugins:*",
