@@ -1,7 +1,7 @@
 # Contribute to the open source platform
 
 This section is for contributing to the Fuchsia open source platform and
-operating system.
+operating system. Explore the open source code at [cs.fuchsia.dev](https://cs.fuchsia.dev)
 
 ## Basic workflows
 
