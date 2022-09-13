@@ -25,4 +25,10 @@ pub struct MemoryCommand {
         description = "repeats the command at the given interval (in seconds) until terminated."
     )]
     pub interval: Option<f64>,
+
+    #[argh(
+        switch,
+        description = "outputs csv that for every process shows the device uptime in nano seconds, the process koid, the process name, and the private, scale, and total memory usage. This option is not supported with other output options like --machine."
+    )]
+    pub csv: bool,
 }

@@ -4,13 +4,23 @@
 
 use {crate::digest, digest::processed, serde::Serialize};
 
+/// Contains the memory usage of processes, and the time at which the
+/// data was captured.
+#[derive(Serialize)]
+pub struct ProcessesMemoryUsage {
+    /// The list of process data.
+    pub process_data: Vec<processed::Process>,
+    /// The time at which the data was captured.
+    pub capture_time: u64,
+}
+
 /// The plugin can output one of these based on the options:
 /// * A complete digest of the memory usage.
 /// * A digest of the memory usage of a subset of the processes running on the targetted device.
 #[derive(Serialize)]
 pub enum ProfileMemoryOutput {
     CompleteDigest(processed::Digest),
-    ProcessDigest(Vec<processed::Process>),
+    ProcessDigest(ProcessesMemoryUsage),
 }
 
 /// Returns a ProfileMemoryOutput that only contains information related to the process identified by `koid`.
@@ -24,5 +34,8 @@ pub fn filter_digest_by_process_koids(
             vec.push(process);
         }
     }
-    return ProfileMemoryOutput::ProcessDigest(vec);
+    return ProfileMemoryOutput::ProcessDigest(ProcessesMemoryUsage {
+        process_data: vec,
+        capture_time: digest.time,
+    });
 }

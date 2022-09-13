@@ -6,10 +6,12 @@
 
 mod digest;
 mod plugin_output;
+mod write_csv_output;
 mod write_human_readable_output;
 
 use {
     crate::plugin_output::filter_digest_by_process_koids,
+    crate::write_csv_output::write_csv_output,
     crate::write_human_readable_output::write_human_readable_output,
     anyhow::Result,
     digest::{processed, raw},
@@ -58,10 +60,14 @@ pub async fn print_output(
             0 => ProfileMemoryOutput::CompleteDigest(processed_digest),
             _ => filter_digest_by_process_koids(processed_digest, &cmd.process_koids),
         };
-        if writer.is_machine() {
-            writer.machine(&output)
+        if cmd.csv {
+            write_csv_output(writer, output)
         } else {
-            write_human_readable_output(writer, output)
+            if writer.is_machine() {
+                writer.machine(&output)
+            } else {
+                write_human_readable_output(writer, output)
+            }
         }
     }
 }

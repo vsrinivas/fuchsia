@@ -32,6 +32,7 @@ ffx_plugin("ffx_profile_memory") {
     "src/digest.rs",
     "src/lib.rs",
     "src/plugin_output.rs",
+    "src/write_csv_output.rs",
     "src/write_human_readable_output.rs",
   ]
 

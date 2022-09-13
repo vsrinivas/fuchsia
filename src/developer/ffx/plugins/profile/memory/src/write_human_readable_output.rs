@@ -88,7 +88,7 @@ pub fn write_human_readable_output<'a>(w: &mut Writer, output: ProfileMemoryOutp
     match output {
         ProfileMemoryOutput::CompleteDigest(digest) => print_complete_digest(w, digest),
         ProfileMemoryOutput::ProcessDigest(processes_digest) => {
-            print_processes_digest(w, processes_digest)
+            print_processes_digest(w, processes_digest.process_data)
         }
     }
 }
