@@ -118,8 +118,7 @@ gvisor_tests = [
   "socket_unix_unbound_seqpacket_test",
   "socket_unix_unbound_stream_test",
   "stat_test",
-
-  # "statfs_test",
+  "statfs_test",
   "symlink_test",
 
   # "tgkill_test",
