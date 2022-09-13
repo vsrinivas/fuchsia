@@ -9,6 +9,7 @@
 #include <algorithm>
 
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/nouns.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -56,8 +57,11 @@ std::string Command::GetSwitchValue(int id) const {
 void Command::SetSwitch(int id, std::string str) { switches_[id] = std::move(str); }
 
 Err DispatchCommand(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
-  if (cmd.verb() == Verb::kNone)
-    return ExecuteNoun(context, cmd);
+  if (cmd.verb() == Verb::kNone) {
+    auto cmd_context = fxl::MakeRefCounted<ConsoleCommandContext>(Console::get());
+    ExecuteNoun(cmd, cmd_context);
+    return Err();
+  }
 
   const auto& verbs = GetVerbs();
   const auto& found = verbs.find(cmd.verb());

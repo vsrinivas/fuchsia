@@ -96,19 +96,20 @@ Examples
 
 // Returns true if processing should stop (either a frame command or an error), false to continue
 // processing to the next noun type.
-bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleFrameNoun(ConsoleContext* console_context, const Command& cmd,
+                     fxl::RefPtr<CommandContext>& cmd_context) {
   if (!cmd.HasNoun(Noun::kFrame))
     return false;
 
   if (!cmd.thread()) {
-    *err = Err(ErrType::kInput, "There is no thread to have frames.");
+    cmd_context->ReportError(Err(ErrType::kInput, "There is no thread to have frames."));
     return true;
   }
 
   FormatStackOptions opts;
 
   if (!cmd.HasSwitch(kRawOutput))
-    opts.pretty_stack = context->pretty_stack_manager();
+    opts.pretty_stack = console_context->pretty_stack_manager();
 
   opts.frame.loc = FormatLocationOptions(cmd.target());
   opts.frame.loc.func.name.elide_templates = true;
@@ -134,7 +135,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
 
     // Always force update the stack. Various things can have changed and when the user requests
     // a stack we want to be sure things are correct.
-    Console::get()->Output(FormatStack(cmd.thread(), true, opts));
+    cmd_context->Output(FormatStack(cmd.thread(), true, opts));
     return true;
   }
 
@@ -142,12 +143,12 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
   FX_DCHECK(cmd.frame());
-  context->SetActiveFrameForThread(cmd.frame());
+  console_context->SetActiveFrameForThread(cmd.frame());
   // Setting the active frame also sets the active thread and target.
-  context->SetActiveThreadForTarget(cmd.thread());
-  context->SetActiveTarget(cmd.target());
+  console_context->SetActiveThreadForTarget(cmd.thread());
+  console_context->SetActiveTarget(cmd.target());
 
-  Console::get()->Output(FormatFrame(cmd.frame(), opts.frame));
+  cmd_context->Output(FormatFrame(cmd.frame(), opts.frame, -1));
   return true;
 }
 
@@ -187,23 +188,25 @@ Examples
 
 // Returns true if processing should stop (either a filter command or an error), false to continue
 // processing to the next noun type.
-bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleFilterNoun(ConsoleContext* console_context, const Command& cmd,
+                      fxl::RefPtr<CommandContext>& cmd_context) {
   if (!cmd.HasNoun(Noun::kFilter))
     return false;
 
-  *err = cmd.ValidateNouns({Noun::kFilter});
-  if (err->has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kFilter}); err.has_error()) {
+    cmd_context->ReportError(err);
     return true;
+  }
 
   if (cmd.GetNounIndex(Noun::kFilter) == Command::kNoIndex) {
     // Just "filter", this lists available filters.
-    Console::get()->Output(FormatFilterList(context));
+    cmd_context->Output(FormatFilterList(console_context));
     return true;
   }
 
   FX_DCHECK(cmd.filter());
-  context->SetActiveFilter(cmd.filter());
-  Console::get()->Output(FormatFilter(context, cmd.filter()));
+  console_context->SetActiveFilter(cmd.filter());
+  cmd_context->Output(FormatFilter(console_context, cmd.filter()));
   return true;
 }
 
@@ -250,14 +253,18 @@ Examples
 )";
 
 // Prints the thread list for the given process to the console.
-void ListThreads(ConsoleContext* context, Process* process) {
+void ListThreads(fxl::RefPtr<CommandContext> cmd_context, Process* process) {
+  if (!cmd_context->console())
+    return;
+  ConsoleContext* console_context = &cmd_context->console()->context();
+
   std::vector<Thread*> threads = process->GetThreads();
-  int active_thread_id = context->GetActiveThreadIdForTarget(process->GetTarget());
+  int active_thread_id = console_context->GetActiveThreadIdForTarget(process->GetTarget());
 
   // Sort by ID.
   std::vector<std::pair<int, Thread*>> id_threads;
   for (Thread* thread : threads)
-    id_threads.push_back(std::make_pair(context->IdForThread(thread), thread));
+    id_threads.push_back(std::make_pair(console_context->IdForThread(thread), thread));
   std::sort(id_threads.begin(), id_threads.end());
 
   std::vector<std::vector<std::string>> rows;
@@ -282,33 +289,34 @@ void ListThreads(ConsoleContext* context, Process* process) {
                ColSpec(Align::kLeft, 0, "state"), ColSpec(Align::kRight, 0, "koid"),
                ColSpec(Align::kLeft, 0, "name")},
               rows, &out);
-  Console::get()->Output(out);
+  cmd_context->Output(out);
 }
 
 // Updates the thread list from the debugged process and asynchronously prints the result. When the
 // user lists threads, we really don't want to be misleading and show out-of-date thread names which
 // the developer might be relying on. Therefore, force a sync of the thread list from the target
 // (which should be fast) before displaying the thread list.
-void ScheduleListThreads(Process* process) {
+void ScheduleListThreads(fxl::RefPtr<CommandContext>& cmd_context, Process* process) {
   // Since the Process issues the callback, it's OK to capture the pointer.
-  process->SyncThreads([process]() { ListThreads(&Console::get()->context(), process); });
+  process->SyncThreads([cmd_context, process]() { ListThreads(cmd_context, process); });
 }
 
 // Returns true if processing should stop (either a thread command or an error), false to continue
 // processing to the nex noun type.
-bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleThreadNoun(ConsoleContext* console_context, const Command& cmd,
+                      fxl::RefPtr<CommandContext>& cmd_context) {
   if (!cmd.HasNoun(Noun::kThread))
     return false;
 
   Process* process = cmd.target()->GetProcess();
   if (!process) {
-    *err = Err(ErrType::kInput, "Process not running, no threads.");
+    cmd_context->ReportError(Err(ErrType::kInput, "Process not running, no threads."));
     return true;
   }
 
   if (cmd.GetNounIndex(Noun::kThread) == Command::kNoIndex) {
     // Just "thread" or "process 2 thread" specified, this lists available threads.
-    ScheduleListThreads(process);
+    ScheduleListThreads(cmd_context, process);
     return true;
   }
 
@@ -316,10 +324,10 @@ bool HandleThreadNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
   FX_DCHECK(cmd.thread());
-  context->SetActiveThreadForTarget(cmd.thread());
+  console_context->SetActiveThreadForTarget(cmd.thread());
   // Setting the active thread also sets the active target.
-  context->SetActiveTarget(cmd.target());
-  Console::get()->Output(FormatThread(context, cmd.thread()));
+  console_context->SetActiveTarget(cmd.target());
+  cmd_context->Output(FormatThread(console_context, cmd.thread()));
   return true;
 }
 
@@ -364,13 +372,14 @@ Examples
 
 // Returns true if processing should stop (either a thread command or an error), false to continue
 // processing to the next noun type.
-bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleProcessNoun(ConsoleContext* console_context, const Command& cmd,
+                       fxl::RefPtr<CommandContext>& cmd_context) {
   if (!cmd.HasNoun(Noun::kProcess))
     return false;
 
   if (cmd.GetNounIndex(Noun::kProcess) == Command::kNoIndex) {
     // Just "process", this lists available processes.
-    Console::get()->Output(FormatTargetList(context));
+    cmd_context->Output(FormatTargetList(console_context));
     return true;
   }
 
@@ -378,8 +387,8 @@ bool HandleProcessNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
   FX_DCHECK(cmd.target());
-  context->SetActiveTarget(cmd.target());
-  Console::get()->Output(FormatTarget(context, cmd.target()));
+  console_context->SetActiveTarget(cmd.target());
+  cmd_context->Output(FormatTarget(console_context, cmd.target()));
   return true;
 }
 
@@ -395,13 +404,13 @@ const char kGlobalHelp[] =
   as opposed to a process or thread.
 )";
 
-bool HandleGlobalNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleGlobalNoun(ConsoleContext* console_context, const Command& cmd,
+                      fxl::RefPtr<CommandContext>& cmd_context) {
   if (!cmd.HasNoun(Noun::kGlobal))
     return false;
 
-  Console::get()->Output(
-      "\"global\" only makes sense when applied to a verb, "
-      "for example \"global get\".");
+  cmd_context->ReportError(
+      Err("\"global\" only makes sense when applied to a verb, for example \"global get\"."));
   return true;
 }
 
@@ -456,10 +465,11 @@ Examples
       Clears breakpoint 2.
 )";
 
-void ListBreakpoints(ConsoleContext* context, bool include_locations) {
-  auto breakpoints = context->session()->system().GetBreakpoints();
+void ListBreakpoints(ConsoleContext* console_context, fxl::RefPtr<CommandContext>& cmd_context,
+                     bool include_locations) {
+  auto breakpoints = console_context->session()->system().GetBreakpoints();
   if (breakpoints.empty()) {
-    Console::get()->Output("No breakpoints.\n");
+    cmd_context->Output("No breakpoints.\n");
     return;
   }
 
@@ -477,12 +487,12 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     }
   }
 
-  int active_breakpoint_id = context->GetActiveBreakpointId();
+  int active_breakpoint_id = console_context->GetActiveBreakpointId();
 
   // Sort by ID.
   std::map<int, Breakpoint*> id_bp;
   for (auto& bp : breakpoints)
-    id_bp[context->IdForBreakpoint(bp)] = bp;
+    id_bp[console_context->IdForBreakpoint(bp)] = bp;
 
   std::vector<std::vector<OutputBuffer>> rows;
   for (const auto& pair : id_bp) {
@@ -498,7 +508,7 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     auto matched_locs = pair.second->GetLocations();
 
     row.push_back(OutputBuffer(Syntax::kSpecial, std::to_string(pair.first)));
-    row.emplace_back(ExecutionScopeToString(context, settings.scope));
+    row.emplace_back(ExecutionScopeToString(console_context, settings.scope));
     row.emplace_back(BreakpointSettings::StopModeToString(settings.stop_mode));
     if (settings.enabled) {
       row.emplace_back("true");
@@ -564,26 +574,28 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
 
   OutputBuffer out;
   FormatTable(col_specs, rows, &out);
-  Console::get()->Output(out);
+  cmd_context->Output(out);
 }
 
 // Returns true if breakpoint was specified (and therefore nothing else should be called. If
 // breakpoint is specified but there was an error, *err will be set.
-bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleBreakpointNoun(ConsoleContext* console_context, const Command& cmd,
+                          fxl::RefPtr<CommandContext>& cmd_context) {
   if (!cmd.HasNoun(Noun::kBreakpoint))
     return false;
 
   // With no verb, breakpoint can not be combined with any other noun. Saying "process 2 breakpoint"
   // doesn't make any sense.
-  *err = cmd.ValidateNouns({Noun::kBreakpoint});
-  if (err->has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kBreakpoint}); err.has_error()) {
+    cmd_context->ReportError(err);
     return true;
+  }
 
   if (cmd.GetNounIndex(Noun::kBreakpoint) == Command::kNoIndex) {
     // Just "breakpoint", this lists available breakpoints. The verbose switch expands each
     // individual breakpoint location.
     bool include_locations = cmd.HasSwitch(kVerboseSwitch);
-    ListBreakpoints(context, include_locations);
+    ListBreakpoints(console_context, cmd_context, include_locations);
     return true;
   }
 
@@ -591,8 +603,8 @@ bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd, Err* err)
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
   FX_DCHECK(cmd.breakpoint());
-  context->SetActiveBreakpoint(cmd.breakpoint());
-  Console::get()->Output(FormatBreakpoint(context, cmd.breakpoint(), true));
+  console_context->SetActiveBreakpoint(cmd.breakpoint());
+  cmd_context->Output(FormatBreakpoint(console_context, cmd.breakpoint(), true));
   return true;
 }
 
@@ -640,15 +652,16 @@ OutputBuffer SymbolServerStateToColorString(SymbolServer::State state) {
   }
 }
 
-void ListSymbolServers(ConsoleContext* context) {
-  std::vector<SymbolServer*> symbol_servers = context->session()->system().GetSymbolServers();
-  int active_symbol_server_id = context->GetActiveSymbolServerId();
+void ListSymbolServers(ConsoleContext* console_context, fxl::RefPtr<CommandContext>& cmd_context) {
+  std::vector<SymbolServer*> symbol_servers =
+      console_context->session()->system().GetSymbolServers();
+  int active_symbol_server_id = console_context->GetActiveSymbolServerId();
 
   // Sort by ID.
   std::vector<std::pair<int, SymbolServer*>> id_symbol_servers;
   for (SymbolServer* symbol_server : symbol_servers) {
     id_symbol_servers.push_back(
-        std::make_pair(context->IdForSymbolServer(symbol_server), symbol_server));
+        std::make_pair(console_context->IdForSymbolServer(symbol_server), symbol_server));
   }
   std::sort(id_symbol_servers.begin(), id_symbol_servers.end());
 
@@ -683,21 +696,23 @@ void ListSymbolServers(ConsoleContext* context) {
   FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
                ColSpec(Align::kLeft, 0, "URL"), ColSpec(Align::kLeft, 0, "State")},
               rows, &out);
-  Console::get()->Output(out);
+  cmd_context->Output(out);
 }
 
-bool HandleSymbolServerNoun(ConsoleContext* context, const Command& cmd, Err* err) {
+bool HandleSymbolServerNoun(ConsoleContext* console_context, const Command& cmd,
+                            fxl::RefPtr<CommandContext>& cmd_context) {
   if (!cmd.HasNoun(Noun::kSymServer))
     return false;
 
   // sym-server only makes sense by itself. It doesn't make sense with any other nouns.
-  *err = cmd.ValidateNouns({Noun::kSymServer});
-  if (err->has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kSymServer}); err.has_error()) {
+    cmd_context->ReportError(err);
     return true;
+  }
 
   if (cmd.GetNounIndex(Noun::kSymServer) == Command::kNoIndex) {
     // Just "breakpoint", this lists available breakpoints.
-    ListSymbolServers(context);
+    ListSymbolServers(console_context, cmd_context);
     return true;
   }
 
@@ -705,7 +720,7 @@ bool HandleSymbolServerNoun(ConsoleContext* context, const Command& cmd, Err* er
   // resolved to a valid pointer if it was specified on the command line (otherwise the command
   // would have been rejected before here).
   FX_DCHECK(cmd.sym_server());
-  context->SetActiveSymbolServer(cmd.sym_server());
+  console_context->SetActiveSymbolServer(cmd.sym_server());
 
   OutputBuffer out;
   out.Append(cmd.sym_server()->name() + " - ");
@@ -767,27 +782,31 @@ const std::map<std::string, Noun>& GetStringNounMap() {
   return map;
 }
 
-Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
-  Err result;
+void ExecuteNoun(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  // Extract a non-weak ConsoleContext pointer. The noun implementations all deal with the console
+  // context (because they're listing and modifying the default item) and are almost all
+  // synchronous. This prevents those implementations from having to deal with the weak pointer in
+  // the CommandContext themselves.
+  if (!cmd_context->console())
+    return;
+  ConsoleContext* console_context = &cmd_context->console()->context();
 
-  if (HandleBreakpointNoun(context, cmd, &result))
-    return result;
-  if (HandleFilterNoun(context, cmd, &result))
-    return result;
+  if (HandleBreakpointNoun(console_context, cmd, cmd_context))
+    return;
+  if (HandleFilterNoun(console_context, cmd, cmd_context))
+    return;
 
   // Work backwards in specificity (frame -> thread -> process).
-  if (HandleFrameNoun(context, cmd, &result))
-    return result;
-  if (HandleThreadNoun(context, cmd, &result))
-    return result;
-  if (HandleProcessNoun(context, cmd, &result))
-    return result;
-  if (HandleSymbolServerNoun(context, cmd, &result))
-    return result;
-  if (HandleGlobalNoun(context, cmd, &result))
-    return result;
-
-  return result;
+  if (HandleFrameNoun(console_context, cmd, cmd_context))
+    return;
+  if (HandleThreadNoun(console_context, cmd, cmd_context))
+    return;
+  if (HandleProcessNoun(console_context, cmd, cmd_context))
+    return;
+  if (HandleSymbolServerNoun(console_context, cmd, cmd_context))
+    return;
+  if (HandleGlobalNoun(console_context, cmd, cmd_context))
+    return;
 }
 
 void AppendNouns(std::map<Noun, NounRecord>* nouns) {
