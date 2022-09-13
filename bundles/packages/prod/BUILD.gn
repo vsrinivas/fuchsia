@@ -229,6 +229,5 @@ group("wlan_drivers") {
 
     # from :nxp
     "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_driver",
-    "//src/connectivity/wlan/drivers/wlanphy",
   ]
 }
