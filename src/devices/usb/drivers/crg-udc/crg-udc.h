@@ -174,7 +174,7 @@ class CrgUdc : public CrgUdcType, public ddk::UsbDciProtocol<CrgUdc, ddk::base_p
     uint32_t req_offset = 0;
     uint32_t req_xfersize = 0;
     uint32_t req_length = 0;
-    uint32_t phys = 0;
+    zx_paddr_t phys = 0;
     bool zlp = false;
 
     // Used for synchronizing endpoint state and ep specific hardware registers.
@@ -303,7 +303,7 @@ class CrgUdc : public CrgUdcType, public ddk::UsbDciProtocol<CrgUdc, ddk::base_p
   // frame_i_d: frame id when the isoc flag was setted
   // SIA: TD is not bound to specific service interval when this bit is asserted
   // AZP: flag for append zero-length packet
-  void SetupNormalTrb(TRBlock* p_trb, uint32_t xfer_len, uint32_t buf_addr, uint8_t td_size,
+  void SetupNormalTrb(TRBlock* p_trb, uint32_t xfer_len, uint64_t buf_addr, uint8_t td_size,
                       uint8_t pcs, uint8_t trb_type, uint8_t short_pkt, uint8_t chain_bit,
                       uint8_t intr_on_compl, bool setup_stage, uint8_t usb_dir, bool isoc,
                       uint16_t frame_i_d, uint8_t SIA, uint8_t AZP);

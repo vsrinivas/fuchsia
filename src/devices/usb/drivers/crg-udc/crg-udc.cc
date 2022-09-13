@@ -71,7 +71,6 @@ void CrgUdc::HandleCompletionCode(Endpoint* ep, TRBlock* event) {
     // chain bit is not set, which mean it is the end of a TD
     trb_transfer_length = event->dw2 & TRB_TRANSFER_LEN_MASK;
     ep->req_xfersize = ep->req_length - trb_transfer_length;
-    ep->req_offset += ep->req_xfersize;
     HandleTransferComplete(ep->ep_num);
 
     if (ep->type == USB_ENDPOINT_CONTROL) {
@@ -142,7 +141,6 @@ zx_status_t CrgUdc::HandleXferEvent(TRBlock* event) {
         trb_transfer_length = event->dw2 & EVE_TRB_TRAN_LEN_MASK;
 
         ep->req_xfersize = ep->req_length - trb_transfer_length;
-        ep->req_offset += ep->req_xfersize;
         HandleTransferComplete(ep->ep_num);
       } else {
         zxlogf(INFO, "EP DIR IN");
@@ -404,7 +402,8 @@ void CrgUdc::BuildEp0Status(Endpoint* ep, uint8_t set_addr, uint8_t stall) {
 
   if (((enq_pt->dw3 >> TRB_TYPE_SHIFT) & TRB_TYPE_MASK) == TRB_TYPE_LINK) {
     if ((enq_pt->dw3 >> TRB_LINK_TOGGLE_CYCLE_SHIFT) & TRB_LINK_TOGGLE_CYCLE_MASK) {
-      enq_pt->dw3 |= ep->pcs & TRB_CYCLE_BIT_MASK;
+      enq_pt->dw3 &= ~(TRB_CYCLE_BIT_MASK << TRB_CYCLE_BIT_SHIFT);
+      enq_pt->dw3 |= (ep->pcs & TRB_CYCLE_BIT_MASK) << TRB_CYCLE_BIT_SHIFT;
       ep->pcs ^= 0x1;
     }
     enq_pt = ep->first_trb;
@@ -444,7 +443,7 @@ void CrgUdc::QueueNextRequest(Endpoint* ep) {
     usb_request_physmap(usb_req, bti_.get());
     usb_request_phys_iter_init(&iter, usb_req, zx_system_get_page_size());
     usb_request_phys_iter_next(&iter, &phys);
-    ep->phys = static_cast<uint32_t>(phys);
+    ep->phys = phys;
 
     ep->req_offset = 0;
     ep->req_length = static_cast<uint32_t>(usb_req->header.length);
@@ -478,7 +477,7 @@ uint32_t CrgUdc::RoomOnRing(uint32_t trbs_num, TRBlock* xfer_ring, TRBlock* enq_
 }
 
 // Fill the normal transfer TRB
-void CrgUdc::SetupNormalTrb(TRBlock* p_trb, uint32_t xfer_len, uint32_t buf_addr, uint8_t td_size,
+void CrgUdc::SetupNormalTrb(TRBlock* p_trb, uint32_t xfer_len, uint64_t buf_addr, uint8_t td_size,
                             uint8_t pcs, uint8_t trb_type, uint8_t short_pkt, uint8_t chain_bit,
                             uint8_t intr_on_compl, bool setup_stage, uint8_t usb_dir, bool isoc,
                             uint16_t frame_i_d, uint8_t SIA, uint8_t AZP) {
@@ -598,7 +597,8 @@ void CrgUdc::UdcQueueCtrl(Endpoint* ep, uint32_t need_trbs_num) {
 
       if (((enq_pt->dw3 >> TRB_TYPE_SHIFT) & TRB_TYPE_MASK) == TRB_TYPE_LINK) {
         if ((enq_pt->dw3 >> TRB_LINK_TOGGLE_CYCLE_SHIFT) & TRB_LINK_TOGGLE_CYCLE_MASK) {
-          enq_pt->dw3 |= ep->pcs & TRB_CYCLE_BIT_MASK;
+          enq_pt->dw3 &= ~(TRB_CYCLE_BIT_MASK << TRB_CYCLE_BIT_SHIFT);
+          enq_pt->dw3 |= (ep->pcs & TRB_CYCLE_BIT_MASK) << TRB_CYCLE_BIT_SHIFT;
           ep->pcs ^= 0x1;
           // Make sure the PCS was updated before resetting the enqueue pointer
           hw_wmb();
@@ -629,7 +629,7 @@ void CrgUdc::UdcQueueTrbs(Endpoint* ep, uint32_t xfer_ring_size, uint32_t need_t
   uint8_t intr_on_compl = 0;
   uint32_t intr_rate;
   uint32_t j = 1;
-  uint32_t req_buf = ep->phys + ep->req_offset;
+  uint64_t req_buf = static_cast<uint64_t>(ep->phys) + ep->req_offset;
   auto* enq_pt = ep->enq_pt;
 
   if (ep->zlp && (ep->req_length != 0) && (ep->req_length % ep->max_packet_size == 0)) {
@@ -683,10 +683,12 @@ void CrgUdc::UdcQueueTrbs(Endpoint* ep, uint32_t xfer_ring_size, uint32_t need_t
     j++;
     if (((enq_pt->dw3 >> TRB_TYPE_SHIFT) & TRB_TYPE_MASK) == TRB_TYPE_LINK) {
       if ((enq_pt->dw3 >> TRB_LINK_TOGGLE_CYCLE_SHIFT) & TRB_LINK_TOGGLE_CYCLE_MASK) {
-        enq_pt->dw3 |= ep->pcs & TRB_CYCLE_BIT_MASK;
+        enq_pt->dw3 &= ~(TRB_CYCLE_BIT_MASK << TRB_CYCLE_BIT_SHIFT);
+        enq_pt->dw3 |= (ep->pcs & TRB_CYCLE_BIT_MASK) << TRB_CYCLE_BIT_SHIFT;
         ep->pcs ^= 0x1;
         // Make sure the PCS was updated before resetting the enqueue pointer
         hw_wmb();
+        enq_pt = ep->first_trb;
       }
     }
   }

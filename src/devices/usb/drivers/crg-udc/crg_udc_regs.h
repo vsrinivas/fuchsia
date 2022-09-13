@@ -85,7 +85,12 @@
 
 // converts a USB endpoint address to 2 - 31 index
 constexpr uint8_t CRG_UDC_ADDR_TO_INDEX(uint8_t addr) {
-  return static_cast<uint8_t>((2 * (addr & 0xF)) + ((addr & USB_DIR_IN) ? 1 : 0));
+  // |  31 | 30  | ...... | 3  | 2  |   1    | 0 |
+  // |IEP15|OEP15| ...... |IEP1|OEP1|reserved|EP0|
+  //
+  // OEP: Outbound EP (EP_IN from Host perspective)
+  // IEP: Inbound EP (EP_OUT from Host perspective)
+  return static_cast<uint8_t>((2 * (addr & 0xF)) + ((addr & USB_DIR_IN) ? 0 : 1));
 }
 constexpr bool CRG_UDC_EP_IS_OUT(uint8_t ep) { return ((ep / 2) == 0); }
 
@@ -134,8 +139,8 @@ constexpr uint32_t EP_TYPE_BULK_OUTBOUND = 2;
 constexpr uint32_t EP_TYPE_INTR_OUTBOUND = 3;
 constexpr uint32_t EP_TYPE_INVALID2 = 4;
 constexpr uint32_t EP_TYPE_ISOCH_INBOUND = 5;
-constexpr uint32_t EP_TYPE_BULK_INBOUND = 7;
-constexpr uint32_t EP_TYPE_INTR_INBOUND = 8;
+constexpr uint32_t EP_TYPE_BULK_INBOUND = 6;
+constexpr uint32_t EP_TYPE_INTR_INBOUND = 7;
 
 constexpr uint32_t LOWER_32_BITS(uint64_t x) { return static_cast<uint32_t>(x); }
 constexpr uint32_t UPPER_32_BITS(uint64_t x) { return static_cast<uint32_t>((x >> 16) >> 16); }
