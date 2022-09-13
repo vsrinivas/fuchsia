@@ -40,11 +40,13 @@ struct IoctlAdapterTest : public zxtest::Test {
 TEST_F(IoctlAdapterTest, IssueIoctlAsync) {
   // Test that an asynchronous ioctl completes correctly and calls the provided completion callback.
 
+  constexpr uint32_t kBssIndex = 20;
   // Add some trailing space to make sure we verify that too.
   constexpr size_t kSomeTrailingSpace = 42;
 
   bool on_ioctl_called = false;
   auto on_ioctl = [&](t_void *, pmlan_ioctl_req req) -> mlan_status {
+    EXPECT_EQ(kBssIndex, req->bss_index);
     on_ioctl_called = true;
     // Schedule the on complete to run asynchronously to simulate an asynchronous ioctl.
     ioctl_adapter_->OnIoctlComplete(req, IoctlStatus::Success);
@@ -54,7 +56,7 @@ TEST_F(IoctlAdapterTest, IssueIoctlAsync) {
   mock_mlan_.SetOnMlanIoctl(std::move(on_ioctl));
 
   IoctlRequest<mlan_ds_bss, kSomeTrailingSpace> join_request(
-      MLAN_IOCTL_BSS, MLAN_ACT_SET,
+      MLAN_IOCTL_BSS, MLAN_ACT_SET, kBssIndex,
       mlan_ds_bss{.sub_command = MLAN_OID_BSS_START,
                   .param = {.ssid_bssid = {.idx = 0, .channel = 11}}});
 
@@ -79,8 +81,11 @@ TEST_F(IoctlAdapterTest, IssueIoctlAsync) {
 }
 
 TEST_F(IoctlAdapterTest, IssueIoctlSync) {
+  constexpr uint32_t kBssIndex = 28;
+
   bool on_ioctl_called = false;
   auto on_ioctl = [&](t_void *, pmlan_ioctl_req req) -> mlan_status {
+    EXPECT_EQ(kBssIndex, req->bss_index);
     on_ioctl_called = true;
     ioctl_adapter_->OnIoctlComplete(req, IoctlStatus::Success);
     return MLAN_STATUS_PENDING;
@@ -88,7 +93,7 @@ TEST_F(IoctlAdapterTest, IssueIoctlSync) {
 
   mock_mlan_.SetOnMlanIoctl(std::move(on_ioctl));
 
-  IoctlRequest<mlan_ds_bss> join_request(MLAN_IOCTL_BSS, MLAN_ACT_SET,
+  IoctlRequest<mlan_ds_bss> join_request(MLAN_IOCTL_BSS, MLAN_ACT_SET, kBssIndex,
                                          mlan_ds_bss{
                                              .sub_command = MLAN_OID_BSS_START,
                                              .param = {.ssid_bssid = {.idx = 0, .channel = 11}},
@@ -121,7 +126,7 @@ TEST_F(IoctlAdapterTest, IssueIoctlAsyncTimeout) {
 
   mock_mlan_.SetOnMlanIoctl(std::move(on_ioctl));
 
-  IoctlRequest<mlan_ds_scan> perform_scan(MLAN_IOCTL_SCAN, MLAN_ACT_SET,
+  IoctlRequest<mlan_ds_scan> perform_scan(MLAN_IOCTL_SCAN, MLAN_ACT_SET, 0,
                                           mlan_ds_scan{.sub_command = MLAN_OID_SCAN_NORMAL});
 
   sync_completion_t completion;
@@ -156,7 +161,7 @@ TEST_F(IoctlAdapterTest, IssueIoctlAsyncFailure) {
 
   mock_mlan_.SetOnMlanIoctl(std::move(on_ioctl));
 
-  IoctlRequest<mlan_ds_scan> perform_scan(MLAN_IOCTL_SCAN, MLAN_ACT_SET,
+  IoctlRequest<mlan_ds_scan> perform_scan(MLAN_IOCTL_SCAN, MLAN_ACT_SET, 0,
                                           mlan_ds_scan{.sub_command = MLAN_OID_SCAN_NORMAL});
 
   std::atomic<int> on_complete_calls = 0;
@@ -191,7 +196,7 @@ TEST_F(IoctlAdapterTest, IssueIoctlCompleteBeforeTimeoutScheduled) {
 
   mock_mlan_.SetOnMlanIoctl(std::move(on_ioctl));
 
-  IoctlRequest<mlan_ds_scan> perform_scan(MLAN_IOCTL_SCAN, MLAN_ACT_SET,
+  IoctlRequest<mlan_ds_scan> perform_scan(MLAN_IOCTL_SCAN, MLAN_ACT_SET, 0,
                                           mlan_ds_scan{.sub_command = MLAN_OID_SCAN_NORMAL});
 
   std::atomic<int> on_complete_calls = 0;
@@ -240,7 +245,7 @@ TEST_F(IoctlAdapterTest, IssueIoctlSyncTimeout) {
 
   mock_mlan_.SetOnMlanIoctl(std::move(on_ioctl));
 
-  IoctlRequest<mlan_ds_bss> join_request(MLAN_IOCTL_BSS, MLAN_ACT_SET,
+  IoctlRequest<mlan_ds_bss> join_request(MLAN_IOCTL_BSS, MLAN_ACT_SET, 0,
                                          mlan_ds_bss{
                                              .sub_command = MLAN_OID_BSS_START,
                                              .param = {.ssid_bssid = {.idx = 0, .channel = 11}},
@@ -259,7 +264,7 @@ TEST_F(IoctlAdapterTest, CancelIoctl) {
   // Test that CancelIoctl behaves as expected, modifying the canceled request action and issues
   // the correct ioctl.
 
-  IoctlRequest<mlan_ds_scan> perform_scan(MLAN_IOCTL_SCAN, MLAN_ACT_SET,
+  IoctlRequest<mlan_ds_scan> perform_scan(MLAN_IOCTL_SCAN, MLAN_ACT_SET, 0,
                                           mlan_ds_scan{.sub_command = MLAN_OID_SCAN_NORMAL});
 
   std::optional<uint32_t> on_ioctl_action;
@@ -313,7 +318,7 @@ TEST_F(IoctlAdapterTest, PendingIoctl) {
   });
 
   // Perform a scan ioctl
-  IoctlRequest<mlan_ds_scan> get_scan_results(MLAN_IOCTL_SCAN, MLAN_ACT_GET,
+  IoctlRequest<mlan_ds_scan> get_scan_results(MLAN_IOCTL_SCAN, MLAN_ACT_GET, 0,
                                               mlan_ds_scan{.sub_command = MLAN_OID_SCAN_NORMAL});
   ASSERT_EQ(IoctlStatus::Pending,
             ioctl_adapter_->IssueIoctl(&get_scan_results, [](pmlan_ioctl_req, IoctlStatus) {}));

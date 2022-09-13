@@ -69,10 +69,12 @@ class IoctlRequest {
 
  public:
   IoctlRequest() = default;
-  // Create a request with the given id and action. The user_request data is copied into the request
-  // as well, it does not have to be kept alive after the request has been created.
-  IoctlRequest(uint32_t request_id, uint32_t action, const RequestType& user_request)
-      : ioctl_req_{.req_id = request_id,
+  // Create a request with the given id, action and bss_index. The user_request data is copied into
+  // the request as well, it does not have to be kept alive after the request has been created.
+  IoctlRequest(uint32_t request_id, uint32_t action, uint32_t bss_index,
+               const RequestType& user_request)
+      : ioctl_req_{.bss_index = bss_index,
+                   .req_id = request_id,
                    .action = action,
                    .pbuf = reinterpret_cast<uint8_t*>(&user_req_),
                    .buf_len = StorageSize,
@@ -86,6 +88,7 @@ class IoctlRequest {
                   "user_req_ has to be the last data member");
     memset(TrailingData(), 0, TrailingSpace);
   }
+
   IoctlRequest(IoctlRequest&& other) noexcept
       : ioctl_req_(other.ioctl_req_),
         callback_(std::move(other.callback_), storage_(other.storage_)) {

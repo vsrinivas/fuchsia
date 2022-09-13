@@ -15,11 +15,15 @@ test("nxpfmac_test") {
   sources = [
     "event_handler_test.cc",
     "ioctl_adapter_test.cc",
+    "scanner_test.cc",
+    "waitable_state_test.cc",
   ]
   deps = [
     ":mlan_mocks",
     "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:core",
     "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/mock-function",
     "//zircon/system/ulib/zxtest:zxtest",
   ]
   public_configs = [
