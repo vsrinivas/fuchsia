@@ -20,7 +20,7 @@ class CompositeDevice;
 
 // Function that is invoked to request a driver try to bind to a device
 using AttemptBindFunc =
-    fit::function<zx_status_t(const Driver* drv, const fbl::RefPtr<Device>& dev)>;
+    fit::function<zx_status_t(MatchedDriverInfo driver_info, const fbl::RefPtr<Device>& dev)>;
 
 using CompositeDeviceMap = std::unordered_map<std::string, std::unique_ptr<CompositeDevice>>;
 

@@ -39,12 +39,14 @@ struct FakeDriver {
   std::string driver_url;
   fdi::wire::DriverPackageType package_type;
   bool is_fallback = false;
+  bool is_dfv2 = false;
 
   FakeDriver(std::string driver_url, fdi::wire::DriverPackageType package_type,
-             bool is_fallback = false)
+             bool is_fallback = false, bool is_dfv2 = false)
       : driver_url(std::move(driver_url)),
         package_type(std::move(package_type)),
-        is_fallback(is_fallback) {}
+        is_fallback(is_fallback),
+        is_dfv2(is_dfv2) {}
 };
 
 class FakeDriverLoaderIndex final : public fidl::WireServer<fdi::DriverIndex> {
@@ -65,8 +67,13 @@ class FakeDriverLoaderIndex final : public fidl::WireServer<fdi::DriverIndex> {
     size_t index = 0;
     for (auto& driver : fake_drivers) {
       auto driver_info = fdi::wire::MatchedDriverInfo(allocator);
-      driver_info.set_driver_url(
-          fidl::ObjectView<fidl::StringView>(allocator, allocator, driver.driver_url));
+      if (driver.is_dfv2) {
+        driver_info.set_url(
+            fidl::ObjectView<fidl::StringView>(allocator, allocator, driver.driver_url));
+      } else {
+        driver_info.set_driver_url(
+            fidl::ObjectView<fidl::StringView>(allocator, allocator, driver.driver_url));
+      }
       driver_info.set_package_type(driver.package_type);
       driver_info.set_is_fallback(driver.is_fallback);
 
@@ -139,7 +146,7 @@ TEST_F(DriverLoaderTest, TestFallbackGetsRemoved) {
   fidl::VectorView<fdf::wire::NodeProperty> props{};
   auto drivers = driver_loader.MatchPropertiesDriverIndex(props, config);
   ASSERT_EQ(drivers.size(), 1);
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, not_fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).v1()->libname, not_fallback_libname);
 }
 
 TEST_F(DriverLoaderTest, TestFallbackAcceptedAfterBaseLoaded) {
@@ -175,8 +182,8 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedAfterBaseLoaded) {
 
   ASSERT_EQ(drivers.size(), 2);
   // The non-fallback should always be first.
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, not_fallback_libname);
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).driver->libname, fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).v1()->libname, not_fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).v1()->libname, fallback_libname);
 }
 
 TEST_F(DriverLoaderTest, TestFallbackAcceptedWhenSystemNotRequired) {
@@ -207,8 +214,8 @@ TEST_F(DriverLoaderTest, TestFallbackAcceptedWhenSystemNotRequired) {
 
   ASSERT_EQ(drivers.size(), 2);
   // The non-fallback should always be first.
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, not_fallback_libname);
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).driver->libname, fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).v1()->libname, not_fallback_libname);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).v1()->libname, fallback_libname);
 }
 
 TEST_F(DriverLoaderTest, TestLibname) {
@@ -236,7 +243,7 @@ TEST_F(DriverLoaderTest, TestLibname) {
   auto drivers = driver_loader.MatchPropertiesDriverIndex(props, config);
 
   ASSERT_EQ(drivers.size(), 1);
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, name2);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).v1()->libname, name2);
 }
 
 TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
@@ -265,7 +272,7 @@ TEST_F(DriverLoaderTest, TestLibnameConvertToPath) {
   auto drivers = driver_loader.MatchPropertiesDriverIndex(props, config);
 
   ASSERT_EQ(drivers.size(), 1);
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, name2);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).v1()->libname, name2);
 }
 
 TEST_F(DriverLoaderTest, TestOnlyReturnBaseAndFallback) {
@@ -301,8 +308,8 @@ TEST_F(DriverLoaderTest, TestOnlyReturnBaseAndFallback) {
   auto drivers = driver_loader.MatchPropertiesDriverIndex(props, config);
 
   ASSERT_EQ(drivers.size(), 2);
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, name1);
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).driver->libname, name3);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).v1()->libname, name1);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[1]).v1()->libname, name3);
 }
 
 TEST_F(DriverLoaderTest, TestReturnOnlyDeviceGroups) {
@@ -396,7 +403,7 @@ TEST_F(DriverLoaderTest, TestReturnDriversAndDeviceGroups) {
   ASSERT_EQ(drivers.size(), 2);
 
   // Check driver.
-  ASSERT_EQ(driver_name, std::get<MatchedDriverInfo>(drivers[0]).driver->libname);
+  ASSERT_EQ(driver_name, std::get<MatchedDriverInfo>(drivers[0]).v1()->libname);
 
   // Check device group.
   auto device_group_result = std::get<fdi::MatchedDeviceGroupNodeInfo>(drivers[1]);
@@ -522,5 +529,25 @@ TEST_F(DriverLoaderTest, TestEphemeralDriver) {
   auto drivers = driver_loader.MatchPropertiesDriverIndex(props, config);
 
   ASSERT_EQ(drivers.size(), 1);
-  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).driver->libname, name1);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).v1()->libname, name1);
+}
+
+TEST_F(DriverLoaderTest, TestV2Driver) {
+  std::string name = "fuchsia-boot:///#meta/driver.cm";
+
+  driver_index_server.fake_drivers.emplace_back(name, fdi::wire::DriverPackageType::kBoot,
+                                                /* is_fallback */ false, /* is_dfv2 */ true);
+
+  DriverLoader driver_loader(nullptr, std::move(driver_index), &resolver, loop.dispatcher(), true,
+                             &universe_resolver);
+  loop.StartThread("fidl-thread");
+
+  DriverLoader::MatchDeviceConfig config;
+  config.libname = name;
+  fidl::VectorView<fdf::wire::NodeProperty> props{};
+  auto drivers = driver_loader.MatchPropertiesDriverIndex(props, config);
+
+  ASSERT_EQ(drivers.size(), 1);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).is_v1(), false);
+  ASSERT_EQ(std::get<MatchedDriverInfo>(drivers[0]).v2().url, name);
 }

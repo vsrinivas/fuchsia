@@ -20,28 +20,6 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 
-struct Driver;
-
-struct MatchedCompositeDevice {
-  uint32_t node;
-  uint32_t num_nodes;
-  std::string name;
-  std::vector<std::string> node_names;
-};
-
-struct MatchedDriverInfo {
-  const Driver* driver = nullptr;
-  bool colocate = false;
-};
-
-struct MatchedCompositeDriverInfo {
-  MatchedCompositeDevice composite;
-  MatchedDriverInfo driver_info;
-};
-
-using MatchedDriver = std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo,
-                                   fuchsia_driver_index::MatchedDeviceGroupNodeInfo>;
-
 struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   Driver() = default;
 
@@ -72,6 +50,44 @@ struct Driver : public fbl::DoublyLinkedListable<std::unique_ptr<Driver>> {
   // If true, this driver never tries to match against new devices.
   bool never_autoselect = false;
 };
+
+struct Dfv2Driver {
+  std::string url;
+  fuchsia_driver_index::DriverPackageType package_type;
+};
+
+struct MatchedCompositeDevice {
+  uint32_t node;
+  uint32_t num_nodes;
+  std::string name;
+  std::vector<std::string> node_names;
+};
+
+struct MatchedDriverInfo {
+  std::variant<const Driver*, Dfv2Driver> driver;
+  bool colocate = false;
+
+  bool is_v1() const { return std::holds_alternative<const Driver*>(driver); }
+
+  const Driver* v1() const { return std::get<const Driver*>(driver); }
+
+  const Dfv2Driver& v2() const { return std::get<Dfv2Driver>(driver); }
+
+  const char* name() const {
+    if (is_v1()) {
+      return v1()->libname.c_str();
+    }
+    return v2().url.c_str();
+  }
+};
+
+struct MatchedCompositeDriverInfo {
+  MatchedCompositeDevice composite;
+  MatchedDriverInfo driver_info;
+};
+
+using MatchedDriver = std::variant<MatchedDriverInfo, MatchedCompositeDriverInfo,
+                                   fuchsia_driver_index::MatchedDeviceGroupNodeInfo>;
 
 #define DRIVER_NAME_LEN_MAX 64
 

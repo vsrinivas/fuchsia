@@ -136,7 +136,7 @@ std::unique_ptr<CompositeDevice> CompositeDevice::CreateFromDriverIndex(
                                                               fbl::Array<const zx_bind_inst_t>());
     dev->unbound_fragments_.push_back(std::move(fragment));
   }
-  dev->driver_index_driver_ = driver.driver_info.driver;
+  dev->driver_index_driver_ = driver.driver_info;
   return dev;
 }
 
@@ -372,8 +372,7 @@ zx_status_t CompositeDevice::TryAssemble() {
     zx_status_t status = coordinator->AttemptBind(driver_index_driver_, device_);
     if (status != ZX_OK) {
       LOGF(ERROR, "%s: Failed to bind composite driver '%s' to device '%s': %s", __func__,
-           driver_index_driver_->libname.data(), device_->name().data(),
-           zx_status_get_string(status));
+           driver_index_driver_.name(), device_->name().data(), zx_status_get_string(status));
     }
     return status;
   }

@@ -710,7 +710,13 @@ zx_status_t Coordinator::PrepareNewProxy(const fbl::RefPtr<Device>& dev,
   return ZX_OK;
 }
 
-zx_status_t Coordinator::AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev) {
+zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
+                                     const fbl::RefPtr<Device>& dev) {
+  if (!matched_driver.is_v1()) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  auto drv = matched_driver.v1();
   if (!driver_host_is_asan() && drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) {
     LOGF(ERROR, "%s (%s) requires ASAN, but we are not in an ASAN environment", drv->libname.data(),
          drv->name.data());

@@ -396,31 +396,37 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
       continue;
     }
 
-    if (!fidl_driver_info->has_driver_url()) {
-      LOGF(ERROR, "DriverIndex: MatchDriversV1 response is missing a driver_url");
-      continue;
-    }
-
     if (!fidl_driver_info->has_is_fallback()) {
       LOGF(ERROR, "DriverIndex: MatchDriversV1 response is missing is_fallback");
       continue;
     }
 
-    auto loaded_driver = LoadDriverUrl(fidl_driver_info.value());
-    if (!loaded_driver) {
+    MatchedDriverInfo matched_driver_info = {};
+    if (fidl_driver_info->has_colocate()) {
+      matched_driver_info.colocate = fidl_driver_info->colocate();
+    }
+
+    // If we have a driver_url we are a DFv1 driver. Otherwise are are DFv2.
+    if (fidl_driver_info->has_driver_url()) {
+      auto loaded_driver = LoadDriverUrl(fidl_driver_info.value());
+      if (!loaded_driver) {
+        continue;
+      }
+      matched_driver_info.driver = loaded_driver;
+    } else if (fidl_driver_info->has_url()) {
+      matched_driver_info.driver = Dfv2Driver{
+          .url = std::string(fidl_driver_info->url().get()),
+          .package_type = fidl_driver_info->package_type(),
+      };
+    } else {
+      LOGF(ERROR, "DriverIndex: MatchDriversV1 response is missing url");
       continue;
     }
 
-    std::string driver_url(fidl_driver_info->driver_url().get());
+    auto driver_url = std::string(matched_driver_info.name());
     if (!fidl_driver_info->is_fallback() && config.only_return_base_and_fallback_drivers &&
         IsFuchsiaBootScheme(driver_url)) {
       continue;
-    }
-
-    MatchedDriverInfo matched_driver_info = {};
-    matched_driver_info.driver = loaded_driver;
-    if (fidl_driver_info->has_colocate()) {
-      matched_driver_info.colocate = fidl_driver_info->colocate();
     }
 
     MatchedDriver matched_driver;

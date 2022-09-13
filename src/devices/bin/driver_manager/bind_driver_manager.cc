@@ -37,7 +37,7 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
     return ZX_ERR_INTERNAL;
   }
   auto driver_info = std::get<MatchedDriverInfo>(driver);
-  zx_status_t status = attempt_bind_(driver_info.driver, dev);
+  zx_status_t status = attempt_bind_(driver_info, dev);
 
   // If we get this here it means we've successfully bound one driver
   // and the device isn't multi-bind.
@@ -46,10 +46,9 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
   }
 
   if (status != ZX_OK) {
-    LOGF(ERROR, "Failed to bind driver '%.*s' to device '%.*s': %s",
-         static_cast<uint32_t>(driver_info.driver->libname.size()),
-         driver_info.driver->libname.data(), static_cast<uint32_t>(dev->name().size()),
-         dev->name().data(), zx_status_get_string(status));
+    LOGF(ERROR, "Failed to bind driver '%s' to device '%.*s': %s", driver_info.name(),
+         static_cast<uint32_t>(dev->name().size()), dev->name().data(),
+         zx_status_get_string(status));
   }
   return status;
 }
@@ -285,7 +284,7 @@ zx_status_t BindDriverManager::BindDriverToFragment(const MatchedCompositeDriver
                                                     const fbl::RefPtr<Device>& dev) {
   // Check if the driver already exists in |driver_index_composite_devices_|. If
   // it doesn't, create and add a new CompositeDevice.
-  std::string name(driver.driver_info.driver->libname.c_str());
+  auto name = std::string(driver.driver_info.name());
   if (driver_index_composite_devices_.count(name) == 0) {
     driver_index_composite_devices_[name] = CompositeDevice::CreateFromDriverIndex(driver);
   }

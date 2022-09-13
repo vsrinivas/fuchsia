@@ -208,7 +208,7 @@ class Coordinator : public CompositeManagerBridge,
   // Callback function to attempt binding a driver to the device.
   // TODO(fxb/90932): Remove this callback, as it makes things more complex and is only useful
   // for testing.
-  zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
+  zx_status_t AttemptBind(const MatchedDriverInfo matched_driver, const fbl::RefPtr<Device>& dev);
 
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }

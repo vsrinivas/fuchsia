@@ -176,7 +176,7 @@ class CompositeDevice : public fbl::DoublyLinkedListable<std::unique_ptr<Composi
 
   // Driver index variables. |driver_index_driver_| is set by CreateFromDriverIndex().
   const bool from_driver_index_;
-  const Driver* driver_index_driver_;
+  MatchedDriverInfo driver_index_driver_;
 
   FragmentList unbound_fragments_;
   FragmentList bound_fragments_;
