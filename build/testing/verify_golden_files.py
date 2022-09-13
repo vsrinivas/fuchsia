@@ -14,25 +14,25 @@ import sys
 
 
 def print_failure_msg(golden, candidate, label):
-    # Use abspath in cp command so it works regardless of the candidate working
-    # directory.
-    candidate = os.path.abspath(candidate)
-    golden = os.path.abspath(golden)
     print(
         f"""
-Please acknowledge this change by updating the golden.
-You can run this command:
+Please acknowledge this change by updating the golden as follows:
 ```
-cp {candidate} \\
+fx build {candidate} &&
+fx run-in-build-dir cp \\
+    {candidate} \\
     {golden}
 ```
 Or you can rebuild with `bless_goldens=true` in your GN args and {label} in your build graph.
+
 """)
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--label', help='GN label for this test', required=True)
+    parser.add_argument(
+        '--source-root', help='Path to the Fuchsia source root', required=True)
     parser.add_argument(
         '--comparisons',
         metavar='FILE',
@@ -81,7 +81,11 @@ def main():
         if current_comparison_failed:
             any_comparison_failed = True
             type = 'Warning' if args.warn or args.bless else 'Error'
-            print('%s: Golden file mismatch' % type)
+            # Print the source-relative golden so that it can be conveniently
+            # navigated to (e.g., in an IDE).
+            src_rel_golden = os.path.relpath(
+                os.path.join(os.getcwd(), golden), args.source_root)
+            print(f'{type}: Golden file mismatch: {src_rel_golden}')
 
             if args.bless:
                 os.makedirs(os.path.dirname(golden), exist_ok=True)

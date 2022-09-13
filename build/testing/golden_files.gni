@@ -240,6 +240,8 @@ template("golden_files") {
       rebase_path(comparison_json, root_build_dir),
       "--label",
       get_label_info(":${target_name}", "label_no_toolchain"),
+      "--source-root",
+      rebase_path("//", root_build_dir),
     ]
 
     if (bless_goldens) {
