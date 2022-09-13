@@ -454,6 +454,7 @@ fn compute_budget_results(
                 merkle: blob.hash,
                 used_space_in_blobfs: count.size,
                 share_count: count.share_count,
+                absolute_share_count: count.share_count,
                 path_in_package: "".to_string(),
             });
         }
@@ -1118,6 +1119,7 @@ mod tests {
                             "path_in_package": "",
                             "used_space_in_blobfs": 159,
                             "share_count": 3,
+                            "absolute_share_count": 3,
                         }
                       ]
                     },
@@ -1131,6 +1133,7 @@ mod tests {
                             "path_in_package": "",
                             "used_space_in_blobfs": 159,
                             "share_count": 3,
+                            "absolute_share_count": 3,
                         }
                       ]
                     }
@@ -1152,6 +1155,7 @@ mod tests {
                             "path_in_package": "",
                             "used_space_in_blobfs": 159,
                             "share_count": 3,
+                            "absolute_share_count": 3,
                         }
                       ]
                     }
@@ -1478,6 +1482,7 @@ mod tests {
                                     merkle: blob2_hash.clone(),
                                     used_space_in_blobfs: 50,
                                     share_count: 2,
+                                    absolute_share_count: 2,
                                     path_in_package: "".to_string(),
                                 },
                                 PackageBlobSizeInfo {
@@ -1485,6 +1490,7 @@ mod tests {
                                     path_in_package: "".to_string(),
                                     used_space_in_blobfs: 90,
                                     share_count: 2,
+                                    absolute_share_count: 2,
                                 },
                             ],
                         },
@@ -1500,6 +1506,7 @@ mod tests {
                                 path_in_package: "".to_string(),
                                 used_space_in_blobfs: 90,
                                 share_count: 2,
+                                absolute_share_count: 2,
                             }],
                         },
                     ),
@@ -1521,6 +1528,7 @@ mod tests {
                             path_in_package: "".to_string(),
                             used_space_in_blobfs: 50,
                             share_count: 2,
+                            absolute_share_count: 2,
                         }],
                     },
                 )]),

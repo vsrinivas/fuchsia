@@ -24,8 +24,10 @@ pub struct PackageBlobSizeInfo {
     pub path_in_package: String,
     /// Space used by this blob in blobfs
     pub used_space_in_blobfs: u64,
-    /// Number of occurrences of the blob across all packages.
+    /// Number of packages that contain this blob.
     pub share_count: u64,
+    /// Count of all occurrences of the blob within and across all packages.
+    pub absolute_share_count: u64,
 }
 
 pub struct PackageSizeInfos<'a>(pub &'a Vec<PackageSizeInfo>);
