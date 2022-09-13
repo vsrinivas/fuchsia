@@ -185,18 +185,42 @@ type FileSummary struct {
 	// Name is the extension-less basename of the file.
 	Name string
 
-	// Deps records the (extension-less) file names that this file depends on;
-	// we say a file "depends" on another if the former has a declaration that
-	// depends on a declaration in the latter.
-	Deps map[string]struct{}
-
-	// TypeKinds gives the kinds of types contained in this file's declarations.
-	// This is useful for knowing the precise set of imports to make in the
-	// code generated from this file.
-	TypeKinds map[TypeKind]struct{}
-
 	// The contained declarations.
 	Decls []DeclWrapper
+
+	// See Deps().
+	deps map[string]struct{}
+
+	// See TypeKinds().
+	typeKinds map[TypeKind]struct{}
+}
+
+// Deps records the (extension-less) file names that this file depends on; we
+// say a file "depends" on another if the former has a declaration that depends
+// on a declaration in the latter.
+func (summary FileSummary) Deps() []string {
+	var deps []string
+	for dep := range summary.deps {
+		deps = append(deps, dep)
+	}
+	// Sort to account for map access nondeterminism.
+	sort.Strings(deps)
+	return deps
+}
+
+// TypeKinds gives the kinds of types contained in this file's declarations.
+// This is useful for knowing the precise set of imports to make in the code
+// generated from this file.
+func (summary FileSummary) TypeKinds() []TypeKind {
+	var kinds []TypeKind
+	for kind := range summary.typeKinds {
+		kinds = append(kinds, kind)
+	}
+	// Sort to account for map access nondeterminism.
+	sort.Slice(kinds, func(i, j int) bool {
+		return strings.Compare(string(kinds[i]), string(kinds[j])) < 0
+	})
+	return kinds
 }
 
 type declMap map[string]Decl
@@ -233,8 +257,8 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 			file = &FileSummary{
 				Library:   libName,
 				Name:      name,
-				Deps:      make(map[string]struct{}),
-				TypeKinds: make(map[TypeKind]struct{}),
+				deps:      make(map[string]struct{}),
+				typeKinds: make(map[TypeKind]struct{}),
 			}
 			filesByName[name] = file
 		}
@@ -280,7 +304,7 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 		file := getFile(fidlDecl.GetLocation())
 		file.Decls = append(file.Decls, DeclWrapper{decl})
 		for kind := range typeKinds {
-			file.TypeKinds[kind] = struct{}{}
+			file.typeKinds[kind] = struct{}{}
 		}
 
 		// Now go back and record the dependents' dependency on this declaration.
@@ -291,7 +315,7 @@ func Summarize(ir fidlgen.Root, order DeclOrder) ([]FileSummary, error) {
 		for _, dependent := range dependents {
 			dependentFile := getFile(dependent.GetLocation())
 			if dependentFile.Name != file.Name {
-				dependentFile.Deps[file.Name] = struct{}{}
+				dependentFile.deps[file.Name] = struct{}{}
 			}
 		}
 

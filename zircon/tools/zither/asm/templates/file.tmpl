@@ -17,7 +17,7 @@
     that does not yet exist in order to restrict what sort of FIDL gets
     processed by zither.
 */}}
-{{ range $name, $unused := .Deps }}
+{{ range $name := .Deps }}
 #include "{{ $name }}.h"
 {{ end }}
 

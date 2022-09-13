@@ -116,7 +116,7 @@ func HeaderGuard(summary zither.FileSummary) string {
 // StandardIncludes gives the list of language standard headers used by a file.
 func StandardIncludes(summary zither.FileSummary) []string {
 	var includes []string
-	for kind := range summary.TypeKinds {
+	for _, kind := range summary.TypeKinds() {
 		switch kind {
 		case zither.TypeKindInteger:
 			includes = append(includes, "stdint.h")
