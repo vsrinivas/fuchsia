@@ -24,5 +24,11 @@
             rights: [ "rw*" ],
             path: "/dev/class/media-codec",
         },
+        {
+            directory: "dev-gpu",
+            from: "parent",
+            rights: [ "rw*" ],
+            path: "/dev/class/gpu",
+        },
     ],
 }

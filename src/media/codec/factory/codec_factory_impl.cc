@@ -36,7 +36,6 @@ const std::string kIsolateRelativeUrlFfmpeg = "#meta/codec_runner_sw_ffmpeg.cm";
 
 struct EncoderSupportSpec {
   std::string isolate_url;
-  std::string isolate_url_v2;
   std::vector<std::string> mime_types;
   std::function<bool(const fuchsia::media::EncoderSettings&)> supports_settings;
   bool supports_mime_type(const std::string& mime_type) const {
@@ -49,14 +48,14 @@ struct EncoderSupportSpec {
 };
 
 const EncoderSupportSpec kSbcEncoderSupportSpec = {
-    .isolate_url_v2 = kIsolateRelativeUrlSbc,
+    .isolate_url = kIsolateRelativeUrlSbc,
     .mime_types = {"audio/pcm"},
     .supports_settings =
         [](const fuchsia::media::EncoderSettings& settings) { return settings.is_sbc(); },
 };
 
 const EncoderSupportSpec kAacEncoderSupportSpec = {
-    .isolate_url_v2 = kIsolateRelativeUrlAac,
+    .isolate_url = kIsolateRelativeUrlAac,
     .mime_types = {"audio/pcm"},
     .supports_settings =
         [](const fuchsia::media::EncoderSettings& settings) { return settings.is_aac(); },
@@ -66,7 +65,6 @@ const EncoderSupportSpec supported_encoders[] = {kSbcEncoderSupportSpec, kAacEnc
 
 struct DecoderSupportSpec {
   std::string isolate_url;
-  std::string isolate_url_v2;
   std::vector<std::string> mime_types;
   bool supports(const std::string& mime_type) const {
     return std::find(mime_types.begin(), mime_types.end(), mime_type) != mime_types.end();
@@ -74,20 +72,19 @@ struct DecoderSupportSpec {
 };
 
 const DecoderSupportSpec kFfmpegSupportSpec = {
-    .isolate_url_v2 = kIsolateRelativeUrlFfmpeg,
+    .isolate_url = kIsolateRelativeUrlFfmpeg,
     .mime_types = {"video/h264"},
 };
 
 const DecoderSupportSpec kSbcDecoderSuportSpec = {
-    .isolate_url_v2 = kIsolateRelativeUrlSbc,
+    .isolate_url = kIsolateRelativeUrlSbc,
     .mime_types = {"audio/sbc"},
 };
 
 const DecoderSupportSpec supported_decoders[] = {kFfmpegSupportSpec, kSbcDecoderSuportSpec};
 
 std::optional<std::string> FindEncoder(const std::string& mime_type,
-                                       const fuchsia::media::EncoderSettings& settings,
-                                       bool is_v2) {
+                                       const fuchsia::media::EncoderSettings& settings) {
   auto encoder = std::find_if(std::begin(supported_encoders), std::end(supported_encoders),
                               [&mime_type, &settings](const EncoderSupportSpec& encoder) {
                                 return encoder.supports(mime_type, settings);
@@ -97,10 +94,10 @@ std::optional<std::string> FindEncoder(const std::string& mime_type,
     return std::nullopt;
   }
 
-  return {is_v2 ? encoder->isolate_url_v2 : encoder->isolate_url};
+  return encoder->isolate_url;
 }
 
-std::optional<std::string> FindDecoder(const std::string& mime_type, bool is_v2) {
+std::optional<std::string> FindDecoder(const std::string& mime_type) {
   auto decoder = std::find_if(
       std::begin(supported_decoders), std::end(supported_decoders),
       [&mime_type](const DecoderSupportSpec& decoder) { return decoder.supports(mime_type); });
@@ -109,7 +106,7 @@ std::optional<std::string> FindDecoder(const std::string& mime_type, bool is_v2)
     return std::nullopt;
   }
 
-  return {is_v2 ? decoder->isolate_url_v2 : decoder->isolate_url};
+  return decoder->isolate_url;
 }
 
 }  // namespace
@@ -120,7 +117,7 @@ std::optional<std::string> FindDecoder(const std::string& mime_type, bool is_v2)
 // with a more general-purpose request spam mitigation mechanism.
 void CodecFactoryImpl::CreateSelfOwned(
     CodecFactoryApp* app, sys::ComponentContext* component_context,
-    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request, bool is_v2) {
+    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request) {
   // I considered just doing "new CodecFactoryImpl(...)" here and declaring that
   // it always inherently owns itself (and implementing it that way), but that
   // seems less flexible for testing purposes and also not necessarily as safe
@@ -130,7 +127,7 @@ void CodecFactoryImpl::CreateSelfOwned(
   // As usual, can't use std::make_unique<> here since making it a friend would
   // break the point of making the constructor private.
   std::shared_ptr<CodecFactoryImpl> self(
-      new CodecFactoryImpl(app, component_context, std::move(request), is_v2));
+      new CodecFactoryImpl(app, component_context, std::move(request)));
   auto* self_ptr = self.get();
   self_ptr->OwnSelf(std::move(self));
   assert(!self);
@@ -140,11 +137,10 @@ void CodecFactoryImpl::OwnSelf(std::shared_ptr<CodecFactoryImpl> self) { self_ =
 
 CodecFactoryImpl::CodecFactoryImpl(
     CodecFactoryApp* app, sys::ComponentContext* component_context,
-    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request, bool is_v2)
+    fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory> request)
     : app_(app),
       component_context_(component_context),
-      binding_(this, std::move(request), app_->dispatcher()),
-      is_v2_(is_v2) {
+      binding_(this, std::move(request), app_->dispatcher()) {
   binding_.set_error_handler([this](zx_status_t status) { self_.reset(); });
 
   // The app already has all hardware codecs loaded by the time we get to talk
@@ -221,7 +217,7 @@ void CodecFactoryImpl::CreateDecoder(
 
   auto maybe_decoder_isolate_url = hw_isolate;
   if (!maybe_decoder_isolate_url)
-    maybe_decoder_isolate_url = FindDecoder(params.input_details().mime_type(), is_v2_);
+    maybe_decoder_isolate_url = FindDecoder(params.input_details().mime_type());
 
   if (!maybe_decoder_isolate_url) {
     FX_LOGS(WARNING) << "No decoder supports " << params.input_details().mime_type();
@@ -231,7 +227,7 @@ void CodecFactoryImpl::CreateDecoder(
   FX_LOGS(INFO) << "CreateDecoder() found SW decoder for: " << params.input_details().mime_type();
 
   ForwardToIsolate(
-      *maybe_decoder_isolate_url, is_v2_, isolate_type, component_context_,
+      *maybe_decoder_isolate_url, isolate_type, component_context_,
       [self = self_, params = std::move(params), decoder = std::move(decoder)](
           fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
         // Forward the request to the factory_delegate_ as-is. This
@@ -307,9 +303,8 @@ void CodecFactoryImpl::CreateEncoder(
 
   auto maybe_encoder_isolate_url = hw_isolate;
   if (!maybe_encoder_isolate_url) {
-    maybe_encoder_isolate_url =
-        FindEncoder(encoder_params.input_details().mime_type(),
-                    encoder_params.input_details().encoder_settings(), is_v2_);
+    maybe_encoder_isolate_url = FindEncoder(encoder_params.input_details().mime_type(),
+                                            encoder_params.input_details().encoder_settings());
   }
 
   if (!maybe_encoder_isolate_url) {
@@ -319,7 +314,7 @@ void CodecFactoryImpl::CreateEncoder(
   }
 
   ForwardToIsolate(
-      *maybe_encoder_isolate_url, is_v2_, isolate_type, component_context_,
+      *maybe_encoder_isolate_url, isolate_type, component_context_,
       [self = self_, encoder_params = std::move(encoder_params),
        encoder_request = std::move(encoder_request)](
           fuchsia::mediacodec::CodecFactoryPtr factory_delegate) mutable {
