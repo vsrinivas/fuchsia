@@ -13,6 +13,7 @@
 
 
 These are the explicitly grouped defines.
+
 ## UNGROUPED_ONE macro {:#UNGROUPED_ONE}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#13)
@@ -22,6 +23,7 @@ These are the explicitly grouped defines.
 </pre>
 
 Not grouped defines.
+
 ## UNGROUPED_TWO macro {:#UNGROUPED_TWO}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#14)
@@ -29,6 +31,7 @@ Not grouped defines.
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">#define</span> <span class="lit">UNGROUPED_TWO</span> 2
 </pre>
+
 
 ## MyClass Class {:#MyClass}
 
@@ -56,7 +59,7 @@ MyClass::<b>MyClass</b>(<span class="typ">int</span> a,
 This constructor will go in a separate section due to this separate documentation.
 
 
-### Iterator functions {:#begin}
+### Iterator functions {:#MyClass::begin}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> MyClass::<b>begin</b>();
@@ -67,7 +70,7 @@ This constructor will go in a separate section due to this separate documentatio
 These functions are explicitly grouped.
 
 
-### MyClass::size() {:#size}
+### MyClass::size() {:#MyClass::size}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int &amp;</span> MyClass::<b>size</b>();
@@ -87,6 +90,7 @@ These functions are explicitly grouped.
 These functions have no naming similarities but since there is no blank line nor comment between
 them, and there is a single comment beginning with a heading, they go into their own section.
 
+
 ## GroupedImplicitly(…) {:#GroupedImplicitly}
 
 <pre class="devsite-disable-click-to-copy">
@@ -96,6 +100,7 @@ them, and there is a single comment beginning with a heading, they go into their
 
 These two are grouped because the name is the same, even though there is no explicit heading.
 
+
 ## UngroupedOne() {:#UngroupedOne}
 
 <pre class="devsite-disable-click-to-copy">
@@ -104,9 +109,11 @@ These two are grouped because the name is the same, even though there is no expl
 
 These two are not grouped because there's no heading and the names are not the same.
 
+
 ## UngroupedTwo() {:#UngroupedTwo}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> <b>UngroupedTwo</b>();
 </pre>
+
 

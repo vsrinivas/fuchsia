@@ -14,19 +14,20 @@ import (
 
 // Represents everything declared in this header.
 type Header struct {
-	Name      string
+	Name string
+
 	Functions []*clangdoc.FunctionInfo
+	Records   []*clangdoc.RecordInfo
+	Enums     []*clangdoc.EnumInfo
+
+	// These are extracted from the header source code.
+	Description []clangdoc.CommentInfo // Header-wide docstring.
+	Defines     []*Define
+	LineClasses []LineClass
 
 	// Functions and defines with grouping rules applied.
 	FunctionGroups []*FunctionGroup
 	DefineGroups   []*DefineGroup
-
-	Records []*clangdoc.RecordInfo
-
-	// These two are extracted from the header source code.
-	Description []clangdoc.CommentInfo // Header-wide docstring.
-	Defines     []*Define
-	LineClasses []LineClass
 }
 
 // Returns the file name relative to the generated docs root directory containing the reference for
@@ -69,7 +70,12 @@ func WriteHeaderReference(settings WriteSettings, index *Index, h *Header, f io.
 		writeDefineGroupSection(settings, index, d, f)
 	}
 
-	// TODO other types and enums.
+	// Enums.
+	for _, e := range h.Enums {
+		writeEnumSection(settings, index, e, f)
+	}
+
+	// TODO typedefs, usings.
 
 	// Structs and classes.
 	sort.Sort(recordByName(h.Records))

@@ -37,7 +37,7 @@ type Index struct {
 	// All nonmember functions/records in all non-anonymous namespaces, indexed by the USR.
 	Functions map[string]*clangdoc.FunctionInfo
 
-	// Records indexed by the USR.
+	// Records (classes, structs, and unions), indexed by the USR.
 	Records map[string]*clangdoc.RecordInfo
 
 	// All unique header files in this library indexed by their file name.
@@ -45,6 +45,9 @@ type Index struct {
 
 	// All unique preprocessor defines in this library indexed by their name.
 	Defines map[string]*Define
+
+	// All enums.
+	Enums map[string]*clangdoc.EnumInfo
 }
 
 // Returns a sorted list of all functions.
@@ -113,6 +116,19 @@ func (f functionGroupByTitle) Less(i, j int) bool {
 	return getName(f[i]) < getName(f[j])
 }
 
+// Interface for sorting an enum list by name.
+type enumByName []*clangdoc.EnumInfo
+
+func (f enumByName) Len() int {
+	return len(f)
+}
+func (f enumByName) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+func (f enumByName) Less(i, j int) bool {
+	return f[i].Name < f[j].Name
+}
+
 type DefineGroup struct {
 	// Nonempty when an explicit title is given. Empty means just use the first name.
 	ExplicitTitle string
@@ -164,6 +180,15 @@ func indexRecord(settings IndexSettings, index *Index, r *clangdoc.RecordInfo) {
 	}
 }
 
+func indexEnum(settings IndexSettings, index *Index, e *clangdoc.EnumInfo) {
+	if settings.ShouldIndexInHeader(e.DefLocation.Filename) {
+		index.Enums[e.Name] = e
+
+		header := index.HeaderForFileName(e.DefLocation.Filename)
+		header.Enums = append(header.Enums, e)
+	}
+}
+
 func indexNamespace(settings IndexSettings, index *Index, r *clangdoc.NamespaceInfo) {
 	for _, f := range r.ChildFunctions {
 		indexFunction(settings, index, f)
@@ -174,8 +199,9 @@ func indexNamespace(settings IndexSettings, index *Index, r *clangdoc.NamespaceI
 	for _, r := range r.ChildRecords {
 		indexRecord(settings, index, r)
 	}
-
-	// TODO enums
+	for _, e := range r.ChildEnums {
+		indexEnum(settings, index, e)
+	}
 }
 
 // Returns true if the two locations have a comment or a blank line separating them.
@@ -192,7 +218,7 @@ func (h *Header) hasSeparatorsBetweenLocations(a clangdoc.Location, b clangdoc.L
 
 	for line := a.LineNumber + 1; line < b.LineNumber; line++ {
 		// The array is 0-indexed while |line| is 1-indexed.
-		if h.LineClasses[line-1] == Blank || h.LineClasses[line-1] == Comment {
+		if h.LineClasses[line-1] == LineClassBlank || h.LineClasses[line-1] == LineClassComment {
 			return true
 		}
 	}
@@ -297,6 +323,7 @@ func makeEmptyIndex() Index {
 	index.Records = make(map[string]*clangdoc.RecordInfo)
 	index.Headers = make(map[string]*Header)
 	index.Defines = make(map[string]*Define)
+	index.Enums = make(map[string]*clangdoc.EnumInfo)
 	return index
 }
 

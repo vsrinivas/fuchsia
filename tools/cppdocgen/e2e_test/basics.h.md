@@ -17,6 +17,7 @@ This test file contains the basics of the document generator.
 </pre>
 
 Documentation for the API flag.
+
 ## API_FLAG_2 macro {:#API_FLAG_2}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#18)
@@ -24,6 +25,37 @@ Documentation for the API flag.
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">#define</span> <span class="lit">API_FLAG_2</span> 2
 </pre>
+
+
+## MySimpleEnum Enum {:#MySimpleEnum}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#38)
+
+<pre class="devsite-disable-click-to-copy">
+<span class="kwd">enum </span> <span class="typ">MySimpleEnum</span> {
+  kValue1,
+  kValue2,
+};
+</pre>
+
+Here is a regular enum with everything implicit.
+
+
+## A very complex enum. {:#MyFancyEnum}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#47)
+
+<pre class="devsite-disable-click-to-copy">
+<span class="kwd">enum class</span> <span class="typ">MyFancyEnum</span> {
+  kValue1,
+  kValue2,
+};
+</pre>
+
+
+This is a C++ enum class with an explicit type and explicit values. It also has an explicit
+title for the docstring.
+
 
 ## SimpleTestStructure Struct {:#SimpleTestStructure}
 
@@ -48,4 +80,27 @@ Some end-of-line documentation.
 ### c
 
 Some documentation for the `b` member of the `SimpleTestStructure`.
+
+## StandaloneUnion Union {:#StandaloneUnion}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#32)
+
+<pre class="devsite-disable-click-to-copy">
+<span class="kwd">union</span> <span class="typ">StandaloneUnion</span> {
+    <span class="typ">int</span> i;
+    <span class="typ">double</span> d;
+};
+</pre>
+
+## UnnamedStructTypedef Struct {:#UnnamedStructTypedef}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#59)
+
+<pre class="devsite-disable-click-to-copy">
+<span class="kwd">struct</span> <span class="typ">UnnamedStructTypedef</span> {
+    <span class="typ">int</span> a;
+};
+</pre>
+
+This tests the C-style thing of defining an unnamed struct and a typedef for it at the same time.
 

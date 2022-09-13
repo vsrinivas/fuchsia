@@ -107,32 +107,32 @@ int GetThing();
 
 	// Corresponds to the classification of each line in the code block above.
 	expectedClasses := [...]LineClass{
-		Comment,
-		Comment,
-		Blank,
-		Preproc,
-		Preproc,
-		Blank,
-		Comment,
-		Comment,
-		Comment,
-		Blank,
-		Comment,
-		Blank,
-		Comment,
-		Comment,
-		Comment,
-		Preproc,
-		Blank,
-		Comment,
-		Preproc,
-		Code, // This should be preproc but we don't handle multiline defines yet.
-		Code, // This should be preproc but we don't handle multiline defines yet.
-		Blank,
-		Code,
-		Blank,
-		Preproc,
-		Blank}
+		LineClassComment,
+		LineClassComment,
+		LineClassBlank,
+		LineClassPreproc,
+		LineClassPreproc,
+		LineClassBlank,
+		LineClassComment,
+		LineClassComment,
+		LineClassComment,
+		LineClassBlank,
+		LineClassComment,
+		LineClassBlank,
+		LineClassComment,
+		LineClassComment,
+		LineClassComment,
+		LineClassPreproc,
+		LineClassBlank,
+		LineClassComment,
+		LineClassPreproc,
+		LineClassCode, // This should be preproc but we don't handle multiline defines yet.
+		LineClassCode, // This should be preproc but we don't handle multiline defines yet.
+		LineClassBlank,
+		LineClassCode,
+		LineClassBlank,
+		LineClassPreproc,
+		LineClassBlank}
 
 	if len(expectedClasses) != len(vals.Classes) {
 		t.Errorf("Expecting %d lines of header line classes, got %d\n",

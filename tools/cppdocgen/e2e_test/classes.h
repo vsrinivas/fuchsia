@@ -14,6 +14,15 @@ class SimpleTestClass {
 
   int value() const { return value_; }
 
+  enum EnumInsideClass { kValue1, kValue2 };
+
+  struct StructInsideClass {
+    int a;
+  };
+
+  typedef StructInsideClass StructInsideClassTypedef;
+  using StructInsideClassUsing = StructInsideClass;
+
   // Some documentation for the public value.
   //
   // This violates the style guide but should still work.

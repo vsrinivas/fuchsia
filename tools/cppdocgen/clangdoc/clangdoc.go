@@ -163,8 +163,13 @@ type Reference struct {
 }
 
 type EnumInfo struct {
-	Scoped  bool     `yaml:"Scoped"` // True for an enum class.
-	Members []string `yaml:"Members"`
+	USR         string        `yaml:"USR"`
+	Name        string        `yaml:"Name"`
+	Namespace   []Reference   `yaml:"Namespace"`
+	DefLocation Location      `yaml:"DefLocation"`
+	Description []CommentInfo `yaml:"Description"`
+	Scoped      bool          `yaml:"Scoped"` // True for an enum class.
+	Members     []string      `yaml:"Members"`
 }
 
 type RecordInfo struct {
@@ -236,7 +241,7 @@ type NamespaceInfo struct {
 	ChildRecords       []*RecordInfo
 
 	ChildFunctions []*FunctionInfo `yaml:"ChildFunctions"`
-	ChildEnums     []*EnumInfo     `yaml:"EnumInfo"`
+	ChildEnums     []*EnumInfo     `yaml:"ChildEnums"`
 }
 
 // Abstracts how to read files from the input.

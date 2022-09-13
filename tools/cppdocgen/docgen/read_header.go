@@ -16,10 +16,10 @@ import (
 type LineClass int
 
 const (
-	Blank LineClass = iota
-	Comment
-	Preproc
-	Code
+	LineClassBlank LineClass = iota
+	LineClassComment
+	LineClassPreproc
+	LineClassCode
 )
 
 type Define struct {
@@ -206,7 +206,7 @@ func ParseHeader(h string, filename string) (vals HeaderValues) {
 			// Accumulate the current comment line.
 			commentsAreDocstring = isDocstring
 			comments = append(comments, contents)
-			vals.Classes[i] = Comment
+			vals.Classes[i] = LineClassComment
 			continue
 		}
 
@@ -215,13 +215,13 @@ func ParseHeader(h string, filename string) (vals HeaderValues) {
 			loc := clangdoc.Location{LineNumber: i + 1, Filename: filename}
 			parsePreprocContents(contents, comments, loc, &vals)
 			comments = comments[0:0]
-			vals.Classes[i] = Preproc
+			vals.Classes[i] = LineClassPreproc
 			continue
 		}
 
 		// Hit a non-comment line we don't care about, reset the comment state.
 		comments = comments[0:0]
-		vals.Classes[i] = Code
+		vals.Classes[i] = LineClassCode
 		hasNonPreprocLine = true
 	}
 	return

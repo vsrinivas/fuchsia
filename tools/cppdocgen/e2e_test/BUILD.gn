@@ -12,6 +12,7 @@ cpp_docgen("docgen_e2e_docs") {
     "basics.h",
     "classes.h",
     "grouping.h",
+    "namespace.h",
   ]
 
   include_dir = ".."
@@ -45,6 +46,10 @@ golden_files("e2e_test") {
     {
       golden = "index.md"
       candidate = "$generated_doc_dir/index.md"
+    },
+    {
+      golden = "namespace.h.md"
+      candidate = "$generated_doc_dir/namespace.h.md"
     },
   ]
   deps = [ ":docgen_e2e_docs" ]

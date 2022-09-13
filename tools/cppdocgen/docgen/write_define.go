@@ -40,6 +40,7 @@ func writeDefineGroupSection(settings WriteSettings, index *Index, g *DefineGrou
 
 	writeDefineDeclarationBlock(g.Defines, f)
 	writeComment(g.Defines[0].Description, markdownHeading2, f)
+	fmt.Fprintf(f, "\n")
 }
 
 func defineHtmlId(d Define) string {

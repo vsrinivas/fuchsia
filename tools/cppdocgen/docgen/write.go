@@ -196,3 +196,56 @@ func getEscapedTypeName(t clangdoc.Type) (string, int) {
 		return escapeHtml(tn), len(tn)
 	}
 }
+
+// Given a list of namespace references (as on FunctionInfo.Namespace), returns the opening and
+// closing namespace declarations. This will be formatted such that the beginning and end can be
+// printed unconditionally around a declaration.
+//
+// If there is no namespace, this will return empty strings.
+//
+// For example, for one namespace
+//   - begin = "namespace my_namespace {\n\n"
+//   - end = "\n} // my_namespace\n"
+//
+// See also getNamespaceQualifier().
+func getNamespaceDecl(n []clangdoc.Reference) (begin, end string) {
+	for i := len(n) - 1; i >= 0; i-- {
+		ns := n[i]
+		if ns.Type == "Namespace" {
+			// Omit "GlobalNamespace". See docs on clangdoc.RecordInfo.Namespace.
+			if ns.Name != "GlobalNamespace" {
+				begin += fmt.Sprintf("<span class=\"kwd\">namespace</span> %s {\n", ns.Name)
+				end = fmt.Sprintf("}  <span class=\"com\">// namespace %s</span>\n", ns.Name) + end
+			}
+		}
+	}
+	if begin != "" {
+		// We generated something, separate it from the content with blank lines.
+		begin += "\n"
+		end = "\n" + end
+	}
+	return
+}
+
+// Given a list of namespace and nested class references (as on FunctionInfo.Namespace), returns the
+// name qualifier for things inside that namespace and class, so "my_namespace::MyClass::". If there
+// are no namespaces, this returns the empty string. It can be unconditionally prepended to names.
+//
+// includeNamespaces specifies whether namespace qualifications should be included. This would be
+// omitted if writing something already qualified with that namespace, as inside a block returned by
+// getNamespaceDecl().
+func getScopeQualifier(n []clangdoc.Reference, includeNamespaces bool) (result string) {
+	for i := len(n) - 1; i >= 0; i-- {
+		ns := n[i]
+		if ns.Type == "Namespace" {
+			// Omit "GlobalNamespace". See docs on clangdoc.RecordInfo.Namespace.
+			if includeNamespaces && ns.Name != "GlobalNamespace" {
+				result += ns.Name + "::"
+			}
+		} else {
+			// Class/struct qualification.
+			result += ns.Name + "::"
+		}
+	}
+	return
+}

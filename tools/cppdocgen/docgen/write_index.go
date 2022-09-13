@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"sort"
+	"strings"
 )
 
 // The functions are grouped and these groups can only have one anchor. So we need to
@@ -29,7 +30,23 @@ func (links indexLinkByName) Swap(i, j int) {
 	links[i], links[j] = links[j], links[i]
 }
 func (links indexLinkByName) Less(i, j int) bool {
-	return links[i].Name < links[j].Name
+	// This is used for the user-presented list of names and in this context most people
+	// expect case-insensitive sorting.
+	return strings.ToLower(links[i].Name) < strings.ToLower(links[j].Name)
+}
+
+func writeListOfLinks(links []indexLink, f io.Writer) {
+	sort.Sort(indexLinkByName(links))
+
+	for i, link := range links {
+		// Only print out the first names if there are multiples. This will happen
+		// for function overloads. Our link names can't currently differentiate these,
+		// so it's impossible to differentiate them here.
+		if i == 0 || links[i-1].Name != link.Name {
+			fmt.Fprintf(f, "  - [%s](%s)\n", link.Name, link.Link)
+		}
+	}
+	fmt.Fprintf(f, "\n")
 }
 
 func writeFunctionIndex(index *Index, f io.Writer) {
@@ -45,16 +62,7 @@ func writeFunctionIndex(index *Index, f io.Writer) {
 			}
 		}
 	}
-
-	sort.Sort(indexLinkByName(allFuncs))
-
-	for i, link := range allFuncs {
-		// Only print out the first function names if there are multiples.
-		if i == 0 || allFuncs[i-1].Name != link.Name {
-			fmt.Fprintf(f, "  - [%s](%s)\n", link.Name, link.Link)
-		}
-	}
-	fmt.Fprintf(f, "\n")
+	writeListOfLinks(allFuncs, f)
 }
 
 func writeDefineIndex(index *Index, f io.Writer) {
@@ -70,14 +78,17 @@ func writeDefineIndex(index *Index, f io.Writer) {
 			}
 		}
 	}
+	writeListOfLinks(allDefines, f)
+}
 
-	sort.Sort(indexLinkByName(allDefines))
+func writeEnumIndex(index *Index, f io.Writer) {
+	fmt.Fprintf(f, "## Enums\n\n")
 
-	for _, link := range allDefines {
-		fmt.Fprintf(f, "  - [%s](%s)\n", link.Name, link.Link)
+	allEnums := make([]indexLink, 0, len(index.Defines))
+	for _, e := range index.Enums {
+		allEnums = append(allEnums, indexLink{Name: enumFullName(e), Link: enumLink(e)})
 	}
-
-	fmt.Fprintf(f, "\n")
+	writeListOfLinks(allEnums, f)
 }
 
 func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
@@ -109,6 +120,10 @@ func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 
 	if len(index.Functions) > 0 {
 		writeFunctionIndex(index, f)
+	}
+
+	if len(index.Enums) > 0 {
+		writeEnumIndex(index, f)
 	}
 
 	if len(index.Defines) > 0 {

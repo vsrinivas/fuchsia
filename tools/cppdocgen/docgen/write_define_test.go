@@ -51,6 +51,7 @@ func TestWriteDefine(t *testing.T) {
 </pre>
 
 This is the documentation for the thing.
+
 `
 	if out.String() != expected {
 		t.Errorf("Got: %s\nExpected: %s\n", out.String(), expected)
@@ -70,6 +71,7 @@ This is the documentation for the thing.
 </pre>
 
 This is the documentation for the thing.
+
 `
 	if out.String() != expected {
 		t.Errorf("Got: %s\nExpected: %s\n", out.String(), expected)
@@ -89,6 +91,7 @@ This is the documentation for the thing.
 </pre>
 
 This is the documentation for the thing.
+
 `
 	if out.String() != expected {
 		t.Errorf("Got: %s\nExpected: %s\n", out.String(), expected)

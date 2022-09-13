@@ -83,6 +83,8 @@ func writeFunctionGroupBody(g *FunctionGroup, namePrefix string, includeReturnTy
 
 	// Any comment is on the first function in the group.
 	writeComment(g.Funcs[0].Description, markdownHeading2, f)
+
+	fmt.Fprintf(f, "\n")
 }
 
 func functionGroupHtmlId(g *FunctionGroup) string {
@@ -93,14 +95,15 @@ func functionGroupHtmlId(g *FunctionGroup) string {
 
 // Writes the reference section for a standalone function.
 func writeFunctionGroupSection(g *FunctionGroup, f io.Writer) {
-	if len(g.ExplicitTitle) != 0 {
+	if g.ExplicitTitle != "" {
 		fmt.Fprintf(f, "## %s {:#%s}\n\n", g.ExplicitTitle, functionGroupHtmlId(g))
 	} else {
-		fmt.Fprintf(f, "## %s%s {:#%s}\n\n", g.Funcs[0].Name, functionGroupEllipsesParens(g), functionGroupHtmlId(g))
+		fullName := functionFullName(g.Funcs[0])
+		fmt.Fprintf(f, "## %s%s {:#%s}\n\n", fullName, functionGroupEllipsesParens(g), functionGroupHtmlId(g))
 	}
 
 	// Include the qualified namespaces as a prefix.
-	writeFunctionGroupBody(g, functionScopePrefix(g.Funcs[0]), true, f)
+	writeFunctionGroupBody(g, getScopeQualifier(g.Funcs[0].Namespace, true), true, f)
 }
 
 // Interface for sorting a function list by function name.
@@ -133,33 +136,22 @@ func (f functionByLocation) Less(i, j int) bool {
 	return f[i].Location[0].LineNumber < f[j].Location[0].LineNumber
 }
 
-// Use for standalone functions. For member functions use memberFunctionHtmlId()
 func functionHtmlId(f *clangdoc.FunctionInfo) string {
-	// Just using the name won't technically be unique. There could be different functions with
-	// the same name in different namespaces. But since there can be overrides with name
-	// collisions anyway, we don't worry about that. Keeping this simple makes it easy to write
-	// links by hand if necessary.
-	return f.Name
+	// Use the fully-qualified function name. This can still produce collisions due to
+	// overloading but we don't have a way to differentiate this other than making all
+	// references by USR, which makes manual linking impossible.
+	return getScopeQualifier(f.Namespace, true) + f.Name
 }
 
 func functionLink(f *clangdoc.FunctionInfo) string {
 	return HeaderReferenceFile(f.Location[0].Filename) + "#" + functionHtmlId(f)
 }
+
 func functionGroupLink(g *FunctionGroup) string {
 	return HeaderReferenceFile(g.Funcs[0].Location[0].Filename) + "#" + functionGroupHtmlId(g)
 }
 
-func functionScopePrefix(f *clangdoc.FunctionInfo) string {
-	result := ""
-
-	// The order is in reverse of C++.
-	for i := len(f.Namespace) - 1; i >= 0; i-- {
-		result += f.Namespace[i].Name + "::"
-	}
-	return result
-}
-
 // Returns the fully-qualified name of a function.
 func functionFullName(f *clangdoc.FunctionInfo) string {
-	return functionScopePrefix(f) + f.Name
+	return getScopeQualifier(f.Namespace, true) + f.Name
 }

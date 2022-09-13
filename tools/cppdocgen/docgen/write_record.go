@@ -139,10 +139,9 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 	}
 
 	if len(groupedCtors) > 0 {
-		fmt.Fprintf(f, "### Constructor{:#%s}\n\n", memberFunctionHtmlId(r, ctors[0]))
+		fmt.Fprintf(f, "### Constructor{:#%s}\n\n", functionHtmlId(ctors[0]))
 		for _, g := range groupedCtors {
 			writeFunctionGroupBody(g, namePrefix, false, f)
-			fmt.Fprintf(f, "\n")
 		}
 	}
 
@@ -186,26 +185,12 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 			}
 
 			writeFunctionGroupBody(g, namePrefix, true, f)
-			fmt.Fprintf(f, "\n")
 		}
 	}
 }
 
 func recordFullName(r *clangdoc.RecordInfo) string {
-	if len(r.Namespace) == 1 && r.Namespace[0].Name == "GlobalNamespace" {
-		// Clang-doc generates "GlobalNamespace" annotations for records in the
-		// global namespace. See clangdoc.RecordInfo.Namespace.
-		//
-		// Ignore these annotations.
-		return r.Name
-	}
-
-	// The order is in reverse of C++.
-	result := ""
-	for i := len(r.Namespace) - 1; i >= 0; i-- {
-		result += r.Namespace[i].Name + "::"
-	}
-	return result + r.Name
+	return getScopeQualifier(r.Namespace, true) + r.Name
 }
 
 // Returns the empty string if the record does not have emitted documentation.
@@ -227,20 +212,13 @@ func recordLink(index *Index, r *clangdoc.RecordInfo) string {
 	return HeaderReferenceFile(fullRecord.DefLocation.Filename) + "#" + recordHtmlId(index, r)
 }
 
-// Use for standalone functions. For member functions use memberFunctionHtmlId()
-func memberFunctionHtmlId(r *clangdoc.RecordInfo, f *clangdoc.FunctionInfo) string {
-	// Need to fully qualify the function with the class for uniqueness even if the title
-	// doesn't have this information.
-	return recordFullName(r) + "::" + f.Name
-}
-
 // Returns the empty string if the record isn't documented.
 func memberFunctionLink(index *Index, r *clangdoc.RecordInfo, f *clangdoc.FunctionInfo) string {
 	fullRecord := index.Records[r.USR]
 	if fullRecord == nil {
 		return ""
 	}
-	return HeaderReferenceFile(fullRecord.DefLocation.Filename) + "#" + memberFunctionHtmlId(fullRecord, f)
+	return HeaderReferenceFile(fullRecord.DefLocation.Filename) + "#" + functionHtmlId(f)
 }
 
 func recordKind(r *clangdoc.RecordInfo) string {
@@ -259,27 +237,16 @@ func writeRecordDeclarationBlock(index *Index, r *clangdoc.RecordInfo, data []cl
 	writePreHeader(f)
 
 	// This includes any parent struct/class name but not namespaces.
-	var namePrefix string
+	nsBegin, nsEnd := getNamespaceDecl(r.Namespace)
+	fmt.Fprintf(f, "%s", nsBegin)
 
-	// Namespaces. The order is in reverse of C++ (most specific first).
-	var nsBegin, nsEnd string
-	for i := len(r.Namespace) - 1; i >= 0; i-- {
-		ns := r.Namespace[i]
-		if ns.Type == "Namespace" {
-			// Omit "GlobalNamespace". See docs on clangdoc.RecordInfo.Namespace.
-			if ns.Name != "GlobalNamespace" {
-				nsBegin += fmt.Sprintf("<span class=\"kwd\">namespace</span> %s {\n", ns.Name)
-				nsEnd = fmt.Sprintf("}  <span class=\"com\">// namespace %s</span>\n", ns.Name) + nsEnd
-			}
-		} else {
-			namePrefix += ns.Name + "::"
-		}
-	}
-	if len(nsBegin) > 0 {
-		fmt.Fprintf(f, "%s\n", nsBegin)
-	}
+	kind := recordKind(r)
+	scopeQualifier := getScopeQualifier(r.Namespace, false)
+	fmt.Fprintf(f, "<span class=\"kwd\">%s</span> <span class=\"typ\">%s%s</span>", kind, scopeQualifier, r.Name)
 
-	fmt.Fprintf(f, "<span class=\"kwd\">%s</span> <span class=\"typ\">%s%s</span>", recordKind(r), namePrefix, r.Name)
+	// Rendered character width of the class declaration. This is used to horizontally align the
+	// derived class references below.
+	declCharLen := len(kind) + 1 + len(scopeQualifier) + len(r.Name)
 
 	// Base and virtual base class records. The direct base classes are in Parents and
 	// VirtualParents but this does not have the access record on it (public/private/protected).
@@ -299,18 +266,19 @@ func writeRecordDeclarationBlock(index *Index, r *clangdoc.RecordInfo, data []cl
 			continue // Not a direct parent.
 		}
 
+		const derivedSeparator = " : "
 		if !emittedBase {
-			fmt.Fprintf(f, " :")
+			fmt.Fprintf(f, derivedSeparator)
 			emittedBase = true
 		} else {
-			fmt.Fprintf(f, ",")
+			fmt.Fprintf(f, ",\n%s", makeIndent(declCharLen+len(derivedSeparator)))
 		}
 
 		if len(b.Access) > 0 {
-			fmt.Fprintf(f, " <span class=\"kwd\">%s</span>", strings.ToLower(b.Access))
+			fmt.Fprintf(f, "<span class=\"kwd\">%s</span>", strings.ToLower(b.Access))
 		}
 		if b.IsVirtual {
-			fmt.Fprintf(f, " <span class=\"kwd\">virtual</span>")
+			fmt.Fprintf(f, "<span class=\"kwd\">virtual</span>")
 		}
 
 		baseType := clangdoc.Type{Name: b.Name, Path: b.Path}
@@ -332,6 +300,13 @@ func writeRecordDeclarationBlock(index *Index, r *clangdoc.RecordInfo, data []cl
 	} else {
 		// Output data members.
 		fmt.Fprintf(f, "\n")
+
+		// For classes, try to make clear that this only lists the public data.
+		if r.TagType == "Class" {
+			fmt.Fprintf(f, "  <span class=\"kwd\">public</span>:\n")
+			fmt.Fprintf(f, "    <span class=\"com\">// Public data members:</span>\n")
+		}
+
 		for _, d := range data {
 			tn, _ := getEscapedTypeName(d.Type)
 			fmt.Fprintf(f, "    <span class=\"typ\">%s</span> %s;\n", tn, d.Name)
@@ -339,11 +314,7 @@ func writeRecordDeclarationBlock(index *Index, r *clangdoc.RecordInfo, data []cl
 	}
 
 	fmt.Fprintf(f, "};\n")
-
-	if len(nsEnd) > 0 {
-		fmt.Fprintf(f, "\n")
-		fmt.Fprintf(f, nsEnd)
-	}
+	fmt.Fprintf(f, "%s", nsEnd)
 
 	writePreFooter(f)
 }

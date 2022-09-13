@@ -29,7 +29,22 @@ struct SimpleTestStructure {
   double c;
 };
 
-enum class MyEnum : char {
+union StandaloneUnion {
+  int i;
+  double d;
+};
+
+// Here is a regular enum with everything implicit.
+enum MySimpleEnum {
+  kValue1,
+  kValue2,
+};
+
+// # A very complex enum.
+//
+// This is a C++ enum class with an explicit type and explicit values. It also has an explicit
+// title for the docstring.
+enum class MyFancyEnum : char {
   kValue1 = 1,
   kValue2 = 2,
 };
@@ -38,6 +53,11 @@ enum class MyEnum : char {
 extern int kGlobalValue;
 
 typedef SimpleTestStructure SimpleTestStructureTypedef;
-using SImpleTestStructureUsing = SimpleTestStructure;
+using SimpleTestStructureUsing = SimpleTestStructure;
+
+// This tests the C-style thing of defining an unnamed struct and a typedef for it at the same time.
+typedef struct {
+  int a;
+} UnnamedStructTypedef;
 
 #endif  // TOOLS_CPPDOCGEN_E2E_TEST_BASICS_H_

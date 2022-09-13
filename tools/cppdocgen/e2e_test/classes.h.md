@@ -4,13 +4,13 @@
 
 ## BaseClass1 Class {:#BaseClass1}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#34)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#43)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">class</span> <span class="typ">BaseClass1</span> { <span class="com">...</span> };
 </pre>
 
-### BaseClass1::BaseClass1Function() {:#BaseClass1Function}
+### BaseClass1::BaseClass1Function() {:#BaseClass1::BaseClass1Function}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> BaseClass1::<b>BaseClass1Function</b>();
@@ -21,13 +21,13 @@ Complicated documentation for BaseClass1Function.
 
 ## BaseClass2 Class {:#BaseClass2}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#40)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#49)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">class</span> <span class="typ">BaseClass2</span> { <span class="com">...</span> };
 </pre>
 
-### BaseClass2::BaseClass2Function() {:#BaseClass2Function}
+### BaseClass2::BaseClass2Function() {:#BaseClass2::BaseClass2Function}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> BaseClass2::<b>BaseClass2Function</b>();
@@ -38,10 +38,11 @@ Insightful documentation for BaseClass2Function.
 
 ## DerivedClass Class {:#DerivedClass}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#46)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#55)
 
 <pre class="devsite-disable-click-to-copy">
-<span class="kwd">class</span> <span class="typ">DerivedClass</span> : <span class="kwd">public</span> <span class="typ"><a href="classes.h.md#BaseClass1">GlobalNamespace::BaseClass1</a></span>, <span class="kwd">private</span> <span class="typ"><a href="classes.h.md#BaseClass2">GlobalNamespace::BaseClass2</a></span> { <span class="com">...</span> };
+<span class="kwd">class</span> <span class="typ">DerivedClass</span> : <span class="kwd">public</span> <span class="typ"><a href="classes.h.md#BaseClass1">GlobalNamespace::BaseClass1</a></span>,
+                     <span class="kwd">private</span> <span class="typ"><a href="classes.h.md#BaseClass2">GlobalNamespace::BaseClass2</a></span> { <span class="com">...</span> };
 </pre>
 
 ### Inherited from [BaseClass1](classes.h.md#BaseClass1)
@@ -50,7 +51,7 @@ Insightful documentation for BaseClass2Function.
 <span class="typ">int</span> <a href="classes.h.md#BaseClass1::BaseClass1Function"><b>BaseClass1Function</b></a>();
 </pre>
 
-### DerivedClass::BaseClass2Function() {:#BaseClass2Function}
+### DerivedClass::BaseClass2Function() {:#DerivedClass::BaseClass2Function}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">void</span> DerivedClass::<b>BaseClass2Function</b>();
@@ -65,6 +66,8 @@ An override with documentation. Note that the BaseClass1Function() is not overri
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">class</span> <span class="typ">SimpleTestClass</span> {
+  <span class="kwd">public</span>:
+    <span class="com">// Public data members:</span>
     <span class="typ">int</span> public_value;
     <span class="typ">int</span> public_value2;
 };
@@ -90,7 +93,7 @@ SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a,
 </pre>
 
 
-### SimpleTestClass::TheFunction() {:#TheFunction}
+### SimpleTestClass::TheFunction() {:#SimpleTestClass::TheFunction}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> SimpleTestClass::<b>TheFunction</b>();
@@ -99,7 +102,7 @@ SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a,
 This is a documented pure virtual function.
 
 
-### SimpleTestClass::value() {:#value}
+### SimpleTestClass::value() {:#SimpleTestClass::value}
 
 <pre class="devsite-disable-click-to-copy">
 <span class="typ">int</span> SimpleTestClass::<b>value</b>();
