@@ -5,6 +5,7 @@
 package testrunner
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -15,6 +16,7 @@ import (
 	"math"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -197,10 +199,71 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 					Src:      t.localOutputDir,
 					Writable: true,
 				},
+				{
+					Src:      outDir,
+					Writable: true,
+				},
+				{
+					// The fx_script_tests utilize this file.
+					Src: "/usr/share/misc/magic.mgc",
+				},
+			},
+			Symlinks: map[string]string{
+				"/proc/self/fd": "/dev/fd",
 			},
 		}
-		// Create a new temporary directory within TMPDIR and mount it as /tmp.
-		// TMPDIR should always be set in infrastructure.
+
+		// Mount the QEMU tun_flags if the qemu interface exists. This is used
+		// by VDL to ascertain that the interface exists.
+		if _, err := os.Stat("/sys/class/net/qemu/"); err == nil {
+			testCmdBuilder.MountPoints = append(
+				testCmdBuilder.MountPoints,
+				&MountPt{
+					Src: "/sys/class/net/qemu/",
+				},
+			)
+		}
+
+		// Some tests invoke the `ssh` command line tool, which always creates
+		// a .ssh file in the home directory. Unfortunately, it prefers to read
+		// the home directory from the /etc/passwd file, and only reads $HOME
+		// if this doesn't work. Because we need to mount /etc/passwd for
+		// ssh-keygen, we need to create the same home directory in
+		// /etc/passwd. This is really quite a big hack, and we should remove
+		// it ASAP.
+		currentUser, err := user.Current()
+		if err != nil {
+			testResult.FailReason = err.Error()
+			return testResult, nil
+		}
+		pwdFile, err := os.Open("/etc/passwd")
+		if err != nil {
+			testResult.FailReason = err.Error()
+			return testResult, nil
+		}
+		defer pwdFile.Close()
+		pwdScanner := bufio.NewScanner(pwdFile)
+		for pwdScanner.Scan() {
+			elems := strings.Split(pwdScanner.Text(), ":")
+			if elems[0] == currentUser.Username {
+				testCmdBuilder.MountPoints = append(
+					testCmdBuilder.MountPoints,
+					&MountPt{
+						Dst:      elems[5],
+						UseTmpfs: true,
+					},
+				)
+				break
+			}
+		}
+		if pwdScanner.Err() != nil {
+			testResult.FailReason = pwdScanner.Err().Error()
+			return testResult, nil
+		}
+
+		// Mount /tmp. Ideally, we would use a tmpfs mount, but we write quite a
+		// lot of data to it, so we instead create a temp dir and mount it
+		// instead.
 		tmpDir, err := os.MkdirTemp("", "")
 		if err != nil {
 			testResult.FailReason = err.Error()
@@ -218,8 +281,11 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 
 		// Construct the sandbox's environment by forwarding the current env
 		// but overriding the TempDirEnvVars with /tmp.
+		// Also override FUCHSIA_TEST_OUTDIR with the outdir specific to this
+		// test.
 		envOverrides := map[string]string{
-			"TMPDIR": "/tmp",
+			"TMPDIR":                   "/tmp",
+			constants.TestOutDirEnvKey: outDir,
 		}
 		for _, key := range environment.TempDirEnvVars() {
 			envOverrides[key] = "/tmp"
