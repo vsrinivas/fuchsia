@@ -322,7 +322,7 @@ where
 }
 
 pub async fn exec_server() -> Result<()> {
-    fuchsia_syslog::init_with_tags(&["remote-diagnostics-bridge"])?;
+    diagnostics_log::init!(&["remote-diagnostics-bridge"]);
     info!("starting log-reader");
     let service = Arc::new(RemoteDiagnosticsBridge::new(|p| ArchiveReaderManagerImpl::new(p))?);
 

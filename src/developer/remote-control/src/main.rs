@@ -20,7 +20,7 @@ use {
 mod args;
 
 async fn exec_server() -> Result<(), Error> {
-    fuchsia_syslog::init_with_tags(&["remote-control"])?;
+    diagnostics_log::init!(&["remote-control"]);
 
     let service = Rc::new(RemoteControlService::new().await);
 
