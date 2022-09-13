@@ -213,7 +213,7 @@ impl FileOps for AccessFile {
     ) -> Result<usize, Errno> {
         // Format is allowed decided autitallow auditdeny seqno flags
         // Everything but seqno must be in hexadecimal format and represents a bits field.
-        let content = format!("ffffffff ffffffff ffffffff 0 {} 0\n", self.seqno);
+        let content = format!("ffffffff ffffffff 0 ffffffff {} 0\n", self.seqno);
         let bytes = content.as_bytes();
         current_task.mm.write_all(data, bytes)
     }
