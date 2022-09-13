@@ -48,6 +48,7 @@ impl ProcedureMarker {
             }
         } else {
             match response {
+                at::Response::Success(at::Success::Ciev { .. }) => Ok(Self::PhoneStatus),
                 _ => Err(format_err!("Other procedures not implemented yet.")),
             }
         }
