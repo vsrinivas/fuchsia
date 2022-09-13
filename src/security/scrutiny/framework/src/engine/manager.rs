@@ -9,7 +9,6 @@ use {
         scheduler::CollectorScheduler,
     },
     anyhow::Result,
-    log::{error, info},
     serde::{Deserialize, Serialize},
     std::fmt,
     std::{
@@ -18,6 +17,7 @@ use {
         sync::{Arc, Mutex, RwLock},
     },
     thiserror::Error,
+    tracing::{error, info},
     uuid::Uuid,
 };
 
@@ -43,7 +43,7 @@ pub enum PluginError {
 
 /// Simple utility wrapper that logs and error and returns it.
 fn log_error(error: PluginError) -> Result<()> {
-    error!("{:?}", error);
+    error!(?error);
     Err(error.into())
 }
 
@@ -117,7 +117,7 @@ impl PluginManager {
         if self.plugins.contains_key(desc) {
             return log_error(PluginError::RegisterCollision(desc.clone()));
         }
-        info!("Plugin: {} Registered", plugin.descriptor());
+        info!(descriptor = %plugin.descriptor(), "Plugin: Registered");
         self.plugins.insert(plugin.descriptor().clone(), PluginInstance::new(plugin));
         Ok(())
     }
@@ -131,7 +131,7 @@ impl PluginManager {
             }
         }
         if let Some(_) = self.plugins.remove(desc) {
-            info!("Plugin: {} Unregistered", desc);
+            info!(descriptor = %desc, "Plugin: Unregistered");
             Ok(())
         } else {
             log_error(PluginError::NotFound(desc.clone()))
@@ -141,7 +141,7 @@ impl PluginManager {
     /// Attempts to load the plugin. This will fail if the plugin is not
     /// in a loaded state, not registered or a dependency is not loaded.
     pub fn load(&mut self, desc: &PluginDescriptor) -> Result<()> {
-        info!("Plugin: {} Loading", desc);
+        info!(descriptor = %desc, "Plugin: Loading");
         let mut deps = Vec::new();
         if let Some(plugin_instance) = self.plugins.get(desc) {
             if plugin_instance.state == PluginState::Loaded {
@@ -186,7 +186,7 @@ impl PluginManager {
         // Hook all the controllers into the dispatcher.
         let mut dispatcher = self.dispatcher.write().unwrap();
         for (namespace, controller) in hooks.controllers.iter() {
-            info!("Plugin Hook: {} -> {}", namespace, desc);
+            info!(%namespace, descriptor = %desc, "Plugin Hook");
             dispatcher.add(
                 plugin_instance.instance_id,
                 namespace.clone(),
@@ -200,7 +200,7 @@ impl PluginManager {
     /// Attempts to unload the plugin, this will fail if the plugin
     /// is already unloaded, not registered or has dependent plugins still loaded.
     pub fn unload(&mut self, desc: &PluginDescriptor) -> Result<()> {
-        info!("Plugin Unload: {}", desc);
+        info!(descriptor = %desc, "Plugin Unload");
         let mut deps = Vec::new();
         if let Some(plugin_instance) = self.plugins.get_mut(desc) {
             if plugin_instance.state == PluginState::Unloaded {
@@ -263,11 +263,7 @@ mod tests {
         super::*,
         crate::{
             engine::hook::PluginHooks,
-            model::{
-                collector::DataCollector,
-                controller::DataController,
-                model::DataModel,
-            },
+            model::{collector::DataCollector, controller::DataController, model::DataModel},
         },
         scrutiny_testing::fake::fake_model_config,
         serde_json::{json, value::Value},
@@ -444,46 +440,26 @@ mod tests {
         manager.register_and_load(plugin_one).expect("failed to load plugin one");
 
         assert_eq!(
-            dispatcher
-                .read()
-                .unwrap()
-                .query("/api/foo/bar".to_string(), json!(""))
-                .unwrap(),
+            dispatcher.read().unwrap().query("/api/foo/bar".to_string(), json!("")).unwrap(),
             json!("foo")
         );
         assert_eq!(
-            dispatcher
-                .read()
-                .unwrap()
-                .query("/api/foo/baz".to_string(), json!(""))
-                .unwrap(),
+            dispatcher.read().unwrap().query("/api/foo/baz".to_string(), json!("")).unwrap(),
             json!("foo")
         );
 
         manager.unload(&plugin_one_desc).expect("failed to unload plugin one");
         assert_eq!(
-            dispatcher
-                .read()
-                .unwrap()
-                .query("/api/foo/bar".to_string(), json!(""))
-                .is_err(),
+            dispatcher.read().unwrap().query("/api/foo/bar".to_string(), json!("")).is_err(),
             true
         );
         assert_eq!(
-            dispatcher
-                .read()
-                .unwrap()
-                .query("/api/foo/baz".to_string(), json!(""))
-                .unwrap(),
+            dispatcher.read().unwrap().query("/api/foo/baz".to_string(), json!("")).unwrap(),
             json!("foo")
         );
         manager.unload(&plugin_two_desc).expect("failed to unload plugin two");
         assert_eq!(
-            dispatcher
-                .read()
-                .unwrap()
-                .query("/api/foo/baz".to_string(), json!(""))
-                .is_err(),
+            dispatcher.read().unwrap().query("/api/foo/baz".to_string(), json!("")).is_err(),
             true
         );
     }

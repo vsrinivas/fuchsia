@@ -11,7 +11,6 @@ use {
     anyhow::{anyhow, Context, Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
     hex,
-    log::warn,
     serde::Serialize,
     std::cmp,
     std::convert::{TryFrom, TryInto},
@@ -23,6 +22,7 @@ use {
         sync::Arc,
     },
     thiserror::Error,
+    tracing::warn,
 };
 
 /// Taken from //src/storage/blobfs/include/blobfs/format.h
@@ -482,13 +482,13 @@ impl<TCRS: TryClone + Read + Seek + Send + Sync> BlobFsReaderBuilder<TCRS> {
 
                 if inode.extent_count > 1 {
                     warn!(
-                        "Skipping blobfs blob {:?}: Extended containers are not currently supported",
-                        merkle
+                        ?merkle,
+                        "Skipping blobfs blob. Extended containers are not currently supported",
                     );
                     continue;
                 }
                 if prelude.is_compressed() && !prelude.is_chunk_compressed() {
-                    warn!("Skipping blobfs blob {:?}: Unsupported compression type", merkle);
+                    warn!(?merkle, "Skipping blobfs blob. Unsupported compression type");
                     continue;
                 }
 

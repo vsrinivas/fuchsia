@@ -5,7 +5,6 @@
 use {
     anyhow::{Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
-    log::info,
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
@@ -13,6 +12,7 @@ use {
     std::io::{Cursor, Read, Seek, SeekFrom},
     std::str,
     thiserror::Error,
+    tracing::info,
 };
 
 const FVM_MAGIC: u64 = 0x54524150204d5646;
@@ -252,10 +252,10 @@ impl FvmReader {
             let idx = usize::try_from(idx)?;
             if let Ok(name) = str::from_utf8(&partitions[idx].unsafe_name) {
                 let fs_type = if name.starts_with("blobfs") {
-                    info!("FVM: Found BlobFS volume with {} slices", vslice_pslice_mappings.len());
+                    info!(slices = vslice_pslice_mappings.len(), "FVM: Found BlobFS volume");
                     Some(FvmPartitionType::BlobFs)
                 } else if name.starts_with("minfs") {
-                    info!("FVM: Found Minfs volume with {} slices", vslice_pslice_mappings.len());
+                    info!(slices = vslice_pslice_mappings.len(), "FVM: Found Minfs volume");
                     Some(FvmPartitionType::MinFs)
                 } else {
                     None
@@ -269,10 +269,10 @@ impl FvmReader {
                         self.cursor.seek(SeekFrom::Start(slice_section_start))?;
                         let offset = i64::try_from((pslice - 1) * header.slice_size)?;
                         info!(
-                            "Seeking: {} {} {}",
                             vslice,
                             pslice,
-                            slice_section_start + (pslice - 1) * header.slice_size
+                            offset = slice_section_start + (pslice - 1) * header.slice_size,
+                            "Seeking",
                         );
                         self.cursor.seek(SeekFrom::Current(offset))?;
                         let mut slice_buffer = vec![1; header.slice_size as usize];

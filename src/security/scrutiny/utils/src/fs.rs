@@ -4,7 +4,6 @@
 
 use {
     anyhow::{anyhow, Context, Result},
-    log::warn,
     once_cell::sync::Lazy,
     std::{
         fs::{create_dir_all, remove_dir_all},
@@ -13,6 +12,7 @@ use {
         sync::atomic::{AtomicU32, Ordering},
     },
     tempfile::TempDir,
+    tracing::warn,
 };
 
 static PID: Lazy<u32> = Lazy::new(|| id());
@@ -69,7 +69,7 @@ impl Drop for TemporaryDirectory {
     fn drop(&mut self) {
         if let Self::ManagedDir(directory_path) = self {
             if remove_dir_all(&directory_path).is_err() {
-                warn!("Failed to delete temporary directory at {:?}", directory_path);
+                warn!(path = ?directory_path, "Failed to delete temporary directory");
             }
         }
     }

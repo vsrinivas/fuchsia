@@ -31,7 +31,6 @@ use {
     fuchsia_url::{
         boot_url::BootUrl, AbsoluteComponentUrl, AbsolutePackageUrl, PackageName, PackageVariant,
     },
-    log::{debug, error, info, warn},
     once_cell::sync::Lazy,
     regex::Regex,
     scrutiny::model::{collector::DataCollector, model::DataModel},
@@ -49,6 +48,7 @@ use {
         str,
         sync::Arc,
     },
+    tracing::{debug, error, info, warn},
     update_package::parse_image_packages_json,
     url::Url,
 };
@@ -88,7 +88,11 @@ impl<'a> StaticPackageDescription<'a> {
         );
         let url_match = match_absolute_pkg_urls(&url, &pkg.url);
         if url_match == PkgUrlMatch::WeakMatch {
-            warn!("Lossy match of absolute package URLs: StaticPackageDescription.url={} ; PackageDefinition.url={}", url, pkg.url);
+            warn!(
+                StaticPackageDescription.url = %url,
+                PackageDefinition.url = %pkg.url,
+                "Lossy match of absolute package URLs",
+            );
         }
         url_match != PkgUrlMatch::NoMatch
     }
@@ -148,8 +152,9 @@ impl PackageDataCollector {
         for (service_name, service_url_or_array) in services {
             if service_mapping.contains_key(&service_name) {
                 debug!(
-                    "Service mapping collision on {} between {} and {}",
-                    service_name, service_mapping[&service_name], service_url_or_array
+                    %service_name,
+                    "Service mapping collision between {} and {}",
+                    service_mapping[&service_name], service_url_or_array
                 );
             }
 
@@ -212,7 +217,10 @@ impl PackageDataCollector {
                             )?;
                         }
                     } else {
-                        warn!("Skipping internal package path that cannot be converted to string: {:?}", name);
+                        warn!(
+                            ?name,
+                            "Skipping internal package path that cannot be converted to string"
+                        );
                     }
                 }
                 break;
@@ -227,7 +235,7 @@ impl PackageDataCollector {
         name: &PathBuf,
         data: &Vec<u8>,
     ) -> Result<()> {
-        info!("Reading service definition: {:?}", name);
+        info!(service_name = ?name, "Reading service definition");
 
         let service_pkg = package_reader.read_service_package_definition(data.as_slice())?;
         if let Some(apps) = service_pkg.apps {
@@ -241,7 +249,7 @@ impl PackageDataCollector {
         if let Some(services) = service_pkg.services {
             Self::extend_service_mapping(&mut sys_config.services, services)?;
         } else {
-            debug!("Expected service with name {:?} to exist. Optimistically continuing.", name);
+            debug!(service_name = ?name, "Expected service to exist. Optimistically continuing.");
         }
 
         Ok(())
@@ -280,17 +288,17 @@ impl PackageDataCollector {
         let sections = reader.parse()?;
         let mut bootfs = HashMap::new();
         let mut cmdline = String::new();
-        info!("Extracted {} sections from the ZBI", sections.len());
+        info!(total = sections.len(), "Extracted sections from the ZBI");
         for section in sections.iter() {
-            info!("Extracted sections {:?}", section.section_type);
+            info!(section_type = ?section.section_type, "Extracted sections");
             if section.section_type == ZbiType::StorageBootfs {
                 let mut bootfs_reader = BootfsReader::new(section.buffer.clone());
                 let bootfs_result = bootfs_reader.parse();
                 if let Err(err) = bootfs_result {
-                    warn!("Bootfs parse failed {}", err);
+                    warn!(%err, "Bootfs parse failed");
                 } else {
                     bootfs = bootfs_result.unwrap();
-                    info!("Bootfs found {} files", bootfs.len());
+                    info!(total = bootfs.len(), "Bootfs found files");
                 }
             } else if section.section_type == ZbiType::Cmdline {
                 let mut cmd_str = std::str::from_utf8(&section.buffer)?;
@@ -453,7 +461,7 @@ impl PackageDataCollector {
 
                         if let Ok(cm_decl) = decode_persistent::<fdecl::Component>(&decl_bytes) {
                             if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
-                                warn!("Invalid cm {} {}", url, err);
+                                warn!(%err, %url, "Invalid cm");
                             } else {
                                 if let Some(schema) = cm_decl.config {
                                     match schema
@@ -512,7 +520,7 @@ impl PackageDataCollector {
                                 }
                             }
                         } else {
-                            warn!("cm failed to be decoded {}", url);
+                            warn!(%url, "cm failed to be decoded");
                         }
                         Manifest {
                             component_id: *component_id,
@@ -598,7 +606,7 @@ impl PackageDataCollector {
     ) -> Result<()> {
         for (file_name, file_data) in &zbi.bootfs {
             if file_name.ends_with(".cm") {
-                info!("Extracting bootfs manifest: {}", file_name);
+                info!(%file_name, "Extracting bootfs manifest");
                 let url = BootUrl::new_resource("/".to_string(), file_name.to_string())?;
                 let url = Url::parse(&url.to_string()).with_context(|| {
                     format!("Failed to convert boot URL to standard URL: {}", url)
@@ -606,7 +614,7 @@ impl PackageDataCollector {
                 let cm_base64 = base64::encode(&file_data);
                 if let Ok(cm_decl) = decode_persistent::<fdecl::Component>(&file_data) {
                     if let Err(err) = cm_fidl_validator::validate(&cm_decl) {
-                        warn!("Invalid cm {} {}", file_name, err);
+                        warn!(%file_name, %err, "Invalid cm");
                     } else {
                         // Retrieve this component's config values, if any.
                         let cvf_bytes = if let Some(schema) = cm_decl.config {
@@ -716,7 +724,10 @@ impl PackageDataCollector {
             if !components.contains_key(pkg_url) {
                 // We don't already know about the component that *should* provide this service.
                 // Create an inferred node.
-                debug!("Expected component {} exist to provide service {} but it does not exist. Creating inferred node.", pkg_url, service_name);
+                debug!(
+                    %pkg_url, %service_name,
+                    "Expected component to exist to provide service, but it does not exist. Creating inferred node."
+                );
                 *component_id += 1;
                 components.insert(
                     pkg_url.clone(),
@@ -760,8 +771,8 @@ impl PackageDataCollector {
         }
         if matching_components.len() > 1 {
             warn!(
-                "Located multiple ({}) pkg-cache components for fuchsia-pkg-cache scheme handling",
-                matching_components.len()
+                total = matching_components.len(),
+                "Located multiple pkg-cache components for fuchsia-pkg-cache scheme handling",
             );
         }
         let matching_component = matching_components[0];
@@ -776,8 +787,8 @@ impl PackageDataCollector {
         }
         if matching_manifests.len() > 1 {
             warn!(
-                "Located multiple ({}) pkg-cache manifests for fuchsia-pkg-cache scheme handling",
-                matching_manifests.len()
+                total = matching_manifests.len(),
+                "Located multiple pkg-cache manifests for fuchsia-pkg-cache scheme handling",
             );
         }
         let matching_manifest = matching_manifests[0];
@@ -822,7 +833,7 @@ impl PackageDataCollector {
                         } else {
                             // Even the service map didn't know about this service. We should create an inferred component
                             // that provides this service.
-                            debug!("Expected a service provider for service {} but it does not exist. Creating inferred node.", service_name);
+                            debug!(%service_name, "Expected a service provider for service but it does not exist. Creating inferred node.");
                             *component_id += 1;
                             let url_fragment = format!("#meta/{}.cmx", service_name);
                             let url = INFERRED_URL
@@ -871,9 +882,9 @@ impl PackageDataCollector {
 
         // Iterate through all served packages, for each cmx they define, create a node.
         let mut component_id = 0;
-        info!("Found {} package", fuchsia_packages.len());
+        info!(total = fuchsia_packages.len(), "Found package");
         for pkg in fuchsia_packages.iter() {
-            info!("Extracting package: {}", pkg.url);
+            info!(url = %pkg.url, "Extracting package");
             let merkle = pkg.url.hash().ok_or_else(||
                 anyhow!("Unable to extract precise package information from URL without package hash: {}", pkg.url)
             )?.clone();
@@ -912,7 +923,7 @@ impl PackageDataCollector {
                 Some(zbi)
             }
             Err(err) => {
-                warn!("{}", err);
+                warn!(%err);
                 None
             }
         };
@@ -932,12 +943,7 @@ impl PackageDataCollector {
             &mut routes,
         );
 
-        info!(
-            "Components: {}, Manifests {}, Routes {}.",
-            components.len(),
-            manifests.len(),
-            routes.len()
-        );
+        info!(components = components.len(), manifests = manifests.len(), routes = routes.len());
 
         Ok(PackageDataResponse::new(components, packages, manifests, routes, zbi))
     }
@@ -957,10 +963,10 @@ impl PackageDataCollector {
         )
         .context("Failed to read sysmgr config")?;
         info!(
-            "Done collecting. Found in the sys realm: {} services, {} apps, {} packages listed.",
-            sysmgr_config.services.keys().len(),
-            sysmgr_config.apps.len(),
-            served_packages.len(),
+            services = sysmgr_config.services.keys().len(),
+            apps = sysmgr_config.apps.len(),
+            packages = served_packages.len(),
+            "Done collecting. Found listed in the sys realm"
         );
 
         let update_package = package_reader
@@ -1579,7 +1585,7 @@ pub mod tests {
         )
         .unwrap();
 
-        log::info!("{:#?}", response.components);
+        tracing::info!(?response.components);
 
         assert_eq!(2, response.components.len());
         assert_eq!(2, response.manifests.len());

@@ -84,7 +84,7 @@ impl PackageReader for PackagesFromUpdateReader {
         let packages_json_contents =
             read_content_blob(&mut far_reader, &mut self.blob_reader, "packages.json")
                 .context("Failed to open update packages.json in update meta.far")?;
-        log::info!(
+        tracing::info!(
             "packages.json contents: \"\"\"\n{}\n\"\"\"",
             std::str::from_utf8(packages_json_contents.as_slice()).unwrap()
         );

@@ -14,10 +14,10 @@ if (is_host) {
     deps = [
       "//src/security/scrutiny/config",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:tracing",
       "//third_party/rust_crates:uuid",
     ]
     non_rust_deps = [ "//src/lib/chunked-compression" ]

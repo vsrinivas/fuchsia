@@ -15,11 +15,11 @@ if (is_host) {
       "//src/security/scrutiny/framework",
       "//src/security/scrutiny/plugins",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:log",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:termion",
       "//third_party/rust_crates:thiserror",
+      "//third_party/rust_crates:tracing",
       "//third_party/rust_crates/compat/rustyline",
     ]
 

@@ -6,7 +6,6 @@ use {
     crate::core::collection::{Package, Packages},
     anyhow::Result,
     fuchsia_url::AbsolutePackageUrl,
-    log::warn,
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::*,
@@ -15,6 +14,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::sync::Arc,
+    tracing::warn,
 };
 
 static DEFAULT_HOST: &str = "fuchsia.com";
@@ -45,9 +45,9 @@ impl DataController for PackageListController {
         let request: PackageListRequest = serde_json::from_value(query)?;
         if request.url.host() != DEFAULT_HOST {
             warn!(
-                "Package list controller URL contains non-default host {} (default={}), which is not checked in URL matching",
-                request.url.host(),
-                DEFAULT_HOST,
+                request_url = %request.url.host(),
+                default_host = %DEFAULT_HOST,
+                "Package list controller URL contains non-default host which is not checked in URL matching",
             );
         }
         let packages = &model.get::<Packages>()?.entries;

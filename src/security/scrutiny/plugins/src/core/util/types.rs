@@ -9,13 +9,13 @@ use {
     cm_fidl_analyzer::{match_absolute_pkg_urls, PkgUrlMatch},
     fuchsia_merkle::Hash,
     fuchsia_url::{AbsoluteComponentUrl, AbsolutePackageUrl},
-    log::warn,
     once_cell::sync::Lazy,
     serde::Serialize,
     std::{
         collections::{HashMap, HashSet},
         path::PathBuf,
     },
+    tracing::warn,
     url::Url,
 };
 
@@ -63,8 +63,9 @@ impl PackageDefinition {
         let url_match = match_absolute_pkg_urls(&self.url, url);
         if url_match == PkgUrlMatch::WeakMatch {
             warn!(
-                "Lossy match of absolute package URLs: PkgDefinition.url={} ; other_url={}",
-                self.url, url
+                PkgDefinition.url = %self.url,
+                other_url = %url,
+                "Lossy match of absolute package URLs",
             );
         }
         url_match != PkgUrlMatch::NoMatch

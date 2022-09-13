@@ -6,11 +6,11 @@ use {
     crate::zstd,
     anyhow::{Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
-    log::info,
     serde::{Deserialize, Serialize},
     std::convert::{TryFrom, TryInto},
     std::io::{Cursor, Read, Seek, SeekFrom},
     thiserror::Error,
+    tracing::info,
 };
 
 /// ZBIs must start with a container type that contains all of the sections in
@@ -252,7 +252,7 @@ impl VBootSeeker {
             header = ZbiHeader::parse(cursor)?;
         }
         cursor.set_position(cursor.position() - ZBI_HEADER_SIZE);
-        info!("Found ZBI inside VBoot at position: {}", cursor.position());
+        info!(position = %cursor.position(), "Found ZBI inside VBoot");
         Ok(())
     }
 }

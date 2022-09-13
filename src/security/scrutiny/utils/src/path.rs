@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    log::warn,
     pathdiff::diff_paths,
     std::path::{Path, PathBuf},
+    tracing::warn,
 };
 
 /// Attempt to build a canonical path of the form `base`/`path`. If `path` is absolute,
@@ -39,8 +39,10 @@ pub fn relativize_path<P1: AsRef<Path>, P2: AsRef<Path>>(base: P1, path: P2) -> 
     let base_path = canonicalize(base_ref, "base path for relativize");
     diff_paths(path_ref, &base_path).unwrap_or_else(|| {
         warn!(
-            "Failed to relativize path {:?} relative to base path {:?} (canonicalized as {:?}); returning path unchanged",
-            path_ref, base_ref, base_path
+            path = ?path_ref,
+            base = ?base_ref,
+            canonical_base = ?base_path,
+            "Failed to relativize path; returning path unchanged",
         );
         path_ref.to_path_buf()
     })
@@ -51,7 +53,7 @@ fn canonicalize<P: AsRef<Path>>(path: P, path_name: &str) -> PathBuf {
     match path_ref.canonicalize() {
         Ok(path) => path,
         Err(err) => {
-            warn!("Failed to canonicalize {}: {:?}: {}", path_name, path_ref, err.to_string());
+            warn!(%path_name, ?path_ref, %err, "Failed to canonicalize");
             path_ref.to_path_buf()
         }
     }

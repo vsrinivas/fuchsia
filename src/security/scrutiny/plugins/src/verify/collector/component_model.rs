@@ -18,7 +18,6 @@ use {
     fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_internal as component_internal,
     fuchsia_url::{boot_url::BootUrl, AbsoluteComponentUrl},
-    log::{error, info, warn},
     once_cell::sync::Lazy,
     routing::{
         component_id_index::ComponentIdIndex, config::RuntimeConfig, environment::RunnerRegistry,
@@ -27,6 +26,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json5::from_reader,
     std::{collections::HashMap, convert::TryFrom, fs::File, path::PathBuf, sync::Arc},
+    tracing::{error, info, warn},
     url::Url,
 };
 
@@ -113,8 +113,9 @@ impl V2ComponentModelDataCollector {
                             }
                             Err(err) => {
                                 error!(
-                                    "Manifest for component: {} is corrupted. Error: {}",
-                                    url, err
+                                    %err,
+                                    %url,
+                                    "Manifest for component is corrupted"
                                 );
                             }
                         }
@@ -233,8 +234,8 @@ impl DataCollector for V2ComponentModelDataCollector {
             self.get_component_id_index(runtime_config.component_id_index_path.as_deref(), &zbi)?;
 
         info!(
-            "V2ComponentModelDataCollector: Found {} v2 component declarations",
-            decls_by_url.len(),
+            total = decls_by_url.len(),
+            "V2ComponentModelDataCollector: Found v2 component declarations",
         );
 
         let dynamic_components =
@@ -248,15 +249,15 @@ impl DataCollector for V2ComponentModelDataCollector {
             runner_registry,
         );
 
-        for error in build_result.errors.iter() {
-            warn!("V2ComponentModelDataCollector: {}", error);
+        for err in build_result.errors.iter() {
+            warn!(%err, "V2ComponentModelDataCollector");
         }
 
         match build_result.model {
             Some(component_model) => {
                 info!(
-                    "V2ComponentModelDataCollector: Built v2 component model with {} instances",
-                    component_model.len()
+                    total_instances = component_model.len(),
+                    "V2ComponentModelDataCollector: Built v2 component model"
                 );
                 let core_deps_collection: Arc<CoreDataDeps> = model.get().map_err(|err| {
                     anyhow!(

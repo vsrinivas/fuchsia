@@ -4,7 +4,6 @@
 
 use {
     anyhow::{Context, Result},
-    log::info,
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::*,
@@ -17,6 +16,7 @@ use {
     std::io::{prelude::*, Cursor},
     std::path::PathBuf,
     std::sync::Arc,
+    tracing::info,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -81,7 +81,7 @@ impl DataController for ZbiExtractController {
                 info!("Attempting to load FvmPartitions");
                 let mut fvm_reader = FvmReader::new(section.buffer.clone());
                 if let Ok(fvm_partitions) = fvm_reader.parse() {
-                    info!("Extracting {} Partitions in StorageRamdisk", fvm_partitions.len());
+                    info!(total = fvm_partitions.len(), "Extracting Partitions in StorageRamdisk");
                     let mut fvm_dir = output_path.clone();
                     fvm_dir.push("fvm");
                     fs::create_dir_all(fvm_dir.clone())?;

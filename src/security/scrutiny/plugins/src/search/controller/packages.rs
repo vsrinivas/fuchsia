@@ -5,7 +5,6 @@
 use {
     crate::core::collection::{Package, Packages},
     anyhow::Result,
-    log::warn,
     regex::Regex,
     scrutiny::{
         model::controller::{DataController, HintDataType},
@@ -15,6 +14,7 @@ use {
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::sync::Arc,
+    tracing::warn,
 };
 
 #[derive(Deserialize, Serialize)]
@@ -41,7 +41,7 @@ impl DataController for PackageSearchController {
                         }
                     }
                     None => {
-                        warn!("Failed to convert package-internal path to string: {:?}", file_name);
+                        warn!(?file_name, "Failed to convert package-internal path to string");
                     }
                 }
             }

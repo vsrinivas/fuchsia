@@ -6,13 +6,13 @@ use {
     crate::model::collector::DataCollector,
     crate::model::model::DataModel,
     anyhow::Result,
-    log::{error, info},
     serde::{Deserialize, Serialize},
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::{mpsc, Arc, Condvar, Mutex},
     std::thread,
     thiserror::Error,
+    tracing::{error, info},
     uuid::Uuid,
 };
 
@@ -81,8 +81,8 @@ impl CollectorInstance {
                         cvar.notify_one();
                     }
 
-                    if let Err(e) = data_collector.collect(Arc::clone(&model)) {
-                        error!("Collector failed with error {:#}", e);
+                    if let Err(err) = data_collector.collect(Arc::clone(&model)) {
+                        error!(%err, "Collector failed with error");
                     }
 
                     {
@@ -206,7 +206,7 @@ impl CollectorScheduler {
     /// have been run.
     pub fn schedule(&self) -> Result<()> {
         let collectors = self.collectors.lock().unwrap();
-        info!("Collector Scheduler: Scheduling {} Tasks", collectors.len());
+        info!(total_tasks = collectors.len(), "Collector Scheduler: Scheduling Tasks");
         // The set of instances that have finished.
         let mut collectors_to_schedule: HashSet<CollectorHandle> =
             collectors.iter().map(|(handle, _)| handle.clone()).collect();
@@ -225,8 +225,8 @@ impl CollectorScheduler {
             // Safe guard against infinite looping.
             if collectors_to_run.is_empty() && !collectors_to_schedule.is_empty() {
                 error!(
-                    "Collector Scheduler: Fatal error {} tasks have unmet dependencies.",
-                    collectors_to_schedule.len()
+                    total_tasks = collectors_to_schedule.len(),
+                    "Collector Scheduler: Fatal error, tasks have unmet dependencies.",
                 );
                 for handle in collectors_to_schedule.iter() {
                     error!("Failed to schedule: {}", collectors.get(handle).unwrap().name);
@@ -236,7 +236,10 @@ impl CollectorScheduler {
             }
 
             // Execute the current batch of collectors that are unblocked.
-            info!("Collector Scheduler: Batching {} Independent Tasks", collectors_to_run.len());
+            info!(
+                total_tasks = collectors_to_run.len(),
+                "Collector Scheduler: Batching Independent Tasks"
+            );
             for handle in collectors_to_run.iter() {
                 let collector = collectors.get(handle).unwrap();
                 info!(
@@ -265,7 +268,7 @@ impl CollectorScheduler {
                 collectors_to_schedule.remove(handle);
             }
         }
-        info!("Collector Scheduler: Finished {} Tasks", collectors.len());
+        info!(total_tasks = collectors.len(), "Collector Scheduler: Finished Tasks");
         Ok(())
     }
 

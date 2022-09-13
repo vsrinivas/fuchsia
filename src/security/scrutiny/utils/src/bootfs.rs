@@ -6,12 +6,12 @@ use {
     crate::package::{deserialize_pkg_index, serialize_pkg_index, PackageIndexContents},
     anyhow::{Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
-    log::trace,
     serde::{Deserialize, Serialize},
     std::collections::HashMap,
     std::convert::{TryFrom, TryInto},
     std::io::{Cursor, Read, Seek, SeekFrom},
     thiserror::Error,
+    tracing::trace,
 };
 
 const BOOTFS_MAGIC: u32 = 0xa56d3ff9;
@@ -113,10 +113,10 @@ impl BootfsReader {
         let mut files = HashMap::new();
         for directory in directory_entries.iter() {
             trace!(
-                "Extracting bootfs file: {}, offset: {}, len: {}",
-                directory.name,
-                directory.data_offset,
-                directory.data_len
+                name = %directory.name,
+                offset = %directory.data_offset,
+                len = %directory.data_len,
+                "Extracting bootfs file",
             );
             self.cursor.set_position(directory.data_offset.into());
             let mut file_data = vec![0; directory.data_len.try_into()?];

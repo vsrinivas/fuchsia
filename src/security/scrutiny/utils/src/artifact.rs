@@ -9,7 +9,6 @@ use {
         io::{ReadSeek, TryClonableBufReaderFile, TryClone},
     },
     anyhow::{anyhow, Context, Result},
-    log::warn,
     pathdiff::diff_paths,
     std::{
         collections::HashSet,
@@ -18,6 +17,7 @@ use {
         path::{Path, PathBuf},
         sync::Arc,
     },
+    tracing::warn,
 };
 
 /// Interface for fetching raw bytes by file path.
@@ -53,9 +53,9 @@ impl BlobFsArtifactReader<TryClonableBufReaderFile> {
             Ok(path) => path,
             Err(err) => {
                 warn!(
-                    "Blobfs artifact reader failed to canonicalize build path: {:?}: {}",
-                    build_path_ref,
-                    err.to_string()
+                    path = ?build_path_ref,
+                    %err,
+                    "Blobfs artifact reader failed to canonicalize build path"
                 );
                 build_path_ref.to_path_buf()
             }
@@ -64,9 +64,9 @@ impl BlobFsArtifactReader<TryClonableBufReaderFile> {
             Ok(path) => path,
             Err(err) => {
                 warn!(
-                    "File artifact reader failed to canonicalize blobfs archive path: {:?}: {}",
-                    blobfs_path_ref,
-                    err.to_string()
+                    path = ?build_path_ref,
+                    %err,
+                    "File artifact reader failed to canonicalize blobfs archive path",
                 );
                 blobfs_path_ref.to_path_buf()
             }

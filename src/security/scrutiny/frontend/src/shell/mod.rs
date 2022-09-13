@@ -13,7 +13,6 @@ use {
         error::ShellError,
     },
     anyhow::{Error, Result},
-    log::{error, info, warn},
     rustyline::{
         completion::{Completer, FilenameCompleter, Pair},
         error::ReadlineError,
@@ -35,6 +34,7 @@ use {
         sync::{Arc, Mutex, RwLock},
     },
     termion::{self, clear, color, cursor, style},
+    tracing::{error, info, warn},
 };
 
 /// A CommandResponse is an internal type to define whether a command was acted
@@ -153,8 +153,8 @@ impl Shell {
         );
 
         let readline = self.readline.readline(&prompt);
-        if let Err(e) = self.readline.save_history("/tmp/scrutiny_history") {
-            warn!("Failed to save scrutiny shell history: {:?}", e);
+        if let Err(err) = self.readline.save_history("/tmp/scrutiny_history") {
+            warn!(?err, "Failed to save scrutiny shell history");
         }
 
         match readline {
@@ -373,7 +373,7 @@ impl Shell {
         if command.is_empty() || command.starts_with("#") {
             return Ok(String::new());
         }
-        info!("Command: {}", command);
+        info!(%command);
 
         let mut output = String::new();
         #[allow(clippy::if_same_then_else)] // TODO(fxbug.dev/95035)
@@ -393,7 +393,7 @@ impl Shell {
         loop {
             if let Some(command) = self.prompt() {
                 if let Err(err) = self.execute(command) {
-                    error!("Execute failed: {:?}", err);
+                    error!(?err, "Execute failed");
                 }
             } else {
                 break;
