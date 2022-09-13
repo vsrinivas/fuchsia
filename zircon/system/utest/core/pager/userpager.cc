@@ -460,6 +460,18 @@ bool UserPager::WritebackBeginPages(Vmo* paged_vmo, uint64_t page_offset, uint64
   return true;
 }
 
+bool UserPager::WritebackBeginZeroPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_count) {
+  zx_status_t status;
+  if ((status = pager_.op_range(
+           ZX_PAGER_OP_WRITEBACK_BEGIN, paged_vmo->vmo_, page_offset * zx_system_get_page_size(),
+           page_count * zx_system_get_page_size(), ZX_VMO_DIRTY_RANGE_IS_ZERO)) != ZX_OK) {
+    fprintf(stderr, "pager op_range WRITEBACK_BEGIN (zero_range) failed with %s\n",
+            zx_status_get_string(status));
+    return false;
+  }
+  return true;
+}
+
 bool UserPager::WritebackEndPages(Vmo* paged_vmo, uint64_t page_offset, uint64_t page_count) {
   zx_status_t status;
   if ((status = pager_.op_range(ZX_PAGER_OP_WRITEBACK_END, paged_vmo->vmo_,

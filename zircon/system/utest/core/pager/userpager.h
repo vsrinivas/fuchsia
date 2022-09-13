@@ -130,6 +130,7 @@ class UserPager {
 
   // Begins and ends writeback on pages in the specified range.
   bool WritebackBeginPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count);
+  bool WritebackBeginZeroPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count);
   bool WritebackEndPages(Vmo* vmo, uint64_t page_offset, uint64_t page_count);
 
   // Checks if there is a request for the range [page_offset, length). Will

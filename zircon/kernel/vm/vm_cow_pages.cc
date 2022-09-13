@@ -4838,7 +4838,7 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len
   return ZX_OK;
 }
 
-zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
+zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len, bool is_zero_range) {
   canary_.Assert();
 
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
@@ -4854,38 +4854,67 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // All Dirty pages need to be marked AwaitingClean, irrespective of where they lie w.r.t.
-  // supply_zero_offset_. If the VMO traps Dirty transitions, future writes need to be trapped in
-  // order to generate DIRTY requests before marking the pages Dirty again. The userpager has
-  // indicated that it is writing back contents as they exist at the time of this call, so new
-  // writes altering those contents should be trapped and acknowledged by the userpager (the
-  // filesystem might need to reserve additional space for the new writes).
   const uint64_t start_offset = offset;
   const uint64_t end_offset = offset + len;
-  zx_status_t status = page_list_.ForEveryPageInRange(
-      [this](const VmPageOrMarker* p, uint64_t off) {
-        // If the page is pinned we have to leave it Dirty in case it is still being written to via
-        // DMA. The VM system will be unaware of these writes, and so we choose to be conservative
-        // here and might end up with pinned pages being left dirty for longer, until a writeback is
-        // attempted after the unpin.
-        if (p->IsPage() && p->Page()->object.pin_count > 0) {
-          return ZX_ERR_NEXT;
-        }
-        // Transition pages from Dirty to AwaitingClean.
-        if (p->IsPage() && is_page_dirty(p->Page())) {
+  // We only need to consider transitioning pages if the caller has specified that this is not a
+  // zero range. For a zero range, we cannot start cleaning any pages because the caller has
+  // expressed intent to write back zeros in this range; any pages we clean might get evicted and
+  // incorrectly supplied again as zero pages, leading to data loss.
+  //
+  // When querying dirty ranges, gaps beyond supply_zero_offset_ are indicated as dirty zero ranges.
+  // So it's perfectly reasonable for the user pager to write back these zero ranges efficiently
+  // without having to read the actual contents of the range, which would read zeroes anyway. There
+  // can exist a race however, where the user pager has just discovered a dirty zero range, and
+  // before it starts writing it out, an actual page gets dirtied in that range. Consider the
+  // following example that demonstrates the race:
+  //  1. The range [5, 10) is indicated as a dirty zero range when the user pager queries dirty
+  //  ranges.
+  //  2. A write comes in for page 7 and it is marked Dirty.
+  //  3. The user pager prepares to write the range [5, 10) with WritebackBegin.
+  //  4. Gaps as well as page 7 are marked AwaitingClean.
+  //  5. The user pager still thinks that [5, 10) is zero and writes back zeroes for the range.
+  //  6. The user pager does a WritebackEnd on [5, 10), and page 7 gets marked Clean.
+  //  7. At some point in the future, page 7 gets evicted. The data on page 7 (which was prematurely
+  //  marked Clean) is now lost.
+  //
+  // This race occurred because there was a mismatch between what the user pager and the kernel
+  // think the contents of the range being written back are. The user pager intended to mark only
+  // zero ranges (gaps) clean, not actual pages. The is_zero_range flag captures this intent, so
+  // that the kernel does not incorrectly clean actual committed pages. Committed dirty pages will
+  // be returned as actual dirty pages (not dirty zero ranges) on a subsequent call to query dirty
+  // ranges, and can be cleaned then.
+  if (!is_zero_range) {
+    // All Dirty pages need to be marked AwaitingClean, irrespective of where they lie w.r.t.
+    // supply_zero_offset_. If the VMO traps Dirty transitions, future writes need to be trapped in
+    // order to generate DIRTY requests before marking the pages Dirty again. The userpager has
+    // indicated that it is writing back contents as they exist at the time of this call, so new
+    // writes altering those contents should be trapped and acknowledged by the userpager (the
+    // filesystem might need to reserve additional space for the new writes).
+    zx_status_t status = page_list_.ForEveryPageInRange(
+        [this](const VmPageOrMarker* p, uint64_t off) {
+          // If the page is pinned we have to leave it Dirty in case it is still being written to
+          // via DMA. The VM system will be unaware of these writes, and so we choose to be
+          // conservative here and might end up with pinned pages being left dirty for longer, until
+          // a writeback is attempted after the unpin.
+          if (p->IsPage() && p->Page()->object.pin_count > 0) {
+            return ZX_ERR_NEXT;
+          }
+          // Transition pages from Dirty to AwaitingClean.
+          if (p->IsPage() && is_page_dirty(p->Page())) {
+            AssertHeld(lock_);
+            UpdateDirtyStateLocked(p->Page(), off, DirtyState::AwaitingClean);
+          }
+          // We can only find actual pages beyond supply_zero_offset_ (no markers), and they will be
+          // AwaitingClean, either from before this call or from having transitioned them to
+          // AwaitingClean above. Pages beyond supply_zero_offset_ are un-Clean.
           AssertHeld(lock_);
-          UpdateDirtyStateLocked(p->Page(), off, DirtyState::AwaitingClean);
-        }
-        // We can only find actual pages beyond supply_zero_offset_ (no markers), and they will be
-        // AwaitingClean, either from before this call or from having transitioned them to
-        // AwaitingClean above. Pages beyond supply_zero_offset_ are un-Clean.
-        AssertHeld(lock_);
-        ASSERT(off < supply_zero_offset_ || (p->IsPage() && is_page_awaiting_clean(p->Page())));
-        return ZX_ERR_NEXT;
-      },
-      start_offset, end_offset);
-  // We don't expect a failure from the traversal.
-  DEBUG_ASSERT(status == ZX_OK);
+          ASSERT(off < supply_zero_offset_ || (p->IsPage() && is_page_awaiting_clean(p->Page())));
+          return ZX_ERR_NEXT;
+        },
+        start_offset, end_offset);
+    // We don't expect a failure from the traversal.
+    DEBUG_ASSERT(status == ZX_OK);
+  }
 
   // If we were not tracking an awaiting clean zero range, see if we can start tracking one.
   if (awaiting_clean_zero_range_end_ == 0) {

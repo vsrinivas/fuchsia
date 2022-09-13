@@ -3530,6 +3530,53 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackInterleavedWriteWithMapping, ZX_
   ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
 }
 
+// Tests that writing a page after a dirty zero range is queried but before it is written back is
+// left dirty.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(ResizeWritebackDirtyAfterQuery, ZX_VMO_RESIZABLE) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Resize the VMO up.
+  ASSERT_TRUE(vmo->Resize(4));
+
+  // Newly extended range should be dirty and zero.
+  zx_vmo_dirty_range_t range = {1, 3, ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // Write a page in the dirty zero range so that a page is committed.
+  TestThread t([vmo]() -> bool {
+    uint8_t data = 0xaa;
+    return vmo->vmo().write(&data, 2 * zx_system_get_page_size(), sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 2, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 2, 1));
+  }
+
+  ASSERT_TRUE(t.Wait());
+
+  // Writeback the dirty zero range we previously queried, explicitly stating that we will be
+  // writing back zeroes.
+  ASSERT_TRUE(pager.WritebackBeginZeroPages(vmo, 1, 3));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 1, 3));
+
+  // The writeback should have left the dirty (non-zero) page dirty.
+  range = {2, 1, 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // No more requests.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
 // Test that OP_ZERO writes zeros in a pager-backed VMO.
 TEST(PagerWriteback, OpZero) {
   UserPager pager;

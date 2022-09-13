@@ -3153,7 +3153,7 @@ static bool vmo_dirty_pages_writeback_test() {
       vmo->DebugGetCowPages()->ReclaimPage(page, 0, VmCowPages::EvictionHintAction::Follow));
 
   // Begin writeback on the page. This should still keep the page in the dirty queue.
-  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE));
+  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE, false));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsReclaim(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
@@ -3187,7 +3187,7 @@ static bool vmo_dirty_pages_writeback_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Clean the page again, and try to evict it.
-  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE));
+  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE, false));
   ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));
@@ -3236,7 +3236,7 @@ static bool vmo_dirty_pages_with_hints_test() {
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
 
   // Clean the page.
-  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE));
+  ASSERT_OK(vmo->WritebackBegin(0, PAGE_SIZE, false));
   ASSERT_OK(vmo->WritebackEnd(0, PAGE_SIZE));
   EXPECT_FALSE(pmm_page_queues()->DebugPageIsPagerBackedDirty(page));
   EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page, &queue));

@@ -135,10 +135,10 @@ zx_status_t PagerDispatcher::RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uin
       return vmo->DirtyPages(offset, length);
     }
     case ZX_PAGER_OP_WRITEBACK_BEGIN: {
-      if (data != 0) {
+      if (data != 0 && data != ZX_VMO_DIRTY_RANGE_IS_ZERO) {
         return ZX_ERR_INVALID_ARGS;
       }
-      return vmo->WritebackBegin(offset, length);
+      return vmo->WritebackBegin(offset, length, data == ZX_VMO_DIRTY_RANGE_IS_ZERO);
     }
     case ZX_PAGER_OP_WRITEBACK_END: {
       if (data != 0) {

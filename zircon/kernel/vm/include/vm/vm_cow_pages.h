@@ -352,7 +352,7 @@ class VmCowPages final
   }
 
   // See VmObject::WritebackBegin
-  zx_status_t WritebackBeginLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+  zx_status_t WritebackBeginLocked(uint64_t offset, uint64_t len, bool is_zero_range) TA_REQ(lock_);
 
   // See VmObject::WritebackEnd
   zx_status_t WritebackEndLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
