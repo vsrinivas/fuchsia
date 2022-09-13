@@ -9,6 +9,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_identity.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <gtest/gtest.h>
 
@@ -137,6 +139,11 @@ class AppUnitTest : public gtest::TestLoopFixture {
         context_, view_manager_.get(), &tts_manager_, &color_transform_manager_,
         &gesture_listener_registry_, &mock_boot_info_manager_, &screen_reader_context_factory_);
 
+    auto identity = scenic::NewViewIdentityOnCreation();
+
+    a11y_control_ref_ = std::move(identity.view_ref_control);
+    mock_a11y_view_ptr_->set_view_ref(std::move(identity.view_ref));
+
     RunLoopUntilIdle();
     // App is created, but is not fully-initialized.  Make sure the fetch of settings only happens
     // after it has been initialized.
@@ -178,6 +185,7 @@ class AppUnitTest : public gtest::TestLoopFixture {
   // We don't actually use these times. If we did, we'd want to more closely correlate them with
   // fake time.
   uint64_t input_event_time_ = 0;
+  fuchsia::ui::views::ViewRefControl a11y_control_ref_;
 };
 
 // Test to make sure ViewManager Service is exposed by A11y.
@@ -544,7 +552,7 @@ TEST_F(AppUnitTest, FocusChainIsWiredToScreenReader) {
   EXPECT_EQ(mock_semantic_provider_->koid(), a11y_focus->view_ref_koid);
 }
 
-TEST_F(AppUnitTest, FetchesLocaleInfoOnStartup) {
+TEST_F(AppUnitTest, AfterStartupHasLocaleAndViewCoordinateConverterAvailable) {
   auto app = GetApp();
 
   // Note: 2 here because as soon as we get a settings, we call Watch() again.
@@ -558,6 +566,7 @@ TEST_F(AppUnitTest, FetchesLocaleInfoOnStartup) {
   // The event causes GetProfile() to be invoked again from the a11y manager side. Check if the call
   // happened through the mock.
   ASSERT_EQ(2, mock_property_provider_.get_profile_count());
+  EXPECT_TRUE(view_manager_->GetViewCoordinateConverterForTest());
 }
 
 TEST_F(AppUnitTest, ScreenReaderReinitializesWhenLocaleChanges) {
