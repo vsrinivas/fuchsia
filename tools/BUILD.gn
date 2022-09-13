@@ -179,7 +179,6 @@ group("tests_no_e2e") {
     "//tools/fuzz:tests",
     "//tools/fvdl:tests",
     "//tools/gn_desc:host_tests($host_toolchain)",
-    "//tools/golden-util:tests",
     "//tools/integration:tests($host_toolchain)",
     "//tools/jq5:tests($host_toolchain)",
     "//tools/lib:tests($host_toolchain)",

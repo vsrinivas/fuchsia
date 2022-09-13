@@ -575,16 +575,16 @@ fx test --e2e fidl_microbenchmarks_test
 
 ### All regen commands
 
-This section gives the `fx regen-goldens` commands to regnerate all FIDL-related
+This section gives the `fx check-goldens` commands to regenerate all FIDL-related
 golden files. This is what `fidldev regen` uses under the hood.
 
 | Name            | Regen commands                                 | Input                     |  Output
 |-----------------|------------------------------------------------|---------------------------|------------
-| (all goldens)   | fx regen-goldens |  |
-| fidlc goldens   | fx regen-goldens fidlc                         | tools/fidl/fidlc/testdata | tools/fidl/fidlc/goldens
-| fidlgen goldens | fx regen-goldens $TOOL                         | tools/fidl/fidlc/testdata | tools/fidl/$TOOL/goldens
-| fidldoc goldens | fx regen-goldens fidldoc                       | tools/fidl/fidlc/testdata | tools/fidl/fidldoc/goldens
-| gidl goldens    | fx regen-goldens gidl | src/tests/fidl/conformance_suite/golden{.gidl,.test.fidl} | tools/fidl/gidl/goldens
+| (all goldens)   | fx check-goldens |  |
+| fidlc goldens   | fx check-goldens fidlc                         | tools/fidl/fidlc/testdata | tools/fidl/fidlc/goldens
+| fidlgen goldens | fx check-goldens $TOOL                         | tools/fidl/fidlc/testdata | tools/fidl/$TOOL/goldens
+| fidldoc goldens | fx check-goldens fidldoc                       | tools/fidl/fidlc/testdata | tools/fidl/fidldoc/goldens
+| gidl goldens    | fx check-goldens gidl | src/tests/fidl/conformance_suite/golden{.gidl,.test.fidl} | tools/fidl/gidl/goldens
 | third party go  | fx exec $FUCHSIA_DIR/third_party/go/regen-fidl |                           |
 
 ### Compiling with `ninja`

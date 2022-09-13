@@ -72,15 +72,11 @@ template("fidl_dart") {
 
     deps = [ json_representation_target ]
 
-    # Don't run the formatter if we are using a custom-built Dart SDK in a
-    # cross-build.
-    if (host_cpu == target_cpu) {
-      args += [
-        "--dart",
-        rebase_path(prebuilt_dart, root_build_dir),
-      ]
-      deps += dart_sdk_deps
-    }
+    args += [
+      "--dart",
+      rebase_path(prebuilt_dart, root_build_dir),
+    ]
+    deps += dart_sdk_deps
 
     metadata = {
       generated_sources = rebase_path(outputs, root_build_dir)

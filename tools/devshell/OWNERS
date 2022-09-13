@@ -54,7 +54,6 @@ per-file vdl=dannyrosen@google.com,yuanzhi@google.com
 # per-file-COMPONENT vdl=Emulators>FEMU
 
 per-file tests/subcommands/fx_format_code_test = jeremymanson@google.com
-per-file tests/subcommands/fx_regen_goldens_test = mkember@google.com
 per-file tests/subcommands/fx_setup_go_test =  olivernewman@google.com
 
 # COMPONENT: Tools>fx

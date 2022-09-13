@@ -20,7 +20,6 @@ group("tests") {
     "rbe:tests",
     "rust:tests",
     "sdk:tests",
-    "testing:tests",
     "tools:tests",
     "tracer:tests",
   ]

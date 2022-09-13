@@ -6,7 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
@@ -118,28 +118,28 @@ if (is_host) {
     }
   }
 
-  golden_test("fidldoc_golden_tests") {
-    goldens_dir = "goldens"
+  golden_files("fidldoc_golden_tests") {
+    testonly = true
     deps = [ ":generate_goldens" ]
-    entries = [
+    comparisons = [
       {
-        golden = "_toc.yaml.golden"
-        generated = "$target_gen_dir/goldens/_toc.yaml"
+        golden = "goldens/_toc.yaml.golden"
+        candidate = "$target_gen_dir/goldens/_toc.yaml"
       },
       {
-        golden = "README.md.golden"
-        generated = "$target_gen_dir/goldens/README.md"
+        golden = "goldens/README.md.golden"
+        candidate = "$target_gen_dir/goldens/README.md"
       },
       {
-        golden = "style.css.golden"
-        generated = "$target_gen_dir/goldens/style.css"
+        golden = "goldens/style.css.golden"
+        candidate = "$target_gen_dir/goldens/style.css"
       },
     ]
     foreach(info, fidl_testdata_info_filtered) {
-      entries += [
+      comparisons += [
         {
-          golden = "${info.name}.md.golden"
-          generated = "$target_gen_dir/goldens/${info.library}/README.md"
+          golden = "goldens/${info.name}.md.golden"
+          candidate = "$target_gen_dir/goldens/${info.library}/README.md"
         },
       ]
     }

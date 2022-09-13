@@ -6,7 +6,7 @@ import("//build/config/clang/clang.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
@@ -92,120 +92,124 @@ if (is_host) {
     deps = [ ":gopkg" ]
   }
 
-  golden_test("fidlgen_cpp_golden_tests") {
-    goldens_dir = "goldens"
-    reformat_goldens_bin = "$root_out_dir/clang-format-wrapper"
-    reformat_goldens_args =
-        [ rebase_path("${clang_prefix}/clang-format", root_build_dir) ]
-    reformat_goldens_inputs = [ "${clang_prefix}/clang-format" ]
-    deps = [ "//tools/fidl/clang-format-wrapper" ]
-    entries = []
+  golden_files("fidlgen_cpp_golden_tests") {
+    testonly = true
+
+    formatter = {
+      script = "$root_out_dir/clang-format-wrapper"
+      inputs = [ "${clang_prefix}/clang-format" ]
+      args = [ rebase_path(inputs[0], root_build_dir) ]
+      deps = [ "//tools/fidl/clang-format-wrapper" ]
+    }
+
+    deps = []
+    comparisons = []
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_cpp" ] - [ "fidlgen_cpp" ] ==
           info.denylist) {
         deps += [ "${info.target}_cpp_generate($fidl_toolchain)" ]
-        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp"
-        include_path = "fidl/${info.library}/cpp"
-        entries += [
+        _gen_dir = "${info.fidl_gen_dir}/${info.target_name}/cpp"
+        _include_path = "fidl/${info.library}/cpp"
+        comparisons += [
           {
-            golden = "${info.name}_wire.h.golden"
-            generated = "$gen_dir/$include_path/wire.h"
+            golden = "goldens/${info.name}_wire.h.golden"
+            candidate = "$_gen_dir/$_include_path/wire.h"
           },
           {
-            golden = "${info.name}_wire_test_base.h.golden"
-            generated = "$gen_dir/$include_path/wire_test_base.h"
+            golden = "goldens/${info.name}_wire_test_base.h.golden"
+            candidate = "$_gen_dir/$_include_path/wire_test_base.h"
           },
           {
-            golden = "${info.name}_markers.h.golden"
-            generated = "$gen_dir/$include_path/markers.h"
+            golden = "goldens/${info.name}_markers.h.golden"
+            candidate = "$_gen_dir/$_include_path/markers.h"
           },
           {
-            golden = "${info.name}_common_types.h.golden"
-            generated = "$gen_dir/$include_path/common_types.h"
+            golden = "goldens/${info.name}_common_types.h.golden"
+            candidate = "$_gen_dir/$_include_path/common_types.h"
           },
           {
-            golden = "${info.name}_common_types.cc.golden"
-            generated = "$gen_dir/$include_path/common_types.cc"
+            golden = "goldens/${info.name}_common_types.cc.golden"
+            candidate = "$_gen_dir/$_include_path/common_types.cc"
           },
           {
-            golden = "${info.name}_wire_types.h.golden"
-            generated = "$gen_dir/$include_path/wire_types.h"
+            golden = "goldens/${info.name}_wire_types.h.golden"
+            candidate = "$_gen_dir/$_include_path/wire_types.h"
           },
           {
-            golden = "${info.name}_wire_types.cc.golden"
-            generated = "$gen_dir/$include_path/wire_types.cc"
+            golden = "goldens/${info.name}_wire_types.cc.golden"
+            candidate = "$_gen_dir/$_include_path/wire_types.cc"
           },
           {
-            golden = "${info.name}_wire_messaging.h.golden"
-            generated = "$gen_dir/$include_path/wire_messaging.h"
+            golden = "goldens/${info.name}_wire_messaging.h.golden"
+            candidate = "$_gen_dir/$_include_path/wire_messaging.h"
           },
           {
-            golden = "${info.name}_wire_messaging.cc.golden"
-            generated = "$gen_dir/$include_path/wire_messaging.cc"
+            golden = "goldens/${info.name}_wire_messaging.cc.golden"
+            candidate = "$_gen_dir/$_include_path/wire_messaging.cc"
           },
           {
-            golden = "${info.name}_natural_types.h.golden"
-            generated = "$gen_dir/$include_path/natural_types.h"
+            golden = "goldens/${info.name}_natural_types.h.golden"
+            candidate = "$_gen_dir/$_include_path/natural_types.h"
           },
           {
-            golden = "${info.name}_natural_types.cc.golden"
-            generated = "$gen_dir/$include_path/natural_types.cc"
+            golden = "goldens/${info.name}_natural_types.cc.golden"
+            candidate = "$_gen_dir/$_include_path/natural_types.cc"
           },
           {
-            golden = "${info.name}_natural_ostream.h.golden"
-            generated = "$gen_dir/$include_path/natural_ostream.h"
+            golden = "goldens/${info.name}_natural_ostream.h.golden"
+            candidate = "$_gen_dir/$_include_path/natural_ostream.h"
           },
           {
-            golden = "${info.name}_natural_ostream.cc.golden"
-            generated = "$gen_dir/$include_path/natural_ostream.cc"
+            golden = "goldens/${info.name}_natural_ostream.cc.golden"
+            candidate = "$_gen_dir/$_include_path/natural_ostream.cc"
           },
           {
-            golden = "${info.name}_natural_messaging.h.golden"
-            generated = "$gen_dir/$include_path/natural_messaging.h"
+            golden = "goldens/${info.name}_natural_messaging.h.golden"
+            candidate = "$_gen_dir/$_include_path/natural_messaging.h"
           },
           {
-            golden = "${info.name}_natural_messaging.cc.golden"
-            generated = "$gen_dir/$include_path/natural_messaging.cc"
+            golden = "goldens/${info.name}_natural_messaging.cc.golden"
+            candidate = "$_gen_dir/$_include_path/natural_messaging.cc"
           },
           {
-            golden = "${info.name}_type_conversions.h.golden"
-            generated = "$gen_dir/$include_path/type_conversions.h"
+            golden = "goldens/${info.name}_type_conversions.h.golden"
+            candidate = "$_gen_dir/$_include_path/type_conversions.h"
           },
           {
-            golden = "${info.name}_type_conversions.cc.golden"
-            generated = "$gen_dir/$include_path/type_conversions.cc"
+            golden = "goldens/${info.name}_type_conversions.cc.golden"
+            candidate = "$_gen_dir/$_include_path/type_conversions.cc"
           },
           {
-            golden = "${info.name}_hlcpp_conversion.h.golden"
-            generated = "$gen_dir/$include_path/hlcpp_conversion.h"
+            golden = "goldens/${info.name}_hlcpp_conversion.h.golden"
+            candidate = "$_gen_dir/$_include_path/hlcpp_conversion.h"
           },
           {
-            golden = "${info.name}_fidl.h.golden"
-            generated = "$gen_dir/$include_path/fidl.h"
+            golden = "goldens/${info.name}_fidl.h.golden"
+            candidate = "$_gen_dir/$_include_path/fidl.h"
           },
           {
-            golden = "${info.name}_driver_wire.h.golden"
-            generated = "$gen_dir/$include_path/driver/wire.h"
+            golden = "goldens/${info.name}_driver_wire.h.golden"
+            candidate = "$_gen_dir/$_include_path/driver/wire.h"
           },
           {
-            golden = "${info.name}_driver_wire_messaging.h.golden"
-            generated = "$gen_dir/$include_path/driver/wire_messaging.h"
+            golden = "goldens/${info.name}_driver_wire_messaging.h.golden"
+            candidate = "$_gen_dir/$_include_path/driver/wire_messaging.h"
           },
           {
-            golden = "${info.name}_driver_wire_messaging.cc.golden"
-            generated = "$gen_dir/$include_path/driver/wire_messaging.cc"
+            golden = "goldens/${info.name}_driver_wire_messaging.cc.golden"
+            candidate = "$_gen_dir/$_include_path/driver/wire_messaging.cc"
           },
           {
-            golden = "${info.name}_driver_natural_messaging.h.golden"
-            generated = "$gen_dir/$include_path/driver/natural_messaging.h"
+            golden = "goldens/${info.name}_driver_natural_messaging.h.golden"
+            candidate = "$_gen_dir/$_include_path/driver/natural_messaging.h"
           },
           {
-            golden = "${info.name}_driver_natural_messaging.cc.golden"
-            generated = "$gen_dir/$include_path/driver/natural_messaging.cc"
+            golden = "goldens/${info.name}_driver_natural_messaging.cc.golden"
+            candidate = "$_gen_dir/$_include_path/driver/natural_messaging.cc"
           },
           {
-            golden = "${info.name}_driver_fidl.h.golden"
-            generated = "$gen_dir/$include_path/driver/fidl.h"
+            golden = "goldens/${info.name}_driver_fidl.h.golden"
+            candidate = "$_gen_dir/$_include_path/driver/fidl.h"
           },
         ]
       }

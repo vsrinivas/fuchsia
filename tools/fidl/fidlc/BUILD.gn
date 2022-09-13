@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fidl/toolchain.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//build/zircon/migrated_targets.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
@@ -143,35 +143,33 @@ if (current_os != "fuchsia") {
   }
 }
 
-if (is_host) {
-  golden_test("fidlc_golden_tests") {
-    goldens_dir = "goldens"
-    deps = []
-    entries = []
-    foreach(info, fidl_testdata_info) {
-      deps += [ "${info.target}($fidl_toolchain)" ]
-      entries += [
-        {
-          golden = "${info.name}.json.golden"
-          generated = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
-        },
-        {
-          golden = "${info.name}.index.json.golden"
-          generated = "${info.fidl_gen_dir}/${info.target_name}.fidl.index.json"
-        },
-        {
-          golden = "${info.name}.tables.c.golden"
-          generated = "${info.fidl_gen_dir}/${info.target_name}/c/${info.target_name}.fidl.tables.c"
-        },
-      ]
-    }
+golden_files("fidlc_golden_tests") {
+  testonly = true
+  deps = []
+  comparisons = []
+  foreach(info, fidl_testdata_info) {
+    deps += [ "${info.target}($fidl_toolchain)" ]
+    comparisons += [
+      {
+        golden = "goldens/${info.name}.json.golden"
+        candidate = "${info.fidl_gen_dir}/${info.target_name}.fidl.json"
+      },
+      {
+        golden = "goldens/${info.name}.index.json.golden"
+        candidate = "${info.fidl_gen_dir}/${info.target_name}.fidl.index.json"
+      },
+      {
+        golden = "goldens/${info.name}.tables.c.golden"
+        candidate = "${info.fidl_gen_dir}/${info.target_name}/c/${info.target_name}.fidl.tables.c"
+      },
+    ]
   }
 }
 
 group("tests") {
   testonly = true
   deps = [
-    ":fidlc_golden_tests($host_toolchain)",
+    ":fidlc_golden_tests",
     "testdata:verify_files_exist",
     "tests($host_toolchain)",
   ]

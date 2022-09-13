@@ -7,7 +7,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
 import("//build/rust/fidl_rust.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
@@ -48,25 +48,29 @@ if (is_host) {
     ]
   }
 
-  golden_test("fidlgen_rust_golden_tests") {
-    goldens_dir = "goldens"
-    reformat_goldens_bin = "$rustc_prefix/bin/rustfmt"
-    reformat_goldens_args = [
-      "--config-path",
-      rebase_path("//rustfmt.toml", root_build_dir),
-    ]
-    reformat_goldens_inputs = [ "//rustfmt.toml" ]
+  golden_files("fidlgen_rust_golden_tests") {
+    testonly = true
+
+    formatter = {
+      script = "$rustc_prefix/bin/rustfmt"
+      inputs = [ "//rustfmt.toml" ]
+      args = [
+        "--config-path",
+        rebase_path(inputs[0], root_build_dir),
+      ]
+    }
+
     deps = []
-    entries = []
+    comparisons = []
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_rust" ] - [ "fidlgen_rust" ] ==
           info.denylist) {
         deps += [ "${info.target}_rust_generate($fidl_toolchain)" ]
-        library_underscore = string_replace(info.library, ".", "_")
-        entries += [
+        _library_underscore = string_replace(info.library, ".", "_")
+        comparisons += [
           {
-            golden = "${info.name}.rs.golden"
-            generated = "${info.fidl_gen_dir}/${info.target_name}/fidl_${library_underscore}.rs"
+            golden = "goldens/${info.name}.rs.golden"
+            candidate = "${info.fidl_gen_dir}/${info.target_name}/fidl_${_library_underscore}.rs"
           },
         ]
       }

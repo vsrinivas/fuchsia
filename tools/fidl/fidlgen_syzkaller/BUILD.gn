@@ -7,7 +7,7 @@ import("//build/fidl/toolchain.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
@@ -59,15 +59,15 @@ if (is_host) {
     outputs = [ "$target_gen_dir/golden_{{source_name_part}}.syz.txt" ]
   }
 
-  golden_test("fidlgen_syzkaller_golden_tests") {
-    goldens_dir = "goldens"
+  golden_files("fidlgen_syzkaller_golden_tests") {
+    testonly = true
     deps = [ ":generate_goldens" ]
-    entries = []
+    comparisons = []
     foreach(info, fidl_testdata_info_filtered) {
-      entries += [
+      comparisons += [
         {
-          golden = "${info.name}.syz.txt.golden"
-          generated = "$target_gen_dir/golden_${info.target_name}.fidl.syz.txt"
+          golden = "goldens/${info.name}.syz.txt.golden"
+          candidate = "$target_gen_dir/golden_${info.target_name}.fidl.syz.txt"
         },
       ]
     }

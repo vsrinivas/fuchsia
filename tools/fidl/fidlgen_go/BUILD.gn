@@ -6,7 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 import("//build/host.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
 
@@ -41,19 +41,23 @@ if (is_host) {
     deps = [ ":gopkg" ]
   }
 
-  golden_test("fidlgen_go_golden_tests") {
-    goldens_dir = "goldens"
-    reformat_goldens_bin = "//prebuilt/third_party/go/$host_platform/bin/gofmt"
+  golden_files("fidlgen_go_golden_tests") {
+    testonly = true
+
+    formatter = {
+      script = "//prebuilt/third_party/go/$host_platform/bin/gofmt"
+    }
+
     deps = []
-    entries = []
+    comparisons = []
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_go" ] - [ "fidlgen_go" ] ==
           info.denylist) {
         deps += [ "${info.target}_go_generate($go_toolchain)" ]
-        entries += [
+        comparisons += [
           {
-            golden = "${info.name}.go.golden"
-            generated = "${info.fidl_gen_dir}/${info.target_name}/${info.library}.fidl/impl.go"
+            golden = "goldens/${info.name}.go.golden"
+            candidate = "${info.fidl_gen_dir}/${info.target_name}/${info.library}.fidl/impl.go"
           },
         ]
       }

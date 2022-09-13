@@ -75,5 +75,5 @@ goldens from `//tools/fidl/fidldoc/goldens`.
 To regenerate the goldens run:
 
 ```
-fx regen-goldens fidldoc
+fx check-goldens fidldoc
 ```

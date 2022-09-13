@@ -1,7 +1,0 @@
-cpp_golden.cc.golden
-dart_golden.dart.golden
-dynfidl_golden.rs.golden
-go_golden.go.golden
-hlcpp_golden.cc.golden
-llcpp_golden.cc.golden
-rust_golden.rs.golden

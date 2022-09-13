@@ -11,8 +11,6 @@ import("//build/testing/config.gni")
 # If the `bless_goldens` build arg is true, the goldens will be updated with
 # the candidate files rather than failing the action.
 #
-# For more complex golden testing, see //build/testing/golden_test.gni.
-#
 # Parameters:
 #
 #  * comparisons

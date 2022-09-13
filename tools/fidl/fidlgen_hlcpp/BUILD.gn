@@ -7,7 +7,7 @@ import("//build/fidl/toolchain.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
@@ -51,32 +51,36 @@ if (is_host) {
     deps = [ ":gopkg" ]
   }
 
-  golden_test("fidlgen_hlcpp_golden_tests") {
-    goldens_dir = "goldens"
-    reformat_goldens_bin = "$root_out_dir/clang-format-wrapper"
-    reformat_goldens_args =
-        [ rebase_path("${clang_prefix}/clang-format", root_build_dir) ]
-    reformat_goldens_inputs = [ "${clang_prefix}/clang-format" ]
-    deps = [ "//tools/fidl/clang-format-wrapper" ]
-    entries = []
+  golden_files("fidlgen_hlcpp_golden_tests") {
+    testonly = true
+
+    formatter = {
+      script = "$root_out_dir/clang-format-wrapper"
+      inputs = [ "${clang_prefix}/clang-format" ]
+      args = [ rebase_path(inputs[0], root_build_dir) ]
+      deps = [ "//tools/fidl/clang-format-wrapper" ]
+    }
+
+    deps = []
+    comparisons = []
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_hlcpp" ] - [ "fidlgen_hlcpp" ] ==
           info.denylist) {
         deps += [ "${info.target}_hlcpp_generate($fidl_toolchain)" ]
-        gen_dir = "${info.fidl_gen_dir}/${info.target_name}/hlcpp"
-        include_path = string_replace(info.library, ".", "/") + "/cpp"
-        entries += [
+        _gen_dir = "${info.fidl_gen_dir}/${info.target_name}/hlcpp"
+        _include_path = string_replace(info.library, ".", "/") + "/cpp"
+        comparisons += [
           {
-            golden = "${info.name}.h.golden"
-            generated = "$gen_dir/$include_path/fidl.h"
+            golden = "goldens/${info.name}.h.golden"
+            candidate = "$_gen_dir/$_include_path/fidl.h"
           },
           {
-            golden = "${info.name}.cc.golden"
-            generated = "$gen_dir/$include_path/fidl.cc"
+            golden = "goldens/${info.name}.cc.golden"
+            candidate = "$_gen_dir/$_include_path/fidl.cc"
           },
           {
-            golden = "${info.name}_test_base.h.golden"
-            generated = "$gen_dir/$include_path/fidl_test_base.h"
+            golden = "goldens/${info.name}_test_base.h.golden"
+            candidate = "$_gen_dir/$_include_path/fidl_test_base.h"
           },
         ]
       }

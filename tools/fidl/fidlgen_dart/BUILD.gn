@@ -7,7 +7,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
 import("//build/sdk/sdk_host_tool.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 if (is_host) {
@@ -41,28 +41,32 @@ if (is_host) {
     deps = [ ":fidlgen_dart" ]
   }
 
-  golden_test("fidlgen_dart_golden_tests") {
-    goldens_dir = "goldens"
-    reformat_goldens_bin = prebuilt_dart
-    reformat_goldens_args = [
-      "format",
-      "-o",
-      "show",
-    ]
+  golden_files("fidlgen_dart_golden_tests") {
+    testonly = true
+
+    formatter = {
+      script = prebuilt_dart
+      args = [
+        "format",
+        "-o",
+        "show",
+      ]
+    }
+
     deps = []
-    entries = []
+    comparisons = []
     foreach(info, fidl_testdata_info) {
       if (info.denylist + [ "fidlgen_dart" ] - [ "fidlgen_dart" ] ==
           info.denylist) {
         deps += [ "${info.target}_dart_generate($dart_toolchain)" ]
-        entries += [
+        comparisons += [
           {
-            golden = "${info.name}_async.dart.golden"
-            generated = "${info.fidl_gen_dir}/${info.library}_package/lib/fidl_async.dart"
+            golden = "goldens/${info.name}_async.dart.golden"
+            candidate = "${info.fidl_gen_dir}/${info.library}_package/lib/fidl_async.dart"
           },
           {
-            golden = "${info.name}_test.dart.golden"
-            generated = "${info.fidl_gen_dir}/${info.library}_package/lib/fidl_test.dart"
+            golden = "goldens/${info.name}_test.dart.golden"
+            candidate = "${info.fidl_gen_dir}/${info.library}_package/lib/fidl_test.dart"
           },
         ]
       }

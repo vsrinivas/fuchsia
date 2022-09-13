@@ -9,7 +9,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/testing/golden_test.gni")
+import("//build/testing/golden_files.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import(
@@ -172,17 +172,17 @@ if (is_host) {
     }
   }
 
-  golden_test("gidl_golden_tests") {
-    goldens_dir = "goldens"
-    deps = []
-    entries = []
+  golden_files("gidl_golden_tests") {
+    testonly = true
 
+    deps = []
+    comparisons = []
     foreach(item, conformance_golden_items) {
       deps += [ ":${item.language}_goldens" ]
-      entries += [
+      comparisons += [
         {
-          golden = "${item.language}_golden.${item.extension}.golden"
-          generated =
+          golden = "goldens/${item.language}_golden.${item.extension}.golden"
+          candidate =
               "$target_gen_dir/${item.language}_golden.${item.extension}"
         },
       ]

@@ -45,9 +45,6 @@ dependencies, not to group together similar standalone libraries.
 ## Golden tests
 
 FIDL tools in //tools/fidl use the test libraries as input when defining golden
-tests with //build/testing/golden_test.gni.
+tests with //build/testing/golden_files.gni.
 
-To regenerate all goldens, run `fx regen-goldens fidl`.
-
-To test goldens, run `fx test ${TOOL}_golden_tests` for the specific tool,
-e.g. `fx test fidlc_golden_tests`.
+To check or update all FIDL-related goldens, run `fx check-goldens fidl`.
