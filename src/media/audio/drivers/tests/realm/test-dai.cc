@@ -96,19 +96,19 @@ class TestDai : public TestDaiDeviceType,
     uint8_t bits_per_slot[] = {32};
     uint8_t bits_per_sample[] = {24};
     formats.number_of_channels =
-        fidl::VectorView<uint32_t>::FromExternal(number_of_channels, countof(number_of_channels));
+        fidl::VectorView<uint32_t>::FromExternal(number_of_channels, std::size(number_of_channels));
     formats.sample_formats =
         fidl::VectorView<fuchsia_hardware_audio::wire::DaiSampleFormat>::FromExternal(
-            sample_formats, countof(sample_formats));
+            sample_formats, std::size(sample_formats));
     formats.frame_formats =
         fidl::VectorView<fuchsia_hardware_audio::wire::DaiFrameFormat>::FromExternal(
-            frame_formats, countof(frame_formats));
+            frame_formats, std::size(frame_formats));
     formats.frame_rates =
-        fidl::VectorView<uint32_t>::FromExternal(frame_rates, countof(frame_rates));
+        fidl::VectorView<uint32_t>::FromExternal(frame_rates, std::size(frame_rates));
     formats.bits_per_slot =
-        fidl::VectorView<uint8_t>::FromExternal(bits_per_slot, countof(bits_per_slot));
+        fidl::VectorView<uint8_t>::FromExternal(bits_per_slot, std::size(bits_per_slot));
     formats.bits_per_sample =
-        fidl::VectorView<uint8_t>::FromExternal(bits_per_sample, countof(bits_per_sample));
+        fidl::VectorView<uint8_t>::FromExternal(bits_per_sample, std::size(bits_per_sample));
 
     all_formats[0] = formats;
 

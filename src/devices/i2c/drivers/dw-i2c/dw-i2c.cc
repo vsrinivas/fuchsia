@@ -501,7 +501,7 @@ int DwI2c::TestThread() {
         {.address = addr, .data_buffer = &data_read, .data_size = 1, .is_read = true, .stop = true},
     };
 
-    status = I2cImplTransact(0, ops, countof(ops));
+    status = I2cImplTransact(0, ops, std::size(ops));
     if (status == ZX_OK) {
       zxlogf(INFO, "I2C device found at address: 0x%02X", addr);
     }
@@ -522,7 +522,7 @@ int DwI2c::TestThread() {
         {.address = addr, .data_buffer = &data_read, .data_size = 1, .is_read = true, .stop = true},
     };
 
-    status = I2cImplTransact(0, ops, countof(ops));
+    status = I2cImplTransact(0, ops, std::size(ops));
     if (status == ZX_OK) {
       // Check with reset value of PMIC registers.
       if (data_read != valid_value) {

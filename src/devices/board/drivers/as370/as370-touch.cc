@@ -31,12 +31,12 @@ static const zx_bind_inst_t ref_out_touch_gpio_match[] = {
     BI_MATCH_IF(EQ, BIND_GPIO_PIN, 5),
 };
 static const device_fragment_part_t ref_out_touch_gpio_fragment[] = {
-    {countof(ref_out_touch_gpio_match), ref_out_touch_gpio_match},
+    {std::size(ref_out_touch_gpio_match), ref_out_touch_gpio_match},
 };
 
 static const device_fragment_t controller_fragments[] = {
-    {"i2c", countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
-    {"gpio", countof(ref_out_touch_gpio_fragment), ref_out_touch_gpio_fragment},
+    {"i2c", std::size(ref_out_i2c_fragment), ref_out_i2c_fragment},
+    {"gpio", std::size(ref_out_touch_gpio_fragment), ref_out_touch_gpio_fragment},
 };
 
 zx_status_t As370::TouchInit() {
@@ -70,13 +70,13 @@ zx_status_t As370::TouchInit() {
 
   const composite_device_desc_t comp_desc = {
       .props = props,
-      .props_count = countof(props),
+      .props_count = std::size(props),
       .fragments = controller_fragments,
-      .fragments_count = countof(controller_fragments),
+      .fragments_count = std::size(controller_fragments),
       .primary_fragment = "i2c",
       .spawn_colocated = false,
       .metadata_list = as370_touch_metadata,
-      .metadata_count = countof(as370_touch_metadata),
+      .metadata_count = std::size(as370_touch_metadata),
   };
 
   zx_status_t status = DdkAddComposite("as370-touch", &comp_desc);

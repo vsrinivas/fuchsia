@@ -111,7 +111,7 @@ void BtTransportUart::SnoopChannelWriteLocked(uint8_t flags, uint8_t* bytes, siz
 
   zx_status_t status =
       snoop_channel_.write(/*flags=*/ZX_CHANNEL_WRITE_USE_IOVEC, /*bytes=*/iovs,
-                           /*num_bytes=*/countof(iovs), /*handles=*/nullptr, /*num_handles=*/0);
+                           /*num_bytes=*/std::size(iovs), /*handles=*/nullptr, /*num_handles=*/0);
 
   if (status != ZX_OK) {
     if (status != ZX_ERR_PEER_CLOSED) {

@@ -47,11 +47,11 @@ zx_status_t As370::SdioInit() {
   sdio_dev.pid = PDEV_PID_SYNAPTICS_AS370;
   sdio_dev.did = PDEV_DID_AS370_SDHCI0;
   sdio_dev.irq_list = sdio_irqs;
-  sdio_dev.irq_count = countof(sdio_irqs);
+  sdio_dev.irq_count = std::size(sdio_irqs);
   sdio_dev.mmio_list = sdio_mmios;
-  sdio_dev.mmio_count = countof(sdio_mmios);
+  sdio_dev.mmio_count = std::size(sdio_mmios);
   sdio_dev.bti_list = sdio_btis;
-  sdio_dev.bti_count = countof(sdio_btis);
+  sdio_dev.bti_count = std::size(sdio_btis);
 
   // Configure eMMC-SD soc pads.
   if (((status = gpio_impl_.SetAltFunction(58, 1)) != ZX_OK) ||  // SD0_CLK

@@ -167,13 +167,13 @@ uint8_t Max98373::getTdmClockRatio(uint32_t number_of_channels, uint8_t bits_per
   constexpr uint8_t kFirstBclkPerLrclk = 2;
   const uint32_t bits_per_frame = number_of_channels * static_cast<uint32_t>(bits_per_slot);
   size_t i = 0;
-  for (; i < countof(kBclkPerLrclk); ++i) {
+  for (; i < std::size(kBclkPerLrclk); ++i) {
     if (bits_per_frame == kBclkPerLrclk[i]) {
       clock_ratio = static_cast<uint8_t>(kFirstBclkPerLrclk + i);
       break;
     }
   }
-  ZX_ASSERT_MSG(i != countof(kBclkPerLrclk),
+  ZX_ASSERT_MSG(i != std::size(kBclkPerLrclk),
                 "Must have supported number of channels and bits per slot");
   return clock_ratio;
 }

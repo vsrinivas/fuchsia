@@ -123,7 +123,7 @@ zx_status_t Nelson::DisplayInit(uint32_t bootloader_display_id) {
       },
   };
 
-  if (bootloader_display_id && bootloader_display_id < countof(uboot_mapping)) {
+  if (bootloader_display_id && bootloader_display_id < std::size(uboot_mapping)) {
     display_panel_info[0].panel_type = uboot_mapping[bootloader_display_id];
     zxlogf(DEBUG, "%s: bootloader provided display panel %d", __func__,
            display_panel_info[0].panel_type);

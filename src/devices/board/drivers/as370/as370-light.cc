@@ -74,7 +74,7 @@ zx_status_t As370::LightInit() {
   light_dev.pid = PDEV_PID_TI_LP5018;
   light_dev.did = PDEV_DID_TI_LED;
   light_dev.metadata_list = light_metadata;
-  light_dev.metadata_count = countof(light_metadata);
+  light_dev.metadata_count = std::size(light_metadata);
 
   status = pbus_.CompositeDeviceAdd(&light_dev, reinterpret_cast<uint64_t>(fragments),
                                     std::size(fragments), nullptr);
