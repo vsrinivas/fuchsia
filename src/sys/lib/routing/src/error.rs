@@ -688,4 +688,7 @@ pub enum AvailabilityRoutingError {
 
     #[error("Offer uses void source, so the route cannot be completed")]
     OfferFromVoidToOptionalTarget,
+
+    #[error("Target optionally uses capability that was not available: {reason}")]
+    FailedToRouteToOptionalTarget { reason: String },
 }

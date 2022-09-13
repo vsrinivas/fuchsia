@@ -69,10 +69,23 @@ fuchsia_component("use-unoffered-component") {
   deps = [ ":use-unoffered" ]
 }
 
+fuchsia_component("optional-use-unoffered-component") {
+  testonly = true
+  manifest = "meta/optional-use-unoffered.cml"
+  component_name = "optional-use-unoffered"
+  deps = [ ":use-unoffered" ]
+}
+
 fuchsia_component("offers-to-children-unavailable") {
   testonly = true
   manifest = "meta/offers-to-children-unavailable.cml"
   component_name = "offers-to-children-unavailable"
+}
+
+fuchsia_component("offers-to-children-unavailable-but-optional") {
+  testonly = true
+  manifest = "meta/offers-to-children-unavailable-but-optional.cml"
+  component_name = "offers-to-children-unavailable-but-optional"
 }
 
 fuchsia_component("routing-tests") {
@@ -86,6 +99,8 @@ group("all-components") {
   deps = [
     ":empty-component",
     ":offers-to-children-unavailable",
+    ":offers-to-children-unavailable-but-optional",
+    ":optional-use-unoffered-component",
     ":reader",
     ":routing-tests",
     ":use-unoffered-component",

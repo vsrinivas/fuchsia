@@ -22,7 +22,7 @@ impl Plugin for RoutingErrorsPlugin {
     fn run_structured(&self, inputs: &FileDataFetcher<'_>) -> Vec<Action> {
         let mut results = Vec::new();
 
-        let re = Regex::new(r".*\[([^:]+):[0-9]+\] ERROR.*Failed to route protocol `([^`]+)` with target component `([^`]+)`.*").expect("regex compilation failed");
+        let re = Regex::new(r".*\[([^:]+):[0-9]+\] ERROR.*Required protocol `([^`]+)` was not available for target component `([^`]+)`.*").expect("regex compilation failed");
         analyze_logs(inputs, re, |mut pattern_match| {
             let (moniker, protocol, name): (&str, &str, &str) =
                 match (pattern_match.pop(), pattern_match.pop(), pattern_match.pop()) {
@@ -75,8 +75,8 @@ mod tests {
             "[WARNING]: Error routing capability \
         \"fidl.examples.routing.echo.Echo\" to component identified as \"echo_client\" \
         with moniker \"/bootstrap/echo/echo_client\". Original error log:\n[00017.480623]\
-        [1150][1253][echo_client:0] ERROR: Failed to route protocol \
-        `fidl.examples.routing.echo.Echo` with target component `/bootstrap/echo/echo_client`\
+        [1150][1253][echo_client:0] ERROR: Required protocol `fidl.examples.routing.echo.Echo` \
+        was not available for target component `/bootstrap/echo/echo_client`\
         : A `use from parent` declaration was found at `/bootstrap/echo/echo_client` for \
         `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the \
         parent"
@@ -84,16 +84,16 @@ mod tests {
             "[WARNING]: Error routing capability \
         \"foo.bar.Baz\" to component identified as \"foobar\" \
         with moniker \"/bootstrap/foobar\". Original error log:\n[12471.623480]\
-        [782][9443][foobar:345] ERROR: Failed to route protocol \
-        `foo.bar.Baz` with target component `/bootstrap/foobar`: A `use from parent` \
+        [782][9443][foobar:345] ERROR: Required protocol `foo.bar.Baz` \
+        was not available for target component `/bootstrap/foobar`: A `use from parent` \
         declaration was found at `/bootstrap/foobar` for `foo.bar.Baz`, but no matching \
         `offer` declaration was found in the parent"
                 .to_string(),
         ];
 
         let fetcher: TextFetcher = r#"
-[00017.480623][1150][1253][echo_client:0] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/bootstrap/echo/echo_client`: A `use from parent` declaration was found at `/bootstrap/echo/echo_client` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
-[12471.623480][782][9443][foobar:345] ERROR: Failed to route protocol `foo.bar.Baz` with target component `/bootstrap/foobar`: A `use from parent` declaration was found at `/bootstrap/foobar` for `foo.bar.Baz`, but no matching `offer` declaration was found in the parent
+[00017.480623][1150][1253][echo_client:0] ERROR: Required protocol `fidl.examples.routing.echo.Echo` was not available for target component `/bootstrap/echo/echo_client`: A `use from parent` declaration was found at `/bootstrap/echo/echo_client` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
+[12471.623480][782][9443][foobar:345] ERROR: Required protocol `foo.bar.Baz` was not available for target component `/bootstrap/foobar`: A `use from parent` declaration was found at `/bootstrap/foobar` for `foo.bar.Baz`, but no matching `offer` declaration was found in the parent
 "#.into();
 
         let diagnostics_data = Vec::new();
@@ -107,7 +107,7 @@ mod tests {
         let expected_output: Vec<String> = vec![];
 
         let fetcher: TextFetcher = r#"
-[00017.480623][1150][1253][component manager] ERROR: Failed to route protocol `fidl.examples.routing.echo.Echo` with target component `/bootstrap/echo/echo_client`: A `use from parent` declaration was found at `/bootstrap/echo/echo_client` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
+[00017.480623][1150][1253][component manager] ERROR: Required protocol `fidl.examples.routing.echo.Echo` was not available for target component `/bootstrap/echo/echo_client`: A `use from parent` declaration was found at `/bootstrap/echo/echo_client` for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
 "#.into();
 
         let diagnostics_data = Vec::new();

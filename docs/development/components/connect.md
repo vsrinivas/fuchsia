@@ -418,7 +418,8 @@ component manager exhibits the following behavior:
     error message like:
 
     ```none {:.devsite-disable-click-to-copy}
-    [component_manager] ERROR: Failed to route protocol `fuchsia.appmgr.Startup` with target component `/startup`:
+    [component_manager] ERROR: Required protocol `fuchsia.appmgr.Startup` was not
+    available for target component `/startup`:
     failed to resolve "fuchsia-pkg://fuchsia.com/your_component#meta/your_component.cm":
     package not found: remote resolver responded with PackageNotFound
     ```
@@ -594,8 +595,9 @@ Do the following to check if a routing failure was the cause of channel closure:
     that explains where the routing chain failed. For example:
 
     ```none {:.devsite-disable-click-to-copy}
-    [echo_client][][W] Failed to route protocol
-    `fidl.examples.routing.echo.Echo` with target component `/core/ffx-laboratory:echo_realm/echo_client`:
+    [echo_client][][W] Required protocol
+    `fidl.examples.routing.echo.Echo` was not available for target component
+    `/core/ffx-laboratory:echo_realm/echo_client`:
     A `use from parent` declaration was found at `/core/ffx-laboratory:echo_realm/echo_client`
     for `fidl.examples.routing.echo.Echo`, but no matching `offer` declaration was found in the parent
     ```

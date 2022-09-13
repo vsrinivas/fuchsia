@@ -11,11 +11,28 @@
             startup: "eager",
         },
 
+        // This child tries to use the fidl.test.component.Trigger capability,
+        // which the parent (this component) does not offer.
+        {
+            name: "child-with-optional-use",
+            url: "#meta/optional-use-unoffered.cm",
+            startup: "eager",
+        },
+
         // Subtree with errors where a parent doesn't correctly route
         // a capability from other components to the child.
         {
             name: "offers-to-children-unavailable",
             url: "#meta/offers-to-children-unavailable.cm",
+            startup: "eager",
+        },
+
+        // Subtree with errors where a parent doesn't correctly route
+        // a capability from other components to the child, but the child
+        // has an optional use.
+        {
+            name: "offers-to-children-unavailable-but-optional",
+            url: "#meta/offers-to-children-unavailable-but-optional.cm",
             startup: "eager",
         },
     ],
@@ -25,7 +42,9 @@
             from: "parent",
             to: [
                 "#child",
+                "#child-with-optional-use",
                 "#offers-to-children-unavailable",
+                "#offers-to-children-unavailable-but-optional",
             ],
         },
     ],
