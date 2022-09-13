@@ -10,7 +10,6 @@ use {
     fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost,
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
     fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger, fidl_fuchsia_process as fprocess,
-    fidl_fuchsia_sys as fsys,
     fs_management::{Blobfs, Fxfs, BLOBFS_TYPE_GUID, DATA_TYPE_GUID},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
@@ -172,7 +171,6 @@ impl TestFixtureBuilder {
             builder
                 .add_route(
                     Route::new()
-                        .capability(Capability::protocol::<fsys::LauncherMarker>())
                         .capability(Capability::protocol::<fprocess::LauncherMarker>())
                         .capability(Capability::protocol::<flogger::LogSinkMarker>())
                         .from(Ref::parent())

@@ -51,7 +51,6 @@ template("fshost_integration_test") {
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
       "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
-      "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
       "//sdk/lib/device-watcher/rust",
       "//src/lib/fdio/rust:fdio",
       "//src/lib/fidl/rust/fidl",

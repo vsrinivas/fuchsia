@@ -22,7 +22,6 @@ source_set("start-storage-benchmark-lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_cpp_wire",
     "//src/lib/fxl",
     "//src/lib/storage/fs_management",
     "//src/storage/memfs:cpp",

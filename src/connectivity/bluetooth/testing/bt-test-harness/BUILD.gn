@@ -55,7 +55,6 @@ rustc_library("bt-test-harness") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:parking_lot",

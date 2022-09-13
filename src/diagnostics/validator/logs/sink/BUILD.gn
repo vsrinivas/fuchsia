@@ -52,7 +52,6 @@ rustc_binary("bin-e2e-test") {
   ]
   test_deps = [
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_rust",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/log/encoding/rust",
     "//src/lib/fidl/rust/fidl",
