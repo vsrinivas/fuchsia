@@ -26,6 +26,7 @@ executable("install-disk-image") {
     "payload-streamer.cc",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_cpp_wire",
     "//sdk/lib/fdio",
     "//src/storage/lib/paver",

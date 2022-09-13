@@ -4,6 +4,7 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -218,8 +219,14 @@ zx_status_t ReadFileToVmo(fbl::unique_fd payload_fd, fuchsia_mem::wire::Buffer* 
     return static_cast<zx_status_t>(r);
   }
 
+  auto vmo = mapper.Release();
+  status = vmo.set_prop_content_size(vmo_offset);
+  if (status != ZX_OK) {
+    return status;
+  }
+
   payload->size = vmo_offset;
-  payload->vmo = mapper.Release();
+  payload->vmo = std::move(vmo);
   return ZX_OK;
 }
 
@@ -265,7 +272,13 @@ zx_status_t RealMain(Flags flags) {
     ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
     return paver_svc.error_value();
   }
-  fidl::WireSyncClient paver_client{std::move(*paver_svc)};
+  auto paver_client = fidl::BindSyncClient(std::move(*paver_svc));
+  auto fshost_svc = service::Connect<fuchsia_fshost::Admin>();
+  if (!fshost_svc.is_ok()) {
+    ERROR("Unable to open /svc/fuchsia.fshost.Admin.\n");
+    return fshost_svc.error_value();
+  }
+  auto fshost_client = fidl::BindSyncClient(std::move(*fshost_svc));
 
   switch (flags.cmd) {
     case Command::kFvm: {
@@ -422,12 +435,11 @@ zx_status_t RealMain(Flags flags) {
         PrintUsage();
         return ZX_ERR_INVALID_ARGS;
       }
-      auto result =
-          data_sink->WriteDataFile(fidl::StringView::FromExternal(flags.path), std::move(payload));
-      status = result.ok() ? result.value().status : result.status();
-      if (status != ZX_OK) {
-        ERROR("install-data-file failed: %s\n", zx_status_get_string(status));
-        return status;
+      auto result = fshost_client->WriteDataFile(fidl::StringView::FromExternal(flags.path),
+                                                 std::move(payload.vmo));
+      if (!result.ok()) {
+        ERROR("install-data-file failed: %s\n", result.status_string());
+        return result.status();
       }
 
       return ZX_OK;

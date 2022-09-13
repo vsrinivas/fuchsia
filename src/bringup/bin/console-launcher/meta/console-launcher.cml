@@ -101,6 +101,7 @@
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
                 "fuchsia.driver.development.DriverDevelopment",
+                "fuchsia.fshost.Admin",
                 "fuchsia.hardware.power.statecontrol.Admin",
                 "fuchsia.hardware.pty.Device",
                 "fuchsia.hardware.usb.DeviceWatcher",

@@ -834,12 +834,10 @@
             to: "#cr50_agent",
         },
         {
-            protocol: [ "fuchsia.fshost.Admin" ],
-            from: "#fshost",
-            to: "#netsvc",
-        },
-        {
-            protocol: [ "fuchsia.fshost.BlockWatcher" ],
+            protocol: [
+                "fuchsia.fshost.Admin",
+                "fuchsia.fshost.BlockWatcher",
+            ],
             from: "#fshost",
             to: [
                 "#console-launcher",
