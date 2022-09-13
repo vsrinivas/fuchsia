@@ -84,6 +84,7 @@ func TestAddImageDeps(t *testing.T) {
 		pave           bool
 		isEmu          bool
 		imageOverrides build.ImageOverrides
+		deviceType     string
 		want           []string
 	}{
 		{
@@ -118,6 +119,13 @@ func TestAddImageDeps(t *testing.T) {
 			imageOverrides: build.ImageOverrides{build.ZbiImage: {Name: "zbi-image"}, build.VbmetaImage: {Name: "vbmeta-image"}},
 			want:           []string{"images.json", "vbmeta-image.vbmeta", "zbi-image.zbi", "zedboot.zbi"},
 		},
+		{
+			name:       "GCE image deps",
+			deviceType: "GCE",
+			pave:       false,
+			isEmu:      false,
+			want:       []string{"images.json"},
+		},
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -125,6 +133,9 @@ func TestAddImageDeps(t *testing.T) {
 				Env: build.Environment{
 					IsEmu:          tc.isEmu,
 					ImageOverrides: tc.imageOverrides,
+					Dimensions: build.DimensionSet{
+						DeviceType: tc.deviceType,
+					},
 				},
 			}
 			AddImageDeps(s, imgDir, imgs, tc.pave)

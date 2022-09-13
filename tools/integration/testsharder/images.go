@@ -16,6 +16,12 @@ import (
 // that shard's list of dependencies.
 func AddImageDeps(s *Shard, buildDir string, images []build.Image, pave bool) error {
 	imageDeps := []string{"images.json"}
+	// GCE test shards do not require any image deps as the build creates a
+	// compute image with all the deps baked in.
+	if s.Env.Dimensions.DeviceType == "GCE" {
+		s.AddDeps(imageDeps)
+		return nil
+	}
 	for _, image := range images {
 		if isUsedForTesting(s, image, pave) {
 			if _, err := os.Stat(filepath.Join(buildDir, image.Path)); err != nil {
