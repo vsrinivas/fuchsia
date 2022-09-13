@@ -16,6 +16,8 @@ source_set("fidl_realtime") {
   ]
 
   sources = [
+    "stream_sink_client.cc",
+    "stream_sink_client.h",
     "stream_sink_server.cc",
     "stream_sink_server.h",
   ]
@@ -28,6 +30,7 @@ source_set("fidl_realtime") {
     "//src/media/audio/services/common",
     "//src/media/audio/services/mixer/common",
     "//src/media/audio/services/mixer/mix",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/trace",
   ]
 
@@ -38,7 +41,10 @@ executable("fidl_realtime_unittests") {
   output_name = "audio_services_mixer_fidl_realtime_unittests"
   testonly = true
 
-  sources = [ "stream_sink_server_unittest.cc" ]
+  sources = [
+    "stream_sink_client_unittest.cc",
+    "stream_sink_server_unittest.cc",
+  ]
 
   deps = [
     ":fidl_realtime",

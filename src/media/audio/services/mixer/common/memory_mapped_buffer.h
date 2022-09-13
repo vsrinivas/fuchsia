@@ -34,15 +34,21 @@ class MemoryMappedBuffer {
   // Returns the size of the buffer in bytes.
   size_t size() const { return mapper_.size(); }
 
+  // Returns the ZX_PROP_VMO_CONTENT_SIZE of the buffer, in bytes, recorded at the time this
+  // MemoryMappedBuffer was created.
+  size_t content_size() const { return content_size_; }
+
  private:
-  explicit MemoryMappedBuffer(fzl::VmoMapper mapper) : mapper_(std::move(mapper)) {}
+  MemoryMappedBuffer(fzl::VmoMapper mapper, size_t content_size)
+      : mapper_(std::move(mapper)), content_size_(content_size) {}
 
   MemoryMappedBuffer(const MemoryMappedBuffer&) = delete;
   MemoryMappedBuffer& operator=(const MemoryMappedBuffer&) = delete;
   MemoryMappedBuffer(MemoryMappedBuffer&&) = delete;
   MemoryMappedBuffer& operator=(MemoryMappedBuffer&&) = delete;
 
-  fzl::VmoMapper mapper_;
+  const fzl::VmoMapper mapper_;
+  const size_t content_size_;
 };
 
 }  // namespace media_audio

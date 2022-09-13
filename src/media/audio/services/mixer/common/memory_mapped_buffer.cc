@@ -5,6 +5,7 @@
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 
 #include <lib/fzl/vmar-manager.h>
+#include <lib/syslog/cpp/macros.h>
 
 namespace media_audio {
 
@@ -35,6 +36,15 @@ fbl::RefPtr<fzl::VmarManager>* CreateVmarManager() {
 
 const fbl::RefPtr<fzl::VmarManager>* const vmar_manager = CreateVmarManager();
 
+uint64_t ContentSize(const zx::vmo& vmo) {
+  uint64_t content_size;
+  if (auto status = vmo.get_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size));
+      status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "zx::vmo::get_property failed";
+  }
+  return content_size;
+}
+
 }  // namespace
 
 // static
@@ -52,9 +62,10 @@ zx::status<std::shared_ptr<MemoryMappedBuffer>> MemoryMappedBuffer::Create(const
 
   struct WithPublicCtor : public MemoryMappedBuffer {
    public:
-    explicit WithPublicCtor(fzl::VmoMapper mapper) : MemoryMappedBuffer(std::move(mapper)) {}
+    WithPublicCtor(fzl::VmoMapper mapper, size_t content_size)
+        : MemoryMappedBuffer(std::move(mapper), content_size) {}
   };
-  return zx::ok(std::make_shared<WithPublicCtor>(std::move(mapper)));
+  return zx::ok(std::make_shared<WithPublicCtor>(std::move(mapper), ContentSize(vmo)));
 }
 
 }  // namespace media_audio
