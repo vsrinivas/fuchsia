@@ -16,7 +16,7 @@ fx build
 
 ### Run Fuchsia
 
-Run Fuchsia as normal, for example using `fx serve` and `fx emu -N`.
+Run Fuchsia as normal, for example using `fx serve` and `ffx emu start --net user --headless`.
 
 To monitor starnix, look for log messages with the `starnix` tag:
 
