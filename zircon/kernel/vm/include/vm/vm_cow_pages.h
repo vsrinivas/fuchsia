@@ -1285,20 +1285,23 @@ class VmCowPages final
   // awaiting_clean_zero_range_end_ for more context.
   uint64_t supply_zero_offset_ TA_GUARDED(lock_) = UINT64_MAX;
 
-  // If supply_zero_offset_ is relevant, and there is a zero range that is AwaitingClean, i.e. a
-  // zero range starting at supply_zero_offset_, on which WritebackBegin was called but not
-  // WritebackEnd, awaiting_clean_zero_range_end_ tracks the end of that range. In other words, if
-  // there exists a zero range that is AwaitingClean, that range is [supply_zero_offset_,
-  // awaiting_clean_zero_range_end_).
+  // If supply_zero_offset_ is relevant, and there is a range beyond it that is AwaitingClean, i.e.
+  // gaps (zeroes) on which WritebackBegin was called but not WritebackEnd,
+  // awaiting_clean_zero_range_end_ tracks the end of that range. In other words, if there exists
+  // such a range that is AwaitingClean, that range is [supply_zero_offset_,
+  // awaiting_clean_zero_range_end_). Note that this range might have some committed (un-Clean)
+  // pages, but the AwaitingClean state pertains only to the *gaps*, since pages have their own
+  // dirty tracking.
   //
   // Will be set to 0 otherwise. So awaiting_clean_zero_range_end_ will either be 0, or will be
   // strictly greater than supply_zero_offset_.
   //
-  // Note that there can be at most one zero range that is AwaitingClean at a time.
+  // Note that there can be at most one such range that is AwaitingClean at a time.
   //
-  // The motivation for this value is to be able to transition the zero range starting at
-  // supply_zero_offset_ to Clean once it has been written back by the user pager, without having to
-  // track per-page dirty state for this zero range, which is represented in the page list by a gap.
+  // The motivation for this value is to be able to transition zero ranges starting at
+  // supply_zero_offset_ to Clean once they have been written back by the user pager, without having
+  // to track per-page dirty state for the zero ranges, which are represented in the page list by
+  // gaps.
   // TODO(rashaeqbal): Consider removing this once page lists can support custom zero ranges.
   uint64_t awaiting_clean_zero_range_end_ TA_GUARDED(lock_) = 0;
 

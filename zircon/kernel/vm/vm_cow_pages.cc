@@ -1839,10 +1839,6 @@ void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyS
         // kernel generates writeback pager requests.
         pmm_page_queues()->MoveToPagerBackedDirty(page);
       }
-
-      // We might need to trim the AwaitingClean zero range [supply_zero_offset_,
-      // awaiting_clean_zero_range_end_) if the newly dirtied page falls within that range.
-      ConsiderTrimAwaitingCleanZeroRangeLocked(offset);
       break;
     case DirtyState::AwaitingClean:
       // A newly added page cannot start off as AwaitingClean.
@@ -4787,8 +4783,7 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len
     uint64_t committed_len = 0;
 
     zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-        [&committed_start, &committed_len, zero_range_end = awaiting_clean_zero_range_end_](
-            const VmPageOrMarker* p, uint64_t off) {
+        [&committed_start, &committed_len](const VmPageOrMarker* p, uint64_t off) {
           // We can only find un-Clean pages beyond supply_zero_offset_. There can be no markers as
           // they represent Clean zero pages.
           ASSERT(p->IsPage());
@@ -4796,10 +4791,6 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len
           ASSERT(is_page_dirty_tracked(page));
           ASSERT(!is_page_clean(page));
           DEBUG_ASSERT(!page->is_loaned());
-          // If we were tracking an awaiting clean zero range, it should lie before any committed
-          // pages. If we were not tracking a range, zero_range_end will be 0, and this check will
-          // trivially pass.
-          DEBUG_ASSERT(zero_range_end <= off);
 
           // Start a run of committed pages if we are not tracking one yet.
           if (committed_len == 0) {
@@ -4896,41 +4887,20 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len) {
   // We don't expect a failure from the traversal.
   DEBUG_ASSERT(status == ZX_OK);
 
-  // If supply_zero_offset_ falls in the range, try to advance supply_zero_offset_ over any pages
-  // that might be committed immediately after it. This gives us the opportunity to start tracking a
-  // zero range (gap) that is awaiting clean after having skipped over any committed pages. A
-  // subsequent WritebackEnd can then transition this awaiting clean zero range to clean and advance
-  // the supply_zero_offset_ beyond the gap.
-  //
-  // Cap the amount of work by only considering advancing supply_zero_offset_ until end_offset. We
-  // will be iterating over the range [start_offset, end_offset) to transition pages anyway, so
-  // attempting to advance supply_zero_offset_ within this range still keeps the order of work
-  // performed in this call the same.
-  TryAdvanceSupplyZeroOffsetLocked(start_offset, end_offset);
-
-  // If supply_zero_offset_ is within bounds, try to find a zero range (gap) starting at
-  // supply_zero_offset_ which can be transitioned to AwaitingClean.
-  if (supply_zero_offset_ >= start_offset && supply_zero_offset_ < end_offset) {
-    uint64_t zero_range_end = supply_zero_offset_;
-    status = page_list_.ForEveryPageAndGapInRange(
-        [](const VmPageOrMarker* p, uint64_t off) {
-          // We advanced supply_zero_offset_ above to skip over any committed pages. So we should
-          // not have found any pages before finding a gap.
-          return ZX_ERR_BAD_STATE;
-        },
-        [&zero_range_end](uint64_t start, uint64_t end) {
-          // The zero range ends where the first gap ends.
-          zero_range_end = end;
-          return ZX_ERR_STOP;
-        },
-        supply_zero_offset_, end_offset);
-    // We don't expect a failure from the traversal.
-    DEBUG_ASSERT(status == ZX_OK);
-
-    // Update AwaitingClean tracking info if we found a valid gap. Note that this can overwrite a
-    // previous non-zero awaiting_clean_zero_range_end_. This is fine as we can only track one
-    // AwaitingClean zero range at a time.
-    awaiting_clean_zero_range_end_ = zero_range_end > supply_zero_offset_ ? zero_range_end : 0;
+  // If we were not tracking an awaiting clean zero range, see if we can start tracking one.
+  if (awaiting_clean_zero_range_end_ == 0) {
+    // We can only track an awaiting clean zero range if the start of the range, i.e.
+    // supply_zero_offset_ lies completely within the specified range.
+    if (supply_zero_offset_ >= start_offset && supply_zero_offset_ < end_offset) {
+      awaiting_clean_zero_range_end_ = end_offset;
+    }
+  } else {
+    DEBUG_ASSERT(supply_zero_offset_ < awaiting_clean_zero_range_end_);
+    // If we were already tracking an awaiting clean zero range, see if we can extend it.
+    if (awaiting_clean_zero_range_end_ >= start_offset &&
+        awaiting_clean_zero_range_end_ < end_offset) {
+      awaiting_clean_zero_range_end_ = end_offset;
+    }
   }
 
   // Set any mappings for this range to read-only, so that a permission fault is triggered the next
@@ -4962,16 +4932,6 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
 
   const uint64_t start_offset = offset;
   const uint64_t end_offset = offset + len;
-
-  // If supply_zero_offset_ falls in the range, try to advance supply_zero_offset_ over any pages
-  // that might be committed immediately after it. Do this before we try to clean an AwaitingClean
-  // zero range below.
-  //
-  // Cap the amount of work by only considering advancing supply_zero_offset_ until end_offset. We
-  // will be iterating over the range [start_offset, end_offset) to transition pages anyway, so
-  // attempting to advance supply_zero_offset_ within this range still keeps the order of work
-  // performed in this call the same.
-  TryAdvanceSupplyZeroOffsetLocked(start_offset, end_offset);
 
   // If writeback begins partway into the zero range described by supply_zero_offset_, return early.
   // We cannot clean any pages beyond supply_zero_offset_ unless we can also advance
@@ -5016,47 +4976,32 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
   uint64_t zero_range_end = ktl::min(awaiting_clean_zero_range_end_, end_offset);
 
   DEBUG_ASSERT(supply_zero_offset_ < zero_range_end);
-  DEBUG_ASSERT((page_list_.ForEveryPageInRange(
-                   [](auto* p, uint64_t off) {
-                     // We don't expect to find any committed pages in the AwaitingClean zero
-                     // range.
-                     return ZX_ERR_BAD_STATE;
-                   },
-                   supply_zero_offset_, zero_range_end)) == ZX_OK);
 
-  // Advance supply_zero_offset_ beyond the zero range (gap) we just cleaned.
-  // This will also update awaiting_clean_zero_range_end_ if required.
+  // Clean any committed AwaitingClean pages in the range we will be advancing supply_zero_offset_
+  // over. Note that we know we cannot fail beyond this point, so it is safe to clean pages as the
+  // supply_zero_offset_ will be advanced over them. In other words, we are certain that we are not
+  // violating the constraint that supply_zero_offset_ cannot be followed by Clean pages.
+  zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+      [this](const VmPageOrMarker* p, uint64_t off) {
+        ASSERT(p->IsPage());
+        vm_page_t* page = p->Page();
+        ASSERT(is_page_dirty_tracked(page));
+        ASSERT(!is_page_clean(page));
+        if (is_page_awaiting_clean(page)) {
+          // Mark the page Clean.
+          AssertHeld(lock_);
+          UpdateDirtyStateLocked(page, off, DirtyState::Clean);
+        }
+        return ZX_ERR_NEXT;
+      },
+      [](uint64_t start, uint64_t end) { return ZX_ERR_NEXT; }, supply_zero_offset_,
+      zero_range_end);
+  // We don't expect a failure from the traversal.
+  DEBUG_ASSERT(status == ZX_OK);
+
+  // Advance supply_zero_offset_ beyond the range we just cleaned. This will also update
+  // awaiting_clean_zero_range_end_ if required.
   UpdateSupplyZeroOffsetLocked(zero_range_end);
-
-  // Now try to advance supply_zero_offset_ further over any committed pages immediately after the
-  // gap we just cleaned.
-  TryAdvanceSupplyZeroOffsetLocked(zero_range_end, end_offset);
-
-  // If we did manage to advance supply_zero_offset_, mark any committed AwaitingClean pages that
-  // were encountered in this range Clean.
-  if (zero_range_end < supply_zero_offset_) {
-    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-        [this](const VmPageOrMarker* p, uint64_t off) {
-          ASSERT(p->IsPage());
-          vm_page_t* page = p->Page();
-          ASSERT(is_page_dirty_tracked(page));
-          ASSERT(!is_page_clean(page));
-          if (is_page_awaiting_clean(page)) {
-            // Mark the page Clean.
-            AssertHeld(lock_);
-            UpdateDirtyStateLocked(page, off, DirtyState::Clean);
-          }
-          return ZX_ERR_NEXT;
-        },
-        [](uint64_t start, uint64_t end) {
-          // We could only have advanced supply_zero_offset_ over consecutive committed pages. We
-          // should not have encountered a gap.
-          return ZX_ERR_BAD_STATE;
-        },
-        zero_range_end, supply_zero_offset_);
-    // We don't expect a failure from the traversal.
-    DEBUG_ASSERT(status == ZX_OK);
-  }
 
   VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
   return ZX_OK;
