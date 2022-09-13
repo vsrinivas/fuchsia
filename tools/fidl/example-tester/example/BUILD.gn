@@ -21,5 +21,8 @@ fuchsia_structured_config_values("client_config_values") {
 
 group("tests") {
   testonly = true
-  deps = [ "//tools/fidl/example-tester/example/rust:tests" ]
+  deps = [
+    "//tools/fidl/example-tester/example/cpp_wire:tests",
+    "//tools/fidl/example-tester/example/rust:tests",
+  ]
 }

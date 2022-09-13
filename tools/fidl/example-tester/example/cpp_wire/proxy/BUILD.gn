@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "proxy_bin"
+  output_dir = target_out_dir + "/cpp_wire"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//tools/fidl/example-tester/example/fidl:test.exampletester_cpp_wire",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
