@@ -10,7 +10,7 @@ use {
     },
     fidl_fuchsia_cobalt_test as cobalt_test,
     fidl_fuchsia_metrics::MetricEvent,
-    fuchsia_cobalt::{CobaltEventExt, MetricEventExt},
+    fuchsia_cobalt_builders::{CobaltEventExt, MetricEventExt},
     fuchsia_zircon_status as zx_status,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
     std::{collections::HashMap, sync::Arc},

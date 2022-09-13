@@ -15,7 +15,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.metrics.test:fuchsia.metrics.test_rust",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/cobalt/rust/builders",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
