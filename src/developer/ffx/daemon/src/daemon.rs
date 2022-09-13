@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use futures::executor::block_on;
-
 use {
     crate::constants::CURRENT_EXE_BUILDID,
     anyhow::{anyhow, bail, Context, Result},
@@ -33,7 +31,8 @@ use {
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{Task, TimeoutExt, Timer},
     futures::{
-        channel::mpsc::{Receiver, Sender},
+        channel::{mpsc, oneshot},
+        executor::block_on,
         prelude::*,
     },
     hoist::{Hoist, OvernetInstance},
@@ -322,7 +321,7 @@ impl Daemon {
     }
 
     pub async fn start(&mut self, hoist: &Hoist) -> Result<()> {
-        let (quit_tx, quit_rx) = futures::channel::mpsc::channel(1);
+        let (quit_tx, quit_rx) = mpsc::channel(1);
         self.log_startup_info().await.context("Logging startup info")?;
 
         self.start_protocols().await?;
@@ -424,7 +423,7 @@ impl Daemon {
         Ok(())
     }
 
-    async fn start_socket_watch(&self, quit_tx: Sender<()>) -> Result<RecommendedWatcher> {
+    async fn start_socket_watch(&self, quit_tx: mpsc::Sender<()>) -> Result<RecommendedWatcher> {
         let socket_path = self.socket_path.clone();
         let socket_dir = self.socket_path.parent().context("Getting parent directory of socket")?;
         let mut watcher = RecommendedWatcher::new_immediate(move |res| {
@@ -525,7 +524,7 @@ impl Daemon {
 
     async fn handle_requests_from_stream(
         &self,
-        quit_tx: &Sender<()>,
+        quit_tx: &mpsc::Sender<()>,
         stream: DaemonRequestStream,
         info: &VersionInfo,
     ) -> Result<()> {
@@ -621,7 +620,7 @@ impl Daemon {
 
     async fn handle_request(
         &self,
-        quit_tx: &Sender<()>,
+        quit_tx: &mpsc::Sender<()>,
         req: DaemonRequest,
         info: &VersionInfo,
     ) -> Result<()> {
@@ -630,43 +629,11 @@ impl Daemon {
         match req {
             DaemonRequest::Quit { responder } => {
                 tracing::info!("Received quit request.");
-
-                match std::fs::remove_file(self.socket_path.clone()) {
-                    Ok(()) => {}
-                    Err(e) => tracing::error!("failed to remove socket file: {}", e),
-                }
-
                 if cfg!(test) {
                     panic!("quit() should not be invoked in test code");
                 }
 
-                self.protocol_register
-                    .shutdown(protocols::Context::new(self.clone()))
-                    .await
-                    .unwrap_or_else(|e| {
-                        tracing::error!("shutting down protocol register: {:?}", e)
-                    });
-
-                add_daemon_metrics_event("quit").await;
-
-                // It is desirable for the client to receive an ACK for the quit
-                // request. As Overnet has a potentially complicated routing
-                // path, it is tricky to implement some notion of a bounded
-                // "flush" for this response, however in practice it is only
-                // necessary here to wait long enough for the message to likely
-                // leave the local process before exiting. Enqueue a detached
-                // timer to shut down the daemon before sending the response.
-                // This is detached because once the client receives the
-                // response, the client will disconnect it's socket. If the
-                // local reactor observes this disconnection before the timer
-                // expires, an in-line timer wait would never fire, and the
-                // daemon would never exit.
-                let mut quit_tx = quit_tx.clone();
-                Task::local(async move {
-                    Timer::new(std::time::Duration::from_millis(20)).await;
-                    quit_tx.send(()).await.expect("failed to send graceful quit message");
-                })
-                .detach();
+                quit_tx.clone().send(()).await?;
 
                 responder.send(true).context("error sending response")?;
             }
@@ -714,8 +681,8 @@ impl Daemon {
     async fn serve(
         &self,
         hoist: &Hoist,
-        quit_tx: Sender<()>,
-        mut quit_rx: Receiver<()>,
+        quit_tx: mpsc::Sender<()>,
+        mut quit_rx: mpsc::Receiver<()>,
     ) -> Result<()> {
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
         let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
@@ -730,6 +697,8 @@ impl Daemon {
         hoist.publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
 
         tracing::info!("Starting daemon serve loop");
+        let (break_loop_tx, mut break_loop_rx) = oneshot::channel();
+        let mut break_loop_tx = Some(break_loop_tx);
 
         loop {
             futures::select! {
@@ -760,10 +729,48 @@ impl Daemon {
                     }
                 },
                 _ = quit_rx.next() => {
-                    tracing::info!("Ending daemon serve loop due to quit message");
+                    if let Some(break_loop_tx) = break_loop_tx.take() {
+                        tracing::info!("Starting graceful shutdown of daemon socket");
+
+                        match std::fs::remove_file(self.socket_path.clone()) {
+                            Ok(()) => {}
+                            Err(e) => tracing::error!("failed to remove socket file: {}", e),
+                        }
+
+                        self.protocol_register
+                            .shutdown(protocols::Context::new(self.clone()))
+                            .await
+                            .unwrap_or_else(|e| {
+                                tracing::error!("shutting down protocol register: {:?}", e)
+                            });
+
+                        add_daemon_metrics_event("quit").await;
+
+                        // It is desirable for the client to receive an ACK for the quit
+                        // request. As Overnet has a potentially complicated routing
+                        // path, it is tricky to implement some notion of a bounded
+                        // "flush" for this response, however in practice it is only
+                        // necessary here to wait long enough for the message to likely
+                        // leave the local process before exiting. Enqueue a detached
+                        // timer to shut down the daemon before sending the response.
+                        // This is detached because once the client receives the
+                        // response, the client will disconnect it's socket. If the
+                        // local reactor observes this disconnection before the timer
+                        // expires, an in-line timer wait would never fire, and the
+                        // daemon would never exit.
+                        Task::local(async move {
+                            Timer::new(std::time::Duration::from_millis(20)).await;
+                            break_loop_tx.send(()).expect("failed to send loop break message");
+                        })
+                        .detach();
+                    } else {
+                        tracing::trace!("Received quit message after shutdown was already initiated");
+                    }
+                },
+                _ = break_loop_rx => {
+                    tracing::info!("Breaking main daemon socket loop");
                     break;
                 }
-
             }
         }
         tracing::info!("Graceful shutdown of daemon loop completed");
@@ -813,7 +820,7 @@ mod test {
         let d = Daemon::new(socket_path);
 
         let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (quit_tx, _quit_rx) = futures::channel::mpsc::channel(1);
+        let (quit_tx, _quit_rx) = mpsc::channel(1);
 
         let d2 = d.clone();
         let task = Task::local(async move {
