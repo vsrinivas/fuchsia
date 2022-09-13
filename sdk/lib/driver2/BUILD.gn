@@ -33,6 +33,7 @@ source_set("devfs_exporter") {
 }
 
 common_sources = [
+  "handlers.h",
   "logger.cc",
   "logger.h",
   "logger_internal.h",
