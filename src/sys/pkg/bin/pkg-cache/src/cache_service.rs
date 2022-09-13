@@ -38,6 +38,9 @@ use {
     vfs::directory::entry::DirectoryEntry as _,
 };
 
+// This encodes a host to interpolate when responding to BasePackageIndex requests.
+const BASE_PACKAGE_HOST: &str = "fuchsia.com";
+
 pub async fn serve(
     package_index: Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: blobfs::Client,
@@ -121,7 +124,8 @@ pub async fn serve(
                 }
                 PackageCacheRequest::BasePackageIndex { iterator, control_handle: _ } => {
                     let stream = iterator.into_stream()?;
-                    serve_base_package_index(Arc::clone(&base_packages), stream).await;
+                    serve_base_package_index(BASE_PACKAGE_HOST, Arc::clone(&base_packages), stream)
+                        .await;
                 }
                 PackageCacheRequest::CachePackageIndex { iterator, control_handle: _ } => {
                     let stream = iterator.into_stream()?;
@@ -1015,6 +1019,7 @@ async fn serve_write_blob(
 /// Serves the `PackageIndexIteratorRequestStream` with as many base package index entries per
 /// request as will fit in a fidl message.
 async fn serve_base_package_index(
+    package_host: &'static str,
     base_packages: Arc<BasePackages>,
     stream: PackageIndexIteratorRequestStream,
 ) {
@@ -1022,7 +1027,7 @@ async fn serve_base_package_index(
         .paths_and_hashes()
         .map(|(path, hash)| PackageIndexEntry {
             package_url: fpkg::PackageUrl {
-                url: format!("fuchsia-pkg://fuchsia.com/{}", path.name()),
+                url: format!("fuchsia-pkg://{}/{}", package_host, path.name()),
             },
             meta_far_blob_id: BlobId::from(hash.clone()).into(),
         })
@@ -2852,7 +2857,8 @@ mod serve_base_package_index_tests {
 
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<PackageIndexIteratorMarker>().unwrap();
-        let task = Task::local(serve_base_package_index(Arc::new(base_packages), stream));
+        let task =
+            Task::local(serve_base_package_index("fuchsia.test", Arc::new(base_packages), stream));
 
         let entries = proxy.next().await.unwrap();
         assert_eq!(
@@ -2860,13 +2866,13 @@ mod serve_base_package_index_tests {
             vec![
                 fidl_fuchsia_pkg::PackageIndexEntry {
                     package_url: fpkg::PackageUrl {
-                        url: "fuchsia-pkg://fuchsia.com/name0".to_string()
+                        url: "fuchsia-pkg://fuchsia.test/name0".to_string(),
                     },
                     meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [0u8; 32] }
                 },
                 fidl_fuchsia_pkg::PackageIndexEntry {
                     package_url: fpkg::PackageUrl {
-                        url: "fuchsia-pkg://fuchsia.com/name1".to_string()
+                        url: "fuchsia-pkg://fuchsia.test/name1".to_string(),
                     },
                     meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [1u8; 32] }
                 }
@@ -2891,13 +2897,13 @@ mod serve_cache_package_index_tests {
     async fn cache_packages_entries_converted_correctly() {
         let cache_packages = system_image::CachePackages::from_entries(vec![
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "fuchsia-pkg://fuchsia.test".parse().unwrap(),
                 "name0".parse().unwrap(),
                 Some(fuchsia_url::PackageVariant::zero()),
                 Hash::from([0u8; 32]),
             ),
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "fuchsia-pkg://fuchsia.test".parse().unwrap(),
                 "name1".parse().unwrap(),
                 Some("1".parse().unwrap()),
                 Hash::from([1u8; 32]),
@@ -2914,13 +2920,13 @@ mod serve_cache_package_index_tests {
             vec![
                 fidl_fuchsia_pkg::PackageIndexEntry {
                     package_url: fpkg::PackageUrl {
-                        url: "fuchsia-pkg://fuchsia.com/name0".to_string()
+                        url: "fuchsia-pkg://fuchsia.test/name0".to_string()
                     },
                     meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [0u8; 32] }
                 },
                 fidl_fuchsia_pkg::PackageIndexEntry {
                     package_url: fpkg::PackageUrl {
-                        url: "fuchsia-pkg://fuchsia.com/name1".to_string()
+                        url: "fuchsia-pkg://fuchsia.test/name1".to_string()
                     },
                     meta_far_blob_id: fidl_fuchsia_pkg::BlobId { merkle_root: [1u8; 32] }
                 }

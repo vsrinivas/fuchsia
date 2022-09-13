@@ -714,25 +714,25 @@ mod tests {
 
         let cache_packages = CachePackages::from_entries(vec![
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "fuchsia-pkg://fuchsia.test".parse().unwrap(),
                 "present0".parse().unwrap(),
                 Some(fuchsia_url::PackageVariant::zero()),
                 *present_package0.meta_far_merkle_root(),
             ),
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "fuchsia-pkg://fuchsia.test".parse().unwrap(),
                 "missing-content-blob".parse().unwrap(),
                 Some(fuchsia_url::PackageVariant::zero()),
                 *missing_content_blob.meta_far_merkle_root(),
             ),
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "fuchsia-pkg://fuchsia.test".parse().unwrap(),
                 "missing-meta-far".parse().unwrap(),
                 Some(fuchsia_url::PackageVariant::zero()),
                 *missing_meta_far.meta_far_merkle_root(),
             ),
             PinnedAbsolutePackageUrl::new(
-                "fuchsia-pkg://fuchsia.com".parse().unwrap(),
+                "fuchsia-pkg://fuchsia.test".parse().unwrap(),
                 "present1".parse().unwrap(),
                 Some(fuchsia_url::PackageVariant::zero()),
                 *present_package1.meta_far_merkle_root(),
