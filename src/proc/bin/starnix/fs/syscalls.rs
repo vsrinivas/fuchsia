@@ -708,7 +708,7 @@ fn read_xattr_name<'a>(
         return error!(EINVAL);
     }
     match &name[..dot_index] {
-        b"user" | b"security" => {}
+        b"user" | b"security" | b"trusted" => {}
         _ => return error!(ENOTSUP),
     }
     Ok(name)
