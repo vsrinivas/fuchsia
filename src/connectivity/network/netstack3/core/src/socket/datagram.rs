@@ -603,6 +603,46 @@ where
     })
 }
 
+pub(crate) fn get_bound_device<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: DatagramStateContext<A, C, S>,
+    S: DatagramSocketSpec<A>,
+>(
+    sync_ctx: &SC,
+    _ctx: &C,
+    id: impl Into<DatagramSocketId<S>>,
+) -> Option<A::DeviceId>
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ListenerAddrState:
+        SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
+    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+{
+    sync_ctx.with_sockets(|state| {
+        let DatagramSockets { bound, unbound } = state;
+        match id.into() {
+            DatagramSocketId::Unbound(id) => {
+                let UnboundSocketState { device, sharing: _, ip_options: _ } =
+                    unbound.get(id.into()).expect("unbound socket not found");
+                *device
+            }
+            DatagramSocketId::Bound(DatagramBoundId::Listener(id)) => {
+                let (_, _, addr): &(S::ListenerState, S::ListenerSharingState, _) =
+                    bound.listeners().get_by_id(&id).expect("UDP listener not found");
+                let ListenerAddr { device, ip: _ } = addr;
+                *device
+            }
+            DatagramSocketId::Bound(DatagramBoundId::Connected(id)) => {
+                let (_, _, addr): &(S::ConnState, S::ConnSharingState, _) =
+                    bound.conns().get_by_id(&id).expect("UDP connected socket not found");
+                let ConnAddr { device, ip: _ } = addr;
+                *device
+            }
+        }
+    })
+}
+
 /// Error resulting from attempting to change multicast membership settings for
 /// a socket.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -1168,5 +1208,19 @@ mod test {
 
         // The values should be back at the defaults.
         assert_eq!(get_ip_hop_limits(&sync_ctx, &non_sync_ctx, unbound), DEFAULT_HOP_LIMITS);
+    }
+
+    #[ip_test]
+    fn bind_device_unbound<I: Ip + DatagramIpExt>() {
+        let mut sync_ctx = DummyDatagramState::<I, DummyDeviceId>::default();
+        let mut non_sync_ctx = DummyNonSyncCtx::default();
+
+        let unbound = create_unbound(&mut sync_ctx);
+
+        set_unbound_device(&mut sync_ctx, &mut non_sync_ctx, unbound, Some(DummyDeviceId));
+        assert_eq!(get_bound_device(&sync_ctx, &non_sync_ctx, unbound), Some(DummyDeviceId));
+
+        set_unbound_device(&mut sync_ctx, &mut non_sync_ctx, unbound, None);
+        assert_eq!(get_bound_device(&sync_ctx, &non_sync_ctx, unbound), None);
     }
 }

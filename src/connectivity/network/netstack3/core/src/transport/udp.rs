@@ -1524,33 +1524,10 @@ pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
 /// Panics if `id` is not a valid socket ID.
 pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonSyncContext<I>>(
     sync_ctx: &SC,
-    _ctx: &C,
+    ctx: &C,
     id: UdpSocketId<I>,
 ) -> Option<SC::DeviceId> {
-    sync_ctx.with_sockets(|state| {
-        let UdpSockets { sockets: DatagramSockets { bound, unbound }, lazy_port_alloc: _ } = state;
-        match id {
-            UdpSocketId::Unbound(id) => {
-                let UnboundSocketState { device, sharing: _, ip_options: _ } =
-                    unbound.get(id.into()).expect("unbound UDP socket not found");
-                *device
-            }
-            UdpSocketId::Bound(id) => match id {
-                UdpBoundId::Listening(id) => {
-                    let (_, _, addr): &(ListenerState<_, _>, PosixSharingOptions, _) =
-                        bound.listeners().get_by_id(&id).expect("UDP listener not found");
-                    let ListenerAddr { device, ip: _ } = addr;
-                    *device
-                }
-                UdpBoundId::Connected(id) => {
-                    let (_, _, addr): &(ConnState<_, _>, PosixSharingOptions, _) =
-                        bound.conns().get_by_id(&id).expect("UDP connected socket not found");
-                    let ConnAddr { device, ip: _ } = addr;
-                    *device
-                }
-            },
-        }
-    })
+    datagram::get_bound_device(sync_ctx, ctx, id)
 }
 
 /// Sets the POSIX `SO_REUSEPORT` option for the specified socket.
