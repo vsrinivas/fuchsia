@@ -19,6 +19,7 @@ const (
 	NodenameEnvKey      = "FUCHSIA_NODENAME"
 	SSHKeyEnvKey        = "FUCHSIA_SSH_KEY"
 	SerialSocketEnvKey  = "FUCHSIA_SERIAL_SOCKET"
+	ECCableEnvKey       = "EC_CABLE_PATH"
 	DeviceAddrEnvKey    = "FUCHSIA_DEVICE_ADDR"
 	IPv4AddrEnvKey      = "FUCHSIA_IPV4_ADDR"
 	IPv6AddrEnvKey      = "FUCHSIA_IPV6_ADDR"

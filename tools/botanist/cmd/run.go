@@ -574,6 +574,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []stri
 	subprocessEnv := map[string]string{
 		constants.NodenameEnvKey:      t.Nodename(),
 		constants.SerialSocketEnvKey:  t.SerialSocketPath(),
+		constants.ECCableEnvKey:       os.Getenv(constants.ECCableEnvKey),
 		constants.TestbedConfigEnvKey: testbedConfig,
 	}
 	if t.UseFFX() {
