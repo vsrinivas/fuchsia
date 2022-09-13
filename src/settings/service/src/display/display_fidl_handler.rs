@@ -40,7 +40,6 @@ impl From<SettingInfo> for LightSensorData {
 
 impl From<FidlThemeMode> for ThemeMode {
     fn from(fidl: FidlThemeMode) -> Self {
-        // TODO(fxbug.dev/61432): consider using TryFrom instead of panicking
         ThemeMode::from_bits(FidlThemeMode::bits(&fidl))
             .expect("failed to convert FidlThemeMode to ThemeMode")
     }
@@ -48,7 +47,6 @@ impl From<FidlThemeMode> for ThemeMode {
 
 impl From<ThemeMode> for FidlThemeMode {
     fn from(fidl: ThemeMode) -> Self {
-        // TODO(fxbug.dev/61432): consider using TryFrom instead of panicking
         FidlThemeMode::from_bits(ThemeMode::bits(&fidl))
             .expect("failed to convert ThemeMode to FidlThemeMode")
     }
