@@ -1,7 +1,8 @@
 # Starnix
 
-Starnix is a component that runs Linux binaries on Fuchsia. Currently, starnix is highly
-experimental and can run only trivial programs.
+Starnix runs unmodified Linux binaries on Fuchsia. We have tested Starnix with
+glibc and bionic based binaries. Patches that improve Linux compatibility are
+welcome!
 
 ## How to run starnix
 
