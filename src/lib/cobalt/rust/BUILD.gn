@@ -40,8 +40,5 @@ rustc_library("fuchsia-cobalt") {
     "//src/sys/time/httpsdate_time_source/*",
     "//src/sys/time/timekeeper/*",
     "//src/sys/time/timekeeper_integration/*",
-    "//vendor/google/bin/device_property/*",
-    "//vendor/google/bin/flash_ts/*",
-    "//vendor/google/bin/flash_ts/tests/*",
   ]
 }
