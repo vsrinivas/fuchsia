@@ -50,7 +50,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .get_driver_development_proxy(subcmd.select)
                 .await
                 .context("Failed to get driver development proxy")?;
-            subcommands::dump::dump(subcmd, driver_development_proxy)
+            subcommands::dump::dump(subcmd, &mut io::stdout(), driver_development_proxy)
                 .await
                 .context("Dump subcommand failed")?;
         }
