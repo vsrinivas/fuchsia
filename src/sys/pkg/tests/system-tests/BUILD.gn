@@ -13,12 +13,12 @@ import("//src/sys/pkg/tests/system-tests/system-tests.gni")
 if (is_host) {
   host_test_data("test_tools") {
     sources = [
-      "$host_tools_dir/device-finder",
+      "$host_tools_dir/ffx",
       "//prebuilt/tools/artifacts/artifacts",
       "//prebuilt/tools/lkg/lkg",
     ]
     outputs = [ "$root_out_dir/test_data/system-tests/{{source_file_part}}" ]
-    public_deps = [ "//tools/net/device-finder:host($host_toolchain)" ]
+    public_deps = [ "//src/developer/ffx:host($host_toolchain)" ]
   }
 
   if (use_vbmeta) {

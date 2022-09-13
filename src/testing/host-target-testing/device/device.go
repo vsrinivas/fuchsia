@@ -32,7 +32,6 @@ const rebootCheckPath = "/tmp/ota_test_should_reboot"
 
 // Client manages the connection to the device.
 type Client struct {
-	deviceFinder             *DeviceFinder
 	deviceResolver           DeviceResolver
 	sshClient                *sshutil.Client
 	initialMonotonicTime     time.Time
@@ -42,7 +41,6 @@ type Client struct {
 // NewClient creates a new Client.
 func NewClient(
 	ctx context.Context,
-	deviceFinder *DeviceFinder,
 	deviceResolver DeviceResolver,
 	privateKey ssh.Signer,
 	sshConnectBackoff retry.Backoff,
@@ -67,7 +65,6 @@ func NewClient(
 	}
 
 	c := &Client{
-		deviceFinder:             deviceFinder,
 		deviceResolver:           deviceResolver,
 		sshClient:                sshClient,
 		workaroundBrokenTimeSkip: workaroundBrokenTimeSkip,
@@ -557,7 +554,10 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 
 	// First, pave the build's zedboot onto the device.
 	logger.Infof(ctx, "waiting for device to enter zedboot")
-	listeningName := c.waitToFindDeviceInNetboot(ctx)
+	listeningName, err := c.deviceResolver.WaitToFindDeviceInNetboot(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to wait for device to reboot into zedboot: %w", err)
+	}
 
 	if err = p.PaveWithOptions(ctx, listeningName, paver.Options{Mode: paver.ZedbootOnly}); err != nil {
 		return fmt.Errorf("device failed to pave: %w", err)
@@ -565,7 +565,10 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 
 	// Next, pave the build onto the device.
 	logger.Infof(ctx, "paved zedboot, waiting for the device to boot into zedboot")
-	listeningName = c.waitToFindDeviceInNetboot(ctx)
+	listeningName, err = c.deviceResolver.WaitToFindDeviceInNetboot(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to wait for device to reboot into zedboot: %w", err)
+	}
 
 	if err = p.PaveWithOptions(ctx, listeningName, paver.Options{Mode: paver.SkipZedboot}); err != nil {
 		return fmt.Errorf("device failed to pave: %w", err)
@@ -604,22 +607,6 @@ func (c *Client) Flash(ctx context.Context, build artifacts.Build) error {
 	logger.Infof(ctx, "device booted")
 
 	return nil
-}
-
-func (c *Client) waitToFindDeviceInNetboot(ctx context.Context) string {
-	nodeNames := c.deviceResolver.NodeNames()
-
-	// Wait for the device to be listening in netboot.
-	logger.Infof(ctx, "waiting for the to be listening on the nodenames: %v", nodeNames)
-
-	for {
-		if entry, err := c.deviceFinder.Resolve(ctx, Netboot, nodeNames); err == nil {
-			logger.Infof(ctx, "device %v is listening on %q", nodeNames, entry)
-			return entry.NodeName
-		} else {
-			logger.Infof(ctx, "failed to resolve nodenames %v: %v", nodeNames, err)
-		}
-	}
 }
 
 func (c *Client) Name() string {
