@@ -87,7 +87,6 @@ zx::socket DuplicateSocket(const zx::socket& socket) {
 
 Vmm::~Vmm() {
   vmm_loop_->Quit();
-  device_loop_->Quit();
 
   // Explicitly destroy the guest in the destructor to ensure it's the first object destroyed. The
   // guest has ownership of VCPU threads that may attempt to access various other objects via the
@@ -166,7 +165,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
 
   // Setup PCI.
   pci_bus_ = std::make_unique<PciBus>(guest_.get(), interrupt_controller_.get());
-  status = pci_bus_->Init(device_loop_->dispatcher());
+  status = pci_bus_->Init(vmm_loop_->dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create PCI bus";
     return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
@@ -176,13 +175,12 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   // Setup balloon device.
   if (cfg.has_virtio_balloon() && cfg.virtio_balloon()) {
     balloon_ = std::make_unique<VirtioBalloon>(guest_->phys_mem());
-    status = pci_bus_->Connect(balloon_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(balloon_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect balloon device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = balloon_->Start(guest_->object(), realm, device_loop_->dispatcher(),
-                             vmm_loop_->dispatcher());
+    status = balloon_->Start(guest_->object(), realm, vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start balloon device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -193,13 +191,13 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   for (auto& block_device : *cfg.mutable_block_devices()) {
     auto block =
         std::make_unique<VirtioBlock>(guest_->phys_mem(), block_device.mode, block_device.format);
-    status = pci_bus_->Connect(block->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(block->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect block device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
     status = block->Start(guest_->object(), block_device.id, std::move(block_device.client), realm,
-                          device_loop_->dispatcher(), block_devices_.size());
+                          vmm_loop_->dispatcher(), block_devices_.size());
 
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start block device";
@@ -211,7 +209,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   // Setup console device.
   if (cfg.has_virtio_console() && cfg.virtio_console()) {
     console_ = std::make_unique<VirtioConsole>(guest_->phys_mem());
-    status = pci_bus_->Connect(console_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(console_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect console device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
@@ -220,7 +218,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
     zx::socket host_console_socket;
     FX_CHECK(zx::socket::create(0, &host_console_socket, &client_console_socket_) == ZX_OK);
     status = console_->Start(guest_->object(), std::move(host_console_socket), realm,
-                             device_loop_->dispatcher());
+                             vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start console device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -233,12 +231,12 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
     input_pointer_ = std::make_unique<VirtioInput>(guest_->phys_mem(), VirtioInput::Pointer);
 
     // Setup keyboard device.
-    status = pci_bus_->Connect(input_keyboard_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(input_keyboard_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect keyboard device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = input_keyboard_->Start(guest_->object(), realm, device_loop_->dispatcher(),
+    status = input_keyboard_->Start(guest_->object(), realm, vmm_loop_->dispatcher(),
                                     "virtio_input_keyboard");
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start keyboard device";
@@ -248,12 +246,12 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
     input_keyboard_->Connect(keyboard_listener.NewRequest());
 
     // Setup pointer device.
-    status = pci_bus_->Connect(input_pointer_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(input_pointer_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect mouse device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = input_pointer_->Start(guest_->object(), realm, device_loop_->dispatcher(),
+    status = input_pointer_->Start(guest_->object(), realm, vmm_loop_->dispatcher(),
                                    "virtio_input_pointer");
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start mouse device";
@@ -263,13 +261,13 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
     input_pointer_->Connect(pointer_listener.NewRequest());
 
     // Setup GPU device.
-    status = pci_bus_->Connect(gpu_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(gpu_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect GPU device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
     status = gpu_->Start(guest_->object(), std::move(keyboard_listener),
-                         std::move(pointer_listener), realm, device_loop_->dispatcher());
+                         std::move(pointer_listener), realm, vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start GPU device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -279,12 +277,12 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   // Setup RNG device.
   if (cfg.has_virtio_rng() && cfg.virtio_rng()) {
     rng_ = std::make_unique<VirtioRng>(guest_->phys_mem());
-    status = pci_bus_->Connect(rng_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(rng_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect RNG device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = rng_->Start(guest_->object(), realm, device_loop_->dispatcher());
+    status = rng_->Start(guest_->object(), realm, vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start RNG device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -293,13 +291,13 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
 
   if (cfg.has_virtio_vsock() && cfg.virtio_vsock()) {
     vsock_ = std::make_unique<controller::VirtioVsock>(guest_->phys_mem());
-    status = pci_bus_->Connect(vsock_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(vsock_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect vsock device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
     status = vsock_->Start(guest_->object(), std::move(*cfg.mutable_vsock_listeners()), realm,
-                           device_loop_->dispatcher());
+                           vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start vsock device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -321,7 +319,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_LOGS(INFO) << "Could not create VMAR for wayland device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = pci_bus_->Connect(wl_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(wl_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Could not connect wayland device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
@@ -340,10 +338,9 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_LOGS(INFO) << "Could not connect to scenic allocator service";
       return fitx::error(GuestError::FAILED_SERVICE_CONNECT);
     }
-    status =
-        wl_->Start(guest_->object(), std::move(wl_vmar),
-                   std::move(cfg.mutable_wayland_device()->server), std::move(sysmem_allocator),
-                   std::move(scenic_allocator), realm, device_loop_->dispatcher());
+    status = wl_->Start(
+        guest_->object(), std::move(wl_vmar), std::move(cfg.mutable_wayland_device()->server),
+        std::move(sysmem_allocator), std::move(scenic_allocator), realm, vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_LOGS(INFO) << "Could not start wayland device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
@@ -366,7 +363,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(INFO, status) << "Could not create VMAR for magma device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = pci_bus_->Connect(magma_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(magma_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(INFO, status) << "Could not connect magma device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
@@ -381,7 +378,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       }
     }
     status = magma_->Start(guest_->object(), std::move(magma_vmar),
-                           std::move(wayland_importer_handle), realm, device_loop_->dispatcher());
+                           std::move(wayland_importer_handle), realm, vmm_loop_->dispatcher());
     if (status == ZX_ERR_NOT_FOUND) {
       FX_LOGS(INFO) << "Magma device not supported by host";
     } else if (status != ZX_OK) {
@@ -393,12 +390,12 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   // Setup sound device.
   if (cfg.has_virtio_sound() && cfg.virtio_sound()) {
     sound_ = std::make_unique<VirtioSound>(guest_->phys_mem());
-    status = pci_bus_->Connect(sound_->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(sound_->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect sound device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = sound_->Start(guest_->object(), realm, device_loop_->dispatcher(),
+    status = sound_->Start(guest_->object(), realm, vmm_loop_->dispatcher(),
                            cfg.has_virtio_sound_input() && cfg.virtio_sound_input());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start sound device";
@@ -411,13 +408,13 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   // the VMM will fail.
   for (auto& net_device : *cfg.mutable_net_devices()) {
     auto net = std::make_unique<VirtioNet>(guest_->phys_mem());
-    status = pci_bus_->Connect(net->pci_device(), device_loop_->dispatcher());
+    status = pci_bus_->Connect(net->pci_device(), vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect Ethernet device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
     status = net->Start(guest_->object(), net_device.mac_address, net_device.enable_bridge, realm,
-                        device_loop_->dispatcher(), net_devices_.size());
+                        vmm_loop_->dispatcher(), net_devices_.size());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Could not open Ethernet device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);

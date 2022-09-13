@@ -16,7 +16,6 @@ VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
                             fit::bind_member(this, &VirtioBalloon::Ready)) {}
 
 zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
-                                 async_dispatcher_t* device_loop_dispatcher,
                                  async_dispatcher_t* dispatcher) {
   constexpr auto kComponentName = "virtio_balloon";
   constexpr auto kComponentCollectionName = "virtio_balloon_devices";
@@ -39,7 +38,7 @@ zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::component::Rea
   }
 
   fuchsia_virtualization_hardware::wire::StartInfo start_info;
-  status = PrepStart(guest, device_loop_dispatcher, &start_info);
+  status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }

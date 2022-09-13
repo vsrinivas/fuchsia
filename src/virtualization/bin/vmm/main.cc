@@ -19,7 +19,6 @@ int main(int argc, char** argv) {
   syslog::SetTags({"vmm"});
 
   auto loop = std::make_shared<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
-  auto device_loop = std::make_shared<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop->dispatcher());
   std::unique_ptr<sys::ComponentContext> context =
       sys::ComponentContext::CreateAndServeOutgoingDirectory();
@@ -35,7 +34,7 @@ int main(int argc, char** argv) {
 
   // Note that Initialize and StartPrimaryVcpu will be invoked by different GuestLifecycle
   // FIDL calls once this has been migrated to use a VmmController.
-  vmm::Vmm vmm(loop, device_loop);
+  vmm::Vmm vmm(loop);
   fitx::result<GuestError> result = vmm.Initialize(std::move(cfg), context.get());
   if (!result.is_ok()) {
     return static_cast<int32_t>(result.error_value());
@@ -46,16 +45,7 @@ int main(int argc, char** argv) {
     return static_cast<int32_t>(result.error_value());
   }
 
-  // Start the dispatch thread for communicating with the out of process
-  // devices.
-  status = device_loop->StartThread("device-worker");
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to create async worker";
-    return status;
-  }
-
   status = loop->Run();
-  device_loop->Shutdown();
 
   return status;
 }

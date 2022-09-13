@@ -39,8 +39,7 @@ namespace vmm {
 
 class Vmm : public fuchsia::virtualization::Guest {
  public:
-  Vmm(std::shared_ptr<async::Loop> vmm_loop, std::shared_ptr<async::Loop> device_loop)
-      : vmm_loop_(std::move(vmm_loop)), device_loop_(std::move(device_loop)) {}
+  explicit Vmm(std::shared_ptr<async::Loop> vmm_loop) : vmm_loop_(std::move(vmm_loop)) {}
   ~Vmm() override;
 
   // Instantiate all VMM objects and configure the guest kernel.
@@ -73,9 +72,8 @@ class Vmm : public fuchsia::virtualization::Guest {
   fitx::result<::fuchsia::virtualization::GuestError> AddPublicServices(
       sys::ComponentContext* context);
 
-  // Dispatch loops for the VMM and device controllers.
+  // Dispatch loop for the VMM and device controllers.
   std::shared_ptr<async::Loop> vmm_loop_;
-  std::shared_ptr<async::Loop> device_loop_;
 
   std::unique_ptr<::Guest> guest_;
 

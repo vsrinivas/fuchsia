@@ -28,7 +28,7 @@ class VirtioBalloon
   explicit VirtioBalloon(const PhysMem& phys_mem);
 
   zx_status_t Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
-                    async_dispatcher_t* device_loop_dispatcher, async_dispatcher_t* dispatcher);
+                    async_dispatcher_t* dispatcher);
 
   void ConnectToBalloonController(
       fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> endpoint);
