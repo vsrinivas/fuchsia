@@ -14,21 +14,66 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 
 #include <lib/ddk/debug.h>
+#include <lib/stdcompat/vector.h>
 #include <zircon/status.h>
 
 namespace wlan::nxpfmac {
 
-void EventHandler::RegisterForEvent(mlan_event_id event_id, EventCallback&& callback) {
-  std::lock_guard lock(mutex_);
+EventRegistration::EventRegistration(EventHandler* event_handler, mlan_event_id event_id,
+                                     void* event)
+    : event_handler_(event_handler), event_id_(event_id), event_(event) {}
 
-  callbacks_[event_id].emplace_back(Callback{.callback = std::move(callback)});
+EventRegistration::EventRegistration(EventRegistration&& other) noexcept
+    : event_handler_(other.event_handler_), event_id_(other.event_id_), event_(other.event_) {
+  other.event_handler_ = nullptr;
 }
 
-void EventHandler::RegisterForInterfaceEvent(mlan_event_id event_id, uint32_t bss_idx,
-                                             EventCallback&& callback) {
+EventRegistration& EventRegistration::operator=(EventRegistration&& other) noexcept {
+  if (event_handler_) {
+    event_handler_->UnregisterEvent(std::move(*this));
+  }
+  event_handler_ = other.event_handler_;
+  event_id_ = other.event_id_;
+  event_ = other.event_;
+
+  other.event_handler_ = nullptr;
+
+  return *this;
+}
+
+EventRegistration::~EventRegistration() {
+  if (event_handler_ && event_) {
+    event_handler_->UnregisterEvent(std::move(*this));
+  }
+}
+
+EventRegistration EventHandler::RegisterForEvent(mlan_event_id event_id, EventCallback&& callback) {
   std::lock_guard lock(mutex_);
 
-  callbacks_[event_id].emplace_back(Callback{.bss_idx = bss_idx, .callback = std::move(callback)});
+  std::unique_ptr<Callback>& event_ptr =
+      callbacks_[event_id].emplace_back(std::make_unique<Callback>(std::move(callback)));
+  return EventRegistration(this, event_id, event_ptr.get());
+}
+
+EventRegistration EventHandler::RegisterForInterfaceEvent(mlan_event_id event_id, uint32_t bss_idx,
+                                                          EventCallback&& callback) {
+  std::lock_guard lock(mutex_);
+
+  std::unique_ptr<Callback>& event_ptr =
+      callbacks_[event_id].emplace_back(std::make_unique<Callback>(bss_idx, std::move(callback)));
+
+  return EventRegistration(this, event_id, event_ptr.get());
+}
+
+bool EventHandler::UnregisterEvent(EventRegistration&& event_registration) {
+  std::lock_guard lock(mutex_);
+
+  auto& callbacks = callbacks_[event_registration.event_id_];
+  const size_t count = cpp20::erase_if(callbacks, [&](const std::unique_ptr<Callback>& callback) {
+    return callback.get() == event_registration.event_;
+  });
+  event_registration.event_handler_ = nullptr;
+  return count != 0;
 }
 
 void EventHandler::OnEvent(pmlan_event event) {
@@ -43,8 +88,8 @@ void EventHandler::OnEvent(pmlan_event event) {
     // If the callback has a bss_idx we'll get it and compare it to the event's bss_idx. Otherwise
     // we return the same index we're looking for because this callback should trigger for all
     // bss_indexes.
-    if (callback.bss_idx.value_or(event->bss_index) == event->bss_index) {
-      callback.callback(event);
+    if (callback->bss_idx.value_or(event->bss_index) == event->bss_index) {
+      callback->callback(event);
     }
   }
 }

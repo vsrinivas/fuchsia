@@ -18,6 +18,7 @@
 #include <zircon/types.h>
 
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <vector>
@@ -26,24 +27,59 @@
 
 namespace wlan::nxpfmac {
 
+class EventHandler;
+
+// A class that represents a registration of an event. This can be used to unregister the event with
+// the event handler. The event will automatically be unregistered when the event registration
+// object is destroyed. This means that the caller HAS to keep this object alive for as long as they
+// wish to receive the event. The object is marked as nodiscard to help enforce this.
+class [[nodiscard]] EventRegistration {
+ public:
+  EventRegistration() = default;
+  // Copying dis-allowed as this would imply registering twice.
+  EventRegistration(const EventRegistration&) = delete;
+  EventRegistration& operator=(const EventRegistration&) = delete;
+  // Moving allowed.
+  EventRegistration(EventRegistration&& other) noexcept;
+  // Note that moving to an object will cause the destination object to be unregistered if it was
+  // registered.
+  EventRegistration& operator=(EventRegistration&& other) noexcept;
+
+  ~EventRegistration();
+
+ private:
+  friend class EventHandler;
+  EventRegistration(EventHandler* event_handler, mlan_event_id event_id, void* event);
+
+  EventHandler* event_handler_ = nullptr;
+  mlan_event_id event_id_ = MLAN_EVENT_ID_FW_UNKNOWN;
+  void* event_ = nullptr;
+};
+
 class EventHandler {
  public:
   using EventCallback = std::function<void(pmlan_event)>;
 
   // Register for an event and receive callbacks for all events regardless of interface (if any).
-  void RegisterForEvent(mlan_event_id event_id, EventCallback&& callback);
+  EventRegistration RegisterForEvent(mlan_event_id event_id, EventCallback&& callback);
   // Register only for events for a specific interface identified by bss_idx.
-  void RegisterForInterfaceEvent(mlan_event_id event_id, uint32_t bss_idx,
-                                 EventCallback&& callback);
+  EventRegistration RegisterForInterfaceEvent(mlan_event_id event_id, uint32_t bss_idx,
+                                              EventCallback&& callback);
+  // Unregister a previously registered event. Returns true if the event was unregistered
+  // successfully, false if the event registration could not be found (e.g. it was already
+  // unregistered).
+  bool UnregisterEvent(EventRegistration&& event_registration);
 
   void OnEvent(pmlan_event event);
 
  private:
   struct Callback {
+    explicit Callback(EventCallback&& callback) : callback(callback) {}
+    Callback(uint32_t bss_idx, EventCallback&& callback) : bss_idx(bss_idx), callback(callback) {}
     std::optional<uint32_t> bss_idx;
     EventCallback callback;
   };
-  using CallbackStorage = std::vector<Callback>;
+  using CallbackStorage = std::vector<std::unique_ptr<Callback>>;
   std::unordered_map<mlan_event_id, CallbackStorage> callbacks_ __TA_GUARDED(mutex_);
   std::mutex mutex_;
 };
