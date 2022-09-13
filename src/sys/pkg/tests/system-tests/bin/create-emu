@@ -213,7 +213,9 @@ fx-info "Connected to instance at ${INSTANCE_IP}."
 fx-info "Installing the SSH authorized keys..."
 
 # Copy in the ssh keys.
-if ! scp -q -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "$(get-ssh-authkeys)" "[${INSTANCE_IP}]:/data/ssh/authorized_keys"; then
+auth_keys=$(cat $(get-ssh-authkeys))
+
+if ! ssh -F "${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config" "${INSTANCE_IP}" "echo \"${auth_keys}\" > /data/ssh/authorized_keys"; then
   fx-error "failed to copy authorized keys to instance"
   fx-error "see ${QEMU_LOG} for more details"
   exit 1
