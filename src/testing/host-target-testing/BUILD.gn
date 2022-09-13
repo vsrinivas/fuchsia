@@ -59,6 +59,7 @@ go_library("host-target-testing") {
     "device/node_names.go",
     "device/node_names_test.go",
     "device/resolver.go",
+    "device/serial.go",
     "errutil/errutil.go",
     "flasher/flasher.go",
     "flasher/flasher_test.go",

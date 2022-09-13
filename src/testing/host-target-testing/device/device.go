@@ -15,6 +15,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/artifacts"
@@ -36,6 +37,7 @@ type Client struct {
 	sshClient                *sshutil.Client
 	initialMonotonicTime     time.Time
 	workaroundBrokenTimeSkip bool
+	bootCounter              *uint32
 }
 
 // NewClient creates a new Client.
@@ -45,6 +47,7 @@ func NewClient(
 	privateKey ssh.Signer,
 	sshConnectBackoff retry.Backoff,
 	workaroundBrokenTimeSkip bool,
+	serialConn *SerialConn,
 ) (*Client, error) {
 	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
@@ -64,10 +67,25 @@ func NewClient(
 		return nil, err
 	}
 
+	bootCounter := new(uint32)
+	go func() {
+		for {
+			line, err := serialConn.ReadLine()
+			if err != nil {
+				logger.Errorf(ctx, "failed to read from serial: %v", err)
+				break
+			}
+			if strings.HasSuffix(line, "Welcome to Zircon\n") {
+				atomic.AddUint32(bootCounter, 1)
+			}
+		}
+	}()
+
 	c := &Client{
 		deviceResolver:           deviceResolver,
 		sshClient:                sshClient,
 		workaroundBrokenTimeSkip: workaroundBrokenTimeSkip,
+		bootCounter:              bootCounter,
 	}
 
 	if err := c.postConnectSetup(ctx); err != nil {
@@ -288,7 +306,19 @@ func (c *Client) ExpectReboot(ctx context.Context, f func() error) error {
 			set -C &&
 			PATH= echo "%s" > "%s"
         )`, bootID, rebootCheckPath)
+
+	initialBootCount := *c.bootCounter
+
 	err = c.Run(ctx, strings.Fields(cmd), os.Stdout, os.Stderr)
+
+	afterBootCount := *c.bootCounter
+
+	logger.Infof(ctx, "device appears to have rebooted %d times", afterBootCount-initialBootCount)
+
+	if initialBootCount != afterBootCount {
+		return fmt.Errorf("boot counters do not match!")
+	}
+
 	if err != nil {
 		return fmt.Errorf("failed to write reboot check file: %w", err)
 	}

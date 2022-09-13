@@ -61,25 +61,25 @@ func TestOTA(t *testing.T) {
 
 	defer c.installerConfig.Shutdown(ctx)
 
-	if err := doTest(ctx); err != nil {
+	deviceClient, err := c.deviceConfig.NewDeviceClient(ctx)
+	if err != nil {
+		t.Fatal("failed to create ota test client: %w", err)
+	}
+	defer deviceClient.Close()
+
+	if err := doTest(ctx, deviceClient); err != nil {
 		logger.Errorf(ctx, "test failed: %v", err)
 		errutil.HandleError(ctx, c.deviceConfig.SerialSocketPath, err)
 		t.Fatal(err)
 	}
 }
 
-func doTest(ctx context.Context) error {
+func doTest(ctx context.Context, deviceClient *device.Client) error {
 	outputDir, cleanup, err := c.archiveConfig.OutputDir()
 	if err != nil {
 		return fmt.Errorf("failed to get output directory: %w", err)
 	}
 	defer cleanup()
-
-	deviceClient, err := c.deviceConfig.NewDeviceClient(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to create ota test client: %w", err)
-	}
-	defer deviceClient.Close()
 
 	l := logger.NewLogger(
 		logger.TraceLevel,

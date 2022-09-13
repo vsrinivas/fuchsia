@@ -133,5 +133,13 @@ func (c *DeviceConfig) NewDeviceClient(ctx context.Context) (*device.Client, err
 
 	connectBackoff := retry.NewConstantBackoff(c.connectTimeout)
 
-	return device.NewClient(ctx, deviceResolver, sshPrivateKey, connectBackoff, c.WorkaroundBrokenTimeSkip)
+	var serialConn *device.SerialConn
+	if c.SerialSocketPath != "" {
+		serialConn, err = device.NewSerialConn(c.SerialSocketPath)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return device.NewClient(ctx, deviceResolver, sshPrivateKey, connectBackoff, c.WorkaroundBrokenTimeSkip, serialConn)
 }
