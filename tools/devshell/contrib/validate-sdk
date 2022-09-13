@@ -10,14 +10,14 @@
 ## This command attempts to build some known SDK-based OOT repos with an SDK
 ## produced with the local Fuchsia tree and build configuration.
 ##
-## Usage: fx validate-sdk [[REPO/CLNUM/PATCHSET] ...]
+## Usage: fx validate-sdk [--local-bazel-rules] [--keep-tmp] [[REPO/CLNUM/PATCHSET] ...]
 ##
 ## It first runs the equivalent of 'fx build sdk:core sdk:driver'
 ##
 ## Then for each SDK-based repo from the list:
 ##                 sdk-samples/getting-started
 ##                 sdk-samples/drivers
-##                 fortune-teller
+##                 sdk-samples/fortune-teller
 ##    it will clone the corresponding repo and attempt to build it with
 ## the local SDK produced by 'fx build sdk:core sdk:driver'
 ##
@@ -27,10 +27,24 @@
 ## If you want to patch a CL from these repos before validating the SDK,
 ## you can use the [REPO/CL/PATCHSET] syntax:
 ##
+##
+##     --local-bazel-rules  Use the version of the sdk-integration repo in
+##                          the local Fuchsia tree (//third_party/sdk-integration)
+##                          instead of the version checked-in on the samples.
+##                          With this option, the in-tree sdk-integration will replace both
+##                          the checked-in and patched-in sdk-integration.
+##
+##     --keep-tmp   Do not delete the temporary directories used to fetch and
+##                  build the samples when they fail to build. This is useful
+##                  to debug and iterate on fixes without having to download the samples again.
+##                  If the build succeeds, the temp dirs will be deleted
+##                  regardless of this flag.
+##
 ##       Examples:
 ##          fx validate-sdk
+##          fx validate-sdk --local-bazel-rules
 ##          fx validate-sdk drivers/715716/9 getting-started/691515/11
-##
+##          fx validate-sdk --keep-tmp
 
 source "${FUCHSIA_DIR}/tools/devshell/lib/style.sh" || exit $?
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
@@ -105,6 +119,25 @@ function clone {
   git -C "$tmp_dir" submodule update --recursive --init
 }
 
+function replace_sdk_integration {
+  local tmp_dir="$1"
+  local sample_bazel_rules="${tmp_dir}/third_party/sdk-integration"
+  local local_bazel_rules="${FUCHSIA_DIR}/third_party/sdk-integration"
+  if [[ ! -d "$sample_bazel_rules" ]]; then
+    fx-error "Unexpected error: cannot find Bazel rules in $sample_bazel_rules"
+    exit 1
+  fi
+  if [[ ! -d "$local_bazel_rules" ]]; then
+    fx-error "Unexpected error: cannot find local Bazel rules in $local_bazel_rules"
+    exit 1
+  fi
+  rm -Rf "${sample_bazel_rules}"
+  mkdir -p "${sample_bazel_rules}"
+  # copy contents instead of the entire directory to avoid copying the .git
+  # directory, as it is large and useless in this context
+  cp -R "${local_bazel_rules}"/* "${sample_bazel_rules}"
+}
+
 function patch {
   local git_url="$1"
   local tmp_dir="$2"
@@ -125,12 +158,50 @@ function build_sample {
 
   cd "$tmp_dir"
   scripts/bootstrap.sh
-  LOCAL_FUCHSIA_PLATFORM_BUILD="$FUCHSIA_BUILD_DIR" tools/bazel build --config=fuchsia_x64 src:samples_repository
+  LOCAL_FUCHSIA_PLATFORM_BUILD="$FUCHSIA_BUILD_DIR" tools/bazel build --config=fuchsia_${FUCHSIA_ARCH} src:samples_repository
 }
 
+function show_instructions {
+  local repo_key="$1"
+  local tmp_dir="$2"
+  if [[ -d "${tmp_dir}" ]]; then
+    echo >&2
+    fx-warn "Keeping temp directory for $repo_key. Use the instructions below to build it:"
+    echo >&2 "fx build sdk:core sdk:driver"
+    echo >&2 "cd $tmp_dir"
+    echo >&2 "LOCAL_FUCHSIA_PLATFORM_BUILD=\"$FUCHSIA_BUILD_DIR\" tools/bazel build --config=fuchsia_${FUCHSIA_ARCH} src:samples_repository"
+  fi
+}
+
+function cleanup {
+  local tmp_dir="$1"
+  if [[ -d "${tmp_dir}" ]]; then
+    rm -Rf "${tmp_dir}"
+  fi
+}
 
 function main {
-  validate_patches "$@"
+  use_sdk_intree=0
+  keep=0
+  patches=()
+  while [[ $# -gt 0 ]]; do
+    if [[ "$1" =~ ^-- ]]; then
+      if [[ "$1" == "--local-bazel-rules" ]]; then
+        use_sdk_intree=1
+      elif [[ "$1" == "--keep-tmp" ]]; then
+        keep=1
+      else
+        fx-error "Invalid syntax"
+        fx-command-help
+        exit 1
+      fi
+    else
+      patches+=( "$1" )
+    fi
+    shift
+  done
+
+  validate_patches "${patches[@]}"
 
   fx-info "*** Creating the SDK..."
   create_sdk
@@ -139,19 +210,34 @@ function main {
   for repo_key in "${REPO_NAMES[@]}"; do
     local repo_url="${REPOS[$i]}"
     i=$((i+1))
-    local tmp_dir="$(mktemp -d)"
+    local message="*** Building $repo_key with local SDK, target arch $FUCHSIA_ARCH "
+    if [[ $use_sdk_intree -eq 1 ]]; then
+      message+="and in-tree sdk-integration "
+    fi
+    fx-info "$message..."
 
-    fx-info "*** Attempting to build $repo_key..."
-    trap "rm -Rf ${tmp_dir}" EXIT
+    local tmp_dir="$(mktemp -d)"
+    if [[ $keep -eq 0 ]]; then
+      trap "cleanup ${tmp_dir}" EXIT
+    else
+      trap "show_instructions \"$repo_key\" \"$tmp_dir\"" EXIT
+    fi
+
     clone "$repo_url" "$tmp_dir"
 
-    local patches=( $(get_patches "$repo_key" "$@" ) )
-    for (( pi=0; pi<${#patches[@]}; pi+=2 )); do
-      patch "$repo_url" "$tmp_dir" "${patches[$pi]}" "${patches[$pi+1]}"
+    local repo_patches=( $(get_patches "$repo_key" "${patches[@]}" ) )
+    for (( pi=0; pi<${#repo_patches[@]}; pi+=2 )); do
+      patch "$repo_url" "$tmp_dir" "${repo_patches[$pi]}" "${repo_patches[$pi+1]}"
     done
+
+    if [[ $use_sdk_intree -eq 1 ]]; then
+      replace_sdk_integration "$tmp_dir"
+    fi
 
     build_sample "$repo_key" "$tmp_dir"
 
+    trap - EXIT
+    cleanup ${tmp_dir}
   done
 }
 
