@@ -46,7 +46,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   void onCoreCodecOutputEndOfStream(bool error_detected_before) override;
 
   void onCoreCodecLogEvent(
-      media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event_code) override;
+      media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) override;
 
   void set_codec_adapter(CodecAdapter *codec_adapter) { codec_adapter_ = codec_adapter; }
 

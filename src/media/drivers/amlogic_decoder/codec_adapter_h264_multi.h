@@ -33,7 +33,7 @@ class CodecAdapterH264Multi : public AmlogicCodecAdapter,
   ~CodecAdapterH264Multi();
 
   void SetCodecDiagnostics(CodecDiagnostics* codec_diagnostics) override;
-  std::optional<media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation>
+  std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
   CoreCodecMetricsImplementation() override;
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;

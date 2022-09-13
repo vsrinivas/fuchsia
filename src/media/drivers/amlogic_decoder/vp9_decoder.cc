@@ -192,8 +192,7 @@ uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(buffer_->ph
 Vp9Decoder::Vp9Decoder(Owner* owner, Client* client, InputType input_type,
                        bool use_compressed_output, bool is_secure)
     : VideoDecoder(
-          media_metrics::
-              StreamProcessorEvents2MigratedMetricDimensionImplementation_AmlogicDecoderVp9,
+          media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderVp9,
           owner, client, is_secure),
       input_type_(input_type),
       use_compressed_output_(use_compressed_output) {
@@ -292,7 +291,7 @@ zx_status_t Vp9Decoder::Initialize() {
   TRACE_DURATION("media", "Vp9Decoder::Initialize");
   zx_status_t status = InitializeBuffers();
   if (status != ZX_OK) {
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InitializationError);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
     LOG(ERROR, "InitializeBuffers() failed");
     return status;
   }
@@ -303,7 +302,7 @@ zx_status_t Vp9Decoder::InitializeBuffers() {
   TRACE_DURATION("media", "Vp9Decoder::InitializeBuffers");
   zx_status_t status = working_buffers_.AllocateBuffers(owner_, is_secure());
   if (status != ZX_OK) {
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
     LOG(ERROR, "working_buffers_.AllocateBuffers() failed");
     return status;
   }
@@ -320,7 +319,7 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   zx_status_t status =
       owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, is_secure());
   if (status != ZX_OK) {
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_DrmConfigError);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DrmConfigError);
     LOG(ERROR, "SetProtected(kHevc) failed");
     return status;
   }
@@ -333,13 +332,13 @@ zx_status_t Vp9Decoder::InitializeHardware() {
     status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_Vp9_Mmu,
                                              FirmwareBlob::FirmwareVdecLoadMode::kHevc);
     if (status != ZX_OK) {
-      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_FirmwareLoadError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
       LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
       return status;
     }
   } else {
     if (is_secure()) {
-      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_DrmConfigError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DrmConfigError);
       LOG(ERROR, "VP9 secure decode requires TEE connection");
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -351,13 +350,13 @@ zx_status_t Vp9Decoder::InitializeHardware() {
     status = owner_->firmware_blob()->GetFirmwareData(FirmwareBlob::FirmwareType::kDec_Vp9_Mmu,
                                                       &data, &firmware_size);
     if (status != ZX_OK) {
-      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_FirmwareLoadError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
       LOG(ERROR, "GetFirmwareData() failed");
       return status;
     }
     status = owner_->core()->LoadFirmware(data, firmware_size);
     if (status != ZX_OK) {
-      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_FirmwareLoadError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_FirmwareLoadError);
       LOG(ERROR, "LoadFirmware() failed");
       return status;
     }
@@ -575,24 +574,21 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
         io_buffer_init_vmo(&video_frame->buffer, owner_->bti()->get(),
                            frames[i].buffer_spec().vmo_range.vmo().get(), 0, IO_BUFFER_RW);
     if (status != ZX_OK) {
-      LogEvent(
-          media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InitializationError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
       LOG(ERROR, "Failed to io_buffer_init_vmo() for frame - status: %d", status);
       CallErrorHandler();
       return;
     }
     size_t vmo_size = io_buffer_size(&video_frame->buffer, 0);
     if (vmo_size < frame_vmo_bytes) {
-      LogEvent(
-          media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InitializationError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
       LOG(ERROR, "Insufficient frame vmo bytes: %ld < %d", vmo_size, frame_vmo_bytes);
       CallErrorHandler();
       return;
     }
     status = io_buffer_physmap(&video_frame->buffer);
     if (status != ZX_OK) {
-      LogEvent(
-          media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InitializationError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
       LOG(ERROR, "Failed to io_buffer_physmap - status: %d", status);
       CallErrorHandler();
       return;
@@ -600,8 +596,7 @@ void Vp9Decoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_t code
 
     for (uint32_t i = 1; i < vmo_size / PAGE_SIZE; i++) {
       if (video_frame->buffer.phys_list[i - 1] + PAGE_SIZE != video_frame->buffer.phys_list[i]) {
-        LogEvent(
-            media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InitializationError);
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
         LOG(ERROR, "VMO isn't contiguous");
         CallErrorHandler();
         return;
@@ -808,8 +803,7 @@ void Vp9Decoder::HandleInterrupt() {
     // particularly large input frames, if we can get this to work. Currently
     // attempting to restart decoding after this in frame-based decoding mode
     // causes old data to be skipped.
-    LogEvent(
-        media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InputProcessingError);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InputProcessingError);
     LOG(ERROR, "Input buffer empty, insufficient padding?");
     return;
   }
@@ -857,8 +851,7 @@ void Vp9Decoder::HandleInterrupt() {
   }
 
   if (dec_status != kProcessedHeader) {
-    LogEvent(
-        media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_DecodeResultInvalidError);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DecodeResultInvalidError);
     LOG(ERROR, "Unexpected decode status %x", dec_status);
     return;
   };
@@ -990,8 +983,7 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
       zx_status_t status = io_buffer_init(&current_frame_->compressed_data, owner_->bti()->get(),
                                           frame_buffer_size, IO_BUFFER_RW);
       if (status != ZX_OK) {
-        LogEvent(
-            media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InitializationError);
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
         LOG(ERROR, "Couldn't allocate compressed frame data: %d", status);
         return;
       }
@@ -999,8 +991,7 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
 
       status = io_buffer_physmap(&current_frame_->compressed_data);
       if (status != ZX_OK) {
-        LogEvent(
-            media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InitializationError);
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
         LOG(ERROR, "Couldn't map compressed frame data: %d", status);
         return;
       }
@@ -1113,7 +1104,7 @@ void Vp9Decoder::ShowExistingFrame(HardwareRenderParams* params) {
   TRACE_DURATION("media", "Vp9Decoder::ShowExistingFrame");
   Frame* frame = reference_frame_map_[params->frame_to_show];
   if (!frame) {
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_MissingPictureError);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_MissingPictureError);
     LOG(WARNING, "Showing existing frame that doesn't exist");
     SkipFrameAfterFirmwareSlow();
     return;
@@ -1204,7 +1195,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     // The SkipFrameAfterFirmwareSlow() takes ~20-40 ms per frame, which isn't great.  That's why we
     // prefer to skip by parsing the cleartext frame_type from the uncompressed_header_size bytes
     // instead, which we currently do for non-DRM content.
-    LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_SlowFrameSkip);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_SlowFrameSkip);
     LOG(WARNING, "!has_keyframe_ && params.frame_type != kVp9FrameTypeKeyFrame --- frame_type: %u",
         params.frame_type);
     SkipFrameAfterFirmwareSlow();
@@ -1215,8 +1206,7 @@ void Vp9Decoder::PrepareNewFrame(bool params_checked_previously) {
     // actually observed this for non-keyframe frames where we never delivered the preceding
     // keyframe to the FW, so in that case most likely the frame size information wasn't availalbe
     // to the FW.
-    LogEvent(
-        media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_DimensionsInvalidError);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DimensionsInvalidError);
     LOG(WARNING, "params.hw_width == 0 || params.hw_height == 0 --- hw_width: %u hw_height: %u",
         params.hw_width, params.hw_height);
     SkipFrameAfterFirmwareSlow();
@@ -1354,8 +1344,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
   // Support up to 4kx2k, the hardware limit.
   constexpr uint32_t kMaxWidth = 4096, kMaxHeight = 2176;
   if (coded_width > kMaxWidth || coded_height > kMaxHeight) {
-    LogEvent(media_metrics::
-                 StreamProcessorEvents2MigratedMetricDimensionEvent_DimensionsUnsupportedError);
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_DimensionsUnsupportedError);
     LOG(ERROR, "Invalid stream size %dx%d", coded_width, coded_height);
     CallErrorHandler();
     return false;
@@ -1381,7 +1370,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
       // does happen, maybe a new BufferCollection was allocated that ended up
       // with settings/constraints that are still incompatible with what params
       // needs, which is bad enough to fail the stream.
-      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_UnreachableError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
       LOG(ERROR,
           "params_checked_previously - calling error_handler_, allocated %d width %d height %d",
           buffers_allocated, coded_width, coded_height);
@@ -1455,8 +1444,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
                                   display_width, display_height, false, 1, 1);
     if (initialize_result != ZX_OK) {
       if (initialize_result != ZX_ERR_STOP) {
-        LogEvent(
-            media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_InitializationError);
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_InitializationError);
         LOG(ERROR, "initialize_frames_handler_() failed - status: %d", initialize_result);
         CallErrorHandler();
         return false;
@@ -1525,7 +1513,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
         "Vp9MpredData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), rounded_up_size,
         (1 << 16), is_secure(), /*is_writable=*/true, /*is_mapping_needed=*/false);
     if (!internal_buffer.is_ok()) {
-      LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
       LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
       CallErrorHandler();
       return false;
@@ -1624,7 +1612,7 @@ zx_status_t Vp9Decoder::AllocateFrames() {
           "Vp9CompressedFrameHeader", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(),
           kCompressedHeaderSize, 1 << 16, false, /*is_writable=*/true, /*is_mapping_neede=*/true);
       if (!internal_buffer.is_ok()) {
-        LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_AllocationError);
+        LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_AllocationError);
         LOG(ERROR, "Alloc buffer error: %d", internal_buffer.error());
         return internal_buffer.error();
       }
@@ -1792,13 +1780,13 @@ void Vp9Decoder::OnSignaledWatchdog() {
   DLOG("HevcStreamLevel %d", HevcStreamLevel::Get().ReadFrom(owner_->dosbus()).reg_value());
   DLOG("HevcParserIntStatus 0x%x",
        HevcParserIntStatus::Get().ReadFrom(owner_->dosbus()).reg_value());
-  LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_WatchdogFired);
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_WatchdogFired);
   if (!frame_data_provider_) {
     LOG(ERROR, "Got Vp9 watchdog timeout - fatal error");
     CallErrorHandler();
     return;
   }
-  LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_StreamReset);
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_StreamReset);
   LOG(ERROR, "Got Vp9 watchdog timeout.  Doing async reset of the stream after current frame.");
   state_ = DecoderState::kFailed;
   frame_data_provider_->AsyncResetStreamAfterCurrentFrame();

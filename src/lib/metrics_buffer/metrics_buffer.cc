@@ -4,24 +4,19 @@
 
 #include "src/lib/metrics_buffer/metrics_buffer.h"
 
-#include <fidl/fuchsia.io/cpp/hlcpp_conversion.h>
 #include <inttypes.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+//#include <lib/syslog/global.h>
 #include <lib/async/cpp/task.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 
-#include <memory>
 #include <mutex>
-#include <utility>
 
-#include "fidl/fuchsia.io/cpp/markers.h"
-#include "lib/fidl/cpp/wire/internal/transport_channel.h"
-#include "lib/sync/completion.h"
-#include "lib/syslog/global.h"
+#include <src/lib/cobalt/cpp/cobalt_event_builder.h>
+
 #include "log.h"
-#include "src/lib/metrics_buffer/metrics_impl.h"
 
 namespace cobalt {
 
@@ -50,14 +45,12 @@ MetricsBuffer::MetricsBuffer(uint32_t project_id,
 MetricsBuffer::~MetricsBuffer() { SetServiceDirectory(nullptr); }
 
 void MetricsBuffer::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> service_directory) {
-  FX_LOGS(INFO) << "SetServiceDirectory is called";
-  std::unique_ptr<cobalt::MetricsImpl> logger_to_delete_outside_lock;
+  std::unique_ptr<cobalt::CobaltLogger> logger_to_delete_outside_lock;
   std::unique_ptr<async::Loop> loop_to_stop_outside_lock;
   {  // scope lock
     std::lock_guard<std::mutex> lock(lock_);
     ZX_DEBUG_ASSERT(!!loop_ == !!cobalt_logger_);
     if (cobalt_logger_) {
-      FX_LOGS(INFO) << "cobalt_logger already exists";
       ZX_DEBUG_ASSERT(loop_);
       // Clean these up after we've released lock_, to avoid potential deadlock waiting on a thread
       // that may be trying to get lock_.
@@ -66,10 +59,7 @@ void MetricsBuffer::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> s
     }
     ZX_DEBUG_ASSERT(!loop_ && !cobalt_logger_);
     if (service_directory) {
-      FX_LOGS(INFO) << "Creating new cobalt_logger";
-      std::unique_ptr<cobalt::MetricsImpl> new_logger;
-      fidl::ClientEnd<fuchsia_io::Directory> directory =
-          fidl::HLCPPToNatural(service_directory->CloneChannel());
+      std::unique_ptr<cobalt::CobaltLogger> new_logger;
       auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       zx_status_t status = loop->StartThread("MetricsBuffer");
       if (status != ZX_OK) {
@@ -78,16 +68,30 @@ void MetricsBuffer::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> s
         // ~service_directory
         return;
       }
-      sync_completion_t finished;
-      // Must create fuchsia_metrics::MetricEventLogger on same dispatcher that it'll use.
-      async::PostTask(loop->dispatcher(), [this, &loop, &directory, &new_logger, &finished] {
-        // MetricsImpl will internally use the directory to reconnect as needed, should we ever lose
-        // connection.
-        new_logger = std::make_unique<cobalt::MetricsImpl>(loop->dispatcher(), std::move(directory),
-                                                           project_id_);
-        sync_completion_signal(&finished);
-      });
-      sync_completion_wait(&finished, ZX_TIME_INFINITE);
+      zx::event cobalt_logger_creation_done;
+      status = zx::event::create(/*options=*/0, &cobalt_logger_creation_done);
+      if (status != ZX_OK) {
+        LOG(WARNING, "zx::event::create() failed - status: %d", status);
+        // ~loop
+        // ~service_directory
+        return;
+      }
+      // Must create cobalt::CobaltLogger on same dispatcher that it'll use.
+      async::PostTask(loop->dispatcher(),
+                      [this, &loop, &service_directory, &new_logger, &cobalt_logger_creation_done] {
+                        new_logger = cobalt::NewCobaltLoggerFromProjectId(
+                            loop->dispatcher(), service_directory, project_id_);
+                        cobalt_logger_creation_done.signal(0, ZX_EVENT_SIGNALED);
+                      });
+      zx_signals_t observed = 0;
+      status =
+          cobalt_logger_creation_done.wait_one(ZX_EVENT_SIGNALED, zx::time::infinite(), &observed);
+      if (status != ZX_OK) {
+        // ~loop
+        // ~new_logger
+        return;
+      }
+      ZX_DEBUG_ASSERT((observed & ZX_EVENT_SIGNALED) != 0);
       loop_ = std::move(loop);
       cobalt_logger_ = std::move(new_logger);
       ZX_DEBUG_ASSERT(!!loop_ && !!cobalt_logger_);
@@ -100,15 +104,15 @@ void MetricsBuffer::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> s
   }  // ~lock
   ZX_DEBUG_ASSERT(!!loop_to_stop_outside_lock == !!logger_to_delete_outside_lock);
   if (loop_to_stop_outside_lock) {
-    // Need to delete the old MetricsImpl with the same dispatcher that created the old MetricsImpl.
-    async::PostTask(loop_to_stop_outside_lock->dispatcher(),
-                    [&logger_to_delete_outside_lock] { logger_to_delete_outside_lock = nullptr; });
-    loop_to_stop_outside_lock->RunUntilIdle();
+    // Stop the loop first, to avoid any async tasks queued by the CobaltLogger outlasting the
+    // CobaltLogger.
     loop_to_stop_outside_lock->Quit();
     loop_to_stop_outside_lock->JoinThreads();
     loop_to_stop_outside_lock->Shutdown();
     // Delete here for clarity.
     loop_to_stop_outside_lock = nullptr;
+    // Now it's safe to delete the CobaltLogger, which we do here manually for clarity.
+    logger_to_delete_outside_lock = nullptr;
   }
 }
 
@@ -142,9 +146,9 @@ void MetricsBuffer::FlushPendingEventCounts() {
   std::lock_guard<std::mutex> lock(lock_);
   ZX_DEBUG_ASSERT(!!loop_ == !!cobalt_logger_);
   if (!cobalt_logger_) {
-    // In some testing scenarios, we may not have access to a real MetricEventLoggerFactory, and we
-    // can end up here if SetServiceDirectory() hit an error while (or shortly after) switching from
-    // an old loop_ and cobalt_logger_ to a new loop_ and cobalt_logger_.
+    // In some testing scenarios, we may not have access to a real LoggerFactory, and we can end up
+    // here if SetServiceDirectory() hit an error while (or shortly after) switching from an old
+    // loop_ and cobalt_logger_ to a new loop_ and cobalt_logger_.
     //
     // If later we get a new cobalt_logger_ from a new SetServiceDirectory(), this method will run
     // again.
@@ -155,15 +159,16 @@ void MetricsBuffer::FlushPendingEventCounts() {
   snapped_pending_event_counts.swap(pending_counts_);
   auto iter = snapped_pending_event_counts.begin();
   constexpr uint32_t kMaxBatchSize = 64;
-  std::vector<fuchsia_metrics::MetricEvent> batch;
+  std::vector<fuchsia::cobalt::CobaltEvent> batch;
   while (iter != snapped_pending_event_counts.end()) {
     auto [key, count] = *iter;
     iter++;
-    batch.emplace_back(key.metric_id(), key.dimension_values(),
-                       fuchsia_metrics::MetricEventPayload::WithCount(count));
+    batch.emplace_back(cobalt::CobaltEventBuilder(key.metric_id())
+                           .with_event_codes(key.dimension_values())
+                           .as_count_event(/*period_duration_micros=*/0, count));
     ZX_DEBUG_ASSERT(batch.size() <= kMaxBatchSize);
     if (batch.size() == kMaxBatchSize || iter == snapped_pending_event_counts.end()) {
-      cobalt_logger_->LogMetricEvents(std::move(batch));
+      cobalt_logger_->LogCobaltEvents(std::move(batch));
       ZX_DEBUG_ASSERT(batch.empty());
     }
   }
@@ -181,7 +186,7 @@ void MetricsBuffer::TryPostFlushCountsLocked() {
 
 MetricsBuffer::PendingCountsKey::PendingCountsKey(uint32_t metric_id,
                                                   std::vector<uint32_t> dimension_values)
-    : metric_id_(metric_id), dimension_values_(std::move(dimension_values)) {}
+    : metric_id_(metric_id), dimension_values_(dimension_values) {}
 
 uint32_t MetricsBuffer::PendingCountsKey::metric_id() const { return metric_id_; }
 

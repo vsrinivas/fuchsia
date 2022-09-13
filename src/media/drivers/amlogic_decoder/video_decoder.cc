@@ -13,23 +13,22 @@ std::atomic<uint32_t> next_decoder_id_;
 }  // namespace
 
 VideoDecoder::VideoDecoder(
-    media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation implementation,
-    Owner* owner, Client* client, bool is_secure)
+    media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation, Owner* owner,
+    Client* client, bool is_secure)
     : decoder_id_(next_decoder_id_++),
       owner_(owner),
       client_(client),
       is_secure_(is_secure),
       implementation_(implementation) {
   pts_manager_ = std::make_unique<PtsManager>();
-  LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_CoreCreated);
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CoreCreated);
 }
 
 VideoDecoder::~VideoDecoder() {
-  LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent_CoreDeleted);
+  LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_CoreDeleted);
 }
 
-void VideoDecoder::LogEvent(
-    media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event) {
+void VideoDecoder::LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent event) {
   metrics().LogEvent(implementation_, event);
 }
 

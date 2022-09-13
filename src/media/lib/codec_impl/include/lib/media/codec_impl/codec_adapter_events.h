@@ -72,7 +72,7 @@ class CodecAdapterEvents {
   // If the CodecAdapter sub-class ever calls this method, the CodecAdapter sub-class must also
   // overide CoreCodecMetricsImplementation(), and not return std::nullopt from that method.
   virtual void onCoreCodecLogEvent(
-      media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event_code) = 0;
+      media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) = 0;
 };
 
 #endif  // SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_ADAPTER_EVENTS_H_

@@ -134,10 +134,9 @@ void CodecAdapterH264Multi::SetCodecDiagnostics(CodecDiagnostics* codec_diagnost
   codec_diagnostics_ = codec_diagnostics->CreateDriverCodec("H264");
 }
 
-std::optional<media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation>
+std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
 CodecAdapterH264Multi::CoreCodecMetricsImplementation() {
-  return media_metrics::
-      StreamProcessorEvents2MigratedMetricDimensionImplementation_AmlogicDecoderH264;
+  return media_metrics::StreamProcessorEvents2MetricDimensionImplementation_AmlogicDecoderH264;
 }
 
 bool CodecAdapterH264Multi::IsCoreCodecRequiringOutputConfigForFormatDetection() { return false; }
@@ -291,7 +290,7 @@ void CodecAdapterH264Multi::CoreCodecStartStream() {
       // Log here instead of in AllocateStreamBuffer() since video_ doesn't know which codec this is
       // for.
       events_->onCoreCodecLogEvent(
-          media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent::AllocationError);
+          media_metrics::StreamProcessorEvents2MetricDimensionEvent::AllocationError);
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
     }

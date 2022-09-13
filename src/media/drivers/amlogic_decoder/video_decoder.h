@@ -166,9 +166,8 @@ class VideoDecoder {
     virtual const AmlogicDecoderTestHooks& __WARN_UNUSED_RESULT test_hooks() const = 0;
   };
 
-  VideoDecoder(
-      media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation implementation,
-      Owner* owner, Client* client, bool is_secure);
+  VideoDecoder(media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
+               Owner* owner, Client* client, bool is_secure);
 
   void SetCodecDiagnostics(DriverCodecDiagnostics* codec_diagnostics) {
     codec_diagnostics_ = codec_diagnostics;
@@ -231,7 +230,7 @@ class VideoDecoder {
   // In case a sub-class wants to do something directly with Metrics, like log using a separate
   // component or similar.
   CodecMetrics& metrics() { return owner_->metrics(); }
-  void LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event);
+  void LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent event);
 
   DriverCodecDiagnostics* codec_diagnostics_{nullptr};
 
@@ -242,7 +241,7 @@ class VideoDecoder {
   bool is_secure_ = false;
 
  private:
-  const media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation implementation_;
+  const media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation_;
 };
 
 }  // namespace amlogic_decoder

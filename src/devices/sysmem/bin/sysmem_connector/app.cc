@@ -4,7 +4,7 @@
 
 #include "app.h"
 
-#include <fuchsia/metrics/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 
 #include <sdk/lib/syslog/cpp/macros.h>
 
@@ -25,13 +25,12 @@ App::App(async_dispatcher_t* dispatcher)
     // Without sysmem_connector_init() success, we can't serve anything, so assert.
     ZX_ASSERT(status == ZX_OK);
   }
-  status = outgoing_aux_service_directory_parent_.AddPublicService<
-      fuchsia::metrics::MetricEventLoggerFactory>(
-      [this](fidl::InterfaceRequest<fuchsia::metrics::MetricEventLoggerFactory> request) {
+
+  status = outgoing_aux_service_directory_parent_.AddPublicService<fuchsia::cobalt::LoggerFactory>(
+      [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
         ZX_DEBUG_ASSERT(component_context_);
-        FX_LOGS(INFO)
-            << "sysmem_connector handling request for MetricEventLoggerFactory -- handle value: "
-            << request.channel().get();
+        FX_LOGS(INFO) << "sysmem_connector handling request for LoggerFactory -- handle value: "
+                      << request.channel().get();
         component_context_->svc()->Connect(std::move(request));
       });
   outgoing_aux_service_directory_ =

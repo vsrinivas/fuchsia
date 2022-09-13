@@ -65,7 +65,7 @@ void FakeCodecAdapterEvents::onCoreCodecOutputEndOfStream(bool error_detected_be
 }
 
 void FakeCodecAdapterEvents::onCoreCodecLogEvent(
-    media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event_code) {}
+    media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) {}
 
 void FakeCodecAdapterEvents::WaitForIdle(size_t input_packet_count, bool set_end_of_stream) {
   std::unique_lock<std::mutex> lock(lock_);

@@ -12,31 +12,30 @@
 #include <zircon/types.h>
 
 #include <mutex>
-#include <optional>
 
 #include "lib/async/cpp/task.h"
 #include "lib/media/codec_impl/log.h"
+#include "src/lib/cobalt/cpp/cobalt_event_builder.h"
 #include "src/media/lib/metrics/metrics.cb.h"
 
 CodecMetrics::CodecMetrics()
     : metrics_buffer_(cobalt::MetricsBuffer::Create(media_metrics::kProjectId)),
-      metric_buffer_(metrics_buffer_->CreateMetricBuffer(
-          media_metrics::kStreamProcessorEvents2MigratedMetricId)) {}
+      metric_buffer_(
+          metrics_buffer_->CreateMetricBuffer(media_metrics::kStreamProcessorEvents2MetricId)) {}
 
 CodecMetrics::CodecMetrics(std::shared_ptr<sys::ServiceDirectory> service_directory)
-    : metrics_buffer_(
-          cobalt::MetricsBuffer::Create(media_metrics::kProjectId, std::move(service_directory))),
-      metric_buffer_(metrics_buffer_->CreateMetricBuffer(
-          media_metrics::kStreamProcessorEvents2MigratedMetricId)) {}
+    : metrics_buffer_(cobalt::MetricsBuffer::Create(media_metrics::kProjectId, service_directory)),
+      metric_buffer_(
+          metrics_buffer_->CreateMetricBuffer(media_metrics::kStreamProcessorEvents2MetricId)) {}
 
 CodecMetrics::~CodecMetrics() {}
 
 void CodecMetrics::SetServiceDirectory(std::shared_ptr<sys::ServiceDirectory> service_directory) {
-  metrics_buffer_->SetServiceDirectory(std::move(service_directory));
+  metrics_buffer_->SetServiceDirectory(service_directory);
 }
 
 void CodecMetrics::LogEvent(
-    media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation implementation,
-    media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event) {
+    media_metrics::StreamProcessorEvents2MetricDimensionImplementation implementation,
+    media_metrics::StreamProcessorEvents2MetricDimensionEvent event) {
   metric_buffer_.LogEvent({implementation, event});
 }

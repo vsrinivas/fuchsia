@@ -31,7 +31,7 @@
             subdir: "class/gpu",
         },
         {
-            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
+            protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
             to: "#codec_factory",
         },

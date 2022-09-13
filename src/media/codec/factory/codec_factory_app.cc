@@ -5,9 +5,9 @@
 #include "codec_factory_app.h"
 
 #include <dirent.h>
+#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/hardware/mediacodec/cpp/fidl.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/sysinfo/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <zircon/status.h>
@@ -51,16 +51,14 @@ CodecFactoryApp::CodecFactoryApp(async_dispatcher_t* dispatcher, ProdOrTest prod
   // AddPublicService() below has had a chance to register for it.
 
   zx_status_t status =
-      outgoing_codec_aux_service_directory_parent_
-          .AddPublicService<fuchsia::metrics::MetricEventLoggerFactory>(
-              [this](fidl::InterfaceRequest<fuchsia::metrics::MetricEventLoggerFactory> request) {
-                ZX_DEBUG_ASSERT(startup_context_);
-                FX_SLOG(INFO, kLogTag,
-                        "codec_factory handling request for MetricEventLoggerFactory" KV("tag",
-                                                                                         kLogTag),
-                        KV("handle value", request.channel().get()));
-                startup_context_->svc()->Connect(std::move(request));
-              });
+      outgoing_codec_aux_service_directory_parent_.AddPublicService<fuchsia::cobalt::LoggerFactory>(
+          [this](fidl::InterfaceRequest<fuchsia::cobalt::LoggerFactory> request) {
+            ZX_DEBUG_ASSERT(startup_context_);
+            FX_SLOG(INFO, kLogTag,
+                    "codec_factory handling request for LoggerFactory" KV("tag", kLogTag),
+                    KV("handle value", request.channel().get()));
+            startup_context_->svc()->Connect(std::move(request));
+          });
   outgoing_codec_aux_service_directory_ =
       outgoing_codec_aux_service_directory_parent_.GetOrCreateDirectory("svc");
 

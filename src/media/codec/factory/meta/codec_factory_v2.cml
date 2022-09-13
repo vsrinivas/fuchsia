@@ -42,7 +42,7 @@
         },
         {
             protocol: [
-                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.tracing.provider.Registry",
             ],

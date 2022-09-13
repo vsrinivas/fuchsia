@@ -52,6 +52,8 @@ source_set("codec_impl") {
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/inspect/cpp",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/cobalt/cpp:cobalt_event_builder",
+    "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/lib/fsl",
     "//src/lib/metrics_buffer",
     "//src/media/lib/metrics",

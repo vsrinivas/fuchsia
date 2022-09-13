@@ -21,8 +21,8 @@ class Mpeg12Decoder : public VideoDecoder {
   explicit Mpeg12Decoder(Owner* owner, Client* client)
       : VideoDecoder(
             // Unspecified because we don't need metrics from this decoder.
-            media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation_Unspecified,
-            owner, client,
+            media_metrics::StreamProcessorEvents2MetricDimensionImplementation_Unspecified, owner,
+            client,
             /*is_secure=*/false) {
     power_ref_ = std::make_unique<PowerReference>(owner_->core());
   }

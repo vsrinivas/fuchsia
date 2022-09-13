@@ -477,7 +477,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   bool IsPortSecurePermitted(CodecPort port);
 
   CodecMetrics* codec_metrics_ = nullptr;
-  std::optional<media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation>
+  std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
       codec_metrics_implementation_dimension_;
 
   // The CodecAdapter is owned by the CodecImpl, and is listed near the top of
@@ -891,7 +891,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   __WARN_UNUSED_RESULT const fuchsia::mediacodec::CreateEncoder_Params& encoder_params() const;
   __WARN_UNUSED_RESULT const fuchsia::media::drm::DecryptorParams& decryptor_params() const;
 
-  void LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event_code) const;
+  void LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) const;
 
   //
   // Core codec interfacing.
@@ -946,7 +946,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void onCoreCodecOutputEndOfStream(bool error_detected_before) override;
 
   void onCoreCodecLogEvent(
-      media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event_code) override;
+      media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) override;
 
   //
   // Core codec.
@@ -956,7 +956,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   //
 
   __WARN_UNUSED_RESULT
-  std::optional<media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation>
+  std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
   CoreCodecMetricsImplementation() override;
 
   __WARN_UNUSED_RESULT bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
