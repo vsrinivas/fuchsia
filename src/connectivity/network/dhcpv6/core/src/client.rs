@@ -1821,8 +1821,6 @@ enum ReplyWithLeasesError {
     MismatchedServerId { got: Vec<u8>, want: Vec<u8> },
     #[error("status code error")]
     StatusCodeError(#[from] StatusCodeError),
-    #[error("no usable lease")]
-    NoUsableLease,
     #[error("IA_NA with unexpected IAID")]
     UnexpectedIaNa(v6::IAID, IaNa),
 }
@@ -1871,11 +1869,19 @@ fn process_ia_na_error_status(
     }
 }
 
+// Possible states to move to after processing a Reply containing leases.
+#[derive(Debug)]
+enum StateAfterReplyWithLeases {
+    RequestNextServer,
+    Assigned,
+}
+
 #[derive(Debug)]
 struct ProcessedReplyWithLeases {
     addresses: HashMap<v6::IAID, AddressEntry>,
     dns_servers: Option<Vec<Ipv6Addr>>,
     actions: Vec<Action>,
+    next_state: StateAfterReplyWithLeases,
 }
 
 fn process_reply_with_leases<B: ByteSlice>(
@@ -2072,42 +2078,40 @@ fn process_reply_with_leases<B: ByteSlice>(
         })
         .collect::<Result<HashMap<_, _>, _>>()?;
 
-    match request_type {
-        // Per RFC 8415, section 18.2.10.1:
-        //
-        //    If the Reply message contains any IAs but the client finds no
-        //    usable addresses and/or delegated prefixes in any of these IAs,
-        //    the client may either try another server (perhaps restarting the
-        //    DHCP server discovery process) or use the Information-request
-        //    message to obtain other configuration information only.
-        //
-        // If there are no usable addresses and no other servers to select,
-        // the client restarts server discover instead of requesting
-        // configuration information only. This option is preferred when the
-        // client operates in stateful mode, where the main goal for the
-        // client is to negotiate addresses.
-        RequestLeasesMessageType::Request => {
-            if addresses.iter().all(|(_iaid, entry)| match entry {
-                AddressEntry::ToRequest(_) => true,
-                AddressEntry::Assigned(_) => false,
-            }) {
-                return Err(ReplyWithLeasesError::NoUsableLease);
+    // Per RFC 8415, section 18.2.10.1:
+    //
+    //    If the Reply message contains any IAs but the client finds no
+    //    usable addresses and/or delegated prefixes in any of these IAs,
+    //    the client may either try another server (perhaps restarting the
+    //    DHCP server discovery process) or use the Information-request
+    //    message to obtain other configuration information only.
+    //
+    // If there are no usable addresses and no other servers to select,
+    // the client restarts server discovery instead of requesting
+    // configuration information only. This option is preferred when the
+    // client operates in stateful mode, where the main goal for the
+    // client is to negotiate addresses.
+    let next_state = if addresses.iter().all(|(_iaid, entry)| match entry {
+        AddressEntry::ToRequest(_) => true,
+        AddressEntry::Assigned(_) => false,
+    }) {
+        warn!("Reply to {}: no usable lease returned", request_type);
+        StateAfterReplyWithLeases::RequestNextServer
+    } else {
+        StateAfterReplyWithLeases::Assigned
+    };
+    // Add configured addresses that were requested by the client but were
+    // not received in this Reply.
+    for (iaid, addr_entry) in current_addresses {
+        match addr_entry {
+            AddressEntry::ToRequest(address_to_request) => {
+                let _: &mut AddressEntry =
+                    addresses.entry(*iaid).or_insert(AddressEntry::ToRequest(*address_to_request));
             }
-            // Add configured addresses that were requested by the client but were
-            // not received in this Reply.
-            for (iaid, addr_entry) in current_addresses {
-                match addr_entry {
-                    AddressEntry::ToRequest(address_to_request) => {
-                        let _: &mut AddressEntry = addresses
-                            .entry(*iaid)
-                            .or_insert(AddressEntry::ToRequest(*address_to_request));
-                    }
-                    AddressEntry::Assigned(_ia) => {
-                        // TODO(https://fxbug.dev/76765): handle assigned addresses
-                        // on transitioning from `Renewing` to `Requesting` for IAs
-                        // with `NoBinding` status.
-                    }
-                }
+            AddressEntry::Assigned(_ia) => {
+                // TODO(https://fxbug.dev/76765): handle assigned addresses
+                // on transitioning from `Renewing` to `Requesting` for IAs
+                // with `NoBinding` status.
             }
         }
     }
@@ -2116,29 +2120,34 @@ fn process_reply_with_leases<B: ByteSlice>(
     // TODO(https://fxbug.dev/95265): Add action to add addresses.
     // TODO(https://fxbug.dev/96684): add actions to schedule/cancel
     // preferred and valid lifetime timers.
-    let actions = std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
-        .chain(dns_servers.clone().map(Action::UpdateDnsServers))
-        // Set timer to start renewing addresses, per RFC 8415, section
-        // 18.2.4:
-        //
-        //    At time T1, the client initiates a Renew/Reply message
-        //    exchange to extend the lifetimes on any leases in the IA.
-        //
-        // Addresses are not renewed if T1 is infinity, per RFC 8415,
-        // section 7.7:
-        //
-        //    A client will never attempt to extend the lifetimes of any
-        //    addresses in an IA with T1 set to 0xffffffff.
-        .chain(match t1 {
-            v6::NonZeroTimeValue::Finite(t1_val) => Some(Action::ScheduleTimer(
-                ClientTimerType::Renew,
-                Duration::from_secs(t1_val.get().into()),
-            )),
-            v6::NonZeroTimeValue::Infinity => None,
-        })
-        .collect::<Vec<_>>();
+    let actions = match next_state {
+        StateAfterReplyWithLeases::Assigned => {
+            std::iter::once(Action::CancelTimer(ClientTimerType::Retransmission))
+                .chain(dns_servers.clone().map(Action::UpdateDnsServers))
+                // Set timer to start renewing addresses, per RFC 8415, section
+                // 18.2.4:
+                //
+                //    At time T1, the client initiates a Renew/Reply message
+                //    exchange to extend the lifetimes on any leases in the IA.
+                //
+                // Addresses are not renewed if T1 is infinity, per RFC 8415,
+                // section 7.7:
+                //
+                //    A client will never attempt to extend the lifetimes of any
+                //    addresses in an IA with T1 set to 0xffffffff.
+                .chain(match t1 {
+                    v6::NonZeroTimeValue::Finite(t1_val) => Some(Action::ScheduleTimer(
+                        ClientTimerType::Renew,
+                        Duration::from_secs(t1_val.get().into()),
+                    )),
+                    v6::NonZeroTimeValue::Infinity => None,
+                })
+                .collect::<Vec<_>>()
+        }
+        StateAfterReplyWithLeases::RequestNextServer => Vec::new(),
+    };
 
-    Ok(ProcessedReplyWithLeases { addresses, dns_servers, actions })
+    Ok(ProcessedReplyWithLeases { addresses, dns_servers, actions, next_state })
 }
 
 impl Requesting {
@@ -2464,7 +2473,7 @@ impl Requesting {
             retrans_count,
             mut solicit_max_rt,
         } = self;
-        let ProcessedReplyWithLeases { addresses, dns_servers, actions } =
+        let ProcessedReplyWithLeases { addresses, dns_servers, actions, next_state } =
             match process_reply_with_leases(
                 client_id,
                 &server_id,
@@ -2586,20 +2595,6 @@ impl Requesting {
                                 transaction_id: None,
                             };
                         }
-                        ReplyWithLeasesError::NoUsableLease => {
-                            warn!(
-                                "Reply to Request: trying next server as no usable lease returned"
-                            );
-                            return request_from_alternate_server_or_restart_server_discovery(
-                                client_id,
-                                to_configured_addresses(current_addresses),
-                                &options_to_request,
-                                collected_advertise,
-                                solicit_max_rt,
-                                rng,
-                                now,
-                            );
-                        }
                         _ => {}
                     }
                     warn!("ignoring Reply to Request: {:?}", e);
@@ -2620,18 +2615,34 @@ impl Requesting {
                 }
             };
 
-        // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
-        // assigned addresses.
-        Transition {
-            state: ClientState::AddressAssigned(AddressAssigned {
-                client_id,
-                addresses,
-                server_id,
-                dns_servers: dns_servers.unwrap_or(Vec::new()),
-                solicit_max_rt,
-            }),
-            actions,
-            transaction_id: None,
+        match next_state {
+            StateAfterReplyWithLeases::RequestNextServer => {
+                warn!("Reply to Request: trying next server");
+                request_from_alternate_server_or_restart_server_discovery(
+                    client_id,
+                    to_configured_addresses(current_addresses),
+                    &options_to_request,
+                    collected_advertise,
+                    solicit_max_rt,
+                    rng,
+                    now,
+                )
+            }
+            StateAfterReplyWithLeases::Assigned => {
+                // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
+                // assigned addresses.
+                Transition {
+                    state: ClientState::AddressAssigned(AddressAssigned {
+                        client_id,
+                        addresses,
+                        server_id,
+                        dns_servers: dns_servers.unwrap_or(Vec::new()),
+                        solicit_max_rt,
+                    }),
+                    actions,
+                    transaction_id: None,
+                }
+            }
         }
     }
 }
@@ -4764,6 +4775,7 @@ mod tests {
         );
     }
 
+    // TODO(https://fxbug.dev/109224): Refactor this test into independent test cases.
     #[test]
     fn requesting_receive_reply_with_failure_status_code() {
         let options_to_request = vec![];
@@ -4864,7 +4876,7 @@ mod tests {
         assert_eq!(got_transaction_id, None);
         assert_eq!(actions[..], []);
 
-        // If the reply contains an top level NotOnLink status code, the
+        // If the reply contains a top level NotOnLink status code, the
         // request should be resent without specifying any addresses.
         let options = [
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
