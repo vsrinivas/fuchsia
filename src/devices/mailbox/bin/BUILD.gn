@@ -1,0 +1,16 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("hifi4rpctest") {
+  sources = [ "hifi4rpctest.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.mailbox:fuchsia.hardware.mailbox_cpp_wire",
+    "//sdk/lib/fdio",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zxc",
+  ]
+
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}

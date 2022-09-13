@@ -169,6 +169,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "av400-i2s-audio-out",
       "av400-i2s-audio-in",
       "sys/platform/05:07:13/av400-audio-pdm-in",
+      "sys/platform/05:07:b/aml-mailbox",
 
       // CPU Device
       "sys/platform/05:07:1e",

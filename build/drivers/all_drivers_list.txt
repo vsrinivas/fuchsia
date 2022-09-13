@@ -141,6 +141,7 @@
 //src/devices/internal/drivers/fragment:fragment-driver
 //src/devices/internal/drivers/fragment:fragment.proxy-driver
 //src/devices/light-sensor/drivers/ams-light:ams-light-driver
+//src/devices/mailbox/drivers/aml-mailbox:aml-mailbox-driver
 //src/devices/mcu/drivers/chromiumos-ec-core:driver
 //src/devices/mcu/drivers/chromiumos-ec-lpc:driver
 //src/devices/mcu/drivers/vim3-mcu:vim3-mcu-driver

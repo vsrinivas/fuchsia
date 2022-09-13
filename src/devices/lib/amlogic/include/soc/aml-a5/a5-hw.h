@@ -37,6 +37,20 @@
 #define A5_RTC_BASE 0xfe09a000
 #define A5_RTC_LENGTH 0x2000
 
+// mailbox
+#define A5_MAILBOX_WR_BASE 0xfe006000
+#define A5_MAILBOX_WR_LENGTH 0x800
+#define A5_MAILBOX_RD_BASE 0xfe006800
+#define A5_MAILBOX_RD_LENGTH 0x800
+#define A5_MAILBOX_SET_BASE 0xfe0070c0
+#define A5_MAILBOX_SET_LENGTH 0x40
+#define A5_MAILBOX_CLR_BASE 0xfe007100
+#define A5_MAILBOX_CLR_LENGTH 0x40
+#define A5_MAILBOX_STS_BASE 0xfe007140
+#define A5_MAILBOX_STS_LENGTH 0x40
+#define A5_MAILBOX_IRQCTRL_BASE 0xfe007020
+#define A5_MAILBOX_IRQCTRL_LENGTH 0x40
+
 // Peripherals - datasheet is nondescript about this section, but it contains
 //  top level ethernet control and temp sensor registers
 
@@ -137,6 +151,8 @@
 #define A5_ETH_GMAC_IRQ 106  // 74+32
 
 #define A5_RTC_IRQ 163  // 131+32
+
+#define A5_MAILBOX_IRQ 280  // 248+32
 
 // Ethernet
 #define A5_ETH_MAC_BASE 0xfdc00000

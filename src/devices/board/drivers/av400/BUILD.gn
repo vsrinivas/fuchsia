@@ -194,6 +194,7 @@ fuchsia_driver("av400-driver") {
     "av400-eth.cc",
     "av400-gpio.cc",
     "av400-i2c.cc",
+    "av400-mailbox.cc",
     "av400-power.cc",
     "av400-pwm.cc",
     "av400-ram.cc",

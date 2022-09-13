@@ -57,6 +57,7 @@ zx_library("svc") {
     "//src/devices/board/lib/acpi/*",
     "//src/devices/bus/drivers/pci/*",
     "//src/devices/i2c/drivers/i2c/*",
+    "//src/devices/mailbox/drivers/aml-mailbox/*",
     "//src/devices/mcu/drivers/chromiumos-ec-core/*",
     "//src/devices/mcu/drivers/chromiumos-ec-lpc/*",
     "//src/devices/testing/mock-ddk/*",

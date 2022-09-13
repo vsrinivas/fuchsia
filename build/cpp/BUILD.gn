@@ -59,6 +59,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/devices/gpio/drivers/gpio:gpio-test-bin",
     "//src/devices/i2c/bin:i2cutil",
     "//src/devices/i2c/drivers/i2c:i2c-test-bin",
+    "//src/devices/mailbox/bin:hifi4rpctest",
     "//src/devices/ml/drivers/aml-nna:aml-nna-driver",
     "//src/devices/ml/drivers/aml-nna:aml-nna-test-bin",
     "//src/devices/nand/bin/nand-util:common",

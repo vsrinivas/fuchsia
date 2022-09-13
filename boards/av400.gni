@@ -23,6 +23,7 @@ _common_bootfs_deps = [
   "//src/devices/cpu/drivers/aml-cpu",
   "//src/devices/gpio/drivers/aml-axg-gpio",
   "//src/devices/i2c/drivers/aml-i2c",
+  "//src/devices/mailbox/drivers/aml-mailbox",
   "//src/devices/power/drivers/aml-meson-power",
   "//src/devices/pwm/drivers/aml-pwm",
   "//src/devices/pwm/drivers/aml-pwm-init",

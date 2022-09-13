@@ -1,0 +1,34 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.mailbox;
+
+using zx;
+
+const MBOX_FIFO_SIZE uint32 = 128; // bytes
+type MboxTx = struct {
+    cmd uint32;
+    tx_buffer vector<uint8>:MBOX_FIFO_SIZE;
+};
+
+type MboxRx = struct {
+    rx_buffer vector<uint8>:MBOX_FIFO_SIZE;
+};
+
+@discoverable
+protocol Device {
+    // |channel| : vendor specific identifier used to communicate with different hardware blocks.
+    SendCommand(struct {
+        channel uint8;
+        mdata MboxTx;
+    }) -> (struct {}) error zx.status;
+
+    // |channel| : vendor specific identifier used to communicate with different hardware blocks.
+    // |rx_len | : rx_len is equal to the number of bytes of the transmitted data MboxTx.tx_buffer.
+    ReceiveData(struct {
+        channel uint8;
+        rx_len uint8;
+    }) -> (struct {
+        mdata MboxRx;
+    }) error zx.status;
+};

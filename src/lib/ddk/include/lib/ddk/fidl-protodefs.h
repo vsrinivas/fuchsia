@@ -25,5 +25,6 @@ DDK_FIDL_PROTOCOL_DEF(ADDRESS_SPACE,  6, "fuchsia.hardware.goldfish.AddressSpace
 DDK_FIDL_PROTOCOL_DEF(GOLDFISH_SYNC,  7, "fuchsia.hardware.goldfish.SyncDevice")
 DDK_FIDL_PROTOCOL_DEF(SPI,            8, "fuchsia.hardware.spi.Device")
 DDK_FIDL_PROTOCOL_DEF(SYSMEM,         9, "fuchsia.hardware.sysmem.Sysmem")
+DDK_FIDL_PROTOCOL_DEF(AML_MAILBOX,    10, "fuchsia.hardware.mailbox.Device")
 #undef DDK_FIDL_PROTOCOL_DEF
 #endif

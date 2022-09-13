@@ -1,0 +1,11 @@
+{
+    "short_description": "AMLogic MailBox driver",
+    "manufacturer": "AMLogic",
+    "families": [],
+    "models": [
+        "A5"
+    ],
+    "areas": [
+        "Misc"
+    ]
+}

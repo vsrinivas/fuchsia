@@ -89,6 +89,7 @@ class Av400 : public Av400Type {
   zx_status_t PowerInit();
   zx_status_t CpuInit();
   zx_status_t DmcInit();
+  zx_status_t MailboxInit();
 
   int Thread();
 

@@ -1,0 +1,51 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("aml_mailbox_bind") {
+  rules = "aml_mailbox.bind"
+  header_output = "aml_mailbox_bind.h"
+  bind_output = "aml-mailbox.bindbc"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+fuchsia_driver("aml-mailbox-driver") {
+  output_name = "aml-mailbox"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [ "aml-mailbox.cc" ]
+  deps = [
+    ":aml_mailbox_bind",
+    "//sdk/fidl/fuchsia.hardware.mailbox:fuchsia.hardware.mailbox_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/bus/lib/device-protocol-platform-device",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/svc",
+    "//zircon/system/ulib/sync",
+  ]
+}
+
+fuchsia_driver_component("aml-mailbox") {
+  component_name = "aml-mailbox"
+  deps = [ ":aml-mailbox-driver" ]
+  info = "aml-mailbox-info.json"
+  colocate = true
+}
