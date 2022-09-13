@@ -31,8 +31,6 @@
 #include <unordered_map>
 #include <vector>
 
-#include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
-#include "src/virtualization/bin/vmm/controller/virtio_vsock.h"
 #include "src/virtualization/bin/vmm/linux.h"
 #include "src/virtualization/bin/vmm/pci.h"
 #include "src/virtualization/bin/vmm/platform_device.h"
@@ -42,8 +40,10 @@
 namespace vmm {
 
 using ::fuchsia::component::RealmSyncPtr;
+using ::fuchsia::virtualization::BalloonController;
 using ::fuchsia::virtualization::GuestConfig;
 using ::fuchsia::virtualization::GuestError;
+using ::fuchsia::virtualization::HostVsockEndpoint;
 using ::fuchsia::virtualization::KernelType;
 
 namespace {
@@ -76,6 +76,13 @@ bool IsValidConfig(const ::fuchsia::virtualization::GuestConfig& guest_config) {
   return true;
 }
 
+// Duplicates a socket, asserting on failure.
+zx::socket DuplicateSocket(const zx::socket& socket) {
+  zx::socket duplicate_socket;
+  FX_CHECK(socket.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_socket) == ZX_OK);
+  return duplicate_socket;
+}
+
 }  // namespace
 
 Vmm::~Vmm() {
@@ -97,10 +104,7 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   RealmSyncPtr realm;
   context->svc()->Connect(realm.NewRequest());
 
-  // TODO(fxbug.dev/104989): Serve these FIDL protocols from the VMM object itself.
-  guest_controller_ = std::make_unique<GuestImpl>();
-
-  guest_ = std::make_unique<Guest>();
+  guest_ = std::make_unique<::Guest>();
   zx_status_t status = guest_->Init(cfg.guest_memory());
   if (status != ZX_OK) {
     return fitx::error(GuestError::GUEST_INITIALIZATION_FAILURE);
@@ -122,7 +126,9 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   platform_devices_.push_back(interrupt_controller_.get());
 
   // Setup UARTs.
-  uart_ = std::make_unique<Uart>(guest_controller_->SerialSocket());
+  zx::socket host_serial_socket;
+  FX_CHECK(zx::socket::create(0, &host_serial_socket, &client_serial_socket_) == ZX_OK);
+  uart_ = std::make_unique<Uart>(std::move(host_serial_socket));
 #if __aarch64__
   status = uart_->Init(guest_.get());
 #elif __x86_64__
@@ -169,20 +175,18 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
 
   // Setup balloon device.
   if (cfg.has_virtio_balloon() && cfg.virtio_balloon()) {
-    std::unique_ptr<VirtioBalloon> balloon = std::make_unique<VirtioBalloon>(guest_->phys_mem());
-    status = pci_bus_->Connect(balloon->pci_device(), device_loop_->dispatcher());
+    balloon_ = std::make_unique<VirtioBalloon>(guest_->phys_mem());
+    status = pci_bus_->Connect(balloon_->pci_device(), device_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect balloon device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = balloon->Start(guest_->object(), realm, device_loop_->dispatcher(),
-                            vmm_loop_->dispatcher());
+    status = balloon_->Start(guest_->object(), realm, device_loop_->dispatcher(),
+                             vmm_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start balloon device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
     }
-
-    guest_controller_->ProvideBalloonController(std::move(balloon));
   }
 
   // Create a new VirtioBlock device for each device requested.
@@ -212,7 +216,10 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
       FX_PLOGS(ERROR, status) << "Failed to connect console device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = console_->Start(guest_->object(), guest_controller_->ConsoleSocket(), realm,
+
+    zx::socket host_console_socket;
+    FX_CHECK(zx::socket::create(0, &host_console_socket, &client_console_socket_) == ZX_OK);
+    status = console_->Start(guest_->object(), std::move(host_console_socket), realm,
                              device_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start console device";
@@ -285,21 +292,18 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
   }
 
   if (cfg.has_virtio_vsock() && cfg.virtio_vsock()) {
-    std::unique_ptr<controller::VirtioVsock> vsock_device;
-    vsock_device = std::make_unique<controller::VirtioVsock>(guest_->phys_mem());
-    status = pci_bus_->Connect(vsock_device->pci_device(), device_loop_->dispatcher());
+    vsock_ = std::make_unique<controller::VirtioVsock>(guest_->phys_mem());
+    status = pci_bus_->Connect(vsock_->pci_device(), device_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to connect vsock device";
       return fitx::error(GuestError::DEVICE_INITIALIZATION_FAILURE);
     }
-    status = vsock_device->Start(guest_->object(), std::move(*cfg.mutable_vsock_listeners()), realm,
-                                 device_loop_->dispatcher());
+    status = vsock_->Start(guest_->object(), std::move(*cfg.mutable_vsock_listeners()), realm,
+                           device_loop_->dispatcher());
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Failed to start vsock device";
       return fitx::error(GuestError::DEVICE_START_FAILURE);
     }
-
-    guest_controller_->ProvideVsockController(std::move(vsock_device));
   }
 
   // Setup wayland device.
@@ -473,18 +477,9 @@ fitx::result<GuestError> Vmm::Initialize(GuestConfig cfg, ::sys::ComponentContex
     return fitx::error(GuestError::KERNEL_LOAD_FAILURE);
   }
 
-  status = guest_controller_->AddPublicService(context);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to add guest controller public service";
-    return fitx::error(GuestError::DUPLICATE_PUBLIC_SERVICES);
-  }
-
-  if (gpu_ != nullptr) {
-    status = gpu_->AddPublicService(context);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to add GPU public service";
-      return fitx::error(GuestError::DUPLICATE_PUBLIC_SERVICES);
-    }
+  auto result = AddPublicServices(context);
+  if (result.is_error()) {
+    return result;
   }
 
   return fitx::ok();
@@ -505,6 +500,62 @@ zx_gpaddr_t Vmm::AllocDeviceAddr(size_t device_size) {
   const zx_gpaddr_t ret = next_device_address_;
   next_device_address_ += device_size;
   return ret;
+}
+
+fitx::result<GuestError> Vmm::AddPublicServices(sys::ComponentContext* context) {
+  zx_status_t status = context->outgoing()->AddPublicService(guest_bindings_.GetHandler(this));
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to add guest controller public service";
+    return fitx::error(GuestError::DUPLICATE_PUBLIC_SERVICES);
+  }
+
+  if (gpu_ != nullptr) {
+    status = gpu_->AddPublicService(context);
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to add GPU public service";
+      return fitx::error(GuestError::DUPLICATE_PUBLIC_SERVICES);
+    }
+  }
+
+  return fitx::ok();
+}
+
+void Vmm::GetSerial(GetSerialCallback callback) {
+  FX_CHECK(client_serial_socket_.is_valid());
+  callback(fpromise::ok(DuplicateSocket(client_serial_socket_)));
+}
+
+void Vmm::GetConsole(GetConsoleCallback callback) {
+  if (console_) {
+    FX_CHECK(client_serial_socket_.is_valid());
+    callback(fpromise::ok(DuplicateSocket(client_console_socket_)));
+  } else {
+    // TODO(fxbug.dev/104989): Convert to GuestError, return DEVICE_NOT_PRESENT.
+    FX_LOGS(WARNING) << "Attempted to get console socket, but the console device is not present";
+    callback(fpromise::error(ZX_ERR_UNAVAILABLE));
+  }
+}
+
+void Vmm::GetHostVsockEndpoint(fidl::InterfaceRequest<HostVsockEndpoint> endpoint,
+                               GetHostVsockEndpointCallback callback) {
+  if (vsock_) {
+    vsock_->GetHostVsockEndpoint(std::move(endpoint));
+    callback(fpromise::ok());
+  } else {
+    FX_LOGS(WARNING) << "Attempted to get HostVsockEndpoint, but the vsock device is not present";
+    callback(fpromise::error(GuestError::DEVICE_NOT_PRESENT));
+  }
+}
+
+void Vmm::GetBalloonController(fidl::InterfaceRequest<BalloonController> endpoint,
+                               GetBalloonControllerCallback callback) {
+  if (balloon_) {
+    balloon_->ConnectToBalloonController(std::move(endpoint));
+    callback(fpromise::ok());
+  } else {
+    FX_LOGS(WARNING) << "Attempted to get BalloonController, but the balloon device is not present";
+    callback(fpromise::error(GuestError::DEVICE_NOT_PRESENT));
+  }
 }
 
 }  // namespace vmm

@@ -7,9 +7,11 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fitx/result.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 #include "src/virtualization/bin/vmm/controller/virtio_block.h"
 #include "src/virtualization/bin/vmm/controller/virtio_console.h"
 #include "src/virtualization/bin/vmm/controller/virtio_gpu.h"
@@ -18,9 +20,9 @@
 #include "src/virtualization/bin/vmm/controller/virtio_net.h"
 #include "src/virtualization/bin/vmm/controller/virtio_rng.h"
 #include "src/virtualization/bin/vmm/controller/virtio_sound.h"
+#include "src/virtualization/bin/vmm/controller/virtio_vsock.h"
 #include "src/virtualization/bin/vmm/controller/virtio_wl.h"
 #include "src/virtualization/bin/vmm/guest.h"
-#include "src/virtualization/bin/vmm/guest_impl.h"
 #include "src/virtualization/bin/vmm/interrupt_controller.h"
 #include "src/virtualization/bin/vmm/platform_device.h"
 #include "src/virtualization/bin/vmm/uart.h"
@@ -35,11 +37,11 @@
 
 namespace vmm {
 
-class Vmm {
+class Vmm : public fuchsia::virtualization::Guest {
  public:
   Vmm(std::shared_ptr<async::Loop> vmm_loop, std::shared_ptr<async::Loop> device_loop)
       : vmm_loop_(std::move(vmm_loop)), device_loop_(std::move(device_loop)) {}
-  ~Vmm();
+  ~Vmm() override;
 
   // Instantiate all VMM objects and configure the guest kernel.
   fitx::result<::fuchsia::virtualization::GuestError> Initialize(
@@ -48,23 +50,34 @@ class Vmm {
   // Start the primary VCPU. This will begin guest execution.
   fitx::result<::fuchsia::virtualization::GuestError> StartPrimaryVcpu();
 
+  // |fuchsia::virtualization::Guest|
+  void GetSerial(GetSerialCallback callback) override;
+  void GetConsole(GetConsoleCallback callback) override;
+  void GetHostVsockEndpoint(
+      fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint,
+      GetHostVsockEndpointCallback callback) override;
+  void GetBalloonController(
+      fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> endpoint,
+      GetBalloonControllerCallback callback) override;
+
  private:
 #if __x86_64__
   static constexpr char kDsdtPath[] = "/pkg/data/dsdt.aml";
   static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 #endif
 
-  // Used to allocate a non-overlapping device memory range.
+  // Allocates a non-overlapping device memory range.
   zx_gpaddr_t AllocDeviceAddr(size_t device_size);
+
+  // Serve any supported public services. This will always serve |fuchsia::virtualization::Guest|.
+  fitx::result<::fuchsia::virtualization::GuestError> AddPublicServices(
+      sys::ComponentContext* context);
 
   // Dispatch loops for the VMM and device controllers.
   std::shared_ptr<async::Loop> vmm_loop_;
   std::shared_ptr<async::Loop> device_loop_;
 
-  // TODO(fxbug.dev/104989): Move this logic into this VMM object, and delete GuestImpl.
-  std::unique_ptr<GuestImpl> guest_controller_;
-
-  std::unique_ptr<Guest> guest_;
+  std::unique_ptr<::Guest> guest_;
 
   // Platform devices.
   std::unique_ptr<InterruptController> interrupt_controller_;
@@ -77,12 +90,14 @@ class Vmm {
   std::unique_ptr<PciBus> pci_bus_;
 
   // Devices.
+  std::unique_ptr<VirtioBalloon> balloon_;
   std::vector<std::unique_ptr<VirtioBlock>> block_devices_;
   std::unique_ptr<VirtioConsole> console_;
   std::unique_ptr<VirtioGpu> gpu_;
   std::unique_ptr<VirtioInput> input_keyboard_;
   std::unique_ptr<VirtioInput> input_pointer_;
   std::unique_ptr<VirtioRng> rng_;
+  std::unique_ptr<controller::VirtioVsock> vsock_;
   std::unique_ptr<VirtioWl> wl_;
   std::unique_ptr<VirtioMagma> magma_;
   std::unique_ptr<VirtioSound> sound_;
@@ -97,6 +112,13 @@ class Vmm {
   // Guest memory pointers for use in starting the primary VCPU.
   uintptr_t entry_ = 0;
   uintptr_t boot_ptr_ = 0;
+
+  // Client ends for the serial and console sockets. Serial will always be available, and console
+  // will be available only when the virtio console device was enabled via the guest configuration.
+  zx::socket client_serial_socket_;
+  zx::socket client_console_socket_;
+
+  fidl::BindingSet<fuchsia::virtualization::Guest> guest_bindings_;
 };
 
 }  // namespace vmm

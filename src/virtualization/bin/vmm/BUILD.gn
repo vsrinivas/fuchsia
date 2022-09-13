@@ -59,8 +59,6 @@ source_set("lib") {
     "dev_mem.h",
     "guest.cc",
     "guest.h",
-    "guest_impl.cc",
-    "guest_impl.h",
     "io.cc",
     "io.h",
     "linux.cc",
