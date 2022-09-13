@@ -205,8 +205,9 @@ func (p *BuildPaver) runPave(ctx context.Context, deviceName string, args ...str
 // debug`. The bootserver supports the flag if:
 //
 //   - the process provides an exit code of 1.
-//   - the process's stderr ends with "cannot specify a bootserver mode without
-//     an image manifest [--images]\n".
+//   - the process's stderr ends with:
+//   - "no images provided!\n"
+//   - "cannot specify a bootserver mode without an image manifest [--images]\n"
 //
 // If the bootserver does not support the flag if:
 //
@@ -231,8 +232,13 @@ func supportsLogLevel(ctx context.Context, bootserverPath string) (bool, error) 
 
 	if exitErr, ok := err.(*exec.ExitError); ok {
 		if exitErr.ExitCode() == 1 {
-			if strings.HasSuffix(stderr.String(), "cannot specify a bootserver mode without an image manifest [--images]\n") {
-				return true, nil
+			for _, suffix := range []string{
+				"bootserver FATAL: no images provided!\n",
+				"cannot specify a bootserver mode without an image manifest [--images]\n",
+			} {
+				if strings.HasSuffix(stderr.String(), suffix) {
+					return true, nil
+				}
 			}
 
 			logger.Warningf(ctx, "was unable to parse stderr, assuming bootserver does not support -log-level: %s", stderr.String())
