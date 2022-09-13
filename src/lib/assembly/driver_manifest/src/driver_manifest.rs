@@ -16,9 +16,10 @@ const BASE_DRIVER_MANIFEST_PACKAGE_NAME: &str = "driver-manager-base-config";
 const BASE_DRIVER_MANIFEST_PATH: &str = "config/base-driver-manifest.json";
 
 /// A driver manifest fragment.
-#[derive(Debug, Default, Serialize, Deserialize)]
+#[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
 pub struct DriverManifest {
-    driver_url: String,
+    /// Url of a driver to load at boot.
+    pub driver_url: String,
 }
 
 /// A builder for the driver manifest package.

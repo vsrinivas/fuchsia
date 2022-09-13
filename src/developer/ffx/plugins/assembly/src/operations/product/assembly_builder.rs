@@ -262,6 +262,32 @@ impl ImageAssemblyConfigBuilder {
         Ok(())
     }
 
+    /// Add the product-provided drivers to the assembly configuration.
+    ///
+    /// This should be performed after all the platform bundles have
+    /// been added as it is for packages. Packages specified as
+    /// base driver packages should not be in the base package set and
+    /// are added automatically.
+    pub fn add_product_drivers(&mut self, drivers: Vec<DriverDetails>) -> Result<()> {
+        // Base drivers are added to the base packages
+        // Config data is not supported for driver packages since it is deprecated.
+        for driver_details in drivers {
+            let manifest =
+                PackageManifest::try_load_from(&driver_details.package).with_context(|| {
+                    format!("parsing {} as a package manifest", &driver_details.package)
+                })?;
+            self.base
+                .add_package(PackageEntry {
+                    path: driver_details.package.clone().into_std_path_buf(),
+                    manifest,
+                })
+                .context(format!("Adding driver {}", &driver_details.package))?;
+            let package_url = DriverManifestBuilder::get_base_package_url(&driver_details.package)?;
+            self.base_drivers.try_insert_unique(package_url, driver_details)?;
+        }
+        Ok(())
+    }
+
     /// Given the parsed json of the product package set entry, parse out the
     /// package manifest, and any configuration associated with the package.
     fn parse_product_package_entry(
@@ -617,11 +643,16 @@ impl FileEntryMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_driver_manifest::DriverManifest;
     use assembly_package_utils::PackageManifestPathBuf;
+    use assembly_test_util::generate_test_manifest;
     use camino::Utf8PathBuf;
     use fuchsia_archive;
     use fuchsia_pkg::{PackageBuilder, PackageManifest};
+    use itertools::Itertools;
     use std::fs::File;
+    use std::io::BufReader;
+    use std::io::Write;
     use tempfile::TempDir;
 
     fn write_empty_pkg(path: impl AsRef<Path>, name: &str) -> PackageManifestPathBuf {
@@ -659,6 +690,55 @@ mod tests {
             blobs: Vec::default(),
             shell_commands: ShellCommands::default(),
         }
+    }
+
+    fn make_test_driver(package_name: &str, outdir: impl AsRef<Path>) -> Result<DriverDetails> {
+        let driver_package_manifest_file_path = outdir.as_ref().join(package_name);
+        let mut driver_package_manifest_file = File::create(&driver_package_manifest_file_path)?;
+        let package_manifest = generate_test_manifest(package_name, None);
+        serde_json::to_writer(&driver_package_manifest_file, &package_manifest)?;
+        driver_package_manifest_file.flush()?;
+
+        Ok(DriverDetails {
+            package: Utf8PathBuf::from_path_buf(driver_package_manifest_file_path.to_owned())
+                .unwrap(),
+            components: vec![Utf8PathBuf::from("meta/foobar.cm")],
+        })
+    }
+
+    /// Create an ImageAssemblyConfigBuilder with a minimal AssemblyInputBundle
+    /// for testing product configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `package_names` - names for empty stub packages to create and add to the
+    ///    base set.
+    fn get_minimum_config_builder(
+        outdir: impl AsRef<Path>,
+        package_names: Vec<String>,
+    ) -> ImageAssemblyConfigBuilder {
+        let minimum_bundle = AssemblyInputBundle {
+            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
+                base: package_names
+                    .iter()
+                    .map(|package_name| write_empty_pkg(&outdir, package_name).into_std_path_buf())
+                    .collect(),
+                kernel: Some(assembly_config_schema::PartialKernelConfig {
+                    path: Some("kernel/path".into()),
+                    args: Vec::default(),
+                    clock_backstop: Some(0),
+                }),
+                qemu_kernel: Some("kernel/qemu/path".into()),
+                ..assembly_config_schema::PartialImageAssemblyConfig::default()
+            },
+            base_drivers: Vec::default(),
+            config_data: BTreeMap::default(),
+            blobs: Vec::default(),
+            shell_commands: ShellCommands::default(),
+        };
+        let mut builder = ImageAssemblyConfigBuilder::default();
+        builder.add_parsed_bundle(outdir.as_ref().join("minimum_bundle"), minimum_bundle).unwrap();
+        builder
     }
 
     #[test]
@@ -797,27 +877,11 @@ mod tests {
                 write_empty_pkg(&outdir, "cache_b").into(),
             ],
         };
-        let minimum_bundle = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                base: vec![
-                    write_empty_pkg(&outdir, "platform_a").into_std_path_buf(),
-                    write_empty_pkg(&outdir, "platform_b").into_std_path_buf(),
-                ],
-                kernel: Some(assembly_config_schema::PartialKernelConfig {
-                    path: Some("kernel/path".into()),
-                    args: Vec::default(),
-                    clock_backstop: Some(0),
-                }),
-                qemu_kernel: Some("kernel/qemu/path".into()),
-                ..assembly_config_schema::PartialImageAssemblyConfig::default()
-            },
-            base_drivers: Vec::default(),
-            config_data: BTreeMap::default(),
-            blobs: Vec::default(),
-            shell_commands: ShellCommands::default(),
-        };
-        let mut builder = ImageAssemblyConfigBuilder::default();
-        builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
+
+        let mut builder = get_minimum_config_builder(
+            &outdir,
+            vec!["platform_a".to_owned(), "platform_b".to_owned()],
+        );
         builder.add_product_packages(packages).unwrap();
         let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
 
@@ -859,35 +923,79 @@ mod tests {
         assert_eq!(config_data_a, "source a");
         assert_eq!(config_data_b, "{}");
     }
+    #[test]
+    fn test_builder_with_product_drivers() -> Result<()> {
+        let outdir = TempDir::new().unwrap();
+        let mut builder = get_minimum_config_builder(
+            &outdir,
+            vec!["platform_a".to_owned(), "platform_b".to_owned()],
+        );
+        let base_driver_1 = make_test_driver("driver1", &outdir)?;
+        let base_driver_2 = make_test_driver("driver2", &outdir)?;
+
+        builder.add_product_drivers(vec![base_driver_1, base_driver_2])?;
+        let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+
+        assert_eq!(
+            result.base.iter().map(|p| p.to_owned()).sorted().collect::<Vec<_>>(),
+            vec![
+                "driver-manager-base-config/package_manifest.json",
+                "driver1",
+                "driver2",
+                "platform_a",
+                "platform_b"
+            ]
+            .iter()
+            .map(|p| outdir.path().join(p).to_owned())
+            .sorted()
+            .collect::<Vec<_>>()
+        );
+
+        let driver_manifest: Vec<DriverManifest> =
+            serde_json::from_reader(BufReader::new(File::open(
+                &outdir.path().join("driver-manager-base-config/config/base-driver-manifest.json"),
+            )?))?;
+        assert_eq!(
+            driver_manifest,
+            vec![
+                DriverManifest {
+                    driver_url: "fuchsia-pkg://testrepository.com/driver1#meta/foobar.cm"
+                        .to_owned()
+                },
+                DriverManifest {
+                    driver_url: "fuchsia-pkg://testrepository.com/driver2#meta/foobar.cm"
+                        .to_owned()
+                }
+            ]
+        );
+
+        Ok(())
+    }
 
     #[test]
-    fn test_builder_with_product_packages_catches_duplicates() {
+    fn test_builder_with_product_packages_catches_duplicates() -> Result<()> {
         let outdir = TempDir::new().unwrap();
-
         let packages = ProductPackagesConfig {
             base: vec![write_empty_pkg(&outdir, "base_a").into()],
             ..ProductPackagesConfig::default()
         };
-        let minimum_bundle = AssemblyInputBundle {
-            image_assembly: assembly_config_schema::PartialImageAssemblyConfig {
-                base: vec![write_empty_pkg(&outdir, "base_a").into_std_path_buf()],
-                kernel: Some(assembly_config_schema::PartialKernelConfig {
-                    path: Some("kernel/path".into()),
-                    args: Vec::default(),
-                    clock_backstop: Some(0),
-                }),
-                qemu_kernel: Some("kernel/qemu/path".into()),
-                ..assembly_config_schema::PartialImageAssemblyConfig::default()
-            },
-            config_data: BTreeMap::default(),
-            blobs: Vec::default(),
-            base_drivers: Vec::default(),
-            shell_commands: ShellCommands::default(),
-        };
-        let mut builder = ImageAssemblyConfigBuilder::default();
-        builder.add_parsed_bundle(outdir.path().join("minimum_bundle"), minimum_bundle).unwrap();
+        let mut builder = get_minimum_config_builder(&outdir, vec!["base_a".to_owned()]);
+
         let result = builder.add_product_packages(packages);
         assert!(result.is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_builder_with_product_drivers_catches_duplicates() -> Result<()> {
+        let outdir = TempDir::new().unwrap();
+        let base_driver_1 = make_test_driver("driver1", &outdir)?;
+        let mut builder = get_minimum_config_builder(&outdir, vec!["driver1".to_owned()]);
+
+        let result = builder.add_product_drivers(vec![base_driver_1]);
+
+        assert!(result.is_err());
+        Ok(())
     }
 
     /// Helper to duplicate the first item in an Vec<T: Clone> and make it also

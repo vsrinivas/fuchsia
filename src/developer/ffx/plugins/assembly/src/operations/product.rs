@@ -90,6 +90,10 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
         .add_product_packages(config.product.packages)
         .context("Adding product-provided packages")?;
 
+    builder
+        .add_product_drivers(config.product.drivers)
+        .context("Adding product-provided drivers")?;
+
     if let Some(package_config_path) = additional_packages_path {
         let additional_packages =
             util::read_config(&package_config_path).context("Loading additional package config")?;

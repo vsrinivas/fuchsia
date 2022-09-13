@@ -8,4 +8,5 @@
 
 mod driver_manifest;
 
+pub use driver_manifest::DriverManifest;
 pub use driver_manifest::DriverManifestBuilder;
