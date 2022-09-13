@@ -227,6 +227,8 @@ static inline void unittest_fails(void) {}
 
 #define ASSERT_NO_FATAL_FAILURE(statement, ...)                                                  \
   do {                                                                                           \
+    LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, true,                                     \
+                            "Test registered fatal failures before " #statement ".");            \
     statement;                                                                                   \
     LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, true,                                     \
                             "Test registered fatal failures in " #statement ".", ##__VA_ARGS__); \
@@ -234,6 +236,8 @@ static inline void unittest_fails(void) {}
 
 #define EXPECT_NO_FATAL_FAILURE(statement, ...)                                                  \
   do {                                                                                           \
+    LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, true,                                     \
+                            "Test registered fatal failures before " #statement ".");            \
     statement;                                                                                   \
     LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, false,                                    \
                             "Test registered fatal failures in " #statement ".", ##__VA_ARGS__); \
@@ -241,6 +245,8 @@ static inline void unittest_fails(void) {}
 
 #define ASSERT_NO_FAILURES(statement, ...)                                                 \
   do {                                                                                     \
+    LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, true,                               \
+                            "Test registered fatal failures before " #statement ".");      \
     statement;                                                                             \
     LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_TEST_HAS_ERRORS, true,                              \
                             "Test registered failures in " #statement ".", ##__VA_ARGS__); \
@@ -248,6 +254,8 @@ static inline void unittest_fails(void) {}
 
 #define EXPECT_NO_FAILURES(statement, ...)                                                 \
   do {                                                                                     \
+    LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_ABORT_IF_ERROR, true,                               \
+                            "Test registered fatal failures before " #statement ".");      \
     statement;                                                                             \
     LIB_ZXTEST_ASSERT_ERROR(LIB_ZXTEST_TEST_HAS_ERRORS, false,                             \
                             "Test registered failures in " #statement ".", ##__VA_ARGS__); \

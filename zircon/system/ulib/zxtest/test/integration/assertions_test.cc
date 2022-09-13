@@ -610,6 +610,13 @@ TEST(ZxTestAssertionTest, AssertNoFatalFailureWithFatalFailure) {
   TEST_CHECKPOINT();
 }
 
+TEST(ZxTestAssertionTest, AssertNoFatalFailureWithPreviousErrorDoesNotRunStatement) {
+  TEST_EXPECTATION(CHECKPOINT_NOT_REACHED, HAS_ERRORS,
+                   "Failed to abort test execution on helper fatal failure.");
+  HelperFnFatal(true);
+  ASSERT_NO_FATAL_FAILURE({ TEST_CHECKPOINT(); }, "HelperFnFatal had a failure. This is expected.");
+}
+
 TEST(ZxTestAssertionTest, AssertNoFatalFailureWithoutFailure) {
   TEST_EXPECTATION(CHECKPOINT_REACHED, NO_ERRORS,
                    "Aborted test execution on helper with no failures.");
