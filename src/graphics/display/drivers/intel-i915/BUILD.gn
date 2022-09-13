@@ -18,10 +18,9 @@ driver_bind_rules("intel-i915-bind") {
 }
 
 source_set("common_srcs") {
-  configs += [
-    "//build/config:all_source",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
+  configs += [ "//build/config:all_source" ]
+  public_configs = [ "//build/config/fuchsia:enable_zircon_asserts" ]
+
   sources = [
     "clock/cdclk.cc",
     "ddi.cc",
