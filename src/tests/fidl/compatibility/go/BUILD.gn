@@ -12,7 +12,6 @@ import("//build/go/toolchain.gni")
 go_library("lib") {
   name = "compatibility_test"
   deps = [
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
     "//src/tests/fidl/compatibility/fidl:fidl_service($go_toolchain)",
   ]

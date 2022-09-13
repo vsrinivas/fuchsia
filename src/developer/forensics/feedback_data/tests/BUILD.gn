@@ -39,7 +39,6 @@ executable("data_provider_unittest_exe") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.math",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/feedback_data:constants",

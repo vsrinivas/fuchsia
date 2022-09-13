@@ -17,7 +17,6 @@ go_library("lib") {
   name = "echo_server_go"
   deps = [
     "//examples/fidl/fuchsia.examples:fuchsia.examples($go_toolchain)",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
   ]
   sources = [ "main.go" ]

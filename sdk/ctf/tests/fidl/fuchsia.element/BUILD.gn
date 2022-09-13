@@ -54,7 +54,6 @@ ctf_executable("reference-element-bin") {
   sources = [ "reference_element.cc" ]
 
   deps = [
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",

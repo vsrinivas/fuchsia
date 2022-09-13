@@ -12,7 +12,7 @@ import("//build/cpp/fidlmerge_cpp.gni")
 #
 #   fidl_target (required)
 #     Specifies the fidl target from which to read fidl json. For example,
-#     "//sdk/fidl/fuchsia.sys" for fuchsia.sys.
+#     "//sdk/fidl/fuchsia.sys2" for fuchsia.sys2.
 #
 #   template_path (optional)
 #     Specifies the template to use to generate the formatting code. Default

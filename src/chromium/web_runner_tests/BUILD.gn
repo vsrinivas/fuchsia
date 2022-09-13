@@ -44,7 +44,6 @@ executable("web_runner_integration_tests_bin") {
 
   deps = [
     ":test_server",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.web",
     "//sdk/lib/fit",
     "//sdk/lib/sys/component/cpp/testing:cpp",

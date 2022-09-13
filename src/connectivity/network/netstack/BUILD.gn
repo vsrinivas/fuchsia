@@ -165,7 +165,6 @@ go_library("lib") {
     "//sdk/fidl/fuchsia.posix.socket.raw($go_toolchain)",
     "//sdk/fidl/fuchsia.scheduler($go_toolchain)",
     "//sdk/fidl/fuchsia.stash($go_toolchain)",
-    "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
     "//src/lib/syslog/go",
     "//third_party/golibs:github.com/google/go-cmp",

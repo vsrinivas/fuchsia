@@ -116,7 +116,6 @@ action("json_for_test") {
     ":fidl-composed($fidl_toolchain)",
     ":fidl-sys($fidl_toolchain)",
     "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp/test:frobinator",
   ]
   outputs = [ "$target_gen_dir/library_loader_test_data.h" ]
