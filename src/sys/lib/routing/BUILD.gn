@@ -74,6 +74,7 @@ rustc_library("routing") {
     "//src/lib/fuchsia",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:test-case",
   ]
 
   # Some host tools use serde to serialize/deserialize types defined in

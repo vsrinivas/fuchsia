@@ -37,8 +37,11 @@ impl AvailabilityState {
             .expect("tried to check availability on an offer that doesn't have that field");
         if offer.source() == &OfferSource::Void {
             match self.advance(next_availability) {
+                // Nb: Although an error is returned here, this specific error is ignored during validation
+                // because it's acceptable for routing to fail due to an optional capability ending in an offer
+                // from `void`.
                 Ok(()) => Err(AvailabilityRoutingError::OfferFromVoidToOptionalTarget),
-                Err(AvailabilityRoutingError::OptionalOfferToRequiredTarget) => {
+                Err(AvailabilityRoutingError::TargetHasStrongerAvailability) => {
                     Err(AvailabilityRoutingError::OfferFromVoidToRequiredTarget)
                 }
                 Err(e) => Err(e),
@@ -58,18 +61,35 @@ impl AvailabilityState {
             // If our availability doesn't change, there's nothing to do.
             (Availability::Required, Availability::Required)
             | (Availability::Optional, Availability::Optional)
+            | (Availability::Transitional, Availability::Transitional)
             // If the next availability is explicitly a pass-through, there's nothing to do.
             | (Availability::Required, Availability::SameAsTarget)
-            | (Availability::Optional, Availability::SameAsTarget) => (),
+            | (Availability::Optional, Availability::SameAsTarget)
+            | (Availability::Transitional, Availability::SameAsTarget) => (),
             // If we are optional and our parent gives us a required offer, that's fine. We're
             // required now.
             (Availability::Optional, Availability::Required) =>
                 self.0 = next_availability.clone(),
+            // If we are transitional, inherit the availabity of the parent offer clause.
+            (Availability::Transitional, Availability::Required)
+            | (Availability::Transitional, Availability::Optional) =>
+                self.0 = next_availability.clone(),
+
+            // If we are optional and parent is transitional, that's a problem because
+            // as parent being optional.
+            (Availability::Optional, Availability::Transitional) =>
+                return Err(AvailabilityRoutingError::TargetHasStrongerAvailability),
+
+            // If we are required and parent is transitional, which is essentially optional, emit
+            // an error like in the subsequent case.
+            (Availability::Required, Availability::Transitional) =>
+                return Err(AvailabilityRoutingError::TargetHasStrongerAvailability),
+
             // If we are required and our parent gives us an optional offer, that's a problem
             // because our parent cannot promise us that the capability we need will always be
             // present.
             (Availability::Required, Availability::Optional) =>
-                return Err(AvailabilityRoutingError::OptionalOfferToRequiredTarget),
+                return Err(AvailabilityRoutingError::TargetHasStrongerAvailability),
         }
         Ok(())
     }
@@ -162,9 +182,9 @@ make_availability_visitor!(AvailabilityEventStreamVisitor, {
 mod tests {
     use {
         super::*,
-        assert_matches::assert_matches,
         cm_rust::{DependencyType, OfferDecl, OfferTarget},
         std::convert::TryInto,
+        test_case::test_case,
     };
 
     fn new_offer(availability: Availability) -> OfferDecl {
@@ -189,59 +209,52 @@ mod tests {
         })
     }
 
-    #[test]
-    fn optional_offer_to_optional() {
-        let mut optional_state: AvailabilityState = Availability::Optional.into();
-        let res = optional_state.advance_with_offer(&new_offer(Availability::Optional));
-        assert_matches!(res, Ok(()));
-    }
-
-    #[test]
-    fn required_offer_to_required() {
-        let mut optional_state: AvailabilityState = Availability::Required.into();
-        let res = optional_state.advance_with_offer(&new_offer(Availability::Required));
-        assert_matches!(res, Ok(()));
-    }
-
-    #[test]
-    fn required_offer_to_optional() {
-        let mut optional_state: AvailabilityState = Availability::Optional.into();
-        let res = optional_state.advance_with_offer(&new_offer(Availability::Required));
-        assert_matches!(res, Ok(()));
-    }
-
-    #[test]
-    fn same_as_target_offer_to_optional() {
-        let mut optional_state: AvailabilityState = Availability::Optional.into();
-        let res = optional_state.advance_with_offer(&new_offer(Availability::SameAsTarget));
-        assert_matches!(res, Ok(()));
-    }
-
-    #[test]
-    fn same_as_target_offer_to_required() {
-        let mut optional_state: AvailabilityState = Availability::Required.into();
-        let res = optional_state.advance_with_offer(&new_offer(Availability::SameAsTarget));
-        assert_matches!(res, Ok(()));
-    }
-
-    #[test]
-    fn optional_offer_to_required() {
-        let mut optional_state: AvailabilityState = Availability::Required.into();
-        let res = optional_state.advance_with_offer(&new_offer(Availability::Optional));
-        assert_matches!(res, Err(AvailabilityRoutingError::OptionalOfferToRequiredTarget));
-    }
-
-    #[test]
-    fn void_offer_to_required() {
-        let mut optional_state: AvailabilityState = Availability::Required.into();
-        let res = optional_state.advance_with_offer(&new_void_offer());
-        assert_matches!(res, Err(AvailabilityRoutingError::OfferFromVoidToRequiredTarget));
-    }
-
-    #[test]
-    fn void_offer_to_optional() {
-        let mut optional_state: AvailabilityState = Availability::Optional.into();
-        let res = optional_state.advance_with_offer(&new_void_offer());
-        assert_matches!(res, Err(AvailabilityRoutingError::OfferFromVoidToOptionalTarget));
+    #[test_case(Availability::Optional, new_offer(Availability::Optional), Ok(()))]
+    #[test_case(Availability::Optional, new_offer(Availability::Required), Ok(()))]
+    #[test_case(Availability::Optional, new_offer(Availability::SameAsTarget), Ok(()))]
+    #[test_case(
+        Availability::Optional,
+        new_offer(Availability::Transitional),
+        Err(AvailabilityRoutingError::TargetHasStrongerAvailability)
+    )]
+    #[test_case(
+        Availability::Optional,
+        new_void_offer(),
+        Err(AvailabilityRoutingError::OfferFromVoidToOptionalTarget)
+    )]
+    #[test_case(
+        Availability::Required,
+        new_offer(Availability::Optional),
+        Err(AvailabilityRoutingError::TargetHasStrongerAvailability)
+    )]
+    #[test_case(Availability::Required, new_offer(Availability::Required), Ok(()))]
+    #[test_case(Availability::Required, new_offer(Availability::SameAsTarget), Ok(()))]
+    #[test_case(
+        Availability::Required,
+        new_offer(Availability::Transitional),
+        Err(AvailabilityRoutingError::TargetHasStrongerAvailability)
+    )]
+    #[test_case(
+        Availability::Required,
+        new_void_offer(),
+        Err(AvailabilityRoutingError::OfferFromVoidToRequiredTarget)
+    )]
+    #[test_case(Availability::Transitional, new_offer(Availability::Optional), Ok(()))]
+    #[test_case(Availability::Transitional, new_offer(Availability::Required), Ok(()))]
+    #[test_case(Availability::Transitional, new_offer(Availability::SameAsTarget), Ok(()))]
+    #[test_case(Availability::Transitional, new_offer(Availability::Transitional), Ok(()))]
+    #[test_case(
+        Availability::Transitional,
+        new_void_offer(),
+        Err(AvailabilityRoutingError::OfferFromVoidToOptionalTarget)
+    )]
+    fn required_offer_to_transitional(
+        availability: Availability,
+        offer: OfferDecl,
+        expected: Result<(), AvailabilityRoutingError>,
+    ) {
+        let mut current_state: AvailabilityState = availability.into();
+        let actual = current_state.advance_with_offer(&offer);
+        assert_eq!(actual, expected);
     }
 }

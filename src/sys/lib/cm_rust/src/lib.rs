@@ -206,6 +206,7 @@ pub enum Availability {
     Required,
     Optional,
     SameAsTarget,
+    Transitional,
 }
 
 // TODO(dgonyeo): remove this once we've soft migrated to the availability field being required.
@@ -220,7 +221,8 @@ fidl_translations_symmetrical_enums!(
     Availability,
     Required,
     Optional,
-    SameAsTarget
+    SameAsTarget,
+    Transitional
 );
 
 #[cfg_attr(

@@ -173,7 +173,9 @@ pub(crate) fn check_use_availability(
     errors: &mut Vec<Error>,
 ) {
     match availability {
-        Some(fdecl::Availability::Required) | Some(fdecl::Availability::Optional) => {}
+        Some(fdecl::Availability::Required)
+        | Some(fdecl::Availability::Optional)
+        | Some(fdecl::Availability::Transitional) => {}
         Some(fdecl::Availability::SameAsTarget) => {
             errors.push(Error::invalid_field(decl_type, "availability"))
         }
@@ -191,8 +193,9 @@ pub(crate) fn check_offer_availability(
     errors: &mut Vec<Error>,
 ) {
     match (source, availability) {
-        // The availability must be optional when the source is void.
-        (Some(fdecl::Ref::VoidType(_)), Some(fdecl::Availability::Optional)) => (),
+        // The availability must be optional or transitional when the source is void.
+        (Some(fdecl::Ref::VoidType(_)), Some(fdecl::Availability::Optional))
+        | (Some(fdecl::Ref::VoidType(_)), Some(fdecl::Availability::Transitional)) => (),
         (
             Some(fdecl::Ref::VoidType(_)),
             Some(fdecl::Availability::Required | fdecl::Availability::SameAsTarget),

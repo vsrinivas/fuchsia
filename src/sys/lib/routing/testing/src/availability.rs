@@ -56,6 +56,22 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
                 offer_availability: Availability::SameAsTarget,
                 use_availability: Availability::Optional,
             },
+            TestCase {
+                offer_availability: Availability::Required,
+                use_availability: Availability::Transitional,
+            },
+            TestCase {
+                offer_availability: Availability::Optional,
+                use_availability: Availability::Transitional,
+            },
+            TestCase {
+                offer_availability: Availability::Transitional,
+                use_availability: Availability::Transitional,
+            },
+            TestCase {
+                offer_availability: Availability::SameAsTarget,
+                use_availability: Availability::Transitional,
+            },
         ] {
             let components = vec![
                 (
@@ -270,6 +286,18 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
                 storage_source: None,
                 offer_availability: Availability::Optional,
                 use_availability: Availability::Optional,
+            },
+            TestCase {
+                source: OfferSource::Void,
+                storage_source: None,
+                offer_availability: Availability::Transitional,
+                use_availability: Availability::Optional,
+            },
+            TestCase {
+                source: OfferSource::Void,
+                storage_source: None,
+                offer_availability: Availability::Transitional,
+                use_availability: Availability::Required,
             },
         ] {
             let components = vec![

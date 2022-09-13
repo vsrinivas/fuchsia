@@ -531,6 +531,7 @@ fn derive_source_and_availability(
         Availability::Required => fdecl::Availability::Required,
         Availability::Optional => fdecl::Availability::Optional,
         Availability::SameAsTarget => fdecl::Availability::SameAsTarget,
+        Availability::Transitional => fdecl::Availability::Transitional,
     });
     if source_availability != Some(&SourceAvailability::Unknown) {
         return (source, availability.unwrap_or(fdecl::Availability::Required));

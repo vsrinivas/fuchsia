@@ -49,6 +49,8 @@ type Availability = strict enum {
     REQUIRED = 1;
     OPTIONAL = 2;
     SAME_AS_TARGET = 3;
+    @available(added=9)
+    TRANSITIONAL = 4;
 };
 
 /// Declares a service offered by a component to one of its children, which may

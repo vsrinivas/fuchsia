@@ -680,8 +680,8 @@ impl RightsRoutingError {
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize), serde(rename_all = "snake_case"))]
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum AvailabilityRoutingError {
-    #[error("Availability of offer is optional, but target requires the capability")]
-    OptionalOfferToRequiredTarget,
+    #[error("Availability of target has strong guarantees than what is being offered.")]
+    TargetHasStrongerAvailability,
 
     #[error("Offer uses void source, but target requires the capability")]
     OfferFromVoidToRequiredTarget,
