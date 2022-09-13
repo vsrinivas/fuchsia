@@ -13,7 +13,7 @@ test_assembly_config("structured_config") {
   ]
   config_json = {
     platform = {
-      feature_set_level = "none"
+      feature_set_level = "empty"
       build_type = "eng"
     }
     product = {

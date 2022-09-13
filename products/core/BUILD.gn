@@ -10,7 +10,6 @@ assert(
 
 product_assembly_configuration("core") {
   platform = {
-    base_feature_set = "core"
     build_type = "eng"
   }
   product = {

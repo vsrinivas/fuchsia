@@ -24,7 +24,7 @@ test_assembly_config("developer_packages") {
   additional_deps = [ ":add_packages" ]
   config_json = {
     platform = {
-      feature_set_level = "none"
+      feature_set_level = "empty"
       build_type = "eng"
     }
     product = {

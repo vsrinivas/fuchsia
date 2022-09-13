@@ -1,6 +1,6 @@
 {
     "platform": {
-        "feature_set_level": "none",
+        "feature_set_level": "empty",
         "build_type": "eng"
     },
     "product": {}

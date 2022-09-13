@@ -8,7 +8,7 @@ import("//src/tests/assembly/assemble_image/test_assembly_config.gni")
 test_assembly_config("assemble_image") {
   config_json = {
     platform = {
-      feature_set_level = "none"
+      feature_set_level = "empty"
       build_type = "eng"
     }
     product = {

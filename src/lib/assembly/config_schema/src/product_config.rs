@@ -14,6 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 /// product images, and then generates the complete Image Assembly configuration
 /// (`crate::config::ImageAssemblyConfig`) from that.
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProductAssemblyConfig {
     pub platform: PlatformConfig,
     pub product: ProductConfig,
@@ -22,6 +23,7 @@ pub struct ProductAssemblyConfig {
 /// Platform configuration options.  These are the options that pertain to the
 /// platform itself, not anything provided by the product.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct PlatformConfig {
     /// The minimum service-level that the platform will provide, or the main
     /// set of platform features that are necessary (or desired) by the product.
@@ -75,8 +77,8 @@ pub enum FeatureSupportLevel {
     /// THIS IS FOR TESTING AND MIGRATIONS ONLY!
     ///
     /// It creates an assembly with no platform.
-    #[serde(rename = "none")]
-    None,
+    #[serde(rename = "empty")]
+    Empty,
 
     /// Bootable, but serial-only.  No netstack, no storage drivers, etc.  this
     /// is the smallest bootable system, and is primarily used for board-level
@@ -121,6 +123,7 @@ pub enum BuildType {
 
 /// Platform configuration options for the identity area.
 #[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct PlatformIdentityConfig {
     /// Whether the pinweaver protocol should be enabled in `password_authenticator` on supported
     /// boards. Pinweaver will always be disabled if the board does not support the protocol.
@@ -130,6 +133,7 @@ pub struct PlatformIdentityConfig {
 
 /// Platform configuration options for the input area.
 #[derive(Debug, Default, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct PlatformInputConfig {
     /// The idle threshold is how much time has passed since the last user
     /// input activity for the system to become idle.
@@ -140,6 +144,7 @@ pub struct PlatformInputConfig {
 /// Options for features that may either be forced on, forced off, or allowed
 /// to be either on or off. Features default to disabled.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub enum FeatureControl {
     #[serde(rename = "disabled")]
     Disabled,
@@ -165,6 +170,7 @@ impl PartialEq<FeatureControl> for &FeatureControl {
 
 /// The Product-provided configuration details.
 #[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProductConfig {
     #[serde(default)]
     pub packages: ProductPackagesConfig,
@@ -203,6 +209,7 @@ pub struct ProductConfig {
 /// ```
 ///
 #[derive(Debug, Default, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProductPackagesConfig {
     /// Paths to package manifests, or more detailed json entries for packages
     /// to add to the 'base' package set.
@@ -219,6 +226,7 @@ pub struct ProductPackagesConfig {
 
 /// Describes in more detail a package to add to the assembly.
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProductPackageDetails {
     /// Path to the package manifest for this package.
     pub manifest: PackageManifestPathBuf,
@@ -243,6 +251,7 @@ impl From<&str> for ProductPackageDetails {
 }
 
 #[derive(Debug, PartialEq, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
 pub struct ProductConfigData {
     /// Path to the config file on the host.
     pub source: SourcePathBuf,
@@ -289,6 +298,7 @@ pub struct AssemblyInputBundle {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
 pub struct DriverDetails {
     /// The package containing the driver.
     pub package: Utf8PathBuf,
@@ -362,7 +372,7 @@ mod tests {
         let json5 = r#"
             {
               platform: {
-                feature_set_level: "none",
+                feature_set_level: "empty",
                 build_type: "eng",
               },
               product: {},
@@ -372,7 +382,7 @@ mod tests {
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
         assert_eq!(config.platform.build_type, BuildType::Eng);
-        assert_eq!(config.platform.feature_set_level, FeatureSupportLevel::None);
+        assert_eq!(config.platform.feature_set_level, FeatureSupportLevel::Empty);
     }
 
     #[test]
