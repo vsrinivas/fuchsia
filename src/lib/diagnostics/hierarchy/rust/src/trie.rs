@@ -555,4 +555,73 @@ mod tests {
 
         assert_eq!(num_iterations, 2);
     }
+
+    #[fuchsia::test]
+    fn test_component_store_trie() {
+        #[derive(Debug, Eq, PartialEq, Clone, Ord, PartialOrd)]
+        struct Data(usize);
+        type TestTrie = Trie<String, Data>;
+
+        let mut trie = TestTrie::new();
+
+        // Returns a key that emulates what the archivist stores.
+        let key = |vals: Vec<&str>| vals.into_iter().map(|s| s.to_string()).collect::<Vec<_>>();
+        // Inserts into the trie.
+        let mut insert = |key: Vec<String>, x: usize| trie.insert(key, Data(x));
+
+        let a: Vec<String> = key(vec!["core", "foo", "bar"]);
+        let b: Vec<String> = key(vec!["core", "foo", "baz"]);
+        let c: Vec<String> = key(vec!["core", "quux"]);
+        let d: Vec<String> = key(vec!["foo.cmx", "3"]);
+        let e: Vec<String> = key(vec!["foo.cmx", "2"]);
+
+        insert(a.clone(), 1);
+        insert(b.clone(), 2);
+        insert(a.clone(), 3);
+        insert(c.clone(), 4);
+        insert(d.clone(), 5);
+        insert(e.clone(), 6);
+
+        // Validates that the given expected key-value pairs match the ones in the trie.
+        macro_rules! check {
+            ($expected:expr) => {
+                let mut expected = $expected;
+                expected.sort();
+                let mut result = trie
+                    .iter()
+                    .map(|(k, v)| (k.iter().map(|x| x.to_string()).collect(), v.cloned()))
+                    .collect::<Vec<(_, _)>>();
+                result.sort();
+                assert_eq!(expected, result);
+            };
+        }
+
+        check!(vec![
+            (key(vec![]), None),
+            (key(vec!["core"]), None),
+            (key(vec!["core", "foo"]), None),
+            (key(vec!["foo.cmx"]), None),
+            (c.clone(), Some(Data(4))),
+            (a.clone(), Some(Data(1))),
+            (a.clone(), Some(Data(3))),
+            (b.clone(), Some(Data(2))),
+            (d.clone(), Some(Data(5))),
+            (e.clone(), Some(Data(6))),
+        ]);
+
+        trie.remove(&a);
+        trie.remove(&b);
+        trie.remove(&c);
+        trie.remove(&d);
+
+        check!(
+            vec![(e.clone(), Some(Data(6))), (key(vec!["foo.cmx"]), None), (key(vec![]), None),]
+        );
+
+        trie.remove(&e);
+        check!(vec![(key(vec![]), None::<Data>)]);
+
+        assert!(trie.root.values.is_empty());
+        assert!(trie.root.children.is_empty());
+    }
 }
