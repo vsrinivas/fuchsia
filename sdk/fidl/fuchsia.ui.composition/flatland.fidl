@@ -496,7 +496,11 @@ protocol Flatland {
     /// ViewportCreationToken. When the ViewportCreationToken dies, this ParentViewportWatcher
     /// channel is destroyed.
     ///
-    /// Views created using `CreateView` will not be associated with a ViewRef.
+    /// Views and subgraphs of Views created using `CreateView` will not be represented in the
+    /// ViewTree, and hence will not be able to participate in any ViewTree-dependent interactions
+    /// such as touch, mouse or focus.
+    /// The Flatland protocol provides no way for Views in the subgraph of a View created with
+    /// `CreateView` to know that they are excluded from the ViewTree.
     CreateView(resource struct {
         token fuchsia.ui.views.ViewCreationToken;
         parent_viewport_watcher server_end:ParentViewportWatcher;
