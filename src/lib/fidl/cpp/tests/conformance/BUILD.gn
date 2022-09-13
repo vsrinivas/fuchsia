@@ -36,9 +36,7 @@ foreach(gidl_file, conformance_suite_gidl_files) {
 
 test("fidl_cpp_conformance_tests_bin") {
   output_name = "fidl_cpp_conformance_tests"
-  deps =
-      [ "//src/tests/fidl/conformance_suite:conformance_fidl_natural_types" ] +
-      gidl_deps
+  deps = [ "//src/tests/fidl/conformance_suite:conformance_fidl_cpp_natural_types" ] + gidl_deps
 }
 
 fuchsia_unittest_package("fidl_cpp_conformance_tests") {

@@ -20,7 +20,7 @@ test("fidl_cpp_natural_type_api_tests_bin") {
     "union_test.cc",
   ]
   deps = [
-    "//sdk/testing/fidl/types_tests:test.types_natural_types",
+    "//sdk/testing/fidl/types_tests:test.types_cpp_natural_types",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

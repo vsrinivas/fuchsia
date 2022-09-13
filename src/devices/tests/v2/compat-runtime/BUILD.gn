@@ -37,7 +37,7 @@ fuchsia_driver("root-driver") {
   output_name = "compat-runtime-root"
   sources = [ "root-driver.cc" ]
   deps = [
-    ":fuchsia.compat.runtime.test_driver",
+    ":fuchsia.compat.runtime.test_cpp_driver",
     ":root-bind",
     "//sdk/lib/driver2:llcpp",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
@@ -69,8 +69,8 @@ fuchsia_driver("v1-driver") {
   sources = [ "v1-driver.cc" ]
   deps = [
     ":compat-runtime-v1-bind",
+    ":fuchsia.compat.runtime.test_cpp_driver",
     ":fuchsia.compat.runtime.test_cpp_wire",
-    ":fuchsia.compat.runtime.test_driver",
     "//sdk/lib/driver2:llcpp",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver",

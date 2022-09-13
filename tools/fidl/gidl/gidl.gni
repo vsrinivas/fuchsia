@@ -129,7 +129,7 @@ template("gidl_cpp_conformance") {
   _gidl_cc_source_set(target_name) {
     type = "conformance"
     language = "cpp"
-    bindings_suffix = "_natural_types"
+    bindings_suffix = "_cpp_natural_types"
     forward_variables_from(invoker, "*")
   }
 }
@@ -239,7 +239,7 @@ template("gidl_driver_cpp_benchmarks") {
   _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "driver_cpp"
-    bindings_suffix = "_driver"
+    bindings_suffix = "_cpp_driver"
     forward_variables_from(invoker, "*")
   }
 }
@@ -248,7 +248,7 @@ template("gidl_driver_llcpp_benchmarks") {
   _gidl_cc_source_set(target_name) {
     type = "benchmark"
     language = "driver_llcpp"
-    bindings_suffix = "_driver"
+    bindings_suffix = "_cpp_driver"
     forward_variables_from(invoker, "*")
 
     # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,

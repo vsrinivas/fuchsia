@@ -14,7 +14,7 @@ test("fidl_cpp_natural_ostream_tests_bin") {
   output_name = "fidl_cpp_natural_ostream_tests"
   sources = [ "natural_ostream_tests.cc" ]
   deps = [
-    "//sdk/testing/fidl/types_tests:test.types_natural_ostream",
+    "//sdk/testing/fidl/types_tests:test.types_cpp_natural_ostream",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

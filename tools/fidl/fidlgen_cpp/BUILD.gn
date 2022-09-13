@@ -238,7 +238,7 @@ group("goldens") {
       if (is_fuchsia) {
         deps += [
           "${info.target}_cpp",
-          "${info.target}_driver",
+          "${info.target}_cpp_driver",
         ]
       }
     }

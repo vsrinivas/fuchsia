@@ -15,7 +15,7 @@ test("fidl_driver_cpp_natural_conversion_tests_bin") {
   output_name = "fidl_driver_cpp_natural_conversion_tests"
   sources = [ "conversion_test.cc" ]
   deps = [
-    "//sdk/lib/fidl_driver/tests/coding:test.driver.coding_driver",
+    "//sdk/lib/fidl_driver/tests/coding:test.driver.coding_cpp_driver",
     "//sdk/lib/stdcompat",
     "//src/devices/bin/driver_runtime:driver_runtime_impl",
     "//zircon/system/ulib/zxtest",

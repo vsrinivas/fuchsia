@@ -194,7 +194,7 @@ source_set("core") {
     "//sdk/banjo/fuchsia.hardware.wlanphyimpl:fuchsia.hardware.wlanphyimpl_banjo_cpp",
     "//sdk/fidl/fuchsia.factory.wlan:fuchsia.factory.wlan_cpp_wire",
     "//sdk/fidl/fuchsia.wlan.common",
-    "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
+    "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_cpp_driver",
     "//sdk/lib/stdcompat",
     "//src/connectivity/wlan/drivers/lib/components:cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/recovery",

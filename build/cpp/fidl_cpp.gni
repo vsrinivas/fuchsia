@@ -310,8 +310,8 @@ template("_fidl_cpp_library_impl") {
 #
 #    Some examples of valid layers are:
 #      * cpp_wire: Wire messaging over channel transport
-#      * wire_types: Wire domain objects
-#      * driver: Unified messaging over driver transport
+#      * cpp_wire_types: Wire domain objects
+#      * cpp_driver: Unified messaging over driver transport
 #
 #    If missing, defaults to bindings_flavor.
 #
@@ -457,7 +457,7 @@ template("fidl_cpp_family") {
   }
 
   #
-  # LLCPP Bindings
+  # New C++ bindings
   #
   # These bindings are defined as a set of layers that build upon each other.
   # All of the layers are generated in a single fidlgen invocation but are
@@ -466,7 +466,7 @@ template("fidl_cpp_family") {
 
   llcpp_layers = [
     {
-      layer = "common"
+      layer = "cpp_common"
       headers = [
         "fidl/$library_name/cpp/common_types.h",
         "fidl/$library_name/cpp/markers.h",
@@ -476,11 +476,11 @@ template("fidl_cpp_family") {
     },
 
     {
-      layer = "wire_types"
+      layer = "cpp_wire_types"
       headers = [ "fidl/$library_name/cpp/wire_types.h" ]
       sources = [ "fidl/$library_name/cpp/wire_types.cc" ]
 
-      layer_deps = [ "common" ]
+      layer_deps = [ "cpp_common" ]
       if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
         public_deps = [ "//sdk/lib/fidl_driver" ]
       }
@@ -493,7 +493,7 @@ template("fidl_cpp_family") {
         "fidl/$library_name/cpp/wire_messaging.h",
       ]
       sources = [ "fidl/$library_name/cpp/wire_messaging.cc" ]
-      layer_deps = [ "wire_types" ]
+      layer_deps = [ "cpp_wire_types" ]
     },
 
     {
@@ -504,29 +504,29 @@ template("fidl_cpp_family") {
     },
 
     {
-      layer = "natural_types"
+      layer = "cpp_natural_types"
       headers = [ "fidl/$library_name/cpp/natural_types.h" ]
       sources = [ "fidl/$library_name/cpp/natural_types.cc" ]
       public_deps = [ "//src/lib/fidl/cpp:cpp_base" ]
-      layer_deps = [ "common" ]
+      layer_deps = [ "cpp_common" ]
       if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
         public_deps += [ "//sdk/lib/fidl_driver:fidl_driver_natural" ]
       }
     },
 
     {
-      layer = "natural_ostream"
+      layer = "cpp_natural_ostream"
       headers = [ "fidl/$library_name/cpp/natural_ostream.h" ]
       sources = [ "fidl/$library_name/cpp/natural_ostream.cc" ]
       public_deps = [ "//src/lib/fidl/cpp:natural_ostream" ]
-      layer_deps = [ "natural_types" ]
+      layer_deps = [ "cpp_natural_types" ]
       if (defined(invoker.contains_drivers) && invoker.contains_drivers) {
         public_deps += [ "//sdk/lib/fidl_driver:fidl_driver_natural" ]
       }
     },
 
     {
-      layer = "type_conversions"
+      layer = "cpp_type_conversions"
       headers = [ "fidl/$library_name/cpp/type_conversions.h" ]
       sources = [ "fidl/$library_name/cpp/type_conversions.cc" ]
 
@@ -539,9 +539,10 @@ template("fidl_cpp_family") {
       }
 
       layer_deps = [
-        # TODO(fxbug.dev/101525): Replace with "wire_types".
+        "cpp_natural_types",
+
+        # TODO(fxbug.dev/101525): Replace with "cpp_wire_types".
         "cpp_wire",
-        "natural_types",
       ]
     },
 
@@ -553,44 +554,44 @@ template("fidl_cpp_family") {
       ]
       sources = [ "fidl/$library_name/cpp/natural_messaging.cc" ]
       layer_deps = [
+        "cpp_natural_types",
+        "cpp_type_conversions",
         "cpp_wire",
-        "natural_types",
-        "type_conversions",
       ]
       public_deps = [ "//src/lib/fidl/cpp" ]
     },
 
     {
-      layer = "driver_wire"  # AKA: wire_driver_messaging
+      layer = "cpp_driver_wire"  # AKA: wire_driver_messaging
       headers = [
         "fidl/$library_name/cpp/driver/wire.h",
         "fidl/$library_name/cpp/driver/wire_messaging.h",
       ]
       sources = [ "fidl/$library_name/cpp/driver/wire_messaging.cc" ]
       public_deps = [ "//sdk/lib/fidl_driver" ]
-      layer_deps = [ "wire_types" ]
+      layer_deps = [ "cpp_wire_types" ]
     },
 
     {
-      layer = "driver"  # AKA: driver_messaging
+      layer = "cpp_driver"  # AKA: driver_messaging
       headers = [ "fidl/$library_name/cpp/driver/natural_messaging.h" ]
       sources = [ "fidl/$library_name/cpp/driver/natural_messaging.cc" ]
       public_deps = [ "//sdk/lib/fidl_driver:fidl_driver_natural" ]
       layer_deps = [
-        "driver_wire",
-        "natural_types",
-        "type_conversions",
+        "cpp_driver_wire",
+        "cpp_natural_types",
+        "cpp_type_conversions",
       ]
     },
 
     {
-      layer = "hlcpp_conversion"
+      layer = "cpp_hlcpp_conversion"
       headers = [ "fidl/$library_name/cpp/hlcpp_conversion.h" ]
       public_deps = [
         ":${target_name}_hlcpp",
         "//src/lib/fidl/cpp:hlcpp_conversion",
       ]
-      layer_deps = [ "natural_types" ]
+      layer_deps = [ "cpp_natural_types" ]
     },
   ]
 

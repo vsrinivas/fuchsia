@@ -24,7 +24,7 @@ test("fidl_cpp_conversion_tests_bin") {
   if (is_fuchsia) {
     deps += [ "//sdk/testing/fidl/types_tests:test.types_cpp" ]
   } else {
-    deps += [ "//sdk/testing/fidl/types_tests:test.types_type_conversions" ]
+    deps += [ "//sdk/testing/fidl/types_tests:test.types_cpp_type_conversions" ]
   }
 }
 

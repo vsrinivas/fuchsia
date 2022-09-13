@@ -66,11 +66,11 @@ foreach(test_name, test_names) {
     sources = [ test_name + ".cc" ]
     deps = [
       ":fidl_driver_transport_testing_lib",
-      ":test.transport_driver",
+      ":test.transport_cpp_driver",
       "//sdk/lib/driver_runtime:testing",
       "//sdk/lib/fidl_driver",
       "//sdk/lib/fidl_driver:fidl_driver_natural",
-      "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_driver",
+      "//sdk/testing/fidl/protocols_tests:test.unknown.interactions_cpp_driver",
       "//src/devices/bin/driver_runtime:driver_runtime_impl",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/sync:sync-cpp",

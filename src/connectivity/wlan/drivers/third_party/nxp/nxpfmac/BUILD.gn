@@ -56,7 +56,7 @@ source_set("core") {
     ":debug",
     "//sdk/banjo/fuchsia.hardware.wlan.fullmac:fuchsia.hardware.wlan.fullmac_banjo_cpp",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
-    "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_driver",
+    "//sdk/fidl/fuchsia.wlan.wlanphyimpl:fuchsia.wlan.wlanphyimpl_cpp_driver",
     "//sdk/lib/fit",
     "//src/connectivity/wlan/drivers/lib/timer:cpp",
     "//src/connectivity/wlan/lib/common/cpp:common",

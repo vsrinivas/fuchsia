@@ -21,7 +21,7 @@ test("fidl_hlcpp_conversion_tests_bin") {
     "union_conversion_test.cc",
   ]
   deps = [
-    "//sdk/testing/fidl/types_tests:test.types_hlcpp_conversion",
+    "//sdk/testing/fidl/types_tests:test.types_cpp_hlcpp_conversion",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",
