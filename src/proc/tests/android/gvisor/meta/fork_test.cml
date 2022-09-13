@@ -5,6 +5,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/fork_test",
-        args: [ "--gunit_filter=ForkTest.*:-*.Alarm:ForkTest.Multi" ],
+        args: [ "--gunit_filter=-ForkTest.Alarm:CloneTest.*" ],
     },
 }
