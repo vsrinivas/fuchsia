@@ -226,6 +226,30 @@ zx_status_t AmlMailbox::DspMboxMessageWrite(uint8_t channel, FidlMailbox::wire::
   return ZX_OK;
 }
 
+zx_status_t AmlMailbox::ScpiMessageWrite(uint8_t channel, FidlMailbox::wire::MboxTx* mdata) {
+  uint8_t tx_size = static_cast<uint8_t>(mdata->tx_buffer.count()) + kMboxHeadSize;
+  uint32_t new_cmd =
+      (mdata->cmd & UINT32_MAX) | SIZE_SHIFT(tx_size) | static_cast<uint32_t>(SYNC_CMD_TAG);
+
+  /* This uses a mailbox communication mechanism to send data once. The complete data structure
+   * should be: uint32_t status + uint64_t taskid + uint64_t complete+uint64_t ullclt + the actual
+   * data sent. According to the mechanism, when ARM sends data, the status needs to be set to 0.
+   * The taskid is set to 0, complete is set to 0, and ullclt is set to 0. Therefore, the first 28
+   * bytes of the data array are set to 0, and the actual sent data starts from data[28]. */
+  struct MboxData mboxdata = {
+      .status = kDefaultValue,
+      .task = kDefaultValue,
+      .complete = kDefaultValue,
+      .ullclt = kDefaultValue,
+  };
+  memset(mboxdata.data, 0, sizeof(mboxdata.data));
+  memcpy(mboxdata.data, &mdata->tx_buffer[0],
+         mdata->tx_buffer.count() * sizeof(mdata->tx_buffer[0]));
+
+  MailboxSendData(channel, new_cmd, reinterpret_cast<uint8_t*>(&mboxdata), tx_size);
+  return ZX_OK;
+}
+
 void AmlMailbox::ReceiveData(ReceiveDataRequestView request,
                              ReceiveDataCompleter::Sync& completer) {
   using fuchsia_hardware_mailbox::wire::DeviceReceiveDataResponse;
@@ -247,7 +271,7 @@ void AmlMailbox::ReceiveData(ReceiveDataRequestView request,
   memcpy(&response.mdata.rx_buffer[0], &channels_[channel][kMboxHeadSize],
          response.mdata.rx_buffer.count() * sizeof(response.mdata.rx_buffer[0]));
 
-  if (channel == kMailboxAocpu) {
+  if ((channel == kMailboxAocpu) || (channel == kMailboxScpi)) {
     rx_flag_[channel] = 0;
     memset(channels_[channel].data(), 0, channels_[channel].size());
   }
@@ -277,6 +301,13 @@ zx_status_t AmlMailbox::SendCommand(uint8_t channel, FidlMailbox::wire::MboxTx* 
       status = DspMboxMessageWrite(channel, mdata);
       if (status != ZX_OK) {
         zxlogf(ERROR, "dspmbox_message_write failed %s", zx_status_get_string(status));
+      }
+      break;
+
+    case kMailboxScpi:
+      status = ScpiMessageWrite(channel, mdata);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "scpi_message_write failed %s", zx_status_get_string(status));
       }
       break;
 

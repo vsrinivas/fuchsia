@@ -45,6 +45,7 @@ void showUsage(char* arg) {
   fprintf(stderr, "Usage: %s <options>*\n", arg);
   fprintf(stderr, "    %s DEVICE a \n", arg);
   fprintf(stderr, "    %s DEVICE d \n", arg);
+  fprintf(stderr, "    %s DEVICE s \n", arg);
 }
 
 zx_status_t AocpuTest(MailboxClient client) {
@@ -126,6 +127,40 @@ zx_status_t DspTest(MailboxClient client) {
   }
 }
 
+zx_status_t ScpiTest(MailboxClient client) {
+  const char message[] = "SCPI_CMD_HIFI4SUSPEND";
+  MboxTx txmdata = {.cmd = MBX_CMD_RPCUINT_TESTA,
+                    .tx_buffer = fidl::VectorView<uint8_t>::FromExternal(
+                        reinterpret_cast<uint8_t*>(const_cast<char*>(message)), sizeof(message))};
+
+  auto mbox_send_result = client->SendCommand(kMailboxScpi, txmdata);
+  if (!mbox_send_result.ok()) {
+    fprintf(stderr, "Failed to mailbox send: %s\n",
+            zx_status_get_string(mbox_send_result.status()));
+    return mbox_send_result.status();
+  }
+
+  fidl::Arena allocator;
+  MboxRx rxmdata;
+  rxmdata.rx_buffer.Allocate(allocator, sizeof(message));
+  auto mbox_receive_result =
+      client->ReceiveData(kMailboxScpi, static_cast<uint8_t>(rxmdata.rx_buffer.count()));
+  if (!mbox_receive_result.ok()) {
+    fprintf(stderr, "Failed to mailbox receive: %s\n",
+            zx_status_get_string(mbox_receive_result.status()));
+    return mbox_receive_result.status();
+  }
+
+  DeviceReceiveDataResponse* response = mbox_receive_result->value();
+  if (strncmp(reinterpret_cast<char*>(&response->mdata.rx_buffer[0]), message, sizeof(message)) ==
+      0) {
+    printf("Scpi testing successfully!!\n");
+    return ZX_OK;
+  } else {
+    return ZX_ERR_UNAVAILABLE;
+  }
+}
+
 int main(int argc, char** argv) {
   if (argc != 3) {
     showUsage(argv[0]);
@@ -165,6 +200,13 @@ int main(int argc, char** argv) {
       status = DspTest(std::move(client));
       if (status != ZX_OK) {
         fprintf(stderr, "DspTest failed: %s\n", zx_status_get_string(status));
+      }
+      break;
+
+    case 's':
+      status = ScpiTest(std::move(client));
+      if (status != ZX_OK) {
+        fprintf(stderr, "ScpiTest failed: %s\n", zx_status_get_string(status));
       }
       break;
 

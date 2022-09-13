@@ -18,6 +18,7 @@ constexpr uint32_t kSizeMask = 0x1FF;
 constexpr uint8_t kMboxIrqShift = 32;
 constexpr uint8_t kMailboxAocpu = 1;
 constexpr uint8_t kMailboxDsp = 2;
+constexpr uint8_t kMailboxScpi = 3;
 
 #define BIT(pos) (1 << pos)
 #define MBOX_DATA_SIZE (kMboxFifoSize - kMboxHeadSize - kMboxResevSize)

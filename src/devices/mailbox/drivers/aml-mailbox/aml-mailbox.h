@@ -63,6 +63,7 @@ class AmlMailbox : public DeviceType {
   void MailboxSendData(uint8_t idx, uint32_t cmd, uint8_t* data, uint8_t tx_size);
   zx_status_t AocpuMboxMessageWrite(uint8_t channel, FidlMailbox::wire::MboxTx* mdata);
   zx_status_t DspMboxMessageWrite(uint8_t channel, FidlMailbox::wire::MboxTx* mdata);
+  zx_status_t ScpiMessageWrite(uint8_t channel, FidlMailbox::wire::MboxTx* mdata);
 
   zx_status_t SendCommand(uint8_t channel, FidlMailbox::wire::MboxTx* mdata);
 
