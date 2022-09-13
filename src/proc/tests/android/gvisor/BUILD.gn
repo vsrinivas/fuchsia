@@ -44,7 +44,6 @@ gvisor_tests = [
   "brk_test",
   "chdir_test",
   "chmod_test",
-
   "chown_test",
   "chroot_test",
   "clock_getres_test",
@@ -61,7 +60,6 @@ gvisor_tests = [
   "exit_test",
   "fchdir_test",
   "fcntl_test",
-
   "flock_test",
   "fork_test",
   "getdents_test",
@@ -72,14 +70,12 @@ gvisor_tests = [
   "kill_test",
   "link_test",
   "lseek_test",
-
   "madvise_test",
 
   # "memfd_test",
   "mkdir_test",
   "mknod_test",
   "mmap_test",
-
   "mremap_test",
   "munmap_test",
   "open_create_test",
@@ -117,8 +113,8 @@ gvisor_tests = [
   "socket_unix_seqpacket_local_test",
   "socket_unix_stream_test",
   "socket_unix_unbound_abstract_test",
+  "socket_unix_unbound_dgram_test",
 
-  #"socket_unix_unbound_dgram_test",
   #"socket_unix_unbound_filesystem_test",
   #"socket_unix_unbound_seqpacket_test",
   #"socket_unix_unbound_stream_test",
