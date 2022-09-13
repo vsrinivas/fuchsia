@@ -149,6 +149,17 @@ If you set the log level to `TRACE` (e.g.,  `fx log --severity TRACE --select "c
 [629.604][starnix][I] exit_group: pid=3 exit_code=1
 ```
 
+For GUnit tests (such as the syscall tests in //src/proc/tests/android/gvisor),
+you can override the `--gunit_filter` argument, which excludes or include tests,
+by specifying an alternate flag after `--` on the command line. For example,
+
+```sh
+fx test epoll_test --output -- --gunit_filter="*"
+```
+
+Specifying `*` as the filter turns on all tests in the binary.
+
+
 ## Testing
 
 ### Writing in-process unit tests
