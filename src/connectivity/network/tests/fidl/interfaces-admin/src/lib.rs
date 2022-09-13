@@ -1388,6 +1388,99 @@ async fn control_enable_disable<N: Netstack>(name: &str) {
 }
 
 #[variants_test]
+async fn link_state_interface_state_interaction<N: Netstack, E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("new sandbox");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
+    let device = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
+    let interface = device.into_interface_in_realm(&realm).await.expect("add endpoint to Netstack");
+    let iface_id = interface.id();
+
+    // Start with the interface disabled, and the link down.
+    // Ethernet Devices on NS3 start enabled, otherwise disabling is a No-Op.
+    let expect_disable = E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap
+        && N::VERSION == NetstackVersion::Netstack3;
+    assert_eq!(
+        expect_disable,
+        interface.control().disable().await.expect("send disable").expect("disable")
+    );
+    interface.set_link_up(false).await.expect("bring device ");
+
+    // Setup the interface watcher.
+    let interfaces_state = realm
+        .connect_to_protocol::<fidl_fuchsia_net_interfaces::StateMarker>()
+        .expect("connect to protocol");
+    let watcher = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
+        .expect("create event stream")
+        .map(|r| r.expect("watcher error"))
+        .fuse();
+    futures::pin_mut!(watcher);
+    // Consume the watcher until we see the idle event.
+    let existing = fidl_fuchsia_net_interfaces_ext::existing(
+        watcher.by_ref().map(Result::<_, fidl::Error>::Ok),
+        HashMap::new(),
+    )
+    .await
+    .expect("existing");
+    assert_matches!(
+        existing.get(&iface_id),
+        Some(fidl_fuchsia_net_interfaces_ext::Properties { online: false, .. })
+    );
+
+    // Map the `watcher` to only produce `Events` when `online` changes.
+    let watcher =
+        watcher.filter_map(|event| match event {
+            fidl_fuchsia_net_interfaces::Event::Changed(
+                fidl_fuchsia_net_interfaces::Properties { id: Some(id), online, .. },
+            ) if id == iface_id => futures::future::ready(online),
+            event => panic!("unexpected event {:?}", event),
+        });
+    futures::pin_mut!(watcher);
+
+    // Helper function that polls the watcher and panics if `online` changes.
+    async fn expect_online_not_changed<S: futures::Stream<Item = bool> + std::marker::Unpin>(
+        mut watcher: S,
+        iface_id: u64,
+    ) -> S {
+        watcher
+            .next()
+            .map(|online: Option<bool>| match online {
+                None => panic!("stream unexpectedly ended"),
+                Some(online) => {
+                    panic!("online unexpectedly changed to {} for {}", online, iface_id)
+                }
+            })
+            .on_timeout(
+                fuchsia_async::Time::after(
+                    netstack_testing_common::ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT,
+                ),
+                || (),
+            )
+            .await;
+        watcher
+    }
+
+    // Set the link up, and observe no change in interface state (because the
+    // interface is still disabled).
+    interface.set_link_up(true).await.expect("bring device up");
+    let watcher = expect_online_not_changed(watcher, iface_id).await;
+    // Set the link down, and observe no change in interface state.
+    interface.set_link_up(false).await.expect("bring device down");
+    let watcher = expect_online_not_changed(watcher, iface_id).await;
+    // Enable the interface, and observe no change in interface state (because
+    // the link is still down).
+    assert!(interface.control().enable().await.expect("send enable").expect("enable"));
+    let mut watcher = expect_online_not_changed(watcher, iface_id).await;
+    // Set the link up, and observe the interface is online.
+    interface.set_link_up(true).await.expect("bring device up");
+    let online = watcher.next().await.expect("stream unexpectedly ended");
+    assert!(online);
+    // Set the link down and observe the interface is offline.
+    interface.set_link_up(false).await.expect("bring device down");
+    let online = watcher.next().await.expect("stream unexpectedly ended");
+    assert!(!online);
+}
+
+#[variants_test]
 // Test add/remove address and observe the events in InterfaceWatcher.
 async fn control_add_remove_address<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
