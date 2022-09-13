@@ -66,6 +66,13 @@ pub const WLANCFG_DEFAULT_AP_CHANNEL: fidl_common::WlanChannel = fidl_common::Wl
     cbw: fidl_common::ChannelBandwidth::Cbw20,
 };
 
+// TODO(fxbug.dev/108667): This sleep was introduced to preserve the old timing behavior
+// of scanning when hw-sim depending on the SoftMAC driver iterating through all of the
+// channels.
+lazy_static! {
+    pub static ref ARTIFICIAL_SCAN_SLEEP: fuchsia_zircon::Duration = 2.seconds();
+}
+
 pub fn default_wlantap_config_client() -> WlantapPhyConfig {
     wlantap_config_client(format!("wlantap-client"), CLIENT_MAC_ADDR)
 }
@@ -533,6 +540,11 @@ pub fn send_scan_complete(
     status: i32,
     phy: &WlantapPhyProxy,
 ) -> Result<(), anyhow::Error> {
+    tracing::info!(
+        "TODO(fxbug.dev/108667): Sleep {} seconds before `ScanComplete()`",
+        ARTIFICIAL_SCAN_SLEEP.into_seconds()
+    );
+    ARTIFICIAL_SCAN_SLEEP.sleep();
     phy.scan_complete(0, scan_id, status).map_err(|e| e.into())
 }
 
