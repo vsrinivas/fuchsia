@@ -21,7 +21,7 @@ To poll power sensor every 500 ms and summarize statistics every 1 second for 30
 output-samples-to-syslog and output-stats-to-syslog enabled:
 
     $ ffx profile power logger start --sampling-interval 500ms --statistics-interval 1s \
-    --output-stats-to-syslog --output-samples-to-syslog",
+    --output-stats-to-syslog --output-samples-to-syslog -d 30s",
     note = "\
 If the metrics-logger component is not available to the target, then this command will not work
 properly. Add --with //src/testing/metrics-logger to fx set."

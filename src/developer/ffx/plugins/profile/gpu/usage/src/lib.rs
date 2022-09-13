@@ -36,7 +36,7 @@ pub async fn start(
         let duration_ms = duration.as_millis() as u32;
         gpu_loggger
             .start_logging(
-                "ffx",
+                "ffx_gpu",
                 &mut vec![&mut Metric::GpuUsage(GpuUsage { interval_ms })].into_iter(),
                 duration_ms,
                 cmd.output_to_syslog,
@@ -46,7 +46,7 @@ pub async fn start(
     } else {
         gpu_loggger
             .start_logging_forever(
-                "ffx",
+                "ffx_gpu",
                 &mut vec![&mut Metric::GpuUsage(GpuUsage { interval_ms })].into_iter(),
                 cmd.output_to_syslog,
                 false,
@@ -76,7 +76,7 @@ pub async fn start(
 }
 
 pub async fn stop(gpu_loggger: fmetrics::MetricsLoggerProxy) -> Result<()> {
-    if !gpu_loggger.stop_logging("ffx").await? {
+    if !gpu_loggger.stop_logging("ffx_gpu").await? {
         ffx_bail!("Stop logging returned false; Check if logging is already inactive.");
     }
     Ok(())
@@ -131,7 +131,7 @@ mod tests {
                 output_stats_to_syslog,
                 responder,
             } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_gpu"), client_id);
                 assert_eq!(metrics.len(), 1);
                 assert_eq!(metrics[0], Metric::GpuUsage(GpuUsage { interval_ms: 1000 }),);
                 assert_eq!(output_samples_to_syslog, false);
@@ -163,7 +163,7 @@ mod tests {
                 responder,
                 ..
             } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_gpu"), client_id);
                 assert_eq!(metrics.len(), 1);
                 assert_eq!(metrics[0], Metric::GpuUsage(GpuUsage { interval_ms: 1000 }),);
                 assert_eq!(output_samples_to_syslog, false);
@@ -185,7 +185,7 @@ mod tests {
         let (mut sender, mut receiver) = mpsc::channel(1);
         let proxy = setup_fake_gpu_loggger(move |req| match req {
             fmetrics::MetricsLoggerRequest::StopLogging { client_id, responder } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_gpu"), client_id);
                 responder.send(true).unwrap();
                 sender.try_send(()).unwrap();
             }

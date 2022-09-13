@@ -39,7 +39,7 @@ pub async fn start(
         let duration_ms = duration.as_millis() as u32;
         power_logger
             .start_logging(
-                "ffx",
+                "ffx_power",
                 &mut vec![&mut Metric::Power(Power { sampling_interval_ms, statistics_args })]
                     .into_iter(),
                 duration_ms,
@@ -50,7 +50,7 @@ pub async fn start(
     } else {
         power_logger
             .start_logging_forever(
-                "ffx",
+                "ffx_power",
                 &mut vec![&mut Metric::Power(Power { sampling_interval_ms, statistics_args })]
                     .into_iter(),
                 cmd.output_samples_to_syslog,
@@ -88,7 +88,7 @@ pub async fn start(
 }
 
 pub async fn stop(power_logger: fmetrics::MetricsLoggerProxy) -> Result<()> {
-    if !power_logger.stop_logging("ffx").await? {
+    if !power_logger.stop_logging("ffx_power").await? {
         ffx_bail!("Stop logging returned false; Check if logging is already inactive.");
     }
     Ok(())
@@ -145,7 +145,7 @@ mod tests {
                 output_stats_to_syslog,
                 responder,
             } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_power"), client_id);
                 assert_eq!(metrics.len(), 1);
                 assert_eq!(
                     metrics[0],
@@ -186,7 +186,7 @@ mod tests {
                 responder,
                 ..
             } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_power"), client_id);
                 assert_eq!(metrics.len(), 1);
                 assert_eq!(
                     metrics[0],
@@ -212,7 +212,7 @@ mod tests {
         let (mut sender, mut receiver) = mpsc::channel(1);
         let logger = setup_fake_power_logger(move |req| match req {
             fmetrics::MetricsLoggerRequest::StopLogging { client_id, responder } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_power"), client_id);
                 responder.send(true).unwrap();
                 sender.try_send(()).unwrap();
             }
@@ -243,7 +243,7 @@ mod tests {
                 output_stats_to_syslog,
                 responder,
             } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_power"), client_id);
                 assert_eq!(metrics.len(), 1);
                 assert_eq!(
                     metrics[0],
@@ -288,7 +288,7 @@ mod tests {
                 responder,
                 ..
             } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_power"), client_id);
                 assert_eq!(metrics.len(), 1);
                 assert_eq!(
                     metrics[0],
@@ -318,7 +318,7 @@ mod tests {
         let (mut sender, mut receiver) = mpsc::channel(1);
         let logger = setup_fake_power_logger(move |req| match req {
             fmetrics::MetricsLoggerRequest::StopLogging { client_id, responder } => {
-                assert_eq!(String::from("ffx"), client_id);
+                assert_eq!(String::from("ffx_power"), client_id);
                 responder.send(true).unwrap();
                 sender.try_send(()).unwrap();
             }
