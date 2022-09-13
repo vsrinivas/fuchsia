@@ -204,6 +204,9 @@ impl Cmx {
                 // than it will take to do so manually for all of the cmx files with injection
                 offer: None,
 
+                // v1 does not have a disable section
+                disable: None,
+
                 // v1 components don't have this info, users must populate it
                 capabilities: None,
                 expose: None,

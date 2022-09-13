@@ -46,9 +46,20 @@ fn optional_path_exists(optional_path: Option<&PathBuf>) -> Result<(), Error> {
 fn run_cmc() -> Result<(), Error> {
     let opt = opts::Opt::from_args();
     match opt.cmd {
-        opts::Commands::Validate { files, extra_schemas } => {
-            validate::validate(&files, &extra_schemas, &features::FeatureSet::empty())?
-        }
+        opts::Commands::Validate {
+            files,
+            extra_schemas,
+            experimental_must_offer_protocol,
+            experimental_must_use_protocol,
+        } => validate::validate(
+            &files,
+            &extra_schemas,
+            &features::FeatureSet::empty(),
+            validate::ProtocolRequirements {
+                must_offer: &experimental_must_offer_protocol,
+                must_use: &experimental_must_use_protocol,
+            },
+        )?,
         opts::Commands::ValidateReferences { component_manifest, package_manifest, gn_label } => {
             reference::validate(&component_manifest, &package_manifest, gn_label.as_ref())?
         }
@@ -101,6 +112,8 @@ fn run_cmc() -> Result<(), Error> {
             config_package_path,
             features,
             experimental_force_runner,
+            experimental_must_offer_protocol,
+            experimental_must_use_protocol,
         } => {
             path_exists(&file)?;
             compile::compile(
@@ -112,6 +125,10 @@ fn run_cmc() -> Result<(), Error> {
                 config_package_path.as_ref().map(String::as_str),
                 &features.into(),
                 &experimental_force_runner,
+                validate::ProtocolRequirements {
+                    must_offer: &experimental_must_offer_protocol,
+                    must_use: &experimental_must_use_protocol,
+                },
             )?
         }
         opts::Commands::PrintReferenceDocs { output } => {

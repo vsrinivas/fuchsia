@@ -932,6 +932,12 @@ pub struct Document {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub include: Option<Vec<String>>,
 
+    /// The `disable` section disables certain features in a particular CML that are
+    /// otherwise enforced by cmc.
+    #[reference_doc(recurse)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub disable: Option<Disable>,
+
     /// Components that are executable include a `program` section. The `program`
     /// section must set the `runner` property to select a [runner][doc-runners] to run
     /// the component. The format of the rest of the `program` section is determined by
@@ -2351,6 +2357,27 @@ pub struct Child {
     pub environment: Option<EnvironmentRef>,
 }
 
+/// Example:
+///
+/// ```json5
+/// disable: {
+///     must_offer_protocol: [ "fuchsia.logger.LogSink", "fuchsia.component.Binder" ],
+///     must_use_protocol: [ "fuchsia.logger.LogSink" ],
+/// }
+/// ```
+#[derive(Default, ReferenceDoc, Deserialize, Debug, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+#[reference_doc(fields_as = "list", top_level_doc_after_fields)]
+pub struct Disable {
+    /// Lists protocols for which the option "experimental_must_offer_protocol" is disabled.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub must_offer_protocol: Option<Vec<String>>,
+
+    /// Lists protocols for which the option "experimental_must_use_protocol" is disabled.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub must_use_protocol: Option<Vec<String>>,
+}
+
 #[derive(Deserialize, Debug, PartialEq, ReferenceDoc, Serialize)]
 #[serde(deny_unknown_fields)]
 #[reference_doc(fields_as = "list", top_level_doc_after_fields)]
@@ -2956,6 +2983,7 @@ pub fn format_cml(buffer: &str, file: &std::path::Path) -> Result<Vec<u8>, Error
             "/*" => hashset! {
                 PathOption::PropertyNameOrder(vec![
                     "include",
+                    "disable",
                     "program",
                     "children",
                     "collections",

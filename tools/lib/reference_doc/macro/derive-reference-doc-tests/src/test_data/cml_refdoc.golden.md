@@ -80,6 +80,27 @@ Include paths cannot have cycles. For instance this is invalid:
 A includes B, B includes A.
 A cycle such as the above will result in a compile-time error.
 
+### `disable` {#disable}
+
+_`object` (optional)_
+
+The `disable` section disables certain features in a particular CML that are
+otherwise enforced by cmc.
+
+- `must_offer_protocol`: (_optional array of `string`_) Lists protocols for which the option "experimental_must_offer_protocol" is disabled.
+- `must_use_protocol`: (_optional array of `string`_) Lists protocols for which the option "experimental_must_use_protocol" is disabled.
+
+Example:
+
+```json5
+disable: {
+    must_offer_protocol: [ "fuchsia.logger.LogSink", "fuchsia.component.Binder" ],
+    must_use_protocol: [ "fuchsia.logger.LogSink" ],
+}
+```
+
+
+
 ### `program` {#program}
 
 _`object` (optional)_

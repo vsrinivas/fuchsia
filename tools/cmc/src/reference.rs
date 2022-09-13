@@ -236,6 +236,7 @@ mod tests {
         super::*,
         crate::compile::compile,
         crate::features::FeatureSet,
+        crate::validate,
         assert_matches::assert_matches,
         serde_json::json,
         std::{fmt::Display, fs::File, io::Write},
@@ -256,8 +257,18 @@ mod tests {
         let path = tmp_dir_path.join(name);
         let cml_path = tmp_dir_path.join("temp.cml");
         File::create(&cml_path).unwrap().write_all(format!("{:#}", contents).as_bytes()).unwrap();
-        compile(&cml_path, &path, None, &vec![], &tmp_dir_path, None, &FeatureSet::empty(), &None)
-            .unwrap();
+        compile(
+            &cml_path,
+            &path,
+            None,
+            &vec![],
+            &tmp_dir_path,
+            None,
+            &FeatureSet::empty(),
+            &None,
+            validate::ProtocolRequirements { must_offer: &[], must_use: &[] },
+        )
+        .unwrap();
         return path;
     }
 
