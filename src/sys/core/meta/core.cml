@@ -782,21 +782,6 @@
             from: "#full-resolver",
             to: "#session-manager",
         },
-
-        // Route DRM protocols to the session on products where they are
-        // availabile.
-        {
-            protocol: [ "fuchsia.media.drm.PlayReady" ],
-            from: "#playready-cdm",
-            to: "#session-manager",
-            source_availability: "unknown",
-        },
-        {
-            protocol: [ "fuchsia.media.drm.Widevine" ],
-            from: "#widevine_cdm",
-            to: "#session-manager",
-            source_availability: "unknown",
-        },
         {
             storage: "data",
             from: "self",

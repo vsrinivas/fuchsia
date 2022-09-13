@@ -60,6 +60,42 @@
             to: "#session-manager",
             source_availability: "unknown",
         },
+
+        // Route Bluetooth HFP Audio Gateway to the session on products where
+        // they are available.
+        {
+            protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "#bt-hfp-audio-gateway",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+
+        // Route update config opt-out to the session on products that include
+        // the system_update_configurator.
+        {
+            protocol: [
+                "fuchsia.update.config.OptOut",
+                "fuchsia.update.config.OptOutAdmin",
+            ],
+            from: "#system-update-configurator",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+
+        // Route DRM protocols to the session on products where they are
+        // available.
+        {
+            protocol: [ "fuchsia.media.drm.PlayReady" ],
+            from: "#playready-cdm",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.media.drm.Widevine" ],
+            from: "#widevine_cdm",
+            to: "#session-manager",
+            source_availability: "unknown",
+        },
         {
             protocol: [
                 "fuchsia.device.NameProvider",

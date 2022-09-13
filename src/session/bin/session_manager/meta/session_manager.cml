@@ -105,8 +105,6 @@
                 "fuchsia.timezone.Timezone",
                 "fuchsia.tracing.perfetto.ProducerConnector",
                 "fuchsia.ultrasound.Factory",
-                "fuchsia.update.config.OptOut",
-                "fuchsia.update.config.OptOutAdmin",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Provisioner",
                 "fuchsia.weave.Signer",
@@ -201,6 +199,16 @@
         {
             // Routed to session-manager via bt-hfp-audio-gateway.core_shard.cml
             protocol: [ "fuchsia.bluetooth.hfp.Hfp" ],
+            from: "parent",
+            to: "#session",
+            availability: "same_as_target",
+        },
+        {
+            // Routed to session-manager via product-specific core shard.
+            protocol: [
+                "fuchsia.update.config.OptOut",
+                "fuchsia.update.config.OptOutAdmin",
+            ],
             from: "parent",
             to: "#session",
             availability: "same_as_target",
