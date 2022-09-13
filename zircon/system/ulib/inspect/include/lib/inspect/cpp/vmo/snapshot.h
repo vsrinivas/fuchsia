@@ -115,6 +115,11 @@ class Snapshot final {
   // Parse the header from a buffer and obtain the generation count.
   static zx_status_t ParseHeader(const uint8_t* buffer, uint64_t* out_generation_count);
 
+  // Determine the correct snapshot size by checking the VMO header block for a
+  // size field and falling back to the VMO size if no size field is present. Both
+  // size field from header and VMO size are capped at kMaxVmoSize.
+  static zx_status_t DetermineSnapshotSize(const zx::vmo& vmo, size_t* snapshot_size);
+
   // Take a new snapshot of the VMO with default options.
   // If reading fails, the boolean value of the constructed |Snapshot| will be false.
   explicit Snapshot(BackingBuffer&& buffer);

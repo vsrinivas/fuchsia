@@ -19,8 +19,12 @@ using inspect::internal::FreeBlockFields;
 using inspect::internal::GetBlock;
 using inspect::internal::HeaderBlockFields;
 using inspect::internal::kMagicNumber;
+using inspect::internal::kMaxVmoSize;
 using inspect::internal::kMinOrderSize;
+using inspect::internal::kMinVmoSize;
+using inspect::internal::kVmoHeaderBlockSize;
 using inspect::internal::kVmoHeaderOrder;
+using inspect::internal::SetHeaderVmoSize;
 
 TEST(Snapshot, ValidRead) {
   fzl::OwnedVmoMapper vmo;
@@ -32,6 +36,7 @@ TEST(Snapshot, ValidRead) {
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 0;
+  SetHeaderVmoSize(header, vmo.size());
 
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
@@ -41,9 +46,9 @@ TEST(Snapshot, ValidRead) {
 
   // Make sure that the data was actually fully copied to the snapshot.
   std::vector<uint8_t> buf;
-  buf.resize(4096u - sizeof(Block));
+  buf.resize(4096u - kVmoHeaderBlockSize);
   memset(buf.data(), 'a', buf.size());
-  EXPECT_EQ(0, memcmp(snapshot.data() + sizeof(Block), buf.data(), buf.size()));
+  EXPECT_EQ(0, memcmp(snapshot.data() + kVmoHeaderBlockSize, buf.data(), buf.size()));
 }
 
 TEST(Snapshot, ReadFailsWithBadVersion) {
@@ -80,6 +85,7 @@ TEST(Snapshot, GetBlock) {
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 0;
+  SetHeaderVmoSize(header, vmo.size());
 
   {
     Snapshot snapshot;
@@ -144,6 +150,7 @@ TEST(Snapshot, ValidPendingSkipCheck) {
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 1;
+  SetHeaderVmoSize(header, vmo.size());
 
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(
@@ -204,6 +211,7 @@ TEST(Snapshot, ValidGenerationChangeSkipCheck) {
                    HeaderBlockFields::Version::Make(0);
   memcpy(&header->header_data[4], kMagicNumber, 4);
   header->payload.u64 = 0;
+  SetHeaderVmoSize(header, vmo.size());
 
   Snapshot snapshot;
   zx_status_t status = Snapshot::Create(
@@ -263,6 +271,82 @@ TEST(Snapshot, FrozenVmo) {
 
   const auto* header_block = reinterpret_cast<Block const*>(snapshot.data());
   EXPECT_EQ(inspect::internal::kVmoFrozen, header_block->payload.u64);
+}
+
+TEST(Snapshot, VmoWithUnusedSpace) {
+  fzl::OwnedVmoMapper vmo;
+  size_t size = 4 * kMinVmoSize;
+  ASSERT_OK(vmo.CreateAndMap(size, "test"));
+  memset(vmo.start(), 'a', size);
+  Block* header = reinterpret_cast<Block*>(vmo.start());
+  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+  SetHeaderVmoSize(header, kMinVmoSize);
+  Snapshot snapshot;
+  zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
+
+  ASSERT_OK(status);
+  ASSERT_EQ(kMinVmoSize, snapshot.size());
+
+  // Make sure that the data was actually fully copied to the snapshot.
+  std::vector<uint8_t> buf;
+  buf.resize(kMinVmoSize - kVmoHeaderBlockSize);
+  memset(buf.data(), 'a', buf.size());
+  EXPECT_EQ(0, memcmp(snapshot.data() + kVmoHeaderBlockSize, buf.data(), buf.size()));
+}
+
+TEST(Snapshot, TruncatedSnapshotOfVeryLargeVmo) {
+  fzl::OwnedVmoMapper vmo;
+  size_t size = 2 * kMaxVmoSize;
+  ASSERT_OK(vmo.CreateAndMap(size, "test"));
+  memset(vmo.start(), 'a', size);
+  Block* header = reinterpret_cast<Block*>(vmo.start());
+  header->header = HeaderBlockFields::Order::Make(kVmoHeaderOrder) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+  SetHeaderVmoSize(header, vmo.size());
+
+  Snapshot snapshot;
+  zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
+
+  ASSERT_OK(status);
+  ASSERT_EQ(kMaxVmoSize, snapshot.size());
+
+  // Make sure that the data was actually fully copied to the snapshot.
+  std::vector<uint8_t> buf;
+  buf.resize(kMaxVmoSize - kVmoHeaderBlockSize);
+  memset(buf.data(), 'a', buf.size());
+  EXPECT_EQ(0, memcmp(snapshot.data() + kVmoHeaderBlockSize, buf.data(), buf.size()));
+}
+
+TEST(Snapshot, HeaderWithoutSizeInfo) {
+  fzl::OwnedVmoMapper vmo;
+  size_t size = 2 * kMinVmoSize;
+  ASSERT_OK(vmo.CreateAndMap(size, "test"));
+  memset(vmo.start(), 'a', size);
+  Block* header = reinterpret_cast<Block*>(vmo.start());
+  header->header = HeaderBlockFields::Order::Make(0) |
+                   HeaderBlockFields::Type::Make(BlockType::kHeader) |
+                   HeaderBlockFields::Version::Make(0);
+  memcpy(&header->header_data[4], kMagicNumber, 4);
+  header->payload.u64 = 0;
+
+  Snapshot snapshot;
+  zx_status_t status = Snapshot::Create(vmo.vmo(), &snapshot);
+
+  ASSERT_OK(status);
+  ASSERT_EQ(size, snapshot.size());
+
+  // Make sure that the data was actually fully copied to the snapshot.
+  std::vector<uint8_t> buf;
+  buf.resize(size - kVmoHeaderBlockSize);
+  memset(buf.data(), 'a', buf.size());
+  EXPECT_EQ(0, memcmp(snapshot.data() + kVmoHeaderBlockSize, buf.data(), buf.size()));
 }
 
 }  // namespace

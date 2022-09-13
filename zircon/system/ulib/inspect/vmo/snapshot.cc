@@ -5,6 +5,7 @@
 #include <lib/inspect/cpp/vmo/block.h>
 #include <lib/inspect/cpp/vmo/limits.h>
 #include <lib/inspect/cpp/vmo/snapshot.h>
+#include <lib/stdcompat/optional.h>
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
@@ -17,6 +18,7 @@ using inspect::internal::Block;
 using inspect::internal::BlockIndex;
 using inspect::internal::IndexForOffset;
 using inspect::internal::kMinOrderSize;
+using inspect::internal::kVmoHeaderBlockSize;
 
 namespace inspect {
 
@@ -83,14 +85,14 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver r
     if (status != ZX_OK) {
       return status;
     }
-    if (size < sizeof(Block)) {
+    if (size < kVmoHeaderBlockSize) {
       return ZX_ERR_OUT_OF_RANGE;
     }
     if (buffer.size() != size) {
       buffer.resize(size);
     }
 
-    status = Snapshot::Read(vmo, sizeof(Block), buffer.data());
+    status = Snapshot::Read(vmo, kVmoHeaderBlockSize, buffer.data());
     if (status != ZX_OK) {
       return status;
     }
@@ -107,6 +109,13 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver r
       continue;
     }
 
+    status = DetermineSnapshotSize(vmo, &size);
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (buffer.size() != size) {
+      buffer.resize(size);
+    }
     status = Snapshot::Read(vmo, size, buffer.data());
     if (status != ZX_OK) {
       return status;
@@ -116,7 +125,7 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver r
     }
 
     // Read the header out of the buffer again,
-    std::vector<uint8_t> new_header(sizeof(Block));
+    std::vector<uint8_t> new_header(kVmoHeaderBlockSize);
     status = Snapshot::Read(vmo, new_header.size(), new_header.data());
     if (status != ZX_OK) {
       return status;
@@ -131,14 +140,6 @@ zx_status_t Snapshot::Create(const zx::vmo& vmo, Options options, ReadObserver r
       return status;
     }
     if (!options.skip_consistency_check && generation != new_generation) {
-      continue;
-    }
-
-    size_t new_size;
-    if (vmo.get_size(&new_size) != ZX_OK) {
-      return ZX_ERR_INTERNAL;
-    }
-    if (new_size != size) {
       continue;
     }
 
@@ -162,6 +163,29 @@ zx_status_t Snapshot::ParseHeader(const uint8_t* buffer, uint64_t* out_generatio
     return ZX_ERR_INTERNAL;
   }
   *out_generation_count = block->payload.u64;
+  return ZX_OK;
+}
+
+zx_status_t Snapshot::DetermineSnapshotSize(const zx::vmo& vmo, size_t* snapshot_size) {
+  size_t size = 0;
+  *snapshot_size = 0;
+  zx_status_t status = vmo.get_size(&size);
+  if (status != ZX_OK) {
+    return status;
+  }
+  uint8_t buffer[kVmoHeaderBlockSize];
+
+  status = Snapshot::Read(vmo, kVmoHeaderBlockSize, buffer);
+  if (status != ZX_OK) {
+    return status;
+  }
+  cpp17::optional<size_t> header_vmo_size =
+      internal::GetHeaderVmoSize(reinterpret_cast<const Block*>(buffer));
+  if (header_vmo_size.has_value()) {
+    *snapshot_size = std::min(header_vmo_size.value(), internal::kMaxVmoSize);
+  } else {
+    *snapshot_size = std::min(size, internal::kMaxVmoSize);
+  }
   return ZX_OK;
 }
 

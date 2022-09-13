@@ -49,6 +49,9 @@ constexpr size_t kVmoFrozen = 0xFFFFFFFFFFFFFFFE;
 // The order of Inspect VMO header.
 constexpr size_t kVmoHeaderOrder = 1;
 
+// The size of Inspect VMO header block.
+constexpr size_t kVmoHeaderBlockSize = kMinOrderSize * 2;
+
 template <typename T>
 constexpr size_t OrderToSize(T order) {
   return kMinOrderSize << order;
