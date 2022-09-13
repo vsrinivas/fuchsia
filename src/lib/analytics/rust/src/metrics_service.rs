@@ -80,7 +80,7 @@ impl MetricsService {
         self.state.opt_out_for_this_invocation()
     }
 
-    fn uuid_as_str(&self) -> String {
+    pub fn uuid_as_str(&self) -> String {
         self.state.uuid.map_or("No uuid".to_string(), |u| u.to_string())
     }
 

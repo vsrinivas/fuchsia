@@ -8,6 +8,7 @@ mod metrics_service;
 mod metrics_state;
 mod notice;
 
+use tracing;
 use {
     anyhow::{bail, Result},
     std::collections::BTreeMap,
@@ -173,6 +174,19 @@ pub async fn make_batch() -> Result<MetricsEventBatch> {
         MetricsServiceInitStatus::INITIALIZED => Ok(MetricsEventBatch::new()),
         MetricsServiceInitStatus::UNINITIALIZED => {
             tracing::error!("make_batch called on uninitialized METRICS_SERVICE");
+            bail!(INIT_ERROR)
+        }
+    }
+}
+
+/// This is exposed for clients who want to use the uuid as a custom dimension
+/// to do more accurate user counts in DataStudio analyses.
+pub async fn uuid_as_str() -> Result<String> {
+    let svc = METRICS_SERVICE.lock().await;
+    match &svc.init_state {
+        MetricsServiceInitStatus::INITIALIZED => Ok(svc.uuid_as_str()),
+        MetricsServiceInitStatus::UNINITIALIZED => {
+            tracing::error!("uuid_as_str called on uninitialized METRICS_SERVICE");
             bail!(INIT_ERROR)
         }
     }

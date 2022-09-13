@@ -4,6 +4,7 @@
 
 use analytics::{
     add_custom_event, init_with_invoker, make_batch, metrics_event_batch::MetricsEventBatch,
+    uuid_as_str,
 };
 use anyhow::Result;
 use ffx_config::EnvironmentContext;
@@ -18,6 +19,8 @@ pub const GA_PROPERTY_ID: &str = "UA-127897021-9";
 pub const FUCHSIA_DISCOVERY_LEGACY_ENV_VAR_NAME: &str = "FUCSHIA_DISABLED_legacy_discovery";
 
 pub const ANALYTICS_LEGACY_DISCOVERY_CUSTOM_DIMENSION_KEY: &str = "cd4";
+
+pub const ANALYTICS_CLIENTID_CUSTOM_DIMENSION_KEY: &str = "cd5";
 
 pub async fn init_metrics_svc(build_info: VersionInfo, invoker: Option<String>) {
     let build_version = build_info.build_version;
@@ -53,6 +56,7 @@ async fn add_ffx_launch_event(
 ) -> Result<()> {
     let mut custom_dimensions = BTreeMap::new();
     add_legacy_discovery_metrics(legacy_discovery_env, &mut custom_dimensions);
+    add_client_id_as_custom_dimension(&mut custom_dimensions).await;
     batcher.add_custom_event(None, Some(&sanitized_args), None, custom_dimensions).await
 }
 
@@ -64,6 +68,14 @@ fn add_legacy_discovery_metrics(
         .insert(ANALYTICS_LEGACY_DISCOVERY_CUSTOM_DIMENSION_KEY, legacy_discovery_env.to_owned());
 }
 
+/// By adding clientId as a custom dimension, DataStudio dashboards will be able to
+/// accurately count unique users of ffx subcommands.
+async fn add_client_id_as_custom_dimension(custom_dimensions: &mut BTreeMap<&str, String>) {
+    if let Ok(uuid) = uuid_as_str().await {
+        custom_dimensions.insert(ANALYTICS_CLIENTID_CUSTOM_DIMENSION_KEY, uuid);
+    }
+}
+
 async fn add_ffx_timing_event(
     legacy_discovery_env: &str,
     sanitized_args: &str,
@@ -72,6 +84,7 @@ async fn add_ffx_timing_event(
 ) -> Result<()> {
     let mut custom_dimensions = BTreeMap::new();
     add_legacy_discovery_metrics(legacy_discovery_env, &mut custom_dimensions);
+    add_client_id_as_custom_dimension(&mut custom_dimensions).await;
     batcher.add_timing_event(Some(&sanitized_args), time, None, None, custom_dimensions).await
 }
 
@@ -99,4 +112,24 @@ pub async fn add_daemon_metrics_event(request_str: &str) {
 
 pub async fn add_daemon_launch_event() {
     add_daemon_metrics_event("start").await;
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // #[test]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn add_client_id_custom_dimension() {
+        // let version_info =  VersionInfo {commit_hash: None,
+        //     commit_timestamp: None, build_version: None,
+        //     abi_revision: None, api_level: None,
+        //     exec_path: None, build_id: None, unknown_data: None,
+        //     __non_exhaustive: ()};
+        let version_info = VersionInfo::EMPTY;
+        init_metrics_svc(version_info, None).await;
+        let mut custom_dimensions = BTreeMap::new();
+        add_client_id_as_custom_dimension(&mut custom_dimensions).await;
+        assert_eq!("No uuid", &custom_dimensions["cd5"]);
+    }
 }
