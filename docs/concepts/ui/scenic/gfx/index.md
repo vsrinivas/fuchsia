@@ -22,7 +22,7 @@ have no knowledge of each other.
 
 ## Sessions
 
-The [`fuchsia.ui.scenic.Session`](https://fuchsia.dev/reference/fidl/fuchsia.ui.scenic?hl=en#Session)
+The [`fuchsia.ui.scenic.Session`](https://fuchsia.dev/reference/fidl/fuchsia.ui.scenic#Session)
 FIDL protocol is the primary API used by clients of Scenic to contribute graphical
 content in the form of `Resources`. Each session has its own resource table and is
 unable to directly interact with resources belonging to other sessions.
