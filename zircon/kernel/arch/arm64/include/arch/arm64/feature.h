@@ -55,7 +55,7 @@ enum arm64_microarch midr_to_microarch(uint32_t midr);
 extern uint32_t arm64_isa_features;
 extern bool feat_pmuv3_enabled;
 
-static inline bool arm64_feature_test(uint32_t feature) { return arm64_isa_features & feature; }
+inline bool arm64_feature_test(uint32_t feature) { return arm64_isa_features & feature; }
 
 // block size of the dc zva instruction, dcache cache line and icache cache line
 extern uint32_t arm64_zva_size;
@@ -69,11 +69,29 @@ enum class arm64_asid_width {
   ASID_16,
 };
 
-extern arm64_asid_width arm64_asid_width_;
+struct arm64_mmu_features {
+  arm64_asid_width asid_width;
 
-static inline enum arm64_asid_width arm64_asid_width() {
-  DEBUG_ASSERT(arm64_asid_width_ != arm64_asid_width::UNKNOWN);
-  return arm64_asid_width_;
+  // supported stage1 page granules
+  bool s1_page_4k;
+  bool s1_page_16k;
+  bool s1_page_64k;
+
+  // privileged access never and related user access override
+  bool pan;
+  bool uao;
+
+  // accessed and dirty bits
+  bool accessed_bit;
+  bool dirty_bit;
+};
+
+// the global feature structure for mmu features
+extern arm64_mmu_features arm64_mmu_features;
+
+inline enum arm64_asid_width arm64_asid_width() {
+  DEBUG_ASSERT(arm64_mmu_features.asid_width != arm64_asid_width::UNKNOWN);
+  return arm64_mmu_features.asid_width;
 }
 
 // call on every cpu to initialize the feature set

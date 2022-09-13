@@ -17,7 +17,7 @@
 
 #include <ktl/enforce.h>
 
-// saved feature bitmap
+// saved instruction set feature bitmap
 uint32_t arm64_isa_features;
 
 // Whether FEAT_PMUv3 is implemented.
@@ -25,7 +25,8 @@ bool feat_pmuv3_enabled;
 
 static arm64_cache_info_t cache_info[SMP_MAX_CPUS];
 
-enum arm64_asid_width arm64_asid_width_;
+// MMU features
+struct arm64_mmu_features arm64_mmu_features;
 
 // cache size parameters cpus, default to a reasonable minimum
 uint32_t arm64_zva_size = 32;
@@ -450,12 +451,60 @@ void arm64_feature_init() {
       arm64_isa_features |= ZX_ARM64_FEATURE_ISA_ASIMD;
     }
 
+    auto mmfr0 = arch::ArmIdAa64Mmfr0El1::Read();
+
     // check the size of the asid
-    uint64_t mmfr0 = __arm_rsr64("id_aa64mmfr0_el1");
-    if ((mmfr0 & ARM64_MMFR0_ASIDBITS_MASK) == ARM64_MMFR0_ASIDBITS_16) {
-      arm64_asid_width_ = arm64_asid_width::ASID_16;
-    } else {
-      arm64_asid_width_ = arm64_asid_width::ASID_8;
+    switch (mmfr0.asid_bits()) {
+      default:
+        printf("ARM: warning, unrecognized ASID width value (%u) in ID_AA64MMFR0_EL1\n",
+               static_cast<uint32_t>(mmfr0.asid_bits()));
+        // default to 8 bits
+        [[fallthrough]];
+      case arch::ArmAsidSize::k8bits:
+        arm64_mmu_features.asid_width = arm64_asid_width::ASID_8;
+        break;
+      case arch::ArmAsidSize::k16bits:
+        arm64_mmu_features.asid_width = arm64_asid_width::ASID_16;
+        break;
+    }
+
+    // Read the supported stage 1 page granularities.
+    if (mmfr0.tgran4() != 0b1111) {
+      arm64_mmu_features.s1_page_4k = true;
+    }
+    if (mmfr0.tgran16() != 0) {
+      arm64_mmu_features.s1_page_16k = true;
+    }
+    if (mmfr0.tgran64() != 0b1111) {
+      arm64_mmu_features.s1_page_64k = true;
+    }
+
+    auto mmfr1 = arch::ArmIdAa64Mmfr1El1::Read();
+
+    // See about A and D bits in page tables.
+    switch (mmfr1.hafdbs()) {
+      default:
+      case 2:
+        arm64_mmu_features.dirty_bit = true;
+        [[fallthrough]];
+      case 1:
+        arm64_mmu_features.accessed_bit = true;
+        break;
+    }
+
+    // Check for PAN features
+    if (mmfr1.pan() != 0) {
+      arm64_mmu_features.pan = true;
+
+      // >1 values also determine support for various
+      // address translation instruction variants with PAN.
+    }
+
+    auto mmfr2 = arch::ArmIdAa64Mmfr2El1::Read();
+
+    // Check for User Access Override
+    if (mmfr2.uao() != 0) {
+      arm64_mmu_features.uao = true;
     }
 
     // Check if FEAT_PMUv3 is enabled.
@@ -508,6 +557,12 @@ void arm64_feature_debug(bool full) {
     print_isa_features();
     dprintf(INFO, "ARM ASID width %s\n",
             (arm64_asid_width() == arm64_asid_width::ASID_16) ? "16" : "8");
+    dprintf(INFO, "ARM Supported S1 Page sizes (4k/16k/64k): %d/%d/%d\n",
+            arm64_mmu_features.s1_page_4k, arm64_mmu_features.s1_page_16k,
+            arm64_mmu_features.s1_page_64k);
+    dprintf(INFO, "ARM accessed bit %d, dirty bit %d\n", arm64_mmu_features.accessed_bit,
+            arm64_mmu_features.dirty_bit);
+    dprintf(INFO, "ARM PAN %d, UAO %d\n", arm64_mmu_features.pan, arm64_mmu_features.uao);
     dprintf(INFO, "ARM cache line sizes: icache %u dcache %u zva %u\n", arm64_icache_size,
             arm64_dcache_size, arm64_zva_size);
     if (DPRINTF_ENABLED_FOR_LEVEL(INFO)) {
