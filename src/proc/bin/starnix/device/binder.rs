@@ -2610,14 +2610,18 @@ impl From<Errno> for TransactionError {
     }
 }
 
-pub struct BinderFs(());
-impl FileSystemOps for BinderFs {}
+pub struct BinderFs;
+impl FileSystemOps for BinderFs {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        Ok(statfs::default(BINDERFS_SUPER_MAGIC))
+    }
+}
 
 const BINDERS: &[&FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 
 impl BinderFs {
     pub fn new_fs(kernel: &Kernel) -> Result<FileSystemHandle, Errno> {
-        let fs = FileSystem::new_with_permanent_entries(kernel, BinderFs(()));
+        let fs = FileSystem::new_with_permanent_entries(kernel, BinderFs);
         let mut builder = StaticDirectoryBuilder::new(&fs);
 
         for (name, node) in Self::get_binder_nodes(kernel, &fs)?.into_iter() {

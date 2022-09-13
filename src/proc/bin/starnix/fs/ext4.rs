@@ -23,7 +23,11 @@ use crate::types::*;
 pub struct ExtFilesystem {
     parser: ExtParser<AndroidSparseReader<ExtVmoReader>>,
 }
-impl FileSystemOps for Arc<ExtFilesystem> {}
+impl FileSystemOps for Arc<ExtFilesystem> {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        Ok(statfs::default(EXT4_SUPER_MAGIC))
+    }
+}
 
 #[derive(Clone)]
 struct ExtNode {

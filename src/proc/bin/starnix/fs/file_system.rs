@@ -261,20 +261,40 @@ impl FileSystem {
 
 /// The filesystem-implementation-specific data for FileSystem.
 pub trait FileSystemOps: Send + Sync {
-    // Rename the given node.
-    //
-    // The node to be renamed is passed as "renamed". It currently has
-    // old_name in old_parent. After the rename operation, it should have
-    // new_name in new_parent.
-    //
-    // If new_parent already has a child named new_name, that node is passed as
-    // "replaced". In that case, both "renamed" and "replaced" will be
-    // directories and the rename operation should succeed only if "replaced"
-    // is empty. The VFS will check that there are no children of "replaced" in
-    // the DirEntry cache, but the implementation of this function is
-    // responsible for checking that there are no children of replaced that are
-    // known only to the file system implementation (e.g., present on-disk but
-    // not in the DirEntry cache).
+    /// Return information about this filesystem.
+    ///
+    /// A typical implementation looks like this:
+    /// ```
+    /// Ok(statfs::default(FILE_SYSTEM_MAGIC))
+    /// ```
+    /// or, if the filesystem wants to customize fields:
+    /// ```
+    /// Ok(statfs {
+    ///     f_blocks: self.blocks,
+    ///     ..statfs::default(FILE_SYSTEM_MAGIC)
+    /// })
+    /// ```
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno>;
+
+    /// Whether this file system generates its own node IDs.
+    fn generate_node_ids(&self) -> bool {
+        false
+    }
+
+    /// Rename the given node.
+    ///
+    /// The node to be renamed is passed as "renamed". It currently has
+    /// old_name in old_parent. After the rename operation, it should have
+    /// new_name in new_parent.
+    ///
+    /// If new_parent already has a child named new_name, that node is passed as
+    /// "replaced". In that case, both "renamed" and "replaced" will be
+    /// directories and the rename operation should succeed only if "replaced"
+    /// is empty. The VFS will check that there are no children of "replaced" in
+    /// the DirEntry cache, but the implementation of this function is
+    /// responsible for checking that there are no children of replaced that are
+    /// known only to the file system implementation (e.g., present on-disk but
+    /// not in the DirEntry cache).
     fn rename(
         &self,
         _fs: &FileSystem,
@@ -286,20 +306,6 @@ pub trait FileSystemOps: Send + Sync {
         _replaced: Option<&FsNodeHandle>,
     ) -> Result<(), Errno> {
         error!(EROFS)
-    }
-
-    /// Return the `statfs` containing information about this filesystem.
-    ///
-    /// If a filesystem cannot generate a `statfs`, the default behavior is to return `Err(ENOSYS)`.
-    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
-        // TODO: This should return ENOSYS, but that currently breaks a bunch of tests (since not
-        // enough `FileSystemOps` implement `stat`).
-        Ok(statfs::default())
-    }
-
-    /// Whether this file system generates its own node IDs.
-    fn generate_node_ids(&self) -> bool {
-        false
     }
 }
 

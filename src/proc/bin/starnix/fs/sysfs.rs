@@ -11,7 +11,7 @@ use crate::types::*;
 struct SysFs;
 impl FileSystemOps for SysFs {
     fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
-        Ok(statfs { f_type: SYSFS_MAGIC as i64, ..Default::default() })
+        Ok(statfs::default(SYSFS_MAGIC))
     }
 }
 

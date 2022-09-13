@@ -54,6 +54,10 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
 
 struct DevPtsFs;
 impl FileSystemOps for DevPtsFs {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        Ok(statfs::default(DEVPTS_SUPER_MAGIC))
+    }
+
     fn generate_node_ids(&self) -> bool {
         true
     }

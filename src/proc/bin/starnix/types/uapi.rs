@@ -8,6 +8,7 @@
 
 use zerocopy::{AsBytes, FromBytes};
 
+use crate::mm::PAGE_SIZE;
 use crate::types::UserAddress;
 
 #[cfg(target_arch = "x86_64")]
@@ -54,7 +55,7 @@ pub struct stat_t {
     pub _pad3: [i64; 3],
 }
 
-#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes, Eq, PartialEq)]
+#[derive(Debug, Clone, Copy, AsBytes, FromBytes, Eq, PartialEq)]
 #[repr(C)]
 pub struct statfs {
     pub f_type: i64,
@@ -69,6 +70,25 @@ pub struct statfs {
     pub f_frsize: i64,
     pub f_flags: i64,
     pub f_spare: [i64; 4],
+}
+
+impl statfs {
+    pub fn default(magic: u32) -> Self {
+        Self {
+            f_type: magic as i64,
+            f_bsize: *PAGE_SIZE,
+            f_blocks: 0,
+            f_bfree: 0,
+            f_bavail: 0,
+            f_files: 0,
+            f_ffree: 0,
+            f_fsid: 0,
+            f_namelen: NAME_MAX as i64,
+            f_frsize: *PAGE_SIZE as i64,
+            f_flags: 0,
+            f_spare: [0, 0, 0, 0],
+        }
+    }
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq, AsBytes, FromBytes)]

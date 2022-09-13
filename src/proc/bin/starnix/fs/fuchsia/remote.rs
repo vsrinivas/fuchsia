@@ -21,6 +21,11 @@ use crate::vmex_resource::VMEX_RESOURCE;
 
 pub struct RemoteFs;
 impl FileSystemOps for RemoteFs {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        const REMOTE_FS_MAGIC: u32 = u32::from_be_bytes(*b"f.io");
+        Ok(statfs::default(REMOTE_FS_MAGIC))
+    }
+
     fn generate_node_ids(&self) -> bool {
         true
     }

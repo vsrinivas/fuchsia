@@ -38,7 +38,11 @@ pub struct LayeredFsRootNodeOps {
     root_file: FileHandle,
 }
 
-impl FileSystemOps for Arc<LayeredFs> {}
+impl FileSystemOps for Arc<LayeredFs> {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        self.base_fs.statfs()
+    }
+}
 
 impl FsNodeOps for Arc<LayeredFs> {
     fn create_file_ops(&self, _node: &FsNode, flags: OpenFlags) -> Result<Box<dyn FileOps>, Errno> {

@@ -5,6 +5,7 @@
 use super::proc_directory::*;
 use crate::fs::*;
 use crate::task::*;
+use crate::types::*;
 
 use std::sync::Arc;
 
@@ -15,7 +16,11 @@ pub fn proc_fs(kernel: Arc<Kernel>) -> FileSystemHandle {
 
 /// `ProcFs` is a filesystem that exposes runtime information about a `Kernel` instance.
 pub struct ProcFs;
-impl FileSystemOps for Arc<ProcFs> {}
+impl FileSystemOps for Arc<ProcFs> {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        Ok(statfs::default(PROC_SUPER_MAGIC))
+    }
+}
 
 impl ProcFs {
     /// Creates a new instance of `ProcFs` for the given `kernel`.

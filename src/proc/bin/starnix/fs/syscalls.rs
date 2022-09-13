@@ -1780,15 +1780,17 @@ mod tests {
         let path_addr = map_memory(&current_task, UserAddress::default(), *PAGE_SIZE);
         current_task.mm.write_memory(path_addr, file_path).expect("failed to clear struct");
 
-        let stat = statfs::default();
         let user_stat = UserRef::new(path_addr + file_path.len());
-        current_task.mm.write_object(user_stat, &stat).expect("failed to clear struct");
+        current_task
+            .mm
+            .write_object(user_stat, &statfs::default(0))
+            .expect("failed to clear struct");
 
         let user_path = UserCString::new(path_addr);
 
         assert_eq!(sys_statfs(&current_task, user_path, user_stat), Ok(()));
 
         let returned_stat = current_task.mm.read_object(user_stat).expect("failed to read struct");
-        assert_eq!(returned_stat, statfs::default());
+        assert_eq!(returned_stat, statfs::default(u32::from_be_bytes(*b"f.io")));
     }
 }

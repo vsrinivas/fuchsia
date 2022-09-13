@@ -238,7 +238,11 @@ pub fn new_pipe(current_task: &CurrentTask) -> Result<(FileHandle, FileHandle), 
 }
 
 struct PipeFs;
-impl FileSystemOps for PipeFs {}
+impl FileSystemOps for PipeFs {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        Ok(statfs::default(PIPEFS_MAGIC))
+    }
+}
 fn pipe_fs(kernel: &Kernel) -> &FileSystemHandle {
     kernel.pipe_fs.get_or_init(|| FileSystem::new(kernel, PipeFs))
 }

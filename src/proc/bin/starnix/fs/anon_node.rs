@@ -34,7 +34,11 @@ impl Anon {
 }
 
 struct AnonFs;
-impl FileSystemOps for AnonFs {}
+impl FileSystemOps for AnonFs {
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        Ok(statfs::default(ANON_INODE_FS_MAGIC))
+    }
+}
 pub fn anon_fs(kernel: &Kernel) -> &FileSystemHandle {
     kernel.anon_fs.get_or_init(|| FileSystem::new(kernel, AnonFs))
 }

@@ -3,22 +3,15 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
-use crate::mm::PAGE_SIZE;
 use crate::task::Kernel;
-use crate::types::{statfs, Errno, NAME_MAX, SOCKFS_MAGIC};
+use crate::types::{statfs, Errno, SOCKFS_MAGIC};
 
 /// `SocketFs` is the file system where anonymous socket nodes are created, for example in
 /// `sys_socket`.
 pub struct SocketFs;
 impl FileSystemOps for SocketFs {
     fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
-        let stat = statfs {
-            f_type: SOCKFS_MAGIC as i64,
-            f_bsize: *PAGE_SIZE,
-            f_namelen: NAME_MAX as i64,
-            ..Default::default()
-        };
-        Ok(stat)
+        Ok(statfs::default(SOCKFS_MAGIC))
     }
 }
 

@@ -59,6 +59,10 @@ impl FileSystemOps for Arc<TmpFs> {
         }
         Ok(())
     }
+
+    fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
+        Ok(statfs::default(TMPFS_MAGIC))
+    }
 }
 
 impl TmpFs {

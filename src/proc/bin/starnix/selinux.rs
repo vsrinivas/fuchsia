@@ -20,7 +20,7 @@ const SELINUX_PERMS: &[&[u8]] = &[b"add", b"find", b"set"];
 struct SeLinuxFs;
 impl FileSystemOps for SeLinuxFs {
     fn statfs(&self, _fs: &FileSystem) -> Result<statfs, Errno> {
-        Ok(statfs { f_type: SELINUX_MAGIC as i64, ..Default::default() })
+        Ok(statfs::default(SELINUX_MAGIC))
     }
 }
 
