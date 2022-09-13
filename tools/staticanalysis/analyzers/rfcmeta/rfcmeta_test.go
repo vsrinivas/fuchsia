@@ -22,6 +22,13 @@ type file struct {
 }
 
 func TestAnalyzer(t *testing.T) {
+	areasFile := file{
+		path: "docs/contribute/governance/rfcs/_areas.yaml",
+		content: `
+- Bluetooth
+- Kernel
+`,
+	}
 	tests := []struct {
 		name     string
 		path     string
@@ -186,6 +193,124 @@ toc:
 					Category: "rfcmeta/file/rfcid_tag_not_found",
 					Message:  "No `{% set rfcid = \"RFC-1234\" %}` tag found.",
 					Path:     "docs/contribute/governance/rfcs/1234_my_rfc.md",
+				},
+			},
+		},
+		{
+			name: "missing area",
+			path: "docs/contribute/governance/rfcs/_rfcs.yaml",
+			files: []file{
+				areasFile,
+				{
+					path: "docs/contribute/governance/rfcs/_rfcs.yaml",
+					content: `
+- name: 'RFC-1234'
+  title: 'My RFC'
+  short_description: "This RFC is mine. You can't have it."
+  authors: ['page@google.com']
+  file: '1234_my_rfc.md'
+`,
+				},
+				{
+					path:    "docs/contribute/governance/rfcs/1234_my_rfc.md",
+					content: `{% set rfcid = "RFC-1234" %}`,
+				},
+			},
+			expected: []*staticanalysis.Finding{
+				{
+					Category:  "rfcmeta/index/missing_area",
+					Message:   `Include an 'area' for this RFC. Options are listed in //docs/contribute/governance/rfcs/_areas.yaml`,
+					Path:      "docs/contribute/governance/rfcs/_rfcs.yaml",
+					StartLine: 2,
+					EndLine:   2,
+				},
+			},
+		},
+		{
+			name: "known area",
+			path: "docs/contribute/governance/rfcs/_rfcs.yaml",
+			files: []file{
+				areasFile,
+				{
+					path: "docs/contribute/governance/rfcs/_rfcs.yaml",
+					content: `
+- name: 'RFC-1234'
+  title: 'My RFC'
+  short_description: "This RFC is mine. You can't have it."
+  authors: ['page@google.com']
+  file: '1234_my_rfc.md'
+  area: ['Kernel']
+`,
+				},
+				{
+					path:    "docs/contribute/governance/rfcs/1234_my_rfc.md",
+					content: `{% set rfcid = "RFC-1234" %}`,
+				},
+			},
+			expected: nil,
+		},
+		{
+			name: "areas file malformed",
+			path: "docs/contribute/governance/rfcs/_rfcs.yaml",
+			files: []file{
+				{
+					path:    "docs/contribute/governance/rfcs/_areas.yaml",
+					content: `asd'f`,
+				},
+				{
+					path: "docs/contribute/governance/rfcs/_rfcs.yaml",
+					content: `
+- name: 'RFC-1234'
+  title: 'My RFC'
+  short_description: "This RFC is mine. You can't have it."
+  authors: ['page@google.com']
+  file: '1234_my_rfc.md'
+  area: ['Kernel']
+`,
+				},
+				{
+					path:    "docs/contribute/governance/rfcs/1234_my_rfc.md",
+					content: `{% set rfcid = "RFC-1234" %}`,
+				},
+			},
+			expected: []*staticanalysis.Finding{
+				{
+					Category:  "rfcmeta/index/unknown_area",
+					Message:   `area "Kernel" is not listed in //docs/contribute/governance/rfcs/_areas.yaml`,
+					Path:      "docs/contribute/governance/rfcs/_rfcs.yaml",
+					StartLine: 2,
+					EndLine:   2,
+				},
+			},
+		},
+		{
+			name: "unknown area",
+			path: "docs/contribute/governance/rfcs/_rfcs.yaml",
+			files: []file{
+				areasFile,
+				{
+					path: "docs/contribute/governance/rfcs/_rfcs.yaml",
+					content: `
+- name: 'RFC-1234'
+  title: 'My RFC'
+  short_description: "This RFC is mine. You can't have it."
+  authors: ['page@google.com']
+  file: '1234_my_rfc.md'
+  area: ['Kernel', 'Area 51']
+`,
+				},
+				{
+					path:    "docs/contribute/governance/rfcs/1234_my_rfc.md",
+					content: `{% set rfcid = "RFC-1234" %}`,
+				},
+			},
+			expected: []*staticanalysis.Finding{
+				{
+					Category:  "rfcmeta/index/unknown_area",
+					Message:   `area "Area 51" is not listed in //docs/contribute/governance/rfcs/_areas.yaml`,
+					Path:      "docs/contribute/governance/rfcs/_rfcs.yaml",
+					StartLine: 2,
+					EndLine:   2,
 				},
 			},
 		},

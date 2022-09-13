@@ -23,6 +23,7 @@ const (
 	rfcsDir      = "docs/contribute/governance/rfcs"
 	tocPath      = "docs/contribute/governance/rfcs/_toc.yaml"
 	rfcIndexPath = "docs/contribute/governance/rfcs/_rfcs.yaml"
+	areasPath    = "docs/contribute/governance/rfcs/_areas.yaml"
 )
 
 type analyzer struct {
@@ -158,9 +159,10 @@ func (a *analyzer) analyzeToc() ([]*staticanalysis.Finding, error) {
 
 // rfcIndexEntry represents a subset of the schema for entries in _rfcs.yaml.
 type rfcIndexEntry struct {
-	Name  string `yaml:"name"`
-	Title string `yaml:"title"`
-	File  string `yaml:"file"`
+	Name  string   `yaml:"name"`
+	Title string   `yaml:"title"`
+	File  string   `yaml:"file"`
+	Areas []string `yaml:"area"`
 }
 
 // analyzeRfcIndex returns findings from _rfcs.yaml.
@@ -216,6 +218,34 @@ func (a *analyzer) analyzeRfcIndex() ([]*staticanalysis.Finding, error) {
 			continue
 		}
 
+		// Check that the "area" field is not empty.
+		if len(rfc.Areas) == 0 {
+			findings = append(findings, &staticanalysis.Finding{
+				Category: "rfcmeta/index/missing_area",
+				Message: fmt.Sprintf("Include an 'area' for this RFC. Options are listed in //%s",
+					areasPath),
+				Path:      rfcIndexPath,
+				StartLine: lineNo,
+				EndLine:   lineNo,
+			})
+		}
+
+		// Check that the "area" field refers to known areas.
+		knownAreas := a.loadAreas()
+		for _, area := range rfc.Areas {
+			if !knownAreas[area] {
+				findings = append(findings, &staticanalysis.Finding{
+					Category: "rfcmeta/index/unknown_area",
+					Message: fmt.Sprintf("area %q is not listed in //%s",
+						area, areasPath),
+					Path:      rfcIndexPath,
+					StartLine: lineNo,
+					EndLine:   lineNo,
+				})
+			}
+		}
+
+		// Check that the path looks right.
 		if !strings.HasPrefix(rfc.File, rfcId+"_") {
 			findings = append(findings, &staticanalysis.Finding{
 				Category: "rfcmeta/index/unexpected_path",
@@ -227,6 +257,7 @@ func (a *analyzer) analyzeRfcIndex() ([]*staticanalysis.Finding, error) {
 			})
 		}
 
+		// ... and that there's a real file there.
 		if _, err := os.Stat(filepath.Join(a.checkoutDir, rfcsDir, rfc.File)); errors.Is(err, os.ErrNotExist) {
 			findings = append(findings, &staticanalysis.Finding{
 				Category: "rfcmeta/index/file_not_found",
@@ -337,6 +368,27 @@ func (a *analyzer) rfcIndexContainsPath(path string) bool {
 		}
 	}
 	return false
+}
+
+// loadAreas returns a set of strings representing the areas in
+// rfcs/_areas.yaml. If this function encounters any problems while reading or
+// parsing `_areas.yaml` it will return nil (i.e., an empty set).
+func (a *analyzer) loadAreas() map[string]bool {
+	b, err := os.ReadFile(filepath.Join(a.checkoutDir, areasPath))
+	if err != nil {
+		return nil
+	}
+
+	areasList := []string{}
+	if err = yaml.Unmarshal(b, &areasList); err != nil {
+		return nil
+	}
+
+	areasMap := make(map[string]bool)
+	for _, area := range areasList {
+		areasMap[area] = true
+	}
+	return areasMap
 }
 
 var reSetRfcIdTag = regexp.MustCompile(`(^.*set *rfcid *= *"RFC-)([^"]*)(".*$)`)

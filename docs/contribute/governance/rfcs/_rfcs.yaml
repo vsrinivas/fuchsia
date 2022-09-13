@@ -1674,7 +1674,7 @@
   short_description: 'Define the versioning and script requirements for Python sources within the Fuchsia project.'
   authors: ['hansens@google.com']
   file: '0129_python_in_fuchsia.md'
-  area: ['governance']
+  area: ['Governance']
   issue: ['77963']
   gerrit_change_id: ['538447', '538448', '538449', '538450', '538451', '538452', '538453', '538454', '538455', '538456', '538457', '538459', '538460', '538561', '539023']
   status: 'Accepted'
@@ -2067,7 +2067,7 @@
   short_description: 'Support for mapping execute-only memory.'
   authors: ['abrachet@google.com']
   file: '0159_execute_only_memory.md'
-  area: ['Zircon', 'Toolchain']
+  area: ['Kernel', 'Toolchain']
   issue: ['89845']
   gerrit_change_id: ['641406']
   status: 'Accepted'
@@ -2345,7 +2345,7 @@
   short_description: 'This RFC is a design proposal for the Test UI Stack component, which will provide ui-specific testing capabilities to test clients both in- and out-of-tree.'
   authors: ['abrusher@google.com']
   file: '0180_test_ui_stack.md'
-  area: ['UI']
+  area: ['View System']
   issue: ['102730']
   gerrit_change_id: ['691540']
   status: 'Accepted'
