@@ -10,8 +10,8 @@ use {
     },
     fidl::endpoints::create_proxy,
     fidl::prelude::*,
-    fidl_fuchsia_io as fio, fidl_fuchsia_wlan_policy as fidl_policy,
-    fidl_fuchsia_wlan_tap as wlantap,
+    fidl_fuchsia_io as fio, fidl_fuchsia_wlan_common as fidl_common,
+    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{DurationExt, Time, TimeoutExt, Timer},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
@@ -268,7 +268,11 @@ pub fn phy_event_from_beacons<'a>(
     let results = beacons
         .iter()
         .map(|beacon| crate::BeaconInfo {
-            primary_channel: beacon.channel,
+            channel: fidl_common::WlanChannel {
+                primary: beacon.channel,
+                secondary80: 0,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+            },
             bssid: beacon.bssid,
             ssid: beacon.ssid.clone(),
             protection: beacon.protection,

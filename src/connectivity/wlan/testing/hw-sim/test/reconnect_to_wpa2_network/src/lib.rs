@@ -61,9 +61,18 @@ fn handle_phy_event(
     second_association_confirm_sender_wrapper: &mut Option<oneshot::Sender<()>>,
 ) {
     match event {
-        WlantapPhyEvent::StartScan { args } => {
-            handle_start_scan_event(&args, phy, ssid, bssid, protection)
-        }
+        WlantapPhyEvent::StartScan { args } => handle_start_scan_event(
+            &args,
+            phy,
+            &BeaconInfo {
+                channel: CHANNEL_1.clone(),
+                bssid: bssid.clone(),
+                ssid: ssid.clone(),
+                protection: protection.clone(),
+                rssi_dbm: -30,
+                beacon_or_probe: BeaconOrProbeResp::Beacon,
+            },
+        ),
         WlantapPhyEvent::Tx { args } => handle_tx_event(
             &args,
             phy,

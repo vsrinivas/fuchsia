@@ -64,7 +64,7 @@ async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils
                         actual.clear();
                         actual.extend_from_slice(llc_frame.body);
                         rx_wlan_data_frame(
-                            &CHANNEL,
+                            &CHANNEL_1,
                             &CLIENT_MAC_ADDR,
                             &BSS.0,
                             &ETH_DST_MAC,

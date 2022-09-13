@@ -156,7 +156,7 @@ async fn multiple_clients_ap() {
                 .on_start_scan(ScanResults::new(
                     &client1_proxy,
                     vec![BeaconInfo {
-                        primary_channel: WLANCFG_DEFAULT_AP_CHANNEL.primary,
+                        channel: WLANCFG_DEFAULT_AP_CHANNEL.clone(),
                         bssid: AP_MAC_ADDR,
                         ssid: AP_SSID.clone(),
                         protection: Open,
@@ -203,7 +203,7 @@ async fn multiple_clients_ap() {
                 .on_start_scan(ScanResults::new(
                     &client2_proxy,
                     vec![BeaconInfo {
-                        primary_channel: WLANCFG_DEFAULT_AP_CHANNEL.primary,
+                        channel: WLANCFG_DEFAULT_AP_CHANNEL.clone(),
                         bssid: AP_MAC_ADDR,
                         ssid: AP_SSID.clone(),
                         protection: Open,

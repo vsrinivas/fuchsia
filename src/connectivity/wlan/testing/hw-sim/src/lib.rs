@@ -55,7 +55,7 @@ lazy_static! {
     pub static ref AP_SSID: Ssid = Ssid::try_from("ap_ssid").unwrap();
 }
 pub const ETH_DST_MAC: [u8; 6] = [0x65, 0x74, 0x68, 0x64, 0x73, 0x74];
-pub const CHANNEL: fidl_common::WlanChannel = fidl_common::WlanChannel {
+pub const CHANNEL_1: fidl_common::WlanChannel = fidl_common::WlanChannel {
     primary: 1,
     secondary80: 0,
     cbw: fidl_common::ChannelBandwidth::Cbw20,
@@ -192,14 +192,6 @@ pub fn send_beacon(
         generate_probe_or_beacon(BeaconOrProbeResp::Beacon, channel, bssid, ssid, protection)?;
     proxy.rx(0, &buf, &mut create_rx_info(channel, rssi_dbm))?;
     Ok(())
-}
-
-pub fn send_scan_complete(
-    scan_id: u64,
-    status: i32,
-    proxy: &WlantapPhyProxy,
-) -> Result<(), anyhow::Error> {
-    proxy.scan_complete(0, scan_id, status).map_err(|e| e.into())
 }
 
 pub fn send_probe_resp(
@@ -458,7 +450,7 @@ pub fn process_tx_auth_updates(
     while i < update_sink.len() {
         match &update_sink[i] {
             SecAssocUpdate::TxSaeFrame(sae_frame) if ready_for_sae_frames => {
-                send_sae_authentication_frame(&sae_frame, &CHANNEL, bssid, &phy)
+                send_sae_authentication_frame(&sae_frame, &CHANNEL_1, bssid, &phy)
                     .expect("Error sending fake SAE authentication frame.");
                 update_sink.remove(i);
             }
@@ -484,16 +476,74 @@ pub fn process_tx_auth_updates(
     Ok(())
 }
 
+pub struct BeaconInfo<'a> {
+    pub channel: fidl_common::WlanChannel,
+    pub bssid: Bssid,
+    pub ssid: Ssid,
+    pub protection: Protection,
+    pub rssi_dbm: i8,
+    pub beacon_or_probe: BeaconOrProbeResp<'a>,
+}
+
+impl<'a> std::default::Default for BeaconInfo<'a> {
+    fn default() -> Self {
+        Self {
+            channel: fidl_common::WlanChannel {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::ChannelBandwidth::Cbw20,
+            },
+            bssid: Bssid([0; 6]),
+            ssid: Ssid::empty(),
+            protection: Protection::Open,
+            rssi_dbm: 0,
+            beacon_or_probe: BeaconOrProbeResp::Beacon,
+        }
+    }
+}
+
+pub fn send_scan_result(phy: &WlantapPhyProxy, beacon_info: &BeaconInfo<'_>) {
+    match beacon_info.beacon_or_probe {
+        BeaconOrProbeResp::Beacon => {
+            send_beacon(
+                &beacon_info.channel,
+                &beacon_info.bssid,
+                &beacon_info.ssid,
+                &beacon_info.protection,
+                phy,
+                beacon_info.rssi_dbm,
+            )
+            .unwrap();
+        }
+        BeaconOrProbeResp::ProbeResp { wsc_ie } => send_probe_resp(
+            &beacon_info.channel,
+            &beacon_info.bssid,
+            &beacon_info.ssid,
+            &beacon_info.protection,
+            wsc_ie,
+            phy,
+            beacon_info.rssi_dbm,
+        )
+        .unwrap(),
+    }
+}
+
+pub fn send_scan_complete(
+    scan_id: u64,
+    status: i32,
+    phy: &WlantapPhyProxy,
+) -> Result<(), anyhow::Error> {
+    phy.scan_complete(0, scan_id, status).map_err(|e| e.into())
+}
+
 pub fn handle_start_scan_event(
     args: &StartScanArgs,
     phy: &WlantapPhyProxy,
-    ssid: &Ssid,
-    bssid: &Bssid,
-    protection: &Protection,
+    beacon_info: &BeaconInfo<'_>,
 ) {
     debug!("Handling start scan event with scan_id {:?}", args.scan_id);
-    send_beacon(&CHANNEL, bssid, ssid, protection, &phy, 0).unwrap();
-    send_scan_complete(args.scan_id, 0, &phy).unwrap();
+    send_scan_result(phy, beacon_info);
+    send_scan_complete(args.scan_id, 0, phy).unwrap();
 }
 
 pub fn handle_tx_event<F>(
@@ -528,7 +578,7 @@ pub fn handle_tx_event<F>(
                                 ..
                             })
                             | None => {
-                                send_open_authentication_success(&CHANNEL, bssid, &phy)
+                                send_open_authentication_success(&CHANNEL_1, bssid, &phy)
                                     .expect("Error sending fake OPEN authentication frame.");
                             }
                             _ => panic!(
@@ -576,7 +626,7 @@ pub fn handle_tx_event<F>(
                             process_auth_update(
                                 &mut authenticator,
                                 &mut update_sink,
-                                &CHANNEL,
+                                &CHANNEL_1,
                                 bssid,
                                 &phy,
                                 true,
@@ -591,7 +641,7 @@ pub fn handle_tx_event<F>(
                 }
                 Some(mac::MgmtBody::AssociationReq { .. }) => {
                     send_association_response(
-                        &CHANNEL,
+                        &CHANNEL_1,
                         bssid,
                         fidl_ieee80211::StatusCode::Success.into(),
                         &phy,
@@ -609,7 +659,7 @@ pub fn handle_tx_event<F>(
                             ),
                         }
                         authenticator.initiate(&mut update_sink).expect("initiating authenticator");
-                        process_auth_update(authenticator, &mut update_sink, &CHANNEL, bssid, &phy, true, true).expect(
+                        process_auth_update(authenticator, &mut update_sink, &CHANNEL_1, bssid, &phy, true, true).expect(
                             "processing authenticator updates immediately after association complete",
                         );
                     }
@@ -618,7 +668,7 @@ pub fn handle_tx_event<F>(
                     // Normally, the AP would only send probe response on the channel it's
                     // on, but our TestHelper doesn't have that feature yet and it
                     // does not affect any current tests.
-                    send_probe_resp(&CHANNEL, &bssid, ssid, protection, None, &phy, -10)
+                    send_probe_resp(&CHANNEL_1, &bssid, ssid, protection, None, &phy, -10)
                         .expect("Error sending fake probe response frame");
                 }
                 _ => {}
@@ -645,7 +695,7 @@ pub fn handle_tx_event<F>(
                     process_auth_update(
                         authenticator,
                         update_sink,
-                        &CHANNEL,
+                        &CHANNEL_1,
                         bssid,
                         &phy,
                         true,
@@ -669,9 +719,18 @@ pub fn handle_connect_events(
     update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
 ) {
     match event {
-        WlantapPhyEvent::StartScan { args } => {
-            handle_start_scan_event(&args, phy, ssid, bssid, protection)
-        }
+        WlantapPhyEvent::StartScan { args } => handle_start_scan_event(
+            &args,
+            phy,
+            &BeaconInfo {
+                channel: CHANNEL_1.clone(),
+                bssid: bssid.clone(),
+                ssid: ssid.clone(),
+                protection: protection.clone(),
+                rssi_dbm: -30,
+                beacon_or_probe: BeaconOrProbeResp::Beacon,
+            },
+        ),
         WlantapPhyEvent::Tx { args } => match authenticator {
             Some(_) => match update_sink {
                 Some(_) => handle_tx_event(

@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{create_rx_info, send_beacon, send_probe_resp, send_scan_complete, BeaconOrProbeResp},
+    crate::{create_rx_info, send_scan_complete, send_scan_result, BeaconInfo},
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_tap as wlantap,
-    ieee80211::{Bssid, Ssid},
     std::collections::hash_map::HashMap,
     wlan_common::{
-        bss::Protection,
         buffer_reader::BufferReader,
         mac::{FrameControl, FrameType, Msdu, MsduIterator},
     },
@@ -113,73 +111,23 @@ impl<'a> Action<wlantap::SetChannelArgs> for MatchChannel<'a> {
     }
 }
 
-pub struct BeaconInfo<'a> {
-    pub primary_channel: u8,
-    pub bssid: Bssid,
-    pub ssid: Ssid,
-    pub protection: Protection,
-    pub rssi_dbm: i8,
-    pub beacon_or_probe: BeaconOrProbeResp<'a>,
-}
-
-impl<'a> std::default::Default for BeaconInfo<'a> {
-    fn default() -> Self {
-        Self {
-            primary_channel: 0,
-            bssid: Bssid([0; 6]),
-            ssid: Ssid::empty(),
-            protection: Protection::Open,
-            rssi_dbm: 0,
-            beacon_or_probe: BeaconOrProbeResp::Beacon,
-        }
-    }
-}
-
 pub struct ScanResults<'a> {
     phy: &'a wlantap::WlantapPhyProxy,
-    results: Vec<BeaconInfo<'a>>,
-    status: i32,
+    inner: Vec<BeaconInfo<'a>>,
 }
 
 impl<'a> ScanResults<'a> {
-    pub fn new(phy: &'a wlantap::WlantapPhyProxy, results: Vec<BeaconInfo<'a>>) -> Self {
-        Self { phy, results, status: 0 }
+    pub fn new(phy: &'a wlantap::WlantapPhyProxy, scan_results: Vec<BeaconInfo<'a>>) -> Self {
+        Self { phy, inner: scan_results }
     }
 }
 
 impl<'a> Action<wlantap::StartScanArgs> for ScanResults<'a> {
     fn run(&mut self, args: &wlantap::StartScanArgs) {
-        for result in &self.results[..] {
-            let channel = fidl_common::WlanChannel {
-                primary: result.primary_channel,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-                secondary80: 0,
-            };
-            match result.beacon_or_probe {
-                BeaconOrProbeResp::Beacon => {
-                    send_beacon(
-                        &channel,
-                        &result.bssid,
-                        &result.ssid,
-                        &result.protection,
-                        &self.phy,
-                        result.rssi_dbm,
-                    )
-                    .unwrap();
-                }
-                BeaconOrProbeResp::ProbeResp { wsc_ie } => send_probe_resp(
-                    &channel,
-                    &result.bssid,
-                    &result.ssid,
-                    &result.protection,
-                    wsc_ie,
-                    &self.phy,
-                    result.rssi_dbm,
-                )
-                .unwrap(),
-            }
+        for beacon_info in &self.inner {
+            send_scan_result(&self.phy, &beacon_info);
         }
-        send_scan_complete(args.scan_id, self.status, self.phy).unwrap();
+        send_scan_complete(args.scan_id, 0, &self.phy).unwrap();
     }
 }
 

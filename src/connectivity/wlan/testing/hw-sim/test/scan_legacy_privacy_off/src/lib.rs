@@ -10,7 +10,7 @@ use {
     wlan_hw_sim::*,
 };
 
-const CHANNEL: u8 = 1;
+const CHANNEL_1: u8 = 1;
 const BSS_WPA1: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
 const BSS_WEP: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x72]);
 const BSS_MIXED: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x7a]);
@@ -33,21 +33,21 @@ async fn scan_legacy_privacy_off() {
     let phy = helper.proxy();
     let beacons = [
         test_utils::ScanTestBeacon {
-            channel: CHANNEL,
+            channel: CHANNEL_1,
             bssid: BSS_WPA1,
             ssid: SSID_WPA1.clone(),
             protection: Protection::Wpa1,
             rssi: None,
         },
         test_utils::ScanTestBeacon {
-            channel: CHANNEL,
+            channel: CHANNEL_1,
             bssid: BSS_WEP,
             ssid: SSID_WEP.clone(),
             protection: Protection::Wep,
             rssi: None,
         },
         test_utils::ScanTestBeacon {
-            channel: CHANNEL,
+            channel: CHANNEL_1,
             bssid: BSS_MIXED,
             ssid: SSID_MIXED.clone(),
             protection: Protection::Wpa1Wpa2Personal,

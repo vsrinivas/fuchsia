@@ -63,7 +63,7 @@ fn build_event_handler<'a>(
         .on_start_scan(ScanResults::new(
             phy,
             vec![BeaconInfo {
-                primary_channel: CHANNEL.primary,
+                channel: CHANNEL_1.clone(),
                 bssid,
                 ssid: ssid.clone(),
                 protection: Protection::Open,
@@ -76,12 +76,12 @@ fn build_event_handler<'a>(
                 Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
                     match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
                         Some(mac::MgmtBody::Authentication { .. }) => {
-                            send_open_authentication_success(&CHANNEL, &bssid, &phy)
+                            send_open_authentication_success(&CHANNEL_1, &bssid, &phy)
                                 .expect("Error sending fake authentication frame.");
                         }
                         Some(mac::MgmtBody::AssociationReq { .. }) => {
                             send_association_response(
-                                &CHANNEL,
+                                &CHANNEL_1,
                                 &bssid,
                                 fidl_ieee80211::StatusCode::Success.into(),
                                 &phy,
