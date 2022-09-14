@@ -44,7 +44,7 @@ gvisor_tests = [
 
   # "affinity_test",
   # "aio_test",
-  # "bad_test",
+  "bad_test",
   "bind_test",
   "brk_test",
   "chdir_test",
