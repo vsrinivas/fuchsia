@@ -291,7 +291,7 @@ mod tests {
         let update_pkg = TestUpdatePackage::new()
             .hash("2937013f2181810606b2a799b05bda2849f3e369a20982a4138f0e0a55984ce4")
             .await
-            .add_package("fuchsia-pkg://fuchsia.com/system_image/0?hash=838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67")
+            .add_package("fuchsia-pkg://fuchsia.test/system_image/0?hash=838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67")
             .await
             .add_file("fuchsia.vbmeta", "vbmeta")
             .await

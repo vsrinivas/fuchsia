@@ -73,7 +73,7 @@ pub struct ConfigBuilder<'a> {
 impl<'a> ConfigBuilder<'a> {
     pub fn new() -> Self {
         Self {
-            update_url: "fuchsia-pkg://fuchsia.com/update",
+            update_url: "fuchsia-pkg://fuchsia.test/update",
             allow_attach_to_existing_attempt: false,
             should_write_recovery: true,
         }
@@ -116,7 +116,7 @@ mod tests {
             allow_attach_to_existing_attempt: true,
             should_write_recovery: true,
         };
-        let update_url = "fuchsia-pkg://example.com/foo".parse().unwrap();
+        let update_url = "fuchsia-pkg://fuchsia.test/foo".parse().unwrap();
 
         let config = Config::from_url_and_options(update_url, options);
 
@@ -128,7 +128,7 @@ mod tests {
                 should_write_recovery: true,
                 allow_attach_to_existing_attempt: true,
                 ..
-            } if url == "fuchsia-pkg://example.com/foo".parse().unwrap()
+            } if url == "fuchsia-pkg://fuchsia.test/foo".parse().unwrap()
         );
     }
 }

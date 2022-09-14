@@ -618,7 +618,7 @@ mod tests {
             install_manager_ch
                 .start_update(
                     ConfigBuilder::new()
-                        .update_url("fuchsia-pkg://fuchsia.com/different-url")
+                        .update_url("fuchsia-pkg://fuchsia.test/different-url")
                         .allow_attach_to_existing_attempt(true)
                         .build()
                         .unwrap(),
