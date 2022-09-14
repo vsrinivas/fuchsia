@@ -11,9 +11,10 @@ use {
     fidl_fuchsia_input_report::{
         Axis, ConsumerControlButton, ConsumerControlDescriptor, ConsumerControlInputDescriptor,
         ContactInputDescriptor, DeviceDescriptor, InputDeviceMarker, KeyboardDescriptor,
-        KeyboardInputDescriptor, Range, TouchDescriptor, TouchInputDescriptor, TouchType, Unit,
-        UnitType,
+        KeyboardInputDescriptor, MouseDescriptor, MouseInputDescriptor, Range, TouchDescriptor,
+        TouchInputDescriptor, TouchType, Unit, UnitType,
     },
+    fidl_fuchsia_ui_test_input::MouseButton,
     std::convert::TryFrom,
 };
 
@@ -130,6 +131,49 @@ impl InputDeviceRegistry {
         })
     }
 
+    pub fn add_mouse_device(&mut self) -> Result<InputDevice, Error> {
+        self.add_device(DeviceDescriptor {
+            // Required for DeviceDescriptor.
+            device_info: Some(new_fake_device_info()),
+            mouse: Some(MouseDescriptor {
+                input: Some(MouseInputDescriptor {
+                    movement_x: Some(Axis {
+                        range: Range { min: -1000, max: 1000 },
+                        unit: Unit { type_: UnitType::Other, exponent: 0 },
+                    }),
+                    movement_y: Some(Axis {
+                        range: Range { min: -1000, max: 1000 },
+                        unit: Unit { type_: UnitType::Other, exponent: 0 },
+                    }),
+                    // `scroll_v` and `scroll_h` are range of tick number on
+                    // driver's report. [-100, 100] should be enough for
+                    // testing.
+                    scroll_v: Some(Axis {
+                        range: Range { min: -100, max: 100 },
+                        unit: Unit { type_: UnitType::Other, exponent: 0 },
+                    }),
+                    scroll_h: Some(Axis {
+                        range: Range { min: -100, max: 100 },
+                        unit: Unit { type_: UnitType::Other, exponent: 0 },
+                    }),
+                    // Match to the values of fuchsia.ui.test.input.MouseButton.
+                    buttons: Some(
+                        (MouseButton::First.into_primitive()..=MouseButton::Third.into_primitive())
+                            .map(|b| {
+                                b.try_into().expect("failed to convert mouse button to primitive")
+                            })
+                            .collect(),
+                    ),
+                    position_x: None,
+                    position_y: None,
+                    ..MouseInputDescriptor::EMPTY
+                }),
+                ..MouseDescriptor::EMPTY
+            }),
+            ..DeviceDescriptor::EMPTY
+        })
+    }
+
     /// Adds a device to the `InputDeviceRegistry` FIDL server connected to this
     /// `InputDeviceRegistry` struct.
     ///
@@ -205,6 +249,12 @@ mod tests {
                     ..
                 });
                 "keyboard_device")]
+    #[test_case(&|registry| InputDeviceRegistry::add_mouse_device(registry) =>
+                matches Ok(DeviceDescriptor {
+                    mouse: Some(MouseDescriptor { .. }),
+                    ..
+                });
+                "mouse_device")]
     fn add_device_registers_correct_device_type(
         add_device_method: &dyn Fn(&mut super::InputDeviceRegistry) -> Result<InputDevice, Error>,
     ) -> Result<DeviceDescriptor, Error> {

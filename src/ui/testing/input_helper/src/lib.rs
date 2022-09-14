@@ -7,14 +7,14 @@ use {
     fidl_fuchsia_input_injection::InputDeviceRegistryProxy,
     fidl_fuchsia_input_report::{
         ConsumerControlInputReport, ContactInputReport, DeviceInfo, InputReport,
-        KeyboardInputReport, TouchInputReport,
+        KeyboardInputReport, MouseInputReport, TouchInputReport,
     },
     fidl_fuchsia_math as math,
     fidl_fuchsia_ui_input::KeyboardReport,
     fidl_fuchsia_ui_test_input::{
         KeyboardRequest, KeyboardRequestStream, MediaButtonsDeviceRequest,
-        MediaButtonsDeviceRequestStream, RegistryRequest, RegistryRequestStream,
-        TouchScreenRequest, TouchScreenRequestStream,
+        MediaButtonsDeviceRequestStream, MouseRequest, MouseRequestStream, RegistryRequest,
+        RegistryRequestStream, TouchScreenRequest, TouchScreenRequestStream,
     },
     fuchsia_async as fasync,
     futures::StreamExt,
@@ -188,8 +188,22 @@ pub async fn handle_registry_request_stream(
 
                 responder.send().expect("Failed to respond to RegisterKeyboard request");
             }
-            Ok(RegistryRequest::RegisterMouse { .. }) => {
-                error!("mouse support not implemented");
+            Ok(RegistryRequest::RegisterMouse { payload, responder }) => {
+                info!("register mouse device");
+
+                if let Some(device) = payload.device {
+                    let mouse_device =
+                        registry.add_mouse_device().expect("failed to create fake mouse device");
+
+                    handle_mouse_request_stream(
+                        mouse_device,
+                        device.into_stream().expect("failed to convert mouse device to stream"),
+                    );
+                } else {
+                    error!("no mouse device provided in registration request");
+                }
+
+                responder.send().expect("Failed to respond to RegisterMouse request");
             }
             Err(e) => {
                 error!("could not receive registry request: {:?}", e);
@@ -394,6 +408,57 @@ fn handle_keyboard_request_stream(
                     } else {
                         warn!("SimulateTextEntry request missing text");
                     }
+                }
+                Err(e) => {
+                    error!("Error on keyboard device channel: {}", e);
+                    return;
+                }
+            }
+        }
+    })
+    .detach()
+}
+
+/// Serves `fuchsia.ui.test.input.Mouse`.
+fn handle_mouse_request_stream(
+    mouse_device: input_device::InputDevice,
+    mut request_stream: MouseRequestStream,
+) {
+    fasync::Task::local(async move {
+        while let Some(request) = request_stream.next().await {
+            match request {
+                Ok(MouseRequest::SimulateMouseEvent { payload, responder }) => {
+                    let mut mouse_input_report = MouseInputReport {
+                        movement_x: payload.movement_x,
+                        movement_y: payload.movement_y,
+                        scroll_v: payload.scroll_v_detent,
+                        scroll_h: payload.scroll_h_detent,
+                        ..MouseInputReport::EMPTY
+                    };
+                    if let Some(pressed_buttons) = payload.pressed_buttons {
+                        mouse_input_report.pressed_buttons = Some(
+                            pressed_buttons
+                                .into_iter()
+                                .map(|b| {
+                                    b.into_primitive()
+                                        .try_into()
+                                        .expect("failed to convert MouseButton to u8")
+                                })
+                                .collect(),
+                        );
+                    }
+
+                    let input_report = InputReport {
+                        event_time: Some(fasync::Time::now().into_nanos()),
+                        mouse: Some(mouse_input_report),
+                        ..InputReport::EMPTY
+                    };
+
+                    mouse_device
+                        .send_input_report(input_report)
+                        .expect("Failed to send key event report");
+
+                    responder.send().expect("Failed to send SimulateMouseEvent response");
                 }
                 Err(e) => {
                     error!("Error on keyboard device channel: {}", e);
