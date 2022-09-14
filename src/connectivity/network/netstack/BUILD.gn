@@ -199,7 +199,6 @@ go_library("lib") {
     "netstack_service.go",
     "netstack_test.go",
     "noop_endpoint_test.go",
-    "socket_conv.go",
   ]
 }
 

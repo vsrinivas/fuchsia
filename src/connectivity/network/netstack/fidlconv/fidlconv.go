@@ -239,3 +239,39 @@ func ToStackMulticastRoute(route admin.Route) (tcpipstack.MulticastRoute, bool) 
 func ToZxTime(t tcpip.MonotonicTime) zx.Time {
 	return zx.Time(t.Sub(tcpip.MonotonicTime{}))
 }
+
+func bytesToAddressDroppingUnspecified(b []uint8) tcpip.Address {
+	for _, e := range b {
+		if e != 0 {
+			return tcpip.Address(b)
+		}
+	}
+	return ""
+}
+
+func ToTCPIPFullAddress(addr net.SocketAddress) tcpip.FullAddress {
+	switch w := addr.Which(); w {
+	case net.SocketAddressIpv4:
+		return tcpip.FullAddress{
+			NIC:  0,
+			Addr: bytesToAddressDroppingUnspecified(addr.Ipv4.Address.Addr[:]),
+			Port: addr.Ipv4.Port,
+		}
+	case net.SocketAddressIpv6:
+		return tcpip.FullAddress{
+			NIC:  tcpip.NICID(addr.Ipv6.ZoneIndex),
+			Addr: bytesToAddressDroppingUnspecified(addr.Ipv6.Address.Addr[:]),
+			Port: addr.Ipv6.Port,
+		}
+	default:
+		panic(fmt.Sprintf("invalid fuchsia.net/SocketAddress variant: %d", w))
+	}
+}
+
+func ToTcpIpAddressDroppingUnspecifiedv4(fidl net.Ipv4Address) tcpip.Address {
+	return bytesToAddressDroppingUnspecified(fidl.Addr[:])
+}
+
+func ToTcpIpAddressDroppingUnspecifiedv6(fidl net.Ipv6Address) tcpip.Address {
+	return bytesToAddressDroppingUnspecified(fidl.Addr[:])
+}

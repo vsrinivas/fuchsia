@@ -382,7 +382,7 @@ func (ep *endpoint) QueryFilesystem(fidl.Context) (int32, *fidlio.FilesystemInfo
 }
 
 func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket.BaseNetworkSocketBindResult, error) {
-	addr := toTCPIPFullAddress(sockaddr)
+	addr := fidlconv.ToTCPIPFullAddress(sockaddr)
 	if err := ep.ep.Bind(addr); err != nil {
 		return socket.BaseNetworkSocketBindResultWithErr(tcpipErrorToCode(err)), nil
 	}
@@ -399,7 +399,7 @@ func (ep *endpoint) Bind(_ fidl.Context, sockaddr fidlnet.SocketAddress) (socket
 }
 
 func (ep *endpoint) toTCPIPFullAddress(address fidlnet.SocketAddress) (tcpip.FullAddress, tcpip.Error) {
-	addr := toTCPIPFullAddress(address)
+	addr := fidlconv.ToTCPIPFullAddress(address)
 	if l := len(addr.Addr); l > 0 {
 		addressSupported := func() bool {
 			switch ep.netProto {
@@ -861,7 +861,7 @@ func (ep *endpoint) GetIpMulticastTtl(fidl.Context) (socket.BaseNetworkSocketGet
 func (ep *endpoint) SetIpMulticastInterface(_ fidl.Context, iface uint64, value fidlnet.Ipv4Address) (socket.BaseNetworkSocketSetIpMulticastInterfaceResult, error) {
 	opt := tcpip.MulticastInterfaceOption{
 		NIC:           tcpip.NICID(iface),
-		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(value),
+		InterfaceAddr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv4(value),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
 		return socket.BaseNetworkSocketSetIpMulticastInterfaceResultWithErr(tcpipErrorToCode(err)), nil
@@ -916,8 +916,8 @@ func (ep *endpoint) GetIpTypeOfService(fidl.Context) (socket.BaseNetworkSocketGe
 func (ep *endpoint) AddIpMembership(_ fidl.Context, membership socket.IpMulticastMembership) (socket.BaseNetworkSocketAddIpMembershipResult, error) {
 	opt := tcpip.AddMembershipOption{
 		NIC:           tcpip.NICID(membership.Iface),
-		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.LocalAddr),
-		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.McastAddr),
+		InterfaceAddr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv4(membership.LocalAddr),
+		MulticastAddr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv4(membership.McastAddr),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
 		return socket.BaseNetworkSocketAddIpMembershipResultWithErr(tcpipErrorToCode(err)), nil
@@ -928,8 +928,8 @@ func (ep *endpoint) AddIpMembership(_ fidl.Context, membership socket.IpMulticas
 func (ep *endpoint) DropIpMembership(_ fidl.Context, membership socket.IpMulticastMembership) (socket.BaseNetworkSocketDropIpMembershipResult, error) {
 	opt := tcpip.RemoveMembershipOption{
 		NIC:           tcpip.NICID(membership.Iface),
-		InterfaceAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.LocalAddr),
-		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv4(membership.McastAddr),
+		InterfaceAddr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv4(membership.LocalAddr),
+		MulticastAddr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv4(membership.McastAddr),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
 		return socket.BaseNetworkSocketDropIpMembershipResultWithErr(tcpipErrorToCode(err)), nil
@@ -940,7 +940,7 @@ func (ep *endpoint) DropIpMembership(_ fidl.Context, membership socket.IpMultica
 func (ep *endpoint) AddIpv6Membership(_ fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseNetworkSocketAddIpv6MembershipResult, error) {
 	opt := tcpip.AddMembershipOption{
 		NIC:           tcpip.NICID(membership.Iface),
-		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv6(membership.McastAddr),
+		MulticastAddr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv6(membership.McastAddr),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
 		return socket.BaseNetworkSocketAddIpv6MembershipResultWithErr(tcpipErrorToCode(err)), nil
@@ -951,7 +951,7 @@ func (ep *endpoint) AddIpv6Membership(_ fidl.Context, membership socket.Ipv6Mult
 func (ep *endpoint) DropIpv6Membership(_ fidl.Context, membership socket.Ipv6MulticastMembership) (socket.BaseNetworkSocketDropIpv6MembershipResult, error) {
 	opt := tcpip.RemoveMembershipOption{
 		NIC:           tcpip.NICID(membership.Iface),
-		MulticastAddr: toTcpIpAddressDroppingUnspecifiedv6(membership.McastAddr),
+		MulticastAddr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv6(membership.McastAddr),
 	}
 	if err := ep.ep.SetSockOpt(&opt); err != nil {
 		return socket.BaseNetworkSocketDropIpv6MembershipResultWithErr(tcpipErrorToCode(err)), nil
@@ -2644,7 +2644,7 @@ func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.Datagra
 			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(&tcpip.ErrDestinationRequired{})), nil
 		}
 	} else {
-		addr = toTCPIPFullAddress(req.To)
+		addr = fidlconv.ToTCPIPFullAddress(req.To)
 		if s.endpoint.netProto == ipv4.ProtocolNumber && len(addr.Addr) == header.IPv6AddressSize {
 			return socket.DatagramSocketSendMsgPreflightResultWithErr(tcpipErrorToCode(&tcpip.ErrAddressFamilyNotSupported{})), nil
 		}
@@ -2876,7 +2876,7 @@ func fidlNetworkControlDataToControlMessages(in socket.NetworkSocketSendControlD
 			pktInfo := inIpv6.GetPktinfo()
 			out.IPv6PacketInfo = tcpip.IPv6PacketInfo{
 				NIC:  tcpip.NICID(pktInfo.Iface),
-				Addr: toTcpIpAddressDroppingUnspecifiedv6(pktInfo.LocalAddr),
+				Addr: fidlconv.ToTcpIpAddressDroppingUnspecifiedv6(pktInfo.LocalAddr),
 			}
 			out.HasIPv6PacketInfo = true
 		}
@@ -3060,7 +3060,7 @@ func (s *networkDatagramSocket) sendMsg(addr *fidlnet.SocketAddress, data []uint
 	var fullAddr tcpip.FullAddress
 	var to *tcpip.FullAddress
 	if addr != nil {
-		fullAddr = toTCPIPFullAddress(*addr)
+		fullAddr = fidlconv.ToTCPIPFullAddress(*addr)
 		if s.endpoint.netProto == ipv4.ProtocolNumber && len(fullAddr.Addr) == header.IPv6AddressSize {
 			return 0, &tcpip.ErrAddressFamilyNotSupported{}
 		}

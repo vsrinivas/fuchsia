@@ -289,3 +289,40 @@ func TestToNetSocketAddress(t *testing.T) {
 		})
 	}
 }
+
+func TestBytesToAddressDroppingUnspecified(t *testing.T) {
+	tests := []struct {
+		name  string
+		bytes []uint8
+		addr  tcpip.Address
+	}{
+		{
+			name:  "IPv4",
+			bytes: []uint8{192, 0, 2, 1},
+			addr:  tcpip.Address("\xC0\x00\x02\x01"),
+		},
+		{
+			name:  "IPv4 Unspecified",
+			bytes: []uint8{0, 0, 0, 0},
+			addr:  tcpip.Address(""),
+		},
+		{
+			name:  "IPv6",
+			bytes: []uint8{0x20, 0x01, 0xdb, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
+			addr:  tcpip.Address("\x20\x01\xdb\x80\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"),
+		},
+		{
+			name:  "IPv6 Unspecified",
+			bytes: []uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			addr:  tcpip.Address(""),
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := bytesToAddressDroppingUnspecified(test.bytes); got != test.addr {
+				t.Errorf("got BytesToAddressDroppingUnspecified(%+v) = %+v, want %+v", test.bytes, got, test.addr)
+			}
+		})
+	}
+}
