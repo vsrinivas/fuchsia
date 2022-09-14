@@ -7,6 +7,7 @@ use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 #[derive(StructOpt, Debug)]
+/// Tool for assembly, compilation, and validation of component manifests.
 pub struct Opt {
     #[structopt(short = "s", long = "stamp", parse(from_os_str))]
     /// Stamp this file on success
