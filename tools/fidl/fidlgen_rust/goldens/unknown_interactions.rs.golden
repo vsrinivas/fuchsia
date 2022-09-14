@@ -4209,7 +4209,7 @@ impl futures::Stream for UnknownInteractionsAjarProtocolRequestStream {
                     let control_handle = UnknownInteractionsAjarProtocolControlHandle {
                         inner: this.inner.clone(),
                     };
-                    Ok(UnknownInteractionsAjarProtocolRequest::_UnknownInteraction {
+                    Ok(UnknownInteractionsAjarProtocolRequest::_UnknownMethod {
                         ordinal: header.ordinal(),
                         control_handle,
                     })
@@ -4255,7 +4255,7 @@ pub enum UnknownInteractionsAjarProtocolRequest {
         responder: UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponder,
     },
     /// An interaction was received which does not match any known method.
-    _UnknownInteraction {
+    _UnknownMethod {
         ordinal: u64,
         control_handle: UnknownInteractionsAjarProtocolControlHandle,
     },
@@ -4393,7 +4393,7 @@ impl UnknownInteractionsAjarProtocolRequest {
             UnknownInteractionsAjarProtocolRequest::StrictTwoWayTableErr { .. } => {
                 "strict_two_way_table_err"
             }
-            UnknownInteractionsAjarProtocolRequest::_UnknownInteraction { .. } => {
+            UnknownInteractionsAjarProtocolRequest::_UnknownMethod { .. } => {
                 "unknown one-way method"
             }
         }
@@ -9268,10 +9268,10 @@ impl futures::Stream for UnknownInteractionsProtocolRequestStream {
                     let control_handle = UnknownInteractionsProtocolControlHandle {
                         inner: this.inner.clone(),
                     };
-                    Ok(UnknownInteractionsProtocolRequest::_UnknownInteraction {
+                    Ok(UnknownInteractionsProtocolRequest::_UnknownMethod {
                         ordinal: header.ordinal(),
                         control_handle,
-                        direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+                        direction: fidl::endpoints::UnknownMethodDirection::OneWay,
                     })
                 }
                 _ if header.dynamic_flags().contains(fidl::encoding::DynamicFlags::FLEXIBLE) => {
@@ -9293,7 +9293,7 @@ impl futures::Stream for UnknownInteractionsProtocolRequestStream {
                     // interaction reply will not contain any handles, so
                     // creating a new Vec here does not cause an allocation.
                     let mut handles = Vec::new();
-                    fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocol_UnknownInteractionResponse");
+                    fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "test.unknowninteractions/UnknownInteractionsProtocol_UnknownMethodResponse");
                     fidl::encoding::Encoder::encode(bytes, &mut handles, &mut msg)?;
                     fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
                     fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -9304,10 +9304,10 @@ impl futures::Stream for UnknownInteractionsProtocolRequestStream {
                         .write_etc(&*bytes, &mut handles)
                         .map_err(fidl::Error::ServerResponseWrite)?;
 
-                    Ok(UnknownInteractionsProtocolRequest::_UnknownInteraction {
+                    Ok(UnknownInteractionsProtocolRequest::_UnknownMethod {
                         ordinal: header.ordinal(),
                         control_handle,
-                        direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+                        direction: fidl::endpoints::UnknownMethodDirection::TwoWay,
                     })
                 }
                 _ => Err(fidl::Error::UnknownOrdinal {
@@ -9375,10 +9375,10 @@ pub enum UnknownInteractionsProtocolRequest {
         responder: UnknownInteractionsProtocolFlexibleTwoWayTableErrResponder,
     },
     /// An interaction was received which does not match any known method.
-    _UnknownInteraction {
+    _UnknownMethod {
         ordinal: u64,
         control_handle: UnknownInteractionsProtocolControlHandle,
-        direction: fidl::endpoints::UnknownInteractionDirection,
+        direction: fidl::endpoints::UnknownMethodDirection,
     },
 }
 
@@ -9616,12 +9616,12 @@ impl UnknownInteractionsProtocolRequest {
             UnknownInteractionsProtocolRequest::FlexibleTwoWayTableErr { .. } => {
                 "flexible_two_way_table_err"
             }
-            UnknownInteractionsProtocolRequest::_UnknownInteraction {
-                direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+            UnknownInteractionsProtocolRequest::_UnknownMethod {
+                direction: fidl::endpoints::UnknownMethodDirection::OneWay,
                 ..
             } => "unknown one-way method",
-            UnknownInteractionsProtocolRequest::_UnknownInteraction {
-                direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+            UnknownInteractionsProtocolRequest::_UnknownMethod {
+                direction: fidl::endpoints::UnknownMethodDirection::TwoWay,
                 ..
             } => "unknown two-way method",
         }

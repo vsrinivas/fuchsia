@@ -6,7 +6,7 @@ use fidl_fidl_serversuite::EventType;
 
 use {
     anyhow::{Context as _, Error},
-    fidl::endpoints::{ControlHandle, ServerEnd, UnknownInteractionDirection},
+    fidl::endpoints::{ControlHandle, ServerEnd, UnknownMethodDirection},
     fidl::{AsHandleRef, Event, Status},
     fidl_fidl_serversuite::{
         AjarTargetMarker, AjarTargetRequest, AnyTarget, ClosedTargetMarker, ClosedTargetRequest,
@@ -133,7 +133,7 @@ async fn run_ajar_target_server(
         .map(|result| result.context("failed request"))
         .try_for_each(|request| async move {
             match request {
-                AjarTargetRequest::_UnknownInteraction { ordinal, control_handle: _ } => {
+                AjarTargetRequest::_UnknownMethod { ordinal, control_handle: _ } => {
                     reporter_proxy
                         .received_unknown_method(ordinal, UnknownMethodType::OneWay)
                         .expect("failed to report unknown method call");
@@ -217,14 +217,10 @@ async fn run_open_target_server(
                         }
                     }
                 }
-                OpenTargetRequest::_UnknownInteraction {
-                    ordinal,
-                    direction,
-                    control_handle: _,
-                } => {
+                OpenTargetRequest::_UnknownMethod { ordinal, direction, control_handle: _ } => {
                     let unknown_method_type = match direction {
-                        UnknownInteractionDirection::OneWay => UnknownMethodType::OneWay,
-                        UnknownInteractionDirection::TwoWay => UnknownMethodType::TwoWay,
+                        UnknownMethodDirection::OneWay => UnknownMethodType::OneWay,
+                        UnknownMethodDirection::TwoWay => UnknownMethodType::TwoWay,
                     };
                     reporter_proxy
                         .received_unknown_method(ordinal, unknown_method_type)

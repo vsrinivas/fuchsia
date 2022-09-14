@@ -428,11 +428,11 @@ pub fn create_proxy_and_stream<T: ProtocolMarker>() -> Result<(T::Proxy, T::Requ
     Ok((client.into_proxy()?, server.into_stream()?))
 }
 
-/// Indicates the direction of an unknown interaction.
+/// Indicates the direction of an unknown method.
 #[derive(Copy, Clone, Debug)]
-pub enum UnknownInteractionDirection {
-    /// Unknown interaction was one-way.
+pub enum UnknownMethodDirection {
+    /// Unknown method was one-way.
     OneWay,
-    /// Unknown interaction was two-way.
+    /// Unknown method was two-way.
     TwoWay,
 }

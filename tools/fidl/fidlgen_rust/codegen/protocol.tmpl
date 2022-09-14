@@ -590,11 +590,11 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
                     let control_handle = {{ $protocol.Name }}ControlHandle {
                         inner: this.inner.clone(),
                     };
-                    Ok({{ $protocol.Name }}Request::_UnknownInteraction {
+                    Ok({{ $protocol.Name }}Request::_UnknownMethod {
                         ordinal: header.ordinal(),
                         control_handle,
                         {{- if $protocol.TwoWayUnknownInteractions }}
-                        direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+                        direction: fidl::endpoints::UnknownMethodDirection::OneWay,
                         {{- end }}
                     })
                 }
@@ -618,7 +618,7 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
                     // interaction reply will not contain any handles, so
                     // creating a new Vec here does not cause an allocation.
                     let mut handles = Vec::new();
-                    fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}_UnknownInteractionResponse");
+                    fidl::duration_begin!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "name" => "{{ $protocol.ECI }}_UnknownMethodResponse");
                     fidl::encoding::Encoder::encode(bytes, &mut handles, &mut msg)?;
                     fidl::trace_blob!("fidl:blob", "encode", bytes.as_slice());
                     fidl::duration_end!("fidl", "encode", "bindings" => _FIDL_TRACE_BINDINGS_RUST, "size" => bytes.len() as u32, "handle_count" => handles.len() as u32);
@@ -629,10 +629,10 @@ impl futures::Stream for {{ $protocol.Name }}RequestStream {
                         .write_etc(&*bytes, &mut handles)
                         .map_err(fidl::Error::ServerResponseWrite)?;
 
-                    Ok({{ $protocol.Name }}Request::_UnknownInteraction {
+                    Ok({{ $protocol.Name }}Request::_UnknownMethod {
                         ordinal: header.ordinal(),
                         control_handle,
-                        direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+                        direction: fidl::endpoints::UnknownMethodDirection::TwoWay,
                     })
                 }
                 {{- end }}
@@ -671,11 +671,11 @@ pub enum {{ $protocol.Name }}Request {
 
     {{- if $protocol.OneWayUnknownInteractions }}
     /// An interaction was received which does not match any known method.
-    _UnknownInteraction {
+    _UnknownMethod {
         ordinal: u64,
         control_handle: {{ $protocol.Name}}ControlHandle,
         {{- if $protocol.TwoWayUnknownInteractions }}
-        direction: fidl::endpoints::UnknownInteractionDirection,
+        direction: fidl::endpoints::UnknownMethodDirection,
         {{- end }}
     },
     {{- end }}
@@ -732,14 +732,14 @@ impl {{ $protocol.Name }}Request {
             {{- end }}
 
             {{- if $protocol.TwoWayUnknownInteractions }}
-            {{ $protocol.Name }}Request::_UnknownInteraction {
-                direction: fidl::endpoints::UnknownInteractionDirection::OneWay, ..
+            {{ $protocol.Name }}Request::_UnknownMethod {
+                direction: fidl::endpoints::UnknownMethodDirection::OneWay, ..
             } => "unknown one-way method",
-            {{ $protocol.Name }}Request::_UnknownInteraction {
-                direction: fidl::endpoints::UnknownInteractionDirection::TwoWay, ..
+            {{ $protocol.Name }}Request::_UnknownMethod {
+                direction: fidl::endpoints::UnknownMethodDirection::TwoWay, ..
             } => "unknown two-way method",
             {{- else if $protocol.OneWayUnknownInteractions }}
-            {{ $protocol.Name }}Request::_UnknownInteraction {..} => "unknown one-way method",
+            {{ $protocol.Name }}Request::_UnknownMethod {..} => "unknown one-way method",
             {{- end }}
         }
     }

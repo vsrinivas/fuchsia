@@ -1432,9 +1432,9 @@ async fn receive_unknown_one_way_flexible() {
 
     assert_matches!(
         request,
-        UnknownInteractionsProtocolRequest::_UnknownInteraction {
+        UnknownInteractionsProtocolRequest::_UnknownMethod {
             ordinal: 0xff10ff10ff10ff10,
-            direction: fidl::endpoints::UnknownInteractionDirection::OneWay,
+            direction: fidl::endpoints::UnknownMethodDirection::OneWay,
             control_handle: _,
         }
     );
@@ -1482,9 +1482,9 @@ async fn receive_unknown_two_way_flexible() {
                 .expect("server failed to read request");
             assert_matches!(
                 request,
-                UnknownInteractionsProtocolRequest::_UnknownInteraction {
+                UnknownInteractionsProtocolRequest::_UnknownMethod {
                     ordinal: 0xff10ff10ff10ff10,
-                    direction: fidl::endpoints::UnknownInteractionDirection::TwoWay,
+                    direction: fidl::endpoints::UnknownMethodDirection::TwoWay,
                     control_handle: _,
                 }
             );
@@ -1561,7 +1561,7 @@ async fn receive_unknown_one_way_ajar_flexible() {
 
     assert_matches!(
         request,
-        UnknownInteractionsAjarProtocolRequest::_UnknownInteraction {
+        UnknownInteractionsAjarProtocolRequest::_UnknownMethod {
             ordinal: 0xff10ff10ff10ff10,
             control_handle: _,
         }
