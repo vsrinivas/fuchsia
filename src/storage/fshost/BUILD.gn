@@ -147,8 +147,6 @@ source_set("block-watcher") {
     "//src/security/fcrypto",
     "//src/security/kms-stateless",
     "//src/security/zxcrypt:zxcrypt-client",
-    "//src/storage/bin/blobfs:component",
-    "//src/storage/bin/minfs:minfs-component",
     "//src/storage/gpt",
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_cpp_wire",
@@ -164,14 +162,9 @@ source_set("block-watcher") {
   if (extract_minfs_metadata_on_corruption) {
     sources += [ "extract-metadata.cc" ]
     public_deps += [ "//src/storage/extractor/cpp:disk_extractor" ]
+    deps += [ "//src/storage/minfs" ]
   } else {
     sources += [ "extract-metadata-noop.cc" ]
-  }
-
-  if (data_filesystem_format == "fxfs") {
-    deps += [ "//src/storage/fxfs:fxfs_component" ]
-  } else if (data_filesystem_format == "f2fs") {
-    deps += [ "//src/storage/bin/f2fs:f2fs-component" ]
   }
 }
 
@@ -208,10 +201,6 @@ executable("fshost") {
     "//third_party/zstd",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-
-  if (data_filesystem_format == "fxfs") {
-    deps += [ "//src/storage/fxfs-crypt" ]
-  }
 }
 
 test("fshost_test") {
@@ -326,12 +315,7 @@ template("fshost_integration_test") {
       "//src/lib/storage/fs_management",
       "//src/lib/storage/ramdevice_client/cpp",
       "//src/lib/testing/predicates",
-      "//src/storage/bin/f2fs",
-      "//src/storage/bin/f2fs:f2fs-component",
-      "//src/storage/bin/minfs:minfs-component",
       "//src/storage/blobfs",
-      "//src/storage/fxfs:fxfs_component",
-      "//src/storage/fxfs-crypt",
       "//src/storage/lib/utils:topological_path",
       "//src/storage/minfs",
       "//src/storage/testing:storage_driver_test_support",
@@ -460,9 +444,6 @@ test("disk-migration-test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
-    "//src/storage/bin/minfs:minfs-component",
-    "//src/storage/fxfs:fxfs_component",
-    "//src/storage/fxfs-crypt",
     "//src/storage/lib/utils:topological_path",
     "//src/storage/minfs",
     "//src/storage/testing:storage_driver_test_support",
@@ -506,7 +487,6 @@ fuchsia_test_package("fshost-tests") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
     "//src/developer/forensics/public/fakes:fake_crash_reporter",
     "//src/storage/bin/blobfs",
-    "//src/storage/bin/minfs",
     "//src/storage/blobfs:decompressor-sandbox",
   ]
 }
@@ -515,6 +495,11 @@ fshost_cml("fshost.cml") {
   options = {
     bootfs_only = bootfs_only
     data_filesystem_format = data_filesystem_format
+
+    if (rust_fshost) {
+      assert(data_filesystem_format == "fxfs", "Only Fxfs is supported")
+    }
+
     use_disk_based_minfs_migration = use_disk_based_minfs_migration
   }
 }
@@ -548,8 +533,6 @@ fuchsia_component("fshost_rust_component") {
   cm_label = ":fshost_manifest"
   deps = [
     ":fshost_rust",
-    "//src/storage/bin/blobfs:blobfs-component",
-    "//src/storage/bin/minfs:minfs-component",
     "//src/storage/memfs:memfs_component",
   ]
   if (data_filesystem_format == "fxfs") {

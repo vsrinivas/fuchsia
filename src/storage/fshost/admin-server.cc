@@ -105,6 +105,7 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
     std::string component_child_name = name + "." + std::to_string(mount_index++);
     options.component_child_name = component_child_name.c_str();
     options.component_collection_name = "fs-collection";
+
     // TODO(fxbug.dev/93066): Support mounting multi-volume filesystems as well.
     auto mounted_filesystem =
         fs_management::Mount(std::move(fd), df, options, fs_management::LaunchLogsAsync);

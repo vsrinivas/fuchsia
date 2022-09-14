@@ -17,7 +17,7 @@
         // Intended to mimic the way fshost configures its blobfs component.
         {
             name: "static-test-blobfs",
-            url: "fuchsia-boot:///#meta/blobfs.cm",
+            url: "#meta/blobfs.cm",
             startup: "eager",
         },
         {

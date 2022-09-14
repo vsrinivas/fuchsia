@@ -44,6 +44,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
+#include <fbl/vector.h>
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
 

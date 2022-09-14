@@ -42,10 +42,27 @@ template("fshost_cml") {
         sources += [ "//src/storage/fshost/meta/f2fs_fshost.cml" ]
       }
       sources += [ "//src/storage/fshost/meta/core_fshost.cml" ]
-
       if (defined(options.use_disk_based_minfs_migration) &&
           options.use_disk_based_minfs_migration) {
         sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
+      }
+
+      # These are dependencies that must be included in the package depending on options.
+
+      deps = [
+        "//src/storage/bin/blobfs:component",
+
+        # For now, we always need minfs to support migration
+        "//src/storage/bin/minfs:minfs-component",
+      ]
+
+      if (options.data_filesystem_format == "fxfs") {
+        deps += [
+          "//src/storage/fxfs:fxfs_component",
+          "//src/storage/fxfs-crypt",
+        ]
+      } else if (options.data_filesystem_format == "f2fs") {
+        deps += [ "//src/storage/bin/f2fs:f2fs-component" ]
       }
     }
   }

@@ -85,6 +85,7 @@ fuchsia_test_package("storage-benchmarks-tests-package") {
   test_components = [ ":storage-benchmarks-tests-component" ]
   deps = [
     "//src/storage/benchmarks/memfs-component",
+    "//src/storage/bin/minfs",
     "//src/storage/fxfs:fxfs_component",
     "//src/storage/fxfs-crypt",
   ]

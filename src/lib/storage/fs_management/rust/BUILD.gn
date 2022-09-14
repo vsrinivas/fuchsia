@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/storage/testing/driver_test_realm.gni")
 
+# This does not include any filesystems.  Callers should depend on the filesystems they need.
 rustc_library("fs_management") {
   with_unit_tests = true
   edition = "2021"
@@ -33,12 +34,6 @@ rustc_library("fs_management") {
     "//src/lib/storage/ramdevice_client",
     "//src/storage/fs_test:crypt_service",
   ]
-  data_deps = [
-    "//src/storage/bin/blobfs",
-    "//src/storage/bin/factoryfs",
-    "//src/storage/bin/minfs",
-  ]
-
   sources = [
     "src/error.rs",
     "src/filesystem.rs",
@@ -63,6 +58,10 @@ fuchsia_test_package("fs-management-rust-tests") {
     }
   }
   test_components = [ ":fs-management-rust-tests-component" ]
+  deps = [
+    "//src/storage/bin/factoryfs",
+    "//src/storage/bin/minfs",
+  ]
 }
 
 group("tests") {

@@ -24,6 +24,7 @@
 #include <string>
 
 #include <fbl/ref_ptr.h>
+#include <fbl/vector.h>
 
 #include "constants.h"
 #include "fdio.h"
@@ -42,7 +43,6 @@
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fxfs.h"
 #include "src/storage/fshost/utils.h"
-#include "src/storage/minfs/minfs.h"
 
 namespace fshost {
 
