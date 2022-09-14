@@ -8,8 +8,7 @@
 
 #include <string>
 
-#include "third_party/icu/source/common/unicode/ucnv.h"
-#include "third_party/icu/source/i18n/unicode/msgfmt.h"
+#include "src/ui/a11y/lib/screen_reader/i18n/icu_headers.h"
 
 namespace a11y {
 namespace i18n {

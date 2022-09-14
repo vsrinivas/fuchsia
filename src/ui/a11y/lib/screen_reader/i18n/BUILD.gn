@@ -3,6 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/intl/intl_strings.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
+
+third_party_icu_headers("icu_headers") {
+  headers = [
+    "third_party/icu/source/i18n/unicode/msgfmt.h",
+    "third_party/icu/source/common/unicode/ucnv.h",
+  ]
+}
 
 group("resources") {
   public_deps = [
@@ -20,11 +28,12 @@ source_set("i18n") {
 
   public_deps = [
     ":fuchsia.intl.l10n",
+    "${icu_root}:icu",
     "//src/lib/intl/lookup/cpp:lib",
-    "//third_party/icu",
   ]
 
   deps = [
+    ":icu_headers",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
   ]
