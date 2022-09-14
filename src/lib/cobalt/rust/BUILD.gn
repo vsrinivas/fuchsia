@@ -30,8 +30,6 @@ rustc_library("fuchsia-cobalt") {
 
   # This library is deprecated, do not add new elements to this list.
   visibility = [
-    "//src/connectivity/bluetooth/lib/bt-a2dp/*",
-    "//src/connectivity/bluetooth/profiles/bt-a2dp/*",
     "//src/connectivity/location/emergency/*",
     "//src/lib/cobalt/*",
     "//src/sys/pkg/bin/system-updater/*",
