@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/assembly/assembled_system.gni")
+import("//build/assembly/legacy_image_metadata_overrides.gni")
 import("//build/images/args.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/vbmeta.gni")
@@ -15,17 +16,6 @@ assert(current_toolchain == default_toolchain,
 
 root_realm("root") {
   core_package_name = "core-invalid"
-}
-
-# Zedboot must be included to pave devices until recovery has a replacement
-# mechanism. Products can specify recovery_label to determine which
-# image to include in zircon-r.
-use_zedboot_as_recovery = false
-zedboot_metadata_slot = "zedboot"
-if (get_label_info(recovery_label, "label_with_toolchain") ==
-    get_label_info(":zedboot", "label_with_toolchain")) {
-  use_zedboot_as_recovery = true
-  zedboot_metadata_slot = "zircon-r"
 }
 
 # Note: This ZBI output is also used by a script in //scripts/verify_cmdline_params.
@@ -101,50 +91,7 @@ assembled_system("zedboot_assembly") {
     inputs = vboot_action.inputs
   }
 
-  image_metadata_overrides = {
-    zbi = {
-      name = zedboot_metadata_slot
-      if (!sign_zbi) {
-        archive = true
-        if (use_zedboot_as_recovery) {
-          bootserver_pave = [ "--zirconr" ]
-          if (zircon_r_partition != "") {
-            fastboot_flash = [ zircon_r_partition ]
-          }
-        }
-        bootserver_pave_zedboot = [ "--zircona" ]
-      }
-    }
-
-    if (sign_zbi) {
-      zbi_signed = {
-        name = "${zedboot_metadata_slot}.signed"
-        archive = true
-        if (use_zedboot_as_recovery) {
-          mkzedboot_mode = [ "vboot" ]
-          bootserver_pave = [ "--zirconr" ]
-          if (zircon_r_partition != "") {
-            fastboot_flash = [ zircon_r_partition ]
-          }
-        }
-        bootserver_pave_zedboot = [ "--zircona" ]
-      }
-    }
-
-    if (use_vbmeta) {
-      vbmeta = {
-        name = zedboot_metadata_slot
-        archive = true
-        if (use_zedboot_as_recovery) {
-          bootserver_pave = [ "--vbmetar" ]
-          if (vbmeta_r_partition != "") {
-            fastboot_flash = [ vbmeta_r_partition ]
-          }
-        }
-        bootserver_pave_zedboot = [ "--vbmetaa" ]
-      }
-    }
-  }
+  image_metadata_overrides = legacy_zedboot_image_metadata_overrides
 
   metadata = {
     update_target = []
@@ -155,14 +102,14 @@ assembled_system("zedboot_assembly") {
     # Optionally include the signed images.
     if (sign_zbi) {
       update_target += [ "zedboot.signed=zedboot.zbi.signed" ]
-      if (use_zedboot_as_recovery) {
+      if (recovery_is_zedboot) {
         mkzedboot_mode = [ "vboot" ]
       }
     }
 
     # Optionally include the vbmeta.
     if (use_vbmeta) {
-      if (use_zedboot_as_recovery) {
+      if (recovery_is_zedboot) {
         # Only include zedboot as recovery.vbmeta if zedboot is used as recovery
         update_target += [ "recovery.vbmeta=zedboot.vbmeta" ]
       }

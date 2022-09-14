@@ -1,0 +1,201 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/images/args.gni")
+
+# TODO(fxbug.dev/81569): Burn this down.
+
+# TODO(fxbug.dev/82077): Remove these once clients switch to the new paths
+old_blobfs_path = "${root_out_dir}/obj/build/images/blob.blk"
+old_fvm_blob_sparse_path =
+    "${root_out_dir}/obj/build/images/fvm.blob.sparse.blk"
+
+# For //build/images/fuchsia:fuchsia_assembly.
+legacy_fuchsia_image_metadata_overrides = {
+  zbi = {
+    name = "zircon-a"
+    archive = true
+    bootserver_pave = []
+    if (!sign_zbi) {
+      bootserver_pave += [
+        "--zircona",
+        # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
+        # zircon-r, so for now zedboot is being paved to this slot.
+        # "--zirconb",
+      ]
+
+      fastboot_flash = []
+      if (zircon_a_partition != "") {
+        fastboot_flash += [ zircon_a_partition ]
+      }
+      if (zircon_b_partition != "") {
+        fastboot_flash += [ zircon_b_partition ]
+      }
+    }
+  }
+
+  if (sign_zbi) {
+    zbi_signed = {
+      name = "zircon-a.signed"
+      archive = true
+      bootserver_pave = [ "--zircona" ]
+      fastboot_flash = []
+      if (zircon_a_partition != "") {
+        fastboot_flash += [ zircon_a_partition ]
+      }
+      if (zircon_b_partition != "") {
+        fastboot_flash += [ zircon_b_partition ]
+      }
+    }
+  }
+
+  if (use_vbmeta) {
+    vbmeta = {
+      name = "zircon-a"
+      archive = true
+      bootserver_pave = [ "--vbmetaa" ]
+      fastboot_flash = []
+      if (vbmeta_a_partition != "") {
+        fastboot_flash += [ vbmeta_a_partition ]
+      }
+      if (vbmeta_b_partition != "") {
+        fastboot_flash += [ vbmeta_b_partition ]
+      }
+    }
+  }
+
+  minfs = {
+    name = "data"
+  }
+
+  blobfs = {
+    name = "blob"
+
+    # TODO(fxbug.dev/82077): Remove these overrides once clients do not
+    # depend on the old path.
+    label = "//build/images/fuchsia:copy_blobfs($default_toolchain)"
+    path = rebase_path(old_blobfs_path, root_build_dir)
+  }
+
+  fvm = {
+    name = "storage-full"
+    archive = add_qemu_to_build_archives
+  }
+
+  fvm_sparse = {
+    name = "storage-sparse"
+    archive = true
+    bootserver_pave = [ "--fvm" ]
+  }
+
+  fvm_blob_sparse = {
+    name = "fvm.blob.sparse"
+
+    # Hack: Infra expects bootserver_pave to be present
+    # in the GN graph for this image to be built.
+    bootserver_pave = []
+
+    # TODO(fxbug.dev/82077): Remove these overrides once clients do not
+    # depend on the old path.
+    label = "//build/images/fuchsia:copy_fvm_blobf_sparse($default_toolchain)"
+    path = rebase_path(old_fvm_blob_sparse_path, root_build_dir)
+  }
+
+  fvm_fastboot = {
+    name = "fvm.fastboot"
+    archive = true
+    fastboot_flash = [ fvm_partition ]
+  }
+}
+
+# For //build/images/bringup:bringup_non_fastboot.
+legacy_bringup_image_metadata_overrides = {
+  zbi = {
+    name = "zircon-a"
+    archive = true
+    bootserver_netboot = [ "--boot" ]
+
+    # Bringup builds always mexec from the paver
+    bootserver_pave = [ "--boot" ]
+
+    if (!sign_zbi) {
+      bootserver_pave += [
+        "--zircona",
+        # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
+        # zircon-r, so for now zedboot is being paved to this slot.
+        # "--zirconb",
+      ]
+    }
+  }
+
+  if (use_vbmeta) {
+    vbmeta = {
+      name = "zircon-a"
+      archive = true
+      bootserver_pave = [ "--vbmetaa" ]
+    }
+  }
+}
+
+# For //build/images/bringup:bringup_fastboot.
+legacy_bringup_fastboot_image_metadata_overrides = {
+  if (sign_zbi) {
+    zbi_signed = {
+      name = "fuchsia"
+      type = "zbi_fastboot"
+      fastboot_boot = [ "boot" ]
+    }
+  }
+}
+
+# For //build/images/zedboot:zedboot_assembly.
+legacy_zedboot_image_metadata_overrides = {
+  _zedboot_metadata_slot = "zedboot"
+  if (recovery_is_zedboot) {
+    _zedboot_metadata_slot = "zircon-r"
+  }
+
+  zbi = {
+    name = _zedboot_metadata_slot
+    if (!sign_zbi) {
+      archive = true
+      if (recovery_is_zedboot) {
+        bootserver_pave = [ "--zirconr" ]
+        if (zircon_r_partition != "") {
+          fastboot_flash = [ zircon_r_partition ]
+        }
+      }
+      bootserver_pave_zedboot = [ "--zircona" ]
+    }
+  }
+
+  if (sign_zbi) {
+    zbi_signed = {
+      name = "${_zedboot_metadata_slot}.signed"
+      archive = true
+      if (recovery_is_zedboot) {
+        mkzedboot_mode = [ "vboot" ]
+        bootserver_pave = [ "--zirconr" ]
+        if (zircon_r_partition != "") {
+          fastboot_flash = [ zircon_r_partition ]
+        }
+      }
+      bootserver_pave_zedboot = [ "--zircona" ]
+    }
+  }
+
+  if (use_vbmeta) {
+    vbmeta = {
+      name = _zedboot_metadata_slot
+      archive = true
+      if (recovery_is_zedboot) {
+        bootserver_pave = [ "--vbmetar" ]
+        if (vbmeta_r_partition != "") {
+          fastboot_flash = [ vbmeta_r_partition ]
+        }
+      }
+      bootserver_pave_zedboot = [ "--vbmetaa" ]
+    }
+  }
+}

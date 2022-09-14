@@ -6,6 +6,7 @@ import("//build/assembly/assembled_system.gni")
 import("//build/assembly/flash_manifest.gni")
 import("//build/assembly/generated_assembly_inputs.gni")
 import("//build/assembly/generated_partitions_config.gni")
+import("//build/assembly/legacy_image_metadata_overrides.gni")
 import("//build/assembly/update_package.gni")
 import("//build/images/args.gni")
 import("//build/images/filesystem_limits.gni")
@@ -221,7 +222,6 @@ if (is_fuchsia) {
 
   # Copy the blob.blk to the old location for assembled images.
   # TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
-  old_blobfs_path = "${root_out_dir}/obj/build/images/blob.blk"
   copy("copy_blobfs") {
     testonly = fuchsia_zbi_testonly
     sources = [ "${target_out_dir}/fuchsia/blob.blk" ]
@@ -231,8 +231,6 @@ if (is_fuchsia) {
 
   # Copy the fvm.blob.sparse.blk to the old location for assembled images.
   # TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
-  old_fvm_blob_sparse_path =
-      "${root_out_dir}/obj/build/images/fvm.blob.sparse.blk"
   copy("copy_fvm_blob_sparse") {
     testonly = fuchsia_zbi_testonly
     sources = [ "${target_out_dir}/fuchsia/fvm.blob.sparse.blk" ]
@@ -272,103 +270,7 @@ if (is_fuchsia) {
     create_legacy_aib_package = !is_debug
     create_legacy_aib_archive = !is_debug
 
-    image_metadata_overrides = {
-      zbi = {
-        name = "zircon-a"
-        archive = true
-        bootserver_pave = []
-        if (!sign_zbi) {
-          bootserver_pave += [
-            "--zircona",
-            # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
-            # zircon-r, so for now zedboot is being paved to this slot.
-            # "--zirconb",
-          ]
-
-          fastboot_flash = []
-          if (zircon_a_partition != "") {
-            fastboot_flash += [ zircon_a_partition ]
-          }
-          if (zircon_b_partition != "") {
-            fastboot_flash += [ zircon_b_partition ]
-          }
-        }
-      }
-
-      if (sign_zbi) {
-        zbi_signed = {
-          name = "zircon-a.signed"
-          archive = true
-          bootserver_pave = [ "--zircona" ]
-          fastboot_flash = []
-          if (zircon_a_partition != "") {
-            fastboot_flash += [ zircon_a_partition ]
-          }
-          if (zircon_b_partition != "") {
-            fastboot_flash += [ zircon_b_partition ]
-          }
-        }
-      }
-
-      if (use_vbmeta) {
-        vbmeta = {
-          name = "zircon-a"
-          archive = true
-          bootserver_pave = [ "--vbmetaa" ]
-          fastboot_flash = []
-          if (vbmeta_a_partition != "") {
-            fastboot_flash += [ vbmeta_a_partition ]
-          }
-          if (vbmeta_b_partition != "") {
-            fastboot_flash += [ vbmeta_b_partition ]
-          }
-        }
-      }
-
-      minfs = {
-        name = "data"
-      }
-
-      blobfs = {
-        name = "blob"
-
-        # TODO(fxbug.dev/82077): Remove these overrides once clients do not
-        # depend on the old path.
-        label = "//build/images/fuchsia:copy_blobfs($default_toolchain)"
-        path = rebase_path(old_blobfs_path, root_build_dir)
-      }
-
-      fvm = {
-        name = "storage-full"
-        archive = add_qemu_to_build_archives
-      }
-
-      fvm_sparse = {
-        name = "storage-sparse"
-        archive = true
-        bootserver_pave = [ "--fvm" ]
-      }
-
-      fvm_blob_sparse = {
-        name = "fvm.blob.sparse"
-
-        # Hack: Infra expects bootserver_pave to be present
-        # in the GN graph for this image to be built.
-        bootserver_pave = []
-
-        # TODO(fxbug.dev/82077): Remove these overrides once clients do not
-        # depend on the old path.
-        label =
-            "//build/images/fuchsia:copy_fvm_blobf_sparse($default_toolchain)"
-        path = rebase_path(old_fvm_blob_sparse_path, root_build_dir)
-      }
-
-      fvm_fastboot = {
-        name = "fvm.fastboot"
-        archive = true
-        fastboot_flash = [ fvm_partition ]
-      }
-    }
+    image_metadata_overrides = legacy_fuchsia_image_metadata_overrides
   }
 
   generated_partitions_config("partitions_config") {

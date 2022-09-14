@@ -21,15 +21,6 @@ if (target_cpu == "x64") {
   assert(false, "Unsupported target cpu: $target_cpu")
 }
 
-recovery_is_zedboot =
-    get_label_info(recovery_label, "label_with_toolchain") ==
-    get_label_info("//build/images/zedboot", "label_with_toolchain")
-
-recovery_is_recovery_eng =
-    get_label_info(recovery_label, "label_with_toolchain") ==
-    get_label_info("//build/images/recovery:recovery-eng",
-                   "label_with_toolchain")
-
 flash_manifest_version = 3
 
 # These are the common assembly-related labels.
