@@ -191,6 +191,8 @@ class SchedulerState {
 
   void set_next_cpu(cpu_num_t next_cpu) { next_cpu_ = next_cpu; }
 
+  Thread* previous_thread() const { return previous_thread_; }
+
  private:
   friend class Scheduler;
 
@@ -291,6 +293,10 @@ class SchedulerState {
   // Takes the value of Scheduler::generation_count_ + 1 at the time this node
   // is added to the run queue.
   uint64_t generation_{0};
+
+  Thread* previous_thread_{nullptr};
+  bool incoming_locked_{false};
+  bool outgoing_locked_{false};
 
   // The current sched_latency flow id for this thread.
   uint64_t flow_id_{0};

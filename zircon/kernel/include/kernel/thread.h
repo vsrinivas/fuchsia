@@ -1074,6 +1074,13 @@ struct Thread {
   // Associate this Thread to the given ThreadDispatcher.
   void SetUsermodeThread(fbl::RefPtr<ThreadDispatcher> user_thread);
 
+  // Returns the lock that protects the thread's internal state, particularly with respect to
+  // scheduling.
+  //
+  // TODO(eieio): Returns the thread lock for now, but will be replaced by a member variable when
+  // the thread lock is removed.
+  MonitoredSpinLock& get_lock() TA_RET_CAP(thread_lock) { return thread_lock; }
+
   // Get the associated ThreadDispatcher.
   ThreadDispatcher* user_thread() { return user_thread_.get(); }
   const ThreadDispatcher* user_thread() const { return user_thread_.get(); }

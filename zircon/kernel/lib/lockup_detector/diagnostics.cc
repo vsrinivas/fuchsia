@@ -170,7 +170,7 @@ void DumpCommonDiagnostics(cpu_num_t cpu, FILE* output_target, FailureSeverity s
   }
 
   Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-  percpu.scheduler.Dump(output_target);
+  percpu.scheduler.DumpThreadLocked(output_target);
   Thread* thread = percpu.scheduler.active_thread();
   if (thread != nullptr) {
     fprintf(output_target, "thread: pid=%lu tid=%lu\n", thread->pid(), thread->tid());

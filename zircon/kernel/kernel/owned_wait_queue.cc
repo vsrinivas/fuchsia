@@ -348,6 +348,7 @@ void OwnedWaitQueue::QueuePressureChanged(Thread* t, int old_prio, int new_prio)
     int old_queue_prio = bwq ? bwq->BlockedPriority() : -1;
     int new_queue_prio;
 
+    t->get_lock().AssertHeld();
     Scheduler::InheritPriority(t, new_prio);
 
     new_queue_prio = bwq ? bwq->BlockedPriority() : -1;

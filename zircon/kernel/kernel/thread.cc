@@ -209,13 +209,12 @@ zx_status_t TaskState::Join(zx_time_t deadline) {
 void TaskState::WakeJoiners(zx_status_t status) { retcode_wait_queue_.WakeAll(status); }
 
 void Thread::Trampoline() {
-  // Release the thread lock that was implicitly held across the reschedule.
-  thread_lock.Release();
+  // Release the incoming lock held across reschedule.
+  Scheduler::LockHandoff();
   arch_enable_ints();
 
   Thread* ct = Thread::Current::Get();
   int ret = ct->task_state_.entry()(ct->task_state_.arg());
-
   Thread::Current::Exit(ret);
 }
 
@@ -1318,6 +1317,7 @@ void Thread::SetPriority(int priority) {
   // queue and have dropped the thread lock.
   AnnotatedAutoPreemptDisabler apd;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  this->get_lock().AssertHeld();
   Scheduler::ChangePriority(this, priority);
 }
 
@@ -1338,6 +1338,7 @@ void Thread::SetDeadline(const zx_sched_deadline_params_t& params) {
   // See the comment in Thread::SetPriority
   AnnotatedAutoPreemptDisabler apd;
   Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
+  this->get_lock().AssertHeld();
   Scheduler::ChangeDeadline(this, params);
 }
 

@@ -478,9 +478,12 @@ bool migrate_unpinned_threads_test() {
 
   // Setup the thread that will perform the migration.
   auto migrate_body = []() TA_REQ(thread_lock) __NO_RETURN {
+    Thread* ct = Thread::Current::Get();
+    DEBUG_ASSERT(ct->scheduler_state().previous_thread() != nullptr);
+    ct->scheduler_state().previous_thread()->get_lock().AssertHeld();
     Scheduler::MigrateUnpinnedThreads();
     mp_set_curr_cpu_active(true);
-    thread_lock.Release();
+    Scheduler::LockHandoff();
     Thread::Current::Exit(0);
   };
   Thread* migrate =

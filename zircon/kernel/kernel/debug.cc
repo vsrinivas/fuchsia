@@ -210,20 +210,15 @@ RecurringCallback g_threadload_callback([]() {
 RecurringCallback g_threadq_callback([]() {
   printf("----------------------------------------------------\n");
   for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
-    Guard<MonitoredSpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
-
-    if (!mp_is_cpu_active(i)) {
-      continue;
+    if (mp_is_cpu_active(i)) {
+      printf("thread queue cpu %2u:\n", i);
+      percpu::Get(i).scheduler.Dump();
     }
-
-    printf("thread queue cpu %2u:\n", i);
-    percpu::Get(i).scheduler.Dump();
   }
   printf("\n");
 });
 
 }  // anonymous namespace
-
 static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
   g_threadload_callback.Toggle();
   return 0;

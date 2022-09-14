@@ -216,13 +216,14 @@ void mp_sync_exec(mp_ipi_target_t target, cpu_mask_t mask, mp_sync_task_t task, 
 
 static void mp_unplug_trampoline() TA_REQ(thread_lock) __NO_RETURN;
 static void mp_unplug_trampoline() {
-  // We're still holding the thread lock from the reschedule that took us
-  // here.
-
   Thread* ct = Thread::Current::Get();
   auto unplug_done = reinterpret_cast<Event*>(ct->task_state().arg());
 
   lockup_secondary_shutdown();
+
+  // We're still holding the incoming lock from the reschedule that took us here.
+  DEBUG_ASSERT(ct->scheduler_state().previous_thread() != nullptr);
+  ct->scheduler_state().previous_thread()->get_lock().AssertHeld();
 
   Scheduler::MigrateUnpinnedThreads();
   DEBUG_ASSERT(!mp_is_cpu_active(arch_curr_cpu_num()));
@@ -246,9 +247,9 @@ static void mp_unplug_trampoline() {
   // since everything this thread ever does is in this function).
   ct->wait_queue_state().AssertNoOwnedWaitQueues();
 
-  // do *not* enable interrupts, we want this CPU to never receive another
-  // interrupt
-  thread_lock.Release();
+  // Release the incoming lock but do *not* enable interrupts, we want this CPU
+  // to never receive another interrupt.
+  Scheduler::LockHandoff();
 
   // Stop and then shutdown this CPU's platform timer.
   platform_stop_timer();
