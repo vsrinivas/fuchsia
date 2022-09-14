@@ -98,8 +98,6 @@ pub fn process_completed_syscall(
     current_task: &mut CurrentTask,
     error_context: &Option<ErrorContext>,
 ) -> Result<Option<ExitStatus>, Errno> {
-    block_while_stopped(current_task);
-
     // Checking for a signal might cause the task to exit, so check before processing exit
     if current_task.read().exit_status.is_none() {
         dequeue_signal(current_task);
@@ -122,6 +120,10 @@ pub fn process_completed_syscall(
         }
         return Ok(Some(exit_status.clone()));
     }
+
+    // Block a stopped process after it's had a chance to handle signals, since a signal might
+    // cause it to stop.
+    block_while_stopped(current_task);
 
     // Handle the debug address after the thread is set up to continue, because
     // `set_process_debug_addr` expects the register state to be in a post-syscall state (most
