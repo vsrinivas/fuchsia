@@ -1,0 +1,47 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.power.manager.debug;
+
+/// Error variants that may be returned by the `Message` method.
+type MessageError = flexible enum {
+    GENERIC = 0;
+    INVALID_NODE_NAME = 1;
+    UNSUPPORTED_COMMAND = 2;
+    INVALID_COMMAND_ARGS = 3;
+};
+
+/// Exposes a debug control interface to the Power Manager.
+@discoverable
+protocol Debug {
+    /// Sends a debug message to the specified Power Manager node.
+    ///
+    /// + `node_name` is the name of the Power Manager node to message. A list
+    ///   of node names for a given device can be found in the device-specific
+    ///   node config file [here](/src/power/power-manager/node_config/).
+    /// + `command` is the node-specific command to be sent to the specified
+    ///   node. The supported commands for a given node can be found by
+    ///   inspecting that node's source.
+    /// + `args` is a vector of arguments to be sent that may be required by the
+    ///   node to execute the command.
+    ///
+    /// For example, to override the SOC temperature to 40C on Astro (according
+    /// to the current [node
+    /// configuration](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/power/power-manager/node_config/astro_node_config.json;l=58;drc=2cd2c555e5d2f0371e36bdca70ed4ba92635cb86)
+    /// and `TemperatureHandler` [implementation](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/power/power-manager/src/temperature_handler.rs;drc=f6e405ca555f5e5ab575d421e84b721684ba41fa):
+    ///
+    ///     ```
+    ///     Message(
+    ///         "temperature_soc_pll",
+    ///         "set_temperature",
+    ///         [ "40" ]
+    ///     )
+    ///     ```
+    ///
+    Message(struct {
+        node_name string:MAX;
+        command string:MAX;
+        args vector<string:MAX>:MAX;
+    }) -> (struct {}) error MessageError;
+};
