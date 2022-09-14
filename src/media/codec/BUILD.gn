@@ -71,31 +71,31 @@ fuchsia_package("codec_factory") {
 group("factory_with_sw_codecs") {
   deps = [
     ":sw_codecs",
-    "//src/media/codec/factory:component_v2",
+    "//src/media/codec/factory:component",
   ]
 }
 
 group("sw_codecs") {
   deps = [
-    ":codec_runner_sw_aac_v2",
-    ":codec_runner_sw_ffmpeg_v2",
-    ":codec_runner_sw_sbc_v2",
+    ":codec_runner_sw_aac_comp",
+    ":codec_runner_sw_ffmpeg_comp",
+    ":codec_runner_sw_sbc_comp",
   ]
 }
 
-fuchsia_component("codec_runner_sw_sbc_v2") {
+fuchsia_component("codec_runner_sw_sbc_comp") {
   manifest = "codecs/meta/codec_runner_sw_sbc.cml"
   deps = [ "//src/media/codec/codecs/sw/sbc:codec_runner_sw_sbc" ]
   component_name = "codec_runner_sw_sbc"
 }
 
-fuchsia_component("codec_runner_sw_aac_v2") {
+fuchsia_component("codec_runner_sw_aac_comp") {
   manifest = "codecs/meta/codec_runner_sw_aac.cml"
   deps = [ "//src/media/codec/codecs/sw/aac:codec_runner_sw_aac" ]
   component_name = "codec_runner_sw_aac"
 }
 
-fuchsia_component("codec_runner_sw_ffmpeg_v2") {
+fuchsia_component("codec_runner_sw_ffmpeg_comp") {
   manifest = "codecs/meta/codec_runner_sw_ffmpeg.cml"
   deps = [ "//src/media/codec/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg" ]
   component_name = "codec_runner_sw_ffmpeg"

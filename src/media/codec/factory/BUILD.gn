@@ -43,8 +43,8 @@ source_set("factory_source") {
   ]
 }
 
-fuchsia_component("component_v2") {
-  manifest = "meta/codec_factory_v2.cml"
+fuchsia_component("component") {
+  manifest = "meta/codec_factory.cml"
   deps = [ ":factory" ]
   component_name = "codec_factory"
 }
@@ -115,15 +115,6 @@ fuchsia_test_package("codec_detect_hw_encode_test") {
   }
 }
 
-# TODO(fxbug.dev/103877): Remove workaround
-fuchsia_test_package("codec_detect_hw_encode_test_v2") {
-  test_components = [ ":codec_detect_hw_encode" ]
-  test_specs = {
-    # test depends on hw encoder device being present
-    environments = [ sherlock_env ]
-  }
-}
-
 executable("codec_factory_integration_test_exe") {
   output_name = "codec_factory_integration_test"
   testonly = true
@@ -171,7 +162,7 @@ fuchsia_component("fake_codec_factory") {
 fuchsia_unittest_package("codec_factory_integration_test") {
   deps = [
     ":codec_factory_integration_test_exe",
-    ":component_v2",
+    ":component",
     ":fake_codec_factory",
   ]
   manifest = "meta/codec_factory_integration_test.cml"
