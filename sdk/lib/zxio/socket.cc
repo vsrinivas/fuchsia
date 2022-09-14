@@ -481,7 +481,7 @@ template <typename Client,
               std::is_same_v<Client, fidl::WireSyncClient<fsocket::StreamSocket>> ||
               std::is_same_v<Client, fidl::WireSyncClient<frawsocket::Socket>> ||
               std::is_same_v<Client, fidl::WireSyncClient<fpacketsocket::Socket>>>>
-class BaseSocket {
+class base_socket {
   static_assert(std::is_same_v<Client, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
                 std::is_same_v<Client, fidl::WireSyncClient<fsocket::DatagramSocket>> ||
                 std::is_same_v<Client, fidl::WireSyncClient<fsocket::StreamSocket>> ||
@@ -489,7 +489,7 @@ class BaseSocket {
                 std::is_same_v<Client, fidl::WireSyncClient<fpacketsocket::Socket>>);
 
  public:
-  explicit BaseSocket(Client& client) : client_(client) {}
+  explicit base_socket(Client& client) : client_(client) {}
 
   Client& client() { return client_; }
 
@@ -737,17 +737,17 @@ template <typename T,
               std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
               std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
               std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>>>
-struct BaseNetworkSocket : public BaseSocket<T> {
+struct network_socket : public base_socket<T> {
   static_assert(std::is_same_v<T, fidl::WireSyncClient<fsocket::SynchronousDatagramSocket>> ||
                 std::is_same_v<T, fidl::WireSyncClient<fsocket::StreamSocket>> ||
                 std::is_same_v<T, fidl::WireSyncClient<frawsocket::Socket>> ||
                 std::is_same_v<T, fidl::WireSyncClient<fsocket::DatagramSocket>>);
 
  public:
-  using BaseSocket = BaseSocket<T>;
-  using BaseSocket::client;
+  using base_socket = base_socket<T>;
+  using base_socket::client;
 
-  explicit BaseNetworkSocket(T& client) : BaseSocket(client) {}
+  explicit network_socket(T& client) : base_socket(client) {}
 
   zx_status_t bind(const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     SocketAddress fidl_addr;
@@ -846,7 +846,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     GetSockOptProcessor proc(optval, optlen);
     switch (level) {
       case SOL_SOCKET:
-        return BaseSocket::get_solsocket_sockopt_fidl(optname, optval, optlen);
+        return base_socket::get_solsocket_sockopt_fidl(optname, optval, optlen);
       case SOL_IP:
         switch (optname) {
           case IP_TTL:
@@ -1032,7 +1032,7 @@ struct BaseNetworkSocket : public BaseSocket<T> {
     SetSockOptProcessor proc(optval, optlen);
     switch (level) {
       case SOL_SOCKET:
-        return BaseSocket::set_solsocket_sockopt_fidl(optname, optval, optlen);
+        return base_socket::set_solsocket_sockopt_fidl(optname, optval, optlen);
       case SOL_IP:
         switch (optname) {
           case IP_MULTICAST_TTL:
@@ -1272,7 +1272,7 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
     zxio_synchronous_datagram_socket_t& zs = zxio_synchronous_datagram_socket(io);
     zx_status_t status = ZX_OK;
     if (zs.client.is_valid()) {
-      status = BaseSocket(zs.client).CloseSocket();
+      status = base_socket(zs.client).CloseSocket();
     }
     zs.~zxio_synchronous_datagram_socket_t();
     return status;
@@ -1292,42 +1292,41 @@ static constexpr zxio_ops_t zxio_synchronous_datagram_socket_ops = []() {
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     zxio_synchronous_datagram_socket_t& zs = zxio_synchronous_datagram_socket(io);
-    zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
+    zx_status_t status = base_socket(zs.client).CloneSocket(out_handle);
     return status;
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+    return network_socket(zxio_synchronous_datagram_socket(io).client)
         .bind(addr, addrlen, out_code);
   };
   ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+    return network_socket(zxio_synchronous_datagram_socket(io).client)
         .connect(addr, addrlen, out_code);
   };
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+    return network_socket(zxio_synchronous_datagram_socket(io).client)
         .getsockname(addr, addrlen, out_code);
   };
   ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+    return network_socket(zxio_synchronous_datagram_socket(io).client)
         .getpeername(addr, addrlen, out_code);
   };
   ops.getsockopt = [](zxio_t* io, int level, int optname, void* optval, socklen_t* optlen,
                       int16_t* out_code) {
-    SockOptResult result = BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+    SockOptResult result = network_socket(zxio_synchronous_datagram_socket(io).client)
                                .getsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
   };
   ops.setsockopt = [](zxio_t* io, int level, int optname, const void* optval, socklen_t optlen,
                       int16_t* out_code) {
-    SockOptResult result = BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
+    SockOptResult result = network_socket(zxio_synchronous_datagram_socket(io).client)
                                .setsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
   };
   ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_synchronous_datagram_socket(io).client)
-        .shutdown(options, out_code);
+    return network_socket(zxio_synchronous_datagram_socket(io).client).shutdown(options, out_code);
   };
   return ops;
 }();
@@ -1354,7 +1353,7 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
     zxio_datagram_socket_t& zs = zxio_datagram_socket(io);
     zx_status_t status = ZX_OK;
     if (zs.client.is_valid()) {
-      status = BaseSocket(zs.client).CloseSocket();
+      status = base_socket(zs.client).CloseSocket();
     }
     zs.~zxio_datagram_socket();
     return status;
@@ -1371,7 +1370,7 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
-    return BaseSocket(zxio_datagram_socket(io).client).CloneSocket(out_handle);
+    return base_socket(zxio_datagram_socket(io).client).CloneSocket(out_handle);
   };
   ops.wait_begin = [](zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                       zx_signals_t* out_zx_signals) {
@@ -1389,30 +1388,30 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
     return zxio_writev(&zxio_datagram_socket(io).pipe.io, vector, vector_count, flags, out_actual);
   };
   ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_datagram_socket(io).client).shutdown(options, out_code);
+    return network_socket(zxio_datagram_socket(io).client).shutdown(options, out_code);
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_datagram_socket(io).client).bind(addr, addrlen, out_code);
+    return network_socket(zxio_datagram_socket(io).client).bind(addr, addrlen, out_code);
   };
   ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_datagram_socket(io).client).connect(addr, addrlen, out_code);
+    return network_socket(zxio_datagram_socket(io).client).connect(addr, addrlen, out_code);
   };
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_datagram_socket(io).client).getsockname(addr, addrlen, out_code);
+    return network_socket(zxio_datagram_socket(io).client).getsockname(addr, addrlen, out_code);
   };
   ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_datagram_socket(io).client).getpeername(addr, addrlen, out_code);
+    return network_socket(zxio_datagram_socket(io).client).getpeername(addr, addrlen, out_code);
   };
   ops.getsockopt = [](zxio_t* io, int level, int optname, void* optval, socklen_t* optlen,
                       int16_t* out_code) {
-    SockOptResult result = BaseNetworkSocket(zxio_datagram_socket(io).client)
+    SockOptResult result = network_socket(zxio_datagram_socket(io).client)
                                .getsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
   };
   ops.setsockopt = [](zxio_t* io, int level, int optname, const void* optval, socklen_t optlen,
                       int16_t* out_code) {
-    SockOptResult result = BaseNetworkSocket(zxio_datagram_socket(io).client)
+    SockOptResult result = network_socket(zxio_datagram_socket(io).client)
                                .setsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
@@ -1444,7 +1443,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     zxio_stream_socket_t& zs = zxio_stream_socket(io);
     zx_status_t status = ZX_OK;
     if (zs.client.is_valid()) {
-      status = BaseSocket(zs.client).CloseSocket();
+      status = base_socket(zs.client).CloseSocket();
     }
     zs.~zxio_stream_socket_t();
     return status;
@@ -1461,7 +1460,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     return ZX_OK;
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
-    return BaseSocket(zxio_stream_socket(io).client).CloneSocket(out_handle);
+    return base_socket(zxio_stream_socket(io).client).CloneSocket(out_handle);
   };
   ops.wait_begin = [](zxio_t* io, zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                       zx_signals_t* out_zx_signals) {
@@ -1524,14 +1523,14 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     return zxio_get_read_buffer_available(&zxio_stream_socket(io).pipe.io, out_available);
   };
   ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_stream_socket(io).client).shutdown(options, out_code);
+    return network_socket(zxio_stream_socket(io).client).shutdown(options, out_code);
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_stream_socket(io).client).bind(addr, addrlen, out_code);
+    return network_socket(zxio_stream_socket(io).client).bind(addr, addrlen, out_code);
   };
   ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
     zx_status_t status =
-        BaseNetworkSocket(zxio_stream_socket(io).client).connect(addr, addrlen, out_code);
+        network_socket(zxio_stream_socket(io).client).connect(addr, addrlen, out_code);
     if (status == ZX_OK) {
       std::lock_guard lock(zxio_stream_socket(io).state_lock);
       switch (*out_code) {
@@ -1610,21 +1609,21 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     return ZX_OK;
   };
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_stream_socket(io).client).getsockname(addr, addrlen, out_code);
+    return network_socket(zxio_stream_socket(io).client).getsockname(addr, addrlen, out_code);
   };
   ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_stream_socket(io).client).getpeername(addr, addrlen, out_code);
+    return network_socket(zxio_stream_socket(io).client).getpeername(addr, addrlen, out_code);
   };
   ops.getsockopt = [](zxio_t* io, int level, int optname, void* optval, socklen_t* optlen,
                       int16_t* out_code) {
-    SockOptResult result = BaseNetworkSocket(zxio_stream_socket(io).client)
+    SockOptResult result = network_socket(zxio_stream_socket(io).client)
                                .getsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
   };
   ops.setsockopt = [](zxio_t* io, int level, int optname, const void* optval, socklen_t optlen,
                       int16_t* out_code) {
-    SockOptResult result = BaseNetworkSocket(zxio_stream_socket(io).client)
+    SockOptResult result = network_socket(zxio_stream_socket(io).client)
                                .setsockopt_fidl(level, optname, optval, optlen);
     *out_code = result.err;
     return result.status;
@@ -1658,7 +1657,7 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
     zxio_raw_socket_t& zs = zxio_raw_socket(io);
     zx_status_t status = ZX_OK;
     if (zs.client.is_valid()) {
-      status = BaseSocket(zs.client).CloseSocket();
+      status = base_socket(zs.client).CloseSocket();
     }
     zs.~zxio_raw_socket_t();
     return status;
@@ -1676,20 +1675,20 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     zxio_raw_socket_t& zs = zxio_raw_socket(io);
-    zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
+    zx_status_t status = base_socket(zs.client).CloneSocket(out_handle);
     return status;
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_raw_socket(io).client).bind(addr, addrlen, out_code);
+    return network_socket(zxio_raw_socket(io).client).bind(addr, addrlen, out_code);
   };
   ops.connect = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_raw_socket(io).client).connect(addr, addrlen, out_code);
+    return network_socket(zxio_raw_socket(io).client).connect(addr, addrlen, out_code);
   };
   ops.getsockname = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_raw_socket(io).client).getsockname(addr, addrlen, out_code);
+    return network_socket(zxio_raw_socket(io).client).getsockname(addr, addrlen, out_code);
   };
   ops.getpeername = [](zxio_t* io, struct sockaddr* addr, socklen_t* addrlen, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_raw_socket(io).client).getpeername(addr, addrlen, out_code);
+    return network_socket(zxio_raw_socket(io).client).getpeername(addr, addrlen, out_code);
   };
   ops.getsockopt = [](zxio_t* io, int level, int optname, void* optval, socklen_t* optlen,
                       int16_t* out_code) {
@@ -1725,7 +1724,7 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
           }
           break;
       }
-      return BaseNetworkSocket(zxio_raw_socket(io).client)
+      return network_socket(zxio_raw_socket(io).client)
           .getsockopt_fidl(level, optname, optval, optlen);
     }();
     *out_code = result.err;
@@ -1765,7 +1764,7 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
           }
           break;
       }
-      return BaseNetworkSocket(zxio_raw_socket(io).client)
+      return network_socket(zxio_raw_socket(io).client)
           .getsockopt_fidl(level, optname, optval, optlen);
     }();
     *out_code = result.err;
@@ -1812,14 +1811,14 @@ static constexpr zxio_ops_t zxio_raw_socket_ops = []() {
           }
           break;
       }
-      return BaseNetworkSocket(zxio_raw_socket(io).client)
+      return network_socket(zxio_raw_socket(io).client)
           .setsockopt_fidl(level, optname, optval, optlen);
     }();
     *out_code = result.err;
     return result.status;
   };
   ops.shutdown = [](zxio_t* io, zxio_shutdown_options_t options, int16_t* out_code) {
-    return BaseNetworkSocket(zxio_raw_socket(io).client).shutdown((options), out_code);
+    return network_socket(zxio_raw_socket(io).client).shutdown((options), out_code);
   };
   return ops;
 }();
@@ -1845,7 +1844,7 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     zxio_packet_socket_t& zs = zxio_packet_socket(io);
     zx_status_t status = ZX_OK;
     if (zs.client.is_valid()) {
-      status = BaseSocket(zs.client).CloseSocket();
+      status = base_socket(zs.client).CloseSocket();
     }
     zs.~zxio_packet_socket_t();
     return status;
@@ -1863,7 +1862,7 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
   };
   ops.clone = [](zxio_t* io, zx_handle_t* out_handle) {
     zxio_packet_socket_t& zs = zxio_packet_socket(io);
-    zx_status_t status = BaseSocket(zs.client).CloneSocket(out_handle);
+    zx_status_t status = base_socket(zs.client).CloneSocket(out_handle);
     return status;
   };
   ops.bind = [](zxio_t* io, const struct sockaddr* addr, socklen_t addrlen, int16_t* out_code) {
@@ -1959,7 +1958,7 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     SockOptResult result = [&]() {
       switch (level) {
         case SOL_SOCKET:
-          return BaseSocket(zxio_packet_socket(io).client)
+          return base_socket(zxio_packet_socket(io).client)
               .get_solsocket_sockopt_fidl(optname, optval, optlen);
         default:
           return SockOptResult::Errno(EPROTONOSUPPORT);
@@ -1973,7 +1972,7 @@ static constexpr zxio_ops_t zxio_packet_socket_ops = []() {
     SockOptResult result = [&]() {
       switch (level) {
         case SOL_SOCKET:
-          return BaseSocket(zxio_packet_socket(io).client)
+          return base_socket(zxio_packet_socket(io).client)
               .set_solsocket_sockopt_fidl(optname, optval, optlen);
         default:
           return SockOptResult::Errno(EPROTONOSUPPORT);
