@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_VM_PAGE_LIST_H_
 
 #include <align.h>
+#include <bits.h>
 #include <lib/fit/function.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -31,63 +32,87 @@
 //             page" and "there's no page because our parent contains the content".
 class VmPageOrMarker {
  public:
-  VmPageOrMarker() : page_(nullptr) {}
+  // A PageType that otherwise holds a null pointer is considered to be Empty.
+  VmPageOrMarker() : raw_(kContentPageType) {}
   ~VmPageOrMarker() { DEBUG_ASSERT(!IsPage()); }
-  VmPageOrMarker(VmPageOrMarker&& other) : page_(other.Release()) {}
+  VmPageOrMarker(VmPageOrMarker&& other) noexcept : raw_(other.Release()) {}
   VmPageOrMarker(const VmPageOrMarker&) = delete;
   VmPageOrMarker& operator=(const VmPageOrMarker&) = delete;
 
   // Returns a reference to the underlying vm_page*. Is only valid to call if `IsPage` is true.
   vm_page* Page() const {
     DEBUG_ASSERT(IsPage());
-    return page_;
+    // Do not need to mask any bits out of raw_, since ContentPage has 0's for the type anyway.
+    static_assert(kContentPageType == 0);
+    return reinterpret_cast<vm_page*>(raw_);
   }
 
   // If this is a page, moves the underlying vm_page* out and returns it. After this IsPage will
   // be false and IsEmpty will be true.
-  vm_page* ReleasePage() {
+  [[nodiscard]] vm_page* ReleasePage() {
     DEBUG_ASSERT(IsPage());
-    return Release();
+    // Do not need to mask any bits out of the Release since ContentPage has 0's for the type
+    // anyway.
+    static_assert(kContentPageType == 0);
+    return reinterpret_cast<vm_page*>(Release());
   }
 
-  bool IsPage() const { return !IsMarker() && !IsEmpty(); }
+  bool IsPage() const { return !IsEmpty() && (GetType() == kContentPageType); }
 
-  bool IsMarker() const { return page_ == RawMarker(); }
+  bool IsMarker() const { return GetType() == kZeroMarkerType; }
 
-  bool IsEmpty() const { return page_ == nullptr; }
+  bool IsEmpty() const {
+    // A PageType that otherwise holds a null pointer is considered to be Empty.
+    return raw_ == kContentPageType;
+  }
 
-  VmPageOrMarker& operator=(VmPageOrMarker&& other) {
-    // Forbid overriding a page, as that would leak it.
+  VmPageOrMarker& operator=(VmPageOrMarker&& other) noexcept {
+    // Forbid overriding content, as that would leak it.
     DEBUG_ASSERT(!IsPage());
-    page_ = other.Release();
+    raw_ = other.Release();
     return *this;
   }
 
-  bool operator==(const VmPageOrMarker& other) const { return page_ == other.page_; }
+  bool operator==(const VmPageOrMarker& other) const { return raw_ == other.raw_; }
 
-  bool operator!=(const VmPageOrMarker& other) const { return page_ != other.page_; }
+  bool operator!=(const VmPageOrMarker& other) const { return raw_ != other.raw_; }
 
-  static VmPageOrMarker Empty() { return {nullptr}; }
+  // A PageType that otherwise holds a null pointer is considered to be Empty.
+  static VmPageOrMarker Empty() { return VmPageOrMarker{kContentPageType}; }
 
-  static VmPageOrMarker Marker() { return {RawMarker()}; }
+  static VmPageOrMarker Marker() { return VmPageOrMarker{kZeroMarkerType}; }
 
-  static VmPageOrMarker Page(vm_page* p) {
+  [[nodiscard]] static VmPageOrMarker Page(vm_page* p) {
+    // A null page is incorrect for two reasons
+    // 1. It's a violation of the API of this method
+    // 2. A null page cannot be represented internally as this is used to represent Empty
     DEBUG_ASSERT(p);
-    return {p};
+    const uint64_t raw = reinterpret_cast<uint64_t>(p);
+    // A pointer should be aligned by definition, and hence the low bits should always be zero, but
+    // assert this anyway just in case kTypeBits is increased or someone passed an invalid pointer.
+    DEBUG_ASSERT((raw & BIT_MASK(kTypeBits)) == 0);
+    return VmPageOrMarker{raw | kContentPageType};
   }
 
  private:
-  VmPageOrMarker(vm_page* p) : page_(p) {}
+  explicit VmPageOrMarker(uint64_t raw) : raw_(raw) {}
 
-  static vm_page* RawMarker() { return reinterpret_cast<vm_page*>(1); }
+  // The low 2 bits of raw_ are reserved to select the type, any other data has to fit into the
+  // remaining high bits. Note that there is no explicit Empty type, rather a PageType with a zero
+  // pointer is used to represent Empty.
+  static constexpr uint64_t kTypeBits = 2;
+  static constexpr uint64_t kContentPageType = 0b00;
+  static constexpr uint64_t kZeroMarkerType = 0b01;
 
-  vm_page* Release() {
-    vm_page* p = page_;
-    page_ = nullptr;
+  uint64_t GetType() const { return raw_ & BIT_MASK(kTypeBits); }
+
+  uint64_t Release() {
+    const uint64_t p = raw_;
+    raw_ = 0;
     return p;
   }
 
-  vm_page* page_;
+  uint64_t raw_;
 };
 
 class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmPageListNode>> {

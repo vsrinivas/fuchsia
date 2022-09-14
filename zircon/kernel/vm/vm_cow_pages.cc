@@ -1477,7 +1477,8 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page,
 
   if (status != ZX_OK) {
     // Release the page from 'p', as we are returning failure 'page' is still owned by the caller.
-    p.ReleasePage();
+    // Store the result in a temporary as we are required to use the result of ReleasePage.
+    [[maybe_unused]] vm_page_t* unused = p.ReleasePage();
   }
   VMO_VALIDATION_ASSERT(DebugValidatePageSplitsHierarchyLocked());
   VMO_FRUGAL_VALIDATION_ASSERT(DebugValidateVmoPageBorrowingLocked());
@@ -4324,7 +4325,10 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
       status = AddNewPageLocked(offset, src_page.Page(), CanOverwriteContent::None, nullptr,
                                 /*zero=*/false, /*do_range_update=*/false);
       if (status == ZX_OK) {
-        src_page.ReleasePage();
+        // The page was successfully added, but we still have a copy in the src_page, so we need to
+        // release it, however need to store the result in a temporary as we are required to use the
+        // result of ReleasePage.
+        [[maybe_unused]] vm_page_t* unused = src_page.ReleasePage();
       }
     } else {
       // When new_zeroed_pages is false, we don't need InitializeVmPage(), so we use
@@ -5334,9 +5338,10 @@ void VmCowPages::SwapPageLocked(uint64_t offset, vm_page_t* old_page, vm_page_t*
   DEBUG_ASSERT(status == ZX_OK);
   // The page released was the old page.
   DEBUG_ASSERT(released_page.IsPage() && released_page.Page() == old_page);
-  // Since we just checked that this matches the target page, which is now owned by the caller, this
-  // is not leaking.
-  released_page.ReleasePage();
+  // Need to take the page out of |released_page| to avoid a [[nodiscard]] error. Since we just
+  // checked that this matches the target page, which is now owned by the caller, this is not
+  // leaking.
+  [[maybe_unused]] vm_page_t* released = released_page.ReleasePage();
 }
 
 zx_status_t VmCowPages::ReplacePagesWithNonLoanedLocked(uint64_t offset, uint64_t len,
