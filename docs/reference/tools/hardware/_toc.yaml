@@ -4,3 +4,5 @@
 toc:
 - title: "gpioutil"
   path: /docs/reference/tools/hardware/gpioutil.md
+- title: "lights-cli"
+  path: /docs/reference/tools/hardware/lights-cli.md
