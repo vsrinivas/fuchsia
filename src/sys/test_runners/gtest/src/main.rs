@@ -33,7 +33,8 @@ async fn main_impl() -> Result<(), anyhow::Error> {
     // We will divide this directory up and pass to  tests as /test_result so that they can write
     // their json output
     let path = Path::new("/data/test_data");
-    fs::create_dir(&path).expect("cannot create directory to store test results.");
+    // the directory might already be present so use create_dir_all.
+    fs::create_dir_all(&path).expect("cannot create directory to store test results.");
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(move |stream| {
