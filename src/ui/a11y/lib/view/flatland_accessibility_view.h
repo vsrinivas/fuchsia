@@ -8,7 +8,6 @@
 #include <fuchsia/accessibility/scene/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/component_context.h>
 #include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/resources.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
@@ -28,7 +27,7 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
                                   public fuchsia::accessibility::scene::Provider,
                                   public Magnifier2::Delegate {
  public:
-  explicit FlatlandAccessibilityView(sys::ComponentContext* context);
+  explicit FlatlandAccessibilityView(fuchsia::ui::composition::FlatlandPtr flatland);
   ~FlatlandAccessibilityView() override = default;
 
   // |AccessibilityViewInterface|

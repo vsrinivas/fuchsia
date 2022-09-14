@@ -15,7 +15,8 @@ namespace a11y {
 
 class FlatlandConnection final {
  public:
-  explicit FlatlandConnection(sys::ComponentContext* context, const std::string& debug_name);
+  explicit FlatlandConnection(fuchsia::ui::composition::FlatlandPtr flatland,
+                              const std::string& debug_name);
   ~FlatlandConnection();
 
   FlatlandConnection(const FlatlandConnection&) = delete;
@@ -50,7 +51,6 @@ class FlatlandConnection final {
   std::queue<PendingPresent> pending_presents_;
   std::vector<zx::event> previous_present_release_fences_;
   std::queue<OnFramePresentedCallback> presented_callbacks_;
-  sys::ComponentContext* context_;
 };
 
 }  // namespace a11y

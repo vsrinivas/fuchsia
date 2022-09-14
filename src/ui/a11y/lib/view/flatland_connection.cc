@@ -8,10 +8,9 @@
 
 namespace a11y {
 
-FlatlandConnection::FlatlandConnection(sys::ComponentContext* context,
+FlatlandConnection::FlatlandConnection(fuchsia::ui::composition::FlatlandPtr flatland,
                                        const std::string& debug_name)
-    : context_(context) {
-  context_->svc()->Connect(flatland_.NewRequest());
+    : flatland_(std::move(flatland)) {
   flatland_->SetDebugName(debug_name);
   flatland_.events().OnError = fit::bind_member(this, &FlatlandConnection::OnError);
   flatland_.events().OnFramePresented =

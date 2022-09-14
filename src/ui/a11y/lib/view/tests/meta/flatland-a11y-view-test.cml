@@ -4,6 +4,7 @@
 {
     include: [
         "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "sys/testing/system-test.shard.cml",
     ],

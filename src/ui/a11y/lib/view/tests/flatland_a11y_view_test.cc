@@ -19,19 +19,11 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/ui/a11y/lib/view/flatland_accessibility_view.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 
 namespace accessibility_test {
 namespace {
-
-using component_testing::ChildRef;
-using component_testing::ParentRef;
-using component_testing::Protocol;
-using component_testing::Realm;
-using component_testing::Route;
-
-constexpr auto kA11yManager = "a11y-manager";
-constexpr auto kA11yManagerUrl = "#meta/a11y-manager.cm";
 
 // This test fixture sets up a test realm with scenic and a11y manager.
 // The test fixture mocks the "scene owner" portion of the handshake by creating
@@ -63,26 +55,6 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
     config.exposed_client_services = {fuchsia::accessibility::scene::Provider::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
-    FX_LOGS(INFO) << "Building realm";
-    realm_ = std::make_unique<Realm>(ui_test_manager_->AddSubrealm());
-
-    // Add real a11y manager.
-    realm_->AddChild(kA11yManager, kA11yManagerUrl);
-
-    // Route tracing provider to a11y manager.
-    realm_->AddRoute(Route{.capabilities = {Protocol{fuchsia::tracing::provider::Registry::Name_},
-                                            Protocol{fuchsia::logger::LogSink::Name_},
-                                            Protocol{fuchsia::ui::scenic::Scenic::Name_},
-                                            Protocol{fuchsia::ui::composition::Flatland::Name_}},
-                           .source = ParentRef(),
-                           .targets = {ChildRef{kA11yManager}}});
-
-    // Route accessibility view registry from scene owner to a11y manager.
-    realm_->AddRoute(
-        Route{.capabilities = {Protocol{fuchsia::accessibility::scene::Provider::Name_}},
-              .source = ChildRef{kA11yManager},
-              .targets = {ParentRef()}});
-
     ui_test_manager_->BuildRealm();
     realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   }
@@ -108,7 +80,6 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
  protected:
   std::unique_ptr<ui_testing::UITestManager> ui_test_manager_;
   std::unique_ptr<sys::ServiceDirectory> realm_exposed_services_;
-  std::unique_ptr<Realm> realm_;
   bool proxy_view_attached_ = false;
   fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> proxy_viewport_watcher_;
 };
@@ -116,7 +87,10 @@ class FlatlandAccessibilityViewTest : public gtest::RealLoopFixture {
 TEST_F(FlatlandAccessibilityViewTest, TestSceneConnected) {
   auto flatland_display =
       realm_exposed_services()->Connect<fuchsia::ui::composition::FlatlandDisplay>();
-  auto proxy_session = realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>();
+  auto a11y_flatland = realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>();
+  auto proxy_flatland = realm_exposed_services()->Connect<fuchsia::ui::composition::Flatland>();
+
+  a11y::FlatlandAccessibilityView a11y_view(std::move(a11y_flatland));
 
   // Set up the display, and add the a11y viewport as the display content.
   // Note that we don't need an extra view between the display and the a11y
@@ -130,24 +104,32 @@ TEST_F(FlatlandAccessibilityViewTest, TestSceneConnected) {
   auto [proxy_view_token, proxy_viewport_token] = scenic::ViewCreationTokenPair::New();
 
   // Request for the a11y manager to insert its view.
-  auto a11y_view_provider =
-      realm_exposed_services()->Connect<fuchsia::accessibility::scene::Provider>();
-  a11y_view_provider->CreateView(std::move(a11y_view_token), std::move(proxy_viewport_token));
+  a11y_view.CreateView(std::move(a11y_view_token), std::move(proxy_viewport_token));
 
   // Create the proxy view.
   fidl::InterfacePtr<fuchsia::ui::composition::ParentViewportWatcher> parent_viewport_watcher;
   auto identity = scenic::NewViewIdentityOnCreation();
-  proxy_session->CreateView2(std::move(proxy_view_token), std::move(identity), {},
-                             proxy_viewport_watcher_.NewRequest());
+  proxy_flatland->CreateView2(std::move(proxy_view_token), std::move(identity), {},
+                              proxy_viewport_watcher_.NewRequest());
 
   // Watch for connected/disconnected to display events for the proxy view.
   WatchProxyViewStatus();
 
-  proxy_session->Present({});
+  proxy_flatland->Present({});
 
   // Run until the proxy view has been attached to the scene, which can only
   // happen if the a11y manager has correctly inserted its view.
   RunLoopUntil([this]() { return proxy_view_attached_; });
+
+  // Verify that the a11y view is ready.
+  bool a11y_view_ready = false;
+  a11y_view.add_scene_ready_callback([&a11y_view_ready]() { return a11y_view_ready = true; });
+  RunLoopUntil([&a11y_view_ready] { return a11y_view_ready; });
+
+  EXPECT_TRUE(a11y_view_ready);
+
+  // Verify that the a11y view has its ViewRef.
+  EXPECT_TRUE(a11y_view.view_ref().has_value());
 }
 
 }  // namespace

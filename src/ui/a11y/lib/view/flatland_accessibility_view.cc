@@ -63,8 +63,8 @@ void InvokeSceneReadyCallbacks(
 
 }  // namespace
 
-FlatlandAccessibilityView::FlatlandAccessibilityView(sys::ComponentContext* context)
-    : flatland_(context, /* debug name = */ "a11y") {}
+FlatlandAccessibilityView::FlatlandAccessibilityView(fuchsia::ui::composition::FlatlandPtr flatland)
+    : flatland_(std::move(flatland), /* debug name = */ "a11y") {}
 
 void FlatlandAccessibilityView::CreateView(
     fuchsia::ui::views::ViewCreationToken a11y_view_token,
@@ -83,6 +83,9 @@ void FlatlandAccessibilityView::CreateView(
 
   // Create a11y view's ViewRef.
   auto view_identity = scenic::NewViewIdentityOnCreation();
+
+  // Save a11y view's ViewRef.
+  view_ref_ = fidl::Clone(view_identity.view_ref);
 
   // Create a11y view, and set it as the content for the root transform.
   flatland_.flatland()->CreateView2(std::move(a11y_view_token), std::move(view_identity),
