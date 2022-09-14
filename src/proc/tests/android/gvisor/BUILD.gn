@@ -177,8 +177,7 @@ gvisor_tests = [
   # "setgid_test",
   "sigaction_test",
   "sigaltstack_test",
-
-  # "signalfd_test",
+  "signalfd_test",
   "sigprocmask_test",
   "sigstop_test",
   "sigtimedwait_test",
