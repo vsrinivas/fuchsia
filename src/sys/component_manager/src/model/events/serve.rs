@@ -21,7 +21,9 @@ use {
     cm_util::io::clone_dir,
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon::{self as zx, sys::ZX_CHANNEL_MAX_MSG_BYTES, HandleBased},
+    fuchsia_zircon::{
+        self as zx, sys::ZX_CHANNEL_MAX_MSG_BYTES, sys::ZX_CHANNEL_MAX_MSG_HANDLES, HandleBased,
+    },
     futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt},
     measure_tape_for_events::Measurable,
     moniker::{
@@ -237,7 +239,10 @@ fn filter_event(moniker: &mut ExtendedMoniker, route: &[ComponentEventRoute]) ->
 
 /// Validates and filters an event, returning true if the route is allowed,
 /// false otherwise. The scope of the event is filtered to the allowed route.
-fn validate_and_filter_event(moniker: &mut ExtendedMoniker, route: &[ComponentEventRoute]) -> bool {
+pub fn validate_and_filter_event(
+    moniker: &mut ExtendedMoniker,
+    route: &[ComponentEventRoute],
+) -> bool {
     let needs_filter = route.iter().any(|component| component.scope.is_some());
     if needs_filter {
         filter_event(moniker, route)
@@ -254,6 +259,7 @@ async fn handle_get_next_request(
     // TODO(https://fxbug.dev/98653): Replace this
     // with a function to measure a Vec<fsys::Event>
     let mut bytes_used: usize = FIDL_HEADER_BYTES + FIDL_VECTOR_HEADER_BYTES;
+    let mut handles_used: usize = 0;
     let mut events = vec![];
 
     /// Creates a FIDL object from an event, logs
@@ -276,8 +282,11 @@ async fn handle_get_next_request(
     /// and returns an empty Vec.
     macro_rules! handle_event {
         ($e: expr, $event_type: expr) => {
-            bytes_used += $e.measure().num_bytes;
-            if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize {
+            let measure_tape = $e.measure();
+            bytes_used += measure_tape.num_bytes;
+            handles_used += measure_tape.num_handles;
+            if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize
+            || handles_used > ZX_CHANNEL_MAX_MSG_HANDLES as usize {
                 buffer.push_back($e);
                 if events.len() == 0 {
                     error!(
