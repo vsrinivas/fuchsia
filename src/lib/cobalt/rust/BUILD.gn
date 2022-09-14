@@ -34,7 +34,6 @@ rustc_library("fuchsia-cobalt") {
     "//src/connectivity/bluetooth/profiles/bt-a2dp/*",
     "//src/connectivity/location/emergency/*",
     "//src/lib/cobalt/*",
-    "//src/power/power-manager/*",
     "//src/sys/pkg/bin/system-updater/*",
     "//src/sys/time/httpsdate_time_source/*",
     "//src/sys/time/timekeeper/*",

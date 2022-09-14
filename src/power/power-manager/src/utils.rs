@@ -323,7 +323,7 @@ pub fn get_current_timestamp() -> crate::types::Nanoseconds {
     crate::types::Nanoseconds(fuchsia_async::Time::now().into_nanos())
 }
 
-use fidl_fuchsia_cobalt::HistogramBucket;
+use fidl_fuchsia_metrics::HistogramBucket;
 
 /// Convenient wrapper for creating and storing an integer histogram to use with Cobalt.
 pub struct CobaltIntHistogram {

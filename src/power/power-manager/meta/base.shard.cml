@@ -27,11 +27,11 @@
     use: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.device.manager.Administrator",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.kernel.CpuResource",
                 "fuchsia.kernel.Stats",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.sys2.SystemController",
                 "fuchsia.ui.activity.Provider",
             ],

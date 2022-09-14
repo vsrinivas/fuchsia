@@ -9,17 +9,19 @@ use crate::node::Node;
 use crate::ok_or_default_err;
 use crate::types::{Celsius, Seconds, ThermalLoad, Watts};
 use crate::utils::{get_current_timestamp, CobaltIntHistogram, CobaltIntHistogramConfig};
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Context, Error, Result};
 use async_trait::async_trait;
+use fidl_contrib::{protocol_connector::ProtocolSender, ProtocolConnector};
+use fidl_fuchsia_metrics::MetricEvent;
 use fuchsia_async as fasync;
-use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
+use fuchsia_cobalt_builders::MetricEventExt;
 use fuchsia_inspect::{self as inspect, HistogramProperty, LinearHistogramParams, Property};
-use futures::future::LocalBoxFuture;
+use futures::future::{self, LocalBoxFuture};
 use futures::stream::FuturesUnordered;
 use futures::{FutureExt, StreamExt};
 use log::*;
 use power_manager_metrics::power_manager_metrics as power_metrics_registry;
-use power_metrics_registry::ThermalLimitResultMetricDimensionResult as thermal_limit_result;
+use power_metrics_registry::ThermalLimitResultMigratedMetricDimensionResult as thermal_limit_result;
 use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::RefCell;
@@ -45,11 +47,59 @@ use std::rc::Rc;
 #[derive(Default)]
 pub struct PlatformMetricsBuilder<'a> {
     cpu_temperature_poll_interval: Seconds,
-    cobalt_sender: Option<CobaltSender>,
+    cobalt_sender: Option<ProtocolSender<MetricEvent>>,
     inspect_root: Option<&'a inspect::Node>,
     cpu_temperature_handler: Option<Rc<dyn Node>>,
     crash_report_handler: Option<Rc<dyn Node>>,
     throttle_debounce_timeout: Seconds,
+}
+
+pub struct CobaltConnectedService;
+impl fidl_contrib::protocol_connector::ConnectedProtocol for CobaltConnectedService {
+    type Protocol = fidl_fuchsia_metrics::MetricEventLoggerProxy;
+    type ConnectError = Error;
+    type Message = fidl_fuchsia_metrics::MetricEvent;
+    type SendError = Error;
+
+    fn get_protocol<'a>(
+        &'a mut self,
+    ) -> future::BoxFuture<'a, Result<fidl_fuchsia_metrics::MetricEventLoggerProxy, Error>> {
+        async {
+            let (logger_proxy, server_end) =
+                fidl::endpoints::create_proxy().context("failed to create proxy endpoints")?;
+            let metric_event_logger_factory = fuchsia_component::client::connect_to_protocol::<
+                fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker,
+            >()
+            .context("Failed to connect to fuchsia::metrics::MetricEventLoggerFactory")?;
+
+            metric_event_logger_factory
+                .create_metric_event_logger(
+                    fidl_fuchsia_metrics::ProjectSpec {
+                        project_id: Some(power_metrics_registry::PROJECT_ID),
+                        ..fidl_fuchsia_metrics::ProjectSpec::EMPTY
+                    },
+                    server_end,
+                )
+                .await?
+                .map_err(|e| format_err!("Connection to MetricEventLogger refused {e:?}"))?;
+
+            Ok(logger_proxy)
+        }
+        .boxed()
+    }
+
+    fn send_message<'a>(
+        &'a mut self,
+        protocol: &'a fidl_fuchsia_metrics::MetricEventLoggerProxy,
+        mut msg: fidl_fuchsia_metrics::MetricEvent,
+    ) -> future::BoxFuture<'a, Result<(), Error>> {
+        async move {
+            let fut = protocol.log_metric_events(&mut std::iter::once(&mut msg));
+            fut.await?.map_err(|e| format_err!("Failed to log metric {e:?}"))?;
+            Ok(())
+        }
+        .boxed()
+    }
 }
 
 impl<'a> PlatformMetricsBuilder<'a> {
@@ -93,8 +143,8 @@ impl<'a> PlatformMetricsBuilder<'a> {
         let crash_report_handler = ok_or_default_err!(self.crash_report_handler)?;
 
         let cobalt_sender = self.cobalt_sender.unwrap_or_else(|| {
-            let (cobalt_sender, sender_future) = CobaltConnector::default()
-                .serve(ConnectionType::project_id(power_metrics_registry::PROJECT_ID));
+            let (cobalt_sender, sender_future) =
+                ProtocolConnector::new(CobaltConnectedService).serve_and_log_errors();
 
             // Spawn a task to handle sending data to the Cobalt service
             fasync::Task::local(sender_future).detach();
@@ -123,10 +173,11 @@ impl<'a> PlatformMetricsBuilder<'a> {
                 cobalt: CobaltPlatformMetrics {
                     sender: cobalt_sender,
                     temperature_histogram: CobaltIntHistogram::new(CobaltIntHistogramConfig {
-                        floor: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_FLOOR,
+                        floor: power_metrics_registry::RAW_TEMPERATURE_MIGRATED_INT_BUCKETS_FLOOR,
                         num_buckets:
-                            power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_NUM_BUCKETS,
-                        step_size: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_STEP_SIZE,
+                            power_metrics_registry::RAW_TEMPERATURE_MIGRATED_INT_BUCKETS_NUM_BUCKETS,
+                        step_size:
+                            power_metrics_registry::RAW_TEMPERATURE_MIGRATED_INT_BUCKETS_STEP_SIZE,
                     }),
                 },
                 inspect: inspect_platform_metrics,
@@ -175,7 +226,7 @@ struct PlatformMetricsInner {
 
 struct CobaltPlatformMetrics {
     /// Sends Cobalt events to the Cobalt FIDL service.
-    sender: CobaltSender,
+    sender: ProtocolSender<MetricEvent>,
 
     /// Histogram of raw CPU temperature readings.
     temperature_histogram: CobaltIntHistogram,
@@ -227,10 +278,9 @@ impl PlatformMetrics {
         data.cobalt.temperature_histogram.add_data(temperature.0 as i64);
         if data.cobalt.temperature_histogram.count() == Self::NUM_TEMPERATURE_READINGS {
             let hist_data = data.cobalt.temperature_histogram.get_data();
-            data.cobalt.sender.log_int_histogram(
-                power_metrics_registry::RAW_TEMPERATURE_METRIC_ID,
-                (),
-                hist_data,
+            data.cobalt.sender.send(
+                MetricEvent::builder(power_metrics_registry::RAW_TEMPERATURE_MIGRATED_METRIC_ID)
+                    .as_integer_histogram(hist_data),
             );
             data.cobalt.temperature_histogram.clear();
         }
@@ -325,9 +375,11 @@ impl PlatformMetrics {
         let mut data = inner.borrow_mut();
         data.inspect.throttling_state.set_inactive();
         data.inspect.throttle_history.set_inactive();
-        data.cobalt
-            .sender
-            .log_event(power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID, vec![result as u32]);
+        data.cobalt.sender.send(
+            MetricEvent::builder(power_metrics_registry::THERMAL_LIMIT_RESULT_MIGRATED_METRIC_ID)
+                .with_event_codes(result)
+                .as_occurrence(1),
+        );
     }
 
     /// Log a thermal load value.
@@ -816,7 +868,8 @@ mod tests {
     use crate::{msg_eq, msg_ok_return};
     use assert_matches::assert_matches;
     use async_utils::PollExt as _;
-    use fidl_fuchsia_cobalt::{CobaltEvent, Event, EventPayload};
+    use fidl_contrib::protocol_connector::ProtocolSender;
+    use fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload};
     use fuchsia_inspect::{assert_data_tree, HistogramAssertion};
 
     /// Tests that well-formed configuration JSON does not panic the `new_from_json` function.
@@ -914,7 +967,7 @@ mod tests {
             cpu_temperature_handler: Some(create_dummy_node()),
             crash_report_handler: Some(crash_report_handler),
             throttle_debounce_timeout: Seconds(5.0),
-            cobalt_sender: Some(CobaltSender::new(cobalt_sender)),
+            cobalt_sender: Some(ProtocolSender::new(cobalt_sender)),
             inspect_root: Some(inspector.root()),
             ..Default::default()
         }
@@ -989,11 +1042,10 @@ mod tests {
         // Verify the expected Cobalt event for the `thermal_limit_result` metric
         assert_eq!(
             cobalt_receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID,
+            MetricEvent {
+                metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_MIGRATED_METRIC_ID,
                 event_codes: vec![thermal_limit_result::Mitigated as u32],
-                component: None,
-                payload: EventPayload::Event(Event),
+                payload: MetricEventPayload::Count(1)
             }
         );
 
@@ -1014,7 +1066,7 @@ mod tests {
         let platform_metrics = PlatformMetricsBuilder {
             cpu_temperature_handler: Some(create_dummy_node()),
             crash_report_handler: Some(create_dummy_node()),
-            cobalt_sender: Some(CobaltSender::new(cobalt_sender)),
+            cobalt_sender: Some(ProtocolSender::new(cobalt_sender)),
             inspect_root: Some(inspector.root()),
             ..Default::default()
         }
@@ -1048,11 +1100,10 @@ mod tests {
             // Verify the expected Cobalt event for the `thermal_limit_result` metric
             assert_eq!(
                 cobalt_receiver.try_next().unwrap().unwrap(),
-                CobaltEvent {
-                    metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_METRIC_ID,
+                MetricEvent {
+                    metric_id: power_metrics_registry::THERMAL_LIMIT_RESULT_MIGRATED_METRIC_ID,
                     event_codes: vec![thermal_limit_result::Shutdown as u32],
-                    component: None,
-                    payload: EventPayload::Event(Event),
+                    payload: MetricEventPayload::Count(1),
                 }
             );
 
@@ -1101,7 +1152,7 @@ mod tests {
             cpu_temperature_handler: Some(mock_cpu_temperature.clone()),
             crash_report_handler: Some(create_dummy_node()),
             cpu_temperature_poll_interval: Seconds(1.0),
-            cobalt_sender: Some(CobaltSender::new(cobalt_sender)),
+            cobalt_sender: Some(ProtocolSender::new(cobalt_sender)),
             inspect_root: Some(inspector.root()),
             ..Default::default()
         }
@@ -1167,9 +1218,9 @@ mod tests {
         // Build the expected raw temperature histogram. PlatformMetrics dispatches the Cobalt event
         // after 100 temperature readings, so only populate the histogram with that many readings
         let mut expected_histogram = CobaltIntHistogram::new(CobaltIntHistogramConfig {
-            floor: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_FLOOR,
-            num_buckets: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_NUM_BUCKETS,
-            step_size: power_metrics_registry::RAW_TEMPERATURE_INT_BUCKETS_STEP_SIZE,
+            floor: power_metrics_registry::RAW_TEMPERATURE_MIGRATED_INT_BUCKETS_FLOOR,
+            num_buckets: power_metrics_registry::RAW_TEMPERATURE_MIGRATED_INT_BUCKETS_NUM_BUCKETS,
+            step_size: power_metrics_registry::RAW_TEMPERATURE_MIGRATED_INT_BUCKETS_STEP_SIZE,
         });
         for _ in 0..60 {
             expected_histogram.add_data(Celsius(40.0).0 as i64);
@@ -1181,11 +1232,10 @@ mod tests {
         // Verify the expected Cobalt event for the `raw_temperature` metric
         assert_eq!(
             cobalt_receiver.try_next().unwrap().unwrap(),
-            CobaltEvent {
-                metric_id: power_metrics_registry::RAW_TEMPERATURE_METRIC_ID,
+            MetricEvent {
+                metric_id: power_metrics_registry::RAW_TEMPERATURE_MIGRATED_METRIC_ID,
                 event_codes: vec![],
-                component: None,
-                payload: EventPayload::IntHistogram(expected_histogram.get_data()),
+                payload: MetricEventPayload::Histogram(expected_histogram.get_data()),
             }
         );
 
