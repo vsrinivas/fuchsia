@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/golden_files.gni")
 import("//build/zircon/migrated_targets.gni")
 import("vdso.gni")
 
@@ -53,7 +54,7 @@ group("public") {
   public_deps = [ ":generate" ]
 }
 
-public_gen_dir = "$root_gen_dir/include/zircon/syscalls"
+syscall_public_gen_dir = "$root_gen_dir/include/zircon/syscalls"
 config("public.config") {
   visibility = [
     ":public",
@@ -76,7 +77,7 @@ group("private") {
   public_deps = [ ":generate" ]
 }
 
-private_gen_dir = "$target_gen_dir/include/lib/syscalls"
+syscall_private_gen_dir = "$target_gen_dir/include/lib/syscalls"
 config("private.config") {
   visibility = [
     ":private",
@@ -98,76 +99,230 @@ config("private.config") {
 
 public_generated = [
   {
-    args = [ "--json" ]
-    outputs = [ "$public_gen_dir/definitions.json" ]
+    arg = "--json"
+    output = "definitions.json"
   },
   {
-    args = [ "--public-header" ]
-    outputs = [ "$public_gen_dir/internal/cdecls.inc" ]
+    arg = "--public-header"
+    output = "internal/cdecls.inc"
   },
   {
-    args = [ "--next-public-header" ]
-    outputs = [ "$public_gen_dir/internal/cdecls-next.inc" ]
+    arg = "--next-public-header"
+    output = "internal/cdecls-next.inc"
   },
 ]
 
-if (!exclude_testonly_syscalls) {
-  public_generated += [
-    {
-      args = [ "--testonly-public-header" ]
-      outputs = [ "$public_gen_dir/internal/testonly-cdecls.inc" ]
-    },
-  ]
-}
+testonly_generated = [
+  {
+    arg = "--testonly-public-header"
+    output = "internal/testonly-cdecls.inc"
+  },
+]
 
 private_generated = [
   {
-    args = [ "--category" ]
-    outputs = [ "$private_gen_dir/category.inc" ]
+    arg = "--category"
+    output = "category.inc"
   },
   {
-    args = [ "--syscall-numbers" ]
-    outputs = [ "$private_gen_dir/zx-syscall-numbers.h" ]
+    arg = "--syscall-numbers"
+    output = "zx-syscall-numbers.h"
   },
   {
-    args = [ "--kernel-header" ]
-    outputs = [ "$private_gen_dir/kernel.inc" ]
+    arg = "--kernel-header"
+    output = "kernel.inc"
   },
   {
-    args = [ "--kernel-wrappers" ]
-    outputs = [ "$private_gen_dir/kernel-wrappers.inc" ]
+    arg = "--kernel-wrappers"
+    output = "kernel-wrappers.inc"
   },
   {
-    args = [ "--private-header" ]
-    outputs = [ "$private_gen_dir/syscalls.inc" ]
+    arg = "--private-header"
+    output = "syscalls.inc"
   },
 ]
 
-zx_host_tool_action("generate") {
-  visibility = [
-    ":private",
-    ":public",
+go_generated = [
+  {
+    arg = "--go-syscall-stubs"
+    output = "src/syscall/zx/syscalls_fuchsia.go"
+  },
+  {
+    arg = "--go-syscall-arm64-asm"
+    output = "src/syscall/zx/syscalls_fuchsia_arm64.s"
+  },
+  {
+    arg = "--go-syscall-x86-asm"
+    output = "src/syscall/zx/syscalls_fuchsia_amd64.s"
+  },
+  {
+    arg = "--go-vdso-keys"
+    output = "src/runtime/vdso_keys_fuchsia.go"
+  },
+  {
+    arg = "--go-vdso-arm64-calls"
+    output = "src/runtime/vdsocalls_fuchsia_arm64.s"
+  },
+  {
+    arg = "--go-vdso-x86-calls"
+    output = "src/runtime/vdsocalls_fuchsia_amd64.s"
+  },
+]
+
+# Helper template to invokes Kazoo.
+#
+# Parameters
+#
+#  * public_gen_dir
+#    - Required: The directory under which the public source will be
+#      generated.
+#    - Type: path
+#
+#  * private_gen_dir
+#    - Required: The directory under which the private source will be
+#      generated.
+#    - Type: path
+#
+#  * go_gen_dir
+#    - Optional: The directory under which the source specific to the go
+#      runtime will be generated.
+#    - Type: path
+#
+#  * exclude_testonly
+#    - Optional: Whether to exclude generating test-only syscalls.
+#    - Type: bool
+#    - Default: true
+#
+#  * testonly
+#    - Optional: Usual GN meaning.
+#
+template("kazoo") {
+  zx_host_tool_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "public_gen_dir",
+                             "private_gen_dir",
+                             "go_gen_dir",
+                             "exclude_testonly",
+                           ])
+
+    if (!defined(exclude_testonly)) {
+      exclude_testonly = true
+    }
+
+    visibility = [ ":*" ]
+
+    tool = "//zircon/tools/kazoo"
+
+    args = []
+    categories = [
+      {
+        gen_dir = public_gen_dir
+        generated = public_generated
+      },
+      {
+        gen_dir = private_gen_dir
+        generated = private_generated
+      },
+    ]
+    if (defined(go_gen_dir)) {
+      categories += [
+        {
+          gen_dir = go_gen_dir
+          generated = go_generated
+        },
+      ]
+    }
+    if (exclude_testonly) {
+      args += [ "--exclude=testonly" ]
+    } else {
+      categories += [
+        {
+          gen_dir = public_gen_dir
+          generated = testonly_generated
+        },
+      ]
+    }
+
+    outputs = []
+    foreach(category, categories) {
+      foreach(gen, category.generated) {
+        output = category.gen_dir + "/" + gen.output
+        args += [
+          gen.arg,
+          rebase_path(output, root_build_dir),
+        ]
+        outputs += [ output ]
+      }
+    }
+
+    deps = [ ":zx" ]
+    sources = get_target_outputs(deps[0])
+    assert(sources == [ sources[0] ])  # There can be only one.
+    args += [ rebase_path(sources[0], root_build_dir) ]
+
+    metadata = {
+      generated_sources = rebase_path(outputs, root_build_dir)
+    }
+  }
+}
+
+kazoo("generate") {
+  public_gen_dir = syscall_public_gen_dir
+  private_gen_dir = syscall_private_gen_dir
+  exclude_testonly = exclude_testonly_syscalls
+}
+
+#
+# Golden testing.
+#
+
+golden_candidate_dir = "$target_gen_dir/golden-candidates"
+public_golden_candidate_dir = "$golden_candidate_dir/public"
+private_golden_candidate_dir = "$golden_candidate_dir/private"
+go_golden_candidate_dir = "$golden_candidate_dir/go"
+
+kazoo("all_outputs") {
+  testonly = true
+  public_gen_dir = public_golden_candidate_dir
+  private_gen_dir = private_golden_candidate_dir
+  go_gen_dir = go_golden_candidate_dir
+  exclude_testonly = false
+}
+
+golden_files("tests") {
+  testonly = true
+
+  categories = [
+    {
+      gen_dir = public_golden_candidate_dir
+      generated = public_generated + testonly_generated
+      golden_subdir = "public"
+    },
+    {
+      gen_dir = private_golden_candidate_dir
+      generated = private_generated
+      golden_subdir = "private"
+    },
+    {
+      gen_dir = go_golden_candidate_dir
+      generated = go_generated
+      golden_subdir = "go"
+    },
   ]
 
-  tool = "//zircon/tools/kazoo"
-
-  args = []
-  if (exclude_testonly_syscalls) {
-    args += [ "--exclude=testonly" ]
+  comparisons = []
+  foreach(category, categories) {
+    foreach(gen, category.generated) {
+      comparisons += [
+        {
+          golden =
+              "//zircon/vdso/goldens/${category.golden_subdir}/" + gen.output
+          candidate = category.gen_dir + "/" + gen.output
+        },
+      ]
+    }
   }
-
-  outputs = []
-  foreach(gen, public_generated + private_generated) {
-    args += gen.args + rebase_path(gen.outputs, root_build_dir)
-    outputs += gen.outputs
-  }
-
-  deps = [ ":zx" ]
-  sources = get_target_outputs(deps[0])
-  assert(sources == [ sources[0] ])  # There can be only one.
-  args += [ rebase_path(sources[0], root_build_dir) ]
-
-  metadata = {
-    generated_sources = rebase_path(outputs, root_build_dir)
-  }
+  deps = [ ":all_outputs" ]
 }

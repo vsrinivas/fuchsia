@@ -59,8 +59,10 @@ zx_host_tool("kazoo") {
 group("tests") {
   testonly = true
   deps = [
-    ":kazoo-syscall-golden-test",
     ":kazoo-unittests",
+
+    # This target performs golden file diffing on kazoo's "zx" outputs.
+    "//zircon/vdso:tests($default_toolchain)",
   ]
 }
 
@@ -182,60 +184,4 @@ action_foreach("generate_test_files") {
 
   sources = get_target_outputs(":test_files_fidl_to_json") +
             get_target_outputs(":test_files_fidl_to_json_zxio")
-}
-
-fidlc_rspfile = "$target_gen_dir/fidlc.rspfile"
-link_output_rspfile("fidlc.rspfile") {
-  visibility = [ ":*" ]
-  outputs = [ fidlc_rspfile ]
-  deps = [ "//tools/fidl/fidlc:fidlc" ]
-}
-
-kazoo_rspfile = "$target_gen_dir/kazoo.rspfile"
-link_output_rspfile("kazoo.rspfile") {
-  visibility = [ ":*" ]
-  outputs = [ kazoo_rspfile ]
-  deps = [ ":kazoo" ]
-}
-
-action("kazoo-syscall-golden-test") {
-  deps = [
-    ":fidlc.rspfile",
-    ":kazoo.rspfile",
-  ]
-
-  script = "golden-test.py"
-  sources = [
-    "golden.txt",
-    fidlc_rspfile,
-    kazoo_rspfile,
-  ]
-  foreach(fidl, all_syscall_fidl_files) {
-    sources += [ "//zircon/vdso/" + fidl ]
-  }
-
-  _new_golden = "$target_out_dir/new-golden.txt"
-  outputs = [
-    "$target_gen_dir/kazoo-golden-test",
-    _new_golden,
-  ]
-  depfile = "$target_gen_dir/kazoo-golden-test.d"
-
-  args = [
-    "--fidlc",
-    rebase_path(fidlc_rspfile, root_build_dir),
-    "--kazoo",
-    rebase_path(kazoo_rspfile, root_build_dir),
-    "--syscalls",
-    rebase_path("//zircon/vdso", root_build_dir),
-    "--output-touch",
-    rebase_path(outputs[0], root_build_dir),
-    "--tmp-base",
-    rebase_path("${target_gen_dir}/__untraced_kazoo_test_dir__",
-                root_build_dir),
-    "--new-golden",
-    rebase_path(_new_golden, root_build_dir),
-    "--depfile",
-    rebase_path(depfile, root_build_dir),
-  ]
 }
