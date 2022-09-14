@@ -633,7 +633,7 @@ TEST(RawSocketICMPv6Test, NegativeIPv6ChecksumsFoldToNegativeOne) {
 
   ASSERT_NO_FATAL_FAILURE(check(-1));
   ASSERT_NO_FATAL_FAILURE(check(-2));
-  ASSERT_NO_FATAL_FAILURE(std::numeric_limits<int>::min());
+  ASSERT_NO_FATAL_FAILURE(check(std::numeric_limits<int>::min()));
 }
 
 TEST(RawSocketICMPv6Test, SetIPv6ChecksumErrorForOddValues) {
