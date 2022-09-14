@@ -73,6 +73,11 @@ pub enum Message {
 
     /// Gets the topological path of the driver associated with the target node
     GetDriverPath,
+
+    /// Send a debug command.
+    /// Arg0: node-specific command as a string
+    /// Arg1: args required to execute the command
+    Debug(String, Vec<String>),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -131,6 +136,9 @@ pub enum MessageReturn {
 
     /// Arg: the topological path of the driver associated with the target node
     GetDriverPath(String),
+
+    /// There is no arg in this MessageReturn type. It only serves as an ACK.
+    Debug,
 }
 
 pub type MessageResult = Result<MessageReturn, crate::error::PowerManagerError>;

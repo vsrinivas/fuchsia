@@ -19,10 +19,11 @@ use std::rc::Rc;
 // nodes
 use crate::{
     activity_handler, cpu_control_handler, cpu_device_handler, cpu_manager, cpu_stats_handler,
-    crash_report_handler, dev_control_handler, driver_manager_handler, input_settings_handler,
-    lid_shutdown, platform_metrics, shutdown_watcher, syscall_handler, system_power_mode_handler,
-    system_profile_handler, system_shutdown_handler, temperature_handler, thermal_load_driver,
-    thermal_policy, thermal_shutdown, thermal_state_handler,
+    crash_report_handler, debug_service, dev_control_handler, driver_manager_handler,
+    input_settings_handler, lid_shutdown, platform_metrics, shutdown_watcher, syscall_handler,
+    system_power_mode_handler, system_profile_handler, system_shutdown_handler,
+    temperature_handler, thermal_load_driver, thermal_policy, thermal_shutdown,
+    thermal_state_handler,
 };
 
 pub struct PowerManager {
@@ -53,6 +54,10 @@ impl PowerManager {
         self.create_nodes_from_config(&config.node_config_path, &mut fs, &node_futures)
             .await
             .context("Failed to create nodes from config")?;
+
+        if config.enable_debug_service {
+            debug_service::publish_debug_service(fs.dir("svc"), self.nodes.clone());
+        }
 
         // Begin serving FIDL requests. It's important to do this after creating nodes but before
         // initializing them, since some nodes depend on incoming FIDL requests for their `init()`
