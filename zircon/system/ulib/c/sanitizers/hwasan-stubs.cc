@@ -25,6 +25,12 @@
   extern "C" __EXPORT __WEAK __NO_SAFESTACK void __hwasan_##name(void) { \
     CRASH_WITH_UNIQUE_BACKTRACE();                                       \
   }
+
+// These can be called before the runtime is loaded, but they should effectively
+// do nothing until then.
+#define HWASAN_STUB(name) \
+  extern "C" __EXPORT __WEAK __NO_SAFESTACK void __hwasan_##name(void) {}
+
 HWASAN_TRAP_STUB(init)
 HWASAN_TRAP_STUB(storeN)
 HWASAN_TRAP_STUB(store1)
@@ -47,6 +53,6 @@ HWASAN_TRAP_STUB(tag_mismatch_v2)
 // This particular stub needs to be empty since it will be called many times
 // before the runtime has been loaded. Additionally, if hwasan were to find an
 // actual bug, we should end up crashing in one of the trap stubs above.
-extern "C" __EXPORT __WEAK __NO_SAFESTACK void __hwasan_add_frame_record(void) {}
+HWASAN_STUB(add_frame_record)
 
 #endif  // __has_feature(hwaddress_sanitizer)
