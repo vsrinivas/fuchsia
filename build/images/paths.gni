@@ -46,6 +46,7 @@ labels = {
 
     meta_packages = "${images}:fuchsia.meta_packages"
   }
+  zedboot_images = "//build/images/zedboot"
 
   qemu_kernel = _qemu_kernel_target
 }
@@ -54,10 +55,12 @@ supports_fastboot_fvm = fvm_partition != "" && !use_bringup_assembly
 
 # These are the common assembly-related files.
 files = {
-  if (!use_bringup_assembly) {
-    images_outdir = get_label_info(labels.images, "target_out_dir")
-    assembly_outdir = images_outdir + "/${labels.assembly_name}"
+  images_outdir = get_label_info(labels.images, "target_out_dir")
+  assembly_outdir = images_outdir + "/${labels.assembly_name}"
+  zedboot_assembly_outdir =
+      get_label_info(labels.zedboot_images, "target_out_dir") + "/zedboot"
 
+  if (!use_bringup_assembly) {
     minfs = "${assembly_outdir}/data.blk"
     blobfs = "${assembly_outdir}/blob.blk"
 
@@ -89,26 +92,37 @@ files = {
   }
 
   _image_suffix = "zbi"
-  if (custom_signing_script != "" || use_vboot) {
+  if (sign_zbi) {
     _image_suffix = "zbi.signed"
   }
 
-  # Final output image and vbmeta
-  final_zbi = "$root_out_dir/fuchsia.${_image_suffix}"
-  final_vbmeta = "$root_out_dir/fuchsia.vbmeta"
+  # The zbi and vbmeta created by assembly
+  zbi = "${assembly_outdir}/${labels.assembly_name}.${_image_suffix}"
+  vbmeta = "${assembly_outdir}/{labels.assembly_name}.vbmeta"
+
+  # Final output image and vbmeta (the files at the above paths are copied here)
+  final_zbi = "$root_out_dir/" + rebase_path(zbi, assembly_outdir)
+  final_vbmeta = "$root_out_dir/" + rebase_path(vbmeta, assembly_outdir)
 
   # Recovery output image and vbmeta
   if (recovery_is_zedboot) {
-    recovery_zbi = "$root_out_dir/zedboot.${_image_suffix}"
-    recovery_vbmeta = "$root_out_dir/zedboot.vbmeta"
+    _recovery_outdir = zedboot_assembly_outdir
+    recovery_zbi = "${zedboot_assembly_outdir}/zedboot.${_image_suffix}"
+    recovery_vbmeta = "${zedboot_assembly_outdir}/zedboot.vbmeta"
   } else if (recovery_is_recovery_eng) {
-    recovery_zbi = "$root_out_dir/obj/build/images/recovery/recovery-eng/recovery-eng.${_image_suffix}"
-    recovery_vbmeta = "$root_out_dir/obj/build/images/recovery/recovery-eng/recovery-eng.vbmeta"
+    _recovery_outdir = assembly_outdir
+    recovery_zbi = "${assembly_outdir}/obj/build/images/recovery/recovery-eng/recovery-eng.${_image_suffix}"
+    recovery_vbmeta = "${assembly_outdir}/obj/build/images/recovery/recovery-eng/recovery-eng.vbmeta"
   } else {
     # The standard recovery image and vbmeta locations.
-    recovery_zbi = "$root_out_dir/recovery.${_image_suffix}"
-    recovery_vbmeta = "$root_out_dir/recovery.vbmeta"
+    _recovery_outdir = root_out_dir
+    recovery_zbi = "${root_out_dir}/recovery.${_image_suffix}"
+    recovery_vbmeta = "${root_out_dir}/recovery.vbmeta"
   }
+  final_recovery_zbi =
+      "$root_out_dir/" + rebase_path(recovery_zbi, _recovery_outdir)
+  final_recovery_vbmeta =
+      "$root_out_dir/" + rebase_path(recovery_vbmeta, _recovery_outdir)
 
   installer_zbi = "$root_out_dir/obj/build/images/recovery/recovery-installer/recovery-installer.${_image_suffix}"
   installer_vbmeta = "$root_out_dir/obj/build/images/recovery/recovery-installer/recovery-installer.vbmeta"

@@ -29,8 +29,7 @@ func TestSerialLogsAvailable(t *testing.T) {
 	arch := distro.TargetCPU()
 	device := emulator.DefaultVirtualDevice(string(arch))
 	device.KernelArgs = append(device.KernelArgs, cmdline...)
-	// The bringup zbi. See //build/images/bringup/BUILD.gn
-	device.Initrd = "fuchsia"
+	device.Initrd = "zircon-a"
 	device.Drive = nil
 
 	ctx, cancel := context.WithCancel(context.Background())

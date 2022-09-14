@@ -93,19 +93,5 @@ template("assemble_network_conformance_system") {
       "//src/sys/component_manager:component_manager_bootfs_config",
       "//src/diagnostics/archivist:default-service-config",
     ]
-
-    # TODO(https://fxbug.dev/81569): Move this metadata to assembled_system.gni.
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = target_name
-          path =
-              rebase_path("$target_out_dir/${target_name}/${target_name}.zbi",
-                          root_build_dir)
-          type = "zbi"
-        },
-      ]
-    }
   }
 }

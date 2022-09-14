@@ -45,8 +45,6 @@ if (is_fuchsia) {
   # Shared parameters across assemblies in this file
   ##################################################
 
-  supports_fastboot_fvm = fvm_partition != ""
-
   files = {
     images_config = "$target_out_dir/fuchsia.images_config.json"
     partitions_config = "$target_out_dir/partitions_config.json"
@@ -229,47 +227,17 @@ if (is_fuchsia) {
     sources = [ "${target_out_dir}/fuchsia/blob.blk" ]
     outputs = [ old_blobfs_path ]
     deps = [ ":fuchsia_assembly" ]
-
-    metadata = {
-      # Declare all the generated images.
-      images = [
-        # BlobFS
-        {
-          label = get_label_info(":fuchsia", "label_with_toolchain")
-          name = "blob"
-          path = rebase_path(old_blobfs_path, root_build_dir)
-          type = "blk"
-        },
-      ]
-    }
   }
 
   # Copy the fvm.blob.sparse.blk to the old location for assembled images.
   # TODO(fxbug.dev/82077): Delete this once clients do not depend on the old path.
-  if (include_fvm_blob_sparse) {
-    old_fvm_blob_sparse_path =
-        "${root_out_dir}/obj/build/images/fvm.blob.sparse.blk"
-    copy("copy_fvm_blob_sparse") {
-      testonly = fuchsia_zbi_testonly
-      sources = [ "${target_out_dir}/fuchsia/fvm.blob.sparse.blk" ]
-      outputs = [ old_fvm_blob_sparse_path ]
-      deps = [ ":fuchsia_assembly" ]
-
-      metadata = {
-        images = [
-          {
-            label = get_label_info(":fuchsia", "label_with_toolchain")
-
-            # Hack: Infra expects bootserver_pave to be present
-            # in the GN graph for this image to be built.
-            bootserver_pave = []
-            name = "fvm.blob.sparse"
-            path = rebase_path(old_fvm_blob_sparse_path, root_build_dir)
-            type = "blk"
-          },
-        ]
-      }
-    }
+  old_fvm_blob_sparse_path =
+      "${root_out_dir}/obj/build/images/fvm.blob.sparse.blk"
+  copy("copy_fvm_blob_sparse") {
+    testonly = fuchsia_zbi_testonly
+    sources = [ "${target_out_dir}/fuchsia/fvm.blob.sparse.blk" ]
+    outputs = [ old_fvm_blob_sparse_path ]
+    deps = [ ":fuchsia_assembly" ]
   }
 
   group("fuchsia") {
@@ -304,163 +272,101 @@ if (is_fuchsia) {
     create_legacy_aib_package = !is_debug
     create_legacy_aib_archive = !is_debug
 
-    _rebased_files = {
-      zbi = rebase_path(files.zbi, root_build_dir)
-      zbi_signed = rebase_path(files.zbi_signed, root_build_dir)
-      vbmeta = rebase_path(files.vbmeta, root_build_dir)
-      minfs = rebase_path(files.minfs, root_build_dir)
-      blobfs = rebase_path(files.blobfs, root_build_dir)
-      fvm = rebase_path(files.fvm, root_build_dir)
-      fvm_sparse = rebase_path(files.fvm_sparse, root_build_dir)
-      fvm_blob_sparse = rebase_path(files.fvm_blob_sparse, root_build_dir)
-      fvm_fastboot = rebase_path(files.fvm_fastboot, root_build_dir)
-    }
+    image_metadata_overrides = {
+      zbi = {
+        name = "zircon-a"
+        archive = true
+        bootserver_pave = []
+        if (!sign_zbi) {
+          bootserver_pave += [
+            "--zircona",
+            # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
+            # zircon-r, so for now zedboot is being paved to this slot.
+            # "--zirconb",
+          ]
 
-    metadata = {
-      # Declare all the generated images.
-      images = [
-        # MinFS
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "data"
-          path = _rebased_files.minfs
-          type = "blk"
-        },
-
-        # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
-        # BlobFS
-        #{
-        #  label = get_label_info(":$target_name", "label_with_toolchain")
-        #  name = "blob"
-        #  path = rebased_files.blobfs
-        #  type = "blk"
-        #},
-
-        # ZBI
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "zircon-a"
-
-          # We are using the copied-to path, becuase some e2e tests depend on it
-          # for their host_test_data.
-          path = "fuchsia.zbi"
-          type = "zbi"
-
-          archive = true
-          bootserver_pave = []
-
-          if (custom_signing_script == "" && !use_vboot) {
-            bootserver_pave += [
-              "--zircona",
-              # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
-              # zircon-r, so for now zedboot is being paved to this slot.
-              # "--zirconb",
-            ]
-
-            fastboot_flash = []
-            if (zircon_a_partition != "") {
-              fastboot_flash += [ zircon_a_partition ]
-            }
-            if (zircon_b_partition != "") {
-              fastboot_flash += [ zircon_b_partition ]
-            }
+          fastboot_flash = []
+          if (zircon_a_partition != "") {
+            fastboot_flash += [ zircon_a_partition ]
           }
-        },
+          if (zircon_b_partition != "") {
+            fastboot_flash += [ zircon_b_partition ]
+          }
+        }
+      }
 
-        # FVM
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = add_qemu_to_build_archives
-          name = "storage-full"
-          path = _rebased_files.fvm
-          type = "blk"
-        },
-
-        # Sparse FVM
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
+      if (sign_zbi) {
+        zbi_signed = {
+          name = "zircon-a.signed"
           archive = true
-          bootserver_pave = [ "--fvm" ]
-          name = "storage-sparse"
-          path = _rebased_files.fvm_sparse
-          type = "blk"
-        },
-      ]
-
-      # Optionally add the signed images.
-      if (custom_signing_script != "" || use_vboot) {
-        images += [
-          {
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            archive = true
-            bootserver_pave = [ "--zircona" ]
-            name = "zircon-a.signed"
-            path = "fuchsia.zbi.signed"
-            type = "zbi.signed"
-
-            fastboot_flash = []
-            if (zircon_a_partition != "") {
-              fastboot_flash += [ zircon_a_partition ]
-            }
-            if (zircon_b_partition != "") {
-              fastboot_flash += [ zircon_b_partition ]
-            }
-          },
-        ]
+          bootserver_pave = [ "--zircona" ]
+          fastboot_flash = []
+          if (zircon_a_partition != "") {
+            fastboot_flash += [ zircon_a_partition ]
+          }
+          if (zircon_b_partition != "") {
+            fastboot_flash += [ zircon_b_partition ]
+          }
+        }
       }
 
-      # Optionally add the vbmeta image.
       if (use_vbmeta) {
-        images += [
-          {
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            archive = true
-            name = "zircon-a"
-            path = "fuchsia.vbmeta"
-            type = "vbmeta"
-
-            bootserver_pave = [ "--vbmetaa" ]
-
-            fastboot_flash = []
-            if (vbmeta_a_partition != "") {
-              fastboot_flash += [ vbmeta_a_partition ]
-            }
-            if (vbmeta_b_partition != "") {
-              fastboot_flash += [ vbmeta_b_partition ]
-            }
-          },
-        ]
+        vbmeta = {
+          name = "zircon-a"
+          archive = true
+          bootserver_pave = [ "--vbmetaa" ]
+          fastboot_flash = []
+          if (vbmeta_a_partition != "") {
+            fastboot_flash += [ vbmeta_a_partition ]
+          }
+          if (vbmeta_b_partition != "") {
+            fastboot_flash += [ vbmeta_b_partition ]
+          }
+        }
       }
 
-      # TODO(fxbug.dev/82077): Add this back once clients move to the new path.
-      # Optionally include the blob-only sparse FVM.
-      # if (include_fvm_blob_sparse) {
-      #   images += [
-      #     {
-      #       label = get_label_info(":$target_name", "label_with_toolchain")
+      minfs = {
+        name = "data"
+      }
 
-      #       # Hack: Infra expects bootserver_pave to be present
-      #       # in the GN graph for this image to be built.
-      #       bootserver_pave = []
-      #       name = "fvm.blob.sparse"
-      #       path = rebased_files.fvm_blob_sparse
-      #       type = "blk"
-      #     },
-      #   ]
-      # }
+      blobfs = {
+        name = "blob"
 
-      # Optionally include the fastboot FVM.
-      if (supports_fastboot_fvm) {
-        images += [
-          {
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            archive = true
-            name = "fvm.fastboot"
-            path = rebase_path(files.fvm_fastboot, root_build_dir)
-            type = "blk"
-            fastboot_flash = [ fvm_partition ]
-          },
-        ]
+        # TODO(fxbug.dev/82077): Remove these overrides once clients do not
+        # depend on the old path.
+        label = "//build/images/fuchsia:copy_blobfs($default_toolchain)"
+        path = rebase_path(old_blobfs_path, root_build_dir)
+      }
+
+      fvm = {
+        name = "storage-full"
+        archive = add_qemu_to_build_archives
+      }
+
+      fvm_sparse = {
+        name = "storage-sparse"
+        archive = true
+        bootserver_pave = [ "--fvm" ]
+      }
+
+      fvm_blob_sparse = {
+        name = "fvm.blob.sparse"
+
+        # Hack: Infra expects bootserver_pave to be present
+        # in the GN graph for this image to be built.
+        bootserver_pave = []
+
+        # TODO(fxbug.dev/82077): Remove these overrides once clients do not
+        # depend on the old path.
+        label =
+            "//build/images/fuchsia:copy_fvm_blobf_sparse($default_toolchain)"
+        path = rebase_path(old_fvm_blob_sparse_path, root_build_dir)
+      }
+
+      fvm_fastboot = {
+        name = "fvm.fastboot"
+        archive = true
+        fastboot_flash = [ fvm_partition ]
       }
     }
   }
@@ -585,17 +491,12 @@ if (is_fuchsia) {
     forward_variables_from(fuchsia_base, "*")
     ramdisk_fvm_in_zbi = true
 
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = enable_netboot
-          bootserver_netboot = [ "--boot" ]
-          name = "netboot"
-          path = "netboot.zbi"
-          type = "zbi"
-        },
-      ]
+    image_metadata_overrides = {
+      zbi = {
+        name = "netboot"
+        archive = enable_netboot
+        bootserver_netboot = [ "--boot" ]
+      }
     }
   }
 

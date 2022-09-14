@@ -159,3 +159,6 @@ declare_args() {
 
 assert(custom_signing_script == "" || !use_vboot,
        "custom_signing_script and use_vboot cannot be used together!")
+
+# Whether to sign the system ZBI.
+sign_zbi = custom_signing_script != "" || use_vboot

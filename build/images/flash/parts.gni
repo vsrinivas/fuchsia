@@ -109,7 +109,7 @@ if (vbmeta_r_partition != "") {
 }
 
 archive_image_suffix = "zbi"
-if (custom_signing_script != "" || use_vboot) {
+if (sign_zbi) {
   archive_image_suffix = "signed.zbi.signed"
 }
 

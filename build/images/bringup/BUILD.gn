@@ -66,54 +66,32 @@ assembled_system("bringup_non_fastboot") {
     inputs = vboot_action.inputs
   }
 
-  metadata = {
-    images = [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        name = "zircon-a"
-        path = "bringup.zbi"
-        type = "zbi"
+  image_metadata_overrides = {
+    zbi = {
+      name = "zircon-a"
+      archive = true
+      bootserver_netboot = [ "--boot" ]
 
-        archive = true
-        bootserver_pave = []
+      # Bringup builds always mexec from the paver
+      bootserver_pave = [ "--boot" ]
 
-        # Bringup builds always mexec from the paver
-        bootserver_pave += [ "--boot" ]
-
-        if (custom_signing_script == "" && !use_vboot) {
-          bootserver_pave += [
-            "--zircona",
-            # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
-            # zircon-r, so for now zedboot is being paved to this slot.
-            # "--zirconb",
-          ]
-        }
-      },
-    ]
-
-    if (use_vbmeta) {
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "zircon-a"
-          path = "bringup.vbmeta"
-          type = "vbmeta"
-
-          archive = true
-          bootserver_pave = [ "--vbmetaa" ]
-        },
-      ]
+      if (!sign_zbi) {
+        bootserver_pave += [
+          "--zircona",
+          # TODO(fxbug.dev/32475): `dm reboot-recovery` boots from zircon-b instead of
+          # zircon-r, so for now zedboot is being paved to this slot.
+          # "--zirconb",
+        ]
+      }
     }
 
-    images += [
-      {
+    if (use_vbmeta) {
+      vbmeta = {
+        name = "zircon-a"
         archive = true
-        bootserver_netboot = [ "--boot" ]
-        name = "fuchsia"
-        path = "bringup.zbi"
-        type = "zbi"
-      },
-    ]
+        bootserver_pave = [ "--vbmetaa" ]
+      }
+    }
   }
 }
 
@@ -140,15 +118,14 @@ assembled_system("bringup_fastboot") {
     inputs = vboot_action.inputs
   }
 
-  metadata = {
-    images = [
-      {
-        fastboot_boot = [ "boot" ]
+  if (sign_zbi) {
+    image_metadata_overrides = {
+      zbi_signed = {
         name = "fuchsia"
-        path = "bringup_fastboot.zbi.signed"
         type = "zbi_fastboot"
-      },
-    ]
+        fastboot_boot = [ "boot" ]
+      }
+    }
   }
 }
 

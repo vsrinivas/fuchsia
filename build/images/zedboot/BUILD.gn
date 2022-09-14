@@ -101,52 +101,59 @@ assembled_system("zedboot_assembly") {
     inputs = vboot_action.inputs
   }
 
-  metadata = {
-    images = []
-    update_target = []
-
-    images += [
-      {
-        label = get_label_info(":$target_name", "label_with_toolchain")
-        if (custom_signing_script == "" && !use_vboot) {
-          archive = true
-          if (use_zedboot_as_recovery) {
-            bootserver_pave = [ "--zirconr" ]
-            if (zircon_r_partition != "") {
-              fastboot_flash = [ zircon_r_partition ]
-            }
+  image_metadata_overrides = {
+    zbi = {
+      name = zedboot_metadata_slot
+      if (!sign_zbi) {
+        archive = true
+        if (use_zedboot_as_recovery) {
+          bootserver_pave = [ "--zirconr" ]
+          if (zircon_r_partition != "") {
+            fastboot_flash = [ zircon_r_partition ]
           }
-          bootserver_pave_zedboot = [ "--zircona" ]
         }
-        name = zedboot_metadata_slot
-        path = "zedboot.zbi"
-        type = "zbi"
-      },
-    ]
+        bootserver_pave_zedboot = [ "--zircona" ]
+      }
+    }
 
-    if (custom_signing_script == "" && !use_vboot) {
+    if (sign_zbi) {
+      zbi_signed = {
+        name = "${zedboot_metadata_slot}.signed"
+        archive = true
+        if (use_zedboot_as_recovery) {
+          mkzedboot_mode = [ "vboot" ]
+          bootserver_pave = [ "--zirconr" ]
+          if (zircon_r_partition != "") {
+            fastboot_flash = [ zircon_r_partition ]
+          }
+        }
+        bootserver_pave_zedboot = [ "--zircona" ]
+      }
+    }
+
+    if (use_vbmeta) {
+      vbmeta = {
+        name = zedboot_metadata_slot
+        archive = true
+        if (use_zedboot_as_recovery) {
+          bootserver_pave = [ "--vbmetar" ]
+          if (vbmeta_r_partition != "") {
+            fastboot_flash = [ vbmeta_r_partition ]
+          }
+        }
+        bootserver_pave_zedboot = [ "--vbmetaa" ]
+      }
+    }
+  }
+
+  metadata = {
+    update_target = []
+    if (!sign_zbi) {
       update_target += [ "zedboot=zedboot.zbi" ]
     }
 
     # Optionally include the signed images.
-    if (custom_signing_script != "" || use_vboot) {
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          if (use_zedboot_as_recovery) {
-            mkzedboot_mode = [ "vboot" ]
-            bootserver_pave = [ "--zirconr" ]
-            if (zircon_r_partition != "") {
-              fastboot_flash = [ zircon_r_partition ]
-            }
-          }
-          name = "${zedboot_metadata_slot}.signed"
-          bootserver_pave_zedboot = [ "--zircona" ]
-          path = "zedboot.zbi.signed"
-          type = "zbi.signed"
-        },
-      ]
+    if (sign_zbi) {
       update_target += [ "zedboot.signed=zedboot.zbi.signed" ]
       if (use_zedboot_as_recovery) {
         mkzedboot_mode = [ "vboot" ]
@@ -155,22 +162,6 @@ assembled_system("zedboot_assembly") {
 
     # Optionally include the vbmeta.
     if (use_vbmeta) {
-      images += [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          archive = true
-          if (use_zedboot_as_recovery) {
-            bootserver_pave = [ "--vbmetar" ]
-            if (vbmeta_r_partition != "") {
-              fastboot_flash = [ vbmeta_r_partition ]
-            }
-          }
-          name = zedboot_metadata_slot
-          bootserver_pave_zedboot = [ "--vbmetaa" ]
-          path = "zedboot.vbmeta"
-          type = "vbmeta"
-        },
-      ]
       if (use_zedboot_as_recovery) {
         # Only include zedboot as recovery.vbmeta if zedboot is used as recovery
         update_target += [ "recovery.vbmeta=zedboot.vbmeta" ]

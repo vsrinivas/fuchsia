@@ -185,7 +185,7 @@ flash_script_args = [
   "--pre-erase-flash=${pre_erase_flash}",
   "--fastboot-path=" + rebase_path("$host_out_dir/fastboot", root_build_dir),
 ]
-if (custom_signing_script != "" || use_vboot) {
+if (sign_zbi) {
   flash_script_args += [ "--signed=true" ]
 }
 

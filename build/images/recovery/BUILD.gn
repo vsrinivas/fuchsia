@@ -206,32 +206,6 @@ if (is_fuchsia) {
   assembled_system("recovery-eng") {
     forward_variables_from(recovery_base, "*")
     base_packages = recovery_eng_packages + [ ":core-eng" ]
-
-    # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "recovery-eng"
-          path = rebase_path("$target_out_dir/recovery-eng/recovery-eng.zbi",
-                             root_build_dir)
-          type = "zbi"
-        },
-      ]
-
-      if (custom_signing_script != "" || use_vboot) {
-        images += [
-          {
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            name = "recovery-eng.signed"
-            path = rebase_path(
-                    "$target_out_dir/recovery-eng/recovery-eng.zbi.signed",
-                    root_build_dir)
-            type = "zbi.signed"
-          },
-        ]
-      }
-    }
   }
 
   assembled_system("recovery-fdr") {
@@ -283,33 +257,6 @@ if (is_fuchsia) {
     #determine the installation source and destination
     fshost_config = {
       gpt_all = true
-    }
-
-    # TODO(fxbug.dev/81569): Move this metadata to assembled_system.gni.
-    metadata = {
-      images = [
-        {
-          label = get_label_info(":$target_name", "label_with_toolchain")
-          name = "recovery-installer"
-          path = rebase_path(
-                  "$target_out_dir/recovery-installer/recovery-installer.zbi",
-                  root_build_dir)
-          type = "zbi"
-        },
-      ]
-
-      if (custom_signing_script != "" || use_vboot) {
-        images += [
-          {
-            label = get_label_info(":$target_name", "label_with_toolchain")
-            name = "recovery-installer.signed"
-            path = rebase_path(
-                    "$target_out_dir/recovery-installer/recovery-installer.zbi.signed",
-                    root_build_dir)
-            type = "zbi.signed"
-          },
-        ]
-      }
     }
   }
 }

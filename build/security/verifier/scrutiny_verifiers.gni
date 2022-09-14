@@ -168,7 +168,7 @@ template("scrutiny_verifiers") {
           "${invoker.assembly_image_name}_verify_bootfs_filelist") {
         testonly = invoker.testonly
         assembly_image_name = invoker.assembly_image_name
-        zbi_is_signed = custom_signing_script != "" || use_vboot
+        zbi_is_signed = sign_zbi
         image_assembler_target =
             ":${invoker.assembly_image_name}.image_assembler"
         goldens = invoker.zbi_bootfs_filelist_goldens
@@ -182,7 +182,7 @@ template("scrutiny_verifiers") {
           "${invoker.assembly_image_name}_verify_kernel_cmdline") {
         testonly = invoker.testonly
         assembly_image_name = invoker.assembly_image_name
-        zbi_is_signed = custom_signing_script != "" || use_vboot
+        zbi_is_signed = sign_zbi
         image_assembler_target =
             ":${invoker.assembly_image_name}.image_assembler"
         goldens = invoker.zbi_kernel_cmdline_goldens

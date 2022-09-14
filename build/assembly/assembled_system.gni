@@ -35,6 +35,21 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #   output_name (optional; default: <target_name>.zbi)
 #     [string] The name of the final system ZBI file.
 #
+#   image_metadata_overrides (optional)
+#     [scope] Per-image overrides for the associated image metadata. Used for
+#     compliance among customers that depend on legacy fields as they were
+#     previously (quasi-)standardized. Any override that is supplied for an
+#     image not assembled is ignored. The scope contains the following:
+#
+#       [scope] zbi, zbi_signed, vbmeta, minfs, blobfs, fvm, fvm_sparse,
+#       fvm_blob_sparse, fvm_fastboot (optional)
+#         An arbitrary scope of additional metadata to record for the
+#         associated image.
+#
+#   metadata (optional)
+#     [scope] Usual GN meaning, passed to the image assembly target created by
+#     the template.
+#
 #   testonly (optional)
 #     [bool] Usual GN meanings.
 #
@@ -195,6 +210,33 @@ template("assembled_system") {
     assert(
         invoker.product_assembly_config_file != "",
         "'product_assembly_config_file' cannot be an empty string. Don't provide a value if it is not being used.")
+  }
+
+  generate_fvm = true
+  if (defined(invoker.generate_fvm)) {
+    generate_fvm = invoker.generate_fvm
+  }
+
+  forward_variables_from(invoker, [ "image_metadata_overrides" ])
+  if (defined(image_metadata_overrides)) {
+    if (!sign_zbi) {
+      assert(
+          !defined(image_metadata_overrides.zbi_signed),
+          "No signed ZBI will be built: no metadata override should be provided")
+    }
+    if (!use_vbmeta) {
+      assert(!defined(image_metadata_overrides.vbmeta),
+             "No VBMeta will be built: no metadata override should be provided")
+    }
+    if (!generate_fvm) {
+      error_msg =
+          "No FVMs will be built: no metadata override should be provided"
+      assert(!defined(image_metadata_overrides.fvm), error_msg)
+      assert(!defined(image_metadata_overrides.fvm_sparse), error_msg)
+      assert(!defined(image_metadata_overrides.fvm_blob_sparse), error_msg)
+      assert(!defined(image_metadata_overrides.fvm_fastboot), error_msg)
+      not_needed([ "error_msg" ])
+    }
   }
 
   kernel_zbi = "//zircon/kernel"
@@ -360,11 +402,6 @@ template("assembled_system") {
   }
   if (defined(invoker.meta_packages)) {
     _meta_packages = invoker.meta_packages
-  }
-
-  generate_fvm = true
-  if (defined(invoker.generate_fvm)) {
-    generate_fvm = invoker.generate_fvm
   }
 
   # Split out driver packages into a separate list so that we
@@ -684,21 +721,6 @@ template("assembled_system") {
                              "testonly",
                              "visibility",
                            ])
-    metadata = {
-      # We insert these barriers to prevent the dependencies of these images
-      # from leaking into images "higher up" in the dependency chain.
-      package_barrier = []
-      config_package_barrier = []
-      distribution_entries_barrier = []
-
-      if (defined(invoker.metadata)) {
-        forward_variables_from(invoker.metadata, "*")
-      }
-
-      if (generate_fvm) {
-        package_output_manifests = [ files.base_package_manifest ]
-      }
-    }
 
     hermetic_inputs_target = ":${labels.image_assembly_inputs}"
     hermetic_inputs_file = files.image_assembly_inputs
@@ -811,6 +833,173 @@ template("assembled_system") {
         if (fvm_ftl_nand_block_count != false) {
           outputs += [ files.fvm_fastboot_tmp ]
         }
+      }
+    }
+
+    metadata = {
+      # We insert these barriers to prevent the dependencies of these images
+      # from leaking into images "higher up" in the dependency chain.
+      package_barrier = []
+      config_package_barrier = []
+      distribution_entries_barrier = []
+
+      images = []
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      if (generate_fvm) {
+        package_output_manifests = [ files.base_package_manifest ]
+      }
+
+      _image_overrides = {
+        zbi = {
+        }
+        zbi_signed = {
+        }
+        vbmeta = {
+        }
+        minfs = {
+        }
+        blobfs = {
+        }
+        fvm = {
+        }
+        fvm_sparse = {
+        }
+        fvm_blob_sparse = {
+        }
+        fvm_fastboot = {
+        }
+
+        if (defined(image_metadata_overrides)) {
+          forward_variables_from(image_metadata_overrides, "*")
+        }
+      }
+
+      _label = get_label_info(":$target_name", "label_with_toolchain")
+      images += [
+        # ZBI
+        {
+          name = image_name
+          type = "zbi"
+          if (defined(invoker.output_dir)) {
+            label = get_label_info(labels.copy_zbi, "label_with_toolchain")
+            path = rebase_path(
+                    "${invoker.output_dir}/" + get_path_info(files.zbi, "file"),
+                    root_build_dir)
+          } else {
+            label = _label
+            path = rebase_path(files.zbi, root_build_dir)
+          }
+          forward_variables_from(_image_overrides["zbi"], "*")
+        },
+      ]
+      if (generate_fvm) {
+        images += [
+          # MinFS
+          {
+            label = _label
+            name = "${image_name}.data"
+            path = rebase_path(files.minfs, root_build_dir)
+            type = "blk"
+            forward_variables_from(_image_overrides["minfs"], "*")
+          },
+
+          # BlobFS
+          {
+            label = _label
+            name = "${image_name}.blob"
+            path = rebase_path(files.blobfs, root_build_dir)
+            type = "blk"
+            forward_variables_from(_image_overrides["blobfs"], "*")
+          },
+
+          # FVM
+          {
+            label = _label
+            name = "${image_name}.fvm"
+            path = rebase_path(files.fvm, root_build_dir)
+            type = "blk"
+            forward_variables_from(_image_overrides["fvm"], "*")
+          },
+
+          # Sparse FVM
+          {
+            label = _label
+            name = "${image_name}.fvm_sparse"
+            path = rebase_path(files.fvm_sparse, root_build_dir)
+            type = "blk"
+            forward_variables_from(_image_overrides["fvm_sparse"], "*")
+          },
+        ]
+      }
+
+      # Optionally add the signed images.
+      if (sign_zbi) {
+        images += [
+          {
+            name = image_name
+            type = "zbi.signed"
+            if (defined(invoker.output_dir)) {
+              label =
+                  get_label_info(labels.copy_zbi_signed, "label_with_toolchain")
+              path = rebase_path("${invoker.output_dir}/" +
+                                     get_path_info(files.zbi_signed, "file"),
+                                 root_build_dir)
+            } else {
+              label = _label
+              path = rebase_path(files.zbi_signed, root_build_dir)
+            }
+            forward_variables_from(_image_overrides["zbi_signed"], "*")
+          },
+        ]
+      }
+
+      # Optionally add the vbmeta image.
+      if (use_vbmeta) {
+        images += [
+          {
+            name = image_name
+            type = "vbmeta"
+            if (defined(invoker.output_dir)) {
+              label = get_label_info(labels.copy_vbmeta, "label_with_toolchain")
+              path = rebase_path("${invoker.output_dir}/" +
+                                     get_path_info(files.vbmeta, "file"),
+                                 root_build_dir)
+            } else {
+              label = _label
+              path = rebase_path(files.vbmeta, root_build_dir)
+            }
+            forward_variables_from(_image_overrides["vbmeta"], "*")
+          },
+        ]
+      }
+
+      # Optionally include the blob-only sparse FVM.
+      if (include_fvm_blob_sparse) {
+        images += [
+          {
+            label = _label
+            name = "${image_name}.fvm_blob_sparse"
+            path = rebase_path(files.fvm_blob_sparse, root_build_dir)
+            type = "blk"
+            forward_variables_from(_image_overrides["fvm_blob_sparse"], "*")
+          },
+        ]
+      }
+
+      # Optionally include the fastboot FVM.
+      if (fvm_partition != "") {
+        images += [
+          {
+            label = _label
+            name = "${image_name}.fvm_fastboot"
+            path = rebase_path(files.fvm_fastboot, root_build_dir)
+            type = "blk"
+            forward_variables_from(_image_overrides["fvm_fastboot"], "*")
+          },
+        ]
       }
     }
 

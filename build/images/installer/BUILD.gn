@@ -60,7 +60,7 @@ if (use_bringup_assembly) {
       "$root_build_dir/host-tools/cgpt",
       files.fvm_sparse,
       files.final_zbi,
-      files.recovery_zbi,
+      files.final_recovery_zbi,
       files.installer_zbi,
       input_images_json_file,
     ]
