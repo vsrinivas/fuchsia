@@ -13,6 +13,7 @@ import os
 import subprocess
 import sys
 import tempfile
+import uuid
 
 import pb_message_util
 from api.proxy import log_pb2
@@ -285,17 +286,20 @@ def main(argv: Sequence[str]) -> int:
     # "build_id" comes from build/rbe/fuchsia-reproxy-wrap.sh.
     build_id_file = os.path.join(args.reproxy_logdir, "build_id")
     if args.uuid:
-        uuid = args.uuid
+        build_id = args.uuid
     elif os.path.isfile(build_id_file):
         with open(build_id_file) as f:
-            uuid = f.read().strip(" \n")
+            build_id = f.read().strip(" \n")
     else:
-        msg(f"Need a build id from either --uuid or {build_id_file}")
-        return 1
+        # Some log dirs were created before we started adding build ids.
+        # If needed, create one, and write it to the same file.
+        build_id = str(uuid.uuid4())
+        with open(build_id_file, 'w') as f:
+            f.write(build_id + "\n")
 
     # Upload aggregate metrics.
     main_upload_metrics(
-        uuid=uuid,
+        uuid=build_id,
         reproxy_logdir=args.reproxy_logdir,
         bq_metrics_table=args.bq_metrics_table,
         dry_run=args.dry_run,
@@ -304,7 +308,7 @@ def main(argv: Sequence[str]) -> int:
 
     # Upload remote action logs.
     main_upload_logs(
-        uuid= uuid,
+        uuid=build_id,
         reproxy_logdir=args.reproxy_logdir,
         reclient_bindir=args.reclient_bindir,  # for logdump utility
         bq_logs_table=args.bq_logs_table,
