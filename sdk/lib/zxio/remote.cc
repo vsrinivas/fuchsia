@@ -530,11 +530,12 @@ zx_status_t zxio_common_advisory_lock(const zx::unowned_channel& control, adviso
       return ZX_ERR_INTERNAL;
   }
   fidl::Arena allocator;
-  fuchsia_io::wire::AdvisoryLockRequest lock_req(allocator);
-  lock_req.set_type(lock_type);
-  lock_req.set_wait(req->wait);
   const fidl::WireResult result =
-      fidl::WireCall(fidl::UnownedClientEnd<fio::AdvisoryLocking>(control))->AdvisoryLock(lock_req);
+      fidl::WireCall(fidl::UnownedClientEnd<fio::AdvisoryLocking>(control))
+          ->AdvisoryLock(fuchsia_io::wire::AdvisoryLockRequest::Builder(allocator)
+                             .type(lock_type)
+                             .wait(req->wait)
+                             .Build());
   if (!result.ok()) {
     return result.status();
   }
@@ -861,14 +862,14 @@ zx_status_t zxio_remote_add_inotify_filter(zxio_t* io, const char* path, size_t 
 zx_status_t zxio_remote_unlink(zxio_t* io, const char* name, size_t name_len, int flags) {
   Remote rio(io);
   fidl::Arena allocator;
-  fuchsia_io::wire::UnlinkOptions options(allocator);
+  auto options = fuchsia_io::wire::UnlinkOptions::Builder(allocator);
   auto io_flags = fuchsia_io::wire::UnlinkFlags::kMustBeDirectory;
   if (flags & AT_REMOVEDIR) {
-    options.set_flags(fidl::ObjectView<decltype(io_flags)>::FromExternal(&io_flags));
+    options.flags(fidl::ObjectView<decltype(io_flags)>::FromExternal(&io_flags));
   }
   const fidl::WireResult result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(rio.control()))
-          ->Unlink(fidl::StringView::FromExternal(name, name_len), options);
+          ->Unlink(fidl::StringView::FromExternal(name, name_len), options.Build());
   if (!result.ok()) {
     return result.status();
   }

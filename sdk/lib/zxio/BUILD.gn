@@ -106,10 +106,6 @@ source_set("zxio") {
     "//zircon/system/ulib/zx",
     "//zircon/third_party/ulib/safemath",
   ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 shared_library("zxio_standalone") {
