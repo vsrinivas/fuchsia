@@ -364,3 +364,72 @@ pub fn block_while_stopped(current_task: &CurrentTask) {
         let _: Result<(), Errno> = waiter.wait(current_task);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::signals::*;
+    use crate::testing::*;
+
+    #[::fuchsia::test]
+    fn test_block_while_stopped_stop_and_continue() {
+        let (_kernel, task) = create_kernel_and_task();
+
+        // block_while_stopped must immediately returned if the task is not stopped.
+        block_while_stopped(&task);
+
+        // Stop the task.
+        task.thread_group.set_stopped(true, SignalInfo::default(SIGSTOP));
+
+        let cloned_task = task.task_arc_clone();
+        let thread = std::thread::spawn(move || {
+            // Wait for the task to have a waiter.
+            while !cloned_task.read().signals.waiter.is_valid() {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+
+            // Continue the task.
+            cloned_task.thread_group.set_stopped(false, SignalInfo::default(SIGCONT));
+        });
+
+        // Block until continued.
+        block_while_stopped(&task);
+
+        // Join the thread, which will ensure set_stopped terminated.
+        thread.join().expect("joined");
+
+        // The task should not be blocked anymore.
+        block_while_stopped(&task);
+    }
+
+    #[::fuchsia::test]
+    fn test_block_while_stopped_stop_and_exit() {
+        let (_kernel, task) = create_kernel_and_task();
+
+        // block_while_stopped must immediately returned if the task is neither stopped nor exited.
+        block_while_stopped(&task);
+
+        // Stop the task.
+        task.thread_group.set_stopped(true, SignalInfo::default(SIGSTOP));
+
+        let cloned_task = task.task_arc_clone();
+        let thread = std::thread::spawn(move || {
+            // Wait for the task to have a waiter.
+            while !cloned_task.read().signals.waiter.is_valid() {
+                std::thread::sleep(std::time::Duration::from_millis(10));
+            }
+
+            // exit the task.
+            cloned_task.thread_group.exit(ExitStatus::Exit(1));
+        });
+
+        // Block until continued.
+        block_while_stopped(&task);
+
+        // Join the task, which will ensure thread_group.exit terminated.
+        thread.join().expect("joined");
+
+        // The task should not be blocked because it is stopped.
+        block_while_stopped(&task);
+    }
+}
