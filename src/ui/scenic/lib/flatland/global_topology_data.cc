@@ -292,12 +292,13 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 
         continue;
       }
+      const TransformHandle& link_transform = link_kv->second;
 
       // If the link exists but doesn't have an UberStruct, skip the link handle.
-      const auto uber_struct_kv = uber_structs.find(link_kv->second.GetInstanceId());
+      const auto uber_struct_kv = uber_structs.find(link_transform.GetInstanceId());
       if (uber_struct_kv == uber_structs.end()) {
         FLATLAND_VERBOSE_LOG << "GlobalTopologyData link doesn't exist for instance_id "
-                             << link_kv->second.GetInstanceId() << ", skipping";
+                             << link_transform.GetInstanceId() << ", skipping";
 
         if (parent_counts.back().children_left == 0) {
           parent_counts.pop_back();
@@ -311,10 +312,10 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
       // corresponding instance ID but the link to it has resolved.
       const auto& new_vector = uber_struct_kv->second->local_topology;
       FX_DCHECK(!new_vector.empty()) << "Valid UberStructs cannot have empty local_topology";
-      if (new_vector[0].handle != link_kv->second) {
+      if (new_vector[0].handle != link_transform) {
         FLATLAND_VERBOSE_LOG << "GlobalTopologyData link mismatch with "
                                 "existing UberStruct ("
-                             << new_vector[0].handle << " vs. " << link_kv->second << "), skipping";
+                             << new_vector[0].handle << " vs. " << link_transform << "), skipping";
 
         if (parent_counts.back().children_left == 0) {
           parent_counts.pop_back();

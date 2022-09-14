@@ -109,7 +109,7 @@ class FlatlandDisplay : public fuchsia::ui::composition::FlatlandDisplay,
 
   const TransformHandle root_transform_;
 
-  LinkSystem::ChildLink child_link_;
+  LinkSystem::LinkToChild link_to_child_;
 };
 
 }  // namespace flatland

@@ -531,20 +531,20 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   auto child_session = CreateSession();
 
   // Create a link between the two.
-  auto child_link = child_session.CreateView(parent_session);
+  auto link_to_child = child_session.CreateView(parent_session);
 
   // Create the root handle for the parent and a handle that will have an image attached.
   const TransformHandle parent_root_handle = parent_session.graph().CreateTransform();
   const TransformHandle parent_image_handle = parent_session.graph().CreateTransform();
 
   // Add the two children to the parent root: link, then image.
-  parent_session.graph().AddChild(parent_root_handle, child_link.GetLinkHandle());
+  parent_session.graph().AddChild(parent_root_handle, link_to_child.GetLinkHandle());
   parent_session.graph().AddChild(parent_root_handle, parent_image_handle);
 
   // Create an image handle for the child.
   const TransformHandle child_image_handle = child_session.graph().CreateTransform();
 
-  // Attach that image handle to the link_origin.
+  // Attach that image handle to the link_attachment_point.
   child_session.graph().AddChild(child_session.GetLinkOrigin(), child_image_handle);
 
   // Get an UberStruct for the parent session.

@@ -175,7 +175,8 @@ class Flatland : public fuchsia::ui::composition::Flatland,
 
   // For validating the transform hierarchy in tests only. For the sake of testing, the "root" will
   // always be the top-most TransformHandle from the TransformGraph owned by this Flatland. If
-  // currently linked to a parent, that means the link_origin. If not, that means the local_root_.
+  // currently linked to a parent, that means the link_attachment_point. If not, that means the
+  // local_root_.
   TransformHandle GetRoot() const;
 
   // For validating properties associated with content in tests only. If |content_id| does not
@@ -320,18 +321,18 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // Present() is called, the actual destruction of Links happens in the following Present().
   std::vector<fit::function<void()>> pending_link_operations_;
 
-  // Wraps a LinkSystem::ChildLink and the properties currently associated with that link.
-  struct ChildLinkData {
-    LinkSystem::ChildLink link;
+  // Wraps a LinkSystem::LinkToChild and the properties currently associated with that link.
+  struct LinkToChildData {
+    LinkSystem::LinkToChild link;
     fuchsia::ui::composition::ViewportProperties properties;
     fuchsia::math::SizeU size;
   };
 
-  // A mapping from Flatland-generated TransformHandle to the ChildLinkData it represents.
-  std::unordered_map<TransformHandle, ChildLinkData> child_links_;
+  // A mapping from Flatland-generated TransformHandle to the LinkToChildData it represents.
+  std::unordered_map<TransformHandle, LinkToChildData> links_to_children_;
 
   // The link from this Flatland instance to our parent.
-  std::optional<LinkSystem::ParentLink> parent_link_;
+  std::optional<LinkSystem::LinkToParent> link_to_parent_;
 
   // Instance name from SetDebugName().
   std::string debug_name_;

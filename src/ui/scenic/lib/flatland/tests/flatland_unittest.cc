@@ -3702,7 +3702,7 @@ TEST_F(FlatlandTest, LinkResolvedBeforeEitherPresent) {
   EXPECT_TRUE(IsDescendantOf(parent->GetRoot(), child->GetRoot()));
 }
 
-TEST_F(FlatlandTest, ClearChildLink) {
+TEST_F(FlatlandTest, ClearLinkToChild) {
   std::shared_ptr<Flatland> parent = CreateFlatland();
   std::shared_ptr<Flatland> child = CreateFlatland();
 

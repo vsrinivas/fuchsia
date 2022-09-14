@@ -246,14 +246,14 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // also supplies its attachment point so that the LinkSystem can create an edge between the two
   // when the link resolves. This allows creation and destruction logic to be paired within a single
   // ObjectLinker endpoint, instead of being spread out between the two endpoints.
-  struct ChildLinkInfo {
+  struct LinkToChildInfo {
     TransformHandle parent_viewport_watcher_handle;
     TransformHandle link_handle;
     fuchsia::math::SizeU initial_logical_size;
     fuchsia::math::Inset initial_inset;
   };
 
-  struct ParentLinkInfo {
+  struct LinkToParentInfo {
     TransformHandle child_view_watcher_handle;
     std::shared_ptr<const fuchsia::ui::views::ViewRef> view_ref;
   };
@@ -261,12 +261,12 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // Linked Flatland instances only implement a small piece of link functionality. For now, directly
   // sharing link requests is a clean way to implement that functionality. This will become more
   // complicated as the Flatland API evolves.
-  using ObjectLinker = scenic_impl::gfx::ObjectLinker<ParentLinkInfo, ChildLinkInfo>;
+  using ObjectLinker = scenic_impl::gfx::ObjectLinker<LinkToParentInfo, LinkToChildInfo>;
 
-  // Destruction of a ChildLink object will trigger deregistration with the LinkSystem.
+  // Destruction of a LinkToChild object will trigger deregistration with the LinkSystem.
   // Deregistration is thread safe, but the user of the Link object should be confident (e.g., by
   // tracking release fences) that no other systems will try to reference the Link.
-  struct ChildLink {
+  struct LinkToChild {
     // The handle on which the ParentViewportWatcherImpl to the child will live.
     TransformHandle parent_viewport_watcher_handle;
     // The LinkSystem-owned handle that will be a key in the LinkTopologyMap when the link resolves.
@@ -276,10 +276,10 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
     ObjectLinker::ImportLink importer;
   };
 
-  // Destruction of a ParentLink object will trigger deregistration with the LinkSystem.
+  // Destruction of a LinkToParent object will trigger deregistration with the LinkSystem.
   // Deregistration is thread safe, but the user of the Link object should be confident (e.g., by
   // tracking release fences) that no other systems will try to reference the Link.
-  struct ParentLink {
+  struct LinkToParent {
     // The handle that the ChildViewWatcherImpl to the parent will live on and will be a value in
     // the LinkTopologyMap when the link resolves.
     TransformHandle child_view_watcher_handle;
@@ -294,29 +294,30 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
     std::optional<fuchsia::ui::views::ViewRefControl> view_ref_control;
   };
 
-  // Creates the child end of a link. The ChildLink's |link_handle| serves as the attachment point
-  // for the caller's transform hierarchy. |initial_properties| is immediately dispatched to the
-  // ParentLink when the Link is resolved, regardless of whether the parent or the child has called
-  // |Flatland::Present()|.
+  // Creates the parent end of a link. The LinkToChild's |link_handle| serves as the attachment
+  // point for the caller's transform hierarchy. |initial_properties| is immediately dispatched to
+  // the LinkToParent when the Link is resolved, regardless of whether the parent or the child has
+  // called |Flatland::Present()|.
   //
   // Link handles are excluded from global topologies, so the |parent_viewport_watcher_handle| is
   // provided by the parent as the attachment point for the ChildViewWatcherImpl.
   //
   // |dispatcher_holder| allows hanging-get response-callbacks to be invoked from the appropriate
   // Flatland session thread.
-  ChildLink CreateChildLink(
+  LinkToChild CreateLinkToChild(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       fuchsia::ui::views::ViewportCreationToken token,
       fuchsia::ui::composition::ViewportProperties initial_properties,
       fidl::InterfaceRequest<fuchsia::ui::composition::ChildViewWatcher> child_view_watcher,
       TransformHandle parent_viewport_watcher_handle, LinkProtocolErrorCallback error_callback);
 
-  // Creates the parent end of a link. Once both ends of a Link have been created, the LinkSystem
-  // will create a local topology that connects the internal Link to the ParentLink's |link_origin|.
+  // Creates the child end of a link. Once both ends of a Link have been created, the LinkSystem
+  // will create a local topology that connects the internal Link to the LinkToParent's
+  // |link_attachment_point|.
   //
   // |dispatcher_holder| allows hanging-get response-callbacks to be invoked from the appropriate
   // Flatland session thread.
-  ParentLink CreateParentLink(
+  LinkToParent CreateLinkToParent(
       std::shared_ptr<utils::DispatcherHolder> dispatcher_holder,
       fuchsia::ui::views::ViewCreationToken token,
       std::optional<fuchsia::ui::views::ViewIdentityOnCreation> view_identity,
@@ -325,11 +326,11 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
       TransformHandle child_view_watcher_handle, LinkProtocolErrorCallback error_callback);
 
   // Returns a snapshot of the current set of links, represented as a map from LinkSystem-owned
-  // TransformHandles to TransformHandles in ParentLinks. The LinkSystem generates Keys for this
-  // map in CreateChildLink() and returns them to callers in a ChildLink's |link_handle|. The
-  // values in this map are arguments to CreateParentLink() and become the ParentLink's
-  // |link_origin|. The LinkSystem places entries in the map when a link resolves and removes them
-  // when a link is invalidated.
+  // TransformHandles to TransformHandles in LinkToParents. The LinkSystem generates Keys for this
+  // map in CreateLinkToChild() and returns them to callers in a LinkToChild's |link_handle|. The
+  // values in this map are arguments to CreateLinkToParent() and become the LinkToParent's
+  // |link_attachment_point|. The LinkSystem places entries in the map when a link resolves and
+  // removes them when a link is invalidated.
   GlobalTopologyData::LinkTopologyMap GetResolvedTopologyLinks();
 
   // Returns the instance ID used for LinkSystem-authored handles.
@@ -384,11 +385,11 @@ class LinkSystem : public std::enable_shared_from_this<LinkSystem> {
   // (possibly deadline scheduled) render thread.
   std::mutex mutex_;
 
-  // A ParentViewportWatcherImpl and the |link_origin| of the child Flatland instance the impl
-  // serves.
+  // A ParentViewportWatcherImpl and the |link_attachment_point| of the child Flatland instance the
+  // impl serves.
   struct ParentViewportWatcherData {
     std::shared_ptr<ParentViewportWatcherImpl> impl;
-    TransformHandle child_link_origin;
+    TransformHandle link_attachment_point;
   };
   // Keyed by the transform in the parent instance.
   std::unordered_map<TransformHandle, ParentViewportWatcherData> parent_viewport_watcher_map_;

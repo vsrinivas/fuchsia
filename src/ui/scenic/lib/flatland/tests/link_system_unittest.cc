@@ -17,8 +17,8 @@
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 
 using flatland::LinkSystem;
-using ChildLink = flatland::LinkSystem::ChildLink;
-using ParentLink = flatland::LinkSystem::ParentLink;
+using LinkToChild = flatland::LinkSystem::LinkToChild;
+using LinkToParent = flatland::LinkSystem::LinkToParent;
 using flatland::TransformGraph;
 using flatland::UberStructSystem;
 using TopologyEntry = flatland::TransformGraph::TopologyEntry;
@@ -81,17 +81,17 @@ TEST_F(LinkSystemTest, UnresolvedParentViewportWatcherDiesOnContentTokenDeath) {
   ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
   properties.set_inset({0, 0, 0, 0});
-  ChildLink parent_link =
-      link_system->CreateChildLink(dispatcher_holder_, std::move(parent_token),
-                                   std::move(properties), child_view_watcher.NewRequest(), handle,
-                                   [](const std::string& error_log) { GTEST_FAIL() << error_log; });
-  EXPECT_TRUE(parent_link.importer.valid());
+  LinkToChild link_to_child = link_system->CreateLinkToChild(
+      dispatcher_holder_, std::move(parent_token), std::move(properties),
+      child_view_watcher.NewRequest(), handle,
+      [](const std::string& error_log) { GTEST_FAIL() << error_log; });
+  EXPECT_TRUE(link_to_child.importer.valid());
   EXPECT_TRUE(child_view_watcher.is_bound());
 
   child_token.value.reset();
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(parent_link.importer.valid());
+  EXPECT_FALSE(link_to_child.importer.valid());
   EXPECT_FALSE(child_view_watcher.is_bound());
 }
 
@@ -105,17 +105,17 @@ TEST_F(LinkSystemTest, UnresolvedChildViewWatcherDiesOnGraphTokenDeath) {
   TransformHandle handle;
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  ParentLink child_link = link_system->CreateParentLink(
+  LinkToParent link_to_parent = link_system->CreateLinkToParent(
       dispatcher_holder_, std::move(child_token), scenic::NewViewIdentityOnCreation(),
       parent_viewport_watcher.NewRequest(), handle,
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
-  EXPECT_TRUE(child_link.exporter.valid());
+  EXPECT_TRUE(link_to_parent.exporter.valid());
   EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   parent_token.value.reset();
   RunLoopUntilIdle();
 
-  EXPECT_FALSE(child_link.exporter.valid());
+  EXPECT_FALSE(link_to_parent.exporter.valid());
   EXPECT_FALSE(parent_viewport_watcher.is_bound());
 }
 
@@ -131,29 +131,29 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  ParentLink parent_link = link_system->CreateParentLink(
+  LinkToParent link_to_parent = link_system->CreateLinkToParent(
       dispatcher_holder_, std::move(child_token), scenic::NewViewIdentityOnCreation(),
       parent_viewport_watcher.NewRequest(), child_graph.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
-  EXPECT_TRUE(parent_link.exporter.valid());
+  EXPECT_TRUE(link_to_parent.exporter.valid());
   EXPECT_TRUE(parent_viewport_watcher.is_bound());
 
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
   ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
   properties.set_inset({0, 0, 0, 0});
-  ChildLink child_link = link_system->CreateChildLink(
+  LinkToChild link_to_child = link_system->CreateLinkToChild(
       dispatcher_holder_, std::move(parent_token), std::move(properties),
       child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
-  EXPECT_TRUE(child_link.importer.valid());
+  EXPECT_TRUE(link_to_child.importer.valid());
   EXPECT_TRUE(child_view_watcher.is_bound());
 
   auto links = link_system->GetResolvedTopologyLinks();
   EXPECT_FALSE(links.empty());
-  EXPECT_EQ(links.count(child_link.link_handle), 1u);
-  EXPECT_EQ(links[child_link.link_handle], parent_link.child_view_watcher_handle);
+  EXPECT_EQ(links.count(link_to_child.link_handle), 1u);
+  EXPECT_EQ(links[link_to_child.link_handle], link_to_parent.child_view_watcher_handle);
 
   bool layout_updated = false;
   parent_viewport_watcher->GetLayout([&](LayoutInfo info) {
@@ -168,7 +168,7 @@ TEST_F(LinkSystemTest, ResolvedLinkCreatesLinkTopology) {
   ASSERT_TRUE(layout_updated);
 }
 
-TEST_F(LinkSystemTest, ChildLinkDeathDestroysTopology) {
+TEST_F(LinkSystemTest, LinkToChildDeathDestroysTopology) {
   auto link_system = CreateViewportSystem();
   auto child_graph = CreateTransformGraph();
   auto parent_graph = CreateTransformGraph();
@@ -178,7 +178,7 @@ TEST_F(LinkSystemTest, ChildLinkDeathDestroysTopology) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  ParentLink parent_link = link_system->CreateParentLink(
+  LinkToParent link_to_parent = link_system->CreateLinkToParent(
       dispatcher_holder_, std::move(child_token), scenic::NewViewIdentityOnCreation(),
       parent_viewport_watcher.NewRequest(), child_graph.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
@@ -188,24 +188,24 @@ TEST_F(LinkSystemTest, ChildLinkDeathDestroysTopology) {
     ViewportProperties properties;
     properties.set_logical_size(SizeU{1, 2});
     properties.set_inset({0, 0, 0, 0});
-    ChildLink child_link = link_system->CreateChildLink(
+    LinkToChild link_to_child = link_system->CreateLinkToChild(
         dispatcher_holder_, std::move(parent_token), std::move(properties),
         child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
         [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
     auto links = link_system->GetResolvedTopologyLinks();
     EXPECT_FALSE(links.empty());
-    EXPECT_EQ(links.count(child_link.link_handle), 1u);
-    EXPECT_EQ(links[child_link.link_handle], parent_link.child_view_watcher_handle);
+    EXPECT_EQ(links.count(link_to_child.link_handle), 1u);
+    EXPECT_EQ(links[link_to_child.link_handle], link_to_parent.child_view_watcher_handle);
 
-    // |child_link| dies here, which destroys the link topology.
+    // |link_to_child| dies here, which destroys the link topology.
   }
 
   auto links = link_system->GetResolvedTopologyLinks();
   EXPECT_TRUE(links.empty());
 }
 
-TEST_F(LinkSystemTest, ParentLinkDeathDestroysTopology) {
+TEST_F(LinkSystemTest, LinkToParentDeathDestroysTopology) {
   auto link_system = CreateViewportSystem();
   auto child_graph = CreateTransformGraph();
   auto parent_graph = CreateTransformGraph();
@@ -218,22 +218,22 @@ TEST_F(LinkSystemTest, ParentLinkDeathDestroysTopology) {
   ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
   properties.set_inset({0, 0, 0, 0});
-  ChildLink child_link = link_system->CreateChildLink(
+  LinkToChild link_to_child = link_system->CreateLinkToChild(
       dispatcher_holder_, std::move(parent_token), std::move(properties),
       child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
   {
     fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-    ParentLink parent_link = link_system->CreateParentLink(
+    LinkToParent parent_link = link_system->CreateLinkToParent(
         dispatcher_holder_, std::move(child_token), scenic::NewViewIdentityOnCreation(),
         parent_viewport_watcher.NewRequest(), child_graph.CreateTransform(),
         [](const std::string& error_log) { GTEST_FAIL() << error_log; });
 
     auto links = link_system->GetResolvedTopologyLinks();
     EXPECT_FALSE(links.empty());
-    EXPECT_EQ(links.count(child_link.link_handle), 1u);
-    EXPECT_EQ(links[child_link.link_handle], parent_link.child_view_watcher_handle);
+    EXPECT_EQ(links.count(link_to_child.link_handle), 1u);
+    EXPECT_EQ(links[link_to_child.link_handle], parent_link.child_view_watcher_handle);
 
     // |parent_link| dies here, which destroys the link topology.
   }
@@ -252,31 +252,31 @@ TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &parent_token.value, &child_token.value));
 
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  bool parent_link_returned_error = false;
-  ParentLink parent_link = link_system->CreateParentLink(
+  bool link_to_parent_returned_error = false;
+  LinkToParent link_to_parent = link_system->CreateLinkToParent(
       dispatcher_holder_, std::move(child_token), scenic::NewViewIdentityOnCreation(),
       parent_viewport_watcher.NewRequest(), child_graph.CreateTransform(),
-      [&](const std::string& error_log) { parent_link_returned_error = true; });
+      [&](const std::string& error_log) { link_to_parent_returned_error = true; });
 
   fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
-  bool child_link_returned_error = false;
+  bool link_to_child_returned_error = false;
   ViewportProperties properties;
   properties.set_logical_size(SizeU{1, 2});
   properties.set_inset({0, 0, 0, 0});
-  ChildLink child_link = link_system->CreateChildLink(
+  LinkToChild link_to_child = link_system->CreateLinkToChild(
       dispatcher_holder_, std::move(parent_token), std::move(properties),
       child_view_watcher.NewRequest(), parent_graph.CreateTransform(),
-      [&](const std::string& error_log) { child_link_returned_error = true; });
+      [&](const std::string& error_log) { link_to_child_returned_error = true; });
 
   {
     bool status_updated = false;
     child_view_watcher->GetStatus([&](auto) { status_updated = true; });
-    EXPECT_FALSE(child_link_returned_error);
+    EXPECT_FALSE(link_to_child_returned_error);
     EXPECT_FALSE(status_updated);
 
     child_view_watcher->GetStatus([&](auto) {});
     RunLoopUntilIdle();
-    EXPECT_TRUE(child_link_returned_error);
+    EXPECT_TRUE(link_to_child_returned_error);
     EXPECT_FALSE(status_updated);
   }
 
@@ -284,20 +284,20 @@ TEST_F(LinkSystemTest, OverwrittenHangingGetsReturnError) {
     bool layout_updated = false;
     parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
     RunLoopUntilIdle();
-    EXPECT_FALSE(parent_link_returned_error);
+    EXPECT_FALSE(link_to_parent_returned_error);
     EXPECT_TRUE(layout_updated);
   }
 
   {
-    parent_link_returned_error = false;
+    link_to_parent_returned_error = false;
     bool layout_updated = false;
     parent_viewport_watcher->GetLayout([&](auto) { layout_updated = true; });
-    EXPECT_FALSE(parent_link_returned_error);
+    EXPECT_FALSE(link_to_parent_returned_error);
     EXPECT_FALSE(layout_updated);
 
     parent_viewport_watcher->GetLayout([&](auto) {});
     RunLoopUntilIdle();
-    EXPECT_TRUE(parent_link_returned_error);
+    EXPECT_TRUE(link_to_parent_returned_error);
     EXPECT_FALSE(layout_updated);
   }
 }

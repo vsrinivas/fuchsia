@@ -26,7 +26,7 @@ using fuchsia::ui::views::ViewportCreationToken;
 
 namespace flatland {
 
-DisplayCompositorTestBase::FakeFlatlandSession::ChildLink
+DisplayCompositorTestBase::FakeFlatlandSession::LinkToChild
 DisplayCompositorTestBase::FakeFlatlandSession::CreateView(FakeFlatlandSession& parent_session) {
   // Create the tokens.
   ViewportCreationToken parent_token;
@@ -35,7 +35,7 @@ DisplayCompositorTestBase::FakeFlatlandSession::CreateView(FakeFlatlandSession& 
 
   // Create the parent link.
   fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
-  LinkSystem::ParentLink parent_link = link_system_->CreateParentLink(
+  LinkSystem::LinkToParent link_to_parent = link_system_->CreateLinkToParent(
       dispatcher_holder_, std::move(child_token), scenic::NewViewIdentityOnCreation(),
       parent_viewport_watcher.NewRequest(), graph_.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
@@ -45,7 +45,7 @@ DisplayCompositorTestBase::FakeFlatlandSession::CreateView(FakeFlatlandSession& 
   ViewportProperties properties;
   properties.set_logical_size(fuchsia::math::SizeU{1, 2});
   properties.set_inset({0, 0, 0, 0});
-  LinkSystem::ChildLink child_link = link_system_->CreateChildLink(
+  LinkSystem::LinkToChild link_to_child = link_system_->CreateLinkToChild(
       dispatcher_holder_, std::move(parent_token), std::move(properties),
       child_view_watcher.NewRequest(), parent_session.graph_.CreateTransform(),
       [](const std::string& error_log) { GTEST_FAIL() << error_log; });
@@ -53,15 +53,15 @@ DisplayCompositorTestBase::FakeFlatlandSession::CreateView(FakeFlatlandSession& 
   // Run the loop to establish the link.
   harness_->RunLoopUntilIdle();
 
-  parent_link_ = ParentLink({
+  link_to_parent_ = LinkToParent({
       .parent_viewport_watcher = std::move(parent_viewport_watcher),
-      .parent_link = std::move(parent_link),
+      .link_to_parent = std::move(link_to_parent),
   });
 
-  return ChildLink({
+  return LinkToChild{
       .child_view_watcher = std::move(child_view_watcher),
-      .child_link = std::move(child_link),
-  });
+      .link_to_child = std::move(link_to_child),
+  };
 }
 
 std::unique_ptr<UberStruct>
@@ -69,11 +69,11 @@ DisplayCompositorTestBase::FakeFlatlandSession::CreateUberStructWithCurrentTopol
     TransformHandle local_root) {
   auto uber_struct = std::make_unique<UberStruct>();
 
-  // Only use the supplied |local_root| if no there is no ParentLink, otherwise use the
-  // |link_origin| from the ParentLink.
-  const TransformHandle root = parent_link_.has_value()
-                                   ? parent_link_.value().parent_link.child_view_watcher_handle
-                                   : local_root;
+  // Only use the supplied |local_root| if no there is no LinkToParent, otherwise use the
+  // |link_attachment_point| from the LinkToParent.
+  const TransformHandle root =
+      link_to_parent_.has_value() ? link_to_parent_.value().link_to_parent.child_view_watcher_handle
+                                  : local_root;
 
   // Compute the local topology and place it in the UberStruct.
   auto local_topology_data = graph_.ComputeAndCleanup(root, std::numeric_limits<uint64_t>::max());
