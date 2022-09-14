@@ -8,9 +8,12 @@ This is used to publish fine-grain anonymized remote build performance data.
 """
 
 import argparse
+import json
 import os
 import subprocess
 import sys
+import tempfile
+
 import pb_message_util
 from api.proxy import log_pb2
 from api.stats import stats_pb2
@@ -25,11 +28,13 @@ def msg(text: str):
 
 
 def table_arg(value: str) -> str:
-    parts = value.split('.')
-    err_msg = "Table name must be in the form PROJECT.DATASET.TABLE"
-    if len(parts) != 3:
+    err_msg = "Table name must be in the form PROJECT:DATASET.TABLE"
+    project, sep, dataset_table = value.partition(':')
+    if not sep:
         raise argparse.ArgumentTypeError(err_msg)
-    project, dataset, table = parts
+    dataset, sep, table = dataset_table.partition('.')
+    if not sep:
+        raise argparse.ArgumentTypeError(err_msg)
     if not (project and dataset and table):
         raise argparse.ArgumentTypeError(err_msg)
     return value
@@ -62,13 +67,6 @@ def main_arg_parser() -> argparse.ArgumentParser:
         "--uuid",
         type=str,
         help="Unique ID string for this build",
-    )
-    parser.add_argument(
-        "--bqupload",
-        # Should be executable or symlink to executable.
-        type=argparse.FileType(mode='r'),
-        help="Path to 'bqupload' tool",
-        required=True,
     )
     parser.add_argument(
         "--upload-batch-size",
@@ -139,9 +137,17 @@ def read_reproxy_metrics_proto(reproxy_logdir: str) -> stats_pb2.Stats:
     return stats
 
 
+def bq_table_insert(table: str, data: str) -> int:
+    # The 'bq' CLI tool comes with gcloud SDK.
+    # Unfortunately, piping the data through stdin doesn't work
+    # because bq expects an interactive session.
+    with tempfile.NamedTemporaryFile() as f:
+        f.write(data.encode())
+        return subprocess.call(['bq', 'insert', table, f.name])
+
+
 def bq_upload_remote_action_logs(
     records: Sequence[Dict[str, Any]],
-    bqupload: str,
     bq_table: str,
     batch_size: int,
 ):
@@ -149,32 +155,30 @@ def bq_upload_remote_action_logs(
         records[i:i + batch_size] for i in range(0, len(records), batch_size))
     any_err = False
     for batch in batches:
-        # bqupload accepts rows as newline-delimited JSON.
-        data = "\n".join(str(row) for row in batch)
-        exit_code = subprocess.call([bqupload, bq_table, data])
+        # bq accepts rows as newline-delimited JSON.
+        data = "\n".join(json.dumps(row) for row in batch)
+        exit_code = bq_table_insert(bq_table, data)
         if exit_code != 0:
             # There will be something printed to stderr already.
             any_err = True
 
     if any_err:
-        print("There was at least one error uploading logs with bqupload.")
+        print("There was at least one error uploading logs.")
 
 
 def bq_upload_metrics(
     metrics: Sequence[Dict[str, Any]],
-    bqupload: str,
     bq_table: str,
 ):
-    data = "\n".join(str(row) for row in metrics)
-    exit_code = subprocess.call([bqupload, bq_table, data])
+    data = "\n".join(json.dumps(row) for row in metrics)
+    exit_code = bq_table_insert(bq_table, data)
     if exit_code != 0:
-        print("There was at least one error uploading metrics with bqupload.")
+        print("There was at least one error uploading metrics.")
 
 
 def main_upload_metrics(
     uuid: str,
     reproxy_logdir: str,
-    bqupload: str,
     bq_metrics_table: str,
     dry_run: bool = False,
     verbose: bool = False,
@@ -203,7 +207,6 @@ def main_upload_metrics(
             msg("Uploading aggregate metrics BQ")
         bq_upload_metrics(
             metrics=[metrics_json],
-            bqupload=bqupload,
             bq_table=bq_metrics_table,
         )
 
@@ -215,7 +218,6 @@ def main_upload_logs(
     uuid: str,
     reproxy_logdir: str,
     reclient_bindir: str,
-    bqupload: str,
     bq_logs_table: str,
     upload_batch_size: int,
     dry_run: bool = False,
@@ -261,7 +263,6 @@ def main_upload_logs(
             msg("Uploading converted logs to BQ")
         bq_upload_remote_action_logs(
             records=log_records,
-            bqupload=bqupload,
             bq_table=bq_logs_table,
             batch_size=upload_batch_size,
         )
@@ -296,7 +297,6 @@ def main(argv: Sequence[str]) -> int:
     main_upload_metrics(
         uuid=uuid,
         reproxy_logdir=args.reproxy_logdir,
-        bqupload=args.bqupload,
         bq_metrics_table=args.bq_metrics_table,
         dry_run=args.dry_run,
         verbose=args.verbose,
@@ -307,7 +307,6 @@ def main(argv: Sequence[str]) -> int:
         uuid= uuid,
         reproxy_logdir=args.reproxy_logdir,
         reclient_bindir=args.reclient_bindir,  # for logdump utility
-        bqupload=args.bqupload,
         bq_logs_table=args.bq_logs_table,
         upload_batch_size=args.upload_batch_size,
         dry_run=args.dry_run,

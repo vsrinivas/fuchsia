@@ -62,7 +62,6 @@ PREBUILT_SUBDIR="$PREBUILT_OS"-"$PREBUILT_ARCH"
 
 # location of reclient binaries relative to output directory where build is run
 reclient_bindir="$project_root_rel"/prebuilt/proprietary/third_party/reclient/"$PREBUILT_SUBDIR"
-bqupload="$project_root_rel"/prebuilt/tools/bqupload/bqupload
 
 # Configuration for RBE metrics and logs collection.
 readonly fx_build_metrics_config="$project_root_rel"/.fx-build-metrics-config
@@ -194,19 +193,19 @@ shutdown() {
   "$bootstrap" --shutdown --cfg="$reproxy_cfg"
 
   test "$BUILD_METRICS_ENABLED" = 0 || {
+    # This script uses the 'bq' CLI tool, which is installed in the
+    # same path as `gcloud`.
     # This is experimental and runs a bit noisily for the moment.
     # TODO(https://fxbug.dev/93886): make this run silently
+    cloud_project=fuchsia-engprod-metrics-prod
+    dataset=metrics
     "$script_dir"/upload_reproxy_logs.sh \
-      --dry-run \
-      --print-sample \
       --verbose \
       --reclient-bindir="$reclient_bindir" \
       --reproxy-logdir="$reproxy_tmpdir" \
       --uuid="$build_uuid" \
-      --bqupload="$bqupload" \
-      --bq-logs-table=PROJECT.DATASET.LOGS_TABLE \
-      --bq-metrics-table=PROJECT.DATASET.METRICS_TABLE
-    # TODO(https://fxbug.dev/93886): upload logs to a real table
+      --bq-logs-table="$cloud_project:$dataset".rbe_client_command_logs_developer \
+      --bq-metrics-table="$cloud_project:$dataset".rbe_client_metrics_developer
   }
 }
 
