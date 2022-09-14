@@ -59,12 +59,6 @@ def main_arg_parser() -> argparse.ArgumentParser:
         required=True,
     )
     parser.add_argument(
-        "--reproxy-logdir",
-        type=dir_arg,
-        help="Location of reproxy logs and metrics",
-        required=True,
-    )
-    parser.add_argument(
         "--uuid",
         type=str,
         help="Unique ID string for this build",
@@ -107,6 +101,14 @@ def main_arg_parser() -> argparse.ArgumentParser:
         default=False,
         help="Show upload steps and progress.",
     )
+
+    # Positional args are the reproxy logdirs to process.
+    parser.add_argument(
+        "reproxy_logdirs",
+        nargs="*",
+        help="The reproxy log dirs to upload",
+    )
+
     return parser
 
 
@@ -272,21 +274,28 @@ def main_upload_logs(
             msg("Done uploading RBE logs.")
 
 
-def main(argv: Sequence[str]) -> int:
-    parser = main_arg_parser()
-    args = parser.parse_args(argv)
+def main_single_logdir(
+    reproxy_logdir: str,
+    metrics_table: str,
+    logs_table: str,
+    uuid_flag: str,
+    upload_batch_size: str,
+    print_sample: bool,
+    dry_run: bool,
+    verbose: bool,
+) -> int:
 
     # Use a stamp-file to know whether or not this directory has been uploaded.
-    upload_stamp_file = os.path.join(args.reproxy_logdir, "upload_stamp")
-    if not args.dry_run and os.path.exists(upload_stamp_file):
-        msg(f"Already uploaded logs in {args.reproxy_logdir}.  Skipping.")
-        return 0
+    upload_stamp_file = os.path.join(reproxy_logdir, "upload_stamp")
+    if not dry_run and os.path.exists(upload_stamp_file):
+        msg(f"Already uploaded logs in {reproxy_logdir}.  Skipping.")
+        return
 
     # Make sure we have a uuid.
     # "build_id" comes from build/rbe/fuchsia-reproxy-wrap.sh.
-    build_id_file = os.path.join(args.reproxy_logdir, "build_id")
-    if args.uuid:
-        build_id = args.uuid
+    build_id_file = os.path.join(reproxy_logdir, "build_id")
+    if uuid_flag:
+        build_id = uuid_flag
     elif os.path.isfile(build_id_file):
         with open(build_id_file) as f:
             build_id = f.read().strip(" \n")
@@ -300,30 +309,47 @@ def main(argv: Sequence[str]) -> int:
     # Upload aggregate metrics.
     main_upload_metrics(
         uuid=build_id,
-        reproxy_logdir=args.reproxy_logdir,
-        bq_metrics_table=args.bq_metrics_table,
-        dry_run=args.dry_run,
-        verbose=args.verbose,
+        reproxy_logdir=reproxy_logdir,
+        bq_metrics_table=metrics_table,
+        dry_run=dry_run,
+        verbose=verbose,
     )
 
     # Upload remote action logs.
     main_upload_logs(
         uuid=build_id,
-        reproxy_logdir=args.reproxy_logdir,
-        reclient_bindir=args.reclient_bindir,  # for logdump utility
-        bq_logs_table=args.bq_logs_table,
-        upload_batch_size=args.upload_batch_size,
-        dry_run=args.dry_run,
-        verbose=args.verbose,
-        print_sample=args.print_sample,
+        reproxy_logdir=reproxy_logdir,
+        reclient_bindir=reclient_bindir,  # for logdump utility
+        bq_logs_table=logs_table,
+        upload_batch_size=upload_batch_size,
+        dry_run=dry_run,
+        verbose=verbose,
+        print_sample=print_sample,
     )
 
     # Leave a stamp-file to indicate we've already uploaded this reproxy_logdir.
-    if not args.dry_run:
+    if not dry_run:
         with open(upload_stamp_file, 'w') as f:
             f.write(
-                "Already uploaded {args.reproxy_logdir}.  Remove this file and re-run to force re-upload."
+                "Already uploaded {reproxy_logdir}.  Remove {upload_stamp_file} and re-run to force re-upload."
             )
+
+
+def main(argv: Sequence[str]) -> int:
+    parser = main_arg_parser()
+    args = parser.parse_args(argv)
+
+    for logdir in args.reproxy_logdirs:
+        main_single_logdir(
+            reproxy_logdir=logdir,
+            metrics_table=args.bq_metrics_table,
+            logs_table=args.bq_logs_table,
+            uuid_flag=args.uuid,
+            upload_batch_size=args.upload_batch_size,
+            print_sample=args.print_sample,
+            dry_run=args.dry_run,
+            verbose=args.verbose,
+        )
 
     return 0
 

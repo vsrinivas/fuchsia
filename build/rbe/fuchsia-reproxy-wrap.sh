@@ -202,10 +202,10 @@ shutdown() {
     "$script_dir"/upload_reproxy_logs.sh \
       --verbose \
       --reclient-bindir="$reclient_bindir" \
-      --reproxy-logdir="$reproxy_tmpdir" \
       --uuid="$build_uuid" \
       --bq-logs-table="$cloud_project:$dataset".rbe_client_command_logs_developer \
-      --bq-metrics-table="$cloud_project:$dataset".rbe_client_metrics_developer
+      --bq-metrics-table="$cloud_project:$dataset".rbe_client_metrics_developer \
+      "$reproxy_tmpdir"
   }
 }
 
