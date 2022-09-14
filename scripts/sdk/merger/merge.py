@@ -4,15 +4,27 @@
 # found in the LICENSE file.
 """Merge the content of two SDKs into a new one.
 
-Use either --first-archive or --first-directory to indicate the first input.
-Use either --second-archive or --second-directory to indicate the second input.
 Use either --output-archive or --output-directory to indicate the output.
+Tp specify inputs, there are two ways due to compatibility:
+
+The legacy way (only supports two inputs):
+
+  * Use either --first-archive or --first-directory to indicate the first input.
+  * Use either --second-archive or --second-directory to indicate the second input.
+
+The new way:
+
+  * Use either --input-archive or --input-directory to indicate an input.
+  * as many times as necessary, which means at least twice, since there is no
+    point in merging a single input.
+
 """
 
 # See https://stackoverflow.com/questions/33533148/how-do-i-type-hint-a-method-with-the-type-of-the-enclosing-class
 from __future__ import annotations
 
 import argparse
+import collections
 import contextlib
 import errno
 import json
@@ -24,7 +36,7 @@ import tarfile
 import tempfile
 
 from functools import total_ordering
-from typing import Any, Dict, List, Sequence, Set, Tuple
+from typing import Any, Dict, Optional, Sequence, Set, Tuple
 
 # Reminder about the layout of each SDK directory:
 #
@@ -32,10 +44,10 @@ from typing import Any, Dict, List, Sequence, Set, Tuple
 # as a JSON object, whose 'parts' key is an array of objects with
 # with the following schema:
 #
-#    meta: [string]: Path to an SDK element metadata file, relative
-#                    to the SDK directory.
+#    "meta": [string]: Path to an SDK element metadata file, relative
+#                      to the SDK directory.
 #
-#    type: [string]: Type of the element.
+#    "type": [string]: Element type.
 #
 # A few examples:
 #
@@ -567,35 +579,93 @@ def merge_sdks(
     return True
 
 
+# A pair used to model either an input archive or an input directory.
+InputInfo = collections.namedtuple('InputInfo', 'archive directory')
+
+
+def make_archive_info(archive: Path) -> InputInfo:
+    return InputInfo(archive=archive, directory=None)
+
+
+def make_directory_info(directory: Path) -> InputInfo:
+    return InputInfo(archive=None, directory=directory)
+
+
+class InputAction(argparse.Action):
+    """custom sub-class to handle input arguments.
+
+    This works by storing in the 'inputs' namespace attribute a
+    list of InputInfo values.
+    """
+
+    def __init__(self, option_strings, dest, **kwargs):
+        dest = 'inputs'
+        super(InputAction, self).__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        assert isinstance(
+            values, str), "Unsupported add_argument() 'type' value"
+        if option_string == '--input-directory':
+            input = make_directory_info(values)
+        elif option_string == '--input-archive':
+            input = make_archive_info(values)
+        else:
+            assert False, "Unsupported options string %s" % option_string
+
+        inputs = getattr(namespace, self.dest)
+        if inputs is None:
+            inputs = []
+        inputs.append(input)
+        setattr(namespace, self.dest, inputs)
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
-    first_group = parser.add_mutually_exclusive_group(required=True)
+    parser.add_argument(
+        '--input-directory',
+        help='Path to an input SDK - as a directory',
+        metavar='DIR',
+        action=InputAction,
+    )
+    parser.add_argument(
+        '--input-archive',
+        help='Path to an input SDK -as an archive',
+        metavar='ARCHIVE',
+        action=InputAction,
+    )
+    first_group = parser.add_mutually_exclusive_group()
     first_group.add_argument(
         '--first-archive',
         help='Path to the first SDK - as an archive',
+        metavar='ARCHIVE1',
         default='')
     first_group.add_argument(
         '--first-directory',
         help='Path to the first SDK - as a directory',
+        metavar='DIR1',
         default='')
-    second_group = parser.add_mutually_exclusive_group(required=True)
+    second_group = parser.add_mutually_exclusive_group()
     second_group.add_argument(
         '--second-archive',
         help='Path to the second SDK - as an archive',
+        metavar='ARCHIVE2',
         default='')
     second_group.add_argument(
         '--second-directory',
         help='Path to the second SDK - as a directory',
+        metavar='DIR2',
         default='')
     output_group = parser.add_mutually_exclusive_group(required=True)
     output_group.add_argument(
         '--output-archive',
         help='Path to the merged SDK - as an archive',
+        metavar='OUT_ARCHIVE',
         default='')
     output_group.add_argument(
         '--output-directory',
         help='Path to the merged SDK - as a directory',
+        metavar='OUT_DIR',
         default='')
     parser.add_argument(
         '--tarmaker', help='Use tarmaker tool for faster archive generation')
@@ -606,28 +676,75 @@ def main():
         '--hermetic-inputs-file', help='Path to the hermetic inputs file')
     args = parser.parse_args()
 
+    # Convert --first-xx and --second-xxx options into the equivalent
+    # --input-xxx ones.
+    if args.first_archive or args.first_directory:
+        if args.inputs:
+            parser.error(
+                'Cannot use --input-xxx option with --first-xxx option!')
+            return 1
+
+        if args.first_archive:
+            first_input = make_archive_info(args.first_archive)
+        else:
+            first_input = make_directory_info(args.first_directory)
+
+        if args.second_archive:
+            second_input = make_archive_info(args.second_archive)
+        elif args.second_directory:
+            second_input = make_directory_info(args.second_directory)
+        else:
+            parser.error('Using --first-xxx requires --second-xxx too!')
+            return 1
+
+        args.inputs = [first_input, second_input]
+
+    elif args.second_archive or args.second_directory:
+        parser.error('Using --second-xxx requires --first-xxx too!')
+        return 1
+
+    if not args.inputs or len(args.inputs) < 2:
+        parser.error(
+            'Not enough input sdks for a merge, at least two are required!')
+        return 1
+
     has_hermetic_inputs_file = bool(args.hermetic_inputs_file)
 
     has_errors = False
-
-    if args.tarmaker:
-
-        def archive_writer(archive, temp_dir):
-            tarmaker_writer(archive, temp_dir, args.tarmaker)
-    else:
-        archive_writer = tarfile_writer
 
     with MergeState() as state:
         if args.tarmaker:
             state.set_tarmaker_tool(args.tarmaker)
 
-        with InputSdk(args.first_archive, args.first_directory, state) as first_sdk, \
-             InputSdk(args.second_archive, args.second_directory, state) as second_sdk, \
-             OutputSdk(args.output_archive, args.output_directory,
-                       dry_run=has_hermetic_inputs_file, state=state) as output_sdk:
+        num_inputs = len(args.inputs)
+        for n, input in enumerate(args.inputs):
+            input_sdk = InputSdk(
+                args.inputs[n].archive, args.inputs[n].directory, state)
 
-            if not merge_sdks(first_sdk, second_sdk, output_sdk):
-                return 1
+            if n == 0:
+                # Just record the first entry, no merge needed.
+                previous_input_sdk = input_sdk
+                continue
+
+            if n + 1 == num_inputs:
+                # The final output directory or archive.
+                out_archive = args.output_archive
+                out_directory = args.output_directory
+                out_dryrun = has_hermetic_inputs_file
+            else:
+                # This is an intermediate merge operation, use a temporary directory for it.
+                out_archive = None
+                out_directory = state.get_temp_dir()
+                out_dryrun = False
+            # Perform the merge operation
+            with OutputSdk(out_archive, out_directory, out_dryrun,
+                           state) as output_sdk:
+                if not merge_sdks(previous_input_sdk, input_sdk, output_sdk):
+                    return 1
+
+            # Use intermediate output as the first input for the next operation.
+            if n + 1 != num_inputs:
+                previous_input_sdk = InputSdk(None, out_directory, state)
 
         depfile_inputs, depfile_outputs = state.get_depfile_inputs_and_outputs()
         if args.hermetic_inputs_file:
