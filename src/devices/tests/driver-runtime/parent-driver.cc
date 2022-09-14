@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.device.runtime.test/cpp/driver/fidl.h>
 #include <fidl/fuchsia.device.runtime.test/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/driver2/outgoing_directory.h>
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/channel_read.h>
@@ -21,8 +23,7 @@
 using fuchsia_device_runtime_test::TestDevice;
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::ServiceConnectable,
-                               ddk::Messageable<TestDevice>::Mixin>;
+using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::Messageable<TestDevice>::Mixin>;
 
 class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST> {
  public:
@@ -34,7 +35,6 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST> {
   void SetTestData(SetTestDataRequestView request, SetTestDataCompleter::Sync& completer) override;
 
   // Device protocol implementation.
-  zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel);
   void DdkUnbind(ddk::UnbindTxn txn) {
     dispatcher_.ShutdownAsync();
     unbind_txn_ = std::move(txn);
@@ -45,6 +45,8 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST> {
   void ShutdownHandler(fdf_dispatcher_t* dispatcher);
 
  private:
+  zx_status_t OnRuntimeConnect(fdf::Channel channel);
+
   // Replies to the request in |channel_read|.
   void HandleRuntimeRequest(fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
                             zx_status_t status);
@@ -60,9 +62,12 @@ class Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEST> {
   // Data set by the test using |SetTestData|.
   uint8_t data_[fuchsia_device_runtime_test::wire::kMaxTransferSize];
   size_t data_size_;
+
+  // For serving the runtime service.
+  std::optional<driver::OutgoingDirectory> outgoing_;
 };
 
-zx_status_t Device::DdkServiceConnect(const char* service_name, fdf::Channel channel) {
+zx_status_t Device::OnRuntimeConnect(fdf::Channel channel) {
   if (client_.get() != FDF_HANDLE_INVALID) {
     // Only support one client for now.
     return ZX_ERR_NOT_SUPPORTED;
@@ -161,7 +166,42 @@ zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
   if (status != ZX_OK) {
     return status;
   }
-  status = dev->DdkAdd("parent");
+
+  auto dispatcher = fdf::Dispatcher::GetCurrent()->get();
+  dev->outgoing_ = driver::OutgoingDirectory::Create(dispatcher);
+
+  driver::ServiceInstanceHandler handler;
+  fuchsia_device_runtime_test::Service::Handler service(&handler);
+
+  auto protocol =
+      [dev = dev.get()](
+          fdf::ServerEnd<fuchsia_device_runtime_test::Parent> server_end) mutable -> void {
+    dev->OnRuntimeConnect(server_end.TakeChannel());
+  };
+  auto add_status = service.add_parent(std::move(protocol));
+  if (add_status.is_error()) {
+    return add_status.status_value();
+  }
+  add_status = dev->outgoing_->AddService<fuchsia_device_runtime_test::Service>(std::move(handler));
+  if (add_status.is_error()) {
+    return add_status.status_value();
+  }
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  auto result = dev->outgoing_->Serve(std::move(endpoints->server));
+  if (result.is_error()) {
+    return result.status_value();
+  }
+  std::array offers = {
+      fuchsia_device_runtime_test::Service::Name,
+  };
+
+  status =
+      dev->DdkAdd(ddk::DeviceAddArgs("parent").set_runtime_service_offers(offers).set_outgoing_dir(
+          endpoints->client.TakeChannel()));
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev
     __UNUSED auto ptr = dev.release();

@@ -173,6 +173,8 @@ typedef struct device_add_args {
   // Optional list of fidl protocols to offer to child driver.
   // These protocols will automatically be added as bind properties which may be used in
   // bind rules.
+  // If provided, the `DEVICE_ADD_MUST_ISOLATE` flag must also be specified, and a proxy will not be
+  // spawned.
   const char** fidl_protocol_offers;
 
   // The number of elements in the above list.
@@ -182,10 +184,20 @@ typedef struct device_add_args {
   // These service will automatically be added as bind properties which may be used in
   // bind rules.
   // Only the service instance named "default" will be used.
+  // If provided, the `DEVICE_ADD_MUST_ISOLATE` flag must also be specified, and a proxy will not be
+  // spawned.
   const char** fidl_service_offers;
 
   // The number of elements in the above list.
   size_t fidl_service_offer_count;
+
+  // Optional list of runtime services to offer to child driver.
+  // Only the service instance named "default" will be used.
+  // If provided, the `DEVICE_ADD_MUST_ISOLATE` flag must not be specified.
+  const char** runtime_service_offers;
+
+  // The number of elements in the above list.
+  size_t runtime_service_offer_count;
 
   // Arguments used with DEVICE_ADD_MUST_ISOLATE
   // these will be passed to the create() driver op of
@@ -203,9 +215,7 @@ typedef struct device_add_args {
   zx_handle_t inspect_vmo;
 
   // Optional client channel end for a fuchsia.io.Directory hosting fidl services specified in
-  // |fidl_service_offers|.
-  // If provided, the `DEVICE_ADD_MUST_ISOLATE` flag must also be specified, and a proxy will not be
-  // spawned.
+  // either |fidl_service_offers| or |runtime_service_offers|.
   zx_handle_t outgoing_dir_channel;
 } device_add_args_t;
 

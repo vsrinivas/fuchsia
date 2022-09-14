@@ -6,6 +6,9 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/fragment-device.h>
+#include <lib/fdf/cpp/channel.h>
+#include <lib/fdf/cpp/protocol.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/process.h>
@@ -173,10 +176,23 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   }
 
   fidl::ClientEnd<fio::Directory> outgoing_dir(zx::channel(args->outgoing_dir_channel));
-  if (outgoing_dir && !(args->flags & DEVICE_ADD_MUST_ISOLATE)) {
-    // It is only valid to provide outgoing_dir if child is meant to be spawned in another driver
-    // host.
-    return ZX_ERR_INVALID_ARGS;
+  // The outgoing directory can be used for either out-of-process FIDL protocols,
+  // or in-process runtime protocols.
+  if (outgoing_dir) {
+    if ((args->fidl_protocol_offer_count > 0) || (args->fidl_service_offer_count > 0)) {
+      if (!(args->flags & DEVICE_ADD_MUST_ISOLATE)) {
+        // It is only valid to provide fidl protocols if child is meant to be spawned in another
+        // driver host.
+        return ZX_ERR_INVALID_ARGS;
+      }
+    }
+    if (args->runtime_service_offer_count > 0) {
+      if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
+        // Runtime protocols are only supported in-process.
+        return ZX_ERR_INVALID_ARGS;
+      }
+      dev->set_runtime_outgoing_dir(std::move(outgoing_dir));
+    }
   }
 
   // out must be set before calling DeviceAdd().
@@ -333,6 +349,30 @@ __EXPORT zx_status_t device_service_connect(zx_device_t* dev, const char* servic
     return dev->ServiceConnectOp(service_name, channel);
   }
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+__EXPORT zx_status_t device_connect_runtime_protocol(zx_device_t* dev, const char* service_name,
+                                                     const char* protocol_name,
+                                                     fdf_handle_t request) {
+  auto& outgoing = dev->runtime_outgoing_dir();
+  if (!outgoing) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  zx::channel client_token, server_token;
+  auto status = zx::channel::create(0, &client_token, &server_token);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdf::ProtocolConnect(std::move(client_token), fdf::Channel(request));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  fbl::StringBuffer<fuchsia_io::wire::kMaxPath> path;
+  // We use "default" as the service instance, as that's what we expect the parent driver
+  // to rename it to.
+  path.AppendPrintf("svc/%s/default/%s", service_name, protocol_name);
+  return fdio_service_connect_at(outgoing.channel().get(), path.c_str(), server_token.release());
 }
 
 // LibDriver Misc Interfaces

@@ -46,6 +46,9 @@ source_set("ddktl") {
     public_deps += [
       # <ddktl/device.h> has #include <lib/service/llcpp/service.h>.
       "//zircon/system/ulib/service:service-llcpp",
+
+      # <ddktl/device.h> has #include <lib/fidl_driver/cpp/transport.h>
+      "//sdk/lib/fidl_driver:fidl_driver_transport",
     ]
   }
 

@@ -48,8 +48,10 @@ driver_bind_rules("parent-driver-bind") {
 fuchsia_driver("parent-driver") {
   sources = [ "parent-driver.cc" ]
   deps = [
+    ":fuchsia.device.runtime.test_cpp_driver",
     ":fuchsia.device.runtime.test_cpp_wire",
     ":parent-driver-bind",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",
@@ -77,6 +79,7 @@ fuchsia_driver("child-driver") {
   sources = [ "child-driver.cc" ]
   deps = [
     ":child-driver-bind",
+    ":fuchsia.device.runtime.test_cpp_driver",
     ":fuchsia.device.runtime.test_cpp_wire",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/lib/driver",

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.device.runtime.test/cpp/driver/fidl.h>
 #include <fidl/fuchsia.device.runtime.test/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
@@ -150,22 +151,16 @@ zx_status_t Device::Init() {
 
 // static
 zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
-  auto channels = fdf::ChannelPair::Create(0);
-  if (channels.is_error()) {
-    return channels.status_value();
+  // Connect to our parent driver.
+  auto client_end = DdkConnectRuntimeProtocol<fuchsia_device_runtime_test::Service::Parent>(device);
+  if (client_end.is_error()) {
+    return client_end.status_value();
   }
-
-  auto dev = std::make_unique<Device>(device, std::move(channels->end0));
+  auto dev = std::make_unique<Device>(device, client_end->TakeHandle());
   zx_status_t status = dev->Init();
   if (status != ZX_OK) {
     return status;
   }
-  // Connect to our parent driver.
-  status = dev->DdkServiceConnect("test-service", std::move(channels->end1));
-  if (status != ZX_OK) {
-    return status;
-  }
-
   status = dev->DdkAdd("child");
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev

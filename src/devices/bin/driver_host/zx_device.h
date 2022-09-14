@@ -537,6 +537,12 @@ struct zx_device
 
   bool Unbound();
 
+  fidl::ClientEnd<fuchsia_io::Directory>& runtime_outgoing_dir() { return runtime_outgoing_dir_; }
+
+  void set_runtime_outgoing_dir(fidl::ClientEnd<fuchsia_io::Directory> outgoing_dir) {
+    runtime_outgoing_dir_ = std::move(outgoing_dir);
+  }
+
   DriverHostContext* driver_host_context() const { return driver_host_context_; }
   bool complete_bind_rebind_after_init() const { return complete_bind_rebind_after_init_; }
   void set_complete_bind_rebind_after_init(bool value) { complete_bind_rebind_after_init_ = value; }
@@ -623,6 +629,9 @@ struct zx_device
   SystemPowerStateMapping system_power_states_mapping_;
   uint32_t current_performance_state_ = fuchsia_device::wire::kDevicePerformanceStateP0;
   bool auto_suspend_configured_ = false;
+
+  // Runtime protocols served by the parent.
+  fidl::ClientEnd<fuchsia_io::Directory> runtime_outgoing_dir_;
 
   DriverHostContext* const driver_host_context_;
   std::optional<DeviceInspect> inspect_;

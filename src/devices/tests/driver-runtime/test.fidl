@@ -29,3 +29,11 @@ protocol TestDeviceChild {
         out vector<uint8>:MAX_TRANSFER_SIZE;
     }) error zx.status;
 };
+
+@discoverable
+@transport("Driver")
+protocol Parent {};
+
+service Service {
+    parent client_end:Parent;
+};

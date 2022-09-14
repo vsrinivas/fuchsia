@@ -443,6 +443,18 @@ zx_off_t device_get_size(zx_device_t* dev);
 zx_status_t device_service_connect(zx_device_t* device, const char* service_name,
                                    fdf_handle_t channel);
 
+// Opens a connection to the specified runtime service offered by |device|.
+//
+// |device| is typically the parent of the device invoking this function.
+// |service_name| can be constructed with `my_service_name::Name`.
+// |request| must be the server end of a zircon channel.
+//
+// If you are inside a C++ device class, it may be more convenient to use the
+// DdkConnectRuntimeProtocol wrapper method from ddktl, which supplies |device| and
+// |service_name| automatically.
+zx_status_t device_connect_runtime_protocol(zx_device_t* device, const char* service_name,
+                                            const char* protocol_name, fdf_handle_t request);
+
 // Device Metadata Support
 
 // retrieves metadata for a specific device
