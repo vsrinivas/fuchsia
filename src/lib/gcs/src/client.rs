@@ -207,7 +207,7 @@ impl Client {
                 .context("write object")?;
                 use std::io::{Seek, SeekFrom};
                 let file_size = file.seek(SeekFrom::End(0)).context("getting file size")?;
-                log::debug!(
+                tracing::debug!(
                     "Wrote gs://{}/{} to {:?}, {} bytes in {} seconds.",
                     bucket,
                     object,

@@ -81,7 +81,6 @@ third_party_rust_crate_log_visibility = [
   "//src/diagnostics/archivist:*",
   "//src/lib/cobalt/rust:*",
   "//src/lib/fuchsia-component-test/tests:*",
-  "//src/lib/gcs:*",
   "//src/lib/process_builder:*",
   "//src/lib/storage/fs_management/rust:*",
   "//src/lib/storage/storage_device:*",

@@ -15,7 +15,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:async-lock",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
