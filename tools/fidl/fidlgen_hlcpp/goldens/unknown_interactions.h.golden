@@ -24772,7 +24772,9 @@ class UnknownInteractionsProtocol_Proxy final : public ::fidl::internal::Proxy, 
   FlexibleEventUnionErrCallback FlexibleEventUnionErr;
   FlexibleEventTableErrCallback FlexibleEventTableErr;
 
-  protected:
+  fit::function<void(uint64_t)> handle_unknown_event;
+
+ protected:
   void handle_unknown_method(uint64_t ordinal, bool method_has_response) override {
     // This method is only provided to satisfy the base interface. It's
     // protected and should never be called by generated code on the client
@@ -25079,7 +25081,9 @@ class UnknownInteractionsAjarProtocol_Proxy final : public ::fidl::internal::Pro
   FlexibleEventUnionErrCallback FlexibleEventUnionErr;
   FlexibleEventTableErrCallback FlexibleEventTableErr;
 
-  protected:
+  fit::function<void(uint64_t)> handle_unknown_event;
+
+ protected:
   void handle_unknown_method(uint64_t ordinal) override {
     // This method is only provided to satisfy the base interface. It's
     // protected and should never be called by generated code on the client

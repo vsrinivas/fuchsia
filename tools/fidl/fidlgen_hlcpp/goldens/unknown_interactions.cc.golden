@@ -23686,6 +23686,10 @@ zx_status_t UnknownInteractionsProtocol_Proxy::Dispatch_(::fidl::HLCPPIncomingMe
       break;
     }
     default: {
+      if (message.txid() == 0 && message.is_flexible()) {
+        handle_unknown_event(message.ordinal());
+        break;
+      }
       status = ZX_ERR_NOT_SUPPORTED;
       break;
     }
@@ -25188,6 +25192,10 @@ zx_status_t UnknownInteractionsAjarProtocol_Proxy::Dispatch_(::fidl::HLCPPIncomi
       break;
     }
     default: {
+      if (message.txid() == 0 && message.is_flexible()) {
+        handle_unknown_event(message.ordinal());
+        break;
+      }
       status = ZX_ERR_NOT_SUPPORTED;
       break;
     }

@@ -82,7 +82,7 @@ class {{ .Name }} {
   {{- range .Methods }}
     {{- if .HasResponse }}
   using {{ .CallbackType }} =
-      {{ .CallbackWrapper }}<void({{ template "ParamTypes" .ResponseArgs }})>;
+      fit::function<void({{ template "ParamTypes" .ResponseArgs }})>;
     {{- end }}
     {{- if .HasRequest }}
       {{ .Docs }}
@@ -175,6 +175,8 @@ class {{ .Proxy.Name }} final : public ::fidl::internal::Proxy, public {{ .Name 
   {{- end }}
 
   {{ if .HandlesOneWayUnknownInteractions -}}
+  fit::function<void(uint64_t)> handle_unknown_event;
+
  protected:
   {{ if .HandlesTwoWayUnknownInteractions -}}
   void handle_unknown_method(uint64_t ordinal, bool method_has_response) override {
@@ -341,6 +343,12 @@ zx_status_t {{ .Proxy.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
       {{- end }}
     {{- end }}
     default: {
+      {{- if .HandlesOneWayUnknownInteractions }}
+      if (message.txid() == 0 && message.is_flexible()) {
+        handle_unknown_event(message.ordinal());
+        break;
+      }
+      {{- end }}
       status = ZX_ERR_NOT_SUPPORTED;
       break;
     }

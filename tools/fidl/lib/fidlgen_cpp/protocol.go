@@ -1053,10 +1053,6 @@ func (m *Method) methodKind() methodKind {
 	return eventMethod
 }
 
-func (m *Method) CallbackWrapper() string {
-	return "fit::function"
-}
-
 type Parameter struct {
 	nameVariants
 	Type              Type
