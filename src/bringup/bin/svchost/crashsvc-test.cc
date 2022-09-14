@@ -5,6 +5,7 @@
 #include <fidl/fuchsia.exception/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async-testing/test_loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/cpp/wire/server.h>
@@ -38,6 +39,18 @@ namespace {
 // We use this fake in order to verify that behaviour.
 class StubExceptionHandler final : public fidl::WireServer<fuchsia_exception::Handler> {
  public:
+  ~StubExceptionHandler() {
+    for (auto& completer : on_exception_completers_) {
+      completer.Close(ZX_ERR_CANCELED);
+    }
+    on_exception_completers_.clear();
+
+    for (auto& completer : is_active_completers_) {
+      completer.Close(ZX_ERR_CANCELED);
+    }
+    is_active_completers_.clear();
+  }
+
   zx_status_t Connect(async_dispatcher_t* dispatcher,
                       fidl::ServerEnd<fuchsia_exception::Handler> request) {
     binding_ = fidl::BindServer(dispatcher, std::move(request), this);
@@ -99,13 +112,12 @@ class StubExceptionHandler final : public fidl::WireServer<fuchsia_exception::Ha
   int exception_count() const { return exception_count_; }
 
  private:
-  std::optional<fidl::ServerBindingRef<fuchsia_exception::Handler>> binding_;
-
   int exception_count_ = 0;
   bool respond_sync_{true};
   bool is_active_{true};
   std::list<OnExceptionCompleter::Async> on_exception_completers_;
   std::list<IsActiveCompleter::Async> is_active_completers_;
+  std::optional<fidl::ServerBindingRef<fuchsia_exception::Handler>> binding_;
 };
 
 // Exposes the services through a virtual directory that crashsvc uses in order to connect to
@@ -136,10 +148,15 @@ class FakeService {
   fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 
+// Test fixture base class that implements functionaloty all tests need, e.g. spawning and crashing
+// processes.
+//
+// Allows test fixtures to define which type of loop the want to run as long as the loops has a
+// dispatcher method.
+template <typename LoopPolicy>
 class TestBase : public zxtest::Test {
  public:
-  explicit TestBase(const async_loop_config_t* config)
-      : loop_(config), fake_service_(loop_.dispatcher()) {}
+  explicit TestBase() : fake_service_(loop().dispatcher()) {}
 
   void SetUp() final {
     ASSERT_OK(zx::job::create(*zx::job::default_job(), 0, &parent_job_));
@@ -147,8 +164,6 @@ class TestBase : public zxtest::Test {
 
     ASSERT_OK(zx::job::create(parent_job_, 0, &job_));
   }
-
-  void TearDown() override { loop().Shutdown(); }
 
   // Synchronously creates a process under |job_| that immediately crashes.
   void GenerateException() const {
@@ -202,8 +217,8 @@ class TestBase : public zxtest::Test {
     return zx::ok(std::make_pair(std::move(exception), std::move(info)));
   }
 
-  const async::Loop& loop() const { return loop_; }
-  async::Loop& loop() { return loop_; }
+  const auto& loop() const { return loop_policy_.loop; }
+  auto& loop() { return loop_policy_.loop; }
 
   const zx::channel& svc_channel() const { return fake_service_.service_channel(); }
 
@@ -244,7 +259,7 @@ class TestBase : public zxtest::Test {
     ASSERT_OK(mini_process_cmd_send(command_channel.get(), MINIP_CMD_BUILTIN_TRAP));
   }
 
-  async::Loop loop_;
+  LoopPolicy loop_policy_;
   FakeService fake_service_;
 
   zx::job parent_job_;
@@ -252,9 +267,15 @@ class TestBase : public zxtest::Test {
   zx::channel exception_channel_;
 };
 
-class CrashsvcTest : public TestBase {
+// Use a real loop on another thread to prevent the test thread from becoming blocked.
+struct RealLoopPolicy {
+  RealLoopPolicy() : loop(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  async::Loop loop;
+};
+
+class CrashsvcTest : public TestBase<RealLoopPolicy> {
  public:
-  CrashsvcTest() : TestBase(&kAsyncLoopConfigNoAttachToCurrentThread) { loop().StartThread(); }
+  CrashsvcTest() { loop().StartThread(); }
 
   void TearDown() final {
     loop().Shutdown();
@@ -348,40 +369,40 @@ TEST_F(CrashsvcTest, ThreadBacktraceExceptionHandler) {
 
 constexpr auto kExceptionHandlerTimeout = zx::sec(3);
 
-class ExceptionHandlerTest : public TestBase {
+// Use a test loop to control when actions occur.
+struct TestLoopPolicy {
+  async::TestLoop loop;
+};
+
+class ExceptionHandlerTest : public TestBase<TestLoopPolicy> {
  public:
-  ExceptionHandlerTest() : TestBase(&kAsyncLoopConfigAttachToCurrentThread) {}
+  void TearDown() override {
+    loop().Quit();
 
-  void RunLoopUntil(fit::function<bool()> condition) {
-    while (!condition()) {
-      loop().Run(zx::deadline_after(zx::msec(10)));
-    }
+    // Kill |job_| to stop exception handling and crashsvc
+    ASSERT_OK(job().kill());
   }
 
-  void RunLoopFor(zx::duration timeout) {
-    while (timeout > zx::nsec(0)) {
-      loop().Run(zx::deadline_after(zx::msec(10)));
-      timeout -= zx::msec(10);
-    }
-  }
+  void RunLoopUntilIdle() { loop().RunUntilIdle(); }
+  void RunLoopFor(const zx::duration duration) { loop().RunFor(duration); }
 };
 
 TEST_F(ExceptionHandlerTest, ExceptionHandlerReconnects) {
   ExceptionHandler handler(loop().dispatcher(), svc_channel().get(), kExceptionHandlerTimeout);
 
-  RunLoopUntil([&stub = stub_handler()] { return stub.HasClient(); });
+  RunLoopUntilIdle();
   ASSERT_TRUE(stub_handler().HasClient());
 
   // Simulates crashsvc losing connection with fuchsia.exception.Handler.
   ASSERT_OK(stub_handler().Unbind());
 
-  RunLoopUntil([&handler] { return !handler.ConnectedToServer(); });
+  RunLoopUntilIdle();
   ASSERT_FALSE(stub_handler().HasClient());
 
   // Create an invalid exception to trigger the reconnection logic.
   handler.Handle(zx::exception{}, zx_exception_info_t{});
 
-  RunLoopUntil([&stub = stub_handler()] { return stub.HasClient(); });
+  RunLoopUntilIdle();
   ASSERT_TRUE(stub_handler().HasClient());
 }
 
@@ -394,7 +415,7 @@ TEST_F(ExceptionHandlerTest, ExceptionHandlerWaitsForIsActive) {
   // Instructs the stub to not respond to calls to IsActive.
   stub_handler().SetIsActive(false);
 
-  RunLoopUntil([&stub = stub_handler()] { return stub.HasClient(); });
+  RunLoopUntilIdle();
   ASSERT_TRUE(stub_handler().HasClient());
 
   ASSERT_NO_FATAL_FAILURE(GenerateException());
@@ -407,7 +428,8 @@ TEST_F(ExceptionHandlerTest, ExceptionHandlerWaitsForIsActive) {
   ASSERT_EQ(stub_handler().exception_count(), 0u);
 
   stub_handler().SetIsActive(true);
-  RunLoopUntil([&stub = stub_handler()] { return stub.exception_count() == 1; });
+  RunLoopUntilIdle();
+  EXPECT_EQ(stub_handler().exception_count(), 1u);
 }
 
 TEST_F(ExceptionHandlerTest, ExceptionHandlerIsActiveTimeOut) {
@@ -419,7 +441,7 @@ TEST_F(ExceptionHandlerTest, ExceptionHandlerIsActiveTimeOut) {
   // Instructs the stub to not respond to calls to IsActive.
   stub_handler().SetIsActive(false);
 
-  RunLoopUntil([&stub = stub_handler()] { return stub.HasClient(); });
+  RunLoopUntilIdle();
   ASSERT_TRUE(stub_handler().HasClient());
 
   ASSERT_NO_FATAL_FAILURE(GenerateException());
@@ -433,8 +455,7 @@ TEST_F(ExceptionHandlerTest, ExceptionHandlerIsActiveTimeOut) {
   RunLoopFor(kExceptionHandlerTimeout);
   ASSERT_EQ(stub_handler().exception_count(), 0u);
 
-  // The exception should be passed up the chain after the timeout. Once we get the exception, kill
-  // the job which will stop exception handling and cause the crashsvc thread to exit.
+  // Expect the kernel to pass the exception up
   //
   // Use a non-inifinte timeout to prevent hangs.
   ASSERT_OK(exception_channel_self.wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(zx::sec(3)),
