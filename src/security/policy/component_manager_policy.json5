@@ -672,7 +672,6 @@
                     "/core/audio_core",
                     "/core/audio_recording",
                     "/core/auto-brightness",
-                    "/core/battery_manager",
                     "/core/bluetooth-core/bt-gap",
                     "/core/brightness_manager",
                     "/core/bt-snoop",

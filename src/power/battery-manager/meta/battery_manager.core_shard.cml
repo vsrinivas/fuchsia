@@ -25,11 +25,11 @@
             to: "#battery_manager",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-power",
             to: "#battery_manager",
-            subdir: "class/power",
+            subdir: "power",
         },
     ],
 }
