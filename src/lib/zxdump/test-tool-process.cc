@@ -101,17 +101,24 @@ std::string TestToolProcess::FilePathForRunner(const TestToolProcess::File& file
 
 class SandboxRootJobServer final : public fidl::WireServer<fuchsia_kernel::RootJob> {
  public:
+  void Init(zx::unowned_job job) { job_ = job; }
+
   void Get(GetCompleter::Sync& completer) override {
     zx::job job;
-    zx_status_t status = zx::job::default_job()->duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
+    zx_status_t status = job_->duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
     EXPECT_EQ(status, ZX_OK) << zx_status_get_string(status);
     completer.Reply(std::move(job));
   }
+
+ private:
+  zx::unowned_job job_;
 };
 
 class TestToolProcess::SandboxRootJobLoop {
  public:
-  void Init(fidl::ClientEnd<fuchsia_io::Directory>& out_svc) {
+  void Init(zx::unowned_job job, fidl::ClientEnd<fuchsia_io::Directory>& out_svc) {
+    server_.Init(job->borrow());
+
     loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
     zx_status_t status = loop_->StartThread("SandboxRootJob");
     ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
@@ -167,7 +174,7 @@ void TestToolProcess::SandboxCommand(PipedCommand& command) {
 
   fidl::ClientEnd<fuchsia_io::Directory> svc;
   sandbox_root_job_loop_ = std::make_unique<TestToolProcess::SandboxRootJobLoop>();
-  ASSERT_NO_FATAL_FAILURE(sandbox_root_job_loop_->Init(svc));
+  ASSERT_NO_FATAL_FAILURE(sandbox_root_job_loop_->Init(job_->borrow(), svc));
   actions.push_back({.action = FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
                      .ns = {
                          .prefix = "/svc",

@@ -6,6 +6,7 @@
 #include <getopt.h>
 #include <lib/zxdump/dump.h>
 #include <lib/zxdump/fd-writer.h>
+#include <lib/zxdump/task.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
@@ -18,7 +19,6 @@
 #include <string_view>
 
 #include <fbl/unique_fd.h>
-#include <task-utils/get.h>
 
 namespace {
 
@@ -510,7 +510,7 @@ bool WriteManyCoreFiles(JobDumper dumper, const Flags& flags) {
   return ok;
 }
 
-constexpr const char kOptString[] = "hlo:mtcpJjfDU";
+constexpr const char kOptString[] = "hlo:amtcpJjfDU";
 constexpr const option kLongOpts[] = {
     {"help", no_argument, nullptr, 'h'},                 //
     {"limit", required_argument, nullptr, 'l'},          //
@@ -524,6 +524,7 @@ constexpr const option kLongOpts[] = {
     {"flat-job-archive", no_argument, nullptr, 'f'},     //
     {"no-date", no_argument, nullptr, 'D'},              //
     {"date", no_argument, nullptr, 'U'},                 //
+    {"root-job", no_argument, nullptr, 'a'},             //
     {nullptr, no_argument, nullptr, 0},                  //
 };
 
@@ -533,6 +534,7 @@ int main(int argc, char** argv) {
   Flags flags;
   bool allow_jobs = false;
   auto handle_job = WriteManyCoreFiles;
+  bool dump_root_job = false;
 
   auto usage = [&](int status = EXIT_FAILURE) {
     std::cerr << "Usage: " << argv[0] << R"""( [SWITCHES...] PID...
@@ -549,6 +551,7 @@ int main(int argc, char** argv) {
     --no-processes, -p                 don't dump processes found in jobs
     --no-date, -D                      don't put dates into job archives
     --date, -U                         do put dates into job archives (default)
+    --root-job, -a                     dump the root job
 
 By default, each PID must be the KOID of a process.
 
@@ -583,6 +586,12 @@ Jobs are always dumped while they continue to run and may omit new processes
 or child jobs created after the dump collection begins.  Job dumps may report
 process or child job KOIDs that were never dumped if they died during
 collection.
+
+With --root-job (-a), dump the root job.  Without --no-children, that means
+dumping every job on the system; and without --no-process, it means dumping
+every process on the system.  Doing this without --no-threads may deadlock
+essential services.  PID arguments are not allowed with --root-job unless
+--no-children is also given, since they would always be redundant.
 )""";
     return status;
   };
@@ -642,17 +651,56 @@ collection.
         flags.collect_job_processes_ = false;
         continue;
 
+      case 'a':
+        dump_root_job = true;
+        continue;
+
       default:
         return usage(EXIT_SUCCESS);
     }
     break;
   }
 
-  if (optind == argc) {
+  if (optind == argc && !dump_root_job) {
     return usage();
   }
 
+  if (optind != argc && dump_root_job && flags.collect_job_children_) {
+    std::cerr << "PID arguments are redundant with root job" << std::endl;
+  }
+
   int exit_status = EXIT_SUCCESS;
+
+  zxdump::TaskHolder holder;
+  if (auto root = zxdump::GetRootJob(); root.is_error()) {
+    std::cerr << "cannot get root job: " << root.error_value() << std::endl;
+    exit_status = EXIT_FAILURE;
+  } else {
+    if (dump_root_job) {
+      zx_info_handle_basic_t info;
+      zx_status_t status = root.value().get_info(  //
+          ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+      if (status != ZX_OK) {
+        std::cerr << zxdump::Error{"zx_object_get_info", status} << std::endl;
+        status = EXIT_FAILURE;
+      } else {
+        zx::handle job;
+        zx_status_t status = root.value().duplicate(ZX_RIGHT_SAME_RIGHTS, &job);
+        if (status != ZX_OK) {
+          std::cerr << zxdump::Error{"zx_handle_duplicate", status} << std::endl;
+          exit_status = EXIT_FAILURE;
+        } else if (!handle_job(JobDumper{zx::job{std::move(job)}, info.koid}, flags))
+          exit_status = EXIT_FAILURE;
+      }
+    }
+
+    auto result = holder.Insert(std::move(root).value());
+    if (result.is_error()) {
+      std::cerr << "root job: " << root.error_value() << std::endl;
+      exit_status = EXIT_FAILURE;
+    }
+  }
+
   for (int i = optind; i < argc; ++i) {
     char* p;
     zx_koid_t pid = strtoul(argv[i], &p, 0);
@@ -661,25 +709,24 @@ collection.
       return usage();
     }
 
-    zx_obj_type_t type;
-    zx_handle_t handle;
-    zx_status_t status = get_task_by_koid(pid, &type, &handle);
-    if (status != ZX_OK) {
-      std::cerr << pid << ": " << zx_status_get_string(status) << std::endl;
-      status = EXIT_FAILURE;
+    auto result = holder.root_job().find(pid);
+    if (result.is_error()) {
+      std::cerr << pid << ": " << result.error_value() << std::endl;
+      exit_status = EXIT_FAILURE;
       continue;
     }
 
-    switch (type) {
+    zxdump::Task& task = result.value();
+    switch (task.type()) {
       case ZX_OBJ_TYPE_PROCESS:
-        if (!WriteDump(ProcessDumper{zx::process{handle}, pid}, flags)) {
+        if (!WriteDump(ProcessDumper{zx::process{task.Reap()}, pid}, flags)) {
           exit_status = EXIT_FAILURE;
         }
         break;
 
       case ZX_OBJ_TYPE_JOB:
         if (allow_jobs) {
-          if (!handle_job(JobDumper{zx::job{handle}, pid}, flags)) {
+          if (!handle_job(JobDumper{zx::job{task.Reap()}, pid}, flags)) {
             exit_status = EXIT_FAILURE;
           }
           break;
@@ -688,7 +735,6 @@ collection.
 
       default:
         std::cerr << pid << ": KOID is not a process\n";
-        zx_handle_close(handle);
         exit_status = EXIT_FAILURE;
         break;
     }

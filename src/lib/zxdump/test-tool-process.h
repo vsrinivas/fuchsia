@@ -10,6 +10,7 @@
 #include <string_view>
 #include <thread>
 #ifdef __Fuchsia__
+#include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #endif
 
@@ -111,6 +112,10 @@ class TestToolProcess {
   std::string collected_stdout();
   std::string collected_stderr();
 
+#ifdef __Fuchsia__
+  void set_job(zx::unowned_job job) { job_ = job; }
+#endif
+
  private:
   class SandboxRootJobLoop;
 
@@ -125,6 +130,7 @@ class TestToolProcess {
   fbl::unique_fd tool_stdin_, tool_stdout_, tool_stderr_;
 #ifdef __Fuchsia__
   zx::process process_;
+  zx::unowned_job job_ = zx::job::default_job();
   std::unique_ptr<SandboxRootJobLoop> sandbox_root_job_loop_;
 #else
   int process_ = -1;

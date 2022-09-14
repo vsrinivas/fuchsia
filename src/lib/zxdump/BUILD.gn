@@ -210,7 +210,6 @@ executable("gcore") {
   deps = [
     ":zxdump",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/task-utils",
   ]
 }
 
