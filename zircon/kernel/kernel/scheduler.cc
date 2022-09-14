@@ -297,24 +297,24 @@ void Scheduler::DumpThreadLocked(FILE* output_target) {
               state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
     } else {
       fprintf(output_target,
-              "\t-> name=%s deadline=(%" PRId64 ", %" PRId64 ", %" PRId64 ") start=%" PRId64
-              " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64 "\n",
+              "\t-> name=%s deadline=(%" PRId64 ", %" PRId64 ") start=%" PRId64 " finish=%" PRId64
+              " ts=%" PRId64 " ema=%" PRId64 "\n",
               active_thread_->name(), state.deadline_.capacity_ns.raw_value(),
-              state.deadline_.deadline_ns.raw_value(), state.deadline_.period_ns.raw_value(),
-              state.start_time_.raw_value(), state.finish_time_.raw_value(),
-              state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
+              state.deadline_.deadline_ns.raw_value(), state.start_time_.raw_value(),
+              state.finish_time_.raw_value(), state.time_slice_ns_.raw_value(),
+              state.expected_runtime_ns_.raw_value());
     }
   }
 
   for (const Thread& thread : deadline_run_queue_) {
     const SchedulerState& state = thread.scheduler_state();
     fprintf(output_target,
-            "\t   name=%s deadline=(%" PRId64 ", %" PRId64 ", %" PRId64 ") start=%" PRId64
-            " finish=%" PRId64 " ts=%" PRId64 " ema=%" PRId64 "\n",
+            "\t   name=%s deadline=(%" PRId64 ", %" PRId64 ") start=%" PRId64 " finish=%" PRId64
+            " ts=%" PRId64 " ema=%" PRId64 "\n",
             thread.name(), state.deadline_.capacity_ns.raw_value(),
-            state.deadline_.deadline_ns.raw_value(), state.deadline_.period_ns.raw_value(),
-            state.start_time_.raw_value(), state.finish_time_.raw_value(),
-            state.time_slice_ns_.raw_value(), state.expected_runtime_ns_.raw_value());
+            state.deadline_.deadline_ns.raw_value(), state.start_time_.raw_value(),
+            state.finish_time_.raw_value(), state.time_slice_ns_.raw_value(),
+            state.expected_runtime_ns_.raw_value());
   }
 
   for (const Thread& thread : fair_run_queue_) {
@@ -1412,7 +1412,7 @@ void Scheduler::QueueThread(Thread* thread, Placement placement, SchedTime now,
       // than the remaining time slice or negative if the thread blocked.
       const SchedDuration time_until_deadline_ns = state->finish_time_ - now;
       if (time_until_deadline_ns <= 0 || state->time_slice_ns_ <= 0) {
-        const SchedTime period_finish_ns = state->start_time_ + state->deadline_.period_ns;
+        const SchedTime period_finish_ns = state->start_time_ + state->deadline_.deadline_ns;
 
         state->start_time_ = now >= period_finish_ns ? now : period_finish_ns;
         state->finish_time_ = state->start_time_ + state->deadline_.deadline_ns;

@@ -155,7 +155,7 @@ struct WaitQueueOrderingTests {
     // into queue ordering right now.
     constexpr SchedUtilization kUtil = SchedUtilization{1} / 5;
     ss.discipline_ = SchedDiscipline::Deadline;
-    ss.deadline_ = SchedDeadlineParams{kUtil * rel_deadline, rel_deadline, rel_deadline};
+    ss.deadline_ = SchedDeadlineParams{kUtil * rel_deadline, rel_deadline};
     ss.start_time_ = start_time;
     ss.finish_time_ = ss.start_time_ + ss.deadline_.deadline_ns;
   }

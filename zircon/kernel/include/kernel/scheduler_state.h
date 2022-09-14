@@ -71,15 +71,12 @@ using SchedTime = ffl::Fixed<zx_time_t, 0>;
 struct SchedDeadlineParams {
   SchedDuration capacity_ns{0};
   SchedDuration deadline_ns{0};
-  SchedDuration period_ns{0};
   SchedUtilization utilization{0};
 
   constexpr SchedDeadlineParams() = default;
-  constexpr SchedDeadlineParams(SchedDuration capacity_ns, SchedDuration deadline_ns,
-                                SchedDuration period_ns)
+  constexpr SchedDeadlineParams(SchedDuration capacity_ns, SchedDuration deadline_ns)
       : capacity_ns{capacity_ns},
         deadline_ns{deadline_ns},
-        period_ns{period_ns},
         utilization{capacity_ns / deadline_ns} {}
 
   constexpr SchedDeadlineParams(const SchedDeadlineParams&) = default;
@@ -88,7 +85,6 @@ struct SchedDeadlineParams {
   constexpr SchedDeadlineParams(const zx_sched_deadline_params_t& params)
       : capacity_ns{params.capacity},
         deadline_ns{params.relative_deadline},
-        period_ns{params.period},
         utilization{capacity_ns / deadline_ns} {}
   constexpr SchedDeadlineParams& operator=(const zx_sched_deadline_params_t& params) {
     *this = SchedDeadlineParams{params};
@@ -96,8 +92,7 @@ struct SchedDeadlineParams {
   }
 
   friend bool operator==(SchedDeadlineParams a, SchedDeadlineParams b) {
-    return a.capacity_ns == b.capacity_ns && a.deadline_ns == b.deadline_ns &&
-           a.period_ns == b.period_ns;
+    return a.capacity_ns == b.capacity_ns && a.deadline_ns == b.deadline_ns;
   }
   friend bool operator!=(SchedDeadlineParams a, SchedDeadlineParams b) { return !(a == b); }
 };
