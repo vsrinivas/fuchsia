@@ -376,7 +376,7 @@ mod tests {
         block_on(super::parse_impl(descriptor, PathEnumerationMethod::Mocked))
     }
 
-    #[test]
+    #[fuchsia::test]
     fn debug_desc() {
         match parse("debug") {
             #[cfg(target_os = "fuchsia")]
@@ -387,7 +387,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn stdio_desc() {
         match parse("-") {
             #[cfg(not(target_os = "fuchsia"))]
@@ -398,7 +398,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn simple_dev_desc() {
         assert_eq!(
             parse("/dev/ttyS0").unwrap(),
@@ -406,7 +406,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn devs_with_config() {
         assert_eq!(
             parse("/dev/ttyS0:b=115200").unwrap(),
@@ -557,7 +557,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn devs_with_multi_config() {
         assert_eq!(
             parse("/dev/ttyS0:p=odd : f=ctsrts:s=2").unwrap(),
@@ -573,7 +573,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_devices() {
         assert_eq!(
             parse("/dev/ttyS0:p=odd, /dev/ttyS1:p=even").unwrap(),
@@ -594,7 +594,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn all_devices() {
         assert_eq!(
             parse("all").unwrap(),
@@ -607,7 +607,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn all_devices_with_overrides() {
         assert_eq!(
             parse("/dev/ttyS0:p=odd, all:p=none, /dev/ttyS1:p=even").unwrap(),

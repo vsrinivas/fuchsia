@@ -26,13 +26,13 @@ impl fidl_fuchsia_overnet::ServiceProviderProxyInterface for Service {
         _connection_info: fidl_fuchsia_overnet::ConnectionInfo,
     ) -> std::result::Result<(), fidl::Error> {
         let test_name = self.1.clone();
-        log::info!("{} got connection {:?}", test_name, chan);
+        tracing::info!(%test_name, "got connection {:?}", chan);
         let mut sender = self.0.clone();
         Task::spawn(log_errors(
             async move {
-                log::info!("{} sending the thing", test_name);
+                tracing::info!(%test_name, "sending the thing");
                 sender.send(chan).await?;
-                log::info!("{} sent the thing", test_name);
+                tracing::info!(%test_name, "sent the thing");
                 Ok(())
             },
             format!("{} failed to send incoming request handle", self.1),
@@ -88,7 +88,7 @@ impl Fixture {
         let service_task = Task::spawn(futures::future::join3(l1, l2, l3).map(drop));
         let service = format!("distribute_handle_for_{}", test_name);
         let (send_handle, mut recv_handle) = futures::channel::mpsc::channel(1);
-        log::info!("{} {} register 2", test_name, fixture_id);
+        tracing::info!(%test_name, %fixture_id, "register 2");
         router2
             .register_raw_service(
                 service.clone(),
@@ -96,7 +96,7 @@ impl Fixture {
             )
             .await
             .unwrap();
-        log::info!("{} {} register 3", test_name, fixture_id);
+        tracing::info!(%test_name, %fixture_id, "register 3");
         router3
             .register_raw_service(
                 service.clone(),
@@ -130,13 +130,13 @@ impl Fixture {
         }
         let (dist_a_to_b, dist_b) = fidl::Channel::create().unwrap();
         let (dist_a_to_c, dist_c) = fidl::Channel::create().unwrap();
-        log::info!("{} {} connect 2", test_name, fixture_id);
+        tracing::info!(%test_name, %fixture_id, "connect 2");
         router1.connect_to_service(router2.node_id(), &service, dist_b).await.unwrap();
-        log::info!("{} {} get 2", test_name, fixture_id);
+        tracing::info!(%test_name, %fixture_id,"get 2");
         let dist_b = recv_handle.next().await.unwrap();
-        log::info!("{} {} connect 3", test_name, fixture_id);
+        tracing::info!(%test_name, %fixture_id, "connect 3");
         router1.connect_to_service(router3.node_id(), &service, dist_c).await.unwrap();
-        log::info!("{} {} get 3", test_name, fixture_id);
+        tracing::info!(%test_name, %fixture_id, "get 3");
         let dist_c = recv_handle.next().await.unwrap();
         let dist_b = fidl::AsyncChannel::from_channel(dist_b).unwrap();
         let dist_c = fidl::AsyncChannel::from_channel(dist_c).unwrap();
@@ -145,7 +145,7 @@ impl Fixture {
 
     async fn distribute_handle<H: HandleBased>(&self, h: H, target: Target) -> H {
         let h = h.into_handle();
-        log::info!("{} distribute_handle: make {:?} on {:?}", self.test_name, h, target);
+        tracing::info!(test_name = %self.test_name, "distribute_handle: make {:?} on {:?}", h, target);
         let (dist_local, dist_remote) = match target {
             Target::A => return H::from_handle(h),
             Target::B => (&self.dist_a_to_b, &self.dist_b),
@@ -158,11 +158,11 @@ impl Fixture {
         assert_eq!(bytes.len(), 0);
         assert_eq!(handles.len(), 1);
         let h = std::mem::replace(handles, vec![]).into_iter().next().unwrap();
-        log::info!("{} distribute_handle: remote is {:?}", self.test_name, h);
+        tracing::info!(test_name = %self.test_name, "distribute_handle: remote is {:?}", h);
         return H::from_handle(h.handle);
     }
 
     pub fn log(&mut self, msg: &str) {
-        log::info!("{}: {}", self.test_name, msg);
+        tracing::info!(test_name = %self.test_name, "{}", msg);
     }
 }

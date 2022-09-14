@@ -93,10 +93,10 @@ impl ServiceMap {
         service_name: String,
         provider: Box<dyn ServiceProviderProxyInterface>,
     ) {
-        log::trace!("Request register_service '{}'", service_name);
+        tracing::trace!("Request register_service '{}'", service_name);
         let mut local_services = self.local_services.lock().await;
         if local_services.insert(service_name.clone(), provider).is_none() {
-            log::trace!("Publish new service '{}'", service_name);
+            tracing::trace!("Publish new service '{}'", service_name);
             let services: Vec<String> = local_services.keys().cloned().collect();
             drop(local_services);
             self.local_service_list.maybe_push(services.clone()).await;

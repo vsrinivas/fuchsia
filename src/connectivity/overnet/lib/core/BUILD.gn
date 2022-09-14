@@ -26,7 +26,7 @@ CORE_DEPS = [
   "//third_party/rust_crates:event-listener",
   "//third_party/rust_crates:futures",
   "//third_party/rust_crates:libc",
-  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:tracing",
   "//third_party/rust_crates:rand",
   "//third_party/rust_crates/mirrors/quiche/quiche",
 ]

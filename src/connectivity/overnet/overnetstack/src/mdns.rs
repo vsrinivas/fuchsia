@@ -22,7 +22,7 @@ async fn connect_to_proxy(
     port: u16,
     proxy: zx::Channel,
 ) -> Result<(), Error> {
-    log::info!("Publish overnet service on port {}", port);
+    tracing::info!(port, "Publish overnet service");
 
     publisher
         .publish_service_instance(
@@ -35,7 +35,7 @@ async fn connect_to_proxy(
         .await?
         .map_err(|e| format_err!("{:?}", e))?;
 
-    log::info!("Published overnet service on port {}", port);
+    tracing::info!(port, "Published overnet service");
     Ok(())
 }
 
@@ -100,13 +100,13 @@ fn endpoint6_to_socket(ep: fidl_fuchsia_net::Ipv6SocketAddress) -> std::net::Soc
 pub async fn subscribe(
     found: futures::channel::mpsc::Sender<std::net::SocketAddrV6>,
 ) -> Result<(), Error> {
-    log::info!("Query for overnet services");
+    tracing::info!("Query for overnet services");
 
     let (server, proxy) = zx::Channel::create()?;
     fuchsia_component::client::connect_to_protocol::<SubscriberMarker>()?
         .subscribe_to_service(SERVICE_NAME, fidl::endpoints::ClientEnd::new(proxy))?;
 
-    log::info!("Wait for overnet services");
+    tracing::info!("Wait for overnet services");
     let found = &found;
 
     ServiceSubscriberRequestStream::from_channel(fasync::Channel::from_channel(server)?)
@@ -114,7 +114,7 @@ pub async fn subscribe(
         .try_for_each(|request| async move {
             match request {
                 ServiceSubscriberRequest::OnInstanceDiscovered { instance, responder } => {
-                    log::info!("Discovered: {:?}", instance);
+                    tracing::info!("Discovered: {:?}", instance);
                     if let Some(ipv4_endpoint) = instance.ipv4_endpoint {
                         found.clone().send(endpoint4_to_socket(ipv4_endpoint)).await?;
                     }
@@ -124,7 +124,7 @@ pub async fn subscribe(
                     responder.send()?;
                 }
                 ServiceSubscriberRequest::OnInstanceChanged { instance, responder } => {
-                    log::info!("Changed: {:?}", instance);
+                    tracing::info!("Changed: {:?}", instance);
                     if let Some(ipv4_endpoint) = instance.ipv4_endpoint {
                         found.clone().send(endpoint4_to_socket(ipv4_endpoint)).await?;
                     }
@@ -134,7 +134,7 @@ pub async fn subscribe(
                     responder.send()?;
                 }
                 ServiceSubscriberRequest::OnInstanceLost { responder, .. } => {
-                    log::info!("Removed a thing");
+                    tracing::info!("Removed a thing");
                     responder.send()?;
                 }
                 ServiceSubscriberRequest::OnQuery { responder, .. } => {
@@ -145,7 +145,7 @@ pub async fn subscribe(
         })
         .await?;
 
-    log::info!("Mdns subscriber finishes");
+    tracing::info!("Mdns subscriber finishes");
 
     Ok(())
 }
@@ -154,7 +154,7 @@ pub async fn subscribe(
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
+    #[fuchsia::test]
     fn test_fuchsia_to_rust_ipaddr6() {
         //test example IPv6 address [fe80::5054:ff:fe40:5763]
         //fidl_fuchsia_net::Ipv6Address

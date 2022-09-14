@@ -332,12 +332,12 @@ mod test {
         .await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn reliable(run: usize) -> Result<(), Error> {
         end2end(run, 0).await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn mostly_reliable(run: usize) -> Result<(), Error> {
         end2end(run, 1).await
     }

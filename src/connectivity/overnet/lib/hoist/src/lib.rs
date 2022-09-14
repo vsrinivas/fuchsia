@@ -10,7 +10,7 @@ pub use not_fuchsia::{default_ascendd_path, hard_coded_security_context, Hoist, 
 #[cfg(target_os = "fuchsia")]
 mod fuchsia;
 #[cfg(target_os = "fuchsia")]
-pub use fuchsia::Hoist;
+pub use crate::fuchsia::Hoist;
 
 use anyhow::{Context, Error};
 use fidl_fuchsia_overnet::{MeshControllerProxy, ServiceConsumerProxy, ServicePublisherProxy};
@@ -19,8 +19,7 @@ use once_cell::sync::OnceCell;
 #[cfg(target_os = "fuchsia")]
 pub mod logger {
     pub fn init() -> Result<(), anyhow::Error> {
-        use anyhow::Context as _;
-        fuchsia_syslog::init_with_tags(&["overnet_hoist"]).context("initialize logging")?;
+        diagnostics_log::init!(&["overnet_hoist"]);
         Ok(())
     }
 }
@@ -65,6 +64,7 @@ pub fn init_hoist() -> Result<&'static Hoist, Error> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use ::fuchsia as fuchsia_lib;
     use anyhow::Error;
     use fuchsia_async::{Task, TimeoutExt};
     use futures::channel::oneshot;
@@ -80,7 +80,7 @@ mod test {
         }
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_lib::test]
     async fn one_bad_channel_doesnt_take_everything_down() {
         let hoist = Hoist::new().unwrap();
         let (tx_complete, mut rx_complete) = oneshot::channel();
@@ -113,7 +113,7 @@ mod test {
         rx_complete_ack.await.unwrap();
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia_lib::test]
     async fn one_bad_link_doesnt_take_the_rest_down() {
         let hoist = Hoist::new().unwrap();
         let mesh_controller = &hoist.connect_as_mesh_controller().unwrap();

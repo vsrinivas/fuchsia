@@ -14,7 +14,7 @@ pub async fn log_errors(
     message: impl std::fmt::Display,
 ) {
     if let Err(e) = f.await {
-        log::warn!("{}: {:?}", message, e);
+        tracing::warn!("{}: {:?}", message, e);
     }
 }
 

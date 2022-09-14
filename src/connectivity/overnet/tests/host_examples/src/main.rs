@@ -382,7 +382,7 @@ fn bridge(a: &mut Ascendd, b: &mut Ascendd) -> Result<(), Error> {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn echo() -> Result<(), Error> {
         echo_test(Default::default())
     }
@@ -399,7 +399,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_ascendd_echo() -> Result<(), Error> {
         multiple_ascendd_echo_test(Default::default())
     }
@@ -442,7 +442,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn interface_passing() -> Result<(), Error> {
         interface_passing_test(Default::default())
     }
@@ -470,7 +470,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn socket_passing_both_ways() -> Result<(), Error> {
         socket_passing_test(
             Default::default(),
@@ -481,7 +481,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn socket_passing_client_to_server_send() -> Result<(), Error> {
         socket_passing_test(
             Default::default(),
@@ -492,7 +492,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn socket_passing_server_to_client_send() -> Result<(), Error> {
         socket_passing_test(
             Default::default(),
@@ -512,7 +512,7 @@ mod tests {
         })
     }
 
-    #[test]
+    #[fuchsia::test]
     fn event_pair() -> Result<(), Error> {
         event_pair_test(Default::default())
     }

@@ -142,7 +142,7 @@ impl FramedStreamWriter {
         let frame_len = bytes.len();
         assert!(frame_len <= 0xffff_ffff);
         let mut header = FrameHeader { frame_type, length: frame_len }.to_bytes()?;
-        log::trace!("header: {:?}", header);
+        tracing::trace!(?header);
         self.quic.send(&mut header, false).await?;
         if bytes.len() > 0 {
             self.quic.send(bytes, fin).await?;

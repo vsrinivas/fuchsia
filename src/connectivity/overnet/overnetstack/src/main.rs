@@ -114,7 +114,7 @@ async fn run_mesh_controller_server(
                             run_stream_link(node, &mut rx, &mut tx, Default::default(), config)
                                 .await
                         {
-                            log::warn!("Socket link failed: {:?}", e);
+                            tracing::warn!("Socket link failed: {:?}", e);
                         }
                         Ok(())
                     }
@@ -133,9 +133,9 @@ async fn maybe_run_subsystem(
 ) -> Result<(), Error> {
     if cond {
         if let Err(e) = run.await {
-            log::warn!("{} subsystem failed: {:?}", name, e);
+            tracing::warn!("{} subsystem failed: {:?}", name, e);
         } else {
-            log::info!("{} subsystem completed successfully", name);
+            tracing::info!("{} subsystem completed successfully", name);
         }
     }
     Ok(())
@@ -197,7 +197,7 @@ async fn main(opt: Opts) -> Result<(), Error> {
             opt.mdns_publish,
             "MDNS-publish",
             rx_addr.map(|a| a.port()).map(Ok).try_for_each(|p| async move {
-                log::info!("GOT NEW PORT: {}", p);
+                tracing::info!("GOT NEW PORT: {}", p);
                 *mdns_publisher.lock().await = Precious(Some(Task::spawn(log_errors(
                     crate::mdns::publish(p, node_id),
                     format!("mdns publisher for port {} failed", p),
@@ -214,17 +214,17 @@ async fn main(opt: Opts) -> Result<(), Error> {
         fs.for_each_concurrent(None, move |svcreq| match svcreq {
             IncomingService::MeshController(stream) => {
                 run_mesh_controller_server(node.clone(), stream)
-                    .unwrap_or_else(|e| log::trace!("{:?}", e))
+                    .unwrap_or_else(|err| tracing::trace!(?err))
                     .boxed_local()
             }
             IncomingService::ServicePublisher(stream) => {
                 run_service_publisher_server(node.clone(), stream)
-                    .unwrap_or_else(|e| log::trace!("{:?}", e))
+                    .unwrap_or_else(|err| tracing::trace!(?err))
                     .boxed_local()
             }
             IncomingService::ServiceConsumer(stream) => {
                 run_service_consumer_server(node.clone(), stream)
-                    .unwrap_or_else(|e| log::trace!("{:?}", e))
+                    .unwrap_or_else(|err| tracing::trace!(?err))
                     .boxed_local()
             }
         })

@@ -65,7 +65,7 @@ impl LinkFrameLabel {
         link_dst: Option<NodeId>,
         mut buf: impl std::io::Write,
     ) -> Result<usize, Error> {
-        log::trace!("ENCODE {:?}", self);
+        tracing::trace!("ENCODE {:?}", self);
         let mut control: u8 = 0;
         let mut length: usize = 0;
         let src = self.target.src;
@@ -112,7 +112,7 @@ impl LinkFrameLabel {
             length += 8;
             buf.write_u64::<byteorder::LittleEndian>(id)?;
         }
-        log::trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
+        tracing::trace!(control = %format!("{:x}", control), ?link_src, ?link_dst);
         length += 1;
         buf.write_u8(control)?;
         Ok(length)
@@ -129,7 +129,7 @@ impl LinkFrameLabel {
     ) -> Result<(LinkFrameLabel, usize), Error> {
         let mut r = ReverseReader(buf);
         let control = r.rd_u8()?;
-        log::trace!("control={:x} link_src={:?} link_dst={:?}", control, link_src, link_dst);
+        tracing::trace!(control = %format!("{:x}", control), ?link_src, ?link_dst);
         if control & LINK_FRAME_LABEL_IS_CONTROL != 0 {
             if control & LINK_FRAME_LABEL_HAS_DST != 0 {
                 anyhow::bail!("Control messages cannot specify dst");
@@ -216,11 +216,11 @@ mod test {
     use super::*;
 
     fn round_trips_buf(r: LinkFrameLabel, link_src: NodeId, link_dst: NodeId) {
-        log::trace!("Check roundtrips: {:?} with src={:?} dst={:?}", r, link_src, link_dst);
+        tracing::trace!(src = ?link_src, dst = ?link_dst, "Check roundtrips: {:?}", r);
         let mut buf: [u8; 128] = [0; 128];
         let suffix_len =
             r.encode_for_link(link_src, false, Some(link_dst), &mut buf[10..]).unwrap();
-        log::trace!("Encodes to: {:?}", &buf[10..10 + suffix_len]);
+        tracing::trace!("Encodes to: {:?}", &buf[10..10 + suffix_len]);
         assert_eq!(buf[0..10].to_vec(), vec![0, 0, 0, 0, 0, 0, 0, 0, 0, 0]);
         let (q, len) =
             LinkFrameLabel::decode(Some(link_src), link_dst, &buf[0..10 + suffix_len]).unwrap();

@@ -29,6 +29,7 @@ rustc_library("serial_link") {
 
   test_deps = [
     "//src/connectivity/overnet/lib/onet_test_util",
+    "//src/lib/fuchsia",
     "//third_party/rust_crates:tracing-subscriber",
   ]
 

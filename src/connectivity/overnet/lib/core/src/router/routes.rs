@@ -226,7 +226,7 @@ impl Routes {
         let mut db = self.db.new_observer();
         let mut last_emitted = ForwardingTable::empty();
         while let Some(db) = db.next().await {
-            log::trace!("[{:?}] Update with new route database {:#?}", own_node_id, db);
+            tracing::trace!(node_id = own_node_id.0, "Update with new route database {:#?}", db);
             let mut wip: BTreeMap<NodeId, Metrics> = db
                 .links
                 .iter()
@@ -246,7 +246,7 @@ impl Routes {
             }
             let table = ForwardingTable { table: Arc::new(wip) };
             if last_emitted.is_significantly_different_to(&table) {
-                log::trace!("[{:?}] New forwarding table: {:#?}", own_node_id, table);
+                tracing::trace!(node_id = own_node_id.0, "New forwarding table: {:#?}", table);
                 self.forwarding_table.push(table.clone()).await;
                 last_emitted = table;
             }
@@ -273,7 +273,7 @@ mod test {
     use super::*;
     use futures::FutureExt;
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_merge_links_removes_routes() {
         const NODE_ID: u64 = 42;
         const FOREIGN_NODE_ID: u64 = 23;

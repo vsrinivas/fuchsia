@@ -218,18 +218,18 @@ impl ListPeersContext {
     /// Implementation of ListPeers fidl method.
     pub async fn list_peers(&self) -> Result<Vec<fidl_fuchsia_overnet::Peer>, Error> {
         let call_id = LIST_PEERS_CALL.fetch_add(1, Ordering::SeqCst);
-        log::trace!("LIST_PEERS_CALL[{}] get observer", call_id);
+        tracing::trace!(list_peers_call = call_id, "get observer");
         let mut obs = self
             .0
             .lock()
             .await
             .take()
             .ok_or_else(|| anyhow::format_err!("Already listing peers"))?;
-        log::trace!("LIST_PEERS_CALL[{}] wait for value", call_id);
+        tracing::trace!(list_peers_call = call_id, "wait for value");
         let r = obs.next().await;
-        log::trace!("LIST_PEERS_CALL[{}] replace observer", call_id);
+        tracing::trace!(list_peers_call = call_id, "replace observer");
         *self.0.lock().await = Some(obs);
-        log::trace!("LIST_PEERS_CALL[{}] return", call_id);
+        tracing::trace!(list_peers_call = call_id, "return");
         Ok(r.unwrap_or_else(Vec::new).into_iter().map(|p| p.into()).collect())
     }
 }
@@ -385,7 +385,7 @@ impl Router {
         rtt_observer: Observer<Option<Duration>>,
         connecting_link_token: ConnectingLinkToken,
     ) -> Result<(), Error> {
-        log::info!("publish link {:?}", routing.debug_id());
+        tracing::info!(debug_id = ?routing.debug_id(), "publish link");
         self.links.lock().await.insert(routing.id(), Arc::downgrade(&routing));
         self.link_state_publisher
             .clone()
@@ -441,11 +441,11 @@ impl Router {
         chan: Channel,
     ) -> Result<(), Error> {
         let is_local = node_id == self.node_id;
-        log::trace!(
-            "Request connect_to_service '{}' on {:?}{}",
-            service_name,
-            node_id,
-            if is_local { " [local]" } else { " [remote]" }
+        tracing::trace!(
+            %service_name,
+            node_id = node_id.0,
+            local = is_local,
+            "Request connect_to_service",
         );
         if is_local {
             self.service_map()
@@ -538,7 +538,7 @@ impl Router {
         conn_id: ConnectionId,
         due_to_routing_error: bool,
     ) {
-        log::trace!("[{:?}] Request remove peer {:?}", self.node_id, conn_id);
+        tracing::trace!(node_id = self.node_id.0, peer_id = ?conn_id, "Request remove peer");
         let mut removed_client_peer_node_id = None;
         {
             let mut peers = self.peers.lock().await;
@@ -563,9 +563,9 @@ impl Router {
             }
         }
         if let Some(removed_client_peer_node_id) = removed_client_peer_node_id {
-            log::trace!(
-                "[{:?}] Removed client peer {:?} to {:?}",
-                self.node_id,
+            tracing::trace!(
+                node_id = self.node_id.0,
+                "Removed client peer {:?} to {:?}",
                 conn_id,
                 removed_client_peer_node_id
             );
@@ -577,9 +577,9 @@ impl Router {
                     .route_for(removed_client_peer_node_id)
                     .is_some();
             if revive {
-                log::trace!(
-                    "[{:?}] Revive client peer to {:?}",
-                    self.node_id,
+                tracing::trace!(
+                    node_id = self.node_id.0,
+                    "Revive client peer to {:?}",
                     removed_client_peer_node_id
                 );
                 if let Err(e) = self
@@ -589,23 +589,23 @@ impl Router {
                     .get_client(self.node_id, removed_client_peer_node_id, self)
                     .await
                 {
-                    log::trace!(
-                        "[{:?}] Failed revibing client peer to {:?}: {:?}",
-                        self.node_id,
+                    tracing::trace!(
+                        node_id = self.node_id.0,
+                        "Failed revibing client peer to {:?}: {:?}",
                         removed_client_peer_node_id,
                         e
                     );
                 } else {
-                    log::trace!(
-                        "[{:?}] Revived client peer to {:?}",
-                        self.node_id,
+                    tracing::trace!(
+                        node_id = self.node_id.0,
+                        "Revived client peer to {:?}",
                         removed_client_peer_node_id
                     );
                 }
             } else {
-                log::trace!(
-                    "[{:?}] Do not revive client peer to {:?}",
-                    self.node_id,
+                tracing::trace!(
+                    node_id = self.node_id.0,
+                    "Do not revive client peer to {:?}",
                     removed_client_peer_node_id
                 );
             }
@@ -636,13 +636,9 @@ impl Router {
         let router = Arc::downgrade(&self);
         let proxy_task = Task::spawn(async move {
             if let Err(e) = f.await {
-                log::trace!("[{:?}:{:?}] Proxy failed: {:?}", this_handle_key, pair_handle_key, e);
+                tracing::trace!(?this_handle_key, ?pair_handle_key, "Proxy failed: {:?}", e);
             } else {
-                log::trace!(
-                    "[{:?}:{:?}] Proxy completed successfully",
-                    this_handle_key,
-                    pair_handle_key
-                );
+                tracing::trace!(?this_handle_key, ?pair_handle_key, "Proxy completed successfully",);
             }
             if let Some(router) = Weak::upgrade(&router) {
                 router.remove_proxied(this_handle_key, pair_handle_key).await;
@@ -664,12 +660,12 @@ impl Router {
         pair_handle_key: HandleKey,
     ) {
         let mut proxied_streams = self.proxied_streams.lock().await;
-        log::trace!(
-            "{:?} REMOVE_PROXIED: {:?}:{:?} all={:?}",
-            self.node_id,
-            this_handle_key,
-            pair_handle_key,
-            sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
+        tracing::trace!(
+            node_id = self.node_id.0,
+            ?this_handle_key,
+            ?pair_handle_key,
+            all = ?sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>()),
+            "REMOVE_PROXIED",
         );
         if let Some(removed) = proxied_streams.remove(&this_handle_key) {
             assert_eq!(removed.original_paired, pair_handle_key);
@@ -690,12 +686,12 @@ impl Router {
         let info = handle_info(handle.as_handle_ref())
             .with_context(|| format!("Getting handle information for {}", raw_handle))?;
         let mut proxied_streams = self.proxied_streams.lock().await;
-        log::trace!(
-            "{:?} SEND_PROXIED: {:?} {:?} all={:?}",
-            self.node_id,
-            handle,
-            info,
-            sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
+        tracing::trace!(
+            node_id = self.node_id.0,
+            ?handle,
+            ?info,
+            all = ?sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>()),
+            "SEND_PROXIED",
         );
         if let Some(pair) = proxied_streams.remove(&info.pair_handle_key) {
             // This handle is the other end of an already proxied object...
@@ -703,7 +699,11 @@ impl Router {
             // initiated, and to where.
             drop(proxied_streams);
             assert_eq!(info.this_handle_key, pair.original_paired);
-            log::trace!("Send paired proxied {:?} orig_pair={:?}", handle, pair.original_paired);
+            tracing::trace!(
+                ?handle,
+                orig_pair = ?pair.original_paired,
+                "Send paired proxied"
+            );
             // We allocate a drain stream to flush any messages we've buffered locally to the new
             // endpoint.
             let drain_stream = conn.alloc_uni().into();
@@ -733,7 +733,7 @@ impl Router {
             }
         } else {
             // This handle (and its pair) is previously unseen... establish a proxy stream for it
-            log::trace!("Send proxied {:?}", handle);
+            tracing::trace!(?handle, "Send proxied");
             let (tx, rx) = futures::channel::oneshot::channel();
             let rx = ProxyTransferInitiationReceiver::new(rx.map_err(move |_| {
                 format_err!(
@@ -946,12 +946,12 @@ impl Router {
             // reunite the channel ends.
             let info = handle_info(handle.as_handle_ref())?;
             let mut proxied_streams = self.proxied_streams.lock().await;
-            log::trace!(
-                "{:?} OPEN_TRANSFER_REMOVE_PROXIED: key={:?} {:?} all={:?}",
-                self.node_id,
-                transfer_key,
-                info,
-                sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>())
+            tracing::trace!(
+                node_id = self.node_id.0,
+                key = ?transfer_key,
+                info = ?info,
+                all = ?sorted(proxied_streams.keys().map(|x| *x).collect::<Vec<_>>()),
+                "OPEN_TRANSFER_REMOVE_PROXIED",
             );
             if let Some(removed) = proxied_streams.remove(&info.this_handle_key) {
                 assert_eq!(removed.original_paired, info.pair_handle_key);
@@ -1109,7 +1109,7 @@ mod tests {
             )
             .await
             {
-                log::trace!("forwarding failed: {:?}", e)
+                tracing::trace!("forwarding failed: {:?}", e)
             }
         });
         f(router1, router2).await

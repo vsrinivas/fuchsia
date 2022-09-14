@@ -78,7 +78,7 @@ pub async fn run_serial_link_handlers(
                         .await
                     }
                 };
-                log::warn!("serial loop completed with failure: {:?}", error);
+                tracing::warn!("serial loop completed with failure: {:?}", error);
                 Ok(())
             }
         })

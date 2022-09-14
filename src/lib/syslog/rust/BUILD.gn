@@ -55,8 +55,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/connectivity/lowpan/lib/openthread_fuchsia:*",
   "//src/connectivity/lowpan/lib/openthread_rust:*",
   "//src/connectivity/lowpan/service:*",
-  "//src/connectivity/overnet/lib/hoist:*",
-  "//src/connectivity/overnet/tools/debug-serial:*",
   "//src/connectivity/ppp/lib/ppp_packet:*",
   "//src/connectivity/ppp/lib/ppp_protocol:*",
   "//src/connectivity/weave/tests/weave_ip_forward:*",

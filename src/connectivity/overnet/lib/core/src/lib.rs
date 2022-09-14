@@ -62,7 +62,7 @@ impl<X: std::fmt::Debug> Trace for X {
     where
         Self: Sized,
     {
-        log::info!("[{:?}] {}: {:?}", ctx, msg, self);
+        tracing::info!("[{:?}] {}: {:?}", ctx, msg, self);
         self
     }
 }

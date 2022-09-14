@@ -291,7 +291,7 @@ async fn peer_to_link(conn: PeerConn, link: Arc<LinkRouting>) {
     loop {
         let mut one_send = OneSend { link: &*link, conn: conn.as_ref(), state: OneSendState::Idle };
         if let Err(e) = future::poll_fn(move |ctx| one_send.poll(ctx)).await {
-            log::warn!(
+            tracing::warn!(
                 "Sender for {:?} on link {:?} failed: {:?}",
                 conn.trace_id(),
                 link.debug_id(),
@@ -367,11 +367,11 @@ async fn check_connectivity(router: Weak<Router>, conn: PeerConn) -> Result<(), 
             .map(|sender_and_current_link| !Arc::ptr_eq(&sender_and_current_link.1, &new_link))
             .unwrap_or(true)
         {
-            log::trace!(
+            tracing::trace!(
                 "Peer {:?} route set to {:?} from {:?}",
                 conn,
                 new_link.debug_id(),
-                sender_and_current_link.map(|s_and_l| s_and_l.1.debug_id())
+                sender_and_current_link.as_ref().map(|s_and_l| s_and_l.1.debug_id())
             );
             sender_and_current_link =
                 Some((Task::spawn(peer_to_link(conn.clone(), new_link.clone())), new_link));
@@ -402,12 +402,7 @@ impl Peer {
         service_observer: Observer<Vec<String>>,
         router: &Arc<Router>,
     ) -> Result<Arc<Self>, Error> {
-        log::trace!(
-            "[{:?}] NEW CLIENT: peer={:?} conn_id={:?}",
-            router.node_id(),
-            node_id,
-            conn_id,
-        );
+        tracing::trace!(node_id = router.node_id().0, peer = node_id.0, ?conn_id, "NEW CLIENT",);
         let (command_sender, command_receiver) = mpsc::channel(1);
         let conn = AsyncConnection::connect(
             None,
@@ -459,12 +454,7 @@ impl Peer {
         config: &mut quiche::Config,
         router: &Arc<Router>,
     ) -> Result<Arc<Self>, Error> {
-        log::trace!(
-            "[{:?}] NEW SERVER: peer={:?} conn_id={:?}",
-            router.node_id(),
-            node_id,
-            conn_id,
-        );
+        tracing::trace!(node_id = router.node_id().0, peer = node_id.0, ?conn_id, "NEW SERVER",);
         let conn = AsyncConnection::accept(
             &quiche::ConnectionId::from_ref(&conn_id.to_array()),
             local_node_id.to_ipv6_repr(),
@@ -516,26 +506,26 @@ impl Peer {
             Weak::upgrade(&router).map(|r| format!("{:?}", r.node_id())).unwrap_or_else(String::new)
         };
         if let Err(RunnerError::NoRouteToPeer) = &result {
-            log::trace!(
-                "[{} conn:{:?}] {:?} runner lost route to peer",
-                get_router_node_id(),
-                conn_id,
-                endpoint,
+            tracing::trace!(
+                node_id = %get_router_node_id(),
+                conn = ?conn_id,
+                ?endpoint,
+                "runner lost route to peer",
             );
         } else if let Err(e) = &result {
-            log::error!(
-                "[{} conn:{:?}] {:?} runner error: {:?}",
-                get_router_node_id(),
-                conn_id,
-                endpoint,
+            tracing::error!(
+                node_id = %get_router_node_id(),
+                conn = ?conn_id,
+                ?endpoint,
+                "runner error: {:?}",
                 e
             );
         } else {
-            log::trace!(
-                "[{} conn:{:?}] {:?} finished successfully",
-                get_router_node_id(),
-                conn_id,
-                endpoint
+            tracing::trace!(
+                node_id = %get_router_node_id(),
+                conn = ?conn_id,
+                ?endpoint,
+                "finished successfully",
             );
         }
         if let Some(router) = Weak::upgrade(&router) {
@@ -650,9 +640,17 @@ async fn client_handshake(
     mut conn_stream_reader: AsyncQuicStreamReader,
     conn_stats: Arc<PeerConnStats>,
 ) -> Result<(FramedStreamWriter, FramedStreamReader), Error> {
-    log::trace!("[{:?} clipeer:{:?}] client connection stream started", my_node_id, peer_node_id);
+    tracing::trace!(
+        my_node_id = my_node_id.0,
+        clipeer = peer_node_id.0,
+        "client connection stream started",
+    );
     // Send FIDL header
-    log::trace!("[{:?} clipeer:{:?}] send fidl header", my_node_id, peer_node_id);
+    tracing::trace!(
+        my_node_id = my_node_id.0,
+        clipeer = ?peer_node_id,
+        "send fidl header"
+    );
     conn_stream_writer
         .send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false)
         .on_timeout(QUIC_CONNECTION_TIMEOUT, || {
@@ -660,7 +658,7 @@ async fn client_handshake(
         })
         .await?;
     async move {
-        log::trace!("[{:?} clipeer:{:?}] send config request", my_node_id, peer_node_id);
+        tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "send config request");
         // Send config request
         let mut conn_stream_writer =
             FramedStreamWriter::from_quic(conn_stream_writer, peer_node_id);
@@ -674,11 +672,11 @@ async fn client_handshake(
             )
             .await?;
         // Receive FIDL header
-        log::trace!("[{:?} clipeer:{:?}] read fidl header", my_node_id, peer_node_id);
+        tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "read fidl header");
         let mut fidl_hdr = [0u8; 4];
         conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
         // Await config response
-        log::trace!("[{:?} clipeer:{:?}] read config", my_node_id, peer_node_id);
+        tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "read config");
         let mut conn_stream_reader =
             FramedStreamReader::from_quic(conn_stream_reader, peer_node_id);
         let _ = Config::from_response(
@@ -690,7 +688,7 @@ async fn client_handshake(
                 bail!("Failed to read config response")
             },
         );
-        log::trace!("[{:?} clipeer:{:?}] handshake completed", my_node_id, peer_node_id);
+        tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "handshake completed");
 
         Ok((conn_stream_writer, conn_stream_reader))
     }
@@ -754,10 +752,10 @@ async fn client_conn_stream(
     let _: ((), (), ()) = futures::future::try_join3(
         async move {
             while let Some(command) = commands.next().await {
-                log::trace!(
-                    "[{:?} clipeer:{:?}] handle command: {:?}",
-                    my_node_id,
-                    peer_node_id,
+                tracing::trace!(
+                    my_node_id = my_node_id.0,
+                    clipeer = peer_node_id.0,
+                    "handle command: {:?}",
                     command
                 );
                 client_conn_handle_command(
@@ -767,7 +765,7 @@ async fn client_conn_stream(
                 )
                 .await?;
             }
-            log::trace!("[{:?} clipeer:{:?}] done commands", my_node_id, peer_node_id);
+            tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "done commands");
             Ok(())
         }
         .map_err(RunnerError::ServiceError),
@@ -798,10 +796,10 @@ async fn client_conn_stream(
         async move {
             loop {
                 let services = services.next().await;
-                log::trace!(
-                    "[{:?} clipeer:{:?}] Send update node description with services: {:?}",
-                    my_node_id,
-                    peer_node_id,
+                tracing::trace!(
+                    my_node_id = my_node_id.0,
+                    clipeer = peer_node_id.0,
+                    "Send update node description with services: {:?}",
                     services
                 );
                 let coding_context = coding::DEFAULT_CONTEXT;
@@ -879,7 +877,7 @@ async fn client_conn_handle_incoming_frame(
     coding_context: coding::Context,
 ) -> Result<(), Error> {
     let msg: PeerReply = decode_fidl_with_context(coding_context, bytes)?;
-    log::trace!("[{:?} clipeer:{:?}] got reply {:?}", my_node_id, peer_node_id, msg);
+    tracing::trace!(my_node_id = my_node_id.0, clipeer = peer_node_id.0, "got reply {:?}", msg);
     match msg {
         PeerReply::UpdateLinkStatusAck(_) => {
             // XXX(raggi): prior code attempted to send to a None under a lock
@@ -897,16 +895,16 @@ async fn server_handshake(
     conn_stats: Arc<PeerConnStats>,
 ) -> Result<(FramedStreamWriter, FramedStreamReader), Error> {
     // Receive FIDL header
-    log::trace!("[{:?} svrpeer:{:?}] read fidl header", my_node_id, node_id);
+    tracing::trace!(my_node_id = my_node_id.0, svrpeer = node_id.0, "read fidl header");
     let mut fidl_hdr = [0u8; 4];
     conn_stream_reader.read_exact(&mut fidl_hdr).await.context("reading FIDL header")?;
     let mut conn_stream_reader = FramedStreamReader::from_quic(conn_stream_reader, node_id);
     // Send FIDL header
-    log::trace!("[{:?} svrpeer:{:?}] send fidl header", my_node_id, node_id);
+    tracing::trace!(my_node_id = my_node_id.0, svrpeer = node_id.0, "send fidl header");
     conn_stream_writer.send(&mut [0, 0, 0, fidl::encoding::MAGIC_NUMBER_INITIAL], false).await?;
     let mut conn_stream_writer = FramedStreamWriter::from_quic(conn_stream_writer, node_id);
     // Await config request
-    log::trace!("[{:?} svrpeer:{:?}] read config", my_node_id, node_id);
+    tracing::trace!(my_node_id = my_node_id.0, svrpeer = node_id.0, "read config");
     let (_, mut response) = Config::negotiate(
         if let (FrameType::Data(coding_context), mut bytes, false) =
             conn_stream_reader.next().await?
@@ -917,7 +915,7 @@ async fn server_handshake(
         },
     );
     // Send config response
-    log::trace!("[{:?} svrpeer:{:?}] send config", my_node_id, node_id);
+    tracing::trace!(my_node_id = my_node_id.0, svrpeer = node_id.0, "send config");
     let coding_context = coding::Context { use_persistent_header: false };
     conn_stream_writer
         .send(
@@ -945,7 +943,7 @@ async fn server_conn_stream(
             .await?;
 
     loop {
-        log::trace!("[{:?} svrpeer:{:?}] await message", my_node_id, node_id);
+        tracing::trace!(my_node_id = my_node_id.0, svrpeer = node_id.0, "await message");
         let (frame_type, mut bytes, fin) =
             conn_stream_reader.next().map_err(RunnerError::ServiceError).await?;
 
@@ -957,7 +955,12 @@ async fn server_conn_stream(
             FrameType::Data(coding_context) => {
                 let msg: PeerMessage = decode_fidl_with_context(coding_context, &mut bytes)
                     .map_err(RunnerError::ServiceError)?;
-                log::trace!("[{:?} svrpeer:{:?}] Got peer request: {:?}", my_node_id, node_id, msg);
+                tracing::trace!(
+                    my_node_id = my_node_id.0,
+                    svrpeer = node_id.0,
+                    "Got peer request: {:?}",
+                    msg
+                );
                 match msg {
                     PeerMessage::ConnectToService(ConnectToService {
                         service_name,

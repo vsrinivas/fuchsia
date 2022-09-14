@@ -49,7 +49,7 @@ async fn exec_client(text: Option<String>) -> Result<(), Error> {
     let svc = hoist().connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
-        log::info!("Got peers: {:?}", peers);
+        tracing::info!("Got peers: {:?}", peers);
         for mut peer in peers {
             if peer.description.services.is_none() {
                 continue;
@@ -65,18 +65,19 @@ async fn exec_client(text: Option<String>) -> Result<(), Error> {
                 continue;
             }
 
-            log::info!("Trying peer: {:?}", peer.id);
+            tracing::info!(id = ?peer.id, "Trying peer");
 
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-            if let Err(e) = svc.connect_to_service(&mut peer.id, echo::EchoMarker::PROTOCOL_NAME, s)
+            if let Err(err) =
+                svc.connect_to_service(&mut peer.id, echo::EchoMarker::PROTOCOL_NAME, s)
             {
-                log::info!("{:?}", e);
+                tracing::info!(?err);
                 continue;
             }
             let proxy =
                 fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
             let cli = echo::EchoProxy::new(proxy);
-            log::info!("Sending {:?} to {:?}", text, peer.id);
+            tracing::info!("Sending {:?} to {:?}", text, peer.id);
             match cli.echo_string(text.as_ref().map(|s| s.as_str())).await {
                 Ok(r) => {
                     let value = match r {
@@ -104,11 +105,11 @@ async fn echo_server(chan: fidl::AsyncChannel, quiet: bool) -> Result<(), Error>
         stream.try_next().await.context("error running echo server")?
     {
         if !quiet {
-            log::info!("Received echo request for string {:?}", value);
+            tracing::info!("Received echo request for string {:?}", value);
         }
         responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
         if !quiet {
-            log::info!("echo response sent successfully");
+            tracing::info!("echo response sent successfully");
         }
     }
     Ok(())
@@ -129,7 +130,7 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
              }| {
                 async move {
                     if !quiet {
-                        log::trace!("Received service request for service");
+                        tracing::trace!("Received service request for service");
                     }
                     let chan = fidl::AsyncChannel::from_channel(chan)
                         .context("failed to make async channel")?;
@@ -143,7 +144,7 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
 ////////////////////////////////////////////////////////////////////////////////
 // main
 
-#[fuchsia_async::run_singlethreaded]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let _t = hoist::init_hoist()?.start_default_link()?;
 
@@ -153,7 +154,7 @@ async fn main() -> Result<(), Error> {
         Subcommand::Server(_) => exec_server(app.quiet).await,
         Subcommand::Client(c) => {
             let r = exec_client(c.text).await;
-            log::trace!("finished client");
+            tracing::trace!("finished client");
             eprintln!("{:?}", r);
             r
         }

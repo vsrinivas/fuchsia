@@ -5,12 +5,11 @@
 //! Component that allows access to the kernel's debug serial line
 
 use anyhow::{Context as _, Error};
-use fasync::unblock;
 use fidl_fuchsia_hardware_serial::{
     Class, NewDeviceProxy_Request, NewDeviceProxy_RequestStream, NewDeviceRequest,
 };
 use fidl_fuchsia_kernel::DebugResourceMarker;
-use fuchsia_async::{self as fasync, Time, Timer};
+use fuchsia_async::{unblock, Time, Timer};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_zircon::{self as zx, DurationNum};
 use futures::channel::mpsc;
@@ -25,7 +24,7 @@ enum IncomingService {
 
 async fn writer_task(mut rx: mpsc::Receiver<Vec<u8>>) -> Result<(), Error> {
     while let Some(data) = rx.next().await {
-        log::trace!("write bytes: {:?}", data);
+        tracing::trace!("write bytes: {:?}", data);
         let data_len = data.len();
         unblock(move || {
             zx::Status::ok(unsafe { zx_debug_write(data.as_ptr(), data.len()) })
@@ -53,17 +52,16 @@ async fn reader_task(
             Ok::<Vec<u8>, Error>(buffer[..actual].to_vec())
         })
         .await?;
-        log::trace!("got bytes: {:?}", &v);
+        tracing::trace!("got bytes: {:?}", &v);
         if let Err(e) = tx.send(v).await {
-            log::warn!("failed to send read to channel: {:?}", e);
+            tracing::warn!("failed to send read to channel: {:?}", e);
         }
     }
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["overnet_debug_proxy"])]
 async fn main() -> Result<(), Error> {
     hoist::init_hoist()?;
-    fuchsia_syslog::init_with_tags(&["overnet_debug_proxy"])?;
 
     let mut fs = ServiceFs::new_local();
     let mut svc_dir = fs.dir("svc");
@@ -93,10 +91,12 @@ async fn main() -> Result<(), Error> {
                                     run_safe(request, &mut tx_write.clone(), &mut r).await;
                                     *reader.lock().await = Some(r);
                                 } else {
-                                    log::warn!("Failed to acquire debug resource (already taken)")
+                                    tracing::warn!(
+                                        "Failed to acquire debug resource (already taken)"
+                                    )
                                 }
                             }
-                            Err(e) => log::warn!("Bad incoming request: {:?}", e),
+                            Err(e) => tracing::warn!("Bad incoming request: {:?}", e),
                         }
                     }
                 })
@@ -109,7 +109,7 @@ async fn main() -> Result<(), Error> {
     .await;
 
     if let Err(e) = &r {
-        log::error!("main loop failed: {:?}", e);
+        tracing::error!("main loop failed: {:?}", e);
     }
 
     r
@@ -124,13 +124,13 @@ async fn run_safe(
     let mut request = match request.into_stream() {
         Ok(request) => request,
         Err(e) => {
-            log::warn!("Failed to turn request into stream: {:?}", e);
+            tracing::warn!("Failed to turn request into stream: {:?}", e);
             return;
         }
     };
     let r = run(&mut request, write, read).await;
     if let Err(e) = r {
-        log::warn!("Request failed: {:?}", e);
+        tracing::warn!("Request failed: {:?}", e);
     }
 }
 
@@ -144,14 +144,14 @@ async fn run(
     requests
         .map_err(Into::into)
         .try_for_each_concurrent(None, |req| async move {
-            log::trace!("handle request: {:?}", req);
+            tracing::trace!("handle request: {:?}", req);
             match req {
                 NewDeviceRequest::Read { responder } => {
                     if let Some(read) = read.lock().await.next().await {
-                        log::trace!("got read: {:?}", read);
+                        tracing::trace!("got read: {:?}", read);
                         responder.send(&mut Ok(read))?;
                     } else {
-                        log::info!("no read (read thread done?)");
+                        tracing::info!("no read (read thread done?)");
                     }
                 }
                 NewDeviceRequest::Write { data, responder } => {
@@ -184,6 +184,7 @@ mod test {
     use fidl_fuchsia_hardware_serial::{
         CharacterWidth, Config, FlowControl, NewDeviceMarker, NewDeviceProxy, Parity, StopWidth,
     };
+    use fuchsia_async as fasync;
 
     struct TestProxy {
         proxy: NewDeviceProxy,
@@ -200,13 +201,13 @@ mod test {
         Ok(TestProxy { proxy, writes: rx_wr, reads: tx_rd })
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn is_classy() -> Result<(), Error> {
         assert_eq!(test_proxy()?.proxy.get_class().await?, Class::KernelDebug);
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn config_not_supported() -> Result<(), Error> {
         assert_eq!(
             test_proxy()?
@@ -224,7 +225,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_write() -> Result<(), Error> {
         let mut test_proxy = test_proxy()?;
         test_proxy.proxy.write(&[1, 2, 3]).await?.map_err(zx::Status::from_raw)?;
@@ -232,7 +233,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_read() -> Result<(), Error> {
         let mut test_proxy = test_proxy()?;
         test_proxy.reads.send(vec![1, 2, 3]).await?;

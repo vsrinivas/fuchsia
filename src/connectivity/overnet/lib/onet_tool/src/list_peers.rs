@@ -34,7 +34,7 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
                 let seen_peers = seen_peers.clone();
                 move || async move {
                     let seen_peers = Arc::new(seen_peers.lock().await.clone());
-                    log::trace!("check if more to do after seeing: {:?}", seen_peers);
+                    tracing::trace!("check if more to do after seeing: {:?}", seen_peers);
                     if seen_peers.len() < MIN_PEERS {
                         return true;
                     }
@@ -43,25 +43,32 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
                         async move {
                             // This async block returns Ok(()) if there is more work to do, and Err(()) if no new work is detected.
                             // The outer select_ok will return Ok(()) if *any* child returns Ok(()), and Err(()) if *all* children return Err(()).
-                            log::trace!("check for new peers with {}", id);
-                            match probe_node(NodeId { id }, Selector::LINKS).on_timeout(Duration::from_secs(5), || Err(format_err!("timeout waiting for diagnostic probe"))). await {
+                            tracing::trace!("check for new peers with {}", id);
+                            match probe_node(NodeId { id }, Selector::LINKS)
+                                .on_timeout(Duration::from_secs(5), || {
+                                    Err(format_err!("timeout waiting for diagnostic probe"))
+                                })
+                                .await
+                            {
                                 Ok(links) => {
                                     for link in links.links.unwrap_or_else(Vec::new) {
                                         if let Some(destination) = link.destination {
                                             if !seen_peers.contains(&destination.id) {
-                                                log::trace!(
-                                                    "note new destination: {:?} via link {:?} from {}",
-                                                    destination.id, link, id
+                                                tracing::trace!(
+                                                    destination_id = ?destination.id,
+                                                    ?link,
+                                                    from = %id,
+                                                    "note new destination",
                                                 );
                                                 return Ok(());
                                             }
                                         }
                                     }
-                                    log::trace!("checked for new peers with {}", id);
+                                    tracing::trace!("checked for new peers with {}", id);
                                     Err(())
                                 }
                                 Err(e) => {
-                                    log::trace!("Seen node {:?} failed probe: {:?}", id, e);
+                                    tracing::trace!("Seen node {:?} failed probe: {:?}", id, e);
                                     Err(())
                                 }
                             }
@@ -72,7 +79,7 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
                     .is_ok()
                 }
             };
-            log::trace!("list_peers begins");
+            tracing::trace!("list_peers begins");
             loop {
                 let more_to_do = more_to_do.clone();
                 let wait_until_no_more_to_do = async move {
@@ -99,7 +106,7 @@ pub fn list_peers() -> impl Stream<Item = Result<NodeId, Error>> {
                     Either::Right((Err(e), _)) => return Err(e.into()),
                 }
             }
-            log::trace!("list_peers done");
+            tracing::trace!("list_peers done");
             Ok(())
         }
         .await;

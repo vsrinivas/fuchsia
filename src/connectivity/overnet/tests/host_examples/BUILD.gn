@@ -37,6 +37,7 @@ if (is_host) {
     with_unit_tests = true
     edition = "2021"
     deps = [
+      "//src/lib/fuchsia",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:lazy_static",

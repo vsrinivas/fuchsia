@@ -134,7 +134,7 @@ async fn handle_diagnostic_requests(
                         ..ProbeResult::EMPTY
                     });
                     if let Err(e) = res {
-                        log::warn!("Failed handling probe: {:?}", e);
+                        tracing::warn!("Failed handling probe: {:?}", e);
                     }
                 }
             }

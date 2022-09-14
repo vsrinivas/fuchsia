@@ -79,7 +79,7 @@ mod test {
 
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn expand_msg_id() {
         let mut r = Reassembler::new();
         assert_eq!(r.expand_msg_id(0), 256);
@@ -98,7 +98,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn single_frame() {
         let mut r = Reassembler::new();
         assert_eq!(r.recv(1, 0 | END_OF_MSG, vec![1, 2, 3]), Some(vec![1, 2, 3]));
@@ -107,7 +107,7 @@ mod test {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_ordered_fragments() {
         let mut r = Reassembler::new();
         assert_eq!(r.recv(1, 0, vec![1, 2, 3]), None);
@@ -115,7 +115,7 @@ mod test {
         assert_eq!(r.recv(1, 2 | END_OF_MSG, vec![7, 8, 9]), Some(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn repeated_fragment() {
         let mut r = Reassembler::new();
         assert_eq!(r.recv(1, 0, vec![1, 2, 3]), None);
@@ -130,7 +130,7 @@ mod test {
         assert_eq!(r.recv(1, 2 | END_OF_MSG, vec![7, 8, 9]), Some(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_unordered_fragments_0() {
         let mut r = Reassembler::new();
         assert_eq!(r.recv(1, 0, vec![1, 2, 3]), None);
@@ -138,7 +138,7 @@ mod test {
         assert_eq!(r.recv(1, 1, vec![4, 5, 6]), Some(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_unordered_fragments_1() {
         let mut r = Reassembler::new();
         assert_eq!(r.recv(1, 2 | END_OF_MSG, vec![7, 8, 9]), None);
@@ -146,7 +146,7 @@ mod test {
         assert_eq!(r.recv(1, 0, vec![1, 2, 3]), Some(vec![1, 2, 3, 4, 5, 6, 7, 8, 9]));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn multiple_concurrent_fragments() {
         let mut r = Reassembler::new();
         assert_eq!(r.recv(1, 0, vec![1, 2, 3]), None);

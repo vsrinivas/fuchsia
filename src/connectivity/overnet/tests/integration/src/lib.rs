@@ -75,7 +75,7 @@ impl Overnet {
         let node = node_id_gen.new_router()?;
 
         let (tx, rx) = futures::channel::mpsc::unbounded();
-        log::info!("{:?} SPAWN OVERNET", node.node_id());
+        tracing::info!(node_id = node.node_id().0, "SPAWN OVERNET");
         let tx = Mutex::new(tx);
         Ok(Arc::new(Overnet {
             tx,
@@ -153,7 +153,7 @@ async fn run_overnet(
     rx: futures::channel::mpsc::UnboundedReceiver<OvernetCommand>,
 ) -> Result<(), Error> {
     let node_id = node.node_id();
-    log::info!("{:?} RUN OVERNET", node_id);
+    tracing::info!(?node_id, "RUN OVERNET");
     let lpc = Arc::new(node.new_list_peers_context());
     // Run application loop
     rx.for_each_concurrent(None, move |cmd| {
@@ -162,22 +162,22 @@ async fn run_overnet(
         async move {
             let cmd_text = format!("{:?}", cmd);
             let cmd_id = NEXT_CMD_ID.fetch_add(1, Ordering::Relaxed);
-            log::info!("{:?} CMD[{}] START: {}", node_id, cmd_id, cmd_text);
+            tracing::info!(node_id = node_id.0, cmd = cmd_id, "START: {}", cmd_text);
             if let Err(e) = run_overnet_command(node, lpc, cmd).await {
-                log::info!(
-                    "{:?} CMD[{}] FAILED: {} with error: {:?}",
-                    node_id,
-                    cmd_id,
+                tracing::info!(
+                    node_id = node_id.0,
+                    cmd = cmd_id,
+                    "{} with error: {:?}",
                     cmd_text,
                     e
                 );
             } else {
-                log::info!("{:?} CMD[{}] SUCCEEDED: {}", node_id, cmd_id, cmd_text);
+                tracing::info!(node_id = node_id.0, cmd = cmd_id, "SUCCEEDED: {}", cmd_text);
             }
         }
     })
     .await;
-    log::info!("{:?} DONE OVERNET", node_id);
+    tracing::info!(node_id = node_id.0, "DONE OVERNET");
     Ok(())
 }
 
@@ -291,7 +291,7 @@ pub async fn connect_with_mutator(
 
 /// Connect two test overnet instances with a stream socket.
 pub fn connect(a: &Arc<Overnet>, b: &Arc<Overnet>) -> Result<(), Error> {
-    log::info!("Connect {:?} and {:?}", a.node_id(), b.node_id());
+    tracing::info!(a = a.node_id().0, b = b.node_id().0, "Connect nodes");
     let a = a.clone().connect_as_mesh_controller()?;
     let b = b.clone().connect_as_mesh_controller()?;
     let (sa, sb) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;

@@ -171,7 +171,7 @@ mod test {
     use futures::prelude::*;
     use stream_framer::{new_deframer, new_framer, ReadBytes};
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn simple_frame_lossy_text() {
         // Try to encode and decode a packet of a variety of different packet sizes.
         // 280 is chosen arbitrarily - it's a short runtime, but hits all of the edge cases we'd

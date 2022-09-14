@@ -53,9 +53,9 @@ async fn run_drop_test(a: Arc<Overnet>, b: Arc<Overnet>) -> Result<(), Error> {
                 control_handle: _control_handle,
             } = svr.try_next().await?.ok_or_else(|| format_err!("No test request received"))?;
             let chan = fidl::AsyncChannel::from_channel(chan)?;
-            log::info!("{:?} CLIENT CONNECTED TO SERVER", b.node_id());
+            tracing::info!(node_id = b.node_id().0, "CLIENT CONNECTED TO SERVER");
             chan.write(&[], &mut vec![]).context("writing to client")?;
-            log::info!("{:?} WAITING FOR CLOSE", b.node_id());
+            tracing::info!(node_id = b.node_id().0, "WAITING FOR CLOSE");
             assert_eq!(
                 chan.recv_msg(&mut Default::default()).await,
                 Err(zx_status::Status::PEER_CLOSED)
@@ -83,10 +83,10 @@ async fn run_drop_test(a: Arc<Overnet>, b: Arc<Overnet>) -> Result<(), Error> {
                     }
                 }
             };
-            log::info!("{:?} GOT CLIENT CHANNEL", a.node_id());
+            tracing::info!(node_id = a.node_id().0, "GOT CLIENT CHANNEL");
             let chan = fidl::AsyncChannel::from_channel(chan)?;
             chan.recv_msg(&mut Default::default()).await.context("waiting for server message")?;
-            log::info!("{:?} GOT MESSAGE FROM SERVER - DROPPING CLIENT", a.node_id());
+            tracing::info!(node_id = a.node_id().0, "GOT MESSAGE FROM SERVER - DROPPING CLIENT");
             drop(a);
             drop(chan);
             Ok(())

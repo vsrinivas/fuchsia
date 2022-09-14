@@ -327,17 +327,17 @@ mod test {
 
     const LONG_PACKET: &'static [u8; 8192] = std::include_bytes!("long_packet.bin");
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn simple(run: usize) -> Result<(), Error> {
         run_test("simple", run, 0, &[b"hello world"]).await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn long(run: usize) -> Result<(), Error> {
         run_test("long", run, 0, &[LONG_PACKET]).await
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn long_flaky(run: usize) -> Result<(), Error> {
         run_test("long_flaky", run, 10, &[LONG_PACKET]).await
     }

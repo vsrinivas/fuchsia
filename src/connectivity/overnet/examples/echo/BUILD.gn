@@ -21,12 +21,12 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
     "//src/connectivity/overnet/lib/hoist",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia",
     "//src/testing/fidl:placeholders_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
   non_rust_deps = [ "//third_party/boringssl" ]
 

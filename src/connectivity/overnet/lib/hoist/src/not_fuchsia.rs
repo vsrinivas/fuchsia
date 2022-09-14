@@ -82,7 +82,7 @@ pub struct Hoist {
 impl Hoist {
     pub fn new() -> Result<Self, Error> {
         let node_id = overnet_core::generate_node_id();
-        log::trace!("Hoist node id:  {}", node_id.0);
+        tracing::trace!(hoist_node_id = node_id.0);
         let node = Router::new(
             RouterOptions::new()
                 .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::HoistRustCrate)
@@ -136,8 +136,8 @@ impl Hoist {
         const MAX_SINGLE_CONNECT_TIME: u64 = 1;
         let label = connection_label(Option::<String>::None);
 
-        log::trace!("Ascendd path: {}", sockpath.display());
-        log::trace!("Overnet connection label: {:?}", label);
+        tracing::trace!(ascendd_path = %sockpath.display());
+        tracing::trace!(overnet_connection_label = ?label);
         let now = SystemTime::now();
         let uds = loop {
             match async_net::unix::UnixStream::connect(&sockpath)
@@ -223,7 +223,7 @@ async fn retry_with_backoff<E, F>(
                 backoff = backoff0;
             }
             Err(e) => {
-                log::warn!("Operation failed: {:?} -- retrying in {:?}", e, backoff);
+                tracing::warn!("Operation failed: {:?} -- retrying in {:?}", e, backoff);
                 Timer::new(backoff).await;
                 backoff = std::cmp::min(backoff * 2, max_backoff);
             }
@@ -274,7 +274,7 @@ async fn handle_controller_request(
         ))
     });
     if let Err(e) = run_stream_link(node, &mut rx, &mut tx, Default::default(), config).await {
-        log::warn!("Socket link failed: {:#?}", e);
+        tracing::warn!("Socket link failed: {:#?}", e);
     }
     Ok(())
 }
@@ -291,10 +291,10 @@ fn log_request<
         let f = f.clone();
         async move {
             let log_id = NEXT_LOG_ID.fetch_add(1, Ordering::SeqCst);
-            log::trace!("[REQUEST:{}] begin {:?}", log_id, r);
+            tracing::trace!(request = log_id, begin = ?r);
             let f = f(r);
             let r = f.await;
-            log::trace!("[REQUEST:{}] end {:?}", log_id, r);
+            tracing::trace!(request = log_id, end = ?r);
             r
         }
         .boxed()
@@ -346,7 +346,7 @@ async fn run_overnet(node: Arc<Router>, rx: HostOvernetRequestStream) -> Result<
             let node = node.clone();
             async move {
                 if let Err(e) = handle_request(node, req).await {
-                    log::warn!("Service handler failed: {:?}", e);
+                    tracing::warn!("Service handler failed: {:?}", e);
                 }
                 Ok(())
             }
@@ -397,7 +397,7 @@ mod test {
     use super::*;
     use scopeguard::guard;
 
-    #[test]
+    #[fuchsia::test]
     fn test_connection_label() {
         let original = std::env::var_os(OVERNET_CONNECTION_LABEL);
         guard(original, |orig| {

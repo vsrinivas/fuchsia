@@ -153,12 +153,7 @@ impl Serializer for ChannelMessageParser {
         fut_ctx: &mut Context<'_>,
         coding_context: coding::Context,
     ) -> Poll<Result<(), Error>> {
-        log::trace!(
-            "ChannelMessageParser::poll_ser: msg:{:?} serialized:{:?} self:{:?}",
-            msg,
-            serialized,
-            self
-        );
+        tracing::trace!(?msg, ?serialized, ?self, "ChannelMessageParser::poll_ser",);
         match self {
             ChannelMessageParser::New => {
                 let ZirconChannelMessage { mut bytes, handles: unbound_handles } =
@@ -224,16 +219,12 @@ impl Serializer for ChannelMessageSerializer {
         fut_ctx: &mut Context<'_>,
         coding_context: coding::Context,
     ) -> Poll<Result<(), Error>> {
-        log::trace!(
-            "ChannelMessageSerializer::poll_ser: msg:{:?} serialized:{:?} self:{:?}",
-            msg,
-            serialized,
-            match self {
-                ChannelMessageSerializer::New => "New",
-                ChannelMessageSerializer::Pending { .. } => "Pending",
-                ChannelMessageSerializer::Done => "Done",
-            }
-        );
+        let self_val = match self {
+            ChannelMessageSerializer::New => "New",
+            ChannelMessageSerializer::Pending { .. } => "Pending",
+            ChannelMessageSerializer::Done => "Done",
+        };
+        tracing::trace!(?msg, ?serialized, self = self_val, "ChannelMessageSerializer::poll_ser");
         match self {
             ChannelMessageSerializer::New => {
                 let handles = std::mem::replace(&mut msg.handles, Vec::new());

@@ -142,7 +142,7 @@ impl ConnState {
         self.timeout = self.conn.timeout().map(|d| Timer::new(Instant::now() + d));
         if let Some(timer) = self.timeout.as_mut() {
             if let Poll::Ready(_) = timer.poll_unpin(ctx) {
-                log::warn!("Timeout happened immediately!");
+                tracing::warn!("Timeout happened immediately!");
             }
         }
     }
@@ -202,7 +202,7 @@ impl VersionNegotiationState {
                 let header = quiche::Header::from_slice(packet, quiche::MAX_CONN_ID_LEN)?;
 
                 if header.ty != quiche::Type::Initial {
-                    log::warn!("Dropped packet during version negotiation");
+                    tracing::warn!("Dropped packet during version negotiation");
                     Ok(false)
                 } else {
                     wakers.drain(..).for_each(Waker::wake);
@@ -294,7 +294,7 @@ impl AsyncConnection {
 
     pub async fn close(&self) {
         let mut io = self.io.lock().await;
-        log::trace!("{:?} close()", self.debug_id());
+        tracing::trace!(debug_id = ?self.debug_id(), "close()");
         io.closed = true;
         let _ = io.conn.close(false, 0, b"");
         io.stream_send.all_ready();
@@ -338,7 +338,8 @@ impl AsyncConnection {
             p: &mut [u8],
             make_reason: impl FnOnce() -> S,
         ) -> Poll<Result<(), Error>> {
-            log::info!("Drop frame of length {}b: {}", p.len(), make_reason());
+            let reason = make_reason();
+            tracing::info!(length = p.len(), %reason, "Drop frame");
             Poll::Ready(Ok(()))
         }
 
@@ -455,10 +456,10 @@ pub struct AsyncQuicStreamWriter {
 impl AsyncQuicStreamWriter {
     pub async fn abandon(&mut self) {
         self.sent_fin = true;
-        log::trace!("{:?} writer abandon", self.debug_id());
+        tracing::trace!(debug_id = ?self.debug_id(), "writer abandon");
         if let Err(e) = self.conn.io.lock().await.conn.stream_shutdown(self.id, Shutdown::Write, 0)
         {
-            log::trace!("shutdown stream failed: {:?}", e);
+            tracing::trace!("shutdown stream failed: {:?}", e);
         }
     }
 
@@ -574,7 +575,7 @@ impl AsyncQuicStreamReader {
                         if finished {
                             Some(Ok((0, true)))
                         } else if io.closed {
-                            log::trace!("{:?} reader abandon", self.debug_id());
+                            tracing::trace!(debug_id = ?self.debug_id(), "reader abandon");
                             let _ = io.conn.stream_shutdown(self.id, Shutdown::Read, 0);
                             Some(Ok((0, true)))
                         } else {
@@ -656,10 +657,10 @@ impl AsyncQuicStreamReader {
     }
 
     pub async fn abandon(&mut self) {
-        log::trace!("{:?} reader abandon", self.debug_id());
+        tracing::trace!(debug_id = ?self.debug_id(), "reader abandon");
         self.observed_closed = true;
         if let Err(e) = self.conn.io.lock().await.conn.stream_shutdown(self.id, Shutdown::Read, 0) {
-            log::trace!("shutdown stream failed: {:?}", e);
+            tracing::trace!("shutdown stream failed: {:?}", e);
         }
     }
 }
@@ -851,21 +852,21 @@ mod test {
             futures::future::join(
                 async move {
                     cli_tx.send(&[1, 2, 3], false).await.unwrap();
-                    log::trace!("sent first");
+                    tracing::trace!("sent first");
                     pause.await.unwrap();
-                    log::trace!("finished pause");
+                    tracing::trace!("finished pause");
                     cli_tx.send(&[], true).await.unwrap();
-                    log::trace!("sent second");
+                    tracing::trace!("sent second");
                 },
                 async move {
                     let (n, fin) = svr_rx.read(buf.as_mut()).await.unwrap();
-                    log::trace!("got: {} {}", n, fin);
+                    tracing::trace!("got: {} {}", n, fin);
                     assert_eq!(n, 3);
                     assert_eq!(fin, false);
                     assert_eq!(&buf[..n], &[1, 2, 3]);
                     unpause.send(()).unwrap();
                     let (n, fin) = svr_rx.read(buf.as_mut()).await.unwrap();
-                    log::trace!("got: {} {}", n, fin);
+                    tracing::trace!("got: {} {}", n, fin);
                     assert_eq!(n, 0);
                     assert_eq!(fin, true);
                 },

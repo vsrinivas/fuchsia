@@ -24,10 +24,10 @@ if (is_host) {
       "//third_party/rust_crates:async-net",
       "//third_party/rust_crates:blocking",
       "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:log",
       "//third_party/rust_crates:nix",
       "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:termios",
+      "//third_party/rust_crates:tracing",
     ]
 
     non_rust_deps = [ "//third_party/boringssl" ]

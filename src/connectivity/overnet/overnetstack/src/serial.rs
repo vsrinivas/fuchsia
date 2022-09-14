@@ -88,12 +88,12 @@ fn convert_io_result<R>(
     match r {
         Ok(Ok(r)) => Ok(r),
         Err(e) => {
-            log::trace!("serial i/o fidl error: {:?}", e);
+            tracing::trace!("serial i/o fidl error: {:?}", e);
             Err(std::io::Error::new(std::io::ErrorKind::Other, e))
         }
         Ok(Err(zx::sys::ZX_OK)) => panic!(),
         Ok(Err(e)) => {
-            log::trace!("serial i/o zircon error: {:?}", e);
+            tracing::trace!("serial i/o zircon error: {:?}", e);
             Err(zx::Status::from_raw(e).into_io_error())
         }
     }

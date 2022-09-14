@@ -43,7 +43,7 @@ async fn probe(
             let result = match probe_node(node_id, probe_bits).await {
                 Ok(x) => x,
                 Err(e) => {
-                    log::warn!("Error probing node: {:?}", e);
+                    tracing::warn!("Error probing node: {:?}", e);
                     return Ok(());
                 }
             };

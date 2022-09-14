@@ -56,13 +56,7 @@ async fn run_link(
         );
     let (link_sender, link_receiver, conn_id) =
         new_quic_link(link_sender, link_receiver, endpoint).await?;
-    log::info!(
-        "NEW LINK: {:?} endpoint={:?} first_packet={:?} conn_id={:?}",
-        addr,
-        endpoint,
-        first_packet,
-        conn_id
-    );
+    tracing::info!(?addr, ?endpoint, ?first_packet, ?conn_id, "NEW LINK");
     if let Some(mut packet) = first_packet {
         link_receiver.received_frame(&mut packet).await;
     }
@@ -106,7 +100,7 @@ async fn run_links(
     .for_each_concurrent(None, |(addr, endpoint, first_packet)| async move {
         if let Err(e) = run_link(node, connections, addr, endpoint, first_packet, udp_socket).await
         {
-            log::info!("link failed: {:?}", e)
+            tracing::info!("link failed: {:?}", e)
         }
     })
     .await;
@@ -121,12 +115,12 @@ async fn route_incoming_frames(
     let mut buf = [0u8; MAX_FRAME_LENGTH];
     loop {
         let (length, sender) = udp_socket.recv_from(&mut buf).await?;
-        log::info!("got {}b packet from {:?}", length, sender);
+        tracing::info!(length_bytes = length, from = ?sender, "got packet");
         if let Err(e) =
             recv_packet(connections, normalize_addr(sender), &mut buf[..length], &mut tx_new_link)
                 .await
         {
-            log::info!("error reading packet: {}", e);
+            tracing::info!("error reading packet: {}", e);
         }
     }
 }

@@ -136,7 +136,7 @@ mod test {
         Ok(())
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_run_streamlink() {
         let rtr_client =
             Router::new(RouterOptions::new().set_node_id(1.into()), test_security_context())

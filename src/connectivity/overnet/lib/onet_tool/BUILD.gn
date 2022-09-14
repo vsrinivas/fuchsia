@@ -17,8 +17,8 @@ rustc_library("onet_tool") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:tracing",
   ]
 
   non_rust_deps = []

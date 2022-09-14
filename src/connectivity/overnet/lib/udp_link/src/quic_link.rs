@@ -80,7 +80,7 @@ impl QuicReceiver {
     /// An error processing a packet does not indicate that the link should be closed.
     pub async fn received_frame(&self, packet: &mut [u8]) {
         if let Err(e) = self.quic.recv(packet).await {
-            log::warn!("error receiving packet: {:?}", e);
+            tracing::warn!("error receiving packet: {:?}", e);
         }
     }
 }

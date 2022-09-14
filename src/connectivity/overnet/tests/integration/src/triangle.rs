@@ -100,13 +100,13 @@ async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
     let c = Overnet::new(&mut node_id_gen)?;
     let d = Overnet::new(&mut node_id_gen)?;
     let e = Overnet::new(&mut node_id_gen)?;
-    log::info!(
-        "NODEIDS:-> A:{:?} B:{:?} C:{:?} D:{:?} E:{:?}",
-        a.node_id(),
-        b.node_id(),
-        c.node_id(),
-        d.node_id(),
-        e.node_id()
+    tracing::info!(
+        a = a.node_id().0,
+        b = b.node_id().0,
+        c = c.node_id().0,
+        d = d.node_id().0,
+        e = e.node_id().0,
+        "NODEIDS"
     );
     super::connect(&a, &b)?;
     super::connect(&b, &c)?;
@@ -188,19 +188,19 @@ async fn exec_captain(
     let svc = overnet.connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
-        log::info!("[{:?}] Got peers: {:?}", overnet.node_id(), peers);
+        tracing::info!(node_id = overnet.node_id().0, "Got peers: {:?}", peers);
         if has_peer_conscript(&peers, client) && has_peer_conscript(&peers, server) {
             let client = connect_peer(&svc, client)?;
             let server = connect_peer(&svc, server)?;
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-            log::info!("[{:?}] server/proxy hdls: {:?} {:?}", overnet.node_id(), s, p);
-            log::info!("[{:?}] ENGAGE CONSCRIPTS", overnet.node_id());
+            tracing::info!(node_id = overnet.node_id().0, "server/proxy hdls: {:?} {:?}", s, p);
+            tracing::info!(node_id = overnet.node_id().0, "ENGAGE CONSCRIPTS");
             server.serve(ServerEnd::new(s))?;
             let response = client
                 .issue(ClientEnd::new(p), text)
                 .await
                 .context(format!("awaiting issue response for captain {:?}", overnet.node_id()))?;
-            log::info!("[{:?}] Captain got response: {:?}", overnet.node_id(), response);
+            tracing::info!(node_id = overnet.node_id().0, "Captain got response: {:?}", response);
             assert_eq!(response, text.map(|s| s.to_string()));
             return Ok(());
         }
@@ -212,15 +212,15 @@ async fn exec_captain(
 
 async fn exec_server(node_id: NodeId, server: ServerEnd<echo::EchoMarker>) -> Result<(), Error> {
     let mut stream = server.into_stream()?;
-    log::info!("{:?} server begins", node_id);
+    tracing::info!(node_id = node_id.0, "server begins");
     while let Some(echo::EchoRequest::EchoString { value, responder }) =
         stream.try_next().await.context("error running echo server")?
     {
-        log::info!("{:?} Received echo request for string {:?}", node_id, value);
+        tracing::info!(node_id = node_id.0, "Received echo request for string {:?}", value);
         responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-        log::info!("{:?} echo response sent successfully", node_id);
+        tracing::info!(node_id = node_id.0, "echo response sent successfully");
     }
-    log::info!("{:?} server done", node_id);
+    tracing::info!(node_id = node_id.0, "server done");
     Ok(())
 }
 
@@ -230,9 +230,9 @@ async fn exec_client(
     text: Option<String>,
     responder: triangle::ConscriptIssueResponder,
 ) -> Result<(), Error> {
-    log::info!("{:?} CLIENT SEND REQUEST: {:?}", node_id, text);
+    tracing::info!(node_id = node_id.0, "CLIENT SEND REQUEST: {:?}", text);
     let response = client.into_proxy()?.echo_string(text.as_deref()).await.unwrap();
-    log::info!("{:?} CLIENT GETS RESPONSE: {:?}", node_id, response);
+    tracing::info!(node_id = node_id.0, "CLIENT GETS RESPONSE: {:?}", response);
     responder.send(response.as_deref())?;
     Ok(())
 }
@@ -258,21 +258,21 @@ async fn exec_conscript<
                 let _ = &req;
                 let ServiceProviderRequest::ConnectToService { chan, info: _, control_handle: _ } =
                     req;
-                log::info!("{:?} Received service request for service", node_id);
+                tracing::info!(node_id = node_id.0, "Received service request for service");
                 let chan = fidl::AsyncChannel::from_channel(chan)
                     .context("failed to make async channel")?;
-                log::info!("{:?} Started service handler", node_id);
+                tracing::info!(node_id = node_id.0, "Started service handler");
                 triangle::ConscriptRequestStream::from_channel(chan)
                     .map_err(Into::into)
                     .try_for_each_concurrent(None, |request| {
                         let action = action.clone();
                         async move {
-                            log::info!("{:?} Received request {:?}", node_id, request);
+                            tracing::info!(node_id = node_id.0, "Received request {:?}", request);
                             action(request).await
                         }
                     })
                     .await?;
-                log::info!("{:?} Finished service handler", node_id);
+                tracing::info!(node_id = node_id.0, "Finished service handler");
                 Ok(())
             }
         })
@@ -283,7 +283,7 @@ async fn conscript_leaf_action(
     own_id: NodeId,
     request: triangle::ConscriptRequest,
 ) -> Result<(), Error> {
-    log::info!("{:?} Handling it", own_id);
+    tracing::info!(node_id = own_id.0, "Handling it");
     match request {
         triangle::ConscriptRequest::Serve { iface, control_handle: _ } => {
             exec_server(own_id, iface)
@@ -304,14 +304,14 @@ async fn conscript_forward_action(
     request: triangle::ConscriptRequest,
     target: triangle::ConscriptProxy,
 ) -> Result<(), Error> {
-    log::info!("{:?} Forwarding request to {:?}", own_id, node_id);
+    tracing::info!(node_id = own_id.0, "Forwarding request to {:?}", node_id);
     match request {
         triangle::ConscriptRequest::Serve { iface, control_handle: _ } => {
             target.serve(iface)?;
         }
         triangle::ConscriptRequest::Issue { iface, request, responder } => {
             let response = target.issue(iface, request.as_deref()).await?;
-            log::info!("Forwarder got response: {:?}", response);
+            tracing::info!("Forwarder got response: {:?}", response);
             responder.send(response.as_deref())?;
         }
     }
@@ -337,7 +337,7 @@ async fn run_triangle_echo_test(
                 let svc = forwarder.clone().connect_as_service_consumer()?;
                 loop {
                     let peers = svc.list_peers().await?;
-                    log::info!(
+                    tracing::info!(
                         "Waiting for forwarding target {:?}; got peers {:?}",
                         target_node_id,
                         peers
@@ -353,7 +353,7 @@ async fn run_triangle_echo_test(
                 })
                 .await
             }
-            .unwrap_or_else(|e: Error| log::warn!("{:?}", e)),
+            .unwrap_or_else(|e: Error| tracing::warn!("{:?}", e)),
         ));
     }
     for conscript in conscripts.into_iter() {
@@ -367,9 +367,9 @@ async fn run_triangle_echo_test(
     }
     exec_captain(client, server, captain, text).await?;
     for (i, task) in background_tasks.into_iter().enumerate() {
-        log::info!("{:?} drop background task {}", captain_node_id, i);
+        tracing::info!(node_id = captain_node_id.0, "drop background task {}", i);
         drop(task);
     }
-    log::info!("{:?} returning from test driver", captain_node_id);
+    tracing::info!(node_id = captain_node_id.0, "returning from test driver");
     Ok(())
 }

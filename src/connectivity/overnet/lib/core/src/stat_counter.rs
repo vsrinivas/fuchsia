@@ -34,7 +34,7 @@ impl std::fmt::Debug for StatCounter {
 mod test {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn simple() {
         let s = StatCounter::default();
         assert_eq!(s.fetch(), 0);

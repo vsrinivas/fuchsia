@@ -99,7 +99,7 @@ mod test {
         align_v2: 8,
     }
 
-    #[test]
+    #[fuchsia::test]
     fn encode_decode_without_persistent_header() {
         let coding_context = Context { use_persistent_header: false };
         let mut bytes =
@@ -109,7 +109,7 @@ mod test {
         assert_eq!(result.byte, 5);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn encode_decode_with_persistent_header() {
         let coding_context = Context { use_persistent_header: true };
         let mut bytes =

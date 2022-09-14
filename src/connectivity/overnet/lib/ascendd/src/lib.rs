@@ -98,10 +98,10 @@ async fn bind_listener(opt: Opt, hoist: &Hoist) -> Result<(PathBuf, String, Unix
     let sockpath = sockpath.unwrap_or(default_ascendd_path());
     let serial = serial.unwrap_or("none".to_string());
 
-    log::info!(
-        "starting ascendd on {} with node id {:?}",
+    tracing::info!(
+        node_id = hoist.node().node_id().0,
+        "starting ascendd on {}",
         sockpath.display(),
-        hoist.node().node_id()
     );
 
     let incoming = loop {
@@ -116,11 +116,14 @@ async fn bind_listener(opt: Opt, hoist: &Hoist) -> Result<(PathBuf, String, Unix
                 .await
             {
                 Ok(_) => {
-                    log::error!("another ascendd is already listening at {}", sockpath.display());
+                    tracing::error!(
+                        "another ascendd is already listening at {}",
+                        sockpath.display()
+                    );
                     bail!("another ascendd is aleady listening!");
                 }
                 Err(_) => {
-                    log::info!("cleaning up stale ascendd socket at {}", sockpath.display());
+                    tracing::info!("cleaning up stale ascendd socket at {}", sockpath.display());
                     std::fs::remove_file(&sockpath)?;
                 }
             },
@@ -129,7 +132,7 @@ async fn bind_listener(opt: Opt, hoist: &Hoist) -> Result<(PathBuf, String, Unix
 
     // as this file is purely advisory, we won't fail for any error, but we can log it.
     if let Err(e) = write_pidfile(&sockpath, std::process::id()) {
-        log::warn!("failed to write pidfile alongside {}: {e:?}", sockpath.display());
+        tracing::warn!("failed to write pidfile alongside {}: {e:?}", sockpath.display());
     }
     Ok((sockpath, serial, incoming))
 }
@@ -154,7 +157,7 @@ async fn run_ascendd(
     let node = hoist.node();
     node.set_implementation(fidl_fuchsia_overnet_protocol::Implementation::Ascendd);
 
-    log::info!("ascendd listening to socket {}", sockpath.display());
+    tracing::info!("ascendd listening to socket {}", sockpath.display());
 
     let sockpath = &sockpath.to_str().context("Non-unicode in socket path")?.to_owned();
     let hoist = &hoist;
@@ -177,11 +180,11 @@ async fn run_ascendd(
                             )
                             .await
                             {
-                                log::warn!("Failed serving socket: {:?}", e);
+                                tracing::warn!("Failed serving socket: {:?}", e);
                             }
                         }
                         Err(e) => {
-                            log::warn!("Failed starting socket: {:?}", e);
+                            tracing::warn!("Failed starting socket: {:?}", e);
                         }
                     }
                 })

@@ -70,7 +70,7 @@ async fn exec_client(overnet: Arc<Overnet>, text: Option<&str>) -> Result<(), Er
     let svc = overnet.connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
-        log::info!("{:?} Got peers: {:?}", overnet.node_id(), peers);
+        tracing::info!(node_id = overnet.node_id().0, "Got peers: {:?}", peers);
         for mut peer in peers {
             if peer.description.services.is_none() {
                 continue;
@@ -90,7 +90,7 @@ async fn exec_client(overnet: Arc<Overnet>, text: Option<&str>) -> Result<(), Er
             let proxy =
                 fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
             let cli = echo::EchoProxy::new(proxy);
-            log::info!("{:?} Sending {:?} to {:?}", overnet.node_id(), text, peer.id);
+            tracing::info!(node_id = overnet.node_id().0, "Sending {:?} to {:?}", text, peer.id);
             assert_eq!(cli.echo_string(text).await.unwrap(), text.map(|s| s.to_string()));
             return Ok(());
         }
@@ -115,16 +115,16 @@ async fn exec_server(overnet: Arc<Overnet>) -> Result<(), Error> {
                 info: _,
                 control_handle: _control_handle,
             } = req;
-            log::info!("{:?} Received service request for service", node_id);
+            tracing::info!(node_id = node_id.0, "Received service request for service");
             let chan =
                 fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
             let mut stream = echo::EchoRequestStream::from_channel(chan);
             while let Some(echo::EchoRequest::EchoString { value, responder }) =
                 stream.try_next().await.context("error running echo server")?
             {
-                log::info!("{:?} Received echo request for string {:?}", node_id, value);
+                tracing::info!(node_id = node_id.0, "Received echo request for string {:?}", value);
                 responder.send(value.as_ref().map(|s| &**s)).context("error sending response")?;
-                log::info!("{:?} echo response sent successfully", node_id);
+                tracing::info!(node_id = node_id.0, "echo response sent successfully");
             }
             Ok(())
         })
@@ -144,7 +144,7 @@ async fn run_echo_test(
     let server = Task::spawn(async move {
         let server_id = server.node_id();
         exec_server(server).await.unwrap();
-        log::info!("{:?} SERVER DONE", server_id)
+        tracing::info!(server_id = server_id.0, "SERVER DONE");
     });
     let r = exec_client(client, text).await;
     drop(server);

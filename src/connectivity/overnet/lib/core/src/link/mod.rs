@@ -530,13 +530,18 @@ async fn run_link_inner(
         Weak::upgrade(&router).ok_or(format_err!("router gone"))
     };
 
-    log::trace!("{:?} perform link handshake", (get_router()?.node_id(), output.debug_id()));
+    tracing::trace!(
+        node_id = get_router()?.node_id().0,
+        debug_id = ?output.debug_id(),
+        "perform link handshake"
+    );
     let (peer_node_id, _peer_introduction_facts) =
         link_handshake(&output, &mut input, introduction_facts).await?;
-    log::trace!(
-        "{:?} link handshake completed: peer_node_id={:?}",
-        (get_router()?.node_id(), output.debug_id()),
-        peer_node_id
+    tracing::trace!(
+        node_id = get_router()?.node_id().0,
+        debug_id = ?output.debug_id(),
+        ?peer_node_id,
+        "link handshake completed",
     );
 
     let link_routing = Arc::new(LinkRouting { peer_node_id, output: output.clone() });
@@ -660,7 +665,7 @@ async fn process_control(
     let mut route_updates = Vec::new();
     loop {
         let payload = input.next().await.ok_or(format_err!("control message channel closed"))?;
-        log::trace!("got control payload from {:?}: {:?}", peer_node_id, payload);
+        tracing::trace!("got control payload from {:?}: {:?}", peer_node_id, payload);
         match payload {
             LinkControlPayload::Introduction { .. } => bail!("Received second introduction"),
             LinkControlPayload::SetRoute(SetRoute { routes, is_end }) => {
@@ -692,16 +697,16 @@ async fn send_state(
 ) -> Result<(), Error> {
     let mut last_emitted = ForwardingTable::empty();
     loop {
-        log::trace!("{:?} await forwarding_table", output.debug_id());
+        tracing::trace!(debug_id = ?output.debug_id(), "await forwarding_table");
         let forwarding_table = forwarding_table
             .next()
             .await
             .ok_or(format_err!("forwarding tables no longer being produced"))?;
-        log::trace!(
-            "{:?} got forwarding_table: {:?}; peer_node_id={:?}",
-            output.debug_id(),
+        tracing::trace!(
+            debug_id = ?output.debug_id(),
+            peer_node_id = peer_node_id.0,
+            "got forwarding_table: {:?}",
             forwarding_table,
-            peer_node_id
         );
         *forwarding_forwarding_table.lock().await = forwarding_table.clone();
         // Remove any routes that would cause a loop to form.
@@ -710,9 +715,9 @@ async fn send_state(
         // or metrics have changed so significantly that downstream routes are likely to need
         // to be updated (this is a heuristic).
         if forwarding_table.is_significantly_different_to(&last_emitted) {
-            log::trace!(
-                "[{:?}] Send new forwarding table: {:?}",
-                output.debug_id(),
+            tracing::trace!(
+                debug_id = ?output.debug_id(),
+                "Send new forwarding table: {:?}",
                 forwarding_table
             );
             let empty_output = || SetRoute { is_end: false, routes: Vec::new() };
@@ -1063,11 +1068,11 @@ impl LinkReceiver {
         frame: &mut [u8],
     ) -> Result<(), Error> {
         if let Some(via) = self.forwarding_table.lock().await.route_for(dst) {
-            log::trace!("[{:?}] fwd {:?} -> {:?} via {:?}", self.debug_id(), src, dst, via);
+            tracing::trace!(src = src.0, dst = dst.0, ?via, "fwd");
             if let Some(via) = self.router.get_link(via).await {
                 if via.output.node_link_id == self.output.node_link_id || via.peer_node_id == src {
                     // This is a looped frame - signal to the sender to avoid this and drop it
-                    log::trace!("[{:?}] Dropping frame due to routing loop", self.debug_id());
+                    tracing::trace!(debug_id = ?self.debug_id(), "Dropping frame due to routing loop");
                     return Ok(());
                 }
                 via.output
@@ -1077,10 +1082,10 @@ impl LinkReceiver {
                     .send(RoutingTarget { src, dst: RoutingDestination::Message(dst) })?
                     .commit_copy(frame)?;
             } else {
-                log::trace!("[{:?}] Dropping frame because no via", self.debug_id());
+                tracing::trace!(debug_id = ?self.debug_id(), "Dropping frame because no via");
             }
         } else {
-            log::trace!("Drop forwarded packet {:?} -> {:?} - no route to dest", src, dst);
+            tracing::trace!(src = src.0, dst = dst.0, "Drop forwarded packet - no route to dest");
         }
         Ok(())
     }
@@ -1119,10 +1124,18 @@ impl LinkReceiver {
         match self.received_frame_inner(frame).await {
             Ok(()) => (),
             Err(RecvError::Warning(err)) => {
-                log::info!("[{:?}] Recoverable error receiving frame: {:?}", self.debug_id(), err)
+                tracing::info!(
+                    debug_id = ?self.debug_id(),
+                    "Recoverable error receiving frame: {:?}",
+                    err
+                )
             }
             Err(RecvError::Fatal(err)) => {
-                log::warn!("[{:?}] Link-fatal error receiving frame: {:?}", self.debug_id(), err);
+                tracing::warn!(
+                    debug_id = ?self.debug_id(),
+                    "Link-fatal error receiving frame: {:?}",
+                    err
+                );
                 self.tx_recv_closed.take();
             }
         }
@@ -1218,7 +1231,7 @@ impl LinkSender {
                 pong,
                 debug_token: LinkFrameLabel::new_debug_token(),
             };
-            log::trace!("link {:?} deliver {:?}", self.debug_id(), label);
+            tracing::trace!(link = ?self.debug_id(), deliver = ?label);
             let mut bytes = [0u8; LINK_FRAME_LABEL_MAX_SIZE];
             let length = label
                 .encode_for_link(
