@@ -54,10 +54,8 @@ type Config = table {
     /// Used to be builtin_pkg_resolver.
     8: reserved;
 
-    /// Determine what content to expose through the component manager's
-    /// outgoing directory.
-    /// If not present, interpreted as OutDirContents.NONE.
-    9: out_dir_contents OutDirContents;
+    /// Used to be out_dir_contents.
+    9: reserved;
 
     /// URL of the root component to launch. This field is used if the no URL
     /// is passed to component manager. If value is passed in both places, then
@@ -168,19 +166,6 @@ type JobPolicyAllowlists = table {
     /// Components must request this policy by including "job_policy_create_raw_processes: true" in
     /// their manifest's program object and must be using the ELF runner.
     3: create_raw_processes vector<AllowlistEntryMoniker>:MAX_ALLOWLIST_SIZE;
-};
-
-/// Determine what content to expose through component manager's outgoing
-/// directory.
-type OutDirContents = strict enum : uint8 {
-    /// Don't expose anything through the outgoing directory.
-    NONE = 1;
-
-    /// Expose component manager's `hub` directory.
-    HUB = 2;
-
-    /// Expose root component's `expose/svc`.
-    SVC = 3;
 };
 
 /// Represents the class of capabilities supported to be allowlisted.

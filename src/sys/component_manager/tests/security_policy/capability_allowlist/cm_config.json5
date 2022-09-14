@@ -25,7 +25,6 @@
             },
         ],
     },
-    out_dir_contents: "hub",
     namespace_capabilities: [
         {
             protocol: [

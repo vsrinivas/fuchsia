@@ -77,7 +77,7 @@ use {
         endpoints::{create_proxy, ServerEnd},
         AsHandleRef,
     },
-    fidl_fuchsia_component_internal::{BuiltinBootResolver, OutDirContents},
+    fidl_fuchsia_component_internal::BuiltinBootResolver,
     fidl_fuchsia_diagnostics_types::Task as DiagnosticsTask,
     fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::*,
@@ -430,7 +430,6 @@ pub struct BuiltinEnvironment {
     pub component_startup_time_stats: Arc<ComponentEarlyStartupTimeStats>,
     pub execution_mode: ExecutionMode,
     pub num_threads: usize,
-    pub out_dir_contents: OutDirContents,
     pub inspector: Inspector,
     pub realm_builder_resolver: Option<Arc<RealmBuilderResolver>>,
     _service_fs_task: Option<fasync::Task<()>>,
@@ -462,7 +461,6 @@ impl BuiltinEnvironment {
         };
 
         let num_threads = runtime_config.num_threads.clone();
-        let out_dir_contents = runtime_config.out_dir_contents.clone();
 
         let event_logger = if runtime_config.log_all_events {
             let event_logger = Arc::new(EventLogger::new());
@@ -951,7 +949,6 @@ impl BuiltinEnvironment {
             component_startup_time_stats,
             execution_mode,
             num_threads,
-            out_dir_contents,
             inspector,
             realm_builder_resolver,
             _service_fs_task: None,

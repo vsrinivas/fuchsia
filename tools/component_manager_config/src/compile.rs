@@ -30,7 +30,6 @@ struct Config {
     use_builtin_process_launcher: Option<bool>,
     maintain_utc_clock: Option<bool>,
     num_threads: Option<u32>,
-    out_dir_contents: Option<OutDirContents>,
     root_component_url: Option<Url>,
     component_id_index_path: Option<String>,
     log_destination: Option<LogDestination>,
@@ -93,23 +92,6 @@ pub struct JobPolicyAllowlists {
 #[serde(deny_unknown_fields)]
 pub struct ChildPolicyAllowlists {
     reboot_on_terminate: Option<Vec<String>>,
-}
-
-#[derive(Deserialize, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[repr(u32)]
-#[serde(rename_all = "snake_case")]
-pub enum OutDirContents {
-    None,
-    Hub,
-    Svc,
-}
-
-symmetrical_enums!(OutDirContents, component_internal::OutDirContents, None, Hub, Svc);
-
-impl std::default::Default for OutDirContents {
-    fn default() -> Self {
-        OutDirContents::Hub
-    }
 }
 
 #[derive(Deserialize, Debug, Clone)]
@@ -246,10 +228,6 @@ impl TryFrom<Config> for component_internal::Config {
                 .map(|c| cml::translate::translate_capabilities(c, true))
                 .transpose()?,
             num_threads: config.num_threads,
-            out_dir_contents: match config.out_dir_contents {
-                Some(out_dir_contents) => Some(out_dir_contents.into()),
-                None => None,
-            },
             root_component_url: match config.root_component_url {
                 Some(root_component_url) => Some(root_component_url.as_str().to_string()),
                 None => None,
@@ -382,7 +360,6 @@ impl Config {
         extend_if_unset!(self, another, namespace_capabilities);
         extend_if_unset!(self, another, builtin_capabilities);
         extend_if_unset!(self, another, num_threads);
-        extend_if_unset!(self, another, out_dir_contents);
         extend_if_unset!(self, another, root_component_url);
         extend_if_unset!(self, another, component_id_index_path);
         extend_if_unset!(self, another, log_destination);
@@ -595,7 +572,6 @@ mod tests {
                 }
             ],
             num_threads: 321,
-            out_dir_contents: "svc",
             root_component_url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx",
             component_id_index_path: "/this/is/an/absolute/path",
             log_destination: "klog",
@@ -728,7 +704,6 @@ mod tests {
                     }),
                 ]),
                 num_threads: Some(321),
-                out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some("fuchsia-pkg://fuchsia.com/foo#meta/foo.cmx".to_string()),
                 component_id_index_path: Some("/this/is/an/absolute/path".to_string()),
                 log_destination: Some(component_internal::LogDestination::Klog),

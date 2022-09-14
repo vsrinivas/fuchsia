@@ -3,7 +3,6 @@
     maintain_utc_clock: false,
     use_builtin_process_launcher: false,
     num_threads: 2,
-    out_dir_contents: "hub",
     namespace_capabilities: [
         {
             protocol: [

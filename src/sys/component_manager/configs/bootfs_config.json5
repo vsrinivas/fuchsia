@@ -2,7 +2,6 @@
     debug: false,
     maintain_utc_clock: true,
     use_builtin_process_launcher: true,
-    out_dir_contents: "hub",
     num_threads: 2,
     namespace_capabilities: [
         {

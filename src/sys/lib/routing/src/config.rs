@@ -11,8 +11,7 @@ use {
     fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_component_internal::{
         self as component_internal, BuiltinBootResolver, CapabilityPolicyAllowlists,
-        DebugRegistrationPolicyAllowlists, LogDestination, OutDirContents,
-        RealmBuilderResolverAndRunner,
+        DebugRegistrationPolicyAllowlists, LogDestination, RealmBuilderResolverAndRunner,
     },
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ExtendedMoniker, MonikerError},
     std::{
@@ -68,10 +67,6 @@ pub struct RuntimeConfig {
 
     /// The list of capabilities offered from component manager as built-in capabilities.
     pub builtin_capabilities: Vec<cm_rust::CapabilityDecl>,
-
-    /// Determine what content to expose through the component manager's
-    /// outgoing directory.
-    pub out_dir_contents: OutDirContents,
 
     /// URL of the root component to launch. This field is used if no URL
     /// is passed to component manager. If value is passed in both places, then
@@ -242,7 +237,6 @@ impl Default for RuntimeConfig {
             num_threads: 1,
             namespace_capabilities: vec![],
             builtin_capabilities: vec![],
-            out_dir_contents: OutDirContents::None,
             root_component_url: Default::default(),
             component_id_index_path: None,
             log_destination: LogDestination::Syslog,
@@ -411,7 +405,6 @@ impl TryFrom<component_internal::Config> for RuntimeConfig {
                 .unwrap_or(default.use_builtin_process_launcher),
             maintain_utc_clock: config.maintain_utc_clock.unwrap_or(default.maintain_utc_clock),
             num_threads,
-            out_dir_contents: config.out_dir_contents.unwrap_or(default.out_dir_contents),
             root_component_url,
             component_id_index_path: config.component_id_index_path,
             log_destination: config.log_destination.unwrap_or(default.log_destination),
@@ -648,7 +641,6 @@ mod tests {
             num_threads: None,
             namespace_capabilities: None,
             builtin_capabilities: None,
-            out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
             reboot_on_terminate_enabled: None,
@@ -672,7 +664,6 @@ mod tests {
             num_threads: Some(10),
             namespace_capabilities: None,
             builtin_capabilities: None,
-            out_dir_contents: None,
             root_component_url: None,
             component_id_index_path: None,
             log_destination: None,
@@ -791,7 +782,6 @@ mod tests {
                         ..fdecl::Event::EMPTY
                     }),
                 ]),
-                out_dir_contents: Some(component_internal::OutDirContents::Svc),
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
                 log_destination: Some(component_internal::LogDestination::Klog),
@@ -929,7 +919,6 @@ mod tests {
                         name: "bar_event".into(),
                     }),
                 ],
-                out_dir_contents: OutDirContents::Svc,
                 root_component_url: Some(Url::new(FOO_PKG_URL.to_string()).unwrap()),
                 component_id_index_path: Some("/boot/config/component_id_index".to_string()),
                 log_destination: LogDestination::Klog,
@@ -961,7 +950,6 @@ mod tests {
                 num_threads: None,
                 namespace_capabilities: None,
                 builtin_capabilities: None,
-                out_dir_contents: None,
                 root_component_url: None,
                 component_id_index_path: None,
                 reboot_on_terminate_enabled: None,
@@ -998,7 +986,6 @@ mod tests {
                 num_threads: None,
                 namespace_capabilities: None,
                 builtin_capabilities: None,
-                out_dir_contents: None,
                 root_component_url: None,
                 component_id_index_path: None,
                 ..component_internal::Config::EMPTY
@@ -1030,7 +1017,6 @@ mod tests {
                 num_threads: None,
                 namespace_capabilities: None,
                 builtin_capabilities: None,
-                out_dir_contents: None,
                 root_component_url: None,
                 component_id_index_path: None,
                 reboot_on_terminate_enabled: None,
@@ -1049,7 +1035,6 @@ mod tests {
                 num_threads: None,
                 namespace_capabilities: None,
                 builtin_capabilities: None,
-                out_dir_contents: None,
                 root_component_url: Some("invalid url".to_string()),
                 component_id_index_path: None,
                 reboot_on_terminate_enabled: None,
@@ -1102,7 +1087,6 @@ mod tests {
                 maintain_utc_clock: None,
                 use_builtin_process_launcher: None,
                 num_threads: None,
-                out_dir_contents: None,
                 root_component_url: Some(FOO_PKG_URL.to_string()),
                 ..component_internal::Config::EMPTY
             },

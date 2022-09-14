@@ -1,7 +1,6 @@
 {
     debug: false,
     maintain_utc_clock: false,
-    out_dir_contents: "hub",
     use_builtin_process_launcher: false,
     namespace_capabilities: [
         {
