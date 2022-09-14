@@ -14,6 +14,7 @@
 
 #include "as370.h"
 #include "src/devices/board/drivers/as370/as370-wifi-bind.h"
+#include "src/devices/lib/nxp/include/wifi/wifi-config.h"
 
 namespace board_as370 {
 
@@ -41,6 +42,28 @@ zx_status_t As370::SdioInit() {
       },
   };
 
+  static const wlan::nxpfmac::NxpSdioWifiConfig wifi_config = {
+      .client_support = true,
+      .softap_support = true,
+      .sdio_rx_aggr_enable = true,
+      .fixed_beacon_buffer = false,
+      .auto_ds = true,
+      .ps_mode = false,
+      .max_tx_buf = 2048,
+      .cfg_11d = false,
+      .inact_tmo = false,
+      .hs_wake_interval = 400,
+      .indication_gpio = 0xff,
+  };
+
+  static const pbus_metadata_t sd_emmc_metadata[] = {
+      {
+          .type = DEVICE_METADATA_WIFI_CONFIG,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&wifi_config),
+          .data_size = sizeof(wifi_config),
+      },
+  };
+
   pbus_dev_t sdio_dev = {};
   sdio_dev.name = "as370-sdio";
   sdio_dev.vid = PDEV_VID_SYNAPTICS;
@@ -52,6 +75,8 @@ zx_status_t As370::SdioInit() {
   sdio_dev.mmio_count = std::size(sdio_mmios);
   sdio_dev.bti_list = sdio_btis;
   sdio_dev.bti_count = std::size(sdio_btis);
+  sdio_dev.metadata_list = sd_emmc_metadata;
+  sdio_dev.metadata_count = std::size(sd_emmc_metadata);
 
   // Configure eMMC-SD soc pads.
   if (((status = gpio_impl_.SetAltFunction(58, 1)) != ZX_OK) ||  // SD0_CLK
