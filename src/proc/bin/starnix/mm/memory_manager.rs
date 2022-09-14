@@ -622,7 +622,17 @@ impl MemoryManagerState {
             let start = mapping.address_to_offset(range_to_zero.start);
             let end = mapping.address_to_offset(range_to_zero.end);
             let op = match advice {
-                MADV_DONTNEED if mapping.filename.is_some() => zx::VmoOp::DONT_NEED,
+                MADV_DONTNEED if mapping.filename.is_some() => {
+                    // Note, we cannot simply implemented MADV_DONTNEED with
+                    // zx::VmoOp::DONT_NEED because they have different
+                    // semantics.
+                    not_implemented!(
+                        current_task,
+                        "madvise advise {} with file-backed mapping not implemented",
+                        advice
+                    );
+                    return error!(EINVAL);
+                }
                 MADV_DONTNEED => zx::VmoOp::ZERO,
                 MADV_WILLNEED => zx::VmoOp::COMMIT,
                 advice => {
