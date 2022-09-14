@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    serde::{Deserialize, Serialize},
-    std::{fmt, iter::FromIterator, slice, vec},
+    serde::Serialize,
+    std::{fmt, io::BufRead, iter::FromIterator, slice, vec},
 };
 
 /// [PackageManifestList] is a construct that points at a path that contains a
 /// package manifest list. This will be used by the packaging tooling to
 /// understand when packages have changed.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 #[serde(transparent)]
 pub struct PackageManifestList(Vec<String>);
 
@@ -37,6 +37,12 @@ impl PackageManifestList {
     /// Returns an iterator over the package manifest path entries.
     pub fn into_iter(self) -> IntoIter {
         IntoIter(self.0.into_iter())
+    }
+
+    pub fn from_reader(reader: impl std::io::Read) -> Result<Self, std::io::Error> {
+        let reader = std::io::BufReader::new(reader);
+        let lines = reader.lines().collect::<Result<Vec<_>, _>>()?;
+        Ok(Self(lines))
     }
 }
 
@@ -108,14 +114,15 @@ mod tests {
     }
 
     #[test]
-    fn test_deserialize() {
-        let package_manifest_list = serde_json::from_value::<PackageManifestList>(json!([
-            "obj/build/images/config-data/package_manifest.json",
-            "obj/build/images/shell-commands/package_manifest.json",
-            "obj/src/sys/component_index/component_index/package_manifest.json",
-            "obj/build/images/driver-manager-base-config/package_manifest.json",
-        ]))
-        .expect("valid json");
+    fn test_from_reader() {
+        let raw_package_manifest_list = r#"obj/build/images/config-data/package_manifest.json
+obj/build/images/shell-commands/package_manifest.json
+obj/src/sys/component_index/component_index/package_manifest.json
+obj/build/images/driver-manager-base-config/package_manifest.json"#;
+
+        let package_manifest_list =
+            PackageManifestList::from_reader(std::io::Cursor::new(raw_package_manifest_list))
+                .unwrap();
 
         assert_eq!(
             package_manifest_list.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
