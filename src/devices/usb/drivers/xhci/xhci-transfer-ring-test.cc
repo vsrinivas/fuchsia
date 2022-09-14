@@ -102,8 +102,6 @@ zx_status_t UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t EventRing::AddTRB() { return ZX_OK; }
-
 zx_status_t UsbXhci::InitThread() {
   fbl::AllocChecker ac;
   interrupters_ = fbl::MakeArray<Interrupter>(&ac, 1);

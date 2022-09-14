@@ -166,9 +166,8 @@ zx_status_t TransferRing::AddTRB(const TRB& trb, std::unique_ptr<TRBContext> con
   if (context->token != token_) {
     return ZX_ERR_INVALID_ARGS;
   }
-  zx_status_t status = ring_->AddTRB();
   Control control = Control::FromTRB(trbs_);
-  status = AllocInternal(control);
+  zx_status_t status = AllocInternal(control);
   if (status != ZX_OK) {
     return status;
   }
@@ -385,7 +384,6 @@ zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
     state->pcs = pcs_;
     state->trbs = trbs_;
   }
-  ring_->AddTRB();
   Control control = Control::FromTRB(trbs_);
   zx_status_t status = AllocInternal(control);
   if (status != ZX_OK) {

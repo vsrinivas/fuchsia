@@ -648,7 +648,8 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, fdf::MmioBuffe
                             bool is_32bit, uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg,
                             IMAN iman_reg, uint8_t cap_length, HCSPARAMS1 hcs_params_1,
                             CommandRing* command_ring, DoorbellOffset doorbell_offset, UsbXhci* hci,
-                            HCCPARAMS1 hcc_params_1, uint64_t* dcbaa, uint16_t interrupter) {
+                            HCCPARAMS1 hcc_params_1, uint64_t* dcbaa, uint16_t interrupter,
+                            inspect::Node* interrupter_node) {
   fbl::AutoLock _(&segment_mutex_);
   erdp_reg_ = erdp_reg;
   hcs_params_1_ = hcs_params_1;

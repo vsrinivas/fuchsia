@@ -1696,7 +1696,9 @@ zx_status_t UsbXhci::InitPci() {
     return status;
   }
   mmio_ = std::move(*buffer);
-  irq_count_ = static_cast<uint16_t>(HCSPARAMS1::Get().ReadFrom(&mmio_.value()).MaxIntrs());
+  irq_count_ =
+      std::min(kMaxInterrupters,
+               static_cast<uint16_t>(HCSPARAMS1::Get().ReadFrom(&mmio_.value()).MaxIntrs()));
 
   // Make sure irq_count_ doesn't exceed supported max PCI IRQs.
   pci_interrupt_modes_t modes{};
@@ -1846,6 +1848,10 @@ zx_status_t UsbXhci::HciFinalize() {
   hcc_ = HCCPARAMS1::Get().ReadFrom(&mmio_.value());
   HCSPARAMS1 hcsparams1 = HCSPARAMS1::Get().ReadFrom(&mmio_.value());
 
+  // Initialize Inspect values
+  HciVersion hci_version = HciVersion::Get().ReadFrom(&mmio_.value());
+  inspect_.Init(hci_version.reg_value(), hcsparams1, hcc_);
+
   // Reset Warm Reset Change (WRC) bit if necessary (see Table 5-27, bit 19 in Section 5.4.8,
   // xHCI specification). This is done to acknowledge any warm reset done during bootup.
   for (uint16_t i = 0; i < hcsparams1.MaxPorts(); i++) {
@@ -1956,6 +1962,7 @@ zx_status_t UsbXhci::HciFinalize() {
   }
   CRCR cr = command_ring_.phys(cap_length_);
   cr.WriteTo(&mmio_.value());
+
   // Initialize all interrupters.
   // TODO: For optimization, we could demand allocate interrupters and not start all interrupters in
   // the beginning.
@@ -1976,10 +1983,6 @@ zx_status_t UsbXhci::HciFinalize() {
   while (USBSTS::Get(cap_length_).ReadFrom(&mmio_.value()).HCHalted()) {
     zx::nanosleep(zx::deadline_after(zx::msec(1)));
   }
-
-  // Initialize Inspect values
-  HciVersion hci_version = HciVersion::Get().ReadFrom(&mmio_.value());
-  inspect_.Init(hci_version.reg_value(), hcsparams1, hcc_);
 
   sync_completion_signal(&bringup_);
   return ZX_OK;

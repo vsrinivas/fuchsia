@@ -20,6 +20,7 @@
 #include "xhci-context.h"
 #include "xhci-hub.h"
 #include "xhci-port-state.h"
+#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h"
 
 namespace usb_xhci {
 
@@ -43,10 +44,11 @@ class EventRingSegmentTable {
   ERSTEntry* entries() { return entries_; }
   zx_paddr_t erst() { return erst_->phys()[0]; }
   // Returns the number of segments in this ERST
-  uint32_t SegmentCount() { return offset_; }
-  uint64_t TrbCount() { return (SegmentCount() * page_size_) / sizeof(TRB); }
+  uint32_t SegmentCount() const { return offset_; }
+  uint64_t TrbCount() const { return (SegmentCount() * page_size_) / sizeof(TRB); }
+  bool CanGrow() const { return offset_ < count_; }
   void AddPressure() { erst_pressure_++; }
-  size_t Pressure() { return erst_pressure_; }
+  size_t Pressure() const { return erst_pressure_; }
   void RemovePressure() { erst_pressure_--; }
 
  private:
@@ -86,7 +88,7 @@ class EventRing {
                    uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg, IMAN iman_reg,
                    uint8_t cap_length, HCSPARAMS1 hcs_params_1, CommandRing* command_ring,
                    DoorbellOffset doorbell_offset, UsbXhci* hci, HCCPARAMS1 hcc_params_1,
-                   uint64_t* dcbaa, uint16_t interrupter);
+                   uint64_t* dcbaa, uint16_t interrupter, inspect::Node* interrupter_node);
   // Disable thread safety analysis here.
   // We don't need to hold the mutex just to read the ERST
   // paddr, as this will never change (it is effectively a constant).
@@ -98,7 +100,6 @@ class EventRing {
     fbl::AutoLock l(&segment_mutex_);
     return AddSegmentIfNone();
   }
-  zx_status_t AddTRB();
   zx_paddr_t erdp_phys() { return erdp_phys_; }
   TRB* erdp_virt() { return erdp_virt_; }
   zx_status_t HandleIRQ();
@@ -167,7 +168,6 @@ class EventRing {
   // Current Cycle State
   bool ccs_ = true;
   fbl::Mutex segment_mutex_;
-  size_t trbs_ __TA_GUARDED(segment_mutex_) = 0;
   EventRingSegmentTable segments_ __TA_GUARDED(segment_mutex_);
   // BTI used for obtaining physical memory addresses.
   // This is valid for the lifetime of the UsbXhci driver,
@@ -202,6 +202,14 @@ class EventRing {
   uint16_t interrupter_;
   bool reevaluate_ = false;
   bool resynchronize_ = false;
+
+  // inspect properties do not allow us to read the values we have published,
+  // nor do they provide any sort of "max" functionality (only add, subtract,
+  // and set).  Because of this, we need to keep our own shadow copy of our max
+  // observed value in order to properly update the published value.
+  inspect::UintProperty total_event_trbs_;
+  inspect::UintProperty max_single_irq_event_trbs_;
+  uint64_t max_single_irq_event_trbs_value_{0};
 };
 }  // namespace usb_xhci
 

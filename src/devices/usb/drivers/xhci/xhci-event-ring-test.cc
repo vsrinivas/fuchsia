@@ -163,14 +163,15 @@ class EventRingHarness : public zxtest::Test {
   zx_status_t InitRing(EventRing* ring) {
     ring_ = ring;
     auto regoffset = RuntimeRegisterOffset::Get().ReadFrom(&buffer_.value());
-    zx_status_t status = ring->Init(zx_system_get_page_size(), kFakeBti, &buffer_.value(), false,
-                                    kErstMax, ERSTSZ::Get(regoffset, 0).ReadFrom(&buffer_.value()),
-                                    ERDP::Get(regoffset, 0).ReadFrom(&buffer_.value()),
-                                    IMAN::Get(regoffset, 0).ReadFrom(&buffer_.value()),
-                                    CapLength::Get().ReadFrom(&buffer_.value()).Length(),
-                                    HCSPARAMS1::Get().ReadFrom(&buffer_.value()), &command_ring_,
-                                    DoorbellOffset::Get().ReadFrom(&buffer_.value()), &hci_,
-                                    HCCPARAMS1::Get().ReadFrom(&buffer_.value()), dcbaa_, 0);
+    zx_status_t status =
+        ring->Init(zx_system_get_page_size(), kFakeBti, &buffer_.value(), false, kErstMax,
+                   ERSTSZ::Get(regoffset, 0).ReadFrom(&buffer_.value()),
+                   ERDP::Get(regoffset, 0).ReadFrom(&buffer_.value()),
+                   IMAN::Get(regoffset, 0).ReadFrom(&buffer_.value()),
+                   CapLength::Get().ReadFrom(&buffer_.value()).Length(),
+                   HCSPARAMS1::Get().ReadFrom(&buffer_.value()), &command_ring_,
+                   DoorbellOffset::Get().ReadFrom(&buffer_.value()), &hci_,
+                   HCCPARAMS1::Get().ReadFrom(&buffer_.value()), dcbaa_, 0, nullptr);
     if (status != ZX_OK) {
       return status;
     }

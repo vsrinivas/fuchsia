@@ -19,14 +19,22 @@ zx_status_t Interrupter::Init(uint16_t interrupter, size_t page_size, fdf::MmioB
     // Already active;
     return ZX_OK;
   }
+
   hci_ = hci;
   interrupter_ = interrupter;
+
+  // Create our inspect node and start to add our properties.
+  char name[64];
+  snprintf(name, sizeof(name), "Interrupter %hu", interrupter_);
+  inspect_root_ = hci_->inspect_root_node().CreateChild(name);
+  total_irqs_ = inspect_root_.CreateUint("Total IRQs", 0);
+
   return event_ring_.Init(page_size, hci_->bti(), buffer, hci->Is32BitController(), erst_max,
                           ERSTSZ::Get(offset, interrupter_).ReadFrom(buffer),
                           ERDP::Get(offset, interrupter_).ReadFrom(buffer),
                           IMAN::Get(offset, interrupter_).FromValue(0), hci_->CapLength(),
                           HCSPARAMS1::Get().ReadFrom(buffer), hci_->GetCommandRing(),
-                          doorbell_offset, hci, hcc_params_1, dcbaa, interrupter_);
+                          doorbell_offset, hci, hcc_params_1, dcbaa, interrupter_, &inspect_root_);
 }
 
 zx_status_t Interrupter::Start(const RuntimeRegisterOffset& offset, fdf::MmioView mmio_view) {
@@ -103,6 +111,8 @@ zx_status_t Interrupter::IrqThread() {
       async_loop_->Quit();
       return;
     }
+
+    total_irqs_.Add(1);
     irq_.ack();
   });
   irq.Begin(async_loop_->dispatcher());

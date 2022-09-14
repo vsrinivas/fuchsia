@@ -17,6 +17,10 @@ namespace usb_xhci {
 // The minimum required number of event ring segment table entries.
 static constexpr uint16_t kMinERSTEntries = 16;
 
+// The target number of TRBs we would like to have in our event ring, available
+// to the HC, at startup.
+static constexpr size_t kTargetEventRingTRBs = 2048;
+
 zx_status_t EventRingSegmentTable::Init(size_t page_size, const zx::bti& bti, bool is_32bit,
                                         uint32_t erst_max, ERSTSZ erst_size,
                                         const dma_buffer::BufferFactory& factory,
@@ -65,7 +69,8 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, fdf::MmioBuffe
                             bool is_32bit, uint32_t erst_max, ERSTSZ erst_size, ERDP erdp_reg,
                             IMAN iman_reg, uint8_t cap_length, HCSPARAMS1 hcs_params_1,
                             CommandRing* command_ring, DoorbellOffset doorbell_offset, UsbXhci* hci,
-                            HCCPARAMS1 hcc_params_1, uint64_t* dcbaa, uint16_t interrupter) {
+                            HCCPARAMS1 hcc_params_1, uint64_t* dcbaa, uint16_t interrupter,
+                            inspect::Node* interrupter_node) {
   fbl::AutoLock l(&segment_mutex_);
   erdp_reg_ = erdp_reg;
   hcs_params_1_ = hcs_params_1;
@@ -82,12 +87,35 @@ zx_status_t EventRing::Init(size_t page_size, const zx::bti& bti, fdf::MmioBuffe
   hcc_params_1_ = hcc_params_1;
   dcbaa_ = dcbaa;
   interrupter_ = interrupter;
-  auto status =
+
+  if (interrupter_node != nullptr) {
+    total_event_trbs_ = interrupter_node->CreateUint("Total Event TRBs", 0);
+    max_single_irq_event_trbs_ = interrupter_node->CreateUint("Max single IRQ event TRBs", 0);
+  }
+
+  zx_status_t status =
       segments_.Init(page_size, bti, is_32bit, erst_max, erst_size, hci->buffer_factory(), mmio_);
   if (status != ZX_OK) {
     return status;
   }
-  return AddSegmentIfNone();
+
+  // Attempt to grow our event ring to the desired size.
+  do {
+    status = AddSegment();
+    if (status != ZX_OK) {
+      zxlogf(WARNING,
+             "Event ring failed to add a segment during initialization. "
+             "The EventRing currently has space for %zu TRBs (status %d)",
+             segments_.TrbCount(), status);
+
+      if (segments_.TrbCount() == 0) {
+        return status;
+      }
+      break;
+    }
+  } while (segments_.CanGrow() && (segments_.TrbCount() < kTargetEventRingTRBs));
+
+  return ZX_OK;
 }
 
 void EventRing::RemovePressure() {
@@ -103,19 +131,6 @@ size_t EventRing::GetPressure() {
 zx_status_t EventRing::AddSegmentIfNone() {
   if (!erdp_phys_) {
     return AddSegment();
-  }
-  return ZX_OK;
-}
-
-zx_status_t EventRing::AddTRB() {
-  fbl::AutoLock l(&segment_mutex_);
-  trbs_++;
-  if (trbs_ == segments_.TrbCount()) {
-    zx_status_t status = AddSegment();
-    if (status != ZX_OK) {
-      return status;
-    }
-    return ZX_OK;
   }
   return ZX_OK;
 }
@@ -484,7 +499,6 @@ Control EventRing::AdvanceErdp() {
     } break;
   }
 
-  trbs_--;
   if (unlikely(buffers_it_->new_segment)) {
     // New buffer. CCS is invalid. Increment only if completion code is not invalid.
     return Control::FromTRB(erdp_virt_)
@@ -500,6 +514,16 @@ zx_status_t EventRing::HandleIRQ() {
   iman_reg_.set_IP(1).set_IE(1).WriteTo(mmio_);
   bool avoid_yield = false;
   zx_paddr_t last_phys = 0;
+  uint64_t processed_trbs{0};
+
+  auto update_inspect_data = fit::defer([&processed_trbs, this]() {
+    total_event_trbs_.Add(processed_trbs);
+    if (max_single_irq_event_trbs_value_ < processed_trbs) {
+      max_single_irq_event_trbs_value_ = processed_trbs;
+      max_single_irq_event_trbs_.Set(max_single_irq_event_trbs_value_);
+    }
+  });
+
   // avoid_yield is used to indicate that we are in "realtime mode"
   // When in this mode, we should avoid yielding our timeslice to the scheduler
   // if at all possible, because yielding could result in us getting behind on our
@@ -514,6 +538,7 @@ zx_status_t EventRing::HandleIRQ() {
     avoid_yield = false;
     for (Control control = reevaluate_ ? AdvanceErdp() : Control::FromTRB(erdp_virt_);
          control.Cycle() == ccs_; control = AdvanceErdp()) {
+      ++processed_trbs;
       switch (control.Type()) {
         case Control::PortStatusChangeEvent: {
           // Section 4.3 -- USB device intialization

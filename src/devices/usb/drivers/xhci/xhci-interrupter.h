@@ -13,8 +13,11 @@
 #include <thread>
 
 #include "xhci-event-ring.h"
+#include "zircon/system/ulib/inspect/include/lib/inspect/cpp/vmo/types.h"
 
 namespace usb_xhci {
+
+struct Inspect;  // fwd decl
 
 // An interrupter that manages an event ring, and handles interrupts.
 class Interrupter {
@@ -64,6 +67,11 @@ class Interrupter {
   EventRing event_ring_;
   std::optional<async::Executor> async_executor_;
   std::optional<async::Loop> async_loop_;
+
+  // published inspect data
+  inspect::Node inspect_root_;
+  inspect::UintProperty total_irqs_;
+
   // Reference to the xHCI core. Since Interrupter is a part of the
   // UsbXhci (always instantiated as a class member), this reference
   // will always be valid for the lifetime of the Interrupter.

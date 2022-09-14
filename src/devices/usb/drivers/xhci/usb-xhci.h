@@ -288,8 +288,14 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
 
   dma_buffer::BufferFactory& buffer_factory() const { return *buffer_factory_; }
 
+  inspect::Node& inspect_root_node() { return inspect_.root; }
+
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(UsbXhci);
+
+  // We don't currently take good advantage of multiple interrupters.  Limit the
+  // number we create to save resources for now.
+  static constexpr uint16_t kMaxInterrupters = 2;
 
   struct UsbRequestState;
 
