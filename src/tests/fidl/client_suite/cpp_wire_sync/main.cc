@@ -200,7 +200,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
         // reporter closes so that the test case has the ability to
         // differentiate between the channel being closed due to the error vs
         // due to the channel going out of scope.
-        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownInteraction) {
+        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownMethod) {
           auto wait_status = reporter.client_end().channel().wait_one(
               ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
           ZX_ASSERT(wait_status == ZX_OK);
@@ -254,7 +254,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
         // reporter closes so that the test case has the ability to
         // differentiate between the channel being closed due to the error vs
         // due to the channel going out of scope.
-        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownInteraction) {
+        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownMethod) {
           auto wait_status = reporter.client_end().channel().wait_one(
               ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
           ZX_ASSERT(wait_status == ZX_OK);
@@ -318,7 +318,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
         // reporter closes so that the test case has the ability to
         // differentiate between the channel being closed due to the error vs
         // due to the channel going out of scope.
-        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownInteraction) {
+        if (!handle_result.ok() && handle_result.reason() != fidl::Reason::kUnknownMethod) {
           auto wait_status = reporter.client_end().channel().wait_one(
               ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), nullptr);
           ZX_ASSERT(wait_status == ZX_OK);

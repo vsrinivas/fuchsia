@@ -637,7 +637,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendUnknownResponse) {
   ASSERT_TRUE(result.is_ok());
   EXPECT_FALSE(result.value().ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendOtherTransportError) {
@@ -786,7 +786,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSendUnknownResponse) {
   ASSERT_TRUE(result.is_ok());
   EXPECT_FALSE(result.value().ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSend) {
@@ -848,7 +848,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendUnknownResponse) {
   ASSERT_TRUE(result.is_ok());
   ASSERT_FALSE(result.value().ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendOtherTransportError) {
@@ -974,7 +974,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendUnknownResponse) {
   ASSERT_TRUE(result.is_ok());
   ASSERT_FALSE(result.value().ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendErrorVariant) {
@@ -1135,7 +1135,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendUnknownResponse) {
   auto result = result_future.get();
   EXPECT_FALSE(result.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendOtherTransportError) {
@@ -1262,7 +1262,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsSyncSendUnknownResponse) {
   auto result = result_future.get();
   EXPECT_FALSE(result.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSend) {
@@ -1314,7 +1314,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendUnknownResponse) {
   auto result = result_future.get();
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendOtherTransportError) {
@@ -1420,7 +1420,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendUnknownResponse) {
   auto result = result_future.get();
   ASSERT_FALSE(result.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendErrorVariant) {

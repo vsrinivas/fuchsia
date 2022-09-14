@@ -26,7 +26,7 @@ const char* const kErrorSyncEventBufferTooSmall =
 const char* const kErrorSyncEventUnhandledTransitionalEvent = "unhandled transitional event";
 const char* const kCallerAllocatedBufferTooSmall =
     "buffer provided to caller-allocating flavor is too small";
-const char* const kUnknownInteraction = "peer did not recognize this method";
+const char* const kUnknownMethod = "server did not recognize this method";
 const char* const kUnsupportedTransportError =
     "server sent a transport_err value that is not supported";
 
@@ -78,7 +78,7 @@ using StatusFormattingBuffer = std::array<char, 256>;
       return "decode error";
     case Reason::kUnexpectedMessage:
       return "unexpected message";
-    case Reason::kUnknownInteraction:
+    case Reason::kUnknownMethod:
       return "unknown interaction";
   }
 }

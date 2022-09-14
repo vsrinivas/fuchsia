@@ -612,7 +612,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendUnknownResponse) {
   ASSERT_TRUE(result.is_ok());
   EXPECT_TRUE(result.value().is_error());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().error_value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().error_value().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.value().error_value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendOtherTransportError) {
@@ -754,7 +754,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSendUnknownResponse) {
   ASSERT_TRUE(result.is_ok());
   EXPECT_TRUE(result.value().is_error());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().error_value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, result.value().error_value().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.value().error_value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSend) {
@@ -812,8 +812,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendUnknownResponse) {
   ASSERT_TRUE(result.value().is_error());
   ASSERT_TRUE(result.value().error_value().is_transport_error());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction,
-            result.value().error_value().transport_error().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.value().error_value().transport_error().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendOtherTransportError) {
@@ -932,8 +931,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendUnknownResponse) {
   ASSERT_TRUE(result.value().is_error());
   ASSERT_TRUE(result.value().error_value().is_transport_error());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, result.value().error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction,
-            result.value().error_value().transport_error().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, result.value().error_value().transport_error().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendErrorVariant) {

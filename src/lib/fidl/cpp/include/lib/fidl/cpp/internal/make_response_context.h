@@ -77,7 +77,7 @@ auto DecodeResponseAndFoldError(::fidl::IncomingHeaderAndMessage&& incoming,
             domain_object.result().transport_err().value();
         switch (transport_err) {
           case ::fidl::internal::TransportErr::kUnknownMethod: {
-            ResultType value = ::fitx::error(::fidl::Error::UnknownInteraction());
+            ResultType value = ::fitx::error(::fidl::Error::UnknownMethod());
             return value;
           }
         }

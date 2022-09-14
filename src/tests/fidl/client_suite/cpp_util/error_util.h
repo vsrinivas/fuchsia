@@ -25,7 +25,7 @@ fidl_clientsuite::FidlErrorKind ClassifyError(const fidl::Status& status) {
       return fidl_clientsuite::FidlErrorKind::kChannelPeerClosed;
     case fidl::Reason::kDecodeError:
       return fidl_clientsuite::FidlErrorKind::kDecodingError;
-    case fidl::Reason::kUnknownInteraction:
+    case fidl::Reason::kUnknownMethod:
       return fidl_clientsuite::FidlErrorKind::kUnknownMethod;
     default:
       auto description = status.FormatDescription();

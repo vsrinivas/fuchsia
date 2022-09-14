@@ -104,13 +104,13 @@ enum class Reason {
   // if they desire.
   kUnexpectedMessage,
 
-  // An ordinal was received which was not recognized, but the the method or
-  // event is flexible.
+  // This error is used on the client to report when a flexible two-way method
+  // called by the client was not recognized by the server.
   //
   // |status| contains the associated error code.  Since the method is flexible,
   // the channel will remain open unless the user explicitly decides to close
   // it.
-  kUnknownInteraction,
+  kUnknownMethod,
 };
 
 // |ErrorOrigin| indicates in which part of request/response processing did a
@@ -143,7 +143,7 @@ extern const char* const kErrorWaitOneFailed;
 extern const char* const kErrorSyncEventBufferTooSmall;
 extern const char* const kErrorSyncEventUnhandledTransitionalEvent;
 extern const char* const kCallerAllocatedBufferTooSmall;
-extern const char* const kUnknownInteraction;
+extern const char* const kUnknownMethod;
 extern const char* const kUnsupportedTransportError;
 
 }  // namespace internal
@@ -203,9 +203,9 @@ class [[nodiscard]] Status {
   }
 
   // Constructs a status for an unknown interaction.
-  constexpr static Status UnknownInteraction() {
-    return Status(ZX_ERR_NOT_SUPPORTED, ::fidl::Reason::kUnknownInteraction,
-                  ::fidl::internal::kUnknownInteraction);
+  constexpr static Status UnknownMethod() {
+    return Status(ZX_ERR_NOT_SUPPORTED, ::fidl::Reason::kUnknownMethod,
+                  ::fidl::internal::kUnknownMethod);
   }
 
   constexpr static Status EncodeError(zx_status_t status, const char* error_message = nullptr) {

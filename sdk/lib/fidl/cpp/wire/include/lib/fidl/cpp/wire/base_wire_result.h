@@ -118,7 +118,7 @@ class BaseWireResult<FidlMethod,
   // For this template, which is only for methods with no application error and
   // an empty payload, this method just checks if transport_err is used (if the
   // method is flexible) and changes the status to
-  // |Status::UnknownInteraction()| if necessary.
+  // |Status::UnknownMethod()| if necessary.
   void ExtractValueFromDecoded(::fidl::WireResponse<FidlMethod>* raw_response) {
     static_assert(!FidlMethod::kHasNonEmptyPayload);
     static_assert(FidlMethod::kHasTransportError);
@@ -127,7 +127,7 @@ class BaseWireResult<FidlMethod,
     if (raw_response->result.is_transport_err()) {
       switch (raw_response->result.transport_err()) {
         case ::fidl::internal::TransportErr::kUnknownMethod:
-          SetStatus(::fidl::Status::UnknownInteraction());
+          SetStatus(::fidl::Status::UnknownMethod());
           return;
       }
       ZX_PANIC("Unknown transport_err");
@@ -213,7 +213,7 @@ class BaseWireResult<
   void ExtractValueFromDecoded(::fidl::WireResponse<FidlMethod>* raw_response) {
     if constexpr (FidlMethod::kHasApplicationError && FidlMethod::kHasTransportError) {
       if (raw_response->result.is_transport_err()) {
-        SetStatus(::fidl::Status::UnknownInteraction());
+        SetStatus(::fidl::Status::UnknownMethod());
       } else if (raw_response->result.is_err()) {
         result_ = fitx::error(raw_response->result.err());
       } else {
@@ -226,7 +226,7 @@ class BaseWireResult<
       }
     } else if constexpr (FidlMethod::kHasTransportError) {
       if (raw_response->result.is_transport_err()) {
-        SetStatus(::fidl::Status::UnknownInteraction());
+        SetStatus(::fidl::Status::UnknownMethod());
       } else {
         // Result must be non-empty, because if there is no application error
         // and the result is empty, we would use the template without the Unwrap

@@ -445,7 +445,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendUnknownResponse) {
   client->FlexibleTwoWay().Then([](auto& response) {
     ASSERT_TRUE(response.is_error());
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().status());
-    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().reason());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -565,7 +565,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSendUnknownResponse) {
   client->FlexibleTwoWayFields().Then([](auto& response) {
     ASSERT_TRUE(response.is_error());
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().status());
-    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().reason());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -611,7 +611,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendUnknownResponse) {
     ASSERT_TRUE(response.is_error());
     ASSERT_TRUE(response.error_value().is_transport_error());
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
-    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().transport_error().reason());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().transport_error().reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -711,7 +711,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendUnknownResponse) {
     ASSERT_TRUE(response.is_error());
     ASSERT_TRUE(response.error_value().is_transport_error());
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
-    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().transport_error().reason());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().transport_error().reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -1126,7 +1126,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendUnknownResponse) {
   auto response = response_fut.get();
   ASSERT_TRUE(response.is_error());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendOtherTransportError) {
@@ -1241,7 +1241,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsSyncSendUnknownResponse) {
   auto response = response_fut.get();
   ASSERT_TRUE(response.is_error());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSend) {
@@ -1287,7 +1287,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendUnknownResponse) {
   ASSERT_TRUE(response.is_error());
   ASSERT_TRUE(response.error_value().is_transport_error());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().transport_error().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().transport_error().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendOtherTransportError) {
@@ -1384,7 +1384,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendUnknownResponse) {
   ASSERT_TRUE(response.is_error());
   ASSERT_TRUE(response.error_value().is_transport_error());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().transport_error().reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.error_value().transport_error().reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendErrorVariant) {

@@ -408,7 +408,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSendUnknownResponse) {
   client->FlexibleTwoWayFields().Then([](auto& response) {
     ASSERT_FALSE(response.ok());
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.status());
-    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.reason());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -453,7 +453,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendUnknownResponse) {
   client->FlexibleTwoWay().Then([](auto& response) {
     ASSERT_FALSE(response.ok());
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.status());
-    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.reason());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -573,7 +573,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendUnknownResponse) {
   client->FlexibleTwoWayErr().Then([](auto& response) {
     ASSERT_FALSE(response.ok());
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.status());
-    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.reason());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -672,7 +672,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendUnknownResponse) {
   client->FlexibleTwoWayFieldsErr().Then([](auto& response) {
     ASSERT_FALSE(response.ok());
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.status());
-    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.reason());
+    EXPECT_EQ(fidl::Reason::kUnknownMethod, response.reason());
   });
 
   auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
@@ -1098,7 +1098,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendUnknownResponse) {
   auto response = response_fut.get();
   ASSERT_FALSE(response.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendOtherTransportError) {
@@ -1223,7 +1223,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleFieldsSyncSendUnknownResponse) {
   auto response = response_fut.get();
   ASSERT_FALSE(response.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSend) {
@@ -1273,7 +1273,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendUnknownResponse) {
   auto response = response_fut.get();
   ASSERT_FALSE(response.ok());
   EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.status());
-  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.reason());
+  EXPECT_EQ(fidl::Reason::kUnknownMethod, response.reason());
 }
 
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendOtherTransportError) {
