@@ -151,12 +151,8 @@ view_tree::SubtreeSnapshot Engine::GenerateViewTreeSnapshot(
       ComputeGlobalHitRegions(topology_data.topology_vector, topology_data.parent_indices,
                               matrix_vector, uber_struct_snapshot);
 
-  const auto unconnected_view_ref_koids =
-      UberStructSystem::ExtractViewRefKoids(uber_struct_snapshot);
-
   return flatland::GlobalTopologyData::GenerateViewTreeSnapshot(
-      topology_data, unconnected_view_ref_koids, global_clip_regions, matrix_vector,
-      child_view_watcher_mapping);
+      topology_data, global_clip_regions, matrix_vector, child_view_watcher_mapping);
 }
 
 // TODO(fxbug.dev/81842) If we put Screenshot on its own thread, we should make this call thread

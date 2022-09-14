@@ -13,6 +13,8 @@
 #include <glm/gtc/type_ptr.hpp>
 
 using flatland::GlobalTopologyData;
+using flatland::TransformClipRegion;
+using flatland::TransformHandle;
 
 namespace {
 
@@ -120,7 +122,6 @@ glm::mat4 Convert2DTransformTo3D(glm::mat3 in_matrix) {
 // Easier-to-read input data to HitTest() below.
 struct HitTestingData {
   const GlobalTopologyData::TopologyVector transforms;
-  const GlobalTopologyData::ChildCountVector children_vector;
   const GlobalTopologyData::ParentIndexVector parent_indices;
   const std::unordered_map<flatland::TransformHandle, flatland::TransformHandle> root_transforms;
   const GlobalTopologyData::ViewRefMap view_refs;
@@ -130,9 +131,8 @@ struct HitTestingData {
 
 view_tree::SubtreeHitTestResult HitTest(const HitTestingData& data, zx_koid_t start_node,
                                         glm::vec2 world_point, bool is_semantic_hit_test) {
-  const auto& [transforms, children_vector, parent_indices, root_transforms, view_refs, hit_regions,
+  const auto& [transforms, parent_indices, root_transforms, view_refs, hit_regions,
                global_clip_regions] = data;
-  FX_DCHECK(transforms.size() == children_vector.size());
   FX_DCHECK(transforms.size() == parent_indices.size());
   FX_DCHECK(transforms.size() == global_clip_regions.size());
 
@@ -162,6 +162,7 @@ view_tree::SubtreeHitTestResult HitTest(const HitTestingData& data, zx_koid_t st
     // Skip anonymous views.
     if (const auto local_root = view_refs.find(root_transform);
         local_root != view_refs.end() && local_root->second != nullptr) {
+      const auto& view_ref = *local_root->second;
       // Skip views without hit regions.
       if (const auto hit_region_vec = hit_regions.find(transform);
           hit_region_vec != hit_regions.end()) {
@@ -181,7 +182,7 @@ view_tree::SubtreeHitTestResult HitTest(const HitTestingData& data, zx_koid_t st
           // point is in both.
           if (utils::RectFContainsPoint(rect, x, y) &&
               utils::RectFContainsPoint(clip_region, x, y)) {
-            hits.push_back(utils::ExtractKoid(*(local_root->second)));
+            hits.push_back(utils::ExtractKoid(view_ref));
             break;
           }
         }
@@ -193,6 +194,7 @@ view_tree::SubtreeHitTestResult HitTest(const HitTestingData& data, zx_koid_t st
   return view_tree::SubtreeHitTestResult{.hits = hits};
 }
 
+// Returns whether the transform at |index| has an anonymous ancestor.
 bool HasAnonymousAncestor(const size_t index, const size_t root_index,
                           const GlobalTopologyData::ViewRefMap& view_refs,
                           const GlobalTopologyData::TopologyVector& topology_vector,
@@ -215,6 +217,128 @@ bool HasAnonymousAncestor(const size_t index, const size_t root_index,
   }
 
   return false;
+}
+
+// Returns the index and ViewRef koid first node in the topology with a ViewRef set.
+// If none is found it returns std::nullopt, indicating an empty ViewTree.
+std::optional<std::pair<size_t, zx_koid_t>> FindRoot(
+    const GlobalTopologyData::TopologyVector& topology_vector,
+    const GlobalTopologyData::ViewRefMap& view_refs) {
+  for (size_t index = 0; index < topology_vector.size(); ++index) {
+    // TODO(fxbug.dev/109352): Make sure the root view is not anonymous?
+    if (const auto koid = GetViewRefKoid(topology_vector[index], view_refs)) {
+      return std::make_pair(index, *koid);
+    }
+  }
+
+  return std::nullopt;
+}
+
+// Finds the parent of the node at |index| by looking upwards until a View is found.
+// Returns ZX_KOID INVALID if no valid parent is found. (The root has no parent)
+zx_koid_t FindParentView(const size_t index, const zx_koid_t view_ref_koid, const zx_koid_t root,
+                         const GlobalTopologyData::TopologyVector& topology_vector,
+                         const GlobalTopologyData::ParentIndexVector& parent_indices,
+                         const GlobalTopologyData::ViewRefMap& view_refs) {
+  zx_koid_t parent_koid = ZX_KOID_INVALID;
+  if (view_ref_koid != root) {
+    size_t parent_index = parent_indices[index];
+    while (view_refs.count(topology_vector[parent_index]) == 0) {
+      parent_index = parent_indices[parent_index];
+    }
+    parent_koid = GetViewRefKoid(topology_vector[parent_index], view_refs).value();
+  }
+  return parent_koid;
+}
+
+// Returns the bounding box of |transform_handle| by findings the clip regions specified by it's
+// view's parent.
+view_tree::BoundingBox ComputeBoundingBox(
+    const TransformHandle transform_handle,
+    const std::unordered_map<TransformHandle, TransformClipRegion>& clip_regions,
+    const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
+  // The clip region coordinates are stored in a view's parent uberstruct. The local clip region for
+  // a viewport is always identical to the local view boundary.
+  std::array<float, 2> max_bounds = {0, 0};
+  if (const auto view_watcher_it = child_view_watcher_mapping.find(transform_handle);
+      view_watcher_it != child_view_watcher_mapping.end()) {
+    const auto parent_viewport_watcher_handle = view_watcher_it->second;
+    if (const auto clip_region_it = clip_regions.find(parent_viewport_watcher_handle);
+        clip_region_it != clip_regions.end()) {
+      const auto [_x, _y, width, height] = clip_region_it->second;
+      max_bounds = {static_cast<float>(width), static_cast<float>(height)};
+    }
+  }
+
+  return {.min = {0, 0}, .max = max_bounds};
+}
+
+// Return value struct for ComputeViewTree().
+struct ViewTreeData {
+  std::unordered_map<zx_koid_t, view_tree::ViewNode> view_tree;
+  std::unordered_set<TransformHandle> implicitly_anonymous_views;
+};
+
+// Computes and returns the ViewTree plus a list of implicit anonymous views (named views that are
+// part of an anonymous subtree) based on GlobalTopologyData.
+ViewTreeData ComputeViewTree(
+    const zx_koid_t root, const size_t root_index,
+    const GlobalTopologyData::TopologyVector& topology_vector,
+    const GlobalTopologyData::ParentIndexVector& parent_indices,
+    const GlobalTopologyData::ViewRefMap& view_refs,
+    const std::unordered_map<TransformHandle, std::string>& debug_names,
+    const std::unordered_map<TransformHandle, TransformClipRegion>& clip_regions,
+    const std::vector<glm::mat3>& global_matrix_vector,
+    const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
+  ViewTreeData output;
+  for (size_t i = root_index; i < topology_vector.size(); ++i) {
+    const auto& transform_handle = topology_vector.at(i);
+    const auto view_ref_it = view_refs.find(transform_handle);
+    // Transforms without ViewRefs are not Views and can be skipped.
+    if (view_ref_it == view_refs.end()) {
+      continue;
+    }
+
+    const auto& view_ref = view_ref_it->second;
+    // Anonymous views can be skipped.
+    if (view_ref == nullptr) {
+      continue;
+    }
+
+    // If any node in the ancestor chain is anonymous then the View should marked "unconnected".
+    if (HasAnonymousAncestor(i, root_index, view_refs, topology_vector, parent_indices)) {
+      output.implicitly_anonymous_views.emplace(transform_handle);
+      continue;
+    }
+
+    std::string debug_name;
+    if (auto debug_it = debug_names.find(transform_handle); debug_it != debug_names.end()) {
+      debug_name = debug_it->second;
+    }
+
+    const zx_koid_t view_ref_koid = utils::ExtractKoid(*view_ref);
+    const zx_koid_t parent_koid =
+        FindParentView(i, view_ref_koid, root, topology_vector, parent_indices, view_refs);
+    const view_tree::BoundingBox bounding_box =
+        ComputeBoundingBox(transform_handle, clip_regions, child_view_watcher_mapping);
+
+    output.view_tree.emplace(
+        view_ref_koid, view_tree::ViewNode{.parent = parent_koid,
+                                           .bounding_box = bounding_box,
+                                           .local_from_world_transform = glm::inverse(
+                                               Convert2DTransformTo3D(global_matrix_vector[i])),
+                                           .view_ref = view_ref,
+                                           .debug_name = debug_name});
+  }
+
+  // Fill in the children by deriving it from the parents of each node.
+  for (const auto& [koid, view_node] : output.view_tree) {
+    if (view_node.parent != ZX_KOID_INVALID) {
+      output.view_tree.at(view_node.parent).children.emplace(koid);
+    }
+  }
+
+  return output;
 }
 
 }  // namespace
@@ -440,131 +564,61 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
 }
 
 view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
-    const GlobalTopologyData& data, const std::unordered_set<zx_koid_t>& unconnected_view_refs,
-    const std::vector<TransformClipRegion>& global_clip_regions,
+    const GlobalTopologyData& data, const std::vector<TransformClipRegion>& global_clip_regions,
     const std::vector<glm::mat3>& global_matrix_vector,
     const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
-  // Find the first node with a ViewRef set. This is the root of the ViewTree.
-  size_t root_index = 0;
-  zx_koid_t root_koid = ZX_KOID_INVALID;
-  for (size_t index = 0; index < data.topology_vector.size(); ++index) {
-    if (const auto koid = GetViewRefKoid(data.topology_vector[index], data.view_refs)) {
-      root_index = index;
-      root_koid = *koid;
-      break;
-    }
-  }
-  if (root_koid == ZX_KOID_INVALID) {
-    // Didn't find a root -> empty ViewTree.
+  const auto root_values = FindRoot(data.topology_vector, data.view_refs);
+  if (!root_values.has_value()) {
+    // No root -> Empty ViewTree.
     return {};
   }
+  const auto [root_index, root_koid] = root_values.value();
+  auto [view_tree, implicitly_anonymous_views] = ComputeViewTree(
+      root_koid, root_index, data.topology_vector, data.parent_indices, data.view_refs,
+      data.debug_names, data.clip_regions, global_matrix_vector, child_view_watcher_mapping);
 
-  view_tree::SubtreeSnapshot snapshot{// We do not currently support other compositors as subtrees.
-                                      .tree_boundaries = {}};
-  auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
-
-  // Copy the ViewRef map so we can remove ViewRefs from implicitly anonymous nodes (descendants of
-  // anonymous nodes).
-  ViewRefMap modified_view_refs = data.view_refs;
-
-  // Add all Views to |view_tree|.
-  root = root_koid;
-  for (size_t i = root_index; i < data.topology_vector.size(); ++i) {
-    const auto& transform_handle = data.topology_vector.at(i);
-    const auto view_ref_it = data.view_refs.find(transform_handle);
-    if (view_ref_it == data.view_refs.end()) {
-      // Transforms without ViewRefs are not Views and can be skipped.
-      continue;
-    }
-
-    // TODO(fxbug.dev/109352): Make sure the root view is not anonymous.
-    const auto& view_ref = view_ref_it->second;
-    if (view_ref == nullptr) {
-      // Anonymous views can be skipped.
-      continue;
-    }
-
-    const zx_koid_t view_ref_koid = utils::ExtractKoid(*view_ref);
-
-    std::string debug_name;
-    if (data.debug_names.count(transform_handle) != 0)
-      debug_name = data.debug_names.at(transform_handle);
-
-    // If any node in the ancestor chain is anonymous then this View should marked "unconnected".
-    if (HasAnonymousAncestor(i, root_index, data.view_refs, data.topology_vector,
-                             data.parent_indices)) {
-      unconnected_views.insert(view_ref_koid);
-      modified_view_refs.erase(transform_handle);
-      continue;
-    }
-
-    // Find the parent by looking upwards until a View is found. The root has no parent.
-    zx_koid_t parent_koid = ZX_KOID_INVALID;
-    if (view_ref_koid != root) {
-      size_t parent_index = data.parent_indices[i];
-      while (data.view_refs.count(data.topology_vector[parent_index]) == 0) {
-        parent_index = data.parent_indices[parent_index];
-      }
-      parent_koid = GetViewRefKoid(data.topology_vector[parent_index], data.view_refs).value();
-    }
-
-    // Set the coordinates of a view node's bounding box using the clip region coordinates stored
-    // in a view's parent uberstruct. The local clip region for a viewport is always identical to
-    // the local view boundary.
-    float max_width = 0, max_height = 0;
-    if (child_view_watcher_mapping.count(transform_handle) != 0) {
-      if (auto& parent_viewport_watcher_handle = child_view_watcher_mapping.at(transform_handle);
-          data.clip_regions.count(parent_viewport_watcher_handle) != 0) {
-        // Fetch the clip region coordinates for a view using its parent viewport watcher
-        // handle.
-        auto& clip_region = data.clip_regions.at(parent_viewport_watcher_handle);
-
-        max_width = clip_region.width;
-        max_height = clip_region.height;
+  // Unconnected_views = all non-anonymous views (those with ViewRefs) not in the ViewTree.
+  std::unordered_set<zx_koid_t> unconnected_views;
+  for (const auto& [_, view_ref] : data.view_refs) {
+    if (view_ref != nullptr) {
+      const zx_koid_t koid = utils::ExtractKoid(*view_ref);
+      if (view_tree.count(koid) == 0) {
+        unconnected_views.emplace(koid);
       }
     }
-
-    view_tree.emplace(
-        view_ref_koid,
-        view_tree::ViewNode{.parent = parent_koid,
-                            .bounding_box = {.min = {0, 0}, .max = {max_width, max_height}},
-                            .local_from_world_transform =
-                                glm::inverse(Convert2DTransformTo3D(global_matrix_vector[i])),
-                            .view_ref = view_ref,
-                            .debug_name = debug_name});
   }
 
-  // Fill in the children by deriving it from the parents of each node.
-  for (const auto& [koid, view_node] : view_tree) {
-    if (view_node.parent != ZX_KOID_INVALID) {
-      view_tree.at(view_node.parent).children.emplace(koid);
-    }
-  }
+  // Copy all non-anonymous ViewRefs from the ViewRefMap.
+  ViewRefMap named_view_refs;
+  named_view_refs.reserve(data.view_refs.size());
+  std::copy_if(data.view_refs.begin(), data.view_refs.end(),
+               std::inserter(named_view_refs, named_view_refs.end()),
+               [&anonymous = implicitly_anonymous_views](const auto& kv) {
+                 return anonymous.count(kv.first) == 0;
+               });
 
   // Note: The ViewTree represents a snapshot of the scene at a specific time. Because of this it's
   // important that it contains no references to live data. This means the hit testing closure must
   // contain only plain values or data with value semantics like shared_ptr<const>, to ensure that
   // it's safe to call from any thread.
-  hit_tester = [hit_test_data = HitTestingData{
-                    .transforms = data.topology_vector,
-                    .children_vector = data.child_counts,
-                    .parent_indices = data.parent_indices,
-                    .root_transforms = data.root_transforms,
-                    .view_refs = std::move(modified_view_refs),
-                    .hit_regions = data.hit_regions,
-                    .global_clip_regions = global_clip_regions,
-                }](zx_koid_t start_node, glm::vec2 world_point, bool is_semantic_hit_test) {
-    return HitTest(hit_test_data, start_node, world_point, is_semantic_hit_test);
-  };
+  const auto hit_tester =
+      [hit_test_data = HitTestingData{
+           .transforms = data.topology_vector,
+           .parent_indices = data.parent_indices,
+           .root_transforms = data.root_transforms,
+           .view_refs = std::move(named_view_refs),
+           .hit_regions = data.hit_regions,
+           .global_clip_regions = global_clip_regions,
+       }](zx_koid_t start_node, glm::vec2 world_point, bool is_semantic_hit_test) {
+        return HitTest(hit_test_data, start_node, world_point, is_semantic_hit_test);
+      };
 
-  // Add unconnected views to the snapshot.
-  for (const auto view_ref_koid : unconnected_view_refs) {
-    if (view_tree.count(view_ref_koid) == 0) {
-      unconnected_views.insert(view_ref_koid);
-    }
-  }
-
-  return snapshot;
+  return view_tree::SubtreeSnapshot{.root = root_koid,
+                                    .view_tree = std::move(view_tree),
+                                    .unconnected_views = std::move(unconnected_views),
+                                    .hit_tester = std::move(hit_tester),
+                                    // We do not currently support other compositors as subtrees.
+                                    .tree_boundaries = {}};
 }
 
 }  // namespace flatland

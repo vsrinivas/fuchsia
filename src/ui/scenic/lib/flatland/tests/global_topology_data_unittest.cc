@@ -70,9 +70,8 @@ view_tree::SubtreeSnapshot GenerateSnapshot(
       gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
   gtd.hit_regions =
       ComputeGlobalHitRegions(gtd.topology_vector, gtd.parent_indices, matrix_vector, uber_structs);
-  return GlobalTopologyData::GenerateViewTreeSnapshot(
-      gtd, UberStructSystem::ExtractViewRefKoids(uber_structs), global_clip_regions, matrix_vector,
-      child_parent_viewport_watcher_mapping);
+  return GlobalTopologyData::GenerateViewTreeSnapshot(gtd, global_clip_regions, matrix_vector,
+                                                      child_parent_viewport_watcher_mapping);
 }
 
 view_tree::SubtreeHitTester GenerateHitTester(
