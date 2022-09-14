@@ -61,13 +61,14 @@ zx_status_t VirtioBalloon::Ready(uint32_t negotiated_features) {
   return status;
 }
 
-void VirtioBalloon::GetNumPages(GetNumPagesCallback callback) {
-  uint32_t actual;
+void VirtioBalloon::GetBalloonSize(GetBalloonSizeCallback callback) {
+  uint32_t current_num_pages, requested_num_pages;
   {
     std::lock_guard<std::mutex> lock(device_config_.mutex);
-    actual = config_.actual;
+    requested_num_pages = config_.num_pages;
+    current_num_pages = config_.actual;
   }
-  callback(actual);
+  callback(current_num_pages, requested_num_pages);
 }
 
 void VirtioBalloon::RequestNumPages(uint32_t num_pages) {

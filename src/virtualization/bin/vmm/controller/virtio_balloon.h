@@ -44,7 +44,7 @@ class VirtioBalloon
   void on_fidl_error(fidl::UnbindInfo error) override;
 
   // |fuchsia::virtualization::BalloonController|
-  void GetNumPages(GetNumPagesCallback callback) override;
+  void GetBalloonSize(GetBalloonSizeCallback callback) override;
   void RequestNumPages(uint32_t num_pages) override;
   void GetMemStats(GetMemStatsCallback callback) override;
 };

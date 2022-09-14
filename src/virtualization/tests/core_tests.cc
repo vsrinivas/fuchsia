@@ -79,8 +79,10 @@ TYPED_TEST(CoreGuestTest, VirtioBalloon) {
   ASSERT_TRUE(this->ConnectToBalloon(balloon_controller.NewRequest()));
 
   uint32_t initial_num_pages;
-  zx_status_t status = balloon_controller->GetNumPages(&initial_num_pages);
+  uint32_t requested_num_pages;
+  zx_status_t status = balloon_controller->GetBalloonSize(&initial_num_pages, &requested_num_pages);
   ASSERT_EQ(status, ZX_OK);
+  EXPECT_EQ(requested_num_pages, initial_num_pages);
   TestGetMemStats("Before inflate", balloon_controller);
 
   // Request an increase to the number of pages in the balloon.
@@ -88,13 +90,14 @@ TYPED_TEST(CoreGuestTest, VirtioBalloon) {
   ASSERT_EQ(status, ZX_OK);
 
   // Verify that the number of pages eventually equals the requested number. The
-  // guest may not respond to the request immediately so we call GetNumPages in
+  // guest may not respond to the request immediately so we call GetBalloonSize in
   // a loop.
-  uint32_t num_pages;
+  uint32_t current_num_pages;
   while (true) {
-    status = balloon_controller->GetNumPages(&num_pages);
+    status = balloon_controller->GetBalloonSize(&current_num_pages, &requested_num_pages);
     ASSERT_EQ(status, ZX_OK);
-    if (num_pages == initial_num_pages + kVirtioBalloonPageCount) {
+    EXPECT_EQ(requested_num_pages, initial_num_pages + kVirtioBalloonPageCount);
+    if (current_num_pages == initial_num_pages + kVirtioBalloonPageCount) {
       break;
     }
   }
@@ -106,9 +109,10 @@ TYPED_TEST(CoreGuestTest, VirtioBalloon) {
   ASSERT_EQ(status, ZX_OK);
 
   while (true) {
-    status = balloon_controller->GetNumPages(&num_pages);
+    status = balloon_controller->GetBalloonSize(&current_num_pages, &requested_num_pages);
     ASSERT_EQ(status, ZX_OK);
-    if (num_pages == initial_num_pages) {
+    EXPECT_EQ(requested_num_pages, initial_num_pages);
+    if (current_num_pages == initial_num_pages) {
       break;
     }
   }
