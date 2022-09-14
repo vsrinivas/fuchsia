@@ -21,18 +21,18 @@
             to: [ "#configurator" ],
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-codec",
             to: [ "#configurator" ],
-            subdir: "class/codec",
+            subdir: "codec",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-dai",
             to: [ "#configurator" ],
-            subdir: "class/dai",
+            subdir: "dai",
         },
     ],
 }
