@@ -219,6 +219,7 @@ type Duplicates = strict union {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberName);
 }
 
+// TODO(fxbug.dev/108248): We should figure out how to use an embedded *.fidl file instead.
 TEST(UnionTests, BadCannotStartAtZero) {
   TestLibrary library(R"FIDL(
 library test;
