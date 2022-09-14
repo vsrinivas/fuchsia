@@ -13,7 +13,7 @@
 
 class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
  public:
-  RunnerServer() {}
+  RunnerServer() = default;
 
   void IsTestEnabled(IsTestEnabledRequestView request,
                      IsTestEnabledCompleter::Sync& completer) override {
@@ -150,7 +150,7 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
       if (result.value().is_ok()) {
         completer.Reply(
             fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithSuccess(
-                std::move(*result.value().value())));
+                *result.value().value()));
       } else {
         completer.Reply(fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::
                             WithApplicationError(result.value().error_value()));
@@ -214,7 +214,8 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
   void ReceiveAjarEvents(ReceiveAjarEventsRequestView request,
                          ReceiveAjarEventsCompleter::Sync& completer) override {
     class EventHandler : public fidl::WireSyncEventHandler<fidl_clientsuite::AjarTarget> {
-      void handle_unknown_event(fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) {
+      void handle_unknown_event(
+          fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::AjarTargetEvent::WithUnknownEvent(
             {{.ordinal = metadata.method_ordinal}});
@@ -268,17 +269,19 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
   void ReceiveOpenEvents(ReceiveOpenEventsRequestView request,
                          ReceiveOpenEventsCompleter::Sync& completer) override {
     class EventHandler : public fidl::WireSyncEventHandler<fidl_clientsuite::OpenTarget> {
-      void StrictEvent(fidl::WireEvent<fidl_clientsuite::OpenTarget::StrictEvent>* event) {
+      void StrictEvent(fidl::WireEvent<fidl_clientsuite::OpenTarget::StrictEvent>* event) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEvent::WithStrictEvent({});
       }
 
-      void FlexibleEvent(fidl::WireEvent<fidl_clientsuite::OpenTarget::FlexibleEvent>* event) {
+      void FlexibleEvent(
+          fidl::WireEvent<fidl_clientsuite::OpenTarget::FlexibleEvent>* event) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEvent::WithFlexibleEvent({});
       }
 
-      void handle_unknown_event(fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) {
+      void handle_unknown_event(
+          fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEvent::WithUnknownEvent(
             {{.ordinal = metadata.method_ordinal}});

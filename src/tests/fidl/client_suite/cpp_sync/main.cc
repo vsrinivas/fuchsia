@@ -13,7 +13,7 @@
 
 class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
  public:
-  RunnerServer() {}
+  RunnerServer() = default;
 
   void IsTestEnabled(IsTestEnabledRequest& request,
                      IsTestEnabledCompleter::Sync& completer) override {
@@ -200,7 +200,8 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
   void ReceiveAjarEvents(ReceiveAjarEventsRequest& request,
                          ReceiveAjarEventsCompleter::Sync& completer) override {
     class EventHandler : public fidl::SyncEventHandler<fidl_clientsuite::AjarTarget> {
-      void handle_unknown_event(fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) {
+      void handle_unknown_event(
+          fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::AjarTargetEvent::WithUnknownEvent(
             {{.ordinal = metadata.method_ordinal}});
@@ -249,17 +250,18 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
   void ReceiveOpenEvents(ReceiveOpenEventsRequest& request,
                          ReceiveOpenEventsCompleter::Sync& completer) override {
     class EventHandler : public fidl::SyncEventHandler<fidl_clientsuite::OpenTarget> {
-      void StrictEvent(fidl::Event<fidl_clientsuite::OpenTarget::StrictEvent>& event) {
+      void StrictEvent(fidl::Event<fidl_clientsuite::OpenTarget::StrictEvent>& event) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEvent::WithStrictEvent({});
       }
 
-      void FlexibleEvent(fidl::Event<fidl_clientsuite::OpenTarget::FlexibleEvent>& event) {
+      void FlexibleEvent(fidl::Event<fidl_clientsuite::OpenTarget::FlexibleEvent>& event) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEvent::WithFlexibleEvent({});
       }
 
-      void handle_unknown_event(fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) {
+      void handle_unknown_event(
+          fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) override {
         ZX_ASSERT(!received_event.has_value());
         received_event = fidl_clientsuite::OpenTargetEvent::WithUnknownEvent(
             {{.ordinal = metadata.method_ordinal}});

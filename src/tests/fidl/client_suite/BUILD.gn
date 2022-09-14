@@ -5,6 +5,7 @@
 group("client_suite") {
   testonly = true
   deps = [
+    "cpp_async",
     "cpp_sync",
     "cpp_wire_sync",
   ]
