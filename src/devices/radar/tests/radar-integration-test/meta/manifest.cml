@@ -24,11 +24,11 @@
     ],
     offer: [
         {
-            directory: "dev-class",
+            directory: "dev",
             from: "parent",
             as: "dev-radar",
             to: "#radar-proxy",
-            subdir: "radar",
+            subdir: "class/radar",
         },
         {
             protocol: "fuchsia.logger.LogSink",

@@ -12,10 +12,10 @@
     },
     use: [
         {
-            directory: "dev-class",
+            // For access to /dev/class/block
+            directory: "dev",
             rights: [ "r*" ],
-            path: "/dev/class/block",
-            subdir: "block",
+            path: "/dev",
         },
         { protocol: "fuchsia.hardware.block.partition.Partition" },
     ],

@@ -18,7 +18,7 @@
             // For /dev/aml-video/amlogic_video, provided by "devices" facet.
             // Entire /dev/ must be routed for GetTopologicalPath on
             // /dev/aml-video/amlogic_video to not hang.
-            directory: "dev-topological",
+            directory: "dev",
             rights: [ "rw*" ],
             path: "/dev",
         },

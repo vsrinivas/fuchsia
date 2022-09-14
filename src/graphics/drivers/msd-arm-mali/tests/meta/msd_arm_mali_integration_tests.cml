@@ -13,7 +13,7 @@
     use: [
         {
             // For /dev/class/gpu, /dev/class/gpu-performance-counters, and /dev/mali/aml-gpu.
-            directory: "dev-topological",
+            directory: "dev",
             rights: [ "r*" ],
             path: "/dev",
         },

@@ -48,12 +48,7 @@
 
         // These system capabilities are offered for use by the devices tests.
         {
-            directory: "dev-topological",
-            from: "parent",
-            to: "#devices-tests",
-        },
-        {
-            directory: "dev-class",
+            directory: "dev",
             from: "parent",
             to: "#devices-tests",
         },
