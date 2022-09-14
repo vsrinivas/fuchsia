@@ -20,13 +20,12 @@ namespace crash_reports {
 
 Queue::Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
              std::shared_ptr<InfoContext> info_context, LogTags* tags, ReportStore* report_store,
-             CrashServer* crash_server, SnapshotCollector* snapshot_collector)
+             CrashServer* crash_server)
     : dispatcher_(dispatcher),
       services_(services),
       tags_(tags),
       report_store_(report_store),
       crash_server_(crash_server),
-      snapshot_collector_(snapshot_collector),
       metrics_(std::move(info_context)) {
   FX_CHECK(dispatcher_);
   FX_CHECK(crash_server_);
@@ -299,11 +298,7 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
   }
 
   metrics_.Retire(pending_report, reason, server_report_id);
-  if (const bool garbage_collected =
-          report_store_->GetSnapshotStore()->Release(pending_report.snapshot_uuid);
-      garbage_collected) {
-    snapshot_collector_->RemoveRequest(pending_report.snapshot_uuid);
-  }
+  report_store_->GetSnapshotStore()->Release(pending_report.snapshot_uuid);
   tags_->Unregister(pending_report.report_id);
   report_store_->Remove(pending_report.report_id);
 }

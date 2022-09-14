@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/crash_reports/snapshot_store.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
@@ -39,25 +40,30 @@ class SnapshotCollector {
   // Returns a promise of a snapshot uuid for a snapshot that contains the most up-to-date system
   // data (a new snapshot will be created if all existing snapshots contain data that is
   // out-of-date). No uuid will be returned if |timeout| expires.
-  ::fpromise::promise<SnapshotUuid> GetSnapshotUuid(zx::duration timeout);
-
-  // Removes request for |uuid|. Check-fails that there are no blocked promises for the request.
-  // TODO(fxbug.dev/108830): Add internal accounting for number of parties interested in a request
-  // and make this a private function.
-  void RemoveRequest(const SnapshotUuid& uuid);
+  ::fpromise::promise<SnapshotUuid> GetSnapshotUuid(zx::duration timeout, ReportId report_id);
 
   // Shuts down the snapshot manager by cancelling any pending FIDL calls and provides waiting
   // clients with a UUID for a generic "shutdown" snapshot.
   void Shutdown();
 
  private:
-  // State associated with an async call to fuchsia.feedback.DataProvider/GetSnapshot.
+  // State associated with an async call to fuchsia.feedback.DataProvider/GetSnapshot. If a
+  // SnapshotRequest exists, it is implicitly pending.
   struct SnapshotRequest {
+    ~SnapshotRequest() {
+      for (auto& blocked_promise : blocked_promises) {
+        if (blocked_promise) {
+          blocked_promise.resume_task();
+        }
+      }
+    }
+
     // The uuid of the request's snapshot.
     SnapshotUuid uuid;
 
-    // Whether the request is pending.
-    bool is_pending;
+    // Ids of pending promises associated with this request. There should be one promise for each
+    // report using this snapshot request.
+    std::set<uint64_t> promise_ids;
 
     // Promises that are waiting on the call to complete.
     std::vector<::fpromise::suspended_task> blocked_promises;
@@ -103,7 +109,8 @@ class SnapshotCollector {
 
   zx::duration shared_request_window_;
 
-  std::vector<std::unique_ptr<SnapshotRequest>> requests_;
+  std::vector<std::unique_ptr<SnapshotRequest>> snapshot_requests_;
+  std::map<uint64_t, std::optional<SnapshotUuid>> report_results_;
 
   bool shutdown_{false};
 };

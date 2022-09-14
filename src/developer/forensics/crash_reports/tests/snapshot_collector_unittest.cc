@@ -99,12 +99,11 @@ class SnapshotCollectorTest : public UnitTestFixture {
     data_provider_server_ = std::move(data_provider_server);
   }
 
-  void ScheduleGetSnapshotUuidAndThen(const zx::duration timeout,
+  void ScheduleGetSnapshotUuidAndThen(const zx::duration timeout, ReportId report_id,
                                       ::fit::function<void(const std::string&)> and_then) {
-    executor_.schedule_task(
-        snapshot_collector_->GetSnapshotUuid(timeout).and_then(std::move(and_then)).or_else([]() {
-          FX_CHECK(false);
-        }));
+    executor_.schedule_task(snapshot_collector_->GetSnapshotUuid(timeout, report_id)
+                                .and_then(std::move(and_then))
+                                .or_else([]() { FX_CHECK(false); }));
   }
 
   void CloseConnection() { data_provider_server_->CloseConnection(); }
@@ -132,7 +131,7 @@ TEST_F(SnapshotCollectorTest, Check_GetSnapshotUuid) {
   SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
-  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
+  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), 0,
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
   // |uuid| should only have a value once |kWindow| has passed.
   RunLoopUntilIdle();
@@ -151,7 +150,7 @@ TEST_F(SnapshotCollectorTest, Check_GetSnapshotUuidRequestsCombined) {
   size_t num_uuid1{0};
   std::optional<std::string> uuid1{std::nullopt};
   for (size_t i = 0; i < kNumRequests; ++i) {
-    ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
+    ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), i,
                                    ([&uuid1, &num_uuid1](const std::string& new_uuid) {
                                      if (!uuid1.has_value()) {
                                        uuid1 = new_uuid;
@@ -167,7 +166,7 @@ TEST_F(SnapshotCollectorTest, Check_GetSnapshotUuidRequestsCombined) {
   size_t num_uuid2{0};
   std::optional<std::string> uuid2{std::nullopt};
   for (size_t i = 0; i < kNumRequests; ++i) {
-    ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
+    ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), kNumRequests + i,
                                    ([&uuid2, &num_uuid2](const std::string& new_uuid) {
                                      if (!uuid2.has_value()) {
                                        uuid2 = new_uuid;
@@ -185,28 +184,12 @@ TEST_F(SnapshotCollectorTest, Check_GetSnapshotUuidRequestsCombined) {
   EXPECT_NE(uuid1.value(), uuid2.value());
 }
 
-TEST_F(SnapshotCollectorTest, Check_RemoveRequest) {
-  SetUpDefaultDataProviderServer();
-  SetUpDefaultSnapshotManager();
-
-  std::optional<std::string> uuid{std::nullopt};
-  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
-                                 ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
-  RunLoopFor(kWindow);
-
-  ASSERT_TRUE(uuid.has_value());
-
-  // At this point the request should no longer have any blocked promises and calling RemoveRequest
-  // should not crash the program.
-  snapshot_collector_->RemoveRequest(uuid.value());
-}
-
 TEST_F(SnapshotCollectorTest, Check_Timeout) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
-  ScheduleGetSnapshotUuidAndThen(zx::sec(0),
+  ScheduleGetSnapshotUuidAndThen(zx::sec(0), 0,
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
   RunLoopFor(kWindow);
 
@@ -223,7 +206,7 @@ TEST_F(SnapshotCollectorTest, Check_Shutdown) {
   SetUpDefaultSnapshotManager();
 
   std::optional<std::string> uuid{std::nullopt};
-  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
+  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), 0,
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
   snapshot_collector_->Shutdown();
   RunLoopUntilIdle();
@@ -236,7 +219,7 @@ TEST_F(SnapshotCollectorTest, Check_Shutdown) {
                                               }));
 
   uuid = std::nullopt;
-  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(),
+  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), 1,
                                  ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
   RunLoopUntilIdle();
 

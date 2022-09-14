@@ -21,7 +21,6 @@
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/report_store.h"
 #include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
-#include "src/developer/forensics/crash_reports/snapshot_collector.h"
 #include "src/lib/fxl/macros.h"
 
 namespace forensics {
@@ -32,7 +31,7 @@ class Queue {
  public:
   Queue(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
         std::shared_ptr<InfoContext> info_context, LogTags* tags, ReportStore* report_store,
-        CrashServer* crash_server, SnapshotCollector* snapshot_collector);
+        CrashServer* crash_server);
 
   // Watcher functions that allow the queue to react to external events, such as
   //  1) the reporting policy changing or
@@ -135,7 +134,6 @@ class Queue {
   LogTags* tags_;
   ReportStore* report_store_;
   CrashServer* crash_server_;
-  SnapshotCollector* snapshot_collector_;
   UploadMetrics metrics_;
 
   async::TaskClosureMethod<Queue, &Queue::UnblockAllEveryFifteenMinutes>

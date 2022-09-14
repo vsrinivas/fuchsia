@@ -5,11 +5,13 @@
 #include "src/developer/forensics/crash_reports/snapshot_collector.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/defer.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "src/developer/forensics/crash_reports/constants.h"
@@ -28,13 +30,14 @@ SnapshotCollector::SnapshotCollector(async_dispatcher_t* dispatcher, timekeeper:
       snapshot_store_(snapshot_store),
       shared_request_window_(shared_request_window) {}
 
-::fpromise::promise<SnapshotUuid> SnapshotCollector::GetSnapshotUuid(zx::duration timeout) {
+::fpromise::promise<SnapshotUuid> SnapshotCollector::GetSnapshotUuid(zx::duration timeout,
+                                                                     ReportId report_id) {
   const zx::time current_time{clock_->Now()};
 
   SnapshotUuid uuid;
 
   if (UseLatestRequest()) {
-    uuid = requests_.back()->uuid;
+    uuid = snapshot_requests_.back()->uuid;
   } else {
     uuid = MakeNewSnapshotRequest(current_time, timeout);
   }
@@ -43,79 +46,67 @@ SnapshotCollector::SnapshotCollector(async_dispatcher_t* dispatcher, timekeeper:
 
   const zx::time deadline = current_time + timeout;
 
+  auto request = FindSnapshotRequest(uuid);
+  FX_CHECK(request);
+  request->promise_ids.insert(report_id);
+
+  // Even though we already know the eventual snapshot uuid, we will wait to set the value in
+  // |report_request_results_| until after the snapshot request is complete.
+  report_results_[report_id] = std::nullopt;
+
   // The snapshot for |uuid| may not be ready, so the logic for returning |uuid| to the client
   // needs to be wrapped in an asynchronous task that can be re-executed when the conditions for
   // returning a UUID are met, e.g., the snapshot for |uuid| is received from |data_provider_| or
   // the call to GetSnapshotUuid times out.
-  return ::fpromise::make_promise(
-      [this, uuid, deadline](::fpromise::context& context) -> ::fpromise::result<SnapshotUuid> {
-        if (shutdown_) {
-          return ::fpromise::ok(kShutdownSnapshotUuid);
-        }
+  return ::fpromise::make_promise([this, uuid, deadline, report_id](::fpromise::context& context)
+                                      -> ::fpromise::result<SnapshotUuid> {
+    auto erase_request_task = fit::defer([this, report_id] { report_results_.erase(report_id); });
 
-        auto request = FindSnapshotRequest(uuid);
+    if (shutdown_) {
+      return ::fpromise::ok(kShutdownSnapshotUuid);
+    }
 
-        // The request and its data were deleted before the promise executed. This should only occur
-        // if a snapshot is dropped immediately after it is received because its annotations and
-        // archive are too large and it is one of the oldest in the FIFO.
-        if (!request) {
-          return ::fpromise::ok(kGarbageCollectedSnapshotUuid);
-        }
+    // The snapshot data was deleted before the promise executed. This should only occur if a
+    // snapshot is dropped immediately after it is received because its annotations and archive
+    // are too large and it is one of the oldest in the FIFO.
+    if (!snapshot_store_->SnapshotExists(uuid)) {
+      return ::fpromise::ok(kGarbageCollectedSnapshotUuid);
+    }
 
-        if (!request->is_pending) {
-          return ::fpromise::ok(request->uuid);
-        }
+    if (report_results_[report_id].has_value()) {
+      return ::fpromise::ok(report_results_[report_id].value());
+    }
 
-        if (clock_->Now() >= deadline) {
-          return ::fpromise::ok(kTimedOutSnapshotUuid);
-        }
+    if (clock_->Now() >= deadline) {
+      return ::fpromise::ok(kTimedOutSnapshotUuid);
+    }
 
-        WaitForSnapshot(uuid, deadline, context.suspend_task());
-        return ::fpromise::pending();
-      });
-}
-
-void SnapshotCollector::RemoveRequest(const SnapshotUuid& uuid) {
-  // No calls to GetUuid should be blocked.
-  if (auto request = FindSnapshotRequest(uuid); request) {
-    FX_CHECK(request->blocked_promises.empty());
-  }
-
-  requests_.erase(std::remove_if(
-      requests_.begin(), requests_.end(),
-      [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; }));
+    WaitForSnapshot(uuid, deadline, context.suspend_task());
+    erase_request_task.cancel();
+    return ::fpromise::pending();
+  });
 }
 
 void SnapshotCollector::Shutdown() {
-  // Unblock all pending promises to return |shutdown_snapshot_|.
+  // The destructor of snapshot requests will unblock all pending promises to return
+  // |shutdown_snapshot_|.
   shutdown_ = true;
-  for (auto& request : requests_) {
-    if (!request->is_pending) {
-      continue;
-    }
-
-    for (auto& blocked_promise : request->blocked_promises) {
-      if (blocked_promise) {
-        blocked_promise.resume_task();
-      }
-    }
-    request->blocked_promises.clear();
-  }
+  snapshot_requests_.clear();
 }
 
 SnapshotUuid SnapshotCollector::MakeNewSnapshotRequest(const zx::time start_time,
                                                        const zx::duration timeout) {
   const auto uuid = uuid::Generate();
-  requests_.emplace_back(std::unique_ptr<SnapshotRequest>(new SnapshotRequest{
+  snapshot_requests_.emplace_back(std::unique_ptr<SnapshotRequest>(new SnapshotRequest{
       .uuid = uuid,
-      .is_pending = true,
+      .promise_ids = {},
       .blocked_promises = {},
       .delayed_get_snapshot = async::TaskClosure(),
   }));
 
   snapshot_store_->StartSnapshot(uuid);
 
-  requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
+  snapshot_requests_.back()->delayed_get_snapshot.set_handler([this, timeout, uuid]() {
     // Give 15s for the packaging of the snapshot and the round-trip between the client and
     // the server and the rest is given to each data collection.
     zx::duration collection_timeout_per_data = timeout - zx::sec(15);
@@ -126,8 +117,8 @@ SnapshotUuid SnapshotCollector::MakeNewSnapshotRequest(const zx::time start_time
           EnforceSizeLimits();
         });
   });
-  requests_.back()->delayed_get_snapshot.PostForTime(dispatcher_,
-                                                     start_time + shared_request_window_);
+  snapshot_requests_.back()->delayed_get_snapshot.PostForTime(dispatcher_,
+                                                              start_time + shared_request_window_);
 
   return uuid;
 }
@@ -147,7 +138,7 @@ void SnapshotCollector::WaitForSnapshot(const SnapshotUuid& uuid, zx::time deadl
   if (const zx_status_t status = async::PostTaskForTime(
           dispatcher_,
           [this, idx, uuid] {
-            if (auto* request = FindSnapshotRequest(uuid); request && request->is_pending) {
+            if (auto* request = FindSnapshotRequest(uuid); request) {
               FX_CHECK(idx < request->blocked_promises.size());
               if (request->blocked_promises[idx]) {
                 request->blocked_promises[idx].resume_task();
@@ -168,28 +159,26 @@ void SnapshotCollector::CompleteWithSnapshot(const SnapshotUuid& uuid,
                                              feedback::Annotations annotations,
                                              fuchsia::feedback::Attachment archive) {
   auto* request = FindSnapshotRequest(uuid);
-
-  // A pending request shouldn't be deleted.
   FX_CHECK(request);
-  FX_CHECK(request->is_pending);
 
   snapshot_store_->AddSnapshotData(uuid, std::move(annotations), std::move(archive));
 
-  // The request is completed and unblock all promises that need |annotations| and |archive|.
-  request->is_pending = false;
-  for (auto& blocked_promise : request->blocked_promises) {
-    if (blocked_promise) {
-      blocked_promise.resume_task();
-    }
+  // The snapshot request is completed and unblock all promises that need |annotations| and
+  // |archive|.
+  for (auto id : request->promise_ids) {
+    report_results_[id] = uuid;
   }
-  request->blocked_promises.clear();
+
+  snapshot_requests_.erase(std::remove_if(
+      snapshot_requests_.begin(), snapshot_requests_.end(),
+      [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; }));
 }
 
 void SnapshotCollector::EnforceSizeLimits() {
   std::vector<std::unique_ptr<SnapshotRequest>> surviving_requests;
-  for (auto& request : requests_) {
-    // If the request is pending or the size limits aren't exceeded, keep the request.
-    if (request->is_pending || !snapshot_store_->SizeLimitsExceeded()) {
+  for (auto& request : snapshot_requests_) {
+    // If the size limits aren't exceeded, keep the request.
+    if (!snapshot_store_->SizeLimitsExceeded()) {
       surviving_requests.push_back(std::move(request));
 
       // Continue in order to keep the rest of the requests alive.
@@ -204,26 +193,26 @@ void SnapshotCollector::EnforceSizeLimits() {
     }
   }
 
-  requests_.swap(surviving_requests);
+  snapshot_requests_.swap(surviving_requests);
 }
 
 bool SnapshotCollector::UseLatestRequest() const {
-  if (requests_.empty()) {
+  if (snapshot_requests_.empty()) {
     return false;
   }
 
   // Whether the FIDL call for the latest request has already been made or not. If it has, the
   // snapshot might not contain all the logs up until now for instance so it's better to create a
   // new request.
-  return requests_.back()->delayed_get_snapshot.is_pending();
+  return snapshot_requests_.back()->delayed_get_snapshot.is_pending();
 }
 
 SnapshotCollector::SnapshotRequest* SnapshotCollector::FindSnapshotRequest(
     const SnapshotUuid& uuid) {
   auto request = std::find_if(
-      requests_.begin(), requests_.end(),
+      snapshot_requests_.begin(), snapshot_requests_.end(),
       [uuid](const std::unique_ptr<SnapshotRequest>& request) { return uuid == request->uuid; });
-  return (request == requests_.end()) ? nullptr : request->get();
+  return (request == snapshot_requests_.end()) ? nullptr : request->get();
 }
 
 }  // namespace crash_reports

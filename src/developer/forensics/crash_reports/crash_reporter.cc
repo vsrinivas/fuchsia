@@ -93,8 +93,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       snapshot_collector_(snapshot_collector),
       crash_server_(crash_server),
       snapshot_store_(report_store->GetSnapshotStore()),
-      queue_(dispatcher_, services_, info_context, tags_, report_store, crash_server_,
-             snapshot_collector_),
+      queue_(dispatcher_, services_, info_context, tags_, report_store, crash_server_),
       product_quotas_(dispatcher_, clock, config.daily_per_product_quota,
                       feedback::kProductQuotasPath, &utc_clock_ready_watcher_),
       info_(info_context),
@@ -181,7 +180,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
   // Only generate a snapshot if the report won't be immediately archived in the filesystem in order
   // to save time during crash report creation.
   if (reporting_policy_watcher_->CurrentPolicy() != ReportingPolicy::kArchive) {
-    get_snapshot_uuid = snapshot_collector_->GetSnapshotUuid(kSnapshotTimeout);
+    get_snapshot_uuid = snapshot_collector_->GetSnapshotUuid(kSnapshotTimeout, report_id);
   }
 
   auto p =
