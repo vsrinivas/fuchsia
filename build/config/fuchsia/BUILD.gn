@@ -12,6 +12,7 @@ import("//build/config/sysroot.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/rbe.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 import("//zircon/public/sysroot/rust.gni")
 
 # Deprecated.
@@ -235,9 +236,9 @@ sanitizer_default_options("scudo_default_options") {
 # will all be removed.
 group("uses-outline-atomics-fxbug98632") {
   visibility = [
+    "${icu_root}:*",
     "//src/developer/debug/debug_agent/test_data:*",
     "//third_party/ffmpeg:*",
-    "//third_party/icu:*",
   ]
   if (current_cpu == "arm64" && is_fuchsia) {
     deps = [ "//src/zircon/lib/zircon" ]
