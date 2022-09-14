@@ -6,7 +6,35 @@ library fuchsia.fuzzer;
 
 using zx;
 
-/// See |Controller.Configure|.
+/// Maximum length of a sanitizer options environment variable name.
+///
+/// `sanitizer_options.name` must be something like "...SAN_OPTIONS". The longest name currently
+/// supported on Fuchsia is "UBSAN_OPTIONS". The longest currently supported on any platform is
+/// "HWASAN_OPTIONS".
+const MAX_SANITIZER_OPTIONS_NAME_SIZE uint16 = 32;
+
+/// Maximum length of a sanitizer options environment variable value.
+///
+/// `sanitizer_options.value` is a concatenation of "<key>=<value>" pairs delimited by ':'.
+/// AddressSanitizer currently has the most flags, with ~40 sanitizer specific ones and ~70 common
+/// ones. Most of these are either boolean values or short integers. The only long types of flags
+/// are paths, but none these of these are supported on Fuchsia.
+const MAX_SANITIZER_OPTIONS_VALUE_SIZE uint16 = 8192;
+
+/// Corresponds to sanitizer enviroment variables.
+///
+/// The options are ignored unless `name` must end in "...SAN_OPTIONS", e.g. "ASAN_OPTIONS".
+/// `value` should be a ':'-delimited list of options, e.g. "verbosity=1:malloc_context_size=20".
+///
+/// For more details, see the following:
+///   * https://github.com/google/sanitizers/wiki/SanitizerCommonFlags
+///   * https://github.com/google/sanitizers/wiki/AddressSanitizerFlags
+type SanitizerOptions = struct {
+    name string:MAX_SANITIZER_OPTIONS_NAME_SIZE;
+    value string:MAX_SANITIZER_OPTIONS_VALUE_SIZE;
+};
+
+/// See `fuchsia.fuzzer.Controller/Configure`.
 type Options = table {
     /// Perform this many fuzzing runs, then exit normally. If unset (or zero), fuzz indefinitely.
     1: runs uint32;
@@ -80,4 +108,15 @@ type Options = table {
     /// fuzzing. It can be useful when reproducing an error with a known error-causing input.
     /// Defaults to false.
    18: debug bool;
+
+    /// If true, include ClusterFuzz-compatible final statistics in the output of a call to
+    /// `fuchsia.fuzzer.Controller/Fuzz`.
+   19: print_final_stats bool;
+
+    /// If true, also use data flow traces as part of the fuzzing coverage data. See
+    /// https://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow for more details.
+   20: use_value_profile bool;
+
+    /// Sanitizer options. See `SanitizerOptions`.
+   21: sanitizer_options SanitizerOptions;
 };

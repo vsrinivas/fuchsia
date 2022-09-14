@@ -97,7 +97,7 @@ impl<O: OutputSink> Fuzzer<O> {
                         self.writer.println(format!(","));
                     }
                     let quoted = format!("\"{}\": ", name);
-                    self.writer.print(format!("  {:<20}{}", quoted, value));
+                    self.writer.print(format!("  {:<24}{}", quoted, value));
                     first = false;
                 }
                 self.writer.println(format!(""));
@@ -768,24 +768,28 @@ mod tests {
         let (_fake, fuzzer, _task) = perform_test_setup(&test)?;
         fuzzer.get(None::<&str>).await?;
         test.output_matches("{");
-        test.output_matches("  \"runs\":             0,");
-        test.output_matches("  \"max_total_time\":   0,");
-        test.output_matches("  \"seed\":             0,");
-        test.output_matches("  \"max_input_size\":   \"1mb\",");
-        test.output_matches("  \"mutation_depth\":   5,");
-        test.output_matches("  \"dictionary_level\": 0,");
-        test.output_matches("  \"detect_exits\":     false,");
-        test.output_matches("  \"detect_leaks\":     false,");
-        test.output_matches("  \"run_limit\":        \"20m\",");
-        test.output_matches("  \"malloc_limit\":     \"2gb\",");
-        test.output_matches("  \"oom_limit\":        \"2gb\",");
-        test.output_matches("  \"purge_interval\":   \"1s\",");
-        test.output_matches("  \"malloc_exitcode\":  2000,");
-        test.output_matches("  \"death_exitcode\":   2001,");
-        test.output_matches("  \"leak_exitcode\":    2002,");
-        test.output_matches("  \"oom_exitcode\":     2003,");
-        test.output_matches("  \"pulse_interval\":   \"20s\",");
-        test.output_matches("  \"debug\":            false");
+        test.output_matches("  \"runs\":                 0,");
+        test.output_matches("  \"max_total_time\":       0,");
+        test.output_matches("  \"seed\":                 0,");
+        test.output_matches("  \"max_input_size\":       \"1mb\",");
+        test.output_matches("  \"mutation_depth\":       5,");
+        test.output_matches("  \"dictionary_level\":     0,");
+        test.output_matches("  \"detect_exits\":         false,");
+        test.output_matches("  \"detect_leaks\":         false,");
+        test.output_matches("  \"run_limit\":            \"20m\",");
+        test.output_matches("  \"malloc_limit\":         \"2gb\",");
+        test.output_matches("  \"oom_limit\":            \"2gb\",");
+        test.output_matches("  \"purge_interval\":       \"1s\",");
+        test.output_matches("  \"malloc_exitcode\":      2000,");
+        test.output_matches("  \"death_exitcode\":       2001,");
+        test.output_matches("  \"leak_exitcode\":        2002,");
+        test.output_matches("  \"oom_exitcode\":         2003,");
+        test.output_matches("  \"pulse_interval\":       \"20s\",");
+        test.output_matches("  \"debug\":                false,");
+        test.output_matches("  \"print_final_stats\":    false,");
+        test.output_matches("  \"use_value_profile\":    false,");
+        test.output_matches("  \"asan_options\":         \"\",");
+        test.output_matches("  \"ubsan_options\":        \"\"");
         test.output_matches("}");
         test.verify_output()
     }

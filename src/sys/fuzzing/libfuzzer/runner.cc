@@ -387,6 +387,19 @@ void LibFuzzerRunner::AddArgs() {
     process_.AddArg(MakeArg("handle_fpe", 0));
     process_.AddArg(MakeArg("handle_abrt", 0));
   }
+  if (options_->print_final_stats()) {
+    process_.AddArg(MakeArg("print_final_stats", 1));
+  }
+  if (options_->use_value_profile()) {
+    process_.AddArg(MakeArg("use_value_profile", 1));
+  }
+  auto sanitizer_options = options_->sanitizer_options();
+  const auto& name = sanitizer_options.name;
+  const auto& value = sanitizer_options.value;
+  if (!name.empty() && !value.empty()) {
+    process_.SetEnvVar(name, value);
+  }
+
   if (has_dictionary_) {
     process_.AddArg(MakeArg("dict", kDictionaryPath));
   }

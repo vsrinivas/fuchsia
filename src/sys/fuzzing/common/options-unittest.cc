@@ -10,77 +10,74 @@ namespace fuzzing {
 namespace {
 
 TEST(OptionsTest, Set) {
-  Options options;
+  // To ensure this test doesn't miss any options, it defines variables with the same name as the
+  // "snake_case" column in options.inc and then uses the `FUCHSIA_FUZZER_OPTIONS` macro.
   uint32_t runs = 1000;
-  zx::duration max_total_time = zx::sec(300);
+  int64_t max_total_time = zx::sec(300).get();
   uint32_t seed = 42;
   uint64_t max_input_size = 1ULL << 10;
   uint16_t mutation_depth = 8;
   uint16_t dictionary_level = 2;
   bool detect_exits = true;
   bool detect_leaks = false;
-  zx::duration run_limit = zx::sec(20);
+  int64_t run_limit = zx::sec(20).get();
   uint64_t malloc_limit = 64ULL << 10;
   uint64_t oom_limit = 1ULL << 20;
-  zx::duration purge_interval = zx::sec(10);
+  int64_t purge_interval = zx::sec(10).get();
   int32_t malloc_exitcode = 1000;
   int32_t death_exitcode = 1001;
   int32_t leak_exitcode = 1002;
   int32_t oom_exitcode = 1003;
-  zx::duration pulse_interval = zx::sec(3);
+  int64_t pulse_interval = zx::sec(3).get();
   bool debug = true;
+  bool print_final_stats = true;
+  bool use_value_profile = true;
+  SanitizerOptions sanitizer_options = {.name = "MYSAN_OPTIONS", .value = "key1=val1:key2=val2"};
 
-  options.set_runs(runs);
-  options.set_max_total_time(max_total_time.get());
-  options.set_seed(seed);
-  options.set_max_input_size(max_input_size);
-  options.set_mutation_depth(mutation_depth);
-  options.set_dictionary_level(dictionary_level);
-  options.set_detect_exits(detect_exits);
-  options.set_detect_leaks(detect_leaks);
-  options.set_run_limit(run_limit.get());
-  options.set_malloc_limit(malloc_limit);
-  options.set_oom_limit(oom_limit);
-  options.set_purge_interval(purge_interval.get());
-  options.set_malloc_exitcode(malloc_exitcode);
-  options.set_death_exitcode(death_exitcode);
-  options.set_leak_exitcode(leak_exitcode);
-  options.set_oom_exitcode(oom_exitcode);
-  options.set_pulse_interval(pulse_interval.get());
-  options.set_debug(debug);
+  Options options1;
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) options1.set_##option(option);
+#include "src/sys/fuzzing/common/options.inc"
+#undef FUCHSIA_FUZZER_OPTION
 
-  EXPECT_EQ(options.runs(), runs);
-  EXPECT_EQ(options.max_total_time(), max_total_time.get());
-  EXPECT_EQ(options.seed(), seed);
-  EXPECT_EQ(options.max_input_size(), max_input_size);
-  EXPECT_EQ(options.mutation_depth(), mutation_depth);
-  EXPECT_EQ(options.dictionary_level(), dictionary_level);
-  EXPECT_EQ(options.detect_exits(), detect_exits);
-  EXPECT_EQ(options.detect_leaks(), detect_leaks);
-  EXPECT_EQ(options.run_limit(), run_limit.get());
-  EXPECT_EQ(options.malloc_limit(), malloc_limit);
-  EXPECT_EQ(options.oom_limit(), oom_limit);
-  EXPECT_EQ(options.purge_interval(), purge_interval.get());
-  EXPECT_EQ(options.malloc_exitcode(), malloc_exitcode);
-  EXPECT_EQ(options.death_exitcode(), death_exitcode);
-  EXPECT_EQ(options.leak_exitcode(), leak_exitcode);
-  EXPECT_EQ(options.oom_exitcode(), oom_exitcode);
-  EXPECT_EQ(options.pulse_interval(), pulse_interval.get());
-  EXPECT_EQ(options.debug(), debug);
+  Options options2;
+  SetOptions(&options2, options1);
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
+  EXPECT_EQ(options2.option(), option);
+#include "src/sys/fuzzing/common/options-literal.inc"
+#undef FUCHSIA_FUZZER_OPTION
+
+  EXPECT_EQ(options2.sanitizer_options().name, sanitizer_options.name);
+  EXPECT_EQ(options2.sanitizer_options().value, sanitizer_options.value);
+
+  // Special case: sanitizer_options.name must end in "...SAN_OPTIONS" or it is ignored.
+  Options invalid;
+  SanitizerOptions bad_options = {.name = "BAD_OPTIONS", .value = "key3=val3:key4=val4"};
+  invalid.set_sanitizer_options(bad_options);
+
+  SetOptions(&options2, invalid);
+  EXPECT_EQ(options2.sanitizer_options().name, sanitizer_options.name);
+  EXPECT_EQ(options2.sanitizer_options().value, sanitizer_options.value);
 }
 
 TEST(OptionsTest, Copy) {
-  Options options1;
-  uint32_t runs = 1000;
-  uint32_t seed = 42;
-  uint16_t mutation_depth = 8;
-  bool detect_leaks = false;
-  uint64_t malloc_limit = 64ULL << 10;
-  uint32_t purge_interval = 10;
-  int32_t death_exitcode = 1001;
-  int32_t oom_exitcode = 1003;
-  bool debug = true;
+  // Start with default values.
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) type option = default_value;
+#include "src/sys/fuzzing/common/options.inc"
+#undef FUCHSIA_FUZZER_OPTION
 
+  // Change some of the values, and set those.
+  runs = 1000;
+  seed = 42;
+  mutation_depth = 8;
+  detect_leaks = false;
+  malloc_limit = 64ULL << 10;
+  purge_interval = 10;
+  death_exitcode = 1001;
+  oom_exitcode = 1003;
+  debug = true;
+  sanitizer_options = {.name = "MYSAN_OPTIONS", .value = "key1=val1:key2=val2"};
+
+  Options options1;
   options1.set_runs(runs);
   options1.set_seed(seed);
   options1.set_mutation_depth(mutation_depth);
@@ -90,91 +87,67 @@ TEST(OptionsTest, Copy) {
   options1.set_death_exitcode(death_exitcode);
   options1.set_oom_exitcode(oom_exitcode);
   options1.set_debug(debug);
+  options1.set_sanitizer_options(sanitizer_options);
 
+  // Copy, and verify the set values are copied and the missing values are defaulted.
   auto options2 = CopyOptions(options1);
-  EXPECT_EQ(options2.runs(), runs);
-  EXPECT_EQ(options2.max_total_time(), kDefaultMaxTotalTime);
-  EXPECT_EQ(options2.seed(), seed);
-  EXPECT_EQ(options2.max_input_size(), kDefaultMaxInputSize);
-  EXPECT_EQ(options2.mutation_depth(), mutation_depth);
-  EXPECT_EQ(options2.dictionary_level(), kDefaultDictionaryLevel);
-  EXPECT_EQ(options2.detect_exits(), kDefaultDetectExits);
-  EXPECT_EQ(options2.detect_leaks(), detect_leaks);
-  EXPECT_EQ(options2.run_limit(), kDefaultRunLimit);
-  EXPECT_EQ(options2.malloc_limit(), malloc_limit);
-  EXPECT_EQ(options2.oom_limit(), kDefaultOomLimit);
-  EXPECT_EQ(options2.purge_interval(), purge_interval);
-  EXPECT_EQ(options2.malloc_exitcode(), kDefaultMallocExitcode);
-  EXPECT_EQ(options2.death_exitcode(), death_exitcode);
-  EXPECT_EQ(options2.leak_exitcode(), kDefaultLeakExitcode);
-  EXPECT_EQ(options2.oom_exitcode(), oom_exitcode);
-  EXPECT_EQ(options2.pulse_interval(), kDefaultPulseInterval);
-  EXPECT_EQ(options2.debug(), debug);
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
+  EXPECT_EQ(options2.option(), option);
+#include "src/sys/fuzzing/common/options-literal.inc"
+#undef FUCHSIA_FUZZER_OPTION
+
+  EXPECT_EQ(options2.sanitizer_options().name, sanitizer_options.name);
+  EXPECT_EQ(options2.sanitizer_options().value, sanitizer_options.value);
 }
 
 TEST(OptionsTest, AddDefaults) {
   // |AddDefaults| should add anything that is missing...
   Options options1;
   AddDefaults(&options1);
-  EXPECT_EQ(options1.runs(), kDefaultRuns);
-  EXPECT_EQ(options1.max_total_time(), kDefaultMaxTotalTime);
-  EXPECT_EQ(options1.seed(), kDefaultSeed);
-  EXPECT_EQ(options1.max_input_size(), kDefaultMaxInputSize);
-  EXPECT_EQ(options1.mutation_depth(), kDefaultMutationDepth);
-  EXPECT_EQ(options1.dictionary_level(), kDefaultDictionaryLevel);
-  EXPECT_EQ(options1.detect_exits(), kDefaultDetectExits);
-  EXPECT_EQ(options1.detect_leaks(), kDefaultDetectLeaks);
-  EXPECT_EQ(options1.run_limit(), kDefaultRunLimit);
-  EXPECT_EQ(options1.malloc_limit(), kDefaultMallocLimit);
-  EXPECT_EQ(options1.oom_limit(), kDefaultOomLimit);
-  EXPECT_EQ(options1.purge_interval(), kDefaultPurgeInterval);
-  EXPECT_EQ(options1.malloc_exitcode(), kDefaultMallocExitcode);
-  EXPECT_EQ(options1.death_exitcode(), kDefaultDeathExitcode);
-  EXPECT_EQ(options1.leak_exitcode(), kDefaultLeakExitcode);
-  EXPECT_EQ(options1.oom_exitcode(), kDefaultOomExitcode);
-  EXPECT_EQ(options1.pulse_interval(), kDefaultPulseInterval);
-  EXPECT_EQ(options1.debug(), kDefaultDebug);
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
+  EXPECT_EQ(options1.option(), kDefault##Option);
+#include "src/sys/fuzzing/common/options-literal.inc"
+#undef FUCHSIA_FUZZER_OPTION
+
+  EXPECT_TRUE(options1.sanitizer_options().name.empty());
+  EXPECT_TRUE(options1.sanitizer_options().value.empty());
 
   // ...but it should not overwrite anything already there.
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) type option = default_value;
+#include "src/sys/fuzzing/common/options.inc"
+#undef FUCHSIA_FUZZER_OPTION
+
+  runs = 1000;
+  seed = 42;
+  mutation_depth = 8;
+  detect_leaks = false;
+  malloc_limit = 64ULL << 10;
+  purge_interval = 10;
+  death_exitcode = 1001;
+  oom_exitcode = 1003;
+  debug = true;
+  sanitizer_options = {.name = "MYSAN_OPTIONS", .value = "key1=val1:key2=val2"};
+
   Options options2;
-  options2.set_runs(2);
-  options2.set_max_total_time(zx::sec(2).get());
-  options2.set_seed(2);
-  options2.set_max_input_size(2);
-  options2.set_mutation_depth(2);
-  options2.set_dictionary_level(2);
-  options2.set_detect_exits(true);
-  options2.set_detect_leaks(true);
-  options2.set_run_limit(zx::sec(2).get());
-  options2.set_malloc_limit(2);
-  options2.set_oom_limit(2);
-  options2.set_purge_interval(zx::sec(2).get());
-  options2.set_malloc_exitcode(2);
-  options2.set_death_exitcode(2);
-  options2.set_leak_exitcode(2);
-  options2.set_oom_exitcode(2);
-  options2.set_pulse_interval(zx::sec(2).get());
-  options2.set_debug(true);
+  options2.set_runs(runs);
+  options2.set_seed(seed);
+  options2.set_mutation_depth(mutation_depth);
+  options2.set_detect_leaks(detect_leaks);
+  options2.set_malloc_limit(malloc_limit);
+  options2.set_purge_interval(purge_interval);
+  options2.set_death_exitcode(death_exitcode);
+  options2.set_oom_exitcode(oom_exitcode);
+  options2.set_debug(debug);
+  options2.set_sanitizer_options(sanitizer_options);
 
   AddDefaults(&options2);
-  EXPECT_NE(options2.runs(), kDefaultRuns);
-  EXPECT_NE(options2.max_total_time(), kDefaultMaxTotalTime);
-  EXPECT_NE(options2.seed(), kDefaultSeed);
-  EXPECT_NE(options2.max_input_size(), kDefaultMaxInputSize);
-  EXPECT_NE(options2.mutation_depth(), kDefaultMutationDepth);
-  EXPECT_NE(options2.dictionary_level(), kDefaultDictionaryLevel);
-  EXPECT_NE(options2.detect_exits(), kDefaultDetectExits);
-  EXPECT_NE(options2.detect_leaks(), kDefaultDetectLeaks);
-  EXPECT_NE(options2.run_limit(), kDefaultRunLimit);
-  EXPECT_NE(options2.malloc_limit(), kDefaultMallocLimit);
-  EXPECT_NE(options2.oom_limit(), kDefaultOomLimit);
-  EXPECT_NE(options2.purge_interval(), kDefaultPurgeInterval);
-  EXPECT_NE(options2.malloc_exitcode(), kDefaultMallocExitcode);
-  EXPECT_NE(options2.death_exitcode(), kDefaultDeathExitcode);
-  EXPECT_NE(options2.leak_exitcode(), kDefaultLeakExitcode);
-  EXPECT_NE(options2.oom_exitcode(), kDefaultOomExitcode);
-  EXPECT_NE(options2.pulse_interval(), kDefaultPulseInterval);
-  EXPECT_NE(options2.debug(), kDefaultDebug);
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
+  EXPECT_EQ(options2.option(), option);
+#include "src/sys/fuzzing/common/options-literal.inc"
+#undef FUCHSIA_FUZZER_OPTION
+
+  EXPECT_EQ(options2.sanitizer_options().name, sanitizer_options.name);
+  EXPECT_EQ(options2.sanitizer_options().value, sanitizer_options.value);
 }
 
 }  // namespace

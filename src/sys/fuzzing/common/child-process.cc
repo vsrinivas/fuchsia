@@ -70,6 +70,10 @@ void ChildProcess::AddArgs(std::initializer_list<const char*> args) {
   }
 }
 
+void ChildProcess::SetEnvVar(const std::string& name, const std::string& value) {
+  envvars_[name] = value;
+}
+
 void ChildProcess::SetStdoutFdAction(FdAction action) { streams_[STDOUT_FILENO].action = action; }
 
 void ChildProcess::SetStderrFdAction(FdAction action) { streams_[STDERR_FILENO].action = action; }
@@ -77,7 +81,21 @@ void ChildProcess::SetStderrFdAction(FdAction action) { streams_[STDERR_FILENO].
 void ChildProcess::AddChannel(zx::channel channel) { channels_.emplace_back(std::move(channel)); }
 
 zx_status_t ChildProcess::Spawn() {
-  // Convert args to C-style strings.
+  // Convert args and envvars to C-style strings.
+  // The envvars vector holds the constructed strings backing the pointers in environ.
+  std::vector<std::string> envvars;
+  std::vector<const char*> environ;
+  for (const auto& [key, value] : envvars_) {
+    std::ostringstream oss;
+    oss << key << "=" << value;
+    envvars.push_back(oss.str());
+    if (verbose_) {
+      std::cerr << envvars.back() << " ";
+    }
+    environ.push_back(envvars.back().c_str());
+  }
+  environ.push_back(nullptr);
+
   std::vector<const char*> argv;
   argv.reserve(args_.size() + 1);
   for (const auto& arg : args_) {
@@ -120,7 +138,7 @@ zx_status_t ChildProcess::Spawn() {
   // Spawn the process!
   auto* handle = process_.reset_and_get_address();
   char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
-  if (auto status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], &argv[0], nullptr,
+  if (auto status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], &argv[0], &environ[0],
                                    actions.size(), actions.data(), handle, err_msg);
       status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to spawn process: " << err_msg << " (" << zx_status_get_string(status)

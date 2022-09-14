@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 // An extremely simple program that simply reads data from stdin and echoes it to stdout, stderr, or
@@ -22,6 +23,9 @@ int main(int argc, char** argv) {
     if (echo_err) {
       putc(c, stderr);
     }
+  }
+  if (auto* rc = getenv("FUZZING_COMMON_TESTING_ECHO_EXITCODE"); rc != nullptr) {
+    return atoi(rc);
   }
   return 0;
 }

@@ -37,6 +37,17 @@ TEST_F(ChildProcessTest, Spawn) {
   RunUntilIdle();
 }
 
+TEST_F(ChildProcessTest, Wait) {
+  ChildProcess process(executor());
+  process.AddArg(kEcho);
+  FUZZING_EXPECT_OK(process.SpawnAsync());
+  RunUntilIdle();
+
+  process.CloseStdin();
+  FUZZING_EXPECT_OK(process.Wait(), 0);
+  RunUntilIdle();
+}
+
 TEST_F(ChildProcessTest, ReadFromStdout) {
   ChildProcess process(executor());
   std::string hello("hello");
@@ -62,6 +73,19 @@ TEST_F(ChildProcessTest, ReadFromStderr) {
   FUZZING_EXPECT_OK(process.WriteAndCloseStdin(input.data(), input.size()), input.size());
   process.AddArgs({kEcho, "--stderr"});
   FUZZING_EXPECT_OK(process.SpawnAsync());
+  RunUntilIdle();
+}
+
+TEST_F(ChildProcessTest, SetEnvVar) {
+  ChildProcess process(executor());
+  process.AddArg(kEcho);
+  process.SetEnvVar("FUZZING_COMMON_TESTING_ECHO_EXITCODE", "1");
+  process.SetEnvVar("FUZZING_COMMON_TESTING_ECHO_EXITCODE", "2");
+  FUZZING_EXPECT_OK(process.SpawnAsync());
+  RunUntilIdle();
+
+  process.CloseStdin();
+  FUZZING_EXPECT_OK(process.Wait(), 2);
   RunUntilIdle();
 }
 

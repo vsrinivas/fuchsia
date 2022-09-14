@@ -4,7 +4,23 @@
 
 #include "src/sys/fuzzing/common/options.h"
 
+#include <lib/syslog/cpp/macros.h>
+
 namespace fuzzing {
+namespace {
+
+const char* kSanOptions = "SAN_OPTIONS";
+
+void SetOptionsImpl(Options* options, const Options& overrides) {
+#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
+  if (overrides.has_##option()) {                                  \
+    options->set_##option(overrides.option());                     \
+  }
+#include "src/sys/fuzzing/common/options.inc"
+#undef FUCHSIA_FUZZER_OPTION
+}
+
+}  // namespace
 
 OptionsPtr MakeOptions() {
   auto options = std::make_shared<Options>();
@@ -14,23 +30,30 @@ OptionsPtr MakeOptions() {
 
 Options CopyOptions(const Options& options) {
   Options copy;
-#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
-  if (options.has_##option()) {                                    \
-    copy.set_##option(options.option());                           \
-  }
-#include "src/sys/fuzzing/common/options.inc"
-#undef FUCHSIA_FUZZER_OPTION
+  SetOptions(&copy, options);
   AddDefaults(&copy);
   return copy;
 }
 
 void SetOptions(Options* options, const Options& overrides) {
-#define FUCHSIA_FUZZER_OPTION(type, option, Option, default_value) \
-  if (overrides.has_##option()) {                                  \
-    options->set_##option(overrides.option());                     \
+  // First, create a mutable copy that can be validated.
+  Options valid;
+  SetOptionsImpl(&valid, overrides);
+
+  // Next, make any changes needed to make `valid` valid.
+  if (valid.has_sanitizer_options()) {
+    // Per options.fidl, sanitizer_options with an invalid name are ignored.
+    auto name = valid.sanitizer_options().name;
+    auto suffix_len = strlen(kSanOptions);
+    if (name.size() < suffix_len ||
+        name.compare(name.size() - suffix_len, suffix_len, kSanOptions)) {
+      FX_LOGS(WARNING) << "Ignoring invalid `sanitizer_options`: " << name;
+      valid.clear_sanitizer_options();
+    }
   }
-#include "src/sys/fuzzing/common/options.inc"
-#undef FUCHSIA_FUZZER_OPTION
+
+  // Finally, apply the `valid` options to the returned `options`.
+  SetOptionsImpl(options, valid);
 }
 
 void AddDefaults(Options* options) {

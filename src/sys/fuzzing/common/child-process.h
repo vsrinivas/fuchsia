@@ -45,6 +45,9 @@ class ChildProcess {
   // Adds all of the given |args|.
   void AddArgs(std::initializer_list<const char*> args);
 
+  // Sets an environment variable. Setting the same variable multiple times updates the value.
+  void SetEnvVar(const std::string& name, const std::string& value);
+
   // Sets how to handle the output file descriptors. See |FdAction| above.
   void SetStdoutFdAction(FdAction action);
   void SetStderrFdAction(FdAction action);
@@ -111,6 +114,7 @@ class ChildProcess {
 
   // Parameters for |fdio_spawn_etc|.
   std::vector<std::string> args_;
+  std::unordered_map<std::string, std::string> envvars_;
   std::vector<zx::channel> channels_;
 
   // The handle to the spawned process.

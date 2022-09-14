@@ -282,10 +282,10 @@ impl Autocomplete for GetShellSubcommand {
 /// Command to set a configuration option on a fuzzer.
 ///
 /// Values for options which take a size can be written as <N>[units], where N is a number and
-/// units is one of 'gb', 'mb', 'kb', or 'b' (the default).
+/// units is one of 'gb', 'mb' (the default), 'kb', or 'b'.
 ///
 /// Values for options which take a time can be written as <N>[units], where N is a number and
-/// units is one of 'd', 'h', 's', 'ms', 'us' or 'ns' (the default).
+/// units is one of 'd', 'h', 's' (the default), 'ms', 'us' or 'ns'.
 ///
 #[valid_when(FuzzerState::Idle)]
 #[derive_subcommand]

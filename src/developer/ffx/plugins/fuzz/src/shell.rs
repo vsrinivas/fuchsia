@@ -161,7 +161,8 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
     async fn execute_any(&self, args: FuzzShellCommand) -> Result<NextAction> {
         match args.command {
             FuzzShellSubcommand::List(ListSubcommand { pattern }) => {
-                let mut urls = get_fuzzer_urls(&self.fuchsia_dir).context("failed to get URLs to list")?;
+                let mut urls =
+                    get_fuzzer_urls(&self.fuchsia_dir).context("failed to get URLs to list")?;
                 if let Some(pattern) = pattern {
                     let globbed = glob::Pattern::new(&pattern)
                         .context("failed to create glob from pattern")?;
