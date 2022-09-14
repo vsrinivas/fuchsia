@@ -21,7 +21,7 @@ go_library("world") {
     "world.go",
   ]
   deps = [
-    "//tools/check-licenses/filetree",
+    "//tools/check-licenses/directory",
     "//tools/check-licenses/license",
     "//tools/check-licenses/project",
     "//tools/lib/logger",

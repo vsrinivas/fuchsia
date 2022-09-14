@@ -4,7 +4,7 @@
     "includes": [
         {
             "paths": [
-                "{FUCHSIA_DIR}/tools/check-licenses/filetree/_config.json",
+                "{FUCHSIA_DIR}/tools/check-licenses/directory/_config.json",
                 "{FUCHSIA_DIR}/tools/check-licenses/license/_config.json",
                 "{FUCHSIA_DIR}/tools/check-licenses/project/_config.json",
                 "{FUCHSIA_DIR}/tools/check-licenses/result/_config.json",

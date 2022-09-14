@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/directory"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 )
@@ -139,26 +139,26 @@ func AllProjectsMustHaveALicense() error {
 
 func AllFilesAndFoldersMustBeIncludedInAProject() error {
 	var b strings.Builder
-	var recurse func(*filetree.FileTree)
+	var recurse func(*directory.Directory)
 	count := 0
 
 	b.WriteString("All files and folders must have proper license attribution.\n")
 	b.WriteString("This means a license file needs to accompany all first and third party projects,\n")
 	b.WriteString("and a README.fuchsia file must exist and specify where the license file lives.\n")
 	b.WriteString("The following directories are not included in a project:\n\n")
-	recurse = func(ft *filetree.FileTree) {
-		if ft.Project == nil {
-			b.WriteString(fmt.Sprintf("-> %v\n", ft.Path))
+	recurse = func(d *directory.Directory) {
+		if d.Project == nil {
+			b.WriteString(fmt.Sprintf("-> %v\n", d.Path))
 			count = count + 1
 			return
 		}
-		for _, child := range ft.Children {
+		for _, child := range d.Children {
 			recurse(child)
 		}
 	}
 	b.WriteString("\nPlease add a LICENSE file to the above projects, and point to them in an associated README.fuchsia file.\n")
 
-	recurse(filetree.RootFileTree)
+	recurse(directory.RootDirectory)
 	if count > 0 {
 		return fmt.Errorf(b.String())
 	}

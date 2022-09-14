@@ -13,8 +13,8 @@ import (
 	"regexp"
 	"strings"
 
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/directory"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
@@ -41,12 +41,12 @@ type CheckLicensesConfig struct {
 
 	Includes []Include `json:"includes"`
 
-	File     *file.FileConfig         `json:"file"`
-	License  *license.LicenseConfig   `json:"license"`
-	Project  *project.ProjectConfig   `json:"project"`
-	FileTree *filetree.FileTreeConfig `json:"filetree"`
-	Result   *result.ResultConfig     `json:"result"`
-	World    *world.WorldConfig       `json:"world"`
+	File      *file.FileConfig           `json:"file"`
+	License   *license.LicenseConfig     `json:"license"`
+	Project   *project.ProjectConfig     `json:"project"`
+	Directory *directory.DirectoryConfig `json:"directory"`
+	Result    *result.ResultConfig       `json:"result"`
+	World     *world.WorldConfig         `json:"world"`
 
 	Target string `json:"target"`
 }
@@ -78,12 +78,12 @@ func NewCheckLicensesConfigJson(configJson string) (*CheckLicensesConfig, error)
 	}
 
 	c := &CheckLicensesConfig{
-		File:     file.NewConfig(),
-		License:  license.NewConfig(),
-		Project:  project.NewConfig(),
-		FileTree: filetree.NewConfig(),
-		Result:   result.NewConfig(),
-		World:    world.NewConfig(),
+		File:      file.NewConfig(),
+		License:   license.NewConfig(),
+		Project:   project.NewConfig(),
+		Directory: directory.NewConfig(),
+		Result:    result.NewConfig(),
+		World:     world.NewConfig(),
 	}
 
 	d := json.NewDecoder(strings.NewReader(configJson))
@@ -126,7 +126,7 @@ func NewCheckLicensesConfigJson(configJson string) (*CheckLicensesConfig, error)
 func (c *CheckLicensesConfig) Merge(other *CheckLicensesConfig) error {
 	c.File.Merge(other.File)
 	c.License.Merge(other.License)
-	c.FileTree.Merge(other.FileTree)
+	c.Directory.Merge(other.Directory)
 	c.Project.Merge(other.Project)
 	c.Result.Merge(other.Result)
 	c.World.Merge(other.World)

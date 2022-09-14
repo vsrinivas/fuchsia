@@ -16,7 +16,7 @@ go_library("result") {
   ]
   deps = [
     "world",
-    "//tools/check-licenses/filetree",
+    "//tools/check-licenses/directory",
     "//tools/check-licenses/license",
     "//tools/check-licenses/project",
     "//tools/lib/logger",

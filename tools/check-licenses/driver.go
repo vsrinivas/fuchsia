@@ -10,8 +10,8 @@ import (
 	"runtime/trace"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/directory"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/result"
@@ -29,15 +29,15 @@ func Execute(ctx context.Context, config *CheckLicensesConfig) error {
 	}
 	log.Printf("Done. [%v]\n", time.Since(startInitialize))
 
-	r := trace.StartRegion(ctx, "filetree.NewFileTree("+config.Target+")")
-	startFileTree := time.Now()
+	r := trace.StartRegion(ctx, "directory.NewDirectory("+config.Target+")")
+	startDirectory := time.Now()
 	log.Print("Discovering files and folders... ")
-	_, err := filetree.NewFileTree(config.Target, nil)
+	_, err := directory.NewDirectory(config.Target, nil)
 	if err != nil {
 		log.Println("Error!")
 		return err
 	}
-	log.Printf("Done. [%v]\n", time.Since(startFileTree))
+	log.Printf("Done. [%v]\n", time.Since(startDirectory))
 	r.End()
 
 	r = trace.StartRegion(ctx, "project.AnalyzeLicenses")
@@ -79,7 +79,7 @@ func initialize(c *CheckLicensesConfig) error {
 	if err := project.Initialize(c.Project); err != nil {
 		return err
 	}
-	if err := filetree.Initialize(c.FileTree); err != nil {
+	if err := directory.Initialize(c.Directory); err != nil {
 		return err
 	}
 	if err := result.Initialize(c.Result); err != nil {

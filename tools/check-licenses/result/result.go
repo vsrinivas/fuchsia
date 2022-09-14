@@ -15,8 +15,8 @@ import (
 	"strconv"
 	"strings"
 
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/directory"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/result/world"
@@ -48,7 +48,7 @@ func SaveResults() (string, error) {
 	}
 	b.WriteString(s)
 
-	s, err = savePackageInfo("filetree", filetree.Config, filetree.Metrics)
+	s, err = savePackageInfo("directory", directory.Config, directory.Metrics)
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +100,7 @@ func SaveResults() (string, error) {
 }
 
 // This retrieves all the relevant metrics information for a given package.
-// e.g. the //tools/check-licenses/filetree package.
+// e.g. the //tools/check-licenses/directory package.
 func savePackageInfo(pkgName string, c interface{}, m MetricsInterface) (string, error) {
 	var b strings.Builder
 

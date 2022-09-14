@@ -1,7 +1,0 @@
-{
-    "name": "root",
-    "path": "{root}",
-    "files": [
-        "{root}/test.py"
-    ]
-}

@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
+	"go.fuchsia.dev/fuchsia/tools/check-licenses/directory"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/file"
-	"go.fuchsia.dev/fuchsia/tools/check-licenses/filetree"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/license"
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 )
@@ -21,7 +21,7 @@ type World struct {
 	Status *strings.Builder
 
 	Files            []*file.File
-	FileTrees        []*filetree.FileTree
+	Directories      []*directory.Directory
 	Projects         []*project.Project
 	Patterns         []*license.Pattern
 	FilteredProjects []*project.Project
@@ -53,18 +53,18 @@ func NewWorld() (*World, error) {
 	}
 	sort.Sort(file.Order(allFiles))
 
-	allFileTrees := make([]*filetree.FileTree, 0)
-	for _, f := range filetree.AllFileTrees {
-		allFileTrees = append(allFileTrees, f)
+	allDirectories := make([]*directory.Directory, 0)
+	for _, f := range directory.AllDirectories {
+		allDirectories = append(allDirectories, f)
 	}
-	sort.Sort(filetree.Order(allFileTrees))
+	sort.Sort(directory.Order(allDirectories))
 
 	w := &World{
-		Status:    &strings.Builder{},
-		Files:     allFiles,
-		FileTrees: allFileTrees,
-		Patterns:  allPatterns,
-		Projects:  allProjects,
+		Status:      &strings.Builder{},
+		Files:       allFiles,
+		Directories: allDirectories,
+		Patterns:    allPatterns,
+		Projects:    allProjects,
 	}
 
 	if err := w.FilterProjects(); err != nil {
