@@ -690,7 +690,6 @@
                     "/core/network/test-components:net-test-realm-controller",
                     "/core/oemcrypto",
                     "/core/playready-cdm",
-                    "/core/radar-proxy",
                     "/core/reverse-migration",
                     "/core/setui_service",
                     "/core/sl4f",
