@@ -319,12 +319,20 @@ fitx::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBl
     stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
     stateful_spec.format = fuchsia::virtualization::BlockFormat::BLOCK;
   } else if (structured_config.stateful_partition_type() == "file") {
-    auto handle = GetPartition(kFileStatefulImage);
     // Simple files.
+    auto handle = GetPartition(kFileStatefulImage);
     if (handle.is_error()) {
       return fitx::error("Failed to open or create stateful file");
     }
-    stateful_spec.client = handle->TakeChannel();
+
+    auto ptr = handle->BindSync();
+    fuchsia::io::File2_Resize_Result resize_result;
+    zx_status_t status = ptr->Resize(stateful_image_size_bytes, &resize_result);
+    if (status != ZX_OK || resize_result.is_err()) {
+      return fitx::error("Failed resize stateful file");
+    }
+
+    stateful_spec.client = ptr.Unbind().TakeChannel();
     stateful_spec.mode = fuchsia::virtualization::BlockMode::READ_WRITE;
     stateful_spec.format = fuchsia::virtualization::BlockFormat::FILE;
   }
