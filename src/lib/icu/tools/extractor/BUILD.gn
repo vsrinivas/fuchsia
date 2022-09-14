@@ -3,8 +3,19 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 
 if (is_host) {
+  third_party_icu_headers("icu_headers") {
+    headers = [
+      "third_party/icu/source/common/unicode/putil.h",
+      "third_party/icu/source/common/unicode/strenum.h",
+      "third_party/icu/source/common/unicode/udata.h",
+      "third_party/icu/source/common/unicode/utypes.h",
+      "third_party/icu/source/i18n/unicode/timezone.h",
+    ]
+  }
+
   executable("icu_data_extractor") {
     output_name = "icu_data_extractor"
     sources = [
@@ -18,9 +29,10 @@ if (is_host) {
       "tz_version.h",
     ]
     deps = [
+      ":icu_headers",
+      "${icu_root}:icu",
       "//src/lib/files",
       "//src/lib/fxl",
-      "//third_party/icu",
       "//zircon/system/ulib/fbl",
     ]
     configs += [

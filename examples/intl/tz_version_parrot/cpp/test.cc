@@ -13,8 +13,7 @@
 // [START imports]
 #include "src/lib/icu_data/cpp/icu_data.h"
 // [END imports]
-#include "third_party/icu/source/common/unicode/utypes.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
+#include "examples/intl/tz_version_parrot/cpp/icu_headers.h"
 
 using icu::TimeZone;
 

@@ -12,8 +12,7 @@
 
 #include <variant>
 
-#include "third_party/icu/source/common/unicode/errorcode.h"
-#include "third_party/icu/source/i18n/unicode/calendar.h"
+#include "src/lib/intl/time_zone_info/icu_headers.h"
 
 namespace intl {
 

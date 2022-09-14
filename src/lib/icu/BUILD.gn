@@ -1,14 +1,15 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-import("//third_party/icu/version.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
+import("${icu_root}/version.gni")
 
 # Automatically declares the correct ICU library major version number
 # based on the configuration that is present in the ICU version
 # configuration.
 #
 # This is used to ensure that atomic version upgrades of the ICU library
-# are possible.  Without this, manual changes to both //third_party/icu
+# are possible.  Without this, manual changes to both ${icu_root}
 # and //third_party/rust_crates would have been required.
 config("version") {
   rustenv = [

@@ -2,18 +2,42 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/lib/icu/third_party_icu_headers.gni")
+
+# Add here all the ICU library headers that you would otherwise use #include for.
+# A header named "icu_headers.h" is generated in the same output directory, and
+# contains #includes to all the `headers` named below.
+#
+# Include that file as:
+#     #include "examples/intl/wisdom/cpp/server/icu_headers.h"
+#
+# In this example, we use one target for a set of header files - but if you need
+# to you can make multiple targets.
+third_party_icu_headers("icu_headers") {
+  headers = [
+    "third_party/icu/source/common/unicode/locid.h",
+    "third_party/icu/source/i18n/unicode/calendar.h",
+    "third_party/icu/source/common/unicode/unistr.h",
+    "third_party/icu/source/i18n/unicode/calendar.h",
+    "third_party/icu/source/i18n/unicode/datefmt.h",
+    "third_party/icu/source/i18n/unicode/timezone.h",
+  ]
+}
+
 source_set("lib") {
   sources = [
     "intl_wisdom_server_impl.cc",
     "intl_wisdom_server_impl.h",
   ]
 
+  deps = [ ":icu_headers" ]
+
   public_deps = [
+    "${icu_root}:icu",
     "//examples/intl/wisdom/fidl:wisdom",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/icu_data/cpp",
-    "//third_party/icu",
   ]
 }
 

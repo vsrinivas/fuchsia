@@ -1,6 +1,21 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//src/lib/icu/third_party_icu_headers.gni")
+
+# [START icu_library]
+third_party_icu_headers("icu_headers") {
+  headers = [
+    "third_party/icu/source/common/unicode/locid.h",
+    "third_party/icu/source/common/unicode/ucnv.h",
+    "third_party/icu/source/common/unicode/unistr.h",
+    "third_party/icu/source/i18n/unicode/calendar.h",
+    "third_party/icu/source/i18n/unicode/gregocal.h",
+    "third_party/icu/source/i18n/unicode/smpdtfmt.h",
+    "third_party/icu/source/i18n/unicode/timezone.h",
+    "third_party/icu/source/i18n/unicode/tzfmt.h",
+  ]
+}
 
 source_set("lib") {
   sources = [
@@ -9,16 +24,14 @@ source_set("lib") {
   ]
 
   public_deps = [
+    ":icu_headers",
     "//examples/intl/wisdom/fidl:wisdom",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-
-    # [START icu_library]
-    "//third_party/icu:icu",
-
-    # [END icu_library]
   ]
 }
+
+# [END icu_library]
 
 executable("intl_wisdom_client") {
   output_name = "intl_wisdom_client"
@@ -27,12 +40,12 @@ executable("intl_wisdom_client") {
 
   deps = [
     ":lib",
+    "${icu_root}:icu",
     "//examples/intl/wisdom/fidl:wisdom",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/icu_data/cpp",
-    "//third_party/icu:icu",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

@@ -10,8 +10,7 @@
 #include "src/lib/fidl_fuchsia_intl_ext/cpp/fidl_ext.h"
 #include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "src/lib/icu_data/cpp/icu_data.h"
-#include "third_party/icu/source/common/unicode/localebuilder.h"
-#include "third_party/icu/source/common/unicode/locid.h"
+#include "src/lib/intl/intl_property_provider_impl/icu_headers.h"
 
 namespace intl {
 namespace testing {

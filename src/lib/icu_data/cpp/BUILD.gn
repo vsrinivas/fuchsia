@@ -1,6 +1,15 @@
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+import("//src/lib/icu/third_party_icu_headers.gni")
+
+third_party_icu_headers("icu_headers") {
+  headers = [
+    "third_party/icu/source/common/unicode/errorcode.h",
+    "third_party/icu/source/common/unicode/udata.h",
+    "third_party/icu/source/i18n/unicode/timezone.h",
+  ]
+}
 
 source_set("cpp") {
   sources = [
@@ -9,8 +18,8 @@ source_set("cpp") {
   ]
 
   deps = [
+    ":icu_headers",
     "//src/lib/fsl",
-    "//third_party/icu",
   ]
 
   public_deps = [ "//zircon/system/ulib/zx" ]

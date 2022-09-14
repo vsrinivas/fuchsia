@@ -16,9 +16,7 @@
 
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
-#include "third_party/icu/source/common/unicode/errorcode.h"
-#include "third_party/icu/source/common/unicode/udata.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
+#include "src/lib/icu_data/cpp/icu_headers.h"
 
 namespace icu_data {
 namespace {

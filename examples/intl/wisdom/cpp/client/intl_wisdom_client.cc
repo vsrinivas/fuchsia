@@ -8,11 +8,7 @@
 
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"
 // [START imports]
-#include "third_party/icu/source/common/unicode/locid.h"
-#include "third_party/icu/source/common/unicode/unistr.h"
-#include "third_party/icu/source/i18n/unicode/calendar.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
-#include "third_party/icu/source/i18n/unicode/tzfmt.h"
+#include "examples/intl/wisdom/cpp/client/icu_headers.h"
 // [END imports]
 
 namespace intl_wisdom {

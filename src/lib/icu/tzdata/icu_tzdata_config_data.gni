@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/dist/resource.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 
 # Provide ICU time zone files to the given package via config-data.
 #
@@ -51,9 +52,9 @@ template("icu_tzdata_config_data") {
     outputs = [ "tzdata/icu/${data_version}/${format}/{{source_file_part}}" ]
 
     sources = [
-      "//third_party/icu/tzres/metaZones.res",
-      "//third_party/icu/tzres/timezoneTypes.res",
-      "//third_party/icu/tzres/zoneinfo64.res",
+      "${icu_root}/tzres/metaZones.res",
+      "${icu_root}/tzres/timezoneTypes.res",
+      "${icu_root}/tzres/zoneinfo64.res",
     ]
 
     # //src/lib/icu/tzdata:revision will be found in the build directory at

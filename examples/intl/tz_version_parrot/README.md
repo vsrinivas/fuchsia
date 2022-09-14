@@ -45,7 +45,8 @@ This example showcases the following cases:
 *  Initializing ICU without tzdata files
 *  Initializing ICU with tzdata from the platform
 
-You can find the platform's tzdata `.res` files in
-[`//third_party/icu/tzres`](/third_party/icu/tzres). The
-[`tzdata-provider`](/src/intl/tzdata_provider) component provides these
-files via directory capabilities.
+You can find the platform's tzdata `.res` files in `${icu_root}/tzres`. The
+[`tzdata-provider`](/src/intl/tzdata_provider) component provides these files
+via directory capabilities.
+
+(The value of `icu_root` is usually `//third_party/icu`.)

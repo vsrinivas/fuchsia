@@ -28,9 +28,9 @@ rustc_library("icu_data") {
   ]
 
   non_rust_deps = [
+    "${icu_root}:icu",
+    "${icu_root}:icudata",
     "../../cpp:icu_data_cpp",
-    "//third_party/icu",
-    "//third_party/icu:icudata",
   ]
 
   sources = [ "src/lib.rs" ]

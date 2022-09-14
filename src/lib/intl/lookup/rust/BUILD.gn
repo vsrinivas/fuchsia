@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/intl/intl_strings.gni")
 import("//build/rust/rustc_staticlib.gni")
 import("//build/testing/environments.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 
 group("rust") {
   testonly = true
@@ -36,7 +37,7 @@ rustc_staticlib("lib") {
     "//third_party/rust_crates:tracing",
   ]
   non_rust_deps = [
-    "//third_party/icu",
+    "${icu_root}:icu",
     "//zircon/system/ulib/zx",
   ]
   test_deps = [

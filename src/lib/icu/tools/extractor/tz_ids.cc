@@ -13,9 +13,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/split_string.h"
-#include "third_party/icu/source/common/unicode/strenum.h"
-#include "third_party/icu/source/common/unicode/utypes.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
+#include "src/lib/icu/tools/extractor/icu_headers.h"
 
 namespace icu_data_extractor {
 

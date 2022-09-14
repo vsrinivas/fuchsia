@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 
 group("time_zone_info") {
   testonly = true
@@ -14,6 +15,16 @@ group("tests") {
   deps = [ ":time-zone-info-service-lib-tests" ]
 }
 
+third_party_icu_headers("icu_headers") {
+  headers = [
+    "third_party/icu/source/common/unicode/errorcode.h",
+    "third_party/icu/source/common/unicode/locid.h",
+    "third_party/icu/source/common/unicode/unistr.h",
+    "third_party/icu/source/i18n/unicode/calendar.h",
+    "third_party/icu/source/i18n/unicode/timezone.h",
+  ]
+}
+
 source_set("time-zone-info-service-lib") {
   sources = [
     "time_zone_info_service.cc",
@@ -21,6 +32,7 @@ source_set("time-zone-info-service-lib") {
   ]
 
   deps = [
+    ":icu_headers",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/service/cpp",
@@ -31,8 +43,8 @@ source_set("time-zone-info-service-lib") {
   ]
 
   public_deps = [
+    "${icu_root}:icu",
     "//sdk/fidl/fuchsia.intl",
-    "//third_party/icu",
   ]
 }
 

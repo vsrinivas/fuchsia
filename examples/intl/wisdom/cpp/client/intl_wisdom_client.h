@@ -8,8 +8,8 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include "examples/intl/wisdom/cpp/client/icu_headers.h"
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
 
 namespace intl_wisdom {
 

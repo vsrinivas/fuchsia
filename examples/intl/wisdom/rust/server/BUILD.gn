@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 
 # This is the main target in this BUILD file.  It implicitly contains everything
 # in the src/ directory, and implicitly looks for src/main.rs as entry point.
@@ -29,7 +30,7 @@ rustc_binary("intl_wisdom_server_rust") {
     "//third_party/rust_crates:rust_icu_ustring",
     "//third_party/rust_crates:thiserror",
   ]
-  non_rust_deps = [ "//third_party/icu" ]
+  non_rust_deps = [ "${icu_root}:icu" ]
 
   sources = [
     "src/main.rs",

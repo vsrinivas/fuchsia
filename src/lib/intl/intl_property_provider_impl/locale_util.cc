@@ -10,15 +10,7 @@
 #include <ostream>
 #include <unordered_set>
 
-#include "third_party/icu/source/common/unicode/errorcode.h"
-#include "third_party/icu/source/common/unicode/localebuilder.h"
-#include "third_party/icu/source/common/unicode/locid.h"
-#include "third_party/icu/source/common/unicode/unistr.h"
-#include "third_party/icu/source/i18n/unicode/calendar.h"
-#include "third_party/icu/source/i18n/unicode/dtptngen.h"
-#include "third_party/icu/source/i18n/unicode/numsys.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
-#include "third_party/icu/source/i18n/unicode/ulocdata.h"
+#include "src/lib/intl/intl_property_provider_impl/icu_headers.h"
 
 namespace intl {
 

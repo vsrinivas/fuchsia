@@ -11,10 +11,9 @@
 #include <sstream>
 
 #include "src/lib/icu_data/cpp/icu_data.h"
-#include "third_party/icu/source/common/unicode/unistr.h"
-#include "third_party/icu/source/i18n/unicode/calendar.h"
-#include "third_party/icu/source/i18n/unicode/datefmt.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
+
+// See the target ":icu_headers" in BUILD.gn
+#include "examples/intl/wisdom/cpp/server/icu_headers.h"
 
 namespace intl_wisdom {
 

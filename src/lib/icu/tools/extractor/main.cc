@@ -16,10 +16,7 @@
 
 #include "common.h"
 #include "src/lib/fxl/command_line.h"
-#include "third_party/icu/source/common/unicode/putil.h"
-#include "third_party/icu/source/common/unicode/udata.h"
-#include "third_party/icu/source/common/unicode/utypes.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
+#include "src/lib/icu/tools/extractor/icu_headers.h"
 #include "tz_ids.h"
 #include "tz_version.h"
 

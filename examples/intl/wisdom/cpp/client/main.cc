@@ -6,6 +6,7 @@
 
 #include <iostream>
 
+#include "examples/intl/wisdom/cpp/client/icu_headers.h"
 #include "fuchsia/examples/intl/wisdom/cpp/fidl.h"
 #include "intl_wisdom_client.h"
 #include "lib/async-loop/cpp/loop.h"
@@ -14,9 +15,6 @@
 #include "lib/zx/process.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/icu_data/cpp/icu_data.h"
-#include "third_party/icu/source/common/unicode/unistr.h"
-#include "third_party/icu/source/i18n/unicode/gregocal.h"
-#include "third_party/icu/source/i18n/unicode/smpdtfmt.h"
 #include "zircon/processargs.h"
 
 using icu::GregorianCalendar;

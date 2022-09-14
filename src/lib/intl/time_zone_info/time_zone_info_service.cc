@@ -13,11 +13,7 @@
 #include <src/lib/icu_data/cpp/icu_data.h>
 
 #include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
-#include "third_party/icu/source/common/unicode/errorcode.h"
-#include "third_party/icu/source/common/unicode/locid.h"
-#include "third_party/icu/source/common/unicode/unistr.h"
-#include "third_party/icu/source/i18n/unicode/calendar.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
+#include "src/lib/intl/time_zone_info/icu_headers.h"
 
 namespace intl {
 

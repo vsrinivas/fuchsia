@@ -9,8 +9,8 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "third_party/icu/source/common/unicode/locid.h"
-#include "third_party/icu/source/i18n/unicode/calendar.h"
+// See the target ":icu_headers" in BUILD.gn
+#include "examples/intl/wisdom/cpp/server/icu_headers.h"
 
 namespace intl_wisdom {
 

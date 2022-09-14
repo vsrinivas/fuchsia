@@ -10,8 +10,7 @@
 
 #include <string>
 
-#include "third_party/icu/source/common/unicode/locid.h"
-#include "third_party/icu/source/i18n/unicode/ucal.h"
+#include "src/lib/intl/intl_property_provider_impl/icu_headers.h"
 
 namespace intl {
 

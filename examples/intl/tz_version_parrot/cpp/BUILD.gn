@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 
 group("cpp") {
   testonly = true
@@ -14,6 +15,14 @@ group("tests") {
   deps = [ ":cpp" ]
 }
 
+# [START icudata_library]
+third_party_icu_headers("icu_headers") {
+  headers = [
+    "third_party/icu/source/common/unicode/utypes.h",
+    "third_party/icu/source/i18n/unicode/timezone.h",
+  ]
+}
+
 executable("bin") {
   testonly = true
   output_name = "tz_version_parrot_cpp"
@@ -21,6 +30,7 @@ executable("bin") {
   sources = [ "test.cc" ]
 
   deps = [
+    ":icu_headers",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
@@ -28,13 +38,10 @@ executable("bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/icu_data/cpp",
     "//third_party/googletest:gtest",
-
-    # [START icudata_library]
-    "//third_party/icu",
-
-    # [END icudata_library]
   ]
 }
+
+# [END icudata_library]
 
 fuchsia_component("tz_version_parrot_cpp") {
   testonly = true

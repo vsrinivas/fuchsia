@@ -5,6 +5,7 @@
 import("//build/host.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 
 if (is_host) {
   rustc_test("icu_data_extractor_tests") {
@@ -23,16 +24,16 @@ if (is_host) {
   }
 
   host_test_data("icudtl_dat") {
-    sources = [ "//third_party/icu/common/icudtl.dat" ]
+    sources = [ "${icu_root}/common/icudtl.dat" ]
     outputs =
         [ "$root_out_dir/test_data/icu_data_extractor/{{source_file_part}}" ]
   }
 
   host_test_data("tzres") {
     sources = [
-      "//third_party/icu/tzres/metaZones.res",
-      "//third_party/icu/tzres/timezoneTypes.res",
-      "//third_party/icu/tzres/zoneinfo64.res",
+      "${icu_root}/tzres/metaZones.res",
+      "${icu_root}/tzres/timezoneTypes.res",
+      "${icu_root}/tzres/zoneinfo64.res",
     ]
     outputs = [
       "$root_out_dir/test_data/icu_data_extractor/tzres/{{source_file_part}}",

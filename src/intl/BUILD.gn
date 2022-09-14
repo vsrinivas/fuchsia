@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/dist/resource.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
 
 group("intl") {
   testonly = true
@@ -28,12 +29,12 @@ group("tests") {
 }
 
 resource("icudtl") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  sources = [ "${icu_root}/common/icudtl.dat" ]
   outputs = [ "data/icudtl.dat" ]
 }
 
 # TODO(fmil): Is there a way to unify with above?
 resource("icudtl_root") {
-  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  sources = [ "${icu_root}/common/icudtl.dat" ]
   outputs = [ "icudtl.dat" ]
 }

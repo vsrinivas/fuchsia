@@ -20,10 +20,7 @@
 #include "src/lib/fostr/fidl/fuchsia/intl/formatting.h"
 #include "src/lib/fostr/fidl/fuchsia/settings/formatting.h"
 #include "src/lib/fxl/macros.h"
-#include "third_party/icu/source/common/unicode/locid.h"
-#include "third_party/icu/source/common/unicode/unistr.h"
-#include "third_party/icu/source/i18n/unicode/calendar.h"
-#include "third_party/icu/source/i18n/unicode/timezone.h"
+#include "src/lib/intl/intl_property_provider_impl/icu_headers.h"
 
 namespace intl {
 
