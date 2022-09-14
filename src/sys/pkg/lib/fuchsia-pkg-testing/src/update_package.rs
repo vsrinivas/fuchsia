@@ -81,6 +81,13 @@ pub fn make_packages_json<'a>(urls: impl AsRef<[&'a str]>) -> String {
     .to_string()
 }
 
+/// We specifically make the integration tests dependent on this (rather than e.g. u64::MAX) so that
+/// when we bump the epoch, most of the integration tests will fail. To fix this, simply bump this
+/// constant to match the SOURCE epoch. This will encourage developers to think critically about
+/// bumping the epoch and follow the policy documented on fuchsia.dev.
+/// See //src/sys/pkg/bin/system-updater/epoch/playbook.md for information on bumping the epoch.
+pub const SOURCE_EPOCH: u64 = 1;
+
 /// Provided an epoch, constructs an `epoch.json` and returns the JSON as a string.
 pub fn make_epoch_json(epoch: u64) -> String {
     json!({
@@ -88,4 +95,9 @@ pub fn make_epoch_json(epoch: u64) -> String {
         "epoch": epoch
     })
     .to_string()
+}
+
+/// Constructs an `epoch.json` with the current epoch and returns the JSON as a string.
+pub fn make_current_epoch_json() -> String {
+    make_epoch_json(SOURCE_EPOCH)
 }

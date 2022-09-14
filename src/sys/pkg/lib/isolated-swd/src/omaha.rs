@@ -160,7 +160,7 @@ mod tests {
         fidl_fuchsia_paver::PaverRequestStream,
         fuchsia_async as fasync,
         fuchsia_component::server::{ServiceFs, ServiceObj},
-        fuchsia_pkg_testing::{make_epoch_json, PackageBuilder},
+        fuchsia_pkg_testing::{make_current_epoch_json, PackageBuilder},
         fuchsia_zircon as zx,
         mock_paver::{hooks as mphooks, PaverEvent},
         omaha_client::http_request::mock::MockHttpRequest,
@@ -281,7 +281,7 @@ mod tests {
             .add_image("zbi.signed", &data)
             .add_image("fuchsia.vbmeta", &data)
             .add_image("recovery", &data)
-            .add_image("epoch.json", make_epoch_json(1).as_bytes())
+            .add_image("epoch.json", make_current_epoch_json().as_bytes())
             .add_image("recovery.vbmeta", &data);
         let updater = updater.build().await;
         Ok(updater)

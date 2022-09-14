@@ -70,7 +70,7 @@ async fn fails_on_missing_zbi_error() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_recovery());
 
     let result = env.run_update().await;
@@ -117,7 +117,7 @@ async fn fails_on_missing_zbi_error_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH));
+        .add_file("epoch.json", make_current_epoch_json());
 
     let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -171,7 +171,7 @@ async fn fails_on_image_write_error_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake_zbi");
 
     let result = env.run_update().await;
@@ -245,7 +245,7 @@ async fn fails_on_image_write_error() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", images_json);
 
     env.resolver
@@ -308,7 +308,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("recovery", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
@@ -385,7 +385,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", images_json);
 
     env.run_update_with_options(
@@ -439,7 +439,7 @@ async fn writes_to_both_configs_if_abr_not_supported_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake_zbi");
 
     env.run_update().await.expect("success");
@@ -503,7 +503,7 @@ async fn writes_to_both_configs_if_abr_not_supported() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", images_json);
 
     env.resolver
@@ -808,7 +808,7 @@ async fn writes_recovery_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("recovery", "new recovery");
 
@@ -861,7 +861,7 @@ async fn writes_recovery_vbmeta_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("recovery", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
@@ -920,7 +920,7 @@ async fn writes_fuchsia_vbmeta_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("fuchsia.vbmeta", "fake zbi vbmeta");
 
@@ -978,7 +978,7 @@ async fn update_with_current_config_v1(
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake_zbi");
 
     env.run_update().await.expect("success");
@@ -1020,7 +1020,7 @@ async fn update_with_current_config(
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver
@@ -1152,7 +1152,7 @@ async fn assert_stage_resolve_failure_reason(
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver.mock_resolve_failure(
@@ -1250,7 +1250,7 @@ async fn retry_image_package_resolve_once() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([base_package]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver
@@ -1355,7 +1355,7 @@ async fn retry_image_package_resolve_twice_fails_update() {
         &env.resolver
             .package("update", "upd4t3")
             .add_file("packages.json", make_packages_json([base_package]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", serde_json::to_string(&images_json).unwrap()),
     );
 
@@ -1482,7 +1482,7 @@ async fn writes_fuchsia() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver
@@ -1562,7 +1562,7 @@ async fn writes_fuchsia_vbmeta() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver.url(image_package_url_to_string("update-images-fuchsia", 9)).resolve(
@@ -1655,7 +1655,7 @@ async fn zbi_match_in_desired_config() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.run_update_with_options("fuchsia-pkg://fuchsia.com/another-update/4", default_options())
@@ -1701,7 +1701,7 @@ async fn zbi_match_in_active_config() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.run_update_with_options("fuchsia-pkg://fuchsia.com/another-update/4", default_options())
@@ -1756,7 +1756,7 @@ async fn zbi_match_in_active_config_error_in_desired_config() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver
@@ -1848,7 +1848,7 @@ async fn recovery_already_present() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.run_update_with_options("fuchsia-pkg://fuchsia.com/another-update/4", default_options())
@@ -1919,7 +1919,7 @@ async fn writes_recovery() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver.url(image_package_url_to_string("update-images-recovery", 9)).resolve(
@@ -2006,7 +2006,7 @@ async fn writes_recovery_vbmeta() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver.url(image_package_url_to_string("update-images-recovery", 9)).resolve(
@@ -2101,7 +2101,7 @@ async fn recovery_present_but_should_write_recovery_is_false() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver

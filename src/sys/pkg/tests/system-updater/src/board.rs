@@ -13,7 +13,7 @@ async fn validates_board_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("board", "x64")
         .add_file("zbi", "fake zbi")
         .add_file("bootloader", "new bootloader");
@@ -32,7 +32,7 @@ async fn validates_board() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi())
         .add_file("board", "x64");
 

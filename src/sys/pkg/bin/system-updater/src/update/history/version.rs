@@ -33,6 +33,9 @@ pub struct Version {
     pub epoch: String,
 }
 
+// TODO(fxbug.dev/109153): Pull this from the build.
+const SOURCE_EPOCH: &str = "1";
+
 impl Default for Version {
     fn default() -> Self {
         Version {
@@ -41,7 +44,7 @@ impl Default for Version {
             vbmeta_hash: Default::default(),
             zbi_hash: Default::default(),
             build_version: SystemVersion::Opaque("".to_string()),
-            epoch: "1".to_string(),
+            epoch: SOURCE_EPOCH.to_string(),
         }
     }
 }
@@ -267,7 +270,7 @@ mod tests {
         ::version::Version as SemanticVersion,
         fidl_fuchsia_paver::Configuration,
         fuchsia_hash::Hash,
-        fuchsia_pkg_testing::{make_epoch_json, TestUpdatePackage},
+        fuchsia_pkg_testing::{make_current_epoch_json, make_epoch_json, TestUpdatePackage},
         fuchsia_zircon::Vmo,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder},
         pretty_assertions::assert_eq,
@@ -296,7 +299,7 @@ mod tests {
             .await
             .add_file("version", "1.2.3.4")
             .await
-            .add_file("epoch.json", make_epoch_json(1)).await;
+            .add_file("epoch.json", make_epoch_json(42)).await;
         assert_eq!(
             Version::for_update_package(&update_pkg).await,
             Version {
@@ -311,7 +314,7 @@ mod tests {
                 zbi_hash: "a7124150e065aa234710ab387523f17deb36a9249938e11f2f3656954412ab8"
                     .to_string(),
                 build_version: SystemVersion::Semantic(SemanticVersion::from([1, 2, 3, 4])),
-                epoch: "1".to_string()
+                epoch: "42".to_string(),
             }
         );
     }
@@ -355,7 +358,7 @@ mod tests {
             .await
             .add_file("images.json", serde_json::to_string(&images_json).unwrap())
             .await
-            .add_file("epoch.json", make_epoch_json(1)).await;
+            .add_file("epoch.json", make_current_epoch_json()).await;
         assert_eq!(
             Version::for_update_package(&update_pkg).await,
             Version {
@@ -366,7 +369,7 @@ mod tests {
                 vbmeta_hash: vbmeta_hash.to_string(),
                 zbi_hash: zbi_hash.to_string(),
                 build_version: SystemVersion::Semantic(SemanticVersion::from([1, 2, 3, 4])),
-                epoch: "1".to_string()
+                epoch: SOURCE_EPOCH.to_string()
             }
         );
     }
@@ -400,7 +403,7 @@ mod tests {
             .await
             .add_file("images.json", serde_json::to_string(&images_json).unwrap())
             .await
-            .add_file("epoch.json", make_epoch_json(1)).await;
+            .add_file("epoch.json", make_current_epoch_json()).await;
         assert_eq!(
             Version::for_update_package(&update_pkg).await,
             Version {
@@ -411,7 +414,7 @@ mod tests {
                 vbmeta_hash: "".to_string(),
                 zbi_hash: zbi_hash.to_string(),
                 build_version: SystemVersion::Semantic(SemanticVersion::from([1, 2, 3, 4])),
-                epoch: "1".to_string()
+                epoch: SOURCE_EPOCH.to_string()
             }
         );
     }
@@ -445,7 +448,7 @@ mod tests {
             .await
             .add_file("images.json", serde_json::to_string(&images_json).unwrap())
             .await
-            .add_file("epoch.json", make_epoch_json(1)).await;
+            .add_file("epoch.json", make_current_epoch_json()).await;
         assert_eq!(
             Version::for_update_package(&update_pkg).await,
             Version {
@@ -456,7 +459,7 @@ mod tests {
                 vbmeta_hash: "".to_string(),
                 zbi_hash: "".to_string(),
                 build_version: SystemVersion::Semantic(SemanticVersion::from([1, 2, 3, 4])),
-                epoch: "1".to_string()
+                epoch: SOURCE_EPOCH.to_string()
             }
         );
     }
@@ -500,7 +503,7 @@ mod tests {
             .await
             .add_file("images.json", serde_json::to_string(&images_json).unwrap())
             .await
-            .add_file("epoch.json", make_epoch_json(1))
+            .add_file("epoch.json", make_current_epoch_json())
             .await
             .add_file("fuchsia.vbmeta", "vbmeta")
             .await
@@ -516,7 +519,7 @@ mod tests {
                 vbmeta_hash: vbmeta_hash.to_string(),
                 zbi_hash: zbi_hash.to_string(),
                 build_version: SystemVersion::Semantic(SemanticVersion::from([1, 2, 3, 4])),
-                epoch: "1".to_string()
+                epoch: SOURCE_EPOCH.to_string()
             }
         );
     }
@@ -551,7 +554,7 @@ mod tests {
             // See comment in sha256_hash_removed_trailing_zeros test.
             zbi_hash: "a7124150e065aa234710ab387523f17deb36a9249938e11f2f3656954412ab8".to_string(),
             build_version: SystemVersion::Opaque("".to_string()),
-            epoch: "1".to_string(),
+            epoch: SOURCE_EPOCH.to_string(),
         };
         assert_eq!(
             Version::current(
@@ -560,7 +563,7 @@ mod tests {
                 &boot_manager,
                 &NamespaceBuildInfo,
                 &system_info,
-                &make_epoch_json(1)
+                &make_current_epoch_json()
             )
             .await,
             last_target_version

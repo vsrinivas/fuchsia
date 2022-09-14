@@ -17,7 +17,7 @@ async fn succeeds_even_if_retained_packages_fails_v1() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("zbi", "fake zbi")),
     ]);
 
@@ -85,7 +85,7 @@ async fn succeeds_even_if_retained_packages_fails() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", make_images_json_zbi())),
     ]);
 
@@ -153,7 +153,7 @@ async fn pinned_url_and_non_empty_packages_json_v1() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("zbi", "fake zbi")),
     ]);
 
@@ -225,7 +225,7 @@ async fn pinned_url_and_non_empty_packages_json() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", make_images_json_zbi())),
     ]);
 
@@ -297,7 +297,7 @@ async fn unpinned_url_and_non_empty_packages_json_v1() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("zbi", "fake zbi")),
     ]);
 
@@ -364,7 +364,7 @@ async fn unpinned_url_and_non_empty_packages_json() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", make_images_json_zbi())),
     ]);
 
@@ -429,7 +429,7 @@ async fn pinned_url_and_empty_packages_json_v1() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("zbi", "fake zbi")),
     ]);
 
@@ -497,7 +497,7 @@ async fn pinned_url_and_empty_packages_json() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", make_images_json_zbi())),
     ]);
 
@@ -565,7 +565,7 @@ async fn unpinned_url_and_empty_packages_json_v1() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("zbi", "fake zbi")),
     ]);
 
@@ -631,7 +631,7 @@ async fn unpinned_url_and_empty_packages_json() {
             .resolver
             .package("update", UPDATE_HASH)
             .add_file("packages.json", make_packages_json([]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", make_images_json_zbi())),
     ]);
 

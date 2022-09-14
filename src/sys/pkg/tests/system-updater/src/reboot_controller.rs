@@ -15,7 +15,7 @@ async fn reboot_controller_detach_causes_deferred_reboot_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     // Start the system update.
@@ -47,7 +47,7 @@ async fn reboot_controller_detach_causes_deferred_reboot() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
 
     // Start the system update.
@@ -79,7 +79,7 @@ async fn reboot_controller_unblock_causes_reboot_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     // Start the system update.
@@ -111,7 +111,7 @@ async fn reboot_controller_unblock_causes_reboot() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
 
     // Start the system update.
@@ -143,7 +143,7 @@ async fn reboot_controller_dropped_causes_reboot_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     // Start the system update.
@@ -175,7 +175,7 @@ async fn reboot_controller_dropped_causes_reboot() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
 
     // Start the system update.

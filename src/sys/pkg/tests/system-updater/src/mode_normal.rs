@@ -16,7 +16,7 @@ async fn updates_the_system_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("version", "1.2.3.4");
     env.resolver
@@ -79,7 +79,7 @@ async fn updates_the_system() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi())
         .add_file("version", "1.2.3.4");
     env.resolver
@@ -141,7 +141,7 @@ async fn requires_zbi() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("bootloader", "new bootloader");
     env.resolver
         .url(SYSTEM_IMAGE_URL)
@@ -180,7 +180,7 @@ async fn updates_the_system_with_progress_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("version", "5.6.7.8");
     env.resolver
@@ -266,7 +266,7 @@ async fn updates_the_system_with_progress() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi())
         .add_file("version", "5.6.7.8");
     env.resolver

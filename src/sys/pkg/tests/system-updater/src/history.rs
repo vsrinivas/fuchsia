@@ -21,7 +21,7 @@ async fn succeeds_without_writable_data_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.expect("run system updater");
@@ -81,7 +81,7 @@ async fn succeeds_without_writable_data() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
 
     env.run_update().await.expect("run system updater");
@@ -194,7 +194,7 @@ async fn writes_history_v1() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67"]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("fuchsia.vbmeta", "vbmeta")
         .add_file("version", "0.2");
@@ -292,7 +292,7 @@ async fn writes_history() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67"]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap())
         .add_file("version", "0.2");
     env.resolver.register_package(
@@ -375,7 +375,7 @@ async fn replaces_bogus_history_v1() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.unwrap();
@@ -433,7 +433,7 @@ async fn replaces_bogus_history() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
 
     env.run_update().await.unwrap();
@@ -490,7 +490,7 @@ async fn increments_attempts_counter_on_retry_v1() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     let _ = env
@@ -605,7 +605,7 @@ async fn increments_attempts_counter_on_retry() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver.url(image_package_url_to_string("update-images-fuchsia", 9)).resolve(

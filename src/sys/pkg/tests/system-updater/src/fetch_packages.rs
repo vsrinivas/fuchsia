@@ -50,7 +50,7 @@ async fn fails_on_update_package_fetch_error_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     let system_image_url = SYSTEM_IMAGE_URL;
@@ -110,7 +110,7 @@ async fn fails_on_update_package_fetch_error() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
 
     let system_image_url = SYSTEM_IMAGE_URL;
@@ -193,7 +193,7 @@ async fn fails_on_content_package_fetch_error_v1() {
                     pkg6_url,
                 ]),
             )
-            .add_file("epoch.json", make_epoch_json(1))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("zbi", "fake zbi"),
     );
     env.resolver
@@ -319,7 +319,7 @@ async fn fails_on_content_package_fetch_error() {
                     pkg6_url,
                 ]),
             )
-            .add_file("epoch.json", make_epoch_json(1))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", make_images_json_zbi()),
     );
     env.resolver
@@ -420,7 +420,7 @@ async fn fails_when_package_cache_sync_fails_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
     env.resolver
         .url(SYSTEM_IMAGE_URL)
@@ -470,7 +470,7 @@ async fn fails_when_package_cache_sync_fails() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
     env.resolver
         .url(SYSTEM_IMAGE_URL)
@@ -580,7 +580,7 @@ async fn assert_fetch_failure_reason_v1(
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
     env.resolver.mock_resolve_failure(SYSTEM_IMAGE_URL, resolve_error);
 
@@ -675,7 +675,7 @@ async fn assert_fetch_failure_reason(
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
     env.resolver.mock_resolve_failure(SYSTEM_IMAGE_URL, resolve_error);
 

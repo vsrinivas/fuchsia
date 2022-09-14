@@ -410,7 +410,7 @@ pub mod tests {
         super::for_tests::UpdaterBuilder,
         super::*,
         fidl_fuchsia_paver::{Asset, Configuration},
-        fuchsia_pkg_testing::{make_epoch_json, PackageBuilder},
+        fuchsia_pkg_testing::{make_current_epoch_json, PackageBuilder},
         mock_paver::PaverEvent,
     };
 
@@ -434,7 +434,7 @@ pub mod tests {
             .add_image("zbi.signed", &data)
             .add_image("fuchsia.vbmeta", &data)
             .add_image("recovery", &data)
-            .add_image("epoch.json", make_epoch_json(1).as_bytes())
+            .add_image("epoch.json", make_current_epoch_json().as_bytes())
             .add_image("recovery.vbmeta", &data);
         let result = updater.build_and_run().await;
 

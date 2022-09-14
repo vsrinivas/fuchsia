@@ -12,12 +12,7 @@ driver.
 The epoch should be bumped one-off as needed. The vast majority of changes should not require
 epoch bumps.
 
-## Step 2: File a public issue to track
-
-Once you've decided on bumping the epoch, file a public issue on bugs.fuchsia.dev to describe why
-the bump is necessary. Consider using fxbug.dev/72370 as an example.
-
-## Step 3: Stage a CL
+## Step 2: Stage a CL
 
 You should bump the epoch in the same CL that introduces the backwards-incompatible change.
 
@@ -25,20 +20,26 @@ Create a CL that:
 * introduces the backwards-incompatible change.
 * adds another line of `<epoch>=<context>` to
   [//src/sys/pkg/bin/system-updater/epoch/history](/src/sys/pkg/bin/system-updater/epoch/history),
-  where `epoch` is the epoch you're bumping to and `context` is the link to the bug.
+  where `epoch` is the epoch you're bumping to and `context` is the link to an associated bug.
 * updates `SOURCE_EPOCH` in
-  [//src/sys/pkg/tests/system-updater/src/lib.rs](/src/sys/pkg/tests/system-updater/src/lib.rs)
+  [//src/sys/pkg/lib/fuchsia-pkg-testing/src/update_package.rs](/src/sys/pkg/lib/fuchsia-pkg-testing/src/update_package.rs
+  to match the new epoch.
+* updates `SOURCE_EPOCH` in
+  [//src/sys/pkg/bin/system-updater/src/update/history/version.rs](/src/sys/pkg/bin/system-updater/src/update/history/version.rs
+  to match the new epoch.
+* updates `epoch` in
+  [//src/security/pkg_test/assesmblies/assemble_security_pkg_test_system.gni](/src/security/pkg_test/assemblies/assemble_security_pkg_test_system.gni)
   to match the new epoch.
 
-## Step 4: Send your CL for approval and submit
+## Step 3: Send your CL for approval and submit
 
 Now that everything is in place, you can send your CL to anyone from
 [//src/sys/pkg/OWNERS](/src/sys/pkg/OWNERS) for approval. When your CL is approved...congrats!
 You can submit the change and officially bump the OTA backstop.
 
-## Step 5: Share news widely
+## Step 4: Share news widely
 
-Send an email using this template:
+Send an email (for example, using this template):
 
 ```
 To: announce@fuchsia.dev

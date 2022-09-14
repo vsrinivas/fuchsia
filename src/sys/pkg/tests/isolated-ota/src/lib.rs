@@ -15,7 +15,8 @@ use {
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     fuchsia_merkle::Hash,
     fuchsia_pkg_testing::{
-        make_epoch_json, serve::ServedRepository, Package, PackageBuilder, RepositoryBuilder,
+        make_current_epoch_json, serve::ServedRepository, Package, PackageBuilder,
+        RepositoryBuilder,
     },
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -507,7 +508,7 @@ pub async fn test_pave_fails() -> Result<(), Error> {
         .paver(|p| p.insert_hook(mphooks::return_error(paver_hook)))
         .add_package(test_package)
         .add_image("zbi.signed", "FAIL".as_bytes())
-        .add_image("epoch.json", make_epoch_json(1).as_bytes())
+        .add_image("epoch.json", make_current_epoch_json().as_bytes())
         .add_image("fuchsia.vbmeta", "FAIL".as_bytes())
         .build()
         .await
@@ -548,7 +549,7 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
         .add_image("recovery", "This is recovery".as_bytes())
         .add_image("recovery.vbmeta", "This is another vbmeta".as_bytes())
         .add_image("bootloader", "This is a bootloader upgrade".as_bytes())
-        .add_image("epoch.json", make_epoch_json(1).as_bytes())
+        .add_image("epoch.json", make_current_epoch_json().as_bytes())
         .add_image("firmware_test", "This is the test firmware".as_bytes());
     for i in 0i64..3 {
         let name = format!("test-package{}", i);
@@ -821,7 +822,7 @@ pub async fn test_omaha_works() -> Result<(), Error> {
         .add_image("recovery", "This is recovery".as_bytes())
         .add_image("recovery.vbmeta", "This is another vbmeta".as_bytes())
         .add_image("bootloader", "This is a bootloader upgrade".as_bytes())
-        .add_image("epoch.json", make_epoch_json(1).as_bytes())
+        .add_image("epoch.json", make_current_epoch_json().as_bytes())
         .add_image("firmware_test", "This is the test firmware".as_bytes());
     for i in 0i64..3 {
         let name = format!("test-package{}", i);

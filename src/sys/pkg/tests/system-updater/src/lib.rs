@@ -18,7 +18,9 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_hash::Hash,
-    fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
+    fuchsia_pkg_testing::{
+        make_current_epoch_json, make_epoch_json, make_packages_json, SOURCE_EPOCH,
+    },
     fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
@@ -846,13 +848,6 @@ const SYSTEM_IMAGE_HASH: &str = "42ade6f4fd51636f70c68811228b4271ed52c4eb9a64730
 const SYSTEM_IMAGE_URL: &str = "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296";
 const UPDATE_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 const UPDATE_PKG_URL_PINNED: &str = "fuchsia-pkg://fuchsia.com/update?hash=00112233445566778899aabbccddeeffffeeddccbbaa99887766554433221100";
-
-// We specifically make the integration tests dependent on this (rather than e.g. u64::MAX) so that
-// when we bump the epoch, most of the integration tests will fail. To fix this, simply bump this
-// constant to match the SOURCE epoch. This will encourage developers to think critically about
-// bumping the epoch and follow the policy documented on fuchsia.dev.
-// See //src/sys/pkg/bin/system-updater/epoch/playbook.md for information on bumping the epoch.
-const SOURCE_EPOCH: u64 = 1;
 
 fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
     (*interactions.lock())

@@ -19,7 +19,7 @@ async fn fails_setting_configuration_active_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     let result = env.run_update().await;
@@ -87,7 +87,7 @@ async fn fails_commit_recovery_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("update-mode", &force_recovery_json())
         .add_file("recovery", "the recovery image")
         .add_file("recovery.vbmeta", "the recovery vbmeta");
@@ -161,7 +161,7 @@ async fn fails_setting_configuration_active() {
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("images.json", make_images_json_zbi())
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH));
+        .add_file("epoch.json", make_current_epoch_json());
 
     let result = env.run_update().await;
     assert!(result.is_err(), "system updater succeeded when it should fail");
@@ -227,7 +227,7 @@ async fn fails_commit_recovery() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_recovery())
         .add_file("update-mode", &force_recovery_json());
 

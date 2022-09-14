@@ -16,7 +16,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([pkg_url]))
         .add_file("images.json", make_images_json_zbi())
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH));
+        .add_file("epoch.json", make_current_epoch_json());
 
     env.resolver.url(pkg_url).fail(error);
 
@@ -46,7 +46,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code_v1(
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([pkg_url]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     env.resolver.url(pkg_url).fail(error);
@@ -145,7 +145,7 @@ async fn succeeds_even_if_metrics_fail_to_send_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.expect("run system updater");
@@ -196,7 +196,7 @@ async fn succeeds_even_if_metrics_fail_to_send() {
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("images.json", make_images_json_zbi())
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH));
+        .add_file("epoch.json", make_current_epoch_json());
 
     env.run_update().await.expect("run system updater");
 

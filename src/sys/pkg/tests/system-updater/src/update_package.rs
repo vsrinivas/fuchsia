@@ -158,7 +158,7 @@ async fn uses_custom_update_package_v1() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     env.run_update_with_options("fuchsia-pkg://fuchsia.com/another-update/4", default_options())
@@ -204,7 +204,7 @@ async fn uses_custom_update_package() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
 
     env.run_update_with_options("fuchsia-pkg://fuchsia.com/another-update/4", default_options())
@@ -251,7 +251,7 @@ async fn ignores_malformed_images_manifest_update_package_v1() {
         .resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("images.json", "fake manifest");
 
@@ -266,7 +266,7 @@ async fn ignores_malformed_images_manifest_update_package_v1() {
         .resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     env_no_images_json
@@ -292,7 +292,7 @@ async fn retry_update_package_resolve_once_v1() {
             .resolver
             .package("update", "upd4t3")
             .add_file("packages.json", make_packages_json([]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("zbi", "fake zbi")),
     ]);
 
@@ -349,7 +349,7 @@ async fn retry_update_package_resolve_once() {
             .resolver
             .package("update", "upd4t3")
             .add_file("packages.json", make_packages_json([]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", make_images_json_zbi())),
     ]);
 
@@ -406,7 +406,7 @@ async fn retry_update_package_resolve_twice_v1() {
             .resolver
             .package("update", "upd4t3")
             .add_file("packages.json", make_packages_json([]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("zbi", "fake zbi")),
     ]);
 
@@ -469,7 +469,7 @@ async fn retry_update_package_resolve_twice() {
             .resolver
             .package("update", "upd4t3")
             .add_file("packages.json", make_packages_json([]))
-            .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+            .add_file("epoch.json", make_current_epoch_json())
             .add_file("images.json", make_images_json_zbi())),
     ]);
 
@@ -610,7 +610,7 @@ async fn fully_populated_images_manifest() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver.url(image_package_url_to_string("update-images-fuchsia", 9)).resolve(

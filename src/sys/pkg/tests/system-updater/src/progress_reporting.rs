@@ -24,7 +24,7 @@ async fn progress_reporting_fetch_multiple_packages_v1() {
         .resolver
         .package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([pkg1_url, pkg2_url, pkg3_url]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
     let pkg1 = env.resolver.package("package1", merkle_str!("aa"));
     let pkg2 = env.resolver.package("package2", merkle_str!("bb"));
@@ -108,7 +108,7 @@ async fn progress_reporting_fetch_multiple_packages() {
         .resolver
         .package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([pkg1_url, pkg2_url, pkg3_url]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
     let pkg1 = env.resolver.package("package1", merkle_str!("aa"));
     let pkg2 = env.resolver.package("package2", merkle_str!("bb"));
@@ -197,7 +197,7 @@ async fn monitor_connects_to_existing_attempt_v1() {
     let update_pkg = env
         .resolver
         .package("update", UPDATE_HASH)
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi");
 
@@ -242,7 +242,7 @@ async fn monitor_connects_to_existing_attempt() {
     let update_pkg = env
         .resolver
         .package("update", UPDATE_HASH)
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("packages.json", make_packages_json([]))
         .add_file("images.json", make_images_json_zbi());
 
@@ -288,7 +288,7 @@ async fn succeed_additional_start_requests_when_compatible_v1() {
         .resolver
         .package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi");
 
     // Block the update pkg resolve to ensure the update attempt is still in
@@ -341,7 +341,7 @@ async fn succeed_additional_start_requests_when_compatible() {
         .resolver
         .package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", make_images_json_zbi());
 
     // Block the update pkg resolve to ensure the update attempt is still in

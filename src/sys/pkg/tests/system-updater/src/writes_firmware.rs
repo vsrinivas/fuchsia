@@ -18,7 +18,7 @@ async fn writes_bootloader_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("bootloader", "new bootloader");
 
@@ -71,7 +71,7 @@ async fn writes_firmware_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("firmware", "fake firmware");
 
@@ -141,7 +141,7 @@ async fn writes_firmware_from_image_manifest_if_present_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("firmware_a", "fake firmware")
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
@@ -228,7 +228,7 @@ async fn images_manifest_update_package_firmware_no_match() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver
@@ -319,7 +319,7 @@ async fn images_manifest_update_package_firmware_match_desired_config() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.run_update_with_options("fuchsia-pkg://fuchsia.com/another-update/4", default_options())
@@ -396,7 +396,7 @@ async fn images_manifest_update_package_firmware_match_active_config() {
     env.resolver
         .register_custom_package("another-update/4", "update", "upd4t3r", "fuchsia.com")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.run_update_with_options("fuchsia-pkg://fuchsia.com/another-update/4", default_options())
@@ -456,7 +456,7 @@ async fn writes_multiple_firmware_types_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("firmware_a", "fake firmware A")
         .add_file("firmware_b", "fake firmware B");
@@ -534,7 +534,7 @@ async fn writes_multiple_firmware_types() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver.url(image_package_url_to_string("update-images-firmware", 5)).resolve(
@@ -617,7 +617,7 @@ async fn skips_unsupported_firmware_type_v1() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("zbi", "fake zbi")
         .add_file("firmware", "fake firmware");
 
@@ -695,7 +695,7 @@ async fn skips_unsupported_firmware_type() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver
@@ -766,7 +766,7 @@ async fn fails_on_firmware_write_error_v1() {
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
         .add_file("zbi", "fake zbi")
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("firmware", "fake firmware");
 
     let mut attempt = env.start_update().await.unwrap();
@@ -852,7 +852,7 @@ async fn fails_on_firmware_write_error() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("epoch.json", make_current_epoch_json())
         .add_file("images.json", serde_json::to_string(&images_json).unwrap());
 
     env.resolver

@@ -387,6 +387,7 @@ mod tests {
             Initiator, PrepareFailureReason, UpdateInfo, UpdateInfoAndProgress,
         },
         fuchsia_inspect::{assert_data_tree, Inspector},
+        fuchsia_pkg_testing::SOURCE_EPOCH,
         mock_paver::MockPaverServiceBuilder,
         pretty_assertions::assert_eq,
         serde_json::json,
@@ -538,7 +539,7 @@ mod tests {
                             "vbmeta_hash": "",
                             "zbi_hash": "",
                             "build_version": "",
-                            "epoch": "1"
+                            "epoch": SOURCE_EPOCH.to_string()
                         },
                         "target": {
                             "update_hash": "newer",
@@ -546,7 +547,7 @@ mod tests {
                             "vbmeta_hash": "",
                             "zbi_hash": "",
                             "build_version": "",
-                            "epoch": "1"
+                            "epoch": SOURCE_EPOCH.to_string()
                         },
                         "options": {
                             "initiator":  "User",
@@ -576,7 +577,7 @@ mod tests {
                             "vbmeta_hash": "",
                             "zbi_hash": "",
                             "build_version": "",
-                            "epoch": "1"
+                            "epoch": SOURCE_EPOCH.to_string()
                         },
                         "target": {
                             "update_hash": "new",
@@ -584,7 +585,7 @@ mod tests {
                             "vbmeta_hash": "",
                             "zbi_hash": "",
                             "build_version": "",
-                            "epoch": "1"
+                            "epoch": SOURCE_EPOCH.to_string()
                         },
                         "options": {
                             "initiator":  "User",
@@ -659,7 +660,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "target_version": {
                                 "update_hash": "new",
@@ -667,7 +668,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "options": {
                                 "initiator": "User",
@@ -695,7 +696,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "target_version": {
                                 "update_hash": "newer",
@@ -703,7 +704,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "options": {
                                 "initiator": "User",
@@ -749,7 +750,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "target_version": {
                                 "update_hash": "new",
@@ -757,7 +758,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "options": {
                                 "initiator": "User",
@@ -785,7 +786,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "target_version": {
                                 "update_hash": "newer",
@@ -793,7 +794,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "options": {
                                 "initiator": "User",
@@ -821,7 +822,7 @@ mod tests {
                                 "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "target_version": {
                                 "update_hash": "new",
@@ -829,7 +830,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": "1"
+                                "epoch": SOURCE_EPOCH.to_string()
                             },
                             "options": {
                                 "initiator": "User",
@@ -964,7 +965,7 @@ mod tests {
                         "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                         "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                         "build_version": "",
-                        "epoch": "1"
+                        "epoch": SOURCE_EPOCH.to_string()
                     },
                     "target": {
                         "update_hash": "new",
@@ -972,7 +973,7 @@ mod tests {
                         "vbmeta_hash": "",
                         "zbi_hash": "",
                         "build_version": "",
-                        "epoch": "1"
+                        "epoch": SOURCE_EPOCH.to_string()
                     },
                     "options": {
                         "allow_attach_to_existing_attempt": false,
