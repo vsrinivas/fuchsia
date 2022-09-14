@@ -540,14 +540,21 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
 
   ProducerStageTestWithRingBuffer()
       : start_stop_command_queue_(std::make_shared<ProducerStage::CommandQueue>()),
-        buffer_(MemoryMappedBuffer::CreateOrDie(zx_system_get_page_size(), true)),
+        buffer_(
+            MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true)),
+        ring_buffer_(RingBuffer::Create({
+            .format = kFormat,
+            .reference_clock_koid = DefaultClockKoid(),
+            .buffer = buffer_,
+            .producer_frames = kRingBufferFrames / 2,
+            .consumer_frames = kRingBufferFrames / 2,
+        })),
         producer_stage_({
             .format = kFormat,
             .reference_clock_koid = DefaultClockKoid(),
             .command_queue = start_stop_command_queue_,
-            .internal_source = std::make_shared<SimpleRingBufferProducerStage>(
-                kFormat, DefaultClockKoid(), buffer_, kRingBufferFrames,
-                [this]() { return safe_read_frame_; }),
+            .internal_source =
+                std::make_shared<SimpleRingBufferProducerStage>("InternalSource", ring_buffer_),
         }) {
     producer_stage_.UpdatePresentationTimeToFracFrame(DefaultPresentationTimeToFracFrame(kFormat));
   }
@@ -579,6 +586,7 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
  private:
   std::shared_ptr<ProducerStage::CommandQueue> start_stop_command_queue_;
   std::shared_ptr<MemoryMappedBuffer> buffer_;
+  std::shared_ptr<RingBuffer> ring_buffer_;
   ProducerStage producer_stage_;
   int64_t safe_read_frame_ = kRingBufferFrames;
 };

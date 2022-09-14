@@ -16,6 +16,7 @@
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
+#include "src/media/audio/services/mixer/mix/ring_buffer.h"
 
 namespace media_audio {
 
@@ -23,15 +24,7 @@ namespace media_audio {
 // Start or Stop commands. This is intended to be embedded within a ProducerStage.
 class SimpleRingBufferProducerStage : public PipelineStage {
  public:
-  // A function that returns the safe read frame for the current time.
-  using SafeReadFrameFn = std::function<int64_t()>;
-
-  SimpleRingBufferProducerStage(Format format, zx_koid_t reference_clock_koid,
-                                std::shared_ptr<MemoryMappedBuffer> buffer, int64_t frame_count,
-                                SafeReadFrameFn safe_read_frame_fn);
-
-  // Returns the ring buffer's size in frames.
-  int64_t frame_count() const { return frame_count_; }
+  SimpleRingBufferProducerStage(std::string_view name, std::shared_ptr<RingBuffer> buffer);
 
   // Implements `PipelineStage`.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) final {
@@ -50,9 +43,7 @@ class SimpleRingBufferProducerStage : public PipelineStage {
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
 
  private:
-  std::shared_ptr<MemoryMappedBuffer> buffer_;
-  int64_t frame_count_ = 0;
-  SafeReadFrameFn safe_read_frame_fn_;
+  const std::shared_ptr<RingBuffer> buffer_;
 };
 
 }  // namespace media_audio

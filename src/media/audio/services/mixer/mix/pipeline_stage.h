@@ -7,6 +7,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
+#include <zircon/types.h>
 
 #include <atomic>
 #include <memory>
