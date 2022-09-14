@@ -29,6 +29,7 @@ namespace {
 constexpr size_t kTagShift = 56;
 constexpr uint8_t kTestTag = 0xAB;
 constexpr size_t kThreadStackSize = ZIRCON_DEFAULT_STACK_SIZE;
+constexpr uint64_t kTagMask = UINT64_C(0xff) << kTagShift;
 
 // Add a tag to the pointer if the pointer is untagged. An optional tag value
 // can be passed, and if one is, it will override the current tag.
@@ -42,7 +43,6 @@ constexpr size_t kThreadStackSize = ZIRCON_DEFAULT_STACK_SIZE;
 // that two pointers have different tags, since hwasan could technically but
 // unlikely produce the same tag for different pointers.
 constexpr uint64_t AddTagIfNeeded(uintptr_t ptr, uint8_t* newtag = nullptr) {
-  constexpr uint64_t kTagMask = UINT64_C(0xff) << kTagShift;
   if (newtag) {
     // Add the tag or overwrite it if there is one.
     return (static_cast<uint64_t>(*newtag) << kTagShift) | (static_cast<uint64_t>(ptr) & ~kTagMask);
@@ -59,6 +59,8 @@ template <typename T>
 T* AddTagIfNeeded(T* ptr, uint8_t* newtag = nullptr) {
   return reinterpret_cast<T*>(AddTagIfNeeded(reinterpret_cast<uintptr_t>(ptr), newtag));
 }
+
+constexpr uintptr_t RemoveTag(uintptr_t ptr) { return ptr & ~kTagMask; }
 
 // Disable sanitizers for this because any sanitizer that involves doing a
 // right shift to get a shadow memory location could cause a tag to leak into
@@ -415,7 +417,7 @@ arch::ArmExceptionSyndromeRegister::ExceptionClass GetEC(uint64_t esr) {
 }
 
 // Making it global static ensures this is in rodata.
-static constexpr uint32_t kUdf0 = 0;
+const uint32_t kUdf0 = 0;
 
 TEST(TopByteIgnoreTests, InstructionAbortNoTag) {
   // Unlike a data abort, instruction aborts on AArch64 will not include the tag in the FAR, so a
@@ -429,7 +431,7 @@ TEST(TopByteIgnoreTests, InstructionAbortNoTag) {
   EXPECT_EQ(report.header.type, ZX_EXCP_FATAL_PAGE_FAULT);
   ASSERT_EQ(GetEC(report.context.arch.u.arm_64.esr),
             arch::ArmExceptionSyndromeRegister::ExceptionClass::kInstructionAbortLowerEl);
-  EXPECT_EQ(report.context.arch.u.arm_64.far, reinterpret_cast<uintptr_t>(&kUdf0));
+  EXPECT_EQ(report.context.arch.u.arm_64.far, RemoveTag(reinterpret_cast<uintptr_t>(&kUdf0)));
 }
 
 #ifdef __clang__
