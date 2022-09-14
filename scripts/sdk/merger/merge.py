@@ -2,6 +2,15 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+"""Merge the content of two SDKs into a new one.
+
+Use either --first-archive or --first-directory to indicate the first input.
+Use either --second-archive or --second-directory to indicate the second input.
+Use either --output-archive or --output-directory to indicate the output.
+"""
+
+# See https://stackoverflow.com/questions/33533148/how-do-i-type-hint-a-method-with-the-type-of-the-enclosing-class
+from __future__ import annotations
 
 import argparse
 import contextlib
@@ -15,25 +24,53 @@ import tarfile
 import tempfile
 
 from functools import total_ordering
+from typing import Any, Dict, List, Sequence, Set, Tuple
 
-all_outputs = []
-all_inputs = []
-follow_symlinks = False
-has_hermetic_inputs_file = False
+# Reminder about the layout of each SDK directory:
+#
+# The top-level meta/manifest.json describes the whole SDK content
+# as a JSON object, whose 'parts' key is an array of objects with
+# with the following schema:
+#
+#    meta: [string]: Path to an SDK element metadata file, relative
+#                    to the SDK directory.
+#
+#    type: [string]: Type of the element.
+#
+# A few examples:
+#
+#    {
+#      "meta": "docs/low_level.json",
+#      "type": "documentation"
+#    },
+#    {
+#      "meta": "fidl/fuchsia.accessibility.gesture/meta.json",
+#      "type": "fidl_library"
+#    },
+#    {
+#      "meta": "pkg/vulkan/vulkan.json",
+#      "type": "data"
+#    },
+#
+# Then each element metadata JSON file itself is a JSON object whose
+# schema depend on its "type" value.
+#
 
+# TODO: Use typing.TypeAlias introduced in Python 3.10 when possible.
+TypeAlias = Any
 
-def _add_output(path):
-    all_outputs.append(os.path.relpath(path))
+# An SdkManifest is just a JSON object implemented as a Python dictionary
+# for now. Define an alias for type checking only.
+SdkManifest: TypeAlias = Dict[str, Any]
 
-
-def _add_input(path):
-    all_inputs.append(os.path.relpath(path))
+Path: TypeAlias = str
 
 
 @total_ordering
 class Part(object):
+    '''Models a 'parts' array entry from an SDK manifest.'''
 
-    def __init__(self, json):
+    def __init__(self, json: Dict):
         self.meta = json['meta']
         self.type = json['type']
 
@@ -41,9 +78,8 @@ class Part(object):
         return (self.meta, self.type) < (other.meta, other.type)
 
     def __eq__(self, other):
-        return (
-            isinstance(other, self.__class__) and self.meta == other.meta and
-            self.type == other.type)
+        assert isinstance(other, self.__class__)
+        return self.meta == other.meta and self.type == other.type
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -52,34 +88,189 @@ class Part(object):
         return hash((self.meta, self.type))
 
 
-@contextlib.contextmanager
-def _open_archive(archive, directory):
-    '''Manages a directory in which an existing SDK is laid out.'''
-    if directory:
-        yield directory
-    elif archive:
-        temp_dir = tempfile.mkdtemp(prefix='fuchsia-merger')
-        # Extract the tarball into the temporary directory.
-        # This is vastly more efficient than accessing files one by one via
-        # the tarfile API.
-        with tarfile.open(archive) as archive_file:
-            archive_file.extractall(temp_dir)
-        try:
-            yield temp_dir
-        finally:
-            shutil.rmtree(temp_dir, ignore_errors=True)
-    else:
-        raise Exception('Error: archive or directory must be set')
+def _ensure_directory(path: Path):
+    '''Ensures that the directory hierarchy of the given path exists.'''
+    os.makedirs(os.path.dirname(path), exist_ok=True)
 
 
-def tarfile_writer(archive_file, source_dir):
-    '''Write an archive using the Python tarfile module.'''
+class ElementMeta(object):
+    '''Models the metadata of a given SDK element.'''
+
+    def __init__(self, meta: Dict[str, Any]):
+        self._meta = meta
+
+    @property
+    def type(self):
+        '''Returns the SDK element type.'''
+        if 'schema_id' in self._meta:
+            return self._meta['data']['type']
+        return self._meta['type']
+
+    @property
+    def json(self):
+        '''Return the JSON object for this element metadata instance.'''
+        return self._meta
+
+    def get_files(self) -> Tuple[Set[Path], Dict[str, Set[Path]]]:
+        '''Extracts the files associated with the given element.
+        Returns a 2-tuple containing:
+         - the set of arch-independent files;
+         - the sets of arch-dependent files, indexed by architecture.
+        '''
+        type = self.type
+        common_files = set()
+        arch_files = {}
+        if type == 'cc_prebuilt_library':
+            common_files.update(self._meta['headers'])
+            for arch, binaries in self._meta['binaries'].items():
+                contents = set()
+                contents.add(binaries['link'])
+                if 'dist' in binaries:
+                    contents.add(binaries['dist'])
+                if 'debug' in binaries:
+                    contents.add(binaries['debug'])
+                arch_files[arch] = contents
+        elif type == 'cc_source_library':
+            common_files.update(self._meta['headers'])
+            common_files.update(self._meta['sources'])
+        elif type == 'dart_library':
+            common_files.update(self._meta['sources'])
+        elif type == 'fidl_library':
+            common_files.update(self._meta['sources'])
+        elif type in ['host_tool', 'companion_host_tool']:
+            if 'files' in self._meta:
+                common_files.update(self._meta['files'])
+            if 'target_files' in self._meta:
+                arch_files.update(self._meta['target_files'])
+        elif type == 'loadable_module':
+            common_files.update(self._meta['resources'])
+            arch_files.update(self._meta['binaries'])
+        elif type == 'sysroot':
+            for arch, version in self._meta['versions'].items():
+                contents = set()
+                contents.update(version['headers'])
+                contents.update(version['link_libs'])
+                contents.update(version['dist_libs'])
+                contents.update(version['debug_libs'])
+                arch_files[arch] = contents
+        elif type == 'documentation':
+            common_files.update(self._meta['docs'])
+        elif type in ('config', 'license', 'component_manifest'):
+            common_files.update(self._meta['data'])
+        elif type in ('version_history'):
+            # These types are pure metadata.
+            pass
+        elif type == 'bind_library':
+            common_files.update(self._meta['sources'])
+        else:
+            raise Exception('Unknown element type: ' + type)
+
+        return (common_files, arch_files)
+
+    def merge_with(self, other: ElementMeta) -> ElementMeta:
+        '''Merge current instance with another one and return new value.'''
+        meta_one = self._meta
+        meta_two = other._meta
+
+        # TODO(fxbug.dev/5362): verify that the common parts of the metadata files are in
+        # fact identical.
+        type = self.type
+        if type != other.type:
+            raise Exception(
+                'Incompatible element types (%s vs %s)' % (type, other.type))
+
+        meta = {}
+        if type in ('cc_prebuilt_library', 'loadable_module'):
+            meta = meta_one
+            meta['binaries'].update(meta_two['binaries'])
+        elif type == 'sysroot':
+            meta = meta_one
+            meta['versions'].update(meta_two['versions'])
+        elif type in ['host_tool', 'companion_host_tool']:
+            meta = meta_one
+            if not 'target_files' in meta:
+                meta['target_files'] = {}
+            if 'target_files' in meta_two:
+                meta['target_files'].update(meta_two['target_files'])
+        elif type in ('cc_source_library', 'dart_library', 'fidl_library',
+                      'documentation', 'device_profile', 'config', 'license',
+                      'component_manifest', 'bind_library', 'version_history'):
+            # These elements are arch-independent, the metadata does not need any
+            # update.
+            meta = meta_one
+        else:
+            raise Exception('Unknown element type: ' + type)
+
+        return ElementMeta(meta)
+
+
+def _has_host_content(parts: Set[Part]):
+    '''Returns true if the given list of SDK parts contains an element with
+    content built for a host.
+    '''
+    return 'host_tool' in [part.type for part in parts]
+
+
+def _merge_sdk_manifests(manifest_one: SdkManifest,
+                         manifest_two: SdkManifest) -> Optional[SdkManifest]:
+    """Merge two SDK manifests into one. Returns None in case of error."""
+    parts_one = set([Part(p) for p in manifest_one['parts']])
+    parts_two = set([Part(p) for p in manifest_two['parts']])
+
+    manifest: SdkManifest = {'arch': {}}
+
+    # Schema version.
+    if manifest_one['schema_version'] != manifest_two['schema_version']:
+        print('Error: mismatching schema version')
+        return None
+    manifest['schema_version'] = manifest_one['schema_version']
+
+    # Host architecture.
+    host_archs = set()
+    if _has_host_content(parts_one):
+        host_archs.add(manifest_one['arch']['host'])
+    if _has_host_content(parts_two):
+        host_archs.add(manifest_two['arch']['host'])
+    if not host_archs:
+        # The archives do not have any host content. The architecture is not
+        # meaningful in that case but is still needed: just pick one.
+        host_archs.add(manifest_one['arch']['host'])
+    if len(host_archs) != 1:
+        print(
+            'Error: mismatching host architecture: %s' % ', '.join(host_archs))
+        return None
+    manifest['arch']['host'] = list(host_archs)[0]
+
+    # Id.
+    if manifest_one['id'] != manifest_two['id']:
+        print('Error: mismatching id')
+        return None
+    manifest['id'] = manifest_one['id']
+
+    # Root.
+    if manifest_one['root'] != manifest_two['root']:
+        print('Error: mismatching root')
+        return None
+    manifest['root'] = manifest_one['root']
+
+    # Target architectures.
+    manifest['arch']['target'] = sorted(
+        set(manifest_one['arch']['target']) |
+        set(manifest_two['arch']['target']))
+
+    # Parts.
+    manifest['parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
+    return manifest
+
+
+def tarfile_writer(archive_file: Path, source_dir: Path):
+    """Write an archive using the Python tarfile module."""
     with tarfile.open(archive_file, "w:gz") as archive:
         archive.add(source_dir, arcname='')
 
 
-def tarmaker_writer(archive_file, source_dir, tarmaker):
-    '''Write an archive using the tarmaker tool.'''
+def tarmaker_writer(archive_file: Path, source_dir: Path, tarmaker: Path):
+    """Write an archive using the tarmaker tool."""
     # Generate a temporary tarmaker manifest, since it will be
     # opened by tarmaker, do not use tempfile.NamedTemporaryFile()
     # because this would fail on Windows.
@@ -101,282 +292,284 @@ def tarmaker_writer(archive_file, source_dir, tarmaker):
         os.unlink(manifest_file)
 
 
-@contextlib.contextmanager
-def _open_output(archive, directory, archive_writer):
-    '''Manages the output of this script.'''
-    if directory:
-        # Remove any existing output.
-        shutil.rmtree(directory, ignore_errors=True)
-        yield directory
-    elif archive:
-        temp_dir = tempfile.mkdtemp(prefix='fuchsia-merger')
-        try:
-            yield temp_dir
-            # Write the archive file.
-            if not has_hermetic_inputs_file:
-                archive_writer(archive, temp_dir)
-        finally:
+class MergeState(object):
+    """Common state for all merge operations. Can be used as a context manager."""
+
+    def __init__(self):
+        self._all_outputs: Set[Path] = set()
+        self._all_inputs: Set[Path] = set()
+        self._temp_dirs: Set[Path] = set()
+        self._tarmaker_tool: Path = None
+
+    def set_tarmaker_tool(self, tarmaker_tool: Path):
+        self._tarmaker_tool = tarmaker_tool
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        self._remove_all_temp_dirs()
+        return False  # Do not suppress exceptions
+
+    def get_temp_dir(self) -> Path:
+        """Return new temporary directory path."""
+        temp_dir = tempfile.mkdtemp(prefix='fuchsia-sdk-merger')
+
+        self._temp_dirs.add(temp_dir)
+        return temp_dir
+
+    def _remove_all_temp_dirs(self):
+        """Remove all temporary directories."""
+        for temp_dir in self._temp_dirs:
             shutil.rmtree(temp_dir, ignore_errors=True)
-    else:
-        raise Exception('Error: archive or directory must be set')
 
+    def _is_temp_file(self, path: Path) -> bool:
+        assert os.path.isabs(path)
+        for tmp_dir in self._temp_dirs:
+            if os.path.commonprefix([path, tmp_dir]) == tmp_dir:
+                return True
+        return False
 
-def _get_manifest(sdk_dir):
-    manifest_path = os.path.join(sdk_dir, 'meta', 'manifest.json')
-    _add_input(manifest_path)
-    '''Returns the set of elements in the given SDK.'''
-    with open(manifest_path, 'r') as manifest:
-        return json.load(manifest)
+    def add_output(self, path: Path):
+        """Add an output path, ignored if temporary."""
+        # For outputs, do not follow symlinks.
+        path = os.path.abspath(path)
+        if not self._is_temp_file(path):
+            self._all_outputs.add(path)
 
+    def add_input(self, path: Path):
+        """Add an input path, ignored if temporary."""
+        # For inputs, always resolve symlinks since that what matters
+        # for Ninja (which never follows symlinks themselves).
+        path = os.path.abspath(os.path.realpath(path))
+        if not self._is_temp_file(path):
+            self._all_inputs.add(path)
 
-def _get_meta(element, sdk_dir):
-    '''Returns the contents of the given element's manifest in a given SDK.'''
-    meta_path = os.path.join(sdk_dir, element)
-    _add_input(meta_path)
-    with open(meta_path, 'r') as meta:
-        return json.load(meta)
+    def get_depfile_inputs_and_outputs(
+            self) -> Tuple[Sequence[Path], Sequence[Path]]:
+        """Return the lists of inputs and outputs that should appear in the depfile."""
 
+        def make_relative_paths(paths):
+            return sorted([os.path.relpath(p) for p in paths])
 
-def _get_type(element):
-    '''Returns the SDK element type.'''
-    # For versioned SDK elements, the type is inside the data field.
-    if 'schema_id' in element:
-        return element['data']['type']
-    return element['type']
+        return make_relative_paths(self._all_inputs), make_relative_paths(
+            self._all_outputs)
 
+    def open_archive(self, archive: Path) -> Path:
+        """Uncompress an archive and return the path of its temporary extraction directory."""
+        extract_dir = self.get_temp_dir()
+        with tarfile.open(archive) as archive_file:
+            archive_file.extractall(extract_dir)
+        return extract_dir
 
-def _get_files(element_meta):
-    '''Extracts the files associated with the given element.
-    Returns a 2-tuple containing:
-     - the set of arch-independent files;
-     - the sets of arch-dependent files, indexed by architecture.
-    '''
-    type = _get_type(element_meta)
-    common_files = set()
-    arch_files = {}
-    if type == 'cc_prebuilt_library':
-        common_files.update(element_meta['headers'])
-        for arch, binaries in element_meta['binaries'].items():
-            contents = set()
-            contents.add(binaries['link'])
-            if 'dist' in binaries:
-                contents.add(binaries['dist'])
-            if 'debug' in binaries:
-                contents.add(binaries['debug'])
-            arch_files[arch] = contents
-    elif type == 'cc_source_library':
-        common_files.update(element_meta['headers'])
-        common_files.update(element_meta['sources'])
-    elif type == 'dart_library':
-        common_files.update(element_meta['sources'])
-    elif type == 'fidl_library':
-        common_files.update(element_meta['sources'])
-    elif type in ['host_tool', 'companion_host_tool']:
-        if 'files' in element_meta:
-            common_files.update(element_meta['files'])
-        if 'target_files' in element_meta:
-            arch_files.update(element_meta['target_files'])
-    elif type == 'loadable_module':
-        common_files.update(element_meta['resources'])
-        arch_files.update(element_meta['binaries'])
-    elif type == 'sysroot':
-        for arch, version in element_meta['versions'].items():
-            contents = set()
-            contents.update(version['headers'])
-            contents.update(version['link_libs'])
-            contents.update(version['dist_libs'])
-            contents.update(version['debug_libs'])
-            arch_files[arch] = contents
-    elif type == 'documentation':
-        common_files.update(element_meta['docs'])
-    elif type in ('config', 'license', 'component_manifest'):
-        common_files.update(element_meta['data'])
-    elif type in ('version_history'):
-        # These types are pure metadata.
-        pass
-    elif type == 'bind_library':
-        common_files.update(element_meta['sources'])
-    else:
-        raise Exception('Unknown element type: ' + type)
-    return (common_files, arch_files)
-
-
-def _ensure_directory(path):
-    '''Ensures that the directory hierarchy of the given path exists.'''
-    target_dir = os.path.dirname(path)
-    try:
-        os.makedirs(target_dir)
-    except OSError as exception:
-        if exception.errno == errno.EEXIST and os.path.isdir(target_dir):
-            pass
+    def write_archive(self, archive: Path, source_dir: Path):
+        """Write a compressed archive."""
+        if self._tarmaker_tool:
+            tarmaker_writer(archive, source_dir, self._tarmaker_tool)
         else:
-            raise
+            tarfile_writer(archive, source_dir)
+        self.add_output(archive)
+
+    def write_json_output(self, path: Path, content: Any, dry_run: bool):
+        """Write JSON output file."""
+        if not dry_run:
+            _ensure_directory(path)
+            with open(path, 'w') as f:
+                json.dump(
+                    content, f, indent=2, sort_keys=True, separators=(',', ':'))
+        self.add_output(path)
 
 
-def _copy_file(file, source_dir, dest_dir):
-    '''Copies a file to a given path, taking care of creating directories if
-    needed.
-    '''
-    source = os.path.join(source_dir, file)
-    destination = os.path.join(dest_dir, file)
-    if not has_hermetic_inputs_file:
-        _ensure_directory(destination)
-        shutil.copy2(source, destination, follow_symlinks=follow_symlinks)
-    _add_input(source)
-    _add_output(destination)
+class InputSdk(object):
+    """Models a single input SDK archive or directory during merge operations."""
 
+    def __init__(self, archive: Path, directory: Path, state: MergeState):
+        """Initialize instance. Either archive or directory must be set."""
+        self._state = state
+        if archive:
+            assert not directory, 'Cannot set both archive and directory'
+            self._directory = state.open_archive(archive)
+        else:
+            assert directory, 'Either archive or directory must be set'
+            self._directory = directory
 
-def _copy_files(files, source_dir, dest_dir):
-    '''Copies a set of files to a given directory.'''
-    for file in files:
-        _copy_file(file, source_dir, dest_dir)
+    def __enter__(self):
+        return self
 
-
-def _copy_identical_files(set_one, source_dir_one, set_two, dest_dir):
-    '''Verifies that two sets of files are absolutely identical and then copies
-    them to the output directory.
-    '''
-    if set_one != set_two:
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        # Nothing to do here, extracted archive will be removed by
+        # MergeState.__exit__() itself.
         return False
-    # Not verifying that the contents of the files are the same, as builds are
-    # not exactly stable at the moment.
-    _copy_files(set_one, source_dir_one, dest_dir)
-    return True
+
+    @property
+    def directory(self) -> Path:
+        """Return directory path."""
+        return self._directory
+
+    def _read_json(self, file: Path) -> Any:
+        source = os.path.join(self._directory, file)
+        self._state.add_input(source)
+        with open(source) as f:
+            return json.load(f)
+
+    def get_manifest(self) -> SdkManifest:
+        """Return the manifest for this SDK."""
+        return self._read_json(os.path.join('meta', 'manifest.json'))
+
+    def get_element_meta(self, element: Path) -> ElementMeta:
+        """Return the contents of the given element's manifest."""
+        # 'element' is actually a path to a meta.json file, relative
+        # to the SDK's top directory.
+        return ElementMeta(self._read_json(element))
 
 
-def _copy_element(element, source_dir, dest_dir):
-    '''Copy an entire SDK element to a given directory.'''
-    meta = _get_meta(element, source_dir)
-    common_files, arch_files = _get_files(meta)
-    files = common_files
-    for more_files in arch_files.values():
-        files.update(more_files)
-    _copy_files(files, source_dir, dest_dir)
-    # Copy the metadata file as well.
-    _copy_file(element, source_dir, dest_dir)
+class OutputSdk(object):
+    """Model either an output archive or directory during a merge operation."""
+
+    def __init__(
+            self, archive: Path, directory: Path, dry_run: bool,
+            state: MergeState):
+        """Initialize instance. Either archive or directory must be set."""
+        self._dry_run = dry_run
+        self._archive = archive
+        self._state = state
+        if archive:
+            assert not directory, 'Cannot set both archive and directory'
+            # When generating the final archive, ensure there are no symlinks in it!
+            self._follow_symlinks = True
+            # Create temporary directory to store archive content. The archive
+            # itself will be created in __exit__() if there were no exceptions
+            # before that.
+            self._directory = state.get_temp_dir()
+        else:
+            assert directory, 'Either archive or directory must be set'
+            if self._dry_run:
+                # Use a temporary directory to keep the destination directory
+                # untouched during dry-runs.
+                self._directory = state.get_temp_dir()
+            else:
+                self._directory = directory
+            # Keep the symlinks in the final directory.
+            self._follow_symlinks = False
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_tb):
+        if exc_type is None and self._archive:
+            if self._dry_run:
+                self._state.add_output(self._archive)
+            else:
+                self._state.write_archive(self._archive, self._directory)
+        return False  # Do not supress exceptions.
+
+    def write_manifest(self, manifest):
+        self._state.write_json_output(
+            os.path.join(self._directory, 'meta', 'manifest.json'), manifest,
+            self._dry_run)
+
+    def write_element_meta(self, element: Path, element_meta: ElementMeta):
+        self._state.write_json_output(
+            os.path.join(self._directory, element), element_meta.json,
+            self._dry_run)
+
+    def copy_file(self, file, source_dir):
+        '''Copies a file to a given sub-path, taking care of creating directories if
+       needed.
+       '''
+        source = os.path.join(source_dir, file)
+        destination = os.path.join(self._directory, file)
+        if not self._dry_run:
+            _ensure_directory(destination)
+            # shutil.copy2() will complain when copying a symlinks into the same symlink.
+            if os.path.islink(destination):
+                os.unlink(destination)
+            shutil.copy2(
+                source, destination, follow_symlinks=self._follow_symlinks)
+        self._state.add_input(source)
+        self._state.add_output(destination)
+
+    def copy_files(self, files, source_dir):
+        for file in files:
+            self.copy_file(file, source_dir)
+
+    def copy_identical_files(self, set_one, set_two, source_dir):
+        if set_one != set_two:
+            return False
+        self.copy_files(set_one, source_dir)
+        return True
+
+    def copy_element(self, element: Path, source_sdk: InputSdk):
+        '''Copy an entire SDK element to a given directory.'''
+        meta = source_sdk.get_element_meta(element)
+        assert meta is not None, 'Could not find metadata for element: %s, %s, %s' % (
+            element, meta, source_sdk)
+        common_files, arch_files = meta.get_files()
+        files = common_files
+        for more_files in arch_files.values():
+            files.update(more_files)
+        self.copy_files(files, source_sdk.directory)
+        # Copy the metadata file as well.
+        self.copy_file(element, source_sdk.directory)
 
 
-def _write_meta(element, source_dir_one, source_dir_two, dest_dir):
-    '''Writes a meta file for the given element, resulting from the merge of the
-    meta files for that element in the two given SDK directories.
-    '''
-    meta_one = _get_meta(element, source_dir_one)
-    meta_two = _get_meta(element, source_dir_two)
-    # TODO(fxbug.dev/5362): verify that the common parts of the metadata files are in
-    # fact identical.
-    type = _get_type(meta_one)
-    meta = {}
-    if type in ('cc_prebuilt_library', 'loadable_module'):
-        meta = meta_one
-        meta['binaries'].update(meta_two['binaries'])
-    elif type == 'sysroot':
-        meta = meta_one
-        meta['versions'].update(meta_two['versions'])
-    elif type in ['host_tool', 'companion_host_tool']:
-        meta = meta_one
-        if not 'target_files' in meta:
-            meta['target_files'] = {}
-        if 'target_files' in meta_two:
-            meta['target_files'].update(meta_two['target_files'])
-    elif type in ('cc_source_library', 'dart_library', 'fidl_library',
-                  'documentation', 'device_profile', 'config', 'license',
-                  'component_manifest', 'bind_library', 'version_history'):
-        # These elements are arch-independent, the metadata does not need any
-        # update.
-        meta = meta_one
-    else:
-        raise Exception('Unknown element type: ' + type)
-    meta_path = os.path.join(dest_dir, element)
-    if not has_hermetic_inputs_file:
-        _ensure_directory(meta_path)
-        with open(meta_path, 'w') as meta_file:
-            json.dump(
-                meta,
-                meta_file,
-                indent=2,
-                sort_keys=True,
-                separators=(',', ': '))
-    _add_output(meta_path)
-    return True
+def merge_sdks(
+        first_sdk: InputSdk, second_sdk: InputSdk,
+        output_sdk: OutputSdk) -> bool:
+    first_manifest = first_sdk.get_manifest()
+    second_manifest = second_sdk.get_manifest()
+    first_parts = set([Part(p) for p in first_manifest['parts']])
+    second_parts = set([Part(p) for p in second_manifest['parts']])
+    common_parts = first_parts & second_parts
 
+    # Copy elements that appear in a single SDK
+    for element_part in sorted(first_parts - common_parts):
+        output_sdk.copy_element(element_part.meta, first_sdk)
+    for element_part in sorted(second_parts - common_parts):
+        output_sdk.copy_element(element_part.meta, second_sdk)
 
-def _has_host_content(parts):
-    '''Returns true if the given list of SDK parts contains an element with
-    content built for a host.
-    '''
-    return 'host_tool' in [part.type for part in parts]
+    # Verify and merge elements which are common to both SDKs.
+    for raw_part in sorted(common_parts):
+        element = raw_part.meta
+        first_meta = first_sdk.get_element_meta(element)
+        second_meta = second_sdk.get_element_meta(element)
+        first_common, first_arch = first_meta.get_files()
+        second_common, second_arch = second_meta.get_files()
 
+        # Common files should not vary.
+        if not output_sdk.copy_identical_files(first_common, second_common,
+                                               first_sdk.directory):
+            print('Error: different common files for %s' % (element))
+            return False
 
-def _write_manifest(source_dir_one, source_dir_two, dest_dir):
-    '''Writes a manifest file resulting from the merge of the manifest files for
-    the two given SDK directories.
-    '''
-    manifest_one = _get_manifest(source_dir_one)
-    manifest_two = _get_manifest(source_dir_two)
-    parts_one = set([Part(p) for p in manifest_one['parts']])
-    parts_two = set([Part(p) for p in manifest_two['parts']])
+        # Arch-dependent files need to be merged in the metadata.
+        all_arches = set(first_arch.keys()) | set(second_arch.keys())
+        for arch in all_arches:
+            if arch in first_arch and arch in second_arch:
+                if not output_sdk.copy_identical_files(first_arch[arch],
+                                                       second_arch[arch],
+                                                       first_sdk.directory):
+                    print('Error: different %s files for %s' % (arch, element))
+                    return False
+            elif arch in first_arch:
+                output_sdk.copy_files(first_arch[arch], first_sdk.directory)
+            elif arch in second_arch:
+                output_sdk.copy_files(second_arch[arch], second_sdk.directory)
 
-    manifest = {'arch': {}}
+        new_meta = first_meta.merge_with(second_meta)
+        output_sdk.write_element_meta(element, new_meta)
 
-    # Schema version.
-    if manifest_one['schema_version'] != manifest_two['schema_version']:
-        print('Error: mismatching schema version')
+    output_manifest = _merge_sdk_manifests(first_manifest, second_manifest)
+    if not output_manifest:
         return False
-    manifest['schema_version'] = manifest_one['schema_version']
 
-    # Host architecture.
-    host_archs = set()
-    if _has_host_content(parts_one):
-        host_archs.add(manifest_one['arch']['host'])
-    if _has_host_content(parts_two):
-        host_archs.add(manifest_two['arch']['host'])
-    if not host_archs:
-        # The archives do not have any host content. The architecture is not
-        # meaningful in that case but is still needed: just pick one.
-        host_archs.add(manifest_one['arch']['host'])
-    if len(host_archs) != 1:
-        print(
-            'Error: mismatching host architecture: %s' % ', '.join(host_archs))
-        return False
-    manifest['arch']['host'] = list(host_archs)[0]
-
-    # Id.
-    if manifest_one['id'] != manifest_two['id']:
-        print('Error: mismatching id')
-        return False
-    manifest['id'] = manifest_one['id']
-
-    # Root.
-    if manifest_one['root'] != manifest_two['root']:
-        print('Error: mismatching root')
-        return False
-    manifest['root'] = manifest_one['root']
-
-    # Target architectures.
-    manifest['arch']['target'] = sorted(
-        set(manifest_one['arch']['target']) |
-        set(manifest_two['arch']['target']))
-
-    # Parts.
-    manifest['parts'] = [vars(p) for p in sorted(parts_one | parts_two)]
-
-    manifest_path = os.path.join(dest_dir, 'meta', 'manifest.json')
-    if not has_hermetic_inputs_file:
-        _ensure_directory(manifest_path)
-        with open(manifest_path, 'w') as manifest_file:
-            json.dump(
-                manifest,
-                manifest_file,
-                indent=2,
-                sort_keys=True,
-                separators=(',', ': '))
-    _add_output(manifest_path)
+    output_sdk.write_manifest(output_manifest)
     return True
 
 
 def main():
     parser = argparse.ArgumentParser(
-        description=('Merges the contents of two SDKs'))
+        description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     first_group = parser.add_mutually_exclusive_group(required=True)
     first_group.add_argument(
         '--first-archive',
@@ -413,11 +606,6 @@ def main():
         '--hermetic-inputs-file', help='Path to the hermetic inputs file')
     args = parser.parse_args()
 
-    # When producing an archive, we need to copy the symlink targets, not the symlinks themselves.
-    global follow_symlinks
-    follow_symlinks = bool(args.output_archive)
-
-    global has_hermetic_inputs_file
     has_hermetic_inputs_file = bool(args.hermetic_inputs_file)
 
     has_errors = False
@@ -429,77 +617,32 @@ def main():
     else:
         archive_writer = tarfile_writer
 
-    with _open_archive(args.first_archive, args.first_directory) as first_dir, \
-         _open_archive(args.second_archive, args.second_directory) as second_dir, \
-         _open_output(args.output_archive, args.output_directory, archive_writer) as out_dir:
+    with MergeState() as state:
+        if args.tarmaker:
+            state.set_tarmaker_tool(args.tarmaker)
 
-        first_elements = set(
-            [Part(p) for p in _get_manifest(first_dir)['parts']])
-        second_elements = set(
-            [Part(p) for p in _get_manifest(second_dir)['parts']])
-        common_elements = first_elements & second_elements
+        with InputSdk(args.first_archive, args.first_directory, state) as first_sdk, \
+             InputSdk(args.second_archive, args.second_directory, state) as second_sdk, \
+             OutputSdk(args.output_archive, args.output_directory,
+                       dry_run=has_hermetic_inputs_file, state=state) as output_sdk:
 
-        # Copy elements that appear in a single SDK.
-        for element in sorted(first_elements - common_elements):
-            _copy_element(element.meta, first_dir, out_dir)
-        for element in (second_elements - common_elements):
-            _copy_element(element.meta, second_dir, out_dir)
+            if not merge_sdks(first_sdk, second_sdk, output_sdk):
+                return 1
 
-        # Verify and merge elements which are common to both SDKs.
-        for raw_element in sorted(common_elements):
-            element = raw_element.meta
-            first_meta = _get_meta(element, first_dir)
-            second_meta = _get_meta(element, second_dir)
-            first_common, first_arch = _get_files(first_meta)
-            second_common, second_arch = _get_files(second_meta)
+        depfile_inputs, depfile_outputs = state.get_depfile_inputs_and_outputs()
+        if args.hermetic_inputs_file:
+            with open(args.hermetic_inputs_file, 'w') as hermetic_inputs_file:
+                hermetic_inputs_file.write('\n'.join(depfile_inputs))
 
-            # Common files should not vary.
-            if not _copy_identical_files(first_common, first_dir, second_common,
-                                         out_dir):
-                print('Error: different common files for %s' % (element))
-                has_errors = True
-                continue
-
-            # Arch-dependent files need to be merged in the metadata.
-            all_arches = set(first_arch.keys()) | set(second_arch.keys())
-            for arch in all_arches:
-                if arch in first_arch and arch in second_arch:
-                    if not _copy_identical_files(first_arch[arch], first_dir,
-                                                 second_arch[arch], out_dir):
-                        print(
-                            'Error: different %s files for %s' %
-                            (arch, element))
-                        has_errors = True
-                        continue
-                elif arch in first_arch:
-                    _copy_files(first_arch[arch], first_dir, out_dir)
-                elif arch in second_arch:
-                    _copy_files(second_arch[arch], second_dir, out_dir)
-
-            if not _write_meta(element, first_dir, second_dir, out_dir):
-                print('Error: unable to merge meta for %s' % (element))
-                has_errors = True
-
-        if not _write_manifest(first_dir, second_dir, out_dir):
-            print('Error: could not write manifest file')
-            has_errors = True
-
-        # TODO(fxbug.dev/5362): verify that metadata files are valid.
+        if args.depfile:
+            with open(args.depfile, 'w') as depfile:
+                depfile.write(
+                    '{}: {}'.format(
+                        ' '.join(depfile_outputs), ' '.join(depfile_inputs)))
 
     if args.stamp_file and not has_hermetic_inputs_file:
         with open(args.stamp_file, 'w') as stamp_file:
             stamp_file.write('')
-
-    if args.hermetic_inputs_file:
-        with open(args.hermetic_inputs_file, 'w') as hermetic_inputs_file:
-            hermetic_inputs_file.write('\n'.join(all_inputs))
-
-    if args.depfile:
-        with open(args.depfile, 'w') as depfile:
-            depfile.write(
-                '{} {}: {}'.format(
-                    args.stamp_file, ' '.join(all_outputs),
-                    ' '.join(all_inputs)))
 
     return 1 if has_errors else 0
 
