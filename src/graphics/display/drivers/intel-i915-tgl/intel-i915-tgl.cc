@@ -2020,7 +2020,10 @@ zx_status_t Controller::Init() {
 
   for (unsigned i = 0; i < ddis_.size(); i++) {
     gmbus_i2cs_.push_back(GMBusI2c(ddis_[i], mmio_space()));
-    dp_auxs_.push_back(DpAux(ddis_[i], mmio_space()));
+
+    dp_auxs_.push_back(DpAux(mmio_space(), ddis_[i], device_id_));
+    zxlogf(TRACE, "DDI %d AUX channel initial configuration:", ddis_[i]);
+    dp_auxs_[dp_auxs_.size() - 1].aux_channel().Log();
   }
 
   ddi_a_lane_capability_control_ = tgl_registers::DdiRegs(tgl_registers::DDI_A)

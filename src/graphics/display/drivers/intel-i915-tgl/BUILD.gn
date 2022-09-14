@@ -32,6 +32,7 @@ source_set("common_srcs") {
 
   sources = [
     "clock/cdclk.cc",
+    "ddi-aux-channel.cc",
     "ddi.cc",
     "display-device.cc",
     "dp-display.cc",
@@ -98,6 +99,7 @@ fuchsia_driver_component("intel-i915-tgl") {
 test("intel-i915-tgl-test") {
   configs += [ "//build/config:all_source" ]
   sources = [
+    "ddi-aux-channel-unittest.cc",
     "dp-capabilities-unittest.cc",
     "dp-display-unittest.cc",
     "fake-dpcd-channel.cc",

@@ -365,26 +365,218 @@ class DisplayIoCtrlRegTxBmu : public hwreg::RegisterBase<DisplayIoCtrlRegTxBmu, 
   static auto Get() { return hwreg::RegisterAddr<DisplayIoCtrlRegTxBmu>(0x6c00c); }
 };
 
-// DDI_AUX_CTL
+// DDI_AUX_CTL (DDI AUX Channel Control)
+//
+// Tiger Lake: IHD-OS-TGL-Vol2c-12.21 Part 1 pages 342-345
+// DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 pages 321-323
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 436-438
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 432-434
 class DdiAuxControl : public hwreg::RegisterBase<DdiAuxControl, uint32_t> {
  public:
-  static constexpr uint32_t kBaseAddr = 0x64010;
+  // True while the DDI is performing an AUX transaction.
+  //
+  // The driver sets this field to true to start an AUX transaction. The
+  // hardware resets it back to false when the AUX transaction is completed.
+  //
+  // The register should not be modified while this field is true.
+  //
+  // On Kaby Lake and Skylake, DDI_AUX_MUTEX must be acquired before setting up
+  // an AUX transaction.
+  DEF_BIT(31, transaction_in_progress);
 
-  DEF_BIT(31, send_busy);
-  DEF_BIT(30, done);
+  // Set to true by hardware when it completes an AUX transaction.
+  //
+  // This bit is sticky Read/Write-Clear. It stays true until the driver resets
+  // it by writing true to it.
+  DEF_BIT(30, transaction_done);
+
+  // If true, an interrupt is triggered when an AUX transaction is completed.
   DEF_BIT(29, interrupt_on_done);
+
+  // Set to true by hardware when an AUX transaction times out.
+  //
+  // This bit is sticky Read/Write-Clear. It stays true until the driver resets
+  // it by writing true to it.
   DEF_BIT(28, timeout);
-  DEF_FIELD(27, 26, timeout_timer_value);
-  DEF_BIT(25, rcv_error);
+
+  // Selects the AUX transaction timeout.
+  //
+  // The AUX transaction limit in the DisplayPort specification is 500us.
+  //
+  // The values are documented as 0 (400us, unsupported), 1 (600us), 2 (800us)
+  DEF_FIELD(27, 26, timeout_timer_select);
+
+  // Only documented on Kaby Lake and Skylake. The docs advise against using.
+  static constexpr int kTimeoutUnsupported400us = 0;
+
+  static constexpr int kTimeout600us = 1;
+  static constexpr int kTimeout800us = 2;
+
+  // 4,000 us on Tiger Lake and DG1. 1,600 us on Kaby Lake and Skylake.
+  static constexpr int kTimeoutLarge = 3;
+
+  // Set to true by hardware when an AUX transaction receives invalid data.
+  //
+  // The received data could be invalid due to: corruption detected, the bits
+  // received don't add up to an integer number of bytes, more than 20 bytes
+  // received.
+  //
+  // This bit is sticky Read/Write-Clear. It stays true until the driver resets
+  // it by writing true to it.
+  DEF_BIT(25, receive_error);
+
+  // Total number of bytes in an AUX message, including the message header.
+  //
+  // The driver writes this field to indicate the message size for the next AUX
+  // transaction. The hardware writes this field to indicate the response size
+  // for the last AUX transaction.
+  //
+  // The message includes the header bytes (4 for command, 2 for reply). The
+  // DisplayPort specification states that the maximum data size is 16 bytes,
+  // leading to a 20-byte maximum message size.
+  //
+  // The driver must write values between 1 and 20. The value read from this
+  // field is only valid and meaningful if `transaction_done` is true, and
+  // `transaction_in_progress`, `timeout`, and `receive_error` are false.
   DEF_FIELD(24, 20, message_size);
+
+  // Directs AUX transactions to the Thunderbolt IO, or the USB-C / Combo IO.
+  //
+  // If true, transactions will be performed via the Thunderbolt controller.
+  // Otherwise, the transactions will be performed over USB-C (using the FIA) or
+  // over the Combo DDI IO.
+  //
+  // This field is reserved (must be false) on Kaby Lake and Skylake, which
+  // don't support Thunderbolt IO.
+  DEF_BIT(11, use_thunderbolt);
+
+  // Number of SYNC pulses sent during SYNC for eDP fast wake transactions.
+  //
+  // The value is the number of SYNC pulses minus 1.
+  DEF_FIELD(9, 5, fast_wake_sync_pulse_count);
+
+  // `fast_wake_sync_pulse_count` should be set to 7, to match the Embedded
+  // DisplayPort standard requirement for 8 pre-charge pulses (zeros) in the
+  // AUX_PHY_WAKE preamble.
+  static constexpr int kFastWakeSyncPulseCount = 8 - 1;
+
+  // Number of SYNC pulses sent during SYNC for standard transactions.
+  //
+  // The value is the number of SYNC pulses minus 1. This is the sum of the
+  // 10-16 pre-charge pulses (zeros) and the 16 consecutive zeros at the start
+  // of the AUX_SYNC pattern.
   DEF_FIELD(4, 0, sync_pulse_count);
+
+  // `sync_pulse_count` should be set to at least 25, to meet the DisplayPort
+  // 26-pulse minimum, which is equivalent to 10 pre-charge pulses.
+  static constexpr int kMinSyncPulseCount = 26 - 1;
+
+  // For Kaby Lake and Skylake DDI A - DDI E.
+  //
+  // The Kaby Lake and Skylake references only document the AUX registers for
+  // DDIs A-D. Other manuals, such as IHD-OS-ICLLP-Vol 2c-1.20, document AUX
+  // registers for DDIs E-F, and their MMIO addresses are what we'd expect.
+  // For now, we assume DDI E has an AUX channel that works like the other DDIs.
+  static auto GetForKabyLakeDdi(Ddi ddi) {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_E);
+
+    const int ddi_index = ddi - Ddi::DDI_A;
+    return hwreg::RegisterAddr<DdiAuxControl>(0x64010 + 0x100 * ddi_index);
+  }
+
+  // For Tiger Lake and DG1.
+  static auto GetForTigerLakeDdi(Ddi ddi) {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_TC_6);
+
+    if (ddi < Ddi::DDI_TC_1) {
+      // The addresses match the Kaby Lake and Skylake DDIs.
+      const int ddi_index = ddi - Ddi::DDI_A;
+      return hwreg::RegisterAddr<DdiAuxControl>(0x64010 + 0x100 * ddi_index);
+    }
+    // The addresses for Type C DDIs are right after the addresses for the Combo
+    // DDIs. The compiler will optimize the if away.
+    const int tc_ddi_index = ddi - Ddi::DDI_TC_1;
+    return hwreg::RegisterAddr<DdiAuxControl>(0x64310 + 0x100 * tc_ddi_index);
+  }
 };
 
-// DDI_AUX_DATA
+// DDI_AUX_DATA (DDI AUX Channel Data)
+//
+// Each DDI has 5 instances of the DDI_AUX_DATA register, making up a 20-byte
+// buffer for storing AUX messages. The MMIO addresses for the 5 instances are
+// consecutive.
+//
+// Tiger Lake: IHD-OS-TGL-Vol2c-12.21 Part 1 pages 346-351
+// DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 pages 324-330
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 439
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 435
 class DdiAuxData : public hwreg::RegisterBase<DdiAuxData, uint32_t> {
  public:
-  // There are 5 32-bit words at this register's address.
-  static constexpr uint32_t kBaseAddr = 0x64014;
+  // The most significant byte in each 32-bit register gets transmitted first.
+  // Intel machines are little-endian, so the transmission order doesn't match
+  // the memory order. The `swapped_` part of the name aims to draw attention
+  // to this subtlety.
+  //
+  // The value is not meaningful while the corresponding DDI_AUX_CTL register's
+  // `transaction_in_progress` field is true.
+  DEF_FIELD(31, 0, swapped_bytes);
+
+  // DDI_AUX_DATA_*_0 for the AUX channel with the given control register.
+  //
+  // The DDI_AUX_DATA_*_[1-4] data registers are accessed using direct MMIO
+  // operations.
+  //
+  // We can get away with using DDI_AUX_CTL as the input because all DDI AUX
+  // channels currently have the same MMIO layout. When this isn't the case
+  // anymore, we'll replace this factory function with GetFor*Ddi() functions,
+  // matching DdiAuxControl.
+  static auto GetData0ForAuxControl(const DdiAuxControl& aux_control) {
+    static constexpr uint32_t kAuxControlMmioBase = 0x64010;
+    static constexpr uint32_t kAuxDataMmioBase = 0x64014;
+    return hwreg::RegisterAddr<DdiAuxData>(aux_control.reg_addr() +
+                                           (kAuxDataMmioBase - kAuxControlMmioBase));
+  }
+};
+
+// DDI_AUX_MUTEX (DDI AUX Channel Mutex)
+//
+// This register is not documented on Tiger Lake or DG1.
+//
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 440-441
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 436-437
+class DdiAuxMutex : public hwreg::RegisterBase<DdiAuxMutex, uint32_t> {
+ public:
+  // If true, the mutex is used to arbitrate AUX channel access.
+  //
+  // The mutex must be enabled and acquired if PSR 1/2 (Panel Self-Refresh) or
+  // GTC (Global Time Code) are used. Otherwise, the mutex can remain disabled.
+  DEF_BIT(31, enabled);
+
+  // Reads acquire the mutex, writes release the mutex.
+  //
+  // Any read is an attempt to acquire the mutex. A successful attempt returns
+  // true in this field. Once the driver acquires the mutex, it retains
+  // ownership (reads continue to return true) until it explicitly releases the
+  // mutex.
+  //
+  // This is a Write-Clear field. Writing true releases the mutex.
+  //
+  // The driver should release the mutex once it completes an AUX transaction,
+  // so the hardware can use it as well.
+  DEF_BIT(30, acquired);
+
+  // We can get away with using DDI_AUX_CTL as the input because all DDI AUX
+  // channels currently have the same MMIO layout. When this isn't the case
+  // anymore, we'll replace this factory function with GetFor*Ddi() functions,
+  // matching DdiAuxControl.
+  static auto GetForAuxControl(const DdiAuxControl& aux_control) {
+    static constexpr uint32_t kAuxControlMmioBase = 0x64010;
+    static constexpr uint32_t kAuxMutexMmioBase = 0x6402c;
+    return hwreg::RegisterAddr<DdiAuxData>(aux_control.reg_addr() +
+                                           (kAuxMutexMmioBase - kAuxControlMmioBase));
+  }
 };
 
 // DP_TP_CTL
@@ -413,12 +605,6 @@ class DdiRegs {
 
   hwreg::RegisterAddr<tgl_registers::DdiBufControl> DdiBufControl() {
     return GetReg<tgl_registers::DdiBufControl>();
-  }
-  hwreg::RegisterAddr<tgl_registers::DdiAuxControl> DdiAuxControl() {
-    return GetReg<tgl_registers::DdiAuxControl>();
-  }
-  hwreg::RegisterAddr<tgl_registers::DdiAuxData> DdiAuxData() {
-    return GetReg<tgl_registers::DdiAuxData>();
   }
   hwreg::RegisterAddr<tgl_registers::DdiDpTransportControl> DdiDpTransportControl() {
     return GetReg<tgl_registers::DdiDpTransportControl>();

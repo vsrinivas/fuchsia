@@ -19,6 +19,7 @@
 
 #include <fbl/string_printf.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-aux-channel.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
@@ -30,8 +31,6 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 #include "src/graphics/display/drivers/intel-i915/pch-engine.h"
-
-#define MIN(a, b) (((a) < (b)) ? (a) : (b))
 
 namespace i915_tgl {
 namespace {
@@ -208,113 +207,8 @@ std::string EdpDpcdRevisionToString(dpcd::EdpRevision rev) {
 
 }  // namespace
 
-// This represents a message sent over DisplayPort's Aux channel, including
-// reply messages.
-class DpAuxMessage {
- public:
-  // Sizes in bytes.  DisplayPort Aux messages are quite small.
-  static constexpr uint32_t kMaxTotalSize = 20;
-  static constexpr uint32_t kMaxBodySize = 16;
-
-  uint8_t data[kMaxTotalSize];
-  uint32_t size;
-
-  // Fill out the header of a DisplayPort Aux message.  For write operations,
-  // |body_size| is the size of the body of the message to send.  For read
-  // operations, |body_size| is the size of our receive buffer.
-  bool SetDpAuxHeader(uint32_t addr, uint32_t dp_cmd, uint32_t body_size) {
-    if (body_size > DpAuxMessage::kMaxBodySize) {
-      zxlogf(WARNING, "DP aux: Message too large");
-      return false;
-    }
-    // Addresses should fit into 20 bits.
-    if (addr >= (1 << 20)) {
-      zxlogf(WARNING, "DP aux: Address is too large: 0x%x", addr);
-      return false;
-    }
-    // For now, we don't handle messages with empty bodies.  (However, they
-    // can be used for checking whether there is an I2C device at a given
-    // address.)
-    if (body_size == 0) {
-      zxlogf(WARNING, "DP aux: Empty message not supported");
-      return false;
-    }
-    data[0] = static_cast<uint8_t>((dp_cmd << 4) | ((addr >> 16) & 0xf));
-    data[1] = static_cast<uint8_t>(addr >> 8);
-    data[2] = static_cast<uint8_t>(addr);
-    // For writes, the size of the message will be encoded twice:
-    //  * The msg->size field contains the total message size (header and
-    //    body).
-    //  * If the body of the message is non-empty, the header contains an
-    //    extra field specifying the body size (in bytes minus 1).
-    // For reads, the message to send is a header only.
-    size = 4;
-    data[3] = static_cast<uint8_t>(body_size - 1);
-    return true;
-  }
-};
-
-zx_status_t DpAux::SendDpAuxMsg(const DpAuxMessage& request, DpAuxMessage* reply) {
-  tgl_registers::DdiRegs ddi_regs(ddi_);
-  uint32_t data_reg = ddi_regs.DdiAuxData().addr();
-
-  // Write the outgoing message to the hardware.
-  for (uint32_t offset = 0; offset < request.size; offset += 4) {
-    // For some reason intel made these data registers big endian...
-    const uint32_t* data = reinterpret_cast<const uint32_t*>(request.data + offset);
-    mmio_space_->Write<uint32_t>(htobe32(*data), data_reg + offset);
-  }
-
-  auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space_);
-  status.set_message_size(request.size);
-  // Reset R/W Clear bits
-  status.set_done(1);
-  status.set_timeout(1);
-  status.set_rcv_error(1);
-  // The documentation says to not use setting 0 (400us), so use 3 (1600us).
-  status.set_timeout_timer_value(3);
-  // TODO(fxbug.dev/31313): Support interrupts
-  status.set_interrupt_on_done(1);
-  // Send busy starts the transaction
-  status.set_send_busy(1);
-  status.WriteTo(mmio_space_);
-
-  // Poll for the reply message.
-  const int kNumTries = 10000;
-  for (int tries = 0; tries < kNumTries; ++tries) {
-    auto status = ddi_regs.DdiAuxControl().ReadFrom(mmio_space_);
-    if (!status.send_busy()) {
-      if (status.timeout()) {
-        return ZX_ERR_TIMED_OUT;
-      }
-      if (status.rcv_error()) {
-        zxlogf(DEBUG, "DP aux: rcv error");
-        return ZX_ERR_IO;
-      }
-      if (!status.done()) {
-        continue;
-      }
-
-      reply->size = status.message_size();
-      if (!reply->size || reply->size > DpAuxMessage::kMaxTotalSize) {
-        zxlogf(TRACE, "DP aux: Invalid reply size %d", reply->size);
-        return ZX_ERR_IO;
-      }
-      // Read the reply message from the hardware.
-      for (uint32_t offset = 0; offset < reply->size; offset += 4) {
-        // For some reason intel made these data registers big endian...
-        *reinterpret_cast<uint32_t*>(reply->data + offset) =
-            be32toh(mmio_space_->Read32(data_reg + offset));
-      }
-      return ZX_OK;
-    }
-    zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
-  }
-  zxlogf(TRACE, "DP aux: No reply after %d tries", kNumTries);
-  return ZX_ERR_TIMED_OUT;
-}
-
-zx_status_t DpAux::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessage* reply) {
+zx::status<DdiAuxChannel::ReplyInfo> DpAux::DoTransaction(const DdiAuxChannel::Request& request,
+                                                          cpp20::span<uint8_t> reply_data_buffer) {
   // If the DisplayPort sink device isn't ready to handle an Aux message,
   // it can return an AUX_DEFER reply, which means we should retry the
   // request. The spec added a requirement for >=7 defer retries in v1.3,
@@ -332,22 +226,24 @@ zx_status_t DpAux::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessa
   unsigned timeouts_seen = 0;
 
   for (;;) {
-    zx_status_t res = SendDpAuxMsg(request, reply);
-    if (res != ZX_OK) {
-      if (res == ZX_ERR_TIMED_OUT) {
+    zx::status<DdiAuxChannel::ReplyInfo> transaction_result =
+        aux_channel_.DoTransaction(request, reply_data_buffer);
+    if (transaction_result.is_error()) {
+      if (transaction_result.error_value() == ZX_ERR_IO_MISSED_DEADLINE) {
         if (++timeouts_seen == kMaxTimeouts) {
           zxlogf(DEBUG, "DP aux: Got too many timeouts (%d)", kMaxTimeouts);
-          return ZX_ERR_TIMED_OUT;
+          return transaction_result;
         }
         // Retry on timeout.
         continue;
       }
+
       // We do not retry if sending the raw message failed for
       // an unexpected reason.
-      return ZX_ERR_IO;
+      return transaction_result;
     }
 
-    uint8_t header_byte = reply->data[0];
+    uint8_t header_byte = transaction_result->reply_header;
     uint8_t padding = header_byte & 0xf;
     uint8_t status = static_cast<uint8_t>(header_byte >> 4);
     // Sanity check: The padding should be zero.  If it's not, we
@@ -361,35 +257,34 @@ zx_status_t DpAux::SendDpAuxMsgWithRetry(const DpAuxMessage& request, DpAuxMessa
     switch (status) {
       case DP_REPLY_AUX_ACK:
         // The AUX_ACK implies that we got an I2C ACK too.
-        return ZX_OK;
+        return transaction_result;
+      case DP_REPLY_AUX_NACK:
+        zxlogf(TRACE, "DP aux: Reply was not an ack (got AUX_NACK)");
+        return zx::error_status(ZX_ERR_IO_REFUSED);
       case DP_REPLY_AUX_DEFER:
         if (++defers_seen == kMaxDefers) {
           zxlogf(TRACE, "DP aux: Received too many AUX DEFERs (%d)", kMaxDefers);
-          return ZX_ERR_TIMED_OUT;
+          return zx::error_status(ZX_ERR_IO_MISSED_DEADLINE);
         }
         // Go around the loop again to retry.
         continue;
-      case DP_REPLY_AUX_NACK:
-        zxlogf(TRACE, "DP aux: Reply was not an ack (got AUX_NACK)");
-        return ZX_ERR_IO_REFUSED;
       case DP_REPLY_I2C_NACK:
         zxlogf(TRACE, "DP aux: Reply was not an ack (got I2C_NACK)");
-        return ZX_ERR_IO_REFUSED;
+        return zx::error_status(ZX_ERR_IO_REFUSED);
       case DP_REPLY_I2C_DEFER:
         // TODO(fxbug.dev/31313): Implement handling of I2C_DEFER.
         zxlogf(TRACE, "DP aux: Received I2C_DEFER (not implemented)");
-        return ZX_ERR_NEXT;
+        return zx::error_status(ZX_ERR_NEXT);
       default:
-        // We got a reply that is not defined by the DisplayPort spec.
         zxlogf(TRACE, "DP aux: Unrecognized reply (header byte: 0x%x)", header_byte);
-        return ZX_ERR_IO;
+        return zx::error_status(ZX_ERR_IO_DATA_INTEGRITY);
     }
   }
 }
 
 zx_status_t DpAux::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_t size) {
   while (size > 0) {
-    uint32_t chunk_size = static_cast<uint32_t>(MIN(size, DpAuxMessage::kMaxBodySize));
+    uint32_t chunk_size = static_cast<uint32_t>(std::min<size_t>(size, DdiAuxChannel::kMaxOpSize));
     size_t bytes_read = 0;
     zx_status_t status = DpAuxReadChunk(dp_cmd, addr, buf, chunk_size, &bytes_read);
     if (status != ZX_OK) {
@@ -409,21 +304,26 @@ zx_status_t DpAux::DpAuxRead(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, size_
 
 zx_status_t DpAux::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, uint32_t size_in,
                                   size_t* size_out) {
-  DpAuxMessage msg;
-  DpAuxMessage reply;
-  if (!msg.SetDpAuxHeader(addr, dp_cmd, size_in)) {
-    return ZX_ERR_INVALID_ARGS;
+  const DdiAuxChannel::Request request = {
+      .address = static_cast<int32_t>(addr),
+      .command = static_cast<int8_t>(dp_cmd),
+      .op_size = static_cast<int8_t>(size_in),
+      .data = cpp20::span<uint8_t>(),
+  };
+
+  zx::status<DdiAuxChannel::ReplyInfo> result =
+      DoTransaction(request, cpp20::span<uint8_t>(buf, size_in));
+  if (result.is_error()) {
+    return result.error_value();
   }
-  zx_status_t status = SendDpAuxMsgWithRetry(msg, &reply);
-  if (status != ZX_OK) {
-    return status;
-  }
-  size_t bytes_read = reply.size - 1;
-  if (bytes_read > size_in) {
+
+  // The cast is not UB because `reply_data_size` is guaranteed to be between
+  // 1 and 16.
+  const size_t bytes_read = static_cast<size_t>(result.value().reply_data_size);
+  if (static_cast<size_t>(bytes_read) > size_in) {
     zxlogf(WARNING, "DP aux read: Reply was larger than requested");
     return ZX_ERR_IO;
   }
-  memcpy(buf, &reply.data[1], bytes_read);
   *size_out = bytes_read;
   return ZX_OK;
 }
@@ -432,20 +332,23 @@ zx_status_t DpAux::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf
   // Implement this if it's ever needed
   ZX_ASSERT_MSG(size <= 16, "message too large");
 
-  DpAuxMessage msg;
-  DpAuxMessage reply;
-  if (!msg.SetDpAuxHeader(addr, dp_cmd, static_cast<uint32_t>(size))) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  memcpy(&msg.data[4], buf, size);
-  msg.size = static_cast<uint32_t>(size + 4);
-  zx_status_t status = SendDpAuxMsgWithRetry(msg, &reply);
-  if (status != ZX_OK) {
-    return status;
+  const DdiAuxChannel::Request request = {
+      .address = static_cast<int32_t>(addr),
+      .command = static_cast<int8_t>(dp_cmd),
+      .op_size = static_cast<int8_t>(size),
+      .data = cpp20::span<const uint8_t>(buf, size),
+  };
+
+  // In case of a short write, receives the amount of written bytes.
+  uint8_t reply_data[1];
+
+  zx::status<DdiAuxChannel::ReplyInfo> transaction_result = DoTransaction(request, reply_data);
+  if (transaction_result.is_error()) {
+    return transaction_result.error_value();
   }
   // TODO(fxbug.dev/31313): Handle the case where the hardware did a short write,
   // for which we could send the remaining bytes.
-  if (reply.size != 1) {
+  if (transaction_result->reply_data_size != 0) {
     zxlogf(WARNING, "DP aux write: Unexpected reply size");
     return ZX_ERR_IO;
   }
@@ -484,8 +387,8 @@ bool DpAux::DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) {
   return DpAuxWrite(DP_REQUEST_NATIVE_WRITE, addr, buf, size) == ZX_OK;
 }
 
-DpAux::DpAux(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space)
-    : ddi_(ddi), mmio_space_(mmio_space) {
+DpAux::DpAux(fdf::MmioBuffer* mmio_buffer, tgl_registers::Ddi ddi, uint16_t device_id)
+    : aux_channel_(mmio_buffer, ddi, device_id) {
   ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
