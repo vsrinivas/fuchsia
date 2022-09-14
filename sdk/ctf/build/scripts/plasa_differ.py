@@ -28,7 +28,6 @@ class PlasaDiffer:
             before,
             '--after-file',
             after,
-            '--format=json',
             '--api-diff-file',
             diff_file.name,
         ]

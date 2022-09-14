@@ -6,14 +6,18 @@ package summarize
 
 import (
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
 func TestWraparoundTypeSerialization(t *testing.T) {
 	tests := []struct {
+		name     string
 		input    wraparoundType
-		expected string
+		expected ElementStr
 	}{
 		{
+			name: "strict wraparound",
 			input: wraparoundType{
 				named: named{
 					name:   "foo",
@@ -23,9 +27,15 @@ func TestWraparoundTypeSerialization(t *testing.T) {
 				strictness: true,
 				parentType: "parentType",
 			},
-			expected: "strict parentType bar.foo baz",
+			expected: ElementStr{
+				Decl:       "baz",
+				Kind:       "parentType",
+				Name:       "bar.foo",
+				Strictness: isStrict,
+			},
 		},
 		{
+			name: "flexible wraparound",
 			input: wraparoundType{
 				named: named{
 					name:   "foo",
@@ -35,13 +45,18 @@ func TestWraparoundTypeSerialization(t *testing.T) {
 				strictness: false,
 				parentType: "parentType",
 			},
-			expected: "flexible parentType bar.foo baz",
+			expected: ElementStr{
+				Decl:       "baz",
+				Kind:       "parentType",
+				Name:       "bar.foo",
+				Strictness: isFlexible,
+			},
 		},
 	}
 	for _, test := range tests {
-		actual := test.input.Serialize().String()
-		if test.expected != actual {
-			t.Errorf("want: %+v, got: %+v", test.expected, actual)
+		actual := test.input.Serialize()
+		if diff := cmp.Diff(test.expected, actual); diff != "" {
+			t.Errorf("%s: expected != actual (-want +got)\n%s", test.name, diff)
 		}
 	}
 }

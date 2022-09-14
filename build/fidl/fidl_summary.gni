@@ -94,8 +94,6 @@ template("fidl_summary_json") {
 
     tool = _fidl_api_summarize_tool
     args = [
-      "--format",
-      "json",
       "--fidl-ir-file",
       rebase_path(_json_representation, root_build_dir),
       "--output-file",

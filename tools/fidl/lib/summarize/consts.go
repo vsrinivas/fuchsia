@@ -34,11 +34,6 @@ type aConst struct {
 	maybeDefaultValue *fidlgen.Constant
 }
 
-// String implements Element
-func (c aConst) String() string {
-	return c.Serialize().String()
-}
-
 func (c aConst) Serialize() ElementStr {
 	e := c.named.Serialize()
 	e.Kind = Kind(aConstType)

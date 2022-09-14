@@ -5,6 +5,7 @@
 package apidiff
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -37,7 +38,7 @@ library l;
 library l;
 `,
 			expected: `
-api_diff:
+{}
 `,
 		},
 		{
@@ -49,13 +50,26 @@ library l1;
 library l2;
 `,
 			expected: `
-api_diff:
-- name: l1
-  before: "library l1"
-  conclusion: APIBreaking
-- name: l2
-  after: "library l2"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l1",
+            "before": {
+                "kind": "library",
+                "name": "l1"
+            },
+            "conclusion": "APIBreaking"
+        },
+        {
+            "name": "l2",
+            "after": {
+                "kind": "library",
+                "name": "l2"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 
@@ -71,7 +85,7 @@ library l;
 const FOO int32 = 32;
 `,
 			expected: `
-api_diff:
+{}
 `,
 		},
 		{
@@ -85,11 +99,26 @@ library l;
 const FOO string = "fuzzy";
 `,
 			expected: `
-api_diff:
-- name: l/FOO
-  before: "const l/FOO int32 32"
-  after: "const l/FOO string \"fuzzy\""
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/FOO",
+            "before": {
+                "kind": "const",
+                "name": "l/FOO",
+                "declaration": "int32",
+                "value": "32"
+            },
+            "after": {
+                "kind": "const",
+                "name": "l/FOO",
+                "declaration": "string",
+                "value": "fuzzy"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -102,10 +131,20 @@ const FOO int32 = 32;
 library l;
 `,
 			expected: `
-api_diff:
-- name: l/FOO
-  before: "const l/FOO int32 32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/FOO",
+            "before": {
+                "kind": "const",
+                "name": "l/FOO",
+                "declaration": "int32",
+                "value": "32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -118,10 +157,20 @@ library l;
 const FOO string = "fuzzy";
 `,
 			expected: `
-api_diff:
-- name: l/FOO
-  after: "const l/FOO string \"fuzzy\""
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/FOO",
+            "after": {
+                "kind": "const",
+                "name": "l/FOO",
+                "declaration": "string",
+                "value": "fuzzy"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -135,11 +184,26 @@ library l;
 const FOO int32 = 42;
 `,
 			expected: `
-api_diff:
-- name: l/FOO
-  before: "const l/FOO int32 32"
-  after: "const l/FOO int32 42"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/FOO",
+            "before": {
+                "kind": "const",
+                "name": "l/FOO",
+                "declaration": "int32",
+                "value": "32"
+            },
+            "after": {
+                "kind": "const",
+                "name": "l/FOO",
+                "declaration": "int32",
+                "value": "42"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 
@@ -160,10 +224,19 @@ type Bits = flexible bits {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits.BIT2
-  after: "bits/member l/Bits.BIT2 2"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/Bits.BIT2",
+            "after": {
+                "kind": "bits/member",
+                "name": "l/Bits.BIT2",
+                "value": "2"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -182,10 +255,19 @@ type Bits = strict bits {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits.BIT2
-  after: "bits/member l/Bits.BIT2 2"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/Bits.BIT2",
+            "after": {
+                "kind": "bits/member",
+                "name": "l/Bits.BIT2",
+                "value": "2"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -204,10 +286,19 @@ type Bits = bits {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits.BIT2
-  before: "bits/member l/Bits.BIT2 2"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Bits.BIT2",
+            "before": {
+                "kind": "bits/member",
+                "name": "l/Bits.BIT2",
+                "value": "2"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -222,13 +313,29 @@ type Bits = strict bits {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits.BIT1
-  after: "bits/member l/Bits.BIT1 1"
-  conclusion: SourceCompatible
-- name: l/Bits
-  after: "strict bits l/Bits uint32"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/Bits.BIT1",
+            "after": {
+                "kind": "bits/member",
+                "name": "l/Bits.BIT1",
+                "value": "1"
+            },
+            "conclusion": "SourceCompatible"
+        },
+        {
+            "name": "l/Bits",
+            "after": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -243,13 +350,29 @@ type Bits = strict bits {
 library l;
 `,
 			expected: `
-api_diff:
-- name: l/Bits.BIT1
-  before: "bits/member l/Bits.BIT1 1"
-  conclusion: APIBreaking
-- name: l/Bits
-  before: "strict bits l/Bits uint32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Bits.BIT1",
+            "before": {
+                "kind": "bits/member",
+                "name": "l/Bits.BIT1",
+                "value": "1"
+            },
+            "conclusion": "APIBreaking"
+        },
+        {
+            "name": "l/Bits",
+            "before": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -267,11 +390,26 @@ type Bits = flexible bits {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits
-  before: "strict bits l/Bits uint32"
-  after: "flexible bits l/Bits uint32"
-  conclusion: Transitionable
+{
+    "api_diff": [
+        {
+            "name": "l/Bits",
+            "before": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "after": {
+                "strictness": "flexible",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "conclusion": "Transitionable"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -289,11 +427,26 @@ type Bits = strict bits {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits
-  before: "flexible bits l/Bits uint32"
-  after: "strict bits l/Bits uint32"
-  conclusion: Transitionable
+{
+    "api_diff": [
+        {
+            "name": "l/Bits",
+            "before": {
+                "strictness": "flexible",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "after": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "conclusion": "Transitionable"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -311,11 +464,26 @@ type Bits = strict bits : uint8 {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits
-  before: "strict bits l/Bits uint32"
-  after: "strict bits l/Bits uint8"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Bits",
+            "before": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "after": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint8"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -333,11 +501,26 @@ type Bits = strict bits : uint8 {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits
-  before: "strict bits l/Bits uint32"
-  after: "strict bits l/Bits uint8"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Bits",
+            "before": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "after": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint8"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -355,11 +538,26 @@ type Bits = flexible bits : uint8 {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits
-  before: "strict bits l/Bits uint32"
-  after: "flexible bits l/Bits uint8"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Bits",
+            "before": {
+                "strictness": "strict",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint32"
+            },
+            "after": {
+                "strictness": "flexible",
+                "kind": "bits",
+                "name": "l/Bits",
+                "declaration": "uint8"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -377,11 +575,24 @@ type Bits = flexible bits {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Bits.BIT1
-  before: "bits/member l/Bits.BIT1 1"
-  after: "bits/member l/Bits.BIT1 2"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Bits.BIT1",
+            "before": {
+                "kind": "bits/member",
+                "name": "l/Bits.BIT1",
+                "value": "1"
+            },
+            "after": {
+                "kind": "bits/member",
+                "name": "l/Bits.BIT1",
+                "value": "2"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 
@@ -398,13 +609,29 @@ type Enum = strict enum {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Enum.WATER
-  after: "enum/member l/Enum.WATER 1"
-  conclusion: SourceCompatible
-- name: l/Enum
-  after: "strict enum l/Enum uint32"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/Enum.WATER",
+            "after": {
+                "kind": "enum/member",
+                "name": "l/Enum.WATER",
+                "value": "1"
+            },
+            "conclusion": "SourceCompatible"
+        },
+        {
+            "name": "l/Enum",
+            "after": {
+                "strictness": "strict",
+                "kind": "enum",
+                "name": "l/Enum",
+                "declaration": "uint32"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -423,10 +650,19 @@ type Enum = flexible enum {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Enum.FIRE
-  after: "enum/member l/Enum.FIRE 2"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/Enum.FIRE",
+            "after": {
+                "kind": "enum/member",
+                "name": "l/Enum.FIRE",
+                "value": "2"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -445,10 +681,19 @@ type Enum = strict enum {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Enum.FIRE
-  after: "enum/member l/Enum.FIRE 2"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Enum.FIRE",
+            "after": {
+                "kind": "enum/member",
+                "name": "l/Enum.FIRE",
+                "value": "2"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -467,10 +712,19 @@ type Enum = enum {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Enum.FIRE
-  before: "enum/member l/Enum.FIRE 2"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Enum.FIRE",
+            "before": {
+                "kind": "enum/member",
+                "name": "l/Enum.FIRE",
+                "value": "2"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -488,11 +742,26 @@ type Enum = flexible enum {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Enum
-  before: "strict enum l/Enum uint32"
-  after: "flexible enum l/Enum uint32"
-  conclusion: Transitionable
+{
+    "api_diff": [
+        {
+            "name": "l/Enum",
+            "before": {
+                "strictness": "strict",
+                "kind": "enum",
+                "name": "l/Enum",
+                "declaration": "uint32"
+            },
+            "after": {
+                "strictness": "flexible",
+                "kind": "enum",
+                "name": "l/Enum",
+                "declaration": "uint32"
+            },
+            "conclusion": "Transitionable"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -510,11 +779,26 @@ type Enum = strict enum {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Enum
-  before: "flexible enum l/Enum uint32"
-  after: "strict enum l/Enum uint32"
-  conclusion: Transitionable
+{
+    "api_diff": [
+        {
+            "name": "l/Enum",
+            "before": {
+                "strictness": "flexible",
+                "kind": "enum",
+                "name": "l/Enum",
+                "declaration": "uint32"
+            },
+            "after": {
+                "strictness": "strict",
+                "kind": "enum",
+                "name": "l/Enum",
+                "declaration": "uint32"
+            },
+            "conclusion": "Transitionable"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -532,11 +816,26 @@ type Enum = strict enum : uint8 {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Enum
-  before: "strict enum l/Enum uint32"
-  after: "strict enum l/Enum uint8"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Enum",
+            "before": {
+                "strictness": "strict",
+                "kind": "enum",
+                "name": "l/Enum",
+                "declaration": "uint32"
+            },
+            "after": {
+                "strictness": "strict",
+                "kind": "enum",
+                "name": "l/Enum",
+                "declaration": "uint8"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -554,11 +853,24 @@ type Enum = enum {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Enum.WATER
-  before: "enum/member l/Enum.WATER 1"
-  after: "enum/member l/Enum.WATER 2"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Enum.WATER",
+            "before": {
+                "kind": "enum/member",
+                "name": "l/Enum.WATER",
+                "value": "1"
+            },
+            "after": {
+                "kind": "enum/member",
+                "name": "l/Enum.WATER",
+                "value": "2"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 
@@ -573,10 +885,18 @@ library l;
 type Struct = struct {};
 `,
 			expected: `
-api_diff:
-- name: l/Struct
-  after: "struct l/Struct"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/Struct",
+            "after": {
+                "kind": "struct",
+                "name": "l/Struct"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -589,10 +909,18 @@ type Struct = struct {};
 library l;
 `,
 			expected: `
-api_diff:
-- name: l/Struct
-  before: "struct l/Struct"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Struct",
+            "before": {
+                "kind": "struct",
+                "name": "l/Struct"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -606,11 +934,23 @@ library l;
 type Struct = resource struct {};
 `,
 			expected: `
-api_diff:
-- name: l/Struct
-  before: "struct l/Struct"
-  after: "resource struct l/Struct"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Struct",
+            "before": {
+                "kind": "struct",
+                "name": "l/Struct"
+            },
+            "after": {
+                "resourceness": "resource",
+                "kind": "struct",
+                "name": "l/Struct"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -624,11 +964,23 @@ library l;
 type Struct = struct {};
 `,
 			expected: `
-api_diff:
-- name: l/Struct
-  before: "resource struct l/Struct"
-  after: "struct l/Struct"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Struct",
+            "before": {
+                "resourceness": "resource",
+                "kind": "struct",
+                "name": "l/Struct"
+            },
+            "after": {
+                "kind": "struct",
+                "name": "l/Struct"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -644,10 +996,19 @@ type Struct = struct {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Struct.foo
-  after: "struct/member l/Struct.foo int32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Struct.foo",
+            "after": {
+                "kind": "struct/member",
+                "name": "l/Struct.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -664,10 +1025,19 @@ type Struct = struct {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Struct.foo
-  before: "struct/member l/Struct.foo int32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Struct.foo",
+            "before": {
+                "kind": "struct/member",
+                "name": "l/Struct.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -685,11 +1055,24 @@ type Struct = struct {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Struct.foo
-  before: "struct/member l/Struct.foo int32"
-  after: "struct/member l/Struct.foo string"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Struct.foo",
+            "before": {
+                "kind": "struct/member",
+                "name": "l/Struct.foo",
+                "declaration": "int32"
+            },
+            "after": {
+                "kind": "struct/member",
+                "name": "l/Struct.foo",
+                "declaration": "string"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -709,11 +1092,26 @@ type Struct = struct {
 };
 `,
 			expected: `
-api_diff:
-- name: l/Struct.foo
-  before: "struct/member l/Struct.foo int32 1"
-  after: "struct/member l/Struct.foo int32 2"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/Struct.foo",
+            "before": {
+                "kind": "struct/member",
+                "name": "l/Struct.foo",
+                "declaration": "int32",
+                "value": "1"
+            },
+            "after": {
+                "kind": "struct/member",
+                "name": "l/Struct.foo",
+                "declaration": "int32",
+                "value": "2"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 
@@ -728,10 +1126,18 @@ library l;
 type T = table {};
 `,
 			expected: `
-api_diff:
-- name: l/T
-  after: "table l/T"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/T",
+            "after": {
+                "kind": "table",
+                "name": "l/T"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -744,10 +1150,18 @@ type T = table {};
 library l;
 `,
 			expected: `
-api_diff:
-- name: l/T
-  before: "table l/T"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T",
+            "before": {
+                "kind": "table",
+                "name": "l/T"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -761,11 +1175,23 @@ library l;
 type T = resource table {};
 `,
 			expected: `
-api_diff:
-- name: l/T
-  before: "table l/T"
-  after: "resource table l/T"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T",
+            "before": {
+                "kind": "table",
+                "name": "l/T"
+            },
+            "after": {
+                "resourceness": "resource",
+                "kind": "table",
+                "name": "l/T"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -779,11 +1205,23 @@ library l;
 type T = table {};
 `,
 			expected: `
-api_diff:
-- name: l/T
-  before: "resource table l/T"
-  after: "table l/T"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T",
+            "before": {
+                "resourceness": "resource",
+                "kind": "table",
+                "name": "l/T"
+            },
+            "after": {
+                "kind": "table",
+                "name": "l/T"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -799,10 +1237,19 @@ type T = table {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  after: "table/member l/T.foo int32"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "after": {
+                "kind": "table/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -819,10 +1266,19 @@ type T = table {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  before: "table/member l/T.foo int32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "table/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -842,10 +1298,19 @@ type T = table {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  before: "table/member l/T.foo int32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "table/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -863,11 +1328,24 @@ type T = table {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  before: "table/member l/T.foo int32"
-  after: "table/member l/T.foo string"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "table/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "after": {
+                "kind": "table/member",
+                "name": "l/T.foo",
+                "declaration": "string"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 
@@ -884,13 +1362,28 @@ type T = strict union {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  after: "union/member l/T.foo int32"
-  conclusion: SourceCompatible
-- name: l/T
-  after: "strict union l/T"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "after": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "SourceCompatible"
+        },
+        {
+            "name": "l/T",
+            "after": {
+                "strictness": "strict",
+                "kind": "union",
+                "name": "l/T"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -905,13 +1398,28 @@ type T = strict union {
 library l;
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  before: "union/member l/T.foo int32"
-  conclusion: APIBreaking
-- name: l/T
-  before: "strict union l/T"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        },
+        {
+            "name": "l/T",
+            "before": {
+                "strictness": "strict",
+                "kind": "union",
+                "name": "l/T"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -931,10 +1439,19 @@ type T = union {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  before: "union/member l/T.foo int32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -955,7 +1472,7 @@ type T = union {
 };
 `,
 			expected: `
-api_diff:
+{}
 `,
 		},
 		{
@@ -971,13 +1488,28 @@ type T = strict union {
 library l;
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  before: "union/member l/T.foo int32"
-  conclusion: APIBreaking
-- name: l/T
-  before: "strict union l/T"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        },
+        {
+            "name": "l/T",
+            "before": {
+                "strictness": "strict",
+                "kind": "union",
+                "name": "l/T"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -995,11 +1527,25 @@ type T = strict resource union {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T
-  before: "strict union l/T"
-  after: "resource strict union l/T"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T",
+            "before": {
+                "strictness": "strict",
+                "kind": "union",
+                "name": "l/T"
+            },
+            "after": {
+                "resourceness": "resource",
+                "strictness": "strict",
+                "kind": "union",
+                "name": "l/T"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1017,11 +1563,25 @@ type T = strict union {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T
-  before: "resource strict union l/T"
-  after: "strict union l/T"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T",
+            "before": {
+                "resourceness": "resource",
+                "strictness": "strict",
+                "kind": "union",
+                "name": "l/T"
+            },
+            "after": {
+                "strictness": "strict",
+                "kind": "union",
+                "name": "l/T"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1040,10 +1600,19 @@ type T = flexible union {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  after: "union/member l/T.foo int32"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "after": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1062,10 +1631,19 @@ type T = strict union {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  after: "union/member l/T.foo int32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "after": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1084,10 +1662,19 @@ type T = strict union {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  before: "union/member l/T.foo int32"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1105,11 +1692,24 @@ type T = union {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.foo
-  before: "union/member l/T.foo int32"
-  after: "union/member l/T.foo string"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "int32"
+            },
+            "after": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "declaration": "string"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 
@@ -1124,10 +1724,18 @@ library l;
 protocol T {};
 `,
 			expected: `
-api_diff:
-- name: l/T
-  after: "protocol l/T"
-  conclusion: SourceCompatible
+{
+    "api_diff": [
+        {
+            "name": "l/T",
+            "after": {
+                "kind": "protocol",
+                "name": "l/T"
+            },
+            "conclusion": "SourceCompatible"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1140,10 +1748,18 @@ protocol T {};
 library l;
 `,
 			expected: `
-api_diff:
-- name: l/T
-  before: "protocol l/T"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T",
+            "before": {
+                "kind": "protocol",
+                "name": "l/T"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1160,10 +1776,19 @@ protocol T {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.Test
-  after: "protocol/member l/T.Test (int32 t) -> ()"
-  conclusion: Transitionable
+{
+    "api_diff": [
+        {
+            "name": "l/T.Test",
+            "after": {
+                "kind": "protocol/member",
+                "name": "l/T.Test",
+                "declaration": "(int32 t) -> ()"
+            },
+            "conclusion": "Transitionable"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1180,10 +1805,19 @@ protocol T {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.Test
-  before: "protocol/member l/T.Test (int32 t) -> ()"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.Test",
+            "before": {
+                "kind": "protocol/member",
+                "name": "l/T.Test",
+                "declaration": "(int32 t) -> ()"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		{
@@ -1201,11 +1835,24 @@ protocol T {
 };
 `,
 			expected: `
-api_diff:
-- name: l/T.Test
-  before: "protocol/member l/T.Test (int32 t) -> ()"
-  after: "protocol/member l/T.Test (int32 t,int32 u) -> ()"
-  conclusion: APIBreaking
+{
+    "api_diff": [
+        {
+            "name": "l/T.Test",
+            "before": {
+                "kind": "protocol/member",
+                "name": "l/T.Test",
+                "declaration": "(int32 t) -> ()"
+            },
+            "after": {
+                "kind": "protocol/member",
+                "name": "l/T.Test",
+                "declaration": "(int32 t,int32 u) -> ()"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
 `,
 		},
 		// aliases don't appear in summaries, apparently.
@@ -1221,25 +1868,16 @@ api_diff:
 			if err != nil {
 				t.Fatalf("while loading summaries: %v", err)
 			}
-			report, err := Compute(summaries[0], summaries[1])
+			actual, err := Compute(summaries[0], summaries[1])
 			if err != nil {
 				t.Fatalf("while computing diff: %v", err)
 			}
-			var buf strings.Builder
-			if err := report.WriteText(&buf); err != nil {
-				t.Fatalf("while writing test diff: %v", err)
+			var expected Report
+			if err := json.Unmarshal([]byte(test.expected), &expected); err != nil {
+				t.Fatalf("unexpected error while unmarshaling expected data: %v", err)
 			}
-			actual, err := readTextReport(strings.NewReader(buf.String()))
-			if err != nil {
-				t.Fatalf("unexpected error while reading actual data: %v:\n%v", err, buf.String())
-			}
-			expected, err := readTextReport(strings.NewReader(test.expected))
-			if err != nil {
-				t.Fatalf("unexpected error while reading expected data: %v", err)
-			}
-			if !cmp.Equal(expected, actual, cmpOptions) {
-				t.Errorf("want:\n\t%+v\n\tgot:\n\t%+v\n\tdiff:\n\t%v",
-					expected, actual, cmp.Diff(expected, actual, cmpOptions))
+			if diff := cmp.Diff(expected, actual, cmpOptions); diff != "" {
+				t.Errorf("want:\n\t%+v\n\tgot:\n\t%+v\n\tdiff:\n\t%v", expected, actual, diff)
 			}
 		})
 	}
@@ -1248,7 +1886,7 @@ api_diff:
 func summarizeOne(t *testing.T, r fidlgen.Root) string {
 	t.Helper()
 	var buf strings.Builder
-	if err := summarize.WriteSummary(&buf, r, summarize.JSONSummaryFormat); err != nil {
+	if err := summarize.WriteSummary(&buf, r); err != nil {
 		t.Fatalf("error while summarizing: %v", err)
 	}
 	return buf.String()

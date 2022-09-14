@@ -55,21 +55,6 @@ func ToClassification(s string) Classification {
 	return stringToClassification[s]
 }
 
-// MarshalYAML implements yaml.Marshaler.
-func (c Classification) MarshalYAML() (interface{}, error) {
-	return c.String(), nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (c *Classification) UnmarshalYAML(u func(interface{}) error) error {
-	var s string
-	if err := u(&s); err != nil {
-		return fmt.Errorf("while unmarshaling: %v: %w", c, err)
-	}
-	*c = ToClassification(s)
-	return nil
-}
-
 // MarshalJSON implements json.Marshaler.
 func (c Classification) MarshalJSON() ([]byte, error) {
 	return json.Marshal(c.String())

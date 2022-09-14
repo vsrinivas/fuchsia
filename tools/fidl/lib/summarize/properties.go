@@ -69,11 +69,6 @@ func newIsMember(
 	}
 }
 
-// String implements Element.
-func (i isMember) String() string {
-	return i.Serialize().String()
-}
-
 func (i isMember) Serialize() ElementStr {
 	e := i.named.Serialize()
 	e.Kind = Kind(fmt.Sprintf("%v/member", i.parentType))
@@ -125,11 +120,6 @@ func newAggregate(
 	}
 }
 
-// String implements Element.
-func (s aggregate) String() string {
-	return s.Serialize().String()
-}
-
 func resourceness(resourceness fidlgen.Resourceness) Resourceness {
 	if resourceness {
 		return isResource
@@ -163,11 +153,6 @@ func newMember(
 		m:          newIsMember(st, parentName, name, declType, maybeDefaultValue),
 		memberType: memberType,
 	}
-}
-
-// String implements Element.
-func (s member) String() string {
-	return s.Serialize().String()
 }
 
 // Member implements Element.

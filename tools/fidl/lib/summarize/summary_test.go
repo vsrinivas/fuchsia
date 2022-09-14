@@ -46,631 +46,6 @@ type summaryTestCase struct {
 	expected string
 }
 
-func TestTextSummaryFormat(t *testing.T) {
-	tests := []summaryTestCase{
-		{
-			name: "library only",
-			fidl: `library l;`,
-			expected: `library l
-`,
-		},
-		{
-			name: "primitives 1",
-			fidl: `
-library l;
-const OFFSET int8 = -33;
-const ENABLED_FLAG bool = true;
-`,
-			expected: `const l/ENABLED_FLAG bool true
-const l/OFFSET int8 -33
-library l
-`,
-		},
-		{
-			// Same as above, except reordered.
-			name: "primitives 2",
-			fidl: `
-library l;
-const ENABLED_FLAG bool = true;
-const OFFSET int8 = -33;
-`,
-			expected: `const l/ENABLED_FLAG bool true
-const l/OFFSET int8 -33
-library l
-`,
-		},
-		{
-			name: "primitives 3",
-			fidl: `
-library l;
-const ANSWER uint16 = 42;
-const ANSWER_IN_BINARY uint16 = 0b101010;
-`,
-			expected: `const l/ANSWER uint16 42
-const l/ANSWER_IN_BINARY uint16 42
-library l
-`,
-		},
-		{
-			name: "primitives 4",
-			fidl: `
-library l;
-const ENABLED_FLAG bool = true;
-const OFFSET int8 = -33;
-const ANSWER uint16 = 42;
-const ANSWER_IN_BINARY uint16 = 0b101010;
-const POPULATION_USA_2018 uint32 = 330000000;
-const DIAMOND uint64 = 0x183c7effff7e3c18;
-const FUCHSIA uint64 = 4054509061583223046;
-const USERNAME string = "squeenze";
-const MIN_TEMP float32 = -273.15;
-const CONVERSION_FACTOR float64 = 1.41421358;
-`,
-			expected: `const l/ANSWER uint16 42
-const l/ANSWER_IN_BINARY uint16 42
-const l/CONVERSION_FACTOR float64 1.41421
-const l/DIAMOND uint64 1746410393481133080
-const l/ENABLED_FLAG bool true
-const l/FUCHSIA uint64 4054509061583223046
-const l/MIN_TEMP float32 -273.15
-const l/OFFSET int8 -33
-const l/POPULATION_USA_2018 uint32 330000000
-const l/USERNAME string "squeenze"
-library l
-`,
-		},
-		{
-			name: "primitives 5, binary operator",
-			fidl: `
-library l;
-const FOO uint8 = 1;
-const BAR uint8 = 2;
-const BAZ uint8 = FOO | BAR;
-`,
-			expected: `const l/BAR uint8 2
-const l/BAZ uint8 3
-const l/FOO uint8 1
-library l
-`,
-		},
-		{
-			name: "bits",
-			fidl: `
-library l;
-type Bits1 = strict bits {
-  BIT1 = 0x01;
-  BIT2 = 0x02;
-};
-`,
-			expected: `bits/member l/Bits1.BIT1 1
-bits/member l/Bits1.BIT2 2
-strict bits l/Bits1 uint32
-library l
-`,
-		},
-		{
-			name: "bits 2",
-			fidl: `
-library l;
-type Bits1 = strict bits {
-  BIT1 = 0x01;
-  BIT2 = 0x02;
-};
-type Bits2 = strict bits {
-  BIT1 = 0x01;
-  BIT2 = 0x02;
-};
-`,
-			expected: `bits/member l/Bits1.BIT1 1
-bits/member l/Bits1.BIT2 2
-strict bits l/Bits1 uint32
-bits/member l/Bits2.BIT1 1
-bits/member l/Bits2.BIT2 2
-strict bits l/Bits2 uint32
-library l
-`,
-		},
-		{
-			name: "bits 3",
-			fidl: `
-library l;
-type Bits = flexible bits : uint8 {
-  BIT1 = 0x01;
-  BIT2 = 0x02;
-};
-`,
-			expected: `bits/member l/Bits.BIT1 1
-bits/member l/Bits.BIT2 2
-flexible bits l/Bits uint8
-library l
-`,
-		},
-		{
-			name: "enums",
-			fidl: `
-			library l;
-type Beverage = flexible enum : uint8 {
-    WATER = 0;
-    COFFEE = 1;
-    TEA = 2;
-    WHISKEY = 3;
-};
-
-// Underlying type is assumed to be uint32.
-type Vessel = strict enum {
-    CUP = 0;
-    BOWL = 1;
-    TUREEN = 2;
-    JUG = 3;
-};
-`,
-			expected: `enum/member l/Beverage.COFFEE 1
-enum/member l/Beverage.TEA 2
-enum/member l/Beverage.WATER 0
-enum/member l/Beverage.WHISKEY 3
-flexible enum l/Beverage uint8
-enum/member l/Vessel.BOWL 1
-enum/member l/Vessel.CUP 0
-enum/member l/Vessel.JUG 3
-enum/member l/Vessel.TUREEN 2
-strict enum l/Vessel uint32
-library l
-`,
-		},
-		{
-			name: "struct as precondition for arrays",
-			fidl: `
-library l;
-type S = struct {
-  x float32;
-};
-`,
-			expected: `struct/member l/S.x float32
-struct l/S
-library l
-`,
-		},
-		{
-			name: "struct with an element with default value",
-			fidl: `
-library l;
-const VALUE string = "booyah!";
-type S = struct {
-  @allow_deprecated_struct_defaults
-  x float32 = 0.314159;
-  @allow_deprecated_struct_defaults
-  foo string = "huzzah";
-  @allow_deprecated_struct_defaults
-  bar bool = true;
-  @allow_deprecated_struct_defaults
-  baz string = VALUE;
-};
-`,
-			expected: `struct/member l/S.bar bool true
-struct/member l/S.baz string "booyah!"
-struct/member l/S.foo string "huzzah"
-struct/member l/S.x float32 0.314159
-struct l/S
-const l/VALUE string "booyah!"
-library l
-`,
-		},
-		{
-			name: "struct with an element with default value",
-			fidl: `
-library l;
-const VALUE string = "booyah!";
-type S = struct {
-  @allow_deprecated_struct_defaults
-  x float32 = 0.314159;
-  @allow_deprecated_struct_defaults
-  foo string = "huzzah";
-  @allow_deprecated_struct_defaults
-  bar bool = true;
-  @allow_deprecated_struct_defaults
-  baz string = VALUE;
-};
-`,
-			expected: `struct/member l/S.bar bool true
-struct/member l/S.baz string "booyah!"
-struct/member l/S.foo string "huzzah"
-struct/member l/S.x float32 0.314159
-struct l/S
-const l/VALUE string "booyah!"
-library l
-`,
-		},
-		{
-			name: "arrays",
-			fidl: `
-library l;
-type Arrays = struct {
-    form array<float32, 16>;
-    matrix array<array<string, 4>, 10>;
-};
-`,
-			expected: `struct/member l/Arrays.form array<float32,16>
-struct/member l/Arrays.matrix array<array<string,4>,10>
-struct l/Arrays
-library l
-`,
-		},
-		{
-			name: "strings",
-			fidl: `
-library l;
-type Document = struct {
-    title string:40;
-    description string:optional;
-};
-`,
-			expected: `struct/member l/Document.description string:optional
-struct/member l/Document.title string:40
-struct l/Document
-library l
-`,
-		},
-		{
-			name: "vectors",
-			fidl: `
-library l;
-type Vectors = struct {
-    params vector<int32>:10;
-    blob vector<uint8>;
-    nullable_vector_of_strings vector<string>:<24, optional>;
-    vector_of_nullable_strings vector<string:optional>;
-    complex vector<vector<array<float32, 16>>>;
-};
-`,
-			expected: `struct/member l/Vectors.blob vector<uint8>
-struct/member l/Vectors.complex vector<vector<array<float32,16>>>
-struct/member l/Vectors.nullable_vector_of_strings vector<string>:<24,optional>
-struct/member l/Vectors.params vector<int32>:10
-struct/member l/Vectors.vector_of_nullable_strings vector<string:optional>
-struct l/Vectors
-library l
-`,
-		},
-		{
-			name: "handles",
-			dep:  zxLibrary,
-			fidl: `
-library l;
-using zx;
-type Handles = resource struct {
-    h zx.handle;
-    c zx.handle:<CHANNEL, optional>;
-};
-`,
-			expected: `struct/member l/Handles.c zx/handle:<CHANNEL,optional>
-struct/member l/Handles.h zx/handle
-resource struct l/Handles
-library l
-`,
-		},
-		{
-			name: "struct local type reference",
-			fidl: `
-library l;
-type A = struct {};
-type B = struct {
-	a A;
-};
-`,
-			expected: `struct l/A
-struct/member l/B.a l/A
-struct l/B
-library l
-`,
-		},
-		{
-			name: "structs 2",
-			fidl: `
-library l;
-type CirclePoint = struct {
-    x float32;
-    y float32;
-};
-type Color = struct {
-    r float32;
-    g float32;
-    b float32;
-};
-type Circle = struct {
-    filled bool;
-    center CirclePoint;
-    radius float32;
-    color box<Color>;
-    dashed bool;
-};
-`,
-			expected: `struct/member l/Circle.center l/CirclePoint
-struct/member l/Circle.color box<l/Color>
-struct/member l/Circle.dashed bool
-struct/member l/Circle.filled bool
-struct/member l/Circle.radius float32
-struct l/Circle
-struct/member l/CirclePoint.x float32
-struct/member l/CirclePoint.y float32
-struct l/CirclePoint
-struct/member l/Color.b float32
-struct/member l/Color.g float32
-struct/member l/Color.r float32
-struct l/Color
-library l
-`,
-		},
-		{
-			name: "tables",
-			fidl: `
-library l;
-type Profile = table {
-    1: locales vector<string>;
-    2: calendars vector<string>;
-    3: time_zones vector<string>;
-};
-`,
-			expected: `table/member l/Profile.calendars vector<string>
-table/member l/Profile.locales vector<string>
-table/member l/Profile.time_zones vector<string>
-table l/Profile
-library l
-`,
-		},
-		{
-			name: "unions",
-			fidl: `
-library l;
-type Left = struct {};
-type Right = struct {};
-type Either = strict union {
-    1: left Left;
-    2: right Right;
-};
-`,
-			expected: `union/member l/Either.left l/Left
-union/member l/Either.right l/Right
-strict union l/Either
-struct l/Left
-struct l/Right
-library l
-`,
-		},
-		{
-			name: "protocols 1",
-			fidl: `
-library l;
-protocol Calculator {
-    Add(struct { a int32; b int32; }) -> (struct { sum int32; });
-};
-`,
-			expected: `protocol/member l/Calculator.Add(int32 a,int32 b) -> (int32 sum)
-protocol l/Calculator
-library l
-`,
-		},
-		{
-			name: "protocols 2",
-			fidl: `
-library l;
-type Foo = struct {};
-type Bar = struct {};
-protocol P {
-    M(struct { b box<Bar>; }) -> (struct { c Foo; });
-};
-`,
-			expected: `struct l/Bar
-struct l/Foo
-protocol/member l/P.M(box<l/Bar> b) -> (l/Foo c)
-protocol l/P
-library l
-`,
-		},
-		{
-			name: "protocols 3",
-			fidl: `
-library l;
-type Bar = struct {};
-protocol P {};
-protocol P2 {
-    M1(resource struct { a client_end:P; });
-    M2(resource struct { a client_end:<P, optional>; });
-    M3(resource struct { a server_end:<P>; });
-    M4(resource struct { a server_end:<P, optional>; });
-};
-`,
-			expected: `struct l/Bar
-protocol l/P
-protocol/member l/P2.M1(client_end:l/P a)
-protocol/member l/P2.M2(client_end:<l/P,optional> a)
-protocol/member l/P2.M3(server_end:l/P a)
-protocol/member l/P2.M4(server_end:<l/P,optional> a)
-protocol l/P2
-library l
-`,
-		},
-		{
-			name: "protocols 4",
-			fidl: `
-library l;
-protocol P {
-    -> F1(struct { a int32; });
-    F2() -> (struct { a int32; });
-	F3() -> (struct {}) error int32;
-	F4();
-};
-`,
-			expected: `protocol/member l/P.F1 -> (int32 a)
-protocol/member l/P.F2() -> (int32 a)
-protocol/member l/P.F3() -> (l/P_F3_Result result)
-protocol/member l/P.F4()
-protocol l/P
-struct l/P_F3_Response
-union/member l/P_F3_Result.err int32
-union/member l/P_F3_Result.response l/P_F3_Response
-strict union l/P_F3_Result
-library l
-`,
-		},
-		{
-			name: "protocols with named payloads",
-			fidl: `
-library l;
-type Payload = struct {
-    a bool;
-};
-protocol P {
-    M1(Payload);
-    M2() -> (Payload) error uint32;
-};
-`,
-			expected: `protocol/member l/P.M1(bool a)
-protocol/member l/P.M2() -> (l/P_M2_Result result)
-protocol l/P
-union/member l/P_M2_Result.err uint32
-union/member l/P_M2_Result.response l/Payload
-strict union l/P_M2_Result
-struct/member l/Payload.a bool
-struct l/Payload
-library l
-`,
-		},
-		{
-			name: "protocols with non-struct payloads",
-			fidl: `
-library l;
-type U = flexible union {
-    1: a uint64;
-};
-type T = table {
-    1: b int32;
-};
-protocol P {
-    M1(U)-> (T);
-    M2(table {1: c bool; })-> (strict union {1: d uint32; });
-};
-`,
-			expected: `protocol/member l/P.M1(l/U payload) -> (l/T payload)
-protocol/member l/P.M2(l/PM2Request payload) -> (l/PM2Response payload)
-protocol l/P
-table/member l/PM2Request.c bool
-table l/PM2Request
-union/member l/PM2Response.d uint32
-strict union l/PM2Response
-table/member l/T.b int32
-table l/T
-union/member l/U.a uint64
-flexible union l/U
-library l
-`,
-		},
-		{
-			name: "protocols with errorable non-struct payloads",
-			fidl: `
-library l;
-type T = table {
-    1: b string;
-};
-protocol P {
-    M1() -> (flexible union { 1: a bool; }) error uint32;
-    M2() -> (T) error int32;
-};
-`,
-			expected: `protocol/member l/P.M1() -> (l/P_M1_Result result)
-protocol/member l/P.M2() -> (l/P_M2_Result result)
-protocol l/P
-union/member l/P_M1_Response.a bool
-flexible union l/P_M1_Response
-union/member l/P_M1_Result.err uint32
-union/member l/P_M1_Result.response l/P_M1_Response
-strict union l/P_M1_Result
-union/member l/P_M2_Result.err int32
-union/member l/P_M2_Result.response l/T
-strict union l/P_M2_Result
-table/member l/T.b string
-table l/T
-library l
-`,
-		},
-		{
-			name: "check types",
-			fidl: `
-library l;
-type S = struct {
-   f1 string;
-   f2 string:4;
-   f3 string:<4, optional>;
-};
-`,
-			expected: `struct/member l/S.f1 string
-struct/member l/S.f2 string:4
-struct/member l/S.f3 string:<4,optional>
-struct l/S
-library l
-`,
-		},
-		{
-			name: "with foreign library",
-			dep:  l2Library,
-			fidl: `
-library l;
-using l2;
-type A = struct {
-  a l2.T;
-};
-`,
-			expected: `struct/member l/A.a l2/T
-struct l/A
-library l
-`,
-		},
-		{
-			name: "protocol with foreign library",
-			dep:  l2Library,
-			fidl: `
-library l;
-using l2;
-type Foo = struct {};
-type Bar = struct {};
-protocol Calculator {
-    compose l2.Inverter;
-    Halve(l2.UnaryArg) -> (l2.UnaryArg);
-    Add(struct { a l2.T; b Bar; }) -> (struct { c Foo; });
-};
-`,
-			expected: `struct l/Bar
-protocol/member l/Calculator.Add(l2/T a,l/Bar b) -> (l/Foo c)
-protocol/member l/Calculator.Halve(int32 num) -> (int32 num)
-protocol/member l/Calculator.Invert(int32 num) -> (int32 num)
-protocol l/Calculator
-struct l/Foo
-library l
-`,
-		},
-		{
-			name: "reserved keyword",
-			fidl: `
-library l;
-type E = strict union {
-    1: reserved;
-    2: e int32;
-};
-type T = table {
-    1: reserved;
-    2: e int32;
-};
-`,
-			expected: `union/member l/E.e int32
-strict union l/E
-table/member l/T.e int32
-table l/T
-library l
-`,
-		},
-	}
-	runGenerateSummaryTests(t, tests, TextSummaryFormat)
-}
-
 func TestJSONSummaryFormat(t *testing.T) {
 	tests := []summaryTestCase{
 		{
@@ -703,6 +78,178 @@ const ENABLED_FLAG bool = true;
         "kind": "const",
         "name": "l/OFFSET",
         "value": "-33"
+    },
+    {
+        "kind": "library",
+        "name": "l"
+    }
+]
+`,
+		},
+		{
+			// Same as above, except reordered.
+			name: "primitives 2",
+			fidl: `
+library l;
+const ENABLED_FLAG bool = true;
+const OFFSET int8 = -33;
+`,
+			expected: `[
+    {
+        "declaration": "bool",
+        "kind": "const",
+        "name": "l/ENABLED_FLAG",
+        "value": "true"
+    },
+    {
+        "declaration": "int8",
+        "kind": "const",
+        "name": "l/OFFSET",
+        "value": "-33"
+    },
+    {
+        "kind": "library",
+        "name": "l"
+    }
+]
+`,
+		},
+		{
+			name: "primitives 3",
+			fidl: `
+library l;
+const ANSWER uint16 = 42;
+const ANSWER_IN_BINARY uint16 = 0b101010;
+`,
+			expected: `[
+    {
+        "declaration": "uint16",
+        "kind": "const",
+        "name": "l/ANSWER",
+        "value": "42"
+    },
+    {
+        "declaration": "uint16",
+        "kind": "const",
+        "name": "l/ANSWER_IN_BINARY",
+        "value": "42"
+    },
+    {
+        "kind": "library",
+        "name": "l"
+    }
+]
+`,
+		},
+		{
+			name: "primitives 4",
+			fidl: `
+library l;
+const ENABLED_FLAG bool = true;
+const OFFSET int8 = -33;
+const ANSWER uint16 = 42;
+const ANSWER_IN_BINARY uint16 = 0b101010;
+const POPULATION_USA_2018 uint32 = 330000000;
+const DIAMOND uint64 = 0x183c7effff7e3c18;
+const FUCHSIA uint64 = 4054509061583223046;
+const USERNAME string = "squeenze";
+const MIN_TEMP float32 = -273.15;
+const CONVERSION_FACTOR float64 = 1.41421358;
+`,
+			expected: `[
+    {
+        "declaration": "uint16",
+        "kind": "const",
+        "name": "l/ANSWER",
+        "value": "42"
+    },
+    {
+        "declaration": "uint16",
+        "kind": "const",
+        "name": "l/ANSWER_IN_BINARY",
+        "value": "42"
+    },
+    {
+        "declaration": "float64",
+        "kind": "const",
+        "name": "l/CONVERSION_FACTOR",
+        "value": "1.41421"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "const",
+        "name": "l/DIAMOND",
+        "value": "1746410393481133080"
+    },
+    {
+        "declaration": "bool",
+        "kind": "const",
+        "name": "l/ENABLED_FLAG",
+        "value": "true"
+    },
+    {
+        "declaration": "uint64",
+        "kind": "const",
+        "name": "l/FUCHSIA",
+        "value": "4054509061583223046"
+    },
+    {
+        "declaration": "float32",
+        "kind": "const",
+        "name": "l/MIN_TEMP",
+        "value": "-273.15"
+    },
+    {
+        "declaration": "int8",
+        "kind": "const",
+        "name": "l/OFFSET",
+        "value": "-33"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "const",
+        "name": "l/POPULATION_USA_2018",
+        "value": "330000000"
+    },
+    {
+        "declaration": "string",
+        "kind": "const",
+        "name": "l/USERNAME",
+        "value": "squeenze"
+    },
+    {
+        "kind": "library",
+        "name": "l"
+    }
+]
+`,
+		},
+		{
+			name: "primitives 5, binary operator",
+			fidl: `
+library l;
+const FOO uint8 = 1;
+const BAR uint8 = 2;
+const BAZ uint8 = FOO | BAR;
+`,
+			expected: `[
+    {
+        "declaration": "uint8",
+        "kind": "const",
+        "name": "l/BAR",
+        "value": "2"
+    },
+    {
+        "declaration": "uint8",
+        "kind": "const",
+        "name": "l/BAZ",
+        "value": "3"
+    },
+    {
+        "declaration": "uint8",
+        "kind": "const",
+        "name": "l/FOO",
+        "value": "1"
     },
     {
         "kind": "library",
@@ -833,7 +380,7 @@ type Bits = flexible bits : uint8 {
 		{
 			name: "enums",
 			fidl: `
-			library l;
+library l;
 type Beverage = flexible enum : uint8 {
     WATER = 0;
     COFFEE = 1;
@@ -1882,10 +1429,10 @@ type T = table {
 `,
 		},
 	}
-	runGenerateSummaryTests(t, tests, JSONSummaryFormat)
+	runGenerateSummaryTests(t, tests)
 }
 
-func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase, format SummaryFormat) {
+func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase) {
 	t.Helper()
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1894,7 +1441,7 @@ func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase, format Summa
 				c = c.WithDependency(test.dep)
 			}
 			r := c.Single(test.fidl)
-			b, err := GenerateSummary(r, format)
+			b, err := GenerateSummary(r)
 			if err != nil {
 				t.Fatalf("while summarizing file: %v", err)
 			}
@@ -1902,11 +1449,10 @@ func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase, format Summa
 			actual := strings.Split(summary, "\n")
 			expected := strings.Split(test.expected, "\n")
 
-			if !cmp.Equal(expected, actual) {
+			if diff := cmp.Diff(expected, actual); diff != "" {
 				t.Errorf("expected:\n---BEGIN---\n%+v\n---END---\n\n"+
 					"actual:\n---BEGIN---\n%+v\n---END---\n\ndiff:\n%v\n\nroot: %+v",
-					test.expected, summary,
-					cmp.Diff(expected, actual), r)
+					test.expected, summary, diff, r)
 			}
 		})
 	}

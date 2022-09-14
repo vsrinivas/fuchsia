@@ -5,7 +5,6 @@
 package summarize
 
 import (
-	"fmt"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -35,11 +34,6 @@ func (s *summarizer) registerProtocolNames(protocols []fidlgen.Protocol) {
 type protocol struct {
 	named
 	notMember
-}
-
-// String implements Element.
-func (p protocol) String() string {
-	return p.Serialize().String()
 }
 
 func (p protocol) Serialize() ElementStr {
@@ -74,14 +68,6 @@ func newMethod(s *symbolTable, parent fidlgen.EncodedCompoundIdentifier, m fidlg
 // Name implements Element.
 func (m method) Name() Name {
 	return m.membership.Name()
-}
-
-// String implements Element.  It formats a protocol method using a notation
-// familiar from FIDL.
-func (m method) String() string {
-	e := m.Serialize()
-	// Method serialization is custom because of different spacing.
-	return fmt.Sprintf("%v %v%v", e.Kind, e.Name, e.Decl)
 }
 
 // Member implements Element.

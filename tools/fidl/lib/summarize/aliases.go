@@ -16,11 +16,6 @@ type alias struct {
 
 const aliasType Kind = "alias"
 
-// String implements Element.
-func (a alias) String() string {
-	return a.Serialize().String()
-}
-
 func (a alias) Serialize() ElementStr {
 	e := a.named.Serialize()
 	e.Kind = aliasType

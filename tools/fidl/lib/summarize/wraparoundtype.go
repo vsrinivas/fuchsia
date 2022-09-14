@@ -26,11 +26,6 @@ func strictness(strict fidlgen.Strictness) Strictness {
 	return isFlexible
 }
 
-// String implements Element.
-func (b wraparoundType) String() string {
-	return b.Serialize().String()
-}
-
 func (b wraparoundType) Serialize() ElementStr {
 	e := b.named.Serialize()
 	e.Kind = Kind(b.parentType)

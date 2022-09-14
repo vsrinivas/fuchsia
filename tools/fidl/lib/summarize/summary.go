@@ -10,7 +10,6 @@ package summarize
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"io"
 	"sort"
 
@@ -19,66 +18,18 @@ import (
 
 type summary []Element
 
-// SummaryFormat is a representation of a FIDL API summary.
-//
-// SummaryFormat implements flag.Setter for convenient use in command-line tools.
-type SummaryFormat string
-
-// SummaryFormat constants.
-const (
-	TextSummaryFormat SummaryFormat = "text"
-	JSONSummaryFormat SummaryFormat = "json"
-)
-
-// String implements flag.Setter.
-func (f *SummaryFormat) String() string {
-	return string(*f)
-}
-
-// Set implements flag.Setter.
-func (f *SummaryFormat) Set(value string) error {
-	format := SummaryFormat(value)
-	if _, err := format.formatter(); err != nil {
-		return err
-	}
-	*f = format
-	return nil
-}
-
-func (f SummaryFormat) formatter() (func(io.Writer, summary) error, error) {
-	switch f {
-	case TextSummaryFormat:
-		return formatTextSummary, nil
-	case JSONSummaryFormat:
-		return formatJSONSummary, nil
-	}
-	return nil, fmt.Errorf("unimplemented summary format %q", string(f))
-}
-
 // GenerateSummary summarizes root and returns the serialized result in the given format.
-func GenerateSummary(root fidlgen.Root, format SummaryFormat) ([]byte, error) {
+func GenerateSummary(root fidlgen.Root) ([]byte, error) {
 	var b bytes.Buffer
-	if err := WriteSummary(&b, root, format); err != nil {
+	if err := WriteSummary(&b, root); err != nil {
 		return nil, err
 	}
 	return b.Bytes(), nil
 }
 
 // WriteSummary summarizes root and writes the serialized result to the given Writer.
-func WriteSummary(w io.Writer, root fidlgen.Root, format SummaryFormat) error {
-	s := summarize(root)
-	f, err := format.formatter()
-	if err != nil {
-		return err
-	}
-	return f(w, s)
-}
-
-func formatTextSummary(w io.Writer, s summary) error {
-	for _, e := range s {
-		fmt.Fprintf(w, "%v\n", e)
-	}
-	return nil
+func WriteSummary(w io.Writer, root fidlgen.Root) error {
+	return formatJSONSummary(w, summarize(root))
 }
 
 func formatJSONSummary(w io.Writer, s summary) error {
@@ -92,8 +43,6 @@ func formatJSONSummary(w io.Writer, s summary) error {
 // Element describes a single platform surface element.  Use Summarize to
 // convert a FIDL AST into Elements.
 type Element interface {
-	// Stringer produces a string representation of this Element.
-	fmt.Stringer
 	// Member returns true if the Element is a member of something.
 	Member() bool
 	// Name returns the fully-qualified name of this Element.  For example,

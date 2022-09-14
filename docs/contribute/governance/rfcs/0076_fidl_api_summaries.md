@@ -16,6 +16,12 @@ syntax of FIDL. There is active and ongoing work to
 (before it is used to automatically detect backwards-incompatible changes
 via API hashing). See: [fxbug.dev/72411][bug72411].
 
+> *Amendment (Aug 2022).* This RFC describes a human-readable text format with
+> each API element on a single line. During implementation, a JSON format
+> containing the same information was added (https://fxrev.dev/480357). Unlike
+> the text format, the JSON format can be parsed back into Go data structures,
+> which is particularly useful for [fidl_api_diff]. Since only the JSON format
+> is used today, we have removed the text format to ease maintenance.
 
 ## Motivation
 
@@ -333,3 +339,4 @@ The go language API regularly produces [API surface summaries][gapi].
 [rfc15]: /docs/contribute/governance/rfcs/0015_cts.md
 [rules]: /docs/development/languages/fidl/guides/compatibility/README.md
 [summarize]: /tools/fidl/fidl_api_summarize
+[fidl_api_diff]: /tools/fidl/fidl_api_diff

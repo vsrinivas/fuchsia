@@ -10,39 +10,38 @@ import (
 	"io"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/summarize"
-	yaml "gopkg.in/yaml.v2"
 )
 
 // ReportItem is a single line item of the API diff report.
 type ReportItem struct {
 	// Name is the fully qualified name that this report item
 	// pertains to.
-	Name summarize.Name `json:"name" yaml:"name"`
+	Name summarize.Name `json:"name"`
 	// Before is what the API summary used to look like.
-	Before string `json:"before,omitempty" yaml:"before,omitempty"`
+	Before *summarize.ElementStr `json:"before,omitempty"`
 	// After is what the API summary looks like now.
-	After string `json:"after,omitempty" yaml:"after,omitempty"`
+	After *summarize.ElementStr `json:"after,omitempty"`
 	// Conclusion is the finding.
-	Conclusion Classification `json:"conclusion" yaml:"conclusion"`
+	Conclusion Classification `json:"conclusion"`
 }
 
 func (r ReportItem) IsAdd() bool {
-	return r.Before == "" && r.After != ""
+	return r.Before == nil && r.After != nil
 }
 
 func (r ReportItem) IsRemove() bool {
-	return r.Before != "" && r.After == ""
+	return r.Before != nil && r.After == nil
 }
 
 func (r ReportItem) IsChange() bool {
-	return r.Before != "" && r.After != ""
+	return r.Before != nil && r.After != nil
 }
 
 // Report is a top-level wrapper for the API diff result.
 type Report struct {
 	// ApiDiff has the report items for each individual change of the API
 	// surface for a FIDL library.
-	ApiDiff []ReportItem `json:"api_diff,omitempty" yaml:"api_diff,omitempty"`
+	ApiDiff []ReportItem `json:"api_diff,omitempty"`
 
 	// backfillIndexes is a list of indexes into ApiDiff which have a
 	// classification of Undetermined.
@@ -79,18 +78,6 @@ func (r *Report) BackfillForParentStrictness(isStrict bool) {
 	r.backfillIndexes = nil
 }
 
-// readTextReport reads the API diff report in text/yaml format from the
-// given reader.
-func readTextReport(r io.Reader) (Report, error) {
-	var ret Report
-	d := yaml.NewDecoder(r)
-	d.SetStrict(true)
-	if err := d.Decode(&ret); err != nil {
-		return Report{}, fmt.Errorf("while reading as text: %w", err)
-	}
-	return ret, nil
-}
-
 func (r *Report) addToDiff(rep ReportItem) {
 	if rep.Conclusion == 0 {
 		panic(fmt.Sprintf("Unset conclusion: %+v", rep))
@@ -98,8 +85,7 @@ func (r *Report) addToDiff(rep ReportItem) {
 	r.ApiDiff = append(r.ApiDiff, rep)
 }
 
-// WriteJSON is a format function that writes JSON format from the
-// given report items.
+// WriteJSON writes a report as JSON.
 func (r Report) WriteJSON(w io.Writer) error {
 	if len(r.backfillIndexes) != 0 {
 		panic(fmt.Sprintf("Report.WriteJSON: programming error, backfillIndexes = %v", r.backfillIndexes))
@@ -113,25 +99,11 @@ func (r Report) WriteJSON(w io.Writer) error {
 	return nil
 }
 
-// WriteText is a format function that writes the text format of the
-// given report items.
-func (r Report) WriteText(w io.Writer) error {
-	if len(r.backfillIndexes) != 0 {
-		panic(fmt.Sprintf("Report.WriteJSON: programming error, backfillIndexes = %v, report: %+v",
-			r.backfillIndexes, r))
-	}
-	e := yaml.NewEncoder(w)
-	if err := e.Encode(r); err != nil {
-		return fmt.Errorf("while writing JSON: %w", err)
-	}
-	return nil
-}
-
 // add processes a single added ElementStr.
 func (r *Report) add(item *summarize.ElementStr) {
 	ret := ReportItem{
 		Name:  item.Name,
-		After: item.String(),
+		After: item,
 	}
 	// TODO: compress this table if possible after all diffs have been
 	// accounted for.
@@ -163,7 +135,7 @@ func (r *Report) add(item *summarize.ElementStr) {
 func (r *Report) remove(item *summarize.ElementStr) {
 	ret := ReportItem{
 		Name:   item.Name,
-		Before: item.String(),
+		Before: item,
 	}
 	// TODO: compress this table if possible after all diffs have been
 	// accounted for.
@@ -184,12 +156,10 @@ func (r *Report) compare(before, after *summarize.ElementStr) {
 		// No change
 		return
 	}
-	beforeStr := before.String()
-	afterStr := after.String()
 	ret := ReportItem{
 		Name:   after.Name,
-		Before: beforeStr,
-		After:  afterStr,
+		Before: before,
+		After:  after,
 	}
 	// 'defer r.addToDiff(ret)` wouldn't work, because it would bind the *current*
 	// value of ret to the function call, and we want the final value to be
@@ -215,7 +185,7 @@ func (r *Report) compare(before, after *summarize.ElementStr) {
 			ret.Conclusion = APIBreaking
 		case before.IsStrict() != after.IsStrict():
 			ret.Conclusion = Transitionable
-		case beforeStr != afterStr: // Type change
+		case before != after: // Type change
 			ret.Conclusion = APIBreaking
 		}
 	case "struct", "table", "union":
@@ -233,10 +203,5 @@ func (r *Report) compare(before, after *summarize.ElementStr) {
 		panic(fmt.Sprintf(
 			"Report.compare: kind not handled: %v; this is a programer error",
 			after.Kind))
-	}
-	if beforeStr == afterStr {
-		panic(fmt.Sprintf(
-			"Report.compare: beforeStr == afterStr - programming error: before: %+v, after: %+v",
-			before, after))
 	}
 }

@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -73,30 +72,6 @@ type ElementStr struct {
 	Resourceness `json:"resourceness,omitempty"`
 	Strictness   `json:"strictness,omitempty"`
 	Value        `json:"value,omitempty"`
-}
-
-func (e ElementStr) String() string {
-	var p []string
-	if e.Resourceness != "" {
-		p = append(p, string(e.Resourceness))
-	}
-	if e.Strictness != "" {
-		p = append(p, string(e.Strictness))
-	}
-	p = append(p, string(e.Kind), string(e.Name))
-	if e.Decl != "" {
-		p = append(p, string(e.Decl))
-	}
-	if e.Value != "" {
-		if e.Decl == "string" {
-			// Quote strings to disambiguate between "foo" and " foo", for
-			// example.
-			p = append(p, fmt.Sprintf("%q", e.Value))
-		} else {
-			p = append(p, string(e.Value))
-		}
-	}
-	return strings.Join(p, " ")
 }
 
 func (e ElementStr) Less(other ElementStr) bool {

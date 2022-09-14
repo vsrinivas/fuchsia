@@ -26,7 +26,6 @@ if (is_host) {
     ]
     deps = [
       "//third_party/golibs:github.com/google/go-cmp",
-      "//third_party/golibs:gopkg.in/yaml.v2",
       "//tools/fidl/lib/fidlgen",
       "//tools/fidl/lib/summarize:gopkg",
     ]

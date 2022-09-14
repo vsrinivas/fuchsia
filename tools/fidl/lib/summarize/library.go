@@ -16,11 +16,6 @@ type library struct {
 	notMember
 }
 
-// String implements Element.
-func (l library) String() string {
-	return l.Serialize().String()
-}
-
 // Name implements Element.
 func (l library) Name() Name {
 	return Name(l.r.Name)

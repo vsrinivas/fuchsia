@@ -21,13 +21,7 @@ var (
 	fir                  = flag.String("fidl-ir-file", "", "The FIDL IR input file to produce an API summary for.")
 	out                  = flag.String("output-file", "", "The output file to write the summary into.")
 	suppressEmptyLibrary = flag.Bool("suppress-empty-library", false, "Generate empty output for libraries with no declarations")
-	format               = summarize.TextSummaryFormat
 )
-
-// TODO(kjharland): Move flags into main().
-func init() {
-	flag.Var(&format, "format", "Specify the output format (text|json)")
-}
 
 // usage prints a user-friendly usage message when the flag --help is provided.
 func usage() {
@@ -66,14 +60,14 @@ func mainImpl() error {
 		return fmt.Errorf("Could not parse FIDL IR from: %v: %w", *in, err)
 	}
 
-	b, err := summarize.GenerateSummary(root, format)
+	b, err := summarize.GenerateSummary(root)
 	if err != nil {
 		return fmt.Errorf("While summarizing %v into %v: %w", *in, *out, err)
 	}
 
 	if *suppressEmptyLibrary {
 		emptyLibRoot := fidlgen.Root{Name: root.Name}
-		emptyLibBytes, err := summarize.GenerateSummary(emptyLibRoot, format)
+		emptyLibBytes, err := summarize.GenerateSummary(emptyLibRoot)
 		if err != nil {
 			return err
 		}

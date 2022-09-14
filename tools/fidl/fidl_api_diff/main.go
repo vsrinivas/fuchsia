@@ -20,8 +20,7 @@ import (
 var (
 	beforeFile = flag.String("before-file", "", "The FIDL API summary JSON file for the original API surface")
 	afterFile  = flag.String("after-file", "", "The FIDL API summary JSON file for the modified API surface")
-	outFile    = flag.String("api-diff-file", "", "The JSON file to write the API diff format into")
-	format     = flag.String("format", "text", "Specify the output format (text|json)")
+	outFile    = flag.String("api-diff-file", "", "The JSON file to write the API diff into")
 	lenient    = flag.Bool("lenient", false, "If set, the program will always exit with the exit code zero.")
 )
 
@@ -33,22 +32,6 @@ func usage() {
 Usage:
 `, os.Args[0])
 	flag.PrintDefaults()
-}
-
-type writerFn func(before, after io.Reader, out io.Writer) error
-
-// getWriter selects a writer based on the passed-in format.
-func writeReport(d apidiff.Report, w io.Writer) error {
-	switch *format {
-	case "":
-		fallthrough
-	case "text":
-		return d.WriteText(w)
-	case "json":
-		return d.WriteJSON(w)
-	default:
-		return fmt.Errorf("not a recognized flag value for --format: %v", *format)
-	}
 }
 
 // errExitCode returns the exit code to use on error.  Allows lenient error-free
@@ -129,7 +112,7 @@ func main() {
 			"Error while computing API diff: %v: %v", *outFile, err)
 		os.Exit(lenient)
 	}
-	if err := writeReport(report, out); err != nil {
+	if err := report.WriteJSON(out); err != nil {
 		fmt.Fprintf(os.Stderr,
 			"Error while diffing:\n\tbefore: %v\n\tafter: %v\n\toutput: %v\n\t%v",
 			*beforeFile, *afterFile, *outFile, err)
