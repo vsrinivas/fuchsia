@@ -457,3 +457,80 @@ The `zxdump::Process::read_memory` distinguishes more cases:
  * `ZX_ERR_NOT_SUPPORTED` specifically means that the dump file containing this
    process was inserted by a `zxdump::TaskHolder::Insert` call with `false`
    passed for the optional `read_memory` flag argument.
+
+## Live Task API
+
+As described above, the `zxdump` C++ library's API for reading information out
+of dumps looks very much like a subset of the Zircon system call API for
+getting the same information on a live system from running Zircon jobs and
+processes.  So it's natural that when using this API on Fuchsia, you can use
+the same API to handle information either from a dump or from a live system.
+
+When the [`<lib/zxdump/task.h>`](include/lib/zxdump/task.h) API is used on
+Fuchsia systems, an additional signature for the `Insert` method is available
+on `zxdump::TaskHolder` objects.  Rather than taking a file descriptor to a
+core file or job archive to read the dump of a process or job (aka a task),
+this takes a Zircon handle to a process or job using the C++
+[lib/zx](/zircon/system/ulib/zx/) API's `zx::handle` family of types.  This
+"inserts" that live task into the holder in the same way: it "self-assembles"
+with the other tasks already in the holder to form a job tree, presenting a
+"super-root" if unrelated tasks go into the same holder.  (It's not possible
+to insert a `zx::thread` directly, only the `zx::process` containing it.)
+
+The biggest difference between inserting a dump and inserting a live task is
+that the live task's information is not immediately collected.  Instead, when
+`get_info`, `get_property`, and `read_state` calls are made on a
+`zxdump::Task` family object that actually represents a live task, the
+information is collected on demand.  Each topic, property, and state kind is
+fetched only once and then cached, but none is fetched until it's requested.
+(The one exception is the "basic" information, so the type and KOID are always
+on hand.)  This means that it's efficient to use this API purely as a nicer
+API front-end for `get_info` et al, while also making it easy to write code
+that makes use of the information in exactly the same way for either a live
+case or a post mortem case.  But the API is designed for the post mortem
+style, which is to say, examining the state just once rather than fetching
+fresh information as it changes over time.
+
+Once a live task has been inserted, all the same API conveniences are
+available, including the `find` methods as well as direct `get_child` lookups.
+Once a live job has been inserted, its child jobs and processes are implicitly
+inserted on demand as they are found by KOID via `get_child` or `find` from
+the job tree already inserted.  As with dumps, when disconnected processes or
+job trees are inserted, there will be a super-root presented as the fake root
+job in the `zxdump::TaskHolder` object.  But if the actual root job handle of
+the running system is inserted as a live task, then `root_job().find(KOID)`
+efficiently finds any job or process on the system by KOID.
+
+It's even possible to comingle live tasks and dump data in a single
+`zxdump::TaskHolder` object.  Just like with inserting multiple dumps,
+whatever KOIDs are made visible in the holder by inserting a process or job
+tree all self-assemble by KOID and become accessible under the root job tree.
+So it can work to insert a post mortem dump of jobs and processes, that are
+now dead but came from the currently running system and exist in the same KOID
+space, alongside the current root job.  The result is a combined picture of
+the whole system's job tree that includes current jobs and processes in their
+active state intermingled with their deceased relatives each in their last
+known state.  (Inserting a live task with the same KOID as a task already read
+from a dump may have confusing results.  The information from the dump will be
+used as the cached information, but any information not present in the dump
+that's requested later might be filled in from the live task.)
+
+Code that can work equally well with dumps or with live tasks can be built for
+Fuchsia or for other host operating systems.  To reduce the need for
+conditional compilation, the `zxdump::LiveTask` type is provided as an alias
+for `zx::handle` on Fuchsia that is also available as a placeholder API on
+other systems.  When not on Fuchsia, the only `zxdump::LiveTask` objects that
+exist are default-constructed "invalid handle" objects.  All the same APIs are
+available, but they'll always fail because the handle passed will always be
+invalid.
+
+For convenience, the `zxdump::GetRootJob()` function is provided to fetch the
+live root job handle via the [fuchsia.kernel.RootJob][fuchsia.kernel.RootJob]
+FIDL protocol.  This returns failure if the current process's component
+sandbox doesn't have access to that privileged protocol.  (Even this is also
+available on non-Fuchsia systems in a version that always returns failure, so
+no conditional compilation is required.)  A tool or service can insert one or
+more dump files, or it can insert the live root job; and then look up tasks by
+KOID and interrogate them with identical code either way.
+
+[fuchsia.kernel.RootJob]: https://fuchsia.dev/reference/fidl/fuchsia.kernel#RootJob

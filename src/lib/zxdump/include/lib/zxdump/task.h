@@ -6,17 +6,60 @@
 #define SRC_LIB_ZXDUMP_INCLUDE_LIB_ZXDUMP_TASK_H_
 
 #include <lib/fitx/result.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls/debug.h>
 
 #include <functional>
 #include <map>
 #include <memory>
+#include <utility>
 
 #include <fbl/unique_fd.h>
+
+#ifdef __Fuchsia__
+#include <lib/zx/handle.h>
+#endif
 
 #include "types.h"
 
 namespace zxdump {
+
+// On Fuchsia, live task handles can be used via the lib/zx API.  On other
+// systems, the API parts for live tasks are still available but they use a
+// stub handle type that is always invalid.
+#ifdef __Fuchsia__
+using LiveTask = zx::handle;
+#else
+// The stub type is move-only and contextually convertible to bool just like
+// the real one.  It supports only a few basic methods, which do nothing and
+// always report an invalid handle.
+struct LiveTask {
+  LiveTask() = default;
+  LiveTask(const LiveTask&) = delete;
+  LiveTask(LiveTask&&) = default;
+  LiveTask& operator=(const LiveTask&) = delete;
+  LiveTask& operator=(LiveTask&&) = default;
+
+  void reset() {}
+
+  bool is_valid() const { return false; }
+
+  explicit operator bool() const { return is_valid(); }
+
+  zx_status_t get_info(uint32_t topic, void* buffer, size_t buffer_size, size_t* actual_count,
+                       size_t* avail_count) const {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  zx_status_t get_property(uint32_t property, void* value, size_t size) const {
+    return ZX_ERR_BAD_HANDLE;
+  }
+
+  zx_status_t get_child(uint64_t koid, zx_rights_t rights, LiveTask* result) const {
+    return ZX_ERR_BAD_HANDLE;
+  }
+};
+#endif
 
 // Forward declarations for below.
 class Task;
@@ -87,6 +130,10 @@ class TaskHolder {
   // but read_memory calls will always fail with ZX_ERR_NOT_SUPPORTED.
   fitx::result<Error> Insert(fbl::unique_fd fd, bool read_memory = true);
 
+  // Insert a live task (job or process).  Live threads cannot be inserted
+  // alone, only their containing process.
+  fitx::result<Error, std::reference_wrapper<Task>> Insert(LiveTask task);
+
   // Yields the current root job.  If all tasks in the eye of the TaskHolder
   // form a unified tree, this returns the actual root job in that tree.
   // Otherwise, this is the fake "root job" that reads as KOID 0 with no data
@@ -114,6 +161,9 @@ class TaskHolder {
 // But no objects that aren't tasks are found in dumps as such.
 class Task {
  public:
+  Task(Task&&) = default;
+  Task& operator=(Task&&) = default;
+
   // Every task has a KOID.  This is just shorthand for extracting it from
   // ZX_INFO_HANDLE_BASIC.  The fake root job returns zero (ZX_KOID_INVALID).
   zx_koid_t koid() const;
@@ -140,7 +190,7 @@ class Task {
   // This gets the full info block for this topic, whatever its size.  Note the
   // data is not necessarily aligned in memory, so it can't be safely accessed
   // with reinterpret_cast.
-  fitx::result<Error, ByteView> get_info(zx_object_info_topic_t topic);
+  fitx::result<Error, ByteView> get_info(zx_object_info_topic_t topic, size_t record_size = 0);
 
   // Get statically-typed info for a topic chosen at a compile time.  Some
   // types return a single `zx_info_*_t` object.  Others return a span of const
@@ -151,7 +201,7 @@ class Task {
     using Info = InfoTraitsType<Topic>;
     if constexpr (kIsSpan<Info>) {
       using Element = typename RemoveSpan<Info>::type;
-      auto result = get_info_aligned(Topic, alignof(Info));
+      auto result = get_info_aligned(Topic, sizeof(Element), alignof(Element));
       if (result.is_error()) {
         return result.take_error();
       }
@@ -160,7 +210,7 @@ class Task {
           result.value().size() / sizeof(Element),
       });
     } else {
-      auto result = get_info(Topic);
+      auto result = get_info(Topic, sizeof(Info));
       if (result.is_error()) {
         return result.take_error();
       }
@@ -196,16 +246,32 @@ class Task {
     return fitx::ok(data);
   }
 
+  // Turn a live task into a postmortem task.  The postmortem task holds only
+  // the basic information (KOID, type) and whatever has been cached by past
+  // get_info or get_property calls.
+  LiveTask Reap() { return std::exchange(live_, {}); }
+
  protected:
   // The class is abstract.  Only the subclasses can be created and destroyed.
   Task() = delete;
-  explicit Task(TaskHolder::JobTree& tree) : tree_{tree} {}
+
+  explicit Task(TaskHolder::JobTree& tree, LiveTask live = {})
+      : tree_{tree}, live_(std::move(live)) {}
+
   ~Task();
+
+  LiveTask& live() { return live_; }
+
+  TaskHolder::JobTree& tree() { return tree_; }
 
  private:
   friend TaskHolder::JobTree;
 
-  fitx::result<Error, ByteView> get_info_aligned(zx_object_info_topic_t topic, size_t align);
+  std::byte* GetBuffer(size_t size);
+  void TakeBuffer(std::unique_ptr<std::byte[]> buffer);
+
+  fitx::result<Error, ByteView> get_info_aligned(zx_object_info_topic_t topic, size_t record_size,
+                                                 size_t align);
   fitx::result<Error, ByteView> GetSuperrootInfo(zx_object_info_topic_t topic);
 
   // A plain reference would make the type not movable.
@@ -213,11 +279,15 @@ class Task {
   std::map<zx_object_info_topic_t, ByteView> info_;
   std::map<uint32_t, ByteView> properties_;
   time_t date_ = 0;
+  LiveTask live_;
 };
 
 // A Thread is a Task and also has register state.
 class Thread : public Task {
  public:
+  Thread(Thread&&) noexcept = default;
+  Thread& operator=(Thread&&) noexcept = default;
+
   ~Thread();
 
   fitx::result<Error, ByteView> read_state(zx_thread_state_topic_t topic);
@@ -234,6 +304,9 @@ class Thread : public Task {
 class Process : public Task {
  public:
   using ThreadMap = std::map<zx_koid_t, Thread>;
+
+  Process(Process&&) noexcept = default;
+  Process& operator=(Process&&) noexcept = default;
 
   ~Process();
 
@@ -265,6 +338,9 @@ class Job : public Task {
   using JobMap = std::map<zx_koid_t, Job>;
   using ProcessMap = std::map<zx_koid_t, Process>;
 
+  Job(Job&&) noexcept = default;
+  Job& operator=(Job&&) noexcept = default;
+
   ~Job();
 
   // This is the same as what you'd get from get_info<ZX_INFO_JOB_CHILDREN> and
@@ -292,6 +368,9 @@ class Job : public Task {
   std::map<zx_koid_t, Job> children_;
   std::map<zx_koid_t, Process> processes_;
 };
+
+// Get the live root job of the running system, e.g. for TaskHolder::Insert.
+fitx::result<Error, LiveTask> GetRootJob();
 
 }  // namespace zxdump
 

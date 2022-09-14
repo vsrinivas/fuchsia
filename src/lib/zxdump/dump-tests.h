@@ -26,6 +26,12 @@ class TestProcess {
  public:
   zx::unowned_process borrow() const { return zx::unowned_process{process_}; }
 
+  LiveTask handle() const {
+    zx::process dup;
+    EXPECT_EQ(ZX_OK, process_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+    return dup;
+  }
+
   ~TestProcess() {
     if (process_) {
       EXPECT_EQ(ZX_OK, process_.kill());

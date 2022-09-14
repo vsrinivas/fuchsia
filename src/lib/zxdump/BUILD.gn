@@ -61,12 +61,20 @@ zx_library("zxdump") {
   deps = [ "//src/lib/elfldltl" ]
 
   if (is_fuchsia) {
-    sources += [ "dump.cc" ]
+    sources += [
+      "dump.cc",
+      "root.cc",
+    ]
     deps += [
+      "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
+      "//sdk/lib/fdio",
       "//sdk/lib/stdcompat",
       "//src/zircon/lib/zircon",
+      "//zircon/system/ulib/service:service-llcpp",
       "//zircon/system/ulib/zx",
     ]
+  } else {
+    sources += [ "stub-root.cc" ]
   }
 }
 
@@ -144,6 +152,7 @@ test("zxdump-unittests") {
       "dump-tests.cc",
       "dump-tests.h",
       "gcore-tests.cc",
+      "task-tests.cc",
     ]
     deps += [
       "//sdk/lib/fdio",
