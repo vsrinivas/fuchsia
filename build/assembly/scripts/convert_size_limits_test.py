@@ -49,14 +49,7 @@ class ConvertTest(unittest.TestCase):
                             limit=53,
                             src=[])
                     ],
-                    non_blobfs_components=[
-                        dict(
-                            component="Update Package",
-                            limit=1024,
-                            creep_limit=128,
-                            merge=False,
-                            blobs_json_path="obj/a/package_manifest.json")
-                    ]),
+                ),
                 image_assembly_config=dict(
                     base=[
                         "obj/a/b1/c1/package_manifest.json",
@@ -120,18 +113,10 @@ class ConvertTest(unittest.TestCase):
                                 'obj/a/b/c2/package_manifest.json',
                             ]),
                     ],
-                    total_budget_bytes=988,
+                    total_budget_bytes=999,
                 ),
                 blobfs_capacity=3000,
-                expected_non_blobfs_output=dict(
-                    package_set_budgets=[
-                        dict(
-                            name="Update Package",
-                            budget_bytes=1024,
-                            creep_budget_bytes=128,
-                            merge=False,
-                            packages=["obj/a/package_manifest.json"]),
-                    ]),
+                max_blob_contents_size=999,
                 return_value=0),
             param(
                 name="failure_when_manifest_is_matched_twice",
@@ -156,19 +141,12 @@ class ConvertTest(unittest.TestCase):
                             limit=22,
                             src=["a/b/c2/package_manifest.json"]),
                     ],
-                    non_blobfs_components=[
-                        dict(
-                            component="Update Package",
-                            limit=1024,
-                            creep_limit=128,
-                            merge=False,
-                            blobs_json_path="obj/a/package_manifest.json")
-                    ]),
+                ),
                 image_assembly_config=dict(
                     base=["obj/a/b/c2/package_manifest.json"]),
                 expected_output=None,
                 blobfs_capacity=101,
-                expected_non_blobfs_output=None,
+                max_blob_contents_size=100,
                 return_value=1),
             param(
                 name=
@@ -176,39 +154,16 @@ class ConvertTest(unittest.TestCase):
                 size_limits=dict(),
                 image_assembly_config=dict(),
                 expected_output=dict(
-                    resource_budgets=[], package_set_budgets=[]),
+                    resource_budgets=[],
+                    package_set_budgets=[],
+                    total_budget_bytes=200),
                 blobfs_capacity=101,
-                expected_non_blobfs_output=None,
+                max_blob_contents_size=200,
                 return_value=0),
-            param(
-                name="failure_when_missing_update_package",
-                size_limits=dict(
-                    core_limit=21,
-                    core_creep_limit=22,
-                    distributed_shlibs=[],
-                    distributed_shlibs_limit=31,
-                    distributed_shlibs_creep_limit=32,
-                    icu_data=[],
-                    icu_data_limit=41,
-                    icu_data_creep_limit=42,
-                    components=[
-                        dict(
-                            component="comp1",
-                            creep_limit=12,
-                            limit=20,
-                            src=["a/b/c2/package_manifest.json"]),
-                    ],
-                    non_blobfs_components=[]),
-                image_assembly_config=dict(
-                    base=["obj/a/b/c2/package_manifest.json"]),
-                expected_output=None,
-                blobfs_capacity=101,
-                expected_non_blobfs_output=None,
-                return_value=1),
         ])
     def test_run_main(
             self, name, size_limits, image_assembly_config, expected_output,
-            blobfs_capacity, expected_non_blobfs_output, return_value):
+            blobfs_capacity, max_blob_contents_size, return_value):
         self.maxDiff = None  # Do not truncate the diff result.
         with tempfile.TemporaryDirectory() as tmpdir:
 
@@ -234,10 +189,10 @@ class ConvertTest(unittest.TestCase):
                 image_assembly_config_path,
                 "--output",
                 output_path,
-                "--non-blobfs-output",
-                non_blobfs_output_path,
                 "--blobfs-capacity",
                 str(blobfs_capacity),
+                "--max-blob-contents-size",
+                str(max_blob_contents_size),
             ]
 
             self.assertEqual(convert_size_limits.main(), return_value)
@@ -245,8 +200,3 @@ class ConvertTest(unittest.TestCase):
             if expected_output is not None:
                 with open(output_path, "r") as file:
                     self.assertEqual(expected_output, json.load(file))
-
-            if expected_non_blobfs_output is not None:
-                with open(non_blobfs_output_path, "r") as file:
-                    self.assertEqual(
-                        expected_non_blobfs_output, json.load(file))

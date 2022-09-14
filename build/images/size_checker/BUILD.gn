@@ -52,8 +52,9 @@ ffx_action("run_product_size_checker") {
   }
 }
 
-if (blobfs_capacity != false && size_checker_input != {
-                                }) {
+if (blobfs_capacity != false && max_blob_contents_size != false &&
+    size_checker_input != {
+    }) {
   _output_dir =
       get_label_info(":convert_size_limits_to_size_budgets", "target_out_dir")
   _size_budgets_blobfs_file = "${_output_dir}/size_budgets.json"
@@ -68,16 +69,31 @@ if (blobfs_capacity != false && size_checker_input != {
     output_conversion = "json"
   }
 
+  generated_file("update_package_budget_json") {
+    outputs = [ _size_budgets_non_blobfs_file ]
+    contents = {
+      package_set_budgets = [
+        {
+          name = "Update Package"
+          budget_bytes =
+              blobfs_capacity - max_blob_contents_size - max_blob_contents_size
+          creep_budget_bytes = update_package_size_creep_limit
+          merge = false
+          packages =
+              [ "obj/build/images/fuchsia/update/update_package_manifest.json" ]
+        },
+      ]
+    }
+    output_conversion = "json"
+  }
+
   action("convert_size_limits_to_size_budgets") {
     script = "//build/assembly/scripts/convert_size_limits.py"
     inputs = [
       "$root_build_dir/size_checker.json",
       _image_assembly_config,
     ]
-    outputs = [
-      _size_budgets_blobfs_file,
-      _size_budgets_non_blobfs_file,
-    ]
+    outputs = [ _size_budgets_blobfs_file ]
     deps = [
       ":size_checker_json",
       "//build/images/fuchsia:fuchsia.product_assembler",
@@ -90,10 +106,10 @@ if (blobfs_capacity != false && size_checker_input != {
       rebase_path(_image_assembly_config, root_build_dir),
       "--output",
       rebase_path(_size_budgets_blobfs_file, root_build_dir),
-      "--non-blobfs-output",
-      rebase_path(_size_budgets_non_blobfs_file, root_build_dir),
       "--blobfs-capacity",
       "$blobfs_capacity",
+      "--max-blob-contents-size",
+      "$max_blob_contents_size",
     ]
   }
 
@@ -163,7 +179,7 @@ if (blobfs_capacity != false && size_checker_input != {
     inputs = [ _size_budgets_non_blobfs_file ]
     outputs = [ _non_blobfs_hermetic_inputs ]
     deps = [
-      ":convert_size_limits_to_size_budgets",
+      ":update_package_budget_json",
       "//build/images/fuchsia:update",
     ]
     testonly = true
@@ -178,7 +194,7 @@ if (blobfs_capacity != false && size_checker_input != {
 
   ffx_action("verify_size_budget_non_blobfs") {
     deps = [
-      ":convert_size_limits_to_size_budgets",
+      ":update_package_budget_json",
       "//build/images/fuchsia:update",
     ]
     hermetic_inputs_target = ":${_non_blobfs_hermetic_inputs_target}"

@@ -83,4 +83,7 @@ declare_args() {
   # }
   size_checker_input = {
   }
+
+  # How much the size of Update Package can be increased in one CL.
+  update_package_size_creep_limit = 90112  # 0.085 MiB
 }

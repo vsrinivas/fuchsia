@@ -218,18 +218,10 @@ size_checker_input = {
     {
       component = "Unallocated"
       src = []
-      limit = 5118702065
+      limit = 5118550513
       creep_limit = 0
     },
   ]
-
-  non_blobfs_components = [
-    {
-      component = "Update Package"
-      blobs_json_path =
-          "obj/build/images/fuchsia/update/update_package_manifest.json"
-      limit = 52125696  # 49.711 MiB
-      creep_limit = 147456  # 144.0 KiB
-    },
-  ]
 }
+
+update_package_size_creep_limit = 147456  # 144.0 KiB

@@ -10,6 +10,8 @@ board_name = "qemu-arm64"
 board_description = "A generic emulated arm64 device."
 
 blobfs_capacity = 10485760000  # 10000 MiB
+max_blob_contents_size =
+    5216665600  # 4975 MiB. Leaves 50 MiB for the update package.
 
 _common_bootfs_deps = [
   "//src/devices/bus/drivers/pci:bus-pci",

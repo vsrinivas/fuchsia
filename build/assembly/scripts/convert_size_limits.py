@@ -35,8 +35,6 @@ import sys
 import collections
 import os
 
-_UPDATE_PACKAGE_NAME = 'Update Package'
-
 
 class InvalidInputError(Exception):
     pass
@@ -75,30 +73,6 @@ def convert_budget_format(component, all_manifests):
         creep_budget_bytes=component["creep_limit"],
         merge=False,
         packages=packages)
-
-
-def convert_non_blobfs_budget(component):
-    """Converts a budget that are not part of blobfs.
-
-  Args:
-    component: dictionary, former non_blobfs size checker configuration entry.
-  Returns:
-    dictionary, new configuration with a name, a maximum size and the list of
-    packages manifest to fit in the budget.
-  """
-    return dict(
-        name=component["component"],
-        budget_bytes=component["limit"],
-        creep_budget_bytes=component["creep_limit"],
-        merge=False,
-        packages=[component["blobs_json_path"]])
-
-
-def make_non_blobfs_budgets(size_limits):
-    return [
-        convert_non_blobfs_budget(non_blobfs)
-        for non_blobfs in size_limits.get("non_blobfs_components", [])
-    ]
 
 
 def count_packages(budgets, all_manifests):
@@ -187,10 +161,9 @@ def main():
     parser.add_argument(
         '--image-assembly-config', type=argparse.FileType('r'), required=True)
     parser.add_argument('--output', type=argparse.FileType('w'), required=True)
-    parser.add_argument(
-        '--non-blobfs-output', type=argparse.FileType('w'), required=True)
     parser.add_argument('-v', '--verbose', action='store_true')
     parser.add_argument('--blobfs-capacity', type=int, required=True)
+    parser.add_argument('--max-blob-contents-size', type=int, required=True)
     args = parser.parse_args()
 
     # Read all input configurations.
@@ -200,40 +173,18 @@ def main():
     # Format the resulting configuration file.
     try:
         # Convert all the budget formats.
-        non_blobfs_budgets = make_non_blobfs_budgets(size_limits)
         resource_budgets = make_resources_budgets(size_limits)
         package_set_budgets = make_package_set_budgets(
             size_limits, image_assembly_config)
 
         output_contents = dict(
             resource_budgets=resource_budgets,
-            package_set_budgets=package_set_budgets)
-
-        # Determine the budget for slot A.
-        if non_blobfs_budgets or resource_budgets or package_set_budgets:
-            # Find the update package budget.
-            update_budget = None
-            for budget in non_blobfs_budgets:
-                if budget['name'] == _UPDATE_PACKAGE_NAME:
-                    update_budget = budget['budget_bytes']
-
-            if update_budget:
-                budget_for_slot_a = int(
-                    (args.blobfs_capacity - update_budget) / 2)
-                output_contents['total_budget_bytes'] = budget_for_slot_a
-            else:
-                print('Failed to find the update package budget')
-                return 1
+            package_set_budgets=package_set_budgets,
+            total_budget_bytes=args.max_blob_contents_size)
 
         # Ensure the outputfile is closed early.
         with args.output as output:
             json.dump(output_contents, output, indent=2)
-
-        # Non blobfs budgets are written to a separate configuration so that
-        # they can be evaluated separately.
-        with args.non_blobfs_output as output:
-            json.dump(
-                dict(package_set_budgets=non_blobfs_budgets), output, indent=2)
 
         return 0
     except InvalidInputError:
