@@ -803,12 +803,19 @@ mod tests {
             }
         }
 
-        let hub_proxy = builtin_environment
+        let (hub_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+        let server_end = server_end.into_channel();
+
+        builtin_environment
             .lock()
             .await
-            .bind_service_fs_for_hub()
+            .hub
+            .as_ref()
+            .unwrap()
+            .open_root(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE, server_end)
             .await
-            .expect("unable to bind service_fs");
+            .unwrap();
 
         model.root().hooks.install(additional_hooks).await;
 

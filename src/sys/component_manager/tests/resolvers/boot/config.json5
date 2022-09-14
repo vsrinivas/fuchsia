@@ -1,4 +1,5 @@
 {
+    debug: true,
     out_dir_contents: "svc",
     use_builtin_process_launcher: false,
     log_destination: "syslog",

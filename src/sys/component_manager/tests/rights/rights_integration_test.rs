@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fidl_fidl_test_components as ftest, fuchsia_async as fasync, fuchsia_component_test::*};
+use {
+    fidl_fidl_test_components as ftest, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
+    fuchsia_component_test::*,
+};
 
 const COMPONENT_MANAGER_URL: &str = "#meta/component_manager_for_rights_test.cm";
 
@@ -35,7 +38,8 @@ async fn run_test(url: &str, expected_result: &str) {
     cm_builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol::<ftest::TriggerMarker>())
+                .capability(Capability::protocol_by_name("fuchsia.sys2.RealmQuery"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.LifecycleController"))
                 .from(Ref::child("component_manager"))
                 .to(Ref::parent()),
         )
@@ -44,10 +48,23 @@ async fn run_test(url: &str, expected_result: &str) {
 
     let instance = cm_builder.build().await.unwrap();
 
-    let trigger = instance
+    let lifecycle_controller = instance
         .root
-        .connect_to_protocol_at_exposed_dir::<ftest::TriggerMarker>()
-        .expect("failed to connect to Trigger");
+        .connect_to_protocol_at_exposed_dir::<fsys::LifecycleControllerMarker>()
+        .unwrap();
+    lifecycle_controller.start(".").await.unwrap().unwrap();
+
+    let realm_query = instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<fsys::RealmQueryMarker>()
+        .expect("failed to connect to RealmQuery");
+    let (_, resolved) = realm_query.get_instance_info(".").await.unwrap().unwrap();
+    let exposed_dir = resolved.unwrap().exposed_dir.into_proxy().unwrap();
+    let trigger =
+        fuchsia_component::client::connect_to_protocol_at_dir_root::<ftest::TriggerMarker>(
+            &exposed_dir,
+        )
+        .unwrap();
 
     let result = trigger.run().await.expect("trigger failed");
     assert_eq!(result, expected_result, "Results did not match");
@@ -175,7 +192,8 @@ async fn route_directories_from_component_manager_namespace() {
     cm_builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol::<ftest::TriggerMarker>())
+                .capability(Capability::protocol_by_name("fuchsia.sys2.RealmQuery"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.LifecycleController"))
                 .from(Ref::child("component_manager"))
                 .to(Ref::parent()),
         )
@@ -184,10 +202,23 @@ async fn route_directories_from_component_manager_namespace() {
 
     let instance = cm_builder.build().await.unwrap();
 
-    let trigger = instance
+    let lifecycle_controller = instance
         .root
-        .connect_to_protocol_at_exposed_dir::<ftest::TriggerMarker>()
-        .expect("failed to connect to Trigger");
+        .connect_to_protocol_at_exposed_dir::<fsys::LifecycleControllerMarker>()
+        .unwrap();
+    lifecycle_controller.start(".").await.unwrap().unwrap();
+
+    let realm_query = instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<fsys::RealmQueryMarker>()
+        .expect("failed to connect to RealmQuery");
+    let (_, resolved) = realm_query.get_instance_info(".").await.unwrap().unwrap();
+    let exposed_dir = resolved.unwrap().exposed_dir.into_proxy().unwrap();
+    let trigger =
+        fuchsia_component::client::connect_to_protocol_at_dir_root::<ftest::TriggerMarker>(
+            &exposed_dir,
+        )
+        .unwrap();
 
     let result = trigger.run().await.expect("trigger failed");
     assert_eq!(result, "All tests passed", "Results did not match");

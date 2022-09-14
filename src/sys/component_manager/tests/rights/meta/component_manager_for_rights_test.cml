@@ -21,7 +21,12 @@
         },
     ],
     capabilities: [
-        { protocol: "fidl.test.components.Trigger" },
+        {
+            protocol: [
+                "fuchsia.sys2.LifecycleController",
+                "fuchsia.sys2.RealmQuery",
+            ],
+        },
     ],
     use: [
         {
@@ -67,7 +72,10 @@
     ],
     expose: [
         {
-            protocol: "fidl.test.components.Trigger",
+            protocol: [
+                "fuchsia.sys2.LifecycleController",
+                "fuchsia.sys2.RealmQuery",
+            ],
             from: "self",
         },
     ],

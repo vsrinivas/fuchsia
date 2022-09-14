@@ -17,7 +17,6 @@ rustc_library("security_policy_test_util") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/fuchsia-fs",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]

@@ -43,15 +43,12 @@ pub async fn start_policy_test(
     EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
     EventMatcher::ok().moniker("./root").expect_match::<Started>(&mut event_stream).await;
 
-    // Access the hub from the component manager instance and get to the Realm protocol
-    let exposed_dir = instance.root.get_exposed_dir();
-    let exposed_dir = fuchsia_fs::directory::open_directory(
-        exposed_dir,
-        "hub/children/root/resolved/expose",
-        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-    )
-    .await
-    .unwrap();
+    // Get to the Realm protocol
+    let realm_query =
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::RealmQueryMarker>().unwrap();
+    let (_, resolved) = realm_query.get_instance_info("./root").await.unwrap().unwrap();
+    let exposed_dir = resolved.unwrap().exposed_dir.into_proxy().unwrap();
+
     let realm =
         fuchsia_component::client::connect_to_protocol_at_dir_root::<fcomponent::RealmMarker>(
             &exposed_dir,

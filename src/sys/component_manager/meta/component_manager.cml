@@ -16,11 +16,11 @@
     },
     capabilities: [
         {
-            directory: "hub",
-            rights: [ "rw*" ],
-            path: "/hub",
+            protocol: [
+                "fuchsia.sys2.LifecycleController",
+                "fuchsia.sys2.RealmQuery",
+            ],
         },
-        { protocol: "fuchsia.sys2.LifecycleController" },
     ],
     use: [
         {
@@ -33,11 +33,10 @@
     ],
     expose: [
         {
-            directory: "hub",
-            from: "self",
-        },
-        {
-            protocol: "fuchsia.sys2.LifecycleController",
+            protocol: [
+                "fuchsia.sys2.LifecycleController",
+                "fuchsia.sys2.RealmQuery",
+            ],
             from: "self",
         },
     ],

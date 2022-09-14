@@ -131,7 +131,7 @@ impl RealmQuery {
     }
 
     /// Serve the fuchsia.sys2.RealmQuery protocol for a given scope on a given stream
-    async fn serve(
+    pub async fn serve(
         self: Arc<Self>,
         scope_moniker: AbsoluteMoniker,
         mut stream: fsys::RealmQueryRequestStream,

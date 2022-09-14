@@ -380,7 +380,6 @@ group("tests") {
     "lib:tests",
     "src/elf_runner/tests",
     "stress_tests",
-    "stress_tests_alt",
     "tests",
   ]
 }

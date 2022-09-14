@@ -70,11 +70,11 @@ use {
         config::RuntimeConfig,
         environment::{DebugRegistry, RunnerRegistry},
     },
-    anyhow::{anyhow, bail, format_err, Context as _, Error},
+    anyhow::{anyhow, format_err, Context as _, Error},
     cm_rust::{CapabilityName, RunnerRegistration},
     cm_types::Url,
     fidl::{
-        endpoints::{create_endpoints, create_proxy, ServerEnd},
+        endpoints::{create_proxy, ServerEnd},
         AsHandleRef,
     },
     fidl_fuchsia_component_internal::{BuiltinBootResolver, OutDirContents},
@@ -88,7 +88,7 @@ use {
     futures::prelude::*,
     lazy_static::lazy_static,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
-    std::{collections::HashMap, path::PathBuf, sync::Arc},
+    std::{collections::HashMap, sync::Arc},
     tracing::{info, warn},
 };
 
@@ -961,23 +961,8 @@ impl BuiltinEnvironment {
     /// Setup a ServiceFs that contains debug capabilities like the root Hub, LifecycleController,
     /// and EventSource.
     async fn create_service_fs<'a>(&self) -> Result<ServiceFs<ServiceObj<'a, ()>>, Error> {
-        if let None = self.hub {
-            bail!("Hub must be enabled if OutDirContents is not `None`");
-        }
-
         // Create the ServiceFs
         let mut service_fs = ServiceFs::new();
-
-        // Setup the hub
-        let (hub_proxy, hub_server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
-        if let Some(hub) = &self.hub {
-            hub.open_root(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-                hub_server_end.into_channel(),
-            )
-            .await?;
-            service_fs.add_remote("hub", hub_proxy);
-        }
 
         // Install the root fuchsia.sys2.LifecycleController
         if let Some(lifecycle_controller) = &self.lifecycle_controller {
@@ -992,6 +977,26 @@ impl BuiltinEnvironment {
                     scope
                         .add_task(async move {
                             lifecycle_controller.serve(AbsoluteMoniker::root(), stream).await;
+                        })
+                        .await;
+                })
+                .detach();
+            });
+        }
+
+        // Install the root fuchsia.sys2.RealmQuery
+        if let Some(realm_query) = &self.realm_query {
+            let realm_query = realm_query.clone();
+            let scope = self.model.top_instance().task_scope().clone();
+            service_fs.dir("svc").add_fidl_service(move |stream| {
+                let realm_query = realm_query.clone();
+                let scope = scope.clone();
+                // Spawn a short-lived task that adds the realm query serve to
+                // component manager's task scope.
+                fasync::Task::spawn(async move {
+                    scope
+                        .add_task(async move {
+                            realm_query.serve(AbsoluteMoniker::root(), stream).await;
                         })
                         .await;
                 })
@@ -1069,30 +1074,6 @@ impl BuiltinEnvironment {
         self.bind_service_fs(server_end).await
     }
 
-    /// Bind ServiceFs to a new channel and return the Hub directory.
-    /// Used mainly by integration tests.
-    pub async fn bind_service_fs_for_hub(&mut self) -> Result<fio::DirectoryProxy, Error> {
-        // Create a channel that ServiceFs will operate on
-        let (service_fs_proxy, service_fs_server_end) =
-            create_proxy::<fio::DirectoryMarker>().unwrap();
-
-        self.bind_service_fs(service_fs_server_end).await?;
-
-        // Open the Hub from within ServiceFs
-        let (hub_client_end, hub_server_end) = create_endpoints::<fio::DirectoryMarker>().unwrap();
-        service_fs_proxy
-            .open(
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-                fio::MODE_TYPE_DIRECTORY,
-                "hub",
-                ServerEnd::new(hub_server_end.into_channel()),
-            )
-            .map_err(|err| ModelError::namespace_creation_failed(err))?;
-        let hub_proxy = hub_client_end.into_proxy().unwrap();
-
-        Ok(hub_proxy)
-    }
-
     fn emit_diagnostics<'a>(
         &self,
         service_fs: &mut ServiceFs<ServiceObj<'a, ()>>,
@@ -1131,56 +1112,15 @@ impl BuiltinEnvironment {
     }
 
     pub async fn run_root(&mut self) -> Result<(), Error> {
-        match self.out_dir_contents {
-            OutDirContents::None => {
-                info!("Field `out_dir_contents` is set to None.");
-                Ok(())
-            }
-            OutDirContents::Hub => {
-                info!("Field `out_dir_contents` is set to Hub.");
-                self.bind_service_fs_to_out().await?;
-                self.model.start().await;
-                component::health().set_ok();
-                self.wait_for_root_stop().await;
+        self.bind_service_fs_to_out().await?;
+        self.model.start().await;
+        component::health().set_ok();
+        self.wait_for_root_stop().await;
 
-                // Stop serving the out directory, so that more connections to debug capabilities
-                // cannot be made.
-                drop(self._service_fs_task.take());
-                Ok(())
-            }
-            OutDirContents::Svc => {
-                info!("Field `out_dir_contents` is set to Svc.");
-
-                if self.execution_mode.is_debug() {
-                    panic!(
-                        "Debug mode requires `out_dir_contents` to be `hub`. This is because the
-                        component tree can only be started from the `fuchsia.sys2.EventSource`
-                        protocol which is available when `out_dir_contents` is set to `hub`."
-                    )
-                }
-
-                let hub_proxy = self.bind_service_fs_for_hub().await?;
-                self.model.start().await;
-                // List the services exposed by the root component.
-                let expose_dir_proxy = fuchsia_fs::open_directory(
-                    &hub_proxy,
-                    &PathBuf::from("exec/expose"),
-                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-                )
-                .expect("Failed to open directory");
-
-                // Bind the root component's expose/ to out/svc of this component, so sysmgr can
-                // find it and route service connections to it.
-                let mut fs = ServiceFs::<ServiceObj<'_, ()>>::new();
-                fs.add_remote("svc", expose_dir_proxy);
-
-                fs.take_and_serve_directory_handle()?;
-
-                component::health().set_ok();
-
-                Ok(fs.collect::<()>().await)
-            }
-        }
+        // Stop serving the out directory, so that more connections to debug capabilities
+        // cannot be made.
+        drop(self._service_fs_task.take());
+        Ok(())
     }
 }
 

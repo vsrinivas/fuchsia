@@ -18,7 +18,9 @@ rustc_test("rights_integration_test_bin") {
   edition = "2021"
   source_root = "rights_integration_test.rs"
   deps = [
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/sys/component_manager/tests/fidl:components_rust",
   ]

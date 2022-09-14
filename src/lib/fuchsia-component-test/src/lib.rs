@@ -833,7 +833,7 @@ impl RealmBuilder {
         component_manager_realm
             .add_route(
                 Route::new()
-                    .capability(Capability::directory("hub").path("/hub").rights(fio::RW_STAR_DIR))
+                    .capability(Capability::protocol_by_name("fuchsia.sys2.RealmQuery"))
                     .capability(Capability::protocol_by_name("fuchsia.sys2.LifecycleController"))
                     .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
                     .from(Ref::child("component_manager"))

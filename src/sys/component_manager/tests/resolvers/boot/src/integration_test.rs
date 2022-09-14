@@ -13,7 +13,7 @@
 //! If the call is successful, then the boot resolver was correctly routed.
 
 use {
-    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
     futures::prelude::*,
     vfs::directory::entry::DirectoryEntry as _,
@@ -65,17 +65,6 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
         .await
         .unwrap();
 
-    // This is the test protocol that is expected to be callable.
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol_by_name("fidl.test.components.Trigger"))
-                .from(&component_manager)
-                .to(Ref::parent()),
-        )
-        .await
-        .unwrap();
-
     builder
         .add_route(
             Route::new()
@@ -89,9 +78,36 @@ async fn boot_resolver_can_be_routed_from_component_manager() {
         .await
         .unwrap();
 
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.sys2.RealmQuery"))
+                .capability(Capability::protocol_by_name("fuchsia.sys2.LifecycleController"))
+                .from(&component_manager)
+                .to(Ref::parent()),
+        )
+        .await
+        .unwrap();
+
     let realm_instance = builder.build().await.unwrap();
+
+    let lifecycle_controller = realm_instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<fsys::LifecycleControllerMarker>()
+        .unwrap();
+    lifecycle_controller.start(".").await.unwrap().unwrap();
+
+    // Get to the Trigger protocol exposed by the root component in this nested component manager
+    let realm_query =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fsys::RealmQueryMarker>().unwrap();
+    let (_, resolved) = realm_query.get_instance_info(".").await.unwrap().unwrap();
+    let exposed_dir = resolved.unwrap().exposed_dir.into_proxy().unwrap();
     let trigger =
-        realm_instance.root.connect_to_protocol_at_exposed_dir::<ftest::TriggerMarker>().unwrap();
+        fuchsia_component::client::connect_to_protocol_at_dir_root::<ftest::TriggerMarker>(
+            &exposed_dir,
+        )
+        .unwrap();
+
     let out = trigger.run().await.expect("trigger failed");
     assert_eq!(out, "Triggered");
 }
