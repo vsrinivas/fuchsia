@@ -1191,7 +1191,7 @@ TEST(NetStreamTest, GetSocketAcceptConn) {
   // (https://cs.opensource.google/gvisor/gvisor/+/master:pkg/tcpip/transport/tcp/accept.go;l=742-762;drc=58b9bdfc21e792c5d529ec9f4ab0b2f2cd1ee082),
   // which is merely notified when tcp.endpoint.shutdown is called
   // (https://cs.opensource.google/gvisor/gvisor/+/master:pkg/tcpip/transport/tcp/endpoint.go;l=2493;drc=58b9bdfc21e792c5d529ec9f4ab0b2f2cd1ee082).
-  if (kIsFuchsia) {
+  if (!kIsFuchsia) {
     SCOPED_TRACE("shutdown-read");
     ASSERT_NO_FATAL_FAILURE(assert_so_accept_conn_eq(0));
   }
