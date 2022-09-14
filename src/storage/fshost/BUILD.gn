@@ -495,11 +495,6 @@ fshost_cml("fshost.cml") {
   options = {
     bootfs_only = bootfs_only
     data_filesystem_format = data_filesystem_format
-
-    if (rust_fshost) {
-      assert(data_filesystem_format == "fxfs", "Only Fxfs is supported")
-    }
-
     use_disk_based_minfs_migration = use_disk_based_minfs_migration
   }
 }
