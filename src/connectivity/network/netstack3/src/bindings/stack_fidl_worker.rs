@@ -8,8 +8,8 @@ use super::{
     devices::{self, CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo, FidlWorkerInfo},
     ethernet_worker, interfaces_admin,
     util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
-    DeviceStatusNotifier, InterfaceControl as _, InterfaceControlRunner,
-    InterfaceEventProducerFactory, Lockable, LockableContext, MutableDeviceState as _,
+    InterfaceControl as _, InterfaceControlRunner, InterfaceEventProducerFactory, Lockable,
+    LockableContext,
 };
 
 use fidl_fuchsia_hardware_ethernet as fhardware_ethernet;
@@ -77,18 +77,6 @@ where
                                 );
                             }
                         }
-                    }
-                    StackRequest::EnableInterfaceDeprecated { id, responder } => {
-                        responder_send!(
-                            responder,
-                            &mut worker.lock_worker().await.fidl_enable_interface(id)
-                        );
-                    }
-                    StackRequest::DisableInterfaceDeprecated { id, responder } => {
-                        responder_send!(
-                            responder,
-                            &mut worker.lock_worker().await.fidl_disable_interface(id)
-                        );
                     }
                     StackRequest::AddInterfaceAddressDeprecated { id, addr, responder } => {
                         responder_send!(
@@ -414,26 +402,5 @@ where
         } else {
             Err(fidl_net_stack::Error::InvalidArgs)
         }
-    }
-}
-
-impl<'a, C> LockedFidlWorker<'a, C>
-where
-    C: LockableContext,
-    C::NonSyncCtx: DeviceStatusNotifier,
-    C::NonSyncCtx: AsRef<Devices> + AsMut<Devices>,
-{
-    fn fidl_enable_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        self.ctx.update_device_state(id, |dev_info| {
-            dev_info.info_mut().common_info_mut().admin_enabled = true;
-        });
-        self.ctx.enable_interface(id)
-    }
-
-    fn fidl_disable_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
-        self.ctx.update_device_state(id, |dev_info| {
-            dev_info.info_mut().common_info_mut().admin_enabled = false;
-        });
-        self.ctx.disable_interface(id)
     }
 }

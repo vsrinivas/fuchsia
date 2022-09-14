@@ -56,22 +56,6 @@ protocol Stack {
         id fuchsia.net.interface_id;
     }) -> (struct {}) error Error;
 
-    /// Enable the interface. Packets may be processed by the stack after this
-    /// call is processed.
-    // TODO(https://fxbug.dev/95449): Remove this when N3 implements Control.
-    @deprecated("Use fuchsia.net.interfaces.admin/Control.Enable")
-    EnableInterfaceDeprecated(struct {
-        id fuchsia.net.interface_id;
-    }) -> (struct {}) error Error;
-
-    /// Disable the interface. The stack will no longer process packets after
-    /// this call.
-    // TODO(https://fxbug.dev/95449): Remove this when N3 implements Control.
-    @deprecated("Use fuchsia.net.interfaces.admin/Control.Disable")
-    DisableInterfaceDeprecated(struct {
-        id fuchsia.net.interface_id;
-    }) -> (struct {}) error Error;
-
     /// Add an address to the interface. If the interface already has an address
     /// of a given type that does not allow duplicates, this method will return
     /// an error.

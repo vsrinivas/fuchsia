@@ -53,44 +53,6 @@ func (ns *Netstack) delInterface(id uint64) stack.StackDelEthernetInterfaceResul
 	return result
 }
 
-func (ns *Netstack) enableInterface(id uint64) stack.StackEnableInterfaceDeprecatedResult {
-	var result stack.StackEnableInterfaceDeprecatedResult
-
-	nicInfo, ok := ns.stack.NICInfo()[tcpip.NICID(id)]
-	if !ok {
-		result.SetErr(stack.ErrorNotFound)
-		return result
-	}
-
-	if err := nicInfo.Context.(*ifState).Up(); err != nil {
-		_ = syslog.Errorf("ifs.Up() failed (NIC %d): %s", id, err)
-		result.SetErr(stack.ErrorInternal)
-		return result
-	}
-
-	result.SetResponse(stack.StackEnableInterfaceDeprecatedResponse{})
-	return result
-}
-
-func (ns *Netstack) disableInterface(id uint64) stack.StackDisableInterfaceDeprecatedResult {
-	var result stack.StackDisableInterfaceDeprecatedResult
-
-	nicInfo, ok := ns.stack.NICInfo()[tcpip.NICID(id)]
-	if !ok {
-		result.SetErr(stack.ErrorNotFound)
-		return result
-	}
-
-	if err := nicInfo.Context.(*ifState).Down(); err != nil {
-		_ = syslog.Errorf("ifs.Down() failed (NIC %d): %s", id, err)
-		result.SetErr(stack.ErrorInternal)
-		return result
-	}
-
-	result.SetResponse(stack.StackDisableInterfaceDeprecatedResponse{})
-	return result
-}
-
 func (ns *Netstack) addInterfaceAddr(id uint64, ifAddr net.Subnet) stack.StackAddInterfaceAddressDeprecatedResult {
 	protocolAddr := fidlconv.ToTCPIPProtocolAddress(ifAddr)
 	if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {
@@ -270,14 +232,6 @@ func (ni *stackImpl) AddEthernetInterface(_ fidl.Context, topologicalPath string
 
 func (ni *stackImpl) DelEthernetInterface(_ fidl.Context, id uint64) (stack.StackDelEthernetInterfaceResult, error) {
 	return ni.ns.delInterface(id), nil
-}
-
-func (ni *stackImpl) EnableInterfaceDeprecated(_ fidl.Context, id uint64) (stack.StackEnableInterfaceDeprecatedResult, error) {
-	return ni.ns.enableInterface(id), nil
-}
-
-func (ni *stackImpl) DisableInterfaceDeprecated(_ fidl.Context, id uint64) (stack.StackDisableInterfaceDeprecatedResult, error) {
-	return ni.ns.disableInterface(id), nil
 }
 
 func (ni *stackImpl) AddInterfaceAddressDeprecated(_ fidl.Context, id uint64, addr net.Subnet) (stack.StackAddInterfaceAddressDeprecatedResult, error) {
