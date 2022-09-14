@@ -554,6 +554,33 @@ TEST_F(SemanticTreeTest, GetPreviousNodeForNonexistentId) {
   EXPECT_EQ(next_node, nullptr);
 }
 
+TEST_F(SemanticTreeTest, NodeFilterWithParentGetsCorrectParent) {
+  // Test case using a NodeFilterWithParent - confirms that it always receives
+  // the right parent node.
+  SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeEvenNodesPath);
+  EXPECT_TRUE(tree_->Update(std::move(updates)));
+
+  const auto kNodeFilterCheckingParents =
+      [](const fuchsia::accessibility::semantics::Node* node,
+         const fuchsia::accessibility::semantics::Node* parent) {
+        // Check to ensure that `parent` is actually the parent of `node`.
+        if (parent) {
+          auto children = parent->child_ids();
+          EXPECT_TRUE(std::find(children.begin(), children.end(), node->node_id()) !=
+                      children.end());
+        } else {
+          EXPECT_TRUE(node->node_id() == 1);
+        }
+
+        return false;
+      };
+
+  for (int i = 0; i < 8; i++) {
+    tree_->GetNextNode(0u, kNodeFilterCheckingParents);
+    tree_->GetPreviousNode(0u, kNodeFilterCheckingParents);
+  }
+}
+
 TEST_F(SemanticTreeTest, InspectOutput) {
   SemanticTree::TreeUpdates updates = BuildUpdatesFromFile(kSemanticTreeOddNodesPath);
   EXPECT_TRUE(tree_->Update(std::move(updates)));
