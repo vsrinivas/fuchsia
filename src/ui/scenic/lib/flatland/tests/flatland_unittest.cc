@@ -198,19 +198,6 @@ const uint32_t kDefaultSize = 1;
 const glm::ivec2 kDefaultPixelScale = {1, 1};
 const int32_t kDefaultInset = 0;
 
-float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
-  switch (orientation) {
-    case Orientation::CCW_0_DEGREES:
-      return 0.f;
-    case Orientation::CCW_90_DEGREES:
-      return -glm::half_pi<float>();
-    case Orientation::CCW_180_DEGREES:
-      return -glm::pi<float>();
-    case Orientation::CCW_270_DEGREES:
-      return -glm::three_over_two_pi<float>();
-  }
-}
-
 void ExpectRectFEquals(const fuchsia::math::RectF& rect1, const fuchsia::math::RectF& rect2) {
   EXPECT_FLOAT_EQ(rect1.x, rect2.x);
   EXPECT_FLOAT_EQ(rect1.y, rect2.y);
@@ -1629,13 +1616,13 @@ TEST_F(FlatlandTest, SetGeometricTransformProperties) {
   // calls *right multiply* instead of *left multiply*.
   glm::mat3 matrix1 = glm::mat3();
   matrix1 = glm::translate(matrix1, {1, 2});
-  matrix1 = glm::rotate(matrix1, GetOrientationAngle(Orientation::CCW_90_DEGREES));
+  matrix1 = glm::rotate(matrix1, utils::GetOrientationAngle(Orientation::CCW_90_DEGREES));
   matrix1 = glm::scale(matrix1, {4.f, 5.f});
   EXPECT_MATRIX(uber_struct, handle1, matrix1);
 
   glm::mat3 matrix2 = glm::mat3();
   matrix2 = glm::translate(matrix2, {6, 7});
-  matrix2 = glm::rotate(matrix2, GetOrientationAngle(Orientation::CCW_270_DEGREES));
+  matrix2 = glm::rotate(matrix2, utils::GetOrientationAngle(Orientation::CCW_270_DEGREES));
   matrix2 = glm::scale(matrix2, {2.f, 3.f});
   EXPECT_MATRIX(uber_struct, handle2, matrix2);
 }

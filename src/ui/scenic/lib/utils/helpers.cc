@@ -9,6 +9,10 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
+#include <glm/gtc/constants.hpp>
+
+using fuchsia::ui::composition::Orientation;
+
 namespace utils {
 
 fuchsia::ui::scenic::Present2Args CreatePresent2Args(zx_time_t requested_presentation_time,
@@ -177,6 +181,19 @@ void PrettyPrintMat3(std::string name, const std::array<float, 9>& mat3) {
                 << mat3[0] << "," << mat3[3] << "," << mat3[6] << "\n"
                 << mat3[1] << "," << mat3[4] << "," << mat3[7] << "\n"
                 << mat3[2] << "," << mat3[5] << "," << mat3[8];
+}
+
+float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation) {
+  switch (orientation) {
+    case Orientation::CCW_0_DEGREES:
+      return 0.f;
+    case Orientation::CCW_90_DEGREES:
+      return -glm::half_pi<float>();
+    case Orientation::CCW_180_DEGREES:
+      return -glm::pi<float>();
+    case Orientation::CCW_270_DEGREES:
+      return -glm::three_over_two_pi<float>();
+  }
 }
 
 }  // namespace utils

@@ -87,6 +87,8 @@ std::string GetArrayString(const std::string& name, const std::array<float, Dim>
   return result;
 }
 
+float GetOrientationAngle(fuchsia::ui::composition::Orientation orientation);
+
 }  // namespace utils
 
 #endif  // SRC_UI_SCENIC_LIB_UTILS_HELPERS_H_

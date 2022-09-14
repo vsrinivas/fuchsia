@@ -820,7 +820,7 @@ TEST(GlobalTopologyDataTest, HitTest_StartNodeTest) {
   }
 }
 
-//  This test features a 10x5 parent view, with a 6x2 child view.
+//  This test features a 10x5 parent view, with a 2x6 child view that is rotated 90 degrees.
 //
 //  The below image is to scale.
 // ------------
@@ -833,7 +833,7 @@ TEST(GlobalTopologyDataTest, HitTest_StartNodeTest) {
 //
 // The child has an infinite hit region defined, but it should only receive hits from (7,2) to
 // (10,4), as the child is clipped by its and its parent's clip boundaries.
-TEST(GlobalTopologyDataTest, HitTest_ClippedChild) {
+TEST(GlobalTopologyDataTest, HitTest_ClippedandRotatedChild) {
   UberStruct::InstanceMap uber_structs;
   GlobalTopologyData::LinkTopologyMap links;
 
@@ -844,10 +844,10 @@ TEST(GlobalTopologyDataTest, HitTest_ClippedChild) {
   const zx_koid_t view_ref_parent_koid = utils::ExtractKoid(view_ref_parent);
   const zx_koid_t view_ref_child_koid = utils::ExtractKoid(view_ref_child);
   const uint32_t kParentWidth = 10, kParentHeight = 5;
-  const uint32_t kChildWidth = 6, kChildHeight = 2;
+  const int32_t kChildWidth = 6, kChildHeight = 2;
   const uint32_t kChildClippedWidth = 3;
 
-  const uint32_t kChildOriginX = 7, kChildOriginY = 2;
+  const int32_t kChildOriginX = 7, kChildOriginY = 2;
 
   const TransformHandle view_ref_parent_root_transform = {1, 0};
   const TransformHandle view_ref_child_root_transform = {2, 0};
@@ -878,19 +878,26 @@ TEST(GlobalTopologyDataTest, HitTest_ClippedChild) {
         std::make_shared<fuchsia::ui::views::ViewRef>(std::move(view_ref_child));
     // Create a maximal hit region so that the clip regions are what must be respected.
     uber_struct->local_hit_regions_map[view_ref_child_root_transform] = {
-        {.region = {0, 0, FLT_MAX, FLT_MAX}}};
+        {.region = {-100, -100, 300, 300}}};
 
     // Apply operations on the child to move it into position.
     glm::mat3 child_matrix = glm::mat3();
-    child_matrix = glm::translate(child_matrix, {kChildOriginX, kChildOriginY});
     child_matrix = glm::scale(child_matrix, {1, 1});
-    // TODO(fxbug.dev/95710): Replace this with a 90 or 270 degree orientation.
-    child_matrix = glm::rotate(child_matrix, 0.f);
+
+    child_matrix = glm::rotate(
+        child_matrix,
+        utils::GetOrientationAngle(fuchsia::ui::composition::Orientation::CCW_90_DEGREES));
+
+    // Translate to account for rotation.
+    child_matrix = glm::translate(child_matrix, {-kChildHeight, 0});
+
+    // Translate to move rectangle to the correct point.
+    child_matrix = glm::translate(child_matrix, {-kChildOriginY - 1, kChildOriginX});
 
     uber_struct->local_matrices[view_ref_child_root_transform] = child_matrix;
 
     TransformClipRegion clip_region = {
-        .x = 0, .y = 0, .width = kChildWidth, .height = kChildHeight};
+        .x = 0, .y = 0, .width = kChildHeight, .height = kChildWidth};
     uber_struct->local_clip_regions[view_ref_child_root_transform] = std::move(clip_region);
 
     uber_structs[vectors[1][0].handle.GetInstanceId()] = std::move(uber_struct);
@@ -899,18 +906,21 @@ TEST(GlobalTopologyDataTest, HitTest_ClippedChild) {
   MakeLink(links, 2);  // 0:2 - 2:0
   auto hit_tester = GenerateHitTester(uber_structs, links, kLinkInstanceId, {1, 0}, {});
 
-  for (float x = 0; x <= 2 * static_cast<float>(kParentWidth); x += 0.1) {
-    for (float y = 0; y <= 2 * static_cast<float>(kParentHeight); y += 0.1) {
+  // Start negative and go beyond the bounds of the parent to ensure correct clipping.
+  for (float x = -10; x <= 2 * static_cast<float>(kParentWidth); x += 0.1) {
+    for (float y = -10; y <= 2 * static_cast<float>(kParentHeight); y += 0.1) {
       auto result = hit_tester(view_ref_parent_koid, {x, y}, true);
 
       if (utils::RectFContainsPoint(
               {kChildOriginX, kChildOriginY, kChildClippedWidth, kChildHeight}, x, y)) {
         // There should be two hit regions, child on top.
-        ASSERT_EQ(result.hits.size(), 2u) << "x,y: " << x << ", " << y;
+        EXPECT_EQ(result.hits.size(), 2u) << "x,y: " << x << ", " << y;
         EXPECT_EQ(result.hits[0], view_ref_child_koid);
+        EXPECT_EQ(result.hits[1], view_ref_parent_koid);
       } else if (utils::RectFContainsPoint({0, 0, kParentWidth, kParentHeight}, x, y)) {
         // There should be one hit region, the parent's.
         EXPECT_EQ(result.hits.size(), 1u) << "x,y: " << x << ", " << y;
+        EXPECT_EQ(result.hits[0], view_ref_parent_koid);
       } else {
         // We are outside of both the parent and child.
         EXPECT_EQ(result.hits.size(), 0u) << "x,y: " << x << ", " << y;
