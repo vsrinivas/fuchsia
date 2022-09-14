@@ -16,13 +16,13 @@ pub enum Event<T> {
     /// Use Init to perform one-time app initialization.
     Init,
     /// Set of system level events that are window agnostic.
-    SystemEvent { event: SystemEvent },
+    SystemEvent(SystemEvent),
     /// Set of device level events that are window agnostic.
     DeviceEvent,
     /// Set of events that apply to a window instance.
-    WindowEvent { window_id: WindowId, event: WindowEvent },
+    WindowEvent(WindowId, WindowEvent),
     /// Set of events that apply to embedded child views.
-    ChildViewEvent { child_view_id: ChildViewId, window_id: WindowId, event: ChildViewEvent },
+    ChildViewEvent(ChildViewId, WindowId, ChildViewEvent),
     /// Used to route application specific events T.
     UserEvent(T),
     /// Use to notify the event processing loop to terminate.
@@ -34,9 +34,9 @@ pub enum Event<T> {
 pub enum SystemEvent {
     /// Can be used to create a window from a [ui_views::ViewCreationToken]. This is useful only
     /// for ViewProvider based applications.
-    ViewCreationToken { token: ui_views::ViewCreationToken },
+    ViewCreationToken(ui_views::ViewCreationToken),
     /// Used for creating a child view given a ViewSpecHolder using [window.create_child_view].
-    PresentViewSpec { view_spec_holder: ViewSpecHolder },
+    PresentViewSpec(ViewSpecHolder),
 }
 
 /// The next future presentation time, expressed in nanoseconds in the `CLOCK_MONOTONIC` timebase.
@@ -46,16 +46,13 @@ type NextPresentTimeInNanos = i64;
 #[derive(Debug)]
 pub enum WindowEvent {
     /// Window is resized. This is also the first event sent upon window creation.
-    Resized { width: u32, height: u32 },
+    Resized(u32, u32),
     /// Window needs to be redrawn. Sent upon receiving the next frame request from Flatland.
-    NeedsRedraw { next_present_time: NextPresentTimeInNanos },
+    NeedsRedraw(NextPresentTimeInNanos),
     /// Window has received or lost focus.
-    Focused { focused: bool },
+    Focused(bool),
     /// A keyboard key event when the window is in focus.
-    Keyboard {
-        event: ui_input3::KeyEvent,
-        responder: ui_input3::KeyboardListenerOnKeyEventResponder,
-    },
+    Keyboard(ui_input3::KeyEvent, ui_input3::KeyboardListenerOnKeyEventResponder),
     /// Window was closed by the [GraphicalPresenter] presenting this window.
     Closed,
 }
@@ -66,7 +63,7 @@ pub enum ChildViewEvent {
     /// Child view is created but not attached to the view tree yet.
     Available,
     /// Child view is attached to the view tree.
-    Attached { view_ref: ui_views::ViewRef },
+    Attached(ui_views::ViewRef),
     /// Child view is detached from the view tree.
     Detached,
 }
@@ -78,5 +75,5 @@ pub struct ViewSpecHolder {
     pub view_spec: felement::ViewSpec,
     pub annotation_controller: Option<ClientEnd<felement::AnnotationControllerMarker>>,
     pub view_controller_request: Option<ServerEnd<felement::ViewControllerMarker>>,
-    pub responder: Option<felement::GraphicalPresenterPresentViewResponder>,
+    pub responder: felement::GraphicalPresenterPresentViewResponder,
 }

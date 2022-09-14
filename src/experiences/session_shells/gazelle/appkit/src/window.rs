@@ -11,9 +11,9 @@ use {
     fidl::AsHandleRef,
     fidl_fuchsia_element as felement, fidl_fuchsia_ui_composition as ui_comp,
     fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic::flatland::{IdGenerator, ViewCreationTokenPair},
+    futures::future::AbortHandle,
     futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     std::sync::{Arc, Mutex},
     tracing::*,
@@ -22,7 +22,7 @@ use {
 use crate::{
     child_view::ChildView,
     event::{Event, ViewSpecHolder, WindowEvent},
-    utils::{EventSender, Presenter},
+    utils::{spawn_abortable, EventSender, Presenter},
 };
 
 /// Defines a type to hold an id to the window. This implementation uses the value of
@@ -37,71 +37,106 @@ impl WindowId {
 }
 
 /// Defines a struct to hold window attributes used to create the window.
-#[derive(Default)]
 pub(crate) struct WindowAttributes {
     /// The title of the window. Only used when presented to the system's GraphicalPresenter.
-    pub title: Option<String>,
+    pub title: String,
     /// The [ViewCreationToken] passed to the application's [ViewProvider]. Unused for windows
     /// presented to the system's GraphicalPresenter.
     pub view_creation_token: Option<ui_views::ViewCreationToken>,
+}
+
+impl Default for WindowAttributes {
+    fn default() -> Self {
+        WindowAttributes { title: "appkit window".to_owned(), view_creation_token: None }
+    }
+}
+
+/// Defines a builder used to collect [WindowAttributes] before building the window.
+#[derive(Default)]
+pub struct WindowBuilder {
+    pub(crate) attributes: WindowAttributes,
+}
+
+impl WindowBuilder {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn with_title(mut self, title: String) -> WindowBuilder {
+        self.attributes.title = title;
+        self
+    }
+
+    pub fn with_view_creation_token(mut self, token: ui_views::ViewCreationToken) -> WindowBuilder {
+        self.attributes.view_creation_token = Some(token);
+        self
+    }
+
+    pub fn build<T>(self, event_sender: EventSender<T>) -> Result<Window<T>, Error> {
+        Window::from_attributes(self.attributes, event_sender)
+    }
 }
 
 const ROOT_TRANSFORM_ID: ui_comp::TransformId = ui_comp::TransformId { value: 1 };
 
 /// Defines a struct to hold [Window] state.
 pub struct Window<T> {
-    attributes: WindowAttributes,
     id: WindowId,
     id_generator: IdGenerator,
     flatland: ui_comp::FlatlandProxy,
+    view_creation_token: Option<ui_views::ViewCreationToken>,
     annotations: Option<Vec<felement::Annotation>>,
     annotation_controller_request_stream: Option<felement::AnnotationControllerRequestStream>,
     view_controller_proxy: Option<felement::ViewControllerProxy>,
     focuser: Option<ui_views::FocuserProxy>,
     event_sender: EventSender<T>,
-    running_tasks: Vec<fasync::Task<()>>,
+    abortable_futures: Vec<AbortHandle>,
     presenter: Arc<Mutex<Presenter>>,
 }
 
-impl<T> Window<T> {
-    pub fn new(event_sender: EventSender<T>) -> Window<T> {
-        let id_generator = IdGenerator::new_with_first_id(ROOT_TRANSFORM_ID.value);
-        let flatland = connect_to_protocol::<ui_comp::FlatlandMarker>()
-            .expect("Failed to connect to fuchsia.ui.comp.Flatland");
-        flatland
-            .create_transform(&mut ROOT_TRANSFORM_ID.clone())
-            .expect("Failed to create transform");
-        flatland
-            .set_root_transform(&mut ROOT_TRANSFORM_ID.clone())
-            .expect("Failed to set root transform");
+impl<T> Drop for Window<T> {
+    fn drop(&mut self) {
+        for abortable_fut in &self.abortable_futures {
+            abortable_fut.abort();
+        }
+        self.abortable_futures.clear();
+    }
+}
 
+impl<T> Window<T> {
+    pub fn new(event_sender: EventSender<T>) -> Result<Window<T>, Error> {
+        let builder = WindowBuilder::new();
+        builder.build(event_sender)
+    }
+
+    /// Creates a [Window] from [attributes].
+    pub(crate) fn from_attributes(
+        mut attributes: WindowAttributes,
+        event_sender: EventSender<T>,
+    ) -> Result<Window<T>, Error> {
+        let id_generator = IdGenerator::new_with_first_id(ROOT_TRANSFORM_ID.value);
+        let flatland = connect_to_protocol::<ui_comp::FlatlandMarker>()?;
+        flatland.create_transform(&mut ROOT_TRANSFORM_ID.clone())?;
+        flatland.set_root_transform(&mut ROOT_TRANSFORM_ID.clone())?;
+
+        let view_creation_token = attributes.view_creation_token.take();
         let id = WindowId(0);
         let presenter = Arc::new(Mutex::new(Presenter::new(flatland.clone())));
-        let attributes = WindowAttributes::default();
+        let annotations = Self::annotations_from_window_attributes(&attributes);
 
-        Self {
-            attributes,
+        Ok(Window {
             id,
             id_generator,
             flatland,
-            annotations: None,
+            view_creation_token,
+            annotations,
             annotation_controller_request_stream: None,
             view_controller_proxy: None,
             focuser: None,
             event_sender,
-            running_tasks: vec![],
+            abortable_futures: vec![],
             presenter,
-        }
-    }
-
-    pub fn with_title(mut self, title: String) -> Window<T> {
-        self.attributes.title = Some(title);
-        self
-    }
-
-    pub fn with_view_creation_token(mut self, token: ui_views::ViewCreationToken) -> Window<T> {
-        self.attributes.view_creation_token = Some(token);
-        self
+        })
     }
 
     pub fn id(&self) -> WindowId {
@@ -145,12 +180,12 @@ impl<T> Window<T> {
         if let Some(focuser) = self.focuser.clone() {
             let mut dup_view_ref = fuchsia_scenic::duplicate_view_ref(&view_ref)
                 .expect("Failed to duplicate view_ref for request_focus");
-            let task = fasync::Task::spawn(async move {
+            let abort_handle = spawn_abortable(async move {
                 if let Err(error) = focuser.request_focus(&mut dup_view_ref).await {
                     error!("Failed to request focus on a view: {:?}", error);
                 }
             });
-            self.running_tasks.push(task);
+            self.abortable_futures.push(abort_handle);
         }
     }
 
@@ -176,7 +211,7 @@ impl<T> Window<T> {
 
         let (mut view_creation_token, viewport_creation_token) =
             // Check if view_creation_token was passed from ViewProvider.
-            match self.attributes.view_creation_token.take() {
+            match self.view_creation_token.take() {
                 Some(view_creation_token) => (view_creation_token, None),
                 None => {
                     // Create a pair of view creation token to present to GraphicalPresenter.
@@ -222,7 +257,6 @@ impl<T> Window<T> {
                 self.annotation_controller_request_stream =
                     Some(annotation_controller_server_end.into_stream().unwrap());
                 self.view_controller_proxy = Some(view_controller_proxy.clone());
-                self.annotations = Self::annotations_from_window_attributes(&self.attributes);
                 Self::connect_to_graphical_presenter(
                     self.id(),
                     self.annotations.take(),
@@ -246,10 +280,10 @@ impl<T> Window<T> {
         .boxed();
 
         // Collect all futures into an abortable spawned task. The task is aborted in [Drop].
-        let task = fasync::Task::spawn(async move {
-            futures::join!(flatland_and_layout_watcher_fut, graphical_presenter_fut, keyboard_fut);
+        let abort_handle = spawn_abortable(async move {
+            futures::join!(flatland_and_layout_watcher_fut, graphical_presenter_fut, keyboard_fut)
         });
-        self.running_tasks.push(task);
+        self.abortable_futures.push(abort_handle);
 
         Ok(())
     }
@@ -278,36 +312,9 @@ impl<T> Window<T> {
         Ok(child_view)
     }
 
-    /// Creates an instance of [ChildView] given a [ViewportCreationToken].
-    pub fn create_child_view_from_viewport(
-        &mut self,
-        viewport_creation_token: ui_views::ViewportCreationToken,
-        width: u32,
-        height: u32,
-        event_sender: EventSender<T>,
-    ) -> Result<ChildView<T>, Error>
-    where
-        T: 'static + Sync + Send,
-    {
-        self.create_child_view(
-            ViewSpecHolder {
-                view_spec: felement::ViewSpec {
-                    viewport_creation_token: Some(viewport_creation_token),
-                    ..felement::ViewSpec::EMPTY
-                },
-                annotation_controller: None,
-                view_controller_request: None,
-                responder: None,
-            },
-            width,
-            height,
-            event_sender,
-        )
-    }
-
     // Waits for first layout event before monitoring flatland events and layout changes.
     async fn serve_flatland_events_and_layout_watcher(
-        window_id: WindowId,
+        id: WindowId,
         flatland: ui_comp::FlatlandProxy,
         presenter: Arc<Mutex<Presenter>>,
         parent_viewport_watcher: ui_comp::ParentViewportWatcherProxy,
@@ -319,26 +326,20 @@ impl<T> Window<T> {
             let width = logical_size.width;
             let height = logical_size.height;
             event_sender
-                .send(Event::WindowEvent {
-                    window_id,
-                    event: WindowEvent::Resized { width, height },
-                })
+                .send(Event::WindowEvent(id, WindowEvent::Resized(width, height)))
                 .expect("Failed to send WindowEvent::Resized event");
         }
 
         let flatland_events_fut =
-            Self::serve_flatland_events(window_id, flatland, presenter, event_sender.clone());
-        let layout_watcher_fut = Self::serve_layout_info_watcher(
-            window_id,
-            parent_viewport_watcher,
-            event_sender.clone(),
-        );
+            Self::serve_flatland_events(id, flatland, presenter, event_sender.clone());
+        let layout_watcher_fut =
+            Self::serve_layout_info_watcher(id, parent_viewport_watcher, event_sender.clone());
 
         futures::join!(flatland_events_fut, layout_watcher_fut);
     }
 
     async fn serve_flatland_events(
-        window_id: WindowId,
+        id: WindowId,
         flatland: ui_comp::FlatlandProxy,
         presenter: Arc<Mutex<Presenter>>,
         event_sender: EventSender<T>,
@@ -349,7 +350,7 @@ impl<T> Window<T> {
             .try_for_each(move |event| {
                 match event {
                     ui_comp::FlatlandEvent::OnNextFrameBegin { values } => {
-                        let next_present_time = values
+                        let next_presentation_time = values
                             .future_presentation_infos
                             .as_ref()
                             .and_then(|infos| infos.first())
@@ -360,10 +361,10 @@ impl<T> Window<T> {
                             .map(|mut presenter| presenter.on_next_frame(values))
                             .expect("Failed to call on_next_frame on presenter");
                         event_sender
-                            .send(Event::WindowEvent {
-                                window_id,
-                                event: WindowEvent::NeedsRedraw { next_present_time },
-                            })
+                            .send(Event::WindowEvent(
+                                id,
+                                WindowEvent::NeedsRedraw(next_presentation_time),
+                            ))
                             .expect("Failed to send WindowEvent::NeedsRedraw event");
                     }
                     ui_comp::FlatlandEvent::OnFramePresented { .. } => {}
@@ -378,7 +379,7 @@ impl<T> Window<T> {
     }
 
     async fn serve_layout_info_watcher(
-        window_id: WindowId,
+        id: WindowId,
         parent_viewport_watcher: ui_comp::ParentViewportWatcherProxy,
         event_sender: EventSender<T>,
     ) {
@@ -397,16 +398,13 @@ impl<T> Window<T> {
                         height = logical_size.height;
                     }
                     event_sender
-                        .send(Event::WindowEvent {
-                            window_id,
-                            event: WindowEvent::Resized { width, height },
-                        })
+                        .send(Event::WindowEvent(id, WindowEvent::Resized(width, height)))
                         .expect("Failed to send WindowEvent::Resized event");
                 }
                 Err(fidl::Error::ClientChannelClosed { .. }) => {
                     info!("ParentViewportWatcher connection closed.");
                     event_sender
-                        .send(Event::WindowEvent { window_id, event: WindowEvent::Closed })
+                        .send(Event::WindowEvent(id, WindowEvent::Closed))
                         .expect("Failed to send WindowEvent::Closed event");
                     break;
                 }
@@ -418,7 +416,7 @@ impl<T> Window<T> {
     }
 
     async fn connect_to_graphical_presenter(
-        window_id: WindowId,
+        id: WindowId,
         annotations: Option<Vec<felement::Annotation>>,
         viewport_creation_token: ui_views::ViewportCreationToken,
         view_ref: ui_views::ViewRef,
@@ -451,12 +449,12 @@ impl<T> Window<T> {
         let stream = view_controller_proxy.take_event_stream();
         let _ = stream.collect::<Vec<_>>().await;
         event_sender
-            .send(Event::WindowEvent { window_id, event: WindowEvent::Closed })
+            .send(Event::WindowEvent(id, WindowEvent::Closed))
             .expect("Failed to send WindowEvent::Closed event");
     }
 
     async fn serve_keyboard_listener(
-        window_id: WindowId,
+        id: WindowId,
         mut view_ref: ui_views::ViewRef,
         event_sender: EventSender<T>,
     ) {
@@ -468,14 +466,11 @@ impl<T> Window<T> {
 
         match keyboard.add_listener(&mut view_ref, listener_client_end).await {
             Ok(()) => {
-                while let Some(Ok(event)) = listener_stream.next().await {
+                while let Ok(event) = listener_stream.next().await.unwrap() {
                     let ui_input3::KeyboardListenerRequest::OnKeyEvent { event, responder, .. } =
                         event;
                     event_sender
-                        .send(Event::WindowEvent {
-                            window_id,
-                            event: WindowEvent::Keyboard { event, responder },
-                        })
+                        .send(Event::WindowEvent(id, WindowEvent::Keyboard(event, responder)))
                         .expect("Failed to send WindowEvent::Keyboard event");
                 }
             }
@@ -489,13 +484,12 @@ impl<T> Window<T> {
         attributes: &WindowAttributes,
     ) -> Option<Vec<felement::Annotation>> {
         // TODO(https://fxbug.dev/108345): Stop hardcoding namespace for ermine shell.
-        let title = attributes.title.clone()?;
         let annotations = vec![felement::Annotation {
             key: felement::AnnotationKey {
                 namespace: "ermine".to_owned(),
                 value: "name".to_owned(),
             },
-            value: felement::AnnotationValue::Text(title),
+            value: felement::AnnotationValue::Text(attributes.title.clone()),
         }];
         Some(annotations)
     }

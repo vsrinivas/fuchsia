@@ -4,13 +4,9 @@
 
 use {
     anyhow::Error,
-    fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream},
-    fidl_fuchsia_element as felement,
-    fidl_fuchsia_input::Key,
-    fidl_fuchsia_ui_app as ui_app,
-    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus},
-    fidl_fuchsia_ui_test_input as ui_test_input, fidl_fuchsia_ui_test_scene as ui_test_scene,
-    fuchsia_async as fasync,
+    fidl::endpoints::{create_proxy_and_stream, create_request_stream},
+    fidl_fuchsia_element as felement, fidl_fuchsia_ui_app as ui_app,
+    fidl_fuchsia_ui_test_scene as ui_test_scene, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic::flatland::ViewCreationTokenPair,
     futures::future::{AbortHandle, Abortable},
@@ -23,7 +19,7 @@ use crate::{
     child_view::{ChildView, ChildViewId},
     event::{ChildViewEvent, Event, SystemEvent, ViewSpecHolder, WindowEvent},
     utils::EventSender,
-    window::{Window, WindowId},
+    window::{Window, WindowBuilder, WindowId},
 };
 
 #[derive(Debug)]
@@ -62,55 +58,46 @@ async fn test_appkit() -> Result<(), Error> {
         services_registration,
     );
 
-    let (keyboard, keyboard_server) = create_proxy::<ui_test_input::KeyboardMarker>()?;
-    let input_registry = connect_to_protocol::<ui_test_input::RegistryMarker>()?;
-    input_registry
-        .register_keyboard(ui_test_input::RegistryRegisterKeyboardRequest {
-            device: Some(keyboard_server),
-            ..ui_test_input::RegistryRegisterKeyboardRequest::EMPTY
-        })
-        .await?;
-
     let mut app = TestApp::new();
     // Declare an event handler that does not allow blocking async calls within it.
     let mut event_handler = |event| {
         info!("------ParentView {:?}", event);
         match event {
             Event::Init => {}
-            Event::WindowEvent { window_id: id, event: window_event } => match window_event {
-                WindowEvent::Resized { width, height } => {
+            Event::WindowEvent(id, window_event) => match window_event {
+                WindowEvent::Resized(width, height) => {
                     app.width = width;
                     app.height = height;
                     if app.active_window.is_none() {
                         app.active_window = Some(id);
 
                         let cloned_graphical_presenter = graphical_presenter_proxy.clone();
-                        let cloned_event_sender = event_sender.clone();
                         fasync::Task::spawn(async move {
-                            create_child_view_spec(cloned_graphical_presenter, cloned_event_sender)
+                            create_child_view_spec(cloned_graphical_presenter)
                                 .await
                                 .expect("Failed to create_child_view");
                         })
                         .detach();
                     }
                 }
-                WindowEvent::NeedsRedraw { .. } => {
+                WindowEvent::NeedsRedraw(_) => {
                     assert!(
                         app.width > 0 && app.height > 0,
                         "Redraw event received before window was resized"
                     );
                 }
-
                 _ => {}
             },
-            Event::SystemEvent { event: system_event } => match system_event {
-                SystemEvent::ViewCreationToken { token: view_creation_token } => {
-                    let mut window = Window::new(event_sender.clone())
-                        .with_view_creation_token(view_creation_token);
+            Event::SystemEvent(system_event) => match system_event {
+                SystemEvent::ViewCreationToken(view_creation_token) => {
+                    let mut window = WindowBuilder::new()
+                        .with_view_creation_token(view_creation_token)
+                        .build(event_sender.clone())
+                        .unwrap();
                     window.create_view().expect("Failed to create view for window");
                     app.windows.insert(window.id(), window);
                 }
-                SystemEvent::PresentViewSpec { view_spec_holder } => {
+                SystemEvent::PresentViewSpec(view_spec_holder) => {
                     let window = app.windows.get_mut(&app.active_window.unwrap()).unwrap();
                     let child_view = window
                         .create_child_view(
@@ -123,7 +110,7 @@ async fn test_appkit() -> Result<(), Error> {
                     app.child_views.insert(child_view.id(), child_view);
                 }
             },
-            Event::ChildViewEvent { child_view_id, window_id, event: child_view_event } => {
+            Event::ChildViewEvent(child_view_id, window_id, child_view_event) => {
                 let window = app.windows.get_mut(&window_id).unwrap();
                 let child_view = app.child_views.get_mut(&child_view_id).unwrap();
 
@@ -135,11 +122,9 @@ async fn test_appkit() -> Result<(), Error> {
                         );
                         window.redraw();
                     }
-                    ChildViewEvent::Attached { view_ref } => {
-                        // Set focus to child view.
+                    ChildViewEvent::Attached(view_ref) => {
                         window.request_focus(view_ref);
-                        // Inject text to child view to test for receiving keyboard events.
-                        inject_text("q".to_string(), keyboard.clone());
+                        event_sender.send(Event::Exit).expect("Failed to send Event::Exit event");
                     }
                     ChildViewEvent::Detached => {}
                 }
@@ -193,18 +178,12 @@ async fn start_view_provider(event_sender: EventSender<TestEvent>) {
     };
 
     let view_provider_fut = async move {
-        match view_provider_request_stream
-            .next()
-            .await
-            .expect("Failed to read ViewProvider request stream")
-        {
+        match view_provider_request_stream.next().await.unwrap() {
             Ok(ui_app::ViewProviderRequest::CreateView2 { args, .. }) => {
                 event_sender
-                    .send(Event::SystemEvent {
-                        event: SystemEvent::ViewCreationToken {
-                            token: args.view_creation_token.unwrap(),
-                        },
-                    })
+                    .send(Event::SystemEvent(SystemEvent::ViewCreationToken(
+                        args.view_creation_token.unwrap(),
+                    )))
                     .expect("Failed to send SystemEvent::ViewCreationToken event");
             }
             _ => panic!("ViewProvider impl only handles CreateView2()"),
@@ -231,16 +210,12 @@ async fn start_graphical_presenter(
                 responder,
             } => {
                 event_sender
-                    .send(Event::SystemEvent {
-                        event: SystemEvent::PresentViewSpec {
-                            view_spec_holder: ViewSpecHolder {
-                                view_spec,
-                                annotation_controller,
-                                view_controller_request,
-                                responder: Some(responder),
-                            },
-                        },
-                    })
+                    .send(Event::SystemEvent(SystemEvent::PresentViewSpec(ViewSpecHolder {
+                        view_spec,
+                        annotation_controller,
+                        view_controller_request,
+                        responder,
+                    })))
                     .expect("Failed to send SystemEvent::PresentViewSpec event");
             }
         }
@@ -249,7 +224,6 @@ async fn start_graphical_presenter(
 
 async fn create_child_view_spec(
     graphical_presenter: felement::GraphicalPresenterProxy,
-    parent_sender: EventSender<TestEvent>,
 ) -> Result<(), Error> {
     let ViewCreationTokenPair { view_creation_token, viewport_creation_token } =
         ViewCreationTokenPair::new()?;
@@ -270,25 +244,12 @@ async fn create_child_view_spec(
             info!("------ChildView  {:?}", event);
             match event {
                 Event::Init => {
-                    let mut window = Window::new(event_sender.clone())
-                        .with_view_creation_token(view_creation_token.take().unwrap());
+                    let mut window = WindowBuilder::new()
+                        .with_view_creation_token(view_creation_token.take().unwrap())
+                        .build(event_sender.clone())
+                        .unwrap();
                     window.create_view().expect("Failed to create window for child view");
                     _window_holder = Some(window);
-                }
-                Event::WindowEvent {
-                    window_id: _,
-                    event: WindowEvent::Keyboard { event, responder },
-                } => {
-                    if let KeyEvent { key: Some(Key::Q), .. } = event {
-                        parent_sender.send(Event::Exit).expect("Failed to send Event::Exit event");
-                        responder
-                            .send(KeyEventStatus::Handled)
-                            .expect("Failed to respond to keyboard event");
-                    } else {
-                        responder
-                            .send(KeyEventStatus::NotHandled)
-                            .expect("Failed to respond to keyboard event");
-                    }
                 }
                 _ => {}
             }
@@ -297,17 +258,4 @@ async fn create_child_view_spec(
     .detach();
 
     Ok(())
-}
-
-fn inject_text(text: String, keyboard: ui_test_input::KeyboardProxy) {
-    fasync::Task::local(async move {
-        keyboard
-            .simulate_us_ascii_text_entry(ui_test_input::KeyboardSimulateUsAsciiTextEntryRequest {
-                text: Some(text),
-                ..ui_test_input::KeyboardSimulateUsAsciiTextEntryRequest::EMPTY
-            })
-            .await
-            .expect("Failed to inject text using fuchsia.ui.test.input.Keyboard");
-    })
-    .detach();
 }

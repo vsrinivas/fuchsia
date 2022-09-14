@@ -5,13 +5,13 @@
 use {
     anyhow::{format_err, Error},
     fidl::endpoints::{create_proxy, Proxy},
-    fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as ui_comp, fuchsia_async as fasync,
-    tracing::*,
+    fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as ui_comp,
+    futures::future::AbortHandle,
 };
 
 use crate::{
     event::{ChildViewEvent, Event, ViewSpecHolder},
-    utils::EventSender,
+    utils::{spawn_abortable, EventSender},
     window::WindowId,
 };
 
@@ -32,7 +32,13 @@ pub struct ChildView<T> {
     viewport_content_id: ui_comp::ContentId,
     _window_id: WindowId,
     _event_sender: EventSender<T>,
-    _running_task: fasync::Task<()>,
+    services_abort: Option<AbortHandle>,
+}
+
+impl<T> Drop for ChildView<T> {
+    fn drop(&mut self) {
+        self.services_abort.take().map(|a| a.abort());
+    }
 }
 
 impl<T> ChildView<T> {
@@ -68,9 +74,7 @@ impl<T> ChildView<T> {
             child_view_watcher_request,
         )?;
 
-        if let Some(responder) = view_spec_holder.responder {
-            responder.send(&mut Ok(())).expect("Failed to respond to GraphicalPresent.present")
-        }
+        view_spec_holder.responder.send(&mut Ok(()))?;
 
         let child_view_id = ChildViewId::from_viewport_content_id(viewport_content_id);
         let child_view_watcher_fut = Self::start_child_view_watcher(
@@ -80,13 +84,14 @@ impl<T> ChildView<T> {
             event_sender.clone(),
         );
 
-        let _running_task = fasync::Task::spawn(child_view_watcher_fut);
+        let abort_handle = spawn_abortable(child_view_watcher_fut);
+        let services_abort = Some(abort_handle);
 
         Ok(ChildView {
             viewport_content_id,
             _window_id: window_id,
             _event_sender: event_sender,
-            _running_task,
+            services_abort,
         })
     }
 
@@ -104,25 +109,19 @@ impl<T> ChildView<T> {
         window_id: WindowId,
         event_sender: EventSender<T>,
     ) {
-        match child_view_watcher_proxy.get_status().await {
-            Ok(_) => event_sender
-                .send(Event::ChildViewEvent {
-                    child_view_id,
-                    window_id,
-                    event: ChildViewEvent::Available,
-                })
-                .expect("Failed to send ChildView::Available event"),
-            Err(err) => error!("ChildViewWatcher.get_status return error: {:?}", err),
+        if let Ok(_) = child_view_watcher_proxy.get_status().await {
+            event_sender
+                .send(Event::ChildViewEvent(child_view_id, window_id, ChildViewEvent::Available))
+                .expect("Failed to send ChildView::Available event");
         }
-        match child_view_watcher_proxy.get_view_ref().await {
-            Ok(view_ref) => event_sender
-                .send(Event::ChildViewEvent {
+        if let Ok(view_ref) = child_view_watcher_proxy.get_view_ref().await {
+            event_sender
+                .send(Event::ChildViewEvent(
                     child_view_id,
                     window_id,
-                    event: ChildViewEvent::Attached { view_ref },
-                })
-                .expect("Failed to send ChildView::Attached event"),
-            Err(err) => error!("ChildViewWatcher.get_view_ref return error: {:?}", err),
+                    ChildViewEvent::Attached(view_ref),
+                ))
+                .expect("Failed to send ChildView::Attached event");
         }
 
         // After retrieving status and viewRef, we can only wait for the channel to close. This is a
@@ -130,11 +129,7 @@ impl<T> ChildView<T> {
         // [felement::ViewController]'s dismiss method.
         let _ = child_view_watcher_proxy.on_closed().await;
         event_sender
-            .send(Event::ChildViewEvent {
-                child_view_id,
-                window_id,
-                event: ChildViewEvent::Detached,
-            })
+            .send(Event::ChildViewEvent(child_view_id, window_id, ChildViewEvent::Detached))
             .expect("Failed to send ChildView::Detached event");
     }
 }

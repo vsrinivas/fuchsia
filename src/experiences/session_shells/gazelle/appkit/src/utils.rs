@@ -4,8 +4,9 @@
 
 use {
     anyhow::{anyhow, Error},
-    fidl_fuchsia_ui_composition as ui_comp,
+    fidl_fuchsia_ui_composition as ui_comp, fuchsia_async as fasync,
     futures::channel::mpsc::{UnboundedReceiver, UnboundedSender},
+    futures::stream::{AbortHandle, Abortable},
 };
 
 use crate::event::Event;
@@ -75,4 +76,19 @@ impl Presenter {
         self.flatland.present(ui_comp::PresentArgs::EMPTY)?;
         Ok(())
     }
+}
+
+pub fn spawn_abortable<T>(task: T) -> AbortHandle
+where
+    T: 'static + Send + futures::Future,
+{
+    let (abort_handle, abort_registration) = AbortHandle::new_pair();
+    let abortable_fut = Abortable::new(task, abort_registration);
+
+    fasync::Task::spawn(async move {
+        let _ = abortable_fut.await;
+    })
+    .detach();
+
+    abort_handle
 }
