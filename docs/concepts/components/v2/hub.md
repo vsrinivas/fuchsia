@@ -1,7 +1,5 @@
 # Hub
 
-<<../_v2_banner.md>>
-
 ## Definition
 
 The hub provides access to detailed structural information about component

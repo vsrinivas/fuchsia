@@ -1,7 +1,7 @@
 # Component sandbox features
 
 This section provides guidance on migrating additional CMX
-[`sandbox`][cmx-services] features.
+`sandbox` features.
 
 Note: If there's a feature in your CMX file that's not in this list,
 please reach out to [component-framework-dev][cf-dev-list].
@@ -565,7 +565,6 @@ specific features your components may support:
 
 [build-info-fidl]: https://fuchsia.dev/reference/fidl/fuchsia.buildinfo#Provider
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
-[cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [collection-persistent-storage]: https://fuchsia.dev/reference/fidl/fuchsia.component.decl#Collection.persistent_storage
 [component-id-index]: /docs/development/components/component_id_index.md
 [config-data]: /docs/development/components/configuration/config_data.md

@@ -1,7 +1,5 @@
 # Understanding components through object-oriented design
 
-<<../_v2_banner.md>>
-
 [Fuchsia Components][component-intro] are composable units of software
 execution that emphasize reuse, isolation, and testability.
 

@@ -74,15 +74,14 @@ The [new Component Framework][cf-intro] (aka CFv2) has full control over the
 sandbox of component instances, and expresses sandboxes in terms of
 [capabilities] that decouple contracts from implementation details.
 
-The legacy Component Framework (`appmgr`) supported
-[sandbox features][cmx-sandbox] that allowed access to certain global namespaces
-and would expose components to platform implementation details that had no
-affordances for updatability such as versioning or transition support. The new
-Component Framework either enforces [isolation][principles-secure] or forbids
-access to these namespaces entirely. For instance the [hub] becomes
-hierarchically contained, only offering information about the component’s realm
-and its children but never of its parent, since a global hub is a form of
-[ambient authority][principles-secure].
+The legacy Component Framework (`appmgr`) supported sandbox features that
+allowed access to certain global namespaces and would expose components to
+platform implementation details that had no affordances for updatability such
+as versioning or transition support. The new Component Framework either enforces
+[isolation][principles-secure] or forbids access to these namespaces entirely.
+For instance the [hub] becomes hierarchically contained, only offering
+information about the component’s realm and its children but never of its parent,
+since a global hub is a form of [ambient authority][principles-secure].
 
 The [components v2 migration][cfv2-migration] is an ongoing multi-year effort.
 Currently the team is focused on
@@ -213,7 +212,6 @@ even if CTS coverage never reaches 100% of the platform surface.
 [cfv2-migration]: /docs/contribute/open_projects/components/migration.md
 [cfv2-sys-migration]: /docs/development/components/v2/migration/README.md
 [cfv2-sys-migration-build-info]: /docs/development/components/v2/migration/features.md#build-info
-[cmx-sandbox]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [cpu-trace]: /docs/development/tracing/advanced/recording-a-cpu-performance-trace.md
 [cts]: /docs/development/testing/cts/overview.md
 [decentralized-product-integration]: /docs/contribute/roadmap/2021/decentralized_product_integration.md

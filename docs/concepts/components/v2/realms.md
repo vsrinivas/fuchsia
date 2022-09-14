@@ -1,7 +1,5 @@
 # Realms
 
-<<../_v2_banner.md>>
-
 A [glossary.realm] is the term for any [glossary.component] and its
 [children][glossary.child-component-instance]. In other words, realm is another
 word for any sub-tree of the

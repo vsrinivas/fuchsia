@@ -89,7 +89,7 @@ In the component manifest file (a `.cml` file) of your component, you must
 specify that it needs to communicate with the Fuchsia trace manager.
 
 Note: For information on component manifests, see
-[Component Manifests](/docs/concepts/components/v1/component_manifests.md).
+[Component Manifests](/docs/concepts/components/v2/component_manifests.md).
 
 To give the trace manager component access, specify
 the protocol `fuchsia.tracing.provider.Registry` as a `use` declaration. For

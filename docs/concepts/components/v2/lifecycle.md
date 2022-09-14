@@ -1,7 +1,5 @@
 # Component lifecycle
 
-<<../_v2_banner.md>>
-
 This document describes how Component manager interacts with individual component
 instances to manage their lifecycle.
 

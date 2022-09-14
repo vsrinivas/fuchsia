@@ -34,7 +34,7 @@ impossible to scale for the following reasons:
 - Various text-based protocols that lack methods and practices for ensuring ABI
   stability or orchestrating ABI evolution.
 
-- Tests written as [legacy components][legacy-components] aka CFv1 which enjoy a
+- Tests written as legacy components aka CFv1 which enjoy a
   lesser degree of isolation, suffer from a greater degree of flakiness, and
   don’t benefit from [new testing tools][realm-builder].
 
@@ -286,10 +286,9 @@ Fuchsia SDK.
 
 Additionally, there exist CFv1 component tests that are arguably system tests.
 This is possible because the legacy CFv1 test runtime allows
-[accessing real system services][v1-test-system-services], as a legacy
-compromise that is intentionally not supported in CFv2 testing. For the purpose
-of this discussion we consider such strictly non-hermetic CFv1 component tests
-to be system tests as well.
+accessing real system services, as a legacy compromise that is intentionally not
+supported in CFv2 testing. For the purpose of this discussion we consider such
+strictly non-hermetic CFv1 component tests to be system tests as well.
 
 Current challenges in scaling e2e test development include:
 
@@ -336,7 +335,6 @@ covered in a [separate roadmap document][oot-system-testing].
 [glossary.out-of-tree]: /docs/glossary/README.md#out-of-tree
 [gn-sdk]: /docs/development/idk/gn/README.md
 [idk]: /docs/development/idk/README.md
-[legacy-components]: /docs/concepts/components/v1/README.md
 [llvm]: https://llvm.org/
 [oot-system-testing]: /docs/contribute/roadmap/2021/oot_system_testing.md
 [overnet]: /src/connectivity/overnet/README.md
@@ -360,5 +358,4 @@ covered in a [separate roadmap document][oot-system-testing].
 [testwithenvironment]: /sdk/lib/sys/cpp/testing/test_with_environment.h
 [trf]: /docs/development/testing/components/test_runner_framework.md
 [troubleshooting-run-test-component]: /docs/development/testing/components/test_runner_framework.md#troubleshooting
-[v1-test-system-services]: /docs/concepts/testing/v1_test_component.md#additional_system_services
 [workstation-out-of-tree]: /docs/contribute/roadmap/2021/workstation_out_of_tree.md

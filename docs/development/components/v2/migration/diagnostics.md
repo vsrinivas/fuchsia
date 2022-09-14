@@ -249,7 +249,7 @@ direct log messages back to the `debuglog` buffer.
 ## Hub {#hub}
 
 The hub provides access to detailed structural information about component
-instances at runtime. In Components v1, `appmgr` provides the [v1 Hub][hub-v1]
+instances at runtime. In Components v1, `appmgr` provides the v1 Hub
 through a specific directory structure populated in your component's namespace
 under `/hub`. In Components v2, many v1 Hub use cases have preferred alternative
 approaches.
@@ -303,7 +303,7 @@ Update your code to reference the content path from the v2 Hub directory
 structure. Here are some examples of path differences between the Hub
 implementations:
 
-| [v1 Hub][hub-v1] Path | [v2 Hub][hub-v2] Path |
+| v1 Hub Path | [v2 Hub][hub-v2] Path |
 | --------------------- | --------------------- |
 | `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/url` | `/hub/url` |
 | `/hub/c/{{ '<var>' }}component-name{{ '</var>' }}/{{ '<var>' }}instance-id{{ '</var>' }}/in/{{ '<var>' }}svc-path{{ '</var>' }}` | `/hub/exec/in/{{ '<var>' }}svc-path{{ '</var>' }}` |
@@ -336,7 +336,6 @@ specific features your components may support:
 [emulatortest]: /tools/emulator/emulatortest
 [event-capabilities]: /docs/concepts/components/v2/capabilities/event.md
 [ffx-inspect]: https://fuchsia.dev/reference/tools/sdk/ffx.md#inspect
-[hub-v1]: /docs/concepts/components/v1/hub.md
 [hub-v2]: /docs/concepts/components/v2/hub.md
 [inspect]: /docs/development/diagnostics/inspect/README.md
 [integration-test-monikers]: /docs/development/testing/components/integration_testing.md#test-component-moniker

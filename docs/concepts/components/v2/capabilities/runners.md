@@ -1,7 +1,5 @@
 # Component Runners
 
-<<../../_v2_banner.md>>
-
 Component runners extend the component framework through an
 [environment][glossary.environment] to provide a runtime for launching new
 component instances.

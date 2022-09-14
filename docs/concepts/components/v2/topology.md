@@ -1,7 +1,5 @@
 # Component topology
 
-<<../_v2_banner.md>>
-
 The _[component topology][glossary.component topology]_ is a general concept
 that expresses the set of relationships between
 [component instances](#component-instances).

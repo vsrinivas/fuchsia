@@ -1,7 +1,5 @@
 # Component manager
 
-<<../_v2_banner.md>>
-
 The component manager is the heart of the component framework. It maintains the
 [component topology][doc-topology], manages
 [component lifecycle][doc-lifecycle], provides components with the

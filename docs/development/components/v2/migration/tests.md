@@ -106,7 +106,7 @@ To migrate this test to the Test Runner Framework, do the following:
 A test may include or depend on components that are separate from the test
 component. Here are some things to look for:
 
--   Does your test have a CMX with [`fuchsia.test facets`][fuchsia-test-facets],
+-   Does your test have a CMX with `fuchsia.test facets`,
     such as `injected-services` or `system-services`?
 -   Does your test create environments in-process? If so, does it create a
     separate environment for each test case?
@@ -120,9 +120,9 @@ The migration procedure varies depending on the testing framework features in
 your v1 component:
 
 -   [Test depends on system services](#system-services): The test has a CMX that
-    contains [`system-services`][system-services] test facets.
+    contains `system-services` test facets.
 -   [Test depend on injected services](#injected-services): The test has a CMX that
-    contains [`injected-services`][fuchsia-test-facets] test facets.
+    contains `injected-services` test facets.
 
 Note: For more details on the services and capabilities provided to components
 by the Test Runner Framework, see the
@@ -130,7 +130,7 @@ by the Test Runner Framework, see the
 
 ### System service dependencies {#system-services}
 
-For tests that use [`system-services`][system-services] test facets, consider if
+For tests that use `system-services` test facets, consider if
 they can be converted to [injected services](#injected-services) instead.
 Injecting services is the preferred method because it promotes hermetic test
 behavior.
@@ -206,7 +206,7 @@ below.
 
 ### Injected service dependencies {#injected-services}
 
-For tests that use other [fuchsia.test facets][fuchsia-test-facets], such as
+For tests that use other fuchsia.test facets, such as
 `injected-services`, your test component manifest must declare each dependent
 component and route the provided capabilities to the test component.
 
@@ -687,7 +687,6 @@ advice in [Troubleshooting test components][troubleshooting-tests].
 
 [cml-children]: https://fuchsia.dev/reference/cml#children
 [example-package-rule]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/BUILD.gn
-[fuchsia-test-facets]: /docs/concepts/testing/v1_test_component.md
 [hermetic-resolution]: /docs/development/testing/components/test_runner_framework.md#hermetic_component_resolution
 [integration-test]: /docs/development/testing/components/integration_testing.md
 [migrate-component-manifest]: /docs/development/components/v2/migration/components.md#create-component-manifest

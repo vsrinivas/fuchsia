@@ -300,7 +300,7 @@ implementations.
 
 Components may have different kinds of configuration data exposed to them
 depending on the features listed in their
-[component manifest](/docs/concepts/components/v1/component_manifests.md)
+[component manifest](/docs/concepts/components/v2/component_manifests.md)
 which are exposed as files in the `/config` namespace entry. These are
 defined by the feature set of the component.
 

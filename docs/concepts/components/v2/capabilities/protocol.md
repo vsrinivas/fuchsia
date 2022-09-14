@@ -1,7 +1,5 @@
 # Protocol capabilities
 
-<<../../_v2_banner.md>>
-
 A [protocol capability][glossary.protocol-capability] is a capability backed
 by a [channel][glossary.channel] that speaks a particular
 [FIDL protocol][glossary.protocol].

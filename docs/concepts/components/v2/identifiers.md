@@ -1,7 +1,5 @@
 # Component identifiers
 
-<<../_v2_banner.md>>
-
 The Component Framework uses different identifiers to describe components.
 This section describes the relationship between the following component
 identifiers, and their usage:

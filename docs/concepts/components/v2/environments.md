@@ -1,7 +1,5 @@
 # Environments
 
-<<../_v2_banner.md>>
-
 *Environments* provide a way to configure certain choices the framework makes
 for components in a [realm][doc-realms].
 [Component manifests][doc-component-manifests] may define environments and

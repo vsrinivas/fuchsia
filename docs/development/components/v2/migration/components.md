@@ -92,7 +92,7 @@ be explicitly specified in CML.
 ### Declaring required services {#required-services}
 
 Add [`use`][manifests-use] declarations to your CML file. These are the
-approximate equivalent of the [`services`][cmx-services] list in CMX.
+approximate equivalent of the `services` list in CMX.
 
 ```json
 // fonts.cmx
@@ -708,7 +708,6 @@ correctly, try following the advice in
 [Troubleshooting components][troubleshooting-components].
 
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
-[cmx-services]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [code-search]: https://cs.opensource.google/fuchsia
 [components-topology]: /docs/concepts/components/v2/topology.md
 [core-realm-rfc]: /docs/contribute/governance/rfcs/0089_core_realm_variations.md

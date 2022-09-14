@@ -52,7 +52,7 @@ is also used for logs and other diagnostics data sources.
 ### [`diagnostics-testing`][diagnostics_testing]
 
 This library includes the convenient `EnvForDiagnostics` which is useful for testing Inspect
-integration with [legacy components][components-v1].
+integration with legacy components.
 
 ### [`diagnostics-reader`][diagnostics_reader]
 
@@ -70,7 +70,6 @@ This library provides an API for reading and writing the blocks of the
 
 
 [codelab]: /docs/development/diagnostics/inspect/codelab/codelab.md#rust
-[components-v1]: /docs/concepts/components/v1/README.md
 [ergonomic_inspect]: /docs/development/languages/rust/ergonomic_inspect.md
 [inspect_vmo_format]: /docs/reference/platform-spec/diagnostics/inspect-vmo-format.md
 [inspect_format]: https://fuchsia-docs.firebaseapp.com/rust/inspect_format/index.html

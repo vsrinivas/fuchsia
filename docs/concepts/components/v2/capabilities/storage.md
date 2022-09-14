@@ -1,7 +1,5 @@
 # Storage capabilities
 
-<<../../_v2_banner.md>>
-
 [Storage capabilities][glossary.storage-capability] allocate per-component
 *isolated* storage within a filesystem directory. This prevents component
 instances from accessing files belonging to other components, including their

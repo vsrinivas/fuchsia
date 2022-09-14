@@ -1,7 +1,5 @@
 # Introduction to Fuchsia components
 
-<<../_v2_banner.md>>
-
 ## Overview
 
 This document offers a brief conceptual overview of Components and the

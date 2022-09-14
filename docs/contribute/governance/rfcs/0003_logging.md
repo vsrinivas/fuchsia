@@ -141,7 +141,7 @@ the test runtime that will cause tests to fail if unexpected ERROR logs are
 observed within the test realm.
 
 The test runtime behavior described above has been implemented, tested, and
-[documented](/docs/concepts/testing/v1_test_component.md#restricting_log_severity).
+documented.
 
 ## Security Consideration
 

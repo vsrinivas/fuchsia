@@ -31,7 +31,7 @@ The legacy framework is largely comprised of:
     and Loader service.
 *   [`sysmgr`][glossary.sysmgr], a component that manages the `sys` realm.
     `sysmgr` is launched by `appmgr`.
-*   The [`.cmx`][cmx] file format for legacy component manifests.
+*   The `.cmx` file format for legacy component manifests.
 *   The [`fuchsia.sys.*`][fuchsia-sys] FIDL library.
 *   The [TestWithEnvironment][sdk-test-with-environment] testing library.
 
@@ -190,7 +190,6 @@ Reach out for questions or for status updates:
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
 [cmc]: /tools/cmc/
 [cml]: /docs/concepts/components/v2/component_manifests.md
-[cmx]: /docs/concepts/components/v1/component_manifests.md
 [component_manager]: /docs/concepts/components/v2/component_manager.md
 [doc-realm-builder]: /docs/development/testing/components/realm_builder.md
 [doc-modular]: /docs/development/modular/overview.md

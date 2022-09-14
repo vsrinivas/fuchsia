@@ -1,7 +1,5 @@
 # Directory capabilities
 
-<<../../_v2_banner.md>>
-
 [Directory capabilities][glossary.directory-capability] allow components
 to connect to a directory provided by another component.
 

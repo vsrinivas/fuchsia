@@ -337,7 +337,7 @@ tests. Using `fx test`, we can already
 [Fuchsia package]: /docs/concepts/packages/package.md
 [Fuchsia component]: /docs/concepts/components/v2
 [Run Fuchsia tests]: /docs/development/testing/run_fuchsia_tests.md
-[Fuchsia component manifest]: /docs/concepts/components/v1/component_manifests.md
+[Fuchsia component manifest]: /docs/concepts/components/v2/component_manifests.md
 [Fuchsia package URLs]: /docs/concepts/packages/package_url.md
 [Source code layout]: /docs/development/source_code/layout.md
 [Building components]: /docs/development/components/build.md

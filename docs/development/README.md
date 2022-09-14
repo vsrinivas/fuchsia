@@ -41,7 +41,7 @@ operating system. Explore the open source code at [cs.fuchsia.dev](https://cs.fu
 
  - [Debugging workflow](/docs/development/debugging/debugging.md)
  - [Fuzz testing with LibFuzzer](/docs/development/testing/fuzzing/overview.md)
- - [Test components](/docs/concepts/testing/v1_test_component.md)
+ - [Test components](/docs/development/testing/components/test_component.md)
  - [Test environments](/docs/contribute/testing/environments.md)
  - [Testability rubrics](/docs/development/testing/testability_rubric.md)
  - [Test flake policy](/docs/development/testing/test_flake_policy.md)

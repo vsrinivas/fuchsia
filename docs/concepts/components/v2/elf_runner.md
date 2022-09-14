@@ -1,7 +1,5 @@
 # ELF Runner
 
-<<../_v2_banner.md>>
-
 The ELF runner is the runner responsible for launching
 [components][glossary.component] based on standard executable files (ELF
 format). It is a built-in runner and is available to all components.

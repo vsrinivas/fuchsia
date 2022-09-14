@@ -57,16 +57,6 @@ toc:
     path: /docs/concepts/components/v2/components_vs_processes.md
   - title: "Object-Oriented Design for Components"
     path: /docs/concepts/components/v2/components_as_classes.md
-- title: "Legacy components"
-  section:
-  - title: "Overview"
-    path: /docs/concepts/components/v1
-  - title: "Component manifests"
-    path: /docs/concepts/components/v1/component_manifests.md
-  - title: "Hub"
-    path: /docs/concepts/components/v1/hub.md
-  - title: "Test components"
-    path: /docs/concepts/testing/v1_test_component.md
 
 # TODO(fxbug.dev/60771)
 # - title: "Overview"

@@ -1,7 +1,5 @@
 # Component manifests {#component-manifests}
 
-<<../_v2_banner.md>>
-
 A [component manifest](#component-manifest) is a file that defines a component
 by encoding a [component declaration](#component-declaration). This document
 gives an overview of the concepts used by component declarations.

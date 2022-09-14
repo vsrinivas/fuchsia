@@ -1,7 +1,5 @@
 # Component resolvers
 
-<<../../_v2_banner.md>>
-
 Component resolvers extend the component framework through an
 [environment][glossary.environment] to resolve a
 [component URL][glossary.component-url] into a component.

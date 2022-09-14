@@ -1,7 +1,5 @@
 # Event capabilities
 
-<<../../_v2_banner.md>>
-
 Event capabilities allow components to subscribe to specific events that occur
 during the various stages of the [component lifecycle][doc-lifecycle].
 This includes information about component state changes as well as capability

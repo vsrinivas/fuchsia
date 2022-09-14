@@ -48,26 +48,6 @@ to play some useful role in the system. For example, the service
 Processes that are not components may or may not have `/svc`. These processes
 receive whatever `/svc` their creator provided to them.
 
-### Legacy components {#services-components-v1}
-
-Services available through `/svc` are a subset of the services provided by the
-component's [environment](/docs/glossary/README.md#environment).
-This subset is determined by the
-[`sandbox.services`](/docs/concepts/components/v1/component_manifests.md#sandbox)
-allowlist in the component's
-[manifest file](/docs/concepts/components/v1/component_manifests.md).
-
-If a component requires access to additional resources (for example, device
-drivers), the package can request access to additional names by including the
-`sandbox` property in its component manifest. For example, to request direct
-access to the input drive, include the following `dev` array in your `sandbox`:
-
-```
-{
-    "dev": [ "class/input" ]
-}
-```
-
 [glossary.component]: /docs/glossary/README.md#component
 [glossary.environment]: /docs/glossary/README.md#environment
 [glossary.namespace]: /docs/glossary/README.md#namespace

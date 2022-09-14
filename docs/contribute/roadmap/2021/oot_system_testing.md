@@ -69,8 +69,7 @@ components are still CFv1, most tests (>70%) use the CFv2 test framework since
 it’s more reliable and offers some new features for developers.
 
 For legacy reasons the v1 test runtime is not hermetic in many ways, for
-instance by
-[allowing access to certain real system services][v1-test-system-services]. As a
+instance by allowing access to certain real system services. As a
 result, inadvertently many CFv1 tests actually behave as system tests. These
 tests suffer from multiple issues, including:
 
@@ -486,6 +485,5 @@ additional justification or otherwise be discouraged by the platform team.
 [sl4f]: /docs/development/drivers/concepts/driver_development/sl4f.md
 [snapshot]: https://fuchsia.dev/reference/tools/fx/cmd/snapshot
 [ssh]: /docs/development/idk/documentation/ssh.md
-[v1-test-system-services]: /docs/concepts/testing/v1_test_component.md#additional_system_services
 [v2-migration]: /docs/contribute/open_projects/components/migration.md
 [v2-testing]: /docs/development/testing/components/README.md

@@ -1,7 +1,5 @@
 # Service capabilities
 
-<<../../_v2_banner.md>>
-
 Caution: service capabilities are experimental and in development. Their
 behavior and APIs could change at any time.
 
