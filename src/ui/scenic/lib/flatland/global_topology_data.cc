@@ -12,6 +12,8 @@
 
 #include <glm/gtc/type_ptr.hpp>
 
+using flatland::GlobalTopologyData;
+
 namespace {
 
 struct pair_hash {
@@ -25,7 +27,7 @@ std::optional<zx_koid_t> GetViewRefKoid(
     const std::unordered_map<flatland::TransformHandle,
                              std::shared_ptr<const fuchsia::ui::views::ViewRef>>& view_ref_map) {
   const auto kv = view_ref_map.find(handle);
-  if (kv == view_ref_map.end()) {
+  if (kv == view_ref_map.end() || kv->second == nullptr) {
     return std::nullopt;
   }
 
@@ -37,7 +39,7 @@ std::optional<size_t> GetViewRefIndex(
     const std::unordered_map<flatland::TransformHandle,
                              std::shared_ptr<const fuchsia::ui::views::ViewRef>>& view_refs) {
   for (const auto& [transform, view_ref] : view_refs) {
-    if (view_ref_koid == utils::ExtractKoid(*view_ref)) {
+    if (view_ref != nullptr && view_ref_koid == utils::ExtractKoid(*view_ref)) {
       // Found |view_ref_koid|, now calculate the index of its root transform in |transforms|.
       for (size_t start = 0; start < transforms.size(); ++start) {
         if (transforms[start] == transform) {
@@ -117,16 +119,12 @@ glm::mat4 Convert2DTransformTo3D(glm::mat3 in_matrix) {
 
 // Easier-to-read input data to HitTest() below.
 struct HitTestingData {
-  const flatland::GlobalTopologyData::TopologyVector transforms;
-  const flatland::GlobalTopologyData::ChildCountVector children_vector;
-  const flatland::GlobalTopologyData::ParentIndexVector parent_indices;
+  const GlobalTopologyData::TopologyVector transforms;
+  const GlobalTopologyData::ChildCountVector children_vector;
+  const GlobalTopologyData::ParentIndexVector parent_indices;
   const std::unordered_map<flatland::TransformHandle, flatland::TransformHandle> root_transforms;
-  const std::unordered_map<flatland::TransformHandle,
-                           std::shared_ptr<const fuchsia::ui::views::ViewRef>>
-      view_refs;
-  const std::unordered_map<flatland::TransformHandle,
-                           std::vector<fuchsia::ui::composition::HitRegion>>
-      hit_regions;
+  const GlobalTopologyData::ViewRefMap view_refs;
+  const GlobalTopologyData::HitRegions hit_regions;
   const std::vector<flatland::TransformClipRegion> global_clip_regions;
 };
 
@@ -161,7 +159,10 @@ view_tree::SubtreeHitTestResult HitTest(const HitTestingData& data, zx_koid_t st
 
     const auto clip_region = utils::ConvertRectToRectF(global_clip_regions[i]);
 
-    if (const auto local_root = view_refs.find(root_transform); local_root != view_refs.end()) {
+    // Skip anonymous views.
+    if (const auto local_root = view_refs.find(root_transform);
+        local_root != view_refs.end() && local_root->second != nullptr) {
+      // Skip views without hit regions.
       if (const auto hit_region_vec = hit_regions.find(transform);
           hit_region_vec != hit_regions.end()) {
         for (const auto& region : hit_region_vec->second) {
@@ -190,6 +191,30 @@ view_tree::SubtreeHitTestResult HitTest(const HitTestingData& data, zx_koid_t st
 
   std::reverse(hits.begin(), hits.end());
   return view_tree::SubtreeHitTestResult{.hits = hits};
+}
+
+bool HasAnonymousAncestor(const size_t index, const size_t root_index,
+                          const GlobalTopologyData::ViewRefMap& view_refs,
+                          const GlobalTopologyData::TopologyVector& topology_vector,
+                          const GlobalTopologyData::ParentIndexVector& parent_indices) {
+  if (index == root_index) {
+    return false;
+  }
+
+  size_t parent_index = parent_indices[index];
+  while (parent_index != root_index) {
+    // A transform that has an entry in the ViewRefMap is a view, but a nullptr entry is an
+    // anonymous view.
+    const auto parent_transform_handle = topology_vector[parent_index];
+    const auto it = view_refs.find(parent_transform_handle);
+    if (it != view_refs.end() && it->second == nullptr) {
+      return true;
+    }
+
+    parent_index = parent_indices[parent_index];
+  }
+
+  return false;
 }
 
 }  // namespace
@@ -230,7 +255,7 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
   ChildCountVector child_counts;
   ParentIndexVector parent_indices;
   std::unordered_set<TransformHandle> live_transforms;
-  std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
+  ViewRefMap view_refs;
   std::unordered_map<TransformHandle, TransformHandle> root_transforms;
   std::unordered_map<TransformHandle, std::string> debug_names;
   std::unordered_map<TransformHandle, TransformClipRegion> clip_regions;
@@ -351,10 +376,9 @@ GlobalTopologyData GlobalTopologyData::ComputeGlobalTopologyData(
     parent_indices.push_back(parent_counts.empty() ? 0 : parent_counts.back().parent_index);
     live_transforms.insert(current_entry.handle);
 
-    // For the root of each local topology (i.e. the View), save the ViewRef if it has one.
-    // Non-View roots might not have one, e.g. the display.
-    if (current_entry == vector[0] &&
-        uber_structs.at(current_entry.handle.GetInstanceId())->view_ref != nullptr) {
+    // For the root of each local topology (i.e. the View), save the ViewRef.
+    // Non-View roots might have a nullptr ViewRef.
+    if (current_entry == vector[0]) {
       view_refs.emplace(current_entry.handle,
                         uber_structs.at(current_entry.handle.GetInstanceId())->view_ref);
     }
@@ -422,13 +446,16 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
     const std::unordered_map<TransformHandle, TransformHandle>& child_view_watcher_mapping) {
   // Find the first node with a ViewRef set. This is the root of the ViewTree.
   size_t root_index = 0;
-  while (root_index < data.topology_vector.size() &&
-         data.view_refs.count(data.topology_vector[root_index]) == 0) {
-    ++root_index;
+  zx_koid_t root_koid = ZX_KOID_INVALID;
+  for (size_t index = 0; index < data.topology_vector.size(); ++index) {
+    if (const auto koid = GetViewRefKoid(data.topology_vector[index], data.view_refs)) {
+      root_index = index;
+      root_koid = *koid;
+      break;
+    }
   }
-
-  // Didn't find one -> empty ViewTree.
-  if (root_index == data.topology_vector.size()) {
+  if (root_koid == ZX_KOID_INVALID) {
+    // Didn't find a root -> empty ViewTree.
     return {};
   }
 
@@ -436,31 +463,48 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
                                       .tree_boundaries = {}};
   auto& [root, view_tree, unconnected_views, hit_tester, tree_boundaries] = snapshot;
 
+  // Copy the ViewRef map so we can remove ViewRefs from implicitly anonymous nodes (descendants of
+  // anonymous nodes).
+  ViewRefMap modified_view_refs = data.view_refs;
+
   // Add all Views to |view_tree|.
-  root = GetViewRefKoid(data.topology_vector[root_index], data.view_refs).value();
+  root = root_koid;
   for (size_t i = root_index; i < data.topology_vector.size(); ++i) {
     const auto& transform_handle = data.topology_vector.at(i);
-    if (data.view_refs.count(transform_handle) == 0) {
+    const auto view_ref_it = data.view_refs.find(transform_handle);
+    if (view_ref_it == data.view_refs.end()) {
       // Transforms without ViewRefs are not Views and can be skipped.
       continue;
     }
 
-    const auto& view_ref = data.view_refs.at(transform_handle);
+    // TODO(fxbug.dev/109352): Make sure the root view is not anonymous.
+    const auto& view_ref = view_ref_it->second;
+    if (view_ref == nullptr) {
+      // Anonymous views can be skipped.
+      continue;
+    }
+
     const zx_koid_t view_ref_koid = utils::ExtractKoid(*view_ref);
 
     std::string debug_name;
     if (data.debug_names.count(transform_handle) != 0)
       debug_name = data.debug_names.at(transform_handle);
 
+    // If any node in the ancestor chain is anonymous then this View should marked "unconnected".
+    if (HasAnonymousAncestor(i, root_index, data.view_refs, data.topology_vector,
+                             data.parent_indices)) {
+      unconnected_views.insert(view_ref_koid);
+      modified_view_refs.erase(transform_handle);
+      continue;
+    }
+
     // Find the parent by looking upwards until a View is found. The root has no parent.
-    // TODO(fxbug.dev/84196): Disallow anonymous views from having parents?
     zx_koid_t parent_koid = ZX_KOID_INVALID;
     if (view_ref_koid != root) {
       size_t parent_index = data.parent_indices[i];
       while (data.view_refs.count(data.topology_vector[parent_index]) == 0) {
         parent_index = data.parent_indices[parent_index];
       }
-
       parent_koid = GetViewRefKoid(data.topology_vector[parent_index], data.view_refs).value();
     }
 
@@ -506,7 +550,7 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
                     .children_vector = data.child_counts,
                     .parent_indices = data.parent_indices,
                     .root_transforms = data.root_transforms,
-                    .view_refs = data.view_refs,
+                    .view_refs = std::move(modified_view_refs),
                     .hit_regions = data.hit_regions,
                     .global_clip_regions = global_clip_regions,
                 }](zx_koid_t start_node, glm::vec2 world_point, bool is_semantic_hit_test) {

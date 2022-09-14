@@ -285,7 +285,7 @@ void Flatland::Present(fuchsia::ui::composition::PresentArgs args) {
 
   uber_struct->images = image_metadatas_;
 
-  if (link_to_parent_.has_value() && link_to_parent_->view_ref != nullptr) {
+  if (link_to_parent_.has_value()) {
     uber_struct->view_ref = link_to_parent_->view_ref;
   }
 

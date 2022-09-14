@@ -41,7 +41,6 @@ MouseInjector::MouseInjector(inspect::Node inspect_node, InjectorSettings settin
       cancel_stream_(std::move(cancel_stream)) {
   FX_DCHECK(inject_);
   FX_DCHECK(settings.device_type == fuchsia::ui::pointerinjector::DeviceType::MOUSE);
-  FX_DCHECK(settings.button_identifiers.size() > 0) << "Tried to add a mouse with no buttons";
 }
 
 void MouseInjector::ForwardEvent(const fuchsia::ui::pointerinjector::Event& event,

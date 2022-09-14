@@ -276,6 +276,55 @@ TEST_F(FlatlandFocusIntegrationTest, RequestValidity_SelfRequest_ShouldSucceed) 
 // Scene:
 //   parent
 //     |
+//   child (anonymous)
+//     |
+// grandchild
+TEST_F(FlatlandFocusIntegrationTest, FocusRequest_ChildOfAnonymousView_ShouldFail) {
+  // Set up the child view.
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+  auto [grandchild_token, grandchild_parent_token] = scenic::ViewCreationTokenPair::New();
+
+  // Create the anonymous child view and attach the grandchild to it.
+  fuchsia::ui::composition::FlatlandPtr child_session;
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
+  {
+    fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+    child_session->CreateView(std::move(child_token), parent_viewport_watcher.NewRequest());
+    fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
+    ViewportProperties properties;
+    properties.set_logical_size({kDefaultLogicalPixelSize, kDefaultLogicalPixelSize});
+    const TransformId kRootTransform{.value = 1};
+    const ContentId kRootContent{.value = 1};
+    child_session->CreateTransform(kRootTransform);
+    child_session->CreateViewport(kRootContent, std::move(grandchild_parent_token),
+                                  std::move(properties), child_view_watcher.NewRequest());
+    child_session->SetRootTransform(kRootTransform);
+    child_session->SetContent(kRootTransform, kRootContent);
+    BlockingPresent(child_session);
+  }
+
+  // Create the named grandchild view.
+  fuchsia::ui::composition::FlatlandPtr grandchild_session;
+  grandchild_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
+  auto identity = scenic::NewViewIdentityOnCreation();
+  auto grandchild_view_ref = fidl::Clone(identity.view_ref);
+  {
+    fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+    grandchild_session->CreateView2(std::move(grandchild_token), std::move(identity), {},
+                                    parent_viewport_watcher.NewRequest());
+    BlockingPresent(grandchild_session);
+  }
+
+  AttachToRoot(std::move(parent_token));
+
+  EXPECT_EQ(CountReceivedFocusChains(), 0u);
+  // Attempt to move focus from the root to the grandchild view.
+  EXPECT_FALSE(RequestFocusChange(root_focuser_, grandchild_view_ref));
+}
+
+// Scene:
+//   parent
+//     |
 //   child
 //     |
 // grandchild

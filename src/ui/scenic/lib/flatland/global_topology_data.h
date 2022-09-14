@@ -46,14 +46,18 @@ struct GlobalTopologyData {
   // The set of TransformHandles in the |topology_vector| (provided for convenience).
   std::unordered_set<TransformHandle> live_handles;
 
-  // ViewRef for each root TransformHandle.
-  std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>> view_refs;
+  // ViewRef for each root TransformHandle. nullptr for anonymous Views.
+  using ViewRefMap =
+      std::unordered_map<TransformHandle, std::shared_ptr<const fuchsia::ui::views::ViewRef>>;
+  ViewRefMap view_refs;
 
   // Map of TransformHandle to its local root TransformHandle. Needed for hit testing.
   std::unordered_map<TransformHandle, TransformHandle> root_transforms;
 
   // HitRegions for each TransformHandle.
-  std::unordered_map<TransformHandle, std::vector<fuchsia::ui::composition::HitRegion>> hit_regions;
+  using HitRegions =
+      std::unordered_map<TransformHandle, std::vector<fuchsia::ui::composition::HitRegion>>;
+  HitRegions hit_regions;
 
   // Debug name for each transform handle, if present.
   std::unordered_map<TransformHandle, std::string> debug_names;
