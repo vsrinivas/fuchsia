@@ -1,0 +1,72 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+@available(platform="examples", added=1)
+library fuchsia.examples.notificationhub;
+
+/// The name of the Application.
+alias AppName = string:64;
+/// Number of milliseconds since the unix epoch.
+alias Timestamp = uint64;
+/// A URL.
+alias Url = string:60000;
+
+/// The settings for a Hub.
+type Settings = flexible bits {
+    /// Set to true if you want incoming messages to a hub to be rate-limited.
+    SLOW_MODE = 0x1;
+};
+
+/// A message in the hub.
+type Message = table {
+    /// A unique id for the message.
+    1: id uint64;
+    /// The name of the Application that sent the message.
+    2: from AppName;
+    /// The time the message was sent, in unix time.
+    3: time Timestamp;
+    /// The contents of the message.
+    4: content Content;
+};
+
+/// The contents of a message.
+type Content = flexible union {
+    /// The text contents of a message.
+    1: text string:140;
+    /// The contents of a banner message, supporting a banner image and text.
+    2: banner table {
+        /// The URL to the banner image.
+        1: image Url;
+        /// The text contents of the banner.
+        2: text string:80;
+    };
+};
+
+/// A representation of a single notification hub.
+type Hub = table {
+    /// The settings for the hub.
+    1: settings Settings;
+    /// The messages in the hub.
+    2: messages vector<Message>:64;
+};
+
+/// All possible connection errors.
+type ConnectionError = flexible enum {
+    /// An error when the user is already connected to a given hub.
+    ALREADY_CONNECTED = 1;
+};
+
+/// The NotificationHub protocol. Allows users to connect to a notification hub,
+/// to recieve notifications. Supports multiple concurrent connections to
+/// separate hubs.
+protocol NotificationHub {
+    /// Connect to a given app's notification hub.
+    Connect(struct {
+        /// The name of the app to connect to.
+        app AppName;
+    }) -> (Hub) error ConnectionError;
+    /// Close all open connections to notification hubs.
+    // We return a table for future flexibility. We can update this in the
+    // future to return additional keyed data.
+    Close() -> (table {});
+};
