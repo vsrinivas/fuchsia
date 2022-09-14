@@ -22,11 +22,11 @@ use futures_util::ready;
 use futures_util::stream::Stream;
 use h2::client::{Connection, SendRequest};
 use http::header::{self, CONTENT_LENGTH};
-use log::{debug, warn};
 use rustls::ClientConfig;
 use tokio_rustls::{
     client::TlsStream as TokioTlsClientStream, Connect as TokioTlsConnect, TlsConnector,
 };
+use tracing::{debug, warn};
 
 use crate::error::ProtoError;
 use crate::iocompat::AsyncIoStdAsTokio;
@@ -306,15 +306,17 @@ impl HttpsClientStreamBuilder {
     /// * `name_server` - IP and Port for the remote DNS resolver
     /// * `dns_name` - The DNS name, Subject Public Key Info (SPKI) name, as associated to a certificate
     pub fn build<S: Connect>(
-        self,
+        mut self,
         name_server: SocketAddr,
         dns_name: String,
     ) -> HttpsClientConnect<S> {
-        assert!(self
-            .client_config
-            .alpn_protocols
-            .iter()
-            .any(|protocol| *protocol == ALPN_H2.to_vec()));
+        // ensure the ALPN protocol is set correctly
+        if self.client_config.alpn_protocols.is_empty() {
+            let mut client_config = (*self.client_config).clone();
+            client_config.alpn_protocols = vec![ALPN_H2.to_vec()];
+
+            self.client_config = Arc::new(client_config);
+        }
 
         let tls = TlsConfig {
             client_config: self.client_config,
@@ -402,7 +404,7 @@ where
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {
             let next = match *self {
-                HttpsClientConnectState::ConnectTcp {
+                Self::ConnectTcp {
                     name_server,
                     bind_addr,
                     ref mut tls,
@@ -415,7 +417,7 @@ where
                         tls: tls.take(),
                     }
                 }
-                HttpsClientConnectState::TcpConnecting {
+                Self::TcpConnecting {
                     ref mut connect,
                     name_server,
                     ref mut tls,
@@ -444,7 +446,7 @@ where
                         )))),
                     }
                 }
-                HttpsClientConnectState::TlsConnecting {
+                Self::TlsConnecting {
                     ref name_server_name,
                     name_server,
                     ref mut tls,
@@ -461,7 +463,7 @@ where
                         handshake: Box::pin(handshake),
                     }
                 }
-                HttpsClientConnectState::H2Handshake {
+                Self::H2Handshake {
                     ref name_server_name,
                     name_server,
                     ref mut handshake,
@@ -485,10 +487,10 @@ where
                         is_shutdown: false,
                     }))
                 }
-                HttpsClientConnectState::Connected(ref mut conn) => {
+                Self::Connected(ref mut conn) => {
                     return Poll::Ready(Ok(conn.take().expect("cannot poll after complete")))
                 }
-                HttpsClientConnectState::Errored(ref mut err) => {
+                Self::Errored(ref mut err) => {
                     return Poll::Ready(Err(err.take().expect("cannot poll after complete")))
                 }
             };
@@ -667,7 +669,7 @@ mod tests {
         let mut client_config = ClientConfig::builder()
             .with_safe_default_cipher_suites()
             .with_safe_default_kx_groups()
-            .with_protocol_versions(&[&rustls::version::TLS12])
+            .with_safe_default_protocol_versions()
             .unwrap()
             .with_root_certificates(root_store)
             .with_no_client_auth();

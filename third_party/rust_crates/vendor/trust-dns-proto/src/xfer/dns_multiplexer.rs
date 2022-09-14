@@ -20,9 +20,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use futures_channel::mpsc;
 use futures_util::stream::{Stream, StreamExt};
 use futures_util::{future::Future, ready, FutureExt};
-use log::{debug, warn};
 use rand;
 use rand::distributions::{Distribution, Standard};
+use tracing::{debug, warn};
 
 use crate::error::*;
 use crate::op::{MessageFinalizer, MessageVerifier};
@@ -316,6 +316,13 @@ where
             Ok(buffer) => {
                 debug!("sending message id: {}", active_request.request_id());
                 let serial_message = SerialMessage::new(buffer, self.stream.name_server_addr());
+
+                debug!(
+                    "final message: {}",
+                    serial_message
+                        .to_message()
+                        .expect("bizarre we just made this message")
+                );
 
                 // add to the map -after- the client send b/c we don't want to put it in the map if
                 //  we ended up returning an error from the send.

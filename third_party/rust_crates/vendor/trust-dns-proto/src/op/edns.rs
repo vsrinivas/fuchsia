@@ -16,6 +16,8 @@
 
 //! Extended DNS options
 
+use std::fmt;
+
 use crate::error::*;
 use crate::rr::rdata::opt::{self, EdnsCode, EdnsOption};
 use crate::rr::rdata::OPT;
@@ -25,7 +27,7 @@ use crate::serialize::binary::{BinEncodable, BinEncoder};
 
 /// Edns implements the higher level concepts for working with extended dns as it is used to create or be
 /// created from OPT record data.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct Edns {
     // high 8 bits that make up the 12 bit total field when included with the 4bit rcode from the
     //  header (from TTL)
@@ -212,6 +214,23 @@ impl BinEncodable for Edns {
 
         place.replace(encoder, len as u16)?;
         Ok(())
+    }
+}
+
+impl fmt::Display for Edns {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
+        let version = self.version;
+        let dnssec_ok = self.dnssec_ok;
+        let max_payload = self.max_payload;
+
+        write!(
+            f,
+            "version: {version} dnssec_ok: {dnssec_ok} max_payload: {max_payload} opts: {opts_len}",
+            version = version,
+            dnssec_ok = dnssec_ok,
+            max_payload = max_payload,
+            opts_len = self.options().as_ref().len()
+        )
     }
 }
 

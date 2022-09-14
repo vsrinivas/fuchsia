@@ -12,7 +12,7 @@ use std::ops::{Deref, DerefMut};
 use crate::op::Message;
 
 /// A set of options for expressing options to how requests should be treated
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct DnsRequestOptions {
     /// When true, the underlying DNS protocols will not return on the first response received.
@@ -25,12 +25,28 @@ pub struct DnsRequestOptions {
     // TODO: add EDNS options here?
     /// When true, will add EDNS options to the request.
     pub use_edns: bool,
+    /// Specifies maximum request depth for DNSSEC validation.
+    pub max_request_depth: usize,
+    /// set recursion desired (or not) for any requests
+    pub recursion_desired: bool,
+}
+
+impl Default for DnsRequestOptions {
+    fn default() -> Self {
+        #[allow(deprecated)]
+        Self {
+            max_request_depth: 26,
+            expects_multiple_responses: false,
+            use_edns: false,
+            recursion_desired: true,
+        }
+    }
 }
 
 /// A DNS request object
 ///
 /// This wraps a DNS Message for requests. It also has request options associated for controlling certain features of the DNS protocol handlers.
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct DnsRequest {
     message: Message,
     options: DnsRequestOptions,

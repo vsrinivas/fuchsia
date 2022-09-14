@@ -255,8 +255,8 @@ rust_icu_unorm2 = { version = "2.0.2", default-features = false, features = ["re
 rust_icu_ustring = { version = "2.0.2", default-features = false, features = ["renaming", "icu_version_in_env"] }
 tokio = { version = "1.19.2", default-features = false }
 tokio-rustls = "0.22.0"
-trust-dns-proto = { version = "0.21.2", default-features = false, features = ["testing"] }
-trust-dns-resolver = { version = "0.21.2", default-features = false, features = ["testing"] }
+trust-dns-proto = { version = "0.22.0", default-features = false, features = ["testing"] }
+trust-dns-resolver = { version = "0.22.0", default-features = false, features = ["testing"] }
 ttf-parser = "0.10.1"
 unicode-normalization = "0.1"
 vk-sys = "0.7.0"
@@ -354,7 +354,6 @@ pulldown-cmark = { path = "forks/pulldown-cmark" }
 rustls = { path = "forks/rustls" }
 security-framework = { path = "forks/security-framework" }
 tracing-core = { path = "forks/tracing-core" }
-trust-dns-resolver = { path = "forks/trust-dns-resolver" }
 zeroize = { path = "forks/zeroize" }
 zstd-sys = { path = "forks/zstd-sys" }
 
@@ -616,6 +615,9 @@ visibility = [":*", "//build/sdk/meta:*"]
 [gn.package.valico."2.4.2"]
 env_vars = ["OUT_DIR=../../../../compat/valico"]
 
+[gn.package.valuable."0.1.0"]
+rustflags = []
+
 [gn.package.zstd-safe."4.0.0+zstd.1.4.9"]
 rustflags = []
 
@@ -660,8 +662,8 @@ configs = [ "//src/lib/icu:version" ]
 [gn.package.rust_icu_ustring."2.0.2"]
 configs = [ "//src/lib/icu:version" ]
 
-[gn.package.trust-dns-resolver."0.21.2"]
-env_vars = [ "CARGO_PKG_VERSION=\\\"0.21.2\\\"" ]
+[gn.package.trust-dns-resolver."0.22.0"]
+env_vars = [ "CARGO_PKG_VERSION=\\\"0.22.0\\\"" ]
 
 [gn.package.unic-common."0.9.0"]
 env_vars = [ "CARGO_PKG_VERSION=\\\"0.9.0\\\"", "CARGO_PKG_NAME=\\\"unic-common\\\"",  "CARGO_PKG_DESCRIPTION=\\\"\\\"", ]

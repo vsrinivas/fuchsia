@@ -938,11 +938,11 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("tracing") {
-  public_deps = [ ":tracing-v0_1_29" ]
+  public_deps = [ ":tracing-v0_1_34" ]
 }
 
 group("tracing-core") {
-  public_deps = [ ":tracing-core-v0_1_21" ]
+  public_deps = [ ":tracing-core-v0_1_26" ]
 }
 
 group("tracing-log") {
@@ -959,13 +959,13 @@ group("tracing-subscriber") {
 
 if (current_os == "fuchsia") {
   group("trust-dns-proto") {
-    public_deps = [ ":trust-dns-proto-v0_21_2" ]
+    public_deps = [ ":trust-dns-proto-v0_22_0" ]
   }
 }
 
 if (current_os == "fuchsia") {
   group("trust-dns-resolver") {
-    public_deps = [ ":trust-dns-resolver-v0_21_2" ]
+    public_deps = [ ":trust-dns-resolver-v0_22_0" ]
   }
 }
 
@@ -3722,10 +3722,10 @@ rust_library("encode_unicode-v0_3_5") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("enum-as-inner-v0_4_0") {
+rust_proc_macro("enum-as-inner-v0_5_1") {
   crate_name = "enum_as_inner"
   crate_root = "//third_party/rust_crates/vendor/enum-as-inner/src/lib.rs"
-  output_name = "enum_as_inner-8c562e91c2f22b20"
+  output_name = "enum_as_inner-ca7505f662d13300"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -3739,8 +3739,8 @@ rust_proc_macro("enum-as-inner-v0_4_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=8c562e91c2f22b20",
-    "-Cextra-filename=-8c562e91c2f22b20",
+    "-Cmetadata=ca7505f662d13300",
+    "-Cextra-filename=-ca7505f662d13300",
   ]
 
   visibility = [ ":*" ]
@@ -4928,7 +4928,7 @@ rust_library("hyper-v0_14_19") {
   deps += [ ":pin-project-lite-v0_2_4" ]
   deps += [ ":tokio-v1_19_2" ]
   deps += [ ":tower-service-v0_3_0" ]
-  deps += [ ":tracing-v0_1_29" ]
+  deps += [ ":tracing-v0_1_34" ]
   deps += [ ":want-v0_3_0" ]
 
   rustenv = []
@@ -8513,7 +8513,7 @@ rust_library("ring-v0_16_12") {
   visibility += [ ":ring" ]
   visibility += [ ":rustls-v0_19_1" ]
   visibility += [ ":sct-v0_6_0" ]
-  visibility += [ ":trust-dns-proto-v0_21_2" ]
+  visibility += [ ":trust-dns-proto-v0_22_0" ]
   visibility += [ ":tuf-v0_3_0-beta10" ]
   visibility += [ ":webpki-v0_21_0" ]
 }
@@ -10678,26 +10678,26 @@ rust_library("tower-service-v0_3_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("tracing-v0_1_29") {
+rust_library("tracing-v0_1_34") {
   crate_name = "tracing"
   crate_root = "//third_party/rust_crates/vendor/tracing/src/lib.rs"
-  output_name = "tracing-145e529ba33a39f9"
+  output_name = "tracing-5bf51f3eb026ae27"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":pin-project-lite-v0_2_4" ]
-  deps += [ ":tracing-attributes-v0_1_18($host_toolchain)" ]
-  deps += [ ":tracing-core-v0_1_21" ]
+  deps += [ ":tracing-attributes-v0_1_22($host_toolchain)" ]
+  deps += [ ":tracing-core-v0_1_26" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=145e529ba33a39f9",
-    "-Cextra-filename=-145e529ba33a39f9",
+    "-Cmetadata=5bf51f3eb026ae27",
+    "-Cextra-filename=-5bf51f3eb026ae27",
     "--cfg=feature=\"attributes\"",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"log\"",
@@ -10708,10 +10708,10 @@ rust_library("tracing-v0_1_29") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("tracing-attributes-v0_1_18") {
+rust_proc_macro("tracing-attributes-v0_1_22") {
   crate_name = "tracing_attributes"
   crate_root = "//third_party/rust_crates/vendor/tracing-attributes/src/lib.rs"
-  output_name = "tracing_attributes-e0ab8aefa16d80d7"
+  output_name = "tracing_attributes-9a1fd8618adb4c31"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -10724,17 +10724,17 @@ rust_proc_macro("tracing-attributes-v0_1_18") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=e0ab8aefa16d80d7",
-    "-Cextra-filename=-e0ab8aefa16d80d7",
+    "-Cmetadata=9a1fd8618adb4c31",
+    "-Cextra-filename=-9a1fd8618adb4c31",
   ]
 
   visibility = [ ":*" ]
 }
 
-rust_library("tracing-core-v0_1_21") {
+rust_library("tracing-core-v0_1_26") {
   crate_name = "tracing_core"
   crate_root = "//third_party/rust_crates/forks/tracing-core/src/lib.rs"
-  output_name = "tracing_core-9d705a9a79783ddd"
+  output_name = "tracing_core-f5d1cc0bbda6a32b"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -10745,11 +10745,12 @@ rust_library("tracing-core-v0_1_21") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=9d705a9a79783ddd",
-    "-Cextra-filename=-9d705a9a79783ddd",
+    "-Cmetadata=f5d1cc0bbda6a32b",
+    "-Cextra-filename=-f5d1cc0bbda6a32b",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"lazy_static\"",
     "--cfg=feature=\"std\"",
+    "--cfg=feature=\"valuable\"",
   ]
 
   visibility = [ ":*" ]
@@ -10764,7 +10765,7 @@ rust_library("tracing-log-v0_1_2") {
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":log-v0_4_11" ]
-  deps += [ ":tracing-core-v0_1_21" ]
+  deps += [ ":tracing-core-v0_1_26" ]
 
   rustenv = []
 
@@ -10818,7 +10819,7 @@ rust_library("tracing-subscriber-v0_3_1") {
   deps = []
   deps += [ ":sharded-slab-v0_1_4" ]
   deps += [ ":thread_local-v1_0_1" ]
-  deps += [ ":tracing-core-v0_1_21" ]
+  deps += [ ":tracing-core-v0_1_26" ]
   deps += [ ":tracing-log-v0_1_2" ]
 
   rustenv = []
@@ -10860,28 +10861,28 @@ rust_library("treeline-v0_1_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("trust-dns-proto-v0_21_2") {
+rust_library("trust-dns-proto-v0_22_0") {
   crate_name = "trust_dns_proto"
   crate_root = "//third_party/rust_crates/vendor/trust-dns-proto/src/lib.rs"
-  output_name = "trust_dns_proto-5ca9ed4250881d0e"
+  output_name = "trust_dns_proto-b7c1414f1b98a98d"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":async-trait-v0_1_56($host_toolchain)" ]
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":data-encoding-v2_3_2" ]
-  deps += [ ":enum-as-inner-v0_4_0($host_toolchain)" ]
+  deps += [ ":enum-as-inner-v0_5_1($host_toolchain)" ]
   deps += [ ":futures-channel-v0_3_19" ]
   deps += [ ":futures-io-v0_3_19" ]
   deps += [ ":futures-util-v0_3_19" ]
   deps += [ ":idna-v0_2_3" ]
   deps += [ ":ipnet-v2_3_1" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":log-v0_4_11" ]
   deps += [ ":rand-v0_8_4" ]
   deps += [ ":smallvec-v1_8_0" ]
   deps += [ ":thiserror-v1_0_23" ]
   deps += [ ":tinyvec-v1_3_1" ]
+  deps += [ ":tracing-v0_1_34" ]
   deps += [ ":url-v2_1_0" ]
 
   rustenv = []
@@ -10889,38 +10890,38 @@ rust_library("trust-dns-proto-v0_21_2") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=5ca9ed4250881d0e",
-    "-Cextra-filename=-5ca9ed4250881d0e",
+    "-Cmetadata=b7c1414f1b98a98d",
+    "-Cextra-filename=-b7c1414f1b98a98d",
     "--cfg=feature=\"testing\"",
   ]
 
   visibility = [ ":*" ]
 }
 
-rust_library("trust-dns-resolver-v0_21_2") {
+rust_library("trust-dns-resolver-v0_22_0") {
   crate_name = "trust_dns_resolver"
-  crate_root = "//third_party/rust_crates/forks/trust-dns-resolver/src/lib.rs"
-  output_name = "trust_dns_resolver-fda24c7930416b60"
+  crate_root = "//third_party/rust_crates/vendor/trust-dns-resolver/src/lib.rs"
+  output_name = "trust_dns_resolver-22c9d5f1801e7ebf"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":cfg-if-v1_0_0" ]
   deps += [ ":futures-util-v0_3_19" ]
   deps += [ ":lazy_static-v1_4_0" ]
-  deps += [ ":log-v0_4_11" ]
   deps += [ ":lru-cache-v0_1_2" ]
   deps += [ ":parking_lot-v0_12_0" ]
   deps += [ ":smallvec-v1_8_0" ]
   deps += [ ":thiserror-v1_0_23" ]
-  deps += [ ":trust-dns-proto-v0_21_2" ]
+  deps += [ ":tracing-v0_1_34" ]
+  deps += [ ":trust-dns-proto-v0_22_0" ]
 
-  rustenv = [ "CARGO_PKG_VERSION=\"0.21.2\"" ]
+  rustenv = [ "CARGO_PKG_VERSION=\"0.22.0\"" ]
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=fda24c7930416b60",
-    "-Cextra-filename=-fda24c7930416b60",
+    "-Cmetadata=22c9d5f1801e7ebf",
+    "-Cextra-filename=-22c9d5f1801e7ebf",
     "--cfg=feature=\"testing\"",
   ]
 
@@ -11633,6 +11634,28 @@ rust_library("valico-v2_4_2") {
     "--edition=2015",
     "-Cmetadata=179ee54e44a59467",
     "-Cextra-filename=-179ee54e44a59467",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_library("valuable-v0_1_0") {
+  crate_name = "valuable"
+  crate_root = "//third_party/rust_crates/vendor/valuable/src/lib.rs"
+  output_name = "valuable-dc86eb7b228f5af1"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=dc86eb7b228f5af1",
+    "-Cextra-filename=-dc86eb7b228f5af1",
+    "--cfg=feature=\"alloc\"",
+    "--cfg=feature=\"std\"",
   ]
 
   visibility = [ ":*" ]

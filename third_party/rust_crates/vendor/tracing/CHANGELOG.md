@@ -1,4 +1,140 @@
-# 0.1.29 (October 5th, 2021
+# 0.1.34 (April 14, 2022)
+
+This release includes bug fixes for the "log" support feature and for the use of
+both scoped and global default dispatchers in the same program.
+
+### Fixed
+
+- Failure to use the global default dispatcher when a thread sets a local
+  default dispatcher before the global default is set ([#2065])
+- **log**: Compilation errors due to `async` block/fn futures becoming `!Send`
+  when the "log" feature flag is enabled ([#2073])
+- Broken links in documentation ([#2068])
+
+Thanks to @ben0x539 for contributing to this release!
+
+[#2065]: https://github.com/tokio-rs/tracing/pull/2065
+[#2073]: https://github.com/tokio-rs/tracing/pull/2073
+[#2068]: https://github.com/tokio-rs/tracing/pull/2068
+
+# 0.1.33 (April 9, 2022)
+
+This release adds new `span_enabled!` and `event_enabled!` variants of the
+`enabled!` macro, for testing whether a subscriber would specifically enable a
+span or an event.
+
+### Added
+
+- `span_enabled!` and `event_enabled!` macros ([#1900])
+- Several documentation improvements ([#2010], [#2012])
+
+### Fixed
+
+- Compilation warning when compiling for <=32-bit targets (including `wasm32`)
+  ([#2060])
+
+Thanks to @guswynn, @arifd, @hrxi, @CAD97, and @name1e5s for contributing to
+this release!
+
+[#1900]: https://github.com/tokio-rs/tracing/pull/1900
+[#2010]: https://github.com/tokio-rs/tracing/pull/2010
+[#2012]: https://github.com/tokio-rs/tracing/pull/2012
+[#2060]: https://github.com/tokio-rs/tracing/pull/2060
+
+# 0.1.32 (March 8th, 2022)
+
+This release reduces the overhead of creating and dropping disabled
+spans significantly, which should improve performance when no `tracing`
+subscriber is in use or when spans are disabled by a filter.
+
+### Fixed
+
+- **attributes**: Compilation failure with `--minimal-versions` due to a
+  too-permissive `syn` dependency ([#1960])
+
+### Changed
+
+- Reduced `Drop` overhead for disabled spans ([#1974])
+- `tracing-attributes`: updated to [0.1.20][attributes-0.1.20]
+
+[#1974]: https://github.com/tokio-rs/tracing/pull/1974
+[#1960]: https://github.com/tokio-rs/tracing/pull/1960
+[attributes-0.1.20]: https://github.com/tokio-rs/tracing/releases/tag/tracing-attributes-0.1.20
+
+# 0.1.31 (February 17th, 2022)
+
+This release increases the minimum supported Rust version (MSRV) to 1.49.0. In
+addition, it fixes some relatively rare macro bugs.
+
+### Added
+
+- Added `tracing-forest` to the list of related crates ([#1935])
+
+### Changed
+
+- Updated minimum supported Rust version (MSRV) to 1.49.0 ([#1913])
+
+### Fixed
+
+- Fixed the `warn!` macro incorrectly generating an event with the `TRACE` level
+  ([#1930])
+- Fixed macro hygiene issues when used in a crate that defines its own `concat!`
+  macro, for real this time ([#1918])
+
+Thanks to @QnnOkabayashi, @nicolaasg, and @teohhanhui for contributing to this
+release!
+
+[#1935]: https://github.com/tokio-rs/tracing/pull/1935
+[#1913]: https://github.com/tokio-rs/tracing/pull/1913
+[#1930]: https://github.com/tokio-rs/tracing/pull/1930
+[#1918]: https://github.com/tokio-rs/tracing/pull/1918
+
+# 0.1.30 (February 3rd, 2022)
+
+This release adds *experimental* support for recording structured field
+values using the [`valuable`] crate. See [this blog post][post] for
+details on `valuable`.
+
+Note that `valuable` support currently requires `--cfg tracing_unstable`. See
+the documentation for details.
+
+This release also adds a new `enabled!` macro for testing if a span or event
+would be enabled.
+
+### Added
+
+- **field**: Experimental support for recording field values using the
+  [`valuable`] crate ([#1608], [#1888], [#1887])
+- `enabled!` macro for testing if a span or event is enabled ([#1882])
+
+### Changed
+
+- `tracing-core`: updated to [0.1.22][core-0.1.22]
+- `tracing-attributes`: updated to [0.1.19][attributes-0.1.19]
+
+### Fixed
+
+- **log**: Fixed "use of moved value" compiler error when the "log" feature is
+  enabled ([#1823])
+- Fixed macro hygiene issues when used in a crate that defines its own `concat!`
+  macro ([#1842])
+- A very large number of documentation fixes and improvements.
+
+Thanks to @@Vlad-Scherbina, @Skepfyr, @Swatinem, @guswynn, @teohhanhui,
+@xd009642, @tobz, @d-e-s-o@0b01, and @nickelc for contributing to this release!
+
+[`valuable`]: https://crates.io/crates/valuable
+[post]: https://tokio.rs/blog/2021-05-valuable
+[core-0.1.22]: https://github.com/tokio-rs/tracing/releases/tag/tracing-core-0.1.22
+[attributes-0.1.19]: https://github.com/tokio-rs/tracing/releases/tag/tracing-attributes-0.1.19
+[#1608]: https://github.com/tokio-rs/tracing/pull/1608
+[#1888]: https://github.com/tokio-rs/tracing/pull/1888
+[#1887]: https://github.com/tokio-rs/tracing/pull/1887
+[#1882]: https://github.com/tokio-rs/tracing/pull/1882
+[#1823]: https://github.com/tokio-rs/tracing/pull/1823
+[#1842]: https://github.com/tokio-rs/tracing/pull/1842
+
+# 0.1.29 (October 5th, 2021)
 
 This release adds support for recording `Option<T> where T: Value` as typed
 `tracing` field values. It also includes significant performance improvements
@@ -8,7 +144,7 @@ span is disabled.
 ### Changed
 
 - `tracing-core`: updated to v0.1.21
-- `tracing-attributes`: updated to v0.1.19
+- `tracing-attributes`: updated to v0.1.18
 
 ### Added
 

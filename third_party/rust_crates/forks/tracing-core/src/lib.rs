@@ -23,7 +23,7 @@
 //! In addition, it defines the global callsite registry and per-thread current
 //! dispatcher which other components of the tracing system rely on.
 //!
-//! *Compiler support: [requires `rustc` 1.42+][msrv]*
+//! *Compiler support: [requires `rustc` 1.49+][msrv]*
 //!
 //! [msrv]: #supported-rust-versions
 //!
@@ -43,9 +43,9 @@
 //! be used with the `tracing` ecosystem. It includes a collection of
 //! `Subscriber` implementations, as well as utility and adapter crates.
 //!
-//! ### Crate Feature Flags
+//! ## Crate Feature Flags
 //!
-//! The following crate feature flags are available:
+//! The following crate [feature flags] are available:
 //!
 //! * `std`: Depend on the Rust standard library (enabled by default).
 //!
@@ -53,15 +53,46 @@
 //!
 //!   ```toml
 //!   [dependencies]
-//!   tracing-core = { version = "0.1.21", default-features = false }
+//!   tracing-core = { version = "0.1.22", default-features = false }
 //!   ```
 //!
 //!   **Note**:`tracing-core`'s `no_std` support requires `liballoc`.
 //!
+//! ### Unstable Features
+//!
+//! These feature flags enable **unstable** features. The public API may break in 0.1.x
+//! releases. To enable these features, the `--cfg tracing_unstable` must be passed to
+//! `rustc` when compiling.
+//!
+//! The following unstable feature flags are currently available:
+//!
+//! * `valuable`: Enables support for recording [field values] using the
+//!   [`valuable`] crate.
+//!
+//! #### Enabling Unstable Features
+//!
+//! The easiest way to set the `tracing_unstable` cfg is to use the `RUSTFLAGS`
+//! env variable when running `cargo` commands:
+//!
+//! ```shell
+//! RUSTFLAGS="--cfg tracing_unstable" cargo build
+//! ```
+//! Alternatively, the following can be added to the `.cargo/config` file in a
+//! project to automatically enable the cfg flag for that project:
+//!
+//! ```toml
+//! [build]
+//! rustflags = ["--cfg", "tracing_unstable"]
+//! ```
+//!
+//! [feature flags]: https://doc.rust-lang.org/cargo/reference/manifest.html#the-features-section
+//! [field values]: crate::field
+//! [`valuable`]: https://crates.io/crates/valuable
+//!
 //! ## Supported Rust Versions
 //!
 //! Tracing is built against the latest stable release. The minimum supported
-//! version is 1.42. The current Tracing version is not guaranteed to build on
+//! version is 1.49. The current Tracing version is not guaranteed to build on
 //! Rust versions earlier than the minimum supported version.
 //!
 //! Tracing follows the same compiler support policies as the rest of the Tokio
@@ -73,19 +104,19 @@
 //! long as doing so complies with this policy.
 //!
 //!
-//! [`span::Id`]: span/struct.Id.html
-//! [`Event`]: event/struct.Event.html
-//! [`Subscriber`]: subscriber/trait.Subscriber.html
-//! [`Metadata`]: metadata/struct.Metadata.html
-//! [`Callsite`]: callsite/trait.Callsite.html
-//! [`Field`]: field/struct.Field.html
-//! [`FieldSet`]: field/struct.FieldSet.html
-//! [`Value`]: field/trait.Value.html
-//! [`ValueSet`]: field/struct.ValueSet.html
-//! [`Dispatch`]: dispatcher/struct.Dispatch.html
+//! [`span::Id`]: span::Id
+//! [`Event`]: event::Event
+//! [`Subscriber`]: subscriber::Subscriber
+//! [`Metadata`]: metadata::Metadata
+//! [`Callsite`]: callsite::Callsite
+//! [`Field`]: field::Field
+//! [`FieldSet`]: field::FieldSet
+//! [`Value`]: field::Value
+//! [`ValueSet`]: field::ValueSet
+//! [`Dispatch`]: dispatcher::Dispatch
 //! [`tokio-rs/tracing`]: https://github.com/tokio-rs/tracing
 //! [`tracing`]: https://crates.io/crates/tracing
-#![doc(html_root_url = "https://docs.rs/tracing-core/0.1.21")]
+#![doc(html_root_url = "https://docs.rs/tracing-core/0.1.22")]
 #![doc(
     html_logo_url = "https://raw.githubusercontent.com/tokio-rs/tracing/master/assets/logo-type.png",
     issue_tracker_base_url = "https://github.com/tokio-rs/tracing/issues/"
@@ -119,14 +150,11 @@ extern crate alloc;
 
 /// Statically constructs an [`Identifier`] for the provided [`Callsite`].
 ///
-/// This may be used in contexts, such as static initializers, where the
-/// [`Callsite::id`] function is not currently usable.
+/// This may be used in contexts such as static initializers.
 ///
 /// For example:
 /// ```rust
-/// # #[macro_use]
-/// # extern crate tracing_core;
-/// use tracing_core::callsite;
+/// use tracing_core::{callsite, identify_callsite};
 /// # use tracing_core::{Metadata, subscriber::Interest};
 /// # fn main() {
 /// pub struct MyCallsite {
@@ -146,9 +174,8 @@ extern crate alloc;
 /// # }
 /// ```
 ///
-/// [`Identifier`]: callsite/struct.Identifier.html
-/// [`Callsite`]: callsite/trait.Callsite.html
-/// [`Callsite::id`]: callsite/trait.Callsite.html#method.id
+/// [`Identifier`]: callsite::Identifier
+/// [`Callsite`]: callsite::Callsite
 #[macro_export]
 macro_rules! identify_callsite {
     ($callsite:expr) => {
@@ -160,9 +187,8 @@ macro_rules! identify_callsite {
 ///
 /// /// For example:
 /// ```rust
-/// # #[macro_use]
-/// # extern crate tracing_core;
 /// # use tracing_core::{callsite::Callsite, subscriber::Interest};
+/// use tracing_core::metadata;
 /// use tracing_core::metadata::{Kind, Level, Metadata};
 /// # fn main() {
 /// # pub struct MyCallsite { }
@@ -186,8 +212,8 @@ macro_rules! identify_callsite {
 /// # }
 /// ```
 ///
-/// [metadata]: metadata/struct.Metadata.html
-/// [`Metadata::new`]: metadata/struct.Metadata.html#method.new
+/// [metadata]: metadata::Metadata
+/// [`Metadata::new`]: metadata::Metadata::new
 #[macro_export]
 macro_rules! metadata {
     (
@@ -228,14 +254,11 @@ macro_rules! metadata {
     };
 }
 
-// std uses lazy_static from crates.io
+// when `std` is enabled, use the `lazy_static` crate from crates.io
 #[cfg(feature = "std")]
-#[macro_use]
-extern crate lazy_static;
+pub(crate) use lazy_static::lazy_static;
 
-// no_std uses vendored version of lazy_static 1.4.0 (4216696) with spin
-// This can conflict when included in a project already using std lazy_static
-// Remove this module when cargo enables specifying dependencies for no_std
+// Facade module: `no_std` uses spinlocks, `std` uses the mutexes in the standard library
 #[cfg(not(feature = "std"))]
 #[macro_use]
 mod lazy_static;

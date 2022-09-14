@@ -9,7 +9,7 @@ use {
     futures::FutureExt as _,
     std::{
         io,
-        net::SocketAddr,
+        net::{Ipv4Addr, Ipv6Addr, SocketAddr},
         task::{Context, Poll},
     },
     trust_dns_proto::udp,
@@ -22,6 +22,27 @@ pub struct DnsUdpSocket(UdpSocket);
 #[async_trait]
 impl udp::UdpSocket for DnsUdpSocket {
     type Time = FuchsiaTime;
+
+    async fn connect_with_bind(_addr: SocketAddr, bind_addr: SocketAddr) -> io::Result<Self> {
+        let socket = Self::bind(bind_addr).await?;
+
+        // TODO(https://fxbug.dev/108817): Consider calling connect on the
+        // socket. Doing so isn't strictly necessary and is disabled within the
+        // provided Trust-DNS implementations. As a result, the same behavior is
+        // currently implemented here. See
+        // https://github.com/bluejekyll/trust-dns/commit/e712a2c031572a128d720d6c763a83fe57399d7f
+
+        Ok(socket)
+    }
+
+    async fn connect(addr: SocketAddr) -> io::Result<Self> {
+        let bind_addr = match addr {
+            SocketAddr::V4(_addr) => (Ipv4Addr::UNSPECIFIED, 0).into(),
+            SocketAddr::V6(_addr) => (Ipv6Addr::UNSPECIFIED, 0).into(),
+        };
+
+        Self::connect_with_bind(addr, bind_addr).await
+    }
 
     async fn bind(addr: SocketAddr) -> io::Result<Self> {
         UdpSocket::bind(&addr).map(Self)

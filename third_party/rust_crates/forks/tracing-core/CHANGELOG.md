@@ -1,3 +1,116 @@
+# 0.1.26 (April 14, 2022)
+
+This release adds a `Value` implementation for `Box<T: Value>` to allow
+recording boxed values more conveniently. In particular, this should improve
+the ergonomics of the implementations for `dyn std::error::Error` trait objects,
+including those added in [v0.1.25]. 
+
+### Added
+
+- `Value` implementation for `Box<T> where T: Value` ([#2071])
+
+### Fixed
+
+- Broken documentation links ([#2068])
+
+Thanks to new contributor @ben0x539 for contributing to this release!
+
+
+[v0.1.25]: https://github.com/tokio-rs/tracing/releases/tag/tracing-core-0.1.25
+[#2071]: https://github.com/tokio-rs/tracing/pull/2071
+[#2068]: https://github.com/tokio-rs/tracing/pull/2068
+
+# 0.1.25 (April 12, 2022)
+
+This release adds additional `Value` implementations for `std::error::Error`
+trait objects with auto trait bounds (`Send` and `Sync`), as Rust will not
+auto-coerce trait objects. Additionally, it fixes a bug when setting scoped
+dispatchers that was introduced in the previous release ([v0.1.24]).
+
+### Added
+
+- `Value` implementations for `dyn Error + Send + 'static`, `dyn Error + Send +
+  Sync + 'static`, `dyn Error + Sync + 'static` ([#2066])
+
+### Fixed
+
+- Failure to use the global default dispatcher if a thread has set a scoped
+  default prior to setting the global default, and unset the scoped default
+  after setting the global default ([#2065])
+
+Thanks to @lilyball for contributing to this release!
+
+[v0.1.24]: https://github.com/tokio-rs/tracing/releases/tag/tracing-core-0.1.24
+[#2066]: https://github.com/tokio-rs/tracing/pull/2066
+[#2065]: https://github.com/tokio-rs/tracing/pull/2065
+
+# 0.1.24 (April 1, 2022)
+
+This release fixes a bug where setting `NoSubscriber` as the local default would
+not disable the global default subscriber locally.
+
+### Fixed
+
+- Setting `NoSubscriber` as the local default now correctly disables the global
+  default subscriber ([#2001])
+- Fixed compilation warnings with the "std" feature disabled ([#2022])
+
+### Changed
+
+- Removed unnecessary use of `write!` and `format_args!` macros ([#1988])
+
+[#1988]: https://github.com/tokio-rs/tracing/pull/1988
+[#2001]: https://github.com/tokio-rs/tracing/pull/2001
+[#2022]: https://github.com/tokio-rs/tracing/pull/2022
+
+# 0.1.23 (March 8, 2022)
+
+### Changed
+
+- Removed `#[inline]` attributes from some `Dispatch` methods whose
+  callers are now inlined ([#1974])
+- Bumped minimum supported Rust version (MSRV) to Rust 1.49.0 ([#1913])
+
+[#1913]: https://github.com/tokio-rs/tracing/pull/1913
+[#1974]: https://github.com/tokio-rs/tracing/pull/1974
+
+# 0.1.22 (February 3, 2022)
+
+This release adds *experimental* support for recording structured field values
+using the [`valuable`] crate. See [this blog post][post] for details on
+`valuable`.
+
+Note that `valuable` support currently requires `--cfg tracing_unstable`. See
+the documentation for details.
+
+### Added
+
+- **field**: Experimental support for recording field values using the
+  [`valuable`] crate ([#1608], [#1888], [#1887])
+- **field**: Added `ValueSet::record` method ([#1823])
+- **subscriber**: `Default` impl for `NoSubscriber` ([#1785])
+- **metadata**: New `Kind::HINT` to support the `enabled!` macro in `tracing`
+  ([#1883], [#1891])
+### Fixed
+
+- Fixed a number of documentation issues ([#1665], [#1692], [#1737])
+
+Thanks to @xd009642, @Skepfyr, @guswynn, @Folyd, and @mbergkvist for
+contributing to this release!
+
+[`valuable`]: https://crates.io/crates/valuable
+[post]: https://tokio.rs/blog/2021-05-valuable
+[#1608]: https://github.com/tokio-rs/tracing/pull/1608
+[#1888]: https://github.com/tokio-rs/tracing/pull/1888
+[#1887]: https://github.com/tokio-rs/tracing/pull/1887
+[#1823]: https://github.com/tokio-rs/tracing/pull/1823
+[#1785]: https://github.com/tokio-rs/tracing/pull/1785
+[#1883]: https://github.com/tokio-rs/tracing/pull/1883
+[#1891]: https://github.com/tokio-rs/tracing/pull/1891
+[#1665]: https://github.com/tokio-rs/tracing/pull/1665
+[#1692]: https://github.com/tokio-rs/tracing/pull/1692
+[#1737]: https://github.com/tokio-rs/tracing/pull/1737
+
 # 0.1.21 (October 1, 2021)
 
 This release adds support for recording `Option<T> where T: Value` as typed
@@ -58,7 +171,7 @@ Thanks to @Folyd, @teozkr, and @dvdplm for contributing to this release!
 [#1435]: https://github.com/tokio-rs/tracing/pull/1435
 [#1446]: https://github.com/tokio-rs/tracing/pull/1446
 
-# 0.1.19 (April 30, 2021)
+# 0.1.18 (April 30, 2021)
 
 ### Added
 
@@ -220,17 +333,6 @@ Thanks to @oli-cosmian for contributing to this release!
 - Added missing `Value` impl for `u8` (#392)
 - Broken links in docs.
 
-# 0.1.7 (October 18, 2019)
-
-### Added
-
-- Added `dispatcher::set_default` API which returns a drop guard (#388)
-
-### Fixed
-
-- Added missing `Value` impl for `u8` (#392)
-- Broken links in docs.
-
 # 0.1.6 (September 12, 2019)
 
 ### Added
@@ -241,7 +343,7 @@ Thanks to @oli-cosmian for contributing to this release!
 
 - Clarified wording in `field::display` documentation (#340)
 
-# 0.1.6 (August 16, 2019)
+# 0.1.5 (August 16, 2019)
 
 ### Added
 

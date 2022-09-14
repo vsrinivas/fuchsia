@@ -1,10 +1,8 @@
-mod support;
-use support::*;
-
-use crate::support::field::mock;
-use crate::support::span::NewSpan;
 use tracing::subscriber::with_default;
 use tracing_attributes::instrument;
+use tracing_mock::field::mock;
+use tracing_mock::span::NewSpan;
+use tracing_mock::*;
 
 #[instrument(fields(foo = "bar", dsa = true, num = 1))]
 fn fn_no_param() {}
@@ -30,6 +28,11 @@ fn fn_clashy_expr_field(s: &str) {
 
 #[instrument(fields(s = "s"))]
 fn fn_clashy_expr_field2(s: &str) {
+    let _ = s;
+}
+
+#[instrument(fields(s = &s))]
+fn fn_string(s: String) {
     let _ = s;
 }
 
@@ -133,6 +136,14 @@ fn empty_field() {
     let span = span::mock().with_field(mock("foo").with_value(&"bar").only());
     run_test(span, || {
         fn_empty_field();
+    });
+}
+
+#[test]
+fn string_field() {
+    let span = span::mock().with_field(mock("s").with_value(&"hello world").only());
+    run_test(span, || {
+        fn_string(String::from("hello world"));
     });
 }
 

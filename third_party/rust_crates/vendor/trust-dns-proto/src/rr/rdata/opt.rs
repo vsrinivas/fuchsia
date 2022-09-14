@@ -15,13 +15,14 @@
  */
 
 //! option record for passing protocol options between the client and server
+#![allow(clippy::use_self)]
 
 use std::collections::HashMap;
 
 #[cfg(feature = "serde-config")]
 use serde::{Deserialize, Serialize};
 
-use log::warn;
+use tracing::warn;
 
 use crate::error::*;
 use crate::serialize::binary::*;
@@ -546,7 +547,7 @@ mod tests {
             0x00, 0x04, 0x00, 0x01, 0x00, 0x00, 0x00, 0x0b, 0x00, 0x00,
         ];
 
-        let mut decoder: BinDecoder<'_> = BinDecoder::new(&*bytes);
+        let mut decoder: BinDecoder<'_> = BinDecoder::new(&bytes);
         let read_rdata = read(&mut decoder, Restrict::new(bytes.len() as u16));
         assert!(
             read_rdata.is_ok(),

@@ -11,19 +11,37 @@
 
 [package]
 edition = "2018"
+rust-version = "1.49.0"
 name = "tracing-attributes"
-version = "0.1.18"
-authors = ["Tokio Contributors <team@tokio.rs>", "Eliza Weisman <eliza@buoyant.io>", "David Barsky <dbarsky@amazon.com>"]
-description = "Procedural macro attributes for automatically instrumenting functions.\n"
+version = "0.1.22"
+authors = [
+    "Tokio Contributors <team@tokio.rs>",
+    "Eliza Weisman <eliza@buoyant.io>",
+    "David Barsky <dbarsky@amazon.com>",
+]
+description = """
+Procedural macro attributes for automatically instrumenting functions.
+"""
 homepage = "https://tokio.rs"
 readme = "README.md"
-keywords = ["logging", "tracing", "macro", "instrument", "log"]
-categories = ["development-tools::debugging", "development-tools::profiling", "asynchronous"]
+keywords = [
+    "logging",
+    "tracing",
+    "macro",
+    "instrument",
+    "log",
+]
+categories = [
+    "development-tools::debugging",
+    "development-tools::profiling",
+    "asynchronous",
+]
 license = "MIT"
 repository = "https://github.com/tokio-rs/tracing"
 
 [lib]
 proc-macro = true
+
 [dependencies.proc-macro2]
 version = "1"
 
@@ -31,14 +49,24 @@ version = "1"
 version = "1"
 
 [dependencies.syn]
-version = "1"
-features = ["full", "parsing", "printing", "visit", "visit-mut", "clone-impls", "extra-traits", "proc-macro"]
+version = "1.0.43"
+features = [
+    "full",
+    "parsing",
+    "printing",
+    "visit",
+    "visit-mut",
+    "clone-impls",
+    "extra-traits",
+    "proc-macro",
+]
 default-features = false
+
 [dev-dependencies.async-trait]
 version = "0.1.44"
 
 [dev-dependencies.tokio-test]
-version = "0.2.0"
+version = "0.3.0"
 
 [dev-dependencies.tracing]
 version = "0.1"
@@ -46,7 +74,12 @@ version = "0.1"
 [dev-dependencies.tracing-core]
 version = "0.1"
 
+[dev-dependencies.tracing-subscriber]
+version = "0.3"
+features = ["env-filter"]
+
 [features]
 async-await = []
+
 [badges.maintenance]
 status = "experimental"

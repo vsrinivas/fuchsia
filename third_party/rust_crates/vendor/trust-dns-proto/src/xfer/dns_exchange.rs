@@ -14,7 +14,7 @@ use std::task::{Context, Poll};
 use futures_channel::mpsc;
 use futures_util::future::{Future, FutureExt};
 use futures_util::stream::{Peekable, Stream, StreamExt};
-use log::{debug, warn};
+use tracing::{debug, warn};
 
 use crate::error::*;
 use crate::xfer::dns_handle::DnsHandle;
@@ -299,7 +299,7 @@ where
         loop {
             let next;
             match *self {
-                DnsExchangeConnectInner::Connecting {
+                Self::Connecting {
                     ref mut connect_future,
                     ref mut outbound_messages,
                     ref mut sender,
@@ -334,7 +334,7 @@ where
                         }
                     };
                 }
-                DnsExchangeConnectInner::Connected {
+                Self::Connected {
                     ref exchange,
                     ref mut background,
                 } => {
@@ -343,7 +343,7 @@ where
 
                     return Poll::Ready(Ok((exchange, background)));
                 }
-                DnsExchangeConnectInner::FailAll {
+                Self::FailAll {
                     ref error,
                     ref mut outbound_messages,
                 } => {

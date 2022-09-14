@@ -24,7 +24,7 @@
 //! - A string literal providing the span's name.
 //! - Finally, between zero and 32 arbitrary key/value fields.
 //!
-//! [`target`]: ../struct.Metadata.html#method.target
+//! [`target`]: super::Metadata::target
 //!
 //! For example:
 //! ```rust
@@ -75,7 +75,7 @@
 //! // Dropping the `_enter` guard will exit the span.
 //!```
 //!
-//! </div><div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
+//! <div class="example-wrap" style="display:inline-block"><pre class="compile_fail" style="white-space:normal;font:inherit;">
 //!     <strong>Warning</strong>: In asynchronous code that uses async/await syntax,
 //!     <code>Span::enter</code> may produce incorrect traces if the returned drop
 //!     guard is held across an await point. See
@@ -136,8 +136,7 @@
 //! as long as the longest-executing span in its subtree.
 //!
 //! ```
-//! # #[macro_use] extern crate tracing;
-//! # use tracing::Level;
+//! # use tracing::{Level, span};
 //! // this span is considered the "root" of a new trace tree:
 //! span!(Level::INFO, "root").in_scope(|| {
 //!     // since we are now inside "root", this span is considered a child
@@ -157,8 +156,7 @@
 //! the `span!` macro. For example:
 //!
 //! ```rust
-//! # #[macro_use] extern crate tracing;
-//! # use tracing::Level;
+//! # use tracing::{Level, span};
 //! // Create, but do not enter, a span called "foo".
 //! let foo = span!(Level::INFO, "foo");
 //!
@@ -200,28 +198,27 @@
 //! _closed_. Consider, for example, a future which has an associated
 //! span and enters that span every time it is polled:
 //! ```rust
-//! # extern crate tracing;
-//! # extern crate futures;
-//! # use futures::{Future, Poll, Async};
+//! # use std::future::Future;
+//! # use std::task::{Context, Poll};
+//! # use std::pin::Pin;
 //! struct MyFuture {
 //!    // data
 //!    span: tracing::Span,
 //! }
 //!
 //! impl Future for MyFuture {
-//!     type Item = ();
-//!     type Error = ();
+//!     type Output = ();
 //!
-//!     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+//!     fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
 //!         let _enter = self.span.enter();
 //!         // Do actual future work...
-//! # Ok(Async::Ready(()))
+//! # Poll::Ready(())
 //!     }
 //! }
 //! ```
 //!
 //! If this future was spawned on an executor, it might yield one or more times
-//! before `poll` returns `Ok(Async::Ready)`. If the future were to yield, then
+//! before `poll` returns [`Poll::Ready`]. If the future were to yield, then
 //! the executor would move on to poll the next future, which may _also_ enter
 //! an associated span or series of spans. Therefore, it is valid for a span to
 //! be entered repeatedly before it completes. Only the time when that span or
@@ -241,8 +238,7 @@
 //! that handle "closes" the span, since the capacity to enter it no longer
 //! exists. For example:
 //! ```
-//! # #[macro_use] extern crate tracing;
-//! # use tracing::Level;
+//! # use tracing::{Level, span};
 //! {
 //!     span!(Level::TRACE, "my_span").in_scope(|| {
 //!         // perform some work in the context of `my_span`...
@@ -275,8 +271,7 @@
 //! construct one span and perform the entire loop inside of that span, like:
 //!
 //! ```rust
-//! # #[macro_use] extern crate tracing;
-//! # use tracing::Level;
+//! # use tracing::{Level, span};
 //! # let n = 1;
 //! let span = span!(Level::TRACE, "my_loop");
 //! let _enter = span.enter();
@@ -287,8 +282,7 @@
 //! ```
 //! Or, should we create a new span for each iteration of the loop, as in:
 //! ```rust
-//! # #[macro_use] extern crate tracing;
-//! # use tracing::Level;
+//! # use tracing::{Level, span};
 //! # let n = 1u64;
 //! for i in 0..n {
 //!     let span = span!(Level::TRACE, "my_loop", iteration = i);
@@ -303,26 +297,25 @@
 //! much time was spent in each individual iteration, we would enter a new span
 //! on every iteration.
 //!
-//! [fields]: ../field/index.html
-//! [Metadata]: ../struct.Metadata.html
-//! [`Id`]: struct.Id.html
-//! [verbosity level]: ../struct.Level.html
-//! [`span!`]: ../macro.span.html
-//! [`trace_span!`]: ../macro.trace_span.html
-//! [`debug_span!`]: ../macro.debug_span.html
-//! [`info_span!`]: ../macro.info_span.html
-//! [`warn_span!`]: ../macro.warn_span.html
-//! [`error_span!`]: ../macro.error_span.html
-//! [`clone_span`]: ../subscriber/trait.Subscriber.html#method.clone_span
-//! [`drop_span`]: ../subscriber/trait.Subscriber.html#method.drop_span
-//! [`exit`]: ../subscriber/trait.Subscriber.html#tymethod.exit
-//! [`Subscriber`]: ../subscriber/trait.Subscriber.html
-//! [`Attributes`]: struct.Attributes.html
-//! [`enter`]: struct.Span.html#method.enter
-//! [`entered`]: struct.Span.html#method.entered
-//! [`in_scope`]: struct.Span.html#method.in_scope
-//! [`follows_from`]: struct.Span.html#method.follows_from
-//! [guard]: struct.Entered.html
+//! [fields]: super::field
+//! [Metadata]: super::Metadata
+//! [verbosity level]: super::Level
+//! [`Poll::Ready`]: std::task::Poll::Ready
+//! [`span!`]: super::span!
+//! [`trace_span!`]: super::trace_span!
+//! [`debug_span!`]: super::debug_span!
+//! [`info_span!`]: super::info_span!
+//! [`warn_span!`]: super::warn_span!
+//! [`error_span!`]: super::error_span!
+//! [`clone_span`]: super::subscriber::Subscriber::clone_span()
+//! [`drop_span`]: super::subscriber::Subscriber::drop_span()
+//! [`exit`]: super::subscriber::Subscriber::exit
+//! [`Subscriber`]: super::subscriber::Subscriber
+//! [`enter`]: Span::enter()
+//! [`entered`]: Span::entered()
+//! [`in_scope`]: Span::in_scope()
+//! [`follows_from`]: Span::follows_from()
+//! [guard]: Entered
 //! [parent]: #span-relationships
 pub use tracing_core::span::{Attributes, Id, Record};
 
@@ -388,7 +381,7 @@ pub(crate) struct Inner {
 ///
 /// This is returned by the [`Span::enter`] function.
 ///
-/// [`Span::enter`]: ../struct.Span.html#method.enter
+/// [`Span::enter`]: super::Span::enter
 #[derive(Debug)]
 #[must_use = "once a span has been entered, it should be exited"]
 pub struct Entered<'a> {
@@ -436,10 +429,10 @@ impl Span {
     /// After the span is constructed, [field values] and/or [`follows_from`]
     /// annotations may be added to it.
     ///
-    /// [metadata]: ../metadata
-    /// [`Subscriber`]: ../subscriber/trait.Subscriber.html
-    /// [field values]: ../field/struct.ValueSet.html
-    /// [`follows_from`]: ../struct.Span.html#method.follows_from
+    /// [metadata]: super::Metadata
+    /// [`Subscriber`]: super::subscriber::Subscriber
+    /// [field values]: super::field::ValueSet
+    /// [`follows_from`]: super::Span::follows_from
     pub fn new(meta: &'static Metadata<'static>, values: &field::ValueSet<'_>) -> Span {
         dispatcher::get_default(|dispatch| Self::new_with(meta, values, dispatch))
     }
@@ -461,9 +454,9 @@ impl Span {
     /// After the span is constructed, [field values] and/or [`follows_from`]
     /// annotations may be added to it.
     ///
-    /// [metadata]: ../metadata
-    /// [field values]: ../field/struct.ValueSet.html
-    /// [`follows_from`]: ../struct.Span.html#method.follows_from
+    /// [metadata]: super::Metadata
+    /// [field values]: super::field::ValueSet
+    /// [`follows_from`]: super::Span::follows_from
     pub fn new_root(meta: &'static Metadata<'static>, values: &field::ValueSet<'_>) -> Span {
         dispatcher::get_default(|dispatch| Self::new_root_with(meta, values, dispatch))
     }
@@ -485,9 +478,9 @@ impl Span {
     /// After the span is constructed, [field values] and/or [`follows_from`]
     /// annotations may be added to it.
     ///
-    /// [metadata]: ../metadata
-    /// [field values]: ../field/struct.ValueSet.html
-    /// [`follows_from`]: ../struct.Span.html#method.follows_from
+    /// [metadata]: super::Metadata
+    /// [field values]: super::field::ValueSet
+    /// [`follows_from`]: super::Span::follows_from
     pub fn child_of(
         parent: impl Into<Option<Id>>,
         meta: &'static Metadata<'static>,
@@ -551,7 +544,8 @@ impl Span {
     /// that the thread from which this function is called is not currently
     /// inside a span, the returned span will be disabled.
     ///
-    /// [considered by the `Subscriber`]: ../subscriber/trait.Subscriber.html#method.current
+    /// [considered by the `Subscriber`]:
+    ///     super::subscriber::Subscriber::current_span
     pub fn current() -> Span {
         dispatcher::get_default(|dispatch| {
             if let Some((id, meta)) = dispatch.current_span().into_inner() {
@@ -586,7 +580,12 @@ impl Span {
             } else {
                 meta.target()
             };
-            span.log(target, level_to_log!(*meta.level()), format_args!("++ {}{}", meta.name(), FmtAttrs(attrs)));
+            let values = attrs.values();
+            span.log(
+                target,
+                level_to_log!(*meta.level()),
+                format_args!("++ {};{}", meta.name(), crate::log::LogValueSet { values, is_first: false }),
+            );
         }}
 
         span
@@ -612,9 +611,13 @@ impl Span {
     /// async fn my_async_function() {
     ///     let span = info_span!("my_async_function");
     ///
-    ///     // THIS WILL RESULT IN INCORRECT TRACES
+    ///     // WARNING: This span will remain entered until this
+    ///     // guard is dropped...
     ///     let _enter = span.enter();
-    ///     some_other_async_function().await;
+    ///     // ...but the `await` keyword may yield, causing the
+    ///     // runtime to switch to another task, while remaining in
+    ///     // this span!
+    ///     some_other_async_function().await
     ///
     ///     // ...
     /// }
@@ -717,13 +720,12 @@ impl Span {
     /// [syntax]: https://rust-lang.github.io/async-book/01_getting_started/04_async_await_primer.html
     /// [`Span::in_scope`]: #method.in_scope
     /// [instrument]: https://docs.rs/tracing/latest/tracing/trait.Instrument.html
-    /// [attr]: ../../attr.instrument.html
+    /// [attr]: macro@crate::instrument
     ///
     /// # Examples
     ///
     /// ```
-    /// #[macro_use] extern crate tracing;
-    /// # use tracing::Level;
+    /// # use tracing::{span, Level};
     /// let span = span!(Level::INFO, "my_span");
     /// let guard = span.enter();
     ///
@@ -738,7 +740,7 @@ impl Span {
     /// Guards need not be explicitly dropped:
     ///
     /// ```
-    /// #[macro_use] extern crate tracing;
+    /// # use tracing::trace_span;
     /// fn my_function() -> String {
     ///     // enter a span for the duration of this function.
     ///     let span = trace_span!("my_function");
@@ -760,7 +762,7 @@ impl Span {
     /// entered:
     ///
     /// ```
-    /// #[macro_use] extern crate tracing;
+    /// # use tracing::{info, info_span};
     /// let span = info_span!("my_great_span");
     ///
     /// {
@@ -776,10 +778,10 @@ impl Span {
     /// info!("i'm outside the span!")
     /// ```
     ///
-    /// [`Subscriber::enter`]: ../subscriber/trait.Subscriber.html#method.enter
-    /// [`Subscriber::exit`]: ../subscriber/trait.Subscriber.html#method.exit
-    /// [`Id`]: ../struct.Id.html
-    #[inline]
+    /// [`Subscriber::enter`]: super::subscriber::Subscriber::enter()
+    /// [`Subscriber::exit`]: super::subscriber::Subscriber::exit()
+    /// [`Id`]: super::Id
+    #[inline(always)]
     pub fn enter(&self) -> Entered<'_> {
         self.do_enter();
         Entered { span: self }
@@ -886,10 +888,11 @@ impl Span {
     /// span.record("some_field", &"hello world!");
     /// ```
     ///
-    /// [`Subscriber::enter`]: ../subscriber/trait.Subscriber.html#method.enter
-    /// [`Subscriber::exit`]: ../subscriber/trait.Subscriber.html#method.exit
-    /// [`Id`]: ../struct.Id.html
-    #[inline]
+
+    /// [`Subscriber::enter`]: super::subscriber::Subscriber::enter()
+    /// [`Subscriber::exit`]: super::subscriber::Subscriber::exit()
+    /// [`Id`]: super::Id
+    #[inline(always)]
     pub fn entered(self) -> EnteredSpan {
         self.do_enter();
         EnteredSpan {
@@ -1028,7 +1031,7 @@ impl Span {
         self
     }
 
-    #[inline]
+    #[inline(always)]
     fn do_enter(&self) {
         if let Some(inner) = self.inner.as_ref() {
             inner.subscriber.enter(&inner.id);
@@ -1036,7 +1039,7 @@ impl Span {
 
         if_log_enabled! { crate::Level::TRACE, {
             if let Some(_meta) = self.meta {
-                self.log(ACTIVITY_LOG_TARGET, log::Level::Trace, format_args!("-> {}", _meta.name()));
+                self.log(ACTIVITY_LOG_TARGET, log::Level::Trace, format_args!("-> {};", _meta.name()));
             }
         }}
     }
@@ -1045,7 +1048,7 @@ impl Span {
     //
     // Running this behaviour on drop rather than with an explicit function
     // call means that spans may still be exited when unwinding.
-    #[inline]
+    #[inline(always)]
     fn do_exit(&self) {
         if let Some(inner) = self.inner.as_ref() {
             inner.subscriber.exit(&inner.id);
@@ -1053,7 +1056,7 @@ impl Span {
 
         if_log_enabled! { crate::Level::TRACE, {
             if let Some(_meta) = self.meta {
-                self.log(ACTIVITY_LOG_TARGET, log::Level::Trace, format_args!("<- {}", _meta.name()));
+                self.log(ACTIVITY_LOG_TARGET, log::Level::Trace, format_args!("<- {};", _meta.name()));
             }
         }}
     }
@@ -1070,8 +1073,7 @@ impl Span {
     /// # Examples
     ///
     /// ```
-    /// # #[macro_use] extern crate tracing;
-    /// # use tracing::Level;
+    /// # use tracing::{trace, span, Level};
     /// let my_span = span!(Level::TRACE, "my_span");
     ///
     /// my_span.in_scope(|| {
@@ -1100,7 +1102,7 @@ impl Span {
         f()
     }
 
-    /// Returns a [`Field`](../field/struct.Field.html) for the field with the
+    /// Returns a [`Field`][super::field::Field] for the field with the
     /// given `name`, if one exists,
     pub fn field<Q: ?Sized>(&self, field: &Q) -> Option<field::Field>
     where
@@ -1110,7 +1112,7 @@ impl Span {
     }
 
     /// Returns true if this `Span` has a field for the given
-    /// [`Field`](../field/struct.Field.html) or field name.
+    /// [`Field`][super::field::Field] or field name.
     #[inline]
     pub fn has_field<Q: ?Sized>(&self, field: &Q) -> bool
     where
@@ -1187,8 +1189,8 @@ impl Span {
     /// span.record("parting", &"you will be remembered");
     /// ```
     ///
-    /// [`field::Empty`]: ../field/struct.Empty.html
-    /// [`Metadata`]: ../struct.Metadata.html
+    /// [`field::Empty`]: super::field::Empty
+    /// [`Metadata`]: super::Metadata
     pub fn record<Q: ?Sized, V>(&self, field: &Q, value: &V) -> &Self
     where
         Q: field::AsField,
@@ -1221,7 +1223,11 @@ impl Span {
                 } else {
                     _meta.target()
                 };
-                self.log(target, level_to_log!(*_meta.level()), format_args!("{}{}", _meta.name(), FmtValues(&record)));
+                self.log(
+                    target,
+                    level_to_log!(*_meta.level()),
+                    format_args!("{};{}", _meta.name(), crate::log::LogValueSet { values, is_first: false }),
+                );
             }}
         }
 
@@ -1335,7 +1341,7 @@ impl Span {
                                 .module_path(meta.module_path())
                                 .file(meta.file())
                                 .line(meta.line())
-                                .args(format_args!("{}; span={}", message, inner.id.into_u64()))
+                                .args(format_args!("{} span={}", message, inner.id.into_u64()))
                                 .build(),
                         );
                     } else {
@@ -1447,6 +1453,7 @@ impl<'a> From<&'a EnteredSpan> for Option<Id> {
 }
 
 impl Drop for Span {
+    #[inline(always)]
     fn drop(&mut self) {
         if let Some(Inner {
             ref id,
@@ -1456,15 +1463,15 @@ impl Drop for Span {
             subscriber.try_close(id.clone());
         }
 
-        if let Some(_meta) = self.meta {
-            if_log_enabled! { crate::Level::TRACE, {
+        if_log_enabled! { crate::Level::TRACE, {
+            if let Some(meta) = self.meta {
                 self.log(
                     LIFECYCLE_LOG_TARGET,
                     log::Level::Trace,
-                    format_args!("-- {}", _meta.name()),
+                    format_args!("-- {};", meta.name()),
                 );
-            }}
-        }
+            }
+        }}
     }
 }
 
@@ -1556,14 +1563,14 @@ impl Deref for EnteredSpan {
 }
 
 impl<'a> Drop for Entered<'a> {
-    #[inline]
+    #[inline(always)]
     fn drop(&mut self) {
         self.span.do_exit()
     }
 }
 
 impl Drop for EnteredSpan {
-    #[inline]
+    #[inline(always)]
     fn drop(&mut self) {
         self.span.do_exit()
     }
@@ -1595,38 +1602,6 @@ const PhantomNotSend: PhantomNotSend = PhantomNotSend { ghost: PhantomData };
 ///
 /// Trivially safe, as `PhantomNotSend` doesn't have any API.
 unsafe impl Sync for PhantomNotSend {}
-
-#[cfg(feature = "log")]
-struct FmtValues<'a>(&'a Record<'a>);
-
-#[cfg(feature = "log")]
-impl<'a> fmt::Display for FmtValues<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut res = Ok(());
-        let mut is_first = true;
-        self.0.record(&mut |k: &field::Field, v: &dyn fmt::Debug| {
-            res = write!(f, "{} {}={:?}", if is_first { ";" } else { "" }, k, v);
-            is_first = false;
-        });
-        res
-    }
-}
-
-#[cfg(feature = "log")]
-struct FmtAttrs<'a>(&'a Attributes<'a>);
-
-#[cfg(feature = "log")]
-impl<'a> fmt::Display for FmtAttrs<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let mut res = Ok(());
-        let mut is_first = true;
-        self.0.record(&mut |k: &field::Field, v: &dyn fmt::Debug| {
-            res = write!(f, "{} {}={:?}", if is_first { ";" } else { "" }, k, v);
-            is_first = false;
-        });
-        res
-    }
-}
 
 #[cfg(test)]
 mod test {

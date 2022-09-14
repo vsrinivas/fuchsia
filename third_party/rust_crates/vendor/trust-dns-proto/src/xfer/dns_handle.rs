@@ -9,12 +9,12 @@
 use std::error::Error;
 
 use futures_util::stream::Stream;
-use log::debug;
 use rand;
+use tracing::debug;
 
-use crate::error::*;
 use crate::op::{Message, MessageType, OpCode, Query};
 use crate::xfer::{DnsRequest, DnsRequestOptions, DnsResponse, SerialMessage};
+use crate::{error::*, op::Edns};
 
 // TODO: this should be configurable
 // > An EDNS buffer size of 1232 bytes will avoid fragmentation on nearly all current networks.
@@ -80,12 +80,13 @@ fn build_message(query: Query, options: DnsRequestOptions) -> Message {
         .set_id(id)
         .set_message_type(MessageType::Query)
         .set_op_code(OpCode::Query)
-        .set_recursion_desired(true);
+        .set_recursion_desired(options.recursion_desired);
 
     // Extended dns
     if options.use_edns {
         message
-            .edns_mut()
+            .extensions_mut()
+            .get_or_insert_with(Edns::new)
             .set_max_payload(MAX_PAYLOAD_LEN)
             .set_version(0);
     }

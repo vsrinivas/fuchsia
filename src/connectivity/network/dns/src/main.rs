@@ -39,7 +39,7 @@ use {
     trust_dns_resolver::{
         config::{
             LookupIpStrategy, NameServerConfig, NameServerConfigGroup, Protocol, ResolverConfig,
-            ResolverOpts,
+            ResolverOpts, ServerOrderingStrategy,
         },
         error::{ResolveError, ResolveErrorKind},
         lookup,
@@ -316,10 +316,9 @@ fn update_resolver<T: ResolverLookup>(resolver: &SharedResolver<T>, servers: Ser
     // TODO(https://fxbug.dev/102536): Set ip_strategy once a unified lookup API
     // exists that respects this setting.
     resolver_opts.num_concurrent_reqs = 10;
-    // TODO(https://github.com/bluejekyll/trust-dns/issues/1702): possibly reenable
-    // Trust-DNS's internal name server sorting once it is more correct and
-    // configurable.
-    resolver_opts.prioritize_name_servers = false;
+    // TODO(https://github.com/bluejekyll/trust-dns/issues/1702): Use the
+    // default server ordering strategy once the algorithm is improved.
+    resolver_opts.server_ordering_strategy = ServerOrderingStrategy::UserProvidedOrder;
 
     // We're going to add each server twice, once with protocol UDP and
     // then with protocol TCP.
@@ -379,7 +378,7 @@ impl ResolverLookup for Resolver {
         name: N,
         record_type: RecordType,
     ) -> Result<lookup::Lookup, ResolveError> {
-        self.lookup(name, record_type, Default::default()).await
+        self.lookup(name, record_type).await
     }
 
     async fn reverse_lookup(&self, addr: IpAddr) -> Result<lookup::ReverseLookup, ResolveError> {

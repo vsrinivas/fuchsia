@@ -88,35 +88,38 @@
 //! assert_eq!(many.into_three().unwrap(), (true, 1_u32, 2_i64));
 //! ```
 
-extern crate proc_macro;
-extern crate proc_macro2;
-#[macro_use]
-extern crate syn;
-#[macro_use]
-extern crate quote;
+#![warn(
+    clippy::default_trait_access,
+    clippy::dbg_macro,
+    clippy::print_stdout,
+    clippy::unimplemented,
+    clippy::use_self,
+    missing_copy_implementations,
+    missing_docs,
+    non_snake_case,
+    non_upper_case_globals,
+    rust_2018_idioms,
+    unreachable_pub
+)]
 
 use heck::ToSnakeCase;
 use proc_macro2::{Ident, Span, TokenStream};
-use syn::DeriveInput;
+use quote::quote;
+use syn::{parse_macro_input, DeriveInput};
 
 /// returns first the types to return, the match names, and then tokens to the field accesses
-fn unit_fields_return(
-    name: &syn::Ident,
-    variant_name: &syn::Ident,
-    function_name: &Ident,
-    doc: &str,
-) -> TokenStream {
+fn unit_fields_return(variant_name: &syn::Ident, function_name: &Ident, doc: &str) -> TokenStream {
     quote!(
         #[doc = #doc]
+        #[inline]
         pub fn #function_name(&self) -> bool {
-            matches!(self, #name::#variant_name)
+            matches!(self, Self::#variant_name)
         }
     )
 }
 
 /// returns first the types to return, the match names, and then tokens to the field accesses
 fn unnamed_fields_return(
-    name: &syn::Ident,
     variant_name: &syn::Ident,
     (function_name_mut_ref, doc_mut_ref): (&Ident, &str),
     (function_name_ref, doc_ref): (&Ident, &str),
@@ -162,9 +165,10 @@ fn unnamed_fields_return(
 
     quote!(
         #[doc = #doc_mut_ref ]
+        #[inline]
         pub fn #function_name_mut_ref(&mut self) -> Option<#returns_mut_ref> {
             match self {
-                #name::#variant_name(#matches) => {
+                Self::#variant_name(#matches) => {
                     Some((#matches))
                 }
                 _ => None
@@ -172,9 +176,10 @@ fn unnamed_fields_return(
         }
 
         #[doc = #doc_ref ]
+        #[inline]
         pub fn #function_name_ref(&self) -> Option<#returns_ref> {
             match self {
-                #name::#variant_name(#matches) => {
+                Self::#variant_name(#matches) => {
                     Some((#matches))
                 }
                 _ => None
@@ -182,9 +187,10 @@ fn unnamed_fields_return(
         }
 
         #[doc = #doc_val ]
+        #[inline]
         pub fn #function_name_val(self) -> ::core::result::Result<#returns_val, Self> {
             match self {
-                #name::#variant_name(#matches) => {
+                Self::#variant_name(#matches) => {
                     Ok((#matches))
                 },
                 _ => Err(self)
@@ -195,7 +201,6 @@ fn unnamed_fields_return(
 
 /// returns first the types to return, the match names, and then tokens to the field accesses
 fn named_fields_return(
-    name: &syn::Ident,
     variant_name: &syn::Ident,
     (function_name_mut_ref, doc_mut_ref): (&Ident, &str),
     (function_name_ref, doc_ref): (&Ident, &str),
@@ -243,9 +248,10 @@ fn named_fields_return(
 
     quote!(
         #[doc = #doc_mut_ref ]
+        #[inline]
         pub fn #function_name_mut_ref(&mut self) -> Option<#returns_mut_ref> {
             match self {
-                #name::#variant_name{ #matches } => {
+                Self::#variant_name{ #matches } => {
                     Some((#matches))
                 }
                 _ => None
@@ -253,9 +259,10 @@ fn named_fields_return(
         }
 
         #[doc = #doc_ref ]
+        #[inline]
         pub fn #function_name_ref(&self) -> Option<#returns_ref> {
             match self {
-                #name::#variant_name{ #matches } => {
+                Self::#variant_name{ #matches } => {
                     Some((#matches))
                 }
                 _ => None
@@ -263,9 +270,10 @@ fn named_fields_return(
         }
 
         #[doc = #doc_val ]
+        #[inline]
         pub fn #function_name_val(self) -> ::core::result::Result<#returns_val, Self> {
             match self {
-                #name::#variant_name{ #matches } => {
+                Self::#variant_name{ #matches } => {
                     Ok((#matches))
                 }
                 _ => Err(self)
@@ -327,9 +335,8 @@ fn impl_all_as_fns(ast: &DeriveInput) -> TokenStream {
         );
 
         let tokens = match &variant_data.fields {
-            syn::Fields::Unit => unit_fields_return(name, variant_name, &function_name_is, &doc_is),
+            syn::Fields::Unit => unit_fields_return(variant_name, &function_name_is, &doc_is),
             syn::Fields::Unnamed(unnamed) => unnamed_fields_return(
-                name,
                 variant_name,
                 (&function_name_mut_ref, &doc_mut_ref),
                 (&function_name_ref, &doc_ref),
@@ -337,7 +344,6 @@ fn impl_all_as_fns(ast: &DeriveInput) -> TokenStream {
                 unnamed,
             ),
             syn::Fields::Named(named) => named_fields_return(
-                name,
                 variant_name,
                 (&function_name_mut_ref, &doc_mut_ref),
                 (&function_name_ref, &doc_ref),
@@ -358,6 +364,7 @@ fn impl_all_as_fns(ast: &DeriveInput) -> TokenStream {
     )
 }
 
+/// Derive functions on an Enum for easily accessing individual items in the Enum
 #[proc_macro_derive(EnumAsInner)]
 pub fn enum_as_inner(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
     // get a usable token stream

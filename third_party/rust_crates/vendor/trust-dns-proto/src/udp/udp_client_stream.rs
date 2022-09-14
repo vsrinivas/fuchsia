@@ -15,7 +15,7 @@ use std::task::{Context, Poll};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use futures_util::{future::Future, stream::Stream};
-use log::{debug, warn};
+use tracing::{debug, warn};
 
 use crate::error::ProtoError;
 use crate::op::message::NoopMessageFinalizer;
@@ -186,6 +186,13 @@ impl<S: UdpSocket + Send + 'static, MF: MessageFinalizer> DnsRequestSender
         let message_id = message.id();
         let message = SerialMessage::new(bytes, self.name_server);
         let bind_addr = self.bind_addr;
+
+        debug!(
+            "final message: {}",
+            message
+                .to_message()
+                .expect("bizarre we just made this message")
+        );
 
         S::Time::timeout::<Pin<Box<dyn Future<Output = Result<DnsResponse, ProtoError>> + Send>>>(
             self.timeout,

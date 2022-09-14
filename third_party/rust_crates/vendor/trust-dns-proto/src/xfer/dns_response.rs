@@ -19,8 +19,7 @@ use futures_util::stream::Stream;
 
 use crate::error::{ProtoError, ProtoErrorKind, ProtoResult};
 use crate::op::{Message, ResponseCode};
-use crate::rr::rdata::SOA;
-use crate::rr::{RData, RecordType};
+use crate::rr::{RData, Record, RecordType};
 
 /// A stream returning DNS responses
 pub struct DnsResponseStream {
@@ -133,12 +132,10 @@ pub struct DnsResponse(Message);
 // TODO: when `impl Trait` lands in stable, remove this, and expose FlatMap over answers, et al.
 impl DnsResponse {
     /// Retrieves the SOA from the response. This will only exist if it was an authoritative response.
-    pub fn soa(&self) -> Option<SOA> {
+    pub fn soa(&self) -> Option<&Record> {
         self.name_servers()
             .iter()
-            .filter_map(|record| record.data().and_then(RData::as_soa))
-            .next()
-            .cloned()
+            .find(|record| record.data().map(|d| d.is_soa()).unwrap_or(false))
     }
 
     /// Looks in the authority section for an SOA record from the response, and returns the negative_ttl, None if not available.
@@ -207,7 +204,7 @@ impl DnsResponse {
                     .map(|soa| (record.ttl(), soa))
             })
             .next()
-            .map(|(ttl, soa)| (ttl as u32).min(soa.minimum()).max(0))
+            .map(|(ttl, soa)| (ttl as u32).min(soa.minimum()))
     }
 
     /// Does the response contain any records matching the query name and type?
@@ -281,6 +278,11 @@ impl DnsResponse {
             (ResponseCode::NoError, false, true, _, false, _) => Some(NegativeType::Referral),
             _ => None,
         }
+    }
+
+    /// Take the inner Message from the response
+    pub fn into_inner(self) -> Message {
+        self.0
     }
 }
 
@@ -614,10 +616,7 @@ impl NegativeType {
     pub fn is_authoritative(&self) -> bool {
         matches!(
             self,
-            NegativeType::NameErrorType1
-                | NegativeType::NameErrorType2
-                | NegativeType::NoDataType1
-                | NegativeType::NoDataType2
+            Self::NameErrorType1 | Self::NameErrorType2 | Self::NoDataType1 | Self::NoDataType2
         )
     }
 }

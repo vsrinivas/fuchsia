@@ -69,10 +69,12 @@ impl fmt::Display for Header {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
             f,
-            "{id}:{flags}:{code:?}:{answers}/{authorities}/{additionals}",
+            "{id}:{message_type}:{flags}:{code:?}:{op_code}:{answers}/{authorities}/{additionals}",
             id = self.id,
+            message_type = self.message_type,
             flags = self.flags(),
             code = self.response_code,
+            op_code = self.op_code,
             answers = self.answer_count,
             authorities = self.name_server_count,
             additionals = self.additional_count,
@@ -92,8 +94,8 @@ pub enum MessageType {
 impl fmt::Display for MessageType {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         let s = match self {
-            MessageType::Query => "QUERY",
-            MessageType::Response => "RESPONSE",
+            Self::Query => "QUERY",
+            Self::Response => "RESPONSE",
         };
 
         f.write_str(s)
@@ -176,7 +178,7 @@ impl Header {
     /// Construct a new header based off the request header. This copies over the RD (recursion-desired)
     ///   and CD (checking-disabled), as well as the op_code and id of the request.
     ///
-    /// See https://datatracker.ietf.org/doc/html/rfc6895#section-2
+    /// See <https://datatracker.ietf.org/doc/html/rfc6895#section-2>
     ///
     /// ```text
     /// The AA, TC, RD, RA, and CD bits are each theoretically meaningful

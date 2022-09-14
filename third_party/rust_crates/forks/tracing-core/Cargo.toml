@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "tracing-core"
-version = "0.1.21"
+version = "0.1.26"
 authors = ["Tokio Contributors <team@tokio.rs>"]
 description = "Core primitives for application-level tracing.\n"
 homepage = "https://tokio.rs"
@@ -23,13 +23,18 @@ license = "MIT"
 repository = "https://github.com/tokio-rs/tracing"
 [package.metadata.docs.rs]
 all-features = true
-rustdoc-args = ["--cfg", "docsrs"]
+rustc-args = ["--cfg", "tracing_unstable"]
+rustdoc-args = ["--cfg", "docsrs", "--cfg", "tracing_unstable"]
 [dependencies.lazy_static]
-version = "1"
+version = "1.0.2"
 optional = true
 
 [features]
-default = ["std"]
+default = ["std", "valuable/std"]
 std = ["lazy_static"]
+[target."cfg(tracing_unstable)".dependencies.valuable]
+version = "0.1.0"
+optional = true
+default_features = false
 [badges.maintenance]
 status = "actively-developed"

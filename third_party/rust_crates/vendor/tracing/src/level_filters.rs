@@ -62,10 +62,10 @@ pub use tracing_core::{metadata::ParseLevelFilterError, LevelFilter};
 /// `Span` constructors should compare the level against this value to
 /// determine if those spans or events are enabled.
 ///
-/// [module-level documentation]: ../index.html#compile-time-filters
+/// [module-level documentation]: super#compile-time-filters
 pub const STATIC_MAX_LEVEL: LevelFilter = MAX_LEVEL;
 
-cfg_if! {
+cfg_if::cfg_if! {
     if #[cfg(all(not(debug_assertions), feature = "release_max_level_off"))] {
         const MAX_LEVEL: LevelFilter = LevelFilter::OFF;
     } else if #[cfg(all(not(debug_assertions), feature = "release_max_level_error"))] {
