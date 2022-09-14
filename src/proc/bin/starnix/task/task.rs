@@ -126,6 +126,10 @@ pub struct TaskMutableState {
 
     /// The exit status that this task exited with.
     pub exit_status: Option<ExitStatus>,
+
+    /// Whether the executor should dump the stack of this task when it exits. Currently used to
+    /// implement ExitStatus::CoreDump.
+    pub dump_on_exit: bool,
 }
 
 pub struct Task {
@@ -220,6 +224,7 @@ impl Task {
                 clear_child_tid: UserRef::default(),
                 signals: Default::default(),
                 exit_status: None,
+                dump_on_exit: false,
             }),
         };
         #[cfg(any(test, debug_assertions))]

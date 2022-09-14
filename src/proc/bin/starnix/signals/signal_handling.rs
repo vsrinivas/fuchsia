@@ -339,7 +339,7 @@ pub fn dequeue_signal(current_task: &mut CurrentTask) {
                 current_task.thread_group.exit(ExitStatus::Kill(siginfo));
             }
             DeliveryAction::CoreDump => {
-                // TODO(tbodt): Trigger crashsvc somehow
+                task_state.dump_on_exit = true;
                 drop(task_state);
                 current_task.thread_group.exit(ExitStatus::CoreDump(siginfo));
             }

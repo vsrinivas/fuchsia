@@ -156,13 +156,12 @@ fn run_exception_loop(
         }
 
         if let Some(exit_status) = process_completed_syscall(current_task, &error_context)? {
-            match exit_status {
-                ExitStatus::CoreDump(_) => {
-                    exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?
-                }
-                _ => exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?,
+            let dump = current_task.read().dump_on_exit;
+            if dump {
+                exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?;
+            } else {
+                exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
             }
-
             return Ok(exit_status);
         }
 
