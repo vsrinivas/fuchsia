@@ -7,8 +7,6 @@ use fuchsia_component::client::connect_to_protocol;
 use std::collections::HashSet;
 use {crate::prelude_internal::*, anyhow::Error, futures::stream::BoxStream};
 
-const WLAN_CLIENT_IF_PREFIX: &str = "wlan";
-
 #[derive(thiserror::Error, Debug, Eq, PartialEq)]
 pub struct BackboneNetworkChanged;
 
@@ -54,33 +52,34 @@ impl BackboneNetworkInterface {
                         match watcher.as_ref().unwrap().watch().await? {
                             Event::Existing(fidl_fuchsia_net_interfaces::Properties {
                                 id,
-                                name,
-                                has_default_ipv4_route,
-                                has_default_ipv6_route,
+                                online,
+                                device_class,
                                 ..
                             })
                             | Event::Added(fidl_fuchsia_net_interfaces::Properties {
                                 id,
-                                name,
-                                has_default_ipv4_route,
-                                has_default_ipv6_route,
+                                online,
+                                device_class,
                                 ..
                             }) => {
-                                fx_log_info!(
-                                    "Looking for backbone if: [Added/Existing] NICID: {:?}, name: {:?}, DRv4: {:?}, DRv6: {:?}",
-                                    id,
-                                    name,
-                                    has_default_ipv4_route,
-                                    has_default_ipv6_route
-                                );
-                                if let (Some(name), Some(id)) = (name, id) {
-                                    if name.starts_with(WLAN_CLIENT_IF_PREFIX) {
-                                        wlan_nicid_set.insert(id);
-                                    }
+                                // Note: if multiple wlan interfaces are available, select the first one come online,
+                                // regardless whether it has an internet connection.
+                                fx_log_info!("Looking for backbone if: id {:?} online {:?} device_class {:?}", id, online, device_class);
+                                if let (
+                                    Some(fidl_fuchsia_net_interfaces::DeviceClass::Device(
+                                        fidl_fuchsia_hardware_network::DeviceClass::Wlan,
+                                    )),
+                                    Some(id),
+                                ) = (device_class, id)
+                                {
+                                    wlan_nicid_set.insert(id);
                                 }
-                                if let (Some(has_route), Some(id)) = (has_default_ipv4_route, id) {
-                                    // wlan router may disabled ipv6
-                                    if has_route && wlan_nicid_set.contains(&id) {
+
+                                if let (Some(id), Some(true)) = (id, online) {
+                                    if wlan_nicid_set.contains(&id) {
+                                        fx_log_info!(
+                                            "Looking for backbone if: wlan client is online"
+                                        );
                                         return Err(anyhow::Error::from(BackboneNetworkChanged));
                                     }
                                 }
@@ -88,21 +87,18 @@ impl BackboneNetworkInterface {
 
                             Event::Changed(fidl_fuchsia_net_interfaces::Properties {
                                 id,
-                                name,
-                                has_default_ipv4_route,
-                                has_default_ipv6_route,
+                                online,
+                                device_class,
                                 ..
                             }) => {
-                                fx_log_info!(
-                                    "Looking for backbone if: [Changed] NICID: {:?}, name: {:?}, DRv4: {:?}, DRv6: {:?}",
-                                    id,
-                                    name,
-                                    has_default_ipv4_route,
-                                    has_default_ipv6_route
-                                );
-                                if let (Some(has_route), Some(id)) = (has_default_ipv4_route, id) {
-                                    // wlan router may disabled ipv6
-                                    if has_route && wlan_nicid_set.contains(&id) {
+                                // Note: if multiple wlan interfaces are available, select the first one come online,
+                                // regardless whether it has an internet connection.
+                                fx_log_info!("Looking for backbone if: id {:?} online {:?} device_class {:?}", id, online, device_class);
+                                if let (Some(id), Some(true)) = (id, online) {
+                                    if wlan_nicid_set.contains(&id) {
+                                        fx_log_info!(
+                                            "Looking for backbone if: wlan client is online"
+                                        );
                                         return Err(anyhow::Error::from(BackboneNetworkChanged));
                                     }
                                 }
