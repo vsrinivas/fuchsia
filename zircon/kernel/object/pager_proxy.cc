@@ -336,7 +336,7 @@ zx_status_t PagerProxy::WaitOnEvent(Event* event) {
            src.get(), waited * gBootOptions->userpager_overtime_wait_seconds, active ? "" : " no");
     // Dump out the rest of the state of the oustanding requests.
     if (src) {
-      src->Dump();
+      src->Dump(0);
     }
   }
 
@@ -352,14 +352,23 @@ zx_status_t PagerProxy::WaitOnEvent(Event* event) {
   return result;
 }
 
-void PagerProxy::Dump() {
+void PagerProxy::Dump(uint depth) {
   Guard<Mutex> guard{&mtx_};
-  printf(
-      "pager_proxy %p pager_dispatcher %p page_source %p key %lu\n"
-      "  source closed %d pager closed %d packet_busy %d complete_pending %d\n",
-      this, pager_, page_source_.get(), key_, page_source_closed_, pager_dispatcher_closed_,
-      packet_busy_, complete_pending_);
+  for (uint i = 0; i < depth; ++i) {
+    printf("  ");
+  }
+  printf("pager_proxy %p pager_dispatcher %p page_source %p key %lu\n", this, pager_,
+         page_source_.get(), key_);
 
+  for (uint i = 0; i < depth; ++i) {
+    printf("  ");
+  }
+  printf("  source closed %d pager closed %d packet_busy %d complete_pending %d\n",
+         page_source_closed_, pager_dispatcher_closed_, packet_busy_, complete_pending_);
+
+  for (uint i = 0; i < depth; ++i) {
+    printf("  ");
+  }
   if (active_request_) {
     printf("  active %s request on pager port [0x%lx, 0x%lx)\n",
            PageRequestTypeToString(GetRequestType(active_request_)),
@@ -370,11 +379,17 @@ void PagerProxy::Dump() {
   }
 
   if (pending_requests_.is_empty()) {
+    for (uint i = 0; i < depth; ++i) {
+      printf("  ");
+    }
     printf("  no pending requests to queue on pager port\n");
     return;
   }
 
   for (auto& req : pending_requests_) {
+    for (uint i = 0; i < depth; ++i) {
+      printf("  ");
+    }
     printf("  pending %s req to queue on pager port [0x%lx, 0x%lx)\n",
            PageRequestTypeToString(GetRequestType(&req)), GetRequestOffset(&req),
            GetRequestOffset(&req) + GetRequestLen(&req));

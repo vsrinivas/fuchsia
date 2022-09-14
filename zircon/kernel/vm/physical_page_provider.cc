@@ -343,12 +343,18 @@ zx_status_t PhysicalPageProvider::WaitOnEvent(Event* event) {
   return ZX_OK;
 }
 
-void PhysicalPageProvider::Dump() {
+void PhysicalPageProvider::Dump(uint depth) {
   Guard<Mutex> guard{&mtx_};
+  for (uint i = 0; i < depth; ++i) {
+    printf("  ");
+  }
   printf("physical_page_provider %p cow_pages_ %p phys_base_ 0x%" PRIx64 " closed %d", this,
          cow_pages_, phys_base_, closed_);
   for (auto& req : pending_requests_) {
     DEBUG_ASSERT(SupportsPageRequestType(GetRequestType(&req)));
+    for (uint i = 0; i < depth; ++i) {
+      printf("  ");
+    }
     printf("  pending req [0x%lx, 0x%lx)\n", GetRequestOffset(&req), GetRequestLen(&req));
   }
 }

@@ -57,7 +57,7 @@ class PagerProxy : public PageProvider,
   void OnClose() final;
   void OnDetach() final;
   zx_status_t WaitOnEvent(Event* event) final;
-  void Dump() final;
+  void Dump(uint depth) final;
   bool SupportsPageRequestType(page_request_type type) const final {
     if (type == page_request_type::READ) {
       return true;

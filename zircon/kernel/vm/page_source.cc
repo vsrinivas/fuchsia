@@ -517,18 +517,24 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
   return status;
 }
 
-void PageSource::Dump() const {
+void PageSource::Dump(uint depth) const {
   Guard<Mutex> guard{&page_source_mtx_};
+  for (uint i = 0; i < depth; ++i) {
+    printf("  ");
+  }
   printf("page_source %p detached %d closed %d\n", this, detached_, closed_);
   for (uint8_t type = 0; type < page_request_type::COUNT; type++) {
     for (auto& req : outstanding_requests_[type]) {
+      for (uint i = 0; i < depth; ++i) {
+        printf("  ");
+      }
       printf("  vmo 0x%lx/k%lu %s req [0x%lx, 0x%lx) pending 0x%lx overlap %lu\n",
              req.vmo_debug_info_.vmo_ptr, req.vmo_debug_info_.vmo_id,
              PageRequestTypeToString(page_request_type(type)), req.offset_, req.GetEnd(),
              req.pending_size_, req.overlap_.size_slow());
     }
   }
-  page_provider_->Dump();
+  page_provider_->Dump(depth);
 }
 
 PageRequest::~PageRequest() { CancelRequest(); }
@@ -621,7 +627,7 @@ static int cmd_page_source(int argc, const cmd_args* argv, uint32_t flags) {
     if (argc < 3) {
       goto notenoughargs;
     }
-    reinterpret_cast<PageSource*>(argv[2].u)->Dump();
+    reinterpret_cast<PageSource*>(argv[2].u)->Dump(0);
   } else {
     printf("unknown command\n");
     goto usage;

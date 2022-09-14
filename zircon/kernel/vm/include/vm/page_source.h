@@ -174,7 +174,7 @@ class PageProvider : public fbl::RefCounted<PageProvider> {
   virtual zx_status_t WaitOnEvent(Event* event) = 0;
 
   // Dumps relevant state for debugging purposes.
-  virtual void Dump() = 0;
+  virtual void Dump(uint depth) = 0;
 
   // Whether the provider supports the |type| of page request. Controls which requests can be safely
   // forwarded to the provider.
@@ -331,7 +331,7 @@ class PageSource final : public PageRequestInterface {
   // The returned properties will last at least until Detach() or Close().
   const PageSourceProperties& properties() const { return page_provider_properties_; }
 
-  void Dump() const;
+  void Dump(uint depth) const;
 
  protected:
   // destructor should only be invoked from RefPtr

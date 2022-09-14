@@ -1111,7 +1111,9 @@ void VmCowPages::DumpLocked(uint depth, bool verbose) const {
     for (uint i = 0; i < depth + 1; ++i) {
       printf("  ");
     }
-    page_source_->Dump();
+    printf("page_source preserves content %d supply_zero_offset %#" PRIx64 "\n",
+           is_source_preserving_page_content_locked(), supply_zero_offset_);
+    page_source_->Dump(depth + 1);
   }
 
   if (verbose) {
