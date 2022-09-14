@@ -1,0 +1,78 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# DISCLAIMER: This only for IN-TREE TESTS that do not use platform assembly
+# input bundles. Any other use case is not supported.
+
+# While adding standalone packages is a common practice, when packages tend to
+# have dependencies on each other to enable a feature usable by a user.
+#
+# For example:
+#   ffx itself is mapped by its "runtime" target, but it still needs network
+#   packages to work.
+#
+# The purpose of these groups is to expose groups of labels that satisfy a set
+# of requirements for enabling a specific feature.
+
+_attr_list = [
+  "bootfs_labels",
+  "base_packages",
+  "cmdline_deps",
+  "system_image_deps",
+  "core_realm_shards",
+]
+
+# Each input groups defines a set of attributes declaring the artifacts and how
+# they are bundled into an assembly_input_bundle() or an assembled_system().
+#
+# In addition, the `core_realm_shards` attribute is provided. Such that when
+# creating a system image, the core realm can be creating by the union of these
+# `core_realm_shards` groups.
+#
+# The template will generate a group for each attribute following the pattern
+# `$target_name.attribute_name`.
+#
+# Supported attributes are:
+#     bootfs_labels (optional, default: [])
+#       [list of labels]
+#     base_packages (optional, default: [])
+#       [list of labels]
+#     cmdline_deps (optional, default: [])
+#       [list of labels]
+#     system_image_deps (optional, default: [])
+#       [list of labels]
+#     core_realm_shards (optional, default: [])
+#       [list of labels] Unlike other attributes, this is not a direct input to
+#       assembled system. This is used to generate a core and root realm. Both
+#       of these realms are input to assembled_system() as base_packages and
+#       bootfs_labels respectively.
+template("assembly_input_groups") {
+  invoker_with_defaults = {
+    bootfs_labels = []
+    base_packages = []
+    cmdline_deps = []
+    system_image_deps = []
+    core_realm_shards = []
+    testonly = true
+
+    # Clobbers any existing variable defined by invoker in the current scope.
+    # In effect, overriding the defaults.
+    forward_variables_from(invoker, "*", [ "testonly" ])
+  }
+
+  foreach(attr, _attr_list) {
+    group("${target_name}.$attr") {
+      if (attr == "core_realm_shards") {
+        forward_variables_from(invoker_with_defaults, [ "visibility" ])
+      } else {
+        forward_variables_from(invoker_with_defaults,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+      }
+      public_deps = invoker_with_defaults[attr]
+    }
+  }
+}

@@ -1,0 +1,17 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# DISCLAIMER: This only for IN-TREE TESTS that do not use platform assembly
+# input bundles. Any other use case is not supported.
+
+import("//build/security/policies_swd.gni")
+import("//bundles/assembly_input_groups/assembly_input_groups.gni")
+
+# Turn security policies into input groupss.
+foreach(policy, policies_swd) {
+  assembly_input_groups("swd_policy.${pol.name}") {
+    base_packages = policy.base_package_deps
+    system_image_deps = polcy.system_image_deps
+  }
+}
