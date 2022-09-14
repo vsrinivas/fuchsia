@@ -56,4 +56,4 @@ grok() {
 }
 
 echo "$OUTPUT: $KERNEL_SYMBOL_FILE" > "$DEPFILE"
-"$NM" -S "$KERNEL_SYMBOL_FILE" | egrep "$NM_REGEXP" | grok
+"$NM" -S "$KERNEL_SYMBOL_FILE" | grep -E "$NM_REGEXP" | grok
