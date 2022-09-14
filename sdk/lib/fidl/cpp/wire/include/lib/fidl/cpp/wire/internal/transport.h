@@ -99,8 +99,6 @@ struct ReadOptions {
 
 // Options passed from the user-facing call API to transport call().
 struct CallOptions {
-  zx_time_t deadline = ZX_TIME_INFINITE;
-
   // Transport specific context.
   internal::OutgoingTransportContext outgoing_transport_context;
 };

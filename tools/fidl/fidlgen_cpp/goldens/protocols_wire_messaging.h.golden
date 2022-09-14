@@ -1418,7 +1418,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestEmptyResponse>(result) {}
@@ -1462,7 +1462,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::NoRequestWithResponse>(result) {}
@@ -1554,7 +1554,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestEmptyResponse>(result) {}
@@ -1598,7 +1598,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithAndWithoutRequestRe
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithAndWithoutRequestResponse> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithAndWithoutRequestResponse::WithRequestWithResponse>(result) {}
@@ -3026,7 +3026,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::Respon
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ResponseAsStruct>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ResponseAsStruct>(result) {}
@@ -3082,7 +3082,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorA
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsPrimitive>(result) {}
@@ -3138,7 +3138,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::ErrorA
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::ErrorAsEnum>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::ErrorAsEnum>(result) {}
@@ -3194,7 +3194,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithErrorSyntax::Handle
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithErrorSyntax> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithErrorSyntax::HandleInResult>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithErrorSyntax::HandleInResult>(result) {}
@@ -4632,7 +4632,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Method
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MethodB>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MethodB>(result) {}
@@ -4685,7 +4685,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::TakeHa
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::TakeHandle>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::TakeHandle>(result) {}
@@ -4729,7 +4729,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::ChannelProtocol::Mutate
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::ChannelProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::ChannelProtocol::MutateSocket>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::ChannelProtocol::MutateSocket>(result) {}
@@ -5614,7 +5614,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::Transitional::Request> 
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::Transitional> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::Transitional::Request>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::Transitional::Request>(result) {}
@@ -6987,7 +6987,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::HandleRightsProtocol::R
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::HandleRightsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::HandleRightsProtocol::ResponseMethod>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::HandleRightsProtocol::ResponseMethod>(result) {}
@@ -8097,7 +8097,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Clien
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ClientEnds>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ClientEnds>(result) {}
@@ -8153,7 +8153,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Serve
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::ServerEnds>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::ServerEnds>(result) {}
@@ -8209,7 +8209,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::WithProtocolEnds::Struc
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::WithProtocolEnds> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::WithProtocolEnds::StructContainingEnds>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::WithProtocolEnds::StructContainingEnds>(result) {}
@@ -9175,7 +9175,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocols::MethodWithUnion::UnionM
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocols::MethodWithUnion> client,
-      ::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocols::MethodWithUnion::UnionMethod>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocols::MethodWithUnion::UnionMethod>(result) {}

@@ -115,7 +115,7 @@ zx_status_t channel_call(fidl_handle_t handle, CallOptions call_options,
   };
 
   zx_status_t status =
-      zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, call_options.deadline, &zircon_args,
+      zx_channel_call_etc(handle, ZX_CHANNEL_WRITE_USE_IOVEC, ZX_TIME_INFINITE, &zircon_args,
                           args.rd.out_data_actual_count, args.rd.out_handles_actual_count);
   if (status != ZX_OK) {
     return status;

@@ -4312,7 +4312,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(result) {}
@@ -4368,7 +4368,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(result) {}
@@ -4463,7 +4463,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(result) {}
@@ -4519,7 +4519,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(result) {}
@@ -4614,7 +4614,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImport>(result) {}
@@ -4670,7 +4670,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError>(result) {}
@@ -4765,7 +4765,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>(result) {}
@@ -4821,7 +4821,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(result) {}
@@ -4916,7 +4916,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnon>(result) {}
@@ -4972,7 +4972,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::Two
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(result) {}

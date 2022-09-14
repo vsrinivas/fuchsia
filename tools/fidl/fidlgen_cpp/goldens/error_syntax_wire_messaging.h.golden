@@ -532,7 +532,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSynt
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> client,
-      ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::ComposedCallWhichMayFail>(result) {}
   WireResult(WireResult&&) = delete;
@@ -585,7 +585,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_errorsyntax::ExampleUseOfErrorSynt
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_errorsyntax::ExampleUseOfErrorSyntax> client,
-      ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_errorsyntax::ExampleUseOfErrorSyntax::CallWhichMayFail>(result) {}
   WireResult(WireResult&&) = delete;

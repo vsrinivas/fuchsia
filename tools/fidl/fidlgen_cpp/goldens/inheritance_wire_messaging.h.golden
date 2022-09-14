@@ -307,7 +307,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Super::Foo> final : p
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritance::Super> client,
-      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(result) {}
   WireResult(WireResult&&) = delete;
@@ -765,7 +765,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Sub::Foo> final : pub
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritance::Sub> client,
-      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(result) {}
   WireResult(WireResult&&) = delete;

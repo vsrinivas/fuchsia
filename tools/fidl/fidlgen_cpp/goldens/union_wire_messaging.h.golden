@@ -496,7 +496,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_union::TestProtocol::StrictXUnionH
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_union::TestProtocol::StrictXUnionHenceResponseMayBeStackAllocated>(result) {}
   WireResult(WireResult&&) = delete;
@@ -549,7 +549,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_union::TestProtocol::FlexibleXUnio
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_union::TestProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_union::TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocated>(result) {}
   WireResult(WireResult&&) = delete;

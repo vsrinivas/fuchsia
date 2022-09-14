@@ -1659,7 +1659,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyDart>(result) {}
@@ -1715,7 +1715,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyGo>(result) {}
@@ -1771,7 +1771,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyLibfuzzer>(result) {}
@@ -1827,7 +1827,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenyRust>(result) {}
@@ -1883,7 +1883,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_bindingsdenylist::DenyEachBinding:
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_bindingsdenylist::DenyEachBinding> client,
-      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_bindingsdenylist::DenyEachBinding::OnlyDenySyzkaller>(result) {}

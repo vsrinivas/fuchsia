@@ -309,7 +309,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : publi
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_error::Example> client,
-      ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_error::Example::Foo>(result) {}
   WireResult(WireResult&&) = delete;

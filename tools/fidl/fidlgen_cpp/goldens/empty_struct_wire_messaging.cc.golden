@@ -71,16 +71,14 @@ namespace test_emptystruct {
 
 ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>::WireResult(
     ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>* request, std::optional<zx::time> deadline) {
+    ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>> handle_storage;
   ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_emptystruct::EmptyProtocol::SendAndReceive>(
-      outgoing.Call(
-          client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+      outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
     decoded_ = std::move(decoded.value());

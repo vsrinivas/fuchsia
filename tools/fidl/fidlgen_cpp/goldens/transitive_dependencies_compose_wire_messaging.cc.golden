@@ -16,16 +16,14 @@ extern "C" const fidl_type_t test_bottom_BottomGetFooResponseTable;
 
 ::fidl::WireResult<::test_transitivedependenciescompose::Top::GetFoo>::WireResult(
     ::fidl::UnownedClientEnd<::test_transitivedependenciescompose::Top> client,
-    ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>* request, std::optional<zx::time> deadline) {
+    ::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_transitivedependenciescompose::Top::GetFoo>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>> handle_storage;
   ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_transitivedependenciescompose::Top::GetFoo>(
-      outgoing.Call(
-          client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+      outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
     decoded_ = std::move(decoded.value());

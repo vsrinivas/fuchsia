@@ -359,7 +359,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>, ::fidl::internal::ChannelTransport> request_message(
@@ -367,10 +367,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -424,7 +421,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>, ::fidl::internal::ChannelTransport> request_message(
@@ -432,10 +429,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -531,7 +525,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>, ::fidl::internal::ChannelTransport> request_message(
@@ -539,10 +533,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -596,7 +587,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>, ::fidl::internal::ChannelTransport> request_message(
@@ -604,10 +595,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -703,7 +691,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>, ::fidl::internal::ChannelTransport> request_message(
@@ -711,10 +699,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -768,7 +753,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>, ::fidl::internal::ChannelTransport> request_message(
@@ -776,10 +761,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -875,7 +857,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>, ::fidl::internal::ChannelTransport> request_message(
@@ -883,10 +865,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -940,7 +919,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>, ::fidl::internal::ChannelTransport> request_message(
@@ -948,10 +927,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1047,7 +1023,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>, ::fidl::internal::ChannelTransport> request_message(
@@ -1055,10 +1031,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1112,7 +1085,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
 
 ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>::WireResult(
     ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>, ::fidl::internal::ChannelTransport> request_message(
@@ -1120,10 +1093,7 @@ extern "C" const fidl_type_t test_protocollayouts_MainProtocolOnAnonWithErrorReq
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {

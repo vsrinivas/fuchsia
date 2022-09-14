@@ -524,7 +524,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_requestflexibleenvelope::Protocol:
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
-      ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(result) {}
   WireResult(WireResult&&) = delete;
@@ -577,7 +577,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_requestflexibleenvelope::Protocol:
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
-      ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(result) {}
   WireResult(WireResult&&) = delete;

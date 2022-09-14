@@ -310,7 +310,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMetho
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(result) {}
   WireResult(WireResult&&) = delete;

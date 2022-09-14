@@ -545,7 +545,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_emptystruct::EmptyProtocol::SendAn
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_emptystruct::EmptyProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_emptystruct::EmptyProtocol::SendAndReceive>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_emptystruct::EmptyProtocol::SendAndReceive>(result) {}
   WireResult(WireResult&&) = delete;

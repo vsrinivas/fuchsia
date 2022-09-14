@@ -294,7 +294,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_foreigntypeinresponseusedthroughco
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top> client,
-      ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(result) {}
   WireResult(WireResult&&) = delete;

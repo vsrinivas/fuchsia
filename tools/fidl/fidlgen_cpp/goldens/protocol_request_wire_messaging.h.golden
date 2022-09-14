@@ -871,7 +871,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild>(result) {}
   WireResult(WireResult&&) = delete;
@@ -924,7 +924,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChildR
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest>(result) {}
   WireResult(WireResult&&) = delete;

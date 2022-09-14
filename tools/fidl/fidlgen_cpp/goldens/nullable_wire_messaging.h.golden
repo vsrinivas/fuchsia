@@ -306,7 +306,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> fin
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request, std::optional<zx::time> deadline = std::nullopt);
+      ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request);
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(result) {}
   WireResult(WireResult&&) = delete;

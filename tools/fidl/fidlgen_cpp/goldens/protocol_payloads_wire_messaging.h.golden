@@ -3513,7 +3513,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposed>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayComposed>(result) {}
@@ -3569,7 +3569,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayComposedWithError>(result) {}
@@ -3664,7 +3664,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocal>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayLocal>(result) {}
@@ -3720,7 +3720,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayLocalWithError>(result) {}
@@ -3815,7 +3815,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImport>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayImport>(result) {}
@@ -3871,7 +3871,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayImportWithError>(result) {}
@@ -3966,7 +3966,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnon>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayAnon>(result) {}
@@ -4022,7 +4022,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolpayloads::MainProtocol::Tw
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolpayloads::MainProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolpayloads::MainProtocol::TwoWayAnonWithError>(result) {}

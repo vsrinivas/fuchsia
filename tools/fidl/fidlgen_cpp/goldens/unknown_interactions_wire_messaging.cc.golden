@@ -455,7 +455,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
@@ -463,10 +463,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
@@ -512,7 +509,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
@@ -520,10 +517,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -577,7 +571,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
@@ -585,10 +579,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -642,7 +633,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
@@ -650,10 +641,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -707,7 +695,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -715,10 +703,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -772,7 +757,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -780,10 +765,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -837,7 +819,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -845,10 +827,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -902,7 +881,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -910,10 +889,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -967,7 +943,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>, ::fidl::internal::ChannelTransport> request_message(
@@ -975,10 +951,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1032,7 +1005,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
@@ -1040,10 +1013,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1097,7 +1067,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
@@ -1105,10 +1075,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1162,7 +1129,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
@@ -1170,10 +1137,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1227,7 +1191,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -1235,10 +1199,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1292,7 +1253,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -1300,10 +1261,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1357,7 +1315,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -1365,10 +1323,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -1422,7 +1377,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -1430,10 +1385,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsProtoco
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -4894,7 +4846,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
@@ -4902,10 +4854,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
@@ -4951,7 +4900,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
@@ -4959,10 +4908,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -5016,7 +4962,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
@@ -5024,10 +4970,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -5081,7 +5024,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
@@ -5089,10 +5032,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -5146,7 +5086,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -5154,10 +5094,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -5211,7 +5148,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -5219,10 +5156,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -5276,7 +5210,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -5284,10 +5218,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -5341,7 +5272,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -5349,10 +5280,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsAjarPro
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -7816,7 +7744,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>, ::fidl::internal::ChannelTransport> request_message(
@@ -7824,10 +7752,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
 }namespace test_unknowninteractions {
@@ -7873,7 +7798,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>, ::fidl::internal::ChannelTransport> request_message(
@@ -7881,10 +7806,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -7938,7 +7860,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>, ::fidl::internal::ChannelTransport> request_message(
@@ -7946,10 +7868,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -8003,7 +7922,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>, ::fidl::internal::ChannelTransport> request_message(
@@ -8011,10 +7930,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -8068,7 +7984,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -8076,10 +7992,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -8133,7 +8046,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -8141,10 +8054,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -8198,7 +8108,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -8206,10 +8116,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {
@@ -8263,7 +8170,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
 
 ::fidl::WireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>::WireResult(
     ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline
+    ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>* request
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>, ::fidl::internal::ChannelTransport> request_message(
@@ -8271,10 +8178,7 @@ extern "C" const fidl_type_t test_unknowninteractions_UnknownInteractionsClosedP
   auto& outgoing = request_message.GetOutgoingMessage();
     ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>> handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
       if (ok()) {

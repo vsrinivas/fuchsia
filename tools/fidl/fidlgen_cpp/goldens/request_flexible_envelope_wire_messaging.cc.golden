@@ -26,16 +26,14 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibl
 
 ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>::WireResult(
     ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
-    ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* request, std::optional<zx::time> deadline) {
+    ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>> handle_storage;
   ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestStrictResponseFlexible>(
-      outgoing.Call(
-          client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+      outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
     decoded_ = std::move(decoded.value());
@@ -87,16 +85,14 @@ namespace test_requestflexibleenvelope {
 
 ::fidl::WireResult<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>::WireResult(
     ::fidl::UnownedClientEnd<::test_requestflexibleenvelope::Protocol> client,
-    ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* request, std::optional<zx::time> deadline) {
+    ::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>* request) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<::fidl::internal::TransactionalRequest<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>, ::fidl::internal::ChannelTransport> request_message(
       ::fidl::internal::AllowUnownedInputRef{}, request);
   auto& outgoing = request_message.GetOutgoingMessage();
   ::fidl::internal::IncomingMessageHandleStorage<::fidl::internal::TransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>> handle_storage;
   ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<::test_requestflexibleenvelope::Protocol::RequestFlexibleResponseStrict>(
-      outgoing.Call(
-          client.handle(), handle_storage.view(bytes_.view()),
-          deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}));
+      outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{}));
   SetStatus(::fidl::internal::StatusFromResult(decoded));
   if (ok()) {
     decoded_ = std::move(decoded.value());

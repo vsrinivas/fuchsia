@@ -20,7 +20,6 @@ class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
   {{ .WireResult.Self }}(
       {{ .Protocol.UnownedClientEnd }} client,
       {{ .WireTransactionalRequest }}* request
-      {{- if .HasResponse }}, std::optional<zx::time> deadline = std::nullopt{{ end }}
   );
 
   explicit {{ .WireResult.Self }}(const ::fidl::Status& result) : {{ .BaseWireResult }}(result) {}
@@ -49,7 +48,6 @@ class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
 {{ .WireResult }}::{{ .WireResult.Self }}(
     {{ .Protocol.UnownedClientEnd }} client,
     {{ .WireTransactionalRequest }}* request
-    {{- if .HasResponse }}, std::optional<zx::time> deadline{{ end }}
 ) {
   FIDL_INTERNAL_DISABLE_AUTO_VAR_INIT
   ::fidl::unstable::OwnedEncodedMessage<{{ .WireTransactionalRequest }}, {{ .Transport.Type }}> request_message(
@@ -59,10 +57,7 @@ class [[nodiscard]] {{ .WireResult }} final : public {{ .BaseWireResult }} {
   {{- if .HasResponse }}
     {{ .IncomingMessageHandleStorageForResponse }} handle_storage;
     ::fitx::result decoded = ::fidl::internal::InplaceDecodeTransactionalResponse<{{ .Marker }}>(
-        outgoing.Call(
-            client.handle(), handle_storage.view(bytes_.view()),
-            deadline.has_value() ? fidl::CallOptions{.deadline = deadline->get()} : fidl::CallOptions{}
-        )
+        outgoing.Call(client.handle(), handle_storage.view(bytes_.view()), fidl::CallOptions{})
     );
     SetStatus(::fidl::internal::StatusFromResult(decoded));
     {{- if .HasResponsePayload }}

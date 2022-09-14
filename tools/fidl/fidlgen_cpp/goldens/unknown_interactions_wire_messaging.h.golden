@@ -5888,7 +5888,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWay>(result) {}
@@ -5932,7 +5932,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFields>(result) {}
@@ -5988,7 +5988,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnion>(result) {}
@@ -6044,7 +6044,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTable>(result) {}
@@ -6100,7 +6100,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayErr>(result) {}
@@ -6156,7 +6156,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayFieldsErr>(result) {}
@@ -6212,7 +6212,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayUnionErr>(result) {}
@@ -6268,7 +6268,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::StrictTwoWayTableErr>(result) {}
@@ -6321,7 +6321,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWay>(result) {}
@@ -6377,7 +6377,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFields>(result) {}
@@ -6433,7 +6433,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnion>(result) {}
@@ -6489,7 +6489,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTable>(result) {}
@@ -6545,7 +6545,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayErr>(result) {}
@@ -6601,7 +6601,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(result) {}
@@ -6657,7 +6657,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayUnionErr>(result) {}
@@ -6713,7 +6713,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsProtocol::FlexibleTwoWayTableErr>(result) {}
@@ -11857,7 +11857,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWay>(result) {}
@@ -11901,7 +11901,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFields>(result) {}
@@ -11957,7 +11957,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnion>(result) {}
@@ -12013,7 +12013,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTable>(result) {}
@@ -12069,7 +12069,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayErr>(result) {}
@@ -12125,7 +12125,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayFieldsErr>(result) {}
@@ -12181,7 +12181,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayUnionErr>(result) {}
@@ -12237,7 +12237,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsAjarProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsAjarProtocol::StrictTwoWayTableErr>(result) {}
@@ -15838,7 +15838,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWay>(result) {}
@@ -15882,7 +15882,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFields>(result) {}
@@ -15938,7 +15938,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnion>(result) {}
@@ -15994,7 +15994,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTable>(result) {}
@@ -16050,7 +16050,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayErr>(result) {}
@@ -16106,7 +16106,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayFieldsErr>(result) {}
@@ -16162,7 +16162,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayUnionErr>(result) {}
@@ -16218,7 +16218,7 @@ class [[nodiscard]] ::fidl::WireResult<::test_unknowninteractions::UnknownIntera
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_unknowninteractions::UnknownInteractionsClosedProtocol> client,
-      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>* request, std::optional<zx::time> deadline = std::nullopt
+      ::fidl::internal::TransactionalRequest<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>* request
   );
 
   explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_unknowninteractions::UnknownInteractionsClosedProtocol::StrictTwoWayTableErr>(result) {}
