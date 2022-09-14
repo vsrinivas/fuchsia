@@ -73,8 +73,7 @@ gvisor_tests = [
   # "fault_test",
   "fchdir_test",
   "fcntl_test",
-
-  # "fifo_test",
+  "fifo_test",
   "flock_test",
   "fork_test",
 
