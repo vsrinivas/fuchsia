@@ -71,10 +71,6 @@ pub fn sys_mmap(
 
     // TODO(tbodt): should we consider MAP_NORESERVE?
 
-    if flags & MAP_ANONYMOUS != 0 && fd.raw() != -1 {
-        return error!(EINVAL);
-    }
-
     let mut zx_flags = mmap_prot_to_vm_opt(prot) | zx::VmarFlags::ALLOW_FAULTS;
     if addr.ptr() != 0 {
         zx_flags |= zx::VmarFlags::SPECIFIC;
