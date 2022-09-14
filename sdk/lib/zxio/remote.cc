@@ -28,6 +28,7 @@ namespace {
 
 using zxio_remote_t = struct zxio_remote {
   zxio_t io;
+  bool is_tty;
   zx::event event;
   zx::stream stream;
   fidl::WireSyncClient<fio::Node> client;
@@ -934,24 +935,16 @@ void zxio_remote_dirent_iterator_destroy(zxio_t* io, zxio_dirent_iterator_t* ite
 
 zx_status_t zxio_remote_isatty(zxio_t* io, bool* tty) {
   auto& remote = *reinterpret_cast<zxio_remote_t*>(io);
-  const fidl::WireResult result = remote.client->DescribeDeprecated();
-  if (!result.ok()) {
-    return result.status();
-  }
-  *tty = result.value().info.is_tty();
+  *tty = remote.is_tty;
   return ZX_OK;
 }
 
 zx_status_t zxio_remote_get_window_size(zxio_t* io, uint32_t* width, uint32_t* height) {
-  bool tty;
-  if (const zx_status_t status = zxio_remote_isatty(io, &tty); status != ZX_OK) {
-    return status;
-  }
-  if (!tty) {
+  auto& remote = *reinterpret_cast<zxio_remote_t*>(io);
+  if (!remote.is_tty) {
     // Not a tty.
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto& remote = *reinterpret_cast<zxio_remote_t*>(io);
   const fidl::UnownedClientEnd<fuchsia_hardware_pty::Device> device(
       remote.client.client_end().borrow().channel());
   if (!device.is_valid()) {
@@ -971,15 +964,11 @@ zx_status_t zxio_remote_get_window_size(zxio_t* io, uint32_t* width, uint32_t* h
 }
 
 zx_status_t zxio_remote_set_window_size(zxio_t* io, uint32_t width, uint32_t height) {
-  bool tty;
-  if (const zx_status_t status = zxio_remote_isatty(io, &tty); status != ZX_OK) {
-    return status;
-  }
-  if (!tty) {
+  auto& remote = *reinterpret_cast<zxio_remote_t*>(io);
+  if (!remote.is_tty) {
     // Not a tty.
     return ZX_ERR_NOT_SUPPORTED;
   }
-  auto& remote = *reinterpret_cast<zxio_remote_t*>(io);
   const fidl::UnownedClientEnd<fuchsia_hardware_pty::Device> device(
       remote.client.client_end().borrow().channel());
   if (!device.is_valid()) {
@@ -1041,9 +1030,10 @@ static constexpr zxio_ops_t zxio_remote_ops = []() {
 }();
 
 zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::event event,
-                             fidl::ClientEnd<fio::Node> client) {
+                             fidl::ClientEnd<fio::Node> client, bool is_tty) {
   auto& remote = *new (storage) zxio_remote_t{
       .io = storage->io,
+      .is_tty = is_tty,
       .event = std::move(event),
       .client = fidl::BindSyncClient(std::move(client)),
   };
@@ -1052,8 +1042,8 @@ zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::event event,
 }
 
 zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::eventpair event,
-                             fidl::ClientEnd<fio::Node> client) {
-  return zxio_remote_init(storage, zx::event{event.release()}, std::move(client));
+                             fidl::ClientEnd<fio::Node> client, bool is_tty) {
+  return zxio_remote_init(storage, zx::event{event.release()}, std::move(client), is_tty);
 }
 
 namespace {

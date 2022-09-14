@@ -58,7 +58,7 @@ class Remote : public zxtest::Test {
     ASSERT_OK(control_client_end.status_value());
     ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
     ASSERT_OK(zxio_remote_init(&remote_, std::move(eventpair_to_client_),
-                               std::move(control_client_end.value())));
+                               std::move(control_client_end.value()), /*is_tty=*/false));
   }
 
   template <typename ServerImpl>

@@ -212,7 +212,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
           fidl::ClientEnd<fuchsia_posix_socket_raw::Socket>(node.TakeChannel()));
     }
     case fio::wire::NodeInfoDeprecated::Tag::kService: {
-      return zxio_remote_init(storage, zx::event{}, std::move(node));
+      return zxio_remote_init(storage, zx::event{}, std::move(node), /*is_tty=*/false);
     }
     case fio::wire::NodeInfoDeprecated::Tag::kStreamSocket: {
       zx::socket& socket = info.stream_socket().socket;
@@ -249,7 +249,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
     case fio::wire::NodeInfoDeprecated::Tag::kTty: {
       fio::wire::Tty& tty = info.tty();
       zx::eventpair event = std::move(tty.event);
-      return zxio_remote_init(storage, std::move(event), std::move(node));
+      return zxio_remote_init(storage, std::move(event), std::move(node), /*is_tty=*/true);
     }
     case fio::wire::NodeInfoDeprecated::Tag::kVmofileDeprecated: {
       fio::wire::VmofileDeprecated& file = info.vmofile_deprecated();
@@ -310,7 +310,8 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
       if (storage == nullptr || !control.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
-      return zxio_remote_init(storage, zx::event{}, fidl::ClientEnd<fio::Node>{std::move(control)});
+      return zxio_remote_init(storage, zx::event{}, fidl::ClientEnd<fio::Node>{std::move(control)},
+                              /*is_tty=*/false);
     }
     case ZXIO_OBJECT_TYPE_STREAM_SOCKET: {
       zx::socket socket(va_arg(args, zx_handle_t));

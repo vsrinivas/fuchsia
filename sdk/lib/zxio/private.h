@@ -151,9 +151,9 @@ zx_status_t zxio_packet_socket_init(zxio_storage_t* storage, zx::eventpair event
 // remote ----------------------------------------------------------------------
 
 zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::event event,
-                             fidl::ClientEnd<fuchsia_io::Node> client);
+                             fidl::ClientEnd<fuchsia_io::Node> client, bool is_tty);
 zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::eventpair event,
-                             fidl::ClientEnd<fuchsia_io::Node> client);
+                             fidl::ClientEnd<fuchsia_io::Node> client, bool is_tty);
 
 // vmo -------------------------------------------------------------------------
 

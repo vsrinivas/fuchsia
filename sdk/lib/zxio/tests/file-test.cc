@@ -325,7 +325,8 @@ class Remote : public File {
       return client_end.status_value();
     }
     return zxio_remote_init(&file_, zx::event{},
-                            fidl::ClientEnd<fio::Node>(client_end.value().TakeChannel()));
+                            fidl::ClientEnd<fio::Node>(client_end.value().TakeChannel()),
+                            /*is_tty=*/false);
   }
 };
 
