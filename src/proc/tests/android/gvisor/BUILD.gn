@@ -274,8 +274,7 @@ gvisor_tests = [
   # "vfork_test",
   # "vsyscall_test",
   "wait_test",
-
-  # "write_test",
+  "write_test",
   "xattr_test",
 ]
 
