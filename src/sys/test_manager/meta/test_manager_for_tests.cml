@@ -71,6 +71,10 @@
                     from: "#rust_test_runner",
                 },
                 {
+                    runner: "rust_test_next_vdso_runner",
+                    from: "#rust_test_next_vdso_runner",
+                },
+                {
                     runner: "starnix_test_runner",
                     from: "#starnix_test_runners",
                 },
@@ -147,6 +151,10 @@
                 {
                     runner: "rust_test_runner",
                     from: "#rust_test_runner",
+                },
+                {
+                    runner: "rust_test_next_vdso_runner",
+                    from: "#rust_test_next_vdso_runner",
                 },
                 {
                     runner: "starnix_test_runner",

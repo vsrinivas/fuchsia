@@ -65,6 +65,10 @@
             url: "fuchsia-pkg://fuchsia.com/netemul-test-runner#meta/netemul-test-runner.cm",
         },
         {
+            name: "rust_test_next_vdso_runner",
+            url: "fuchsia-pkg://fuchsia.com/rust-test-next-vdso-runner#meta/rust-test-next-vdso-runner.cm",
+        },
+        {
             name: "rust_test_runner",
             url: "fuchsia-pkg://fuchsia.com/rust-test-runner#meta/rust-test-runner.cm",
         },
@@ -335,6 +339,7 @@
                 "#lib_loader_cache",
                 "#netemul_test_runner",
                 "#runner_memfs",
+                "#rust_test_next_vdso_runner",
                 "#rust_test_runner",
                 "#starnix_test_runners",
                 "#stress_test_runner",
@@ -391,6 +396,7 @@
                 "#gtest_runner",
                 "#gunit_runner",
                 "#netemul_test_runner",
+                "#rust_test_next_vdso_runner",
                 "#rust_test_runner",
                 "#starnix_test_runners",
             ],
@@ -405,6 +411,7 @@
                 "#go_test_runner",
                 "#gtest_runner",
                 "#gunit_runner",
+                "#rust_test_next_vdso_runner",
                 "#rust_test_runner",
                 "#starnix_test_runners",
             ],
@@ -466,6 +473,7 @@
             to: [
                 "#gtest_runner",
                 "#gunit_runner",
+                "#rust_test_next_vdso_runner",
                 "#rust_test_runner",
                 "#starnix-tests",
                 "#starnix_test_runners",

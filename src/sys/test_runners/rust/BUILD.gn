@@ -13,11 +13,13 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner_rust",
+    "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
     "//sdk/fidl/fuchsia.test:fuchsia.test_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-runtime",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/test_runners:lib",
     "//third_party/rust_crates:anyhow",
@@ -54,9 +56,24 @@ fuchsia_package("rust-test-runner") {
   deps = [ ":rust_test_runner" ]
 }
 
+fuchsia_component("rust_test_next_vdso_runner") {
+  testonly = true
+  manifest = "meta/rust-test-next-vdso-runner.cml"
+  component_name = "rust-test-next-vdso-runner"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("rust-test-next-vdso-runner") {
+  testonly = true
+  deps = [ ":rust_test_next_vdso_runner" ]
+}
+
 group("rust") {
   testonly = true
-  deps = [ ":rust-test-runner" ]
+  deps = [
+    ":rust-test-next-vdso-runner",
+    ":rust-test-runner",
+  ]
 }
 
 fuchsia_unittest_component("test-component") {

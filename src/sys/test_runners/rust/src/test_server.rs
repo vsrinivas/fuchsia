@@ -4,9 +4,10 @@
 
 use {
     async_trait::async_trait,
-    fidl_fuchsia_test as ftest,
+    fidl_fuchsia_process as fproc, fidl_fuchsia_test as ftest,
     ftest::{Invocation, RunListenerProxy},
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_runtime as runtime,
+    fuchsia_zircon::{self as zx, HandleBased},
     futures::{
         future::{abortable, join3, AbortHandle, FutureExt as _},
         lock::Mutex,
@@ -31,6 +32,13 @@ use {
     tracing::{debug, error},
     zx::Task,
 };
+
+lazy_static! {
+    static ref VDSO_VMO: zx::Handle = {
+        runtime::take_startup_handle(runtime::HandleInfo::new(runtime::HandleType::VdsoVmo, 0))
+            .expect("failed to take vDSO handle")
+    };
+}
 
 type EnumeratedTestNames = Arc<HashSet<String>>;
 
@@ -535,7 +543,12 @@ where
         args: Some(args),
         name_infos: None,
         environs: environ,
-        handle_infos: None,
+        handle_infos: Some(vec![fproc::HandleInfo {
+            handle: (*VDSO_VMO)
+                .duplicate_handle(zx::Rights::SAME_RIGHTS)
+                .map_err(launch::LaunchError::DuplicateVdso)?,
+            id: runtime::HandleInfo::new(runtime::HandleType::VdsoVmo, 0).as_raw(),
+        }]),
         loader_proxy_chan: Some(client.into_channel()),
         executable_vmo,
         options: component.options,

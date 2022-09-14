@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/lib.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/rust_test_runner",
+        use_next_vdso: "true",
+    },
+    capabilities: [
+        {
+            runner: "rust_test_next_vdso_runner",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    use: [
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+        },
+    ],
+    expose: [
+        {
+            runner: "rust_test_next_vdso_runner",
+            from: "self",
+        },
+    ],
+}
