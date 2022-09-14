@@ -135,13 +135,10 @@ std::string TrimToZirconMaxNameLength(std::string pattern) {
   return pattern;
 }
 
-void RunVerbAttach(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
   // Only process can be specified.
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
-    return cmd_context->ReportError(err);
-
-  // Should be non-null since we're running in a synchronous context.
-  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+    return err;
 
   // attach <koid> accepts no switch.
   uint64_t koid = 0;
@@ -151,45 +148,44 @@ void RunVerbAttach(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) 
     // in this case. It's easy to hit enter twice which will cause a duplicate attach. The
     // duplicate target is the only reason to check here, the attach will fail later if there's
     // a duplicate (say, created in a race condition).
-    if (console_context->session()->system().ProcessFromKoid(koid)) {
-      return cmd_context->ReportError(
-          Err("Process " + std::to_string(koid) + " is already being debugged."));
-    }
+    if (context->session()->system().ProcessFromKoid(koid))
+      return Err("Process " + std::to_string(koid) + " is already being debugged.");
 
     // Attach to a process by KOID.
-    auto err_or_target = GetRunnableTarget(console_context, cmd);
+    auto err_or_target = GetRunnableTarget(context, cmd);
     if (err_or_target.has_error())
-      return cmd_context->ReportError(err_or_target.err());
-    err_or_target.value()->Attach(koid, [cmd_context](fxl::WeakPtr<Target> target, const Err& err,
-                                                      uint64_t timestamp) mutable {
-      // Don't display a message on success because the ConsoleContext will print the new
-      // process information when it's detected.
-      ProcessCommandCallback(target, false, err, cmd_context);
-    });
-    return;
+      return err_or_target.err();
+    err_or_target.value()->Attach(
+        koid, [callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err,
+                                               uint64_t timestamp) mutable {
+          // Don't display a message on success because the ConsoleContext will print the new
+          // process information when it's detected.
+          ProcessCommandCallback(target, false, err, std::move(callback));
+        });
+    return Err();
   }
 
   // For all other cases, "process" cannot be specified.
   if (cmd.HasNoun(Noun::kProcess)) {
-    return cmd_context->ReportError(Err("Attaching by filters doesn't support \"process\" noun."));
+    return Err("Attaching by filters doesn't support \"process\" noun.");
   }
 
   // When --job switch is on and --exact is off, require 0 or 1 argument.
   // Otherwise require 1 argument.
   if ((!cmd.HasSwitch(kSwitchJob) || cmd.HasSwitch(kSwitchExact) || !cmd.args().empty()) &&
       cmd.args().size() != 1) {
-    return cmd_context->ReportError(Err("Wrong number of arguments to attach."));
+    return Err("Wrong number of arguments to attach.");
   }
 
   // --job <koid> must be parsable as uint64.
   uint64_t job_koid = 0;
   if (cmd.HasSwitch(kSwitchJob) &&
       StringToUint64(cmd.GetSwitchValue(kSwitchJob), &job_koid).has_error()) {
-    return cmd_context->ReportError(Err("--job only accepts a koid"));
+    return Err("--job only accepts a koid");
   }
 
   // Now all the checks are performed. Create a filter.
-  Filter* filter = console_context->session()->system().CreateNewFilter();
+  Filter* filter = context->session()->system().CreateNewFilter();
 
   std::string pattern;
   if (!cmd.args().empty())
@@ -217,7 +213,7 @@ void RunVerbAttach(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) 
     filter->SetPattern(TrimToZirconMaxNameLength(pattern));
   }
 
-  console_context->SetActiveFilter(filter);
+  context->SetActiveFilter(filter);
 
   // This doesn't use the default filter formatting to try to make it friendlier for people
   // that are less familiar with the debugger and might be unsure what's happening (this is normally
@@ -229,6 +225,10 @@ void RunVerbAttach(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) 
   Console::get()->Output("Waiting for process matching \"" + pattern +
                          "\".\n"
                          "Type \"filter\" to see the current filters.");
+  if (callback) {
+    callback(Err());
+  }
+  return Err();
 }
 
 }  // namespace

@@ -87,49 +87,50 @@ Target* SearchForAttachedTarget(ConsoleContext* context, uint64_t process_koid) 
   return target;
 }
 
-void SendExplicitDetachMessage(uint64_t process_koid, fxl::RefPtr<CommandContext> cmd_context) {
+void SendExplicitDetachMessage(ConsoleContext* context, uint64_t process_koid) {
   debug_ipc::DetachRequest request = {};
   request.koid = process_koid;
 
-  cmd_context->GetConsoleContext()->session()->remote_api()->Detach(
-      request, [process_koid, cmd_context](const Err& err, debug_ipc::DetachReply reply) {
-        if (err.has_error())
-          return cmd_context->ReportError(err);
+  context->session()->remote_api()->Detach(
+      request, [process_koid](const Err& err, debug_ipc::DetachReply reply) {
+        Console* console = Console::get();
 
-        if (reply.status.has_error()) {
-          return cmd_context->ReportError(Err("Could not detach from process " +
-                                              std::to_string(process_koid) + ": " +
-                                              reply.status.message()));
+        if (err.has_error()) {
+          console->Output(err);
+          return;
         }
 
-        cmd_context->Output(
-            fxl::StringPrintf("Successfully detached from %" PRIu64 ".", process_koid));
+        if (reply.status.has_error()) {
+          console->Output(Err("Could not detach from process " + std::to_string(process_koid) +
+                              ": " + reply.status.message()));
+          return;
+        }
+
+        console->Output(fxl::StringPrintf("Successfully detached from %" PRIu64 ".", process_koid));
       });
 }
 
-void RunVerbDetach(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+Err RunVerbDetach(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
   // Only a process can be detached.
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
-    return cmd_context->ReportError(err);
+    return err;
 
   uint64_t process_koid = 0;
   if (cmd.args().size() == 1) {
-    if (cmd.HasNoun(Noun::kProcess)) {
-      return cmd_context->ReportError(
-          Err(ErrType::kInput, "You can only specify PIDs without context."));
-    }
+    if (cmd.HasNoun(Noun::kProcess))
+      return Err(ErrType::kInput, "You can only specify PIDs without context.");
     process_koid = fxl::StringToNumber<uint64_t>(cmd.args()[0]);
   } else if (cmd.args().size() > 1) {
-    return cmd_context->ReportError(Err(ErrType::kInput, "\"detach\" takes at most 1 argument."));
+    return Err(ErrType::kInput, "\"detach\" takes at most 1 argument.");
   }
 
-  Target* target = SearchForAttachedTarget(cmd_context->GetConsoleContext(), process_koid);
+  Target* target = SearchForAttachedTarget(context, process_koid);
 
   // If there is no suitable target and the user specified a pid to detach to, it means we need to
   // send an explicit detach message.
   if (!target && process_koid != 0) {
-    SendExplicitDetachMessage(process_koid, cmd_context);
-    return;
+    SendExplicitDetachMessage(context, process_koid);
+    return Err();
   }
 
   // Here we either found an attached target or we use the context one (because the user did not
@@ -138,11 +139,13 @@ void RunVerbDetach(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) 
     target = cmd.target();
   // Only print something when there was an error detaching. The console context will watch for
   // Process destruction and print messages for each one in the success case.
-  target->Detach([cmd_context](fxl::WeakPtr<Target> target, const Err& err) mutable {
-    // The ConsoleContext displays messages for stopped processes, so don't display messages
-    // when successfully detaching.
-    ProcessCommandCallback(target, false, err, cmd_context);
-  });
+  target->Detach(
+      [callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err) mutable {
+        // The ConsoleContext displays messages for stopped processes, so don't display messages
+        // when successfully detaching.
+        ProcessCommandCallback(target, false, err, std::move(callback));
+      });
+  return Err();
 }
 
 }  // namespace

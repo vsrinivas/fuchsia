@@ -50,39 +50,41 @@ Examples
   run /boot/bin/crasher log_fatal
 )";
 
-void RunVerbRun(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+Err RunVerbRun(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
   // Only a process can be run.
   Err err = cmd.ValidateNouns({Noun::kProcess});
   if (err.has_error())
-    return cmd_context->ReportError(err);
+    return err;
 
   // Output warning about this possibly not working.
   OutputBuffer warning(Syntax::kWarning, GetExclamation());
   warning.Append(
       " Run won't work for many processes and components. "
       "See \"help run\".\n");
-  cmd_context->Output(warning);
+  Console::get()->Output(warning);
 
   // May need to create a new target.
-  auto err_or_target = GetRunnableTarget(cmd_context->GetConsoleContext(), cmd);
+  auto err_or_target = GetRunnableTarget(context, cmd);
   if (err_or_target.has_error())
-    return cmd_context->ReportError(err_or_target.err());
+    return err_or_target.err();
   Target* target = err_or_target.value();
 
   if (cmd.args().empty()) {
     // Use the args already set on the target.
     if (target->GetArgs().empty())
-      return cmd_context->ReportError(Err("No program to run. Try \"run <program name>\"."));
+      return Err("No program to run. Try \"run <program name>\".");
   } else {
     target->SetArgs(cmd.args());
   }
 
-  target->Launch(
-      [cmd_context](fxl::WeakPtr<Target> target, const Err& err, uint64_t timestamp) mutable {
-        // The ConsoleContext displays messages for new processes, so don't display messages when
-        // successfully starting.
-        ProcessCommandCallback(std::move(target), false, err, cmd_context);
-      });
+  target->Launch([callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err,
+                                                  uint64_t timestamp) mutable {
+    // The ConsoleContext displays messages for new processes, so don't display messages when
+    // successfully starting.
+    ProcessCommandCallback(std::move(target), false, err, std::move(callback));
+  });
+
+  return Err();
 }
 
 }  // namespace

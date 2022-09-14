@@ -5,7 +5,6 @@
 #include "src/developer/debug/zxdb/console/commands/verb_print.h"
 
 #include "src/developer/debug/zxdb/console/command.h"
-#include "src/developer/debug/zxdb/console/command_context.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -49,28 +48,23 @@ Examples
       Print a variable with types in the context of a specific stack frame.
 )";
 
-void RunVerbPrint(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+Err RunVerbPrint(ConsoleContext* context, const Command& cmd) {
   // This will work in any context, but the data that's available will vary depending on whether
   // there's a stopped thread, a process, or nothing.
   fxl::RefPtr<EvalContext> eval_context = GetEvalContextForCommand(cmd);
 
   ErrOr<ConsoleFormatOptions> options = GetPrintCommandFormatOptions(cmd);
-  if (options.has_error()) {
-    cmd_context->ReportError(options.err());
-    return;
-  }
+  if (options.has_error())
+    return options.err();
 
-  Err err = EvalCommandExpression(
+  return EvalCommandExpression(
       cmd, "print", eval_context, false, false,
-      [options = options.value(), cmd_context, eval_context](ErrOrValue value) {
-        if (value.has_error()) {
-          cmd_context->ReportError(value.err());
-        } else {
-          cmd_context->Output(FormatValueForConsole(value.value(), options, eval_context));
-        }
+      [options = options.value(), eval_context](ErrOrValue value) {
+        if (value.has_error())
+          Console::get()->Output(value.err());
+        else
+          Console::get()->Output(FormatValueForConsole(value.value(), options, eval_context));
       });
-  if (err.has_error())
-    cmd_context->ReportError(err);
 }
 
 }  // namespace

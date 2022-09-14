@@ -25,12 +25,6 @@ void CommandContext::Output(fxl::RefPtr<AsyncOutputBuffer> output) {
   }
 }
 
-ConsoleContext* CommandContext::GetConsoleContext() const {
-  if (weak_console_)
-    return &weak_console_->context();
-  return nullptr;
-}
-
 // ConsoleCommandContext ---------------------------------------------------------------------------
 
 ConsoleCommandContext::ConsoleCommandContext(Console* console, CompletionCallback done)

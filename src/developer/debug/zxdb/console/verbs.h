@@ -11,7 +11,6 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err.h"
-#include "src/developer/debug/zxdb/console/command_context.h"
 #include "src/developer/debug/zxdb/console/command_group.h"
 #include "src/developer/debug/zxdb/console/switch_record.h"
 
@@ -118,10 +117,6 @@ struct VerbRecord {
   using CommandExecutorWithCallback =
       fit::function<Err(ConsoleContext*, const Command&, fit::callback<void(Err)>)>;
 
-  // New-style executor that uses the CommandContext.
-  using CommandExecutorWithContext =
-      fit::function<void(const Command&, fxl::RefPtr<CommandContext>)>;
-
   // Type for the callback to complete the command's arguments. The command
   // will be filled out as far as is possible for the current parse, and the
   // completions should be filled with suggestions for the next token, each of
@@ -140,28 +135,18 @@ struct VerbRecord {
   VerbRecord(CommandExecutorWithCallback exec_cb, std::initializer_list<std::string> aliases,
              const char* short_help, const char* help, CommandGroup group,
              SourceAffinity source_affinity = SourceAffinity::kNone);
-  VerbRecord(CommandExecutorWithContext exec_context, std::initializer_list<std::string> aliases,
-             const char* short_help, const char* help, CommandGroup group,
-             SourceAffinity source_affinity = SourceAffinity::kNone);
-
-  // Variants that take a completer.
   VerbRecord(CommandExecutor exec, CommandCompleter complete,
              std::initializer_list<std::string> aliases, const char* short_help, const char* help,
              CommandGroup group, SourceAffinity source_affinity = SourceAffinity::kNone);
   VerbRecord(CommandExecutorWithCallback exec_cb, CommandCompleter complete,
              std::initializer_list<std::string> aliases, const char* short_help, const char* help,
              CommandGroup group, SourceAffinity source_affinity = SourceAffinity::kNone);
-  VerbRecord(CommandExecutorWithContext exec_context, CommandCompleter complete,
-             std::initializer_list<std::string> aliases, const char* short_help, const char* help,
-             CommandGroup group, SourceAffinity source_affinity = SourceAffinity::kNone);
   ~VerbRecord();
 
   VerbRecord& operator=(VerbRecord&&) = default;
 
-  // The various types of executors. Only one of these will be non-null.
   CommandExecutor exec = nullptr;
   CommandExecutorWithCallback exec_cb = nullptr;
-  CommandExecutorWithContext exec_context = nullptr;
 
   // These are the user-typed strings that will name this verb. The [0]th one
   // is the canonical name.

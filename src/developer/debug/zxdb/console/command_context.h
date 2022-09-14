@@ -16,7 +16,6 @@
 namespace zxdb {
 
 class Console;
-class ConsoleContext;
 
 // This object collects the output and errors from a command and tracks its completion.
 //
@@ -41,10 +40,9 @@ class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
   // Reports that the command failed with the given error. The error will be printed to the screen.
   virtual void ReportError(const Err& err) = 0;
 
-  // The Console/ConsoleContext may be null if this object has outlived the Console object. In
-  // production this probably won't happen but can be triggered in tests more easily.
+  // May be null if this object has outlived the Console object. In production this probably won't
+  // happen but can be triggered in tests more easily.
   Console* console() { return weak_console_.get(); }
-  ConsoleContext* GetConsoleContext() const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CommandContext);

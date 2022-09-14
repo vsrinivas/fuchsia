@@ -56,38 +56,34 @@ Examples
   mem-analyze --num=128 0x43011a14bfc8
 )";
 
-void RunVerbMemAnalyze(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+Err RunVerbMemAnalyze(ConsoleContext* context, const Command& cmd) {
   // Only a process can have its memory read.
-  if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error()) {
-    cmd_context->ReportError(err);
-    return;
-  }
+  if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
+    return err;
 
   // Length parameters.
   std::optional<uint32_t> input_size;
-  if (Err err = ReadAnalyzeNumAndSizeSwitches(cmd, &input_size); err.has_error()) {
-    cmd_context->ReportError(err);
-    return;
-  }
+  if (Err err = ReadAnalyzeNumAndSizeSwitches(cmd, &input_size); err.has_error())
+    return err;
 
-  Err err = EvalCommandAddressExpression(
+  return EvalCommandAddressExpression(
       cmd, "mem-analyze", GetEvalContextForCommand(cmd),
-      [weak_target = cmd.target()->GetWeakPtr(), input_size, cmd_context](
-          const Err& err, uint64_t address, std::optional<uint64_t> object_size) {
+      [weak_target = cmd.target()->GetWeakPtr(), input_size](const Err& err, uint64_t address,
+                                                             std::optional<uint64_t> object_size) {
+        Console* console = Console::get();
         if (err.has_error()) {
-          cmd_context->ReportError(err);
+          console->Output(err);  // Evaluation error.
           return;
         }
-        if (!weak_target || !cmd_context->console()) {
-          // Target or console has been destroyed during evaluation. Normally a message will be
-          // printed when that happens so we can skip reporting the error.
+        if (!weak_target) {
+          // Target has been destroyed during evaluation. Normally a message will be printed when
+          // that happens so we can skip reporting the error.
           return;
         }
 
-        Err run_err =
-            AssertRunningTarget(&cmd_context->console()->context(), "mem-read", weak_target.get());
+        Err run_err = AssertRunningTarget(&console->context(), "mem-read", weak_target.get());
         if (run_err.has_error()) {
-          cmd_context->ReportError(run_err);
+          console->Output(run_err);
           return;
         }
 
@@ -102,22 +98,20 @@ void RunVerbMemAnalyze(const Command& cmd, fxl::RefPtr<CommandContext> cmd_conte
         else
           opts.bytes_to_read = kDefaultAnalyzeByteSize;
 
-        AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read, cmd_context](
+        AnalyzeMemory(opts, [bytes_to_read = opts.bytes_to_read](
                                 const Err& err, OutputBuffer output, uint64_t next_addr) {
           if (err.has_error()) {
-            cmd_context->ReportError(err);
+            output.Append(err);
           } else {
             // Help text for continuation.
             output.Append(
                 Syntax::kComment,
                 fxl::StringPrintf("↓ For more lines: ma -n %d 0x%" PRIx64,
                                   static_cast<int>(bytes_to_read / sizeof(uint64_t)), next_addr));
-            cmd_context->Output(output);
           }
+          Console::get()->Output(output);
         });
       });
-  if (err.has_error())
-    cmd_context->ReportError(err);
 }
 
 }  // namespace

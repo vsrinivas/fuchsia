@@ -72,11 +72,6 @@ Err DispatchCommand(ConsoleContext* context, const Command& cmd, CommandCallback
   auto& verb_record = found->second;
   if (verb_record.exec_cb) {
     return verb_record.exec_cb(context, cmd, std::move(callback));
-  } else if (verb_record.exec_context) {
-    auto cmd_context =
-        fxl::MakeRefCounted<ConsoleCommandContext>(Console::get(), std::move(callback));
-    verb_record.exec_context(cmd, std::move(cmd_context));
-    return Err();
   } else {
     Err original_err = verb_record.exec(context, cmd);
     if (callback) {
