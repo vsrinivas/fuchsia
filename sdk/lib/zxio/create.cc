@@ -40,7 +40,7 @@ constexpr zxio_ops_t zxio_handle_holder_ops = []() {
   };
 
   ops.release = [](zxio_t* io, zx_handle_t* out_handle) {
-    zx_handle_t handle = zxio_get_handle_holder(io).handle.release();
+    const zx_handle_t handle = zxio_get_handle_holder(io).handle.release();
     if (handle == ZX_HANDLE_INVALID) {
       return ZX_ERR_BAD_HANDLE;
     }
@@ -105,7 +105,8 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
     case ZX_OBJ_TYPE_SOCKET: {
       zx::socket socket(std::move(handle));
       zx_info_socket_t info;
-      zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+      const zx_status_t status =
+          socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
       if (status != ZX_OK) {
         return status;
       }
@@ -123,7 +124,7 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
       }
       // We pass 0 for the initial seek value because the |handle| we're given does not remember
       // the seek value we had previously.
-      zx_status_t status = zx::stream::create(options, vmo, 0u, &stream);
+      const zx_status_t status = zx::stream::create(options, vmo, 0u, &stream);
       if (status != ZX_OK) {
         zxio_default_init(&storage->io);
         return status;
@@ -143,7 +144,8 @@ zx_status_t zxio_create(zx_handle_t raw_handle, zxio_storage_t* storage) {
     return ZX_ERR_INVALID_ARGS;
   }
   zx_info_handle_basic_t info = {};
-  zx_status_t status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  const zx_status_t status =
+      handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
     zxio_default_init(&storage->io);
     return status;
@@ -156,7 +158,7 @@ zx_status_t zxio_create_with_on_open(zx_handle_t raw_handle, zxio_storage_t* sto
   if (!node.is_valid() || storage == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  fidl::UnownedClientEnd unowned_node = node.borrow();
+  const fidl::UnownedClientEnd unowned_node = node.borrow();
   zx_status_t handler_status;
   ZxioCreateOnOpenEventHandler handler(std::move(node), storage, handler_status);
   const fidl::Status status = handler.HandleOneEvent(unowned_node);
@@ -177,12 +179,12 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
       fio::wire::DatagramSocket& datagram_socket = info.datagram_socket();
       zx::socket& socket = datagram_socket.socket;
       zx_info_socket_t info;
-      if (zx_status_t status =
+      if (const zx_status_t status =
               socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
           status != ZX_OK) {
         return status;
       }
-      zxio_datagram_prelude_size_t prelude_size{
+      const zxio_datagram_prelude_size_t prelude_size{
           .tx = datagram_socket.tx_meta_buf_size,
           .rx = datagram_socket.rx_meta_buf_size,
       };
@@ -216,7 +218,8 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
       zx::socket& socket = info.stream_socket().socket;
       zx_info_socket_t info;
       bool is_connected;
-      zx_status_t status = socket.wait_one(ZX_USER_SIGNAL_3, zx::time::infinite_past(), nullptr);
+      const zx_status_t status =
+          socket.wait_one(ZX_USER_SIGNAL_3, zx::time::infinite_past(), nullptr);
       // TODO(tamird): Transferring a listening or connecting socket to another process doesn't work
       // correctly since those states can't be observed here.
       switch (status) {
@@ -229,7 +232,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
         default:
           return status;
       }
-      if (zx_status_t status =
+      if (const zx_status_t status =
               socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
           status != ZX_OK) {
         return status;
@@ -312,7 +315,7 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
     case ZXIO_OBJECT_TYPE_STREAM_SOCKET: {
       zx::socket socket(va_arg(args, zx_handle_t));
       zx_info_socket_t* info = va_arg(args, zx_info_socket_t*);
-      bool is_connected = va_arg(args, int);
+      const bool is_connected = va_arg(args, int);
       zx::channel client(va_arg(args, zx_handle_t));
       if (storage == nullptr || !socket.is_valid() || info == nullptr || !client.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
