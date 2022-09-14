@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+static_library("backtrace_sym") {
+  visibility = [ ":*" ]
+  sources = [ "backtrace_sym.c" ]
+  deps = [ "//zircon/system/ulib/backtrace-request" ]
+}
+
+rustc_library("rust") {
+  name = "backtrace_request"
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = true
+
+  sources = [ "src/lib.rs" ]
+
+  non_rust_deps = [ ":backtrace_sym" ]
+}
+
+group("tests") {
+  testonly = true
+
+  # We don't have any tests to run, but building the test binary ensures all the
+  # linking is correct.
+  deps = [ ":rust_test" ]
+}

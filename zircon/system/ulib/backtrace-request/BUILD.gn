@@ -24,5 +24,8 @@ zx_library("backtrace-request-utils") {
 
 group("tests") {
   testonly = true
-  deps = [ "test:tests" ]
+  deps = [
+    "rust:tests",
+    "test:tests",
+  ]
 }
