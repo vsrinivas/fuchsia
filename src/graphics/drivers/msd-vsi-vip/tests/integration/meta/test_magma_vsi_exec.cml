@@ -11,7 +11,7 @@
     },
     use: [
         {
-            directory: "dev",
+            directory: "dev-topological",
             rights: [ "r*" ],
             path: "/dev",
         },

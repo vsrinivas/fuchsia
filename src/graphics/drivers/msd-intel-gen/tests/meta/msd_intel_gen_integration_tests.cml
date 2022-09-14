@@ -13,7 +13,7 @@
     use: [
         {
             // For /dev/class/gpu, /dev/class/gpu-performance-counters, and /dev/pci-00:02.0-fidl/intel_i915/intel-gpu-core
-            directory: "dev",
+            directory: "dev-topological",
             rights: [ "r*" ],
             path: "/dev",
         },

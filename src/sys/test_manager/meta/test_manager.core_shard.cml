@@ -229,6 +229,11 @@
             to: "#test_manager",
         },
         {
+            directory: "dev-topological",
+            from: "parent",
+            to: "#test_manager",
+        },
+        {
             directory: "boot",
             from: "parent",
             to: "#test_manager",

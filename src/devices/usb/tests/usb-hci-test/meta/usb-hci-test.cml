@@ -12,10 +12,10 @@
     },
     use: [
         {
-            directory: "dev",
+            directory: "dev-class",
             rights: [ "rw*" ],
-            path: "/dev",
-            subdir: "class/usb-hci-test",
+            path: "/dev/class/usb-hci-test",
+            subdir: "usb-hci-test",
         },
     ],
 }
