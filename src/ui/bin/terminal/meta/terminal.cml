@@ -50,8 +50,6 @@
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
                 "fuchsia.space.Manager",
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
                 "fuchsia.sys2.RealmExplorer.root",
                 "fuchsia.sys2.RealmQuery.root",
                 "fuchsia.sysmem.Allocator",
