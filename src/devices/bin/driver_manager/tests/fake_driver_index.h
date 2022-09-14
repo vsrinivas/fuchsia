@@ -85,8 +85,12 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
 
     fidl::Arena arena;
     auto driver_info = GetDriverInfo(arena, matched_result);
+    auto node_names = fidl::VectorView<fidl::StringView>(arena, request->nodes().count());
+    for (size_t i = 0; i < request->nodes().count(); i++) {
+      node_names[i] = fidl::StringView(arena, "node-" + std::to_string(i));
+    }
     completer.ReplySuccess(
-        GetMatchedCompositeInfo(arena, driver_info, matched_result.composite.value()));
+        GetMatchedCompositeInfo(arena, driver_info, matched_result.composite.value()), node_names);
   }
 
   void AddDeviceGroupMatch(std::string topological_path, MatchResult result) {

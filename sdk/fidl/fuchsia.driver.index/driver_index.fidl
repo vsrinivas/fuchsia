@@ -69,6 +69,13 @@ type MatchedDeviceGroupInfo = table {
 
     /// The composite info of the driver that matches to the transform of this device group.
     3: composite MatchedCompositeInfo;
+
+    /// Total number of nodes in the device group.
+    4: num_nodes uint32;
+
+    /// A list of all the node names for this device group.
+    /// These are ordered according to index.
+    5: node_names vector<string:MAX>:MAX;
 };
 
 /// Information for a device group node that's matched by the driver index.
@@ -117,5 +124,6 @@ protocol DriverIndex {
     /// groups are included in the driver matching process.
     AddDeviceGroup(fuchsia.driver.framework.DeviceGroup) -> (struct {
         composite_driver MatchedCompositeInfo;
+        node_names vector<string:MAX>:MAX;
     }) error zx.status;
 };

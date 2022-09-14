@@ -23,9 +23,14 @@ pub struct DeviceGroupNodePropertyCondition {
 
 type DeviceGroupNodeProperties = BTreeMap<PropertyKey, DeviceGroupNodePropertyCondition>;
 
+struct MatchedComposite {
+    pub info: fdi::MatchedCompositeInfo,
+    pub names: Vec<String>,
+}
+
 struct DeviceGroupInfo {
     pub nodes: Vec<fdf::DeviceGroupNode>,
-    pub composite_driver: Option<fdi::MatchedCompositeInfo>,
+    pub matched: Option<MatchedComposite>,
 }
 
 // The DeviceGroupManager struct is responsible of managing a list of device groups
@@ -75,10 +80,10 @@ impl DeviceGroupManager {
             vec![];
         for (node_idx, node) in nodes.iter().enumerate() {
             let properties = convert_to_device_properties(&node.properties)?;
-
             let device_group_info = fdi::MatchedDeviceGroupInfo {
                 topological_path: Some(topological_path.clone()),
                 node_index: Some(node_idx as u32),
+                num_nodes: Some(nodes.len() as u32),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             };
 
@@ -100,16 +105,18 @@ impl DeviceGroupManager {
                 self.device_group_list.insert(
                     topological_path.clone(),
                     DeviceGroupInfo {
-                        nodes: nodes,
-                        composite_driver: Some(matched_composite.clone()),
+                        nodes,
+                        matched: Some(MatchedComposite {
+                            info: matched_composite.info.clone(),
+                            names: matched_composite.names.clone(),
+                        }),
                     },
                 );
-                return Ok(matched_composite);
+                return Ok((matched_composite.info, matched_composite.names));
             }
         }
 
-        self.device_group_list
-            .insert(topological_path, DeviceGroupInfo { nodes: nodes, composite_driver: None });
+        self.device_group_list.insert(topological_path, DeviceGroupInfo { nodes, matched: None });
         Err(Status::NOT_FOUND.into_raw())
     }
 
@@ -132,41 +139,57 @@ impl DeviceGroupManager {
 
         // Put in the matched composite info for this device group
         // that we have stored in our device_group_list.
-        // TODO(fxb/107371): Only return device groups that have a matched composite.
-        for result_dev_group in &mut device_groups {
-            if let Some(topological_path) = &result_dev_group.topological_path {
-                let list_value = self.device_group_list.get(topological_path);
-                match list_value {
-                    None => {
-                        log::warn!(
-                            "Could not find the corresponding entry in device_group_list for {}",
-                            topological_path
-                        );
-                    }
-                    Some(device_group) => {
-                        result_dev_group.composite = device_group.composite_driver.clone();
-                    }
-                }
+        let mut device_groups_result = vec![];
+        for device_group in device_groups {
+            if let Some(device_group) = self.device_group_add_composite_info(device_group) {
+                device_groups_result.push(device_group);
             }
         }
 
+        if device_groups_result.is_empty() {
+            return None;
+        }
+
         Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
-            device_groups: Some(device_groups.to_vec()),
+            device_groups: Some(device_groups_result),
             ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
         }))
     }
 
     pub fn new_driver_available(&mut self, resolved_driver: ResolvedDriver) {
         for dev_group in self.device_group_list.values_mut() {
-            if dev_group.composite_driver.is_some() {
+            if dev_group.matched.is_some() {
                 continue;
             }
             let matched_composite_result =
                 match_composite_transformation(&resolved_driver, &dev_group.nodes);
-            if let Ok(matched_composite) = matched_composite_result {
-                dev_group.composite_driver = matched_composite;
+            if let Ok(Some(matched_composite)) = matched_composite_result {
+                dev_group.matched = Some(MatchedComposite {
+                    info: matched_composite.info,
+                    names: matched_composite.names,
+                });
             }
         }
+    }
+
+    fn device_group_add_composite_info(
+        &self,
+        mut info: fdi::MatchedDeviceGroupInfo,
+    ) -> Option<fdi::MatchedDeviceGroupInfo> {
+        if let Some(topological_path) = &info.topological_path {
+            let list_value = self.device_group_list.get(topological_path);
+            if let Some(device_group) = list_value {
+                // TODO(fxb/107371): Only return device groups that have a matched composite.
+                if let Some(matched) = &device_group.matched {
+                    info.composite = Some(matched.info.clone());
+                    info.node_names = Some(matched.names.clone());
+                }
+
+                return Some(info);
+            }
+        }
+
+        return None;
     }
 }
 
@@ -253,7 +276,7 @@ fn node_property_to_symbol(value: &fdf::NodePropertyValue) -> Symbol {
 fn match_composite_transformation<'a>(
     composite_driver: &'a ResolvedDriver,
     nodes: &'a Vec<fdf::DeviceGroupNode>,
-) -> Result<Option<fdi::MatchedCompositeInfo>, i32> {
+) -> Result<Option<MatchedComposite>, i32> {
     // The device group must have at least 1 node to match a composite driver.
     if nodes.len() < 1 {
         return Ok(None);
@@ -301,8 +324,12 @@ fn match_composite_transformation<'a>(
     let mut unmatched_additional_indices =
         (0..composite.additional_nodes.len()).collect::<HashSet<_>>();
 
+    let primary_name: String = composite.symbol_table[&composite.primary_node.name_id].clone();
+    let mut names = vec![primary_name];
+
     for i in 1..nodes.len() {
         let mut matched = None;
+        let mut matched_name: Option<String> = None;
         for &j in &unmatched_additional_indices {
             let matches = node_matches_composite_driver(
                 &nodes[i],
@@ -311,6 +338,8 @@ fn match_composite_transformation<'a>(
             );
             if matches {
                 matched = Some(j);
+                matched_name =
+                    Some(composite.symbol_table[&composite.additional_nodes[j].name_id].clone());
                 break;
             }
         }
@@ -320,16 +349,19 @@ fn match_composite_transformation<'a>(
         }
 
         unmatched_additional_indices.remove(&matched.unwrap());
+        names.push(matched_name.unwrap());
     }
 
-    Ok(Some(fdi::MatchedCompositeInfo {
+    let info = fdi::MatchedCompositeInfo {
         node_index: None,
         num_nodes: Some((composite.additional_nodes.len() + 1) as u32),
         composite_name: Some(composite.symbol_table[&composite.device_name_id].clone()),
         node_names: Some(collect_node_names_from_composite_rules(composite)),
         driver_info: Some(composite_driver.create_matched_driver_info()),
         ..fdi::MatchedCompositeInfo::EMPTY
-    }))
+    };
+
+    return Ok(Some(MatchedComposite { info, names }));
 }
 
 fn node_matches_composite_driver(
@@ -483,6 +515,7 @@ mod tests {
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
             topological_path: Some("test/path".to_string()),
             node_index: Some(0),
+            num_nodes: Some(2),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
         };
         assert_eq!(
@@ -509,6 +542,7 @@ mod tests {
         let expected_device_group_2 = fdi::MatchedDeviceGroupInfo {
             topological_path: Some("test/path".to_string()),
             node_index: Some(1),
+            num_nodes: Some(2),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
         };
         assert_eq!(
@@ -564,6 +598,7 @@ mod tests {
         let expected_device_group = fdi::MatchedDeviceGroupInfo {
             topological_path: Some("test/path".to_string()),
             node_index: Some(0),
+            num_nodes: Some(1),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
         };
         assert_eq!(
@@ -720,12 +755,14 @@ mod tests {
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path".to_string()),
                 node_index: Some(1),
+                num_nodes: Some(2),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             }));
 
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path2".to_string()),
                 node_index: Some(0),
+                num_nodes: Some(2),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             }));
 
@@ -895,18 +932,21 @@ mod tests {
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path".to_string()),
                 node_index: Some(0),
+                num_nodes: Some(2),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             }));
 
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path2".to_string()),
                 node_index: Some(1),
+                num_nodes: Some(2),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             }));
 
             assert!(matched_device_groups.contains(&fdi::MatchedDeviceGroupInfo {
                 topological_path: Some("test/path3".to_string()),
                 node_index: Some(0),
+                num_nodes: Some(1),
                 ..fdi::MatchedDeviceGroupInfo::EMPTY
             }));
 
@@ -1081,6 +1121,7 @@ mod tests {
         let expected_device_group_1 = fdi::MatchedDeviceGroupInfo {
             topological_path: Some("test/path".to_string()),
             node_index: Some(0),
+            num_nodes: Some(2),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
         };
         assert_eq!(
@@ -1100,6 +1141,7 @@ mod tests {
         let expected_device_group_2 = fdi::MatchedDeviceGroupInfo {
             topological_path: Some("test/path".to_string()),
             node_index: Some(1),
+            num_nodes: Some(2),
             ..fdi::MatchedDeviceGroupInfo::EMPTY
         };
         assert_eq!(
@@ -1414,7 +1456,7 @@ mod tests {
         let additional_node_properties_2 = vec![fdf::DeviceGroupProperty {
             key: fdf::NodePropertyKey::IntValue(10),
             condition: fdf::Condition::Accept,
-            values: vec![fdf::NodePropertyValue::BoolValue(false)],
+            values: vec![fdf::NodePropertyValue::BoolValue(true)],
         }];
 
         let primary_key_1 = "whimbrel";
@@ -1502,18 +1544,25 @@ mod tests {
 
         let mut device_group_manager = DeviceGroupManager::new();
         assert_eq!(
-            Ok(fdi::MatchedCompositeInfo {
-                node_index: None,
-                num_nodes: Some(3),
-                composite_name: Some(device_name.to_string()),
-                node_names: Some(vec![
+            Ok((
+                fdi::MatchedCompositeInfo {
+                    node_index: None,
+                    num_nodes: Some(3),
+                    composite_name: Some(device_name.to_string()),
+                    node_names: Some(vec![
+                        primary_name.to_string(),
+                        additional_a_name.to_string(),
+                        additional_b_name.to_string()
+                    ]),
+                    driver_info: Some(composite_driver.clone().create_matched_driver_info()),
+                    ..fdi::MatchedCompositeInfo::EMPTY
+                },
+                vec![
                     primary_name.to_string(),
-                    additional_a_name.to_string(),
-                    additional_b_name.to_string()
-                ]),
-                driver_info: Some(composite_driver.clone().create_matched_driver_info()),
-                ..fdi::MatchedCompositeInfo::EMPTY
-            }),
+                    additional_b_name.to_string(),
+                    additional_a_name.to_string()
+                ]
+            )),
             device_group_manager.add_device_group(
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
@@ -1526,6 +1575,41 @@ mod tests {
                 },
                 vec![&composite_driver]
             )
+        );
+
+        // Match additional node A, the last node in the device group at index 2.
+        let mut device_properties_1: DeviceProperties = HashMap::new();
+        device_properties_1.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(10));
+
+        let expected_device_group = fdi::MatchedDeviceGroupInfo {
+            topological_path: Some("test/path".to_string()),
+            node_index: Some(2),
+            num_nodes: Some(3),
+            node_names: Some(vec![
+                primary_name.to_string(),
+                additional_b_name.to_string(),
+                additional_a_name.to_string(),
+            ]),
+            composite: Some(fdi::MatchedCompositeInfo {
+                node_index: None,
+                num_nodes: Some(3),
+                composite_name: Some(device_name.to_string()),
+                node_names: Some(vec![
+                    primary_name.to_string(),
+                    additional_a_name.to_string(),
+                    additional_b_name.to_string(),
+                ]),
+                driver_info: Some(composite_driver.clone().create_matched_driver_info()),
+                ..fdi::MatchedCompositeInfo::EMPTY
+            }),
+            ..fdi::MatchedDeviceGroupInfo::EMPTY
+        };
+        assert_eq!(
+            Some(fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                device_groups: Some(vec![expected_device_group]),
+                ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
+            })),
+            device_group_manager.match_device_group_nodes(&device_properties_1)
         );
     }
 

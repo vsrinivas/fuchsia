@@ -2244,6 +2244,7 @@ mod tests {
                     device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
                         topological_path: Some("test/path".to_string()),
                         node_index: Some(0),
+                        num_nodes: Some(1),
                         ..fdi::MatchedDeviceGroupInfo::EMPTY
                     }]),
                     ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
@@ -2385,6 +2386,7 @@ mod tests {
                         device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
                             topological_path: Some("test/path".to_string()),
                             node_index: Some(0),
+                            num_nodes: Some(1),
                             ..fdi::MatchedDeviceGroupInfo::EMPTY
                         }]),
                         ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
@@ -2560,7 +2562,7 @@ mod tests {
                 .await
                 .unwrap()
                 .unwrap();
-            assert_eq!(url.to_string(), result.driver_info.unwrap().url.unwrap());
+            assert_eq!(url.to_string(), result.0.driver_info.unwrap().url.unwrap());
 
             let node_1_transform_nonmatch = vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue("trembler".to_string())),
