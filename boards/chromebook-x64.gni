@@ -75,6 +75,9 @@ board_zedboot_fshost_config.gpt_all = true
 board_fshost_config.blobfs_max_bytes = 4294967296
 board_fshost_config.data_max_bytes = 4294967296
 
+# data_max_bytes is also used to size the data partition during paving.
+board_zedboot_fshost_config.data_max_bytes = 4294967296
+
 board_bootfs_labels -= [ "//src/power/power-manager:base_config" ]
 board_bootfs_labels += [ "//src/power/power-manager:chromebook_config" ]
 
