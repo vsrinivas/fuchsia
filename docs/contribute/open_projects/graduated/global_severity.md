@@ -38,7 +38,7 @@ For instance:
 ```json
       {
            "max_severity": "FATAL"
-           "url": "fuchsia-pkg://fuchsia.com/audio_core_unittests#meta/audio_core_unittests.cmx"
+           "url": "fuchsia-pkg://fuchsia.com/audio_core_unittests#meta/audio_core_unittests.cm"
       },
 ```
 

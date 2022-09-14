@@ -5,8 +5,6 @@ connect to a protocol in its namespace.
 
 These steps apply to the [Components v2][glossary.components-v2] model as run
 under component manager.
-Portions of it also apply to the [Components v1][glossary.components-v1] model
-as run under appmgr.
 
 At a high level these steps are:
 
@@ -262,7 +260,6 @@ parent offering these capabilities. Currently these are:
 [channel]: /docs/reference/kernel_objects/channel.md
 [component-manifests]: /docs/concepts/components/v2/component_manifests.md
 [fuchsia.io]: https://fuchsia.dev/reference/fidl/fuchsia.io
-[glossary.components-v1]: /docs/glossary/README.md#components-v1
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [handle]: /docs/concepts/kernel/handles.md

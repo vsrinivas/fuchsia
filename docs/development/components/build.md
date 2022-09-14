@@ -1,7 +1,6 @@
 {% set v1_banner %}
   <aside class="caution">
-    <b>Caution:</b> Caution: This format is used with
-    <a href="/docs/concepts/components/v1/README.md">legacy components</a>.
+    <b>Caution:</b> Caution: This format is used with legacy components.
     If you are still using legacy components, consider
     <a href="/docs/contribute/open_projects/components/migration.md">migrating</a>
     to the modern component framework.
@@ -58,47 +57,27 @@ the component's program binary and required capabilities.
 
 Below is an example manifest file for a simple "Hello, World" component:
 
-  * {.cml}
-
-    ```json5
-    {
-        // Information about the program to run.
-        program: {
-            // Use the built-in ELF runner to run native binaries.
-            runner: "elf",
-            // The binary to run for this component.
-            binary: "bin/hello",
-            // Program arguments
-            args: [
-                "Hello",
-                "World!",
-            ],
-        },
-
-        // Capabilities used by this component.
-        use: [
-            { protocol: "fuchsia.logger.LogSink" },
+```json5
+{
+    // Information about the program to run.
+    program: {
+        // Use the built-in ELF runner to run platform-specific binaries.
+        runner: "elf",
+        // The binary to run for this component.
+        binary: "bin/hello",
+        // Program arguments
+        args: [
+            "Hello",
+            "World!",
         ],
-    }
-    ```
+    },
 
-  * {.cmx}
-
-    {{ v1_banner }}
-
-    ```json
-    {
-        "program": {
-            "binary": "bin/hello-world",
-            "args": [ "Hello", "World!" ]
-        },
-        "sandbox": {
-            "services": [
-                "fuchsia.logger.LogSink"
-            ]
-        }
-    }
-    ```
+    // Capabilities used by this component.
+    use: [
+        { protocol: "fuchsia.logger.LogSink" },
+    ],
+}
+```
 
 ### Manifest shards {#component-manifest-shards}
 
@@ -115,43 +94,25 @@ the file suffix.
 Below is an equivalent manifest to the previous example, with the logging
 capability replaced by a manifest shard `include`:
 
-  * {.cml}
+```json5
+{
+    // Include capabilities for the syslog library
+    include: [ "syslog/client.shard.cml" ],
 
-    ```json5
-    {
-        // Include capabilities for the syslog library
-        include: [ "syslog/client.shard.cml" ],
-
-        // Information about the program to run.
-        program: {
-            // Use the built-in ELF runner to run native binaries.
-            runner: "elf",
-            // The binary to run for this component.
-            binary: "bin/hello-world",
-            // Program arguments
-            args: [
-                "Hello",
-                "World!",
-            ],
-        },
-    }
-    ```
-
-  * {.cmx}
-
-    {{ v1_banner }}
-
-    ```json
-    {
-        "include": [
-            "syslog/client.shard.cmx"
+    // Information about the program to run.
+    program: {
+        // Use the built-in ELF runner to run platform-specific binaries.
+        runner: "elf",
+        // The binary to run for this component.
+        binary: "bin/hello-world",
+        // Program arguments
+        args: [
+            "Hello",
+            "World!",
         ],
-        "program": {
-            "binary": "bin/hello-world",
-            "args": [ "Hello", "World!" ]
-        }
-    }
-    ```
+    },
+}
+```
 
 #### Relative paths
 
@@ -263,41 +224,22 @@ source_set("font_provider_client") {
 
 expect_includes("font_provider_client_includes") {
   includes = [
-    "client.shard.cmx",
     "client.shard.cml",
   ]
 }
 ```
 
-Note: It recommended to provide both `.cml` and `.cmx` includes until the
-[components migration][components-migration] is complete.
-
 This sets a build time requirement for dependent manifests to include the
 expected manifest shards:
 
-  * {.cml}
-
-    ```json5
-    {
-        include: [
-            "//sdk/lib/fonts/client.shard.cml",
-        ]
-        ...
-    }
-    ```
-
-  * {.cmx}
-
-    {{ v1_banner }}
-
-    ```json
-    {
-        "include": [
-            "//sdk/lib/fonts/client.shard.cmx"
-        ]
-        ...
-    }
-    ```
+```json5
+{
+    include: [
+        "//sdk/lib/fonts/client.shard.cml",
+    ]
+    ...
+}
+```
 
 Include paths are resolved relative to the source root.
 Transitive includes (includes of includes) are allowed.
@@ -834,10 +776,6 @@ for us.
      deps = [ ":rot13_test" ]
    }
    ```
-
-Note: By default these templates generate Components V2 (.cml) manifests.
-You may pass `v2 = false` to either `fuchsia_unittest_component` or
-`fuchsia_unittest_package` to generate a V1 (.cmx) manifest instead.
 
 The generated component manifest file can be found with the following command:
 

@@ -298,8 +298,7 @@
   a <a href=\"/docs/glossary#component\">component</a>’s runtime configuration,
   services and directories it receives in its <a href=\"/docs/glossary#namespace\">namespace</a>,
   and <a href=\"/docs/glossary#component-manifest-facet\">facets</a>.</p>"
-  see_also: ["<a href=\"/docs/concepts/components/v1/component_manifests.md\">Legacy component manifests</a>",
-             "<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
   related_guides: [""]
   area: ["Component Framework"]
 
@@ -308,8 +307,7 @@
   full_description: "Additional metadata that is carried in a
   <a href=\"/docs/glossary#component-manifest\">component manifest</a>. This is an extension
   point to the <a href=\"/docs/glossary#component-framework\">framework</a>."
-  see_also: ["<a href=\"/docs/concepts/components/v1/component_manifests.md\">Legacy component manifests</a>",
-             "<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
+  see_also: ["<a href=\"/docs/concepts/components/v2/component_manifests.md\">Component manifests</a>"]
   related_guides: [""]
   area: ["Component Framework"]
 

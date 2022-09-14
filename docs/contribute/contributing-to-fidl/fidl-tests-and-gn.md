@@ -134,21 +134,23 @@ If your test requires any component features, services, etc. beyond the
 import("//build/components.gni")
 
 fuchsia_unittest_package("fidl_foo_tests") {
-  manifest = "meta/fidl_foo_tests.cmx"
+  manifest = "meta/fidl_foo_tests.cml"
   deps = [ ":fidl_foo_tests_bin" ]
 }
 
-# meta/fidl_foo_tests.cmx
+# meta/fidl_foo_tests.cml
 {
-    "program": {
+    program: {
         "binary": "bin/fidl_foo_tests"
     },
-    "sandbox": {
-        "services": [
-            "fuchsia.logger.LogSink",   # some example services
-            "fuchsia.process.Launcher"
+    use: [
+      {
+        protocol: [
+          "fuchsia.logger.LogSink",   # some example services
+          "fuchsia.process.Launcher"
         ]
-    }
+      }
+    ]
 }
 ```
 

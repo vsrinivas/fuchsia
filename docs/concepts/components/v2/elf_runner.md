@@ -182,5 +182,4 @@ and `red`.
 [fxb-72764]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72764
 [logsink]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
 [security-allowlist]: /src/security/policy/component_manager_policy.json5
-<!-- TODO: the component manifest link describes v1 manifests -->
 [glossary-component-manifests]: /docs/glossary/README.md#component-manifest

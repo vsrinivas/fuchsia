@@ -107,22 +107,24 @@ Refer to the following example of avoiding vague placeholders.
     <header id="not-recommended">Not Recommended</header>
 <p>
 To add a service, include the following:
-  <pre><code class= "prettyprint">"services": [ "fuchsia.example.Foo" ],</code></pre>
+  <pre><code class= "prettyprint">protocol: "fuchsia.example.Foo"</code></pre>
 </p>
   </article>
   <article>
     <header id="recommended">Recommended</header>
 <p>
-To add a service, you must edit your component manifest (.cmx).
-For example, adding the <code>fuchsia.sys.Launcher</code> <code>service</code>
+To add a service, you must edit your component manifest (.cml).
+For example, adding the <code>fuchsia.process.Launcher</code> <code>service</code>
 to your component manifest gives your component the ability to launch
-other components.
+processes.
 </p>
 <p>
   <pre class= "prettyprint">
-  "sandbox": {
-              "services": [ "fuchsia.sys.Launcher" ],
-          }</pre>
+  use: [
+    {
+      protocol: "fuchsia.process.Launcher"
+    }
+  ]</pre>
 </p>
 </article>
 </section>

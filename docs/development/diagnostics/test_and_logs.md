@@ -21,7 +21,7 @@ For instance, to allow a test to produce `ERROR` logs:
 ```gn
 fuchsia_component("my-package") {
   testonly = true
-  manifest = "meta/my-test.cmx"
+  manifest = "meta/my-test.cml"
   deps = [ ":my_test" ]
 }
 

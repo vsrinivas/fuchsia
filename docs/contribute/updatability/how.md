@@ -196,7 +196,6 @@ platform interfaces are observed and respected.
 [cfv2-migration]: /docs/contribute/open_projects/components/migration.md
 [cfv2-sys-migration]: /docs/development/components/v2/migration/README.md
 [cfv2-sys-migration-build-info]: /docs/development/components/v2/migration/features.md#build-info
-[cmx-sandbox]: /docs/concepts/components/v1/component_manifests.md#sandbox
 [component-data]: /docs/development/components/data.md#hermetic_data_files_with_resource
 [component-manifest]: /docs/concepts/components/v2/component_manifests.md
 [cpu-trace]: /docs/development/tracing/advanced/recording-a-cpu-performance-trace.md

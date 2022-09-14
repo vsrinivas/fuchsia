@@ -37,34 +37,17 @@ Any application that accesses Settings must declare usage through its component
 manifest. For example, the following manifest declares access to the
 [fuchsia.settings.accessibility][accessibility] protocol:
 
-- {cml}
-
-  ```json5
-  {
-      program: {
-          runner: "elf",
-          binary: "bin/example",
-      },
-      use: [
-          { protocol: "fuchsia.settings.Accessibility" },
-      ],
-  }
-  ```
-
-- {cmx}
-
-  ```json
-  {
-      "program": {
-          "binary": "bin/example"
-      },
-      "sandbox": {
-          "services": [
-              "fuchsia.settings.Accessibility",
-          ]
-      }
-  }
-  ```
+```json5
+{
+    program: {
+        runner: "elf",
+        binary: "bin/example",
+    },
+    use: [
+        { protocol: "fuchsia.settings.Accessibility" },
+    ],
+}
+```
 
 For more information about Fuchsia components, see
 [Component manifests][manifest].

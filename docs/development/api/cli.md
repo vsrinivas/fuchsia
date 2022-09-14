@@ -40,7 +40,7 @@ determine if the tool is a good fit for Fuchsia or the Fuchsia SDK.
 > IDK tools are specific to Fuchsia in some way. Generic tools or tools that are
 > widely available should not be part of Fuchsia and will not be included in the
 > Fuchsia IDK. For example, a tool that verifies generic JSON files would not be
-> a good addition. However a tool that verifies Fuchsia `.cmx` files, which
+> a good addition. However a tool that verifies Fuchsia `.cml` files, which
 > happen to use the JSON format, would be okay.
 
 > **ffx**

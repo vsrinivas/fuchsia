@@ -47,7 +47,7 @@ If you type a noun by itself, it lists the available objects of that type:
     ```none {:.devsite-disable-click-to-copy}
     [zxdb] process
       # State       Koid Name
-    ▶ 1 Not running 3471 debug_agent_unit_tests.cmx
+    ▶ 1 Not running 3471 debug_agent_unit_tests.cm
     ```
 
   * List threads in the current process:
