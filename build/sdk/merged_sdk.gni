@@ -25,91 +25,63 @@ template("merged_sdk") {
   tarmaker_tool = host_out_dir + "/tarmaker"
   tarmaker_target = "//build/tools/tarmaker($host_toolchain)"
 
-  index = 0
-  foreach(dep, invoker.deps) {
-    export_dir = "${root_out_dir}/sdk/exported"
-    name = get_label_info(dep, "name")
-    dep_dir = "${export_dir}/$name"
-    dep_gen_dir = get_label_info(dep, "target_gen_dir")
-    dep_stamp = "$dep_gen_dir/$name.exported"
-    _outputs = []
+  export_dir = "${root_out_dir}/sdk/exported"
 
-    if (index == 0) {
-      latest_dir = dep_dir
-      latest_stamp = dep_stamp
-    } else {
-      step = "${target_name}_merge_${index}"
+  merged_target = "${target_name}.generate"
+  merged_archive = "$target_gen_dir/$target_name.tgz"
+  merged_stamp = "$target_gen_dir/$target_name.stamp"
 
-      # Produce an archive only on the last step. Intermediate merged SDKs are
-      # symlink forests, like the input exported SDKs, to save disk space.
-      merged = "$target_gen_dir/$target_name.$index"
-      merged_stamp = "$merged.stamp"
-      _outputs += [ merged_stamp ]
-      if (index < dep_count - 1) {
-        output_flag = "--output-directory"
-      } else {
-        output_flag = "--output-archive"
-        merged += ".tar.gz"
-        _outputs += [ merged ]
-      }
+  action(merged_target) {
+    forward_variables_from(invoker, [ "testonly" ])
 
-      action(step) {
-        forward_variables_from(invoker, [ "testonly" ])
+    #TODO(b/222339823): Switch to Rust merge tool when fixed.
+    script = "//scripts/sdk/merger/merge.py"
 
-        #TODO(b/222339823): Switch to Rust merge tool when fixed.
-        script = "//scripts/sdk/merger/merge.py"
+    inputs = [ tarmaker_tool ]
 
-        sources = [
-          dep_stamp,
-          latest_stamp,
-          tarmaker_tool,
-        ]
+    outputs = [
+      merged_archive,
+      merged_stamp,
+    ]
+    depfile = merged_archive + ".d"
 
-        outputs = _outputs
+    args = [
+      "--output-archive",
+      rebase_path(merged_archive, root_build_dir),
+      "--stamp-file",
+      rebase_path(merged_stamp, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+      "--tarmaker",
+      rebase_path(tarmaker_tool, root_build_dir),
+    ]
 
-        depfile = merged_stamp + ".d"
+    deps = [ tarmaker_target ] + invoker.deps
 
-        args = [
-          "--first-directory",
-          rebase_path(latest_dir, root_build_dir),
-          "--second-directory",
-          rebase_path(dep_dir, root_build_dir),
-          output_flag,
-          rebase_path(merged, root_build_dir),
-          "--stamp-file",
-          rebase_path(merged_stamp, root_build_dir),
-          "--depfile",
-          rebase_path(depfile, root_build_dir),
-          "--tarmaker",
-          rebase_path(tarmaker_tool, root_build_dir),
-        ]
+    foreach(dep, invoker.deps) {
+      dep_name = get_label_info(dep, "name")
+      dep_gen_dir = get_label_info(dep, "target_gen_dir")
+      dep_dir = "${export_dir}/${dep_name}"
+      dep_stamp = "${dep_gen_dir}/${dep_name}.exported"
 
-        if (index == 1) {
-          public_deps = invoker.deps
-        } else {
-          public_deps = [ ":$latest_step" ]
-        }
+      inputs += [ dep_stamp ]
 
-        deps = [ tarmaker_target ]
-      }
-
-      latest_dir = merged
-      latest_stamp = merged_stamp
-      latest_step = step
+      args += [
+        "--input-directory",
+        rebase_path(dep_dir, root_build_dir),
+      ]
     }
-
-    index = index + 1
   }
 
   copy(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     output_archive = "${root_out_dir}/sdk/archive/${target_name}.tar.gz"
 
-    sources = [ latest_dir ]
+    sources = [ merged_archive ]
 
     outputs = [ output_archive ]
 
-    public_deps = [ ":$latest_step" ]
+    public_deps = [ ":$merged_target" ]
 
     metadata = {
       sdk_archives = [
