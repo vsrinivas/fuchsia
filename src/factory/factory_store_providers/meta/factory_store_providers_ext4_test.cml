@@ -60,12 +60,11 @@
             to: [ "#factory_store_providers" ],
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "#factory_driver_test_realm",
             as: "dev-class-block",
             to: [ "#factory_store_providers" ],
-            rights: [ "r*" ],
-            subdir: "class/block",
+            subdir: "block",
         },
     ],
 }

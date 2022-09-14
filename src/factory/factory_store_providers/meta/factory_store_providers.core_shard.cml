@@ -26,25 +26,11 @@
     ],
     offer: [
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-class-block",
             to: [ "#factory_store_providers" ],
-            subdir: "class/block",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-nelson-emmc",
-            to: [ "#factory_store_providers" ],
-            subdir: "nelson-emmc",
-        },
-        {
-            directory: "dev",
-            from: "parent",
-            as: "dev-sherlock-emmc",
-            to: [ "#factory_store_providers" ],
-            subdir: "sherlock-emmc",
+            subdir: "block",
         },
         {
             directory: "config-data",

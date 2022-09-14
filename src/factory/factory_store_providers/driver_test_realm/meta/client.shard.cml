@@ -11,7 +11,7 @@
     ],
     use: [
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "#factory_driver_test_realm",
             rights: [ "rw*" ],
             path: "/dev",

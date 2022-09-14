@@ -31,16 +31,6 @@
             path: "/dev/class/block",
         },
         {
-            directory: "dev-nelson-emmc",
-            rights: [ "r*" ],
-            path: "/dev/nelson-emmc",
-        },
-        {
-            directory: "dev-sherlock-emmc",
-            rights: [ "r*" ],
-            path: "/dev/sherlock-emmc",
-        },
-        {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",
