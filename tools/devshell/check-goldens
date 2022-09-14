@@ -32,13 +32,14 @@ fx-config-read
 # Golden file build API module.
 readonly GOLDEN_FILES_JSON="golden_files.json"
 
+search_term=""
 function run-jq {
-    fx-command-run jq --raw-output "$1" "${FUCHSIA_BUILD_DIR}/${GOLDEN_FILES_JSON}"
+  fx-command-run jq --raw-output --arg search_term "$search_term" "$1" \
+    "${FUCHSIA_BUILD_DIR}/${GOLDEN_FILES_JSON}"
 }
 
 list=false
 filter="contains"  # jq filter function
-search_term=""
 while [[ $# -ne 0 ]]; do
   case "$1" in
   --help|-h)
@@ -57,7 +58,7 @@ while [[ $# -ne 0 ]]; do
     exit 1
     ;;
   *)
-    if [[ ! -z "${search_term}" ]] ; then
+    if [[ -n "${search_term}" ]] ; then
       fx-error "only one seach term may be provided;" \
         " use --regex if you want more complicated matching"
       exit 1
@@ -74,7 +75,7 @@ done
 test -r "${FUCHSIA_BUILD_DIR}/${GOLDEN_FILES_JSON}" || fx-gen
 
 # jq expression that gives the desired golden file element matches.
-expr=".[] | select(.files | any(.golden | ${filter}(\"${search_term}\")))"
+expr=".[] | select(.files | any(.golden | ${filter}(\$search_term)))"
 
 if $list ; then
   run-jq "${expr} | .files[] | .golden"
