@@ -9,7 +9,7 @@ use {
     fidl::endpoints::{create_proxy, ControlHandle, RequestStream},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::{
-        client::{connect_to_protocol, connect_to_protocol_at},
+        client::{connect_to_protocol, connect_to_protocol_at_dir_svc},
         server::ServiceFs,
     },
     fuchsia_component_test::{ScopedInstance, ScopedInstanceFactory},
@@ -86,17 +86,24 @@ async fn run_component_controller(
     request_stream: fcrunner::ComponentControllerRequestStream,
 ) -> Result<(), Error> {
     let is_test = component_is_test(&start_info);
-    let hub_location =
-        format!("/hub/children/{}:{}/exec/out/svc", RUNNER_COLLECTION, nested_runner.child_name());
+
+    let relative_moniker = format!("./{}:{}", RUNNER_COLLECTION, nested_runner.child_name());
 
     let controller = connect_to_protocol::<fsys::LifecycleControllerMarker>()?;
-    controller
-        .start(&format!("./{}:{}", RUNNER_COLLECTION, nested_runner.child_name()))
+    controller.start(&relative_moniker).await?.expect("nested runer could not be started");
+
+    let realm_query = connect_to_protocol::<fsys::RealmQueryMarker>()?;
+    let resolved_dirs = realm_query
+        .get_instance_directories(&relative_moniker)
         .await?
-        .unwrap();
+        .unwrap()
+        .expect("nested runner was not resolved");
+    let started_dirs = resolved_dirs.started_dirs.expect("nested runner was not started");
+    let out_dir = started_dirs.out_dir.expect("nested runner does not have out dir");
+    let out_dir = out_dir.into_proxy().unwrap();
 
     let component_runner =
-        connect_to_protocol_at::<fcrunner::ComponentRunnerMarker>(&hub_location)?;
+        connect_to_protocol_at_dir_svc::<fcrunner::ComponentRunnerMarker>(&out_dir)?;
     let (nested_controller, server_end) = create_proxy::<fcrunner::ComponentControllerMarker>()?;
     component_runner.start(start_info, server_end)?;
     proxy_component_controller(nested_controller, request_stream, is_test).await

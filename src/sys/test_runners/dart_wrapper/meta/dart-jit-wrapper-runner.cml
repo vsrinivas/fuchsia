@@ -27,10 +27,8 @@
     ],
     use: [
         {
-            directory: "hub",
+            protocol: "fuchsia.sys2.RealmQuery",
             from: "framework",
-            rights: [ "rw*" ],
-            path: "/hub",
         },
         {
             protocol: "fuchsia.sys2.LifecycleController",
