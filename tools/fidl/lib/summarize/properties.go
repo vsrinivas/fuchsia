@@ -121,7 +121,7 @@ func newAggregate(
 }
 
 func resourceness(resourceness fidlgen.Resourceness) Resourceness {
-	if resourceness {
+	if resourceness.IsResourceType() {
 		return isResource
 	}
 	return isValue

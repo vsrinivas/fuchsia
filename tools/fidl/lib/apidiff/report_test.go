@@ -11,11 +11,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
-)
-
-var (
-	ignoreUnexported = cmpopts.IgnoreUnexported(Report{})
 )
 
 func TestReportJSON(t *testing.T) {

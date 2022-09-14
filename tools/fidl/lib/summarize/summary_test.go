@@ -1450,9 +1450,7 @@ func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase) {
 			expected := strings.Split(test.expected, "\n")
 
 			if diff := cmp.Diff(expected, actual); diff != "" {
-				t.Errorf("expected:\n---BEGIN---\n%+v\n---END---\n\n"+
-					"actual:\n---BEGIN---\n%+v\n---END---\n\ndiff:\n%v\n\nroot: %+v",
-					test.expected, summary, diff, r)
+				t.Errorf("got summary diff (-want, +got):\n%s\n", diff)
 			}
 		})
 	}

@@ -13,41 +13,41 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// Strictness is whether an aggregate is strict or flexible.
+// Strictness describes if an element is strict or flexible:
+// https://fuchsia.dev/fuchsia-src/reference/fidl/language/language#strict-vs-flexible
 type Strictness string
 
 var (
-	// noStrict denotes no defined strictness for this element.
-	noStrict Strictness = ""
-	// isStrict strictness value.
-	isStrict Strictness = "strict"
-	// isFlexible strictness value.
-	isFlexible Strictness = "flexible"
+	noStrictness Strictness = ""
+	isStrict     Strictness = "strict"
+	isFlexible   Strictness = "flexible"
 )
 
-// Resourceness is whether the aggregate has resources or not.
+// Resourceness describes if an element is a value or resource type:
+// https://fuchsia.dev/fuchsia-src/reference/fidl/language/language#value-vs-resource
 type Resourceness string
 
 var (
-	// isValue resourceness is the "default", so we omit it altogether.
+	// isValue is the default, so we omit it altogether.
 	isValue Resourceness = ""
-	// isResource is an aggregate that contains e.g. handles.
+	// isResource means the type is allowed to contain handles.
 	isResource Resourceness = "resource"
 )
 
-// Kind is the encoding of the type, e.g. 'const'.
+// Kind corresponds to fidl::flat::Element::Kind in fidlc, e.g. const, enum,
+// enum member, struct, struct member, protocol, method, etc.
 type Kind string
 
 // Decl is the underlying type declaration.  For `enum Foo : int32`,
 // this will be `int32`.
 type Decl string
 
-// Name is the fully qualified name of the element.
+// Name is the fully qualified name of the element:
+// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0043_documentation_comment_format?hl=en#fully-qualified-names
 type Name string
 
-// Value is a string-serialized value of the element.
-// Since for the time being the typed value is not necessary, this is quite
-// enough to pipe the element value through where needed.
+// Value is a string-serialized value of the element, applicable to consts,
+// enum/bits members, and struct members (default values).
 type Value string
 
 // fidlConstToValue converts the fidlgen view of a constant value to
@@ -60,11 +60,12 @@ func fidlConstToValue(fc *fidlgen.Constant) Value {
 	return Value(fc.Value)
 }
 
-// ElementStr is a generic stringly-typed view of an Element. The aim is to
-// keep the structure as flat as possible, and omit fields which have no
-// bearing to the Kind of element represented.
+// ElementStr is a generic stringly-typed view of an Element. The aim is to keep
+// the structure as flat as possible, and omit fields which have no bearing to
+// the Kind of element represented.
 //
-// Keep the element ordering sorted.
+// Keep the fields sorted by name, otherwise JSON marshaling will not match the
+// fx format-code style.
 type ElementStr struct {
 	Decl         `json:"declaration,omitempty"`
 	Kind         `json:"kind"`
@@ -89,7 +90,7 @@ func (e ElementStr) IsStrict() bool {
 // HasStrictness returns true if this ElementStr has a notion of strictness, as
 // not all ElementStrs do.
 func (e ElementStr) HasStrictness() bool {
-	return e.Strictness != noStrict
+	return e.Strictness != noStrictness
 }
 
 // LoadSummariesJSON loads several the API summaries in the JSON format from

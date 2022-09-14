@@ -230,7 +230,7 @@ func (t *typeString) addConstraint(constraint string) {
 func (t typeString) String() string {
 	var ret []string
 	if t.layout == "" {
-		panic(fmt.Sprintf("layout not set - programming error: %#v", t))
+		panic(fmt.Sprintf("layout not set: %#v", t))
 	}
 	ret = append(ret, t.layout)
 	// <> omitted if no params.

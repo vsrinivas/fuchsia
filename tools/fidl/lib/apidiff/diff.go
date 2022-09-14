@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// Package apidiff contains the code used for computing FIDL API
-// differences.
 package apidiff
 
 import (
@@ -24,32 +22,40 @@ func Compute(before, after []summarize.ElementStr) (Report, error) {
 	var ret Report
 	parallelIter(before, after,
 		func(before, after *summarize.ElementStr) {
+			// Note: The calls to backfillForParentStrictness below rely on the
+			// fact that elements are processed inside out due to name sorting.
+			// For example, if we are currently processing an enum, that means
+			// we just finished processing all its members.
 			switch {
 			// Added a thing.
 			case before == nil:
-				// If it has strictness, then check if the elements need to be
-				// backfilled.
 				if after.HasStrictness() {
-					// If a declaration with strictness is added, we know that
-					// any added elements are unused, so they don't break the
-					// API.
-					ret.BackfillForParentStrictness(false)
+					// Treat all new declaration as flexible for the purposes of
+					// backfilling. For example, when adding a new strict enum,
+					// the "addition" of its members is safe even though adding
+					// members to existing strict enums is not allowed.
+					ret.backfillForParentStrictness(false)
 				}
 				ret.add(after)
 			// Removed a thing.
 			case after == nil:
 				ret.remove(before)
-			// Both exist.
+			// Changed a thing.
 			case before != nil && after != nil:
 				if after.HasStrictness() {
-					// A declaration with strictness already exists.
-					ret.BackfillForParentStrictness(after.IsStrict())
+					// Backfill based on after's strictness. It doesn't really
+					// matter if we use before or after because if they differ
+					// in strictness, that will be considered API breaking.
+					ret.backfillForParentStrictness(after.IsStrict())
 				}
 				ret.compare(before, after)
 			default:
-				panic("both before and after are nil - that is a programming error")
+				panic("both before and after are nil")
 			}
 		})
+	if len(ret.backfillIndexes) != 0 {
+		panic(fmt.Sprintf("indexes still need backfill: %v", ret.backfillIndexes))
+	}
 	return ret, nil
 }
 
@@ -84,8 +90,6 @@ func parallelIter(before, after []summarize.ElementStr, forEachFn func(before, a
 				a++
 			}
 		default:
-			// Ideally wouldn't be needed, but this helps in case the Less
-			// operation on ElementStr has a bug.
 			panic(fmt.Sprintf(
 				"neither before nor after are candidates: b=%v, len(before)=%v, a=%v, len(after)=%v",
 				b, len(before), a, len(after)))
@@ -107,7 +111,6 @@ func cmpFn(a, b summarize.ElementStr) int {
 	case !l1 && !l2:
 		return 0
 	default:
-		// Defensive coding in case ElementStr.Less has a bug.
 		panic(fmt.Sprintf("unexpected cmp: l1=%+v, l2=%+v", a, b))
 	}
 }
