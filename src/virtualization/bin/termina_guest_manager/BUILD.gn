@@ -46,24 +46,11 @@ fuchsia_structured_config_values("default_config") {
   }
 }
 
-fuchsia_structured_config_values("no_container_runtime_config") {
-  cm_label = ":manifest"
-  values = {
-    stateful_partition_type = "file"
-
-    # 128 MiB - keep this smaller in integration tests since we're not actually putting any
-    # containers on this partition.
-    stateful_partition_size = 134217728
-
-    start_container_runtime = false
-  }
-}
-
 fuchsia_structured_config_cpp_elf_lib("termina_config") {
   cm_label = ":manifest"
 }
 
-extras_image = "$target_out_dir/linux/extras.img"
+extras_image = "$target_out_dir/linux/termina_extras.img"
 resource("extras_img") {
   sources = [ extras_image ]
   outputs = [ "data/{{source_file_part}}" ]
@@ -185,6 +172,7 @@ fuchsia_component("termina_guest_manager_cmp") {
   }
   deps = [
     ":bin",
+    ":default_config",
     ":extras_img",
   ]
 }
@@ -194,20 +182,7 @@ fuchsia_package("termina_guest_manager_pkg") {
   if (termina_extras_tests) {
     testonly = true
   }
-  deps = [
-    ":default_config",
-    ":termina_guest_manager_cmp",
-  ]
-}
-
-fuchsia_package("termina_guest_manager_no_container_runtime") {
-  if (termina_extras_tests) {
-    testonly = true
-  }
-  deps = [
-    ":no_container_runtime_config",
-    ":termina_guest_manager_cmp",
-  ]
+  deps = [ ":termina_guest_manager_cmp" ]
 }
 
 group("termina_guest_manager") {

@@ -58,9 +58,7 @@ constexpr char kZirconGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/zircon_guest_manager#meta/zircon_guest_manager.cm";
 constexpr char kDebianGuestUrl[] =
     "fuchsia-pkg://fuchsia.com/debian_guest_manager#meta/debian_guest_manager.cm";
-constexpr char kTerminaGuestUrl[] =
-    "fuchsia-pkg://fuchsia.com/termina_guest_manager_no_container_runtime#meta/"
-    "termina_guest_manager.cm";
+constexpr char kTerminaGuestUrl[] = "#meta/termina_guest_manager.cm";
 constexpr auto kDevGpuDirectory = "dev-gpu";
 constexpr auto kGuestManagerName = "guest_manager";
 
@@ -710,6 +708,18 @@ zx_status_t MountDeviceInGuest(vm_tools::Maitred::Stub& maitred, std::string_vie
   }
 
   return ZX_OK;
+}
+
+void TerminaEnclosedGuest::InstallInRealm(component_testing::Realm& realm,
+                                          GuestLaunchInfo& guest_launch_info) {
+  EnclosedGuest::InstallInRealm(realm, guest_launch_info);
+
+  using component_testing::ConfigValue;
+  realm.InitMutableConfigFromPackage(kGuestManagerName);
+  realm.SetConfigValue(kGuestManagerName, "stateful_partition_type", "file");
+  realm.SetConfigValue(kGuestManagerName, "stateful_partition_size",
+                       ConfigValue::Uint64(128 * 1024 * 1024));
+  realm.SetConfigValue(kGuestManagerName, "start_container_runtime", ConfigValue::Bool(false));
 }
 
 zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {

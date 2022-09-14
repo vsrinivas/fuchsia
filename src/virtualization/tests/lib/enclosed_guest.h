@@ -64,7 +64,7 @@ class EnclosedGuest {
   //
   // Abort with ZX_ERR_TIMED_OUT if we reach `deadline` before the guest has started.
   zx_status_t Start(zx::time deadline);
-  void InstallInRealm(component_testing::Realm& realm, GuestLaunchInfo& guest_launch_info);
+  virtual void InstallInRealm(component_testing::Realm& realm, GuestLaunchInfo& guest_launch_info);
   zx_status_t LaunchInRealm(std::unique_ptr<sys::ServiceDirectory> services,
                             GuestLaunchInfo& guest_launch_info, zx::time deadline);
 
@@ -216,6 +216,7 @@ class TerminaEnclosedGuest : public EnclosedGuest {
                       std::string* result, int32_t* return_code) override;
 
   zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override;
+  void InstallInRealm(component_testing::Realm& realm, GuestLaunchInfo& guest_launch_info) override;
 
  protected:
   zx_status_t WaitForSystemReady(zx::time deadline) override;

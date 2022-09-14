@@ -67,7 +67,7 @@ constexpr DiskImage kFileStatefulImage = DiskImage{
 };
 
 constexpr DiskImage kExtrasImage = DiskImage{
-    .path = "/pkg/data/extras.img",
+    .path = "/pkg/data/termina_extras.img",
     .format = fuchsia::virtualization::BlockFormat::FILE,
     .read_only = true,
     .create_file = false,

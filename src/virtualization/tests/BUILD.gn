@@ -26,7 +26,7 @@ guest_packages = [
   "//src/virtualization/bin/vmm",
   "//src/virtualization/bin/guest_manager:debian_guest_manager",
   "//src/virtualization/bin/guest_manager:zircon_guest_manager",
-  "//src/virtualization/bin/termina_guest_manager:termina_guest_manager_no_container_runtime",
+  "//src/virtualization/bin/termina_guest_manager:termina_guest_manager_cmp",
   "//src/virtualization/packages",
 ]
 
