@@ -5454,6 +5454,49 @@ TEST_F(FlatlandTest, MultithreadedLinkResolution) {
   EXPECT_EQ(links.size(), 1U);
 }
 
+// Verify that `destroy_instance_function_()` is only invoked once, even if there are multiple
+// errors that each would alone cause `destroy_instance_function_()` to be invoked.
+TEST_F(FlatlandTest, NoDoubleDestroyRequest) {
+  // Create flatland and allocator instances that has two BufferCollectionImporters.
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> no_importers;
+  std::shared_ptr<Allocator> allocator =
+      std::make_shared<Allocator>(context_provider_.context(), no_importers, no_importers,
+                                  utils::CreateSysmemAllocatorSyncPtr());
+
+  auto session_id = scheduling::GetNextSessionId();
+  fuchsia::ui::composition::FlatlandPtr flatland_ptr;
+
+  size_t destroy_instance_function_invocation_count = 0;
+
+  auto flatland = Flatland::New(
+      std::make_shared<utils::UnownedDispatcherHolder>(dispatcher()), flatland_ptr.NewRequest(),
+      session_id,
+      /*destroy_instance_functon=*/
+      [&destroy_instance_function_invocation_count]() {
+        ++destroy_instance_function_invocation_count;
+      },
+      flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(session_id),
+      no_importers, [](auto...) {}, [](auto...) {}, [](auto...) {}, [](auto...) {});
+
+  fuchsia::ui::composition::PresentArgs present_args;
+  present_args.set_requested_presentation_time(0);
+  present_args.set_acquire_fences({});
+  present_args.set_release_fences({});
+  present_args.set_unsquashable({});
+
+  flatland->AddChild(TransformId{.value = 11}, TransformId{.value = 12});
+  flatland->Present(std::move(present_args));
+
+  EXPECT_EQ(destroy_instance_function_invocation_count, 1U);
+
+  flatland->AddChild(TransformId{.value = 11}, TransformId{.value = 12});
+  flatland->Present(std::move(present_args));
+
+  // If it wasn't for the guard variable `destroy_instance_function_was_invoked_` in
+  // `Flatland::CloseConnection()`, this check would fail deterministically.
+  EXPECT_EQ(destroy_instance_function_invocation_count, 1U);
+}
+
 TEST_F(FlatlandDisplayTest, SimpleSetContent) {
   constexpr uint32_t kWidth = 800;
   constexpr uint32_t kHeight = 600;

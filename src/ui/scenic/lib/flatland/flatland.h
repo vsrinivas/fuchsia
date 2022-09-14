@@ -252,6 +252,10 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   // cannot detect if this instance closes |binding_|.
   std::function<void()> destroy_instance_function_;
 
+  // Keep track of whether |destroy_instance_function_| has been invoked, in order to guarantee that
+  // it is called at most once.
+  bool destroy_instance_function_was_invoked_ = false;
+
   // Waits for the invalidation of the bound channel, then triggers the destruction of this client.
   // Uses WaitOnce since calling the handler will result in the destruction of this object.
   async::WaitOnce peer_closed_waiter_;

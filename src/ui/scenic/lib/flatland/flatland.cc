@@ -124,9 +124,13 @@ Flatland::Flatland(
       register_touch_source_(std::move(register_touch_source)),
       register_mouse_source_(std::move(register_mouse_source)) {
   zx_status_t status = peer_closed_waiter_.Begin(
-      dispatcher(),
-      [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait, zx_status_t status,
-             const zx_packet_signal_t* signal) { destroy_instance_function_(); });
+      dispatcher(), [this](async_dispatcher_t* dispatcher, async::WaitOnce* wait,
+                           zx_status_t status, const zx_packet_signal_t* signal) {
+        if (!destroy_instance_function_was_invoked_) {
+          destroy_instance_function_was_invoked_ = true;
+          destroy_instance_function_();
+        }
+      });
   FX_DCHECK(status == ZX_OK);
 
   FLATLAND_VERBOSE_LOG << "Flatland new with ID: " << session_id_;
@@ -1538,17 +1542,28 @@ void Flatland::ReportLinkProtocolError(const std::string& error_log) {
 }
 
 void Flatland::CloseConnection(FlatlandError error) {
+  // NOTE: there's no need to test the return values of OnError()/Cancel()/Close().  If they fail,
+  // the binding and waiter will be cleaned up anyway because we'll soon be destroyed (since
+  // destroy_instance_function_ has been or will be invoked).
+
   // Send the error to the client before closing the connection.
   binding_.events().OnError(error);
 
   // Cancel the async::Wait before closing the connection, or it will assert on destruction.
-  zx_status_t status = peer_closed_waiter_.Cancel();
+  peer_closed_waiter_.Cancel();
 
   // Immediately close the FIDL interface to prevent future requests.
   binding_.Close(ZX_ERR_BAD_STATE);
 
   // Finally, trigger the destruction of this instance.
-  destroy_instance_function_();
+  //
+  // NOTE: it would probably be OK to test |destroy_instance_function_was_invoked_| at the top of
+  // the function, exiting early if it was already invoked.  But this way makes it obvious that the
+  // cleanups above run at least once (and there's no downside if they are run a second time).
+  if (!destroy_instance_function_was_invoked_) {
+    destroy_instance_function_was_invoked_ = true;
+    destroy_instance_function_();
+  }
 }
 
 // MatrixData function implementations
