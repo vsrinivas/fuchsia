@@ -115,6 +115,9 @@ impl Mapping {
     /// - `addr`: The address to read data from.
     /// - `bytes`: The byte array to read into.
     fn read_memory(&self, addr: UserAddress, bytes: &mut [u8]) -> Result<(), Errno> {
+        if !self.permissions.contains(zx::VmarFlags::PERM_READ) {
+            return error!(EFAULT);
+        }
         self.vmo.read(bytes, self.address_to_offset(addr)).map_err(|e| {
             tracing::warn!("Got an error when reading from vmo: {:?}", e);
             errno!(EFAULT)
@@ -127,6 +130,9 @@ impl Mapping {
     /// - `addr`: The address to write to.
     /// - `bytes`: The bytes to write to the VMO.
     fn write_memory(&self, addr: UserAddress, bytes: &[u8]) -> Result<(), Errno> {
+        if !self.permissions.contains(zx::VmarFlags::PERM_WRITE) {
+            return error!(EFAULT);
+        }
         self.vmo.write(bytes, self.address_to_offset(addr)).map_err(|_| errno!(EFAULT))
     }
 }
