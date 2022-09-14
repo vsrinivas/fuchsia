@@ -168,32 +168,6 @@ using zxio_remote_t = struct zxio_remote {
 static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
               "zxio_remote_t must fit inside zxio_storage_t.");
 
-// remote v2 -------------------------------------------------------------------
-
-// A |zxio_t| backend that uses the |fuchsia.io/Node2| protocol.
-//
-// The |control| handle is a channel that implements the |fuchsia.io/Node2|. The
-// |observer| handle is an optional object used with some |fuchsia.io/Node2|
-// servers. The |stream| handle is an optional stream object associated with the
-// file. See fuchsia.io/FileInfo for additional documentation.
-//
-// Will eventually be an implementation detail of zxio once fdio completes its
-// transition to the zxio backend.
-using zxio_remote_v2_t = struct zxio_remote_v2 {
-  zxio_t io;
-  zx_handle_t control;
-  zx_handle_t observer;
-  zx_handle_t stream;
-};
-
-static_assert(sizeof(zxio_remote_v2_t) <= sizeof(zxio_storage_t),
-              "zxio_remote_v2_t must fit inside zxio_storage_t.");
-
-zx_status_t zxio_remote_v2_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t observer);
-zx_status_t zxio_dir_v2_init(zxio_storage_t* storage, zx_handle_t control);
-zx_status_t zxio_file_v2_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t observer,
-                              zx_handle_t stream);
-
 zx_status_t zxio_remote_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t event);
 
 // vmo -------------------------------------------------------------------------
