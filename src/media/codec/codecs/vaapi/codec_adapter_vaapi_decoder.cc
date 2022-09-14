@@ -677,6 +677,12 @@ class TiledBufferManager : public SurfaceBufferManager {
     // reconstruct the surfaces here. They will be reconstructed once GetDPBSurface() is called and
     // the buffer has no linked surface.
     allocated_free_surfaces_.clear();
+
+    // Given the new picture size and the current surface size, create a surface size that will
+    // allow us to hold decoded picture without shrinking the dimensions of the current DPB surface.
+    // Since media-driver does not allow the surfaces to become smaller, ensure that the surface
+    // dimensions are always at least equal to what they were before this function call.
+    dpb_surface_size_ = GetRequiredSurfaceSizeLocked(coded_picture_size_);
   }
 
  private:
