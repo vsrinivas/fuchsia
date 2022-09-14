@@ -31,7 +31,7 @@ declare_args() {
   # Set to one of "minfs", "fxfs", "f2fs" (unstable).
   # If set to anything other than "minfs", any existing minfs partition will be
   # migrated in-place to the specified format when fshost mounts it.
-  data_filesystem_format = "fxfs"
+  data_filesystem_format = "minfs"
 
   # Set to true to enable legacy data partition names.
   allow_legacy_data_partition_names = false
