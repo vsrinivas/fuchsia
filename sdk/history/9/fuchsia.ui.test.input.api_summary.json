@@ -90,6 +90,100 @@
         "strictness": "flexible"
     },
     {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.ADD",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.DOWN",
+        "value": "2"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.HOVER",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.MOVE",
+        "value": "3"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.UP",
+        "value": "4"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.test.input/MouseEventPhase.WHEEL",
+        "value": "5"
+    },
+    {
+        "declaration": "uint32",
+        "kind": "enum",
+        "name": "fuchsia.ui.test.input/MouseEventPhase",
+        "strictness": "flexible"
+    },
+    {
+        "declaration": "(fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest payload)",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.test.input/MouseInputListener.ReportMouseInput"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.test.input/MouseInputListener"
+    },
+    {
+        "declaration": "vector<fuchsia.ui.test.input/MouseButton>:32",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.buttons"
+    },
+    {
+        "declaration": "string:1024",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.component_name"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.device_pixel_ratio"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.local_x"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.local_y"
+    },
+    {
+        "declaration": "fuchsia.ui.test.input/MouseEventPhase",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.phase"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.time_received"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.wheel_x_physical_pixel"
+    },
+    {
+        "declaration": "float64",
+        "kind": "table/member",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.wheel_y_physical_pixel"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest"
+    },
+    {
         "declaration": "int64",
         "kind": "table/member",
         "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_x"

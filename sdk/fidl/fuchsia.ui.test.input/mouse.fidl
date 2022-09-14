@@ -4,6 +4,8 @@
 
 library fuchsia.ui.test.input;
 
+using zx;
+
 /// A hardcoded number of max mouse buttons. This should be increased in the future
 /// if we ever see mice with more buttons.
 const MOUSE_MAX_NUM_BUTTONS uint32 = 32;
@@ -18,6 +20,28 @@ type MouseButton = flexible enum {
 
     /// "Third" mouse button.
     THIRD = 2;
+};
+
+/// Identifies the phase of a mouse event.
+type MouseEventPhase = flexible enum {
+    /// The observer has started tracking the mouse.
+    ADD = 0;
+
+    /// The mouse has moved since the last ADD event, without an interceding DOWN
+    /// event.
+    HOVER = 1;
+
+    /// One or more mouse buttons have been pressed.
+    DOWN = 2;
+
+    /// The mouse has moved since the last DOWN event.
+    MOVE = 3;
+
+    /// All pressed buttons have been released.
+    UP = 4;
+
+    /// The mouse wheel was manipulated.
+    WHEEL = 5;
 };
 
 /// A tool to inject mouse events into Input Pipeline.
@@ -53,4 +77,47 @@ protocol Mouse {
         /// is computed with accelerator, detent / mm to pixel ratio, etc.
         7: scroll_h_physical_pixel float64;
     }) -> ();
+};
+
+/// A tool for applications to report touch input to interested parties (e.g. a test
+/// fixture).
+@discoverable
+protocol MouseInputListener {
+    /// Report that component under test has received expected input.
+    ReportMouseInput(table {
+        /// The horizontal coordinate in the reporter's coordinate system.
+        1: local_x float64;
+
+        /// The vertical coordinate in the reporter's coordinate system.
+        2: local_y float64;
+
+        /// The monotonic time (ns) the mouse event was received by the client.
+        /// Note that this value should be used with caution. Some reporters may not be
+        /// capable of ns-level precision, but still report in ns-level units.
+        3: time_received zx.time;
+
+        /// Name of the component to help distinguish responses from multiple components.
+        ///
+        /// NOTE: This name is *independent* of component framework, so the reporter and
+        /// listener are free to agree on an arbitrary value.
+        4: component_name string:1024;
+
+        /// The pressed buttons that the reporter received.
+        5: buttons vector<MouseButton>:MOUSE_MAX_NUM_BUTTONS;
+
+        /// The phase of the mouse event that the reporter received.
+        6: phase MouseEventPhase;
+
+        /// The device pixel ratio of which the reporter is aware.
+        ///
+        /// Some reporters may account for this scale factor when converting to local
+        /// coordinates.
+        7: device_pixel_ratio float64;
+
+        /// The horizontal wheel scroll delta in physical pixels.
+        8: wheel_x_physical_pixel float64;
+
+        /// The vertical wheel scroll delta in physical pixels.
+        9: wheel_y_physical_pixel float64;
+    });
 };
