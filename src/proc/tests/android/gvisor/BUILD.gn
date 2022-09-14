@@ -56,7 +56,7 @@ gvisor_tests = [
   "clock_nanosleep_test",
 
   # "close_range_test",
-  # "concurrency_test",
+  "concurrency_test",
   "creat_test",
   "dev_test",
   "dup_test",
