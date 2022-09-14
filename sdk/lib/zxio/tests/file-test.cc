@@ -84,8 +84,8 @@ class File : public zxtest::Test {
     EXPECT_TRUE(response.info.is_file());
     fio::wire::FileObject& file = response.info.file();
 
-    return zxio_file_init(&file_, client_end.value().TakeChannel().release(), file.event.release(),
-                          file.stream.release());
+    return zxio_file_init(&file_, std::move(file.event), std::move(file.stream),
+                          fidl::ClientEnd<fio::Node>{client_end.value().TakeChannel()});
   }
 
   void TearDown() override {
@@ -324,7 +324,8 @@ class Remote : public File {
     if (client_end.is_error()) {
       return client_end.status_value();
     }
-    return zxio_remote_init(&file_, client_end.value().TakeChannel().release(), ZX_HANDLE_INVALID);
+    return zxio_remote_init(&file_, zx::event{},
+                            fidl::ClientEnd<fio::Node>(client_end.value().TakeChannel()));
   }
 };
 

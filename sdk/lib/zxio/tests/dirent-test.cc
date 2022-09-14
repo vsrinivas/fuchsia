@@ -93,7 +93,7 @@ class DirentTest : public zxtest::Test {
   void SetUp() final {
     zx::status control_ends = fidl::CreateEndpoints<fio::Directory>();
     ASSERT_OK(control_ends.status_value());
-    ASSERT_OK(zxio_dir_init(&dir_, control_ends->client.TakeChannel().release()));
+    ASSERT_OK(zxio_dir_init(&dir_, fidl::ClientEnd<fio::Node>{control_ends->client.TakeChannel()}));
     server_ = std::make_unique<TestServer>();
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(loop_->StartThread("fake-filesystem"));

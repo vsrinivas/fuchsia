@@ -57,8 +57,8 @@ class Remote : public zxtest::Test {
     zx::status control_client_end = fidl::CreateEndpoints(&control_server_);
     ASSERT_OK(control_client_end.status_value());
     ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
-    ASSERT_OK(zxio_remote_init(&remote_, control_client_end->TakeChannel().release(),
-                               eventpair_to_client_.release()));
+    ASSERT_OK(zxio_remote_init(&remote_, std::move(eventpair_to_client_),
+                               std::move(control_client_end.value())));
   }
 
   template <typename ServerImpl>

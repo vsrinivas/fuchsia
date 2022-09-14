@@ -105,10 +105,10 @@ uint32_t zxio_node_protocols_to_posix_type(zxio_node_protocols_t protocols);
 
 bool zxio_is_valid(const zxio_t* io);
 
-zx_status_t zxio_dir_init(zxio_storage_t* storage, zx_handle_t control);
+zx_status_t zxio_dir_init(zxio_storage_t* storage, fidl::ClientEnd<fuchsia_io::Node> client);
 
-zx_status_t zxio_file_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t event,
-                           zx_handle_t stream);
+zx_status_t zxio_file_init(zxio_storage_t* storage, zx::event event, zx::stream stream,
+                           fidl::ClientEnd<fuchsia_io::Node> client);
 
 zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
 
@@ -150,25 +150,10 @@ zx_status_t zxio_packet_socket_init(zxio_storage_t* storage, zx::eventpair event
 
 // remote ----------------------------------------------------------------------
 
-// A |zxio_t| backend that uses the |fuchsia.io.Node| protocol.
-//
-// The |control| handle is a channel that implements the |fuchsia.io.Node|. The
-// |event| handle is an optional event object used with some |fuchsia.io.Node|
-// servers.
-//
-// Will eventually be an implementation detail of zxio once fdio completes its
-// transition to the zxio backend.
-using zxio_remote_t = struct zxio_remote {
-  zxio_t io;
-  zx_handle_t control;
-  zx_handle_t event;
-  zx_handle_t stream;
-};
-
-static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
-              "zxio_remote_t must fit inside zxio_storage_t.");
-
-zx_status_t zxio_remote_init(zxio_storage_t* storage, zx_handle_t control, zx_handle_t event);
+zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::event event,
+                             fidl::ClientEnd<fuchsia_io::Node> client);
+zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::eventpair event,
+                             fidl::ClientEnd<fuchsia_io::Node> client);
 
 // vmo -------------------------------------------------------------------------
 
@@ -192,20 +177,5 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t size, zxio_vmo_flags_
 zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
                                       fuchsia_io::wire::NodeInfoDeprecated& node_info,
                                       zxio_storage_t* storage);
-
-// Common functionalities shared by the fuchsia.io v1 |node| and |remote| transports.
-// These operate on the raw FIDL channel directly, as |node| and |remote|
-// have different object layouts.
-
-// Send a |fuchsia.io/Node.Close| message on |control|. Note: does not close the channel.
-zx_status_t zxio_raw_remote_close(const zx::unowned_channel& control);
-
-zx_status_t zxio_raw_remote_clone(const zx::unowned_channel& source, zx_handle_t* out_handle);
-
-zx_status_t zxio_raw_remote_attr_get(const zx::unowned_channel& control,
-                                     zxio_node_attributes_t* out_attr);
-
-zx_status_t zxio_raw_remote_attr_set(const zx::unowned_channel& control,
-                                     const zxio_node_attributes_t* attr);
 
 #endif  // LIB_ZXIO_PRIVATE_H_
