@@ -23,7 +23,10 @@ fpromise::result<std::unique_ptr<DeviceWatcherImpl>, zx_status_t> DeviceWatcherI
 
   server->dispatcher_ = dispatcher;
 
-  ZX_ASSERT(server->launcher_.Bind(std::move(launcher), server->dispatcher_) == ZX_OK);
+  if (zx_status_t status = server->launcher_.Bind(std::move(launcher), server->dispatcher_);
+      status != ZX_OK) {
+    return fpromise::error(status);
+  }
 
   return fpromise::ok(std::move(server));
 }
@@ -34,10 +37,14 @@ fpromise::result<PersistentDeviceId, zx_status_t> DeviceWatcherImpl::AddDevice(
   fuchsia::hardware::camera::DeviceSyncPtr dev;
   dev.Bind(std::move(camera));
   fuchsia::camera2::hal::ControllerSyncPtr ctrl;
-  ZX_ASSERT(dev->GetChannel2(ctrl.NewRequest()) == ZX_OK);
+  if (zx_status_t status = dev->GetChannel2(ctrl.NewRequest()); status != ZX_OK) {
+    return fpromise::error(status);
+  }
 
   fuchsia::camera2::DeviceInfo info_return;
-  ZX_ASSERT(ctrl->GetDeviceInfo(&info_return) == ZX_OK);
+  if (zx_status_t status = ctrl->GetDeviceInfo(&info_return); status != ZX_OK) {
+    return fpromise::error(status);
+  }
 
   if (!info_return.has_vendor_id() || !info_return.has_product_id()) {
     FX_LOGS(INFO) << "Controller missing vendor or product ID.";
