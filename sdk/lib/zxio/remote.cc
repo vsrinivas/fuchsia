@@ -35,8 +35,8 @@ class DirentIteratorImpl {
   }
 
   ~DirentIteratorImpl() {
-    // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
-    (void)fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control))->Rewind();
+    __UNUSED const fidl::WireResult result =
+        fidl::WireCall(fidl::UnownedClientEnd<fio::Directory>(io_->control))->Rewind();
   }
 
   zx_status_t Next(zxio_dirent_t* inout_entry) {
