@@ -21,34 +21,9 @@
             ],
         },
         {
-            directory: "dev-class-block",
+            directory: "dev-topological",
             rights: [ "r*" ],
-            path: "/dev/class/block",
-        },
-        {
-            directory: "dev-class-light",
-            rights: [ "r*" ],
-            path: "/dev/class/light",
-        },
-        {
-            directory: "dev-class-temperature",
-            rights: [ "r*" ],
-            path: "/dev/class/temperature",
-        },
-        {
-            directory: "dev-class-thermal",
-            rights: [ "r*" ],
-            path: "/dev/class/thermal",
-        },
-        {
-            directory: "dev-sherlock-emmc",
-            rights: [ "r*" ],
-            path: "/dev/sherlock-emmc",
-        },
-        {
-            directory: "dev-sys",
-            rights: [ "r*" ],
-            path: "/dev/sys",
+            path: "/dev",
         },
     ],
 }
