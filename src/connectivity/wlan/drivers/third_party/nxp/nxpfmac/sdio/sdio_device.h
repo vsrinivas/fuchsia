@@ -49,6 +49,7 @@ class SdioDevice : public Device {
 
  private:
   explicit SdioDevice(zx_device_t* parent);
+  zx_status_t InitCfgFromMetaData(mlan_device* mlan_device);
 
   std::unique_ptr<SdioBus> bus_;
   std::unique_ptr<async::Loop> async_loop_;
