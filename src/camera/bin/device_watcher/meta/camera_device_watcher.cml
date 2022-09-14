@@ -2,21 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "syslog/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/camera_device_watcher_bin",
     },
-    collections: [
-        {
-            name: "csi_camera_devices",
-            durability: "single_run",
-        },
-        {
-            name: "usb_camera_devices",
-            durability: "single_run",
-        },
-    ],
     capabilities: [
         {
             protocol: [
@@ -31,43 +24,11 @@
             rights: [ "r*" ],
             path: "/dev/class/camera",
         },
+
+        // TODO(fxb/92885) migrate camera_device.cmx to components v2
+        // and remove this v1 dependency
         {
-            protocol: [ "fuchsia.component.Realm" ],
-            from: "framework",
-        },
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.camera2.hal.Controller",
-                "fuchsia.logger.LogSink",
-                "fuchsia.sysmem.Allocator",
-            ],
-            from: "parent",
-            to: [
-                "#csi_camera_devices",
-                "#usb_camera_devices",
-            ],
-        },
-        {
-            protocol: [
-                "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-            ],
-            from: "parent",
-            to: [
-                "#csi_camera_devices",
-                "#usb_camera_devices",
-            ],
-        },
-        {
-            directory: "dev-camera",
-            from: "parent",
-            to: [
-                "#csi_camera_devices",
-                "#usb_camera_devices",
-            ],
+            protocol: [ "fuchsia.sys.Launcher" ],
         },
     ],
     expose: [

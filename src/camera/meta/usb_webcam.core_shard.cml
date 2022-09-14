@@ -10,7 +10,7 @@
     children: [
         {
             name: "usb_camera_device_watcher",
-            url: "fuchsia-pkg://fuchsia.com/camera_device_watcher#meta/camera_device_watcher.cm",
+            url: "fuchsia-pkg://fuchsia.com/usb_camera_device_watcher#meta/usb_camera_device_watcher.cm",
             environment: "#core-env",
         },
     ],

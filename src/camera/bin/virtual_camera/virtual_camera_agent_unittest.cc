@@ -25,8 +25,6 @@ class FakeDeviceWatcherTester : public fuchsia::camera::test::DeviceWatcherTeste
   MOCK_METHOD(void, InjectDevice, (fidl::InterfaceHandle<fuchsia::hardware::camera::Device>),
               (override));
 
-  MOCK_METHOD(void, InjectDeviceByPath, (std::string), (override));
-
   FakeDeviceWatcherTester() {
     ON_CALL(*this, InjectDevice)
         .WillByDefault([this](fidl::InterfaceHandle<fuchsia::hardware::camera::Device> handle) {

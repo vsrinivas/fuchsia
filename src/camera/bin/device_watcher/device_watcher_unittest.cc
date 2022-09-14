@@ -7,7 +7,6 @@
 #include <fuchsia/camera3/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
-#include <lib/syslog/cpp/macros.h>
 
 #include "src/camera/bin/device_watcher/device_instance.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
@@ -118,14 +117,10 @@ TEST_F(DeviceWatcherTest, DISABLED_WatchDevicesFindsCameras) {
   }
 }
 
-// TODO(b/243974090) - Is this test needed? The old incarnation of this test checked to see if the
-// mock Launcher service was called properly. The new incarnation would need a mock Realm service to
-// check if CreateChild is called properly.
-TEST_F(DeviceWatcherTest, DISABLED_InstanceLaunches) {
+TEST_F(DeviceWatcherTest, InstanceLaunches) {
   sys::testing::FakeLauncher fake_launcher;
-  constexpr auto kCollectionName = "my_dynamic_collection";
-  constexpr auto kChildName = "my_child_name";
-  constexpr auto kCameraDeviceUrl = "fuchsia-pkg://fuchsia.com/camera_device#meta/camera_device.cm";
+  constexpr auto kCameraDeviceUrl =
+      "fuchsia-pkg://fuchsia.com/camera_device#meta/camera_device.cmx";
   bool camera_launched = false;
   fake_launcher.RegisterComponent(
       kCameraDeviceUrl, [&](fuchsia::sys::LaunchInfo launch_info,
@@ -138,19 +133,9 @@ TEST_F(DeviceWatcherTest, DISABLED_InstanceLaunches) {
       });
   fuchsia::sys::LauncherPtr launcher;
   fake_launcher.GetHandler()(launcher.NewRequest());
-  fuchsia::hardware::camera::DeviceHandle camera_handle;
-  fuchsia::component::RealmPtr realm;
-  std::string collection_name = kCollectionName;
-  std::string child_name = kChildName;
-  std::string url = kCameraDeviceUrl;
-
-  auto context = sys::ComponentContext::Create();
-  zx_status_t status = context->svc()->Connect(realm.NewRequest());
-  ZX_ASSERT(status == ZX_OK);
-
   bool component_unavailable_received = false;
-  auto result = camera::DeviceInstance::Create(std::move(camera_handle), realm, dispatcher(),
-                                               collection_name, child_name, url);
+  auto result = DeviceInstance::Create(
+      launcher, nullptr, [&]() { component_unavailable_received = true; }, dispatcher());
   ASSERT_TRUE(result.is_ok());
   auto instance = result.take_value();
   // The instance should attempt to launch the component. Then, upon seeing the controller request

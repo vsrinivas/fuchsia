@@ -17,36 +17,11 @@
     ],
     use: [
         {
-            directory: "dev-camera",
-            rights: [ "r*" ],
-            path: "/dev/class/camera",
-        },
-        {
             protocol: [
                 "fuchsia.camera.test.DeviceWatcherTester",
                 "fuchsia.camera3.DeviceWatcher",
             ],
             from: "#camera_device_watcher",
-        },
-        {
-            protocol: [ "fuchsia.component.Realm" ],
-            from: "framework",
-        },
-    ],
-    offer: [
-        {
-            directory: "dev-camera",
-            from: "parent",
-            to: "#camera_device_watcher",
-        },
-        {
-            protocol: [
-                "fuchsia.camera2.hal.Controller",
-                "fuchsia.logger.LogSink",
-                "fuchsia.sysmem.Allocator",
-            ],
-            from: "parent",
-            to: "#camera_device_watcher",
         },
     ],
 }
