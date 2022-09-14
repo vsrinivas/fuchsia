@@ -259,6 +259,8 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
 
   device_request_semaphore_ = magma::PlatformSemaphore::Create();
 
+  CheckEngines();
+
   return true;
 }
 
@@ -1140,6 +1142,11 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
       return MAGMA_STATUS_OK;
     }
 
+    case kMagmaIntelGenQueryHasContextIsolation: {
+      *result_out = MsdIntelDevice::cast(device)->engines_have_context_isolation();
+      break;
+    }
+
     default:
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "unhandled id %" PRIu64, id);
   }
@@ -1148,6 +1155,20 @@ magma_status_t msd_device_query(msd_device_t* device, uint64_t id,
     *result_buffer_out = magma::PlatformHandle::kInvalidHandle;
 
   return MAGMA_STATUS_OK;
+}
+
+void MsdIntelDevice::CheckEngines() {
+  // Most engines support context isolation, but some may not; as support
+  // for more engines are added, this should be revisited.
+  engines_have_context_isolation_ = true;
+
+  for (auto& engine : engine_command_streamers()) {
+    switch (engine->id()) {
+      case RENDER_COMMAND_STREAMER:
+      case VIDEO_COMMAND_STREAMER:
+        break;
+    }
+  }
 }
 
 void msd_device_dump_status(msd_device_t* device, uint32_t dump_type) {

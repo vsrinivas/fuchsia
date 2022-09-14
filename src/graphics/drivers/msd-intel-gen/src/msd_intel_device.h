@@ -60,6 +60,7 @@ class MsdIntelDevice : public msd_device_t,
   uint32_t subslice_total() { return subslice_total_; }
   uint32_t eu_total() { return eu_total_; }
   std::pair<magma_intel_gen_topology*, uint8_t*> GetTopology();
+  bool engines_have_context_isolation() { return engines_have_context_isolation_; }
 
   static MsdIntelDevice* cast(msd_device_t* dev) {
     DASSERT(dev);
@@ -145,6 +146,7 @@ class MsdIntelDevice : public msd_device_t,
   void Destroy();
 
   bool BaseInit(void* device_handle);
+  void CheckEngines();
   void InitEngine(EngineCommandStreamer* engine);
   void EnableInterrupts(EngineCommandStreamer* engine, bool enable);
   bool RenderInitBatch();
@@ -206,6 +208,7 @@ class MsdIntelDevice : public msd_device_t,
   uint32_t subslice_total_{};
   uint32_t eu_total_{};
   std::unique_ptr<Topology> topology_;
+  bool engines_have_context_isolation_ = false;
 
   std::thread device_thread_;
   std::unique_ptr<magma::PlatformThreadId> device_thread_id_;

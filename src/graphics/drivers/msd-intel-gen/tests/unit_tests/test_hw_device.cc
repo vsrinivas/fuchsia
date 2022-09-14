@@ -49,6 +49,8 @@ class TestMsdIntelDevice : public testing::Test {
       device->register_io()->Write32(expected, 0x4f100);
       uint32_t value = device->register_io()->Read32(0x4f100);
       ASSERT_EQ(expected, value);
+
+      EXPECT_TRUE(device->engines_have_context_isolation());
     }
   }
 

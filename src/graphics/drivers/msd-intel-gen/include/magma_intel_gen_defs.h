@@ -20,6 +20,8 @@ enum MagmaIntelGenQuery {
   kMagmaIntelGenQueryTimestamp = MAGMA_QUERY_VENDOR_PARAM_0 + 3,
   // Returns magma_intel_gen_topology (buffer result, see struct magma_intel_gen_topology)
   kMagmaIntelGenQueryTopology = MAGMA_QUERY_VENDOR_PARAM_0 + 4,
+  // Returns boolean (simple result)
+  kMagmaIntelGenQueryHasContextIsolation = MAGMA_QUERY_VENDOR_PARAM_0 + 5,
 };
 
 struct magma_intel_gen_timestamp_query {
