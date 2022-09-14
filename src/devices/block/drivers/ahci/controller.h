@@ -70,8 +70,11 @@ class Controller {
 
   static int InitThread(void* arg) { return static_cast<Controller*>(arg)->InitScan(); }
 
-  // Create worker, irq, and watchdog threads.
-  zx_status_t LaunchThreads();
+  // Create irq and worker threads.
+  zx_status_t LaunchIrqAndWorkerThreads();
+
+  // Create thread for device initialization and discovery.
+  zx_status_t LaunchInitThread();
 
   // Release all resources.
   // Not used in DDK lifecycle where Release() is called.
@@ -90,7 +93,6 @@ class Controller {
 
  private:
   int WorkerLoop();
-  int WatchdogLoop();
   int IrqLoop();
   int InitScan();
 
@@ -104,6 +106,7 @@ class Controller {
 
   ThreadWrapper irq_thread_;
   ThreadWrapper worker_thread_;
+  ThreadWrapper init_thread_;
 
   sync_completion_t worker_completion_;
 

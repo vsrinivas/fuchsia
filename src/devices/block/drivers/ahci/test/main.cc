@@ -129,14 +129,14 @@ TEST(AhciTest, CreateBusConfigFailure) {
   EXPECT_NOT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
 }
 
-TEST(AhciTest, LaunchThreads) {
+TEST(AhciTest, LaunchIrqAndWorkerThreads) {
   zx_device_t* fake_parent = nullptr;
   std::unique_ptr<FakeBus> bus(new FakeBus());
 
   std::unique_ptr<Controller> con;
   EXPECT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
 
-  EXPECT_OK(con->LaunchThreads());
+  EXPECT_OK(con->LaunchIrqAndWorkerThreads());
   con->Shutdown();
 }
 

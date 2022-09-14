@@ -270,7 +270,7 @@ zx_status_t Controller::CreateWithBus(zx_device_t* parent, std::unique_ptr<Bus> 
   return ZX_OK;
 }
 
-zx_status_t Controller::LaunchThreads() {
+zx_status_t Controller::LaunchIrqAndWorkerThreads() {
   zx_status_t status = irq_thread_.CreateWithName(IrqThread, this, "ahci-irq");
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error %d creating irq thread", status);
@@ -284,11 +284,23 @@ zx_status_t Controller::LaunchThreads() {
   return ZX_OK;
 }
 
+zx_status_t Controller::LaunchInitThread() {
+  zx_status_t status = init_thread_.CreateWithName(InitThread, this, "ahci-init");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "ahci: error %d creating init thread", status);
+    return status;
+  }
+  return ZX_OK;
+}
+
 void Controller::Shutdown() {
   {
     fbl::AutoLock lock(&lock_);
     threads_should_exit_ = true;
   }
+
+  // Wait for the init thread to finish in case it hasn't already done so.
+  init_thread_.Join();
 
   // Signal the worker thread.
   sync_completion_signal(&worker_completion_);
@@ -314,8 +326,8 @@ zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  if ((status = controller->LaunchThreads()) != ZX_OK) {
-    zxlogf(ERROR, "ahci: failed to start controller threads (%d)", status);
+  if ((status = controller->LaunchIrqAndWorkerThreads()) != ZX_OK) {
+    zxlogf(ERROR, "ahci: failed to start controller irq and worker threads (%d)", status);
     return status;
   }
 
@@ -335,9 +347,7 @@ zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
   }
 
   // initialize controller and detect devices
-  thrd_t t;
-  int ret = thrd_create_with_name(&t, Controller::InitThread, controller.get(), "ahci-init");
-  if (ret != thrd_success) {
+  if ((status = controller->LaunchInitThread()) != ZX_OK) {
     zxlogf(ERROR, "ahci: error %d in init thread create", status);
     // This is an error in that no devices will be found, but the AHCI controller is enabled.
     // Not returning an error, but the controller should be removed.
