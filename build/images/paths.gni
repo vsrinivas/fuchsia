@@ -89,7 +89,7 @@ files = {
 
   # The zbi and vbmeta created by assembly
   zbi = "${assembly_outdir}/${labels.assembly_name}.${_image_suffix}"
-  vbmeta = "${assembly_outdir}/{labels.assembly_name}.vbmeta"
+  vbmeta = "${assembly_outdir}/${labels.assembly_name}.vbmeta"
 
   # Final output image and vbmeta (the files at the above paths are copied here)
   final_zbi = "$root_out_dir/" + rebase_path(zbi, assembly_outdir)
