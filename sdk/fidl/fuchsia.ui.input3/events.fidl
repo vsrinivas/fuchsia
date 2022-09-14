@@ -10,20 +10,68 @@ using zx;
 ///
 /// We do not expect new values to be added into this enum.
 type KeyEventType = strict enum {
-    /// Key is pressed down.
+    /// Key is actuated.
+    ///
+    /// Receiving this event type means that a key has been actuated
+    /// at the timestamp when the event is received, and while the event
+    /// recipient is focused.
+    ///
+    /// For example, if the key is a keyboard key, then it was just
+    /// pressed.
     PRESSED = 1;
 
-    /// Key is released.
+    /// Key is no longer actuated.
+    ///
+    /// Receiving this event type means that a key has been de-actuated
+    /// at the timestamp when the event is received, and while the event
+    /// recipient is focused.
+    ///
+    /// For example, if the key is a keyboard key, then it was just
+    /// released.
     RELEASED = 2;
 
-    /// Key was pressed while the client wasn't able to receive it, e.g new device connected
-    /// with a key held down or before system was started.
-    /// Client should not handle this as a key press.
+    /// Key was actuated while the client wasn't able to receive it,
+    /// and is still actuated now that the client is able to receive
+    /// key events.
+    ///
+    /// This may happen in a few ways:
+    ///
+    ///    - A new device was connected while its key was actuated.
+    ///    - The key was actuated while the event recipient did not
+    ///      have focus.
+    ///
+    /// Therefore, this is not a "regular" key actuation. It reports
+    /// now that the key has been actuated in the unknown past. Some
+    /// event recipients may therefore decide that this is not an
+    /// actionable key event, while some others may decide that it is.
+    ///
+    /// For example, recipients that trigger some user action may
+    /// decide to ignore `SYNC` events, to avoid spurious actions. In
+    /// contrast, recipients that keep track of the keyboard
+    /// state may want to consider a `SYNC` event as a signal
+    /// to update the key's state to actuated.
     SYNC = 3;
 
-    /// Key was released while the client wasn't able to receive it, e.g device was disconnected
-    /// or focus lost.
-    /// Client should not handle this as a key release.
+    /// Key may have been actuated, but its actuation has
+    /// become invalid due to an event other than a key
+    /// de-actuation.
+    ///
+    /// This may happen in a few ways:
+    ///
+    ///    - A device was disconnected while its key was actuated.
+    ///    - The event recipient just lost focus.
+    ///
+    /// Therefore, this is not a "regular" key de-actuation. It reports
+    /// the key is no longer validly actuated due to an event other than
+    /// a key release. Some event recipients may therefore decide that
+    /// this is not an actionable key event, while some others may
+    /// decide that it is.
+    ///
+    /// For example, recipients which trigger some user action may
+    /// decide to ignore `CANCEL` events, to avoid spurious actions. In
+    /// contrast, recipients that keep track of the keyboard
+    /// state may want to consider a `CANCEL` event as a signal to update
+    /// the key's state to being de-actuated.
     CANCEL = 4;
 };
 
