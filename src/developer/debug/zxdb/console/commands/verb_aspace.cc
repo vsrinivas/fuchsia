@@ -142,29 +142,30 @@ void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map,
   console->Output(out);
 }
 
-Err RunVerbAspace(ConsoleContext* context, const Command& cmd) {
+void RunVerbAspace(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // Only a process can be specified.
   if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   bool print_totals = true;
   uint64_t address = 0;
   if (cmd.args().size() == 1) {
     if (Err err = ReadUint64Arg(cmd, 0, "address", &address); err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
     print_totals = false;  // Adding up totals for a subregion is misleading.
   } else if (cmd.args().size() > 1) {
-    return Err(ErrType::kInput, "\"aspace\" takes zero or one parameter.");
+    return cmd_context->ReportError(
+        Err(ErrType::kInput, "\"aspace\" takes zero or one parameter."));
   }
 
-  if (Err err = AssertRunningTarget(context, "aspace", cmd.target()); err.has_error())
-    return err;
+  if (Err err = AssertRunningTarget(cmd_context->GetConsoleContext(), "aspace", cmd.target());
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   cmd.target()->GetProcess()->GetAspace(
       address, [print_totals](const Err& err, std::vector<debug_ipc::AddressRegion> map) {
         OnAspaceComplete(err, map, print_totals);
       });
-  return Err();
 }
 
 }  // namespace

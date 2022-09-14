@@ -52,17 +52,17 @@ Examples
   thread 2 backtrace
 )";
 
-Err RunVerbBacktrace(ConsoleContext* context, const Command& cmd) {
+void RunVerbBacktrace(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread}); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   if (!cmd.thread())
-    return Err("There is no thread to have frames.");
+    return cmd_context->ReportError(Err("There is no thread to have frames."));
 
   FormatStackOptions opts;
 
   if (!cmd.HasSwitch(kRawOutput))
-    opts.pretty_stack = context->pretty_stack_manager();
+    opts.pretty_stack = cmd_context->GetConsoleContext()->pretty_stack_manager();
 
   opts.frame.loc = FormatLocationOptions(cmd.target());
   opts.frame.loc.func.name.elide_templates = true;
@@ -90,8 +90,7 @@ Err RunVerbBacktrace(ConsoleContext* context, const Command& cmd) {
 
   // Always force update the stack. Various things can have changed and when the user requests
   // a stack we want to be sure things are correct.
-  Console::get()->Output(FormatStack(cmd.thread(), true, opts));
-  return Err();
+  cmd_context->Output(FormatStack(cmd.thread(), true, opts));
 }
 
 }  // namespace

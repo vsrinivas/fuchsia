@@ -636,23 +636,13 @@ Err VerifySystemHasRunningProcess(System* system) {
 }
 
 void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
-                            const Err& err, CommandCallback callback) {
-  if (display_message_on_success || err.has_error()) {
-    // Display messaging.
-    Console* console = Console::get();
-
-    OutputBuffer out;
-    if (err.has_error()) {
-      out.Append(err);
-    } else if (target) {
-      out.Append(FormatTarget(&console->context(), target.get()));
-    }
-
-    console->Output(out);
+                            const Err& err, fxl::RefPtr<CommandContext> cmd_context) {
+  if (err.has_error()) {
+    cmd_context->ReportError(err);
+  } else if (ConsoleContext* console_context = cmd_context->GetConsoleContext();
+             console_context && display_message_on_success) {
+    cmd_context->Output(FormatTarget(console_context, target.get()));
   }
-
-  if (callback)
-    callback(err);
 }
 
 void AsyncPrintReturnValue(const FunctionReturnInfo& info, fit::deferred_callback cb) {
