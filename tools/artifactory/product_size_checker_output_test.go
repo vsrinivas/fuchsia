@@ -37,7 +37,7 @@ func TestProductSizeCheckerOutputUploads(t *testing.T) {
 		{
 			Source:      "BUILD_DIR/obj/build/viz",
 			Destination: "namespace/visualization",
-			Compress:    true,
+			Recursive:   true,
 		},
 		{
 			Source:      "BUILD_DIR/A/B/C/D",

@@ -26,7 +26,7 @@ func productSizeCheckerOutputUploads(mods productSizeCheckerOutputModules, names
 			{
 				Source:      filepath.Join(mods.BuildDir(), mods.ProductSizeCheckerOutput()[0].Visualization),
 				Destination: path.Join(namespace, "visualization"),
-				Compress:    true,
+				Recursive:   true,
 			},
 			{
 				Source:      filepath.Join(mods.BuildDir(), mods.ProductSizeCheckerOutput()[0].SizeBreakdown),
