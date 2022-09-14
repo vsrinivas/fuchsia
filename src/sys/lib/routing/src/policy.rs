@@ -7,7 +7,8 @@ use {
         capability_source::CapabilitySourceInterface,
         component_instance::ComponentInstanceInterface,
         config::{
-            AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource, RuntimeConfig,
+            AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource, DebugCapabilityKey,
+            RuntimeConfig,
         },
     },
     fuchsia_zircon_status as zx,
@@ -249,24 +250,35 @@ impl GlobalPolicyChecker {
     where
         C: ComponentInstanceInterface,
     {
-        let policy_key = Self::get_policy_key(capability_source).map_err(|e| {
-            error!("Security policy could not generate a policy key for `{}`", capability_source);
-            e
-        })?;
-        if let Some(allowed_envs) =
-            self.config.security_policy.debug_capability_policy.get(&policy_key)
-        {
-            if let Some(_) = allowed_envs.get(&(env_moniker.clone(), env_name.to_string())) {
-                return Ok(());
-            }
+        let CapabilityAllowlistKey { source_moniker, source_name, source, capability } =
+            Self::get_policy_key(capability_source).map_err(|e| {
+                error!(
+                    "Security policy could not generate a policy key for `{}`",
+                    capability_source
+                );
+                e
+            })?;
+        let debug_key =
+            DebugCapabilityKey { source_name, source, capability, env_name: env_name.to_string() };
+
+        let route_allowed =
+            match self.config.security_policy.debug_capability_policy.get(&debug_key) {
+                None => false,
+                Some(allowlist_set) => {
+                    allowlist_set.iter().any(|entry| entry.matches(&source_moniker, env_moniker))
+                }
+            };
+        if route_allowed {
+            return Ok(());
         }
+
         warn!(
             "Debug security policy prevented `{}` from `{}` being routed to `{}`.",
-            policy_key.source_name, policy_key.source_moniker, target_moniker
+            debug_key.source_name, source_moniker, target_moniker
         );
         Err(PolicyError::debug_capability_use_disallowed(
-            policy_key.source_name.str(),
-            &policy_key.source_moniker,
+            debug_key.source_name.str(),
+            &source_moniker,
             &env_moniker,
             env_name,
             &target_moniker,
@@ -296,7 +308,7 @@ impl GlobalPolicyChecker {
     }
 }
 
-fn allowlist_entry_matches(
+pub(crate) fn allowlist_entry_matches(
     allowlist_entry: &AllowlistEntry,
     target_moniker: &AbsoluteMoniker,
 ) -> bool {

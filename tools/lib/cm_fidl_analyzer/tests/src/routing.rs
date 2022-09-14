@@ -35,7 +35,10 @@ use {
     routing::{
         component_id_index::ComponentIdIndex,
         component_instance::ComponentInstanceInterface,
-        config::{AllowlistEntry, CapabilityAllowlistKey, RuntimeConfig, SecurityPolicy},
+        config::{
+            AllowlistEntry, CapabilityAllowlistKey, DebugCapabilityAllowlistEntry,
+            DebugCapabilityKey, RuntimeConfig, SecurityPolicy,
+        },
         environment::RunnerRegistry,
         error::RoutingError,
         rights::{READ_RIGHTS, WRITE_RIGHTS},
@@ -74,7 +77,7 @@ pub struct RoutingTestBuilderForAnalyzer {
     builtin_capabilities: Vec<CapabilityDecl>,
     builtin_runner_registrations: Vec<RunnerRegistration>,
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
-    debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+    debug_capability_policy: HashMap<DebugCapabilityKey, HashSet<DebugCapabilityAllowlistEntry>>,
     component_id_index_path: Option<String>,
     builtin_boot_resolver: component_internal::BuiltinBootResolver,
 }
@@ -160,8 +163,8 @@ impl RoutingTestModelBuilder for RoutingTestBuilderForAnalyzer {
     /// Add a custom debug capability security policy to restrict routing of certain caps.
     fn add_debug_capability_policy(
         &mut self,
-        key: CapabilityAllowlistKey,
-        allowlist: HashSet<(AbsoluteMoniker, String)>,
+        key: DebugCapabilityKey,
+        allowlist: HashSet<DebugCapabilityAllowlistEntry>,
     ) {
         self.debug_capability_policy.insert(key, allowlist);
     }

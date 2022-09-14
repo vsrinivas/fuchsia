@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::policy::allowlist_entry_matches,
     anyhow::{format_err, Context, Error},
     cm_rust::{CapabilityName, CapabilityTypeName, FidlIntoNative},
     cm_types::{Name, Url},
@@ -130,16 +131,49 @@ pub struct SecurityPolicy {
     /// capability.
     pub capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
 
-    /// Debug Capability routing policies. The key contains all the information required
-    /// to uniquely identify any routable capability and the set of (monikers, environment_name)
-    /// define the set of components which were allowed to register it as a debug capability in
-    /// their environment `environment_name`.
+    /// Debug Capability routing policies. The key contains all the absolute information
+    /// needed to identify a routable capability and the set of DebugCapabilityAllowlistEntries
+    /// define the allowed set of routing paths from the capability source to the environment
+    /// offering the capability.
     pub debug_capability_policy:
-        HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+        HashMap<DebugCapabilityKey, HashSet<DebugCapabilityAllowlistEntry>>,
 
     /// Allowlists component child policy. These allowlists control what components are allowed
     /// to set privileged options on their children.
     pub child_policy: ChildPolicyAllowlists,
+}
+
+/// Allowlist key for debug capability allowlists.
+/// This defines all portions of the allowlist that do not support globbing.
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub struct DebugCapabilityKey {
+    pub source_name: CapabilityName,
+    pub source: CapabilityAllowlistSource,
+    pub capability: CapabilityTypeName,
+    pub env_name: String,
+}
+
+/// Represents a single allowed route for a debug capability.
+#[derive(Debug, PartialEq, Eq, Clone, Hash)]
+pub struct DebugCapabilityAllowlistEntry {
+    source: AllowlistEntry,
+    dest: AllowlistEntry,
+}
+
+impl DebugCapabilityAllowlistEntry {
+    pub fn new(source: AllowlistEntry, dest: AllowlistEntry) -> Self {
+        Self { source, dest }
+    }
+
+    pub fn matches(&self, source: &ExtendedMoniker, dest: &AbsoluteMoniker) -> bool {
+        let source_absolute = match source {
+            // Currently no debug capabilities are routed from cm.
+            ExtendedMoniker::ComponentManager => return false,
+            ExtendedMoniker::ComponentInstance(ref moniker) => moniker,
+        };
+        allowlist_entry_matches(&self.source, source_absolute)
+            && allowlist_entry_matches(&self.dest, dest)
+    }
 }
 
 /// Allowlists for Zircon job policy. Part of runtime security policy.
@@ -274,39 +308,39 @@ fn parse_allowlist_entries(strs: &Option<Vec<String>>) -> Result<Vec<AllowlistEn
         Some(strs) => strs,
         None => return Ok(Vec::new()),
     };
-    strs.iter()
-        .map(|s| {
-            if let Some(prefix) = s.strip_suffix("/**") {
-                let realm = if prefix.is_empty() {
-                    AbsoluteMoniker::root()
-                } else {
-                    AbsoluteMoniker::parse_str(prefix)
-                        .map_err(|e| AllowlistEntryError::RealmEntryInvalidMoniker(s.clone(), e))?
-                };
-                Ok(AllowlistEntry::Realm(realm))
-            } else if let Some(prefix) = s.strip_suffix(":**") {
-                let (realm, collection) = prefix
-                    .rsplit_once('/')
-                    .ok_or_else(|| AllowlistEntryError::CollectionEntryMissingRealm(s.clone()))?;
-                Name::from_str(&collection).map_err(|_| {
-                    AllowlistEntryError::InvalidCollectionName(s.clone(), collection.into())
-                })?;
+    strs.iter().map(|s| parse_allowlist_entry(s)).collect()
+}
 
-                let realm = if realm.is_empty() {
-                    AbsoluteMoniker::root()
-                } else {
-                    AbsoluteMoniker::parse_str(realm).map_err(|e| {
-                        AllowlistEntryError::CollectionEntryInvalidMoniker(s.clone(), e)
-                    })?
-                };
-                Ok(AllowlistEntry::Collection(realm, collection.to_string()))
-            } else {
-                let realm = AbsoluteMoniker::parse_str(s.as_str())
-                    .map_err(|e| AllowlistEntryError::OtherInvalidMoniker(s.clone(), e))?;
-                Ok(AllowlistEntry::Exact(realm))
-            }
-        })
-        .collect()
+fn parse_allowlist_entry(entry: &str) -> Result<AllowlistEntry, Error> {
+    if let Some(prefix) = entry.strip_suffix("/**") {
+        let realm = if prefix.is_empty() {
+            AbsoluteMoniker::root()
+        } else {
+            AbsoluteMoniker::parse_str(prefix)
+                .map_err(|e| AllowlistEntryError::RealmEntryInvalidMoniker(entry.to_string(), e))?
+        };
+        Ok(AllowlistEntry::Realm(realm))
+    } else if let Some(prefix) = entry.strip_suffix(":**") {
+        let (realm, collection) = prefix
+            .rsplit_once('/')
+            .ok_or_else(|| AllowlistEntryError::CollectionEntryMissingRealm(entry.to_string()))?;
+        Name::from_str(&collection).map_err(|_| {
+            AllowlistEntryError::InvalidCollectionName(entry.to_string(), collection.into())
+        })?;
+
+        let realm = if realm.is_empty() {
+            AbsoluteMoniker::root()
+        } else {
+            AbsoluteMoniker::parse_str(realm).map_err(|e| {
+                AllowlistEntryError::CollectionEntryInvalidMoniker(entry.to_string(), e)
+            })?
+        };
+        Ok(AllowlistEntry::Collection(realm, collection.to_string()))
+    } else {
+        let realm = AbsoluteMoniker::parse_str(entry)
+            .map_err(|e| AllowlistEntryError::OtherInvalidMoniker(entry.to_string(), e))?;
+        Ok(AllowlistEntry::Exact(realm))
+    }
 }
 
 fn as_usize_or_default(value: Option<u32>, default: usize) -> usize {
@@ -468,13 +502,13 @@ fn parse_capability_policy(
 
 fn parse_debug_capability_policy(
     debug_registration_policy: Option<DebugRegistrationPolicyAllowlists>,
-) -> Result<HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>, Error> {
+) -> Result<HashMap<DebugCapabilityKey, HashSet<DebugCapabilityAllowlistEntry>>, Error> {
     let debug_capability_policy = if let Some(debug_capability_policy) = debug_registration_policy {
         if let Some(allowlist) = debug_capability_policy.allowlist {
-            let mut policies: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>> =
+            let mut policies: HashMap<DebugCapabilityKey, HashSet<DebugCapabilityAllowlistEntry>> =
                 HashMap::new();
             for e in allowlist.into_iter() {
-                let source_moniker = ExtendedMoniker::parse_str(
+                let source_moniker = parse_allowlist_entry(
                     e.source_moniker
                         .as_deref()
                         .ok_or(Error::new(PolicyConfigError::EmptySourceMoniker))?,
@@ -496,22 +530,22 @@ fn parse_debug_capability_policy(
                     Err(Error::new(PolicyConfigError::EmptyAllowlistedDebugRegistration))
                 }?;
 
-                let target_moniker = AbsoluteMoniker::parse_str(
+                let target_moniker = parse_allowlist_entry(
                     e.target_moniker
                         .as_deref()
                         .ok_or(PolicyConfigError::EmptyTargetMonikerDebugRegistration)?,
                 )?;
-                let environment_name = e
+                let env_name = e
                     .environment_name
                     .ok_or(PolicyConfigError::EmptyEnvironmentNameDebugRegistration)?;
 
-                let key = CapabilityAllowlistKey {
-                    source_moniker,
+                let key = DebugCapabilityKey {
                     source_name,
                     source: CapabilityAllowlistSource::Self_,
                     capability,
+                    env_name,
                 };
-                let value = (target_moniker, environment_name);
+                let value = DebugCapabilityAllowlistEntry::new(source_moniker, target_moniker);
                 if let Some(h) = policies.get_mut(&key) {
                     h.insert(value);
                 } else {
@@ -710,15 +744,15 @@ mod tests {
                                 ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
                             },
                             component_internal::DebugRegistrationAllowlistEntry {
-                                source_moniker: Some("/foo/bar/baz".to_string()),
-                                source_name: Some("fuchsia.foo.bar".to_string()),
+                                source_moniker: Some("/foo/bar/**".to_string()),
+                                source_name: Some("fuchsia.foo.baz".to_string()),
                                 debug: Some(component_internal::AllowlistedDebugRegistration::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
-                                target_moniker: Some("/foo".to_string()),
+                                target_moniker: Some("/foo/**".to_string()),
                                 environment_name: Some("foo_env2".to_string()),
                                 ..component_internal::DebugRegistrationAllowlistEntry::EMPTY
                             },
                             component_internal::DebugRegistrationAllowlistEntry {
-                                source_moniker: Some("/foo/bar".to_string()),
+                                source_moniker: Some("/foo/bar/coll:**".to_string()),
                                 source_name: Some("fuchsia.foo.baz".to_string()),
                                 debug: Some(component_internal::AllowlistedDebugRegistration::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
                                 target_moniker: Some("/root".to_string()),
@@ -811,29 +845,63 @@ mod tests {
                         ),
                     ].iter().cloned()),
                     debug_capability_policy: HashMap::from_iter(vec![
-                        (CapabilityAllowlistKey {
-                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo", "bar", "baz"])),
-                            source_name: CapabilityName::from("fuchsia.foo.bar"),
-                            source: CapabilityAllowlistSource::Self_,
-                            capability: CapabilityTypeName::Protocol,
-                        },
-                        HashSet::from_iter(vec![
-                            (AbsoluteMoniker::from(vec!["foo", "bar"]),"bar_env1".to_string()),
-                            (AbsoluteMoniker::from(vec!["foo"]),"foo_env1".to_string()),
-                            (AbsoluteMoniker::from(vec!["foo"]),"foo_env2".to_string())
-                        ].iter().cloned())
+                        (
+                            DebugCapabilityKey {
+                                source_name: CapabilityName::from("fuchsia.foo.bar"),
+                                source: CapabilityAllowlistSource::Self_,
+                                capability: CapabilityTypeName::Protocol,
+                                env_name: "bar_env1".to_string(),
+                            },
+                            HashSet::from_iter(vec![
+                                DebugCapabilityAllowlistEntry::new(
+                                    AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo", "bar", "baz"])),
+                                    AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo", "bar"])),
+                                )
+                            ])
                         ),
-                        (CapabilityAllowlistKey {
-                            source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec!["foo", "bar"])),
-                            source_name: CapabilityName::from("fuchsia.foo.baz"),
-                            source: CapabilityAllowlistSource::Self_,
-                            capability: CapabilityTypeName::Protocol,
-                        },
-                        HashSet::from_iter(vec![
-                            (AbsoluteMoniker::from(vec!["root"]),"root_env".to_string()),
-                        ].iter().cloned())
+                        (
+                            DebugCapabilityKey {
+                                source_name: CapabilityName::from("fuchsia.foo.bar"),
+                                source: CapabilityAllowlistSource::Self_,
+                                capability: CapabilityTypeName::Protocol,
+                                env_name: "foo_env1".to_string(),
+                            },
+                            HashSet::from_iter(vec![
+                                DebugCapabilityAllowlistEntry::new(
+                                    AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo", "bar", "baz"])),
+                                    AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo"])),
+                                )
+                            ])
                         ),
-                    ].iter().cloned()),
+                        (
+                            DebugCapabilityKey {
+                                source_name: CapabilityName::from("fuchsia.foo.baz"),
+                                source: CapabilityAllowlistSource::Self_,
+                                capability: CapabilityTypeName::Protocol,
+                                env_name: "foo_env2".to_string(),
+                            },
+                            HashSet::from_iter(vec![
+                                DebugCapabilityAllowlistEntry::new(
+                                    AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["foo", "bar"])),
+                                    AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["foo"])),
+                                )
+                            ])
+                        ),
+                        (
+                            DebugCapabilityKey {
+                                source_name: CapabilityName::from("fuchsia.foo.baz"),
+                                source: CapabilityAllowlistSource::Self_,
+                                capability: CapabilityTypeName::Protocol,
+                                env_name: "root_env".to_string(),
+                            },
+                            HashSet::from_iter(vec![
+                                DebugCapabilityAllowlistEntry::new(
+                                    AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["foo", "bar"]), "coll".to_string()),
+                                    AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root"])),
+                                )
+                            ])
+                        ),
+                    ]),
                     child_policy: ChildPolicyAllowlists {
                         reboot_on_terminate: vec![
                             AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["something", "important"])),

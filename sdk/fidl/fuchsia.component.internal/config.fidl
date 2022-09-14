@@ -244,9 +244,8 @@ type AllowlistedDebugRegistration = flexible union {
 /// Defines a capability policy entry in the set of debug capability policy
 /// allowlists.
 type DebugRegistrationAllowlistEntry = table {
-    /// The `source_moniker` represents the origin of a capability. The
-    /// `source_moniker` is absolute moniker.
-    1: source_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    /// The `source_moniker` represents the origin of a capability.
+    1: source_moniker AllowlistEntryMoniker;
 
     /// The source name of this particular capability.
     2: source_name string:fuchsia.component.MAX_NAME_LENGTH;
@@ -257,7 +256,7 @@ type DebugRegistrationAllowlistEntry = table {
 
     /// The `target_moniker` represents the component which is allowed to register
     /// this capability in its environment's debug sction.
-    4: target_moniker string:fuchsia.component.MAX_MONIKER_LENGTH;
+    4: target_moniker AllowlistEntryMoniker;
 
     /// Name of the environment where this capability can be registered.
     5: environment_name fuchsia.component.name;

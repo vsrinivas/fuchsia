@@ -41,7 +41,10 @@ use {
         },
         component_id_index::ComponentInstanceId,
         component_instance::ComponentInstanceInterface,
-        config::{AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource},
+        config::{
+            AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource,
+            DebugCapabilityAllowlistEntry, DebugCapabilityKey,
+        },
         error::RoutingError,
         event::EventSubscription,
         rights::READ_RIGHTS,
@@ -286,8 +289,8 @@ pub trait RoutingTestModelBuilder {
     /// Add a custom debug capability security policy to restrict routing of certain caps.
     fn add_debug_capability_policy(
         &mut self,
-        key: CapabilityAllowlistKey,
-        allowlist: HashSet<(AbsoluteMoniker, String)>,
+        key: DebugCapabilityKey,
+        allowlist: HashSet<DebugCapabilityAllowlistEntry>,
     );
 
     /// Sets the path to the component ID index for the test model.
@@ -342,6 +345,7 @@ macro_rules! instantiate_common_routing_tests {
             test_use_protocol_component_provided_debug_capability_policy_from_self,
             test_use_protocol_component_provided_debug_capability_policy_from_child,
             test_use_protocol_component_provided_debug_capability_policy_from_grandchild,
+            test_use_protocol_component_provided_wildcard_debug_capability_policy,
             test_use_event_from_framework,
             test_use_event_stream_from_above_root,
             test_use_event_stream_from_above_root_and_downscoped,
@@ -4398,15 +4402,18 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((AbsoluteMoniker::root(), "env_a".to_owned()));
+        allowlist.insert(DebugCapabilityAllowlistEntry::new(
+            AllowlistEntry::Exact(AbsoluteMoniker::root()),
+            AllowlistEntry::Exact(AbsoluteMoniker::root()),
+        ));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::root()),
+            DebugCapabilityKey {
                 source_name: CapabilityName::from("svc_allowed"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
+                env_name: "env_a".to_string(),
             },
             allowlist,
         );
@@ -4506,17 +4513,18 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((AbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
+        allowlist.insert(DebugCapabilityAllowlistEntry::new(
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b"])),
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b"])),
+        ));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b",
-                ])),
+            DebugCapabilityKey {
                 source_name: CapabilityName::from("svc_allowed"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
+                env_name: "env_b".to_string(),
             },
             allowlist,
         );
@@ -4632,17 +4640,18 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((AbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
+        allowlist.insert(DebugCapabilityAllowlistEntry::new(
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b", "d"])),
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b"])),
+        ));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b", "d",
-                ])),
+            DebugCapabilityKey {
                 source_name: CapabilityName::from("svc_allowed"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
+                env_name: "env_b".to_string(),
             },
             allowlist,
         );
@@ -4775,17 +4784,18 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         ];
 
         let mut allowlist = HashSet::new();
-        allowlist.insert((AbsoluteMoniker::from(vec!["b"]), "env_b".to_owned()));
+        allowlist.insert(DebugCapabilityAllowlistEntry::new(
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b", "d", "e"])),
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["b"])),
+        ));
 
         let mut builder = T::new("a", components);
         builder.add_debug_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "b", "d", "e",
-                ])),
+            DebugCapabilityKey {
                 source_name: CapabilityName::from("svc_allowed"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
+                env_name: "env_b".to_string(),
             },
             allowlist,
         );
@@ -4804,6 +4814,150 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
         model
             .check_use(
                 vec!["b", "c"].into(),
+                CheckUse::Protocol {
+                    path: "/svc/hippo_not_allowed".try_into().unwrap(),
+                    expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),
+                },
+            )
+            .await;
+    }
+
+    ///  a
+    ///   \
+    ///    b
+    ///   / \
+    ///  c   d
+    ///   \
+    ///    e
+    /// c: defines an environment with debug protocols exposed by d, 1 allowed and 1 not allowed
+    /// b: offers protocols from d to c
+    /// e: uses service svc_allowed as /svc/hippo.
+    /// e: uses service svc_not_allowed as /svc/hippo_not_allowed
+    /// Tests component provided debug caps given wildcard selectors
+    pub async fn test_use_protocol_component_provided_wildcard_debug_capability_policy(&self) {
+        let expose_decl_svc_allowed = ExposeProtocolDecl {
+            source: ExposeSource::Self_,
+            source_name: "svc_allowed".into(),
+            target_name: "svc_allowed".into(),
+            target: ExposeTarget::Parent,
+        };
+        let expose_decl_svc_not_allowed = ExposeProtocolDecl {
+            source: ExposeSource::Self_,
+            source_name: "svc_not_allowed".into(),
+            target_name: "svc_not_allowed".into(),
+            target: ExposeTarget::Parent,
+        };
+        let components = vec![
+            ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+            (
+                "b",
+                ComponentDeclBuilder::new()
+                    .add_child(ChildDeclBuilder::new_lazy_child("c"))
+                    .add_child(ChildDeclBuilder::new_lazy_child("d"))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::static_child("d".into()),
+                        source_name: "svc_allowed".into(),
+                        target_name: "svc_allowed".into(),
+                        target: OfferTarget::static_child("c".to_string()),
+                        dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
+                    }))
+                    .offer(OfferDecl::Protocol(OfferProtocolDecl {
+                        source: OfferSource::static_child("d".into()),
+                        source_name: "svc_not_allowed".into(),
+                        target_name: "svc_not_allowed".into(),
+                        target: OfferTarget::static_child("c".to_string()),
+                        dependency_type: DependencyType::Strong,
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+            (
+                "c",
+                ComponentDeclBuilder::new()
+                    .add_environment(
+                        EnvironmentDeclBuilder::new()
+                            .name("env_c")
+                            .extends(fdecl::EnvironmentExtends::Realm)
+                            .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                                cm_rust::DebugProtocolRegistration {
+                                    source_name: "svc_allowed".into(),
+                                    target_name: "svc_allowed".into(),
+                                    source: RegistrationSource::Parent,
+                                },
+                            ))
+                            .add_debug_registration(cm_rust::DebugRegistration::Protocol(
+                                cm_rust::DebugProtocolRegistration {
+                                    source_name: "svc_not_allowed".into(),
+                                    target_name: "svc_not_allowed".into(),
+                                    source: RegistrationSource::Parent,
+                                },
+                            )),
+                    )
+                    .add_child(ChildDeclBuilder::new_lazy_child("e").environment("env_c"))
+                    .build(),
+            ),
+            (
+                "d",
+                ComponentDeclBuilder::new()
+                    .protocol(ProtocolDeclBuilder::new("svc_allowed").build())
+                    .expose(cm_rust::ExposeDecl::Protocol(expose_decl_svc_allowed))
+                    .protocol(ProtocolDeclBuilder::new("svc_not_allowed").build())
+                    .expose(cm_rust::ExposeDecl::Protocol(expose_decl_svc_not_allowed))
+                    .build(),
+            ),
+            (
+                "e",
+                ComponentDeclBuilder::new()
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Debug,
+                        source_name: "svc_not_allowed".into(),
+                        target_path: CapabilityPath::try_from("/svc/hippo_not_allowed").unwrap(),
+                        availability: Availability::Required,
+                    }))
+                    .use_(UseDecl::Protocol(UseProtocolDecl {
+                        dependency_type: DependencyType::Strong,
+                        source: UseSource::Debug,
+                        source_name: "svc_allowed".into(),
+                        target_path: CapabilityPath::try_from("/svc/hippo").unwrap(),
+                        availability: Availability::Required,
+                    }))
+                    .build(),
+            ),
+        ];
+
+        let mut allowlist = HashSet::new();
+        allowlist.insert(DebugCapabilityAllowlistEntry::new(
+            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["b"])),
+            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["b"])),
+        ));
+
+        let mut builder = T::new("a", components);
+        builder.add_debug_capability_policy(
+            DebugCapabilityKey {
+                source_name: CapabilityName::from("svc_allowed"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+                env_name: "env_c".to_string(),
+            },
+            allowlist,
+        );
+        let model = builder.build().await;
+
+        model
+            .check_use(
+                vec!["b", "c", "e"].into(),
+                CheckUse::Protocol {
+                    path: "/svc/hippo".try_into().unwrap(),
+                    expected_res: ExpectedResult::Ok,
+                },
+            )
+            .await;
+
+        model
+            .check_use(
+                vec!["b", "c", "e"].into(),
                 CheckUse::Protocol {
                     path: "/svc/hippo_not_allowed".try_into().unwrap(),
                     expected_res: ExpectedResult::Err(zx::Status::ACCESS_DENIED),

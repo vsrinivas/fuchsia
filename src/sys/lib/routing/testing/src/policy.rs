@@ -16,7 +16,8 @@ use {
         component_instance::ComponentInstanceInterface,
         config::{
             AllowlistEntry, CapabilityAllowlistKey, CapabilityAllowlistSource,
-            ChildPolicyAllowlists, JobPolicyAllowlists, RuntimeConfig, SecurityPolicy,
+            ChildPolicyAllowlists, DebugCapabilityAllowlistEntry, DebugCapabilityKey,
+            JobPolicyAllowlists, RuntimeConfig, SecurityPolicy,
         },
         policy::GlobalPolicyChecker,
     },
@@ -41,6 +42,8 @@ macro_rules! instantiate_global_policy_checker_tests {
             global_policy_checker_can_route_capability_component_cap,
             global_policy_checker_can_route_capability_capability_cap,
             global_policy_checker_can_route_debug_capability_capability_cap,
+            global_policy_checker_can_route_debug_capability_with_realm_allowlist_entry,
+            global_policy_checker_can_route_debug_capability_with_collection_allowlist_entry,
             global_policy_checker_can_route_capability_builtin_cap,
             global_policy_checker_can_route_capability_with_realm_allowlist_entry,
             global_policy_checker_can_route_capability_with_collection_allowlist_entry,
@@ -279,18 +282,24 @@ where
     fn global_policy_checker_can_route_debug_capability_capability_cap(&self) -> Result<(), Error> {
         let mut config_builder = CapabilityAllowlistConfigBuilder::new();
         config_builder.add_debug_capability_policy(
-            CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(AbsoluteMoniker::from(vec![
-                    "foo",
-                ])),
+            DebugCapabilityKey {
                 source_name: CapabilityName::from("debug_service1"),
                 source: CapabilityAllowlistSource::Self_,
                 capability: CapabilityTypeName::Protocol,
+                env_name: "foo_env".to_string(),
             },
-            vec![
-                (AbsoluteMoniker::from(vec!["foo"]), "foo_env".to_string()),
-                (AbsoluteMoniker::from(vec!["root", "bootstrap"]), "bootstrap_env".to_string()),
-            ],
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo"])),
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo"])),
+        );
+        config_builder.add_debug_capability_policy(
+            DebugCapabilityKey {
+                source_name: CapabilityName::from("debug_service1"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+                env_name: "bootstrap_env".to_string(),
+            },
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["foo"])),
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root", "bootstrap"])),
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
         let component = self.make_component(vec!["foo:0"].into());
@@ -302,50 +311,295 @@ where
             }),
             component: component.as_weak(),
         };
-        let valid_0 =
-            (AbsoluteMoniker::from(vec!["root", "bootstrap"]), "bootstrap_env".to_string());
-        let valid_1 = (AbsoluteMoniker::from(vec!["foo"]), "foo_env".to_string());
-        let invalid_0 = (AbsoluteMoniker::from(vec!["foobar"]), "foobar_env".to_string());
-        let invalid_1 =
-            (AbsoluteMoniker::from(vec!["foo", "bar", "foobar"]), "foobar_env".to_string());
+
+        let valid_cases = vec![
+            (AbsoluteMoniker::from(vec!["root", "bootstrap"]), "bootstrap_env".to_string()),
+            (AbsoluteMoniker::from(vec!["foo"]), "foo_env".to_string()),
+        ];
+
+        let invalid_cases = vec![
+            (AbsoluteMoniker::from(vec!["foobar"]), "foobar_env".to_string()),
+            (AbsoluteMoniker::from(vec!["foo", "bar", "foobar"]), "foobar_env".to_string()),
+            (AbsoluteMoniker::from(vec!["root", "bootstrap"]), "foo_env".to_string()),
+            (AbsoluteMoniker::from(vec!["root", "baz"]), "foo_env".to_string()),
+        ];
+
         let target_moniker = AbsoluteMoniker::from(vec!["target"]);
 
-        assert_matches!(
-            global_policy_checker.can_route_debug_capability(
-                &protocol_capability,
-                &valid_0.0,
-                &valid_0.1,
-                &target_moniker
-            ),
-            Ok(())
+        for valid_case in valid_cases {
+            assert_matches!(
+                global_policy_checker.can_route_debug_capability(
+                    &protocol_capability,
+                    &valid_case.0,
+                    &valid_case.1,
+                    &target_moniker
+                ),
+                Ok(()),
+                "{:?}",
+                valid_case
+            );
+        }
+
+        for invalid_case in invalid_cases {
+            assert_matches!(
+                global_policy_checker.can_route_debug_capability(
+                    &protocol_capability,
+                    &invalid_case.0,
+                    &invalid_case.1,
+                    &target_moniker
+                ),
+                Err(_),
+                "{:?}",
+                invalid_case
+            );
+        }
+
+        Ok(())
+    }
+
+    // Tests `GlobalPolicyChecker::can_route_debug_capability()` for capability sources of type
+    // `Capability` with realm allowlist entries.
+    fn global_policy_checker_can_route_debug_capability_with_realm_allowlist_entry(
+        &self,
+    ) -> Result<(), Error> {
+        let mut config_builder = CapabilityAllowlistConfigBuilder::new();
+        config_builder.add_debug_capability_policy(
+            DebugCapabilityKey {
+                source_name: CapabilityName::from("debug_service1"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+                env_name: "bar_env".to_string(),
+            },
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["bar"])),
+            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["root", "bootstrap1"])),
         );
-        assert_matches!(
-            global_policy_checker.can_route_debug_capability(
-                &protocol_capability,
-                &valid_1.0,
-                &valid_1.1,
-                &target_moniker
-            ),
-            Ok(())
+        config_builder.add_debug_capability_policy(
+            DebugCapabilityKey {
+                source_name: CapabilityName::from("debug_service1"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+                env_name: "foo_env".to_string(),
+            },
+            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["foo"])),
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root", "bootstrap2"])),
         );
-        assert_matches!(
-            global_policy_checker.can_route_debug_capability(
-                &protocol_capability,
-                &invalid_0.0,
-                &invalid_0.1,
-                &target_moniker
-            ),
-            Err(_)
+        config_builder.add_debug_capability_policy(
+            DebugCapabilityKey {
+                source_name: CapabilityName::from("debug_service1"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+                env_name: "baz_env".to_string(),
+            },
+            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["baz"])),
+            AllowlistEntry::Realm(AbsoluteMoniker::from(vec!["root", "bootstrap3"])),
         );
-        assert_matches!(
-            global_policy_checker.can_route_debug_capability(
-                &protocol_capability,
-                &invalid_1.0,
-                &invalid_1.1,
-                &target_moniker
+        let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
+
+        // source, dest, env
+        let valid_cases = vec![
+            (vec!["bar:0"], vec!["root", "bootstrap1", "child"], "bar_env".to_string()),
+            (
+                vec!["bar:0"],
+                vec!["root", "bootstrap1", "child", "grandchild"],
+                "bar_env".to_string(),
             ),
-            Err(_)
+            (vec!["foo:0", "child:0"], vec!["root", "bootstrap2"], "foo_env".to_string()),
+            (
+                vec!["foo:0", "child:0", "grandchild:0"],
+                vec!["root", "bootstrap2"],
+                "foo_env".to_string(),
+            ),
+            (vec!["baz:0", "child:0"], vec!["root", "bootstrap3", "child"], "baz_env".to_string()),
+            (
+                vec!["baz:0", "child:0", "granchild:0"],
+                vec!["root", "bootstrap3", "child", "grandchild"],
+                "baz_env".to_string(),
+            ),
+        ];
+
+        let invalid_cases = vec![
+            (vec!["bar:0"], vec!["root", "bootstrap"], "bar_env".to_string()),
+            (vec!["bar:0"], vec!["root", "not_bootstrap"], "bar_env".to_string()),
+            (vec!["foo:0"], vec!["root", "bootstrap2"], "foo_env".to_string()),
+            (vec!["foo:0", "child:0"], vec!["root", "not_bootstrap"], "foo_env".to_string()),
+            (vec!["baz:0"], vec!["root", "bootstrap3", "child"], "baz_env".to_string()),
+            (vec!["baz:0", "child:0"], vec!["root", "bootstrap"], "baz_env".to_string()),
+        ];
+
+        let target_moniker = AbsoluteMoniker::from(vec!["target"]);
+
+        for (source, dest, env) in valid_cases {
+            let component = self.make_component(source.clone().into());
+            let protocol_capability = CapabilitySourceInterface::<C>::Component {
+                capability: ComponentCapability::Protocol(ProtocolDecl {
+                    name: "debug_service1".into(),
+                    source_path: Some("/svc/debug_service1".parse().unwrap()),
+                }),
+                component: component.as_weak(),
+            };
+            assert_matches!(
+                global_policy_checker.can_route_debug_capability(
+                    &protocol_capability,
+                    &AbsoluteMoniker::from(dest.clone()),
+                    &env,
+                    &target_moniker
+                ),
+                Ok(()),
+                "{:?}",
+                (source, dest, env)
+            );
+        }
+
+        for (source, dest, env) in invalid_cases {
+            let component = self.make_component(source.clone().into());
+            let protocol_capability = CapabilitySourceInterface::<C>::Component {
+                capability: ComponentCapability::Protocol(ProtocolDecl {
+                    name: "debug_service1".into(),
+                    source_path: Some("/svc/debug_service1".parse().unwrap()),
+                }),
+                component: component.as_weak(),
+            };
+            assert_matches!(
+                global_policy_checker.can_route_debug_capability(
+                    &protocol_capability,
+                    &AbsoluteMoniker::from(dest.clone()),
+                    &env,
+                    &target_moniker
+                ),
+                Err(_),
+                "{:?}",
+                (source, dest, env)
+            );
+        }
+
+        Ok(())
+    }
+
+    // Tests `GlobalPolicyChecker::can_route_debug_capability()` for capability sources of type
+    // `Capability` with collection allowlist entries.
+    fn global_policy_checker_can_route_debug_capability_with_collection_allowlist_entry(
+        &self,
+    ) -> Result<(), Error> {
+        let mut config_builder = CapabilityAllowlistConfigBuilder::new();
+        config_builder.add_debug_capability_policy(
+            DebugCapabilityKey {
+                source_name: CapabilityName::from("debug_service1"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+                env_name: "bar_env".to_string(),
+            },
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["bar"])),
+            AllowlistEntry::Collection(
+                AbsoluteMoniker::from(vec!["root", "bootstrap"]),
+                "coll1".to_string(),
+            ),
         );
+        config_builder.add_debug_capability_policy(
+            DebugCapabilityKey {
+                source_name: CapabilityName::from("debug_service1"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+                env_name: "foo_env".to_string(),
+            },
+            AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["foo"]), "coll2".to_string()),
+            AllowlistEntry::Exact(AbsoluteMoniker::from(vec!["root", "bootstrap2"])),
+        );
+        config_builder.add_debug_capability_policy(
+            DebugCapabilityKey {
+                source_name: CapabilityName::from("debug_service1"),
+                source: CapabilityAllowlistSource::Self_,
+                capability: CapabilityTypeName::Protocol,
+                env_name: "baz_env".to_string(),
+            },
+            AllowlistEntry::Collection(AbsoluteMoniker::from(vec!["baz"]), "coll3".to_string()),
+            AllowlistEntry::Collection(
+                AbsoluteMoniker::from(vec!["root", "bootstrap3"]),
+                "coll4".to_string(),
+            ),
+        );
+        let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
+
+        // source, dest, env
+        let valid_cases = vec![
+            (vec!["bar:0"], vec!["root", "bootstrap", "coll1:instance1"], "bar_env".to_string()),
+            (
+                vec!["bar:0"],
+                vec!["root", "bootstrap", "coll1:instance1", "child"],
+                "bar_env".to_string(),
+            ),
+            (vec!["foo:0", "coll2:instance2:0"], vec!["root", "bootstrap2"], "foo_env".to_string()),
+            (
+                vec!["foo:0", "coll2:instance2:0", "child:0"],
+                vec!["root", "bootstrap2"],
+                "foo_env".to_string(),
+            ),
+            (
+                vec!["baz:0", "coll3:instance3:0"],
+                vec!["root", "bootstrap3", "coll4:instance4"],
+                "baz_env".to_string(),
+            ),
+            (
+                vec!["baz:0", "coll3:instance3:0", "child:0"],
+                vec!["root", "bootstrap3", "coll4:instance4", "child"],
+                "baz_env".to_string(),
+            ),
+        ];
+
+        let invalid_cases = vec![
+            (vec!["bar:0"], vec!["root", "bootstrap"], "bar_env".to_string()),
+            (vec!["bar:0"], vec!["root", "not_bootstrap"], "bar_env".to_string()),
+            (vec!["foo:0"], vec!["root", "bootstrap2"], "foo_env".to_string()),
+            (vec!["foo:0", "child:0"], vec!["root", "not_bootstrap"], "foo_env".to_string()),
+            (vec!["baz:0"], vec!["root", "bootstrap3", "child"], "baz_env".to_string()),
+            (vec!["baz:0", "child:0"], vec!["root", "bootstrap"], "baz_env".to_string()),
+        ];
+
+        let target_moniker = AbsoluteMoniker::from(vec!["target"]);
+
+        for (source, dest, env) in valid_cases {
+            let component = self.make_component(source.clone().into());
+            let protocol_capability = CapabilitySourceInterface::<C>::Component {
+                capability: ComponentCapability::Protocol(ProtocolDecl {
+                    name: "debug_service1".into(),
+                    source_path: Some("/svc/debug_service1".parse().unwrap()),
+                }),
+                component: component.as_weak(),
+            };
+            assert_matches!(
+                global_policy_checker.can_route_debug_capability(
+                    &protocol_capability,
+                    &AbsoluteMoniker::from(dest.clone()),
+                    &env,
+                    &target_moniker
+                ),
+                Ok(()),
+                "{:?}",
+                (source, dest, env)
+            );
+        }
+
+        for (source, dest, env) in invalid_cases {
+            let component = self.make_component(source.clone().into());
+            let protocol_capability = CapabilitySourceInterface::<C>::Component {
+                capability: ComponentCapability::Protocol(ProtocolDecl {
+                    name: "debug_service1".into(),
+                    source_path: Some("/svc/debug_service1".parse().unwrap()),
+                }),
+                component: component.as_weak(),
+            };
+            assert_matches!(
+                global_policy_checker.can_route_debug_capability(
+                    &protocol_capability,
+                    &AbsoluteMoniker::from(dest.clone()),
+                    &env,
+                    &target_moniker
+                ),
+                Err(_),
+                "{:?}",
+                (source, dest, env)
+            );
+        }
+
         Ok(())
     }
 
@@ -494,7 +748,7 @@ where
 // construction.
 struct CapabilityAllowlistConfigBuilder {
     capability_policy: HashMap<CapabilityAllowlistKey, HashSet<AllowlistEntry>>,
-    debug_capability_policy: HashMap<CapabilityAllowlistKey, HashSet<(AbsoluteMoniker, String)>>,
+    debug_capability_policy: HashMap<DebugCapabilityKey, HashSet<DebugCapabilityAllowlistEntry>>,
 }
 
 impl CapabilityAllowlistConfigBuilder {
@@ -516,11 +770,14 @@ impl CapabilityAllowlistConfigBuilder {
     /// Add a new entry to the configuration.
     pub fn add_debug_capability_policy<'a>(
         &'a mut self,
-        key: CapabilityAllowlistKey,
-        value: Vec<(AbsoluteMoniker, String)>,
+        key: DebugCapabilityKey,
+        source: AllowlistEntry,
+        dest: AllowlistEntry,
     ) -> &'a mut Self {
-        let value_set = HashSet::from_iter(value.iter().cloned());
-        self.debug_capability_policy.insert(key, value_set);
+        self.debug_capability_policy
+            .entry(key)
+            .or_default()
+            .insert(DebugCapabilityAllowlistEntry::new(source, dest));
         self
     }
 
