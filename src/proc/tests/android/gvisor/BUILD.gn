@@ -99,7 +99,8 @@ gvisor_tests = [
   "madvise_test",
 
   # "membarrier_test",
-  # "memfd_test",
+  "memfd_test",
+
   # "memory_accounting_test",
   # "mempolicy_test",
   # "mincore_test",
