@@ -76,6 +76,9 @@ toc:
 - title: "UI-Input"
   section:
   - include: /docs/development/ui-input/_toc.yaml
+- title: "Virtualization"
+  section:
+  - include: /docs/development/virtualization/_toc.yaml
 - heading: "Test and debug"
 - title: "Test"
   section:
