@@ -13,7 +13,7 @@ use fidl::endpoints::Proxy;
 use fidl_fuchsia_hardware_power_statecontrol as fpower;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
-use fuchsia_inspect::{self as inspect};
+use fuchsia_inspect::{self as inspect, NumericProperty as _};
 use fuchsia_zircon as zx;
 use fuchsia_zircon::AsHandleRef;
 use futures::prelude::*;
@@ -82,8 +82,8 @@ impl<'a, 'b> ShutdownWatcherBuilder<'a, 'b> {
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         let node = Rc::new(ShutdownWatcher {
-            reboot_watchers: RefCell::new(Vec::new()),
-            inspect: InspectData::new(inspect_root, "ShutdownWatcher".to_string()),
+            reboot_watchers: Rc::new(RefCell::new(HashMap::new())),
+            inspect: Rc::new(InspectData::new(inspect_root, "ShutdownWatcher".to_string())),
         });
 
         // Publish the service only if we were provided with a ServiceFs
@@ -98,10 +98,10 @@ impl<'a, 'b> ShutdownWatcherBuilder<'a, 'b> {
 pub struct ShutdownWatcher {
     /// Contains all the registered RebootMethodsWatcher channels to be notified when a reboot
     /// request is received.
-    reboot_watchers: RefCell<Vec<fpower::RebootMethodsWatcherProxy>>,
+    reboot_watchers: Rc<RefCell<HashMap<u32, fpower::RebootMethodsWatcherProxy>>>,
 
     /// Struct for managing Component Inspection data
-    inspect: InspectData,
+    inspect: Rc<InspectData>,
 }
 
 impl ShutdownWatcher {
@@ -157,8 +157,22 @@ impl ShutdownWatcher {
             "ShutdownWatcher::add_reboot_watcher",
             "watcher" => watcher.as_channel().raw_handle()
         );
-        self.inspect.add_reboot_watcher(watcher.as_channel().raw_handle().into());
-        self.reboot_watchers.borrow_mut().push(watcher);
+
+        // If the client closes the watcher channel, remove it from our `reboot_watchers` map and
+        // update Inspect
+        let key = watcher.as_channel().raw_handle();
+        let proxy = watcher.clone();
+        let reboot_watchers = self.reboot_watchers.clone();
+        let inspect = self.inspect.clone();
+        fasync::Task::local(async move {
+            let _ = proxy.on_closed().await;
+            reboot_watchers.borrow_mut().remove(&key);
+            inspect.remove_reboot_watcher();
+        })
+        .detach();
+
+        self.inspect.add_reboot_watcher();
+        self.reboot_watchers.borrow_mut().insert(key, watcher);
     }
 
     /// Handles the SystemShutdown message by notifying the appropriate registered watchers.
@@ -184,9 +198,9 @@ impl ShutdownWatcher {
 
     /// Notifies the registered reboot watchers of the incoming reboot request reason.
     async fn notify_reboot_watchers(&self, reason: RebootReason, timeout: Seconds) {
-        // TODO(fxbug.dev/44484): This string must live for the duration of the function because the trace
-        // macro uses it when the function goes out of scope. Therefore, it must be bound here and
-        // not used anonymously at the macro callsite.
+        // TODO(fxbug.dev/44484): This string must live for the duration of the function because the
+        // trace macro uses it when the function goes out of scope. Therefore, it must be bound here
+        // and not used anonymously at the macro callsite.
         let reason_str = format!("{:?}", reason);
         fuchsia_trace::duration!(
             "power_manager",
@@ -195,16 +209,21 @@ impl ShutdownWatcher {
         );
 
         // Take the current watchers out of the RefCell because we'll be modifying the vector
-        let watchers = self.reboot_watchers.replace(vec![]);
+        let watchers = self.reboot_watchers.replace(HashMap::new());
 
         // Create a future for each watcher that calls the watcher's `on_reboot` method and returns
         // the watcher proxy if the response was received within the timeout, or None otherwise. We
         // take this approach so that watchers that timed out have their channel dropped
         // (fxbug.dev/53760).
-        let watcher_futures = watchers.into_iter().map(|watcher| async move {
+        let watcher_futures = watchers.into_iter().map(|(key, watcher_proxy)| async move {
             let deadline = zx::Duration::from_seconds(timeout.0 as i64).after_now();
-            match watcher.on_reboot(reason).map_err(|_| ()).on_timeout(deadline, || Err(())).await {
-                Ok(()) => Some(watcher.clone()),
+            match watcher_proxy
+                .on_reboot(reason)
+                .map_err(|_| ())
+                .on_timeout(deadline, || Err(()))
+                .await
+            {
+                Ok(()) => Some((key, watcher_proxy)),
                 Err(()) => None,
             }
         });
@@ -236,32 +255,39 @@ impl Node for ShutdownWatcher {
 }
 
 struct InspectData {
-    reboot_watchers: inspect::Node,
+    reboot_watcher_current_connections: inspect::UintProperty,
+    reboot_watcher_total_connections: inspect::UintProperty,
 }
 
 impl InspectData {
     fn new(parent: &inspect::Node, name: String) -> Self {
         // Create a local root node and properties
         let root = parent.create_child(name);
-        let reboot_watchers = root.create_child("reboot_watchers");
+        let reboot_watcher_current_connections =
+            root.create_uint("reboot_watcher_current_connections", 0);
+        let reboot_watcher_total_connections =
+            root.create_uint("reboot_watcher_total_connections", 0);
 
         // Pass ownership of the new node to the parent node, otherwise it'll be dropped
         parent.record(root);
 
-        InspectData { reboot_watchers }
+        InspectData { reboot_watcher_current_connections, reboot_watcher_total_connections }
     }
 
-    /// Adds a new Inspect node with a unique name and proxy identifier.
-    fn add_reboot_watcher(&self, proxy: u64) {
-        let watcher_node = self.reboot_watchers.create_child(inspect::unique_name(""));
-        watcher_node.record_uint("proxy", proxy);
-        self.reboot_watchers.record(watcher_node);
+    fn add_reboot_watcher(&self) {
+        self.reboot_watcher_current_connections.add(1);
+        self.reboot_watcher_total_connections.add(1);
+    }
+
+    fn remove_reboot_watcher(&self) {
+        self.reboot_watcher_current_connections.subtract(1);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::run_all_tasks_until_stalled::run_all_tasks_until_stalled;
     use assert_matches::assert_matches;
     use fidl::prelude::*;
     use inspect::assert_data_tree;
@@ -282,11 +308,22 @@ mod tests {
     }
 
     /// Tests for the presence and correctness of inspect data
-    #[fasync::run_singlethreaded(test)]
-    async fn test_inspect_data() {
+    #[test]
+    fn test_inspect_data() {
+        let mut exec = fasync::TestExecutor::new().unwrap();
         let inspector = inspect::Inspector::new();
         let node =
             ShutdownWatcherBuilder::new().with_inspect_root(inspector.root()).build().unwrap();
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                ShutdownWatcher: {
+                    reboot_watcher_current_connections: 0u64,
+                    reboot_watcher_total_connections: 0u64
+                }
+            }
+        );
 
         let (watcher_proxy, _) =
             fidl::endpoints::create_proxy::<fpower::RebootMethodsWatcherMarker>().unwrap();
@@ -296,11 +333,48 @@ mod tests {
             inspector,
             root: {
                 ShutdownWatcher: {
-                    reboot_watchers: {
-                        "0": {
-                            proxy: watcher_proxy.as_channel().raw_handle() as u64
-                        }
-                    }
+                    reboot_watcher_current_connections: 1u64,
+                    reboot_watcher_total_connections: 1u64
+                }
+            }
+        );
+
+        drop(watcher_proxy);
+        run_all_tasks_until_stalled(&mut exec);
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                ShutdownWatcher: {
+                    reboot_watcher_current_connections: 0u64,
+                    reboot_watcher_total_connections: 1u64
+                }
+            }
+        );
+
+        let (watcher_proxy, _) =
+            fidl::endpoints::create_proxy::<fpower::RebootMethodsWatcherMarker>().unwrap();
+        node.add_reboot_watcher(watcher_proxy.clone());
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                ShutdownWatcher: {
+                    reboot_watcher_current_connections: 1u64,
+                    reboot_watcher_total_connections: 2u64
+                }
+            }
+        );
+
+        drop(watcher_proxy);
+        run_all_tasks_until_stalled(&mut exec);
+
+        assert_data_tree!(
+            inspector,
+            root: {
+                ShutdownWatcher: {
+                    reboot_watcher_current_connections: 0u64,
+                    reboot_watcher_total_connections: 2u64
                 }
             }
         );
