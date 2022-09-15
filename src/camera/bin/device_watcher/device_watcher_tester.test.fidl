@@ -13,4 +13,9 @@ protocol DeviceWatcherTester {
     InjectDevice(resource struct {
         camera client_end:fuchsia.hardware.camera.Device;
     });
+
+    /// Inserts the given controller implementation as a new device path.
+    InjectDeviceByPath(resource struct {
+        path string;
+    });
 };

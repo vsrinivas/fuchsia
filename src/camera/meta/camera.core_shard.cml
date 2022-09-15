@@ -18,9 +18,29 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.logger.LogSink",
+            protocol: [
+                "fuchsia.camera2.hal.Controller",
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+            ],
             from: "parent",
-            to: '#camera_device_watcher',
+            to: "#camera_device_watcher",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: "#camera_device_watcher",
+        },
+        {
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
+            from: "#cobalt",
+            to: "#camera_device_watcher",
+        },
+        {
+            protocol: [ "fuchsia.ui.policy.DeviceListenerRegistry" ],
+            from: "#ui",
+            to: "#camera_device_watcher",
+            dependency: "weak",
         },
         {
             directory: "dev",
@@ -28,14 +48,6 @@
             as: "dev-camera",
             to: "#camera_device_watcher",
             subdir: "class/camera",
-        },
-        {
-            // TODO(fxb/92885) migrate camera_device.cmx to components v2
-            // and remove this v1 dependency
-            protocol: "fuchsia.sys.Launcher",
-            from: "self",
-            to: "#camera_device_watcher",
-            dependency: "weak_for_migration",
         },
     ],
 }

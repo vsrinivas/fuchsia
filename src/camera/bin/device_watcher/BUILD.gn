@@ -28,6 +28,7 @@ source_set("lib") {
     ":fuchsia.camera.test",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.hardware.camera",
     "//sdk/fidl/fuchsia.io",
     "//sdk/lib/fidl/cpp",
@@ -54,9 +55,14 @@ fidl("fuchsia.camera.test") {
   public_deps = [ "//sdk/fidl/fuchsia.hardware.camera" ]
 }
 
-fuchsia_package_with_single_component("camera_device_watcher") {
+fuchsia_component("camera_device_watcher_cmp") {
+  component_name = "camera_device_watcher"
   manifest = "meta/camera_device_watcher.cml"
   deps = [ ":camera_device_watcher_bin" ]
+}
+
+fuchsia_package("camera_device_watcher") {
+  deps = [ ":camera_device_watcher_cmp" ]
 }
 
 executable("camera_device_watcher_unittest_bin") {
@@ -75,7 +81,7 @@ executable("camera_device_watcher_unittest_bin") {
 fuchsia_unittest_package("camera_device_watcher_unittest") {
   manifest = "meta/camera_device_watcher_unittest.cml"
   deps = [
-    ":camera_device_watcher",
+    ":camera_device_watcher_cmp",
     ":camera_device_watcher_unittest_bin",
   ]
   test_specs = {

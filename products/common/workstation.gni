@@ -89,7 +89,7 @@ legacy_base_package_labels += [
 
 # USB camera support
 legacy_base_package_labels += [
-  "//src/camera/bin/usb_device_watcher",
+  "//src/camera/bin/device_watcher",
   "//src/camera/bin/usb_device",
   "//src/camera/drivers/usb_video",
 ]
