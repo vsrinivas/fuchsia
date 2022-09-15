@@ -25,7 +25,6 @@ using StartCommand = ConsumerStage::StartCommand;
 using StopCommand = ConsumerStage::StopCommand;
 using StartedStatus = ConsumerStage::StartedStatus;
 using StoppedStatus = ConsumerStage::StoppedStatus;
-using ::fuchsia_audio_mixer::PipelineDirection;
 using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 using ::testing::ElementsAre;
 using ::testing::FieldsAre;

@@ -20,7 +20,7 @@ using ThreadId = uint64_t;
 using GainControlId = uint64_t;
 
 // This ID shall not be used.
-constexpr uint64_t kInvalidId = fuchsia_audio_mixer::kInvalidId;
+constexpr uint64_t kInvalidId = ::fuchsia_audio_mixer::kInvalidId;
 
 // This ID is used by the GlobalTaskQueue to mean "any thread allowed".
 constexpr uint64_t kAnyThreadId = std::numeric_limits<uint64_t>::max();
@@ -29,6 +29,7 @@ static_assert(kAnyThreadId != kInvalidId);
 // Alias common types into this namespace.
 using TimelineFunction = ::media::TimelineFunction;
 using TimelineRate = ::media::TimelineRate;
+using PipelineDirection = ::fuchsia_audio_mixer::PipelineDirection;
 
 }  // namespace media_audio
 

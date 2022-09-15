@@ -46,9 +46,11 @@ bool HasDestInChildren(const std::vector<NodePtr>& children, const NodePtr& dest
 
 }  // namespace
 
-Node::Node(std::string_view name, bool is_meta, PipelineStagePtr pipeline_stage, NodePtr parent)
+Node::Node(std::string_view name, bool is_meta, PipelineDirection pipeline_direction,
+           PipelineStagePtr pipeline_stage, NodePtr parent)
     : name_(name),
       is_meta_(is_meta),
+      pipeline_direction_(pipeline_direction),
       pipeline_stage_(std::move(pipeline_stage)),
       parent_(std::move(parent)) {
   if (parent_) {
@@ -143,6 +145,8 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
 
   // Save this for the closure since we can't read Nodes from the mix threads.
   const auto dest_stage_thread_id = dest->pipeline_stage_thread()->id();
+
+  // TODO(fxbug.dev/87651): update topological order of consumer stages
 
   // The PipelineStages are updated asynchronously.
   global_queue.Push(dest_stage_thread_id,
@@ -251,6 +255,11 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInn
   if (!dest->CanAcceptSourceFormat(source->pipeline_stage()->format())) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
   }
+  if (dest->pipeline_direction() == PipelineDirection::kOutput &&
+      source->pipeline_direction() == PipelineDirection::kInput) {
+    return fpromise::error(
+        fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
+  }
 
   // Since source->dest() is not set, source should not appear in dest->sources().
   FX_CHECK(!HasNode(dest->sources(), source));
@@ -265,6 +274,8 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInn
 
   // Save this now since we can't read Nodes from the mix threads.
   const auto dest_stage_thread_id = dest->pipeline_stage_thread()->id();
+
+  // TODO(fxbug.dev/87651): update topological order of consumer stages
 
   // Update the PipelineStages asynchronously, on dest's thread.
   global_queue.Push(dest_stage_thread_id,

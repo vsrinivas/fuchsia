@@ -57,6 +57,7 @@ class NodeCreateEdgeTest : public ::testing::Test {
 // - (error) source has too many dest edges (if source->is_meta)
 // - (error) dest has too many source edges
 // - (error) dest doesn't accept source's format
+// - (error) dest is an output pipeline, source is an input pipeline
 // - (error) would create a cycle
 // - success
 //
@@ -135,6 +136,24 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryIncompatibleFormats) {
   auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+}
+
+TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryPipelineMismatch) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .unconnected_ordinary_nodes = {1, 2},
+      .pipeline_directions =
+          {
+              {PipelineDirection::kInput, {1}},
+              {PipelineDirection::kOutput, {2}},
+          },
+      .default_thread = detached_thread_,
+  });
+
+  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryCycle) {
@@ -237,6 +256,25 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaIncompatibleFormats) {
   auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+}
+
+TEST_F(NodeCreateEdgeTest, OrdinaryToMetaPipelineMismatch) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
+      .unconnected_ordinary_nodes = {1},
+      .pipeline_directions =
+          {
+              {PipelineDirection::kInput, {1}},
+              {PipelineDirection::kOutput, {2}},
+          },
+      .default_thread = detached_thread_,
+  });
+
+  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
 }
 
 TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestNodeTooManyIncomingEdges) {
@@ -355,6 +393,25 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryIncompatibleFormats) {
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
+TEST_F(NodeCreateEdgeTest, MetaToOrdinaryPipelineMismatch) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .meta_nodes = {{1, {.source_children = {}, .dest_children = {}}}},
+      .unconnected_ordinary_nodes = {2},
+      .pipeline_directions =
+          {
+              {PipelineDirection::kInput, {1}},
+              {PipelineDirection::kOutput, {2}},
+          },
+      .default_thread = detached_thread_,
+  });
+
+  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
+}
+
 TEST_F(NodeCreateEdgeTest, MetaToOrdinaryCycle) {
   GlobalTaskQueue q;
   FakeGraph graph({
@@ -456,6 +513,28 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaIncompatibleFormats) {
   auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+}
+
+TEST_F(NodeCreateEdgeTest, MetaToMetaPipelineMismatch) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .meta_nodes =
+          {
+              {1, {.source_children = {}, .dest_children = {}}},
+              {2, {.source_children = {}, .dest_children = {}}},
+          },
+      .pipeline_directions =
+          {
+              {PipelineDirection::kInput, {1}},
+              {PipelineDirection::kOutput, {2}},
+          },
+      .default_thread = detached_thread_,
+  });
+
+  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kOutputPipelineCannotReadFromInputPipeline);
 }
 
 TEST_F(NodeCreateEdgeTest, MetaToMetaCycle) {

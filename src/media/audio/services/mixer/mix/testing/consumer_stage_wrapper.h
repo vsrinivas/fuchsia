@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
@@ -19,8 +20,7 @@ namespace media_audio {
 // FakeConsumerStageWriter.
 struct ConsumerStageWrapper {
   ConsumerStageWrapper(Format f, zx::duration presentation_delay,
-                       fuchsia_audio_mixer::PipelineDirection pipeline_direction =
-                           fuchsia_audio_mixer::PipelineDirection::kOutput,
+                       PipelineDirection pipeline_direction = PipelineDirection::kOutput,
                        zx_koid_t reference_clock_koid = DefaultClockKoid())
       : format(f) {
     packet_queue = MakeDefaultPacketQueue(format),

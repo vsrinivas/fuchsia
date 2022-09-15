@@ -278,7 +278,7 @@ protocol Graph {
         /// Optional. Empty if not specified.
         1: name string:MAX_NAME_LENGTH;
 
-        /// Direction of audio data consumed by this node.
+        /// Direction of audio data produced by this node.
         ///
         /// Required.
         2: direction PipelineDirection;
@@ -334,7 +334,7 @@ protocol Graph {
         /// Optional. Empty if not specified.
         1: name string:MAX_NAME_LENGTH;
 
-        /// Direction of audio data consumed and produced by this node.
+        /// Direction of audio data produced by this node.
         ///
         /// Required.
         2: direction PipelineDirection;
@@ -582,6 +582,10 @@ type CreateEdgeError = flexible enum {
 
     /// This edge would create a cycle.
     CYCLE = 7;
+
+    /// The source node has PipelineDirection INPUT and the destination node has
+    /// PipelineDirection OUTPUT.
+    OUTPUT_PIPELINE_CANNOT_READ_FROM_INPUT_PIPELINE = 8;
 };
 
 /// Type of errors return by [`DeleteEdge`].

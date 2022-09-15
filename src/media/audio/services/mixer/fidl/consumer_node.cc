@@ -14,9 +14,11 @@ namespace media_audio {
 std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
   struct WithPublicCtor : public ConsumerNode {
    public:
-    explicit WithPublicCtor(std::string_view name, PipelineStagePtr pipeline_stage,
-                            const Format& format, std::shared_ptr<CommandQueue> command_queue)
-        : ConsumerNode(name, std::move(pipeline_stage), format, std::move(command_queue)) {}
+    explicit WithPublicCtor(std::string_view name, PipelineDirection pipeline_direction,
+                            PipelineStagePtr pipeline_stage, const Format& format,
+                            std::shared_ptr<CommandQueue> command_queue)
+        : ConsumerNode(name, pipeline_direction, std::move(pipeline_stage), format,
+                       std::move(command_queue)) {}
   };
 
   auto command_queue = std::make_shared<CommandQueue>();
@@ -33,7 +35,8 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
   // TODO(fxbug.dev/87651): also need to call `args.thread->AddConsumer(pipeline_stage)` on the
   // appropriate thread
 
-  auto node = std::make_shared<WithPublicCtor>(args.name, std::move(pipeline_stage), args.format,
+  auto node = std::make_shared<WithPublicCtor>(args.name, args.pipeline_direction,
+                                               std::move(pipeline_stage), args.format,
                                                std::move(command_queue));
   node->set_pipeline_stage_thread(args.thread);
   return node;

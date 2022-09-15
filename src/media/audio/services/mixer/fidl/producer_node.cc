@@ -16,8 +16,9 @@ namespace media_audio {
 std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
   struct WithPublicCtor : public ProducerNode {
    public:
-    explicit WithPublicCtor(std::string_view name, PipelineStagePtr pipeline_stage, NodePtr parent)
-        : ProducerNode(name, std::move(pipeline_stage), std::move(parent)) {}
+    explicit WithPublicCtor(std::string_view name, PipelineDirection pipeline_direction,
+                            PipelineStagePtr pipeline_stage, NodePtr parent)
+        : ProducerNode(name, pipeline_direction, std::move(pipeline_stage), std::move(parent)) {}
   };
 
   auto pipeline_stage = std::make_shared<ProducerStage>(ProducerStage::Args{
@@ -29,8 +30,8 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
   });
   pipeline_stage->set_thread(args.detached_thread);
 
-  auto node = std::make_shared<WithPublicCtor>(args.name, std::move(pipeline_stage),
-                                               std::move(args.parent));
+  auto node = std::make_shared<WithPublicCtor>(args.name, args.pipeline_direction,
+                                               std::move(pipeline_stage), std::move(args.parent));
   node->set_pipeline_stage_thread(args.detached_thread);
   return node;
 }

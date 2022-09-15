@@ -7,6 +7,7 @@
 
 #include <lib/zx/time.h>
 
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/producer_stage.h"
@@ -22,7 +23,10 @@ class ProducerNode : public Node {
     // Name of this node.
     std::string_view name;
 
-    // Parent meta node.
+    // Whether this node participates in an input pipeline or an output pipeline.
+    PipelineDirection pipeline_direction;
+
+    // Parent meta node. Optional.
     NodePtr parent;
 
     // Command queue for the ProducerStage.
@@ -41,8 +45,10 @@ class ProducerNode : public Node {
   zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) final;
 
  private:
-  ProducerNode(std::string_view name, PipelineStagePtr pipeline_stage, NodePtr parent)
-      : Node(name, /*is_meta=*/false, std::move(pipeline_stage), std::move(parent)) {}
+  ProducerNode(std::string_view name, PipelineDirection pipeline_direction,
+               PipelineStagePtr pipeline_stage, NodePtr parent)
+      : Node(name, /*is_meta=*/false, pipeline_direction, std::move(pipeline_stage),
+             std::move(parent)) {}
 
   NodePtr CreateNewChildSource() final {
     UNREACHABLE << "CreateNewChildSource should not be called on ordinary nodes";

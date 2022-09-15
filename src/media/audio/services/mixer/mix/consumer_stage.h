@@ -13,6 +13,7 @@
 #include <variant>
 
 #include "src/media/audio/services/common/logging.h"
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/thread_safe_queue.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
@@ -83,7 +84,7 @@ class ConsumerStage : public PipelineStage {
     std::string_view name;
 
     // Whether this ConsumerStage participates in an input pipeline or an output pipeline.
-    fuchsia_audio_mixer::PipelineDirection pipeline_direction;
+    PipelineDirection pipeline_direction;
 
     // Initial presentation delay. For output pipelines, this is the downstream presentation delay.
     // For input pipelines, this the upstream presentation delay.
@@ -169,13 +170,13 @@ class ConsumerStage : public PipelineStage {
 
   // For output pipelines, this reports the presentation delay downstream of this consumer.
   zx::duration downstream_delay() const {
-    FX_CHECK(pipeline_direction_ == fuchsia_audio_mixer::PipelineDirection::kOutput);
+    FX_CHECK(pipeline_direction_ == PipelineDirection::kOutput);
     return presentation_delay_;
   }
 
   // For input pipelines, this reports the presentation delay upstream of this consumer.
   zx::duration upstream_delay() const {
-    FX_CHECK(pipeline_direction_ == fuchsia_audio_mixer::PipelineDirection::kInput);
+    FX_CHECK(pipeline_direction_ == PipelineDirection::kInput);
     return presentation_delay_;
   }
 
@@ -190,7 +191,7 @@ class ConsumerStage : public PipelineStage {
     UNREACHABLE << "Consumers cannot be read: there is no destination stream";
   }
 
-  const fuchsia_audio_mixer::PipelineDirection pipeline_direction_;
+  const PipelineDirection pipeline_direction_;
   const zx::duration presentation_delay_;  // downstream or upstream delay
   const std::shared_ptr<Writer> writer_;   // how to write consumed packets
   const std::shared_ptr<CommandQueue> pending_commands_;

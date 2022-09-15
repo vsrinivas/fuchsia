@@ -166,6 +166,7 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
       .consumer_frames = kRingBufferFrames / 2,
   });
   auto producer = MetaProducerNode::Create({
+      .pipeline_direction = PipelineDirection::kInput,
       .format = kFormat,
       .reference_clock_koid = kReferenceClockKoid,
       .data_source = ring_buffer,
@@ -185,12 +186,14 @@ TEST(MetaProducerNodeTestRingBuffer, CreateEdgeSuccess) {
     ASSERT_TRUE(result.is_ok());
   }
 
+  EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
   ASSERT_EQ(producer->child_sources().size(), 0u);
   ASSERT_EQ(producer->child_dests().size(), 1u);
 
   auto producer_child = std::static_pointer_cast<FakeNode>(producer->child_dests()[0]);
-  EXPECT_EQ(producer_child->pipeline_stage_thread(), detached_thread);
   EXPECT_EQ(producer_child->dest(), dest);
+  EXPECT_EQ(producer_child->pipeline_direction(), PipelineDirection::kInput);
+  EXPECT_EQ(producer_child->pipeline_stage_thread(), detached_thread);
   EXPECT_EQ(producer_child->pipeline_stage()->thread(), detached_thread);
   EXPECT_EQ(producer_child->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(producer_child->pipeline_stage()->reference_clock_koid(), kReferenceClockKoid);

@@ -37,10 +37,9 @@ ConsumerStage::Status ConsumerStage::RunMixJob(MixJobContext& ctx,
 
   // Output pipelines consume data that will be presented in the future.
   // Input pipelines consume data that was presented in the past.
-  const zx::duration consume_offset =
-      (pipeline_direction_ == fuchsia_audio_mixer::PipelineDirection::kOutput)
-          ? period + downstream_delay()  //
-          : -period - upstream_delay();
+  const zx::duration consume_offset = (pipeline_direction_ == PipelineDirection::kOutput)
+                                          ? period + downstream_delay()
+                                          : -period - upstream_delay();
 
   const zx::time start_consume_time = mix_job_start_time + consume_offset;
   const zx::time end_consume_time = start_consume_time + period;

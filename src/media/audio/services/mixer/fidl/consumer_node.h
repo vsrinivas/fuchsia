@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_CONSUMER_NODE_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_CONSUMER_NODE_H_
 
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
 #include "src/media/audio/services/mixer/mix/thread.h"
@@ -18,8 +19,8 @@ class ConsumerNode : public Node {
     // Name of this node.
     std::string_view name;
 
-    // Whether this ConsumerStage participates in an input pipeline or an output pipeline.
-    fuchsia_audio_mixer::PipelineDirection pipeline_direction;
+    // Whether this node participates in an input pipeline or an output pipeline.
+    PipelineDirection pipeline_direction;
 
     // Format of audio consumed by this node.
     Format format;
@@ -48,9 +49,11 @@ class ConsumerNode : public Node {
  private:
   using CommandQueue = ConsumerStage::CommandQueue;
 
-  ConsumerNode(std::string_view name, PipelineStagePtr pipeline_stage, const Format& format,
+  ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,
+               PipelineStagePtr pipeline_stage, const Format& format,
                std::shared_ptr<CommandQueue> command_queue)
-      : Node(name, /*is_meta=*/false, std::move(pipeline_stage), /*parent=*/nullptr),
+      : Node(name, /*is_meta=*/false, pipeline_direction, std::move(pipeline_stage),
+             /*parent=*/nullptr),
         format_(format),
         command_queue_(std::move(command_queue)) {}
 

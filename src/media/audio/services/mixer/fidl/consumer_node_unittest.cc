@@ -21,6 +21,7 @@ using ::testing::ElementsAre;
 
 const Format kFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 10000});
 const Format kWrongFormat = Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 10000});
+const auto kPipelineDirection = PipelineDirection::kOutput;
 
 // At 10kHz fps, 1ms is 10 frames.
 constexpr auto kMixJobFrames = 10;
@@ -38,7 +39,7 @@ class ConsumerNodeTest : public ::testing::Test {
   const std::shared_ptr<FakeConsumerStageWriter> consumer_writer_ =
       std::make_shared<FakeConsumerStageWriter>();
   const std::shared_ptr<ConsumerNode> consumer_node_ = ConsumerNode::Create({
-      .pipeline_direction = fuchsia_audio_mixer::PipelineDirection::kOutput,
+      .pipeline_direction = kPipelineDirection,
       .format = kFormat,
       .reference_clock_koid = clock_->koid(),
       .writer = consumer_writer_,
@@ -114,6 +115,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   }
 
   auto consumer_stage = static_cast<ConsumerStage*>(consumer_node_->pipeline_stage().get());
+  EXPECT_EQ(consumer_node_->pipeline_direction(), kPipelineDirection);
   EXPECT_EQ(consumer_node_->pipeline_stage_thread(), mix_thread_);
   EXPECT_EQ(consumer_stage->thread(), mix_thread_);
   EXPECT_EQ(consumer_stage->format(), kFormat);

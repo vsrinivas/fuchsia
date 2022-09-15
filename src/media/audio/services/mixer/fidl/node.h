@@ -143,6 +143,9 @@ class Node {
   // REQUIRED: !is_meta()
   ThreadPtr pipeline_stage_thread() const;
 
+  // Kind of pipeline this node participates in.
+  PipelineDirection pipeline_direction() const { return pipeline_direction_; }
+
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect
   // to `source` edge, on top of any additional external delay contribution that is set via
@@ -151,8 +154,8 @@ class Node {
   virtual zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) = 0;
 
  protected:
-  // REQUIRED: `parent` outlives this node.
-  Node(std::string_view name, bool is_meta, PipelineStagePtr pipeline_stage, NodePtr parent);
+  Node(std::string_view name, bool is_meta, PipelineDirection pipeline_direction,
+       PipelineStagePtr pipeline_stage, NodePtr parent);
   virtual ~Node() = default;
 
   Node(const Node&) = delete;
@@ -235,6 +238,7 @@ class Node {
 
   const std::string name_;
   const bool is_meta_;
+  const PipelineDirection pipeline_direction_;
   const PipelineStagePtr pipeline_stage_;
 
   // If this node is a child of a meta node, then `parent_` is that meta node.

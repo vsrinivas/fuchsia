@@ -17,9 +17,9 @@ const Format kDefaultFormat =
     Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16, 1, 16000});
 }  // namespace
 
-FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, FakeNodePtr parent,
-                   const Format* format)
-    : Node(std::string("Node") + std::to_string(id), is_meta,
+FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, PipelineDirection pipeline_direction,
+                   FakeNodePtr parent, const Format* format)
+    : Node(std::string("Node") + std::to_string(id), is_meta, pipeline_direction,
            is_meta ? nullptr
                    : FakePipelineStage::Create({
                          .name = "PipelineStage" + std::to_string(id),
@@ -75,7 +75,10 @@ bool FakeNode::AllowsDest() const {
   return true;
 }
 
-FakeGraph::FakeGraph(Args args) : default_thread_(args.default_thread) {
+FakeGraph::FakeGraph(Args args)
+    : pipeline_directions_(std::move(args.pipeline_directions)),
+      default_pipeline_direction_(args.default_pipeline_direction),
+      default_thread_(args.default_thread) {
   // Populate `formats_`.
   for (auto& [format_ptr, nodes] : args.formats) {
     auto format = std::make_shared<Format>(*format_ptr);
@@ -166,7 +169,8 @@ FakeNodePtr FakeGraph::CreateMetaNode(std::optional<NodeId> id) {
     id = NextId();
   }
 
-  std::shared_ptr<FakeNode> node(new FakeNode(*this, *id, true, nullptr, nullptr));
+  std::shared_ptr<FakeNode> node(
+      new FakeNode(*this, *id, true, PipelineDirectionForNode(*id), nullptr, nullptr));
   nodes_[*id] = node;
   return node;
 }
@@ -189,8 +193,11 @@ FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr 
   }
 
   const Format* format = formats_.count(*id) ? formats_[*id].get() : &kDefaultFormat;
+  const auto pipeline_direction =
+      parent ? parent->pipeline_direction() : PipelineDirectionForNode(*id);
 
-  std::shared_ptr<FakeNode> node(new FakeNode(*this, *id, false, parent, format));
+  std::shared_ptr<FakeNode> node(
+      new FakeNode(*this, *id, false, pipeline_direction, parent, format));
   nodes_[*id] = node;
   node->set_pipeline_stage_thread(default_thread_);
   node->fake_pipeline_stage()->set_thread(default_thread_);
@@ -205,6 +212,15 @@ NodeId FakeGraph::NextId() {
     id++;
   }
   return id;
+}
+
+PipelineDirection FakeGraph::PipelineDirectionForNode(NodeId id) const {
+  for (auto& [dir, nodes] : pipeline_directions_) {
+    if (nodes.count(id) > 0) {
+      return dir;
+    }
+  }
+  return default_pipeline_direction_;
 }
 
 }  // namespace media_audio

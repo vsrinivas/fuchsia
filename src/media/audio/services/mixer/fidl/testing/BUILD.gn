@@ -15,7 +15,10 @@ source_set("testing") {
     "fake_graph.h",
   ]
 
-  public_deps = [ "//src/media/audio/services/mixer/fidl" ]
+  public_deps = [
+    "//src/media/audio/services/mixer/common",
+    "//src/media/audio/services/mixer/fidl",
+  ]
 
   deps = [ "//src/media/audio/services/mixer/mix/testing" ]
 }

@@ -88,6 +88,7 @@ NodePtr MetaProducerNode::CreateNewChildDest() {
 
   auto child = ProducerNode::Create({
       .name = child_name,
+      .pipeline_direction = pipeline_direction(),
       .parent = shared_from_this(),
       .start_stop_command_queue = queues.start_stop,
       .internal_source = std::move(internal_source),

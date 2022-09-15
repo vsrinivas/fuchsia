@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <variant>
 
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
@@ -27,6 +28,9 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   struct Args {
     // Name of this node.
     std::string_view name;
+
+    // Whether this node participates in an input pipeline or an output pipeline.
+    PipelineDirection pipeline_direction;
 
     // Format of data produced by this node.
     Format format;
@@ -60,7 +64,8 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   using PacketCommandQueue = SimplePacketQueueProducerStage::CommandQueue;
 
   MetaProducerNode(Args args)
-      : Node(args.name, /*is_meta=*/true, /*pipeline_stage=*/nullptr, /*parent=*/nullptr),
+      : Node(args.name, /*is_meta=*/true, args.pipeline_direction, /*pipeline_stage=*/nullptr,
+             /*parent=*/nullptr),
         format_(args.format),
         reference_clock_koid_(args.reference_clock_koid),
         data_source_(std::move(args.data_source)),

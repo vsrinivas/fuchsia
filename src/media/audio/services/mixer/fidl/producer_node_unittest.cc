@@ -55,6 +55,7 @@ TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
   auto packet_command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>();
 
   auto producer = ProducerNode::Create({
+      .pipeline_direction = PipelineDirection::kInput,
       .start_stop_command_queue = start_stop_command_queue,
       .internal_source =
           std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
@@ -65,6 +66,7 @@ TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
       .detached_thread = detached_thread_,
   });
 
+  EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
   EXPECT_EQ(producer->pipeline_stage_thread(), detached_thread_);
   EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread_);
   EXPECT_EQ(producer->pipeline_stage()->format(), kFormat);
