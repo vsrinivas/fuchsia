@@ -1,0 +1,13 @@
+# Copyright 2022 The Fuchsia Authors.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//products/workstation_eng.gni")
+
+# TODO(fxbug.dev/105182): Remove removal when this test is passing with DFv2
+# enabled.
+host_labels += [ "//src/experiences/tests/chrome:test" ]
+host_labels -= [ "//src/experiences/tests/chrome:test" ]
+# TODO(fxbug.dev/105182): Remove this product, `workstation_eng_dfv2` when all
+# workstation_eng tests pass with DFv2 enabled and all builder bots with DFv2
+# use the `workstation_eng` product instead.

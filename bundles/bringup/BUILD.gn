@@ -123,7 +123,7 @@ test_deps_dfv1 += [ "//src/tests/drivers_serial_log:bringup_tests" ]
 # `test_deps` when the test is passing with DFv2 enabled.
 test_deps_dfv1 += [ "//src/tests/reboot/dm_reboot_bringup_test:tests" ]
 
-# TODO(fxbug.dev/106517): Remove from `test_deps_dfv1` and insert into
+# TODO(fxbug.dev/105182): Remove from `test_deps_dfv1` and insert into
 # `test_deps` when the test is passing with DFv2 enabled.
 test_deps_dfv1 += [
   "//zircon/system/utest/device-enumeration:device-enumeration-bootfs-test",
