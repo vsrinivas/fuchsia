@@ -76,65 +76,134 @@ static std::optional<uint32_t> GetUint32(const char* arg) {
 
 void usage(const char* prog_name) {
   // clang-format off
-  printf("usage:\n");
-  printf("%s [options] <cmd> <cmd params>\n", prog_name);
-  printf("\nOptions\n");
-  printf("  When options are specified, they must occur before the command and command\n"
-         "  arguments.  Valid options include...\n"
-         "  -d <device id>   : Dev node id for the audio device to use.  Defaults to 0.\n"
-         "  -t <device type> : The type of device to open, either input or output.  Ignored if\n"
-         "                     the command given implies the device type (play, record, duplex,\n"
-         "                     etc). Otherwise, defaults to output.\n"
-         "  -r <frame rate>  : Frame rate to use.  Defaults to 48000 Hz\n"
-         "  -b <bits/sample> : Bits per sample to use.  Defaults to 16\n"
-         "  -c <channels>    : Number of channels to use.  Defaults to the first driver reported\n"
-         "                     value.\n"
-         "  -a <active>      : Active channel mask (e.g. 0xf or 15 for channels 0, 1, 2 and 3).\n"
-         "                     Defaults to all channels.\n");
-  printf("\nValid command are\n");
-  printf("info   : Fetches capability and status info for the specified stream\n");
-  printf("mute   : Mute the specified stream\n");
-  printf("unmute : Unmute the specified stream\n");
-  printf("agc    : Params : (on|off)\n");
-  printf("         Enable or disable AGC for the specified input stream.\n");
-  printf("gain   : Params : <db_gain>\n");
-  printf("         Set the gain of the stream to the specified level\n");
-  printf("pmon   : Params : [<duration>]\n"
-         "         Monitor the plug state of the specified stream for the\n"
-         "         specified amount of time.  Duration defaults to %.1fs and is\n"
-         "         floored at %u mSec\n",
-         DEFAULT_PLUG_MONITOR_DURATION,
-         static_cast<int>(MIN_PLUG_MONITOR_DURATION * 1000));
-  printf("tone   : Params : [<freq>] [<duration>] [<amplitude>]\n"
-         "         Play a sinusoidal tone of the specified frequency for the\n"
-         "         specified duration.  Frequency is clamped on the range\n"
-         "         [%.1f, %.1f] Hz.  Default is %.1f Hz.\n"
-         "         Duration is given in seconds and floored at %d mSec.\n"
-         "         If duration is unspecified plays until a key is pressed.\n"
-         "         Output will be scaled by specified amplitude if provided.\n"
-         "         Amplitude will be clamped between %.1f and %.1f\n",
-          MIN_TONE_FREQ,
-          MAX_TONE_FREQ,
-          DEFAULT_TONE_FREQ,
-          static_cast<int>(MIN_PLAY_DURATION * 1000),
-          MIN_PLAY_AMPLITUDE,
-          DEFAULT_PLAY_AMPLITUDE);
-  printf("noise  : Params : [<duration>]\n"
-         "         Play pseudo-white noise for the specified duration.  Duration is\n"
-         "         given in seconds and floored at %d mSec.\n"
-         "         If duration is unspecified plays until a key is pressed.\n",
-          static_cast<int>(MIN_PLAY_DURATION * 1000));
-  printf("play   : Params : <file>\n");
-  printf("         Play the specified WAV file on the selected output.\n");
-  printf("loop   : Params : <file>\n");
-  printf("         Repeat the specified WAV file on the selected output until a key is pressed\n");
-  printf("record : Params : <file> [<duration>]\n"
-         "         Record to the specified WAV file from the selected input.\n"
-         "         Duration is specified in seconds.\n"
-         "         If duration is unspecified records until a key is pressed.\n");
-  printf("duplex : Params : <play-file> <record-file>\n"
-         "         Play play-file on the selected output and record record-file from\n"
-         "         the selected input.\n");
+  printf(
+      "Usage:\n"
+      "  audio-driver-ctl [-d <id>] [-t (input|output)] agc (on|off)\n\n"
+      "  audio-driver-ctl [-a <mask>] [-b (8|16|20|24|32)] [-c <channels>] \\\n"
+      "      [-d <id>] [-r <hertz>] duplex <playpath> <recordpath>\n\n"
+      "  audio-driver-ctl [-d <id>] [-t (input|output)] gain <decibels>\n\n"
+      "  audio-driver-ctl [-d <id>] [-t (input|output)] info\n\n"
+      "  audio-driver-ctl [-a <mask>] [-b (8|16|20|24|32)] [-c <channels>] \\\n"
+      "      [-d <id>] loop <playpath>\n\n"
+      "  audio-driver-ctl [-d <id>] [-t (input|output)] mute\n\n"
+      "  audio-driver-ctl [-a <mask>] [-b (8|16|20|24|32)] [-c <channels>] \\\n"
+      "      [-d <id>] [-r <hertz>] noise [<seconds>] [<amplitude>]\n\n"
+      "  audio-driver-ctl [-a <mask>] [-b (8|16|20|24|32)] [-c <channels>] \\\n"
+      "      [-d <id>] play <playpath>\n\n"
+      "  audio-driver-ctl [-d <id>] [-t (input|output)] pmon [<seconds>]\n\n"
+      "  audio-driver-ctl [-a <mask>] [-b (8|16|20|24|32)] [-c <channels>] \\\n"
+      "      [-d <id>] [-r <hertz>] record <recordpath> [<seconds>]\n\n"
+      "  audio-driver-ctl [-a <mask>] [-b (8|16|20|24|32)] [-c <channels>] \\\n"
+      "      [-d <id>] [-r <hertz>] tone [<frequency>] [<seconds>] [<amplitude>]\n\n"
+      "  audio-driver-ctl [-d <id>] [-t (input|output)] unmute\n\n"
+      "Play, record, and configure audio streams.\n\n"
+      "Options:\n"
+      "  -a <mask>              Active channel mask. For example `0xf` or `15` for\n"
+      "                         channels 0, 1, 2, and 3. Defaults to all channels.\n"
+      "  -b (8|16|20|24|32)     Bits per sample. Defaults to `16`.\n"
+      "  -c <channels>          Number of channels. Defaults to the first driver-reported\n"
+      "                         value. Run `audio-driver-ctl info` to see how many channels\n"
+      "                         your target Fuchsia device has.\n"
+      "  -d <id>                The device node ID of the stream. Defaults to `0`.\n"
+      "                         To figure out <id>, run `audio-driver-ctl info`. You'll\n"
+      "                         see path values like `/dev/class/audio-input/000`. <id> in\n"
+      "                         this example is `000`.\n"
+      "  -t (input|output)      The device type. Defaults to `output`. This option is\n"
+      "                         ignored for commands like `play` that only make sense\n"
+      "                         for one of the types.\n"
+      "  -r <hertz>             The frame rate in hertz. Defaults to `%u`.\n\n", DEFAULT_FRAME_RATE);
+  printf(
+      "Commands:\n"
+      "  agc                    Enables or disables automatic gain control for the stream.\n"
+      "  duplex                 Simultaneously plays the WAV file located at <playpath>\n"
+      "                         and records it to another WAV file located at <recordpath>\n"
+      "                         in order to analyze the delays in the system. The `-c`\n"
+      "                         option if provided applies to the recording side since\n"
+      "                         the number of channels for playback is taken from the\n"
+      "                         WAV file header.\n"
+      "  gain                   Sets the gain of the stream in decibels.\n"
+      "  info                   Gets capability and status info for a stream.\n"
+      "  loop                   Repeatedly plays the WAV file at <playpath> on the selected\n"
+      "                         output until a key is pressed.\n"
+      "  mute                   Mutes a stream.\n"
+      "  noise                  Plays pseudo-white noise. <seconds> controls how long\n"
+      "                         the noise plays and must be at least %.3f seconds.\n"
+      "                         If <seconds> is not provided the noise plays until a\n"
+      "                         key is pressed.\n", MIN_PLAY_DURATION);
+  printf(
+      "  play                   Plays a WAV file.\n"
+      "  pmon                   Monitors the plug state of a stream. <seconds> must be\n"
+      "                         above %.1f seconds (default: %.1f seconds).\n",
+      MIN_PLUG_MONITOR_DURATION, DEFAULT_PLUG_MONITOR_DURATION);
+  printf(
+      "  record                 Records to the specified WAV file from the selected input.\n"
+      "                         If <seconds> is not provided the input is recorded until\n"
+      "                         a key is pressed.\n"
+      "  tone                   Plays a sinusoidal tone. <frequency> must be between %.1f\n"
+      "                         and %.1f hertz (default: %.1f hertz). <seconds> must be above\n"
+      "                         %.3f seconds. If <seconds> is not provided the tone plays\n"
+      "                         until a key is pressed. <amplitude> scales the output\n"
+      "                         if provided and must be an increment of 0.1 between\n"
+      "                         %.1f and %.1f.\n", MIN_TONE_FREQ, MAX_TONE_FREQ, DEFAULT_TONE_FREQ, MIN_PLAY_DURATION, MIN_PLAY_AMPLITUDE, MAX_PLAY_AMPLITUDE);
+  printf(
+      "  unmute                 Unmutes a stream. Note that the gain of the stream will\n"
+      "                         be reset to its default value.\n\n"
+      "Examples:\n"
+      "  Enable automatic gain control on the default output stream:\n"
+      "  $ audio-driver-ctl agc on\n\n"
+      "  Get info for the default output stream:\n"
+      "  # Equivalent to `audio-driver-ctl -t output -d 000 info`\n"
+      "  $ audio-driver-ctl info\n"
+      "  Info for audio output at \"/dev/class/audio-output/000\"\n"
+      "    Unique ID    : 0100000000000000-0000000000000000\n"
+      "    Manufacturer : Spacely Sprockets\n"
+      "    Product      : acme\n"
+      "    Current Gain : 0.00 dB (unmuted, AGC on)\n"
+      "    Gain Caps    : gain range [-103.00, 24.00] in 0.50 dB steps; can mute; can AGC\n"
+      "    Plug State   : plugged\n"
+      "    Plug Time    : 12297829382473034410\n"
+      "    PD Caps      : hardwired\n"
+      "  Number of channels      : 1\n"
+      "  Frame rate              : 8000Hz\n"
+      "  Bits per channel        : 16\n"
+      "  Valid bits per channel  : 16\n"
+      "  ...\n\n"
+      "  Use the `-t` and `-d` options to interact with a stream other than the\n"
+      "  default output stream:\n"
+      "  $ audio-driver-ctl -t input -d 001 info\n"
+      "  ...\n\n"
+      "  Set the gain of the default output stream to -40 decibels:\n"
+      "  $ audio-driver-ctl gain -40\n\n"
+      "  Mute the default output stream:\n"
+      "  $ audio-driver-ctl mute\n\n"
+      "  Repeatedly play a WAV file on the default output stream:\n"
+      "  $ audio-driver-ctl loop /tmp/test.wav\n"
+      "  Looping /tmp/test.wav until a key is pressed\n\n"
+      "  Play a WAV file on the default output stream:\n"
+      "  $ audio-driver-ctl play /tmp/test.wav\n\n"
+      "  Play a 450 hertz tone for 1 second at 50%% amplitude on the default output stream:\n"
+      "  $ audio-driver-ctl tone 450 1 0.5\n"
+      "  Playing 450.00 Hz tone for 1.00 seconds at 0.50 amplitude\n\n"
+      "  Unmute the default output stream:\n"
+      "  $ audio-driver-ctl unmute\n\n"
+      "Notes:\n"
+      "  To copy WAV files from your host to your target Fuchsia device or vice versa,\n"
+      "  run `fx cp (--to-target|--to-host) <source> <destination>` on your host.\n"
+      "  <source> is the file you want to copy and <destination> is where you want\n"
+      "  the copied file to be placed:\n"
+      "  # Copy from host to Fuchsia target device.\n"
+      "  $ fx cp --to-target /path/on/host/example.wav /path/on/fuchsia/target/example.wav\n"
+      "  # Copy from Fuchsia target device to host.\n"
+      "  $ fx cp --to-host /path/on/fuchsia/target/example.wav /path/on/host/example.wav\n\n"
+      "  If you get a `Failed to set source format` error like the next example when\n"
+      "  running `play` it means that there's a mismatch between the number of channels\n"
+      "  specified in the WAV file's header and the number of channels on your target\n"
+      "  Fuchsia device. For example the WAV file might be intended for a 2-channel\n"
+      "  system whereas your target Fuchsia device only has 1 channel. The solution is\n"
+      "  to get a WAV file with the same number of channels as your target Fuchsia device.\n"
+      "  $ audio-driver-ctl play /tmp/two_channel.wav\n"
+      "  Failed to set source format [11025 Hz, 1 Chan, 00000000ffffffff Mask, 00000004 fmt] (res -20)\n\n"
+      "  Source code for `audio-driver-ctl`: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/media/audio/tools/audio-driver-ctl/audio.cc\n\n");
   // clang-format on
 }
 
