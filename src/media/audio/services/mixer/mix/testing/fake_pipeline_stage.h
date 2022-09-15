@@ -56,6 +56,9 @@ class FakePipelineStage : public PipelineStage {
     }
   }
 
+  // Sets the canned packet to return from Read.
+  void SetPacketForRead(std::optional<PacketView> packet) { packet_ = packet; }
+
  private:
   FakePipelineStage(std::string_view name, Format format, zx_koid_t reference_clock_koid)
       : PipelineStage(name, format, reference_clock_koid) {}
@@ -64,10 +67,18 @@ class FakePipelineStage : public PipelineStage {
   void AdvanceSelfImpl(Fixed frame) {}
   void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {}
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) {
-    return std::nullopt;
+    if (!packet_) {
+      return std::nullopt;
+    }
+    auto isect = packet_->IntersectionWith(start_frame, frame_count);
+    if (!isect) {
+      return std::nullopt;
+    }
+    return MakeUncachedPacket(isect->start(), isect->length(), isect->payload());
   }
 
   std::unordered_set<PipelineStagePtr> sources_;
+  std::optional<PacketView> packet_;
 };
 
 }  // namespace media_audio

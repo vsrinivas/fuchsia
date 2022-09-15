@@ -18,6 +18,8 @@ source_set("fidl") {
   sources = [
     "clock_registry.cc",
     "clock_registry.h",
+    "consumer_node.cc",
+    "consumer_node.h",
     "gain_control_registry.cc",
     "gain_control_registry.h",
     "graph_creator_server.cc",
@@ -62,6 +64,7 @@ executable("fidl_unittests") {
 
   sources = [
     "clock_registry_unittest.cc",
+    "consumer_node_unittest.cc",
     "gain_control_registry_unittest.cc",
     "graph_creator_server_unittest.cc",
     "meta_producer_node_unittest.cc",

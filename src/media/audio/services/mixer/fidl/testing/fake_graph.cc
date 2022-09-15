@@ -6,15 +6,25 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 
 namespace media_audio {
 
-FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, FakeNodePtr parent)
+namespace {
+const Format kDefaultFormat =
+    Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16, 1, 16000});
+}  // namespace
+
+FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, FakeNodePtr parent,
+                   const Format* format)
     : Node(std::string("Node") + std::to_string(id), is_meta,
            is_meta ? nullptr
-                   : FakePipelineStage::Create({.name = "PipelineStage" + std::to_string(id)}),
+                   : FakePipelineStage::Create({
+                         .name = "PipelineStage" + std::to_string(id),
+                         .format = *format,
+                     }),
            parent),
       graph_(graph) {}
 
@@ -44,14 +54,36 @@ void FakeNode::DestroyChildDest(NodePtr child_dest) {
   }
 }
 
-bool FakeNode::CanAcceptSource(NodePtr source) const {
-  if (on_can_accept_source_) {
-    return on_can_accept_source_(source);
+bool FakeNode::CanAcceptSourceFormat(const Format& format) const {
+  if (on_can_accept_source_format_) {
+    return on_can_accept_source_format_(format);
+  }
+  return true;
+}
+
+std::optional<size_t> FakeNode::MaxSources() const {
+  if (on_max_sources_) {
+    return on_max_sources_();
+  }
+  return std::nullopt;
+}
+
+bool FakeNode::AllowsDest() const {
+  if (on_allows_dest_) {
+    return on_allows_dest_();
   }
   return true;
 }
 
 FakeGraph::FakeGraph(Args args) : default_thread_(args.default_thread) {
+  // Populate `formats_`.
+  for (auto& [format_ptr, nodes] : args.formats) {
+    auto format = std::make_shared<Format>(*format_ptr);
+    for (auto id : nodes) {
+      formats_[id] = format;
+    }
+  }
+
   // Create all meta nodes and their children.
   for (auto& [meta_id, meta_args] : args.meta_nodes) {
     auto meta = CreateMetaNode(meta_id);
@@ -109,7 +141,9 @@ FakeGraph::~FakeGraph() {
     node->on_create_new_child_dest_ = nullptr;
     node->on_destroy_child_source_ = nullptr;
     node->on_destroy_child_dest_ = nullptr;
-    node->on_can_accept_source_ = nullptr;
+    node->on_can_accept_source_format_ = nullptr;
+    node->on_max_sources_ = nullptr;
+    node->on_allows_dest_ = nullptr;
     // Also clear PipelineStage sources. This is necessary in certain error-case tests, such as
     // tests that intentionally create cycles.
     if (!node->is_meta()) {
@@ -132,7 +166,7 @@ FakeNodePtr FakeGraph::CreateMetaNode(std::optional<NodeId> id) {
     id = NextId();
   }
 
-  std::shared_ptr<FakeNode> node(new FakeNode(*this, *id, true, nullptr));
+  std::shared_ptr<FakeNode> node(new FakeNode(*this, *id, true, nullptr, nullptr));
   nodes_[*id] = node;
   return node;
 }
@@ -154,7 +188,9 @@ FakeNodePtr FakeGraph::CreateOrdinaryNode(std::optional<NodeId> id, FakeNodePtr 
     id = NextId();
   }
 
-  std::shared_ptr<FakeNode> node(new FakeNode(*this, *id, false, parent));
+  const Format* format = formats_.count(*id) ? formats_[*id].get() : &kDefaultFormat;
+
+  std::shared_ptr<FakeNode> node(new FakeNode(*this, *id, false, parent, format));
   nodes_[*id] = node;
   node->set_pipeline_stage_thread(default_thread_);
   node->fake_pipeline_stage()->set_thread(default_thread_);

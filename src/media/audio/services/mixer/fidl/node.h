@@ -14,6 +14,7 @@
 #include <string_view>
 #include <vector>
 
+#include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
@@ -197,10 +198,22 @@ class Node {
   // REQUIRED: is_meta()
   virtual void DestroyChildDest(NodePtr child_dest) {}
 
-  // Reports whether this node can accept source from the given `source` node.
+  // Reports whether this node can accept a source edge with the given format. If MaxSources() is 0,
+  // this should return false.
   //
   // REQUIRED: !is_meta()
-  virtual bool CanAcceptSource(NodePtr source) const = 0;
+  virtual bool CanAcceptSourceFormat(const Format& format) const = 0;
+
+  // Reports the maximum number of source edges allowed, or `std::nullopt` for no limit.
+  //
+  // REQUIRED: !is_meta()
+  virtual std::optional<size_t> MaxSources() const = 0;
+
+  // Reports whether this node can accept a destination edge, i.e. whether it can be a source for
+  // any other node.
+  //
+  // REQUIRED: !is_meta()
+  virtual bool AllowsDest() const = 0;
 
  private:
   friend class FakeGraph;

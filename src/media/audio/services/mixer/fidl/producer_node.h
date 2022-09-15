@@ -50,7 +50,9 @@ class ProducerNode : public Node {
   NodePtr CreateNewChildDest() final {
     UNREACHABLE << "CreateNewChildDest should not be called on ordinary nodes";
   }
-  bool CanAcceptSource(NodePtr source) const final;
+  bool CanAcceptSourceFormat(const Format& format) const final;
+  std::optional<size_t> MaxSources() const final;
+  bool AllowsDest() const final;
 };
 
 }  // namespace media_audio

@@ -238,10 +238,17 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInn
     return result;
   }
 
-  if (source->dest()) {
+  if (source->dest() == dest) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
   }
-  if (!dest->CanAcceptSource(source)) {
+  if (source->dest() || !source->AllowsDest()) {
+    return fpromise::error(
+        fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+  }
+  if (auto max = dest->MaxSources(); max && dest->sources().size() >= *max) {
+    return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
+  }
+  if (!dest->CanAcceptSourceFormat(source->pipeline_stage()->format())) {
     return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
   }
 

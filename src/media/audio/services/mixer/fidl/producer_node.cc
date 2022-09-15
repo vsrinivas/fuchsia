@@ -41,9 +41,8 @@ zx::duration ProducerNode::GetSelfPresentationDelayForSource(const NodePtr& sour
   return zx::duration(0);
 }
 
-bool ProducerNode::CanAcceptSource(NodePtr source) const {
-  // Producers do not have sources.
-  return false;
-}
+bool ProducerNode::CanAcceptSourceFormat(const Format& format) const { return false; }
+std::optional<size_t> ProducerNode::MaxSources() const { return 0; }
+bool ProducerNode::AllowsDest() const { return true; }
 
 }  // namespace media_audio

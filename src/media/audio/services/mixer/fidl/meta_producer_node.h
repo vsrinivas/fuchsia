@@ -69,7 +69,14 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   NodePtr CreateNewChildSource() final;
   NodePtr CreateNewChildDest() final;
   void DestroyChildDest(NodePtr child_dest) final;
-  bool CanAcceptSource(NodePtr source) const final;
+
+  bool CanAcceptSourceFormat(const Format& format) const final {
+    UNREACHABLE << "CanAcceptSourceFormat should not be called on meta nodes";
+  }
+  std::optional<size_t> MaxSources() const final {
+    UNREACHABLE << "MaxSources should not be called on meta nodes";
+  }
+  bool AllowsDest() const final { UNREACHABLE << "AllowsDest should not be called on meta nodes"; }
 
   const Format format_;
   const zx_koid_t reference_clock_koid_;

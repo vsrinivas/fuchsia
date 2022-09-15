@@ -77,11 +77,6 @@ class ConsumerStage : public PipelineStage {
     virtual void End() = 0;
   };
 
-  enum class PipelineDirection {
-    Input,
-    Output,
-  };
-
   // Arguments for the constructor.
   struct Args {
     // Name of this stage.

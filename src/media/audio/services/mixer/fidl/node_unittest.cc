@@ -52,10 +52,11 @@ class NodeCreateEdgeTest : public ::testing::Test {
 // - (meta -> meta)
 //
 // In these scenarios:
+// - (error) source already connected to the same node node (if !source->is_meta)
 // - (error) source already connected to a different node (if !source->is_meta)
 // - (error) source has too many dest edges (if source->is_meta)
-// - (error) dest has too many source edges (if dest->is_meta)
-// - (error) dest doesn't accept src
+// - (error) dest has too many source edges
+// - (error) dest doesn't accept source's format
 // - (error) would create a cycle
 // - success
 //
@@ -63,7 +64,35 @@ class NodeCreateEdgeTest : public ::testing::Test {
 // PipelineStage is assigned to the same thread as destination PipelineStage (which is assigned to
 // fake_thread_).
 
-TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceAlreadyConnected) {
+TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryAlreadyConnected) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .edges = {{1, 2}},
+      .default_thread = detached_thread_,
+  });
+
+  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(2));
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+}
+
+TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceDisallowsOutgoingEdges) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .unconnected_ordinary_nodes = {1, 2},
+      .default_thread = detached_thread_,
+  });
+
+  auto source = graph.node(1);
+  source->SetOnAllowsDest([]() { return false; });
+
+  auto result = Node::CreateEdge(q, source, /*dest=*/graph.node(2));
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+}
+
+TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceAlreadyHasOutgoingEdge) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .edges = {{1, 2}},
@@ -73,10 +102,27 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySourceAlreadyConnected) {
 
   auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(3));
   ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
-TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryDestRejectsSource) {
+TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryDestNodeTooManyIncomingEdges) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .edges = {{1, 3}},
+      .unconnected_ordinary_nodes = {2},
+      .default_thread = detached_thread_,
+  });
+
+  auto dest = graph.node(3);
+  dest->SetOnMaxSources([]() { return 1; });
+
+  auto result = Node::CreateEdge(q, /*source=*/graph.node(2), dest);
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
+}
+
+TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryIncompatibleFormats) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .unconnected_ordinary_nodes = {1, 2},
@@ -84,7 +130,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinaryDestRejectsSource) {
   });
 
   auto dest = graph.node(2);
-  dest->SetOnCreateCanAcceptSource([](auto n) { return false; });
+  dest->SetOnCanAcceptSourceFormat([](auto n) { return false; });
 
   auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
@@ -129,10 +175,10 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToOrdinarySuccess) {
   CheckPipelineStagesAfterCreate(q, source->fake_pipeline_stage(), dest->fake_pipeline_stage());
 }
 
-TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceAlreadyConnected) {
+TEST_F(NodeCreateEdgeTest, OrdinaryToMetaAlreadyConnected) {
   GlobalTaskQueue q;
   FakeGraph graph({
-      .meta_nodes = {{3, {.source_children = {}, .dest_children = {}}}},
+      .meta_nodes = {{3, {.source_children = {2}, .dest_children = {}}}},
       .edges = {{1, 2}},
       .default_thread = detached_thread_,
   });
@@ -142,7 +188,38 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceAlreadyConnected) {
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kAlreadyConnected);
 }
 
-TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestRejectsSource) {
+TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceDisallowsOutgoingEdges) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
+      .unconnected_ordinary_nodes = {1},
+      .default_thread = detached_thread_,
+  });
+
+  auto source = graph.node(1);
+  source->SetOnAllowsDest([]() { return false; });
+
+  auto result = Node::CreateEdge(q, source, /*dest=*/graph.node(2));
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+}
+
+TEST_F(NodeCreateEdgeTest, OrdinaryToMetaSourceAlreadyHasOutgoingEdge) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .meta_nodes = {{3, {.source_children = {}, .dest_children = {}}}},
+      .edges = {{1, 2}},
+      .default_thread = detached_thread_,
+  });
+
+  auto result = Node::CreateEdge(q, /*source=*/graph.node(1), /*dest=*/graph.node(3));
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+}
+
+TEST_F(NodeCreateEdgeTest, OrdinaryToMetaIncompatibleFormats) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{2, {.source_children = {}, .dest_children = {}}}},
@@ -153,7 +230,7 @@ TEST_F(NodeCreateEdgeTest, OrdinaryToMetaDestRejectsSource) {
   auto dest = graph.node(2);
   dest->SetOnCreateNewChildSource([&graph, dest]() {
     auto child = graph.CreateOrdinaryNode(std::nullopt, dest);
-    child->SetOnCreateCanAcceptSource([](auto n) { return false; });
+    child->SetOnCanAcceptSourceFormat([](auto n) { return false; });
     return child;
   });
 
@@ -242,7 +319,27 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinarySourceNodeTooManyOutgoingEdges) {
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
 
-TEST_F(NodeCreateEdgeTest, MetaToOrdinaryDestRejectsSource) {
+TEST_F(NodeCreateEdgeTest, MetaToOrdinaryDestNodeTooManyIncomingEdges) {
+  GlobalTaskQueue q;
+  FakeGraph graph({
+      .meta_nodes =
+          {
+              {1, {.source_children = {}, .dest_children = {2}}},
+              {3, {.source_children = {}, .dest_children = {}}},
+          },
+      .edges = {{2, 4}},
+      .default_thread = detached_thread_,
+  });
+
+  auto dest = graph.node(4);
+  dest->SetOnMaxSources([]() { return 1; });
+
+  auto result = Node::CreateEdge(q, /*source=*/graph.node(3), dest);
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
+}
+
+TEST_F(NodeCreateEdgeTest, MetaToOrdinaryIncompatibleFormats) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes = {{1, {.source_children = {}, .dest_children = {}}}},
@@ -251,7 +348,7 @@ TEST_F(NodeCreateEdgeTest, MetaToOrdinaryDestRejectsSource) {
   });
 
   auto dest = graph.node(2);
-  dest->SetOnCreateCanAcceptSource([](auto n) { return false; });
+  dest->SetOnCanAcceptSourceFormat([](auto n) { return false; });
 
   auto result = Node::CreateEdge(q, /*source=*/graph.node(1), dest);
   ASSERT_FALSE(result.is_ok());
@@ -338,7 +435,7 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaDestNodeTooManyIncomingEdges) {
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
-TEST_F(NodeCreateEdgeTest, MetaToMetaDestRejectsSource) {
+TEST_F(NodeCreateEdgeTest, MetaToMetaIncompatibleFormats) {
   GlobalTaskQueue q;
   FakeGraph graph({
       .meta_nodes =
@@ -352,7 +449,7 @@ TEST_F(NodeCreateEdgeTest, MetaToMetaDestRejectsSource) {
   auto dest = graph.node(2);
   dest->SetOnCreateNewChildSource([&graph, dest]() {
     auto child = graph.CreateOrdinaryNode(std::nullopt, dest);
-    child->SetOnCreateCanAcceptSource([](auto n) { return false; });
+    child->SetOnCanAcceptSourceFormat([](auto n) { return false; });
     return child;
   });
 

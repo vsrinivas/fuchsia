@@ -45,7 +45,7 @@ TEST_F(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
 
   auto result = Node::CreateEdge(q, graph.node(1), producer);
   ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
+  EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
 
 TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
