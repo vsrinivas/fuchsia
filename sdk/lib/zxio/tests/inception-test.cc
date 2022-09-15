@@ -14,22 +14,21 @@
 
 #include "sdk/lib/zxio/tests/test_directory_server_base.h"
 #include "sdk/lib/zxio/tests/test_file_server_base.h"
-#include "sdk/lib/zxio/tests/test_node_server.h"
 #include "sdk/lib/zxio/tests/test_socket_server.h"
 
 TEST(CreateWithAllocator, ErrorAllocator) {
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
     return ZX_ERR_INVALID_ARGS;
   };
-  zx::channel channel0, channel1;
-  ASSERT_OK(zx::channel::create(0u, &channel0, &channel1));
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
   void* context;
-  ASSERT_STATUS(zxio_create_with_allocator(std::move(channel0), allocator, &context),
+  ASSERT_STATUS(zxio_create_with_allocator(std::move(socket0), allocator, &context),
                 ZX_ERR_NO_MEMORY);
 
   // Make sure that the handle is closed.
   zx_signals_t pending = 0;
-  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED, "pending is %u", pending);
 }
 
@@ -38,15 +37,15 @@ TEST(CreateWithAllocator, BadAllocator) {
     *out_storage = nullptr;
     return ZX_OK;
   };
-  zx::channel channel0, channel1;
-  ASSERT_OK(zx::channel::create(0u, &channel0, &channel1));
+  zx::socket socket0, socket1;
+  ASSERT_OK(zx::socket::create(0u, &socket0, &socket1));
   void* context;
-  ASSERT_STATUS(zxio_create_with_allocator(std::move(channel0), allocator, &context),
+  ASSERT_STATUS(zxio_create_with_allocator(std::move(socket0), allocator, &context),
                 ZX_ERR_NO_MEMORY);
 
   // Make sure that the handle is closed.
   zx_signals_t pending = 0;
-  ASSERT_STATUS(channel1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(socket1.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_CHANNEL_PEER_CLOSED, ZX_CHANNEL_PEER_CLOSED, "pending is %u", pending);
 }
 
