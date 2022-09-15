@@ -34,9 +34,7 @@ where
 
     /// Inserts the given value into the map and attach it to the inspect tree. Returns the previous
     /// value with the given key, if any.
-    // TODO(fxbug.dev/103390): remove allow once used.
-    #[allow(dead_code)]
-    pub(crate) fn insert(&mut self, key: String, value: V) -> Option<V> {
+    pub fn insert(&mut self, key: String, value: V) -> Option<V> {
         // `with_inspect` will only return an error on types with interior mutability.
         let value_with_inspect =
             value.with_inspect(&self.node, &key).expect("Failed to attach new map entry");

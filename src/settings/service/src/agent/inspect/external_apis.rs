@@ -49,7 +49,7 @@ use crate::trace;
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, Node, Property};
-use fuchsia_inspect_derive::{Inspect, WithInspect};
+use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 use futures::StreamExt;
 use inspect::StringProperty;
 use settings_inspect_utils::inspect_queue::InspectQueue;
@@ -63,7 +63,7 @@ blueprint_definition!(
 );
 
 /// The key for the queue for completed calls per protocol.
-const COMPLETED_CALLS_KEY: &str = "calls";
+const COMPLETED_CALLS_KEY: &str = "completed_calls";
 
 /// The key for the queue for pending calls per protocol.
 const PENDING_CALLS_KEY: &str = "pending_calls";
@@ -93,10 +93,6 @@ struct ExternalApiCallInfo {
 
     /// The timestamp at which the response was received.
     response_timestamp: StringProperty,
-
-    /// The external request count within the protocol associated with the current call.
-    #[inspect(skip)]
-    count: u64,
 }
 
 impl ExternalApiCallInfo {
@@ -108,7 +104,7 @@ impl ExternalApiCallInfo {
         node: &inspect::Node,
         count: u64,
     ) -> Self {
-        let mut info = Self::default()
+        let info = Self::default()
             .with_inspect(node, &format!("{count:020}"))
             // `with_inspect` will only return an error on types with
             // interior mutability. Since none are used here, this should be
@@ -118,7 +114,6 @@ impl ExternalApiCallInfo {
         info.response.set(response);
         info.request_timestamp.set(request_timestamp);
         info.response_timestamp.set(response_timestamp);
-        info.count = count;
 
         info
     }
@@ -126,18 +121,13 @@ impl ExternalApiCallInfo {
 
 #[derive(Default, Inspect)]
 struct ExternalApiCallsWrapper {
+    inspect_node: Node,
     /// The number of total calls that have been made on this protocol.
-    count: u64,
+    count: IValue<u64>,
     /// The most recent pending and completed calls per-protocol.
-    #[inspect(forward)]
     calls: ManagedInspectMap<InspectQueue<ExternalApiCallInfo>>,
-}
-
-impl ExternalApiCallsWrapper {
-    // TODO(fxb/103390): Remove constructor once InspectQueue improvements are made.
-    fn new(calls: ManagedInspectMap<InspectQueue<ExternalApiCallInfo>>) -> Self {
-        Self { count: 0, calls }
-    }
+    /// The external api event counts.
+    event_counts: ManagedInspectMap<IValue<u64>>,
 }
 
 /// The [SettingTypeUsageInspectAgent] is responsible for listening to requests to external
@@ -148,29 +138,37 @@ pub(crate) struct ExternalApiInspectAgent {
     /// Example structure:
     /// ```text
     /// {
-    ///   "fuchsia.external.FakeAPI": {
-    ///     "pending_calls": {
-    ///       "00000000000000000005": {
-    ///         request: "set_manual_brightness(0.7)",
-    ///         response: "None",
-    ///         request_timestamp: "19.002716",
-    ///         response_timestamp: "None",
-    ///       },
-    ///     },
+    ///   "fuchsia.ui.brightness.Control": {
+    ///     "count": 6,
     ///     "calls": {
-    ///       "00000000000000000002": {
-    ///         request: "set_manual_brightness(0.6)",
-    ///         response: "Ok(None)",
-    ///         request_timestamp: "18.293864",
-    ///         response_timestamp: "18.466811",
-    ///       },
-    ///       "00000000000000000004": {
-    ///         request: "set_manual_brightness(0.8)",
-    ///         response: "Ok(None)",
-    ///         request_timestamp: "18.788366",
-    ///         response_timestamp: "18.915355",
+    ///       "pending_calls": {
+    ///         "00000000000000000006": {
+    ///           request: "set_manual_brightness(0.7)",
+    ///           response: "None",
+    ///           request_timestamp: "19.002716",
+    ///           response_timestamp: "None",
+    ///         },
+    ///       }],
+    ///       "completed_calls": [{
+    ///         "00000000000000000003": {
+    ///           request: "set_manual_brightness(0.6)",
+    ///           response: "Ok(None)",
+    ///           request_timestamp: "18.293864",
+    ///           response_timestamp: "18.466811",
+    ///         },
+    ///         "00000000000000000005": {
+    ///           request: "set_manual_brightness(0.8)",
+    ///           response: "Ok(None)",
+    ///           request_timestamp: "18.788366",
+    ///           response_timestamp: "18.915355",
+    ///         },
     ///       },
     ///     },
+    ///     "event_counts": {
+    ///       "Connect": 1,
+    ///       "ApiCall": 3,
+    ///       "ApiResponse": 2,
+    ///     }
     ///   },
     ///   ...
     /// }
@@ -273,13 +271,12 @@ impl ExternalApiInspectAgent {
                         completed_calls_node,
                         count,
                     );
-                    self.add_info(protocol, COMPLETED_CALLS_KEY, info);
+                    self.add_info(protocol, COMPLETED_CALLS_KEY, "Created", info);
                 }
                 ExternalServiceEvent::ApiCall(protocol, request, timestamp) => {
                     let count = self.get_count(protocol) + 1;
                     let pending_calls = self.get_pending_queue(protocol);
                     let pending_calls_node = pending_calls.inspect_node();
-
                     let info = ExternalApiCallInfo::new(
                         &request,
                         "none",
@@ -288,7 +285,7 @@ impl ExternalApiInspectAgent {
                         pending_calls_node,
                         count,
                     );
-                    self.add_info(protocol, PENDING_CALLS_KEY, info);
+                    self.add_info(protocol, PENDING_CALLS_KEY, "ApiCall", info);
                 }
                 ExternalServiceEvent::ApiResponse(
                     protocol,
@@ -310,7 +307,7 @@ impl ExternalApiInspectAgent {
                         count,
                     );
                     self.remove_pending(protocol, &info);
-                    self.add_info(protocol, COMPLETED_CALLS_KEY, info);
+                    self.add_info(protocol, COMPLETED_CALLS_KEY, "ApiResponse", info);
                 }
                 ExternalServiceEvent::ApiError(
                     protocol,
@@ -332,7 +329,7 @@ impl ExternalApiInspectAgent {
                         count,
                     );
                     self.remove_pending(protocol, &info);
-                    self.add_info(protocol, COMPLETED_CALLS_KEY, info);
+                    self.add_info(protocol, COMPLETED_CALLS_KEY, "ApiError", info);
                 }
                 ExternalServiceEvent::Closed(
                     protocol,
@@ -353,7 +350,7 @@ impl ExternalApiInspectAgent {
                         count,
                     );
                     self.remove_pending(protocol, &info);
-                    self.add_info(protocol, COMPLETED_CALLS_KEY, info);
+                    self.add_info(protocol, COMPLETED_CALLS_KEY, "Closed", info);
                 }
             }
         }
@@ -389,18 +386,15 @@ impl ExternalApiInspectAgent {
     /// calls `ensure_protocol_exists`.
     fn get_count(&mut self, protocol: &str) -> u64 {
         self.ensure_protocol_exists(protocol);
-        self.api_calls.get(protocol).expect("Wrapper should exist").count
+        *self.api_calls.get(protocol).expect("Wrapper should exist").count
     }
 
     /// Ensures that an entry exists for the given `protocol`, adding a new one if
     /// it does not yet exist.
     fn ensure_protocol_exists(&mut self, protocol: &str) {
-        let _ = self.api_calls.get_or_insert_with(protocol.to_string(), || {
-            let protocol_node = component::inspector().root().create_child(protocol);
-            ExternalApiCallsWrapper::new(
-                ManagedInspectMap::<InspectQueue<ExternalApiCallInfo>>::with_node(protocol_node),
-            )
-        });
+        let _ = self
+            .api_calls
+            .get_or_insert_with(protocol.to_string(), ExternalApiCallsWrapper::default);
     }
 
     /// Ensures that an entry exists for the given `protocol`, and `queue_key` adding a
@@ -422,9 +416,24 @@ impl ExternalApiInspectAgent {
 
     /// Inserts the given `info` into the entry at `protocol` and `queue_key`, incrementing
     /// the total call count to the protocol's wrapper entry.
-    fn add_info(&mut self, protocol: &str, queue_key: &str, info: ExternalApiCallInfo) {
-        let mut wrapper = self.api_calls.get_mut(protocol).expect("Protocol entry should exist");
-        wrapper.count += 1;
+    fn add_info(
+        &mut self,
+        protocol: &str,
+        queue_key: &'static str,
+        event_type: &str,
+        info: ExternalApiCallInfo,
+    ) {
+        let wrapper = self.api_calls.get_mut(protocol).expect("Protocol entry should exist");
+        {
+            let mut wrapper_guard = wrapper.count.as_mut();
+            *wrapper_guard += 1;
+        }
+        let event_count =
+            wrapper.event_counts.get_or_insert_with(event_type.to_string(), || IValue::new(0));
+        {
+            let mut event_count_guard = event_count.as_mut();
+            *event_count_guard += 1;
+        }
 
         let queue = wrapper.calls.get_mut(queue_key).expect("Queue should exist");
         queue.push(info);
@@ -521,12 +530,18 @@ mod tests {
             external_apis: {
                 "fuchsia.external.FakeAPI": {
                     "calls": {
-                        "00000000000000000001": {
-                            request: "connect",
-                            response: "none",
-                            request_timestamp: "none",
-                            response_timestamp: "0.000000",
+                        "completed_calls": {
+                            "00000000000000000001": {
+                                request: "connect",
+                                response: "none",
+                                request_timestamp: "none",
+                                response_timestamp: "0.000000",
+                            },
                         },
+                    },
+                    "count": 1u64,
+                    "event_counts": {
+                        "Created": 1u64,
                     },
                 },
             },
@@ -554,13 +569,19 @@ mod tests {
         assert_data_tree!(inspector, root: {
             external_apis: {
                 "fuchsia.external.FakeAPI": {
-                    "pending_calls": {
-                        "00000000000000000001": {
-                            request: "set_manual_brightness(0.6)",
-                            response: "none",
-                            request_timestamp: "0.000000",
-                            response_timestamp: "none",
+                    "calls": {
+                        "pending_calls": {
+                            "00000000000000000001": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "none",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "none",
+                            },
                         },
+                    },
+                    "count": 1u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
                     },
                 },
             },
@@ -594,13 +615,19 @@ mod tests {
         assert_data_tree!(inspector, root: {
             external_apis: {
                 "fuchsia.external.FakeAPI": {
-                    "pending_calls": {
-                        "00000000000000000001": {
-                            request: "set_manual_brightness(0.6)",
-                            response: "none",
-                            request_timestamp: "0.000000",
-                            response_timestamp: "none",
+                    "calls": {
+                        "pending_calls": {
+                            "00000000000000000001": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "none",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "none",
+                            },
                         },
+                    },
+                    "count": 1u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
                     },
                 },
             },
@@ -611,14 +638,21 @@ mod tests {
         assert_data_tree!(inspector, root: {
             external_apis: {
                 "fuchsia.external.FakeAPI": {
-                    "pending_calls": {},
                     "calls": {
-                        "00000000000000000002": {
-                            request: "set_manual_brightness(0.6)",
-                            response: "Ok(None)",
-                            request_timestamp: "0.000000",
-                            response_timestamp: "0.129987",
+                        "pending_calls": {},
+                        "completed_calls": {
+                            "00000000000000000002": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "Ok(None)",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "0.129987",
+                            },
                         },
+                    },
+                    "count": 2u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
+                        "ApiResponse": 1u64,
                     },
                 },
             },
@@ -653,13 +687,19 @@ mod tests {
         assert_data_tree!(inspector, root: {
             external_apis: {
                 "fuchsia.external.FakeAPI": {
-                    "pending_calls": {
-                        "00000000000000000001": {
-                            request: "set_manual_brightness(0.6)",
-                            response: "none",
-                            request_timestamp: "0.000000",
-                            response_timestamp: "none",
+                    "calls": {
+                        "pending_calls": {
+                            "00000000000000000001": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "none",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "none",
+                            },
                         },
+                    },
+                    "count": 1u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
                     },
                 },
             },
@@ -670,14 +710,21 @@ mod tests {
         assert_data_tree!(inspector, root: {
             external_apis: {
                 "fuchsia.external.FakeAPI": {
-                    "pending_calls": {},
                     "calls": {
-                        "00000000000000000002": {
-                            request: "set_manual_brightness(0.6)",
-                            response: "Err(INTERNAL_ERROR)",
-                            request_timestamp: "0.000000",
-                            response_timestamp: "0.129987",
+                        "pending_calls": {},
+                        "completed_calls": {
+                            "00000000000000000002": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "Err(INTERNAL_ERROR)",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "0.129987",
+                            },
                         },
+                    },
+                    "count": 2u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
+                        "ApiError": 1u64,
                     },
                 },
             },
@@ -711,13 +758,19 @@ mod tests {
         assert_data_tree!(inspector, root: {
             external_apis: {
                 "fuchsia.external.FakeAPI": {
-                    "pending_calls": {
-                        "00000000000000000001": {
-                            request: "set_manual_brightness(0.6)",
-                            response: "none",
-                            request_timestamp: "0.000000",
-                            response_timestamp: "none",
+                    "calls": {
+                        "pending_calls": {
+                            "00000000000000000001": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "none",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "none",
+                            },
                         },
+                    },
+                    "count": 1u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
                     },
                 },
             },
@@ -728,14 +781,167 @@ mod tests {
         assert_data_tree!(inspector, root: {
             external_apis: {
                 "fuchsia.external.FakeAPI": {
-                    "pending_calls": {},
                     "calls": {
-                        "00000000000000000002": {
-                            request: "set_manual_brightness(0.6)",
-                            response: "closed",
-                            request_timestamp: "0.000000",
-                            response_timestamp: "0.129987",
+                        "pending_calls": {},
+                        "completed_calls": {
+                            "00000000000000000002": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "closed",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "0.129987",
+                            },
                         },
+                    },
+                    "count": 2u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
+                        "Closed": 1u64,
+                    },
+                },
+            },
+        });
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_inspect_multiple_requests() {
+        let inspector = inspect::Inspector::new();
+        let inspect_node = inspector.root().create_child("external_apis");
+        let context = create_context().await;
+
+        let request_processor = RequestProcessor::new(context.delegate.clone());
+
+        ExternalApiInspectAgent::create_with_node(context, inspect_node).await;
+
+        let api_call_event = ExternalServiceEvent::ApiCall(
+            MOCK_PROTOCOL_NAME,
+            "set_manual_brightness(0.6)".into(),
+            "0.000000".into(),
+        );
+        let api_response_event = ExternalServiceEvent::ApiResponse(
+            MOCK_PROTOCOL_NAME,
+            "Ok(None)".into(),
+            "set_manual_brightness(0.6)".into(),
+            "0.000000".into(),
+            "0.129987".into(),
+        );
+
+        let api_call_event_2 = ExternalServiceEvent::ApiCall(
+            MOCK_PROTOCOL_NAME,
+            "set_manual_brightness(0.7)".into(),
+            "0.139816".into(),
+        );
+        let api_response_event_2 = ExternalServiceEvent::ApiResponse(
+            MOCK_PROTOCOL_NAME,
+            "Ok(None)".into(),
+            "set_manual_brightness(0.7)".into(),
+            "0.139816".into(),
+            "0.141235".into(),
+        );
+
+        request_processor.send_and_receive(api_call_event.clone()).await;
+        assert_data_tree!(inspector, root: {
+            external_apis: {
+                "fuchsia.external.FakeAPI": {
+                    "calls": {
+                        "pending_calls": {
+                            "00000000000000000001": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "none",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "none",
+                            },
+                        },
+                    },
+                    "count": 1u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
+                    },
+                },
+            },
+        });
+
+        request_processor.send_and_receive(api_response_event.clone()).await;
+
+        assert_data_tree!(inspector, root: {
+            external_apis: {
+                "fuchsia.external.FakeAPI": {
+                    "calls": {
+                        "pending_calls": {},
+                        "completed_calls": {
+                            "00000000000000000002": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "Ok(None)",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "0.129987",
+                            },
+                        },
+                    },
+                    "count": 2u64,
+                    "event_counts": {
+                        "ApiCall": 1u64,
+                        "ApiResponse": 1u64,
+                    },
+                },
+            },
+        });
+
+        request_processor.send_and_receive(api_call_event_2.clone()).await;
+        assert_data_tree!(inspector, root: {
+            external_apis: {
+                "fuchsia.external.FakeAPI": {
+                    "calls": {
+                        "pending_calls": {
+                            "00000000000000000003": {
+                                request: "set_manual_brightness(0.7)",
+                                response: "none",
+                                request_timestamp: "0.139816",
+                                response_timestamp: "none",
+                            },
+                        },
+                        "completed_calls": {
+                            "00000000000000000002": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "Ok(None)",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "0.129987",
+                            },
+                        },
+                    },
+                    "count": 3u64,
+                    "event_counts": {
+                        "ApiCall": 2u64,
+                        "ApiResponse": 1u64,
+                    },
+                },
+            },
+        });
+
+        request_processor.send_and_receive(api_response_event_2.clone()).await;
+
+        assert_data_tree!(inspector, root: {
+            external_apis: {
+                "fuchsia.external.FakeAPI": {
+                    "calls": {
+                        "pending_calls": {},
+                        "completed_calls": {
+                            "00000000000000000002": {
+                                request: "set_manual_brightness(0.6)",
+                                response: "Ok(None)",
+                                request_timestamp: "0.000000",
+                                response_timestamp: "0.129987",
+                            },
+                            "00000000000000000004": {
+                                request: "set_manual_brightness(0.7)",
+                                response: "Ok(None)",
+                                request_timestamp: "0.139816",
+                                response_timestamp: "0.141235",
+                            },
+                        },
+                    },
+                    "count": 4u64,
+                    "event_counts": {
+                        "ApiCall": 2u64,
+                        "ApiResponse": 2u64,
                     },
                 },
             },
