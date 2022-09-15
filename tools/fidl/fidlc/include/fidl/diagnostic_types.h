@@ -195,7 +195,7 @@ struct Diagnostic {
   }
 
   // Print the entire error output - first the ID, followed by the human-readable error explanation.
-  std::string Print() const { return PrintId() + " " + msg; }
+  std::string Print() const { return msg; }
 
   ErrorId id;
   DiagnosticKind kind;

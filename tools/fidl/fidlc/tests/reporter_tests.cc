@@ -40,7 +40,7 @@ TEST(ReporterTests, ReportErrorFormatParams) {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_EQ(errors[0]->span, span);
   EXPECT_EQ(errors[0]->PrintId(), kTestErrorIdStr);
-  EXPECT_SUBSTR(errors[0]->Print().c_str(), kTestErrorIdStr);
+  EXPECT_NOT_SUBSTR(errors[0]->Print().c_str(), kTestErrorIdStr);
   EXPECT_NOT_SUBSTR(errors[0]->msg.c_str(), kTestErrorIdStr);
   EXPECT_SUBSTR(errors[0]->msg.c_str(),
                 "This test error has one string param 'param1' and another 'param2'.");
@@ -57,7 +57,7 @@ TEST(ReporterTests, MakeErrorThenReportIt) {
   ASSERT_EQ(errors.size(), 1);
   ASSERT_EQ(errors[0]->span, span);
   EXPECT_EQ(errors[0]->PrintId(), kTestErrorIdStr);
-  EXPECT_SUBSTR(errors[0]->Print().c_str(), kTestErrorIdStr);
+  EXPECT_NOT_SUBSTR(errors[0]->Print().c_str(), kTestErrorIdStr);
   EXPECT_NOT_SUBSTR(errors[0]->msg.c_str(), kTestErrorIdStr);
   ASSERT_SUBSTR(errors[0]->msg.c_str(),
                 "This test error has one string param 'param1' and another 'param2'.");
@@ -73,7 +73,7 @@ TEST(ReporterTests, ReportWarningFormatParams) {
   ASSERT_EQ(warnings.size(), 1);
   ASSERT_EQ(warnings[0]->span, span);
   EXPECT_EQ(warnings[0]->PrintId(), kTestWarningIdStr);
-  EXPECT_SUBSTR(warnings[0]->Print().c_str(), kTestWarningIdStr);
+  EXPECT_NOT_SUBSTR(warnings[0]->Print().c_str(), kTestWarningIdStr);
   EXPECT_NOT_SUBSTR(warnings[0]->msg.c_str(), kTestWarningIdStr);
   EXPECT_SUBSTR(warnings[0]->msg.c_str(),
                 "This test warning has one string param 'param1' and another 'param2'.");
@@ -90,7 +90,7 @@ TEST(ReporterTests, MakeWarningThenReportIt) {
   ASSERT_EQ(warnings.size(), 1);
   ASSERT_EQ(warnings[0]->span, span);
   EXPECT_EQ(warnings[0]->PrintId(), kTestWarningIdStr);
-  EXPECT_SUBSTR(warnings[0]->Print().c_str(), kTestWarningIdStr);
+  EXPECT_NOT_SUBSTR(warnings[0]->Print().c_str(), kTestWarningIdStr);
   EXPECT_NOT_SUBSTR(warnings[0]->msg.c_str(), kTestWarningIdStr);
   EXPECT_SUBSTR(warnings[0]->msg.c_str(),
                 "This test warning has one string param 'param1' and another 'param2'.");
