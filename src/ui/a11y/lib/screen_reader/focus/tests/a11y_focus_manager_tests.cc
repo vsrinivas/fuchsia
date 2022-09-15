@@ -11,12 +11,16 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
-#include "src/ui/a11y/lib/annotation/tests/mocks/mock_focus_highlight_manager.h"
+#include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
+#include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
+#include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
 #include "src/ui/a11y/lib/testing/view_ref_helper.h"
 #include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_semantics.h"
+#include "src/ui/a11y/lib/view/tests/mocks/mock_view_source.h"
 
 namespace accessibility_test {
 namespace {
@@ -31,12 +35,45 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
   void SetUp() override {
     inspector_ = std::make_unique<inspect::Inspector>();
     a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManager>(
-        &mock_focus_chain_requester_, &mock_focus_chain_registry_, &mock_focus_highlight_manager_,
+        &mock_focus_chain_requester_, &mock_focus_chain_registry_, &mock_view_source_,
         inspector_->GetRoot().CreateChild(kInspectNodeName));
     a11y_focus_manager_->set_on_a11y_focus_updated_callback(
         [this](std::optional<a11y::A11yFocusManager::A11yFocusInfo> focus) {
           a11y_focus_received_in_update_callback_ = std::move(focus);
         });
+
+    // Fill the test view's semantic tree.
+    mock_view_source_.CreateView(view_ref_helper_);
+
+    // Create test nodes.
+    std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+
+    fuchsia::ui::gfx::BoundingBox root_bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                       .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto root_node = CreateTestNode(0u, "test_label_0", {1u});
+    root_node.set_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
+    root_node.set_location(std::move(root_bounding_box));
+    node_updates.emplace_back(std::move(root_node));
+
+    fuchsia::ui::gfx::BoundingBox parent_bounding_box = {.min = {.x = 1.0, .y = 2.0, .z = 3.0},
+                                                         .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto parent_node = CreateTestNode(1u, "test_label_1", {2u});
+    parent_node.set_transform({2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 1, 1, 1, 1});
+    parent_node.set_location(std::move(parent_bounding_box));
+    fuchsia::accessibility::semantics::Node parent_copy;
+    parent_node.Clone(&parent_copy);  // Creates a copy for latter use.
+    node_updates.emplace_back(std::move(parent_node));
+
+    fuchsia::ui::gfx::BoundingBox child_bounding_box = {.min = {.x = 2.0, .y = 3.0, .z = 4.0},
+                                                        .max = {.x = 4.0, .y = 5.0, .z = 6.0}};
+    auto child_node = CreateTestNode(2u, "test_label_2", {});
+    child_node.set_transform({5, 0, 0, 0, 0, 5, 0, 0, 0, 0, 5, 0, 10, 20, 30, 1});
+    child_node.set_location(std::move(child_bounding_box));
+    node_updates.emplace_back(std::move(child_node));
+
+    auto* mock_semantic_tree = GetMockSemanticTree(view_ref_helper_.koid());
+    ASSERT_TRUE(mock_semantic_tree);
+    mock_semantic_tree->Update(std::move(node_updates));
   }
 
   // Helper function to check if the given ViewRef has a11y focus.
@@ -45,9 +82,54 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
     ASSERT_TRUE(a11y_focus.has_value());
     EXPECT_EQ(view_ref_helper.koid(), a11y_focus.value().view_ref_koid);
     EXPECT_EQ(node_id, a11y_focus.value().node_id);
-    auto highlighted_node = mock_focus_highlight_manager_.GetHighlightedNode();
-    EXPECT_EQ(highlighted_node->koid, view_ref_helper.koid());
-    EXPECT_EQ(highlighted_node->node_id, node_id);
+  }
+
+  MockAnnotationView* GetMockAnnotationView(zx_koid_t koid) {
+    auto view = mock_view_source_.GetViewWrapper(koid);
+    FX_CHECK(view);
+
+    auto* annotation_view = view->annotation_view();
+    return static_cast<MockAnnotationView*>(annotation_view);
+  }
+
+  MockSemanticTree* GetMockSemanticTree(zx_koid_t koid) {
+    auto view = mock_view_source_.GetViewWrapper(koid);
+    FX_CHECK(view);
+
+    auto* mock_view_semantics = static_cast<MockViewSemantics*>(view->view_semantics());
+    FX_CHECK(mock_view_semantics);
+
+    return mock_view_semantics->mock_semantic_tree();
+  }
+
+  void ExpectNoHighlight(zx_koid_t koid) {
+    auto* mock_annotation_view = GetMockAnnotationView(koid);
+    ASSERT_TRUE(mock_annotation_view);
+    EXPECT_FALSE(mock_annotation_view->GetCurrentFocusHighlight().has_value());
+  }
+
+  void ExpectHighlight(zx_koid_t koid, fuchsia::ui::gfx::BoundingBox bounding_box,
+                       std::array<float, 3> scale, std::array<float, 3> translation) {
+    auto* mock_annotation_view = GetMockAnnotationView(koid);
+    ASSERT_TRUE(mock_annotation_view);
+    ASSERT_TRUE(mock_annotation_view->GetCurrentFocusHighlight().has_value());
+
+    const auto& highlight_bounding_box = mock_annotation_view->GetCurrentFocusHighlight();
+    ASSERT_TRUE(highlight_bounding_box.has_value());
+    EXPECT_EQ(highlight_bounding_box->min.x, bounding_box.min.x);
+    EXPECT_EQ(highlight_bounding_box->min.y, bounding_box.min.y);
+    EXPECT_EQ(highlight_bounding_box->min.z, bounding_box.min.z);
+    EXPECT_EQ(highlight_bounding_box->max.x, bounding_box.max.x);
+    EXPECT_EQ(highlight_bounding_box->max.y, bounding_box.max.y);
+    EXPECT_EQ(highlight_bounding_box->max.z, bounding_box.max.z);
+
+    const auto& highlight_scale = mock_annotation_view->GetFocusHighlightScaleVector();
+    ASSERT_TRUE(highlight_scale.has_value());
+    EXPECT_EQ(*highlight_scale, scale);
+
+    const auto& highlight_translation = mock_annotation_view->GetFocusHighlightTranslationVector();
+    ASSERT_TRUE(highlight_translation.has_value());
+    EXPECT_EQ(*highlight_translation, translation);
   }
 
   // Helper function to ensure that a promise completes.
@@ -57,9 +139,10 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
     RunLoopUntil([&] { return done; });
   }
 
+  ViewRefHelper view_ref_helper_;
+  MockViewSource mock_view_source_;
   MockAccessibilityFocusChainRequester mock_focus_chain_requester_;
   MockAccessibilityFocusChainRegistry mock_focus_chain_registry_;
-  MockFocusHighlightManager mock_focus_highlight_manager_;
   std::optional<a11y::A11yFocusManager::A11yFocusInfo> a11y_focus_received_in_update_callback_;
   std::unique_ptr<inspect::Inspector> inspector_;
   std::unique_ptr<a11y::A11yFocusManager> a11y_focus_manager_;
@@ -76,15 +159,22 @@ TEST_F(A11yFocusManagerTest, GetA11yFocusNoViewFound) {
 
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFocusChainUpdate) {
   mock_focus_chain_requester_.set_will_change_focus(true);
-  ViewRefHelper view_ref_helper;
+
   bool success = false;
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper.koid(), a11y::A11yFocusManager::kRootNodeId,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), 2u,
                                     [&success](bool result) { success = result; });
-  CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
+  CheckViewInFocus(view_ref_helper_, 2u);
   EXPECT_TRUE(success);
   EXPECT_TRUE(a11y_focus_received_in_update_callback_);
-  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper.koid());
-  EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, a11y::A11yFocusManager::kRootNodeId);
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper_.koid());
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, 2u);
+
+  // Check that the highlight is positioned correctly.
+  ExpectHighlight(view_ref_helper_.koid(), /* bounding box = */
+                  {.min = {.x = 2.0f, .y = 3.0, .z = 4.0}, .max = {.x = 4.0, .y = 5.0, .z = 6.0}},
+                  /* scale = */
+                  {100.f, 150.f, 200.f},
+                  /* translation = */ {260.f, 670.f, 1280.f});
 
   // Now that one view is in Focus, changes the focus to another view, which causes again a Focus
   // Chain update.
@@ -98,15 +188,17 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFocusChainUpdate) {
   EXPECT_TRUE(a11y_focus_received_in_update_callback_);
   EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper_2.koid());
   EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, 1u);
+
+  // Check that the highlight in the originally focused view is cleared.
+  ExpectNoHighlight(view_ref_helper_.koid());
 }
 
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAnInspectUpdate) {
   mock_focus_chain_requester_.set_will_change_focus(true);
-  ViewRefHelper view_ref_helper;
   bool success = false;
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper.koid(), a11y::A11yFocusManager::kRootNodeId,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), a11y::A11yFocusManager::kRootNodeId,
                                     [&success](bool result) { success = result; });
-  CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
+  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManager::kRootNodeId);
   EXPECT_TRUE(success);
   // Now that one view is in Focus, changes the focus to another view, which causes again a Focus
   // Chain update.
@@ -133,9 +225,8 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAnInspectUpdate) {
 
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFailedFocusChainUpdate) {
   mock_focus_chain_requester_.set_will_change_focus(false);
-  ViewRefHelper view_ref_helper;
   bool success = true;  // expects false later.
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper.koid(), a11y::A11yFocusManager::kRootNodeId,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), a11y::A11yFocusManager::kRootNodeId,
                                     [&success](bool result) { success = result; });
   EXPECT_FALSE(success);
   auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
@@ -144,51 +235,75 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFailedFocusChainUpdate) {
 
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusToTheSameView) {
   mock_focus_chain_requester_.set_will_change_focus(true);
-  ViewRefHelper view_ref_helper;
   bool success = false;
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper.koid(), a11y::A11yFocusManager::kRootNodeId,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), a11y::A11yFocusManager::kRootNodeId,
                                     [&success](bool result) { success = result; });
-  CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
+  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManager::kRootNodeId);
   EXPECT_TRUE(success);
   EXPECT_TRUE(a11y_focus_received_in_update_callback_);
-  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper.koid());
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper_.koid());
   EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, a11y::A11yFocusManager::kRootNodeId);
 
   // Changes the focus to the same view.
   mock_focus_chain_requester_.set_will_change_focus(true);
   bool success_2 = false;
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper.koid(), 1u,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), 1u,
                                     [&success_2](bool result) { success_2 = result; });
-  CheckViewInFocus(view_ref_helper, 1u);
+  CheckViewInFocus(view_ref_helper_, 1u);
   EXPECT_TRUE(success_2);
   EXPECT_TRUE(a11y_focus_received_in_update_callback_);
-  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper.koid());
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper_.koid());
   EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, 1u);
 }
 
 TEST_F(A11yFocusManagerTest, ListensToFocusChainUpdates) {
-  ViewRefHelper view_ref_helper;
   // The Focus Chain is updated and the Focus Chain Manager listens to the update.
-  mock_focus_chain_registry_.SendViewRefKoid(view_ref_helper.koid());
-  CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
+  mock_focus_chain_registry_.SendViewRefKoid(view_ref_helper_.koid());
+  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManager::kRootNodeId);
 }
 
 TEST_F(A11yFocusManagerTest, ClearsTheA11YFocus) {
   mock_focus_chain_requester_.set_will_change_focus(true);
-  ViewRefHelper view_ref_helper;
   bool success = false;
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper.koid(), a11y::A11yFocusManager::kRootNodeId,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), 2u,
                                     [&success](bool result) { success = result; });
-  CheckViewInFocus(view_ref_helper, a11y::A11yFocusManager::kRootNodeId);
+  CheckViewInFocus(view_ref_helper_, 2u);
   EXPECT_TRUE(success);
+
+  // Check that the highlight is positioned correctly.
+  ExpectHighlight(view_ref_helper_.koid(), /* bounding box = */
+                  {.min = {.x = 2.0f, .y = 3.0, .z = 4.0}, .max = {.x = 4.0, .y = 5.0, .z = 6.0}},
+                  /* scale = */
+                  {100.f, 150.f, 200.f},
+                  /* translation = */ {260.f, 670.f, 1280.f});
 
   a11y_focus_manager_->ClearA11yFocus();
   auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
   ASSERT_FALSE(a11y_focus);
   EXPECT_FALSE(a11y_focus_received_in_update_callback_);
+  ExpectNoHighlight(view_ref_helper_.koid());
+}
 
-  auto highlighted_node = mock_focus_highlight_manager_.GetHighlightedNode();
-  ASSERT_FALSE(highlighted_node);
+TEST_F(A11yFocusManagerTest, DeletingA11yFocusManagerClearsHighlights) {
+  mock_focus_chain_requester_.set_will_change_focus(true);
+  bool success = false;
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), 2u,
+                                    [&success](bool result) { success = result; });
+  CheckViewInFocus(view_ref_helper_, 2u);
+  EXPECT_TRUE(success);
+
+  // Check that the highlight is positioned correctly.
+  ExpectHighlight(view_ref_helper_.koid(), /* bounding box = */
+                  {.min = {.x = 2.0f, .y = 3.0, .z = 4.0}, .max = {.x = 4.0, .y = 5.0, .z = 6.0}},
+                  /* scale = */
+                  {100.f, 150.f, 200.f},
+                  /* translation = */ {260.f, 670.f, 1280.f});
+
+  // Delete the a11y focus manager object.
+  a11y_focus_manager_.reset();
+
+  // Verify that the highlight was cleared.
+  ExpectNoHighlight(view_ref_helper_.koid());
 }
 
 }  // namespace

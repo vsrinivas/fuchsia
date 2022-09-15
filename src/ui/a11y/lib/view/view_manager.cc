@@ -148,21 +148,6 @@ void ViewManager::SetSemanticsEnabled(bool enabled) {
   }
 }
 
-void ViewManager::SetAnnotationsEnabled(bool annotations_enabled) {
-  // This function call should be a noop if annotation state is not changing.
-  if (annotations_enabled_ == annotations_enabled) {
-    return;
-  }
-
-  // If we are disabling annotations, then we should clear the existing
-  // highlight (if any).
-  if (!annotations_enabled) {
-    ClearAllHighlights();
-  }
-
-  annotations_enabled_ = annotations_enabled;
-}
-
 void ViewManager::ViewSignalHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                     zx_status_t status, const zx_packet_signal* signal) {
   zx_koid_t koid = fsl::GetKoid(wait->object());
@@ -263,100 +248,6 @@ std::optional<zx_koid_t> ViewManager::GetViewWithVisibleVirtualkeyboard() {
     return virtualkeyboard_visibility_.first;
   }
   return std::nullopt;
-}
-
-void ViewManager::ClearAllHighlights() { ClearFocusHighlights(); }
-
-void ViewManager::ClearFocusHighlights() {
-  if (!annotations_enabled_) {
-    return;
-  }
-
-  if (!highlighted_node_.has_value()) {
-    return;
-  }
-
-  auto it = view_wrapper_map_.find(highlighted_node_->koid);
-  if (it == view_wrapper_map_.end()) {
-    FX_LOGS(WARNING)
-        << "ViewManager::ClearFocusHighlights: Invalid previously highlighted view koid: "
-        << highlighted_node_->koid;
-    return;
-  }
-
-  FX_DCHECK(it->second);
-  auto* annotation_view = it->second->annotation_view();
-
-  if (!annotation_view) {
-    FX_LOGS(WARNING) << "Could not clear highlights: missing annotation view";
-    return;
-  }
-
-  annotation_view->ClearFocusHighlights();
-
-  return;
-}
-
-void ViewManager::UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) {
-  if (!annotations_enabled_) {
-    return;
-  }
-
-  ClearFocusHighlights();
-
-  if (DrawHighlight(newly_highlighted_node)) {
-    highlighted_node_ = std::make_optional<SemanticNodeIdentifier>(newly_highlighted_node);
-  }
-}
-
-bool ViewManager::DrawHighlight(SemanticNodeIdentifier newly_highlighted_node) {
-  auto it = view_wrapper_map_.find(newly_highlighted_node.koid);
-  if (it == view_wrapper_map_.end()) {
-    FX_LOGS(WARNING) << "ViewManager::UpdateHighlights: Invalid newly highlighted view koid: "
-                     << newly_highlighted_node.koid;
-    return false;
-  }
-
-  FX_DCHECK(it->second);
-
-  FX_DCHECK(it->second);
-  auto* annotation_view = it->second->annotation_view();
-
-  if (!annotation_view) {
-    FX_LOGS(WARNING) << "Could not draw highlight: missing annotation view";
-    return false;
-  }
-
-  // Get the node's bounding box and node-to-root transform, which are required
-  // to draw the highlight correctly.
-  auto tree_weak_ptr = GetTreeByKoid(newly_highlighted_node.koid);
-
-  if (!tree_weak_ptr) {
-    FX_LOGS(ERROR) << "Invalid tree pointer for view " << newly_highlighted_node.koid;
-    return false;
-  }
-
-  auto annotated_node = tree_weak_ptr->GetNode(newly_highlighted_node.node_id);
-
-  if (!annotated_node) {
-    FX_LOGS(ERROR) << "No node found with id: " << newly_highlighted_node.node_id;
-    return false;
-  }
-
-  auto transform = tree_weak_ptr->GetNodeToRootTransform(newly_highlighted_node.node_id);
-  if (!transform) {
-    FX_LOGS(ERROR) << "Could not compute node-to-root transform for node: "
-                   << newly_highlighted_node.node_id;
-    return false;
-  }
-
-  auto bounding_box = annotated_node->location();
-
-  // Request to draw the highlight.
-  annotation_view->DrawHighlight(bounding_box, transform->scale_vector(),
-                                 transform->translation_vector());
-
-  return true;
 }
 
 void ViewManager::ExecuteHitTesting(

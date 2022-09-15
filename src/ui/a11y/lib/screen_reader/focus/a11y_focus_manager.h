@@ -10,9 +10,9 @@
 
 #include <unordered_map>
 
-#include "src/ui/a11y/lib/annotation/focus_highlight_manager.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_requester.h"
+#include "src/ui/a11y/lib/view/view_source.h"
 
 namespace a11y {
 
@@ -51,8 +51,7 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
 
   // |focus_chain_requester| and |registry| must outlive this object.
   explicit A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
-                            AccessibilityFocusChainRegistry* registry,
-                            FocusHighlightManager* focus_highlight_manager,
+                            AccessibilityFocusChainRegistry* registry, ViewSource* view_source,
                             inspect::Node inspect_node = inspect::Node());
   virtual ~A11yFocusManager();
 
@@ -72,7 +71,7 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // Removes current highlights (if any), and highlights node specified by identifier
   // |{currently_focused_view,
   // focused_node_in_view_map_[currently_focused_view_]}|.
-  virtual void UpdateHighlights();
+  virtual void UpdateHighlights(zx_koid_t newly_focused_view, uint32_t newly_focused_node);
 
   // Registers a callback that is invoked when the a11y focus is updated. For now, only one callback
   // can be registered at a time.
@@ -92,6 +91,16 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // Helper function to update inspect info.
   void UpdateInspectProperties();
 
+  // Helper method to update highlights, focus bookkeeping, and inspect, and to
+  // invoke the on focus callback.
+  //
+  // This set of operations must occur in the same order on every focus change,
+  // regardless of whether the focus change occurs within the same view.
+  void UpdateFocus(zx_koid_t newly_focused_view, uint32_t newly_focused_node);
+
+  // Clears the current focus highlight (if any).
+  void ClearHighlights();
+
   // Map for storing node_id which is in a11y focus for every viewref_koid.
   // By default, root-node(node_id = 0) is set for a view in a11y focus.
   std::unordered_map<zx_koid_t /* viewref_koid */, uint32_t /* node_id */>
@@ -103,8 +112,8 @@ class A11yFocusManager : public AccessibilityFocusChainListener {
   // Interface used to request Focus Chain Updates.
   AccessibilityFocusChainRequester* const focus_chain_requester_ = nullptr;
 
-  // Used to manipulate semantic annotations.
-  FocusHighlightManager* const focus_highlight_manager_ = nullptr;
+  // Used to retrieve semantic tree data and manipulate highlights.
+  ViewSource* const view_source_ = nullptr;
 
   OnA11yFocusUpdatedCallback on_a11y_focus_updated_callback_;
 

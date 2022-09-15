@@ -8,8 +8,6 @@ source_set("mocks") {
   sources = [
     "mock_annotation_view.cc",
     "mock_annotation_view.h",
-    "mock_focus_highlight_manager.cc",
-    "mock_focus_highlight_manager.h",
   ]
 
   deps = [

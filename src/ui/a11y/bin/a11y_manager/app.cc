@@ -163,7 +163,6 @@ void App::SetState(A11yManagerState state) {
 void App::UpdateScreenReaderState() {
   // If this is used elsewhere, it should be moved into its own function.
   view_manager_->SetSemanticsEnabled(state_.screen_reader_enabled());
-  view_manager_->SetAnnotationsEnabled(state_.screen_reader_enabled());
 
   if (state_.screen_reader_enabled()) {
     if (!screen_reader_) {

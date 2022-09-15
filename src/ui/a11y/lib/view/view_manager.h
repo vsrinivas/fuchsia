@@ -14,7 +14,6 @@
 
 #include <memory>
 
-#include "src/ui/a11y/lib/annotation/focus_highlight_manager.h"
 #include "src/ui/a11y/lib/input_injection/injector_manager.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 #include "src/ui/a11y/lib/semantics/semantic_tree_service.h"
@@ -40,7 +39,6 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
                     public fuchsia::accessibility::virtualkeyboard::Listener,
                     public InjectorManagerInterface,
                     public SemanticsSource,
-                    public FocusHighlightManager,
                     public ViewSource {
  public:
   explicit ViewManager(std::unique_ptr<SemanticTreeServiceFactory> factory,
@@ -62,9 +60,6 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // Returns a handle to the semantics event manager so that listeners
   // can register.
   SemanticsEventManager* GetSemanticsEventManager() { return semantics_event_manager_.get(); }
-
-  // |FocusHighlightManager|
-  void SetAnnotationsEnabled(bool annotations_enabled) override;
 
   // |SemanticsSource|
   bool ViewHasSemantics(zx_koid_t view_ref_koid) override;
@@ -98,13 +93,6 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
 
   // |SemanticsSource|
   std::optional<zx_koid_t> GetViewWithVisibleVirtualkeyboard() override;
-
-  // |FocusHighlightManager|
-  void ClearAllHighlights() override;
-  void ClearFocusHighlights() override;
-
-  // |FocusHighlightManager|
-  void UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) override;
 
   // |SemanticsSource|
   void ExecuteHitTesting(
@@ -148,14 +136,6 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   // Returns nullptr if no such tree is found.
   const fxl::WeakPtr<::a11y::SemanticTree> GetTreeByKoid(const zx_koid_t koid) const;
 
-  // Helper function to draw an annotation.
-  // Returns true on success, false on failure.
-  bool DrawHighlight(SemanticNodeIdentifier newly_highlighted_node);
-
-  // Helper function to clear an existing annotation.
-  // Returns true on success, false on failure.
-  bool RemoveHighlight();
-
   // |fuchsia::accessibility::semantics::SemanticsManager|:
   void RegisterViewForSemantics(
       fuchsia::ui::views::ViewRef view_ref,
@@ -187,10 +167,6 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
       wait_map_;
 
   bool semantics_enabled_ = false;
-
-  bool annotations_enabled_ = false;
-
-  std::optional<SemanticNodeIdentifier> highlighted_node_ = std::nullopt;
 
   std::unique_ptr<SemanticTreeServiceFactory> factory_;
 

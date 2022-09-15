@@ -38,7 +38,9 @@ void MockA11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
   callback(true);
 }
 
-void MockA11yFocusManager::UpdateHighlights() { update_highlights_called_ = true; }
+void MockA11yFocusManager::UpdateHighlights(zx_koid_t koid, uint32_t node_id) {
+  update_highlights_called_ = true;
+}
 
 bool MockA11yFocusManager::IsGetA11yFocusCalled() const { return get_a11y_focus_called_; }
 

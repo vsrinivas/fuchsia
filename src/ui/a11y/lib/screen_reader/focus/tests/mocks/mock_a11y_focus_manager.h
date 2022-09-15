@@ -22,7 +22,7 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
                     a11y::A11yFocusManager::SetA11yFocusCallback callback) override;
 
   // |A11yFocusManager|
-  void UpdateHighlights() override;
+  void UpdateHighlights(zx_koid_t koid, uint32_t node_id) override;
 
   // Returns true if GetA11yFocusCalled was called.
   bool IsGetA11yFocusCalled() const;

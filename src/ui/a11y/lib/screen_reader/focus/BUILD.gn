@@ -13,6 +13,7 @@ source_set("focus") {
     "//sdk/lib/fidl/cpp",
     "//src/ui/a11y/lib/semantics",
     "//src/ui/a11y/lib/util",
+    "//src/ui/a11y/lib/view",
   ]
 
   deps = [
