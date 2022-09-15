@@ -21,11 +21,11 @@
             to: "#tee_manager",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-tee",
             to: "#tee_manager",
-            subdir: "class/tee",
+            subdir: "tee",
         },
         {
             storage: "data",

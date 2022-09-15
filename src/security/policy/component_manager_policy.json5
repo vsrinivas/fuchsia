@@ -696,7 +696,6 @@
                     "/core/starnix_manager/starmium",
                     "/core/sysmem_connector",
                     "/core/system_recovery",
-                    "/core/tee_manager",
                     "/core/temperature-logger",
                     "/core/termina-guest-manager",
                     "/core/termina-guest-manager/vmm/virtio_magma_devices:virtio_magma",
