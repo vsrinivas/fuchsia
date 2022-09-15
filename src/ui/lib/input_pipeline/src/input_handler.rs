@@ -2,7 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::input_device, async_trait::async_trait};
+use {crate::input_device, async_trait::async_trait, std::any::Any, std::rc::Rc};
+
+pub trait AsRcAny {
+    fn as_rc_any(self: Rc<Self>) -> Rc<dyn Any>;
+}
+
+impl<T: Any> AsRcAny for T {
+    fn as_rc_any(self: Rc<Self>) -> Rc<dyn Any> {
+        self
+    }
+}
 
 /// An [`InputHandler`] dispatches InputEvents to an external service. It maintains
 /// service connections necessary to handle the events.
@@ -21,7 +31,7 @@ use {crate::input_device, async_trait::async_trait};
 ///   propagating to downstream handlers in a timely manner. See
 ///   [further discussion of blocking](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/input_pipeline/docs/coding.md).
 #[async_trait(?Send)]
-pub trait InputHandler {
+pub trait InputHandler: AsRcAny {
     /// Returns a vector of InputEvents to propagate to the next InputHandler.
     ///
     /// * The vector may be empty if, e.g., the handler chose to buffer the
@@ -40,7 +50,7 @@ pub trait InputHandler {
 
 /// An [`UnhandledInputHandler`] is like an [`InputHandler`], but only deals in unhandled events.
 #[async_trait(?Send)]
-pub trait UnhandledInputHandler {
+pub trait UnhandledInputHandler: AsRcAny {
     /// Returns a vector of InputEvents to propagate to the next InputHandler.
     ///
     /// * The vector may be empty if, e.g., the handler chose to buffer the

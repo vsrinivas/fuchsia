@@ -12,14 +12,24 @@ use {
 pub(super) async fn run_gesture_arena_test(
     inputs: Vec<input_device::InputEvent>,
 ) -> Vec<Vec<input_device::InputEvent>> {
-    let arena = gesture_arena::make_input_handler(fuchsia_inspect::Inspector::new().root());
+    let handler = gesture_arena::make_input_handler(fuchsia_inspect::Inspector::new().root());
 
     let mut output: Vec<Vec<input_device::InputEvent>> = vec![];
 
     for e in inputs.into_iter() {
-        let generated_events = arena.clone().handle_input_event(e).await;
+        let generated_events = handler.clone().handle_input_event(e).await;
         output.push(generated_events);
     }
+
+    let arena =
+        handler.as_rc_any().downcast::<gesture_arena::GestureArena>().expect("not a gesture arena");
+
+    // This check ensure all incoming events have been forwarded or dropped.
+    assert!(
+        !arena.clone().has_buffered_events(),
+        "has buffered events: {:?}",
+        arena.mutable_state_to_str()
+    );
 
     output
 }

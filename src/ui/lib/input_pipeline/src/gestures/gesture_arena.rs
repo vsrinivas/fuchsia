@@ -289,7 +289,7 @@ trait ContenderFactory {
     fn make_contenders(&self) -> Vec<Box<dyn Contender>>;
 }
 
-struct GestureArena {
+pub(super) struct GestureArena {
     contender_factory: Box<dyn ContenderFactory>,
     mutable_state: RefCell<MutableState>,
     inspect_log: RefCell<BoundedListNode>,
@@ -317,6 +317,14 @@ impl GestureArena {
                 inspect_node.create_child(inspect_keys::ARENA_LOG_ROOT),
                 max_inspect_log_entries,
             )),
+        }
+    }
+
+    #[cfg(test)]
+    pub(super) fn has_buffered_events(self: std::rc::Rc<Self>) -> bool {
+        match &*self.mutable_state.borrow() {
+            MutableState::Matching { buffered_events, .. } => buffered_events.len() > 0,
+            _ => false,
         }
     }
 }
@@ -746,13 +754,13 @@ impl GestureArena {
         }
     }
 
-    #[allow(dead_code)] // only called in developer debug builds
-    fn log_mutable_state(&self) {
+    #[allow(dead_code)] // only called in developer debug builds and tests.
+    pub(super) fn mutable_state_to_str(&self) -> String {
         match &*self.mutable_state.borrow() {
-            MutableState::Idle => fx_log_info!("touchpad: Idle"),
-            MutableState::Chain => fx_log_info!("touchpad: Chain"),
+            MutableState::Idle => format!("touchpad: Idle"),
+            MutableState::Chain => format!("touchpad: Chain"),
             MutableState::Matching { contenders, matched_contenders, buffered_events } => {
-                fx_log_info!(
+                format!(
                     "touchpad: Matching {{ \
                                 contenders: [ {} ], \
                                 matched_contenders: [ {} ], \
@@ -768,10 +776,15 @@ impl GestureArena {
                 )
             }
             MutableState::Forwarding { winner } => {
-                fx_log_info!("touchpad: Forwarding {{ winner: {} }}", winner.get_type_name());
+                format!("touchpad: Forwarding {{ winner: {} }}", winner.get_type_name())
             }
-            MutableState::Invalid => fx_log_info!("touchpad: Invalid"),
+            MutableState::Invalid => format!("touchpad: Invalid"),
         }
+    }
+
+    #[allow(dead_code)] // only called in developer debug builds
+    fn log_mutable_state(&self) {
+        fx_log_info!("{}", self.mutable_state_to_str());
     }
 }
 
