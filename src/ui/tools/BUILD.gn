@@ -5,16 +5,12 @@
 import("//build/components.gni")
 
 group("scenic") {
-  deps = [
-    ":input",
-    ":print_input",
-  ]
+  deps = [ ":input" ]
 }
 
 group("tools") {
   deps = [
     ":input",
-    ":print_input",
     "paper_shader_compiler",
     "print-input-report",
     "tiles",
@@ -34,10 +30,7 @@ group("tests") {
 
 # Non-component tools contains the names of shell command tools that do not
 # have any CMX.
-non_component_tools = [
-  "input",
-  "print_input",
-]
+non_component_tools = [ "input" ]
 foreach(tool, non_component_tools) {
   fuchsia_shell_package(tool) {
     deps = [ tool ]

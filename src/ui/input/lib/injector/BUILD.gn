@@ -21,7 +21,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/ui/input",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/inspect",
   ]
@@ -33,7 +32,6 @@ source_set("lib") {
     "//src/lib/fostr/fidl/fuchsia.input.report",
     "//src/lib/fostr/fidl/fuchsia.ui.input",
     "//src/lib/fxl",
-    "//src/lib/ui/input",
     "//zircon/system/ulib/trace",
   ]
 }
