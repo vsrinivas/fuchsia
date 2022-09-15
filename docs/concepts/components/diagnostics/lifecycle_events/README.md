@@ -8,41 +8,23 @@ these events are and through which interface they can be accessed for diagnostic
 
 The archivist ingests events from the component framework.
 The following diagram shows a very high level overview of the three lifecycle events
-(started, directory_ready and stopped) the archivist is interested in:
+(started, directory_ready and stopped) the archivist is interested in.
 
-- {appmgr}
+![Figure: Flow of lifecycle events under component manager](component_manager_lifecycle_flow.png)
 
-  ![Figure: Flow of lifecycle events under appmgr](appmgr_lifecycle_flow.png)
+The archivist consumes the following lifecycle events under component manager through
+[`fuchsia.sys2.EventSource`][event_source]:
 
-  The archivist consumes the following lifecycle events under appmgr through
-  [`fuchsia.sys.internal.ComponentEventProvider`][component_event_provider]:
-
-  - **Started**: Sent by appmgr when a component starts, the [runner] might still need to
-    launch the component. This event is synthesized for all components that exist at the moment the
-    archivist starts listening for events.
-  - **Stopped**: Sent by appmgr when a component stops. The runner might still need to tear down the
-    component, but the component is gone from the framework perspective.
-  - **Diagnostics ready**: Sent by appmgr when a component's `out/diagnostics` directory is being
-    served by the component.
-
-
-- {component manager}
-
-  ![Figure: Flow of lifecycle events under component manager](component_manager_lifecycle_flow.png)
-
-  The archivist consumes the following lifecycle events under component manager through
-  [`fuchsia.sys2.EventSource`][event_source]:
-
-  - **Started**: Sent by component manager when a component starts, the [runner] might still
-    need to launch the component, but the component has started from the framework perspective.
-  - **Stopped**: Sent by component manager when a component stops, the runner might still need to to
-    tear down the component, but the component is gone from the framework perspective.
-  - **Running**: Sent by component manager for all components that are running at the moment the
-    archivist starts listening for events. In other words, a synthesized started event. This event
-    is provided to the reader as **Started**, but consumed from the framework as “Running”.
-  - **Directory ready**: The archivist listens for directory ready of the `out/diagnostics`
-    directory. When the component starts serving this directory, the component manager sends this
-    event to the Archivist.
+- **Started**: Sent by component manager when a component starts, the [runner] might still
+  need to launch the component, but the component has started from the framework perspective.
+- **Stopped**: Sent by component manager when a component stops, the runner might still need to to
+  tear down the component, but the component is gone from the framework perspective.
+- **Running**: Sent by component manager for all components that are running at the moment the
+  archivist starts listening for events. In other words, a synthesized started event. This event
+  is provided to the reader as **Started**, but consumed from the framework as “Running”.
+- **Directory ready**: The archivist listens for directory ready of the `out/diagnostics`
+  directory. When the component starts serving this directory, the component manager sends this
+  event to the Archivist.
 
 
 ## Reading lifecycle events
@@ -81,17 +63,15 @@ from other sources. The following is an example of a JSON object entry:
 
 Monikers identify the component related to the triggered event.
 
-As explained in [Archivist consumption of lifecycle events](#archivist-consumption), there are two
-systems that provide the archivist with events, appmgr and component manager:
-
--   Components running under appmgr have a `.cmx` extension
--   Components running under component manager have a `.cm` extension
+As explained in [Archivist consumption of lifecycle events](#archivist-consumption), component
+manager provdes archivist with events. Components running under component manager have a `.cm`
+extension.
 
 #### Timestamp
 
 The time is recorded using the kernel's monotonic clock (nanoseconds) and conveyed without
 modification as an unsigned integer. The time is when the event was created by the component
-manager and appmgr, which also provide the time.
+manager, which also provide the time.
 
 #### Lifecycle event type
 

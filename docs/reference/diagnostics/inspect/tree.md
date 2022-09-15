@@ -132,7 +132,7 @@ which are separated by a `:`:
 3. The property path: The name of the property.
 
 For `iquery` only (1) is required. If only (1) is provided (for example
-`realm/component.cmx`) then iquery will use a selector `realm/component.cmx:*` to
+`realm/component`) then iquery will use a selector `realm/component:*` to
 fetch all the inspect data.
 
 `iquery` includes two utility commands to know what components are available and
@@ -177,19 +177,6 @@ fx iquery show --manifest component_name
 
 The Fuchsia Diagnostics Platform, hosted by the [Archivist][archivist],
 is responsible for monitoring and aggregating Inspect data on demand.
-
-#### Collection under appmgr
-
-When a component is running under appmgr, diagnostics
-data is collected from its `out/diagnostics` directory.
-A connection to this directory is provided to Archivist by the
-[`ComponentEventProvider`][fidl-event-provider] protocol.
-
-A separate component, called `archivist-for-embedding.cmx`, serves the same
-purpose as the Archivist but may be injected into tests. This allows tests
-to find only their own diagnostics data, helping to make tests hermetic.
-
-#### Collection under component\_manager
 
 When running under component manager, diagnostics data is made available to the
 Archivist through [event capabilities][events].

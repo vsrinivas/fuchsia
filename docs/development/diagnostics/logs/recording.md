@@ -60,16 +60,6 @@ In addition, `driver_manager` binds `stdout` and `stderr` to debuglog. This allo
 to output critical information to the debuglog, or to fallback to the debuglog for certain product
 configurations where the `LogSink` service is not available.
 
-### Processes
-
-The handles are [populated in procargs] by [appmgr] when creating processes and are pulled from
-[`fuchsia.sys/LaunchInfo`] if provided. For example, `run-test-component` provides its own
-`stdout`/`stderr` handles for test components so it can prevent that output from reaching the klog.
-
-If no fd's are provided by the caller of `CreateComponent,` then the handles are [cloned] from
-appmgr's own `stdout` and `stderr`. appmgr populates its own stdio with debuglog handles, using the
-[`stdout-to-debuglog`] library to wire up a handle received from [`fuchsia.boot.WriteOnlyLog`].
-
 ### Components
 
 By default, [components] only have their `stdout` and `stderr` streams captured
