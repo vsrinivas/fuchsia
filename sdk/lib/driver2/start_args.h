@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.component.runner/cpp/wire.h>
 #include <fidl/fuchsia.data/cpp/wire.h>
+#include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/zx/status.h>
 
@@ -33,9 +34,34 @@ zx::status<T> SymbolValue(const fuchsia_driver_framework::wire::DriverStartArgs&
 }
 
 template <typename T>
+zx::status<T> SymbolValue(
+    const std::optional<std::vector<fuchsia_driver_framework::NodeSymbol>>& symbols,
+    std::string_view name) {
+  if (!symbols.has_value()) {
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  static_assert(sizeof(T) == sizeof(zx_vaddr_t), "T must match zx_vaddr_t in size");
+  for (auto& symbol : *symbols) {
+    if (name == symbol.name().value()) {
+      T value;
+      memcpy(&value, &symbol.address().value(), sizeof(zx_vaddr_t));
+      return zx::ok(value);
+    }
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+template <typename T>
 T GetSymbol(const fuchsia_driver_framework::wire::DriverStartArgs& args, std::string_view name,
             T default_value = nullptr) {
   auto value = driver::SymbolValue<T>(args, name);
+  return value.is_ok() ? *value : default_value;
+}
+
+template <typename T>
+T GetSymbol(const std::optional<std::vector<fuchsia_driver_framework::NodeSymbol>>& symbols,
+            std::string_view name, T default_value = nullptr) {
+  auto value = driver::SymbolValue<T>(symbols, name);
   return value.is_ok() ? *value : default_value;
 }
 
@@ -51,6 +77,23 @@ inline zx::status<std::string> ProgramValue(const fuchsia_data::wire::Dictionary
       }
       auto& value = entry.value.str();
       return zx::ok(std::string{value.data(), value.size()});
+    }
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+inline zx::status<std::string> ProgramValue(const std::optional<fuchsia_data::Dictionary>& program,
+                                            std::string_view key) {
+  if (program.has_value() && program->entries().has_value()) {
+    for (const auto& entry : *program->entries()) {
+      if (key != entry.key()) {
+        continue;
+      }
+      auto value = entry.value()->str();
+      if (!value.has_value()) {
+        return zx::error(ZX_ERR_WRONG_TYPE);
+      }
+      return zx::ok(value.value());
     }
   }
   return zx::error(ZX_ERR_NOT_FOUND);
