@@ -14,7 +14,7 @@
     offer: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.time.external.PushSource",
             ],
             from: "parent",

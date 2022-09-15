@@ -877,10 +877,7 @@
         {
             protocol: "fuchsia.cobalt.LoggerFactory",
             from: "#cobalt",
-            to: [
-                "#sampler",
-                "#timekeeper",
-            ],
+            to: [ "#sampler" ],
         },
         {
             protocol: "fuchsia.metrics.MetricEventLoggerFactory",
@@ -892,6 +889,7 @@
                 "#sampler",
                 "#session-manager",
                 "#sysmem_connector",
+                "#timekeeper",
             ],
         },
         {

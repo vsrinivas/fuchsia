@@ -33,8 +33,5 @@ rustc_library("fuchsia-cobalt") {
     "//src/connectivity/location/emergency/*",
     "//src/lib/cobalt/*",
     "//src/sys/pkg/bin/system-updater/*",
-    "//src/sys/time/httpsdate_time_source/*",
-    "//src/sys/time/timekeeper/*",
-    "//src/sys/time/timekeeper_integration/*",
   ]
 }

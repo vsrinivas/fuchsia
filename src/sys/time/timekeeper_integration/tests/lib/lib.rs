@@ -5,10 +5,12 @@
 use {
     chrono::{Datelike, TimeZone, Timelike},
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_cobalt::CobaltEvent,
-    fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierMarker, LoggerQuerierProxy},
     fidl_fuchsia_hardware_rtc::{DeviceRequest, DeviceRequestStream},
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
+    fidl_fuchsia_metrics_test::{
+        LogMethod, MetricEventLoggerQuerierMarker, MetricEventLoggerQuerierProxy,
+    },
     fidl_fuchsia_testing::{
         FakeClockControlMarker, FakeClockControlProxy, FakeClockMarker, FakeClockProxy,
     },
@@ -63,8 +65,13 @@ impl NestedTimekeeper {
         clock: Arc<zx::Clock>,
         initial_rtc_time: Option<zx::Time>,
         use_fake_clock: bool,
-    ) -> (Self, Arc<PushSourcePuppet>, RtcUpdates, LoggerQuerierProxy, Option<FakeClockController>)
-    {
+    ) -> (
+        Self,
+        Arc<PushSourcePuppet>,
+        RtcUpdates,
+        MetricEventLoggerQuerierProxy,
+        Option<FakeClockController>,
+    ) {
         let push_source_puppet = Arc::new(PushSourcePuppet::new());
 
         let builder = RealmBuilder::new().await.unwrap();
@@ -164,7 +171,9 @@ impl NestedTimekeeper {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.cobalt.test.LoggerQuerier"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.test.MetricEventLoggerQuerier",
+                    ))
                     .from(&mock_cobalt)
                     .to(Ref::parent()),
             )
@@ -174,7 +183,9 @@ impl NestedTimekeeper {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.MetricEventLoggerFactory",
+                    ))
                     .from(&mock_cobalt)
                     .to(&timekeeper),
             )
@@ -213,7 +224,7 @@ impl NestedTimekeeper {
 
         let cobalt_querier = realm_instance
             .root
-            .connect_to_protocol_at_exposed_dir::<LoggerQuerierMarker>()
+            .connect_to_protocol_at_exposed_dir::<MetricEventLoggerQuerierMarker>()
             .unwrap();
 
         let nested_timekeeper = Self { _realm_instance: realm_instance };
@@ -547,13 +558,13 @@ pub fn rtc_time_to_zx_time(rtc_time: fidl_fuchsia_hardware_rtc::Time) -> zx::Tim
     zx::Time::from_nanos(date.timestamp_nanos())
 }
 
-/// Create a stream of CobaltEvents from a proxy.
+/// Create a stream of MetricEvents from a proxy.
 pub fn create_cobalt_event_stream(
-    proxy: Arc<LoggerQuerierProxy>,
+    proxy: Arc<MetricEventLoggerQuerierProxy>,
     log_method: LogMethod,
-) -> std::pin::Pin<Box<dyn Stream<Item = CobaltEvent>>> {
+) -> std::pin::Pin<Box<dyn Stream<Item = MetricEvent>>> {
     async_utils::hanging_get::client::HangingGetStream::new(proxy, move |p| {
-        p.watch_logs2(PROJECT_ID, log_method)
+        p.watch_logs(PROJECT_ID, log_method)
     })
     .map(|res| futures::stream::iter(res.unwrap().0))
     .flatten()

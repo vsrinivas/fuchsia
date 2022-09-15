@@ -2,29 +2,87 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::datatypes::{HttpsSample, Phase};
-use crate::diagnostics::{Diagnostics, Event};
-use fidl_fuchsia_cobalt::HistogramBucket;
-use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
-use fuchsia_zircon as zx;
-use futures::Future;
-use parking_lot::Mutex;
-use time_metrics_registry::{
-    HttpsdateBoundSizeMetricDimensionPhase as CobaltPhase, HTTPSDATE_BOUND_SIZE_METRIC_ID,
-    HTTPSDATE_POLL_LATENCY_INT_BUCKETS_FLOOR,
-    HTTPSDATE_POLL_LATENCY_INT_BUCKETS_NUM_BUCKETS as RTT_BUCKETS,
-    HTTPSDATE_POLL_LATENCY_INT_BUCKETS_STEP_SIZE, HTTPSDATE_POLL_LATENCY_METRIC_ID, PROJECT_ID,
+use {
+    crate::{
+        datatypes::{HttpsSample, Phase},
+        diagnostics::{Diagnostics, Event},
+    },
+    anyhow::{format_err, Context as _, Error},
+    cobalt_client::traits::AsEventCodes,
+    fidl_contrib::{
+        protocol_connector::ConnectedProtocol, protocol_connector::ProtocolSender,
+        ProtocolConnector,
+    },
+    fidl_fuchsia_metrics::{
+        HistogramBucket, MetricEvent, MetricEventLoggerFactoryMarker, MetricEventLoggerProxy,
+        ProjectSpec,
+    },
+    fuchsia_cobalt_builders::MetricEventExt,
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_zircon as zx,
+    futures::{future, Future, FutureExt as _},
+    parking_lot::Mutex,
+    time_metrics_registry::{
+        HttpsdateBoundSizeMetricDimensionPhase as CobaltPhase,
+        HTTPSDATE_BOUND_SIZE_MIGRATED_METRIC_ID, HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_FLOOR,
+        HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_NUM_BUCKETS as RTT_BUCKETS,
+        HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_STEP_SIZE,
+        HTTPSDATE_POLL_LATENCY_MIGRATED_METRIC_ID, PROJECT_ID,
+    },
 };
 
 const RTT_BUCKET_SIZE: zx::Duration =
-    zx::Duration::from_micros(HTTPSDATE_POLL_LATENCY_INT_BUCKETS_STEP_SIZE as i64);
+    zx::Duration::from_micros(HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_STEP_SIZE as i64);
 const RTT_BUCKET_FLOOR: zx::Duration =
-    zx::Duration::from_micros(HTTPSDATE_POLL_LATENCY_INT_BUCKETS_FLOOR);
+    zx::Duration::from_micros(HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_FLOOR);
+
+struct CobaltConnectedService;
+impl ConnectedProtocol for CobaltConnectedService {
+    type Protocol = MetricEventLoggerProxy;
+    type ConnectError = Error;
+    type Message = MetricEvent;
+    type SendError = Error;
+
+    fn get_protocol<'a>(
+        &'a mut self,
+    ) -> future::BoxFuture<'a, Result<MetricEventLoggerProxy, Error>> {
+        async {
+            let (logger_proxy, server_end) =
+                fidl::endpoints::create_proxy().context("failed to create proxy endpoints")?;
+            let metric_event_logger_factory =
+                connect_to_protocol::<MetricEventLoggerFactoryMarker>()
+                    .context("Failed to connect to fuchsia::metrics::MetricEventLoggerFactory")?;
+
+            metric_event_logger_factory
+                .create_metric_event_logger(
+                    ProjectSpec { project_id: Some(PROJECT_ID), ..ProjectSpec::EMPTY },
+                    server_end,
+                )
+                .await?
+                .map_err(|e| format_err!("Connection to MetricEventLogger refused {e:?}"))?;
+            Ok(logger_proxy)
+        }
+        .boxed()
+    }
+
+    fn send_message<'a>(
+        &'a mut self,
+        protocol: &'a MetricEventLoggerProxy,
+        mut msg: MetricEvent,
+    ) -> future::BoxFuture<'a, Result<(), Error>> {
+        async move {
+            let fut = protocol.log_metric_events(&mut std::iter::once(&mut msg));
+            fut.await?.map_err(|e| format_err!("Failed to log metric {e:?}"))?;
+            Ok(())
+        }
+        .boxed()
+    }
+}
 
 /// A `Diagnostics` implementation that uploads diagnostics metrics to Cobalt.
 pub struct CobaltDiagnostics {
     /// Client connection to Cobalt.
-    sender: Mutex<CobaltSender>,
+    sender: Mutex<ProtocolSender<MetricEvent>>,
     /// Last known phase of the algorithm.
     phase: Mutex<Phase>,
 }
@@ -32,8 +90,7 @@ pub struct CobaltDiagnostics {
 impl CobaltDiagnostics {
     /// Create a new `CobaltDiagnostics`, and future that must be polled to upload to Cobalt.
     pub fn new() -> (Self, impl Future<Output = ()>) {
-        let (sender, fut) =
-            CobaltConnector::default().serve(ConnectionType::project_id(PROJECT_ID));
+        let (sender, fut) = ProtocolConnector::new(CobaltConnectedService).serve_and_log_errors();
         (Self { sender: Mutex::new(sender), phase: Mutex::new(Phase::Initial) }, fut)
     }
 
@@ -63,11 +120,10 @@ impl CobaltDiagnostics {
     fn success(&self, sample: &HttpsSample) {
         let phase = self.phase.lock();
         let mut sender = self.sender.lock();
-        sender.log_event_count(
-            HTTPSDATE_BOUND_SIZE_METRIC_ID,
-            [<Phase as Into<CobaltPhase>>::into(*phase)],
-            0i64, // period_duration, not used
-            sample.final_bound_size.into_micros(),
+        sender.send(
+            MetricEvent::builder(HTTPSDATE_BOUND_SIZE_MIGRATED_METRIC_ID)
+                .with_event_codes(<Phase as Into<CobaltPhase>>::into(*phase).as_event_codes())
+                .as_integer(sample.final_bound_size.into_micros()),
         );
 
         let mut bucket_counts = [0u64; RTT_BUCKETS as usize + 2];
@@ -82,7 +138,10 @@ impl CobaltDiagnostics {
             .filter(|(_, count)| **count > 0)
             .map(|(index, count)| HistogramBucket { index: index as u32, count: *count })
             .collect::<Vec<_>>();
-        sender.log_int_histogram(HTTPSDATE_POLL_LATENCY_METRIC_ID, (), histogram_buckets);
+        sender.send(
+            MetricEvent::builder(HTTPSDATE_POLL_LATENCY_MIGRATED_METRIC_ID)
+                .as_integer_histogram(histogram_buckets),
+        );
     }
 
     fn phase_update(&self, phase: &Phase) {
@@ -103,12 +162,14 @@ impl Diagnostics for CobaltDiagnostics {
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::datatypes::Poll;
-    use fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload};
-    use futures::{channel::mpsc, stream::StreamExt};
-    use lazy_static::lazy_static;
-    use std::{collections::HashSet, iter::FromIterator};
+    use {
+        super::*,
+        crate::datatypes::Poll,
+        fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
+        futures::{channel::mpsc, stream::StreamExt},
+        lazy_static::lazy_static,
+        std::{collections::HashSet, iter::FromIterator},
+    };
 
     const TEST_INITIAL_PHASE: Phase = Phase::Initial;
     const TEST_BOUND_SIZE: zx::Duration = zx::Duration::from_millis(101);
@@ -120,7 +181,7 @@ mod test {
     const TEST_RTT_2_BUCKET: u32 = 4;
     const OVERFLOW_RTT: zx::Duration = zx::Duration::from_seconds(10);
     const RTT_BUCKET_SIZE: zx::Duration =
-        zx::Duration::from_micros(HTTPSDATE_POLL_LATENCY_INT_BUCKETS_STEP_SIZE as i64);
+        zx::Duration::from_micros(HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_STEP_SIZE as i64);
 
     const POLL_OFFSET_RTT_BUCKET_SIZE: zx::Duration = zx::Duration::from_micros(10000);
     const POLL_OFFSET_RTT_FLOOR: zx::Duration = zx::Duration::from_micros(0);
@@ -142,11 +203,11 @@ mod test {
     }
 
     /// Create a `CobaltDiagnostics` and a receiver to inspect events it produces.
-    fn diagnostics_for_test() -> (CobaltDiagnostics, mpsc::Receiver<CobaltEvent>) {
+    fn diagnostics_for_test() -> (CobaltDiagnostics, mpsc::Receiver<MetricEvent>) {
         let (send, recv) = mpsc::channel(10);
         (
             CobaltDiagnostics {
-                sender: Mutex::new(CobaltSender::new(send)),
+                sender: Mutex::new(ProtocolSender::new(send)),
                 phase: Mutex::new(TEST_INITIAL_PHASE),
             },
             recv,
@@ -184,20 +245,15 @@ mod test {
         assert_eq!(
             event_recv.take(2).collect::<Vec<_>>().await,
             vec![
-                CobaltEvent {
-                    metric_id: HTTPSDATE_BOUND_SIZE_METRIC_ID,
+                MetricEvent {
+                    metric_id: HTTPSDATE_BOUND_SIZE_MIGRATED_METRIC_ID,
                     event_codes: vec![*TEST_INITIAL_PHASE_COBALT as u32],
-                    component: None,
-                    payload: EventPayload::EventCount(CountEvent {
-                        period_duration_micros: 0,
-                        count: TEST_BOUND_SIZE.into_micros()
-                    })
+                    payload: MetricEventPayload::IntegerValue(TEST_BOUND_SIZE.into_micros())
                 },
-                CobaltEvent {
-                    metric_id: HTTPSDATE_POLL_LATENCY_METRIC_ID,
+                MetricEvent {
+                    metric_id: HTTPSDATE_POLL_LATENCY_MIGRATED_METRIC_ID,
                     event_codes: vec![],
-                    component: None,
-                    payload: EventPayload::IntHistogram(vec![HistogramBucket {
+                    payload: MetricEventPayload::Histogram(vec![HistogramBucket {
                         index: TEST_RTT_BUCKET,
                         count: 1
                     }])
@@ -248,21 +304,16 @@ mod test {
         let mut events = event_recv.take(2).collect::<Vec<_>>().await;
         assert_eq!(
             events[0],
-            CobaltEvent {
-                metric_id: HTTPSDATE_BOUND_SIZE_METRIC_ID,
+            MetricEvent {
+                metric_id: HTTPSDATE_BOUND_SIZE_MIGRATED_METRIC_ID,
                 event_codes: vec![*TEST_INITIAL_PHASE_COBALT as u32],
-                component: None,
-                payload: EventPayload::EventCount(CountEvent {
-                    period_duration_micros: 0,
-                    count: TEST_BOUND_SIZE.into_micros()
-                })
+                payload: MetricEventPayload::IntegerValue(TEST_BOUND_SIZE.into_micros())
             }
         );
-        assert_eq!(events[1].metric_id, HTTPSDATE_POLL_LATENCY_METRIC_ID);
+        assert_eq!(events[1].metric_id, HTTPSDATE_POLL_LATENCY_MIGRATED_METRIC_ID);
         assert!(events[1].event_codes.is_empty());
-        assert!(events[1].component.is_none());
         match events.remove(1).payload {
-            EventPayload::IntHistogram(buckets) => {
+            MetricEventPayload::Histogram(buckets) => {
                 let expected_buckets: HashSet<HistogramBucket> = HashSet::from_iter(vec![
                     HistogramBucket { index: TEST_RTT_BUCKET, count: 1 },
                     HistogramBucket { index: TEST_RTT_2_BUCKET, count: 2 },
@@ -289,20 +340,15 @@ mod test {
         assert_eq!(
             event_recv.take(2).collect::<Vec<_>>().await,
             vec![
-                CobaltEvent {
-                    metric_id: HTTPSDATE_BOUND_SIZE_METRIC_ID,
+                MetricEvent {
+                    metric_id: HTTPSDATE_BOUND_SIZE_MIGRATED_METRIC_ID,
                     event_codes: vec![*TEST_INITIAL_PHASE_COBALT as u32],
-                    component: None,
-                    payload: EventPayload::EventCount(CountEvent {
-                        period_duration_micros: 0,
-                        count: TEST_BOUND_SIZE.into_micros()
-                    })
+                    payload: MetricEventPayload::IntegerValue(TEST_BOUND_SIZE.into_micros())
                 },
-                CobaltEvent {
-                    metric_id: HTTPSDATE_POLL_LATENCY_METRIC_ID,
+                MetricEvent {
+                    metric_id: HTTPSDATE_POLL_LATENCY_MIGRATED_METRIC_ID,
                     event_codes: vec![],
-                    component: None,
-                    payload: EventPayload::IntHistogram(vec![HistogramBucket {
+                    payload: MetricEventPayload::Histogram(vec![HistogramBucket {
                         index: RTT_BUCKETS + 1,
                         count: 1
                     }])

@@ -10,37 +10,91 @@ use {
         },
         MonitorTrack, PrimaryTrack, TimeSource,
     },
+    anyhow::{format_err, Context as _, Error},
+    cobalt_client::traits::AsEventCodes,
+    fidl_contrib::{
+        protocol_connector::ConnectedProtocol, protocol_connector::ProtocolSender,
+        ProtocolConnector,
+    },
+    fidl_fuchsia_metrics::{
+        MetricEvent, MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec,
+    },
     fuchsia_async as fasync,
-    fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
+    fuchsia_cobalt_builders::MetricEventExt,
+    fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
+    futures::{future, FutureExt as _},
     parking_lot::Mutex,
     std::sync::Arc,
     time_metrics_registry::{
-        RealTimeClockEventsMetricDimensionEventType as RtcEvent,
+        RealTimeClockEventsMigratedMetricDimensionEventType as RtcEvent,
         TimeMetricDimensionDirection as Direction, TimeMetricDimensionExperiment as Experiment,
         TimeMetricDimensionIteration as Iteration, TimeMetricDimensionRole as CobaltRole,
         TimeMetricDimensionTrack as CobaltTrack,
-        TimekeeperLifecycleEventsMetricDimensionEventType as LifecycleEvent,
-        TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
-        TimekeeperTrackEventsMetricDimensionEventType as TrackEvent,
-        REAL_TIME_CLOCK_EVENTS_METRIC_ID, TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
-        TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
-        TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID, TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
-        TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID, TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+        TimekeeperLifecycleEventsMigratedMetricDimensionEventType as LifecycleEvent,
+        TimekeeperTimeSourceEventsMigratedMetricDimensionEventType as TimeSourceEvent,
+        TimekeeperTrackEventsMigratedMetricDimensionEventType as TrackEvent, PROJECT_ID,
+        REAL_TIME_CLOCK_EVENTS_MIGRATED_METRIC_ID, TIMEKEEPER_CLOCK_CORRECTION_MIGRATED_METRIC_ID,
+        TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_MIGRATED_METRIC_ID,
+        TIMEKEEPER_LIFECYCLE_EVENTS_MIGRATED_METRIC_ID,
+        TIMEKEEPER_MONITOR_DIFFERENCE_MIGRATED_METRIC_ID,
+        TIMEKEEPER_SQRT_COVARIANCE_MIGRATED_METRIC_ID,
+        TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID,
+        TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID,
     },
     time_util::time_at_monotonic,
 };
 
-/// The period duration in micros. This field is required for Cobalt 1.0 EVENT_COUNT but not used.
-const PERIOD_DURATION: i64 = 0;
-
 /// The number of parts in a million.
 const ONE_MILLION: i64 = 1_000_000;
 
+struct CobaltConnectedService;
+impl ConnectedProtocol for CobaltConnectedService {
+    type Protocol = MetricEventLoggerProxy;
+    type ConnectError = Error;
+    type Message = MetricEvent;
+    type SendError = Error;
+
+    fn get_protocol<'a>(
+        &'a mut self,
+    ) -> future::BoxFuture<'a, Result<MetricEventLoggerProxy, Error>> {
+        async {
+            let (logger_proxy, server_end) =
+                fidl::endpoints::create_proxy().context("failed to create proxy endpoints")?;
+            let metric_event_logger_factory =
+                connect_to_protocol::<MetricEventLoggerFactoryMarker>()
+                    .context("Failed to connect to fuchsia::metrics::MetricEventLoggerFactory")?;
+
+            metric_event_logger_factory
+                .create_metric_event_logger(
+                    ProjectSpec { project_id: Some(PROJECT_ID), ..ProjectSpec::EMPTY },
+                    server_end,
+                )
+                .await?
+                .map_err(|e| format_err!("Connection to MetricEventLogger refused {e:?}"))?;
+            Ok(logger_proxy)
+        }
+        .boxed()
+    }
+
+    fn send_message<'a>(
+        &'a mut self,
+        protocol: &'a MetricEventLoggerProxy,
+        mut msg: MetricEvent,
+    ) -> future::BoxFuture<'a, Result<(), Error>> {
+        async move {
+            let fut = protocol.log_metric_events(&mut std::iter::once(&mut msg));
+            fut.await?.map_err(|e| format_err!("Failed to log timekeeper metric {e:?}"))?;
+            Ok(())
+        }
+        .boxed()
+    }
+}
+
 /// A connection to the real Cobalt service.
 pub struct CobaltDiagnostics {
-    /// The wrapped CobaltSender used to log metrics.
-    sender: Mutex<CobaltSender>,
+    /// The ProtocolSender for MetricEvent's used to log metrics.
+    sender: Mutex<ProtocolSender<MetricEvent>>,
     /// The experiment to record on all experiment-based events.
     experiment: Experiment,
     /// The UTC clock used in the primary track.
@@ -59,8 +113,7 @@ impl CobaltDiagnostics {
         primary: &PrimaryTrack<T>,
         optional_monitor: &Option<MonitorTrack<T>>,
     ) -> Self {
-        let (sender, fut) = CobaltConnector::default()
-            .serve(ConnectionType::project_id(time_metrics_registry::PROJECT_ID));
+        let (sender, fut) = ProtocolConnector::new(CobaltConnectedService).serve_and_log_errors();
         fasync::Task::spawn(fut).detach();
         Self {
             sender: Mutex::new(sender),
@@ -74,18 +127,21 @@ impl CobaltDiagnostics {
     fn record_kalman_filter_update(&self, track: Track, sqrt_covariance: zx::Duration) {
         let mut locked_sender = self.sender.lock();
         let cobalt_track = Into::<CobaltTrack>::into(track);
-        locked_sender.log_event_count(
-            TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
-            (TrackEvent::EstimatedOffsetUpdated, cobalt_track, self.experiment),
-            PERIOD_DURATION,
-            1,
+        locked_sender.send(
+            MetricEvent::builder(TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID)
+                .with_event_codes(
+                    (TrackEvent::EstimatedOffsetUpdated, cobalt_track, self.experiment)
+                        .as_event_codes(),
+                )
+                .as_occurrence(1),
         );
-        locked_sender.log_event_count(
-            TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
-            (Into::<CobaltTrack>::into(track), self.experiment),
-            PERIOD_DURATION,
-            // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
-            sqrt_covariance.into_micros(),
+        locked_sender.send(
+            MetricEvent::builder(TIMEKEEPER_SQRT_COVARIANCE_MIGRATED_METRIC_ID)
+                .with_event_codes(
+                    (Into::<CobaltTrack>::into(track), self.experiment).as_event_codes(),
+                )
+                // This metric is configured to be microseconds, which does not follow the standard of nanoseconds everywhere.
+                .as_integer(sqrt_covariance.into_micros()),
         );
     }
 
@@ -99,11 +155,12 @@ impl CobaltDiagnostics {
         // Frequency arrives as a deviation in ppm from a 1Hz clock which can be positive or
         // negative, but to keep the events we report to cobalt positive we output an absolute
         // utc parts per million monotonic parts.
-        self.sender.lock().log_event_count(
-            TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_METRIC_ID,
-            (iteration, Into::<CobaltTrack>::into(track), self.experiment),
-            PERIOD_DURATION,
-            rate_adjust_ppm as i64 + ONE_MILLION,
+        self.sender.lock().send(
+            MetricEvent::builder(TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_MIGRATED_METRIC_ID)
+                .with_event_codes(
+                    (iteration, Into::<CobaltTrack>::into(track), self.experiment).as_event_codes(),
+                )
+                .as_integer(rate_adjust_ppm as i64 + ONE_MILLION),
         );
     }
 
@@ -118,18 +175,18 @@ impl CobaltDiagnostics {
         let cobalt_track = Into::<CobaltTrack>::into(track);
         let direction =
             if correction.into_nanos() >= 0 { Direction::Positive } else { Direction::Negative };
-        locked_sender.log_event_count(
-            TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
-            (Into::<TrackEvent>::into(strategy), cobalt_track, self.experiment),
-            PERIOD_DURATION,
-            1,
+        locked_sender.send(
+            MetricEvent::builder(TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID)
+                .with_event_codes(
+                    (Into::<TrackEvent>::into(strategy), cobalt_track, self.experiment)
+                        .as_event_codes(),
+                )
+                .as_occurrence(1),
         );
-        locked_sender.log_event_count(
-            TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
-            (direction, cobalt_track, self.experiment),
-            PERIOD_DURATION,
-            // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
-            correction.into_micros().abs(),
+        locked_sender.send(
+            MetricEvent::builder(TIMEKEEPER_CLOCK_CORRECTION_MIGRATED_METRIC_ID)
+                .with_event_codes((direction, cobalt_track, self.experiment).as_event_codes())
+                .as_integer(correction.into_micros().abs()),
         );
     }
 
@@ -139,11 +196,17 @@ impl CobaltDiagnostics {
     /// difference between the monitor and primary clocks.
     fn record_clock_update(&self, track: Track, reason: ClockUpdateReason) {
         let mut locked_sender = self.sender.lock();
-        locked_sender.log_event_count(
-            TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
-            (Into::<TrackEvent>::into(reason), Into::<CobaltTrack>::into(track), self.experiment),
-            PERIOD_DURATION,
-            1,
+        locked_sender.send(
+            MetricEvent::builder(TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID)
+                .with_event_codes(
+                    (
+                        Into::<TrackEvent>::into(reason),
+                        Into::<CobaltTrack>::into(track),
+                        self.experiment,
+                    )
+                        .as_event_codes(),
+                )
+                .as_occurrence(1),
         );
         if track == Track::Monitor {
             if let Some(monitor_clock) = self.monitor_clock.as_ref() {
@@ -152,12 +215,11 @@ impl CobaltDiagnostics {
                 let monitor = time_at_monotonic(monitor_clock, monotonic_ref);
                 let direction =
                     if monitor >= primary { Direction::Positive } else { Direction::Negative };
-                locked_sender.log_event_count(
-                    TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID,
-                    (direction, self.experiment),
-                    PERIOD_DURATION,
-                    // Unfortunately Cobalt does not follow the standard of nanoseconds everywhere.
-                    (monitor - primary).into_micros().abs(),
+                locked_sender.send(
+                    MetricEvent::builder(TIMEKEEPER_MONITOR_DIFFERENCE_MIGRATED_METRIC_ID)
+                        .with_event_codes((direction, self.experiment).as_event_codes())
+                        // This metric is configured to be microseconds, which does not follow the standard of nanoseconds everywhere.
+                        .as_integer((monitor - primary).into_micros().abs()),
                 );
             }
         }
@@ -172,39 +234,51 @@ impl Diagnostics for CobaltDiagnostics {
                     InitialClockState::NotSet => LifecycleEvent::InitializedBeforeUtcStart,
                     InitialClockState::PreviouslySet => LifecycleEvent::InitializedAfterUtcStart,
                 };
-                self.sender.lock().log_event(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event);
+                self.sender.lock().send(
+                    MetricEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_MIGRATED_METRIC_ID)
+                        .with_event_codes(event.as_event_codes())
+                        .as_occurrence(1),
+                );
             }
             Event::InitializeRtc { outcome, .. } => {
-                self.sender
-                    .lock()
-                    .log_event(REAL_TIME_CLOCK_EVENTS_METRIC_ID, Into::<RtcEvent>::into(outcome));
+                self.sender.lock().send(
+                    MetricEvent::builder(REAL_TIME_CLOCK_EVENTS_MIGRATED_METRIC_ID)
+                        .with_event_codes(Into::<RtcEvent>::into(outcome).as_event_codes())
+                        .as_occurrence(1),
+                );
             }
             Event::TimeSourceFailed { role, error } => {
                 let event = Into::<TimeSourceEvent>::into(error);
-                self.sender.lock().log_event_count(
-                    TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
-                    (event, Into::<CobaltRole>::into(role), self.experiment),
-                    PERIOD_DURATION,
-                    1,
+                self.sender.lock().send(
+                    MetricEvent::builder(TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID)
+                        .with_event_codes(
+                            (event, Into::<CobaltRole>::into(role), self.experiment)
+                                .as_event_codes(),
+                        )
+                        .as_occurrence(1),
                 );
             }
             Event::TimeSourceStatus { .. } => {}
             Event::SampleRejected { role, error } => {
                 let event = Into::<TimeSourceEvent>::into(error);
-                self.sender.lock().log_event_count(
-                    TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
-                    (event, Into::<CobaltRole>::into(role), self.experiment),
-                    PERIOD_DURATION,
-                    1,
+                self.sender.lock().send(
+                    MetricEvent::builder(TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID)
+                        .with_event_codes(
+                            (event, Into::<CobaltRole>::into(role), self.experiment)
+                                .as_event_codes(),
+                        )
+                        .as_occurrence(1),
                 );
             }
             Event::FrequencyWindowDiscarded { track, reason } => {
                 if let Some(event) = Into::<Option<TrackEvent>>::into(reason) {
-                    self.sender.lock().log_event_count(
-                        TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
-                        (event, Into::<CobaltTrack>::into(track), self.experiment),
-                        PERIOD_DURATION,
-                        1,
+                    self.sender.lock().send(
+                        MetricEvent::builder(TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID)
+                            .with_event_codes(
+                                (event, Into::<CobaltTrack>::into(track), self.experiment)
+                                    .as_event_codes(),
+                            )
+                            .as_occurrence(1),
                     );
                 }
             }
@@ -218,9 +292,11 @@ impl Diagnostics for CobaltDiagnostics {
                 self.record_clock_correction(track, correction, strategy);
             }
             Event::WriteRtc { outcome } => {
-                self.sender
-                    .lock()
-                    .log_event(REAL_TIME_CLOCK_EVENTS_METRIC_ID, Into::<RtcEvent>::into(outcome));
+                self.sender.lock().send(
+                    MetricEvent::builder(REAL_TIME_CLOCK_EVENTS_MIGRATED_METRIC_ID)
+                        .with_event_codes(Into::<RtcEvent>::into(outcome).as_event_codes())
+                        .as_occurrence(1),
+                );
             }
             Event::StartClock { track, source } => {
                 if track == Track::Primary {
@@ -228,7 +304,11 @@ impl Diagnostics for CobaltDiagnostics {
                         StartClockSource::Rtc => LifecycleEvent::StartedUtcFromRtc,
                         StartClockSource::External(_) => LifecycleEvent::StartedUtcFromTimeSource,
                     };
-                    self.sender.lock().log_event(TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID, event);
+                    self.sender.lock().send(
+                        MetricEvent::builder(TIMEKEEPER_LIFECYCLE_EVENTS_MIGRATED_METRIC_ID)
+                            .with_event_codes(event.as_event_codes())
+                            .as_occurrence(1),
+                    );
                 }
             }
             Event::UpdateClock { track, reason } => {
@@ -246,7 +326,7 @@ mod test {
             ClockUpdateReason, FrequencyDiscardReason, InitializeRtcOutcome, Role,
             SampleValidationError, TimeSourceError, WriteRtcOutcome,
         },
-        fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, Event as EmptyEvent, EventPayload},
+        fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
         futures::{channel::mpsc, FutureExt, StreamExt},
         test_util::{assert_geq, assert_leq},
     };
@@ -262,9 +342,9 @@ mod test {
 
     /// Creates a test CobaltDiagnostics and an mpsc receiver that may be used to verify the
     /// events it sends. The primary and monitor clocks will have a difference of MONITOR_OFFSET.
-    fn create_test_object() -> (CobaltDiagnostics, mpsc::Receiver<CobaltEvent>) {
+    fn create_test_object() -> (CobaltDiagnostics, mpsc::Receiver<MetricEvent>) {
         let (mpsc_sender, mpsc_receiver) = futures::channel::mpsc::channel(1);
-        let sender = CobaltSender::new(mpsc_sender);
+        let sender = ProtocolSender::new(mpsc_sender);
         let diagnostics = CobaltDiagnostics {
             sender: Mutex::new(sender),
             experiment: TEST_EXPERIMENT,
@@ -274,11 +354,6 @@ mod test {
         (diagnostics, mpsc_receiver)
     }
 
-    /// Creates an `EventPayload` containing the supplied count.
-    fn event_count_payload(count: i64) -> EventPayload {
-        EventPayload::EventCount(CountEvent { period_duration_micros: 0, count })
-    }
-
     #[fuchsia::test(allow_stalls = false)]
     async fn record_initialization_events() {
         let (diagnostics, mut mpsc_receiver) = create_test_object();
@@ -286,11 +361,10 @@ mod test {
         diagnostics.record(Event::Initialized { clock_state: InitialClockState::NotSet });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![LifecycleEvent::InitializedBeforeUtcStart as u32],
-                component: None,
-                payload: EventPayload::Event(EmptyEvent),
+                payload: MetricEventPayload::Count(1),
             })
         );
     }
@@ -309,11 +383,10 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_LIFECYCLE_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![LifecycleEvent::StartedUtcFromTimeSource as u32],
-                component: None,
-                payload: EventPayload::Event(EmptyEvent),
+                payload: MetricEventPayload::Count(1),
             })
         );
     }
@@ -326,22 +399,20 @@ mod test {
             .record(Event::InitializeRtc { outcome: InitializeRtcOutcome::Succeeded, time: None });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::REAL_TIME_CLOCK_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::REAL_TIME_CLOCK_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![RtcEvent::ReadSucceeded as u32],
-                component: None,
-                payload: EventPayload::Event(EmptyEvent),
+                payload: MetricEventPayload::Count(1),
             })
         );
 
         diagnostics.record(Event::WriteRtc { outcome: WriteRtcOutcome::Failed });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::REAL_TIME_CLOCK_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::REAL_TIME_CLOCK_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![RtcEvent::WriteFailed as u32],
-                component: None,
-                payload: EventPayload::Event(EmptyEvent),
+                payload: MetricEventPayload::Count(1),
             })
         );
     }
@@ -356,15 +427,14 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     TimeSourceEvent::SampleRejectedMonotonicTooOld as u32,
                     CobaltRole::Primary as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(1),
+                payload: MetricEventPayload::Count(1),
             })
         );
 
@@ -374,15 +444,14 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     TimeSourceEvent::RestartedCallFailed as u32,
                     CobaltRole::Monitor as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(1),
+                payload: MetricEventPayload::Count(1),
             })
         );
     }
@@ -397,15 +466,14 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     TrackEvent::FrequencyWindowDiscardedSampleCount as u32,
                     CobaltTrack::Primary as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(1),
+                payload: MetricEventPayload::Count(1),
             })
         );
 
@@ -417,24 +485,22 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     TrackEvent::EstimatedOffsetUpdated as u32,
                     CobaltTrack::Primary as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(1),
+                payload: MetricEventPayload::Count(1),
             })
         );
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_SQRT_COVARIANCE_MIGRATED_METRIC_ID,
                 event_codes: vec![CobaltTrack::Primary as u32, TEST_EXPERIMENT as u32],
-                component: None,
-                payload: event_count_payload(55555),
+                payload: MetricEventPayload::IntegerValue(55555),
             })
         );
 
@@ -446,15 +512,15 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_METRIC_ID,
+            Some(MetricEvent {
+                metric_id:
+                    time_metrics_registry::TIMEKEEPER_FREQUENCY_ABS_ESTIMATE_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     Iteration::Subsequent as u32,
                     CobaltTrack::Primary as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(1_000_000 - 4),
+                payload: MetricEventPayload::IntegerValue(1_000_000 - 4),
             })
         );
 
@@ -465,28 +531,26 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     TrackEvent::CorrectionByNominalRateSlew as u32,
                     CobaltTrack::Monitor as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(1),
+                payload: MetricEventPayload::Count(1),
             })
         );
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_CLOCK_CORRECTION_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     Direction::Negative as u32,
                     CobaltTrack::Monitor as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(777),
+                payload: MetricEventPayload::IntegerValue(777),
             })
         );
     }
@@ -502,15 +566,14 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     TrackEvent::ClockUpdateTimeStep as u32,
                     CobaltTrack::Primary as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(1),
+                payload: MetricEventPayload::Count(1),
             })
         );
         assert!(mpsc_receiver.next().now_or_never().is_none());
@@ -524,25 +587,23 @@ mod test {
         });
         assert_eq!(
             mpsc_receiver.next().await,
-            Some(CobaltEvent {
-                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+            Some(MetricEvent {
+                metric_id: time_metrics_registry::TIMEKEEPER_TRACK_EVENTS_MIGRATED_METRIC_ID,
                 event_codes: vec![
                     TrackEvent::ClockUpdateBeginSlew as u32,
                     CobaltTrack::Monitor as u32,
                     TEST_EXPERIMENT as u32
                 ],
-                component: None,
-                payload: event_count_payload(1),
+                payload: MetricEventPayload::Count(1),
             })
         );
         let event = mpsc_receiver.next().await.unwrap();
-        assert_eq!(event.metric_id, TIMEKEEPER_MONITOR_DIFFERENCE_METRIC_ID);
+        assert_eq!(event.metric_id, TIMEKEEPER_MONITOR_DIFFERENCE_MIGRATED_METRIC_ID);
         assert_eq!(event.event_codes, vec![Direction::Positive as u32, TEST_EXPERIMENT as u32]);
         match event.payload {
-            EventPayload::EventCount(CountEvent { period_duration_micros, count }) => {
-                assert_eq!(period_duration_micros, 0);
-                assert_geq!(count, MONITOR_OFFSET.into_micros() - 5000);
-                assert_leq!(count, MONITOR_OFFSET.into_micros() + 5000);
+            MetricEventPayload::IntegerValue(value) => {
+                assert_geq!(value, MONITOR_OFFSET.into_micros() - 5000);
+                assert_leq!(value, MONITOR_OFFSET.into_micros() + 5000);
             }
             _ => panic!("monitor clock update did not produce event count payload"),
         }

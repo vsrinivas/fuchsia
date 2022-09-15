@@ -27,10 +27,10 @@ rustc_library("timekeeper_integration_lib") {
 
   deps = [
     ":test.time_rust",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
-    "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test_rust",
     "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
+    "//sdk/fidl/fuchsia.metrics.test:fuchsia.metrics.test_rust",
     "//sdk/fidl/fuchsia.time:fuchsia.time_rust",
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
     "//src/lib/async-utils",
@@ -61,10 +61,10 @@ rustc_test("integration_test_bin") {
 
   deps = [
     ":timekeeper_integration_lib",
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
-    "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
+    "//sdk/fidl/fuchsia.metrics.test:fuchsia.metrics.test_rust",
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/cobalt/rust/builders",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/test_util",
@@ -84,7 +84,7 @@ rustc_test("faketime_integration_test_bin") {
 
   deps = [
     ":timekeeper_integration_lib",
-    "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test_rust",
+    "//sdk/fidl/fuchsia.metrics.test:fuchsia.metrics.test_rust",
     "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
     "//src/lib/fake-clock/fidl:fidl_rust",
     "//src/lib/fuchsia",

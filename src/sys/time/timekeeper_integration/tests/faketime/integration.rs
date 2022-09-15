@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierProxy},
+    fidl_fuchsia_metrics_test::{LogMethod, MetricEventLoggerQuerierProxy},
     fidl_fuchsia_testing::Increment,
     fidl_fuchsia_time_external::{Status, TimeSample},
     fuchsia_async as fasync,
@@ -13,7 +13,7 @@ use {
     test_util::assert_geq,
     time_metrics_registry::{
         TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
-        TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
+        TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID,
     },
     timekeeper_integration_lib::{
         create_cobalt_event_stream, new_clock, poll_until, poll_until_async, FakeClockController,
@@ -34,7 +34,7 @@ use {
 /// passed to cobalt, and manipulate the fake time.
 fn faketime_test<F, Fut>(clock: Arc<zx::Clock>, test_fn: F)
 where
-    F: FnOnce(Arc<PushSourcePuppet>, LoggerQuerierProxy, FakeClockController) -> Fut,
+    F: FnOnce(Arc<PushSourcePuppet>, MetricEventLoggerQuerierProxy, FakeClockController) -> Fut,
     Fut: Future<Output = ()>,
 {
     let mut executor = fasync::LocalExecutor::new().expect("Failed to create executor");
@@ -67,7 +67,7 @@ fn test_restart_inactive_time_source_that_claims_healthy() {
     let clock = new_clock();
     faketime_test(Arc::clone(&clock), |push_source_controller, cobalt, fake_time| async move {
         let cobalt_event_stream =
-            create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogCobaltEvent);
+            create_cobalt_event_stream(Arc::new(cobalt), LogMethod::LogMetricEvents);
 
         let mono_before =
             zx::Time::from_nanos(fake_time.get_monotonic().await.expect("Failed to get time"));
@@ -104,7 +104,8 @@ fn test_restart_inactive_time_source_that_claims_healthy() {
         // Timekeeper should report the restarted event to Cobalt.
         let restart_event = cobalt_event_stream
             .skip_while(|event| {
-                let is_restart_event = event.metric_id == TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID
+                let is_restart_event = event.metric_id
+                    == TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID
                     && event
                         .event_codes
                         .contains(&(TimeSourceEvent::RestartedSampleTimeOut as u32));
@@ -113,7 +114,7 @@ fn test_restart_inactive_time_source_that_claims_healthy() {
             .next()
             .await
             .expect("Failed to get restart event");
-        assert_eq!(restart_event.metric_id, TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID);
+        assert_eq!(restart_event.metric_id, TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID);
         assert!(restart_event
             .event_codes
             .contains(&(TimeSourceEvent::RestartedSampleTimeOut as u32)));

@@ -19,7 +19,7 @@
     ],
     use: [
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            protocol: [ "fuchsia.metrics.MetricEventLoggerFactory" ],
             from: "parent",
         },
         {

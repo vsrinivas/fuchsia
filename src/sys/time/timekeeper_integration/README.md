@@ -13,7 +13,7 @@ The test component implements a number of services:
  Timekeeper to the test component.
 
 In addition, the test launches a mock Cobalt component, which makes
-`fuchsia.cobalt.LoggerFactory` available to Timekeeper.
+`fuchsia.metrics.MetricEventLoggerFactory` available to Timekeeper.
 
 ## Fake-clock tests
 The tests in `tests/faketime` also use `//src/lib/fake-clock`. This allows

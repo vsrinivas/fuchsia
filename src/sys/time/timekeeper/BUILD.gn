@@ -10,13 +10,15 @@ timekeeper_deps = [
   "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
   "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_rust",
+  "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
   "//sdk/fidl/fuchsia.time:fuchsia.time_rust",
   "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",
-  "//src/lib/cobalt/rust:fuchsia-cobalt",
+  "//src/lib/cobalt/rust/builders",
   "//src/lib/diagnostics/inspect/runtime/rust",
   "//src/lib/diagnostics/inspect/rust",
   "//src/lib/fdio/rust:fdio",
   "//src/lib/fidl/rust/fidl",
+  "//src/lib/fidl/rust/fidl-contrib",
   "//src/lib/fuchsia",
   "//src/lib/fuchsia-async",
   "//src/lib/fuchsia-component",
@@ -24,6 +26,7 @@ timekeeper_deps = [
   "//src/sys/time/lib/inspect-writable",
   "//src/sys/time/lib/time-util",
   "//src/sys/time/lib/time_metrics_registry",
+  "//third_party/cobalt/src/lib/client/rust:cobalt-client",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:chrono",
@@ -61,7 +64,6 @@ rustc_binary("bin") {
   sources = timekeeper_sources
 
   test_deps = [
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//src/lib/fuchsia",
     "//src/lib/test_util",
   ]
