@@ -260,6 +260,8 @@ impl futures::Stream for AllowedEventStream {
 pub enum AllowedEvent {}
 
 impl AllowedEvent {
+    /// Decodes a message buffer as a [`AllowedEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<AllowedEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -706,6 +708,8 @@ impl futures::Stream for DenyEachBindingEventStream {
 pub enum DenyEachBindingEvent {}
 
 impl DenyEachBindingEvent {
+    /// Decodes a message buffer as a [`DenyEachBindingEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<DenyEachBindingEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -1579,6 +1583,8 @@ impl futures::Stream for ImportsSameNameContextEventStream {
 pub enum ImportsSameNameContextEvent {}
 
 impl ImportsSameNameContextEvent {
+    /// Decodes a message buffer as a [`ImportsSameNameContextEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<ImportsSameNameContextEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;

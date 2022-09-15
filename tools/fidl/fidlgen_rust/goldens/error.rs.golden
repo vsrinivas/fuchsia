@@ -189,6 +189,8 @@ impl futures::Stream for ExampleEventStream {
 pub enum ExampleEvent {}
 
 impl ExampleEvent {
+    /// Decodes a message buffer as a [`ExampleEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<ExampleEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;

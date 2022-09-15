@@ -176,6 +176,8 @@ impl futures::Stream for TopEventStream {
 pub enum TopEvent {}
 
 impl TopEvent {
+    /// Decodes a message buffer as a [`TopEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<TopEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;

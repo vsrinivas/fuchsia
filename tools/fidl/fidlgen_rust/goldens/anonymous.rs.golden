@@ -682,6 +682,8 @@ impl futures::Stream for SomeProtocolEventStream {
 pub enum SomeProtocolEvent {}
 
 impl SomeProtocolEvent {
+    /// Decodes a message buffer as a [`SomeProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<SomeProtocolEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;

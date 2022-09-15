@@ -213,6 +213,8 @@ impl futures::Stream for ChildEventStream {
 pub enum ChildEvent {}
 
 impl ChildEvent {
+    /// Decodes a message buffer as a [`ChildEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<ChildEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -533,6 +535,8 @@ impl futures::Stream for ParentEventStream {
 pub enum ParentEvent {}
 
 impl ParentEvent {
+    /// Decodes a message buffer as a [`ParentEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<ParentEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;

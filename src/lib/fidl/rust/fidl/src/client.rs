@@ -917,7 +917,13 @@ pub mod sync {
                     .map_err(|e| self.wrap_error(Error::ClientEvent, e))?;
                 match self.channel.read_etc(&mut buf) {
                     Ok(()) => {
-                        // We succeeded in reading the message.
+                        // We succeeded in reading the message. Check that it is
+                        // an event not a two-way method reply.
+                        let (header, _) = decode_transaction_header(buf.bytes())
+                            .map_err(|_| Error::InvalidHeader)?;
+                        if header.tx_id() != 0 {
+                            return Err(Error::UnexpectedSyncResponse);
+                        }
                         return Ok(buf);
                     }
                     Err(zx::Status::SHOULD_WAIT) => {
@@ -1121,6 +1127,21 @@ mod tests {
         assert!(thread1.join().is_ok());
         assert!(thread2.join().is_ok());
 
+        Ok(())
+    }
+
+    #[test]
+    fn sync_client_wait_for_event_gets_method_response() -> Result<(), Error> {
+        let (client_end, server_end) = zx::Channel::create().context("chan create")?;
+        let client = sync::Client::new(client_end, "test_protocol");
+        send_transaction(
+            TransactionHeader::new(3902304923, SEND_ORDINAL, DynamicFlags::empty()),
+            &server_end,
+        );
+        assert_matches!(
+            client.wait_for_event(zx::Time::after(5.seconds())),
+            Err(crate::Error::UnexpectedSyncResponse)
+        );
         Ok(())
     }
 

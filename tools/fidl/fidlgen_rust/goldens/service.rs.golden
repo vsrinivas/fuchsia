@@ -160,6 +160,8 @@ impl futures::Stream for FirstProtocolEventStream {
 pub enum FirstProtocolEvent {}
 
 impl FirstProtocolEvent {
+    /// Decodes a message buffer as a [`FirstProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<FirstProtocolEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -434,6 +436,8 @@ impl futures::Stream for SecondProtocolEventStream {
 pub enum SecondProtocolEvent {}
 
 impl SecondProtocolEvent {
+    /// Decodes a message buffer as a [`SecondProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<SecondProtocolEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;

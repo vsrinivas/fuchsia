@@ -3801,6 +3801,8 @@ impl UnknownInteractionsAjarProtocolEvent {
         }
     }
 
+    /// Decodes a message buffer as a [`UnknownInteractionsAjarProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(
         mut buf: fidl::MessageBufEtc,
     ) -> Result<UnknownInteractionsAjarProtocolEvent, fidl::Error> {
@@ -6168,6 +6170,8 @@ impl UnknownInteractionsClosedProtocolEvent {
         }
     }
 
+    /// Decodes a message buffer as a [`UnknownInteractionsClosedProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(
         mut buf: fidl::MessageBufEtc,
     ) -> Result<UnknownInteractionsClosedProtocolEvent, fidl::Error> {
@@ -8732,6 +8736,8 @@ impl UnknownInteractionsProtocolEvent {
         }
     }
 
+    /// Decodes a message buffer as a [`UnknownInteractionsProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(
         mut buf: fidl::MessageBufEtc,
     ) -> Result<UnknownInteractionsProtocolEvent, fidl::Error> {

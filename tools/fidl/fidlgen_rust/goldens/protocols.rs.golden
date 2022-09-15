@@ -367,6 +367,8 @@ impl futures::Stream for AnotherDiscoverableProtocolEventStream {
 pub enum AnotherDiscoverableProtocolEvent {}
 
 impl AnotherDiscoverableProtocolEvent {
+    /// Decodes a message buffer as a [`AnotherDiscoverableProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(
         mut buf: fidl::MessageBufEtc,
     ) -> Result<AnotherDiscoverableProtocolEvent, fidl::Error> {
@@ -748,6 +750,8 @@ impl ChannelProtocolEvent {
         }
     }
 
+    /// Decodes a message buffer as a [`ChannelProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<ChannelProtocolEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -1399,6 +1403,8 @@ impl futures::Stream for DiscoverableProtocolEventStream {
 pub enum DiscoverableProtocolEvent {}
 
 impl DiscoverableProtocolEvent {
+    /// Decodes a message buffer as a [`DiscoverableProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<DiscoverableProtocolEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -1736,6 +1742,8 @@ impl HandleRightsProtocolEvent {
         }
     }
 
+    /// Decodes a message buffer as a [`HandleRightsProtocolEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<HandleRightsProtocolEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -2148,6 +2156,8 @@ impl futures::Stream for ManyParametersEventStream {
 pub enum ManyParametersEvent {}
 
 impl ManyParametersEvent {
+    /// Decodes a message buffer as a [`ManyParametersEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<ManyParametersEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -2423,6 +2433,8 @@ impl futures::Stream for MethodWithUnionEventStream {
 pub enum MethodWithUnionEvent {}
 
 impl MethodWithUnionEvent {
+    /// Decodes a message buffer as a [`MethodWithUnionEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<MethodWithUnionEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -2837,6 +2849,8 @@ impl TransitionalEvent {
         }
     }
 
+    /// Decodes a message buffer as a [`TransitionalEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<TransitionalEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -3460,6 +3474,8 @@ impl WithAndWithoutRequestResponseEvent {
         }
     }
 
+    /// Decodes a message buffer as a [`WithAndWithoutRequestResponseEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(
         mut buf: fidl::MessageBufEtc,
     ) -> Result<WithAndWithoutRequestResponseEvent, fidl::Error> {
@@ -4451,6 +4467,8 @@ impl futures::Stream for WithErrorSyntaxEventStream {
 pub enum WithErrorSyntaxEvent {}
 
 impl WithErrorSyntaxEvent {
+    /// Decodes a message buffer as a [`WithErrorSyntaxEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<WithErrorSyntaxEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
@@ -5345,6 +5363,8 @@ impl futures::Stream for WithProtocolEndsEventStream {
 pub enum WithProtocolEndsEvent {}
 
 impl WithProtocolEndsEvent {
+    /// Decodes a message buffer as a [`WithProtocolEndsEvent`]. Transaction
+    /// ID in the message must be zero; this method does not check TXID.
     fn decode(mut buf: fidl::MessageBufEtc) -> Result<WithProtocolEndsEvent, fidl::Error> {
         let (bytes, _handles) = buf.split_mut();
         let (tx_header, _body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
