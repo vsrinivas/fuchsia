@@ -206,9 +206,11 @@ func testFuzzWithCorpus(t *testing.T, handle string) {
 		"-src", outputCorpus, "-dst", "data/corpus")
 	runCommandOk(t, "put_data", "-handle", handle, "-fuzzer", crash_fuzzer,
 		"-src", inputCorpus, "-dst", "data/corpus")
+
+	// Note: max_total_time is an int flag, but ClusterFuzz sometimes passes floats
 	out := runCommandOk(t, "run_fuzzer", "-handle", handle, "-fuzzer", crash_fuzzer,
 		"-artifact-dir", artifactDir, "--", "-seed=123", "-artifact_prefix=data/",
-		"-jobs=0", "data/corpus/new", "data/corpus/uninteresting")
+		"-jobs=0", "-max_total_time=10.0", "data/corpus/new", "data/corpus/uninteresting")
 
 	glog.Info(out)
 
