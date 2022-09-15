@@ -14,6 +14,7 @@ group("tests") {
     ":circular_queue-tests",
     ":gvnic-tests",
     ":gvnic_bind_test",
+    ":pagelist-tests",
   ]
 }
 
@@ -95,4 +96,22 @@ test("circular_queue_test") {
 
 fuchsia_unittest_package("circular_queue-tests") {
   deps = [ ":circular_queue_test" ]
+}
+
+test("pagelist_test") {
+  sources = [
+    "bigendian.h",
+    "pagelist.cc",
+    "pagelist.h",
+    "pagelist_test.cc",
+  ]
+  deps = [
+    "//src/devices/testing/fake-bti",
+    "//src/devices/testing/fake-dma-buffer",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+fuchsia_unittest_package("pagelist-tests") {
+  deps = [ ":pagelist_test" ]
 }
