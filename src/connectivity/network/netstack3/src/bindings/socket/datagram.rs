@@ -1575,6 +1575,56 @@ where
     }
 }
 
+pub(crate) trait RequestHandlerDispatcher<I, T>:
+    AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>
+where
+    I: IpExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
+{
+}
+
+impl<I, T, D> RequestHandlerDispatcher<I, T> for D
+where
+    I: IpExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
+    D: AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>,
+{
+}
+
+// TODO(https://github.com/rust-lang/rust/issues/20671): Replace the duplicate associated type with
+// a where clause bounding the parent trait's associated type.
+//
+// OR
+//
+// TODO(https://github.com/rust-lang/rust/issues/52662): Replace the duplicate associated type with
+// a bound on the parent trait's associated type.
+trait RequestHandlerContext<I, T>:
+    LockableContext<NonSyncCtx = <Self as RequestHandlerContext<I, T>>::NonSyncCtx>
+where
+    I: IpExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
+{
+    type NonSyncCtx: RequestHandlerDispatcher<I, T> + NonSyncContext + AsRef<Devices>;
+}
+
+impl<I, T, C> RequestHandlerContext<I, T> for C
+where
+    I: IpExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: Transport<I>,
+    C: LockableContext,
+    C::NonSyncCtx: RequestHandlerDispatcher<I, T> + AsRef<Devices>,
+{
+    type NonSyncCtx = C::NonSyncCtx;
+}
+
 /// A borrow into a [`SocketWorker`]'s state along with the flags used to handle
 /// any requests.
 struct RequestHandler<'a, I: Ip, T: Transport<I>, C> {
@@ -1615,82 +1665,6 @@ where
         + TryIntoFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
     <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<Devices<DeviceId>>,
 {
-    /// Returns the intersection of the requested flags against the current
-    /// rights.
-    ///
-    /// If the requested flags contains invalid flags, or requests rights that
-    /// aren't held by `self.flags`, returns `None`. Otherwise returns the new
-    /// flags.
-    fn new_rights(&self, request_flags: fio::OpenFlags) -> Option<fio::OpenFlags> {
-        // Datagram sockets don't understand the following flags.
-        if request_flags.intersects(fio::OpenFlags::APPEND) {
-            return None;
-        }
-        // Datagram sockets are neither mountable nor executable.
-        if request_flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
-            return None;
-        }
-        // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
-        // OPEN_RIGHT_* flags.
-        if request_flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS)
-            && (request_flags.intersects(fio::OpenFlags::RIGHT_READABLE)
-                || request_flags.intersects(fio::OpenFlags::RIGHT_WRITABLE))
-        {
-            return None;
-        }
-        // If CLONE_SAME_RIGHTS is not set, then use the intersection of the
-        // inherited rights and the newly specified rights.
-        if request_flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS) {
-            return Some(self.flags.clone());
-        }
-
-        // Check that the new rights are a subset of the current rights.
-        let new_rights =
-            request_flags & (fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
-        if !self.flags.contains(new_rights) {
-            return None;
-        }
-
-        Some(self.flags.clone() & new_rights)
-    }
-
-    fn handle_clone(
-        self,
-        request: ServerEnd<impl super::CanClone>,
-        requested_flags: fio::OpenFlags,
-    ) -> Option<(fposix_socket::SynchronousDatagramSocketRequestStream, fio::OpenFlags)> {
-        let channel = fidl::AsyncChannel::from_channel(request.into_channel())
-            .expect("failed to create async channel");
-        let request_stream =
-            fposix_socket::SynchronousDatagramSocketRequestStream::from_channel(channel);
-        let control_handle = request_stream.control_handle();
-        let send_on_open = |status: i32, info: Option<&mut fio::NodeInfoDeprecated>| {
-            let () = control_handle.send_on_open_(status, info).unwrap_or_else(|e| {
-                log::log!(
-                    util::fidl_err_log_level(&e),
-                    "failed to send OnOpen event with status ({}): {}",
-                    status,
-                    e
-                )
-            });
-        };
-
-        match self.new_rights(requested_flags) {
-            None => {
-                send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
-                None
-            }
-            Some(flags) => {
-                if requested_flags.intersects(fio::OpenFlags::DESCRIBE) {
-                    let mut info =
-                        self.describe().map(fio::NodeInfoDeprecated::SynchronousDatagramSocket);
-                    send_on_open(zx::sys::ZX_OK, info.as_mut());
-                }
-                Some((request_stream, flags))
-            }
-        }
-    }
-
     async fn handle_request(
         mut self,
         request: fposix_socket::SynchronousDatagramSocketRequest,
@@ -2202,66 +2176,83 @@ where
         }
         ControlFlow::Continue(None)
     }
-}
 
-pub(crate) trait RequestHandlerDispatcher<I, T>:
-    AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>
-where
-    I: IpExt,
-    T: Transport<Ipv4>,
-    T: Transport<Ipv6>,
-    T: Transport<I>,
-{
-}
+    /// Returns the intersection of the requested flags against the current
+    /// rights.
+    ///
+    /// If the requested flags contains invalid flags, or requests rights that
+    /// aren't held by `self.flags`, returns `None`. Otherwise returns the new
+    /// flags.
+    fn new_rights(&self, request_flags: fio::OpenFlags) -> Option<fio::OpenFlags> {
+        // Datagram sockets don't understand the following flags.
+        if request_flags.intersects(fio::OpenFlags::APPEND) {
+            return None;
+        }
+        // Datagram sockets are neither mountable nor executable.
+        if request_flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
+            return None;
+        }
+        // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
+        // OPEN_RIGHT_* flags.
+        if request_flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS)
+            && (request_flags.intersects(fio::OpenFlags::RIGHT_READABLE)
+                || request_flags.intersects(fio::OpenFlags::RIGHT_WRITABLE))
+        {
+            return None;
+        }
+        // If CLONE_SAME_RIGHTS is not set, then use the intersection of the
+        // inherited rights and the newly specified rights.
+        if request_flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS) {
+            return Some(self.flags.clone());
+        }
 
-impl<I, T, D> RequestHandlerDispatcher<I, T> for D
-where
-    I: IpExt,
-    T: Transport<Ipv4>,
-    T: Transport<Ipv6>,
-    T: Transport<I>,
-    D: AsRef<SocketCollectionPair<T>> + AsMut<SocketCollectionPair<T>>,
-{
-}
+        // Check that the new rights are a subset of the current rights.
+        let new_rights =
+            request_flags & (fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        if !self.flags.contains(new_rights) {
+            return None;
+        }
 
-// TODO(https://github.com/rust-lang/rust/issues/20671): Replace the duplicate associated type with
-// a where clause bounding the parent trait's associated type.
-//
-// OR
-//
-// TODO(https://github.com/rust-lang/rust/issues/52662): Replace the duplicate associated type with
-// a bound on the parent trait's associated type.
-trait RequestHandlerContext<I, T>:
-    LockableContext<NonSyncCtx = <Self as RequestHandlerContext<I, T>>::NonSyncCtx>
-where
-    I: IpExt,
-    T: Transport<Ipv4>,
-    T: Transport<Ipv6>,
-    T: Transport<I>,
-{
-    type NonSyncCtx: RequestHandlerDispatcher<I, T> + NonSyncContext + AsRef<Devices>;
-}
+        Some(self.flags.clone() & new_rights)
+    }
 
-impl<I, T, C> RequestHandlerContext<I, T> for C
-where
-    I: IpExt,
-    T: Transport<Ipv4>,
-    T: Transport<Ipv6>,
-    T: Transport<I>,
-    C: LockableContext,
-    C::NonSyncCtx: RequestHandlerDispatcher<I, T> + AsRef<Devices>,
-{
-    type NonSyncCtx = C::NonSyncCtx;
-}
+    fn handle_clone(
+        self,
+        request: ServerEnd<impl super::CanClone>,
+        requested_flags: fio::OpenFlags,
+    ) -> Option<(fposix_socket::SynchronousDatagramSocketRequestStream, fio::OpenFlags)> {
+        let channel = fidl::AsyncChannel::from_channel(request.into_channel())
+            .expect("failed to create async channel");
+        let request_stream =
+            fposix_socket::SynchronousDatagramSocketRequestStream::from_channel(channel);
+        let control_handle = request_stream.control_handle();
+        let send_on_open = |status: i32, info: Option<&mut fio::NodeInfoDeprecated>| {
+            let () = control_handle.send_on_open_(status, info).unwrap_or_else(|e| {
+                log::log!(
+                    util::fidl_err_log_level(&e),
+                    "failed to send OnOpen event with status ({}): {}",
+                    status,
+                    e
+                )
+            });
+        };
 
-impl<'a, I, T, C> RequestHandler<'a, I, T, C>
-where
-    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
-    T: Transport<Ipv4>,
-    T: Transport<Ipv6>,
-    T: Transport<I>,
-    C: RequestHandlerContext<I, T>,
-{
+        match self.new_rights(requested_flags) {
+            None => {
+                send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
+                None
+            }
+            Some(flags) => {
+                if requested_flags.intersects(fio::OpenFlags::DESCRIBE) {
+                    let mut info =
+                        self.describe().map(fio::NodeInfoDeprecated::SynchronousDatagramSocket);
+                    send_on_open(zx::sys::ZX_OK, info.as_mut());
+                }
+                Some((request_stream, flags))
+            }
+        }
+    }
+
     fn describe(&self) -> Option<fio::SynchronousDatagramSocket> {
         let Self { ctx: _, data: BindingData { peer_event, info: _, messages: _ }, flags: _ } =
             self;
@@ -2290,24 +2281,7 @@ where
             self;
         messages.lock().queue.max_available_messages_size = max_bytes
     }
-}
 
-impl<'a, I, T, SC> RequestHandler<'a, I, T, SC>
-where
-    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
-    T: Transport<Ipv4>,
-    T: Transport<Ipv6>,
-    T: TransportState<
-        I,
-        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
-        SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
-    >,
-    SC: RequestHandlerContext<I, T>,
-    SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
-        TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx, DeviceId = DeviceId>,
-    DeviceId: TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>
-        + TryIntoFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
-{
     /// Handles a [POSIX socket connect request].
     ///
     /// [POSIX socket connect request]: fposix_socket::SynchronousDatagramSocketRequest::Connect
@@ -2630,31 +2604,7 @@ where
             truncated.try_into().unwrap_or(u32::MAX),
         ))
     }
-}
 
-impl<'a, I, T, SC> RequestHandler<'a, I, T, SC>
-where
-    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
-    T: Transport<Ipv4>,
-    T: Transport<Ipv6>,
-    T: TransportState<
-        I,
-        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
-        SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
-    >,
-    T: BufferTransportState<
-        I,
-        Buf<Vec<u8>>,
-        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
-        SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
-    >,
-    SC: RequestHandlerContext<I, T>,
-    SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
-        TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx, DeviceId = DeviceId>,
-    DeviceId: TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>
-        + TryIntoFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
-    <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<Devices<DeviceId>>,
-{
     async fn send_msg(
         self,
         addr: Option<fnet::SocketAddress>,
@@ -2817,23 +2767,7 @@ where
         }
         Err(fposix::Errno::Enotconn)
     }
-}
 
-impl<'a, I, T, SC> RequestHandler<'a, I, T, SC>
-where
-    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
-    T: Transport<Ipv4>,
-    T: Transport<Ipv6>,
-    T: TransportState<
-        I,
-        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
-        SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
-    >,
-    SC: RequestHandlerContext<I, T>,
-    SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
-        TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx, DeviceId = DeviceId>,
-    <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<Devices<DeviceId>>,
-{
     async fn set_multicast_membership(
         self,
         membership: I::MulticastMembership,
