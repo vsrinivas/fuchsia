@@ -79,18 +79,18 @@ step. For example:
 Set a breakpoint in the driver's `ComputeFactorial` function:
 
 <pre class="devsite-click-to-copy">
-<span class="no-select">[zxdb] </span>break QemuEduDriver::ComputeFactorial
+<span class="no-select">[zxdb] </span>break QemuEduServer::ComputeFactorial
 </pre>
 
 The command prints output similar to the following to indicate where the
 breakpoint is set:
 
 ```none {:.devsite-disable-click-to-copy}
-[zxdb] break QemuEduDriver::ComputeFactorial
-Created Breakpoint 1 @ QemuEduDriver::ComputeFactorial
-   215 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
- ◉ 216                                      ComputeFactorialCompleter::Sync& completer) {
-   217   // Write a value into the factorial register.
+[zxdb] break QemuEduServer::ComputeFactorial
+Created Breakpoint 1 @ QemuEduServer::ComputeFactorial
+   116 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+ ◉ 117                                      ComputeFactorialCompleter::Sync& completer) {
+   118   auto edu_device = device_.lock();
 ```
 
 ## Step through the driver function
@@ -105,12 +105,12 @@ In the `zxdb` terminal, verify that the debugger has hit the breakpoint in the d
 `ComputeFactorial` function. For example:
 
 ```none {:.devsite-disable-click-to-copy}
-🛑 thread 2 on bp 1 qemu_edu::QemuEduDriver::ComputeFactorial(qemu_edu::QemuEduDriver*, fidl::WireServer<fuchsia_hardware_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_hardware_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:216
-   214 // Driver Service: Compute factorial on the edu device
-   215 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
- ▶ 216                                      ComputeFactorialCompleter::Sync& completer) {
-   217   // Write a value into the factorial register.
-   218   uint32_t input = request->input;
+🛑 thread 2 on bp 1 qemu_edu::QemuEduServer::ComputeFactorial(qemu_edu::QemuEduServer*, fidl::WireServer<fuchsia_examples_qemuedu::Device>::ComputeFactorialRequestView, fidl::Completer<fidl::internal::WireCompleterBase<fuchsia_examples_qemuedu::Device::ComputeFactorial> >::Sync&) • qemu_edu.cc:117
+   115 // Driver Service: Compute factorial on the edu device
+   116 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+ ▶ 117                                      ComputeFactorialCompleter::Sync& completer) {
+   118   auto edu_device = device_.lock();
+   119   if (!edu_device) {
 ```
 
 Use the `list` command at the `zxdb` prompt to show where execution is currently
@@ -123,22 +123,22 @@ paused:
 The command prints output similar to the following:
 
 ```none {:.devsite-disable-click-to-copy}
-   211   return zx::ok();
-   212 }
-   213
-   214 // Driver Service: Compute factorial on the edu device
-   215 void QemuEduDriver::ComputeFactorial(ComputeFactorialRequestView request,
- ▶ 216                                      ComputeFactorialCompleter::Sync& completer) {
-   217   // Write a value into the factorial register.
-   218   uint32_t input = request->input;
-   219
-   220   mmio_->Write32(input, edu_device_registers::kFactorialCompoutationOffset);
-   221
-   222   // Busy wait on the factorial status bit.
-   223   while (true) {
-   224     const auto status = edu_device_registers::Status::Get().ReadFrom(&*mmio_);
-   225     if (!status.busy())
-   226       break;
+   112   return zx::ok();
+   113 }
+   114 
+   115 // Driver Service: Compute factorial on the edu device
+   116 void QemuEduServer::ComputeFactorial(ComputeFactorialRequestView request,
+ ▶ 117                                      ComputeFactorialCompleter::Sync& completer) {
+   118   auto edu_device = device_.lock();
+   119   if (!edu_device) {
+   120     FDF_LOG(ERROR, "Unable to access device resources");
+   121     return;
+   122   }
+   123 
+   124   uint32_t input = request->input;
+   125 
+   126   uint32_t factorial = edu_device->ComputeFactorial(input);
+   127 
 ```
 
 Step into the `ComputeFactorial` function using the `next` command:
@@ -156,7 +156,7 @@ Print the contents of the request passed into the function:
 The command prints output containing the factorial input value:
 
 ```none {:.devsite-disable-click-to-copy}
-{request_ = (*)0x24302c4be78 ➔ {fuchsia_examples_qemuedu:… = {input = 12}}}
+{request_ = (*)0x747c1f2e98 ➔ {fuchsia_examples_qemuedu:… = {input = 12}}}
 ```
 
 Exit the debugger session and disconnect:

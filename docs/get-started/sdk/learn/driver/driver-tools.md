@@ -105,7 +105,7 @@ path:
 ```
 
 Add `liveness_check()` and `compute_factorial()` functions to call methods using
-the `fuchsia.hardware.qemuedu/Device` FIDL protocol returned from `OpenDevice()`.
+the `fuchsia.examples.qemuedu/Device` FIDL protocol returned from `OpenDevice()`.
 Finally, update the tool's `main()` function to call the appropriate device
 function based on the argument passed on the command line:
 
@@ -122,7 +122,7 @@ function based on the argument passed on the command line:
 ```
 
 Update the tools component's build configuration to depend on the FIDL bindings
-for the `fuchsia.hardware.qemuedu` library:
+for the `fuchsia.examples.qemuedu` library:
 
 `qemu_edu/tools/BUILD.bazel`:
 

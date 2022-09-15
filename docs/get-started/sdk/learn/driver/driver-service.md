@@ -55,7 +55,7 @@ computation and liveness check hardware registers on the `edu` device.
 Add the following build rules to the bottom of the project's build configuration
 to compile the FIDL library and generate C++ bindings:
 
-*   `fuchsia_fidl_library()`: Declares the `fuchsia.hardware.qemuedu` FIDL
+*   `fuchsia_fidl_library()`: Declares the `fuchsia.examples.qemuedu` FIDL
     library and describes the FIDL source files it includes.
 *   `fuchsia_fidl_llcpp_library()`: Describes the generated
     [LLCPP (Low-Level C++) bindings][fidl-cpp-bindings] for components to
@@ -83,8 +83,8 @@ manifest to declare and expose the protocol as a capability:
 }
 ```
 
-Include the FIDL bindings for the `fuchsia.hardware.qemuedu` library and update
-the driver class to implement the server end of the protocol:
+Include the FIDL bindings for the `fuchsia.examples.qemuedu` library and create
+a new `QemuEduServer` class to implement the server end of the FIDL protocol:
 
 `qemu_edu/drivers/qemu_edu.h`:
 
@@ -97,33 +97,17 @@ the driver class to implement the server end of the protocol:
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="namespace_start" adjust_indentation="auto" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="class_header" adjust_indentation="auto" highlight="1" %}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="public_main" %}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="public_fidl" highlight="1,2,3,4" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fidl_server" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="private_main" %}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="private_hw" %}
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fields_main" %}
-
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="fields_hw" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="class_header" adjust_indentation="auto" %}
+// ...
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="class_footer" adjust_indentation="auto" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.h" region_tag="namespace_end" adjust_indentation="auto" %}
 ```
 
-Similar to the identification register in the previous section, these methods
-interact with the MMIO region to read and write data into the respective `edu`
-device registers:
-
-*   `ComputeFactorial()`: Write an input value to the factorial computation
-    register and wait for the status register to report that the computation is
-    complete.
-*   `LivenessCheck()`: Write a challenge value to the liveness check register
-    and confirm the expected result.
-
-Add the following code to implement the `fuchsia.hardware.qemuedu/Device` method
-in your driver class:
+Add the following code to implement the `fuchsia.examples.qemuedu/Device`
+protocol methods and map them to the device resource methods:
 
 `qemu_edu/drivers/qemu_edu.cc`:
 
@@ -131,20 +115,20 @@ in your driver class:
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="namespace_start" adjust_indentation="auto" %}
 // ...
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="compute_factorial" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="compute_factorial" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16" %}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="liveness_check" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="liveness_check" adjust_indentation="auto" highlight="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18" %}
 
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/qemu_edu.cc" region_tag="namespace_end" adjust_indentation="auto" %}
 ```
 
 Update the driver's build configuration to depend on the FIDL bindings for the
-new `fuchsia.hardware.qemuedu` library:
+new `fuchsia.examples.qemuedu` library:
 
 `qemu_edu/drivers/BUILD.bazel`:
 
 {% set build_bazel_snippet %}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" exclude_regexp="fuchsia\.device\.fs" highlight="11" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" exclude_regexp="fuchsia\.device\.fs" highlight="12" %}
 {% endset %}
 
 ```bazel
@@ -153,7 +137,7 @@ new `fuchsia.hardware.qemuedu` library:
 
 ## Export and serve the protocol
 
-The `qemu_edu` driver makes the `fuchsia.hardware.qemuedu/Device` protocol
+The `qemu_edu` driver makes the `fuchsia.examples.qemuedu/Device` protocol
 discoverable to other components using devfs. To discover which driver services
 are available in the system, a non-driver component would look up the device
 filesystem (usually mounted to `/dev` in a component’s namespace) and scan for
@@ -195,7 +179,7 @@ create a devfs entry:
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/driver_compat.h" region_tag="namespace_end" adjust_indentation="auto" %}
 ```
 
-Update the driver's `Run()` method to begin serving the `fuchsia.hardware.qemuedu/Device` protocol
+Update the driver's `Run()` method to begin serving the `fuchsia.examples.qemuedu/Device` protocol
 to a new devfs entry at `/dev/sys/platform/platform-passthrough/PCI0/bus/00:06.0_/qemu-edu`, which
 matches the device node's topological path:
 
@@ -220,7 +204,7 @@ Update the driver's build configuration to include the FIDL bindings for the
 `qemu_edu/drivers/BUILD.bazel`:
 
 {% set build_bazel_snippet %}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" highlight="12" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/qemu_edu/drivers/BUILD.bazel" region_tag="binary" adjust_indentation="auto" highlight="13" %}
 {% endset %}
 
 ```bazel
