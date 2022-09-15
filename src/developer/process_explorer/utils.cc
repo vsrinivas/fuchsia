@@ -27,7 +27,7 @@ std::string WriteProcessesDataAsJson(std::vector<Process> processes_data) {
 
     for (const auto& object : process.objects) {
       rapidjson::Value object_json(rapidjson::kObjectType);
-      object_json.AddMember("type", object.type, allocator)
+      object_json.AddMember("object_type", object.object_type, allocator)
           .AddMember("koid", object.koid, allocator)
           .AddMember("related_koid", object.related_koid, allocator)
           .AddMember("peer_owner_koid", object.peer_owner_koid, allocator);

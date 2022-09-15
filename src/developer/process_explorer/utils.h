@@ -15,7 +15,7 @@ namespace process_explorer {
 
 // An object can be a: channel, event, socket, etc.
 struct KernelObject {
-  zx_obj_type_t type;
+  zx_obj_type_t object_type;
   zx_koid_t koid;
   zx_koid_t related_koid;
   zx_koid_t peer_owner_koid;

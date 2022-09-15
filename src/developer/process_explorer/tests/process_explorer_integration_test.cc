@@ -51,7 +51,7 @@ class LocalRootJobImpl : public fuchsia::kernel::RootJob, public LocalComponent 
       json.append("\"name\":\"").append(process.name).append("\",");
       json.append("\"objects\":[");
       for (const auto& object : process.objects) {
-        json.append("{\"type\":").append(std::to_string(object.type));
+        json.append("{\"type\":").append(std::to_string(object.object_type));
         json.append(",\"koid\":").append(std::to_string(object.koid));
         json.append(",\"related_koid\":").append(std::to_string(object.related_koid));
         json.append(",\"peer_owner_koid\":").append(std::to_string(object.peer_owner_koid));

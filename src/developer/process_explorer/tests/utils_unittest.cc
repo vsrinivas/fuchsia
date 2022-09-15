@@ -27,7 +27,7 @@ const zx_koid_t SOCKET_BETWEEN_1_AND_3[2] = {40465, 40466};
 
 void CreateObject(zx_obj_type_t type, zx_koid_t koid, zx_koid_t related_koid,
                   zx_koid_t peer_owner_koid, std::vector<KernelObject>* objects) {
-  objects->push_back({.type = type,
+  objects->push_back({.object_type = type,
                       .koid = koid,
                       .related_koid = related_koid,
                       .peer_owner_koid = peer_owner_koid});
