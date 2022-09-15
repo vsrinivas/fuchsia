@@ -324,6 +324,7 @@ async fn download_blob_to_destination(
     match async_fs::File::open(&path).await {
         Ok(mut file) => {
             let hash = fuchsia_merkle::from_async_read(&mut file).await?.root();
+            let () = file.close().await?;
             if blob == &hash {
                 return Ok(path);
             }
@@ -356,7 +357,7 @@ async fn download_blob_to_destination(
     if blob == &hash {
         // Flush the file to make sure all the bytes got written to disk.
         file.flush().await?;
-        drop(file);
+        let () = file.close().await?;
 
         temp_path.persist(&path)?;
 
