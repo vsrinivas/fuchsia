@@ -9,7 +9,7 @@
 #include <limits>
 #include <sstream>
 
-#include "third_party/icu/source/common/unicode/utf8.h"
+#include "src/developer/shell/parser/icu_headers.h"
 
 namespace shell::parser::ast {
 namespace {

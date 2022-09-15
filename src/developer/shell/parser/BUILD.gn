@@ -4,6 +4,11 @@
 
 import("//build/components.gni")
 import("//build/test.gni")
+import("//src/lib/icu/third_party_icu_headers.gni")
+
+third_party_icu_headers("icu_headers") {
+  headers = [ "third_party/icu/source/common/unicode/utf8.h" ]
+}
 
 static_library("parser") {
   sources = [
@@ -22,9 +27,9 @@ static_library("parser") {
   ]
 
   deps = [
+    ":icu_headers",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
-    "//third_party/icu",
   ]
 
   public_deps = [ "//sdk/lib/syslog/cpp" ]
