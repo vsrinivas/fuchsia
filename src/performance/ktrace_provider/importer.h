@@ -47,6 +47,9 @@ class Importer {
   bool ImportCounterRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportUnknownRecord(const ktrace_header_t* record, size_t record_size);
 
+  bool HandleFxtStringRecord(const uint64_t* record);
+  bool HandleFxtThreadName(const uint64_t* record);
+
   bool HandleThreadName(zx_koid_t thread, zx_koid_t process, std::string_view name);
   bool HandleProcessName(zx_koid_t process, std::string_view name);
   bool HandleSyscallName(uint32_t syscall, std::string_view name);
@@ -217,6 +220,7 @@ class Importer {
 
   std::vector<CpuInfo> cpu_infos_;
 
+  std::unordered_map<uint32_t, std::string> fxt_string_table_;
   std::unordered_map<zx_koid_t, trace_thread_ref_t> thread_refs_;
 
   const trace_thread_ref_t kUnknownThreadRef;

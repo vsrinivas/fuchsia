@@ -16,6 +16,7 @@ source_set("importer") {
 
   public_deps = [
     "//src/lib/fxl",
+    "//src/performance/lib/fxt",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/zircon-internal",

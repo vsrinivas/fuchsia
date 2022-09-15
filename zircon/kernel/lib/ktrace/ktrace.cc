@@ -85,6 +85,11 @@ void ktrace_add_probe(StringRef* string_ref) {
 void ktrace_report_probes() {
   for (StringRef* ref = StringRef::head(); ref != nullptr; ref = ref->next) {
     ktrace_name_etc(TAG_PROBE_NAME, ref->id, 0, ref->string, true);
+    // Also emit an FXT string record.
+    // TEMPORARY(fxbug.dev/98176): Since ktrace_provider also creates its own
+    // string references, use the upper half of the index space.
+    const uint16_t fxt_id = static_cast<uint16_t>(ref->id) | 0x4000;
+    fxt_string_record(fxt_id, ref->string, strnlen(ref->string, ZX_MAX_NAME_LEN - 1));
   }
 }
 

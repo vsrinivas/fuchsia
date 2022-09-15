@@ -34,10 +34,12 @@ int StringRef::Register(StringRef* string_ref) {
   // runtime. This is ignored if tracing is not active and is replayed at the
   // beginning of subsequent tracing sessions.
   ktrace_name_etc(TAG_PROBE_NAME, string_ref->id, 0, string_ref->string, true);
-  // Also emit an FXT string record, using the same id space.
-  DEBUG_ASSERT(string_ref->id <= 0x7FFF);
-  fxt_string_record(static_cast<uint16_t>(string_ref->id), string_ref->string,
-                    strnlen(string_ref->string, ZX_MAX_NAME_LEN - 1));
+  // Also emit an FXT string record.
+  // TEMPORARY(fxbug.dev/98176): Since ktrace_provider also creates its own
+  // string references, use the upper half of the index space.
+  const uint16_t fxt_id = static_cast<uint16_t>(string_ref->id) | 0x4000;
+  DEBUG_ASSERT(fxt_id <= 0x7FFF);
+  fxt_string_record(fxt_id, string_ref->string, strnlen(string_ref->string, ZX_MAX_NAME_LEN - 1));
 
   // Register the string ref in the global linked list. When there is a race
   // above only the winning agent that set the id will continue to this point.

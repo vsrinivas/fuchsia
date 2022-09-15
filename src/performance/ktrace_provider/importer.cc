@@ -4,11 +4,13 @@
 
 #include "src/performance/ktrace_provider/importer.h"
 
+#include <lib/fxt/fields.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/clock.h>
 #include <zircon/syscalls.h>
 
+#include <iomanip>
 #include <iterator>
 #include <string_view>
 
@@ -145,10 +147,37 @@ bool Importer::Import(Reader& reader) {
       }
 
       if (KTRACE_GROUP(record->tag) & KTRACE_GRP_FXT) {
-        size_t fxt_record_size = KTRACE_LEN(record->tag) - sizeof(uint64_t);
-        const char* fxt_record = reinterpret_cast<const char*>(record) + sizeof(uint64_t);
+        const size_t fxt_record_size = KTRACE_LEN(record->tag) - sizeof(uint64_t);
+        const uint64_t* fxt_record = reinterpret_cast<const uint64_t*>(record) + 1;
+
+        // Verify that the FXT record header specifies the correct size.
+        const size_t fxt_size_from_header =
+            fxt::RecordFields::RecordSize::Get<size_t>(fxt_record[0]) * sizeof(uint64_t);
+        if (fxt_size_from_header != fxt_record_size) {
+          FX_LOGS(ERROR) << "Found fxt record of size " << fxt_record_size
+                         << " bytes whose header indicates a record of size "
+                         << fxt_size_from_header << " bytes. Skipping.";
+          continue;
+        }
+
         void* dst = trace_context_alloc_record(context_, fxt_record_size);
-        memcpy(dst, fxt_record, fxt_record_size);
+        if (dst != nullptr) {
+          memcpy(dst, reinterpret_cast<const char*>(fxt_record), fxt_record_size);
+        }
+
+        if (fxt::RecordFields::Type::Get<fxt::RecordType>(fxt_record[0]) ==
+            fxt::RecordType::kString) {
+          HandleFxtStringRecord(fxt_record);
+        }
+
+        switch (KTRACE_EVENT(record->tag)) {
+          case KTRACE_EVENT(TAG_THREAD_NAME):
+            HandleFxtThreadName(fxt_record);
+            break;
+          default:
+            break;
+        }
+
         continue;
       }
 
@@ -514,6 +543,57 @@ bool Importer::ImportUnknownRecord(const ktrace_header_t* record, size_t record_
   FX_VLOGS(5) << "UNKNOWN: tag=0x" << std::hex << record->tag << ", size=" << std::dec
               << record_size;
   return false;
+}
+
+bool Importer::HandleFxtThreadName(const uint64_t* record) {
+  const uint64_t header = record[0];
+  if (fxt::RecordFields::Type::Get<fxt::RecordType>(header) != fxt::RecordType::kKernelObject) {
+    return false;
+  }
+  const size_t num_args = fxt::KernelObjectRecordFields::ArgumentCount::Get<size_t>(header);
+  const zx_koid_t thread = record[1];
+  zx_koid_t process = ZX_KOID_INVALID;
+  // Scan argument list to find the process koid, if specified. First, read the
+  // name ref to skip over any inline name.
+  const uint64_t* next_arg = record + 2;
+  const uint32_t name_ref = fxt::KernelObjectRecordFields::NameStringRef::Get<uint32_t>(header);
+  if (name_ref & 0x8000) {
+    next_arg += fxt::WordSize::FromBytes(name_ref & 0x7FFF).SizeInWords();
+  }
+  for (size_t i = 0; i < num_args; i++) {
+    const uint64_t arg_header = next_arg[0];
+    const size_t arg_size = fxt::ArgumentFields::ArgumentSize::Get<size_t>(arg_header);
+    const fxt::ArgumentType arg_type =
+        fxt::ArgumentFields::Type::Get<fxt::ArgumentType>(arg_header);
+    if (arg_type == fxt::ArgumentType::kKoid) {
+      const uint32_t name_ref = fxt::ArgumentFields::NameRef::Get<uint32_t>(arg_header);
+      std::string arg_name;
+      zx_koid_t koid;
+      if (name_ref & 0x8000) {
+        const size_t name_length = name_ref & 0x7FFF;
+        arg_name = std::string(reinterpret_cast<const char*>(next_arg + 1), name_length);
+        koid = *(next_arg + 1 + fxt::WordSize::FromBytes(name_length).SizeInWords());
+      } else {
+        arg_name = fxt_string_table_[name_ref];
+        koid = next_arg[1];
+      }
+      if (arg_name == "process") {
+        process = koid;
+        break;
+      }
+    }
+
+    next_arg += arg_size;
+  }
+  thread_refs_.emplace(thread, trace_context_make_registered_thread(context_, process, thread));
+  return true;
+}
+
+bool Importer::HandleFxtStringRecord(const uint64_t* record) {
+  const uint32_t index = fxt::StringRecordFields::StringIndex::Get<uint32_t>(record[0]);
+  const size_t length = fxt::StringRecordFields::StringLength::Get<size_t>(record[0]);
+  fxt_string_table_.emplace(index, std::string(reinterpret_cast<const char*>(record + 1), length));
+  return true;
 }
 
 bool Importer::HandleThreadName(zx_koid_t thread, zx_koid_t process, std::string_view name) {
