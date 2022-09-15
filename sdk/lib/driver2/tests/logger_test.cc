@@ -8,7 +8,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/driver2/logger.h>
-#include <lib/driver2/test_base.h>
+#include <lib/driver2/tests/test_base.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/syslog/wire_format.h>
 

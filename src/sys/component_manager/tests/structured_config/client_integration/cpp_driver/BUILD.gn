@@ -25,7 +25,7 @@ fuchsia_driver("receiver_driver") {
     ":receiver_bind",
     ":receiver_config",
     ":test.structuredconfig.receiver.shim_cpp_wire",
-    "//sdk/lib/driver2:llcpp",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/inspect/component/cpp:component_inspector",
     "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",

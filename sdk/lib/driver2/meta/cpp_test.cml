@@ -8,6 +8,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/llcpp_test",
+        binary: "bin/cpp_test",
     },
 }

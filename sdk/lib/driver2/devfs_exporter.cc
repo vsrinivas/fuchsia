@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/driver2/devfs_exporter.h>
-#include <lib/fpromise/bridge.h>
 
 namespace fdfs = fuchsia_device_fs;
 

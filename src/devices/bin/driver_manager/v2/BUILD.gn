@@ -24,7 +24,7 @@ source_set("driver_runner") {
   ]
 
   deps = [
-    "//sdk/lib/driver2:llcpp",
+    "//sdk/lib/driver2:cpp",
     "//src/devices/bin/driver_manager:binding",
     "//src/devices/lib/log",
     "//src/lib/fxl",
@@ -61,7 +61,7 @@ executable("driver_runner_test") {
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.component.decl",
     "//sdk/fidl/fuchsia.driver.host",
-    "//sdk/lib/driver2:llcpp",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
