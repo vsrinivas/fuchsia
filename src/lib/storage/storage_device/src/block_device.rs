@@ -191,12 +191,11 @@ impl Drop for BlockDevice {
 mod tests {
     use {
         crate::{block_device::BlockDevice, Device},
-        fuchsia_async as fasync,
         fuchsia_zircon::Status,
         remote_block_device::testing::FakeBlockClient,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_lifecycle() {
         let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), false)
             .await
@@ -209,7 +208,7 @@ mod tests {
         device.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_write_buffer() {
         let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), false)
             .await
@@ -233,7 +232,7 @@ mod tests {
         device.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_only() {
         let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)), true)
             .await

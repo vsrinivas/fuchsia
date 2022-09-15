@@ -99,7 +99,6 @@ impl Device for FileBackedDevice {
 mod tests {
     use {
         crate::{file_backed_device::FileBackedDevice, Device},
-        fuchsia_async as fasync,
         std::fs::{File, OpenOptions},
         std::path::PathBuf,
     };
@@ -120,7 +119,7 @@ mod tests {
         (pathbuf, file)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_lifecycle() {
         let (_path, file) = create_file();
         let device = FileBackedDevice::new(file);
@@ -132,7 +131,7 @@ mod tests {
         device.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_write() {
         let (_path, file) = create_file();
         let device = FileBackedDevice::new(file);
@@ -155,7 +154,7 @@ mod tests {
         device.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_write_past_end_of_file_fails() {
         let (_path, file) = create_file();
         let device = FileBackedDevice::new(file);
@@ -171,7 +170,7 @@ mod tests {
         device.close().await.expect("Close failed");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_writes_persist() {
         let (path, file) = create_file();
         let device = FileBackedDevice::new(file);

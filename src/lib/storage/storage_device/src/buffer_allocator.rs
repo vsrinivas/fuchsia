@@ -210,7 +210,7 @@ impl BufferAllocator {
 
         inner.allocation_map.insert(offset, self.size_for_order(order));
         let range = offset..offset + size;
-        log::debug!("Allocated range {:?} ({:?} bytes used)", range, self.size_for_order(order));
+        tracing::debug!(?range, bytes_used = self.size_for_order(order), "Allocated");
 
         // Safety is ensured by the allocator not double-allocating any regions.
         Some(Buffer::new(unsafe { self.source.sub_slice(&range) }, range, &self))
@@ -226,7 +226,7 @@ impl BufferAllocator {
             .remove(&offset)
             .expect(&format!("No allocation record found for {:?}", range));
         assert!(range.end - range.start <= size);
-        log::debug!("Freeing range {:?} (using {:?} bytes)", range, size);
+        tracing::debug!(?range, bytes_used = size, "Freeing");
 
         // Merge as many free slots as we can.
         let mut order = order(size, self.block_size());
@@ -270,7 +270,7 @@ mod tests {
         std::sync::Arc,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_odd_sized_buffer_source() {
         let source = Box::new(MemBufferSource::new(123));
         let allocator = BufferAllocator::new(2, source);
@@ -285,7 +285,7 @@ mod tests {
         assert!(allocator.try_allocate_buffer(2).is_none());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_buffer_read_write() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(8192, source);
@@ -297,7 +297,7 @@ mod tests {
         assert_eq!(vec, vec![0xaa as u8; 8192]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_buffer_consecutive_calls_do_not_overlap() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(8192, source);
@@ -307,7 +307,7 @@ mod tests {
         assert!(buf1.range().end <= buf2.range().start || buf2.range().end <= buf1.range().start);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_many_buffers() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(8192, source);
@@ -317,7 +317,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_small_buffers_dont_overlap() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(8192, source);
@@ -327,7 +327,7 @@ mod tests {
         assert!(buf1.range().end <= buf2.range().start || buf2.range().end <= buf1.range().start);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_large_buffer() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(8192, source);
@@ -340,7 +340,7 @@ mod tests {
         assert_eq!(vec, vec![0xaa as u8; 1024 * 1024]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_large_buffer_after_smaller_buffers() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(8192, source);
@@ -355,7 +355,7 @@ mod tests {
         assert_eq!(buf.len(), 1024 * 1024);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_allocate_at_limits() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(8192, source);
@@ -370,7 +370,7 @@ mod tests {
         assert_eq!(buf.len(), 8192);
     }
 
-    #[fasync::run(10, test)]
+    #[fuchsia::test(threads = 10)]
     async fn test_random_allocs_deallocs() {
         let source = Box::new(MemBufferSource::new(16 * 1024 * 1024));
         let bs = 512;
@@ -418,7 +418,7 @@ mod tests {
         .await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_buffer_refs() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(512, source);
@@ -472,7 +472,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_buffer_split() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
         let allocator = BufferAllocator::new(512, source);
