@@ -94,6 +94,7 @@ constexpr bool kUserOptInDataSharing = true;
 constexpr bool kUserOptOutDataSharing = false;
 
 constexpr size_t kDailyPerProductQuota = 100u;
+constexpr zx::duration kResetOffset = zx::min(20);
 
 const std::map<std::string, std::string> kFeedbackAnnotations = {
     {feedback::kBuildVersionKey, kBuildVersion},
@@ -188,7 +189,8 @@ class CrashReporterTest : public UnitTestFixture {
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config, crash_register_.get(), &tags_,
-        snapshot_collector_.get(), crash_server_.get(), &report_store_->GetReportStore());
+        snapshot_collector_.get(), crash_server_.get(), &report_store_->GetReportStore(),
+        kResetOffset);
     FX_CHECK(crash_reporter_);
   }
 
@@ -470,8 +472,8 @@ TEST_F(CrashReporterTest, ResetsQuota) {
     ASSERT_TRUE(FileOneCrashReport().is_ok());
   }
 
-  clock_.Set(clock_.Now() + zx::hour(24));
-  RunLoopFor(zx::hour(24));
+  RunLoopFor(zx::hour(24) + kResetOffset);
+  clock_.Set(clock_.Now() + zx::hour(24) + kResetOffset);
 
   for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
     ASSERT_TRUE(FileOneCrashReport().is_ok());

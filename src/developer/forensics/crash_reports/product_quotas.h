@@ -31,7 +31,7 @@ class ProductQuotas {
  public:
   ProductQuotas(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
                 std::optional<uint64_t> quota, std::string quota_filepath,
-                UtcClockReadyWatcherBase* utc_clock_ready_watcher);
+                UtcClockReadyWatcherBase* utc_clock_ready_watcher, zx::duration reset_time_offset);
   ProductQuotas(const ProductQuotas&) = delete;
   ProductQuotas(ProductQuotas&&) = delete;
   ProductQuotas& operator=(const ProductQuotas&) = delete;
@@ -40,7 +40,11 @@ class ProductQuotas {
   bool HasQuotaRemaining(const Product& product);
   void DecrementRemainingQuota(const Product& product);
 
+  // Generates a random offset to apply to product quota resets, bounded between -1 hour and 1 hour.
+  static zx::duration RandomResetOffset();
+
  private:
+  timekeeper::time_utc ActualResetTime() const;
   void Reset();
   void RestoreFromJson();
   void WriteJson();
@@ -62,6 +66,7 @@ class ProductQuotas {
   // Should be exactly midnight UTC of a date, i.e. multiples of zx::hour(24). This is the value
   // currently saved in |quota_json_|.
   std::optional<timekeeper::time_utc> next_reset_utc_time_;
+  zx::duration reset_time_offset_;
   async::TaskClosureMethod<ProductQuotas, &ProductQuotas::Reset> reset_task_{this};
   fxl::WeakPtrFactory<ProductQuotas> ptr_factory_{this};
 };

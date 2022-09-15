@@ -26,6 +26,8 @@ using testing::HasSubstr;
 
 constexpr char kJsonName[] = "product_quotas.json";
 constexpr uint64_t kDefaultQuota = 5;
+constexpr zx::duration kNegativeResetOffset = zx::min(-10);
+constexpr zx::duration kPositiveResetOffset = zx::min(10);
 
 class ProductQuotasTest : public UnitTestFixture {
  public:
@@ -44,9 +46,9 @@ class ProductQuotasTest : public UnitTestFixture {
     return json;
   }
 
-  void MakeNewProductQuotas(std::optional<uint64_t> quota) {
-    product_quotas_ = std::make_unique<ProductQuotas>(dispatcher(), &clock_, quota,
-                                                      QuotasJsonPath(), &utc_clock_ready_watcher_);
+  void MakeNewProductQuotas(std::optional<uint64_t> quota, zx::duration reset_offset = zx::min(0)) {
+    product_quotas_ = std::make_unique<ProductQuotas>(
+        dispatcher(), &clock_, quota, QuotasJsonPath(), &utc_clock_ready_watcher_, reset_offset);
   }
 
   std::unique_ptr<ProductQuotas> product_quotas_;
@@ -216,7 +218,6 @@ TEST_F(ProductQuotasTest, NoQuota_DeletesJson) {
 
 TEST_F(ProductQuotasTest, InsertTimeIntoJson) {
   StartClock();
-  RunLoopUntilIdle();
 
   // 259200000000000 is January 04 1970 00:00:00, which is the next midnight after the starting
   // point for MonotonicTestClockBase.
@@ -261,56 +262,12 @@ TEST_F(ProductQuotasTest, Clock_NeverStarts) {
   EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
 }
 
-TEST_F(ProductQuotasTest, Clock_StartBeforeDeadline) {
+TEST_F(ProductQuotasTest, Clock_StartBeforeDeadlineWithNegativeOffset) {
   // 259200000000000 is January 04 1970 00:00:00
+  // AsyncTestClock starting point is 191692000000000, January 03 1970 05:14:52
+  // Reset should be executed on January 03 1970 23:50:00
   const std::string json = R"({
     "next_reset_time_utc_nanos": 259200000000000,
-    "quotas": {
-        "some name-some version": 1
-    }
-  })";
-  const Product product{
-      .name = "some name",
-      .version = "some version",
-      .channel = "some channel",
-  };
-  ASSERT_TRUE(files::WriteFile(QuotasJsonPath(), json));
-
-  MakeNewProductQuotas(1);
-  StartClock();
-  RunLoopUntilIdle();
-  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
-
-  // Exhaust quota.
-  product_quotas_->DecrementRemainingQuota(product);
-  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
-
-  RunLoopFor(zx::hour(12));
-
-  // Make new ProductQuotas to force it to read from JSON.
-  MakeNewProductQuotas(1);
-
-  // Run loop past the UTC deadline, causing a quota reset. UTC offset for AsyncTestClock is
-  // approximately 19 hours.
-  RunLoopFor(zx::hour(7));
-  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
-
-  // Exhaust quota
-  product_quotas_->DecrementRemainingQuota(product);
-  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
-
-  // Run loop past the 24 hour fallback (which should have been cancelled).
-  RunLoopFor(zx::hour(12));
-  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
-
-  // Run loop past the new UTC deadline.
-  RunLoopFor(zx::hour(13));
-  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
-}
-
-TEST_F(ProductQuotasTest, Clock_StartAfterDeadline) {
-  const std::string json = R"({
-    "next_reset_time_utc_nanos": 0,
     "quotas": {
         "some name-some version": 0
     }
@@ -322,31 +279,194 @@ TEST_F(ProductQuotasTest, Clock_StartAfterDeadline) {
   };
   ASSERT_TRUE(files::WriteFile(QuotasJsonPath(), json));
 
-  // Run loop for 12 hours before constructing ProductQuotas so we don't trigger 24 hour fallback
-  // reset when the loop is run later.
-  RunLoopFor(zx::hour(12));
-  MakeNewProductQuotas(1);
-  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
-
-  // Run loop past the UTC deadline without starting the clock.
-  RunLoopFor(zx::hour(13));
-  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
-
+  MakeNewProductQuotas(1, kNegativeResetOffset);
   StartClock();
-  RunLoopUntilIdle();
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Clock time: January 03 1970 23:50:52
+  RunLoopFor(zx::hour(18) + zx::min(36));
+  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
+
+  // Exhaust quota.
+  product_quotas_->DecrementRemainingQuota(product);
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the 24 hour fallback (which should have been cancelled).
+  // Clock time: January 04 1970 11:50:52
+  RunLoopFor(zx::hour(12));
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the new UTC deadline.
+  // Clock time: January 04 1970 23:50:52
+  RunLoopFor(zx::hour(12));
   EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
 }
 
-TEST_F(ProductQuotasTest, ResetAtMidnight) {
+TEST_F(ProductQuotasTest, Clock_StartBeforeDeadlineWithPositiveOffset) {
+  // 259200000000000 is January 04 1970 00:00:00
+  // AsyncTestClock starting point is 191692000000000, January 03 1970 05:14:52
+  // Reset should be executed on January 04 1970 00:10:00
+  const std::string json = R"({
+    "next_reset_time_utc_nanos": 259200000000000,
+    "quotas": {
+        "some name-some version": 0
+    }
+  })";
+  const Product product{
+      .name = "some name",
+      .version = "some version",
+      .channel = "some channel",
+  };
+  ASSERT_TRUE(files::WriteFile(QuotasJsonPath(), json));
+
+  MakeNewProductQuotas(1, kPositiveResetOffset);
   StartClock();
-  RunLoopUntilIdle();
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Clock time: January 04 1970 00:10:52
+  RunLoopFor(zx::hour(18) + zx::min(56));
+  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
+
+  // Exhaust quota
+  product_quotas_->DecrementRemainingQuota(product);
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the 24 hour fallback (which should have been cancelled).
+  // Clock time: January 04 1970 12:50:52
+  RunLoopFor(zx::hour(12));
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the new UTC deadline.
+  // Clock time: January 05 1970 00:10:52
+  RunLoopFor(zx::hour(12));
+  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
+}
+
+TEST_F(ProductQuotasTest, Clock_StartAfterDeadlineWithNegativeOffset) {
+  // 259200000000000 is January 04 1970 00:00:00
+  // AsyncTestClock starting point is 191692000000000, January 03 1970 05:14:52
+  // Reset should be executed on January 03 1970 23:50:00
+  const std::string json = R"({
+    "next_reset_time_utc_nanos": 259200000000000,
+    "quotas": {
+        "some name-some version": 0
+    }
+  })";
+  const Product product{
+      .name = "some name",
+      .version = "some version",
+      .channel = "some channel",
+  };
+  ASSERT_TRUE(files::WriteFile(QuotasJsonPath(), json));
+
+  MakeNewProductQuotas(1, kNegativeResetOffset);
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the UTC deadline without starting the clock.
+  // Clock Time: January 03 1970 23:50:52
+  RunLoopFor(zx::hour(18) + zx::min(36));
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  StartClock();
+  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
+
+  // Exhaust quota
+  product_quotas_->DecrementRemainingQuota(product);
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the 24 hour fallback (which should have been cancelled).
+  // Clock time: January 04 1970 11:50:52
+  RunLoopFor(zx::hour(12));
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the new UTC deadline.
+  // Clock time: January 04 1970 23:10:52
+  RunLoopFor(zx::hour(12));
+  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
+}
+
+TEST_F(ProductQuotasTest, Clock_StartAfterDeadlineWithPositiveOffset) {
+  // 259200000000000 is January 04 1970 00:00:00
+  // AsyncTestClock starting point is 191692000000000, January 03 1970 05:14:52
+  // Reset should be executed on January 04 1970 00:50:00
+  const std::string json = R"({
+    "next_reset_time_utc_nanos": 259200000000000,
+    "quotas": {
+        "some name-some version": 0
+    }
+  })";
+  const Product product{
+      .name = "some name",
+      .version = "some version",
+      .channel = "some channel",
+  };
+  ASSERT_TRUE(files::WriteFile(QuotasJsonPath(), json));
+
+  MakeNewProductQuotas(1, kNegativeResetOffset);
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the UTC deadline without starting the clock.
+  // Clock Time: January 04 1970 00:50:52
+  RunLoopFor(zx::hour(18) + zx::min(56));
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  StartClock();
+  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
+
+  // Exhaust quota
+  product_quotas_->DecrementRemainingQuota(product);
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the 24 hour fallback (which should have been cancelled).
+  // Clock time: January 04 1970 12:50:52
+  RunLoopFor(zx::hour(12));
+  EXPECT_FALSE(product_quotas_->HasQuotaRemaining(product));
+
+  // Run loop past the new UTC deadline.
+  // Clock time: January 05 1970 00:10:52
+  RunLoopFor(zx::hour(12));
+  EXPECT_TRUE(product_quotas_->HasQuotaRemaining(product));
+}
+
+TEST_F(ProductQuotasTest, ResetAtMidnightWithNegativeOffset) {
+  // AsyncTestClock starting point is 191692000000000, January 03 1970 05:14:52
+  // Reset should be executed on January 03 1970 23:50:00
+  MakeNewProductQuotas(1, kNegativeResetOffset);
+  StartClock();
+
+  // Clock Time: January 03 1970 23:45:52
+  RunLoopFor(zx::hour(18) + zx::min(31));
 
   // 259200000000000 is January 04 1970 00:00:00
   EXPECT_EQ(ReadQuotasJson(), R"({
     "next_reset_time_utc_nanos": 259200000000000
 })");
 
-  RunLoopFor(zx::hour(25));
+  // Clock Time: January 03 1970 23:50:52
+  RunLoopFor(zx::min(5));
+
+  // 345600000000000 is January 05 1970 00:00:00
+  EXPECT_EQ(ReadQuotasJson(), R"({
+    "next_reset_time_utc_nanos": 345600000000000
+})");
+}
+
+TEST_F(ProductQuotasTest, ResetAtMidnightWithPositiveOffset) {
+  // AsyncTestClock starting point is 191692000000000, January 03 1970 05:14:52
+  // Reset should be executed on January 04 1970 00:10:00
+  MakeNewProductQuotas(1, kPositiveResetOffset);
+  StartClock();
+
+  // Clock Time: January 04 1970 00:05:52
+  RunLoopFor(zx::hour(18) + zx::min(51));
+
+  // 259200000000000 is January 04 1970 00:00:00
+  EXPECT_EQ(ReadQuotasJson(), R"({
+    "next_reset_time_utc_nanos": 259200000000000
+})");
+
+  // Clock Time: January 04 1970 00:10:52
+  RunLoopFor(zx::min(5));
 
   // 345600000000000 is January 05 1970 00:00:00
   EXPECT_EQ(ReadQuotasJson(), R"({
@@ -356,7 +476,6 @@ TEST_F(ProductQuotasTest, ResetAtMidnight) {
 
 TEST_F(ProductQuotasTest, TimeFromJson) {
   StartClock();
-  RunLoopUntilIdle();
 
   // 259200000000000 is January 04 1970 00:00:00
   EXPECT_EQ(ReadQuotasJson(), R"({

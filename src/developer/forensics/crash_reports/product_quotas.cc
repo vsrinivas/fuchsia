@@ -8,6 +8,7 @@
 #include <lib/zx/time.h>
 
 #include <optional>
+#include <random>
 #include <string>
 #include <utility>
 
@@ -50,12 +51,14 @@ timekeeper::time_utc StartOfDay(const timekeeper::time_utc time) {
 
 ProductQuotas::ProductQuotas(async_dispatcher_t* dispatcher, timekeeper::Clock* clock,
                              const std::optional<uint64_t> quota, std::string quota_filepath,
-                             UtcClockReadyWatcherBase* utc_clock_ready_watcher)
+                             UtcClockReadyWatcherBase* utc_clock_ready_watcher,
+                             const zx::duration reset_time_offset)
     : dispatcher_(dispatcher),
       clock_(clock),
       quota_(quota),
       quota_filepath_(std::move(quota_filepath)),
-      utc_clock_ready_watcher_(utc_clock_ready_watcher) {
+      utc_clock_ready_watcher_(utc_clock_ready_watcher),
+      reset_time_offset_(reset_time_offset) {
   if (!quota_.has_value()) {
     FX_LOGS(INFO) << "No quota specified. Deleting " << quota_filepath_;
     files::DeletePath(quota_filepath_, /*recursive=*/true);
@@ -107,6 +110,19 @@ void ProductQuotas::DecrementRemainingQuota(const Product& product) {
   UpdateJson(key, remaining_quotas_[key]);
 }
 
+zx::duration ProductQuotas::RandomResetOffset() {
+  std::uniform_int_distribution<zx_duration_t> dist(zx::hour(-1).get(), zx::hour(1).get());
+  uint32_t seed = 0;
+  zx_cprng_draw(&seed, sizeof(seed));
+  std::default_random_engine rng(seed);
+
+  return zx::duration(dist(rng));
+}
+
+timekeeper::time_utc ProductQuotas::ActualResetTime() const {
+  return *next_reset_utc_time_ + reset_time_offset_;
+}
+
 void ProductQuotas::Reset() {
   // If no quota has been set, resetting is a no-op.
   if (!quota_.has_value()) {
@@ -128,7 +144,7 @@ void ProductQuotas::Reset() {
     // 00:00 of February 2nd and Reset ran at 23:59 of February 1st, the next midnight would be
     // 00:00 February 2nd.
     next_reset_utc_time_ = StartOfDay(*next_reset_utc_time_ + zx::hour(24));
-    const zx::duration time_until_next_reset = *next_reset_utc_time_ - current_time;
+    const zx::duration time_until_next_reset = ActualResetTime() - current_time;
     UpdateJson(*next_reset_utc_time_);
     reset_task_.PostDelayed(dispatcher_, time_until_next_reset);
   } else {
@@ -142,22 +158,31 @@ void ProductQuotas::OnClockStart() {
   const timekeeper::time_utc current_time = CurrentUtcTimeRaw(clock_);
 
   if (!next_reset_utc_time_.has_value()) {
-    // Case 1: A next reset time wasn't persisted in the JSON file.
+    // A next reset time wasn't persisted in the JSON file. Set it to next midnight.
     next_reset_utc_time_ = StartOfDay(current_time + zx::hour(24));
-    const zx::duration time_until_next_reset = *next_reset_utc_time_ - current_time;
-
     UpdateJson(*next_reset_utc_time_);
-    reset_task_.PostDelayed(dispatcher_, time_until_next_reset);
-  } else if (current_time > *next_reset_utc_time_) {
-    // Case 2: Deadline already passed. Set the "next reset" to be the previous midnight so that
-    // Reset() calculates the next midnight correctly.
-    next_reset_utc_time_ = StartOfDay(current_time);
-    Reset();
-  } else {
-    // Case 3: Deadline not yet passed.
-    const zx::duration time_until_next_reset = *next_reset_utc_time_ - current_time;
-    reset_task_.PostDelayed(dispatcher_, time_until_next_reset);
   }
+
+  const timekeeper::time_utc actual_reset_utc_time = ActualResetTime();
+
+  // Delay performing the reset.
+  if (current_time < actual_reset_utc_time) {
+    const zx::duration time_until_next_reset = actual_reset_utc_time - current_time;
+    reset_task_.PostDelayed(dispatcher_, time_until_next_reset);
+    return;
+  }
+
+  // A reset needs to occur now.
+  //
+  // Update |next_reset_utc_time_| so Reset() calculates the next midnight correctly.
+  //
+  // It should be midnight of the current day if we're past |next_reset_utc_time_| (a previous
+  // midnight), otherwise it should be midnight of the next day because we're after
+  // |actual_reset_time| and before |next_reset_utc_time_| (the next midnight).
+  next_reset_utc_time_ = current_time >= next_reset_utc_time_
+                             ? StartOfDay(current_time)
+                             : StartOfDay(current_time + zx::hour(24));
+  Reset();
 }
 
 // Product "quotas" keys will be determined using the "Key" function in this file. JSON format will
