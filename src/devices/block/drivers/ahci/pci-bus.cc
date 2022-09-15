@@ -39,7 +39,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
     return status;
   }
 
-  pci_device_info_t config;
+  fuchsia_hardware_pci::wire::DeviceInfo config;
   status = pci_.GetDeviceInfo(&config);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error getting pci config information");
@@ -107,7 +107,7 @@ zx_status_t PciBus::BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_
 }
 
 zx_status_t PciBus::InterruptWait() {
-  if (irq_mode_ == PCI_INTERRUPT_MODE_LEGACY) {
+  if (irq_mode_ == fuchsia_hardware_pci::InterruptMode::kLegacy) {
     pci_.AckInterrupt();
   }
 

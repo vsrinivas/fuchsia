@@ -135,8 +135,9 @@ zx_status_t PciModernBackend::Init() {
   // try to parse capabilities
   uint8_t off = 0;
   zx_status_t st;
-  for (st = pci().GetFirstCapability(PCI_CAPABILITY_ID_VENDOR, &off); st == ZX_OK;
-       st = pci().GetNextCapability(PCI_CAPABILITY_ID_VENDOR, off, &off)) {
+  for (st = pci().GetFirstCapability(fuchsia_hardware_pci::CapabilityId::kVendor, &off);
+       st == ZX_OK;
+       st = pci().GetNextCapability(fuchsia_hardware_pci::CapabilityId::kVendor, off, &off)) {
     virtio_pci_cap_t cap;
 
     st = ReadVirtioCap(off, &cap);

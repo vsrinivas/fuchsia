@@ -57,8 +57,9 @@ TEST_F(FakePciProtocolTests, CreateBar) {
 
   pci::RunAsync(loop_, [&] { fake_pci().CreateBar(0, size, true); });
 
-  pci_bar_t bar;
-  pci().GetBar(0, &bar);
+  fidl::Arena arena;
+  fuchsia_hardware_pci::wire::Bar bar;
+  pci().GetBar(arena, 0, &bar);
   EXPECT_EQ(size, bar.size);
 }
 
@@ -93,12 +94,12 @@ TEST_F(FakePciProtocolTests, SetBusMastering) {
 }
 
 TEST_F(FakePciProtocolTests, GetDeviceInfo) {
-  pci_device_info_t actual{};
-  pci_device_info_t zeroed{};
+  fuchsia_hardware_pci::wire::DeviceInfo actual{};
+  fuchsia_hardware_pci::wire::DeviceInfo zeroed{};
   ASSERT_OK(pci().GetDeviceInfo(&actual));
   ASSERT_EQ(0, memcmp(&zeroed, &actual, sizeof(zeroed)));
 
-  pci_device_info_t expected = {
+  fuchsia_hardware_pci::wire::DeviceInfo expected = {
       .vendor_id = 0x1,
       .device_id = 0x2,
 
@@ -134,7 +135,7 @@ TEST_F(FakePciProtocolTests, GetDeviceInfo) {
 }
 
 TEST_F(FakePciProtocolTests, GetInterruptModes) {
-  pci_interrupt_modes_t modes{};
+  fuchsia_hardware_pci::wire::InterruptModes modes{};
   pci().GetInterruptModes(&modes);
   ASSERT_EQ(0, modes.has_legacy);
   ASSERT_EQ(0, modes.msi_count);
@@ -182,7 +183,7 @@ TEST_F(FakePciProtocolTests, SetInterruptMode) {
     fake_pci().AddMsixInterrupt();
   });
 
-  pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY;
+  fuchsia_hardware_pci::InterruptMode mode = fuchsia_hardware_pci::InterruptMode::kLegacy;
   ASSERT_OK(pci().SetInterruptMode(mode, 1));
   pci::RunAsync(loop_, [&] {
     ASSERT_EQ(1, fake_pci().GetIrqCount());
@@ -190,7 +191,7 @@ TEST_F(FakePciProtocolTests, SetInterruptMode) {
   });
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().SetInterruptMode(mode, 2));
 
-  mode = PCI_INTERRUPT_MODE_MSI;
+  mode = fuchsia_hardware_pci::InterruptMode::kMsi;
   ASSERT_OK(pci().SetInterruptMode(mode, 1));
   pci::RunAsync(loop_, [&] {
     ASSERT_EQ(1, fake_pci().GetIrqCount());
@@ -250,7 +251,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
 
   zx::interrupt interrupt{};
   uint32_t irq_cnt = 1;
-  ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, irq_cnt));
+  ASSERT_OK(pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kLegacy, irq_cnt));
   ASSERT_OK(pci().MapInterrupt(0, &interrupt));
   ASSERT_TRUE(MatchKoids(legacy, interrupt));
   ASSERT_FALSE(MatchKoids(msi0, interrupt));
@@ -261,7 +262,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().MapInterrupt(irq_cnt, &interrupt));
   interrupt.reset();
 
-  ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_LEGACY_NOACK, irq_cnt));
+  ASSERT_OK(pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kLegacyNoack, irq_cnt));
   ASSERT_OK(pci().MapInterrupt(0, &interrupt));
   ASSERT_TRUE(MatchKoids(legacy, interrupt));
   ASSERT_FALSE(MatchKoids(msi0, interrupt));
@@ -273,7 +274,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   interrupt.reset();
 
   irq_cnt = 2;
-  ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_MSI, irq_cnt));
+  ASSERT_OK(pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kMsi, irq_cnt));
   ASSERT_OK(pci().MapInterrupt(0, &interrupt));
   ASSERT_FALSE(MatchKoids(legacy, interrupt));
   ASSERT_TRUE(MatchKoids(msi0, interrupt));
@@ -294,7 +295,7 @@ TEST_F(FakePciProtocolTests, MapInterrupt) {
   interrupt.reset();
 
   irq_cnt = 3;
-  ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_MSI_X, irq_cnt));
+  ASSERT_OK(pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kMsiX, irq_cnt));
   ASSERT_OK(pci().MapInterrupt(0, &interrupt));
   ASSERT_FALSE(MatchKoids(legacy, interrupt));
   ASSERT_FALSE(MatchKoids(msi0, interrupt));
@@ -332,24 +333,28 @@ TEST_F(FakePciProtocolTests, VerifyAllocatedMsis) {
   });
 
   zx::interrupt zero, one;
-  ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_MSI, 2));
+  ASSERT_OK(pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kMsi, 2));
   ASSERT_OK(pci().MapInterrupt(0, &zero));
   ASSERT_OK(pci().MapInterrupt(1, &one));
   // Changing to other IRQ modes should be blocked because IRQ handles are outstanding.
-  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, 1));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_INTERRUPT_MODE_LEGACY_NOACK, 1));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_INTERRUPT_MODE_MSI_X, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE,
+            pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kLegacy, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE,
+            pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kLegacyNoack, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE,
+            pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kMsiX, 1));
   zero.reset();
   one.reset();
   // Now transitioning should work.
-  ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, 1));
-  ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_MSI_X, 1));
+  ASSERT_OK(pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kLegacy, 1));
+  ASSERT_OK(pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kMsiX, 1));
 
   // Verify MSI-X works the same.
   ASSERT_OK(pci().MapInterrupt(0, &zero));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, pci().SetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, 1));
+  ASSERT_EQ(ZX_ERR_BAD_STATE,
+            pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kLegacy, 1));
   zero.reset();
-  ASSERT_OK(pci().SetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, 1));
+  ASSERT_OK(pci().SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kLegacy, 1));
 }
 
 TEST_F(FakePciProtocolTests, ConfigRW) {
@@ -397,9 +402,10 @@ TEST_F(FakePciProtocolTests, ConfigRW) {
 }
 
 TEST_F(FakePciProtocolTests, GetBar) {
-  pci_bar_t bar{};
-  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(0, &bar));
-  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().GetBar(6, &bar));
+  fuchsia_hardware_pci::wire::Bar bar{};
+  fidl::Arena arena;
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, pci().GetBar(arena, 0, &bar));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, pci().GetBar(arena, 6, &bar));
 
   uint32_t bar_id = 3;
   size_t size = 256;
@@ -407,8 +413,8 @@ TEST_F(FakePciProtocolTests, GetBar) {
                 [&] { ASSERT_NO_DEATH([&]() { fake_pci().CreateBar(bar_id, size, true); }); });
   // Verify that the VMO we got back via the protocol method matches the setup
   // and that the other fields are correct.
-  ASSERT_OK(pci().GetBar(bar_id, &bar));
-  zx::vmo proto(bar.result.vmo);
+  ASSERT_OK(pci().GetBar(arena, bar_id, &bar));
+  zx::vmo proto = std::move(bar.result.vmo());
   zx_handle_t borrowed;
   pci::RunAsync(loop_, [&] { borrowed = fake_pci().GetBar(bar_id).get(); });
   ASSERT_TRUE(MatchKoids(borrowed, proto));
@@ -423,11 +429,12 @@ TEST_F(FakePciProtocolTests, BarTypes) {
     fake_pci().CreateBar(1, page_size, false);
   });
 
-  pci_bar_t bar;
-  ASSERT_OK(pci().GetBar(0, &bar));
-  ASSERT_EQ(bar.type, ZX_PCI_BAR_TYPE_MMIO);
-  ASSERT_OK(pci().GetBar(1, &bar));
-  ASSERT_EQ(bar.type, ZX_PCI_BAR_TYPE_PIO);
+  fidl::Arena arena;
+  fuchsia_hardware_pci::wire::Bar bar;
+  ASSERT_OK(pci().GetBar(arena, 0, &bar));
+  ASSERT_TRUE(bar.result.is_vmo());
+  ASSERT_OK(pci().GetBar(arena, 1, &bar));
+  ASSERT_TRUE(bar.result.is_io());
 }
 
 TEST_F(FakePciProtocolTests, MapMmio) {
@@ -476,12 +483,12 @@ TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
   });
 
   uint8_t offset1 = 0;
-  ASSERT_OK(pci().GetFirstCapability(PCI_CAPABILITY_ID_VENDOR, &offset1));
+  ASSERT_OK(pci().GetFirstCapability(fuchsia_hardware_pci::CapabilityId::kVendor, &offset1));
   uint8_t val;
   config->read(&val, PCI_CONFIG_CAPABILITIES_PTR, sizeof(val));
   ASSERT_EQ(0x50, val);
   config->read(&val, offset1, sizeof(val));
-  ASSERT_EQ(PCI_CAPABILITY_ID_VENDOR, val);
+  ASSERT_EQ(fuchsia_hardware_pci::CapabilityId::kVendor, val);
   config->read(&val, offset1 + 2, sizeof(val));
   ASSERT_EQ(6, val);
 
@@ -492,7 +499,8 @@ TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
 
   // Can we find sequential capabilities, or different IDs?
   uint8_t offset2 = 0;
-  ASSERT_OK(pci().GetNextCapability(PCI_CAPABILITY_ID_VENDOR, offset1, &offset2));
+  ASSERT_OK(
+      pci().GetNextCapability(fuchsia_hardware_pci::CapabilityId::kVendor, offset1, &offset2));
   ASSERT_EQ(0x60, offset2);
 
   pci::RunAsync(loop_, [&] {
@@ -500,9 +508,10 @@ TEST_F(FakePciProtocolTests, PciGetFirstAndNextCapability) {
     fake_pci().AddVendorCapability(0xB0, 16);
   });
 
-  ASSERT_OK(pci().GetFirstCapability(PCI_CAPABILITY_ID_PCI_EXPRESS, &offset1));
+  ASSERT_OK(pci().GetFirstCapability(fuchsia_hardware_pci::CapabilityId::kPciExpress, &offset1));
   ASSERT_EQ(0x70, offset1);
 
-  ASSERT_OK(pci().GetNextCapability(PCI_CAPABILITY_ID_VENDOR, offset2, &offset1));
+  ASSERT_OK(
+      pci().GetNextCapability(fuchsia_hardware_pci::CapabilityId::kVendor, offset2, &offset1));
   ASSERT_EQ(0xB0, offset1);
 }

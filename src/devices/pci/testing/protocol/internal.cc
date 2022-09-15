@@ -165,7 +165,15 @@ zx_status_t FakePciProtocolInternal::PciResetDevice() {
 
 zx_status_t FakePciProtocolInternal::PciGetDeviceInfo(pci_device_info_t* out_info) {
   ZX_ASSERT(out_info);
-  *out_info = info_;
+  out_info->vendor_id = info_.vendor_id;
+  out_info->device_id = info_.device_id;
+  out_info->base_class = info_.base_class;
+  out_info->sub_class = info_.sub_class;
+  out_info->program_interface = info_.program_interface;
+  out_info->revision_id = info_.revision_id;
+  out_info->bus_id = info_.bus_id;
+  out_info->dev_id = info_.dev_id;
+  out_info->func_id = info_.func_id;
   return ZX_OK;
 }
 
@@ -258,8 +266,8 @@ __EXPORT zx::interrupt& FakePciProtocolInternal::AddInterrupt(pci_interrupt_mode
   ZX_PANIC("%s", kFakePciInternalError);
 }
 
-__EXPORT pci_device_info_t
-FakePciProtocolInternal::SetDeviceInfoInternal(pci_device_info_t new_info) {
+__EXPORT fuchsia_hardware_pci::wire::DeviceInfo FakePciProtocolInternal::SetDeviceInfoInternal(
+    fuchsia_hardware_pci::wire::DeviceInfo new_info) {
   config().write(&new_info.vendor_id, PCI_CONFIG_VENDOR_ID, sizeof(info().vendor_id));
   config().write(&new_info.device_id, PCI_CONFIG_DEVICE_ID, sizeof(info().device_id));
   config().write(&new_info.revision_id, PCI_CONFIG_REVISION_ID, sizeof(info().revision_id));

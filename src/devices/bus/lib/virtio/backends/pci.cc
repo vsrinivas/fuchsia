@@ -22,7 +22,8 @@
 
 namespace virtio {
 
-PciBackend::PciBackend(ddk::Pci pci, pci_device_info_t info) : pci_(std::move(pci)), info_(info) {
+PciBackend::PciBackend(ddk::Pci pci, fuchsia_hardware_pci::wire::DeviceInfo info)
+    : pci_(std::move(pci)), info_(info) {
   snprintf(tag_, sizeof(tag_), "pci[%02x:%02x.%1x]", info_.bus_id, info_.dev_id, info_.func_id);
 }
 
@@ -62,13 +63,13 @@ zx_status_t PciBackend::ConfigureInterruptMode() {
   // This looks a lot like something ConfigureInterruptMode was designed for, but
   // since we have a specific requirement to use MSI-X if and only if we have 2
   // vectors it means rolling it by hand.
-  pci_interrupt_modes_t modes{};
+  fuchsia_hardware_pci::wire::InterruptModes modes{};
   pci().GetInterruptModes(&modes);
-  pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY;
+  fuchsia_hardware_pci::InterruptMode mode = fuchsia_hardware_pci::InterruptMode::kLegacy;
   uint32_t irq_cnt = 1;
 
   if (modes.msix_count >= 2) {
-    mode = PCI_INTERRUPT_MODE_MSI_X;
+    mode = fuchsia_hardware_pci::InterruptMode::kMsiX;
     irq_cnt = 2;
   } else if (modes.has_legacy == 0) {
     zxlogf(ERROR, "No interrupt support found for device!");

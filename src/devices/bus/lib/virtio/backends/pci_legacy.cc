@@ -16,18 +16,20 @@ namespace virtio {
 
 zx_status_t PciLegacyBackend::Init() {
   fbl::AutoLock guard(&lock());
-  pci_bar_t bar0;
-  zx_status_t status = pci().GetBar(0u, &bar0);
+  fidl::Arena arena;
+  fuchsia_hardware_pci::wire::Bar bar0;
+  zx_status_t status = pci().GetBar(arena, 0u, &bar0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Couldn't get IO bar for device: %s", tag(), zx_status_get_string(status));
     return status;
   }
 
-  if (bar0.type != PCI_BAR_TYPE_IO) {
+  if (!bar0.result.is_io()) {
     return ZX_ERR_WRONG_TYPE;
   }
 
-  bar0_base_ = static_cast<uint16_t>(bar0.result.io.address & std::numeric_limits<uint16_t>::max());
+  bar0_base_ =
+      static_cast<uint16_t>(bar0.result.io().address & std::numeric_limits<uint16_t>::max());
 
   device_cfg_offset_ =
       bar0_base_ + ((irq_mode() == PCI_INTERRUPT_MODE_MSI_X) ? VIRTIO_PCI_CONFIG_OFFSET_MSIX

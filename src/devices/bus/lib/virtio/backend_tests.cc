@@ -337,7 +337,7 @@ TEST_F(VirtioTests, LegacyIoBackendSuccess) {
   // With a manually crafted backend using the test interface it should succeed.
   ddk::Pci pci(fake_parent_.get());
   ASSERT_TRUE(pci.is_valid());
-  pci_device_info_t info{};
+  fuchsia_hardware_pci::wire::DeviceInfo info{};
   ASSERT_OK(pci.GetDeviceInfo(&info));
   zx::bti bti{};
   ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
@@ -366,7 +366,7 @@ TEST_F(VirtioTests, LegacyMsiX) {
 
   ddk::Pci pci(fake_parent_.get());
   ASSERT_TRUE(pci.is_valid());
-  pci_device_info_t info{};
+  fuchsia_hardware_pci::wire::DeviceInfo info{};
   ASSERT_OK(pci.GetDeviceInfo(&info));
   zx::bti bti{};
   ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));

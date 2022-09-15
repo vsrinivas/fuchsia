@@ -101,7 +101,7 @@ class IntegrationTest : public ::testing::Test {
     pci_.PciWriteConfig16(registers::GmchGfxControl::kAddr, 0x40);
 
     constexpr uint16_t kIntelVendorId = 0x8086;
-    pci_.SetDeviceInfo(pci_device_info_t{
+    pci_.SetDeviceInfo({
         .vendor_id = kIntelVendorId,
         .device_id = i915::kTestDeviceDid,
     });

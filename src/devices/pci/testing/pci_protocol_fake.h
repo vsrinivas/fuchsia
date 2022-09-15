@@ -43,7 +43,10 @@ class FakePciProtocol : public FakePciProtocolInternal,
   zx::interrupt& AddMsixInterrupt() { return AddInterrupt(PCI_INTERRUPT_MODE_MSI_X); }
 
   // Sets the structure returned by |PciGetDeviceInfo|.
-  pci_device_info_t SetDeviceInfo(pci_device_info_t info) { return SetDeviceInfoInternal(info); }
+  fuchsia_hardware_pci::wire::DeviceInfo SetDeviceInfo(
+      fuchsia_hardware_pci::wire::DeviceInfo info) {
+    return SetDeviceInfoInternal(info);
+  }
 
   // Adds a vendor capability of size |size| to the device at |position| in PCI Configuration Space.
   void AddVendorCapability(uint8_t position, uint8_t size) {

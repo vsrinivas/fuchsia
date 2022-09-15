@@ -87,7 +87,7 @@ IntelHDAController::~IntelHDAController() {
 
   // Disable IRQs at the PCI level.
   if (pci_.is_valid()) {
-    pci_.SetInterruptMode(PCI_INTERRUPT_MODE_DISABLED, 0);
+    pci_.SetInterruptMode(fuchsia_hardware_pci::InterruptMode::kDisabled, 0);
   }
 
   // Let go of our stream state.

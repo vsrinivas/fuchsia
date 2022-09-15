@@ -28,8 +28,8 @@ class HdaControllerTest : public zxtest::Test {
  protected:
   void SetUp() final {
     auto& vmo = pci_.CreateBar(0, kHdaBar0Size, true);
-    pci_device_info_t info = {.vendor_id = INTEL_HDA_PCI_VID,
-                              .device_id = INTEL_HDA_PCI_DID_KABYLAKE};
+    fuchsia_hardware_pci::wire::DeviceInfo info = {.vendor_id = INTEL_HDA_PCI_VID,
+                                                   .device_id = INTEL_HDA_PCI_DID_KABYLAKE};
     pci_.SetDeviceInfo(info);
     zx_vaddr_t vaddr = {};
     ASSERT_OK(zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, 0,

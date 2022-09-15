@@ -62,7 +62,7 @@ class Interrupts {
 
   // Initialized by |Init|.
   zx::interrupt irq_;
-  pci_interrupt_mode_t irq_mode_;
+  fuchsia_hardware_pci::InterruptMode irq_mode_;
   std::optional<thrd_t> irq_thread_;  // Valid while irq_ is valid.
   cpp20::span<const registers::Ddi> ddis_;
 

@@ -101,7 +101,8 @@ class FakePciProtocolInternal
   // methods to ensure they're doing it properly.
   void AddCapabilityInternal(uint8_t capability_id, uint8_t position, uint8_t size);
   zx::interrupt& AddInterrupt(pci_interrupt_mode_t mode);
-  pci_device_info_t SetDeviceInfoInternal(pci_device_info_t new_info);
+  fuchsia_hardware_pci::wire::DeviceInfo SetDeviceInfoInternal(
+      fuchsia_hardware_pci::wire::DeviceInfo new_info);
 
   pci_interrupt_mode_t irq_mode() const { return irq_mode_; }
   uint32_t irq_cnt() const { return irq_cnt_; }
@@ -110,7 +111,7 @@ class FakePciProtocolInternal
 
   uint32_t reset_cnt() const { return reset_cnt_; }
   std::optional<bool> bus_master_en() const { return bus_master_en_; }
-  pci_device_info_t& info() { return info_; }
+  fuchsia_hardware_pci::wire::DeviceInfo& info() { return info_; }
   zx::vmo& config() { return config_; }
 
   void reset();
@@ -162,7 +163,7 @@ class FakePciProtocolInternal
   zx::bti bti_;
   uint32_t reset_cnt_;
   std::optional<bool> bus_master_en_;
-  pci_device_info_t info_ = {};
+  fuchsia_hardware_pci::wire::DeviceInfo info_ = {};
   zx::vmo config_;
   pci_protocol_t protocol_ = {.ops = &pci_protocol_ops_, .ctx = this};
 };

@@ -105,7 +105,7 @@ class TglIntegrationTest : public ::testing::Test {
     pci_.PciWriteConfig16(tgl_registers::GmchGfxControl::kAddr, 0x40);
 
     constexpr uint16_t kIntelVendorId = 0x8086;
-    pci_.SetDeviceInfo(pci_device_info_t{
+    pci_.SetDeviceInfo({
         .vendor_id = kIntelVendorId,
         .device_id = i915_tgl::kTestDeviceDid,
     });

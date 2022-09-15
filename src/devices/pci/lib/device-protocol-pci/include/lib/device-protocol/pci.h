@@ -80,33 +80,37 @@ class Pci {
 
   ~Pci() = default;
 
-  zx_status_t GetDeviceInfo(pci_device_info_t* out_info) const;
-  zx_status_t GetBar(uint32_t bar_id, pci_bar_t* out_result) const;
+  zx_status_t GetDeviceInfo(fuchsia_hardware_pci::wire::DeviceInfo* out_info) const;
+  // The arena backs the memory of the Bar result and must have the same
+  // lifetime or longer.
+  zx_status_t GetBar(fidl::AnyArena& arena, uint32_t bar_id,
+                     fuchsia_hardware_pci::wire::Bar* out_result) const;
   zx_status_t SetBusMastering(bool enabled) const;
   zx_status_t ResetDevice() const;
   zx_status_t AckInterrupt() const;
   zx_status_t MapInterrupt(uint32_t which_irq, zx::interrupt* out_interrupt) const;
-  void GetInterruptModes(pci_interrupt_modes_t* out_modes) const;
-  zx_status_t SetInterruptMode(pci_interrupt_mode_t mode, uint32_t requested_irq_count) const;
+  void GetInterruptModes(fuchsia_hardware_pci::wire::InterruptModes* out_modes) const;
+  zx_status_t SetInterruptMode(fuchsia_hardware_pci::InterruptMode mode,
+                               uint32_t requested_irq_count) const;
   zx_status_t ReadConfig8(uint16_t offset, uint8_t* out_value) const;
   zx_status_t ReadConfig16(uint16_t offset, uint16_t* out_value) const;
   zx_status_t ReadConfig32(uint16_t offset, uint32_t* out_value) const;
   zx_status_t WriteConfig8(uint16_t offset, uint8_t value) const;
   zx_status_t WriteConfig16(uint16_t offset, uint16_t value) const;
   zx_status_t WriteConfig32(uint16_t offset, uint32_t value) const;
-  zx_status_t GetFirstCapability(pci_capability_id_t id, uint8_t* out_offset) const;
-  zx_status_t GetNextCapability(pci_capability_id_t id, uint8_t start_offset,
+  zx_status_t GetFirstCapability(fuchsia_hardware_pci::CapabilityId id, uint8_t* out_offset) const;
+  zx_status_t GetNextCapability(fuchsia_hardware_pci::CapabilityId id, uint8_t start_offset,
                                 uint8_t* out_offset) const;
-  zx_status_t GetFirstExtendedCapability(pci_extended_capability_id_t id,
+  zx_status_t GetFirstExtendedCapability(fuchsia_hardware_pci::ExtendedCapabilityId id,
                                          uint16_t* out_offset) const;
-  zx_status_t GetNextExtendedCapability(pci_extended_capability_id_t id, uint16_t start_offset,
-                                        uint16_t* out_offset) const;
+  zx_status_t GetNextExtendedCapability(fuchsia_hardware_pci::ExtendedCapabilityId id,
+                                        uint16_t start_offset, uint16_t* out_offset) const;
   zx_status_t GetBti(uint32_t index, zx::bti* out_bti) const;
 
   // These two methods are not Banjo methods but miscellaneous PCI helper
   // methods.
   zx_status_t ConfigureInterruptMode(uint32_t requested_irq_count,
-                                     pci_interrupt_mode_t* out_mode) const;
+                                     fuchsia_hardware_pci::InterruptMode* out_mode) const;
   zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy,
                       std::optional<fdf::MmioBuffer>* mmio) const;
 

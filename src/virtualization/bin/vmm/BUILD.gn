@@ -137,6 +137,7 @@ source_set("lib") {
 
   public_deps = [
     ":bits",
+    "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_cpp_wire",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware_cpp_wire",

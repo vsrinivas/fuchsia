@@ -10,6 +10,7 @@
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fidl/fuchsia.hardware.acpi/cpp/wire_types.h>
 #include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
+#include <fidl/fuchsia.hardware.pci/cpp/wire_types.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/binding_driver.h>
@@ -407,7 +408,7 @@ zx_status_t IntelI2cController::SetBusFrequency(const uint32_t frequency) {
 int IntelI2cController::IrqThread() {
   zx_status_t status;
   for (;;) {
-    if (irq_mode_ == PCI_INTERRUPT_MODE_LEGACY) {
+    if (irq_mode_ == fuchsia_hardware_pci::InterruptMode::kLegacy) {
       pci_.AckInterrupt();
     }
 

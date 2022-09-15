@@ -1658,7 +1658,7 @@ void UsbXhci::Shutdown(zx_status_t status) {
 }
 
 void UsbXhci::InitQuirks() {
-  pci_device_info_t info;
+  fuchsia_hardware_pci::wire::DeviceInfo info;
   pci_.GetDeviceInfo(&info);
   if ((info.vendor_id == 0x1033) && (info.device_id == 0x194)) {
     qemu_quirk_ = true;
@@ -1701,7 +1701,7 @@ zx_status_t UsbXhci::InitPci() {
                static_cast<uint16_t>(HCSPARAMS1::Get().ReadFrom(&mmio_.value()).MaxIntrs()));
 
   // Make sure irq_count_ doesn't exceed supported max PCI IRQs.
-  pci_interrupt_modes_t modes{};
+  fuchsia_hardware_pci::wire::InterruptModes modes{};
   pci_.GetInterruptModes(&modes);
   uint32_t mode_irq_max = std::max(static_cast<uint16_t>(modes.msi_count), modes.msix_count);
   irq_count_ = std::min(irq_count_, static_cast<uint16_t>(mode_irq_max));

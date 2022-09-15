@@ -18,6 +18,8 @@ __BEGIN_CDECLS
 #include <libfdt.h>
 __END_CDECLS
 
+namespace fpci = fuchsia_hardware_pci;
+
 namespace {
 
 // PCI ECAM address manipulation.
@@ -496,7 +498,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |   (31..16)     |    (15..0)     |
     // |   device_id    |   vendor_id    |
     //  ---------------------------------
-    case PCI_CONFIG_VENDOR_ID:
+    case fpci::wire::Config::kVendorId:
       *value = attrs_.vendor_id;
       *value |= attrs_.device_id << 16;
       return ZX_OK;
@@ -504,13 +506,13 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |   (31..16)  |   (15..0)    |
     // |   status    |    command   |
     //  ----------------------------
-    case PCI_CONFIG_COMMAND: {
+    case fpci::wire::Config::kCommand: {
       std::lock_guard<std::mutex> lock(mutex_);
       *value = command_;
 
-      uint16_t status = PCI_STATUS_INTERRUPT;
+      uint16_t status = static_cast<uint16_t>(fpci::wire::Status::kInterrupt);
       if (!capabilities_.empty()) {
-        status |= PCI_STATUS_NEW_CAPS;
+        status |= static_cast<uint16_t>(fpci::wire::Status::kNewCaps);
       }
       *value |= status << 16;
       return ZX_OK;
@@ -519,15 +521,15 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |    (31..16)    |    (15..8)   |      (7..0)     |
     // |   class_code   |    prog_if   |    revision_id  |
     //  -------------------------------------------------
-    case PCI_CONFIG_REVISION_ID:
+    case fpci::wire::Config::kRevisionId:
       *value = attrs_.device_class;
       return ZX_OK;
     //  ---------------------------------------------------------------
     // |   (31..24)  |   (23..16)    |    (15..8)    |      (7..0)     |
     // |     BIST    |  header_type  | latency_timer | cache_line_size |
     //  ---------------------------------------------------------------
-    case PCI_CONFIG_CACHE_LINE_SIZE:
-      *value = PCI_HEADER_TYPE_STANDARD << 16;
+    case fpci::wire::Config::kCacheLineSize:
+      *value = static_cast<uint16_t>(fpci::wire::HeaderType::kStandard) << 16;
       return ZX_OK;
     case kPciRegisterBar0:
     case kPciRegisterBar1:
@@ -550,7 +552,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |   (31..24)  |  (23..16)   |    (15..8)     |    (7..0)      |
     // | max_latency |  min_grant  | interrupt_pin  | interrupt_line |
     //  -------------------------------------------------------------
-    case PCI_CONFIG_INTERRUPT_LINE: {
+    case fpci::wire::Config::kInterruptLine: {
       std::lock_guard<std::mutex> lock(mutex_);
       const uint8_t interrupt_pin = 1;
       *value = (interrupt_pin << 8) | reg_interrupt_line_;
@@ -560,7 +562,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |   (31..16)        |         (15..0)       |
     // |   subsystem_id    |  subsystem_vendor_id  |
     //  -------------------------------------------
-    case PCI_CONFIG_SUBSYSTEM_VENDOR_ID:
+    case fpci::wire::Config::kSubsystemVendorId:
       *value = attrs_.subsystem_vendor_id;
       *value |= attrs_.subsystem_id << 16;
       return ZX_OK;
@@ -568,7 +570,7 @@ zx_status_t PciDevice::ReadConfigWord(uint8_t reg, uint32_t* value) const {
     // |     (31..8)     |         (7..0)         |
     // |     Reserved    |  capabilities_pointer  |
     //  ------------------------------------------
-    case PCI_CONFIG_CAPABILITIES_PTR: {
+    case fpci::wire::Config::kCapabilitiesPtr: {
       *value = 0;
       std::lock_guard<std::mutex> lock(mutex_);
       if (!capabilities_.empty()) {
@@ -624,7 +626,7 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
   }
 
   switch (reg) {
-    case PCI_CONFIG_COMMAND: {
+    case fpci::wire::Config::kCommand: {
       if (value.access_size != 2) {
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -636,7 +638,7 @@ zx_status_t PciDevice::WriteConfig(uint64_t reg, const IoValue& value) {
       // bus.
       return Interrupt();
     }
-    case PCI_CONFIG_INTERRUPT_LINE: {
+    case fpci::wire::Config::kInterruptLine: {
       // The 8-byte `interrupt_line` register is R/W, while the other registers
       // are read-only. (PCI 3.0, Section 6.2.4)
       std::lock_guard<std::mutex> lock(mutex_);

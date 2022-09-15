@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_PCI_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_PCI_H_
 
+#include <fidl/fuchsia.hardware.pci/cpp/wire.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <zircon/compiler.h>

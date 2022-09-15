@@ -12,6 +12,8 @@
 
 #include "src/virtualization/bin/vmm/bits.h"
 
+namespace fpci = fuchsia_hardware_pci;
+
 namespace {
 
 constexpr uint16_t kPciConfigAddrPortBase = 0;
@@ -59,7 +61,7 @@ TEST(PciDeviceTest, ReadConfigRegister) {
   // Access Vendor/Device ID as a single 32bit read.
   IoValue value = {};
   value.access_size = 4;
-  EXPECT_EQ(device->ReadConfig(PCI_CONFIG_VENDOR_ID, &value), ZX_OK);
+  EXPECT_EQ(device->ReadConfig(fpci::wire::Config::kVendorId, &value), ZX_OK);
   EXPECT_EQ(value.u32, PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16));
 }
 
@@ -72,7 +74,7 @@ TEST(PciDeviceTest, ReadConfigRegisterBytewise) {
 
   uint32_t expected_device_vendor = PCI_VENDOR_ID_INTEL | (PCI_DEVICE_ID_INTEL_Q35 << 16);
   for (int i = 0; i < 4; ++i) {
-    uint16_t reg = static_cast<uint16_t>(PCI_CONFIG_VENDOR_ID + i);
+    uint16_t reg = static_cast<uint16_t>(fpci::wire::Config::kVendorId + i);
     IoValue value = {};
     value.access_size = 1;
     EXPECT_EQ(device->ReadConfig(reg, &value), ZX_OK);
@@ -117,8 +119,8 @@ TEST(PciDeviceTest, ReadBarSize) {
   IoValue value;
   value.access_size = 4;
   value.u32 = UINT32_MAX;
-  EXPECT_EQ(test_device.WriteConfig(PCI_CONFIG_BASE_ADDRESSES + 0, value), ZX_OK);
-  EXPECT_EQ(test_device.WriteConfig(PCI_CONFIG_BASE_ADDRESSES + 4, value), ZX_OK);
+  EXPECT_EQ(test_device.WriteConfig(fpci::wire::Config::kBaseAddresses + 0, value), ZX_OK);
+  EXPECT_EQ(test_device.WriteConfig(fpci::wire::Config::kBaseAddresses + 4, value), ZX_OK);
 
   // PCI Express Base Specification, Rev. 4.0 Version 1.0, Section 7.5.1.2.1:
   // Base Address Registers
@@ -143,9 +145,9 @@ TEST(PciDeviceTest, ReadBarSize) {
   // Read out BAR and compute size.
   value.access_size = 4;
   value.u32 = 0;
-  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 0, &value), ZX_OK);
+  EXPECT_EQ(test_device.ReadConfig(fpci::wire::Config::kBaseAddresses + 0, &value), ZX_OK);
   uint64_t reg = value.u32;
-  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_BASE_ADDRESSES + 4, &value), ZX_OK);
+  EXPECT_EQ(test_device.ReadConfig(fpci::wire::Config::kBaseAddresses + 4, &value), ZX_OK);
   reg |= static_cast<uint64_t>(value.u32) << 32;
 
   EXPECT_EQ(reg & ~kPciBarMmioAddrMask, kPciBarMmioType64Bit | kPciBarMmioAccessSpace);
@@ -163,9 +165,10 @@ TEST(PciDeviceTest, ReadWriteInterruptLine) {
 
   // Write/read the 8-bit value directly.
   {
-    EXPECT_EQ(device->WriteConfig(PCI_CONFIG_INTERRUPT_LINE, IoValue::FromU8(0xaa)), ZX_OK);
+    EXPECT_EQ(device->WriteConfig(fpci::wire::Config::kInterruptLine, IoValue::FromU8(0xaa)),
+              ZX_OK);
     IoValue value = IoValue::FromU8(0);
-    EXPECT_EQ(device->ReadConfig(PCI_CONFIG_INTERRUPT_LINE, &value), ZX_OK);
+    EXPECT_EQ(device->ReadConfig(fpci::wire::Config::kInterruptLine, &value), ZX_OK);
     EXPECT_EQ(value.u8, 0xaa);
   }
 
@@ -173,12 +176,13 @@ TEST(PciDeviceTest, ReadWriteInterruptLine) {
   // the neighbouring registers.
   {
     IoValue original_value = IoValue::FromU32(0);
-    EXPECT_EQ(device->ReadConfig(PCI_CONFIG_INTERRUPT_LINE, &original_value), ZX_OK);
+    EXPECT_EQ(device->ReadConfig(fpci::wire::Config::kInterruptLine, &original_value), ZX_OK);
 
-    EXPECT_EQ(device->WriteConfig(PCI_CONFIG_INTERRUPT_LINE, IoValue::FromU32(0x55555555)), ZX_OK);
+    EXPECT_EQ(device->WriteConfig(fpci::wire::Config::kInterruptLine, IoValue::FromU32(0x55555555)),
+              ZX_OK);
 
     IoValue value = IoValue::FromU32(0);
-    EXPECT_EQ(device->ReadConfig(PCI_CONFIG_INTERRUPT_LINE, &value), ZX_OK);
+    EXPECT_EQ(device->ReadConfig(fpci::wire::Config::kInterruptLine, &value), ZX_OK);
     EXPECT_EQ(value.u32, clear_bits(original_value.u32, 8, 0) | 0x55);
   }
 }
@@ -203,21 +207,21 @@ TEST(PciDeviceTest, ReadCapability) {
   //
   // Initially expect the bit to be 0, as we have no caps.
   IoValue status = IoValue::FromU16(0);
-  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_STATUS, &status), ZX_OK);
-  EXPECT_FALSE(status.u16 & PCI_STATUS_NEW_CAPS);
+  EXPECT_EQ(test_device.ReadConfig(fpci::wire::Config::kStatus, &status), ZX_OK);
+  EXPECT_FALSE(status.u16 & static_cast<uint16_t>(fpci::wire::Status::kNewCaps));
 
   // Create and install a simple capability.
   EXPECT_EQ(test_device.AddCapability(SimplePciCap{.id = 0x9, .next = 0, .data = {0x11, 0x22}}),
             ZX_OK);
 
   // The PCI_STATUS_NEW_CAPS bit should now be set.
-  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_STATUS, &status), ZX_OK);
-  EXPECT_TRUE(status.u16 & PCI_STATUS_NEW_CAPS);
+  EXPECT_EQ(test_device.ReadConfig(fpci::wire::Config::kStatus, &status), ZX_OK);
+  EXPECT_TRUE(status.u16 & static_cast<uint16_t>(fpci::wire::Status::kNewCaps));
 
   // Read the cap pointer from config space. Here just verify it points to
   // some location beyond the pre-defined header.
   IoValue cap_ptr = IoValue::FromU8(0);
-  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_CAPABILITIES_PTR, &cap_ptr), ZX_OK);
+  EXPECT_EQ(test_device.ReadConfig(fpci::wire::Config::kCapabilitiesPtr, &cap_ptr), ZX_OK);
   EXPECT_LT(0x40u, cap_ptr.u8);
 
   // Read the capability. This will be the Cap ID (9), next pointer (0), followed
@@ -244,7 +248,7 @@ TEST(PciDeviceTest, ReadChainedCapability) {
   }
 
   IoValue cap_ptr = IoValue::FromU8(0);
-  EXPECT_EQ(test_device.ReadConfig(PCI_CONFIG_CAPABILITIES_PTR, &cap_ptr), ZX_OK);
+  EXPECT_EQ(test_device.ReadConfig(fpci::wire::Config::kCapabilitiesPtr, &cap_ptr), ZX_OK);
   for (uint8_t i = 0; i < kNumCaps; ++i) {
     IoValue cap_header = IoValue::FromU32(0);
 
@@ -363,13 +367,14 @@ TEST(PciBusTest, ReadConfigDataPort) {
   // address port is added to the data port address.
   value.access_size = 2;
   value.u16 = 0;
-  bus.set_config_addr(pci_type1_addr(0, 0, 0, PCI_CONFIG_DEVICE_ID));
+  bus.set_config_addr(pci_type1_addr(0, 0, 0, fpci::wire::Config::kDeviceId));
   // Verify we're using a 4b aligned register address.
   EXPECT_EQ(bus.config_addr() & bit_mask<uint32_t>(2), 0u);
   // Add the register offset to the data port base address.
-  EXPECT_EQ(bus.ReadIoPort(kPciConfigDataPortBase + (PCI_CONFIG_DEVICE_ID & bit_mask<uint32_t>(2)),
-                           &value),
-            ZX_OK);
+  EXPECT_EQ(
+      bus.ReadIoPort(
+          kPciConfigDataPortBase + (fpci::wire::Config::kDeviceId & bit_mask<uint32_t>(2)), &value),
+      ZX_OK);
   EXPECT_EQ(value.access_size, 2);
   EXPECT_EQ(value.u16, PCI_DEVICE_ID_INTEL_Q35);
 }

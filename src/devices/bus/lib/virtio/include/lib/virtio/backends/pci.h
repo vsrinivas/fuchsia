@@ -18,7 +18,7 @@ namespace virtio {
 
 class PciBackend : public Backend {
  public:
-  PciBackend(ddk::Pci pci, pci_device_info_t info);
+  PciBackend(ddk::Pci pci, fuchsia_hardware_pci::wire::DeviceInfo info);
   zx_status_t Bind() final;
   virtual zx_status_t Init() = 0;
   const char* tag() { return tag_; }
@@ -34,13 +34,13 @@ class PciBackend : public Backend {
 
  protected:
   const ddk::Pci& pci() { return pci_; }
-  pci_device_info_t info() { return info_; }
+  fuchsia_hardware_pci::wire::DeviceInfo info() { return info_; }
   fbl::Mutex& lock() { return lock_; }
   zx::port& wait_port() { return wait_port_; }
 
  private:
   ddk::Pci pci_;
-  pci_device_info_t info_;
+  fuchsia_hardware_pci::wire::DeviceInfo info_;
   fbl::Mutex lock_;
   zx::port wait_port_;
   char tag_[16];  // pci[XX:XX.X] + \0, aligned to 8
@@ -99,9 +99,10 @@ class PciLegacyIoInterface : public LegacyIoInterface {
 // configuration structures when MSI-X is enabled.
 class PciLegacyBackend : public PciBackend {
  public:
-  PciLegacyBackend(ddk::Pci pci, pci_device_info_t info)
+  PciLegacyBackend(ddk::Pci pci, fuchsia_hardware_pci::wire::DeviceInfo info)
       : PciBackend(std::move(pci), info), legacy_io_(PciLegacyIoInterface::Get()) {}
-  PciLegacyBackend(ddk::Pci pci, pci_device_info_t info, LegacyIoInterface* interface)
+  PciLegacyBackend(ddk::Pci pci, fuchsia_hardware_pci::wire::DeviceInfo info,
+                   LegacyIoInterface* interface)
       : PciBackend(std::move(pci), info), legacy_io_(interface) {}
   PciLegacyBackend(const PciLegacyBackend&) = delete;
   PciLegacyBackend& operator=(const PciLegacyBackend&) = delete;
@@ -149,7 +150,8 @@ class PciLegacyBackend : public PciBackend {
 // PciModernBackend is for v1.0+ Virtio using MMIO mapped bars and PCI capabilities.
 class PciModernBackend : public PciBackend {
  public:
-  PciModernBackend(ddk::Pci pci, pci_device_info_t info) : PciBackend(std::move(pci), info) {}
+  PciModernBackend(ddk::Pci pci, fuchsia_hardware_pci::wire::DeviceInfo info)
+      : PciBackend(std::move(pci), info) {}
   // The dtor handles cleanup of allocated bars because we cannot tear down
   // the mappings safely while the virtio device is being used by a driver.
   ~PciModernBackend() override = default;

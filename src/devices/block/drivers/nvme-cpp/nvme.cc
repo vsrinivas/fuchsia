@@ -56,14 +56,14 @@ zx_status_t Nvme::Bind(void* ctx, zx_device_t* dev) {
 }
 
 zx_status_t Nvme::InitPciAndDispatcher() {
-  pci_interrupt_mode_t mode;
+  fuchsia_hardware_pci::InterruptMode mode;
   zx_status_t status = pci_.ConfigureInterruptMode(1, &mode);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to configure interrupt: %s", zx_status_get_string(status));
     return status;
   }
 
-  is_msix_ = (mode == PCI_INTERRUPT_MODE_MSI_X);
+  is_msix_ = (mode == fuchsia_hardware_pci::InterruptMode::kMsiX);
 
   status = pci_.MapInterrupt(0, &irq_);
   if (status != ZX_OK) {

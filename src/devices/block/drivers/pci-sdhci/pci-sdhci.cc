@@ -32,7 +32,7 @@ PciSdhci::PciSdhci(zx_device_t* parent) : DeviceType(parent) {}
 
 zx_status_t PciSdhci::SdhciGetInterrupt(zx::interrupt* interrupt_out) {
   // select irq mode
-  pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_DISABLED;
+  fuchsia_hardware_pci::InterruptMode mode = fuchsia_hardware_pci::InterruptMode::kDisabled;
   zx_status_t status = pci_.ConfigureInterruptMode(1, &mode);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: error setting irq mode: %s", kTag, zx_status_get_string(status));
