@@ -248,7 +248,7 @@ TEST(CompareRangesOfNodesInternalTest, PathAIsContainedInPathB) {
   EXPECT_EQ(*it_2, "way");
 }
 
-TEST(ComparePathInternalTest, PathAandBDoNotMatch) {
+TEST(CompareRangesOfNodesInternalTest, PathAandBDoNotMatch) {
   auto path = ConvertPath("/this/is/my/path");
   auto path_2 = ConvertPath("/this/is/my/other/path");
 
@@ -261,7 +261,7 @@ TEST(ComparePathInternalTest, PathAandBDoNotMatch) {
   EXPECT_EQ(*it_2, "other");
 }
 
-TEST(ComparePathInCompareRangesOfNodesInternalTestternalTest, WithAddressAndNoWildcardMatch) {
+TEST(CompareRangesOfNodesInternalTest, WithAddressAndNoWildcardMatch) {
   auto path = ConvertPath("/this/is/my@10/path");
   auto path_2 = ConvertPath("/this/is/my@10/path");
 
