@@ -56,12 +56,12 @@ use {
     },
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_io as fio,
     from_enum::FromEnum,
-    log::warn,
     moniker::{AbsoluteMoniker, ChildMoniker, RelativeMonikerBase},
     std::{
         path::{Path, PathBuf},
         sync::Arc,
     },
+    tracing::warn,
 };
 
 #[cfg(feature = "serde")]
@@ -324,9 +324,9 @@ where
             let (env_component_instance, env_name, registration_decl) = match target
                 .environment()
                 .get_debug_capability(&use_decl.source_name)
-                .map_err(|e| {
-                    warn!("route_protocol error 1, use_decl={use_decl:?}: {e}");
-                    e
+                .map_err(|err| {
+                    warn!(?use_decl, %err, "route_protocol error 1");
+                    err
                 })? {
                 Some((
                     ExtendedInstanceInterface::Component(env_component_instance),
@@ -372,21 +372,21 @@ where
                     mapper,
                 )
                 .await
-                .map_err(|e| {
-                    warn!("route_protocol error 2, use_decl={use_decl:?}: {e}");
-                    e
+                .map_err(|err| {
+                    warn!(?use_decl, %err, "route_protocol error 2");
+                    err
                 })?;
 
             target
                 .try_get_policy_checker()
-                .map_err(|e| {
-                    warn!("route_protocol error 3, use_decl={use_decl:?}: {e}");
-                    e
+                .map_err(|err| {
+                    warn!(?use_decl, %err, "route_protocol error 3");
+                    err
                 })?
                 .can_route_debug_capability(&source, &env_moniker, &env_name, target.abs_moniker())
-                .map_err(|e| {
-                    warn!("route_protocol error 4, use_decl={use_decl:?}: {e}");
-                    e
+                .map_err(|err| {
+                    warn!(?use_decl, %err, "route_protocol error 4");
+                    err
                 })?;
             return Ok(RouteSource::Protocol(source));
         }

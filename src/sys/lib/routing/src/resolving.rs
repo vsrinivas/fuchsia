@@ -12,7 +12,6 @@ use {
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_io as fio,
     fuchsia_zircon_status as zx,
     lazy_static::lazy_static,
-    log::error,
     once_cell::sync::OnceCell,
     std::convert::TryFrom,
     std::sync::Arc,

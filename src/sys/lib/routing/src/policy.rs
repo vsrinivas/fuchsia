@@ -12,12 +12,12 @@ use {
         },
     },
     fuchsia_zircon_status as zx,
-    log::{error, warn},
     moniker::{
         AbsoluteMoniker, ChildMonikerBase, ExtendedMoniker, RelativeMoniker, RelativeMonikerBase,
     },
     std::sync::{Arc, Weak},
     thiserror::Error,
+    tracing::{error, warn},
 };
 
 #[cfg(feature = "serde")]
