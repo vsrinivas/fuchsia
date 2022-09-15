@@ -3,4 +3,6 @@
 // found in the LICENSE file.
 
 mod click;
+mod motion;
+mod primary_tap;
 mod utils;
