@@ -351,6 +351,10 @@ pub trait IpDeviceId: Copy + Display + Debug + Eq + Hash + PartialEq + Send + Sy
     fn is_loopback(&self) -> bool;
 }
 
+pub(crate) trait DualStackDeviceIdContext {
+    type DualStackDeviceId: IpDeviceId;
+}
+
 /// An execution context which provides a `DeviceId` type for various IP
 /// internals to share.
 ///

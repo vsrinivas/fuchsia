@@ -18,7 +18,7 @@ use core::num::{NonZeroU32, NonZeroU8};
 #[cfg(test)]
 use net_types::ip::IpVersion;
 use net_types::{
-    ip::{AddrSubnet, Ip, IpAddress as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ip::{AddrSubnet, AddrSubnetEither, Ip, IpAddress as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     MulticastAddr, SpecifiedAddr, UnicastAddr,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
@@ -46,7 +46,7 @@ use crate::{
             igmp::IgmpTimerId, mld::MldDelayedReportTimerId, GmpHandler, GroupJoinResult,
             GroupLeaveResult,
         },
-        IpDeviceIdContext,
+        DualStackDeviceIdContext, IpDeviceIdContext,
     },
     Instant,
 };
@@ -253,6 +253,53 @@ pub enum IpDeviceEvent<DeviceId, I: Ip> {
         /// `true` if IP was enabled on the device; `false` if IP was disabled.
         ip_enabled: bool,
     },
+}
+
+pub(crate) struct DualStackDeviceStateRef<'a, I: Instant> {
+    pub(crate) ipv4: &'a Ipv4DeviceState<I>,
+    pub(crate) ipv6: &'a Ipv6DeviceState<I>,
+}
+
+/// The non-synchronized execution context for dual-stack devices.
+pub(crate) trait DualStackDeviceNonSyncContext: InstantContext {}
+impl<C: InstantContext> DualStackDeviceNonSyncContext for C {}
+
+/// The synchronized execution context for dual-stack devices.
+pub(crate) trait DualStackDeviceContext<C: DualStackDeviceNonSyncContext>:
+    DualStackDeviceIdContext
+{
+    /// Calls the function with an immutable view into the dual-stack device's
+    /// state.
+    fn with_dual_stack_device_state<O, F: FnOnce(DualStackDeviceStateRef<'_, C::Instant>) -> O>(
+        &self,
+        device_id: Self::DualStackDeviceId,
+        cb: F,
+    ) -> O;
+}
+
+/// An implementation of dual-stack devices.
+pub(crate) trait DualStackDeviceHandler<C>: DualStackDeviceIdContext {
+    /// Get all IPv4 and IPv6 address/subnet pairs configured on a device.
+    fn get_all_ip_addr_subnets(&self, device_id: Self::DualStackDeviceId) -> Vec<AddrSubnetEither>;
+}
+
+impl<C: DualStackDeviceNonSyncContext, SC: DualStackDeviceContext<C>> DualStackDeviceHandler<C>
+    for SC
+{
+    fn get_all_ip_addr_subnets(&self, device_id: Self::DualStackDeviceId) -> Vec<AddrSubnetEither> {
+        self.with_dual_stack_device_state(device_id, |DualStackDeviceStateRef { ipv4, ipv6 }| {
+            let addrs_v4 = ipv4
+                .ip_state
+                .iter_addrs()
+                .filter_map(<Ipv4 as IpDeviceStateIpExt<C::Instant>>::assigned_addr);
+            let addrs_v6 = ipv6
+                .ip_state
+                .iter_addrs()
+                .filter_map(<Ipv6 as IpDeviceStateIpExt<C::Instant>>::assigned_addr);
+
+            addrs_v4.map(AddrSubnetEither::V4).chain(addrs_v6.map(AddrSubnetEither::V6)).collect()
+        })
+    }
 }
 
 /// The non-synchronized execution context for IP devices.
@@ -716,30 +763,6 @@ pub(crate) fn with_assigned_ipv4_addr_subnets<
     cb: F,
 ) -> O {
     with_assigned_addr_subnets::<Ipv4, _, _, _, _>(sync_ctx, device_id, cb)
-}
-
-/// Gets the IPv6 address and subnet pairs associated with this device which are
-/// in the assigned state.
-///
-/// Tentative IP addresses (addresses which are not yet fully bound to a device)
-/// and deprecated IP addresses (addresses which have been assigned but should
-/// no longer be used for new connections) will not be returned by
-/// `get_assigned_ipv6_addr_subnets`.
-///
-/// Returns an [`Iterator`] of `AddrSubnet`.
-///
-/// See [`Tentative`] and [`AddrSubnet`] for more information.
-pub(crate) fn with_assigned_ipv6_addr_subnets<
-    C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
-    SC: IpDeviceContext<Ipv6, C>,
-    O,
-    F: FnOnce(Box<dyn Iterator<Item = AddrSubnet<Ipv6Addr>> + '_>) -> O,
->(
-    sync_ctx: &SC,
-    device_id: SC::DeviceId,
-    cb: F,
-) -> O {
-    with_assigned_addr_subnets::<Ipv6, _, _, _, _>(sync_ctx, device_id, cb)
 }
 
 /// Gets a single IPv4 address and subnet for a device.
@@ -1271,6 +1294,30 @@ pub(crate) mod testutil {
                 .cloned()
                 .collect()
         })
+    }
+
+    /// Gets the IPv6 address and subnet pairs associated with this device which are
+    /// in the assigned state.
+    ///
+    /// Tentative IP addresses (addresses which are not yet fully bound to a device)
+    /// and deprecated IP addresses (addresses which have been assigned but should
+    /// no longer be used for new connections) will not be returned by
+    /// `get_assigned_ipv6_addr_subnets`.
+    ///
+    /// Returns an [`Iterator`] of `AddrSubnet`.
+    ///
+    /// See [`Tentative`] and [`AddrSubnet`] for more information.
+    pub(crate) fn with_assigned_ipv6_addr_subnets<
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+        SC: IpDeviceContext<Ipv6, C>,
+        O,
+        F: FnOnce(Box<dyn Iterator<Item = AddrSubnet<Ipv6Addr>> + '_>) -> O,
+    >(
+        sync_ctx: &SC,
+        device_id: SC::DeviceId,
+        cb: F,
+    ) -> O {
+        with_assigned_addr_subnets::<Ipv6, _, _, _, _>(sync_ctx, device_id, cb)
     }
 }
 

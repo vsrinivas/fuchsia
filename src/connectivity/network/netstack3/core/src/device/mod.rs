@@ -48,10 +48,11 @@ use crate::{
                 AddrConfig, DualStackIpDeviceState, Ipv4DeviceConfiguration, Ipv4DeviceState,
                 Ipv6DeviceConfiguration, Ipv6DeviceState,
             },
-            BufferIpDeviceContext, IpDeviceContext, Ipv6DeviceContext,
+            BufferIpDeviceContext, DualStackDeviceContext, DualStackDeviceStateRef,
+            IpDeviceContext, Ipv6DeviceContext,
         },
         types::AddableEntry,
-        IpDeviceId, IpDeviceIdContext,
+        DualStackDeviceIdContext, IpDeviceId, IpDeviceIdContext,
     },
     BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
@@ -187,6 +188,21 @@ fn leave_link_multicast_group<NonSyncCtx: NonSyncContext, A: IpAddress>(
             MulticastAddr::from(&multicast_addr),
         ),
         DeviceIdInner::Loopback => {}
+    }
+}
+
+impl<NonSyncCtx: NonSyncContext> DualStackDeviceContext<NonSyncCtx> for SyncCtx<NonSyncCtx> {
+    fn with_dual_stack_device_state<
+        O,
+        F: FnOnce(DualStackDeviceStateRef<'_, NonSyncCtx::Instant>) -> O,
+    >(
+        &self,
+        device_id: Self::DualStackDeviceId,
+        cb: F,
+    ) -> O {
+        with_ip_device_state(self, device_id, |DualStackIpDeviceState { ipv4, ipv6 }| {
+            cb(DualStackDeviceStateRef { ipv4: &ipv4.read(), ipv6: &ipv6.read() })
+        })
     }
 }
 
@@ -882,6 +898,10 @@ pub(crate) fn del_ip_addr<NonSyncCtx: NonSyncContext, A: IpAddress>(
             crate::ip::device::state::DelIpv6AddrReason::ManualAction,
         ),
     }
+}
+
+impl<NonSyncCtx: NonSyncContext> DualStackDeviceIdContext for SyncCtx<NonSyncCtx> {
+    type DualStackDeviceId = DeviceId;
 }
 
 // Temporary blanket impl until we switch over entirely to the traits defined in

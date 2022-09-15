@@ -59,7 +59,7 @@ use crate::{
     device::DeviceId,
     device::{DeviceLayerState, DeviceLayerTimerId},
     ip::{
-        device::{Ipv4DeviceTimerId, Ipv6DeviceTimerId},
+        device::{DualStackDeviceHandler, Ipv4DeviceTimerId, Ipv6DeviceTimerId},
         icmp::{BufferIcmpContext, IcmpContext},
         IpLayerTimerId, Ipv4State, Ipv6State,
     },
@@ -428,11 +428,7 @@ pub fn get_all_ip_addr_subnets<NonSyncCtx: NonSyncContext>(
     ctx: &SyncCtx<NonSyncCtx>,
     device: DeviceId,
 ) -> Vec<AddrSubnetEither> {
-    crate::ip::device::with_assigned_ipv4_addr_subnets(ctx, device, |addrs_v4| {
-        crate::ip::device::with_assigned_ipv6_addr_subnets(ctx, device, |addrs_v6| {
-            addrs_v4.map(AddrSubnetEither::V4).chain(addrs_v6.map(AddrSubnetEither::V6)).collect()
-        })
-    })
+    DualStackDeviceHandler::get_all_ip_addr_subnets(ctx, device)
 }
 
 /// Set the IP address and subnet for a device.
