@@ -12,12 +12,6 @@ mod tests {
         pretty_assertions::assert_eq,
     };
 
-    const NO_MOVEMENT_LOCATION: mouse_binding::MouseLocation =
-        mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-            counts: Position { x: 0.0, y: 0.0 },
-            millimeters: Position { x: 0.0, y: 0.0 },
-        });
-
     fn touchpad_event(positions: Vec<Position>, time: zx::Time) -> input_device::InputEvent {
         let injector_contacts: Vec<touch_binding::TouchContact> = positions
             .iter()
@@ -128,10 +122,10 @@ mod tests {
           ..
           }
         ] => {
-          assert_eq!(location_a, &NO_MOVEMENT_LOCATION);
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
           assert_eq!(pressed_button_a, &hashset! {1});
           assert_eq!(affected_button_a, &hashset! {1});
-          assert_eq!(location_b, &NO_MOVEMENT_LOCATION);
+          assert_eq!(location_b, &utils::NO_MOVEMENT_LOCATION);
           assert_eq!(pressed_button_b, &hashset! {});
           assert_eq!(affected_button_b, &hashset! {1});
         });

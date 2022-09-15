@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{gestures::gesture_arena, input_device, touch_binding},
+    crate::{gestures::gesture_arena, input_device, mouse_binding, touch_binding, Position},
     fidl_fuchsia_input_report as fidl_input_report, fuchsia_zircon as zx,
 };
 
@@ -67,3 +67,10 @@ pub(super) fn make_touchpad_event(
         handled: input_device::Handled::No,
     }
 }
+
+pub(super) const EPSILON: f32 = 1.0 / 100_000.0;
+pub(super) const NO_MOVEMENT_LOCATION: mouse_binding::MouseLocation =
+    mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+        counts: Position { x: 0.0, y: 0.0 },
+        millimeters: Position { x: 0.0, y: 0.0 },
+    });

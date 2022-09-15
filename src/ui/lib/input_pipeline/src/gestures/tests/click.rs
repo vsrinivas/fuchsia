@@ -13,8 +13,6 @@ mod tests {
         test_util::{assert_gt, assert_near},
     };
 
-    const EPSILON: f32 = 1.0 / 100_000.0;
-
     fn touchpad_event(
         positions: Vec<Position>,
         pressed_buttons: HashSet<mouse_binding::MouseButton>,
@@ -265,8 +263,82 @@ mod tests {
           ..
           },
         ] => {
-          assert_near!(location1.millimeters.x, 0.0, EPSILON);
+          assert_near!(location1.millimeters.x, 0.0, utils::EPSILON);
           assert_gt!(location1.millimeters.y, 0.0);
+        });
+    }
+
+    #[fuchsia::test(allow_stalls = false)]
+    async fn click_then_place_2nd_finger_then_scroll() {
+        let finger1_pos1_um = Position { x: 2_000.0, y: 3_000.0 };
+        let finger1_pos2_um = finger1_pos1_um.clone();
+        let finger1_pos3_um = finger1_pos1_um.clone();
+        let finger2_pos3_um = Position { x: 5_000.0, y: 3_000.0 };
+        let finger1_pos4_um = Position {
+            x: 2_000.0,
+            y: 4_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+        };
+        let finger2_pos4_um = Position {
+            x: 5_000.0,
+            y: 4_000.0 + args::SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM * 1_000.0,
+        };
+        let inputs = vec![
+            touchpad_event(vec![finger1_pos1_um], hashset! {1}),
+            touchpad_event(vec![finger1_pos2_um], hashset! {}),
+            touchpad_event(vec![finger1_pos3_um, finger2_pos3_um], hashset! {}),
+            touchpad_event(vec![finger1_pos4_um, finger2_pos4_um], hashset! {}),
+        ];
+        let got = utils::run_gesture_arena_test(inputs).await;
+
+        assert_eq!(got.len(), 4);
+        assert_eq!(got[0].as_slice(), []);
+        assert_matches!(got[1].as_slice(), [
+          input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Mouse(
+              mouse_binding::MouseEvent {
+                pressed_buttons: pressed_button1,
+                affected_buttons: affected_button1,
+                ..
+              },
+            ),
+          ..
+          },
+          input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Mouse(
+              mouse_binding::MouseEvent {
+                pressed_buttons: pressed_button2,
+                affected_buttons: affected_button2,
+                ..
+              },
+            ),
+          ..
+          }
+        ] => {
+          assert_eq!(pressed_button1, &hashset! {1});
+          assert_eq!(affected_button1, &hashset! {1});
+          assert_eq!(pressed_button2, &hashset! {});
+          assert_eq!(affected_button2, &hashset! {1});
+        });
+        assert_eq!(got[2].as_slice(), []);
+        assert_matches!(got[3].as_slice(), [
+          input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Mouse(
+              mouse_binding::MouseEvent {
+                location,
+                wheel_delta_v: Some(mouse_binding::WheelDelta{
+                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
+                  physical_pixel: None,
+                }),
+                wheel_delta_h: None,
+                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
+                ..
+              },
+            ),
+          ..
+          },
+        ] => {
+          assert_gt!(*delta_v, 0.0);
+          assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
     }
 }
