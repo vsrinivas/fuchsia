@@ -38,15 +38,14 @@ use {
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
-    fuchsia_inspect as inspect,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_zircon as zx,
+    fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
     input_config_lib::Config,
     scene_management::{self, SceneManager, ViewingDistance, ViewportToken},
     std::rc::Rc,
     std::sync::Arc,
+    tracing::{error, info, warn},
 };
 
 mod color_transform_manager;
@@ -76,7 +75,7 @@ enum ExposedServices {
 async fn main() -> Result<(), Error> {
     let result = inner_main().await;
     if let Err(e) = result {
-        fx_log_err!("Uncaught error in main(): {}", e);
+        error!("Uncaught error in main(): {}", e);
         return Err(e);
     }
     Ok(())
@@ -141,7 +140,7 @@ async fn inner_main() -> Result<(), Error> {
     let use_flatland = scenic.uses_flatland().await.expect("Failed to get flatland info.");
     let display_ownership =
         scenic.get_display_ownership_event().await.expect("Failed to get display ownership.");
-    fx_log_info!("Instantiating SceneManager, use_flatland: {:?}", use_flatland);
+    info!(use_flatland, "Instantiating SceneManager");
 
     // Read config files to discover display attributes.
     let display_rotation = match std::fs::read_to_string("/config/data/display_rotation") {
@@ -153,7 +152,7 @@ async fn inner_main() -> Result<(), Error> {
             ))?
         }
         Err(e) => {
-            fx_log_warn!(
+            warn!(
                 "Wasn't able to read config/data/display_rotation, \
                 defaulting to a display rotation of 0 degrees: {}",
                 e
@@ -171,7 +170,7 @@ async fn inner_main() -> Result<(), Error> {
             ))?)
         }
         Err(e) => {
-            fx_log_warn!(
+            warn!(
                 "Wasn't able to read config/data/display_pixel_density, \
                     guessing based on display size: {}",
                 e
@@ -189,7 +188,7 @@ async fn inner_main() -> Result<(), Error> {
             unknown => anyhow::bail!("Invalid /config/data/display_usage value: {unknown}"),
         }),
         Err(e) => {
-            fx_log_warn!(
+            warn!(
                 "Wasn't able to read config/data/display_usage, \
                 guessing based on display size: {}",
                 e
@@ -236,7 +235,7 @@ async fn inner_main() -> Result<(), Error> {
             .await?,
         ));
         if let Err(e) = register_gfx_as_magnifier(Arc::clone(&gfx_scene_manager)) {
-            fx_log_warn!("failed to register as the magnification handler: {:?}", e);
+            warn!("failed to register as the magnification handler: {:?}", e);
         }
         gfx_scene_manager
     };
@@ -278,11 +277,11 @@ async fn inner_main() -> Result<(), Error> {
         fidl::endpoints::create_request_stream::<ColorTransformHandlerMarker>()?;
     match connect_to_protocol::<ColorTransformMarker>() {
         Err(e) => {
-            fx_log_err!("Failed to connect to fuchsia.accessibility.color_transform: {:?}", e);
+            error!("Failed to connect to fuchsia.accessibility.color_transform: {:?}", e);
         }
         Ok(proxy) => match proxy.register_color_transform_handler(color_transform_handler_client) {
             Err(e) => {
-                fx_log_err!("Failed to call RegisterColorTransformHandler: {:?}", e);
+                error!("Failed to call RegisterColorTransformHandler: {:?}", e);
             }
             Ok(()) => {
                 ColorTransformManager::handle_color_transform_request_stream(
@@ -342,7 +341,7 @@ async fn inner_main() -> Result<(), Error> {
                         //
                         // Nonetheless, InputDeviceRegistry isn't critical to production use.
                         // So we just log the error and move on.
-                        fx_log_warn!(
+                        warn!(
                             "failed to forward InputDeviceRegistryRequestStream: {:?}; \
                                 must restart to enable input injection",
                             e
@@ -354,7 +353,7 @@ async fn inner_main() -> Result<(), Error> {
                 match &input_config_server.handle_request(request_stream).await {
                     Ok(()) => (),
                     Err(e) => {
-                        fx_log_warn!("failed to forward InputConfigFeaturesRequestStream: {:?}", e)
+                        warn!("failed to forward InputConfigFeaturesRequestStream: {:?}", e)
                     }
                 }
             }
@@ -362,7 +361,7 @@ async fn inner_main() -> Result<(), Error> {
                 match &media_buttons_listener_registry_server.handle_request(request_stream).await {
                     Ok(()) => (),
                     Err(e) => {
-                        fx_log_warn!(
+                        warn!(
                             "failed to forward media buttons listener request via DeviceListenerRegistryRequestStream: {:?}",
                             e
                         )
@@ -373,7 +372,7 @@ async fn inner_main() -> Result<(), Error> {
                 match &factory_reset_countdown_server.handle_request(request_stream).await {
                     Ok(()) => (),
                     Err(e) => {
-                        fx_log_warn!("failed to forward FactoryResetCountdown: {:?}", e)
+                        warn!("failed to forward FactoryResetCountdown: {:?}", e)
                     }
                 }
             }
@@ -381,7 +380,7 @@ async fn inner_main() -> Result<(), Error> {
                 match &factory_reset_device_server.handle_request(request_stream).await {
                     Ok(()) => (),
                     Err(e) => {
-                        fx_log_warn!("failed to forward fuchsia.recovery.policy.Device: {:?}", e)
+                        warn!("failed to forward fuchsia.recovery.policy.Device: {:?}", e)
                     }
                 }
             }
@@ -394,7 +393,7 @@ async fn inner_main() -> Result<(), Error> {
                 {
                     Ok(()) => (),
                     Err(e) => {
-                        fx_log_warn!(
+                        warn!(
                       "failure while serving fuchsia.input.interaction.observation.Aggregator: {:?}",
                       e
                   );
@@ -408,7 +407,7 @@ async fn inner_main() -> Result<(), Error> {
                     {
                         Ok(()) => (),
                         Err(e) => {
-                            fx_log_warn!(
+                            warn!(
                                 "failure while serving fuchsia.input.interaction.Notifier: {:?}",
                                 e
                             );
@@ -420,7 +419,7 @@ async fn inner_main() -> Result<(), Error> {
         }
     }
 
-    fx_log_info!("Finished service handler loop; exiting main.");
+    info!("Finished service handler loop; exiting main.");
     Ok(())
 }
 
@@ -444,7 +443,7 @@ pub async fn handle_accessibility_view_registry_request_stream(
                         let _ = responder.send(&mut result);
                     }
                     Err(e) => {
-                        fx_log_warn!("Closing A11yViewRegistry connection due to error {:?}", e);
+                        warn!("Closing A11yViewRegistry connection due to error {:?}", e);
                         responder.control_handle().shutdown_with_epitaph(zx::Status::PEER_CLOSED);
                     }
                 };
@@ -454,7 +453,7 @@ pub async fn handle_accessibility_view_registry_request_stream(
                 responder,
                 ..
             } => {
-                fx_log_err!("A11yViewRegistry.CreateAccessibilityViewport not implemented!");
+                error!("A11yViewRegistry.CreateAccessibilityViewport not implemented!");
                 responder.control_handle().shutdown_with_epitaph(zx::Status::PEER_CLOSED);
             }
         };
@@ -472,11 +471,11 @@ pub async fn handle_scene_manager_request_stream(
                     let mut scene_manager = scene_manager.lock().await;
                     let mut set_root_view_result =
                         scene_manager.set_root_view_deprecated(proxy).await.map_err(|e| {
-                            fx_log_err!("Failed to obtain ViewRef from SetRootView(): {}", e);
+                            error!("Failed to obtain ViewRef from SetRootView(): {}", e);
                             PresentRootViewError::InternalError
                         });
                     if let Err(e) = responder.send(&mut set_root_view_result) {
-                        fx_log_err!("Error responding to SetRootView(): {}", e);
+                        error!("Error responding to SetRootView(): {}", e);
                     }
                 }
             }
@@ -490,11 +489,11 @@ pub async fn handle_scene_manager_request_stream(
                     .set_root_view(ViewportToken::Gfx(view_holder_token), Some(view_ref))
                     .await
                     .map_err(|e| {
-                        fx_log_err!("Failed to obtain ViewRef from PresentRootViewLegacy(): {}", e);
+                        error!("Failed to obtain ViewRef from PresentRootViewLegacy(): {}", e);
                         PresentRootViewError::InternalError
                     });
                 if let Err(e) = responder.send(&mut set_root_view_result) {
-                    fx_log_err!("Error responding to PresentRootViewLegacy(): {}", e);
+                    error!("Error responding to PresentRootViewLegacy(): {}", e);
                 }
             }
             SceneManagerRequest::PresentRootView { viewport_creation_token, responder } => {
@@ -503,11 +502,11 @@ pub async fn handle_scene_manager_request_stream(
                     .set_root_view(ViewportToken::Flatland(viewport_creation_token), None)
                     .await
                     .map_err(|e| {
-                        fx_log_err!("Failed to obtain ViewRef from PresentRootView(): {}", e);
+                        error!("Failed to obtain ViewRef from PresentRootView(): {}", e);
                         PresentRootViewError::InternalError
                     });
                 if let Err(e) = responder.send(&mut set_root_view_result) {
-                    fx_log_err!("Error responding to PresentRootView(): {}", e);
+                    error!("Error responding to PresentRootView(): {}", e);
                 }
             }
         };

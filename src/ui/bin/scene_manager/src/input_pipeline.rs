@@ -16,9 +16,7 @@ use {
     focus_chain_provider::FocusChainProviderPublisher,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_inspect as inspect,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_zircon as zx,
+    fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::{lock::Mutex, StreamExt},
     icu_data,
     input_pipeline::{
@@ -39,6 +37,7 @@ use {
     std::iter::FromIterator,
     std::rc::Rc,
     std::sync::Arc,
+    tracing::{error, info, warn},
 };
 
 /// Begins handling input events. The returned future will complete when
@@ -167,7 +166,7 @@ async fn add_touchscreen_handler(
             fasync::Task::local(touch_handler.clone().watch_viewport()).detach();
             assembly = assembly.add_handler(touch_handler);
         }
-        Err(e) => fx_log_err!(
+        Err(e) => error!(
             "build_input_pipeline_assembly(): Touch injector handler was not installed: {:?}",
             e
         ),
@@ -189,7 +188,7 @@ async fn add_mouse_handler(
             fasync::Task::local(mouse_handler.clone().watch_viewport()).detach();
             assembly = assembly.add_handler(mouse_handler);
         }
-        Err(e) => fx_log_err!(
+        Err(e) => error!(
             "build_input_pipeline_assembly(): Mouse injector handler was not installed: {:?}",
             e
         ),
@@ -224,7 +223,7 @@ async fn build_input_pipeline_assembly(
         assembly = add_inspect_handler(node.create_child("input_pipeline_entry"), assembly);
 
         if supported_input_devices.contains(&input_device::InputDeviceType::Keyboard) {
-            fx_log_info!("Registering keyboard-related input handlers.");
+            info!("Registering keyboard-related input handlers.");
 
             // Add as early as possible, but not before inspect handlers.
             assembly = add_chromebook_keyboard_handler(assembly);
@@ -252,7 +251,7 @@ async fn build_input_pipeline_assembly(
         }
 
         if supported_input_devices.contains(&input_device::InputDeviceType::ConsumerControls) {
-            fx_log_info!("Registering consumer controls-related input handlers.");
+            info!("Registering consumer controls-related input handlers.");
 
             // Add factory reset handler before media buttons handler.
             assembly = assembly.add_handler(factory_reset_handler);
@@ -260,7 +259,7 @@ async fn build_input_pipeline_assembly(
         }
 
         if supported_input_devices.contains(&input_device::InputDeviceType::Mouse) {
-            fx_log_info!("Registering mouse-related input handlers.");
+            info!("Registering mouse-related input handlers.");
 
             // Add the click-drag handler before the mouse handler, to allow
             // the click-drag handler to filter events seen by the mouse
@@ -320,7 +319,7 @@ async fn build_input_pipeline_assembly(
         }
 
         if supported_input_devices.contains(&input_device::InputDeviceType::Touch) {
-            fx_log_info!("Registering touchscreen-related input handlers.");
+            info!("Registering touchscreen-related input handlers.");
 
             assembly = add_touchscreen_handler(scene_manager.clone(), assembly).await;
         }
@@ -413,7 +412,7 @@ fn add_pointer_display_scale_handler(
     ) {
         Ok(handler) => assembly.add_handler(handler),
         Err(e) => {
-            fx_log_err!("Failed to install pointer scaler: {}", e);
+            error!("Failed to install pointer scaler: {}", e);
             assembly
         }
     }
@@ -447,7 +446,7 @@ pub async fn handle_input_config_request_streams(
         {
             Ok(()) => (),
             Err(e) => {
-                fx_log_warn!(
+                warn!(
                     "failure while serving InputConfig.Features: {}; \
                      will continue serving other clients",
                     e
@@ -470,7 +469,7 @@ pub async fn handle_device_listener_registry_request_stream(
             {
                 Ok(()) => (),
                 Err(e) => {
-                    fx_log_warn!("failure while serving DeviceListenerRegistry: {}", e);
+                    warn!("failure while serving DeviceListenerRegistry: {}", e);
                 }
             }
         })
@@ -491,7 +490,7 @@ pub async fn handle_factory_reset_countdown_request_stream(
             {
                 Ok(()) => (),
                 Err(e) => {
-                    fx_log_warn!("failure while serving FactoryResetCountdown: {}", e);
+                    warn!("failure while serving FactoryResetCountdown: {}", e);
                 }
             }
         })
@@ -509,7 +508,7 @@ pub async fn handle_recovery_policy_device_request_stream(
             match factory_reset_handler.handle_recovery_policy_device_request_stream(stream).await {
                 Ok(()) => (),
                 Err(e) => {
-                    fx_log_warn!("failure while serving fuchsia.recovery.policy.Device: {}", e);
+                    warn!("failure while serving fuchsia.recovery.policy.Device: {}", e);
                 }
             }
         })
@@ -539,7 +538,7 @@ pub async fn handle_input_device_registry_request_streams(
         {
             Ok(()) => (),
             Err(e) => {
-                fx_log_warn!(
+                warn!(
                     "failure while serving InputDeviceRegistry: {}; \
                      will continue serving other clients",
                     e

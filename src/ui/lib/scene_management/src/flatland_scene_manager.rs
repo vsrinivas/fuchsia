@@ -23,12 +23,12 @@ use {
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
     fidl_fuchsia_ui_display_singleton as singleton_display, fidl_fuchsia_ui_views as ui_views,
     fuchsia_scenic as scenic,
-    fuchsia_syslog::fx_log_warn,
     futures::channel::{mpsc::unbounded, oneshot},
     input_pipeline::Size,
     math as fmath,
     parking_lot::Mutex,
     std::sync::Arc,
+    tracing::warn,
 };
 
 // TODO(fxbug.dev/91061): Make this larger when we have a protocol to
@@ -442,10 +442,11 @@ impl FlatlandSceneManager {
         match layout_info.pixel_scale {
             Some(math::SizeU { width: 1, height: 1 }) => (),
             Some(size) => {
-                fx_log_warn!(
-                    "Expected size {:?} from display, got {:?}",
-                    math::SizeU { width: 1, height: 1 },
-                    size
+                warn!(
+                    expected_width = 1,
+                    expected_height = 1,
+                    got_width = size.width,
+                    got_height = size.height,
                 )
             }
             None => (),
@@ -587,7 +588,7 @@ impl FlatlandSceneManager {
                 maybe_cursor_transform_id = Some(cursor_transform_id);
             }
             Err(e) => {
-                fx_log_warn!("Failed to create cursor View: {:?}. Cursor disabled.", e);
+                warn!("Failed to create cursor View: {:?}. Cursor disabled.", e);
             }
         };
 
@@ -766,8 +767,8 @@ impl FlatlandSceneManager {
         let request_focus_result =
             self.root_flatland.focuser.request_focus(&mut child_view_ref).await;
         match request_focus_result {
-            Err(e) => fx_log_warn!("Request focus failed with err: {}", e),
-            Ok(Err(value)) => fx_log_warn!("Request focus failed with err: {:?}", value),
+            Err(e) => warn!("Request focus failed with err: {}", e),
+            Ok(Err(value)) => warn!("Request focus failed with err: {:?}", value),
             Ok(_) => {}
         }
         pingback_channels

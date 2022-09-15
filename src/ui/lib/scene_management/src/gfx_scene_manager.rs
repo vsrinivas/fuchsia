@@ -19,13 +19,13 @@ use {
     fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_gfx as ui_gfx,
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
     futures::channel::mpsc::unbounded,
     futures::channel::oneshot,
     futures::TryStreamExt,
     input_pipeline::Size,
     parking_lot::Mutex,
     std::sync::Arc,
+    tracing::{error, warn},
 };
 
 pub type FocuserPtr = Arc<ui_views::FocuserProxy>;
@@ -329,11 +329,11 @@ impl SceneManager for GfxSceneManager {
     }
 
     fn set_cursor_position(&mut self, _position: input_pipeline::Position) {
-        fx_log_err!("Cursor is not supported on GFX");
+        error!("Cursor is not supported on GFX");
     }
 
     fn set_cursor_visibility(&mut self, _visible: bool) {
-        fx_log_err!("Cursor is not supported on GFX");
+        error!("Cursor is not supported on GFX");
     }
 
     fn get_pointerinjection_display_size(&self) -> Size {
@@ -613,10 +613,7 @@ impl GfxSceneManager {
                         { scene_manager.lock().await.set_camera_clip_space_transform(x, y, scale) }
                             .await;
                         if let Err(e) = responder.send() {
-                            fx_log_warn!(
-                                "Failed to send MagnificationHandlerRequest() response: {}",
-                                e
-                            );
+                            warn!("Failed to send MagnificationHandlerRequest() response: {}", e);
                         }
                     }
                     Ok(None) => {
@@ -624,7 +621,7 @@ impl GfxSceneManager {
                     }
                     Err(e) => {
                         { scene_manager.lock().await.reset_camera_clip_space_transform() }.await;
-                        fx_log_err!("Error obtaining MagnificationHandlerRequest: {}", e);
+                        error!("Error obtaining MagnificationHandlerRequest: {}", e);
                         return;
                     }
                 }
@@ -837,8 +834,8 @@ impl GfxSceneManager {
             })
             .await;
         match auto_focus_result {
-            Err(e) => fx_log_warn!("Request focus failed with err: {}", e),
-            Ok(Err(value)) => fx_log_warn!("Request focus failed with err: {:?}", value),
+            Err(e) => warn!("Request focus failed with err: {}", e),
+            Ok(Err(value)) => warn!("Request focus failed with err: {:?}", value),
             Ok(_) => {}
         }
     }

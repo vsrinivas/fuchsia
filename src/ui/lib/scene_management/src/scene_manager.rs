@@ -18,9 +18,8 @@ use {
     },
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
     flatland_frame_scheduling_lib::*,
-    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_trace as trace, fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_scenic as scenic, fuchsia_scenic, fuchsia_trace as trace,
+    fuchsia_zircon as zx,
     futures::channel::mpsc::{UnboundedReceiver, UnboundedSender},
     futures::channel::oneshot,
     futures::future::TryFutureExt,
@@ -28,6 +27,7 @@ use {
     parking_lot::Mutex,
     std::collections::VecDeque,
     std::sync::{Arc, Weak},
+    tracing::{error, info, warn},
 };
 
 /// ViewHolder / Viewport token union.
@@ -247,7 +247,7 @@ fn present(session: &scenic::SessionPtr) {
             // one future time.
             .present2(0, 0)
             .map_ok(|_| ())
-            .unwrap_or_else(|error| fx_log_err!("Present error: {:?}", error)),
+            .unwrap_or_else(|error| error!("Present error: {:?}", error)),
     )
     .detach();
 }
@@ -257,7 +257,7 @@ pub fn create_viewport_hanging_get(
 ) -> Arc<Mutex<InjectorViewportHangingGet>> {
     let notify_fn: InjectorViewportChangeFn = Box::new(|viewport_spec, responder| {
         if let Err(fidl_error) = responder.send((*viewport_spec).into()) {
-            fx_log_info!("Viewport hanging get notification, FIDL error: {}", fidl_error);
+            info!("Viewport hanging get notification, FIDL error: {}", fidl_error);
         }
         // TODO(fxbug.dev/87670): the HangingGet docs don't explain what value to return.
         true
@@ -278,7 +278,7 @@ pub fn start_flatland_presentation_loop(
             if let Some(flatland) = weak_flatland.upgrade() {
                 flatland.lock().take_event_stream()
             } else {
-                fx_log_warn!(
+                warn!(
                     "Failed to upgrade Flatand weak ref; exiting presentation loop for {debug_name}"
                 );
                 return;
@@ -348,7 +348,7 @@ pub fn start_flatland_presentation_loop(
                             scheduler.on_frame_presented(actual_presentation_time, presented_infos);
                         }
                         Some(Ok(ui_comp::FlatlandEvent::OnError{ error })) => {
-                            fx_log_err!(
+                            error!(
                                 "Received FlatlandError code: {}; exiting listener loop for {debug_name}",
                                 error.into_primitive()
                             );
@@ -369,7 +369,7 @@ pub fn start_flatland_presentation_loop(
                             .present(present_parameters.into())
                             .expect("Present failed for {debug_name}");
                     } else {
-                        fx_log_warn!(
+                        warn!(
                             "Failed to upgrade Flatand weak ref; exiting listener loop for {debug_name}"
                         );
                         return;
@@ -395,19 +395,19 @@ pub fn handle_pointer_injector_configuration_setup_request_stream(
                     let (mut context_view_ref, mut target_view_ref) =
                         scene_manager.lock().await.get_pointerinjection_view_refs();
                     if let Err(e) = responder.send(&mut context_view_ref, &mut target_view_ref) {
-                        fx_log_warn!("Failed to send GetViewRefs() response: {}", e);
+                        warn!("Failed to send GetViewRefs() response: {}", e);
                     }
                 }
                 Ok(Some(PointerInjectorConfigurationSetupRequest::WatchViewport { responder })) => {
                     if let Err(e) = subscriber.register(responder) {
-                        fx_log_warn!("Failed to register WatchViewport() subscriber: {}", e);
+                        warn!("Failed to register WatchViewport() subscriber: {}", e);
                     }
                 }
                 Ok(None) => {
                     return;
                 }
                 Err(e) => {
-                    fx_log_err!("Error obtaining SetupRequest: {}", e);
+                    error!("Error obtaining SetupRequest: {}", e);
                     return;
                 }
             }

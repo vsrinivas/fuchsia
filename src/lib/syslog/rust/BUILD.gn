@@ -122,10 +122,8 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/pkg/tests/pkg-resolver:*",
   "//src/ui/bin/brightness_manager:*",
   "//src/ui/bin/input-pipeline:*",
-  "//src/ui/bin/scene_manager:*",
   "//src/ui/bin/text:*",
   "//src/ui/lib/input_pipeline:*",
-  "//src/ui/lib/scene_management:*",
 ]
 
 # At this time we are not enforcing restrictions on the below.

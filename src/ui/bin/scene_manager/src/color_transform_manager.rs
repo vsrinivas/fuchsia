@@ -12,12 +12,11 @@ use {
     },
     fidl_fuchsia_ui_display_color as fidl_color,
     fidl_fuchsia_ui_policy::{DisplayBacklightRequest, DisplayBacklightRequestStream},
-    fuchsia_async as fasync,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
-    fuchsia_zircon as zx,
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::stream::TryStreamExt,
     std::sync::Arc,
+    tracing::{error, info, warn},
 };
 
 const ZERO_OFFSET: [f32; 3] = [0., 0., 0.];
@@ -91,10 +90,10 @@ impl ColorTransformManager {
         match res {
             Ok(true) => {}
             Ok(false) => {
-                fx_log_err!("Error setting display minimum RGB");
+                error!("Error setting display minimum RGB");
             }
             Err(e) => {
-                fx_log_err!("Error calling SetMinimumRgb: {}", e);
+                error!("Error calling SetMinimumRgb: {}", e);
             }
         }
     }
@@ -119,10 +118,10 @@ impl ColorTransformManager {
         match res {
             Ok(zx::sys::ZX_OK) => {}
             Ok(_) => {
-                fx_log_err!("Error setting color conversion");
+                error!("Error setting color conversion");
             }
             Err(e) => {
-                fx_log_err!("Error calling SetValues: {}", e);
+                error!("Error calling SetValues: {}", e);
             }
         }
     }
@@ -144,14 +143,14 @@ impl ColorTransformManager {
                                 manager.set_scenic_color_conversion(transform).await;
                             }
                             _ => {
-                                fx_log_warn!("Ignoring SetColorTransformConfiguration - missing matrix, pre_offset, or post_offset");
+                                warn!("Ignoring SetColorTransformConfiguration - missing matrix, pre_offset, or post_offset");
                             }
                         };
 
                         match responder.send() {
                             Ok(_) => {}
                             Err(e) => {
-                                fx_log_err!("Error responding to SetMinimumRgb(): {}", e);
+                                error!("Error responding to SetMinimumRgb(): {}", e);
                             }
                         }
                     }
@@ -159,7 +158,7 @@ impl ColorTransformManager {
                         return;
                     }
                     Err(e) => {
-                        fx_log_err!("Error obtaining ColorTransformHandlerRequest: {}", e);
+                        error!("Error obtaining ColorTransformHandlerRequest: {}", e);
                         return;
                     }
                 }
@@ -179,7 +178,7 @@ impl ColorTransformManager {
                     Ok(Some(ColorAdjustmentHandlerRequest::SetColorAdjustment{ color_adjustment, control_handle: _})) => {
                         let mut manager = manager.lock().await;
                         if manager.state.is_active() {
-                            fx_log_info!("Ignoring SetColorAdjustment because color correction is currently active.");
+                            info!("Ignoring SetColorAdjustment because color correction is currently active.");
                             continue;
                         }
                         if let Some(matrix) = color_adjustment.matrix {
@@ -189,14 +188,14 @@ impl ColorTransformManager {
                                 post_offset: ZERO_OFFSET,
                             }).await;
                         } else {
-                            fx_log_warn!("Ignoring SetColorAdjustment - `matrix` is empty.");
+                            warn!("Ignoring SetColorAdjustment - `matrix` is empty.");
                         }
                     }
                     Ok(None) => {
                         return;
                     }
                     Err(e) => {
-                        fx_log_err!("Error obtaining ColorAdjustmentHandlerRequest: {}", e);
+                        error!("Error obtaining ColorAdjustmentHandlerRequest: {}", e);
                         return;
                     }
                 }
@@ -218,7 +217,7 @@ impl ColorTransformManager {
                         match responder.send() {
                             Ok(_) => {}
                             Err(e) => {
-                                fx_log_err!("Error responding to SetMinimumRgb(): {}", e);
+                                error!("Error responding to SetMinimumRgb(): {}", e);
                             }
                         }
                     }
@@ -226,7 +225,7 @@ impl ColorTransformManager {
                         return;
                     }
                     Err(e) => {
-                        fx_log_err!("Error obtaining ColorAdjustmentHandlerRequest: {}", e);
+                        error!("Error obtaining ColorAdjustmentHandlerRequest: {}", e);
                         return;
                     }
                 };

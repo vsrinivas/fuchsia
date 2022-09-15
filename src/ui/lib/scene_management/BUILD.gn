@@ -25,7 +25,6 @@ rustc_library("scene_management") {
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/ui/flatland-frame-scheduling:flatland-frame-scheduling-lib",
     "//src/lib/ui/fuchsia-scenic",
@@ -37,6 +36,7 @@ rustc_library("scene_management") {
     "//third_party/rust_crates:libm",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [
