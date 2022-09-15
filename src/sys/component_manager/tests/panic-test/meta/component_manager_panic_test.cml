@@ -21,16 +21,13 @@
             from: "framework",
         },
         {
-            event_stream_deprecated: "panic_test_event_stream",
-            subscriptions: [
-                { event: "stopped" },
-            ],
+            event_stream: "stopped_v2",
+            from: "parent",
         },
         {
             protocol: "fuchsia.component.Realm",
             from: "framework",
         },
-        { protocol: "fuchsia.sys2.EventSource" },
     ],
     offer: [
         {

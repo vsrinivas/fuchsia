@@ -30,11 +30,7 @@ async fn test() {
         .expect("failed to connect to fuchsia.component.Binder");
 
     // Wait for the component manager to stop because of a panic
-    let source = EventSource::new().expect("Could not connect to fuchsia.sys2.EventSource");
-    let mut stream = source
-        .take_static_event_stream("panic_test_event_stream")
-        .await
-        .expect("Could not take static event stream");
+    let mut stream = EventStream::open().unwrap();
     let mut matcher = EventMatcher::ok().stop(Some(ExitStatusMatcher::Crash(11)));
     matcher.expect_match::<Stopped>(&mut stream).await;
 }
