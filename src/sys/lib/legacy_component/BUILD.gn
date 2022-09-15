@@ -18,7 +18,7 @@ rustc_library("legacy_component_lib") {
     "//src/sys/lib/runner",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   visibility = [

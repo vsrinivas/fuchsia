@@ -10,8 +10,8 @@ use {
     },
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_io as fio, fidl_fuchsia_sys as fsysv1,
     futures::TryStreamExt,
-    log::*,
     std::sync::Arc,
+    tracing::*,
     vfs::{
         directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
         directory::immutable::simple as pfs, execution_scope::ExecutionScope,
@@ -127,10 +127,9 @@ impl LegacyComponent {
                     )),
                 ) {
                     if status == fuchsia_zircon::Status::ALREADY_EXISTS {
-                        log::error!(
+                        error!(
                             "Service {} added twice to namespace of component {}",
-                            svc_name_for_err,
-                            legacy_url
+                            svc_name_for_err, legacy_url
                         );
                     }
 
