@@ -38,6 +38,25 @@ var (
 // enum member, struct, struct member, protocol, method, etc.
 type Kind string
 
+// Kind constants.
+const (
+	AliasKind          Kind = "alias"
+	BitsKind           Kind = "bits"
+	BitsMemberKind     Kind = "bits/member"
+	ConstKind          Kind = "const"
+	EnumKind           Kind = "enum"
+	EnumMemberKind     Kind = "enum/member"
+	LibraryKind        Kind = "library"
+	ProtocolKind       Kind = "protocol"
+	ProtocolMemberKind Kind = "protocol/member"
+	StructKind         Kind = "struct"
+	StructMemberKind   Kind = "struct/member"
+	TableKind          Kind = "table"
+	TableMemberKind    Kind = "table/member"
+	UnionKind          Kind = "union"
+	UnionMemberKind    Kind = "union/member"
+)
+
 // Decl is the underlying type declaration.  For `enum Foo : int32`,
 // this will be `int32`.
 type Decl string

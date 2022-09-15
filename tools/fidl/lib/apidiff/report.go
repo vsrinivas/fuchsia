@@ -107,15 +107,23 @@ func (r *Report) add(item *summarize.ElementStr) {
 		After: item,
 	}
 	switch item.Kind {
-	case "bits", "enum", "struct", "library", "const",
-		"table", "union", "protocol", "alias",
-		"table/member", "bits/member":
+	case summarize.BitsKind,
+		summarize.EnumKind,
+		summarize.StructKind,
+		summarize.LibraryKind,
+		summarize.ConstKind,
+		summarize.TableKind,
+		summarize.UnionKind,
+		summarize.ProtocolKind,
+		summarize.AliasKind,
+		summarize.TableMemberKind,
+		summarize.BitsMemberKind:
 		ret.Conclusion = SourceCompatible
-	case "enum/member", "union/member":
+	case summarize.EnumMemberKind, summarize.UnionMemberKind:
 		ret.Conclusion = NeedsBackfill
-	case "struct/member":
+	case summarize.StructMemberKind:
 		ret.Conclusion = APIBreaking
-	case "protocol/member":
+	case summarize.ProtocolMemberKind:
 		ret.Conclusion = Transitionable
 	default:
 		panic(fmt.Sprintf("unexpected item kind: %+v", item))

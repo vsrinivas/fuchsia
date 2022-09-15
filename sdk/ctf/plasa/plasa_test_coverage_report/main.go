@@ -81,7 +81,7 @@ const (
 	// kindVDSOAPI denotes a VDSO API element.
 	kindVDSOAPI = "api_vdso"
 	// kindFIDLProtocolMember is a kind of a FIDL API element, which is in itself a method on a protocol.
-	kindFIDLProtocolMember = "protocol/member"
+	kindFIDLProtocolMember = summarize.ProtocolMemberKind
 )
 
 func readManifest(r io.Reader) (PlasaManifest, error) {
