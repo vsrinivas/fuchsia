@@ -31,12 +31,12 @@ async fn destroy() {
     let instance =
         builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
     let proxy =
-        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
 
-    let mut event_source = EventSource::from_proxy(proxy);
+    let event_stream = EventStream::new_v2(proxy);
 
     let expectation = EventSequence::new()
-        .all_of(
+        .has_subset(
             vec![
                 EventMatcher::ok()
                     .r#type(Stopped::TYPE)
@@ -48,7 +48,7 @@ async fn destroy() {
             Ordering::Unordered,
         )
         .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker("./collection_realm/coll:parent"))
-        .all_of(
+        .has_subset(
             vec![
                 EventMatcher::ok()
                     .r#type(Destroyed::TYPE)
@@ -60,9 +60,7 @@ async fn destroy() {
             Ordering::Unordered,
         )
         .then(EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./collection_realm/coll:parent"))
-        .subscribe_and_expect(&mut event_source)
-        .await
-        .unwrap();
+        .expect(event_stream);
     instance.start_component_tree().await.unwrap();
 
     // Assert the expected lifecycle events. The leaves can be stopped/destroyed in either order.
