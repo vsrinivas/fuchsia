@@ -18,7 +18,7 @@
     use: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.net.http.Loader",
             ],
         },

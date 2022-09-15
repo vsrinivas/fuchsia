@@ -27,8 +27,11 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.location:fuchsia.location_rust",
     "//sdk/fidl/fuchsia.location.position:fuchsia.location.position_rust",
     "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor_rust",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//sdk/fidl/fuchsia.net.http:fuchsia.net.http_rust",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
+    "//src/lib/cobalt/rust/builders",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fidl/rust/fidl-contrib",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
@@ -38,10 +41,8 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_rust",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy_rust",
     "//src/lib/fidl/rust/fidl",
-    "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:test-case",
