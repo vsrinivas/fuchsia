@@ -83,6 +83,9 @@ group("non_hermetic_deps") {
   # TODO(fxbug.dev/94463): Remove entry when action tracer can handle ld.lld invocations.
   visibility += [ "//src/graphics/lib/magma/src/libmagma:*" ]
 
+  # TODO(fxbug.dev/109382): Hermetic deps checking is disabled on build_id_entry
+  visibility += [ "//third_party/intel/media-driver/fuchsia:*" ]
+
   # These repos are not in the default checkout.
   visibility += [
     # This git repo is only checked out when the vulkan-cts attribute is set.
