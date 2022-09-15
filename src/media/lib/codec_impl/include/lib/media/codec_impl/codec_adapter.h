@@ -59,7 +59,7 @@ class CodecAdapter {
 
   // This will return std::nullopt by default.  A sub-class must implement this method if the
   // sub-class ever calls LogEvent().
-  virtual std::optional<media_metrics::StreamProcessorEvents2MetricDimensionImplementation>
+  virtual std::optional<media_metrics::StreamProcessorEvents2MigratedMetricDimensionImplementation>
   CoreCodecMetricsImplementation();
 
   // Core codec.
@@ -444,7 +444,7 @@ class CodecAdapter {
  protected:
   // If SetCodecMetrics() was called, this will log an event.  If this method is ever called by a
   // subclass, then CoreCodecMetricsImplementation() must be implemented by the subclass.
-  void LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code);
+  void LogEvent(media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event_code);
 
   // See comment on the constructor re. sharing this lock with the caller of
   // CodecAdapter methods, at least for now.

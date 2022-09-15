@@ -87,7 +87,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   }
 
   void onCoreCodecLogEvent(
-      media_metrics::StreamProcessorEvents2MetricDimensionEvent event_code) override {}
+      media_metrics::StreamProcessorEvents2MigratedMetricDimensionEvent event_code) override {}
 
   uint64_t fail_codec_count() const { return fail_codec_count_; }
   uint64_t fail_stream_count() const { return fail_stream_count_; }
