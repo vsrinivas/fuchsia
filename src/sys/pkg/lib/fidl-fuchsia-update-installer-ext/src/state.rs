@@ -61,29 +61,13 @@ pub struct UpdateInfo {
 }
 
 /// Mutable progress information for an update attempt.
-#[derive(Arbitrary, Clone, Copy, Debug, Serialize, PartialEq, PartialOrd)]
+#[derive(Arbitrary, Clone, Copy, Debug, Serialize, PartialEq, PartialOrd, TypedBuilder)]
 pub struct Progress {
     /// Within the range of [0.0, 1.0]
     #[proptest(strategy = "0.0f32 ..= 1.0")]
+    #[builder(setter(transform = |x: f32| x.max(0.0).min(1.0)))]
     fraction_completed: f32,
 
-    bytes_downloaded: u64,
-}
-
-/// Builder of Progress.
-#[derive(Clone, Debug)]
-pub struct ProgressBuilder;
-
-/// Builder of Progress, with a known fraction_completed field.
-#[derive(Clone, Debug)]
-pub struct ProgressBuilderWithFraction {
-    fraction_completed: f32,
-}
-
-/// Builder of Progress, with a known fraction_completed and bytes_downloaded field.
-#[derive(Clone, Debug)]
-pub struct ProgressBuilderWithFractionAndBytes {
-    fraction_completed: f32,
     bytes_downloaded: u64,
 }
 
@@ -287,11 +271,6 @@ impl UpdateInfo {
 }
 
 impl Progress {
-    /// Starts building an instance of Progress.
-    pub fn builder() -> ProgressBuilder {
-        ProgressBuilder
-    }
-
     /// Produces a Progress at 0% complete and 0 bytes downloaded.
     pub fn none() -> Self {
         Self { fraction_completed: 0.0, bytes_downloaded: 0 }
@@ -317,32 +296,6 @@ impl Progress {
         let Progress { fraction_completed, bytes_downloaded } = self;
         node.record_double("fraction_completed", *fraction_completed as f64);
         node.record_uint("bytes_downloaded", *bytes_downloaded);
-    }
-}
-
-impl ProgressBuilder {
-    /// Sets the fraction_completed field, claming the provided float to the range [0.0, 1.0] and
-    /// converting NaN to 0.0.
-    pub fn fraction_completed(self, fraction_completed: f32) -> ProgressBuilderWithFraction {
-        ProgressBuilderWithFraction { fraction_completed: fraction_completed.max(0.0).min(1.0) }
-    }
-}
-
-impl ProgressBuilderWithFraction {
-    /// Sets the bytes_downloaded field.
-    pub fn bytes_downloaded(self, bytes_downloaded: u64) -> ProgressBuilderWithFractionAndBytes {
-        ProgressBuilderWithFractionAndBytes {
-            fraction_completed: self.fraction_completed,
-            bytes_downloaded,
-        }
-    }
-}
-
-impl ProgressBuilderWithFractionAndBytes {
-    /// Builds the Progress instance.
-    pub fn build(self) -> Progress {
-        let Self { fraction_completed, bytes_downloaded } = self;
-        Progress { fraction_completed, bytes_downloaded }
     }
 }
 
