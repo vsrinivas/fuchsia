@@ -822,7 +822,9 @@ async fn run_address_state_provider(
     mut assignment_state_receiver: futures::channel::mpsc::UnboundedReceiver<
         fnet_interfaces_admin::AddressAssignmentState,
     >,
-    stop_receiver: futures::channel::oneshot::Receiver<fnet_interfaces_admin::AddressRemovalReason>,
+    mut stop_receiver: futures::channel::oneshot::Receiver<
+        fnet_interfaces_admin::AddressRemovalReason,
+    >,
 ) {
     let address = addr_subnet_either.addr();
     // Add the address to Core. Note that even though we verified the address
@@ -854,14 +856,17 @@ async fn run_address_state_provider(
                 .expect("receiver unexpectedly empty")
                 .expect("sender unexpectedly closed");
             // Run the `AddressStateProvider` main loop.
+            // Pass in the `assignment_state_receiver` and `stop_receiver` by
+            // ref so that they don't get dropped after the main loop exits
+            // (before the senders are removed from `ctx`).
             address_state_provider_main_loop(
                 address,
                 id,
                 control_handle,
                 req_stream,
-                assignment_state_receiver,
+                &mut assignment_state_receiver,
                 initial_assignment_state,
-                stop_receiver,
+                &mut stop_receiver,
             )
             .await;
             true
@@ -900,11 +905,13 @@ async fn address_state_provider_main_loop(
     id: BindingId,
     control_handle: fnet_interfaces_admin::AddressStateProviderControlHandle,
     req_stream: fnet_interfaces_admin::AddressStateProviderRequestStream,
-    assignment_state_receiver: futures::channel::mpsc::UnboundedReceiver<
+    assignment_state_receiver: &mut futures::channel::mpsc::UnboundedReceiver<
         fnet_interfaces_admin::AddressAssignmentState,
     >,
     initial_assignment_state: fnet_interfaces_admin::AddressAssignmentState,
-    stop_receiver: futures::channel::oneshot::Receiver<fnet_interfaces_admin::AddressRemovalReason>,
+    stop_receiver: &mut futures::channel::oneshot::Receiver<
+        fnet_interfaces_admin::AddressRemovalReason,
+    >,
 ) {
     // When detached, the lifetime of `req_stream` should not be tied to the
     // lifetime of `address`.
@@ -913,8 +920,6 @@ async fn address_state_provider_main_loop(
         fsm: AddressAssignmentWatcherStateMachine::UnreportedUpdate(initial_assignment_state),
         last_response: None,
     };
-    let stop_receiver = stop_receiver.fuse();
-    let assignment_state_receiver = assignment_state_receiver.fuse();
     enum AddressStateProviderEvent {
         Request(Result<Option<fnet_interfaces_admin::AddressStateProviderRequest>, fidl::Error>),
         AssignmentStateChange(fnet_interfaces_admin::AddressAssignmentState),
