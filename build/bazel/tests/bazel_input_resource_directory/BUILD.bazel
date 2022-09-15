@@ -1,0 +1,23 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+filegroup(
+    name = "reference_filegroup",
+    srcs = [
+        "@legacy_ninja_build_outputs//:example_bazel_input_resource_directory",
+    ],
+)
+
+# IMPORTANT: Do not query this target _before_ building the Ninja target
+# build/bazel/legacy_ninja_build_outputs, otherwise Bazel will complain
+# that the source files do not exist (e.g. 'no such target ...').
+#
+# This is enforced by the test-all.py script.
+filegroup(
+    name = "reference_files",
+    srcs = [
+        "@legacy_ninja_build_outputs//:example_generated_input_directory/bar/bar.txt",
+        "@legacy_ninja_build_outputs//:example_generated_input_directory/foo.txt",
+    ],
+)

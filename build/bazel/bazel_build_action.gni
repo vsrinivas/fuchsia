@@ -121,10 +121,7 @@ template("bazel_build_action") {
            invoker.bazel_targets + [ "--ninja-outputs" ] +
            rebase_path(_outputs, root_build_dir)
 
-    deps = invoker.bazel_inputs + [
-             "//build/bazel:generate_main_workspace",
-             "//build/bazel:legacy_ninja_build_outputs",
-           ]
+    deps = invoker.bazel_inputs + [ "//build/bazel:generate_main_workspace" ]
 
     forward_variables_from(invoker,
                            [

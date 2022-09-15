@@ -5,7 +5,7 @@
 # Expose a set of Ninja output files as a corresponding Bazel filegroup()
 # of prebuilt input sources for the Bazel build.
 #
-# This target can be used as a dependency for the bazel_inputs_workspace()
+# This target can be used as a dependency for the bazel_inputs_manifest()
 # template, and works like resource(). Consider using bazel_input_resource_tree()
 # if you have multiple source files with non-trivial outputs paths.
 #
@@ -21,8 +21,9 @@
 #
 #  ...
 #
-#  bazel_inputs_workspace("legacy_ninja_build_outputs")
+#  bazel_inputs_manifest("legacy_ninja_build_outputs")
 #    inputs_deps = [ ":foo_files" ]
+#    ...
 #  }
 # ```
 #
@@ -107,7 +108,7 @@ template("bazel_input_resource") {
                            ])
 
     metadata = {
-      # Used by bazel_inputs_workspace() template.
+      # Used by bazel_inputs_manifest() template.
       # See its documentation for the metadata schema.
       bazel_inputs = [
         {
@@ -256,7 +257,7 @@ template("bazel_input_resource_tree") {
                              "sources_root",
                            ])
     metadata = {
-      # Used by bazel_inputs_workspace() template.
+      # Used by bazel_inputs_manifest() template.
       bazel_inputs = [
         {
           name = _name
@@ -343,7 +344,7 @@ template("bazel_input_resource_directory") {
                              "visibility",
                            ])
     metadata = {
-      # Used by bazel_inputs_workspace() template.
+      # Used by bazel_inputs_manifest() template.
       bazel_inputs = [
         {
           name = _name
@@ -357,18 +358,19 @@ template("bazel_input_resource_directory") {
   }
 }
 
-# Generate a Bazel workspace that contains a symlink tree to Ninja
-# build output files, which will be treated as prebuilt inputs by
-# the Bazel build.
+# Generate a manifest file describing the content of the Bazel inputs
+# repository that will be used by the Bazel workspace to read Ninja outputs
+# as sources / prebuilts.
 #
 # Args:
-#   inputs_deps:
-#     A list of GN labels that point to bazel_input_xxx() targets,
-#     each one of them describing a group of files to be visible in the
-#     generated workspace (as a Bazel filegroup()). Note thata these
-#     label names are used directly as the names of the filegroups.
+#   output:
+#     Path to generated manifest file.
 #
-template("bazel_inputs_workspace") {
+#   inputs_deps:
+#     A list of targets, all transitive dependencies which are bazel_input_xxx()
+#     target will generate one entry in the manifest.
+#
+template("bazel_inputs_manifest") {
   # Generate a single manifest file that collects all bazel_input_xxx()
   # resources. Each metadata entry is a scope that describes a single
   # Bazel filegroup() target that will appear at the top of the
@@ -378,101 +380,85 @@ template("bazel_inputs_workspace") {
   #
   # ## REGULAR ENTRIES
   #
-  #   name: (required)
-  #      Bazel filegroup name.
-  #      Type: string
+  #   These entries expose an explicit list of files, they look like:
   #
-  #   destinations: (required)
-  #      List of input files, relative to the top of the generated workspace.
-  #      Each one will appear in the `srcs` list of the corresponding
-  #      filegroup.
+  #     name: (required)
+  #        Bazel filegroup name.
+  #        Type: string
   #
-  #   sources: (required)
-  #      List of source files for the filegroup. Must have the same
-  #      size as the `destinations` list.
-  #      Type: list of paths relative to the root_build_dir
+  #     destinations: (required)
+  #        List of input files, relative to the top of the generated workspace.
+  #        Each one will appear in the `srcs` list of the corresponding
+  #        filegroup.
   #
-  #   gn_label: (optional)
-  #      GN label of target that defines this entry. Only used for
-  #      debugging the build, completely ignored otherwise.
-  #      Type: GN label string
+  #     sources: (required)
+  #        List of source files for the filegroup. Must have the same
+  #        size as the `destinations` list.
+  #        Type: list of paths relative to the root_build_dir
+  #
+  #     gn_label:
+  #        GN label of target that defines this entry. Only used for
+  #        debugging the build, completely ignored otherwise.
+  #        Type: GN label string
+  #
+  #   They should generate Bazel targets that look like:
+  #
+  #     filegroup(
+  #        name = "<name>",
+  #        srcs = [
+  #            <destination_1>,
+  #            <destination_2>,
+  #            ...
+  #        ],
+  #     )
+  #
+  #   Where <destination_N> is the N-th entry in `destinations`, and will be
+  #   the path to a symlink (in the repository) to the corresponding
+  #   <sources_N> file.
   #
   # ## DIRECTORY ENTRIES
   #
-  #   name: (required)
-  #      Bazel filegroup name.
-  #      Type: string
+  #   These entries expose all files under a given output directory as
+  #   a single filegroup() using the glob() function. IMPORTANT: For
+  #   correctness, only use these when it is 100% sure that the content
+  #   of the source directory is re-created properly during incremental
+  #   builds. These look like:
   #
-  #   source_dir: (required)
-  #      A source directory path, relative to the Ninja build output
-  #      directory, which will contain all input files for the Bazel
-  #      filegroup().
+  #     name: (required)
+  #        Bazel filegroup name.
+  #        Type: string
   #
-  #   dest_dir: (required)
-  #      A directory prefix for all input files, relative to the top of
-  #      the generated workspace. This will be a symlink to source_dir,
-  #      and the filegroup() will use a glob(["<dest_dir>/*"]) call to get all
-  #      files in it.
+  #     source_dir: (required)
+  #        A source directory path, relative to the Ninja build output
+  #        directory, which will contain all input files for the Bazel
+  #        filegroup().
   #
-  #   gn_label: (optional)
-  #      GN label of target that defines this entry. Only used for
-  #      debugging the build, completely ignored otherwise.
-  #      Type: GN label string
+  #     dest_dir: (required)
+  #        A directory prefix for all input files, relative to the top of
+  #        the generated workspace. This will be a symlink to source_dir,
+  #        and the filegroup() will use a glob(["<dest_dir>/*"]) call to get all
+  #        files in it.
   #
-  generated_file_target = "${target_name}.inputs_manifest"
-  generated_file_path = "${target_gen_dir}/${generated_file_target}.json"
-
-  generated_file(generated_file_target) {
+  #     gn_label: (optional)
+  #        GN label of target that defines this entry. Only used for
+  #        debugging the build, completely ignored otherwise.
+  #        Type: GN label string
+  #
+  #   They should generate Bazel targets that look like:
+  #
+  #     filegroup(
+  #         name = "<name>",
+  #         srcs = glob(["<dest_dir>/**]),
+  #     )
+  #
+  #   Where <dest_dir> is a repository symlink that points to source_dir.
+  #
+  generated_file(target_name) {
     forward_variables_from(invoker, [ "testonly" ])
-    outputs = [ generated_file_path ]
+    outputs = [ invoker.output ]
     data_keys = [ "bazel_inputs" ]
     walk_keys = [ "bazel_inputs_barrier" ]
     deps = invoker.input_deps
     output_conversion = "json"
-  }
-
-  workspace_dir = "$target_gen_dir/$target_name"
-
-  action(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-    script = "//build/bazel/scripts/generate-build-inputs-workspace.py"
-
-    outputs = [
-      "${workspace_dir}/BUILD.bazel",
-      "${workspace_dir}/MODULE.bazel",
-      "${workspace_dir}/WORKSPACE.bazel",
-    ]
-
-    inputs = [ generated_file_path ]
-
-    args = [
-      "--workspace-dir",
-      rebase_path(workspace_dir, root_build_dir),
-      "--repository-name",
-      target_name,
-      "--input-manifest",
-      rebase_path(inputs[0], root_build_dir),
-      "--source-dir",
-      rebase_path(root_build_dir, root_build_dir),
-    ]
-
-    # This action cannot be hermetic because it creates output files
-    # whose list depend on the content of the manifest generated
-    # by input_deps targets. The manifests themselves are already
-    # known from `all_files` and don't need to be listed in a depfile.
-    #
-    # All files should be symlink and are final outputs, from the
-    # point of view of the Ninja build system (i.e. they are never
-    # used as direct inputs from other Ninja actions) so this
-    # should not be an issue.
-    #
-    # Unlike Ninja, Bazel will look at the timestamps of symmlink
-    # targets, not those of the symlink themselves, so any change
-    # in a real Ninja output file will be detected by Bazel
-    # properly.
-    #
-    hermetic_deps = false
-
-    deps = [ ":$generated_file_target" ]
   }
 }

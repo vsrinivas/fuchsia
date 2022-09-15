@@ -67,9 +67,12 @@ fuchsia_sdk_repository(
 
 register_toolchains("@fuchsia_sdk//:fuchsia_toolchain_sdk")
 
-local_repository(
+# buildifier: disable=load-on-top
+load("//:build/bazel/repository_rules.bzl", "bazel_inputs_repository")
+
+bazel_inputs_repository(
     name = "legacy_ninja_build_outputs",
-    path = "../legacy_ninja_build_outputs",
+    inputs_manifest = "//:bazel_inputs_manifest.json",
 )
 
 # buildifier: disable=load-on-top

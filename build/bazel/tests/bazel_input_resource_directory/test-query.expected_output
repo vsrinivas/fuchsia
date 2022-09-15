@@ -1,0 +1,6 @@
+//build/bazel/tests/bazel_input_resource_directory:BUILD.bazel
+//build/bazel/tests/bazel_input_resource_directory:reference_filegroup
+//build/bazel/tests/bazel_input_resource_directory:reference_files
+@legacy_ninja_build_outputs//:example_bazel_input_resource_directory
+@legacy_ninja_build_outputs//:example_generated_input_directory/bar/bar.txt
+@legacy_ninja_build_outputs//:example_generated_input_directory/foo.txt

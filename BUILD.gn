@@ -1386,10 +1386,15 @@ group("package_archive") {
   public_deps = [ "//build/gn:package_archive" ]
 }
 
-# A convenience shortcut for the target used to generate the Bazel
-# workspaces. See final target for details.
+# IMPORTANT: This target is only provided for the benefit of the `fx bazel`
+# command, and nothing should depend on it, its definition may change over
+# time.
+#
+# Targets that need to depend on the Bazel workspace should instead depend
+# directly on //build/bazel:generate_main_workspace.
+#
 if (current_toolchain == default_toolchain) {
   group("bazel_workspace") {
-    deps = [ "//build/bazel:bazel_workspace" ]
+    deps = [ "//build/bazel:generate_main_workspace" ]
   }
 }
