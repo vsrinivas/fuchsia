@@ -58,7 +58,12 @@ __EXPORT zx_status_t device_get_deadline_profile(zx_device_t* device, uint64_t c
 
 __EXPORT zx_status_t device_set_profile_by_role(zx_device_t* device, zx_handle_t thread,
                                                 const char* role, size_t role_size) {
-  return ZX_ERR_NOT_SUPPORTED;
+  if (device == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return device->driver()
+      ->SetProfileByRole(zx::unowned_thread(thread), std::string_view(role, role_size))
+      .status_value();
 }
 
 __EXPORT zx_status_t device_get_protocol(const zx_device_t* dev, uint32_t proto_id, void* out) {

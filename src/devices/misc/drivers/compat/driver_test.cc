@@ -204,6 +204,17 @@ class TestProfileProvider : public fidl::testing::WireTestBase<fuchsia_scheduler
     get_deadline_profile_callback_ = std::move(cb);
   }
 
+  void SetProfileByRole(SetProfileByRoleRequestView request,
+                        SetProfileByRoleCompleter::Sync& completer) override {
+    if (set_profile_by_role_callback_) {
+      set_profile_by_role_callback_(request);
+    }
+    completer.Reply(ZX_OK);
+  }
+  void SetSetProfileByRoleCallback(std::function<void(SetProfileByRoleRequestView&)> cb) {
+    set_profile_by_role_callback_ = std::move(cb);
+  }
+
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
     printf("Not implemented: ProfileProvider::%s", name.data());
   }
@@ -211,6 +222,7 @@ class TestProfileProvider : public fidl::testing::WireTestBase<fuchsia_scheduler
  private:
   std::function<void(uint32_t, std::string_view)> get_profile_callback_;
   std::function<void(GetDeadlineProfileRequestView&)> get_deadline_profile_callback_;
+  std::function<void(SetProfileByRoleRequestView&)> set_profile_by_role_callback_;
 };
 
 class TestExporter : public fidl::testing::WireTestBase<fuchsia_device_fs::Exporter> {
@@ -786,6 +798,45 @@ TEST_F(DriverTest, GetVariable) {
     ASSERT_EQ(ZX_ERR_BUFFER_TOO_SMALL,
               device_get_variable(v1_test->zxdev, "driver.foo", variable, 1, &actual));
     ASSERT_EQ(actual, 4u);
+    sync_completion_signal(&finished);
+  });
+  do {
+    RunUntilDispatchersIdle();
+  } while (sync_completion_wait(&finished, ZX_TIME_INFINITE_PAST) == ZX_ERR_TIMED_OUT);
+  thread.join();
+
+  ShutdownDriverDispatcher();
+  driver.reset();
+  ASSERT_TRUE(RunLoopUntilIdle());
+}
+
+TEST_F(DriverTest, SetProfileByRole) {
+  profile_provider_.SetSetProfileByRoleCallback(
+      [](TestProfileProvider::SetProfileByRoleRequestView& rv) {
+        ASSERT_TRUE(rv->thread.is_valid());
+        ASSERT_EQ("test-profile", rv->role.get());
+      });
+
+  zx_protocol_device_t ops{
+      .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
+  };
+  auto driver = StartDriver("/pkg/driver/v1_test.so", &ops);
+  // Verify that v1_test.so has added a child device.
+  WaitForChildDeviceAdded();
+
+  // Verify that v1_test.so has set a context.
+  std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
+  ASSERT_NE(nullptr, v1_test.get());
+
+  // device_get_profile blocks, so we have to do it in a separate thread.
+  sync_completion_t finished;
+  auto thread = std::thread([&finished, &v1_test]() {
+    constexpr char kThreadName[] = "test-thread";
+    zx::thread thread;
+    ASSERT_EQ(ZX_OK, zx::thread::create(*zx::process::self(), kThreadName, sizeof(kThreadName), 0,
+                                        &thread));
+    ASSERT_EQ(ZX_OK, device_set_profile_by_role(v1_test->zxdev, thread.release(), "test-profile",
+                                                strlen("test-profile")));
     sync_completion_signal(&finished);
   });
   do {

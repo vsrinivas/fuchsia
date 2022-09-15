@@ -59,6 +59,7 @@ class Driver {
   zx::status<zx::profile> GetSchedulerProfile(uint32_t priority, const char* name);
   zx::status<zx::profile> GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period,
                                              const char* name);
+  zx::status<> SetProfileByRole(zx::unowned_thread thread, std::string_view role);
   zx::status<std::string> GetVariable(const char* name);
 
   // Export a device to devfs. If this returns success, the deferred callback will remove

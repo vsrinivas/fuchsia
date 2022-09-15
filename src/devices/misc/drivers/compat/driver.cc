@@ -651,6 +651,31 @@ zx::status<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t d
   return zx::ok(std::move(response.profile));
 }
 
+zx::status<> Driver::SetProfileByRole(zx::unowned_thread thread, std::string_view role) {
+  auto profile_client = component::ConnectAt<fuchsia_scheduler::ProfileProvider>(ns_.svc_dir());
+  if (profile_client.is_error()) {
+    return profile_client.take_error();
+  }
+
+  zx::thread duplicate_thread;
+  zx_status_t status =
+      thread->duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_MANAGE_THREAD, &duplicate_thread);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  fidl::WireResult result =
+      fidl::WireCall(*profile_client)
+          ->SetProfileByRole(std::move(duplicate_thread), fidl::StringView::FromExternal(role));
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  if (result->status != ZX_OK) {
+    return zx::error(result->status);
+  }
+  return zx::ok();
+}
+
 zx::status<std::string> Driver::GetVariable(const char* name) {
   auto boot_args = component::ConnectAt<fuchsia_boot::Arguments>(ns_.svc_dir());
   if (boot_args.is_error()) {
