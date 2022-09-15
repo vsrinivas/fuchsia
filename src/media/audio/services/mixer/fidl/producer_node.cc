@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl/packet_queue_producer_node.h"
+#include "src/media/audio/services/mixer/fidl/producer_node.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -11,25 +11,19 @@
 namespace media_audio {
 
 // static
-std::shared_ptr<PacketQueueProducerNode> PacketQueueProducerNode::Create(Args args) {
-  struct WithPublicCtor : public PacketQueueProducerNode {
+std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
+  struct WithPublicCtor : public ProducerNode {
    public:
     explicit WithPublicCtor(std::string_view name, PipelineStagePtr pipeline_stage, NodePtr parent)
-        : PacketQueueProducerNode(name, std::move(pipeline_stage), std::move(parent)) {}
+        : ProducerNode(name, std::move(pipeline_stage), std::move(parent)) {}
   };
 
   auto pipeline_stage = std::make_shared<ProducerStage>(ProducerStage::Args{
       .name = args.name,
-      .format = args.format,
-      .reference_clock_koid = args.reference_clock_koid,
+      .format = args.internal_source->format(),
+      .reference_clock_koid = args.internal_source->reference_clock_koid(),
       .command_queue = std::move(args.start_stop_command_queue),
-      .internal_source =
-          std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
-              .name = args.name,
-              .format = args.format,
-              .reference_clock_koid = args.reference_clock_koid,
-              .command_queue = std::move(args.packet_command_queue),
-          }),
+      .internal_source = std::move(args.internal_source),
   });
   pipeline_stage->set_thread(args.detached_thread);
 
@@ -39,7 +33,7 @@ std::shared_ptr<PacketQueueProducerNode> PacketQueueProducerNode::Create(Args ar
   return node;
 }
 
-bool PacketQueueProducerNode::CanAcceptSource(NodePtr src) const {
+bool ProducerNode::CanAcceptSource(NodePtr src) const {
   // Producers do not have sources.
   return false;
 }

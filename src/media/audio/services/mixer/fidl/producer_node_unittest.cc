@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl/packet_queue_producer_node.h"
+#include "src/media/audio/services/mixer/fidl/producer_node.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
+#include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
@@ -16,17 +17,20 @@ namespace {
 const Format kFormat =
     Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kFloat, 2, 48000});
 
-class PacketQueueProducerNodeTest : public ::testing::Test {
+class ProducerNodeTest : public ::testing::Test {
  protected:
   const DetachedThreadPtr detached_thread_ = DetachedThread::Create();
 };
 
-TEST_F(PacketQueueProducerNodeTest, CreateEdgeCannotAcceptSource) {
-  auto producer = PacketQueueProducerNode::Create({
-      .format = kFormat,
-      .reference_clock_koid = 0,
+TEST_F(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
+  auto producer = ProducerNode::Create({
       .start_stop_command_queue = std::make_shared<ProducerStage::CommandQueue>(),
-      .packet_command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>(),
+      .internal_source =
+          std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+              .format = kFormat,
+              .reference_clock_koid = DefaultClockKoid(),
+              .command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>(),
+          }),
       .detached_thread = detached_thread_,
   });
 
@@ -44,17 +48,20 @@ TEST_F(PacketQueueProducerNodeTest, CreateEdgeCannotAcceptSource) {
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
 
-TEST_F(PacketQueueProducerNodeTest, CreateEdgeSuccess) {
+TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
   constexpr zx_koid_t kReferenceClockKoid = 42;
 
   auto start_stop_command_queue = std::make_shared<ProducerStage::CommandQueue>();
   auto packet_command_queue = std::make_shared<SimplePacketQueueProducerStage::CommandQueue>();
 
-  auto producer = PacketQueueProducerNode::Create({
-      .format = kFormat,
-      .reference_clock_koid = kReferenceClockKoid,
+  auto producer = ProducerNode::Create({
       .start_stop_command_queue = start_stop_command_queue,
-      .packet_command_queue = packet_command_queue,
+      .internal_source =
+          std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
+              .format = kFormat,
+              .reference_clock_koid = kReferenceClockKoid,
+              .command_queue = packet_command_queue,
+          }),
       .detached_thread = detached_thread_,
   });
 
