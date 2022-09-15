@@ -63,11 +63,6 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     [label] A label for the above product assembly config, if it's the output
 #     of a build action.
 #
-#   allow_eng_platform_bundle_use (optional; default=false)
-#     [boolean] If true, allow the 'eng' platform bundles to be used by the
-#     assembled system.  (this is only a check made by GN, assembly itself may
-#     still access them)
-#
 #   base_packages (required)
 #     [list of labels] The packages to include in the base package set.
 #
@@ -304,13 +299,9 @@ template("assembled_system") {
     _platform_aib_names = [
       # "common_base",
       "common_minimal",
+      "common_minimal_eng",
       "emulator_support",
     ]
-    if (defined(invoker.allow_eng_platform_bundle_use) &&
-        invoker.allow_eng_platform_bundle_use) {
-      # Add the "eng" mode platform Assembly Input Bundles to the set of inputs
-      _platform_aib_names += [ "common_minimal_eng" ]
-    }
 
     # Add platform AIBs, by their names:
     platform_common_aibs = []
