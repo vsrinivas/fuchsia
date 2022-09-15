@@ -117,8 +117,9 @@ class DataProcessor : public AbstractDataProcessor {
         : dir_fd(std::move(arg_dir_fd)), data_sink(dir_fd) {}
   };
 
-  /// Process data present in `data_sink_map_`.
-  static void ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
+  /// Process data present in `data_sink_map_`. Returns true iff processing
+  /// all data is complete.
+  static bool ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
                                std::shared_ptr<ProcessorState> state);
 
   std::shared_ptr<DataProcessorInner> inner_;

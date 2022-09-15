@@ -47,8 +47,9 @@ DataProcessor::DataProcessor(fbl::unique_fd dir_fd, async_dispatcher_t* dispatch
                                       if (!owned) {
                                         return;
                                       }
-                                      ProcessDataInner(owned, state);
-                                      wait->Begin(dispatcher);
+                                      if (!ProcessDataInner(owned, state)) {
+                                        wait->Begin(dispatcher);
+                                      }
                                     });
 
   // async::Wait is not threadsafe, so to ensure only the processor thread accesses it,
@@ -92,6 +93,7 @@ TestSinkMap DataProcessor::DataProcessorInner::TakeMapContents() {
 
 void DataProcessor::DataProcessorInner::AddData(std::string test_url, DataSinkDump data_sink_dump) {
   mutex_.lock();
+  ZX_ASSERT(!done_adding_data_);
   auto& map = data_sink_map_[std::move(test_url)];
   map[std::move(data_sink_dump.data_sink)].push_back(std::move(data_sink_dump.vmo));
   idle_signal_event_.signal(0, STATE_DIRTY_SIGNAL);
@@ -121,7 +123,7 @@ zx::unowned_event DataProcessor::DataProcessorInner::GetEvent() {
   return idle_signal_event_.borrow();
 }
 
-void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
+bool DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
                                      std::shared_ptr<ProcessorState> state) {
   auto data_sink_map = inner->TakeMapContents();
   for (auto& [test_url, sink_vmo_map] : data_sink_map) {
@@ -159,7 +161,9 @@ void DataProcessor::ProcessDataInner(std::shared_ptr<DataProcessorInner> inner,
 
     WriteSummaryFile(state->dir_fd, debug_data_map);
     inner->SignalFlushed();
+    return true;
   }
+  return false;
 }
 
 namespace {
