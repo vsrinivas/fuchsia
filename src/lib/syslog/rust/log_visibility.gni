@@ -87,7 +87,6 @@ third_party_rust_crate_log_visibility = [
   "//src/storage/fxfs/tools:*",
   "//src/sys/base-resolver:*",
   "//src/sys/lib/fidl-fuchsia-pkg-ext:*",
-  "//src/sys/lib/fuchsia-zbi:*",
   "//src/sys/lib/legacy_component:*",
   "//src/sys/lib/library_loader:*",
   "//src/sys/lib/moniker:*",

@@ -6,13 +6,13 @@ use {
     fuchsia_zbi_abi::{ZBI_ALIGNMENT_BYTES, ZBI_FLAG_CRC32},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    log::info,
     std::{
         collections::{HashMap, HashSet},
         convert::TryFrom,
         mem::size_of,
     },
     thiserror::Error,
+    tracing::info,
     zerocopy::LayoutVerified,
 };
 

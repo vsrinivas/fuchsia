@@ -15,8 +15,8 @@ rustc_library("fuchsia-zbi") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fuchsia-zbi/abi",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
