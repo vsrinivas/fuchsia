@@ -52,6 +52,7 @@ source_set("lib") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 
   # TODO(fxbug.dev/85473): This target uses |fidl::WireTryDispatch| which is deprecated.

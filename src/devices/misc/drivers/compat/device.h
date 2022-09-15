@@ -16,6 +16,7 @@
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
+#include <lib/sync/cpp/completion.h>
 
 #include <list>
 #include <memory>
@@ -96,6 +97,8 @@ class Device : public std::enable_shared_from_this<Device>,
 
   zx_status_t CreateNode();
 
+  void CompleteUnbind();
+
   // Serves the |fuchsia_driver_framework::RuntimeConnector| protocol,
   // used for supporting v1 of driver runtime protocol discovery.
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ServeRuntimeConnectorProtocol();
@@ -162,6 +165,9 @@ class Device : public std::enable_shared_from_this<Device>,
 
   bool pending_rebind_ = false;
   bool pending_removal_ = false;
+
+  // Signaled when unbind is replied to.
+  libsync::Completion unbind_completed_;
 
   // The default protocol of the device.
   device_t compat_symbol_;

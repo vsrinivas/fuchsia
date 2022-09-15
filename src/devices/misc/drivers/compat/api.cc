@@ -34,7 +34,7 @@ __EXPORT zx_status_t device_rebind(zx_device_t* dev) {
 
 __EXPORT void device_async_remove(zx_device_t* dev) { dev->Remove(); }
 
-__EXPORT void device_unbind_reply(zx_device_t* dev) {}
+__EXPORT void device_unbind_reply(zx_device_t* dev) { dev->CompleteUnbind(); }
 
 __EXPORT void device_suspend_reply(zx_device_t* dev, zx_status_t status, uint8_t out_state) {}
 

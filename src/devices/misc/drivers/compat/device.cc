@@ -174,6 +174,13 @@ Device::~Device() {
     // TODO(fxbug.dev/92196)
     if (HasOp(ops_, &zx_protocol_device_t::unbind)) {
       ops_->unbind(compat_symbol_.context);
+
+      // TODO(http://fxbug.dev/97457): Stop blocking here once we have prepare_stop
+      // If we haven't seen unbind complete then wait for it.
+      // This blocks the main thread, but if the driver didn't complete unbind
+      // during the unbind call, we assume it's handling it on a second thread.
+      zx_status_t status = unbind_completed_.Wait(zx::sec(10));
+      ZX_ASSERT_MSG(status == ZX_OK, "Timed out waiting for unbind to be completed");
     }
 
     // Call the parent's pre-release.
@@ -204,6 +211,8 @@ void Device::Unbind() {
   // assign a default client to unbind the existing client.
   node_ = {};
 }
+
+void Device::CompleteUnbind() { unbind_completed_.Signal(); }
 
 const char* Device::Name() const { return name_.data(); }
 
