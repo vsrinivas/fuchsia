@@ -428,7 +428,7 @@ func (b *BaseBuild) Path(keys ...string) ([]string, error) {
 	return paths, nil
 }
 
-var logPrefixRegex = regexp.MustCompile(`[0-9\[\]\.]*\[klog\] INFO: `)
+var logPrefixRegex = regexp.MustCompile(`[0-9\[\]\.]*\[klog\] (?:INFO|WARNING|ERROR): `)
 
 // Remove timestamps, etc.
 func stripLogPrefix(line string) string {

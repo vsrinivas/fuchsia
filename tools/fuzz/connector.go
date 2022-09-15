@@ -575,7 +575,8 @@ func (c *SSHConnector) Put(hostSrc string, targetDst string) error {
 
 // Any command that will end up attaching to a fuzzer requires this.
 func ffxCommandRequiresOutputDir(args []string) bool {
-	return len(args) >= 2 && args[0] == "fuzz" && args[1] != "list"
+	return len(args) >= 2 && args[0] == "fuzz" &&
+		args[1] != "list" && args[1] != "stop"
 }
 
 // FfxRun runs the specified command to completion via ffx and returns its

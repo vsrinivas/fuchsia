@@ -297,7 +297,8 @@ func TestSetCFFOptions(t *testing.T) {
 
 	// All valid options
 	args := []string{"-runs=3", "-max_total_time=10", "-malloc_limit_mb=42",
-		"-artifact_prefix=data/", "-seed=123", "-jobs=0"}
+		"-artifact_prefix=data/", "-seed=123", "-jobs=0", "-max_len=3141",
+		"-print_final_stats=1"}
 	f.Parse(args)
 
 	if err := f.setCFFOptions(conn); err != nil {
@@ -308,13 +309,15 @@ func TestSetCFFOptions(t *testing.T) {
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm runs 3",
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm max_total_time 10s",
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm seed 123",
-		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm max_input_size 1mb",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm max_input_size 3141b",
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm mutation_depth 5",
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm detect_leaks false",
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm run_limit 1200s",
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm malloc_limit 42mb",
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm oom_limit 2gb",
 		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm purge_interval 1s",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm print_final_stats 1",
+		"fuzz set fuchsia-pkg://fuchsia.com/cff#meta/fuzzer.cm use_value_profile false",
 	}
 
 	if diff := cmp.Diff(expected, conn.FfxHistory, sortSlicesOpt); diff != "" {

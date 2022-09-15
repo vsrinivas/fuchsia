@@ -195,7 +195,11 @@ func testFuzzWithoutCorpus(t *testing.T, handle string) {
 func testFuzzWithCorpus(t *testing.T, handle string) {
 	crash_fuzzer := "example-fuzzers/crash_fuzzer"
 
-	artifactDir := t.TempDir()
+	dir := t.TempDir()
+	artifactDir := filepath.Join(dir, "artifacts")
+	if err := os.Mkdir(artifactDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
 	runCommandOk(t, "prepare_fuzzer", "-handle", handle, "-fuzzer", crash_fuzzer)
 
 	outputCorpus := makeCorpus(t, "new", nil)
@@ -207,10 +211,18 @@ func testFuzzWithCorpus(t *testing.T, handle string) {
 	runCommandOk(t, "put_data", "-handle", handle, "-fuzzer", crash_fuzzer,
 		"-src", inputCorpus, "-dst", "data/corpus")
 
+	dictionary := filepath.Join(dir, "dictionary")
+	if err := os.WriteFile(dictionary, []byte(`"moraine"`), 0o600); err != nil {
+		t.Fatalf("error creating dictionary file: %s", err)
+	}
+	runCommandOk(t, "put_data", "-handle", handle, "-fuzzer", crash_fuzzer,
+		"-src", dictionary, "-dst", "data/")
+
 	// Note: max_total_time is an int flag, but ClusterFuzz sometimes passes floats
 	out := runCommandOk(t, "run_fuzzer", "-handle", handle, "-fuzzer", crash_fuzzer,
 		"-artifact-dir", artifactDir, "--", "-seed=123", "-artifact_prefix=data/",
-		"-jobs=0", "-max_total_time=10.0", "data/corpus/new", "data/corpus/uninteresting")
+		"-jobs=0", "-print_final_stats=1", "-max_total_time=10.0",
+		"-dict=data/dictionary", "data/corpus/new", "data/corpus/uninteresting")
 
 	glog.Info(out)
 
@@ -225,6 +237,11 @@ func testFuzzWithCorpus(t *testing.T, handle string) {
 
 	if !strings.Contains(out, "Test unit written to") {
 		t.Fatalf("Artifact info missing from output:\n%s", out)
+	}
+
+	// Emitted by Fuzzer::PrintFinalStats in libFuzzer
+	if !strings.Contains(out, "stat::average_exec_per_sec") {
+		t.Fatalf("Final stats missing from output:\n%s", out)
 	}
 
 	runCommandOk(t, "get_data", "-handle", handle, "-fuzzer", crash_fuzzer,

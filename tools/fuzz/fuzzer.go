@@ -391,9 +391,11 @@ var optionMapping = map[string]*cffOption{
 	"mutate_depth":             {"mutation_depth", "int", "5"},
 	"detect_leaks":             {"detect_leaks", "bool", "false"},
 	"timeout":                  {"run_limit", "time", "1200s"},
-	"malloc_limit_mb":          {"malloc_limit", "byte", "2gb"},
-	"rss_limit_mb":             {"oom_limit", "byte", "2gb"},
+	"malloc_limit_mb":          {"malloc_limit", "mb", "2gb"},
+	"rss_limit_mb":             {"oom_limit", "mb", "2gb"},
 	"purge_allocator_interval": {"purge_interval", "time", "1s"},
+	"print_final_stats":        {"print_final_stats", "bool", "false"},
+	"use_value_profile":        {"use_value_profile", "bool", "false"},
 
 	// Options that are not supported, but safe to ignore because they are
 	// handled in other ways.
@@ -403,6 +405,9 @@ var optionMapping = map[string]*cffOption{
 	"merge":               nil,
 	"merge_control_file":  nil,
 	"jobs":                nil,
+
+	// TODO(fxbug.dev/108878): Translate this once ffx fuzz supports it
+	"dict": nil,
 }
 
 func (f *Fuzzer) setCFFOptions(conn Connector) error {
@@ -414,8 +419,6 @@ func (f *Fuzzer) setCFFOptions(conn Connector) error {
 		}
 
 		if _, ok := optionMapping[opt]; !ok {
-			// TODO(fxbug.dev/108878): Make sure nothing ClusterFuzz might pass
-			// us will result in an error.
 			return fmt.Errorf("unsupported libFuzzer option: -%s=%s", opt, val)
 		}
 	}
@@ -429,8 +432,10 @@ func (f *Fuzzer) setCFFOptions(conn Connector) error {
 		val, ok := f.options[libFuzzerOpt]
 		if ok {
 			// Add units as necessary
-			if cffOpt.unit == "byte" {
+			if cffOpt.unit == "mb" {
 				val = val + "mb"
+			} else if cffOpt.unit == "byte" {
+				val = val + "b"
 			} else if cffOpt.unit == "time" {
 				val = val + "s"
 			}
