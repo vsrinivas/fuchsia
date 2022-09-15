@@ -2,16 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/watcher.h>
-#include <lib/stdcompat/span.h>
 #include <lib/zxio/types.h>
 #include <zircon/types.h>
 
 #include "sdk/lib/fdio/fdio_unistd.h"
 #include "sdk/lib/fdio/internal.h"
-
-namespace fio = fuchsia_io;
 
 namespace {
 
@@ -25,7 +21,7 @@ struct ZxioCallbackAdapterContext {
 
 __EXPORT
 zx_status_t fdio_watch_directory(int dirfd, watchdir_func_t cb, zx_time_t deadline, void* cookie) {
-  fbl::RefPtr<fdio> io = fd_to_io(dirfd);
+  const fbl::RefPtr<fdio> io = fd_to_io(dirfd);
   if (io == nullptr || cb == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }

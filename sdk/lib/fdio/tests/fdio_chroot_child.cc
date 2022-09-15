@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 int main(int argc, char** argv) {
@@ -14,36 +15,39 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  int rv = chdir(argv[1]);
-  if (rv != 0) {
-    printf("chdir returned %d, errno=%d\n", rv, errno);
+  if (const int rv = chdir(argv[1]); rv != 0) {
+    printf("chdir returned %d, errno=%d(%s)\n", rv, errno, strerror(errno));
     return 1;
-  } else {
-    printf("chdir(%s) SUCCESS\n", argv[1]);
   }
+  printf("chdir(%s) SUCCESS\n", argv[1]);
 
-  rv = chroot(argv[2]);
-  if (rv != 0) {
-    printf("chroot returned %d, errno=%d\n", rv, errno);
+  if (const int rv = chroot(argv[2]); rv != 0) {
+    printf("chroot returned %d, errno=%d(%s)\n", rv, errno, strerror(errno));
     return 1;
-  } else {
-    printf("chroot(%s) SUCCESS\n", argv[2]);
   }
+  printf("chroot(%s) SUCCESS\n", argv[2]);
 
-  rv = access(argv[3], F_OK);
-  if (rv != 0) {
-    printf("access returned %d, errno=%d\n", rv, errno);
+  if (const int rv = access(argv[3], F_OK); rv != 0) {
+    printf("access returned %d, errno=%d(%s)\n", rv, errno, strerror(errno));
     return 1;
-  } else {
-    printf("access(%s) SUCCESS\n", argv[3]);
   }
+  printf("access(%s) SUCCESS\n", argv[3]);
 
-  char cwd[PATH_MAX];
-  getcwd(cwd, sizeof(cwd));
+  char buf[PATH_MAX];
+
+  const char* cwd = getcwd(buf, sizeof(buf));
+  if (cwd == nullptr) {
+    printf("cwd returned nullptr, errno=%d(%s)\n", errno, strerror(errno));
+    return 1;
+  }
   printf("cwd=%s\n", cwd);
 
-  char realpath_dot[PATH_MAX];
-  realpath(".", realpath_dot);
-  printf("realpath=%s\n", realpath_dot);
+  const char* rp = realpath(".", buf);
+  if (rp == nullptr) {
+    printf("realpath returned nullptr, errno=%d(%s)\n", errno, strerror(errno));
+    return 1;
+  }
+  printf("realpath(.)=%s\n", rp);
+
   return 0;
 }

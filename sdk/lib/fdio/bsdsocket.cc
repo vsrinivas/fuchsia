@@ -65,8 +65,8 @@ int socket(int domain, int type, int protocol) {
 
   void* context = nullptr;
   int16_t out_code;
-  zx_status_t status = zxio_socket(service_connector, domain, type & kSockTypesMask, protocol,
-                                   fdio_zxio_allocator, &context, &out_code);
+  const zx_status_t status = zxio_socket(service_connector, domain, type & kSockTypesMask, protocol,
+                                         fdio_zxio_allocator, &context, &out_code);
   // If the status is ZX_ERR_NO_MEMORY, then zxio_create_with_allocator has not allocated
   // anything and we can return immediately with no cleanup.
   if (status == ZX_ERR_NO_MEMORY) {
@@ -74,7 +74,7 @@ int socket(int domain, int type, int protocol) {
     return ERROR(status);
   }
 
-  fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
+  const fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
   if (status != ZX_OK) {
     if (status == ZX_ERR_PEER_CLOSED) {
       // If we got a peer closed error, then it usually means that we
@@ -105,24 +105,27 @@ int socket(int domain, int type, int protocol) {
 
 __EXPORT
 int connect(int fd, const struct sockaddr* addr, socklen_t len) {
-  fdio_ptr io = fd_to_io(fd);
+  const fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
 
   int16_t out_code;
-  zx_status_t status;
-  if ((status = zxio_connect(&io->zxio_storage().io, addr, len, &out_code)) != ZX_OK) {
+  if (const zx_status_t status = zxio_connect(&io->zxio_storage().io, addr, len, &out_code);
+      status != ZX_OK) {
     return ERROR(status);
   }
   if (out_code == EINPROGRESS) {
     auto& ioflag = io->ioflag();
     if (!(ioflag & IOFLAG_NONBLOCK)) {
-      if ((status = fdio_wait(io, FDIO_EVT_WRITABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
+      if (const zx_status_t status =
+              fdio_wait(io, FDIO_EVT_WRITABLE, zx::time::infinite(), nullptr);
+          status != ZX_OK) {
         return ERROR(status);
       }
       // Call Connect() again after blocking to find connect's result.
-      if ((status = zxio_connect(&io->zxio_storage().io, addr, len, &out_code)) != ZX_OK) {
+      if (const zx_status_t status = zxio_connect(&io->zxio_storage().io, addr, len, &out_code);
+          status != ZX_OK) {
         return ERROR(status);
       }
     }
@@ -136,12 +139,12 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
 template <typename F>
 static int delegate(int fd, F fn) {
-  fdio_ptr io = fd_to_io(fd);
+  const fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
   int16_t out_code;
-  zx_status_t status = fn(io, &out_code);
+  const zx_status_t status = fn(io, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -175,7 +178,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
   }
 
   std::optional reservation = []() -> std::optional<std::pair<int, void (fdio_slot::*)()>> {
-    fbl::AutoLock lock(&fdio_lock);
+    const fbl::AutoLock lock(&fdio_lock);
     for (int i = 0; i < FDIO_MAX_FD; ++i) {
       std::optional cleanup = fdio_fdtab[i].try_reserve();
       if (cleanup.has_value()) {
@@ -190,11 +193,11 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
   auto [nfd, cleanup_getter] = reservation.value();
   // Lambdas are not allowed to reference local bindings.
   auto release = fit::defer([nfd = nfd, cleanup_getter = cleanup_getter]() {
-    fbl::AutoLock lock(&fdio_lock);
+    const fbl::AutoLock lock(&fdio_lock);
     (fdio_fdtab[nfd].*cleanup_getter)();
   });
 
-  fdio_ptr accepted_io = fdio_stream_socket_allocate();
+  const fdio_ptr accepted_io = fdio_stream_socket_allocate();
   if (accepted_io == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
@@ -202,7 +205,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     zx_status_t status;
     int16_t out_code;
 
-    fdio_ptr io = fd_to_io(fd);
+    const fdio_ptr io = fd_to_io(fd);
     if (io == nullptr) {
       return ERRNO(EBADF);
     }
@@ -212,8 +215,9 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     for (;;) {
       // We're going to manage blocking on the client side, so always ask the
       // provider for a non-blocking socket.
-      if ((status = zxio_accept(&io->zxio_storage().io, addr, addrlen, &accepted_io->zxio_storage(),
-                                &out_code)) != ZX_OK) {
+      status = zxio_accept(&io->zxio_storage().io, addr, addrlen, &accepted_io->zxio_storage(),
+                           &out_code);
+      if (status != ZX_OK) {
         break;
       }
 
@@ -221,7 +225,8 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
       // same value as EWOULDBLOCK.
       if (out_code == EWOULDBLOCK) {
         if (blocking) {
-          if ((status = fdio_wait(io, FDIO_EVT_READABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
+          status = fdio_wait(io, FDIO_EVT_READABLE, zx::time::infinite(), nullptr);
+          if (status != ZX_OK) {
             break;
           }
           continue;
@@ -242,7 +247,7 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     accepted_io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
-  fbl::AutoLock lock(&fdio_lock);
+  const fbl::AutoLock lock(&fdio_lock);
   if (fdio_fdtab[nfd].try_fill(accepted_io)) {
     return nfd;
   }
@@ -366,7 +371,7 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 __EXPORT
 int getsockopt(int fd, int level, int optname, void* __restrict optval,
                socklen_t* __restrict optlen) {
-  fdio_ptr io = fd_to_io(fd);
+  const fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
@@ -397,7 +402,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
   }
 
   int16_t out_code;
-  zx_status_t status =
+  const zx_status_t status =
       zxio_getsockopt(&io->zxio_storage().io, level, optname, optval, optlen, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
@@ -410,7 +415,7 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
 
 __EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) {
-  fdio_ptr io = fd_to_io(fd);
+  const fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
@@ -472,7 +477,7 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
   }
 
   int16_t out_code;
-  zx_status_t status =
+  const zx_status_t status =
       zxio_setsockopt(&io->zxio_storage().io, level, optname, optval, optlen, &out_code);
   if (status != ZX_OK) {
     return ERROR(status);
@@ -482,6 +487,18 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
   }
   return 0;
 }
+
+namespace {
+
+template <typename T, size_t N>
+void populate_ifs(struct ifaddrs_storage* ifs, sa_family_t af, const fidl::Array<T, N>& addr_bytes,
+                  uint64_t ifindex, uint8_t prefix_len) {
+  copy_addr(&ifs->ifa.ifa_addr, af, &ifs->addr, const_cast<uint8_t*>(addr_bytes.data()),
+            N * sizeof(T), static_cast<uint32_t>(ifindex));
+  gen_netmask(&ifs->ifa.ifa_netmask, af, &ifs->netmask, prefix_len);
+}
+
+}  // namespace
 
 // TODO(https://fxbug.dev/30719): set ifa_ifu.ifu_broadaddr and ifa_ifu.ifu_dstaddr.
 //
@@ -495,16 +512,17 @@ int getifaddrs(struct ifaddrs** ifap) {
   }
 
   auto response = provider->GetInterfaceAddresses();
-  zx_status_t status = response.status();
+  const zx_status_t status = response.status();
   if (status != ZX_OK) {
     return ERROR(status);
   }
 
   for (const auto& iface : response->interfaces) {
-    if (!iface.has_name() || !iface.has_addresses()) {
+    if (!iface.has_id() || !iface.has_name() || !iface.has_addresses()) {
       continue;
     }
 
+    const auto& if_id = iface.id();
     const auto& if_name = iface.name();
     for (const auto& address : iface.addresses()) {
       auto ifs = static_cast<struct ifaddrs_storage*>(calloc(1, sizeof(struct ifaddrs_storage)));
@@ -522,18 +540,12 @@ int getifaddrs(struct ifaddrs** ifap) {
       switch (addr.Which()) {
         case fnet::wire::IpAddress::Tag::kIpv4: {
           const auto& addr_bytes = addr.ipv4().addr;
-          copy_addr(&ifs->ifa.ifa_addr, AF_INET, &ifs->addr,
-                    const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(),
-                    static_cast<uint32_t>(iface.id()));
-          gen_netmask(&ifs->ifa.ifa_netmask, AF_INET, &ifs->netmask, prefix_len);
+          populate_ifs(ifs, AF_INET, addr_bytes, if_id, prefix_len);
           break;
         }
         case fnet::wire::IpAddress::Tag::kIpv6: {
           const auto& addr_bytes = addr.ipv6().addr;
-          copy_addr(&ifs->ifa.ifa_addr, AF_INET6, &ifs->addr,
-                    const_cast<uint8_t*>(addr_bytes.data()), addr_bytes.size(),
-                    static_cast<uint32_t>(iface.id()));
-          gen_netmask(&ifs->ifa.ifa_netmask, AF_INET6, &ifs->netmask, prefix_len);
+          populate_ifs(ifs, AF_INET6, addr_bytes, if_id, prefix_len);
           break;
         }
       }

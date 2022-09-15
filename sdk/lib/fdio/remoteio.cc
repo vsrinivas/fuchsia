@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/fdio/limits.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/cpp/inception.h>
@@ -10,15 +11,11 @@
 
 #include <fbl/auto_lock.h>
 
-#include "sdk/lib/fdio/fdio_unistd.h"
 #include "sdk/lib/fdio/internal.h"
 #include "sdk/lib/fdio/socket.h"
 #include "sdk/lib/fdio/zxio.h"
 
 namespace fio = fuchsia_io;
-namespace fsocket = fuchsia_posix_socket;
-namespace frawsocket = fuchsia_posix_socket_raw;
-namespace fpacketsocket = fuchsia_posix_socket_packet;
 
 static_assert(FDIO_CHUNK_SIZE >= PATH_MAX, "FDIO_CHUNK_SIZE must be large enough to contain paths");
 
@@ -33,7 +30,7 @@ zx_status_t fdio_validate_path(const char* path, size_t* out_length) {
   if (path == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
-  size_t length = strnlen(path, PATH_MAX);
+  const size_t length = strnlen(path, PATH_MAX);
   if (length >= PATH_MAX) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -106,7 +103,7 @@ zx_status_t fdio_zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_st
 zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node,
                                   fio::wire::NodeInfoDeprecated info) {
   void* context = nullptr;
-  zx_status_t status =
+  const zx_status_t status =
       zxio_create_with_allocator(std::move(node), info, fdio_zxio_allocator, &context);
   // If the status is ZX_ERR_NO_MEMORY, then zxio_create_with_allocator has not allocated
   // anything and we can return immediately with no cleanup.

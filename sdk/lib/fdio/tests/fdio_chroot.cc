@@ -73,7 +73,7 @@ TEST(ChrootTest, Slash) {
       "chroot(/) SUCCESS\n"
       "access(/tmp/chroot1) SUCCESS\n"
       "cwd=/tmp/chroot1/a\n"
-      "realpath=/tmp/chroot1/a\n",
+      "realpath(.)=/tmp/chroot1/a\n",
       result.c_str());
 }
 
@@ -88,7 +88,7 @@ TEST(ChrootTest, Smoke) {
       "chroot(/tmp/chroot1) SUCCESS\n"
       "access(/a) SUCCESS\n"
       "cwd=/a\n"
-      "realpath=/a\n",
+      "realpath(.)=/a\n",
       result.c_str());
 }
 
@@ -103,7 +103,7 @@ TEST(ChrootTest, AboveCWD) {
       "chroot(..) SUCCESS\n"
       "access(/a) SUCCESS\n"
       "cwd=/a\n"
-      "realpath=/a\n",
+      "realpath(.)=/a\n",
       result.c_str());
 }
 
@@ -118,7 +118,7 @@ TEST(ChrootTest, MountPoint) {
       "chroot(/tmp) SUCCESS\n"
       "access(/chroot1/a) SUCCESS\n"
       "cwd=/chroot1\n"
-      "realpath=/chroot1\n",
+      "realpath(.)=/chroot1\n",
       result.c_str());
 }
 
@@ -133,7 +133,7 @@ TEST(ChrootTest, AwayFromCWD) {
       "chroot(/tmp/chroot1/a) SUCCESS\n"
       "access(/foo) SUCCESS\n"
       "cwd=(unreachable)\n"
-      "realpath=(unreachable)\n",
+      "realpath(.)=(unreachable)\n",
       result.c_str());
 }
 
@@ -149,7 +149,7 @@ TEST(ChrootTest, TrickyPathPrefix) {
       "chroot(/tmp/chroot1/a) SUCCESS\n"
       "access(/foo) SUCCESS\n"
       "cwd=(unreachable)\n"
-      "realpath=(unreachable)\n",
+      "realpath(.)=(unreachable)\n",
       result.c_str());
 }
 
@@ -164,7 +164,7 @@ TEST(ChrootTest, AccessOutsideRoot) {
       "chroot(a) SUCCESS\n"
       "access(b) SUCCESS\n"
       "cwd=(unreachable)\n"
-      "realpath=(unreachable)\n",
+      "realpath(.)=(unreachable)\n",
       result.c_str());
 }
 
@@ -176,7 +176,7 @@ TEST(ChrootTest, BogusDirectory) {
   ASSERT_NO_FATAL_FAILURE(spawn_child(argv, &result));
   EXPECT_STREQ(
       "chdir(/tmp/chroot1) SUCCESS\n"
-      "chroot returned -1, errno=2\n",
+      "chroot returned -1, errno=2(No such file or directory)\n",
       result.c_str());
 }
 
@@ -189,6 +189,6 @@ TEST(ChrootTest, CannotEscapeWithDotDot) {
   EXPECT_STREQ(
       "chdir(/tmp/chroot1) SUCCESS\n"
       "chroot(/tmp/chroot1) SUCCESS\n"
-      "access returned -1, errno=2\n",
+      "access returned -1, errno=2(No such file or directory)\n",
       result.c_str());
 }

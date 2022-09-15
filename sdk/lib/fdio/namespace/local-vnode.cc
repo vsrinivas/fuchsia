@@ -4,7 +4,6 @@
 
 #include "local-vnode.h"
 
-#include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/cpp/create_with_type.h>
 #include <lib/zxio/zxio.h>
@@ -54,7 +53,7 @@ void LocalVnode::Unlink() {
 
 // Returns a child if it has the name |name|.
 // Otherwise, returns nullptr.
-fbl::RefPtr<LocalVnode> LocalVnode::Lookup(cpp17::string_view name) const {
+fbl::RefPtr<LocalVnode> LocalVnode::Lookup(std::string_view name) const {
   auto it = entries_by_name_.find(fbl::String{name});
   if (it != entries_by_name_.end()) {
     return it->node();
@@ -100,13 +99,13 @@ void LocalVnode::UnlinkFromParent() {
 
 zx_status_t EnumerateInternal(const LocalVnode& vn, fbl::StringBuffer<PATH_MAX>* path,
                               const EnumerateCallback& func) {
-  size_t original_length = path->length();
+  const size_t original_length = path->length();
 
   // Add this current node to the path, and enumerate it if it has a remote
   // object.
   path->Append(vn.Name().data(), vn.Name().length());
   if (vn.RemoteValid()) {
-    func(cpp17::string_view(path->data(), path->length()), vn.Remote());
+    func(std::string_view(path->data(), path->length()), vn.Remote());
   }
 
   // If we added a non-null path, add a separator and enumerate all the

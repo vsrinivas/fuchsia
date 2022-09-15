@@ -7,12 +7,9 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/stdcompat/optional.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
-
-#include "predicates.h"
 
 namespace {
 
@@ -41,7 +38,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Node> {
   }
 
  private:
-  cpp17::optional<fuchsia_io::wire::NodeInfoDeprecated> describe_info_;
+  std::optional<fuchsia_io::wire::NodeInfoDeprecated> describe_info_;
 };
 
 // Serves |node_info| over |endpoints| using a |Server| instance by

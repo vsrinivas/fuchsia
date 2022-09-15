@@ -7,11 +7,12 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fit/function.h>
-#include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zxio/types.h>
 #include <limits.h>
 #include <zircon/types.h>
+
+#include <utility>
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
@@ -23,7 +24,7 @@
 
 namespace fdio_internal {
 
-using EnumerateCallback = fit::function<zx_status_t(cpp17::string_view path, zxio_t* entry)>;
+using EnumerateCallback = fit::function<zx_status_t(std::string_view path, zxio_t* entry)>;
 
 // Represents a mapping from a string name to a remote connection.
 //
@@ -66,7 +67,7 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
 
   // Returns a child if it has the name |name|.
   // Otherwise, returns nullptr.
-  fbl::RefPtr<LocalVnode> Lookup(cpp17::string_view name) const;
+  fbl::RefPtr<LocalVnode> Lookup(std::string_view name) const;
 
   // Returns the next child vnode from the list of children, assuming that
   // |last_seen| is the ID of the last returned vnode. At the same time,
@@ -101,7 +102,7 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
                                                    fbl::NodeOptions::AllowMultiContainerUptr>,
                     fbl::TaggedWAVLTreeContainable<Entry*, NameTreeTag>> {
    public:
-    Entry(uint64_t id, fbl::RefPtr<LocalVnode> node) : id_(id), node_(node) {}
+    Entry(uint64_t id, fbl::RefPtr<LocalVnode> node) : id_(id), node_(std::move(node)) {}
     ~Entry() = default;
 
     uint64_t id() const { return id_; }

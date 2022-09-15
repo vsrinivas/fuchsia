@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/directory.h>
-#include <lib/stdcompat/string_view.h>
 
 #include <fbl/auto_lock.h>
 

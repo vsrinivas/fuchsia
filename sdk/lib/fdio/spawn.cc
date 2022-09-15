@@ -14,6 +14,7 @@
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/fit/defer.h>
+#include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -39,8 +40,6 @@
 #include <vector>
 
 #include <fbl/unique_fd.h>
-
-#include "lib/stdcompat/string_view.h"
 
 namespace fio = fuchsia_io;
 namespace fprocess = fuchsia_process;
