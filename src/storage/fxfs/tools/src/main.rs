@@ -5,7 +5,6 @@
 use {
     anyhow::Error,
     argh::FromArgs,
-    fuchsia_async as fasync,
     fxfs::{
         crypt::{insecure::InsecureCrypt, Crypt},
         filesystem::{mkfs_with_default, FxFilesystem, OpenOptions},
@@ -142,33 +141,9 @@ struct CheckGoldenSubCommand {
     images_dir: Option<String>,
 }
 
-struct SimpleLogger;
-
-impl log::Log for SimpleLogger {
-    fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
-        true
-    }
-
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            if record.level() <= log::Level::Warn {
-                eprintln!("[{}] {}", record.level(), record.args());
-            } else {
-                println!("[{}] {}", record.level(), record.args());
-            }
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-const LOGGER: SimpleLogger = SimpleLogger {};
-
-#[fasync::run(10)]
+#[fuchsia::main(threads = 10)]
 async fn main() -> Result<(), Error> {
-    log::set_logger(&LOGGER)?;
-    log::set_max_level(log::LevelFilter::Info);
-    log::debug!("fxfs {:?}", std::env::args());
+    tracing::debug!("fxfs {:?}", std::env::args());
 
     let args: TopLevel = argh::from_env();
     match args.subcommand {
@@ -215,7 +190,6 @@ async fn main() -> Result<(), Error> {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).write(true).open(cmd.file)?,
                     ));
-                    log::set_max_level(log::LevelFilter::Info);
                     mkfs_with_default(device, Some(crypt)).await?;
                     Ok(())
                 }
@@ -223,7 +197,6 @@ async fn main() -> Result<(), Error> {
                     let device = DeviceHolder::new(FileBackedDevice::new(
                         std::fs::OpenOptions::new().read(true).open(cmd.file)?,
                     ));
-                    log::set_max_level(log::LevelFilter::Info);
                     let fs = FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
                         .await?;
                     let options = fsck::FsckOptions {

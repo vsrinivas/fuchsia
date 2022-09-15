@@ -35,12 +35,12 @@ if (is_host) {
     edition = "2021"
     deps = [
       ":lib",
-      "//src/lib/fuchsia-async",
+      "//src/lib/fuchsia",
       "//src/lib/storage/storage_device",
       "//src/storage/fxfs:lib($host_toolchain)",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:tracing",
     ]
     sources = [ "src/main.rs" ]
     output_name = "fxfs"

@@ -84,7 +84,6 @@ third_party_rust_crate_log_visibility = [
   "//src/storage/conformance/conformance_harness/rustvfs:*",
   "//src/storage/flashmap:*",
   "//src/storage/fshost-rust:*",
-  "//src/storage/fxfs/tools:*",
   "//src/sys/base-resolver:*",
   "//src/sys/lib/fidl-fuchsia-pkg-ext:*",
   "//src/sys/lib/legacy_component:*",
