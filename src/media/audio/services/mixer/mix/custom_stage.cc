@@ -12,6 +12,7 @@
 #include <cstring>
 #include <memory>
 #include <optional>
+#include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
@@ -38,9 +39,9 @@ zx_koid_t GetKoid(const zx::vmo& vmo) {
 
 }  // namespace
 
-CustomStage::CustomStage(ProcessorConfiguration config, zx_koid_t reference_clock_koid)
-    : PipelineStage("CustomStage", Format::CreateOrDie(config.outputs()[0].format()),
-                    reference_clock_koid),
+CustomStage::CustomStage(std::string_view name, ProcessorConfiguration config,
+                         zx_koid_t reference_clock_koid)
+    : PipelineStage(name, Format::CreateOrDie(config.outputs()[0].format()), reference_clock_koid),
       block_size_frames_(static_cast<int64_t>(config.block_size_frames())),
       latency_frames_(static_cast<int64_t>(config.outputs()[0].latency_frames())),
       max_frames_per_call_(static_cast<int64_t>(config.max_frames_per_call())),

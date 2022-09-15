@@ -13,6 +13,7 @@
 
 #include <cstddef>
 #include <optional>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -32,7 +33,7 @@ namespace media_audio {
 // TODO(fxbug.dev/87651): Generalize this for all N inputs K outputs use cases.
 class CustomStage : public PipelineStage {
  public:
-  CustomStage(fuchsia_audio_effects::wire::ProcessorConfiguration config,
+  CustomStage(std::string_view name, fuchsia_audio_effects::wire::ProcessorConfiguration config,
               zx_koid_t reference_clock_koid);
 
   // Implements `PipelineStage`.
