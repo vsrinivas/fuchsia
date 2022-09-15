@@ -658,6 +658,13 @@ zx_status_t Device::WriteOp(const void* data, size_t len, size_t off, size_t* ou
   return ops_->write(compat_symbol_.context, data, len, off, out_actual);
 }
 
+zx_off_t Device::GetSizeOp() {
+  if (!HasOp(ops_, &zx_protocol_device_t::get_size)) {
+    return 0;
+  }
+  return ops_->get_size(compat_symbol_.context);
+}
+
 fpromise::promise<void, zx_status_t> Device::WaitForInitToComplete() {
   std::scoped_lock lock(init_lock_);
   if (init_is_finished_) {

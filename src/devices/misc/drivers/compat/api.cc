@@ -86,7 +86,7 @@ __EXPORT zx_status_t device_close_protocol_session_multibindable(zx_device_t* de
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-__EXPORT zx_off_t device_get_size(zx_device_t* dev) { return 0; }
+__EXPORT zx_off_t device_get_size(zx_device_t* dev) { return dev->GetSizeOp(); }
 
 // LibDriver Misc Interfaces
 

@@ -745,6 +745,23 @@ TEST_F(DeviceTest, DeviceReadWrite) {
   ASSERT_TRUE(test_loop().RunUntilIdle());
 }
 
+TEST_F(DeviceTest, DeviceGetSize) {
+  constexpr size_t kSize = 1337;
+  auto endpoints = fidl::CreateEndpoints<fdf::Node>();
+
+  // Create a device.
+  zx_protocol_device_t ops{
+      .get_size = [](void* ctx) -> size_t { return kSize; },
+  };
+  compat::Device device(compat::kDefaultDevice, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  device.Bind({std::move(endpoints->client), dispatcher()});
+
+  ASSERT_EQ(kSize, device.GetSizeOp());
+
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+}
+
 TEST_F(DeviceTest, DevfsVnodeTestBind) {
   auto [node, node_client] = CreateTestNode();
 
