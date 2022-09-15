@@ -8,10 +8,10 @@
 use {
     crate::rtc::RtcCreationError,
     time_metrics_registry::{
-        RealTimeClockEventsMetricDimensionEventType as CobaltRtcEvent, TimeMetricDimensionRole,
-        TimeMetricDimensionTrack,
-        TimekeeperTimeSourceEventsMetricDimensionEventType as CobaltTimeSourceEvent,
-        TimekeeperTrackEventsMetricDimensionEventType as CobaltTrackEvent,
+        RealTimeClockEventsMigratedMetricDimensionEventType as CobaltRtcEvent,
+        TimeMetricDimensionRole, TimeMetricDimensionTrack,
+        TimekeeperTimeSourceEventsMigratedMetricDimensionEventType as CobaltTimeSourceEvent,
+        TimekeeperTrackEventsMigratedMetricDimensionEventType as CobaltTrackEvent,
     },
 };
 

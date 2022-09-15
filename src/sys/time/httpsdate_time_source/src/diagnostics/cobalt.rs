@@ -23,7 +23,7 @@ use {
     futures::{future, Future, FutureExt as _},
     parking_lot::Mutex,
     time_metrics_registry::{
-        HttpsdateBoundSizeMetricDimensionPhase as CobaltPhase,
+        HttpsdateBoundSizeMigratedMetricDimensionPhase as CobaltPhase,
         HTTPSDATE_BOUND_SIZE_MIGRATED_METRIC_ID, HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_FLOOR,
         HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_NUM_BUCKETS as RTT_BUCKETS,
         HTTPSDATE_POLL_LATENCY_MIGRATED_INT_BUCKETS_STEP_SIZE,
