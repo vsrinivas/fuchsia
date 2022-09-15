@@ -12,6 +12,7 @@ ffx_plugin("ffx_daemon_plugin") {
     "echo:ffx_echo",
     "hang:ffx_hang",
     "log:ffx_daemon_log",
+    "socket:ffx_daemon_socket",
     "start:ffx_daemon_start",
     "stop:ffx_daemon_stop",
   ]

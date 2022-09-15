@@ -19,10 +19,13 @@ use {
 
 mod constants;
 mod daemon;
+mod socket;
 
 pub use constants::LOG_FILE_PREFIX;
 
 pub use daemon::Daemon;
+
+pub use socket::SocketDetails;
 
 async fn create_daemon_proxy(hoist: &Hoist, id: &mut NodeId) -> Result<DaemonProxy> {
     let svc = hoist.connect_as_service_consumer()?;

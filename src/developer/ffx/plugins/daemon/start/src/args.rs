@@ -10,7 +10,6 @@ use std::path::PathBuf;
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "start", description = "run as daemon")]
 pub struct StartCommand {
-    // for internal use only
     #[argh(option)]
     /// override the path the socket will be bound to
     pub path: Option<PathBuf>,
