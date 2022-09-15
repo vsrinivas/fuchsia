@@ -28,13 +28,13 @@ rustc_library("input-synthesis") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/keymaps",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
@@ -61,11 +61,12 @@ rustc_binary("input-synthesis-bin") {
   deps = [
     ":input-synthesis",
     ":test.inputsynthesis_rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/main.rs" ]

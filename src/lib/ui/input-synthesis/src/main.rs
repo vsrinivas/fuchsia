@@ -21,23 +21,21 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     futures::StreamExt,
     input_synthesis::synthesizer::InputDevice,
     std::time::Duration,
+    tracing::{error, info, warn},
 };
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["input-synthesis"])]
 async fn main() -> Result<()> {
-    fuchsia_syslog::init_with_tags(&["input-synthesis"]).expect("Failed to init syslog");
-
-    fx_log_info!("starting input synthesis test component");
+    info!("starting input synthesis test component");
 
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(|mut stream: TextRequestStream| {
         fasync::Task::local(async move {
             while let Some(request) = stream.next().await {
-                fx_log_info!("got request: {:?}", &request);
+                info!("got request: {:?}", &request);
                 match request {
                     Ok(TextRequest::Send_ { text, responder, .. }) => {
                         input_synthesis::text_command(text, Duration::from_millis(100))
@@ -46,11 +44,11 @@ async fn main() -> Result<()> {
                         responder.send().expect("send a response to TextRequest");
                     }
                     Err(e) => {
-                        fx_log_err!("could not receive request: {:?}", e);
+                        error!("could not receive request: {:?}", e);
                     }
                 }
             }
-            fx_log_warn!("text requester terminated - no more text injection is possible");
+            warn!("text requester terminated - no more text injection is possible");
         })
         .detach();
     });
@@ -58,7 +56,7 @@ async fn main() -> Result<()> {
         fasync::Task::local(async move {
             let mut devices: Vec<Box<dyn InputDevice>> = Vec::new();
             while let Some(request) = stream.next().await {
-                fx_log_info!("got request: {:?}", &request);
+                info!("got request: {:?}", &request);
                 match request {
                     Ok(MouseRequest::AddDevice { responder, .. }) => {
                         let device = input_synthesis::add_mouse_device_command(127, 127)
@@ -78,7 +76,7 @@ async fn main() -> Result<()> {
                     }) => {
                         let id = device_id as usize;
                         if id >= devices.len() {
-                            fx_log_err!("unknown device_id: {}", id);
+                            error!(device_id = id, "unknown");
                             responder
                                 .send(&mut Err(Error::InvalidDeviceId))
                                 .expect("send a Error to MouseRequest");
@@ -89,11 +87,11 @@ async fn main() -> Result<()> {
                         responder.send(&mut Ok({})).expect("send a response to MouseRequest");
                     }
                     Err(e) => {
-                        fx_log_err!("could not receive request: {:?}", e);
+                        error!("could not receive request: {:?}", e);
                     }
                 }
             }
-            fx_log_warn!("mouse requester terminated - no more mouse injection is possible");
+            warn!("mouse requester terminated - no more mouse injection is possible");
         })
         .detach();
     });
