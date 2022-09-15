@@ -402,6 +402,7 @@ core_shard("setui_service_core_shard") {
     # TODO(fxbug.dev/98207): remove //garnet/bin visibility once migration is
     # complete
     "//build/images/fuchsia:*",
+    "//bundles/assembly_input_groups:*",
     "//garnet/bin/*",
     "//vendor/google/*",
   ]

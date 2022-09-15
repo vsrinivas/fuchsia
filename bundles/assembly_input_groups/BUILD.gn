@@ -6,6 +6,7 @@
 # input bundles. Any other use case is not supported.
 
 import("//build/security/policies_swd.gni")
+import("//build/zbi/kernel_cmdline.gni")
 import("//bundles/assembly_input_groups/assembly_input_groups.gni")
 
 # Turn security policies into input groupss.
@@ -14,4 +15,222 @@ foreach(policy, policies_swd) {
     base_packages = policy.base_package_deps
     system_image_deps = polcy.system_image_deps
   }
+}
+
+# When setting 'userboot.test.next', 'userboot.next' must be set explicitly, to differentiate
+# between running a test, booting or both.
+kernel_cmdline("userboot.next-component-manager") {
+  args = [ "userboot.next=bin/component_manager+--boot" ]
+}
+
+# Required by "test-manager"
+assembly_input_groups("process-resolver") {
+  visibility = [ ":*" ]
+  base_packages = [ "//src/sys/process-resolver" ]
+  core_realm_shards = [ "//src/sys/process-resolver:core_shard" ]
+}
+
+# Enables TestManager service for launching component tests.
+assembly_input_groups("test-manager") {
+  testonly = true
+  base_packages = [
+    "//src/sys/test_manager",
+    ":process-resolver.base_packages",
+  ]
+
+  core_realm_shards = [
+    "//src/sys/test_manager:test_manager_core_shard",
+    "//src/media/audio/audio_core:core_shard",
+    "//src/performance/trace_manager:trace_manager_core_shard",
+    "//src/settings/service:setui_service_core_shard",
+    "//src/intl/tzdata_provider:core-shard",
+    "//src/media/sounds/soundplayer:core_shard",
+    ":process-resolver.core_realm_shards",
+  ]
+}
+
+# The only use-case of this package, and why it only exposes a core realm shard is
+# for sshd host deps to be happy. And just like sshd depends on appmgr, so does appmgr
+# on memory-monitor.
+assembly_input_groups("memory-monitor") {
+  visibility = [ ":*" ]
+  base_packages = [ "//src/developer/memory/monitor" ]
+  core_realm_shards =
+      [ "//src/developer/memory/monitor:memory_monitor_core_shard" ]
+}
+
+# The only use-case of this package, and why it only exposes a core realm shard is
+# for sshd host deps to be happy. The main thing here is that sshd needs hub(v1)
+# as exposed by appmgr. So component manager needs to know about the capability routing,
+# but no one is using such thing.
+assembly_input_groups("runtime-v1-deprecated") {
+  visibility = [ ":*" ]
+  base_packages = [
+    "//src/security/policy:appmgr_policy_eng",
+    "//src/sys/appmgr",
+    "//src/sys/appmgr:appmgr_scheme_config",
+    "//src/sys/appmgr:component_id_index_no_restrict_storage",
+    "//src/sys/appmgr:core_component_id_index",
+    "//src/sys/sysmgr",
+    "//src/sys/sysmgr:services_config",
+    ":memory-monitor.base_packages",
+  ]
+  core_realm_shards = [
+    "//src/sys/appmgr:appmgr_core_shard",
+    ":memory-monitor.core_realm_shards",
+  ]
+}
+
+assembly_input_groups("ssh") {
+  base_packages = [
+    "//src/developer/sshd-host",
+    "//src/developer/sshd-host:config",
+    ":runtime-v1-deprecated.base_packages",
+  ]
+
+  core_realm_shards = [
+    "//src/developer/sshd-host:core_shard",
+    ":runtime-v1-deprecated.core_realm_shards",
+  ]
+}
+
+assembly_input_groups("ffx") {
+  base_packages = [
+    "//src/connectivity/network/mdns/bundles:services",
+    "//src/connectivity/network/mdns/service:mdns_fuchsia_udp_config",
+    "//src/developer/ffx:runtime",
+  ]
+}
+
+# Enables a target interaction through fx. Must use 'unrestricted' swd policy.
+assembly_input_groups("fx") {
+  base_packages = [
+    ":package-updates.base_packages",
+    ":ssh.base_packages",
+  ]
+  core_realm_shards = [ ":ssh.core_realm_shards" ]
+}
+
+# Base set of packages to get basic features of component runtime running.
+assembly_input_groups("bootstrap") {
+  bootfs_labels = [
+    "//build/info:bootfs",
+    "//bundles:bootstrap",
+    "//bundles/drivers:bootstrap",
+    "//src/sys/component_manager:component_manager_bootfs_config",
+    "//src/diagnostics/archivist:default-service-config",
+  ]
+
+  cmdline_deps = [
+    ":userboot.next-component-manager",
+    "//products/kernel_cmdline:blobfs.cache-eviction-policy--NEVER_EVICT",
+    "//products/kernel_cmdline:console.shell--true",
+    "//products/kernel_cmdline:kernel.enable-debugging-syscalls--true",
+    "//products/kernel_cmdline:kernel.enable-serial-syscalls--true",
+    "//products/kernel_cmdline:kernel.oom.behavior--reboot",
+    "//products/kernel_cmdline:netsvc.all-features--true",
+    "//products/kernel_cmdline:netsvc.disable--false",
+    "//products/kernel_cmdline:oom.reboot-timeout--low",
+  ]
+}
+
+assembly_input_groups("session-manager") {
+  base_packages = [
+    "//src/sys/full-resolver",
+    "//src/session/bin/session_manager",
+  ]
+}
+
+assembly_input_groups("network") {
+  base_packages = [
+    "//src/connectivity/network/mdns/bundles:config",
+    "//src/connectivity/network/mdns/bundles:services",
+    "//src/connectivity/network/netcfg:config-default",
+    "//src/connectivity/network",
+    "//src/sys/stash:pkg",
+  ]
+
+  core_realm_shards = [ "//src/connectivity/network:virtualization-core-shard" ]
+}
+
+assembly_input_groups("debugging") {
+  testonly = true
+  bootfs_labels = [
+    "//bundles:debugging",
+    "//bundles/drivers:bootstrap-eng",
+    "//src/diagnostics/bundles:dev-tools",
+    "//bundles/bringup:manual_testing",
+    "//bundles/drivers:utils",
+  ]
+}
+
+assembly_input_groups("forensics") {
+  base_packages = [ "//src/developer/forensics:pkg" ]
+  core_realm_shards = [ "//src/developer/forensics:core_shard" ]
+}
+
+assembly_input_groups("diagnostics") {
+  base_packages = [
+    "//src/diagnostics/config/persistence",
+    "//src/diagnostics/config/triage:triage-detect",
+    "//src/diagnostics/detect:triage-detect",
+    "//src/diagnostics/kcounter:diagnostics-kcounter",
+    "//src/diagnostics/persistence:diagnostics-persistence",
+    "//src/diagnostics/log_listener:log_listener_shell",
+    "//src/diagnostics/log-stats:package",
+    "//src/diagnostics/sampler",
+  ]
+}
+
+assembly_input_groups("bootfs-package-support") {
+  bootfs_labels = [
+    "//src/sys/core:bootfs",
+    "//src/sys/base-resolver:bootfs",
+  ]
+}
+
+assembly_input_groups("time-service") {
+  base_packages = [
+    "//src/sys/time/httpsdate_time_source:httpsdate-time-source",
+    "//src/sys/time/timekeeper",
+  ]
+}
+
+assembly_input_groups("telemetry") {
+  base_packages = [
+    "//src/cobalt/bin/app:cobalt",
+    "//src/cobalt/bin/app:cobalt_registry",
+    "//src/cobalt/bin/app:config",
+    "//src/cobalt/bin/system-metrics:cobalt_system_metrics",
+  ]
+}
+
+assembly_input_groups("package-resolver") {
+  base_packages = [
+    "//src/sys/pkg/bin/pkg-cache",
+    "//src/sys/pkg/bin/pkg-resolver",
+    "//src/developer/build_info:build-info-service",
+    "//src/hwinfo:hwinfo",
+  ]
+}
+
+assembly_input_groups("package-updates") {
+  base_packages = [
+    "//src/sys/pkg:tools",
+    "//src/security/root_ssl_certificates",
+  ]
+}
+
+assembly_input_groups("build-info") {
+  base_packages = [
+    "//build/info:build-info",
+    "//src/hwinfo:default_product_config",
+  ]
+}
+
+assembly_input_groups("usb") {
+  bootfs_labels = [
+    "//bundles/drivers:usb-host-stack",
+    "//bundles/drivers:usb-peripheral-stack",
+  ]
 }
