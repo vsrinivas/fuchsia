@@ -52,6 +52,16 @@ uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& prog
 
 zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts);
 
+struct LoadedDriver {
+  fbl::RefPtr<Driver> driver;
+  fuchsia_driver_framework::DriverStartArgs start_args;
+  fdf::Dispatcher dispatcher;
+};
+
+void LoadDriver(fuchsia_driver_framework::DriverStartArgs start_args,
+                async_dispatcher_t* dispatcher,
+                fit::callback<void(zx::status<LoadedDriver>)> callback);
+
 }  // namespace dfv2
 
 #endif  // SRC_DEVICES_BIN_DRIVER_HOST2_DRIVER_H_
