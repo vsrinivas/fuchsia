@@ -28,7 +28,7 @@ using RealmRoot = component_testing::RealmRoot;
 class ViewEmbedderTest : public PixelTest {
  private:
   RealmRoot SetupRealm() {
-    return ScenicRealmBuilder()
+    return ScenicRealmBuilder({.use_flatland = false})
         .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
         .AddRealmProtocol(fuchsia::ui::annotation::Registry::Name_)
         .Build();

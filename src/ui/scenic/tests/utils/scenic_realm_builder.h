@@ -30,6 +30,7 @@ struct MockComponent {
 };
 
 struct RealmBuilderArgs {
+  bool use_flatland = true;
   std::optional<ViewProviderConfig> view_provider_config;
 };
 
@@ -71,6 +72,8 @@ class ScenicRealmBuilder {
   // Adds child components in the scenic realm and routes required protocols from the
   // test_manager to the realm.
   ScenicRealmBuilder& Init(RealmBuilderArgs args);
+
+  std::string BuildScenicConfig(bool use_flatland);
 
   component_testing::RealmBuilder realm_builder_;
 };

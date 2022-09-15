@@ -181,7 +181,7 @@ class GfxMouseIntegrationTest : public zxtest::Test, public loop_fixture::RealLo
     // Build the realm topology and route the protocols required by this test fixture from the
     // scenic subrealm.
     realm_ = std::make_unique<RealmRoot>(
-        ScenicRealmBuilder()
+        ScenicRealmBuilder({.use_flatland = false})
             .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
             .AddRealmProtocol(fuchsia::ui::pointerinjector::Registry::Name_)
             .Build());

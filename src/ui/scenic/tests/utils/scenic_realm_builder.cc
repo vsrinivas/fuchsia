@@ -16,8 +16,8 @@
 namespace integration_tests {
 namespace {
 
-// Name for the scenic subrealm.
-constexpr auto kScenicRealm = "scenic_realm";
+// Name for the scenic component.
+constexpr auto kScenic = "scenic";
 constexpr auto kScenicRealmUrl = "#meta/scenic_only.cm";
 
 }  // namespace
@@ -28,15 +28,19 @@ using Protocol = component_testing::Protocol;
 using ChildRef = component_testing::ChildRef;
 using ParentRef = component_testing::ParentRef;
 using RealmBuilder = component_testing::RealmBuilder;
+using component_testing::DirectoryContents;
 
 ScenicRealmBuilder::ScenicRealmBuilder(RealmBuilderArgs args)
-    : realm_builder_(RealmBuilder::Create()) {
+    : realm_builder_(RealmBuilder::CreateFromRelativeUrl(kScenicRealmUrl)) {
   Init(std::move(args));
 }
 
 ScenicRealmBuilder& ScenicRealmBuilder::Init(RealmBuilderArgs args) {
-  // Configure the scenic subrealm for the test fixture.
-  realm_builder_.AddChild(kScenicRealm, kScenicRealmUrl);
+  // Route /config/data/scenic_config to scenic.
+  auto config_directory_contents = DirectoryContents();
+  config_directory_contents.AddFile("scenic_config", BuildScenicConfig(args.use_flatland));
+  realm_builder_.RouteReadOnlyDirectory("config-data", {ChildRef{.name = kScenic}},
+                                        std::move(config_directory_contents));
 
   // Route the protocols required by the scenic subrealm from the test_manager.
   realm_builder_.AddRoute(
@@ -46,7 +50,7 @@ ScenicRealmBuilder& ScenicRealmBuilder::Init(RealmBuilderArgs args) {
                              Protocol{fuchsia::tracing::provider::Registry::Name_},
                              Protocol{fuchsia::vulkan::loader::Loader::Name_}},
             .source = ParentRef(),
-            .targets = {ChildRef{kScenicRealm}}});
+            .targets = {ChildRef{kScenic}}});
 
   // Configure the ViewProvider for the test fixture. This setup is done for tests requiring a view
   // provider.
@@ -61,7 +65,7 @@ ScenicRealmBuilder& ScenicRealmBuilder::Init(RealmBuilderArgs args) {
 
     // Route the protocols required by the view provider.
     realm_builder_.AddRoute(Route{.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
-                                  .source = ChildRef{kScenicRealm},
+                                  .source = ChildRef{kScenic},
                                   .targets = {ChildRef{config.name}}});
   }
 
@@ -69,9 +73,8 @@ ScenicRealmBuilder& ScenicRealmBuilder::Init(RealmBuilderArgs args) {
 }
 
 ScenicRealmBuilder& ScenicRealmBuilder::AddRealmProtocol(const ProtocolName& protocol) {
-  realm_builder_.AddRoute(Route{.capabilities = {Protocol{protocol}},
-                                .source = ChildRef{kScenicRealm},
-                                .targets = {ParentRef()}});
+  realm_builder_.AddRoute(Route{
+      .capabilities = {Protocol{protocol}}, .source = ChildRef{kScenic}, .targets = {ParentRef()}});
 
   return *this;
 }
@@ -85,5 +88,14 @@ ScenicRealmBuilder& ScenicRealmBuilder::AddMockComponent(const MockComponent& mo
 }
 
 RealmRoot ScenicRealmBuilder::Build() { return realm_builder_.Build(); }
+
+std::string ScenicRealmBuilder::BuildScenicConfig(bool use_flatland) {
+  std::ostringstream config;
+
+  config << "{"
+         << "   \"i_can_haz_flatland\" : " << std::boolalpha << use_flatland << "}";
+
+  return config.str();
+}
 
 }  // namespace integration_tests

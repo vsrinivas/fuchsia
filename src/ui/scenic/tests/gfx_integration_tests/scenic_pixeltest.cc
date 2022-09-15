@@ -101,7 +101,7 @@ fuchsia::ui::composition::RegisterBufferCollectionArgs CreateArgs(
 class ScenicPixelTest : public PixelTest {
  private:
   RealmRoot SetupRealm() {
-    return ScenicRealmBuilder()
+    return ScenicRealmBuilder({.use_flatland = false})
         .AddRealmProtocol(fuchsia::ui::scenic::Scenic::Name_)
         .AddRealmProtocol(fuchsia::ui::annotation::Registry::Name_)
         .AddRealmProtocol(fuchsia::ui::composition::Allocator::Name_)
