@@ -613,6 +613,12 @@ class TiledBufferManager : public SurfaceBufferManager {
 
   std::optional<std::pair<const CodecBuffer*, uint32_t>> ProcessOutputSurface(
       scoped_refptr<VASurface> va_surface) override {
+    VAStatus status = vaSyncSurface(VADisplayWrapper::GetSingleton()->display(), va_surface->id());
+    if (status != VA_STATUS_SUCCESS) {
+      FX_SLOG(ERROR, "SyncSurface failed", KV("error_str", vaErrorStr(status)));
+      return std::nullopt;
+    }
+
     const CodecBuffer* buffer = nullptr;
 
     {
