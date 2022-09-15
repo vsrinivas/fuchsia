@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use {
     anyhow::{Context as _, Error},
-    component_events::events::Event,
     component_events::{events::*, matcher::*},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio, fidl_fuchsia_modular as modular, fidl_fuchsia_sys as fsys,
@@ -43,11 +42,7 @@ async fn basemgr_v1_to_v2_test() -> Result<(), Error> {
     };
 
     // Subscribe to stopped events for child components
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
-        .await
-        .context("failed to subscribe to EventSource")?;
+    let mut event_stream = EventStream::open_at_path("/svc/fuchsia.component.EventStream").unwrap();
 
     let builder = RealmBuilder::new().await?;
 

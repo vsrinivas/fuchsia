@@ -13,10 +13,9 @@
         binary: "bin/basemgr_v1_to_v2_test_realm",
     },
     use: [
-        { protocol: "fuchsia.sys2.EventSource" },
         {
-            event: "stopped",
-            from: "framework",
+            event_stream: "stopped_v2",
+            from: "parent",
         },
     ],
     offer: [
