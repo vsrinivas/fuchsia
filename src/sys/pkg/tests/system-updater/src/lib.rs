@@ -587,7 +587,7 @@ impl MockCacheService {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_pkg::PackageCacheRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) = stream.try_next().await.expect("received request") {
             match event {
                 fidl_fuchsia_pkg::PackageCacheRequest::Sync { responder } => {
                     self.interactions.lock().push(BlobfsSync);
@@ -615,7 +615,7 @@ impl MockSpaceService {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_space::ManagerRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) = stream.try_next().await.expect("received request") {
             let fidl_fuchsia_space::ManagerRequest::Gc { responder } = event;
             self.interactions.lock().push(Gc);
             responder.send(&mut Ok(()))?;
@@ -637,7 +637,7 @@ impl MockRetainedPackagesService {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_pkg::RetainedPackagesRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) = stream.try_next().await.expect("received request") {
             match event {
                 fidl_fuchsia_pkg::RetainedPackagesRequest::Clear { responder } => {
                     self.interactions.lock().push(ClearRetainedPackages);
@@ -693,7 +693,7 @@ impl MockLogger {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_cobalt::LoggerRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) = stream.try_next().await.expect("received request") {
             match event {
                 fidl_fuchsia_cobalt::LoggerRequest::LogCobaltEvent { event, responder } => {
                     self.cobalt_events.lock().push(event);
@@ -722,7 +722,7 @@ impl MockLoggerFactory {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_cobalt::LoggerFactoryRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) = stream.try_next().await.expect("received request") {
             match event {
                 fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectId {
                     project_id,

@@ -32,7 +32,7 @@ impl MockRebootService {
         self: Arc<Self>,
         mut stream: AdminRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) = stream.try_next().await.expect("received request") {
             match event {
                 AdminRequest::Reboot { reason, responder } => {
                     let mut result = (self.call_hook)(reason);

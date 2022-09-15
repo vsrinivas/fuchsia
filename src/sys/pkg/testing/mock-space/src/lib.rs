@@ -40,7 +40,7 @@ impl MockSpaceService {
         self: Arc<Self>,
         mut stream: fidl_fuchsia_space::ManagerRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) = stream.try_next().await.expect("received request") {
             let fidl_fuchsia_space::ManagerRequest::Gc { responder } = event;
             responder.send(&mut (self.call_hook)())?;
         }

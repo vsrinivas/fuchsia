@@ -248,7 +248,7 @@ impl MockResolverService {
         self: Arc<Self>,
         mut stream: PackageResolverRequestStream,
     ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await? {
+        while let Some(event) = stream.try_next().await.expect("received request") {
             match event {
                 fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
                     package_url,
