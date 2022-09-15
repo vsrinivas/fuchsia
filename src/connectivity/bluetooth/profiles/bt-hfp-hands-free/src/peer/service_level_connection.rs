@@ -13,7 +13,7 @@ use super::indicators::AgIndicators;
 use super::procedure::{Procedure, ProcedureMarker};
 
 use crate::config::HandsFreeFeatureSupport;
-use crate::features::{AgFeatures, HfFeatures};
+use crate::features::{AgFeatures, CallHoldAction, HfFeatures};
 
 pub struct SlcState {
     /// Collection of active procedures.
@@ -36,6 +36,8 @@ pub struct SharedState {
     pub initialized: bool,
     /// Determines whether the indicator status update function is enabled.
     pub indicators_update_enabled: bool,
+    /// Features supported from the three-way calling or call waiting
+    pub three_way_features: Vec<CallHoldAction>,
 }
 
 // TODO(fxbug.dev/104703): More fields for SLCI
@@ -74,6 +76,7 @@ impl SharedState {
             ag_indicators: AgIndicators::default(),
             initialized: false,
             indicators_update_enabled: true,
+            three_way_features: Vec::new(),
         }
     }
 
@@ -85,6 +88,11 @@ impl SharedState {
     pub fn supports_three_way_calling(&self) -> bool {
         self.ag_features.contains(AgFeatures::THREE_WAY_CALLING)
             && self.hf_features.contains(HfFeatures::THREE_WAY_CALLING)
+    }
+
+    pub fn supports_hf_indicators(&self) -> bool {
+        self.ag_features.contains(AgFeatures::HF_INDICATORS)
+            && self.hf_features.contains(HfFeatures::HF_INDICATORS)
     }
 
     #[cfg(test)]

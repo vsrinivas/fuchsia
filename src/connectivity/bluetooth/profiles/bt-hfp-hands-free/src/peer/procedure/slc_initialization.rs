@@ -7,7 +7,7 @@ use at_commands as at;
 
 use super::{Procedure, ProcedureMarker};
 
-use crate::features::{AgFeatures, CVSD, MSBC};
+use crate::features::{extract_features_from_command, AgFeatures, CVSD, MSBC};
 use crate::peer::service_level_connection::SharedState;
 
 /// This mode's behavior is to forward unsolicited result codes directly per
@@ -23,6 +23,7 @@ pub enum Stages {
     ListIndicators,
     EnableIndicators,
     IndicatorStatusUpdate,
+    CallHoldAndMultiParty,
 }
 
 // TODO(fxbug.dev/104703): Still work in progress
@@ -136,26 +137,43 @@ impl Procedure for SlcInitProcedure {
                     ));
                 }
             },
-            Stages::IndicatorStatusUpdate => {
-                match update[..] {
-                    [at::Response::Ok] => {
-                        // TODO (fxbug.dev/108596): Implement Call hold and multiparty services in addiotn to Generic Status Indicators.
-                        if state.supports_three_way_calling() {
-                            return Ok(vec![at::Command::Chld { command: String::from("") }]);
-                        } else {
-                            self.terminated = true;
-                            return Ok(vec![]);
-                        }
-                    }
-                    _ => {
-                        return Err(format_err!(
-                            "Wrong responses at {:?} stage of SLCI with response(s): {:?}.",
-                            self.state,
-                            update
-                        ));
+            Stages::IndicatorStatusUpdate => match update[..] {
+                [at::Response::Ok] => {
+                    if state.supports_three_way_calling() {
+                        self.state = Stages::CallHoldAndMultiParty;
+                        return Ok(vec![at::Command::ChldTest {}]);
+                    } else {
+                        self.terminated = true;
+                        return Ok(vec![]);
                     }
                 }
-            }
+                _ => {
+                    return Err(format_err!(
+                        "Wrong responses at {:?} stage of SLCI with response(s): {:?}.",
+                        self.state,
+                        update
+                    ));
+                }
+            },
+            Stages::CallHoldAndMultiParty => match &update[..] {
+                [at::Response::Success(at::Success::Chld { commands }), at::Response::Ok] => {
+                    state.three_way_features = extract_features_from_command(&commands)?;
+                    if state.supports_hf_indicators() {
+                        // TODO implement in follow up
+                        return Ok(vec![]);
+                    } else {
+                        self.terminated = true;
+                        return Ok(vec![]);
+                    }
+                }
+                _ => {
+                    return Err(format_err!(
+                        "Wrong responses at {:?} stage of SLCI with response(s): {:?}.",
+                        self.state,
+                        update
+                    ));
+                }
+            },
         }
     }
 
@@ -168,7 +186,7 @@ impl Procedure for SlcInitProcedure {
 mod tests {
     use super::*;
 
-    use crate::config::HandsFreeFeatureSupport;
+    use crate::{config::HandsFreeFeatureSupport, features::CallHoldAction};
     use assert_matches::assert_matches;
 
     // TODO(fxb/71668) Stop using raw bytes.
@@ -259,6 +277,91 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn slci_three_way_feature_proper_works() {
+        let mut procedure = SlcInitProcedure::new();
+        //three way calling needed for stage.
+        let config = HandsFreeFeatureSupport {
+            ec_or_nr: false,
+            call_waiting_or_three_way_calling: true,
+            cli_presentation_capability: false,
+            voice_recognition_activation: false,
+            remote_volume_control: false,
+            wide_band_speech: false,
+            enhanced_voice_recognition: false,
+            enhanced_voice_recognition_with_text: false,
+        };
+        let mut ag_features = AgFeatures::default();
+        ag_features.set(AgFeatures::THREE_WAY_CALLING, true);
+        let mut state = SharedState::load_with_set_ag_features(config, ag_features);
+
+        assert!(!procedure.is_terminated());
+
+        let response1 = vec![
+            at::Response::Success(at::Success::Brsf { features: ag_features.bits() }),
+            at::Response::Ok,
+        ];
+        let expected_command1 = vec![at::Command::CindTest {}];
+
+        assert_eq!(procedure.ag_update(&mut state, &response1).unwrap(), expected_command1);
+        assert_matches!(procedure.state, Stages::ListIndicators);
+
+        let indicator_msg = CIND_TEST_RESPONSE_BYTES.to_vec();
+        let response2 = vec![at::Response::RawBytes(indicator_msg), at::Response::Ok];
+        let expected_command2 = vec![at::Command::CindRead {}];
+        assert_eq!(procedure.ag_update(&mut state, &response2).unwrap(), expected_command2);
+        assert_matches!(procedure.state, Stages::EnableIndicators);
+
+        let response3 = vec![
+            at::Response::Success(at::Success::Cind {
+                service: false,
+                call: false,
+                callsetup: 0,
+                callheld: 0,
+                signal: 0,
+                roam: false,
+                battchg: 0,
+            }),
+            at::Response::Ok,
+        ];
+        let update3 =
+            vec![at::Command::Cmer { mode: INDICATOR_REPORTING_MODE, keyp: 0, disp: 0, ind: 1 }];
+        assert_eq!(procedure.ag_update(&mut state, &response3).unwrap(), update3);
+        assert_matches!(procedure.state, Stages::IndicatorStatusUpdate);
+
+        let response4 = vec![at::Response::Ok];
+        let update4 = vec![at::Command::ChldTest {}];
+        assert_eq!(procedure.ag_update(&mut state, &response4).unwrap(), update4);
+        assert_matches!(procedure.state, Stages::CallHoldAndMultiParty);
+
+        let commands = vec![
+            String::from("0"),
+            String::from("1"),
+            String::from("2"),
+            String::from("11"),
+            String::from("22"),
+            String::from("3"),
+            String::from("4"),
+        ];
+        let response5 =
+            vec![at::Response::Success(at::Success::Chld { commands }), at::Response::Ok];
+        let update5 = Vec::<at::Command>::new();
+        assert_eq!(procedure.ag_update(&mut state, &response5).unwrap(), update5);
+        assert!(procedure.is_terminated());
+
+        let features = vec![
+            CallHoldAction::ReleaseAllHeld,
+            CallHoldAction::ReleaseAllActive,
+            CallHoldAction::HoldActiveAndAccept,
+            CallHoldAction::ReleaseSpecified(1),
+            CallHoldAction::HoldAllExceptSpecified(2),
+            CallHoldAction::AddCallToHeldConversation,
+            CallHoldAction::ExplicitCallTransfer,
+        ];
+
+        assert_eq!(features, state.three_way_features);
+    }
+
+    #[fuchsia::test]
     fn error_when_incorrect_response_at_feature_stage() {
         let mut procedure = SlcInitProcedure::start_at_state(Stages::Features);
         let config = HandsFreeFeatureSupport::default();
@@ -338,6 +441,48 @@ mod tests {
         // Did not receive expected Ok response as should result in error.
         let wrong_response = vec![at::Response::Success(at::Success::TestResponse {})];
         assert_matches!(procedure.ag_update(&mut state, &wrong_response), Err(_));
+        assert!(!procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn error_when_incorrect_response_at_call_hold_stage_non_number_index() {
+        let mut procedure = SlcInitProcedure::start_at_state(Stages::CallHoldAndMultiParty);
+        let config = HandsFreeFeatureSupport {
+            call_waiting_or_three_way_calling: true,
+            ..HandsFreeFeatureSupport::default()
+        };
+        let mut state = SharedState::new(config);
+
+        assert!(!procedure.is_terminated());
+
+        let invalid_command = vec![String::from("1A")];
+        let response = vec![
+            at::Response::Success(at::Success::Chld { commands: invalid_command }),
+            at::Response::Ok,
+        ];
+
+        assert_matches!(procedure.ag_update(&mut state, &response), Err(_));
+        assert!(!procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn error_when_incorrect_response_at_call_hold_stage_invalid_command() {
+        let mut procedure = SlcInitProcedure::start_at_state(Stages::CallHoldAndMultiParty);
+        let config = HandsFreeFeatureSupport {
+            call_waiting_or_three_way_calling: true,
+            ..HandsFreeFeatureSupport::default()
+        };
+        let mut state = SharedState::new(config);
+
+        assert!(!procedure.is_terminated());
+
+        let invalid_command = vec![String::from("5")];
+        let response = vec![
+            at::Response::Success(at::Success::Chld { commands: invalid_command }),
+            at::Response::Ok,
+        ];
+
+        assert_matches!(procedure.ag_update(&mut state, &response), Err(_));
         assert!(!procedure.is_terminated());
     }
 
