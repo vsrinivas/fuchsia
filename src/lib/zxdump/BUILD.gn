@@ -13,6 +13,7 @@ zx_library("zxdump") {
     "lib/zxdump/fd-writer.h",
     "lib/zxdump/task.h",
     "lib/zxdump/types.h",
+    "lib/zxdump/zstd-writer.h",
   ]
 
   public_deps = [
@@ -53,12 +54,16 @@ zx_library("zxdump") {
     "read.cc",
     "rights.h",
     "task.cc",
+    "zstd-writer.cc",
   ]
 
   # Test code can use private headers from sources.
   friend = [ ":*" ]
 
-  deps = [ "//src/lib/elfldltl" ]
+  deps = [
+    "//src/lib/elfldltl",
+    "//third_party/zstd",
+  ]
 
   if (is_fuchsia) {
     sources += [
@@ -100,12 +105,26 @@ source_set("piped-command") {
   }
 }
 
+source_set("test-pipe-reader") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  public = [ "test-pipe-reader.h" ]
+  public_deps = [ "//zircon/system/ulib/fbl" ]
+
+  sources = [ "test-pipe-reader.cc" ]
+  deps = [ "//third_party/googletest:gtest" ]
+}
+
 source_set("test-tool-process") {
   visibility = [ ":*" ]
   testonly = true
 
   public = [ "test-tool-process.h" ]
-  public_deps = [ "//zircon/system/ulib/fbl" ]
+  public_deps = [
+    "//sdk/lib/stdcompat",
+    "//zircon/system/ulib/fbl",
+  ]
 
   sources = [ "test-tool-process.cc" ]
   deps = [
@@ -122,6 +141,24 @@ source_set("test-tool-process") {
       "//zircon/system/ulib/service:service-llcpp",
     ]
   }
+
+  data_deps = [ ":zstd-for-test" ]
+}
+
+zstd_label = "//third_party/zstd:zstdcli(${toolchain_variant.base})"
+
+if (is_host) {
+  host_test_data("zstd-for-test") {
+    visibility = [ ":*" ]
+    deps = [ zstd_label ]
+    sources = [ get_label_info(zstd_label, "root_out_dir") + "/zstd" ]
+  }
+} else {
+  group("zstd-for-test") {
+    visibility = [ ":*" ]
+    testonly = true
+    deps = [ zstd_label ]
+  }
 }
 
 test("zxdump-unittests") {
@@ -131,9 +168,12 @@ test("zxdump-unittests") {
     "fd-writer-tests.cc",
     "piped-command-tests.cc",
     "test-file.h",
+    "writer-tests.h",
+    "zstd-writer-tests.cc",
   ]
   deps = [
     ":piped-command",
+    ":test-pipe-reader",
     ":test-tool-process",
     ":zxdump",
     "//sdk/lib/fit",

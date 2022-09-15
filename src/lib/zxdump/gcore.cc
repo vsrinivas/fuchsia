@@ -7,6 +7,7 @@
 #include <lib/zxdump/dump.h>
 #include <lib/zxdump/fd-writer.h>
 #include <lib/zxdump/task.h>
+#include <lib/zxdump/zstd-writer.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
@@ -17,6 +18,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <variant>
 
 #include <fbl/unique_fd.h>
 
@@ -26,6 +28,7 @@ using namespace std::literals;
 
 constexpr std::string_view kOutputPrefix = "core."sv;
 constexpr std::string_view kArchiveSuffix = ".a"sv;
+constexpr std::string_view kZstdSuffix = ".zst"sv;
 
 // Command-line flags controlling the dump are parsed into this object, which
 // is passed around to the methods affected by policy choices.
@@ -34,6 +37,9 @@ struct Flags {
     std::string filename{outer ? output_prefix_ : kOutputPrefix};
     filename += std::to_string(pid);
     filename += suffix;
+    if (outer && zstd_) {
+      filename += kZstdSuffix;
+    }
     return filename;
   }
 
@@ -47,14 +53,49 @@ struct Flags {
   bool collect_job_processes_ = true;
   bool flatten_jobs_ = false;
   bool archive_member_date_ = true;
+  bool zstd_ = false;
 };
 
 // This handles writing a single output file, and removing that output file if
 // the dump is aborted before `Ok(true)` is called.
-class Writer : public zxdump::FdWriter {
+class Writer {
  public:
-  Writer(fbl::unique_fd fd, std::string filename)
-      : zxdump::FdWriter{std::move(fd)}, filename_{std::move(filename)} {}
+  using error_type = zxdump::FdWriter::error_type;
+
+  Writer() = delete;
+
+  Writer(fbl::unique_fd fd, std::string filename, bool zstd)
+      : writer_{zstd ? WhichWriter{zxdump::ZstdWriter(std::move(fd))}
+                     : WhichWriter{zxdump::FdWriter(std::move(fd))}},
+        filename_{std::move(filename)} {}
+
+  auto AccumulateFragmentsCallback() {
+    return std::visit(
+        [](auto& writer)
+            -> fit::function<fitx::result<error_type>(size_t offset, zxdump::ByteView data)> {
+          return writer.AccumulateFragmentsCallback();
+        },
+        writer_);
+  }
+
+  auto WriteFragments() {
+    return std::visit(
+        [](auto& writer) -> fitx::result<error_type, size_t> { return writer.WriteFragments(); },
+        writer_);
+  }
+
+  auto WriteCallback() {
+    return std::visit(
+        [](auto& writer)
+            -> fit::function<fitx::result<error_type>(size_t offset, zxdump::ByteView data)> {
+          return writer.WriteCallback();
+        },
+        writer_);
+  }
+
+  void ResetOffset() {
+    std::visit([](auto& writer) { writer.ResetOffset(); }, writer_);
+  }
 
   // Write errors from errno use the file name.
   void Error(std::string_view op) {
@@ -63,12 +104,23 @@ class Writer : public zxdump::FdWriter {
     if (fn.empty()) {
       fn = "<stdout>"sv;
     }
-    std::cerr << fn << ": "sv << op << ": "sv << strerror(errno) << std::endl;
+    std::cerr << fn << ": "sv << op;
+    if (errno != 0) {
+      std::cerr << ": "sv << strerror(errno);
+    }
+    std::cerr << std::endl;
   }
 
   // Called with true if the output file should be preserved at destruction.
   bool Ok(bool ok) {
     if (ok) {
+      if (auto writer = std::get_if<zxdump::ZstdWriter>(&writer_)) {
+        auto result = writer->Finish();
+        if (result.is_error()) {
+          Error(result.error_value());
+          return false;
+        }
+      }
       filename_.clear();
     }
     return ok;
@@ -81,6 +133,9 @@ class Writer : public zxdump::FdWriter {
   }
 
  private:
+  using WhichWriter = std::variant<zxdump::FdWriter, zxdump::ZstdWriter>;
+
+  WhichWriter writer_;
   std::string filename_;
 };
 
@@ -280,8 +335,7 @@ class JobDumper : public DumperBase {
   static bool DumpMemberHeader(Writer& writer, std::string_view name, size_t size, time_t mtime) {
     // File offset calculations start fresh with each member.
     writer.ResetOffset();
-    auto write = writer.WriteCallback();
-    auto result = JobDump::DumpMemberHeader(write, 0, name, size, mtime);
+    auto result = JobDump::DumpMemberHeader(writer.WriteCallback(), 0, name, size, mtime);
     if (result.is_error()) {
       writer.Error(*result.error_value().dump_error_);
     }
@@ -476,7 +530,7 @@ bool WriteDump(Dumper dumper, const Flags& flags) {
   if (!fd) {
     return false;
   }
-  Writer writer{std::move(fd), std::move(outfile)};
+  Writer writer{std::move(fd), std::move(outfile), flags.zstd_};
   return writer.Ok(dumper.Collect(flags) && dumper.Dump(writer, flags));
 }
 
@@ -510,11 +564,12 @@ bool WriteManyCoreFiles(JobDumper dumper, const Flags& flags) {
   return ok;
 }
 
-constexpr const char kOptString[] = "hlo:amtcpJjfDU";
+constexpr const char kOptString[] = "hlo:zamtcpJjfDU";
 constexpr const option kLongOpts[] = {
     {"help", no_argument, nullptr, 'h'},                 //
     {"limit", required_argument, nullptr, 'l'},          //
     {"output-prefix", required_argument, nullptr, 'o'},  //
+    {"zstd", no_argument, nullptr, 'z'},                 //
     {"exclude-memory", no_argument, nullptr, 'm'},       //
     {"no-threads", no_argument, nullptr, 't'},           //
     {"no-children", no_argument, nullptr, 'c'},          //
@@ -541,6 +596,7 @@ int main(int argc, char** argv) {
 
     --help, -h                         print this message
     --output-prefix=PREFIX, -o PREFIX  write <PREFIX><PID>, not core.<PID>
+    --zstd, -z                         compress output files with zstd -11
     --limit=BYTES, -l BYTES            truncate output to BYTES per process
     --exclude-memory, -M               exclude all process memory from dumps
     --no-threads, -t                   collect only memory, threads left to run
@@ -653,6 +709,10 @@ essential services.  PID arguments are not allowed with --root-job unless
 
       case 'a':
         dump_root_job = true;
+        continue;
+
+      case 'z':
+        flags.zstd_ = true;
         continue;
 
       default:

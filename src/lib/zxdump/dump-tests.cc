@@ -7,10 +7,12 @@
 #include <lib/zxdump/dump.h>
 #include <lib/zxdump/fd-writer.h>
 #include <lib/zxdump/task.h>
+#include <lib/zxdump/zstd-writer.h>
 
 #include <gtest/gtest.h>
 
 #include "test-file.h"
+#include "test-tool-process.h"
 
 // The dump format is complex enough that direct testing of output data would
 // be tantamount to reimplementing the reader, and golden binary files aren't
@@ -22,6 +24,8 @@
 
 namespace zxdump::testing {
 
+using namespace std::literals;
+
 void TestProcessForPropertiesAndInfo::StartChild() {
   SpawnAction({
       .action = FDIO_SPAWN_ACTION_SET_NAME,
@@ -29,6 +33,31 @@ void TestProcessForPropertiesAndInfo::StartChild() {
   });
   ASSERT_NO_FATAL_FAILURE(TestProcess::StartChild());
 }
+
+template <typename Writer>
+void TestProcessForPropertiesAndInfo::Dump(Writer& writer) {
+  zxdump::ProcessDump<zx::unowned_process> dump(borrow());
+
+  auto collect_result = dump.CollectProcess(TestProcess::PruneAllMemory);
+  ASSERT_TRUE(collect_result.is_ok()) << collect_result.error_value();
+
+  auto dump_result = dump.DumpHeaders(writer.AccumulateFragmentsCallback());
+  ASSERT_TRUE(dump_result.is_ok()) << dump_result.error_value();
+
+  auto write_result = writer.WriteFragments();
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error_value();
+  const size_t bytes_written = write_result.value();
+
+  auto memory_result = dump.DumpMemory(writer.WriteCallback());
+  ASSERT_TRUE(memory_result.is_ok()) << memory_result.error_value();
+  const size_t total_with_memory = memory_result.value();
+
+  // We pruned all memory, so DumpMemory should not have added any output.
+  EXPECT_EQ(bytes_written, total_with_memory);
+}
+
+template void TestProcessForPropertiesAndInfo::Dump(FdWriter&);
+template void TestProcessForPropertiesAndInfo::Dump(ZstdWriter&);
 
 void TestProcessForPropertiesAndInfo::CheckDump(zxdump::TaskHolder& holder, bool threads_dumped) {
   auto find_result = holder.root_job().find(koid());
@@ -141,30 +170,102 @@ TEST(ZxdumpTests, ProcessDumpPropertiesAndInfo) {
 
   TestProcessForPropertiesAndInfo process;
   ASSERT_NO_FATAL_FAILURE(process.StartChild());
-
-  zxdump::ProcessDump<zx::unowned_process> dump(process.borrow());
-
-  auto collect_result = dump.CollectProcess(TestProcess::PruneAllMemory);
-  ASSERT_TRUE(collect_result.is_ok()) << collect_result.error_value();
-
-  auto dump_result = dump.DumpHeaders(writer.AccumulateFragmentsCallback());
-  ASSERT_TRUE(dump_result.is_ok()) << dump_result.error_value();
-
-  auto write_result = writer.WriteFragments();
-  ASSERT_TRUE(write_result.is_ok()) << write_result.error_value();
-  const size_t bytes_written = write_result.value();
-
-  auto memory_result = dump.DumpMemory(writer.WriteCallback());
-  ASSERT_TRUE(memory_result.is_ok()) << memory_result.error_value();
-  const size_t total_with_memory = memory_result.value();
-
-  // We pruned all memory, so DumpMemory should not have added any output.
-  EXPECT_EQ(bytes_written, total_with_memory);
+  ASSERT_NO_FATAL_FAILURE(process.Dump(writer));
 
   zxdump::TaskHolder holder;
   auto read_result = holder.Insert(file.RewoundFd());
   ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
   ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder, false));
+}
+
+TEST(ZxdumpTests, ProcessDumpToZstdFile) {
+  constexpr std::string_view kName = "zstd-process-dump-test";
+
+  // We'll verify the data written to the file by decompressing it with the
+  // zstd tool and reading in the resulting uncompressed file.
+  zxdump::testing::TestToolProcess zstd;
+  ASSERT_NO_FATAL_FAILURE(zstd.Init());
+
+  // Set up the writer to send the compressed data to a temporary file.
+  zxdump::testing::TestToolProcess::File& zstd_file =
+      zstd.MakeFile(kName, zxdump::testing::TestToolProcess::File::kZstdSuffix);
+  zxdump::ZstdWriter writer(zstd_file.CreateInput());
+
+  TestProcessForPropertiesAndInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+  ASSERT_NO_FATAL_FAILURE(process.Dump(writer));
+
+  // Complete the compressed stream.
+  auto finish = writer.Finish();
+  ASSERT_TRUE(finish.is_ok()) << finish.error_value();
+
+  // Decompress the file using the tool.
+  zxdump::testing::TestToolProcess::File& plain_file = zstd.MakeFile(kName);
+  std::vector<std::string> args({
+      "-d"s,
+      "-q"s,
+      zstd_file.name(),
+      "-o"s,
+      plain_file.name(),
+  });
+  ASSERT_NO_FATAL_FAILURE(zstd.Start("zstd"s, args));
+  ASSERT_NO_FATAL_FAILURE(zstd.CollectStdout());
+  ASSERT_NO_FATAL_FAILURE(zstd.CollectStderr());
+  int exit_status;
+  ASSERT_NO_FATAL_FAILURE(zstd.Finish(exit_status));
+  EXPECT_EQ(exit_status, EXIT_SUCCESS);
+
+  // The zstd tool would complain about a malformed file.
+  EXPECT_EQ(zstd.collected_stderr(), "");
+  EXPECT_EQ(zstd.collected_stdout(), "");
+
+  // Now read in the uncompressed file and check its contents.
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(plain_file.OpenOutput());
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+  ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder, false));
+}
+
+TEST(ZxdumpTests, ProcessDumpToZstdPipe) {
+  // We'll verify the data by piping it directly to the zstd tool to decompress
+  // as a filter with pipes on both ends, reading from that pipe.
+  zxdump::testing::TestToolProcess zstd;
+  ASSERT_NO_FATAL_FAILURE(zstd.Init());
+  std::vector<std::string> args({"-d"s});
+  ASSERT_NO_FATAL_FAILURE(zstd.Start("zstd"s, args));
+  ASSERT_NO_FATAL_FAILURE(zstd.CollectStderr());
+
+  TestProcessForPropertiesAndInfo process;
+  ASSERT_NO_FATAL_FAILURE(process.StartChild());
+  {
+    // Set up the writer to send the compressed data to the tool.
+    zxdump::ZstdWriter writer(std::move(zstd.tool_stdin()));
+
+    ASSERT_NO_FATAL_FAILURE(process.Dump(writer));
+
+    // Complete the compressed stream.
+    auto finish = writer.Finish();
+    ASSERT_TRUE(finish.is_ok()) << finish.error_value();
+
+    // The write side of the pipe is closed when the writer goes out of scope,
+    // so the decompressor can finish.
+  }
+
+  // Now read in the uncompressed dump stream and check its contents.
+  zxdump::TaskHolder holder;
+  auto read_result = holder.Insert(std::move(zstd.tool_stdout()), false);
+  ASSERT_TRUE(read_result.is_ok()) << read_result.error_value();
+  ASSERT_NO_FATAL_FAILURE(process.CheckDump(holder, false));
+
+  // The reader should have consumed the all of the tool's stdout by now,
+  // so it will have been unblocked to finish after its stdin hit EOF when
+  // the writer's destruction closed the pipe.
+  int exit_status;
+  ASSERT_NO_FATAL_FAILURE(zstd.Finish(exit_status));
+  EXPECT_EQ(exit_status, EXIT_SUCCESS);
+
+  // The zstd tool would complain about a malformed stream.
+  EXPECT_EQ(zstd.collected_stderr(), "");
 }
 
 }  // namespace

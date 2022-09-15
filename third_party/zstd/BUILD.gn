@@ -219,15 +219,28 @@ if (!is_kernel) {
     output_name = "zstd"
     sources = [
       "src/programs/benchfn.c",
+      "src/programs/benchfn.h",
       "src/programs/benchzstd.c",
+      "src/programs/benchzstd.h",
       "src/programs/datagen.c",
+      "src/programs/datagen.h",
       "src/programs/dibio.c",
+      "src/programs/dibio.h",
       "src/programs/fileio.c",
+      "src/programs/fileio.h",
+      "src/programs/platform.h",
       "src/programs/timefn.c",
+      "src/programs/timefn.h",
       "src/programs/util.c",
+      "src/programs/util.h",
       "src/programs/zstdcli.c",
+      "src/programs/zstdcli_trace.c",
+      "src/programs/zstdcli_trace.h",
     ]
-    configs += [ ":internal.config" ]
+    configs += [
+      ":internal.config",
+      "//build/config:Wno-strict-prototypes",
+    ]
     deps = [ ":zstd" ]
   }
 }

@@ -10,7 +10,9 @@
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zxdump/dump.h>
+#include <lib/zxdump/fd-writer.h>
 #include <lib/zxdump/task.h>
+#include <lib/zxdump/zstd-writer.h>
 #include <unistd.h>
 
 #include <cstdio>
@@ -116,12 +118,20 @@ class TestProcessForPropertiesAndInfo : public TestProcess {
   // Start a child for basic property & info dump testing.
   void StartChild();
 
+  // Do the basic dump using the dumper API.
+  template <typename Writer>
+  void Dump(Writer& writer);
+
   // Verify a dump file for that child was inserted and looks right.
   void CheckDump(zxdump::TaskHolder& holder, bool threads_dumped = true);
 
  private:
   static constexpr const char* kChildName = "zxdump-property-test-child";
 };
+
+// The template and its instantiations are defined in dump-tests.cc.
+extern template void TestProcessForPropertiesAndInfo::Dump(FdWriter&);
+extern template void TestProcessForPropertiesAndInfo::Dump(ZstdWriter&);
 
 }  // namespace zxdump::testing
 

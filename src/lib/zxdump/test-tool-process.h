@@ -30,6 +30,8 @@ class TestToolProcess {
  public:
   class File {
    public:
+    static constexpr std::string_view kZstdSuffix = ".zst";
+
     File() = default;
     File(const File&) = delete;
     File(File&&) = default;
@@ -54,6 +56,14 @@ class TestToolProcess {
     // Don't expect this file to be created.
     File NoFile();
 
+    // This immediately takes the existing file already written and runs
+    // the zstd tool to compress it into a file of the same name + ".zst".
+    File& ZstdCompress() const;
+
+    // This immediately takes the existing file ending in ".zst" and uses
+    // the zstd tool to decompress it into a file of the same name - ".zst".
+    File& ZstdDecompress() const;
+
    private:
     TestToolProcess* owner_ = nullptr;
     friend TestToolProcess;
@@ -66,6 +76,12 @@ class TestToolProcess {
   TestToolProcess(TestToolProcess&&) = default;
 
   ~TestToolProcess();
+
+  // This creates a new isolated tmp directory.
+  void Init();
+
+  // This uses an existing tmp directory shared with another TestToolProcess.
+  void Init(std::string_view tmp_path);
 
   // Return a file name that can be passed to the tool via its Start arguments.
   // The file name will include the given name string for debugging purposes,
@@ -112,6 +128,8 @@ class TestToolProcess {
   std::string collected_stdout();
   std::string collected_stderr();
 
+  const std::string& tmp_path() const { return tmp_path_; }
+
 #ifdef __Fuchsia__
   void set_job(zx::unowned_job job) { job_ = job; }
 #endif
@@ -124,6 +142,7 @@ class TestToolProcess {
   void SandboxCommand(PipedCommand& command);
 
   std::string tmp_path_;
+  bool clear_tmp_ = false;
   std::list<File> files_;
   std::string collected_stdout_, collected_stderr_;
   std::thread stdin_thread_, stdout_thread_, stderr_thread_;

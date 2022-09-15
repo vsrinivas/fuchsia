@@ -6,7 +6,9 @@
 
 #include <dirent.h>
 #include <fcntl.h>
+#include <lib/stdcompat/string_view.h>
 #include <unistd.h>
+#include <zircon/assert.h>
 
 #include <cstdlib>
 #include <filesystem>
@@ -37,6 +39,8 @@
 #endif
 
 namespace zxdump::testing {
+
+using namespace std::literals;
 
 std::string GetTmpDir() {
 #ifndef __Fuchsia__
@@ -75,6 +79,7 @@ std::string ToolPath(std::string tool) {
 }
 
 std::string TestToolProcess::FilePathForTool(const TestToolProcess::File& file) const {
+  ZX_ASSERT(!tmp_path_.empty());
 #ifdef __Fuchsia__
   // The tool process runs in a sandbox where /tmp/ is actually our tmp_path_.
   return "/tmp/" + file.name_;
@@ -85,6 +90,7 @@ std::string TestToolProcess::FilePathForTool(const TestToolProcess::File& file) 
 }
 
 std::string TestToolProcess::FilePathForRunner(const std::string& name) const {
+  ZX_ASSERT(!tmp_path_.empty());
   return tmp_path_ + name;
 }
 
@@ -254,10 +260,14 @@ TestToolProcess::File TestToolProcess::File::NoFile() {
 TestToolProcess::File::~File() = default;
 
 void TestToolProcess::Start(const std::string& tool, const std::vector<std::string>& args) {
+  ZX_ASSERT(!tmp_path_.empty());
+
   PipedCommand command;
 
   auto redirect = [&](int number, fbl::unique_fd& tool_fd, bool read) {
-    if (!tool_fd) {
+    if (tool_fd) {
+      command.Redirect(number, std::move(tool_fd));
+    } else {
       int pipe_fd[2];
       ASSERT_EQ(pipe(pipe_fd), 0) << strerror(errno);
       ASSERT_EQ(fcntl(pipe_fd[0], F_SETFD, FD_CLOEXEC), 0) << strerror(errno);
@@ -299,7 +309,9 @@ void TestToolProcess::Finish(int& status) {
 #endif
 }
 
-TestToolProcess::TestToolProcess() {
+TestToolProcess::TestToolProcess() = default;
+
+void TestToolProcess::Init() {
   tmp_path_ = GetTmpDir() + "tool-tmp.";
   int n = 1;
   while (mkdir((tmp_path_ + std::to_string(n)).c_str(), 0777) < 0) {
@@ -307,7 +319,10 @@ TestToolProcess::TestToolProcess() {
     ++n;
   }
   tmp_path_ += std::to_string(n) + '/';
+  clear_tmp_ = true;
 }
+
+void TestToolProcess::Init(std::string_view tmp_path) { tmp_path_ = tmp_path; }
 
 TestToolProcess::~TestToolProcess() {
   bool live = false;
@@ -338,7 +353,7 @@ TestToolProcess::~TestToolProcess() {
     EXPECT_EQ(remove(path.c_str()), 0) << file.name() << " as " << path << ": " << strerror(errno);
   }
 
-  if (!tmp_path_.empty()) {
+  if (clear_tmp_) {
     EXPECT_EQ(tmp_path_.back(), '/');
     tmp_path_.resize(tmp_path_.size() - 1);  // Remove trailing slash.
     if (rmdir(tmp_path_.c_str()) != 0) {
@@ -410,6 +425,41 @@ TestToolProcess::File& TestToolProcess::MakeFile(std::string_view name, std::str
   file.name_ += suffix;
   files_.push_back(std::move(file));
   return files_.back();
+}
+
+TestToolProcess::File& TestToolProcess::File::ZstdCompress() const {
+  File& zstd_file = owner_->MakeFile(name_, kZstdSuffix);
+  TestToolProcess zstd_tool;
+  zstd_tool.Init(owner_->tmp_path());
+  std::vector<std::string> args({
+      "-1"s,
+      name(),
+      "-o"s,
+      zstd_file.name(),
+  });
+  zstd_tool.Start("zstd", args);
+  int status;
+  zstd_tool.Finish(status);
+  EXPECT_EQ(status, EXIT_SUCCESS);
+  return zstd_file;
+}
+
+TestToolProcess::File& TestToolProcess::File::ZstdDecompress() const {
+  ZX_ASSERT(cpp20::ends_with(std::string_view(name_), kZstdSuffix));
+  File& plain_file = owner_->MakeFile(name_.substr(0, name_.size() - kZstdSuffix.size()));
+  TestToolProcess zstd_tool;
+  zstd_tool.Init(owner_->tmp_path());
+  std::vector<std::string> args({
+      "-d"s,
+      name(),
+      "-o"s,
+      plain_file.name(),
+  });
+  zstd_tool.Start("zstd"s, args);
+  int status;
+  zstd_tool.Finish(status);
+  EXPECT_EQ(status, EXIT_SUCCESS);
+  return plain_file;
 }
 
 }  // namespace zxdump::testing

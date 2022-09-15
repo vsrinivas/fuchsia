@@ -86,6 +86,7 @@ TEST(ZxdumpTests, PipedCommandRedirect) {
   // takes care of pushing to its stdin and pulling from its stdout.
   constexpr std::string_view kStdinContents = "stdin contents";
   zxdump::testing::TestToolProcess child;
+  ASSERT_NO_FATAL_FAILURE(child.Init());
   ASSERT_NO_FATAL_FAILURE(child.Start(kTestChild, {"-c", "-", "-x", "0"}));
   ASSERT_NO_FATAL_FAILURE(child.CollectStdout());
   ASSERT_NO_FATAL_FAILURE(child.CollectStderr());
@@ -102,6 +103,7 @@ TEST(ZxdumpTests, TestToolProcessInputFile) {
   std::string in_file_name;
   {
     zxdump::testing::TestToolProcess child;
+    ASSERT_NO_FATAL_FAILURE(child.Init());
     auto& in_file = child.MakeFile("input");
     in_file_name = in_file.name();
     EXPECT_NE(in_file_name.find("input"), std::string::npos);
@@ -135,6 +137,7 @@ TEST(ZxdumpTests, TestToolProcessInputFile) {
 TEST(ZxdumpTests, TestToolProcessOutputFile) {
   constexpr std::string_view kFileContents = "file contents";
   zxdump::testing::TestToolProcess child;
+  ASSERT_NO_FATAL_FAILURE(child.Init());
   auto& out_file = child.MakeFile("output");
   const std::string out_file_name = out_file.name();
   EXPECT_NE(out_file_name.find("output"), std::string::npos);
