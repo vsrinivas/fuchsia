@@ -2,270 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    analytics::{add_crash_event, get_notice, opt_out_for_this_invocation},
-    anyhow::{Context as _, Result},
-    async_trait::async_trait,
-    async_utils::async_once::Once,
-    buildid,
-    errors::{ffx_bail, ffx_error, FfxError, ResultExt as _},
-    ffx_config::{get_log_dirs, EnvironmentContext},
-    ffx_core::Injector,
-    ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running_at_path},
-    ffx_lib_args::{from_env, redact_arg_values, Ffx},
-    ffx_lib_sub_command::SubCommand,
-    ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc},
-    ffx_target::{get_remote_proxy, open_target_with_fut},
-    ffx_writer::Writer,
-    fidl::endpoints::create_proxy,
-    fidl_fuchsia_developer_ffx::{
-        DaemonError, DaemonProxy, FastbootMarker, FastbootProxy, TargetProxy, VersionInfo,
-    },
-    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
-    fuchsia_async::TimeoutExt,
-    futures::FutureExt,
-    std::collections::HashMap,
-    std::default::Default,
-    std::fs::File,
-    std::io::Write,
-    std::path::PathBuf,
-    std::str::FromStr,
-    std::time::{Duration, Instant},
-    timeout::timeout,
-};
-
-// Config key for event timeout.
-const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
-
-const CURRENT_EXE_BUILDID: &str = "current.buildid";
-
-fn is_default_target() -> bool {
-    let app: Ffx = argh::from_env();
-    app.target.is_none()
-}
-
-struct Injection {
-    daemon_once: Once<DaemonProxy>,
-    remote_once: Once<RemoteControlProxy>,
-    target: Once<Option<String>>,
-}
-
-impl std::fmt::Debug for Injection {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Injection").finish()
-    }
-}
-
-impl Default for Injection {
-    fn default() -> Self {
-        Self { target: Once::new(), daemon_once: Once::new(), remote_once: Once::new() }
-    }
-}
-
-impl Injection {
-    async fn target(&self) -> Result<Option<String>> {
-        self.target
-            .get_or_try_init(async {
-                let app: Ffx = argh::from_env();
-                app.target().await
-            })
-            .await
-            .map(|s| s.clone())
-    }
-
-    #[tracing::instrument(level = "info")]
-    async fn init_remote_proxy(&self) -> Result<RemoteControlProxy> {
-        let daemon_proxy = self.daemon_factory().await?;
-        let target = self.target().await?;
-        let proxy_timeout = proxy_timeout().await?;
-        get_remote_proxy(target, is_default_target(), daemon_proxy, proxy_timeout).await
-    }
-
-    async fn fastboot_factory_inner(&self) -> Result<FastbootProxy> {
-        let daemon_proxy = self.daemon_factory().await?;
-        let target = self.target().await?;
-        let (target_proxy, target_proxy_fut) = open_target_with_fut(
-            target,
-            is_default_target(),
-            daemon_proxy.clone(),
-            proxy_timeout().await?,
-        )?;
-        target_proxy_fut.await?;
-        let (fastboot_proxy, fastboot_server_end) = create_proxy::<FastbootMarker>()?;
-        target_proxy.open_fastboot(fastboot_server_end)?;
-        Ok(fastboot_proxy)
-    }
-
-    async fn target_factory_inner(&self) -> Result<TargetProxy> {
-        let target = self.target().await?;
-        let daemon_proxy = self.daemon_factory().await?;
-        let (target_proxy, target_proxy_fut) = open_target_with_fut(
-            target,
-            is_default_target(),
-            daemon_proxy.clone(),
-            proxy_timeout().await?,
-        )?;
-        target_proxy_fut.await?;
-        Ok(target_proxy)
-    }
-
-    async fn daemon_timeout_error(&self) -> Result<FfxError> {
-        Ok(FfxError::DaemonError {
-            err: DaemonError::Timeout,
-            target: self.target().await?,
-            is_default_target: is_default_target(),
-        })
-    }
-}
-
-#[async_trait(?Send)]
-impl Injector for Injection {
-    // This could get called multiple times by the plugin system via multiple threads - so make sure
-    // the spawning only happens one thread at a time.
-    #[tracing::instrument(level = "info")]
-    async fn daemon_factory(&self) -> Result<DaemonProxy> {
-        let context = ffx_config::global_env_context()
-            .context("Trying to initialize daemon with no global context")?;
-
-        self.daemon_once
-            .get_or_try_init(init_daemon_proxy(context))
-            .await
-            .map(|proxy| proxy.clone())
-    }
-
-    async fn fastboot_factory(&self) -> Result<FastbootProxy> {
-        let target = self.target().await?;
-        let timeout_error = self.daemon_timeout_error().await?;
-        timeout(proxy_timeout().await?, self.fastboot_factory_inner()).await.map_err(|_| {
-            tracing::warn!("Timed out getting fastboot proxy for: {:?}", target);
-            timeout_error
-        })?
-    }
-
-    async fn target_factory(&self) -> Result<TargetProxy> {
-        let target = self.target().await?;
-        let timeout_error = self.daemon_timeout_error().await?;
-        timeout(proxy_timeout().await?, self.target_factory_inner()).await.map_err(|_| {
-            tracing::warn!("Timed out getting fastboot proxy for: {:?}", target);
-            timeout_error
-        })?
-    }
-
-    #[tracing::instrument(level = "info")]
-    async fn remote_factory(&self) -> Result<RemoteControlProxy> {
-        let target = self.target().await?;
-        let timeout_error = self.daemon_timeout_error().await?;
-        timeout(proxy_timeout().await?, async {
-            self.remote_once
-                .get_or_try_init(self.init_remote_proxy())
-                .await
-                .map(|proxy| proxy.clone())
-        })
-        .await
-        .map_err(|_| {
-            tracing::warn!("Timed out getting remote control proxy for: {:?}", target);
-            timeout_error
-        })?
-    }
-
-    async fn is_experiment(&self, key: &str) -> bool {
-        ffx_config::get(key).await.unwrap_or(false)
-    }
-
-    async fn build_info(&self) -> Result<VersionInfo> {
-        Ok::<VersionInfo, anyhow::Error>(ffx_build_version::build_info())
-    }
-
-    async fn writer(&self) -> Result<Writer> {
-        let app: Ffx = argh::from_env();
-        Ok(Writer::new(app.machine))
-    }
-}
-
-async fn init_daemon_proxy(context: EnvironmentContext) -> Result<DaemonProxy> {
-    // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
-    // instead.
-    let hoist = hoist::hoist();
-    let ascendd_path = context.load().await?.get_ascendd_path()?;
-
-    if cfg!(not(test)) && !is_daemon_running_at_path(&ascendd_path) {
-        ffx_daemon::spawn_daemon(&context).await?;
-    }
-    // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
-    // instead.
-    let (nodeid, proxy, link) =
-        get_daemon_proxy_single_link(hoist, ascendd_path.clone(), None).await?;
-
-    // Spawn off the link task, so that FIDL functions can be called (link IO makes progress).
-    let link_task = fuchsia_async::Task::local(link.map(|_| ()));
-
-    // TODO(fxb/67400) Create an e2e test.
-    let build_id = if cfg!(test) {
-        "testcurrenthash".to_owned()
-    } else {
-        let build_id = ffx_config::query(CURRENT_EXE_BUILDID)
-            .level(Some(ffx_config::ConfigLevel::Runtime))
-            .get()
-            .await;
-        match build_id {
-            Ok(str) => str,
-            Err(err) => {
-                tracing::error!("BUG: ffx version information is missing! {:?}", err);
-                link_task.detach();
-                return Ok(proxy);
-            }
-        }
-    };
-
-    let daemon_version_info = timeout(proxy_timeout().await?, proxy.get_version_info())
-        .await
-        .context("timeout")
-        .map_err(|_| {
-            ffx_error!(
-                "ffx was unable to query the version of the running ffx daemon. \
-                                 Run `ffx doctor --restart-daemon` and try again."
-            )
-        })?
-        .context("Getting hash from daemon")?;
-
-    if Some(build_id) == daemon_version_info.build_id {
-        link_task.detach();
-        return Ok(proxy);
-    }
-
-    eprintln!("Daemon is a different version, attempting to restart");
-    tracing::info!("Daemon is a different version, attempting to restart");
-
-    // Tell the daemon to quit, and wait for the link task to finish.
-    // TODO(raggi): add a timeout on this, if the daemon quit fails for some
-    // reason, the link task would hang indefinitely.
-    let (quit_result, _) = futures::future::join(proxy.quit(), link_task).await;
-
-    if !quit_result.is_ok() {
-        ffx_bail!(
-            "ffx daemon upgrade failed unexpectedly. \n\
-            Try running `ffx doctor --restart-daemon` and then retry your \
-            command.\n\nError was: {:?}",
-            quit_result
-        )
-    }
-
-    if cfg!(not(test)) {
-        ffx_daemon::spawn_daemon(&context).await?;
-    }
-
-    let (_nodeid, proxy, link) =
-        get_daemon_proxy_single_link(hoist, ascendd_path, Some(vec![nodeid])).await?;
-
-    fuchsia_async::Task::local(link.map(|_| ())).detach();
-
-    Ok(proxy)
-}
-
-async fn proxy_timeout() -> Result<Duration> {
-    let proxy_timeout: f64 = ffx_config::get(PROXY_TIMEOUT_SECS).await?;
-    Ok(Duration::from_secs_f64(proxy_timeout))
-}
+use analytics::{add_crash_event, get_notice, opt_out_for_this_invocation};
+use anyhow::{Context as _, Result};
+use buildid;
+use errors::{ffx_error, ResultExt as _};
+use ffx_config::{get_log_dirs, EnvironmentContext};
+use ffx_core::Injector;
+use ffx_daemon_proxy::Injection;
+use ffx_lib_args::{from_env, redact_arg_values, Ffx};
+use ffx_lib_sub_command::SubCommand;
+use ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc};
+use fuchsia_async::TimeoutExt;
+use std::collections::HashMap;
+use std::fs::File;
+use std::io::Write;
+use std::path::PathBuf;
+use std::str::FromStr;
+use std::time::{Duration, Instant};
 
 fn is_daemon(subcommand: &Option<SubCommand>) -> bool {
     if let Some(SubCommand::FfxDaemonPlugin(ffx_daemon_plugin_args::DaemonCommand {
@@ -282,7 +35,8 @@ fn is_schema(subcommand: &Option<SubCommand>) -> bool {
 }
 
 fn set_buildid_config(overrides: Option<String>) -> Result<Option<String>> {
-    let runtime = format!("{}={}", CURRENT_EXE_BUILDID, buildid::get_build_id()?);
+    let runtime =
+        format!("{}={}", ffx_build_version::CURRENT_EXE_BUILDID, buildid::get_build_id()?);
     match overrides {
         Some(s) => {
             if s.is_empty() {
@@ -337,7 +91,7 @@ async fn run() -> Result<()> {
     // hoist() unset for ffx but I'm leaving the last couple uses of it in place for the sake of
     // avoiding complicated merge conflicts with isolation. Once we're ready for that, this should be
     // `let Hoist = hoist::Hoist::new()...`
-    hoist::init_hoist().context("initializing hoist")?;
+    let hoist = hoist::init_hoist().context("initializing hoist")?;
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
     // properly have the runtime parameters.
@@ -385,7 +139,7 @@ async fn run() -> Result<()> {
 
     let analytics_disabled = ffx_config::get("ffx.analytics.disabled").await.unwrap_or(false);
     let ffx_invoker = ffx_config::get("fuchsia.analytics.ffx_invoker").await.unwrap_or(None);
-    let injection = Injection::default();
+    let injection = Injection::new(hoist.clone(), app.machine, app.target().await?);
     init_metrics_svc(injection.build_info().await?, ffx_invoker).await; // one time call to initialize app analytics
     if analytics_disabled {
         opt_out_for_this_invocation().await?
@@ -478,243 +232,8 @@ async fn main() {
 #[cfg(test)]
 mod test {
     use super::*;
-    use ascendd;
-    use async_lock::Mutex;
-    use async_net::unix::UnixListener;
-    use fidl::endpoints::{ClientEnd, DiscoverableProtocolMarker, RequestStream};
-    use fidl_fuchsia_developer_ffx::{DaemonMarker, DaemonRequest, DaemonRequestStream};
-    use fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream};
-    use fuchsia_async::Task;
-    use futures::AsyncReadExt;
-    use futures::TryStreamExt;
-    use hoist::OvernetInstance;
     use std::io::BufWriter;
-    use std::path::PathBuf;
-    use std::sync::Arc;
     use tempfile;
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_init_daemon_proxy_link_lost() {
-        let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
-        let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
-
-        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
-        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
-        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
-        hoist::init_hoist().unwrap();
-
-        // Start a listener that accepts and immediately closes the socket..
-        let listener = UnixListener::bind(sockpath.to_owned()).unwrap();
-        let _listen_task = Task::local(async move {
-            loop {
-                drop(listener.accept().await.unwrap());
-            }
-        });
-
-        let res = init_daemon_proxy(test_env.context.clone()).await;
-        let str = format!("{}", res.err().unwrap());
-        assert!(str.contains("link lost"));
-        assert!(str.contains("ffx doctor"));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_init_daemon_proxy_timeout_no_connection() {
-        let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
-        let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
-
-        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
-        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
-        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
-        hoist::init_hoist().unwrap();
-
-        // Start a listener that never accepts the socket.
-        let _listener = UnixListener::bind(sockpath.to_owned()).unwrap();
-
-        let res = init_daemon_proxy(test_env.context.clone()).await;
-        let str = format!("{}", res.err().unwrap());
-        assert!(str.contains("Timed out"));
-        assert!(str.contains("ffx doctor"));
-    }
-
-    async fn test_daemon(sockpath: PathBuf, build_id: &str, sleep_secs: u64) {
-        let version_info = VersionInfo {
-            exec_path: Some(std::env::current_exe().unwrap().to_string_lossy().to_string()),
-            build_id: Some(build_id.to_owned()),
-            ..VersionInfo::EMPTY
-        };
-        let local_hoist = hoist::hoist();
-        let daemon_hoist = Arc::new(hoist::Hoist::new().unwrap());
-        let _t = local_hoist.start_socket_link(sockpath.clone());
-
-        let (s, p) = fidl::Channel::create().unwrap();
-        daemon_hoist.publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p)).unwrap();
-
-        let link_tasks = Arc::new(Mutex::new(Vec::<Task<()>>::new()));
-        let link_tasks1 = link_tasks.clone();
-
-        let listener = UnixListener::bind(&sockpath).unwrap();
-        let listen_task = Task::local(async move {
-            // let (sock, _addr) = listener.accept().await.unwrap();
-            let mut stream = listener.incoming();
-            while let Some(sock) = stream.try_next().await.unwrap_or(None) {
-                fuchsia_async::Timer::new(Duration::from_secs(sleep_secs)).await;
-                let hoist_clone = daemon_hoist.clone();
-                link_tasks1.lock().await.push(Task::local(async move {
-                    let (mut rx, mut tx) = sock.split();
-                    ascendd::run_stream(
-                        hoist_clone.node(),
-                        &mut rx,
-                        &mut tx,
-                        Some("fake daemon".to_string()),
-                        None,
-                    )
-                    .map(|r| eprintln!("link error: {:?}", r))
-                    .await;
-                }));
-            }
-        });
-
-        let mut stream = ServiceProviderRequestStream::from_channel(
-            fidl::AsyncChannel::from_channel(s).unwrap(),
-        );
-
-        while let Some(ServiceProviderRequest::ConnectToService { chan, .. }) =
-            stream.try_next().await.unwrap_or(None)
-        {
-            let link_tasks = link_tasks.clone();
-            let mut stream =
-                DaemonRequestStream::from_channel(fidl::AsyncChannel::from_channel(chan).unwrap());
-            while let Some(request) = stream.try_next().await.unwrap_or(None) {
-                match request {
-                    DaemonRequest::GetVersionInfo { responder, .. } => {
-                        responder.send(version_info.clone()).unwrap()
-                    }
-                    DaemonRequest::Quit { responder, .. } => {
-                        std::fs::remove_file(sockpath).unwrap();
-                        listen_task.cancel().await;
-                        responder.send(true).unwrap();
-                        // This is how long the daemon sleeps for, which
-                        // is a workaround for the fact that we have no
-                        // way to "flush" the response over overnet due
-                        // to the constraints of mesh routing.
-                        fuchsia_async::Timer::new(Duration::from_millis(20)).await;
-                        link_tasks.lock().await.clear();
-                        return;
-                    }
-                    _ => {
-                        panic!("unimplemented stub for request: {:?}", request);
-                    }
-                }
-            }
-        }
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_init_daemon_proxy_hash_matches() {
-        let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
-        let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
-
-        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
-        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
-        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
-        hoist::init_hoist().unwrap();
-
-        let sockpath1 = sockpath.to_owned();
-        let daemons_task = Task::local(async move {
-            test_daemon(sockpath1.to_owned(), "testcurrenthash", 0).await;
-        });
-
-        // wait until daemon binds the socket path
-        while std::fs::metadata(&sockpath).is_err() {
-            fuchsia_async::Timer::new(Duration::from_millis(20)).await
-        }
-
-        let proxy = init_daemon_proxy(test_env.context.clone()).await.unwrap();
-        proxy.quit().await.unwrap();
-        daemons_task.await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_init_daemon_proxy_upgrade() {
-        let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
-        let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
-
-        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
-        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
-        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
-        hoist::init_hoist().unwrap();
-
-        // Spawn two daemons, the first out of date, the second is up to date.
-        let sockpath1 = sockpath.to_owned();
-        let daemons_task = Task::local(async move {
-            test_daemon(sockpath1.to_owned(), "oldhash", 0).await;
-            // Note: testcurrenthash is explicitly expected by #cfg in get_daemon_proxy
-            test_daemon(sockpath1.to_owned(), "testcurrenthash", 0).await;
-        });
-
-        // wait until daemon binds the socket path
-        while std::fs::metadata(&sockpath).is_err() {
-            fuchsia_async::Timer::new(Duration::from_millis(20)).await
-        }
-
-        let proxy = init_daemon_proxy(test_env.context.clone()).await.unwrap();
-        proxy.quit().await.unwrap();
-        daemons_task.await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_init_daemon_blocked_for_4s_succeeds() {
-        let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
-        let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
-
-        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
-        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
-        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
-        hoist::init_hoist().unwrap();
-
-        // Spawn two daemons, the first out of date, the second is up to date.
-        let sockpath1 = sockpath.to_owned();
-        let daemon_task = Task::local(async move {
-            test_daemon(sockpath1.to_owned(), "testcurrenthash", 4).await;
-        });
-
-        // wait until daemon binds the socket path
-        while std::fs::metadata(&sockpath).is_err() {
-            fuchsia_async::Timer::new(Duration::from_millis(20)).await
-        }
-
-        let proxy = init_daemon_proxy(test_env.context.clone()).await.unwrap();
-        proxy.quit().await.unwrap();
-        daemon_task.await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_init_daemon_blocked_for_6s_timesout() {
-        let test_env = ffx_config::test_init().await.expect("Failed to initialize test env");
-        let sockpath = test_env.load().await.get_ascendd_path().expect("No ascendd path");
-
-        // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
-        // instead. These cases in particular require a lot of changes to ffx libraries, and they currently *only* work
-        // because this binary is compiled with panic=abort, which forces each test to run in its own process.
-        hoist::init_hoist().unwrap();
-
-        // Spawn two daemons, the first out of date, the second is up to date.
-        let sockpath1 = sockpath.to_owned();
-        let _daemon_task = Task::local(async move {
-            test_daemon(sockpath1.to_owned(), "testcurrenthash", 6).await;
-        });
-
-        // wait until daemon binds the socket path
-        while std::fs::metadata(&sockpath).is_err() {
-            fuchsia_async::Timer::new(Duration::from_millis(20)).await
-        }
-
-        let err = init_daemon_proxy(test_env.context.clone()).await;
-        assert!(err.is_err());
-        let str = format!("{:?}", err);
-        assert!(str.contains("Timed out"));
-        assert!(str.contains("ffx doctor"));
-    }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_stamp_file_creation() {

@@ -69,6 +69,7 @@ group("tests") {
     "core:tests($host_toolchain)",
     "events:tests($host_toolchain)",
     "protocols:tests($host_toolchain)",
+    "proxy:tests($host_toolchain)",
     "target:tests($host_toolchain)",
   ]
 }

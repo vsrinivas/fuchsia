@@ -96,14 +96,7 @@ if (is_host) {
       "src/main.rs",
     ]
 
-    test_deps = [
-      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
-      "//src/connectivity/overnet/lib/ascendd",
-      "//src/connectivity/overnet/lib/hoist",
-      "//third_party/rust_crates:async-lock",
-      "//third_party/rust_crates:async-net",
-      "//third_party/rust_crates:tempfile",
-    ]
+    test_deps = [ "//third_party/rust_crates:tempfile" ]
   }
 
   sdk_host_tool("bin_sdk") {

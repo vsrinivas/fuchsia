@@ -1,0 +1,50 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+if (is_host) {
+  rustc_library("lib") {
+    name = "ffx_daemon_proxy"
+    version = "0.1.0"
+    edition = "2021"
+    with_unit_tests = true
+
+    deps = [
+      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
+      "//src/connectivity/overnet/lib/hoist",
+      "//src/developer/ffx/config:lib",
+      "//src/developer/ffx/core:lib",
+      "//src/developer/ffx/daemon:lib",
+      "//src/developer/ffx/lib/errors:lib",
+      "//src/developer/ffx/lib/target:lib",
+      "//src/developer/ffx/lib/timeout:lib",
+      "//src/developer/ffx/lib/version:lib",
+      "//src/developer/ffx/lib/writer:lib",
+      "//src/lib/async-utils",
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:async-trait",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:tracing",
+    ]
+
+    test_deps = [
+      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
+      "//src/connectivity/overnet/lib/ascendd",
+      "//src/connectivity/overnet/lib/hoist",
+      "//third_party/rust_crates:async-lock",
+      "//third_party/rust_crates:async-net",
+    ]
+
+    sources = [ "src/lib.rs" ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":lib_test($host_toolchain)" ]
+}
