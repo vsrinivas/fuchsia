@@ -12,6 +12,7 @@ rustc_library("bt-fidl-mocks") {
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth_rust",
     "//sdk/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_rust",
+    "//sdk/fidl/fuchsia.bluetooth.gatt2:fuchsia.bluetooth.gatt2_rust",
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_rust",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fidl/rust/fidl",
@@ -26,6 +27,7 @@ rustc_library("bt-fidl-mocks") {
   sources = [
     "src/expect.rs",
     "src/gatt.rs",
+    "src/gatt2.rs",
     "src/lib.rs",
     "src/sys.rs",
   ]
