@@ -53,8 +53,12 @@ void FileConnection::Describe2(Describe2Callback callback) {
                   node.Which(), fuchsia::io::NodeInfoDeprecated::Tag::kFile);
     fuchsia::io::FileObject& object = node.file();
     fuchsia::io::FileInfo info;
-    info.set_observer(std::move(object.event));
-    info.set_stream(std::move(object.stream));
+    if (object.event.is_valid()) {
+      info.set_observer(std::move(object.event));
+    }
+    if (object.stream.is_valid()) {
+      info.set_stream(std::move(object.stream));
+    }
     callback(std::move(info));
   });
 }

@@ -164,8 +164,12 @@ ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation vnode_repre
       representation = fio::wire::Representation::WithConnector(arena);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::File>) {
       fio::wire::FileInfo file(arena);
-      file.set_observer(std::move(repr.observer));
-      file.set_stream(std::move(repr.stream));
+      if (repr.observer.is_valid()) {
+        file.set_observer(std::move(repr.observer));
+      }
+      if (repr.stream.is_valid()) {
+        file.set_stream(std::move(repr.stream));
+      }
       representation = fio::wire::Representation::WithFile(arena, file);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
       representation = fio::wire::Representation::WithDirectory(arena);

@@ -157,7 +157,10 @@ impl<T: 'static + File> FileConnection<T> {
                 }
             };
 
-        if let Some(mut info) = info {
+        if let Some(fio::FileInfo { observer, stream, .. }) = info {
+            let mut info =
+                fio::NodeInfoDeprecated::File(fio::FileObject { event: observer, stream });
+
             match control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info)) {
                 Ok(()) => (),
                 Err(_) => return,
@@ -229,12 +232,15 @@ impl<T: 'static + File> FileConnection<T> {
             }
             fio::FileRequest::DescribeDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe");
-                responder.send(&mut self.file.describe(self.flags)?)?;
+                let fio::FileInfo { observer, stream, .. } = self.file.describe(self.flags)?;
+                let mut info =
+                    fio::NodeInfoDeprecated::File(fio::FileObject { event: observer, stream });
+                responder.send(&mut info)?;
             }
             fio::FileRequest::Describe2 { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe2");
-                let _ = responder;
-                todo!("https://fxbug.dev/77623");
+                let info = self.file.describe(self.flags)?;
+                responder.send(info)?;
             }
             fio::FileRequest::GetConnectionInfo { responder } => {
                 fuchsia_trace::duration!("storage", "File::GetConnectionInfo");

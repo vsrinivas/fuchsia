@@ -1719,9 +1719,10 @@ where
                 responder_send!(responder, &mut self.make_handler().await.bind(addr));
             }
             fposix_socket::SynchronousDatagramSocketRequest::Query { responder } => {
-                // TODO(https://fxbug.dev/105608): Use a generated constant.
-                const PROTOCOL: &str = "fuchsia.posix.socket/SynchronousDatagramSocket";
-                responder_send!(responder, PROTOCOL.as_bytes());
+                responder_send!(
+                    responder,
+                    fposix_socket::SYNCHRONOUS_DATAGRAM_SOCKET_PROTOCOL_NAME.as_bytes()
+                );
             }
             fposix_socket::SynchronousDatagramSocketRequest::QueryFilesystem { responder } => {
                 responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), None);

@@ -89,10 +89,7 @@ pub trait File: Sync + Send + DirectoryEntry {
     }
 
     /// Describes the underlying object.  Defaults to a simple file.
-    fn describe(
-        &self,
-        _connection_flags: fio::OpenFlags,
-    ) -> Result<fio::NodeInfoDeprecated, Status> {
-        Ok(fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None }))
+    fn describe(&self, _connection_flags: fio::OpenFlags) -> Result<fio::FileInfo, Status> {
+        Ok(fio::FileInfo::EMPTY)
     }
 }
