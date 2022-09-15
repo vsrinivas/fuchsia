@@ -303,9 +303,25 @@ zx_status_t RealtekCodec::SetupDell5420() {
       {20u, SET_ANALOG_PIN_WIDGET_CTRL(true, false, false)},
       {20u, SET_EAPD_BTL_ENABLE(2)},
 
-      // Enable MIC2's input. Failure to keep this enabled causes headphone output to not work.
-      // TODO(103178) : figure out why.
+      // Enable NID 25 as an input.
+      // This magic is required to make headphone output work.
+      // There's some more (mostly undocumented) magic around NID 25
+      // that is required to make the headset microphone work,
+      // and that will follow in a future change.
       {25u, SET_ANALOG_PIN_WIDGET_CTRL(false, true, false)},
+
+      // Enable built-in microphone as an input.
+      // NID 18 is pin complex.
+      // NID 35 is mixer configured to take input from NID 18.
+      // NID 8 is input codec which takes input from NID 35.
+      {18u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0)},
+      {18u, SET_ANALOG_PIN_WIDGET_CTRL(false, true, false)},
+      {35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 0)},  // Mute all these
+      {35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 1)},
+      {35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 2)},
+      {35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 3)},
+      {35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(true, 0, 4)},
+      {35u, SET_INPUT_AMPLIFIER_GAIN_MUTE(false, 0, 5)},  // Don't mute this
 
       // Power up the top level Audio Function group.
       {1u, SET_POWER_STATE(HDA_PS_D0)},
@@ -345,6 +361,20 @@ zx_status_t RealtekCodec::SetupDell5420() {
           .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
           .mfr_name = "Dell",
           .product_name = "Built-in Speakers",
+      },
+
+      // Built-in microphone
+      {
+          .stream_id = 3,
+          .afg_nid = 1,
+          .conv_nid = 8,
+          .pc_nid = 18,
+          .is_input = true,
+          .default_conv_gain = 0.0f,
+          .default_pc_gain = 20.0f,
+          .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
+          .mfr_name = "Dell",
+          .product_name = "Built-in Microphone",
       },
   };
 
