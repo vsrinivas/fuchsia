@@ -23,9 +23,9 @@ use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
 use fuchsia_component::{client, server::ServiceFs};
 use fuchsia_inspect::component;
-use fuchsia_syslog::fx_log_warn;
 use futures::{channel::mpsc, prelude::*};
 use std::sync::Arc;
+use tracing::warn;
 
 type Result<T> = std::result::Result<T, Error>;
 type SessionId = u64;
@@ -39,13 +39,12 @@ const CHANNEL_BUFFER_SIZE: usize = 100;
 const MAX_EVENTS_SENT_WITHOUT_ACK: usize = 20;
 
 fn spawn_log_error(fut: impl Future<Output = Result<()>> + 'static) {
-    fasync::Task::local(fut.unwrap_or_else(|e| fx_log_warn!("{}", e))).detach()
+    fasync::Task::local(fut.unwrap_or_else(|err| warn!(%err))).detach()
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["mediasession"])]
 async fn main() {
-    fuchsia_syslog::init_with_tags(&["mediasession"]).expect("Initializing syslogger");
-    fuchsia_syslog::fx_log_info!("Initializing Fuchsia Media Session Service");
+    tracing::info!("Initializing Fuchsia Media Session Service");
 
     let mut server = ServiceFs::new_local();
     let inspector = component::inspector();

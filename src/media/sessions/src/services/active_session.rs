@@ -5,7 +5,6 @@
 use crate::{proxies::player::PlayerProxyEvent, Result, SessionId, CHANNEL_BUFFER_SIZE};
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_media_sessions2::*;
-use fuchsia_syslog::fx_log_warn;
 use futures::{
     channel::mpsc,
     future,
@@ -15,6 +14,7 @@ use std::{
     collections::{BTreeMap, HashMap},
     ops::RangeFrom,
 };
+use tracing::warn;
 
 const LOG_TAG: &str = "active_session";
 
@@ -154,7 +154,7 @@ impl ActiveSession {
         let active_session_id = self.active_sessions.active_session();
         let active_session = self.active_session()?;
         if let Err(fidl_error) = responder.send(active_session) {
-            fx_log_warn!(tag: LOG_TAG, "Disconnecting Active Session client: {:?}", fidl_error);
+            warn!(tag = LOG_TAG, "Disconnecting Active Session client: {:?}", fidl_error);
             self.clients.remove(&client_id);
         }
 

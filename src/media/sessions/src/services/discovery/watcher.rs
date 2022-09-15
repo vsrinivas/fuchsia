@@ -111,13 +111,11 @@ mod test {
     use super::*;
     use assert_matches::assert_matches;
     use fidl::{encoding::Decodable, endpoints::create_endpoints};
-    use fuchsia_async as fasync;
     use futures::{stream, Future, SinkExt, StreamExt};
     use futures_test::task::*;
     use std::sync::Arc;
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn back_pressure_when_acks_behind() -> Result<()> {
         let (watcher_client, watcher_server) = create_endpoints::<SessionsWatcherMarker>()?;
         let mut under_test: FlowControlledProxySink = watcher_client.into_proxy()?.into();
@@ -149,8 +147,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn player_filter() -> Result<()> {
         let make_event = |player_id: SessionId, is_active| {
             FilterApplicant::new(

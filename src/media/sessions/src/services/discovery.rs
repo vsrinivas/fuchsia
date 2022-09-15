@@ -18,7 +18,6 @@ use fidl::{
 };
 use fidl_fuchsia_media::UsageReporterProxy;
 use fidl_fuchsia_media_sessions2::*;
-use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use futures::{
     self,
     channel::mpsc,
@@ -34,6 +33,7 @@ use std::{
     marker::Unpin,
     ops::RangeFrom,
 };
+use tracing::{info, warn};
 
 const LOG_TAG: &str = "discovery";
 
@@ -110,7 +110,7 @@ impl Discovery {
         }))
         .filter_map(move |(id, event)| {
             if id != session_id {
-                fx_log_warn!(tag: LOG_TAG, "Watcher did not filter sessions by id");
+                warn!(tag = LOG_TAG, "Watcher did not filter sessions by id");
                 future::ready(None)
             } else {
                 match event {
@@ -131,10 +131,9 @@ impl Discovery {
         let mut requests = match session_control_request.into_stream() {
             Ok(requests) => requests,
             Err(e) => {
-                fx_log_warn!(
-                    tag: LOG_TAG,
-                    "Client attempted to connect to session with bad channel: {:?}",
-                    e
+                warn!(
+                    tag = LOG_TAG,
+                    "Client attempted to connect to session with bad channel: {:?}", e
                 );
                 return;
             }
@@ -194,11 +193,7 @@ impl Discovery {
         let proxy = match session_watcher.into_proxy() {
             Ok(proxy) => proxy,
             Err(e) => {
-                fx_log_warn!(
-                    tag: LOG_TAG,
-                    "Client tried to watch session with invalid watcher: {:?}",
-                    e
-                );
+                warn!(tag = LOG_TAG, "Client tried to watch session with invalid watcher: {:?}", e);
                 return;
             }
         };
@@ -223,8 +218,8 @@ impl Discovery {
 
             if let Some(usage) = usage {
                 if let Err(e) = self.interrupter.watch_usage(usage).await {
-                    fx_log_warn!(
-                        tag: LOG_TAG,
+                    warn!(
+                        tag = LOG_TAG,
                         concat!(
                             "Audio policy service UsageReporter is unavailable; ",
                             "interruptions will not work. Error: {:?}"
@@ -244,8 +239,8 @@ impl Discovery {
         std::mem::swap(&mut interrupted, &mut self.interrupt_paused_players);
 
         if let InterruptionStage::Begin = stage {
-            fx_log_info!(
-                tag: LOG_TAG,
+            info!(
+                tag = LOG_TAG,
                 concat!(
                     "Usage {:?} was interrputed; will pause the players ",
                     "that requested to be paused on interruption.",
@@ -288,10 +283,9 @@ impl Discovery {
         let status_request_stream = match session_request.into_stream() {
             Ok(status_request_stream) => status_request_stream,
             Err(e) => {
-                fx_log_info!(
-                    tag: LOG_TAG,
-                    "Client tried to observe session but sent a bad handle: {:?}",
-                    e
+                info!(
+                    tag = LOG_TAG,
+                    "Client tried to observe session but sent a bad handle: {:?}", e
                 );
                 return;
             }
@@ -360,7 +354,7 @@ impl Discovery {
                 // A new player has been published to `fuchsia.media.sessions2.Publisher`.
                 mut new_player = self.player_stream.select_next_some() => {
                     if let Err(e) = new_player.notify_published() {
-                        fx_log_warn!(tag: LOG_TAG, "Notify failed {:?}", e);
+                        warn!(tag = LOG_TAG, "Notify failed {:?}", e);
                     }
                     self.players.insert(new_player.id(), new_player);
                 }
@@ -385,12 +379,10 @@ mod test {
         endpoints::{create_endpoints, create_proxy},
     };
     use fidl_fuchsia_media::UsageReporterMarker;
-    use fuchsia_async as fasync;
     use fuchsia_inspect::Inspector;
     use futures::channel::oneshot;
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn watchers_caught_up_to_existing_players() -> Result<()> {
         let (mut player_sink, player_stream) = mpsc::channel(100);
         let (mut discovery_request_sink, discovery_request_stream) = mpsc::channel(100);

@@ -11,7 +11,6 @@ use fidl_fuchsia_media_audio::*;
 use fidl_fuchsia_media_sessions2::*;
 use fidl_table_validation::*;
 use fuchsia_inspect as inspect;
-use fuchsia_syslog::fx_log_info;
 use futures::{
     channel::oneshot,
     future::BoxFuture,
@@ -24,6 +23,7 @@ use std::{
     sync::Arc,
     task::{Context, Poll, Waker},
 };
+use tracing::info;
 
 const DEFAULT_PLAYER_USAGE: AudioRenderUsage = AudioRenderUsage::Media;
 
@@ -438,7 +438,7 @@ impl Stream for Player {
                             PlayerProxyEvent::Removed
                         }
                         e => {
-                            fx_log_info!(tag: "player_proxy", "Player update failed: {:#?}", e);
+                            info!(tag = "player_proxy", "Player update failed: {:#?}", e);
                             PlayerProxyEvent::Removed
                         }
                     },
@@ -449,9 +449,7 @@ impl Stream for Player {
                             PlayerProxyEvent::Updated(Arc::new(self.session_info_delta()))
                         }
                         Err(e) => {
-                            fx_log_info!(
-                                tag: "player_proxy",
-                                "Player sent invalid update: {:#?}", e);
+                            info!(tag = "player_proxy", "Player sent invalid update: {:#?}", e);
                             PlayerProxyEvent::Removed
                         }
                     },
@@ -480,7 +478,6 @@ mod test {
     use assert_matches::assert_matches;
     use fidl::encoding::Decodable;
     use fidl::endpoints::*;
-    use fuchsia_async as fasync;
     use futures::{
         future,
         stream::{StreamExt, TryStreamExt},
@@ -506,8 +503,7 @@ mod test {
         (inspector, player, player_server)
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn client_channel_closes_when_backing_player_disconnects() -> Result<()> {
         let (_inspector, mut player, _player_server) = test_player();
 
@@ -532,8 +528,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn update_stream_relays_player_state() -> Result<()> {
         let (_inspector, mut player, player_server) = test_player();
         let mut requests = player_server.into_stream()?;
@@ -573,8 +568,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn update_stream_terminates_when_backing_player_disconnects() {
         let (_inspector, mut player, _) = test_player();
         let mut player_stream = Pin::new(&mut player);
@@ -583,8 +577,7 @@ mod test {
         assert!(player_stream.is_terminated());
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn update_stream_terminates_on_invalid_delta() -> Result<()> {
         let (_inspector, mut player, player_server) = test_player();
         let mut requests = player_server.into_stream()?;
@@ -615,9 +608,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
-    #[allow(unused)]
+    #[fuchsia::test]
     async fn inspect_node() -> Result<()> {
         let (inspector, mut player, player_server) = test_player();
         let mut requests = player_server.into_stream()?;

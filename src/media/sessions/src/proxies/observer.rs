@@ -4,7 +4,6 @@
 
 use crate::Result;
 use fidl_fuchsia_media_sessions2::*;
-use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
 use futures::{
     stream::{Fuse, Map, Stream, StreamExt},
@@ -14,6 +13,7 @@ use std::{
     pin::Pin,
     task::{Context, Poll},
 };
+use tracing::warn;
 
 pub enum WatchStatusResponder {
     SessionControl(SessionControlWatchStatusResponder),
@@ -115,8 +115,8 @@ where
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.update(cx) {
             Err(UpdateError::DuplicateRequestForStatus) => {
-                fx_log_warn!(
-                    tag: "observer",
+                warn!(
+                    tag = "observer",
                     concat!(
                         "Client sent a request for status ",
                         "without waiting for a response to a prior request."
@@ -137,10 +137,7 @@ where
                     return Poll::Ready(Ok(()));
                 }
                 Err(e) => {
-                    fx_log_warn!(
-                        tag: "observer",
-                        "Error writing status to observer: {:?}", e
-                    );
+                    warn!(tag = "observer", "Error writing status to observer: {:?}", e);
                 }
                 Ok(_) => {}
             }
@@ -159,8 +156,7 @@ mod test {
     use fuchsia_async as fasync;
     use futures::{channel::mpsc, future, sink::SinkExt, task::noop_waker, FutureExt};
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn clients_waits_for_new_status() -> Result<()> {
         let (mut status_sink, status_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
         let (session_control_proxy, session_control_server) =
@@ -186,8 +182,7 @@ mod test {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn client_gets_cached_player_status() -> Result<()> {
         let (mut status_sink, status_stream) = mpsc::channel(CHANNEL_BUFFER_SIZE);
         let (session_control_proxy, session_control_server) =

@@ -6,12 +6,12 @@ use crate::Result;
 use async_utils::stream::StreamMap;
 use fidl::endpoints::create_request_stream;
 use fidl_fuchsia_media::*;
-use fuchsia_syslog::fx_log_warn;
 use futures::stream::{FusedStream, Stream};
 use std::{
     pin::Pin,
     task::{Context, Poll},
 };
+use tracing::warn;
 
 const LOG_TAG: &str = "interrupter";
 
@@ -68,7 +68,7 @@ impl Stream for Interrupter {
         ) {
             Ok(state_change) => state_change,
             Err(e) => {
-                fx_log_warn!(tag: LOG_TAG, "Audio policy service died: {:?}", e);
+                warn!(tag = LOG_TAG, "Audio policy service died: {:?}", e);
                 return Poll::Pending;
             }
         };
@@ -76,8 +76,8 @@ impl Stream for Interrupter {
         let usage = match usage {
             Usage::RenderUsage(usage) => usage,
             _ => {
-                fx_log_warn!(
-                    tag: LOG_TAG,
+                warn!(
+                    tag = LOG_TAG,
                     concat!(
                         "Audio policy service sent a capture usage state change; ",
                         "we only subscribe to renderer usage state changes."
@@ -91,7 +91,7 @@ impl Stream for Interrupter {
             UsageState::Muted(_) | UsageState::Ducked(_) => InterruptionStage::Begin,
             UsageState::Unadjusted(_) => InterruptionStage::End,
             UsageStateUnknown!() => {
-                fx_log_warn!(tag: LOG_TAG, "Audio policy service sent unknown UsageState variant");
+                warn!(tag = LOG_TAG, "Audio policy service sent unknown UsageState variant");
                 return Poll::Pending;
             }
         };
@@ -110,7 +110,6 @@ impl FusedStream for Interrupter {
 mod test {
     use super::*;
     use assert_matches::assert_matches;
-    use fuchsia_async as fasync;
     use futures::{
         future,
         stream::{StreamExt, TryStreamExt},
@@ -127,8 +126,7 @@ mod test {
         (interrupter, usage_reporter_requests)
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn pends_when_empty() {
         let (mut interrupter, _usage_reporter_requests) = test_interrupter();
 
@@ -136,8 +134,7 @@ mod test {
         assert_matches!(futures::poll!(next), Poll::Pending);
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn reports_interruption_on_multiple_watchers() {
         let (mut interrupter, mut usage_reporter_requests) = test_interrupter();
 
@@ -186,8 +183,7 @@ mod test {
         );
     }
 
-    #[fasync::run_singlethreaded]
-    #[test]
+    #[fuchsia::test]
     async fn reports_interruption() {
         let (mut interrupter, mut usage_reporter_requests) = test_interrupter();
 

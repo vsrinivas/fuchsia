@@ -82,7 +82,7 @@ impl Filter {
 mod test {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn active_filter() {
         let loose_filter = Filter::new(Decodable::new_empty());
         assert_eq!(loose_filter, Filter::default());
@@ -105,7 +105,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn allowlist_filter() {
         let loose_filter = Filter::new(Decodable::new_empty());
         assert_eq!(loose_filter, Filter::default());
@@ -147,7 +147,7 @@ mod test {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn filter_is_intersection() {
         let loose_filter = Filter::new(Decodable::new_empty());
         assert_eq!(loose_filter, Filter::default());

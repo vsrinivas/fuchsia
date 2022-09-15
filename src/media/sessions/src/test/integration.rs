@@ -30,14 +30,6 @@ const MEDIASESSION_URL: &str = "#meta/mediasession.cm";
 const MEDIASESSION_SELECTOR: &str = "mediasession";
 const ARCHIVIST_URL: &str = "#meta/archivist-for-embedding.cm";
 
-fn init_logger() {
-    static LOGGER: std::sync::Once = std::sync::Once::new();
-
-    LOGGER.call_once(|| {
-        fuchsia_syslog::init_with_tags(&["mediasession_tests"]).expect("Initializing syslogger")
-    })
-}
-
 struct TestService {
     #[allow(unused)]
     realm: RealmInstance,
@@ -404,9 +396,8 @@ fn delta_with_interruption(
     delta
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn can_publish_players() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -421,9 +412,8 @@ async fn can_publish_players() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn can_receive_deltas() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -475,9 +465,8 @@ async fn can_receive_deltas() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn active_status() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -534,9 +523,8 @@ async fn active_status() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn player_controls_are_proxied() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -572,9 +560,8 @@ async fn player_controls_are_proxied() -> Result<()> {
         .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn player_disconnection_propagates() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -596,9 +583,8 @@ async fn player_disconnection_propagates() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn watch_filter_active() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -624,9 +610,8 @@ async fn watch_filter_active() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn disconnected_player_results_in_removal_event() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -643,9 +628,8 @@ async fn disconnected_player_results_in_removal_event() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn player_status() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -684,9 +668,8 @@ async fn player_status() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn player_capabilities() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -714,9 +697,8 @@ async fn player_capabilities() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn media_images() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -761,9 +743,8 @@ async fn media_images() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn players_get_ids() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
 
     let player1 = TestPlayer::new(&service).await?;
@@ -774,9 +755,8 @@ async fn players_get_ids() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn session_controllers_can_watch_session_status() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
 
@@ -806,9 +786,8 @@ async fn session_controllers_can_watch_session_status() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn session_observers_can_watch_session_status() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
     let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
 
@@ -838,9 +817,8 @@ async fn session_observers_can_watch_session_status() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn player_disconnection_disconects_observers() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
     let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
 
@@ -861,9 +839,8 @@ async fn player_disconnection_disconects_observers() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn observers_caught_up_with_state_of_session() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
     let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
 
@@ -891,9 +868,8 @@ async fn observers_caught_up_with_state_of_session() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn player_is_interrupted() -> Result<()> {
-    init_logger();
     let mut service = TestService::new().await?;
     let mut player = TestPlayer::new(&service).await?;
 
@@ -921,9 +897,8 @@ async fn player_is_interrupted() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn unenrolled_player_is_not_paused_when_interrupted() -> Result<()> {
-    init_logger();
     let mut service = TestService::new().await?;
     let mut player1 = TestPlayer::new(&service).await?;
     let mut player2 = TestPlayer::new(&service).await?;
@@ -952,9 +927,8 @@ async fn unenrolled_player_is_not_paused_when_interrupted() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn player_paused_before_interruption_is_not_resumed_by_its_end() -> Result<()> {
-    init_logger();
     let mut service = TestService::new().await?;
     let mut player1 = TestPlayer::new(&service).await?;
     let mut player2 = TestPlayer::new(&service).await?;
@@ -991,9 +965,8 @@ async fn player_paused_before_interruption_is_not_resumed_by_its_end() -> Result
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn player_paused_during_interruption_is_not_resumed_by_its_end() -> Result<()> {
-    init_logger();
     let mut service = TestService::new().await?;
     let mut player = TestPlayer::new(&service).await?;
     let (session, session_server) = create_proxy()?;
@@ -1029,9 +1002,8 @@ async fn player_paused_during_interruption_is_not_resumed_by_its_end() -> Result
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn active_session_initializes_clients_without_player() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
     let active_session_discovery = service
         .realm
@@ -1048,9 +1020,8 @@ async fn active_session_initializes_clients_without_player() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn active_session_initializes_clients_with_idle_player() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
     let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
@@ -1072,9 +1043,8 @@ async fn active_session_initializes_clients_with_idle_player() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn active_session_initializes_clients_with_active_player() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
     let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
@@ -1107,9 +1077,8 @@ async fn active_session_initializes_clients_with_active_player() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn active_session_falls_back_when_session_removed() -> Result<()> {
-    init_logger();
     let service = TestService::new().await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
     let active_session_discovery = service
@@ -1163,9 +1132,8 @@ async fn active_session_falls_back_when_session_removed() -> Result<()> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["mediasession_tests"])]
 async fn inspect_tree_correct() -> Result<()> {
-    init_logger();
     let mut service = TestService::new().await?;
     let player1 = TestPlayer::new(&service).await?;
     let player2 = TestPlayer::new(&service).await?;

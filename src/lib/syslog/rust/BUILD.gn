@@ -74,7 +74,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/lib/storage/block_client/rust:*",
   "//src/lib/ui/carnelian:*",
   "//src/lib/ui/keymaps:*",
-  "//src/media/sessions:*",
   "//src/media/stream_processors/test:*",
   "//src/power/power-manager:*",
   "//src/power/shutdown-shim/tests:*",
