@@ -58,11 +58,11 @@
             subdir: "memory_monitor",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-aml-ram",
             to: "#memory_monitor",
-            subdir: "class/aml-ram",
+            subdir: "aml-ram",
         },
         {
             storage: "cache",
