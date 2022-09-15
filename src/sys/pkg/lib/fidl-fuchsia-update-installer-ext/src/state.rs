@@ -12,6 +12,7 @@ use {
     serde::{Deserialize, Serialize},
     std::convert::{TryFrom, TryInto},
     thiserror::Error,
+    typed_builder::TypedBuilder,
 };
 
 /// The state of an update installation attempt.
@@ -52,18 +53,10 @@ pub enum StateId {
 }
 
 /// Immutable metadata for an update attempt.
-#[derive(Arbitrary, Clone, Copy, Debug, Serialize, Deserialize, PartialEq, PartialOrd)]
+#[derive(
+    Arbitrary, Clone, Copy, Debug, Serialize, Deserialize, PartialEq, PartialOrd, TypedBuilder,
+)]
 pub struct UpdateInfo {
-    download_size: u64,
-}
-
-/// Builder of UpdateInfo
-#[derive(Clone, Debug)]
-pub struct UpdateInfoBuilder;
-
-/// Builder of UpdateInfo, with a known download_size field.
-#[derive(Clone, Debug)]
-pub struct UpdateInfoBuilderWithDownloadSize {
     download_size: u64,
 }
 
@@ -282,11 +275,6 @@ impl Event for State {
 }
 
 impl UpdateInfo {
-    /// Starts building an instance of UpdateInfo.
-    pub fn builder() -> UpdateInfoBuilder {
-        UpdateInfoBuilder
-    }
-
     /// Gets the download_size field.
     pub fn download_size(&self) -> u64 {
         self.download_size
@@ -295,21 +283,6 @@ impl UpdateInfo {
     fn write_to_inspect(&self, node: &inspect::Node) {
         let UpdateInfo { download_size } = self;
         node.record_uint("download_size", *download_size)
-    }
-}
-
-impl UpdateInfoBuilder {
-    /// Sets the download_size field.
-    pub fn download_size(self, download_size: u64) -> UpdateInfoBuilderWithDownloadSize {
-        UpdateInfoBuilderWithDownloadSize { download_size }
-    }
-}
-
-impl UpdateInfoBuilderWithDownloadSize {
-    /// Builds the UpdateInfo instance.
-    pub fn build(self) -> UpdateInfo {
-        let Self { download_size } = self;
-        UpdateInfo { download_size }
     }
 }
 

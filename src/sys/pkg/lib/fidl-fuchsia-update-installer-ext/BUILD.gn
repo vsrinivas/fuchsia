@@ -24,6 +24,7 @@ rustc_library("fidl-fuchsia-update-installer-ext") {
     "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:typed-builder",
   ]
 
   test_deps = [
