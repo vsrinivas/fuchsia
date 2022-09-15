@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/e97c614dc33873bfb1d2a13567b063e873b29e66/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/c5a24d23903bc6b381153bd455b8a974447e8e4e/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/e97c614dc33873bfb1d2a13567b063e873b29e66/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/c5a24d23903bc6b381153bd455b8a974447e8e4e/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -1143,7 +1143,7 @@ From //build/images/custom_signing.gni:21
 
 **Current value (from the default):** `""`
 
-From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/301fb3d9f4b8cf133dd681f5ed599c1e9f51fce4/BUILD.gn#22)
+From [//third_party/Vulkan-Loader/BUILD.gn:22](https://fuchsia.googlesource.com/third_party/Vulkan-Loader/+/d7b87dd46f624557e2edd299a37856e246fda198/BUILD.gn#22)
 
 ### cxx_rbe_enable
 Set to true to enable distributed compilation of C++ using RBE.
@@ -1303,7 +1303,7 @@ Set to one of "minfs", "fxfs", "f2fs" (unstable).
 If set to anything other than "minfs", any existing minfs partition will be
 migrated in-place to the specified format when fshost mounts it.
 
-**Current value (from the default):** `"fxfs"`
+**Current value (from the default):** `"minfs"`
 
 From //src/storage/fshost/generated_fshost_config.gni:34
 
@@ -2320,7 +2320,7 @@ From //build/images/args.gni:77
 
 **Current value (from the default):** `false`
 
-From //src/power/power-manager/BUILD.gn:138
+From //src/power/power-manager/BUILD.gn:140
 
 ### enable_suspend
 
@@ -2999,7 +2999,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/win_x64/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -6416,7 +6416,7 @@ The termina kernel image.
 Defaults to the common linux kernel image from CIPD, but can be overridden to use a
 custom kernel for development purposes.
 
-**Current value (from the default):** `"//prebuilt/virtualization/packages/termina_guest/kernel/arm64/vm_kernel"`
+**Current value (from the default):** `"//prebuilt/virtualization/packages/termina_guest/kernel/arm64/vm_kernel-5.15"`
 
 From //src/virtualization/packages/termina_guest/BUILD.gn:12
 
@@ -6507,7 +6507,7 @@ From //build/security.gni:227
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"win_x64/thinlto-cache"`
+**Current value (from the default):** `"thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
