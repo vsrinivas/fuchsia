@@ -159,9 +159,37 @@ DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
       dispatcher_(dispatcher),
       root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)),
       composite_device_manager_(this, dispatcher, [this]() { this->TryBindAllOrphansUntracked(); }),
-      composite_node_manager_(dispatcher_, this) {
+      composite_node_manager_(dispatcher_, this),
+      device_group_manager_(this) {
   inspector.GetRoot().CreateLazyNode(
       "driver_runner", [this] { return Inspect(); }, &inspector);
+}
+
+zx::status<std::unique_ptr<DeviceGroup>> DriverRunner::CreateDeviceGroup(
+    DeviceGroupCreateInfo create_info, fdi::MatchedCompositeInfo driver) {
+  return DeviceGroupV2::Create(std::move(create_info), std::move(driver), dispatcher_, this);
+}
+
+void DriverRunner::BindNodesForDeviceGroups() { TryBindAllOrphansUntracked(); }
+
+void DriverRunner::AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
+                                               AddToIndexCallback callback) {
+  driver_index_->AddDeviceGroup(group).Then(
+      [callback = std::move(callback)](
+          fidl::WireUnownedResult<fdi::DriverIndex::AddDeviceGroup>& result) mutable {
+        if (!result.ok()) {
+          LOGF(ERROR, "DriverIndex::AddDeviceGroup failed %d", result.status());
+          callback(zx::error(result.status()));
+          return;
+        }
+
+        if (result->is_error()) {
+          callback(result->take_error());
+          return;
+        }
+
+        callback(zx::ok(fidl::ToNatural(*result->value())));
+      });
 }
 
 fpromise::promise<inspect::Inspector> DriverRunner::Inspect() const {
@@ -379,11 +407,12 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
     }
 
     auto& matched_driver = result->value()->driver;
-    if (!matched_driver.is_driver() && !matched_driver.is_composite_driver()) {
+    if (!matched_driver.is_driver() && !matched_driver.is_composite_driver() &&
+        !matched_driver.is_device_group_node()) {
       orphaned();
       LOGF(WARNING,
-           "Failed to match Node '%s', the MatchedDriver is not a normal or composite"
-           "driver.",
+           "Failed to match Node '%s', the MatchedDriver is not a normal/composite"
+           "driver or a device group node.",
            driver_node->name().data());
       return;
     }
@@ -398,29 +427,68 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
       return;
     }
 
-    auto driver_info = matched_driver.is_driver() ? matched_driver.driver()
-                                                  : matched_driver.composite_driver().driver_info();
-
-    if (!driver_info.has_url()) {
+    if (matched_driver.is_device_group_node() &&
+        !matched_driver.device_group_node().has_device_groups()) {
       orphaned();
-      LOGF(ERROR, "Failed to match Node '%s', the driver URL is missing",
+      LOGF(WARNING,
+           "Failed to match Node '%s', the MatchedDriver is missing device groups for a device "
+           "group node.",
            driver_node->name().data());
       return;
     }
 
-    // This is a composite driver, create a composite node for it.
+    // If this is a composite driver, create a composite node for it.
     if (matched_driver.is_composite_driver()) {
       auto composite = composite_node_manager_.HandleMatchedCompositeInfo(
           node, matched_driver.composite_driver());
       if (composite.is_error()) {
         // Orphan the node if it is not part of a valid composite.
         if (composite.error_value() == ZX_ERR_INVALID_ARGS) {
-          orphaned_nodes_.push_back(node.weak_from_this());
+          orphaned();
         }
 
         return;
       }
       driver_node = *composite;
+    }
+
+    // If this is a device group match, bind the node into its device group and get the child
+    // and driver if its a completed device group to proceed with driver start.
+    fdi::wire::MatchedDriverInfo driver_info;
+    if (matched_driver.is_device_group_node()) {
+      auto device_groups = matched_driver.device_group_node();
+      auto result =
+          device_group_manager_.BindDeviceGroupNode(device_groups, driver_node->weak_from_this());
+      if (result.is_error()) {
+        orphaned();
+        LOGF(ERROR, "Failed to bind node '%s' to any of the matched device group nodes.",
+             driver_node->name().data());
+        return;
+      }
+
+      auto composite_node_and_driver = result.value();
+
+      // If it doesn't have a value but there was no error it just means the node was added
+      // to a device group but the device group is not complete yet.
+      if (!composite_node_and_driver.has_value()) {
+        return;
+      }
+
+      auto composite_node = std::get<std::weak_ptr<dfv2::Node>>(composite_node_and_driver->node);
+      auto locked_composite_node = composite_node.lock();
+      ZX_ASSERT(locked_composite_node);
+      driver_node = locked_composite_node.get();
+      driver_info = composite_node_and_driver->driver;
+    } else {
+      driver_info = matched_driver.is_driver() ? matched_driver.driver()
+                                               : matched_driver.composite_driver().driver_info();
+    }
+
+    if (!driver_info.has_url()) {
+      orphaned();
+      LOGF(ERROR, "Failed to match Node '%s', the driver URL is missing",
+           driver_node->name().data());
+      return;
     }
 
     auto pkg_type =
@@ -433,10 +501,10 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
       return;
     }
 
-    node.OnBind();
+    driver_node->OnBind();
     report_no_bind.cancel();
     if (result_tracker) {
-      result_tracker->ReportSuccessfulBind(node.TopoName(), driver_info.url().get());
+      result_tracker->ReportSuccessfulBind(driver_node->TopoName(), driver_info.url().get());
     }
   };
   fidl::Arena<> arena;

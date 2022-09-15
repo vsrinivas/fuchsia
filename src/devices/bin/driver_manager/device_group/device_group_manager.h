@@ -11,7 +11,12 @@
 
 #include <unordered_map>
 
-#include "src/devices/bin/driver_manager/device_group/device_group.h"
+#include "src/devices/bin/driver_manager/device_group/composite_manager_bridge.h"
+
+struct CompositeNodeAndDriver {
+  fuchsia_driver_index::wire::MatchedDriverInfo driver;
+  DeviceOrNode node;
+};
 
 // This class is responsible for managing device groups. It keeps track of the device
 // groups and its matching composite driver and nodes. DeviceGroupManager is owned by a
@@ -23,26 +28,46 @@ class DeviceGroupManager {
   explicit DeviceGroupManager(CompositeManagerBridge* bridge);
 
   // Adds a device group to the driver index. If it's successfully added, then the
-  // DeviceGroupManagere stores the device group in a map.
+  // DeviceGroupManager stores the device group in a map. After that, it sends a call to
+  // CompositeManagerBridge to bind all unbound devices.
   zx::status<> AddDeviceGroup(fuchsia_driver_framework::wire::DeviceGroup group);
 
-  // Receives this call from CompositeManagerBridge when a matched composite driver is found
-  // for a device group. This function creates a DeviceGroup object and adds it into
-  // |device_groups_|. After that, it sends a call to CompositeManagerBridge to bind all
-  // unbound devices.
-  zx::status<> BindAndCreateDeviceGroup(size_t size, std::string_view topological_path,
-                                        fuchsia_driver_index::MatchedCompositeInfo driver);
-
-  // Receives this call from CompositeManagerBridge when a device/node is matched to a device group
-  // node. DeviceGroupManager will go through the list of device groups until it finds one with
+  // Binds the device to one of the device group nodes that it was matched to.
+  // DeviceGroupManager will go through the list of device groups until it finds one with
   // the node unbound.
-  zx::status<> BindDeviceGroupNode(fuchsia_driver_index::MatchedDeviceGroupNodeInfo match_info,
-                                   DeviceOrNode node);
+  // DFv1:
+  // This will internally use device_group_v1, which itself uses
+  // CompositeDevice's BindFragment to do all the work needed to track the composite fragments
+  // and to start the driver.
+  // A std::nullopt is always returned.
+  // DFv2:
+  // This will use device_group_v2, which internally tracks the nodes in a ParentSetCollector,
+  // when the parent set is completed, a child node is created that is parented by all the nodes
+  // from the parent set.
+  // A std::nullopt is returned if the chosen device group is not yet complete, otherwise a
+  // shared pointer to the newly created child node is returned along with the driver of the
+  // chosen match. DriverRunner is responsible for starting the driver on the node.
+  zx::status<std::optional<CompositeNodeAndDriver>> BindDeviceGroupNode(
+      fuchsia_driver_index::wire::MatchedDeviceGroupNodeInfo match_info,
+      const DeviceOrNode& device_or_node);
+
+  // Reason for both versions of this method is that in DFv1 the match info is stored
+  // via natural types because BindDeviceGroupNode is outside of the fidl wire response's scope.
+  // In DFv2 BindDeviceGroupNode happens in the scope of the wire response so we don't want to
+  // do any natural type conversions.
+  zx::status<std::optional<CompositeNodeAndDriver>> BindDeviceGroupNode(
+      fuchsia_driver_index::MatchedDeviceGroupNodeInfo match_info,
+      const DeviceOrNode& device_or_node);
 
   // Exposed for testing only.
   const DeviceGroupMap& device_groups() const { return device_groups_; }
 
  private:
+  // This function creates a DeviceGroup object and adds it into |device_groups_|.
+  // It is called by |AddDeviceGroup| and |BindDeviceGroupNode|.
+  zx::status<> CreateDeviceGroup(DeviceGroupCreateInfo create_info,
+                                 fuchsia_driver_index::MatchedCompositeInfo driver);
+
   // Contains all device groups. This maps the topological path to a DeviceGroup object.
   // If matching composite driver has not been found for the device group, then the
   // entry is set to null.

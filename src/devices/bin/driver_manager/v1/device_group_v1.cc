@@ -9,7 +9,8 @@
 namespace device_group {
 
 zx::status<std::unique_ptr<DeviceGroupV1>> DeviceGroupV1::Create(
-    size_t size, fuchsia_driver_index::MatchedCompositeInfo composite, Coordinator* coordinator) {
+    DeviceGroupCreateInfo create_info, fuchsia_driver_index::MatchedCompositeInfo composite,
+    Coordinator* coordinator) {
   if (!coordinator) {
     LOGF(ERROR, "Coordinator should not be null");
     return zx::error(ZX_ERR_INTERNAL);
@@ -46,32 +47,34 @@ zx::status<std::unique_ptr<DeviceGroupV1>> DeviceGroupV1::Create(
 
   auto composite_dev = CompositeDevice::CreateFromDriverIndex(
       MatchedCompositeDriverInfo{.composite = matched_device, .driver_info = matched_driver_info});
-  return zx::ok(std::make_unique<DeviceGroupV1>(size, std::move(composite_dev)));
+  return zx::ok(std::make_unique<DeviceGroupV1>(std::move(create_info), std::move(composite_dev)));
 }
 
-DeviceGroupV1::DeviceGroupV1(size_t size, std::unique_ptr<CompositeDevice> composite_device)
-    : DeviceGroup(size), composite_device_(std::move(composite_device)) {}
+DeviceGroupV1::DeviceGroupV1(DeviceGroupCreateInfo create_info,
+                             std::unique_ptr<CompositeDevice> composite_device)
+    : DeviceGroup(std::move(create_info), composite_device->name()),
+      composite_device_(std::move(composite_device)) {}
 
-zx::status<> DeviceGroupV1::BindNodeToComposite(uint32_t node_index, DeviceOrNode device_wrapper) {
-  auto device_ptr = std::get_if<std::weak_ptr<DeviceV1Wrapper>>(&device_wrapper);
+zx::status<std::optional<DeviceOrNode>> DeviceGroupV1::BindNodeImpl(
+    uint32_t node_index, const DeviceOrNode& device_or_node) {
+  auto device_ptr = std::get_if<std::weak_ptr<DeviceV1Wrapper>>(&device_or_node);
   ZX_ASSERT(device_ptr);
-
   auto owned = device_ptr->lock();
   if (!owned) {
     LOGF(ERROR, "DeviceV1Wrapper weak_ptr not available");
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  auto device = owned->device;
-  auto status = composite_device_->BindFragment(node_index, device);
+  auto owned_device = owned->device;
+  auto status = composite_device_->BindFragment(node_index, owned_device);
   if (status != ZX_OK) {
     LOGF(ERROR, "Failed to BindFragment for '%.*s': %s",
-         static_cast<uint32_t>(device->name().size()), device->name().data(),
+         static_cast<uint32_t>(owned_device->name().size()), owned_device->name().data(),
          zx_status_get_string(status));
     return zx::error(status);
   }
 
-  return zx::ok();
+  return zx::ok(std::nullopt);
 }
 
 }  // namespace device_group

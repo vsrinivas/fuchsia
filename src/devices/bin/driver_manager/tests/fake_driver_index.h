@@ -6,7 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_FAKE_DRIVER_INDEX_H_
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <fidl/fuchsia.driver.index/cpp/wire.h>
+#include <fidl/fuchsia.driver.index/cpp/fidl.h>
 #include <lib/fit/function.h>
 #include <lib/zx/status.h>
 #include <zircon/errors.h>
@@ -22,6 +22,7 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
   struct MatchResult {
     std::string url;
     std::optional<CompositeDriverInfo> composite;
+    std::optional<fuchsia_driver_index::MatchedDeviceGroupInfo> device_group;
     bool is_fallback = false;
   };
 
@@ -78,28 +79,33 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
     }
 
     auto matched_result = device_group_match_[topological_path];
-    if (!matched_result.composite) {
-      completer.ReplyError(ZX_ERR_INTERNAL);
+    auto composite = matched_result.composite();
+    auto names = matched_result.node_names();
+    if (!composite.has_value() || !names.has_value()) {
+      completer.ReplyError(ZX_ERR_INVALID_ARGS);
       return;
     }
-
     fidl::Arena arena;
-    auto driver_info = GetDriverInfo(arena, matched_result);
-    auto node_names = fidl::VectorView<fidl::StringView>(arena, request->nodes().count());
-    for (size_t i = 0; i < request->nodes().count(); i++) {
-      node_names[i] = fidl::StringView(arena, "node-" + std::to_string(i));
-    }
-    completer.ReplySuccess(
-        GetMatchedCompositeInfo(arena, driver_info, matched_result.composite.value()), node_names);
+    completer.ReplySuccess(fidl::ToWire(arena, composite.value()),
+                           fidl::ToWire(arena, names.value()));
   }
 
-  void AddDeviceGroupMatch(std::string topological_path, MatchResult result) {
-    device_group_match_[topological_path] = result;
+  void AddDeviceGroupMatch(std::string_view topological_path,
+                           fuchsia_driver_index::MatchedDeviceGroupInfo result) {
+    device_group_match_[std::string(topological_path)] = result;
   }
 
  private:
   static fuchsia_driver_index::wire::MatchedDriver GetMatchedDriver(fidl::AnyArena& arena,
                                                                     MatchResult match) {
+    if (match.device_group) {
+      fuchsia_driver_index::MatchedDeviceGroupNodeInfo const result(
+          {.device_groups = std::vector<fuchsia_driver_index::MatchedDeviceGroupInfo>{
+               match.device_group.value()}});
+      return fuchsia_driver_index::wire::MatchedDriver::WithDeviceGroupNode(
+          arena, fidl::ToWire(arena, result));
+    }
+
     auto driver_info = GetDriverInfo(arena, match);
 
     if (!match.composite) {
@@ -141,10 +147,9 @@ class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::Driv
   async_dispatcher_t* dispatcher_;
   MatchCallback match_callback_;
 
-  // Maps a MatchResult to a device group topological path. The MatchResult
-  // in the form of MatchedCompositeInfo when FakeDriverIndex receives an
-  // AddDeviceGroup() call for a matching topological path.
-  std::unordered_map<std::string, MatchResult> device_group_match_;
+  // Maps a MatchedDeviceGroupInfo to a device group topological path. This gets returned when
+  // FakeDriverIndex receives an AddDeviceGroup() call for a matching topological path.
+  std::unordered_map<std::string, fuchsia_driver_index::MatchedDeviceGroupInfo> device_group_match_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_FAKE_DRIVER_INDEX_H_

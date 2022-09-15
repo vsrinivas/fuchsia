@@ -4,6 +4,8 @@
 
 #include "src/devices/bin/driver_manager/device_group/device_group_manager.h"
 
+#include <lib/fit/defer.h>
+
 #include <zxtest/zxtest.h>
 
 #include "src/devices/bin/driver_manager/device_group/device_group.h"
@@ -14,39 +16,55 @@ namespace fdi = fuchsia_driver_index;
 
 class FakeDeviceGroup : public DeviceGroup {
  public:
-  explicit FakeDeviceGroup(size_t size) : DeviceGroup(size) {}
+  explicit FakeDeviceGroup(DeviceGroupCreateInfo create_info, std::string_view composite_name)
+      : DeviceGroup(std::move(create_info), composite_name) {}
 
-  zx::status<> BindNodeToComposite(uint32_t node_index, DeviceOrNode node) override {
-    return zx::ok();
+  zx::status<std::optional<DeviceOrNode>> BindNodeImpl(
+      uint32_t node_index, const DeviceOrNode& device_or_node) override {
+    return zx::ok(std::nullopt);
   }
 };
 
 class FakeDeviceManagerBridge : public CompositeManagerBridge {
  public:
   zx::status<std::unique_ptr<DeviceGroup>> CreateDeviceGroup(
-      size_t size, fdi::MatchedCompositeInfo driver) override {
-    return zx::ok(std::make_unique<FakeDeviceGroup>(size));
+      DeviceGroupCreateInfo create_info, fdi::MatchedCompositeInfo driver) override {
+    auto name = driver.composite_name();
+    if (!name.has_value()) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
+
+    return zx::ok(std::make_unique<FakeDeviceGroup>(std::move(create_info), name.value()));
   }
 
   // Match and bind all unbound nodes.
   void BindNodesForDeviceGroups() override {}
 
-  zx::status<fdi::MatchedCompositeInfo> AddDeviceGroupToDriverIndex(
-      fdf::wire::DeviceGroup group) override {
-    auto iter = composite_matches.find(std::string(group.topological_path().get()));
-    if (iter == composite_matches.end()) {
-      return zx::error(ZX_ERR_NOT_FOUND);
+  void AddDeviceGroupToDriverIndex(fdf::wire::DeviceGroup group,
+                                   AddToIndexCallback callback) override {
+    auto iter = device_group_matches_.find(std::string(group.topological_path().get()));
+    zx::status<fdi::DriverIndexAddDeviceGroupResponse> result;
+    if (iter == device_group_matches_.end()) {
+      result = zx::error(ZX_ERR_NOT_FOUND);
+    } else {
+      auto composite = iter->second.composite();
+      auto names = iter->second.node_names();
+      ZX_ASSERT(composite.has_value());
+      ZX_ASSERT(names.has_value());
+      result = zx::ok(fdi::DriverIndexAddDeviceGroupResponse(composite.value(), names.value()));
     }
-    return zx::ok(iter->second);
+    auto defer =
+        fit::defer([callback = std::move(callback), result]() mutable { callback(result); });
   }
 
-  void AddCompositeMatch(std::string_view topological_path,
-                         const fdi::MatchedCompositeInfo composite) {
-    composite_matches[std::string(topological_path)] = composite;
+  void AddDeviceGroupMatch(std::string_view topological_path, fdi::MatchedDeviceGroupInfo match) {
+    device_group_matches_[std::string(topological_path)] = std::move(match);
   }
 
  private:
-  std::unordered_map<std::string, fdi::MatchedCompositeInfo> composite_matches;
+  // Stores matches for each device group topological path, that get returned to the
+  // AddToIndexCallback that is given in AddDeviceGroupToDriverIndex.
+  std::unordered_map<std::string, fdi::MatchedDeviceGroupInfo> device_group_matches_;
 };
 
 class DeviceGroupManagerTest : public zxtest::Test {
@@ -89,10 +107,11 @@ TEST_F(DeviceGroupManagerTest, TestAddMatchDeviceGroup) {
   auto device_group_path = "/test/path";
   fdi::MatchedCompositeInfo composite_match{{
       .composite_name = "ovenbird",
-      .node_index = 2,
-      .num_nodes = 3,
   }};
-  bridge_.AddCompositeMatch(device_group_path, composite_match);
+  fdi::MatchedDeviceGroupInfo match{
+      {.composite = composite_match, .node_names = {{"node-0", "node-1"}}}};
+
+  bridge_.AddDeviceGroupMatch(device_group_path, match);
   ASSERT_OK(device_group_manager_->AddDeviceGroup(
       fdf::wire::DeviceGroup::Builder(allocator)
           .topological_path(fidl::StringView(allocator, device_group_path))
@@ -112,8 +131,15 @@ TEST_F(DeviceGroupManagerTest, TestAddMatchDeviceGroup) {
   matched_node_2.device_groups()->push_back(fdi::MatchedDeviceGroupInfo{{
       .topological_path = device_group_path,
       .node_index = 1,
+      .composite = composite_match,
+      .num_nodes = 2,
+      .node_names = {{"node-0", "node-1"}},
   }});
-  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(matched_node_2, std::weak_ptr<Node>()));
+
+  ASSERT_EQ(std::nullopt, device_group_manager_
+                              ->BindDeviceGroupNode(fidl::ToWire(allocator, matched_node_2),
+                                                    std::weak_ptr<dfv2::Node>())
+                              .value());
   ASSERT_TRUE(
       device_group_manager_->device_groups().at(device_group_path)->device_group_nodes()[1]);
 
@@ -124,8 +150,13 @@ TEST_F(DeviceGroupManagerTest, TestAddMatchDeviceGroup) {
   matched_node_1.device_groups()->push_back(fdi::MatchedDeviceGroupInfo{{
       .topological_path = device_group_path,
       .node_index = 0,
+      .composite = composite_match,
+      .num_nodes = 2,
+      .node_names = {{"node-0", "node-1"}},
   }});
-  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(matched_node_1, std::weak_ptr<Node>()));
+
+  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(fidl::ToWire(allocator, matched_node_1),
+                                                       std::weak_ptr<dfv2::Node>()));
   ASSERT_TRUE(
       device_group_manager_->device_groups().at(device_group_path)->device_group_nodes()[0]);
 }
@@ -163,7 +194,10 @@ TEST_F(DeviceGroupManagerTest, TestBindSameNodeTwice) {
   fdi::MatchedCompositeInfo composite_match{{
       .composite_name = "ovenbird",
   }};
-  bridge_.AddCompositeMatch(device_group_path, composite_match);
+  fdi::MatchedDeviceGroupInfo match{
+      {.composite = composite_match, .node_names = {{"node-0", "node-1"}}}};
+
+  bridge_.AddDeviceGroupMatch(device_group_path, match);
   ASSERT_OK(device_group_manager_->AddDeviceGroup(
       fdf::wire::DeviceGroup::Builder(allocator)
           .topological_path(fidl::StringView(allocator, device_group_path))
@@ -184,15 +218,21 @@ TEST_F(DeviceGroupManagerTest, TestBindSameNodeTwice) {
   matched_node.device_groups()->push_back(fdi::MatchedDeviceGroupInfo{{
       .topological_path = device_group_path,
       .node_index = 0,
+      .composite = composite_match,
+      .num_nodes = 2,
+      .node_names = {{"node-0", "node-1"}},
   }});
-  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(matched_node, std::weak_ptr<Node>()));
+
+  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(fidl::ToWire(allocator, matched_node),
+                                                       std::weak_ptr<dfv2::Node>()));
   ASSERT_TRUE(
       device_group_manager_->device_groups().at(device_group_path)->device_group_nodes()[0]);
 
   // Bind the same node.
-  ASSERT_EQ(ZX_ERR_NOT_FOUND,
-            device_group_manager_->BindDeviceGroupNode(matched_node, std::weak_ptr<Node>())
-                .status_value());
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, device_group_manager_
+                                  ->BindDeviceGroupNode(fidl::ToWire(allocator, matched_node),
+                                                        std::weak_ptr<dfv2::Node>())
+                                  .status_value());
 }
 
 TEST_F(DeviceGroupManagerTest, TestMultibind) {
@@ -226,9 +266,13 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
   };
 
   auto device_group_path_1 = "/test/path";
-  bridge_.AddCompositeMatch(device_group_path_1, fdi::MatchedCompositeInfo{{
-                                                     .composite_name = "waxwing",
-                                                 }});
+  auto matched_info_1 = fdi::MatchedCompositeInfo{{
+      .composite_name = "waxwing",
+  }};
+  fdi::MatchedDeviceGroupInfo match_1{
+      {.composite = matched_info_1, .node_names = {{"node-0", "node-1"}}}};
+
+  bridge_.AddDeviceGroupMatch(device_group_path_1, match_1);
   ASSERT_OK(device_group_manager_->AddDeviceGroup(
       fdf::wire::DeviceGroup::Builder(allocator)
           .topological_path(fidl::StringView(allocator, device_group_path_1))
@@ -245,9 +289,12 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
   };
 
   auto device_group_path_2 = "/test/path2";
-  bridge_.AddCompositeMatch(device_group_path_2, fdi::MatchedCompositeInfo{{
-                                                     .composite_name = "grosbeak",
-                                                 }});
+  auto matched_info_2 = fdi::MatchedCompositeInfo{{
+      .composite_name = "grosbeak",
+  }};
+  fdi::MatchedDeviceGroupInfo match_2{{.composite = matched_info_2, .node_names = {{"node-0"}}}};
+
+  bridge_.AddDeviceGroupMatch(device_group_path_2, match_2);
   ASSERT_OK(device_group_manager_->AddDeviceGroup(
       fdf::wire::DeviceGroup::Builder(allocator)
           .topological_path(fidl::StringView(allocator, device_group_path_2))
@@ -265,19 +312,28 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
   matched_node.device_groups()->push_back(fdi::MatchedDeviceGroupInfo{{
       .topological_path = device_group_path_1,
       .node_index = 1,
+      .composite = matched_info_1,
+      .num_nodes = 2,
+      .node_names = {{"node-0", "node-1"}},
   }});
   matched_node.device_groups()->push_back(fdi::MatchedDeviceGroupInfo{{
       .topological_path = device_group_path_2,
       .node_index = 0,
+      .composite = matched_info_2,
+      .num_nodes = 1,
+      .node_names = {{"node-0"}},
   }});
-  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(matched_node, std::weak_ptr<Node>()));
+
+  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(fidl::ToWire(allocator, matched_node),
+                                                       std::weak_ptr<dfv2::Node>()));
   ASSERT_TRUE(
       device_group_manager_->device_groups().at(device_group_path_1)->device_group_nodes()[1]);
   ASSERT_FALSE(
       device_group_manager_->device_groups().at(device_group_path_2)->device_group_nodes()[0]);
 
   // Bind the node again. Both device groups should now have the bound node.
-  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(matched_node, std::weak_ptr<Node>()));
+  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(fidl::ToWire(allocator, matched_node),
+                                                       std::weak_ptr<dfv2::Node>()));
   ASSERT_TRUE(
       device_group_manager_->device_groups().at(device_group_path_1)->device_group_nodes()[1]);
   ASSERT_TRUE(
@@ -328,23 +384,37 @@ TEST_F(DeviceGroupManagerTest, TestBindWithNoCompositeMatch) {
   matched_node.device_groups()->push_back(fdi::MatchedDeviceGroupInfo{{
       .topological_path = device_group_path,
       .node_index = 0,
+      .num_nodes = 2,
+      .node_names = {{"node-0", "node-1"}},
   }});
-  ASSERT_EQ(ZX_ERR_NOT_FOUND,
-            device_group_manager_->BindDeviceGroupNode(matched_node, std::weak_ptr<Node>())
-                .status_value());
+  ASSERT_EQ(ZX_ERR_NOT_FOUND, device_group_manager_
+                                  ->BindDeviceGroupNode(fidl::ToWire(allocator, matched_node),
+                                                        std::weak_ptr<dfv2::Node>())
+                                  .status_value());
 
-  // Bind a composite driver to the device group.
-  fdi::MatchedCompositeInfo composite_match{{
-      .composite_name = "waxwing",
-  }};
-  ASSERT_OK(device_group_manager_->BindAndCreateDeviceGroup(
-      device_group.nodes().count(), device_group.topological_path().get(), composite_match));
-  ASSERT_EQ(
-      2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
-
+  // Add a composite match into the matched node info.
   // Reattempt binding the device group node 1. With a matched composite driver, it should
   // now bind successfully.
-  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(matched_node, std::weak_ptr<Node>()));
+  fdi::MatchedCompositeInfo composite_match{{
+      .composite_name = "waxwing",
+      .node_index = 1,
+      .num_nodes = 2,
+      .node_names = {{"node-0", "node-1"}},
+  }};
+  auto matched_node_with_composite = fdi::MatchedDeviceGroupNodeInfo{{
+      .device_groups = std::vector<fdi::MatchedDeviceGroupInfo>(),
+  }};
+  matched_node_with_composite.device_groups()->push_back(fdi::MatchedDeviceGroupInfo{{
+      .topological_path = device_group_path,
+      .node_index = 0,
+      .composite = composite_match,
+      .num_nodes = 2,
+      .node_names = {{"node-0", "node-1"}},
+  }});
+  ASSERT_OK(device_group_manager_->BindDeviceGroupNode(
+      fidl::ToWire(allocator, matched_node_with_composite), std::weak_ptr<dfv2::Node>()));
+  ASSERT_EQ(
+      2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
   ASSERT_TRUE(
       device_group_manager_->device_groups().at(device_group_path)->device_group_nodes()[0]);
 }
@@ -372,9 +442,11 @@ TEST_F(DeviceGroupManagerTest, TestAddDuplicate) {
   };
 
   auto device_group_path = "/test/path";
-  bridge_.AddCompositeMatch(device_group_path, fdi::MatchedCompositeInfo{{
-                                                   .composite_name = "grosbeak",
-                                               }});
+  bridge_.AddDeviceGroupMatch(device_group_path,
+                              fdi::MatchedDeviceGroupInfo{{.composite = fdi::MatchedCompositeInfo{{
+                                                               .composite_name = "grosbeak",
+                                                           }},
+                                                           .node_names = {{"node-0"}}}});
 
   auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
                           .topological_path(fidl::StringView(allocator, device_group_path))
@@ -422,10 +494,11 @@ TEST_F(DeviceGroupManagerTest, TestRebindCompositeMatch) {
   auto device_group_path = "/test/path";
   fdi::MatchedCompositeInfo composite_match{{
       .composite_name = "ovenbird",
-      .node_index = 2,
-      .num_nodes = 3,
   }};
-  bridge_.AddCompositeMatch(device_group_path, composite_match);
+  fdi::MatchedDeviceGroupInfo match{
+      {.composite = composite_match, .node_names = {{"node-0", "node-1"}}}};
+
+  bridge_.AddDeviceGroupMatch(device_group_path, match);
 
   auto device_group = fdf::wire::DeviceGroup::Builder(allocator)
                           .topological_path(fidl::StringView(allocator, device_group_path))
@@ -435,9 +508,6 @@ TEST_F(DeviceGroupManagerTest, TestRebindCompositeMatch) {
   ASSERT_EQ(
       2, device_group_manager_->device_groups().at(device_group_path)->device_group_nodes().size());
 
-  ASSERT_EQ(ZX_ERR_ALREADY_BOUND,
-            device_group_manager_
-                ->BindAndCreateDeviceGroup(device_group.nodes().count(),
-                                           device_group.topological_path().get(), composite_match)
-                .status_value());
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            device_group_manager_->AddDeviceGroup(device_group).status_value());
 }

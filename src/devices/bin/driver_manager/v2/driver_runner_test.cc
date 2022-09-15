@@ -288,6 +288,34 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
                 .node_names = {"one", "two"},
             }),
         });
+      } else if (args.name().get() == "dev-group-0") {
+        return zx::ok(FakeDriverIndex::MatchResult{
+            .device_group = fuchsia_driver_index::MatchedDeviceGroupInfo({
+                .topological_path = "/test/path",
+                .node_index = 0,
+                .composite = fuchsia_driver_index::MatchedCompositeInfo(
+                    {.composite_name = "test-composite",
+                     .num_nodes = 2,
+                     .node_names = {{"node-0", "node-1"}},
+                     .driver_info = fuchsia_driver_index::MatchedDriverInfo(
+                         {.url = "fuchsia-boot:///#meta/composite-driver.cm", .colocate = true})}),
+                .num_nodes = 2,
+                .node_names = {{"node-0", "node-1"}},
+            })});
+      } else if (args.name().get() == "dev-group-1") {
+        return zx::ok(FakeDriverIndex::MatchResult{
+            .device_group = fuchsia_driver_index::MatchedDeviceGroupInfo({
+                .topological_path = "/test/path",
+                .node_index = 1,
+                .composite = fuchsia_driver_index::MatchedCompositeInfo(
+                    {.composite_name = "test-composite",
+                     .num_nodes = 2,
+                     .node_names = {{"node-0", "node-1"}},
+                     .driver_info = fuchsia_driver_index::MatchedDriverInfo(
+                         {.url = "fuchsia-boot:///#meta/composite-driver.cm", .colocate = true})}),
+                .num_nodes = 2,
+                .node_names = {{"node-0", "node-1"}},
+            })});
       } else {
         return zx::error(ZX_ERR_NOT_FOUND);
       }
@@ -1669,6 +1697,148 @@ TEST_F(DriverRunnerTest, StartCompositeDriver) {
                                      .binary = "driver/composite-driver.so",
                                      .colocate = true,
                                  });
+  StopDriverComponent(std::move(root_driver.value()));
+}
+
+TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
+  auto driver_index = CreateDriverIndex();
+  auto driver_index_client = driver_index.Connect();
+  ASSERT_EQ(ZX_OK, driver_index_client.status_value());
+  DriverRunner driver_runner(ConnectToRealm(), std::move(*driver_index_client), inspector(),
+                             dispatcher());
+
+  auto defer = fit::defer([this] { Unbind(); });
+
+  // Add a match for the device group that we are creating.
+  std::string topological_path("/test/path");
+  const fuchsia_driver_index::MatchedDeviceGroupInfo match({
+      .composite = fuchsia_driver_index::MatchedCompositeInfo(
+          {.composite_name = "test-composite",
+           .num_nodes = 2,
+           .node_names = {{"node-0", "node-1"}},
+           .driver_info = fuchsia_driver_index::MatchedDriverInfo(
+               {.url = "fuchsia-boot:///#meta/composite-driver.cm", .colocate = true})}),
+      .node_names = {{"node-0", "node-1"}},
+  });
+  driver_index.AddDeviceGroupMatch(topological_path, match);
+
+  const fuchsia_driver_framework::DeviceGroup group(
+      {.topological_path = topological_path,
+       .nodes = std::vector<fuchsia_driver_framework::DeviceGroupNode>{
+           fuchsia_driver_framework::DeviceGroupNode({
+               .properties = std::vector<fuchsia_driver_framework::DeviceGroupProperty>(),
+               .transformation = std::vector<fuchsia_driver_framework::NodeProperty>(),
+           }),
+           fuchsia_driver_framework::DeviceGroupNode({
+               .properties = std::vector<fuchsia_driver_framework::DeviceGroupProperty>(),
+               .transformation = std::vector<fuchsia_driver_framework::NodeProperty>(),
+           })}});
+
+  fidl::Arena<> arena;
+  auto added = driver_runner.device_group_manager().AddDeviceGroup(fidl::ToWire(arena, group));
+  ASSERT_EQ(ZX_OK, added.status_value());
+
+  RunLoopUntilIdle();
+
+  ASSERT_EQ(2u, driver_runner.device_group_manager()
+                    .device_groups()
+                    .at(topological_path)
+                    ->device_group_nodes()
+                    .size());
+
+  ASSERT_FALSE(driver_runner.device_group_manager()
+                   .device_groups()
+                   .at(topological_path)
+                   ->device_group_nodes()
+                   .at(0));
+
+  ASSERT_FALSE(driver_runner.device_group_manager()
+                   .device_groups()
+                   .at(topological_path)
+                   ->device_group_nodes()
+                   .at(1));
+
+  fdf::NodeControllerPtr node_controller;
+  driver_host().SetStartHandler(
+      [this, &node_controller](fdf::DriverStartArgs start_args, auto request) {
+        realm().SetCreateChildHandler(
+            [](fdecl::CollectionRef collection, fdecl::Child decl, auto offers) {});
+        realm().SetOpenExposedDirHandler([this](fdecl::ChildRef child, auto exposed_dir) {
+          driver_dir().Bind(std::move(exposed_dir));
+        });
+
+        fdf::NodePtr root_node;
+        EXPECT_EQ(ZX_OK, root_node.Bind(std::move(*start_args.mutable_node()), dispatcher()));
+        fdf::NodeAddArgs args;
+        args.set_name("dev-group-0");
+        root_node->AddChild(std::move(args), node_controller.NewRequest(dispatcher()), {},
+                            [](auto result) { EXPECT_FALSE(result.is_err()); });
+        args.set_name("dev-group-1");
+        root_node->AddChild(std::move(args), node_controller.NewRequest(dispatcher()), {},
+                            [](auto result) { EXPECT_FALSE(result.is_err()); });
+        BindDriver(std::move(request), std::move(root_node));
+      });
+  auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
+  ASSERT_EQ(ZX_OK, root_driver.status_value());
+
+  ASSERT_TRUE(driver_runner.device_group_manager()
+                  .device_groups()
+                  .at(topological_path)
+                  ->device_group_nodes()
+                  .at(0));
+
+  ASSERT_TRUE(driver_runner.device_group_manager()
+                  .device_groups()
+                  .at(topological_path)
+                  ->device_group_nodes()
+                  .at(1));
+
+  driver_host().SetStartHandler([this](fdf::DriverStartArgs start_args, auto request) {
+    auto& entries = start_args.program().entries();
+    EXPECT_EQ(2u, entries.size());
+    EXPECT_EQ("binary", entries[0].key);
+    EXPECT_EQ("driver/composite-driver.so", entries[0].value->str());
+    EXPECT_EQ("colocate", entries[1].key);
+    EXPECT_EQ("true", entries[1].value->str());
+
+    fdf::NodePtr node;
+    ASSERT_EQ(ZX_OK, node.Bind(start_args.mutable_node()->TakeChannel()));
+    BindDriver(std::move(request), std::move(node));
+  });
+  auto composite_driver =
+      StartDriver(driver_runner, {
+                                     .url = "fuchsia-boot:///#meta/composite-driver.cm",
+                                     .binary = "driver/composite-driver.so",
+                                     .colocate = true,
+                                 });
+
+  auto hierarchy = Inspect(driver_runner);
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {
+                                                   .node_name = {"node_topology"},
+                                                   .child_names = {"root"},
+                                               }));
+
+  ASSERT_NO_FATAL_FAILURE(
+      CheckNode(hierarchy, {.node_name = {"node_topology", "root"},
+                            .child_names = {"dev-group-0", "dev-group-1"},
+                            .str_properties = {
+                                {"driver", "fuchsia-boot:///#meta/root-driver.cm"},
+                            }}));
+
+  ASSERT_NO_FATAL_FAILURE(CheckNode(
+      hierarchy,
+      {.node_name = {"node_topology", "root", "dev-group-0"}, .child_names = {"test-composite"}}));
+
+  ASSERT_NO_FATAL_FAILURE(CheckNode(
+      hierarchy,
+      {.node_name = {"node_topology", "root", "dev-group-1"}, .child_names = {"test-composite"}}));
+
+  ASSERT_NO_FATAL_FAILURE(
+      CheckNode(hierarchy, {.node_name = {"node_topology", "root", "dev-group-0", "test-composite"},
+                            .str_properties = {
+                                {"driver", "fuchsia-boot:///#meta/composite-driver.cm"},
+                            }}));
+
   StopDriverComponent(std::move(root_driver.value()));
 }
 

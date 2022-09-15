@@ -1067,8 +1067,8 @@ void Coordinator::InitOutgoingServices(component::OutgoingDirectory& outgoing) {
 std::string Coordinator::GetFragmentDriverUrl() const { return "#driver/fragment.so"; }
 
 zx::status<std::unique_ptr<DeviceGroup>> Coordinator::CreateDeviceGroup(
-    size_t size, fdi::MatchedCompositeInfo driver) {
-  return device_group::DeviceGroupV1::Create(size, driver, this);
+    DeviceGroupCreateInfo create_info, fdi::MatchedCompositeInfo driver) {
+  return device_group::DeviceGroupV1::Create(std::move(create_info), std::move(driver), this);
 }
 
 // TODO(fxb/107737): Ideally, we try to match and bind all devices, regardless if they
@@ -1086,9 +1086,9 @@ void Coordinator::BindNodesForDeviceGroups() {
   }
 }
 
-zx::status<fdi::MatchedCompositeInfo> Coordinator::AddDeviceGroupToDriverIndex(
-    fuchsia_driver_framework::wire::DeviceGroup group) {
-  return driver_loader_.AddDeviceGroup(group);
+void Coordinator::AddDeviceGroupToDriverIndex(fuchsia_driver_framework::wire::DeviceGroup group,
+                                              AddToIndexCallback callback) {
+  driver_loader_.AddDeviceGroup(group, std::move(callback));
 }
 
 void Coordinator::RestartDriverHosts(RestartDriverHostsRequestView request,

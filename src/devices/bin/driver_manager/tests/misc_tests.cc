@@ -518,15 +518,14 @@ TEST(MiscTestCase, AddDeviceGroup) {
           .spawn_colocated = false,
           .metadata = metadata,
       };
-
-  auto composite_driver = FakeDriverIndex::MatchResult{
-      .url = "#driver/mock-device.so",
-      .composite = std::make_optional(FakeDriverIndex::CompositeDriverInfo{
-          .node_index = 0u,
-          .num_nodes = 1u,
-          .node_names = {"shoveler"},
-      })};
-  fake_driver_index.AddDeviceGroupMatch("/group", composite_driver);
+  const fdi::MatchedDeviceGroupInfo match({
+      .composite = fdi::MatchedCompositeInfo(
+          {.num_nodes = 1,
+           .node_names = {{"shoveler"}},
+           .driver_info = fdi::MatchedDriverInfo({.url = "#driver/mock-device.so"})}),
+      .node_names = {{"shoveler"}},
+  });
+  fake_driver_index.AddDeviceGroupMatch("/group", match);
 
   ASSERT_OK(coordinator.AddDeviceGroup(device, "group", group_desc));
   loop.RunUntilIdle();

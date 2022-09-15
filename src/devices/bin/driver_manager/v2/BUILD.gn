@@ -11,6 +11,8 @@ source_set("driver_runner") {
     "composite_assembler.h",
     "composite_manager.cc",
     "composite_manager.h",
+    "device_group_v2.cc",
+    "device_group_v2.h",
     "driver_component.cc",
     "driver_component.h",
     "driver_host.cc",
@@ -26,6 +28,7 @@ source_set("driver_runner") {
   deps = [
     "//sdk/lib/driver2:cpp",
     "//src/devices/bin/driver_manager:binding",
+    "//src/devices/bin/driver_manager/device_group:lib",
     "//src/devices/lib/log",
     "//src/lib/fxl",
     "//zircon/system/ulib/service:service-llcpp",

@@ -87,7 +87,7 @@ zx::status<Node*> CompositeNodeManager::HandleMatchedCompositeInfo(
   auto& [_, parent_set] = *parent_set_result.value();
 
   // Add the node to the parent set that was acquired for it.
-  parent_set.AddNode(matched_driver.node_index(), node);
+  parent_set.AddNode(matched_driver.node_index(), node.weak_from_this());
 
   // Check if we have all the nodes for the composite driver.
   auto completed_parents = parent_set.GetIfComplete();

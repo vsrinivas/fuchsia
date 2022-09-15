@@ -8,8 +8,8 @@
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/coordinator.h"
 
-// Wrapper struct for a fbl::RefPtr<Device>. This allows DeviceOrNode to be
-// defined without any dependencies on the DFv1 code.
+// Wrapper struct for a fbl::RefPtr<Device>. This allows the device_group code
+// to refer to this without any dependencies on the DFv1 code.
 // TODO(fxb/106479): Move this struct and the rest of the device group code
 // under the namespace.
 struct DeviceV1Wrapper {
@@ -23,13 +23,16 @@ namespace device_group {
 class DeviceGroupV1 : public DeviceGroup {
  public:
   static zx::status<std::unique_ptr<DeviceGroupV1>> Create(
-      size_t size, fuchsia_driver_index::MatchedCompositeInfo driver, Coordinator* coordinator);
+      DeviceGroupCreateInfo create_info, fuchsia_driver_index::MatchedCompositeInfo driver,
+      Coordinator* coordinator);
 
   // Must only be called by Create() to ensure the objects are verified.
-  DeviceGroupV1(size_t size, std::unique_ptr<CompositeDevice> composite_device);
+  DeviceGroupV1(DeviceGroupCreateInfo create_info,
+                std::unique_ptr<CompositeDevice> composite_device);
 
  protected:
-  zx::status<> BindNodeToComposite(uint32_t node_index, DeviceOrNode node) override;
+  zx::status<std::optional<DeviceOrNode>> BindNodeImpl(uint32_t node_index,
+                                                       const DeviceOrNode& device_or_node) override;
 
  private:
   std::unique_ptr<CompositeDevice> composite_device_;

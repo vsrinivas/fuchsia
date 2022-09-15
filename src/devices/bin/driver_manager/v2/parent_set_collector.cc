@@ -6,9 +6,14 @@
 
 namespace dfv2 {
 
-void ParentSetCollector::AddNode(uint32_t index, Node& node) {
+void ParentSetCollector::AddNode(uint32_t index, std::weak_ptr<Node> node) {
   ZX_ASSERT(index < size_);
-  parents_[index] = node.weak_from_this();
+  parents_[index] = std::move(node);
+}
+
+void ParentSetCollector::RemoveNode(uint32_t index) {
+  ZX_ASSERT(index < size_);
+  parents_[index] = std::weak_ptr<Node>();
 }
 
 std::optional<std::vector<Node*>> ParentSetCollector::GetIfComplete() {

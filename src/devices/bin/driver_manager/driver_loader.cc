@@ -276,19 +276,20 @@ bool DriverLoader::MatchesLibnameDriverIndex(const std::string& driver_url,
   return result.value() == libname;
 }
 
-zx::status<fuchsia_driver_index::MatchedCompositeInfo> DriverLoader::AddDeviceGroup(
-    fuchsia_driver_framework::wire::DeviceGroup group) {
+void DriverLoader::AddDeviceGroup(fuchsia_driver_framework::wire::DeviceGroup group,
+                                  AddToIndexCallback callback) {
   auto result = driver_index_.sync()->AddDeviceGroup(group);
   if (!result.ok()) {
     LOGF(ERROR, "DriverIndex::AddDeviceGroup failed %d", result.status());
-    return zx::error(result.status());
+    callback(zx::error(result.status()));
+    return;
   }
-
   if (result->is_error()) {
-    return result->take_error();
+    callback(result->take_error());
+    return;
   }
 
-  return zx::ok(fidl::ToNatural(result->value()->composite_driver));
+  callback(zx::ok(fidl::ToNatural(*result->value())));
 }
 
 const std::vector<MatchedDriver> DriverLoader::MatchDeviceDriverIndex(

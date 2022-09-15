@@ -16,12 +16,15 @@ namespace dfv2 {
 // it will return a vector containing all the parent node pointers.
 class ParentSetCollector {
  public:
-  explicit ParentSetCollector(uint32_t size) : size_(size), parents_(size) {}
+  explicit ParentSetCollector(size_t size) : size_(size), parents_(size) {}
 
   // Add a node to the parent set at the specified index.
   // Caller should check that |ContainsNode| is false for the index before calling this.
   // Only a weak_ptr of the node is stored by this class (until collection in GetIfComplete).
-  void AddNode(uint32_t index, Node& node);
+  void AddNode(uint32_t index, std::weak_ptr<Node> node);
+
+  // Remove a node at a specific index from the parent set.
+  void RemoveNode(uint32_t index);
 
   // Returns the completed parent set if it is a completed set.
   // Otherwise a nullopt.
@@ -32,11 +35,11 @@ class ParentSetCollector {
   // Returns whether the parent set is occupied at the index.
   bool ContainsNode(uint32_t index) const;
 
-  uint32_t size() const { return size_; }
+  size_t size() const { return size_; }
   const std::weak_ptr<Node>& get(uint32_t index) const { return parents_[index]; }
 
  private:
-  uint32_t size_;
+  size_t size_;
 
   // Nodes are stored as weak_ptrs. Only when trying to collect the completed set are they
   // locked into shared_ptrs and validated to not be null.
