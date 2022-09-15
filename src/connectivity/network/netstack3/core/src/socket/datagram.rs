@@ -528,6 +528,41 @@ pub(crate) fn set_unbound_device<
     })
 }
 
+pub(crate) fn disconnect_connected<
+    A: SocketMapAddrSpec,
+    C: DatagramStateNonSyncContext<A>,
+    SC: DatagramStateContext<A, C, S>,
+    S: DatagramSocketSpec<A>,
+>(
+    sync_ctx: &mut SC,
+    _ctx: &mut C,
+    id: S::ConnId,
+) -> S::ListenerId
+where
+    Bound<S>: Tagged<AddrVec<A>>,
+    S::ListenerAddrState:
+        SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
+    S::ConnAddrState: SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    S::ConnSharingState: Into<S::ListenerSharingState>,
+{
+    sync_ctx.with_sockets_mut(|state| {
+        let DatagramSockets { bound, unbound: _ } = state;
+        let (state, sharing, addr): (_, S::ConnSharingState, _) =
+            bound.conns_mut().remove(&id).expect("connection not found");
+
+        let ConnState { socket } = state;
+        let (_, ip_options): (IpSockDefinition<_, _>, _) = socket.into_definition_options();
+
+        let ConnAddr { ip: ConnIpAddr { local: (local_ip, identifier), remote: _ }, device } = addr;
+        let addr = ListenerAddr { ip: ListenerIpAddr { addr: Some(local_ip), identifier }, device };
+
+        bound
+            .listeners_mut()
+            .try_insert(addr, ListenerState { ip_options }, sharing.into())
+            .expect("inserting listener for disconnected socket failed")
+    })
+}
+
 #[derive(Derivative)]
 #[derivative(Clone(bound = ""), Debug(bound = ""))]
 pub(crate) enum DatagramBoundId<S: DatagramSocketStateSpec> {

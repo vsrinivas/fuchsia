@@ -31,9 +31,9 @@ pub(crate) trait PosixSocketStateSpec: Sized {
     type ConnId: Clone + Into<usize> + From<usize> + Debug + PartialEq;
 
     /// The state for a listening socket.
-    type ListenerState;
+    type ListenerState: Debug;
     /// The state for a connected socket.
-    type ConnState;
+    type ConnState: Debug;
 }
 
 pub(crate) trait PosixConflictPolicy<A: SocketMapAddrSpec>: PosixSocketStateSpec {

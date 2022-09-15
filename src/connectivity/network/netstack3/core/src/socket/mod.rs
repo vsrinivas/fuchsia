@@ -119,10 +119,10 @@ pub(crate) trait SocketMapStateSpec {
     type ConnId: Clone + Into<usize> + From<usize> + Debug;
 
     /// The state stored for a listening socket.
-    type ListenerState;
+    type ListenerState: Debug;
     /// The state stored for a listening socket that is used to determine
     /// whether sockets can share an address.
-    type ListenerSharingState;
+    type ListenerSharingState: Debug;
 
     /// The state stored for a connected socket.
     type ConnState;

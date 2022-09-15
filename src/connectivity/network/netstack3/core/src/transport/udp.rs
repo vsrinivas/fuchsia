@@ -1792,26 +1792,10 @@ pub fn disconnect_udp_connected<
     SC: UdpStateContext<I, C>,
 >(
     sync_ctx: &mut SC,
-    _ctx: &mut C,
+    ctx: &mut C,
     id: UdpConnId<I>,
 ) -> UdpListenerId<I> {
-    sync_ctx.with_sockets_mut(|state| {
-        let UdpSockets { sockets: DatagramSockets { bound, unbound: _ }, lazy_port_alloc: _ } =
-            state;
-        let (state, sharing, addr): (_, PosixSharingOptions, _) =
-            bound.conns_mut().remove(&id).expect("UDP connection not found");
-
-        let ConnState { socket } = state;
-        let (_, ip_options): (IpSockDefinition<_, _>, _) = socket.into_definition_options();
-
-        let ConnAddr { ip: ConnIpAddr { local: (local_ip, identifier), remote: _ }, device } = addr;
-        let addr = ListenerAddr { ip: ListenerIpAddr { addr: Some(local_ip), identifier }, device };
-
-        bound
-            .listeners_mut()
-            .try_insert(addr, ListenerState { ip_options }, sharing)
-            .expect("inserting listener for disconnected socket failed")
-    })
+    datagram::disconnect_connected(sync_ctx, ctx, id)
 }
 
 /// Disconnects an already existing UDP socket and connects it to a new remote
