@@ -5,7 +5,7 @@
 use {
     account_common::{AccountId, AccountManagerError},
     anyhow::format_err,
-    fidl_fuchsia_identity_account::Error as ApiError,
+    fidl_fuchsia_identity_account::{AccountMetadata as FidlAccountMetadata, Error as ApiError},
     serde::{Deserialize, Serialize},
     std::{
         collections::{btree_map::Values as BTreeMapValues, BTreeMap},
@@ -29,11 +29,18 @@ pub struct StoredAccount {
 
     /// PreAuthState for the account
     pre_auth_state: Vec<u8>,
+
+    /// Some basic information associated with the account
+    metadata: AccountMetadata,
 }
 
 impl StoredAccount {
-    pub fn new(account_id: AccountId, pre_auth_state: Vec<u8>) -> StoredAccount {
-        Self { account_id, pre_auth_state }
+    pub fn new(
+        account_id: AccountId,
+        pre_auth_state: Vec<u8>,
+        metadata: AccountMetadata,
+    ) -> StoredAccount {
+        Self { account_id, pre_auth_state, metadata }
     }
 
     pub fn account_id(&self) -> &AccountId {
@@ -46,6 +53,44 @@ impl StoredAccount {
 
     pub fn pre_auth_state(&self) -> &Vec<u8> {
         &self.pre_auth_state
+    }
+
+    pub fn metadata(&self) -> &AccountMetadata {
+        &self.metadata
+    }
+}
+
+/// Basic data about a system account.
+///
+/// This is generated from the equivalent struct in the FIDL bindings and
+/// used to add serialization attributes.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AccountMetadata {
+    /// A human-readable name for the account
+    name: String,
+}
+
+impl AccountMetadata {
+    pub fn new(name: String) -> Self {
+        Self { name }
+    }
+}
+
+impl TryFrom<FidlAccountMetadata> for AccountMetadata {
+    type Error = ApiError;
+    fn try_from(mut account_metadata: FidlAccountMetadata) -> Result<Self, Self::Error> {
+        let name = account_metadata.name.take().ok_or({
+            warn!("Unable to convert AccountMetadata without name");
+            ApiError::InvalidRequest
+        })?;
+
+        Ok(Self::new(name))
+    }
+}
+
+impl<'a> Into<FidlAccountMetadata> for &'a AccountMetadata {
+    fn into(self) -> FidlAccountMetadata {
+        FidlAccountMetadata { name: Some(self.name.to_string()), ..FidlAccountMetadata::EMPTY }
     }
 }
 
@@ -77,6 +122,20 @@ impl StoredAccountList {
         }
     }
 
+    /// Get the metadata for the specified account_id.
+    pub fn get_metadata(
+        &self,
+        account_id: &AccountId,
+    ) -> Result<&AccountMetadata, AccountManagerError> {
+        match self.accounts.get(account_id) {
+            None => {
+                let cause = format_err!("ID {:?} not found", &account_id);
+                Err(AccountManagerError::new(ApiError::NotFound).with_cause(cause))
+            }
+            Some(stored_account) => Ok(stored_account.metadata()),
+        }
+    }
+
     /// Create a new stored account list from the given accounts.
     /// Uses `account_list_dir` to persist the account list.
     pub fn new(account_list_dir: &Path, accounts: Vec<StoredAccount>) -> StoredAccountList {
@@ -93,14 +152,17 @@ impl StoredAccountList {
         &mut self,
         account_id: &AccountId,
         pre_auth_state: Vec<u8>,
+        metadata: AccountMetadata,
     ) -> Result<(), AccountManagerError> {
         if self.accounts.contains_key(account_id) {
             let cause = format_err!("Duplicate ID {:?} creating new account", &account_id);
             return Err(AccountManagerError::new(ApiError::Internal).with_cause(cause));
         }
 
-        self.accounts
-            .insert(account_id.clone(), StoredAccount::new(account_id.clone(), pre_auth_state));
+        self.accounts.insert(
+            account_id.clone(),
+            StoredAccount::new(account_id.clone(), pre_auth_state, metadata),
+        );
 
         self.save()
     }
@@ -228,13 +290,23 @@ mod tests {
         static ref ACCOUNT_ID_2: AccountId = AccountId::new(1);
         static ref ACCOUNT_PRE_AUTH_STATE_1: Vec<u8> = vec![1, 2, 3];
         static ref ACCOUNT_PRE_AUTH_STATE_2: Vec<u8> = vec![2, 4, 6];
-        static ref STORED_ACCOUNT_1: StoredAccount =
-            StoredAccount::new(ACCOUNT_ID_1.clone(), ACCOUNT_PRE_AUTH_STATE_1.to_vec());
-        static ref STORED_ACCOUNT_2: StoredAccount =
-            StoredAccount::new(ACCOUNT_ID_2.clone(), ACCOUNT_PRE_AUTH_STATE_2.to_vec());
+        static ref ACCOUNT_METADATA_1: AccountMetadata = AccountMetadata::new("test1".to_string());
+        static ref ACCOUNT_METADATA_2: AccountMetadata = AccountMetadata::new("test2".to_string());
+        static ref STORED_ACCOUNT_1: StoredAccount = StoredAccount::new(
+            ACCOUNT_ID_1.clone(),
+            ACCOUNT_PRE_AUTH_STATE_1.to_vec(),
+            ACCOUNT_METADATA_1.clone(),
+        );
+        static ref STORED_ACCOUNT_2: StoredAccount = StoredAccount::new(
+            ACCOUNT_ID_2.clone(),
+            ACCOUNT_PRE_AUTH_STATE_2.to_vec(),
+            ACCOUNT_METADATA_2.clone(),
+        );
         static ref STORED_ACCOUNTS_SERIALIZED_STR: String =
-            "{\"1\":{\"account_id\":1,\"pre_auth_state\":[2,4,6]},\
-            \"13\":{\"account_id\":13,\"pre_auth_state\":[1,2,3]}}"
+            "{\"1\":{\"account_id\":1,\"pre_auth_state\":[2,4,6],\
+            \"metadata\":{\"name\":\"test2\"}},\
+            \"13\":{\"account_id\":13,\"pre_auth_state\":[1,2,3],\
+            \"metadata\":{\"name\":\"test1\"}}}"
                 .to_string();
     }
 
@@ -279,8 +351,10 @@ mod tests {
         let account2 = accounts.next().unwrap();
         assert_eq!(account1.account_id(), &*ACCOUNT_ID_2);
         assert_eq!(account1.pre_auth_state(), &*ACCOUNT_PRE_AUTH_STATE_2);
+        assert_eq!(account1.metadata(), &*ACCOUNT_METADATA_2);
         assert_eq!(account2.account_id(), &*ACCOUNT_ID_1);
         assert_eq!(account2.pre_auth_state(), &*ACCOUNT_PRE_AUTH_STATE_1);
+        assert_eq!(account2.metadata(), &*ACCOUNT_METADATA_1);
 
         loaded.save()
     }
@@ -298,8 +372,10 @@ mod tests {
             let account2 = accounts.next().unwrap();
             assert_eq!(account1.account_id(), &*ACCOUNT_ID_2);
             assert_eq!(account1.pre_auth_state(), &*ACCOUNT_PRE_AUTH_STATE_2);
+            assert_eq!(account1.metadata(), &*ACCOUNT_METADATA_2);
             assert_eq!(account2.account_id(), &*ACCOUNT_ID_1);
             assert_eq!(account2.pre_auth_state(), &*ACCOUNT_PRE_AUTH_STATE_1);
+            assert_eq!(account2.metadata(), &*ACCOUNT_METADATA_1);
 
             assert_eq!(None, accounts.next());
         }
@@ -310,6 +386,7 @@ mod tests {
             let account1 = accounts.next().unwrap();
             assert_eq!(account1.account_id(), &*ACCOUNT_ID_1);
             assert_eq!(account1.pre_auth_state(), &*ACCOUNT_PRE_AUTH_STATE_1);
+            assert_eq!(account1.metadata(), &*ACCOUNT_METADATA_1);
 
             assert_eq!(None, accounts.next());
         }

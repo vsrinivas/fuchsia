@@ -9,13 +9,15 @@ use {
         },
         account_handler_connection::AccountHandlerConnection,
         account_map::AccountMap,
+        stored_account_list::AccountMetadata,
     },
     account_common::{AccountId, AccountManagerError, FidlAccountId},
     anyhow::Error,
     fidl_fuchsia_identity_account::{
         AccountManagerGetAccountRequest, AccountManagerProvisionNewAccountRequest,
         AccountManagerRegisterAccountListenerRequest, AccountManagerRequest,
-        AccountManagerRequestStream, Error as ApiError, Lifetime,
+        AccountManagerRequestStream, AccountMetadata as FidlAccountMetadata, Error as ApiError,
+        Lifetime,
     },
     fidl_fuchsia_identity_internal::{
         AccountHandlerControlCreateAccountRequest, AccountHandlerControlUnlockAccountRequest,
@@ -71,8 +73,9 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 let response = self.get_account_ids().await;
                 responder.send(&response)?;
             }
-            AccountManagerRequest::GetAccountMetadata { id: _, responder: _ } => {
-                unimplemented!();
+            AccountManagerRequest::GetAccountMetadata { id, responder } => {
+                let mut response = self.get_account_metadata(id).await;
+                responder.send(&mut response)?;
             }
             AccountManagerRequest::GetAccount { payload, responder } => {
                 let mut response = self.get_account(payload).await;
@@ -115,6 +118,22 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
 
     async fn get_account_ids(&self) -> Vec<FidlAccountId> {
         self.account_map.lock().await.get_account_ids().iter().map(|id| id.clone().into()).collect()
+    }
+
+    async fn get_account_metadata(
+        &self,
+        id: FidlAccountId,
+    ) -> Result<FidlAccountMetadata, ApiError> {
+        let account_id = id.into();
+        self.account_map
+            .lock()
+            .await
+            .get_metadata(&account_id)
+            .map_err(|err| {
+                warn!("Failure getting account metadata: {:?}", err);
+                err.api_error
+            })
+            .map(|metadata| metadata.into())
     }
 
     async fn get_account(
@@ -240,18 +259,25 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
     async fn provision_new_account(
         &self,
         AccountManagerProvisionNewAccountRequest {
-            lifetime,
-            auth_mechanism_id,
-            ..
+            lifetime, auth_mechanism_id, mut metadata, ..
         }: AccountManagerProvisionNewAccountRequest,
     ) -> Result<FidlAccountId, ApiError> {
+        let account_metadata = metadata
+            .take()
+            .ok_or({
+                warn!("No metadata found");
+                ApiError::InvalidRequest
+            })?
+            .try_into()?;
         let (account_handler, pre_auth_state) = self
             .create_account_internal(lifetime.ok_or(ApiError::InvalidRequest)?, auth_mechanism_id)
             .await?;
         let account_id = account_handler.get_account_id();
 
         // Persist the account both in memory and on disk
-        if let Err(err) = self.add_account(account_handler.clone(), pre_auth_state).await {
+        if let Err(err) =
+            self.add_account(account_handler.clone(), pre_auth_state, account_metadata).await
+        {
             warn!("Failure adding account: {:?}", err);
             account_handler.terminate().await;
             Err(err.api_error)
@@ -266,11 +292,14 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         &self,
         account_handler: Arc<AHC>,
         pre_auth_state: Vec<u8>,
+        metadata: AccountMetadata,
     ) -> Result<(), AccountManagerError> {
         let mut account_map = self.account_map.lock().await;
 
-        account_map.add_account(Arc::clone(&account_handler), pre_auth_state).await.map_err(
-            |err| {
+        account_map
+            .add_account(Arc::clone(&account_handler), pre_auth_state, metadata)
+            .await
+            .map_err(|err| {
                 warn!("Could not add account: {:?}", err);
                 // TODO(fxbug.dev/39829): Improve error mapping.
                 if err.api_error == ApiError::FailedPrecondition {
@@ -278,8 +307,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 } else {
                     err.api_error
                 }
-            },
-        )?;
+            })?;
         let event = AccountEvent::AccountAdded(account_handler.get_account_id().clone());
         self.event_emitter.publish(&event).await;
         Ok(())
@@ -311,6 +339,7 @@ mod tests {
         static ref TEST_GRANULARITY: AuthChangeGranularity =
             AuthChangeGranularity { summary_changes: Some(true), ..AuthChangeGranularity::EMPTY };
         static ref ACCOUNT_PRE_AUTH_STATE: Vec<u8> = vec![1, 2, 3];
+        static ref ACCOUNT_METADATA: AccountMetadata = AccountMetadata::new("test".to_string());
     }
 
     fn request_stream_test<TestFn, Fut>(account_manager: TestAccountManager, test_fn: TestFn)
@@ -349,7 +378,13 @@ mod tests {
     ) -> TestAccountManager {
         let stored_account_list = existing_ids
             .iter()
-            .map(|&id| StoredAccount::new(AccountId::new(id), ACCOUNT_PRE_AUTH_STATE.to_vec()))
+            .map(|&id| {
+                StoredAccount::new(
+                    AccountId::new(id),
+                    ACCOUNT_PRE_AUTH_STATE.to_vec(),
+                    ACCOUNT_METADATA.clone(),
+                )
+            })
             .collect();
         StoredAccountList::new(data_dir, stored_account_list)
             .save()
@@ -414,7 +449,11 @@ mod tests {
         let data_dir = TempDir::new().unwrap();
         let stored_account_list = StoredAccountList::new(
             data_dir.path(),
-            vec![StoredAccount::new(AccountId::new(1), vec![])],
+            vec![StoredAccount::new(
+                AccountId::new(1),
+                vec![],
+                AccountMetadata::new("test".to_string()),
+            )],
         );
         stored_account_list.save().unwrap();
         let inspector = Inspector::new();

@@ -7,8 +7,8 @@ use {
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_identity_account::{
         AccountManagerGetAccountRequest, AccountManagerMarker,
-        AccountManagerProvisionNewAccountRequest, AccountManagerProxy, AccountMarker, AccountProxy,
-        Error as ApiError, Lifetime,
+        AccountManagerProvisionNewAccountRequest, AccountManagerProxy, AccountMarker,
+        AccountMetadata, AccountProxy, Error as ApiError, Lifetime,
     },
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_sys2 as fsys2,
@@ -35,17 +35,25 @@ const ACCOUNT_MANAGER_COMPONENT_NAME: &'static str = "account_manager";
 /// Maximum time between a lock request and when the account is locked
 const LOCK_REQUEST_DURATION: zx::Duration = zx::Duration::from_seconds(5);
 
+/// Convenience function to create an account metadata table
+/// with the supplied name.
+fn create_account_metadata(name: &str) -> AccountMetadata {
+    AccountMetadata { name: Some(name.to_string()), ..AccountMetadata::EMPTY }
+}
+
 /// Calls provision_new_account on the supplied account_manager, returning an error on any
 /// non-OK responses, or the account ID on success.
 async fn provision_new_account(
     account_manager: &AccountManagerProxy,
     lifetime: Lifetime,
     auth_mechanism_id: Option<&str>,
+    metadata: AccountMetadata,
 ) -> Result<LocalAccountId, Error> {
     account_manager
         .provision_new_account(AccountManagerProvisionNewAccountRequest {
             lifetime: Some(lifetime),
             auth_mechanism_id: auth_mechanism_id.map(|id| id.to_string()),
+            metadata: Some(metadata),
             ..AccountManagerProvisionNewAccountRequest::EMPTY
         })
         .await?
@@ -230,11 +238,23 @@ async fn test_provision_new_account() -> Result<(), Error> {
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
     // Provision a new account.
-    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
+    let account_1 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test1"),
+    )
+    .await?;
     assert_eq!(account_manager.get_account_ids().await?, vec![account_1]);
 
     // Provision a second new account and verify it has a different ID.
-    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
+    let account_2 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test2"),
+    )
+    .await?;
     assert_ne!(account_1, account_2);
 
     // Provision account with an auth mechanism
@@ -242,6 +262,7 @@ async fn test_provision_new_account() -> Result<(), Error> {
         &account_manager,
         Lifetime::Persistent,
         Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID),
+        create_account_metadata("test3"),
     )
     .await?;
 
@@ -263,6 +284,7 @@ async fn test_provision_then_lock_then_unlock_account() -> Result<(), Error> {
         &account_manager,
         Lifetime::Persistent,
         Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID),
+        create_account_metadata("test"),
     )
     .await?;
     let (account_client_end, account_server_end) = create_endpoints()?;
@@ -289,6 +311,7 @@ async fn test_unlock_account() -> Result<(), Error> {
         &account_manager,
         Lifetime::Persistent,
         Some(ALWAYS_SUCCEED_AUTH_MECHANISM_ID),
+        create_account_metadata("test"),
     )
     .await?;
 
@@ -312,6 +335,7 @@ async fn test_provision_then_lock_then_unlock_fail_authentication() -> Result<()
         &account_manager,
         Lifetime::Persistent,
         Some(ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID),
+        create_account_metadata("test"),
     )
     .await?;
     let (account_client_end, account_server_end) = create_endpoints()?;
@@ -339,6 +363,7 @@ async fn test_unlock_account_fail_authentication() -> Result<(), Error> {
         &account_manager,
         Lifetime::Persistent,
         Some(ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID),
+        create_account_metadata("test"),
     )
     .await?;
 
@@ -360,7 +385,9 @@ async fn get_account_and_persona_helper(lifetime: Lifetime) -> Result<(), Error>
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let account_id = provision_new_account(&account_manager, lifetime, None).await?;
+    let account_id =
+        provision_new_account(&account_manager, lifetime, None, create_account_metadata("test"))
+            .await?;
     // Connect a channel to the newly created account and verify it's usable.
     let (account_client_end, account_server_end) = create_endpoints()?;
     assert_eq!(get_account(&account_manager, account_id, account_server_end).await?, Ok(()));
@@ -399,8 +426,20 @@ async fn test_account_deletion() -> Result<(), Error> {
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
-    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
+    let account_1 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test1"),
+    )
+    .await?;
+    let account_2 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test2"),
+    )
+    .await?;
     let existing_accounts = account_manager.get_account_ids().await?;
     assert!(existing_accounts.contains(&account_1));
     assert!(existing_accounts.contains(&account_2));
@@ -428,9 +467,27 @@ async fn test_lifecycle() -> Result<(), Error> {
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
 
-    let account_1 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
-    let account_2 = provision_new_account(&account_manager, Lifetime::Persistent, None).await?;
-    let account_3 = provision_new_account(&account_manager, Lifetime::Ephemeral, None).await?;
+    let account_1 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test1"),
+    )
+    .await?;
+    let account_2 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test2"),
+    )
+    .await?;
+    let account_3 = provision_new_account(
+        &account_manager,
+        Lifetime::Ephemeral,
+        None,
+        create_account_metadata("test3"),
+    )
+    .await?;
 
     let existing_accounts = account_manager.get_account_ids().await?;
     assert_eq!(existing_accounts.len(), 3);
@@ -454,6 +511,26 @@ async fn test_lifecycle() -> Result<(), Error> {
     // Delete an account and verify it is removed.
     assert_eq!(account_manager.remove_account(account_2).await?, Ok(()));
     assert_eq!(account_manager.get_account_ids().await?, vec![account_1]);
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_account_metadata_persistence() -> Result<(), Error> {
+    let mut account_manager = create_account_manager().await?;
+    let account_metadata = create_account_metadata("test1");
+    let account_1 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        account_metadata.clone(),
+    )
+    .await?;
+
+    // Restart account manager
+    account_manager.restart().await?;
+
+    assert_eq!(account_manager.get_account_metadata(account_1).await?, Ok(account_metadata));
 
     Ok(())
 }

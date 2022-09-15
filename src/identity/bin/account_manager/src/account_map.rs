@@ -7,8 +7,9 @@
 
 use {
     crate::{
-        account_handler_connection::AccountHandlerConnection, inspect,
-        stored_account_list::StoredAccountList,
+        account_handler_connection::AccountHandlerConnection,
+        inspect,
+        stored_account_list::{AccountMetadata, StoredAccountList},
     },
     account_common::{AccountId, AccountManagerError, ResultExt},
     anyhow::format_err,
@@ -91,6 +92,17 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
         }
     }
 
+    // Returns the persisted metadata for the specified account.
+    pub fn get_metadata<'a>(
+        &'a self,
+        account_id: &'a AccountId,
+    ) -> Result<&'a AccountMetadata, AccountManagerError> {
+        match self.accounts.get(account_id) {
+            None => return Err(AccountManagerError::new(ApiError::NotFound)),
+            _ => self.stored_account_list.get_metadata(account_id),
+        }
+    }
+
     /// Returns an AccountHandlerConnection for a new account. The
     /// AccountHandler is in the Uninitialized state.
     pub async fn new_handler(&self, lifetime: Lifetime) -> Result<Arc<AHC>, AccountManagerError> {
@@ -120,6 +132,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
         &'a mut self,
         handler: Arc<AHC>,
         pre_auth_state: Vec<u8>,
+        metadata: AccountMetadata,
     ) -> Result<(), AccountManagerError> {
         let account_id = handler.get_account_id();
         if self.accounts.contains_key(account_id) {
@@ -127,9 +140,10 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
             return Err(AccountManagerError::new(ApiError::FailedPrecondition).with_cause(cause));
         }
 
+        // TODO(apsbhatia): Handle metadata storage for Ephemeral accounts.
         // Write to disk if account is persistent
         if handler.get_lifetime() == &Lifetime::Persistent {
-            self.stored_account_list.add_account(account_id, pre_auth_state)?;
+            self.stored_account_list.add_account(account_id, pre_auth_state, metadata)?;
         }
 
         // Reflect in the map
@@ -221,6 +235,7 @@ mod tests {
         static ref TEST_ACCOUNT_ID_1: AccountId = AccountId::new(123);
         static ref TEST_ACCOUNT_ID_2: AccountId = AccountId::new(456);
         static ref ACCOUNT_PRE_AUTH_STATE: Vec<u8> = vec![1, 3, 4];
+        static ref ACCOUNT_METADATA: AccountMetadata = AccountMetadata::new("test".to_string());
     }
 
     impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
@@ -228,7 +243,13 @@ mod tests {
             let inspect = inspect::Accounts::new(inspect_parent);
             let stored_accounts = accounts
                 .iter()
-                .map(|(id, _)| StoredAccount::new(id.clone(), ACCOUNT_PRE_AUTH_STATE.to_vec()))
+                .map(|(id, _)| {
+                    StoredAccount::new(
+                        id.clone(),
+                        ACCOUNT_PRE_AUTH_STATE.to_vec(),
+                        ACCOUNT_METADATA.clone(),
+                    )
+                })
                 .collect();
             let stored_account_list = StoredAccountList::new(&data_dir, stored_accounts);
             let account_map = Self { accounts, stored_account_list, inspect };
@@ -284,7 +305,8 @@ mod tests {
             )
             .await?,
         );
-        map.add_account(conn_test, ACCOUNT_PRE_AUTH_STATE.to_vec()).await?;
+        map.add_account(conn_test, ACCOUNT_PRE_AUTH_STATE.to_vec(), ACCOUNT_METADATA.clone())
+            .await?;
 
         // An ephemeral account that will not survive a lifecycle
         let conn_ephemeral = Arc::new(
@@ -294,7 +316,7 @@ mod tests {
             )
             .await?,
         );
-        map.add_account(conn_ephemeral, vec![]).await?;
+        map.add_account(conn_ephemeral, vec![], ACCOUNT_METADATA.clone()).await?;
 
         // All accounts should be available in this lifecycle
         assert_eq!(
@@ -334,11 +356,11 @@ mod tests {
             map.get_handler(&TEST_ACCOUNT_ID_1).await?.get_account_id(),
             &*TEST_ACCOUNT_ID_1
         );
-
         assert_eq!(
             map.get_account_pre_auth_state(&TEST_ACCOUNT_ID_1).await?,
             &*ACCOUNT_PRE_AUTH_STATE
         );
+        assert_eq!(map.get_metadata(&TEST_ACCOUNT_ID_1)?, &*ACCOUNT_METADATA);
         assert_data_tree!(inspector, root: { accounts: {
             total: 1u64,
             active: 1u64,
@@ -433,7 +455,7 @@ mod tests {
 
         // Cannot add duplicate account, even if it isn't currently loaded
         assert_eq!(
-            map.add_account(conn_test, ACCOUNT_PRE_AUTH_STATE.to_vec())
+            map.add_account(conn_test, ACCOUNT_PRE_AUTH_STATE.to_vec(), ACCOUNT_METADATA.clone())
                 .await
                 .unwrap_err()
                 .api_error,
