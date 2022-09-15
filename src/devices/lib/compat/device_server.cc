@@ -74,6 +74,33 @@ zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
   return ZX_OK;
 }
 
+zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
+                                driver::OutgoingDirectory* outgoing) {
+  driver::ServiceInstanceHandler handler;
+  fuchsia_driver_compat::Service::Handler compat_service(&handler);
+  auto device = [this, dispatcher](
+                    fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {
+    fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher,
+                                                                      std::move(server_end), this);
+  };
+  zx::status<> status = compat_service.add_device(std::move(device));
+  if (status.is_error()) {
+    return status.error_value();
+  }
+  status = outgoing->AddService<fuchsia_driver_compat::Service>(std::move(handler), name());
+  if (status.is_error()) {
+    return status.error_value();
+  }
+  stop_serving_ = [this, outgoing]() {
+    (void)outgoing->RemoveService<fuchsia_driver_compat::Service>(name_);
+  };
+
+  if (service_offers_) {
+    return service_offers_->Serve(dispatcher, outgoing);
+  }
+  return ZX_OK;
+}
+
 std::vector<fuchsia_component_decl::wire::Offer> DeviceServer::CreateOffers(
     fidl::ArenaBase& arena) {
   std::vector<fuchsia_component_decl::wire::Offer> offers;

@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.component.decl/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/driver2/outgoing_directory.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
@@ -23,6 +24,7 @@ class ServiceOffersV1 {
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
 
   zx_status_t Serve(async_dispatcher_t* dispatcher, component::OutgoingDirectory* outgoing);
+  zx_status_t Serve(async_dispatcher_t* dispatcher, driver::OutgoingDirectory* outgoing);
 
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir() const { return dir_; }
 

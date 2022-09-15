@@ -7,6 +7,8 @@
 
 #include <fidl/fuchsia.component.decl/cpp/wire.h>
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
+#include <lib/driver2/handlers.h>
+#include <lib/driver2/outgoing_directory.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include "src/devices/lib/compat/service_offers.h"
@@ -34,6 +36,7 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
 
   zx_status_t Serve(async_dispatcher_t* dispatcher, component::OutgoingDirectory* outgoing);
+  zx_status_t Serve(async_dispatcher_t* dispatcher, driver::OutgoingDirectory* outgoing);
 
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
 

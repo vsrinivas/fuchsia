@@ -42,4 +42,26 @@ zx_status_t ServiceOffersV1::Serve(async_dispatcher_t* dispatcher,
   return ZX_OK;
 }
 
+zx_status_t ServiceOffersV1::Serve(async_dispatcher_t* dispatcher,
+                                   driver::OutgoingDirectory* outgoing) {
+  // Add each service in the device as an service in our outgoing directory.
+  // We rename each instance from "default" into the child name, and then rename it back to default
+  // via the offer.
+  for (const auto& service_name : offers_) {
+    const auto instance_path = std::string("svc/").append(service_name).append("/default");
+    auto client = service::ConnectAt<fuchsia_io::Directory>(dir_, instance_path.c_str());
+    if (client.is_error()) {
+      return client.status_value();
+    }
+
+    const auto path = std::string("svc/").append(service_name);
+    auto result = outgoing->AddDirectoryAt(std::move(*client), path, name_);
+    if (result.is_error()) {
+      return result.error_value();
+    }
+    stop_serving_ = [this, outgoing, path]() { (void)outgoing->RemoveDirectoryAt(path, name_); };
+  }
+  return ZX_OK;
+}
+
 }  // namespace compat
