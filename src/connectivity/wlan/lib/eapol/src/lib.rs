@@ -6,8 +6,8 @@
 
 use {
     core::mem,
-    log::warn,
     thiserror::{self, Error},
+    tracing::warn,
     wlan_bitfield::bitfield,
     wlan_common::{
         appendable::{Appendable, BufferTooSmall},
@@ -87,7 +87,7 @@ impl<B: ByteSlice> KeyFrameRx<B> {
                 // Some APs add additional bytes to the 802.1X body. This is odd, but doesn't break anything.
                 match reader.peek_remaining().len() {
                     0 => (),
-                    extra => warn!("Ignoring {} additional bytes in eapol frame body", extra),
+                    extra => warn!(bytes = extra, "Ignoring extra bytes in eapol frame body"),
                 }
                 Ok(KeyFrameRx { eapol_fields, key_frame_fields, key_mic, key_data })
             }

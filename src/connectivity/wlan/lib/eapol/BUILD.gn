@@ -13,8 +13,8 @@ rustc_library("eapol") {
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/lib.rs" ]
