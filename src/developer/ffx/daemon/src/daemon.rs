@@ -7,6 +7,7 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     ascendd::Ascendd,
     async_trait::async_trait,
+    errors::ffx_error,
     ffx_build_version::build_info,
     ffx_config::ConfigLevel,
     ffx_daemon_core::events::{self, EventHandler},
@@ -416,7 +417,8 @@ impl Daemon {
             // nuanced approach here.
             blocking::Unblock::new(std::io::stdout()),
         )
-        .await?;
+        .await
+        .map_err(|e| ffx_error!("Error trying to start daemon socket: {e}"))?;
 
         self.ascendd.replace(Some(ascendd));
 

@@ -13,7 +13,10 @@ use fuchsia_async::Task;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use hoist::Hoist;
-use std::io::{ErrorKind::TimedOut, Write};
+use std::io::{
+    ErrorKind::{self, TimedOut},
+    Write,
+};
 use std::path::{Path, PathBuf};
 use std::pin::Pin;
 use std::sync::Arc;
@@ -120,11 +123,21 @@ async fn bind_listener(opt: Opt, hoist: &Hoist) -> Result<(PathBuf, String, Unix
                         "another ascendd is already listening at {}",
                         sockpath.display()
                     );
-                    bail!("another ascendd is aleady listening!");
+                    bail!("another ascendd is aleady listening at {}!", sockpath.display());
                 }
-                Err(_) => {
-                    tracing::info!("cleaning up stale ascendd socket at {}", sockpath.display());
+                Err(e) if e.kind() == ErrorKind::ConnectionRefused => {
+                    tracing::info!(
+                        "trying to clean up stale ascendd socket at {} (error: {e:?})",
+                        sockpath.display()
+                    );
                     std::fs::remove_file(&sockpath)?;
+                }
+                Err(e) => {
+                    tracing::info!("An unexpected error occurred while trying to bind to the ascendd socket at {}: {e:?}", sockpath.display());
+                    bail!(
+                        "unexpected error while trying to bind to ascendd socket at {}: {e}",
+                        sockpath.display()
+                    );
                 }
             },
         }

@@ -32,10 +32,11 @@ impl EnvironmentContext {
     pub fn get_default_ascendd_path(&self) -> Result<PathBuf> {
         match (self.env_var("ASCENDD"), self.env_kind()) {
             (Ok(path), _) => Ok(PathBuf::from(&path)),
-            (_, EnvironmentKind::InTree { .. } | EnvironmentKind::NoContext) => {
-                Ok(hoist::default_ascendd_path())
+            (_, EnvironmentKind::InTree { build_dir: Some(p), .. }) => {
+                Ok(p.join(".ffx-daemon/daemon.sock"))
             }
             (_, EnvironmentKind::Isolated { isolate_root }) => Ok(isolate_root.join("daemon.sock")),
+            (_, _) => Ok(hoist::default_ascendd_path()),
         }
     }
 

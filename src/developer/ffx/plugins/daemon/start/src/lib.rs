@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Result, ffx_core::ffx_plugin, ffx_daemon_start_args::StartCommand};
+use anyhow::Result;
+use errors::ffx_error;
+use ffx_core::ffx_plugin;
+use ffx_daemon_start_args::StartCommand;
 
 #[ffx_plugin()]
 pub async fn daemon(cmd: StartCommand) -> Result<()> {
@@ -11,8 +14,19 @@ pub async fn daemon(cmd: StartCommand) -> Result<()> {
     let hoist = hoist::hoist();
     let ascendd_path = match cmd.path {
         Some(path) => path,
-        None => ffx_config::global_env().await?.get_ascendd_path()?,
+        None => ffx_config::global_env()
+            .await
+            .and_then(|env| env.get_ascendd_path())
+            .map_err(|e| ffx_error!("Could not load daemon socket path: {e:?}"))?,
     };
+    let parent_dir =
+        ascendd_path.parent().ok_or_else(|| ffx_error!("Daemon socket path had no parent"))?;
+    std::fs::create_dir_all(parent_dir).map_err(|e| {
+        ffx_error!(
+            "Could not create directory for the daemon socket ({path}): {e:?}",
+            path = parent_dir.display()
+        )
+    })?;
     let mut daemon = ffx_daemon::Daemon::new(ascendd_path);
     daemon.start(hoist).await
 }
