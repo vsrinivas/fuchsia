@@ -22,8 +22,6 @@
 #include "src/virtualization/tests/lib/fake_netstack.h"
 #include "src/virtualization/tests/lib/guest_console.h"
 #include "src/virtualization/tests/lib/socket_logger.h"
-#include "src/virtualization/third_party/vm_tools/vm_guest.grpc.pb.h"
-#include "src/virtualization/third_party/vm_tools/vm_host.grpc.pb.h"
 
 enum class GuestKernel {
   ZIRCON,
@@ -226,7 +224,6 @@ class TerminaEnclosedGuest : public EnclosedGuest {
  private:
   std::unique_ptr<vsh::BlockingCommandRunner> command_runner_;
   async::Executor executor_;
-  std::unique_ptr<vm_tools::Maitred::Stub> maitred_;
 };
 
 using AllGuestTypes =

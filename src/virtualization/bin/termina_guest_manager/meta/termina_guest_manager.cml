@@ -87,5 +87,25 @@
         },
         stateful_partition_size: { type: "uint64" },
         start_container_runtime: { type: "bool" },
+
+        // Mount additional devices  before starting the container runtime.
+        //
+        // Each mount will contain three entries in this vector; the first is the device path, the
+        // second is the mountpoint, and the third is the filesystem type.
+        //
+        // Ex:
+        //   additional_read_only_mounts = [
+        //       "/dev/vdc",
+        //       "/tmp/foo",
+        //       "ext4",
+        //   ]
+        additional_read_only_mounts: {
+            type: "vector",
+            max_count: 15,
+            element: {
+                type: "string",
+                max_size: 50,
+            },
+        },
     },
 }

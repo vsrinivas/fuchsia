@@ -67,8 +67,9 @@ class Guest : public vm_tools::StartupListener::Service,
  private:
   zx::status<> StartGrpcServer();
   void StartGuest(fuchsia::virtualization::GuestManager& guest_manager);
-  void MountExtrasPartition();
-  void MountVmTools();
+  void MountFilesystems();
+  void MountReadOnlyFilesystem(const std::string& source, const std::string& target,
+                               const std::string& fstype);
   void ConfigureNetwork();
   void StartTermina();
   void LaunchContainerShell();

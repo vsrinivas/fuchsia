@@ -182,52 +182,50 @@ void Guest::OnGuestLaunched(fuchsia::virtualization::GuestManager& guest_manager
   });
 }
 
-void Guest::MountVmTools() {
-  TRACE_DURATION("termina_guest_manager", "Guest::MountVmTools");
-  FX_CHECK(maitred_) << "Called MountVmTools without a maitre'd connection";
-  FX_LOGS(INFO) << "Mounting vm_tools";
+void Guest::MountReadOnlyFilesystem(const std::string& source, const std::string& target,
+                                    const std::string& fstype) {
+  TRACE_DURATION("termina_guest_manager", "Guest::MountReadOnlyFilesystem");
+  FX_CHECK(maitred_) << "Called MountReadOnlyFilesystem without a maitre'd connection";
+  FX_LOGS(INFO) << "Mounting filesystem: " << source << " @ " << target;
 
   grpc::ClientContext context;
   vm_tools::MountRequest request;
   vm_tools::MountResponse response;
 
-  request.mutable_source()->assign("/dev/vdb");
-  request.mutable_target()->assign("/opt/google/cros-containers");
-  request.mutable_fstype()->assign("ext4");
+  request.mutable_source()->assign(source);
+  request.mutable_target()->assign(target);
+  request.mutable_fstype()->assign(fstype);
   request.mutable_options()->assign("");
   request.set_mountflags(MS_RDONLY);
+  request.set_create_target(true);
 
   {
     TRACE_DURATION("termina_guest_manager", "MountRPC");
     auto grpc_status = maitred_->Mount(&context, request, &response);
-    FX_CHECK(grpc_status.ok()) << "Failed to mount vm_tools partition: "
+    FX_CHECK(grpc_status.ok()) << "Failed to mount " << source << " @ " << target << ": "
                                << grpc_status.error_message();
   }
   FX_LOGS(INFO) << "Mounted Filesystem: " << response.error();
 }
 
-void Guest::MountExtrasPartition() {
-  TRACE_DURATION("termina_guest_manager", "Guest::MountExtrasPartition");
-  FX_CHECK(maitred_) << "Called MountExtrasPartition without a maitre'd connection";
-  FX_LOGS(INFO) << "Mounting Extras Partition";
+void Guest::MountFilesystems() {
+  TRACE_DURATION("termina_guest_manager", "Guest::MountFilesystems");
 
-  grpc::ClientContext context;
-  vm_tools::MountRequest request;
-  vm_tools::MountResponse response;
+  // Default mounts
+  MountReadOnlyFilesystem("/dev/vdb", "/opt/google/cros-containers", "ext4");
+  MountReadOnlyFilesystem("/dev/vdd", "/mnt/shared", "romfs");
 
-  request.mutable_source()->assign("/dev/vdd");
-  request.mutable_target()->assign("/mnt/shared");
-  request.mutable_fstype()->assign("romfs");
-  request.mutable_options()->assign("");
-  request.set_mountflags(0);
-
-  {
-    TRACE_DURATION("termina_guest_manager", "MountRPC");
-    auto grpc_status = maitred_->Mount(&context, request, &response);
-    FX_CHECK(grpc_status.ok()) << "Failed to mount extras filesystem: "
-                               << grpc_status.error_message();
+  // Add some additional filesystems, specified in structured configuration.
+  //
+  // TODO: We should model this as a struct once this is supported by structured configuration:
+  // https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0146_structured_config_schemas_in_cml?hl=en#complex_data_types
+  FX_CHECK(structured_config_.additional_read_only_mounts().size() % 3 == 0)
+      << "Structured config does not contain an appropriate number of values; this should be "
+      << "triplets of <device>, <mountpoint>, <filesystem-type>";
+  auto it = structured_config_.additional_read_only_mounts().begin();
+  while (it != structured_config_.additional_read_only_mounts().end()) {
+    MountReadOnlyFilesystem(*(it++), *(it++), *(it++));
   }
-  FX_LOGS(INFO) << "Mounted Filesystem: " << response.error();
 }
 
 void Guest::ConfigureNetwork() {
@@ -466,8 +464,7 @@ grpc::Status Guest::VmReady(grpc::ServerContext* context, const vm_tools::EmptyM
       [this](fpromise::result<std::unique_ptr<vm_tools::Maitred::Stub>, zx_status_t>& result) {
         FX_CHECK(result.is_ok()) << "Failed to connect to Maitre'd";
         this->maitred_ = std::move(result.value());
-        MountVmTools();
-        MountExtrasPartition();
+        MountFilesystems();
         ConfigureNetwork();
         StartTermina();
       };

@@ -62,15 +62,10 @@ constexpr char kTerminaGuestUrl[] = "#meta/termina_guest_manager.cm";
 constexpr auto kDevGpuDirectory = "dev-gpu";
 constexpr auto kGuestManagerName = "guest_manager";
 
-// The first disk letter (ex: /dev/vda would be disk letter 'a') to use for test devices. Letters
-// before this will be provided by termina_guest_manager directly.
-constexpr char kFirstVirtioBlockDiskLetter = 'e';
-
 // TODO(fxbug.dev/12589): Use consistent naming for the test utils here.
 constexpr char kDebianTestUtilDir[] = "/test_utils";
 constexpr zx::duration kLoopConditionStep = zx::msec(10);
 constexpr zx::duration kRetryStep = zx::msec(200);
-constexpr uint32_t kTerminaMaitredPort = 8888;
 
 std::string JoinArgVector(const std::vector<std::string>& argv) {
   std::string result;
@@ -680,36 +675,6 @@ zx_status_t TerminaEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) 
   return ZX_OK;
 }
 
-// Use Maitred to mount the given block device at the given location.
-//
-// The destination directory will be created if required.
-zx_status_t MountDeviceInGuest(vm_tools::Maitred::Stub& maitred, std::string_view block_device,
-                               std::string_view mount_point, std::string_view fs_type,
-                               uint64_t mount_flags) {
-  grpc::ClientContext context;
-  vm_tools::MountRequest request;
-  vm_tools::MountResponse response;
-
-  request.mutable_source()->assign(block_device);
-  request.mutable_target()->assign(mount_point);
-  request.mutable_fstype()->assign(fs_type);
-  request.set_mountflags(mount_flags);
-  request.set_create_target(true);
-
-  auto grpc_status = maitred.Mount(&context, request, &response);
-  if (!grpc_status.ok()) {
-    FX_LOGS(ERROR) << "Request to mount block device '" << block_device
-                   << "' failed: " << grpc_status.error_message();
-    return ZX_ERR_IO;
-  }
-  if (response.error() != 0) {
-    FX_LOGS(ERROR) << "Mounting block device '" << block_device << "' failed: " << response.error();
-    return ZX_ERR_IO;
-  }
-
-  return ZX_OK;
-}
-
 void TerminaEnclosedGuest::InstallInRealm(component_testing::Realm& realm,
                                           GuestLaunchInfo& guest_launch_info) {
   EnclosedGuest::InstallInRealm(realm, guest_launch_info);
@@ -720,28 +685,36 @@ void TerminaEnclosedGuest::InstallInRealm(component_testing::Realm& realm,
   realm.SetConfigValue(kGuestManagerName, "stateful_partition_size",
                        ConfigValue::Uint64(128 * 1024 * 1024));
   realm.SetConfigValue(kGuestManagerName, "start_container_runtime", ConfigValue::Bool(false));
+
+  // These correspond to the additional block devices supplied in BuildLaunchInfo.
+  realm.SetConfigValue(kGuestManagerName, "additional_read_only_mounts",
+                       ConfigValue{std::vector<std::string>{
+                           "/dev/vde",
+                           "/tmp/vm_extras",
+                           "ext2",
+
+                           "/dev/vdf",
+                           "/tmp/test_utils",
+                           "romfs",
+
+                           "/dev/vdg",
+                           "/tmp/extras",
+                           "romfs",
+                       }});
 }
 
 zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   // Connect to the LinuxManager to get status updates on VM.
   auto linux_manager = ConnectToService<fuchsia::virtualization::LinuxManager>();
   std::optional<std::string> failure;
-  linux_manager.events().OnGuestInfoChanged = [this, &failure](auto label, auto info) {
+  bool done = false;
+  linux_manager.events().OnGuestInfoChanged = [&done, &failure](auto label, auto info) {
     switch (info.container_status()) {
       case fuchsia::virtualization::ContainerStatus::FAILED:
         failure = std::move(info.failure_reason());
         break;
       case fuchsia::virtualization::ContainerStatus::STARTING_VM: {
-        auto p = NewGrpcVsockStub<vm_tools::Maitred>(vsock_, kTerminaMaitredPort)
-                     .then([this](fpromise::result<std::unique_ptr<vm_tools::Maitred::Stub>,
-                                                   zx_status_t>& result) {
-                       if (result.is_ok()) {
-                         maitred_ = std::move(result.value());
-                       } else {
-                         FX_PLOGS(ERROR, result.error()) << "Failed to connect to maitred";
-                       }
-                     });
-        executor_.schedule_task(std::move(p));
+        done = true;
         break;
       }
       default:
@@ -749,12 +722,9 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
     }
   };
 
-  // The VM will connect to the StartupListener port when it's ready and we'll
-  // create the maitred stub in |VmReady|.
   {
     PeriodicLogger logger("Wait for termina", zx::sec(1));
-    if (!RunLoopUntil([this, &failure] { return failure.has_value() || maitred_ != nullptr; },
-                      deadline)) {
+    if (!RunLoopUntil([&done, &failure] { return failure.has_value() || done; }, deadline)) {
       return ZX_ERR_TIMED_OUT;
     }
   }
@@ -762,34 +732,12 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
     FX_LOGS(ERROR) << "Failed to start Termina: " << *failure;
     return ZX_ERR_UNAVAILABLE;
   }
-  FX_CHECK(maitred_) << "No maitred connection";
 
   // Connect to vshd.
   fuchsia::virtualization::HostVsockEndpointPtr endpoint;
   FX_CHECK(GetHostVsockEndpoint(endpoint.NewRequest()).is_ok());
 
   command_runner_ = std::make_unique<vsh::BlockingCommandRunner>(std::move(endpoint));
-
-  char disk_letter = kFirstVirtioBlockDiskLetter;
-
-  // Create mountpoints for test utils and extras. The root filesystem is read only so we
-  // put these under /tmp.
-  zx_status_t status;
-  status = MountDeviceInGuest(*maitred_, fxl::StringPrintf("/dev/vd%c", disk_letter++),
-                              "/tmp/vm_extras", "ext2", MS_RDONLY);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = MountDeviceInGuest(*maitred_, fxl::StringPrintf("/dev/vd%c", disk_letter++),
-                              "/tmp/test_utils", "romfs", MS_RDONLY);
-  if (status != ZX_OK) {
-    return status;
-  }
-  status = MountDeviceInGuest(*maitred_, fxl::StringPrintf("/dev/vd%c", disk_letter++),
-                              "/tmp/extras", "romfs", MS_RDONLY);
-  if (status != ZX_OK) {
-    return status;
-  }
 
   return ZX_OK;
 }
