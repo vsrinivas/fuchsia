@@ -308,64 +308,6 @@ const char* removal_problem(uint32_t flags) {
   return "?";
 }
 
-uint8_t device_get_suspend_reason(SystemPowerState power_state) {
-  switch (power_state) {
-    case SystemPowerState::kReboot:
-      return DEVICE_SUSPEND_REASON_REBOOT;
-    case SystemPowerState::kRebootRecovery:
-      return DEVICE_SUSPEND_REASON_REBOOT_RECOVERY;
-    case SystemPowerState::kRebootBootloader:
-      return DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER;
-    case SystemPowerState::kMexec:
-      return DEVICE_SUSPEND_REASON_MEXEC;
-    case SystemPowerState::kPoweroff:
-      return DEVICE_SUSPEND_REASON_POWEROFF;
-    case SystemPowerState::kSuspendRam:
-      return DEVICE_SUSPEND_REASON_SUSPEND_RAM;
-    case SystemPowerState::kRebootKernelInitiated:
-      return DEVICE_SUSPEND_REASON_REBOOT_KERNEL_INITIATED;
-    default:
-      return DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
-  }
-}
-
-zx_status_t device_get_dev_power_state_from_mapping(
-    const fbl::RefPtr<zx_device>& dev, uint32_t flags,
-    fuchsia_device::wire::SystemPowerStateInfo* info, uint8_t* suspend_reason) {
-  // TODO(ravoorir) : When the usage of suspend flags is replaced with
-  // system power states, this function will not need the switch case.
-  // Some suspend flags might be translated to system power states with
-  // additional hints (ex: REBOOT/REBOOT_BOOTLOADER/REBOOT_RECOVERY/MEXEC).
-  // For now, each of these flags are treated as an individual state.
-  SystemPowerState sys_state;
-  switch (flags) {
-    case DEVICE_SUSPEND_FLAG_REBOOT:
-      sys_state = SystemPowerState::kReboot;
-      break;
-    case DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY:
-      sys_state = SystemPowerState::kRebootRecovery;
-      break;
-    case DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER:
-      sys_state = SystemPowerState::kRebootBootloader;
-      break;
-    case DEVICE_SUSPEND_FLAG_MEXEC:
-      sys_state = SystemPowerState::kMexec;
-      break;
-    case DEVICE_SUSPEND_FLAG_POWEROFF:
-      sys_state = SystemPowerState::kPoweroff;
-      break;
-    case DEVICE_SUSPEND_FLAG_REBOOT_KERNEL_INITIATED:
-      sys_state = SystemPowerState::kRebootKernelInitiated;
-      break;
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
-  auto& sys_power_states = dev->GetSystemPowerStateMapping();
-  *info = sys_power_states[static_cast<unsigned long>(sys_state)];
-  *suspend_reason = internal::device_get_suspend_reason(sys_state);
-  return ZX_OK;
-}
-
 }  // namespace
 
 uint32_t get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_perf_state) {
@@ -749,8 +691,7 @@ void DriverHostContext::DeviceSystemSuspend(const fbl::RefPtr<zx_device>& dev, u
     fuchsia_device::wire::SystemPowerStateInfo new_state_info;
     uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
 
-    status = internal::device_get_dev_power_state_from_mapping(dev, flags, &new_state_info,
-                                                               &suspend_reason);
+    status = dev->get_dev_power_state_from_mapping(flags, &new_state_info, &suspend_reason);
     if (status == ZX_OK) {
       enum_lock_acquire();
       {
@@ -780,14 +721,18 @@ void DriverHostContext::DeviceSystemResume(const fbl::RefPtr<zx_device>& dev,
   }
 
   zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+
   // If new resume hook is implemented, prefer that.
   if (dev->ops()->resume) {
     enum_lock_acquire();
     {
       api_lock_.Release();
       auto& sys_power_states = dev->GetSystemPowerStateMapping();
-      uint32_t requested_perf_state =
-          internal::get_perf_state(dev, sys_power_states[target_system_state].performance_state);
+
+      // Subtract 1 from `target_system_state` because it uses a 1-based index
+      uint32_t performance_state = sys_power_states.at(target_system_state - 1).performance_state;
+
+      uint32_t requested_perf_state = internal::get_perf_state(dev, performance_state);
       dev->ops()->resume(dev->ctx, requested_perf_state);
       api_lock_.Acquire();
     }

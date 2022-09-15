@@ -526,6 +526,10 @@ struct zx_device
     inspect_->set_current_performance_state(state);
   }
 
+  zx_status_t get_dev_power_state_from_mapping(uint32_t flags,
+                                               fuchsia_device::wire::SystemPowerStateInfo* info,
+                                               uint8_t* suspend_reason);
+
   // Begin an async tracing entry for this device.  It will have the given category, and the name
   // "<device_name>:<tag>".
   AsyncTrace BeginAsyncTrace(const char* category, const char* tag) {

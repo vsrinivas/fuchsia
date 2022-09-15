@@ -202,6 +202,73 @@ TEST_F(CoreTest, RebindNoChildren) {
   ASSERT_OK(ctx_.loop().RunUntilIdle());
 }
 
+TEST_F(CoreTest, SystemPowerStateMapping) {
+  fbl::RefPtr<zx_device> dev;
+  ASSERT_OK(zx_device::Create(&ctx_, "test", driver_obj_, &dev));
+  ASSERT_NO_FATAL_FAILURE(Connect(dev));
+
+  ASSERT_OK(dev->SetPowerStates(internal::kDeviceDefaultPowerStates,
+                                std::size(internal::kDeviceDefaultPowerStates)));
+
+  // Use the default system power state mapping, but set `performance_state` values to be
+  // incrementally increasing so the test can verify we select the correct one
+  zx_device::SystemPowerStateMapping states_mapping(internal::kDeviceDefaultStateMapping);
+  for (size_t i = 0; i < states_mapping.size(); i++) {
+    states_mapping[i].performance_state = (uint32_t)i;
+  }
+  ASSERT_OK(dev->SetSystemPowerStateMapping(states_mapping));
+
+  fuchsia_device::wire::SystemPowerStateInfo state_info;
+  uint8_t suspend_reason = DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
+
+  ASSERT_OK(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_REBOOT, &state_info,
+                                                  &suspend_reason));
+  ASSERT_EQ(suspend_reason, DEVICE_SUSPEND_REASON_REBOOT);
+  ASSERT_EQ(state_info.performance_state, 1);
+
+  ASSERT_OK(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER,
+                                                  &state_info, &suspend_reason));
+  ASSERT_EQ(suspend_reason, DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER);
+  ASSERT_EQ(state_info.performance_state, 2);
+
+  ASSERT_OK(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY, &state_info,
+                                                  &suspend_reason));
+  ASSERT_EQ(suspend_reason, DEVICE_SUSPEND_REASON_REBOOT_RECOVERY);
+  ASSERT_EQ(state_info.performance_state, 3);
+
+  ASSERT_OK(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_POWEROFF, &state_info,
+                                                  &suspend_reason));
+  ASSERT_EQ(suspend_reason, DEVICE_SUSPEND_REASON_POWEROFF);
+  ASSERT_EQ(state_info.performance_state, 4);
+
+  ASSERT_OK(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_MEXEC, &state_info,
+                                                  &suspend_reason));
+  ASSERT_EQ(suspend_reason, DEVICE_SUSPEND_REASON_MEXEC);
+  ASSERT_EQ(state_info.performance_state, 5);
+
+  ASSERT_STATUS(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_SUSPEND_RAM, &state_info,
+                                                      &suspend_reason),
+                ZX_ERR_INVALID_ARGS);
+
+  ASSERT_OK(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_REBOOT_KERNEL_INITIATED,
+                                                  &state_info, &suspend_reason));
+  ASSERT_EQ(suspend_reason, DEVICE_SUSPEND_REASON_REBOOT_KERNEL_INITIATED);
+  ASSERT_EQ(state_info.performance_state, 7);
+
+  ctx_.loop().Quit();
+  ctx_.loop().JoinThreads();
+  ASSERT_OK(ctx_.loop().ResetQuit());
+  ASSERT_OK(ctx_.loop().RunUntilIdle());
+
+  dev->set_flag(DEV_FLAG_DEAD);
+  {
+    fbl::AutoLock lock(&ctx_.api_lock());
+    dev->removal_cb = [](zx_status_t) {};
+    ctx_.DriverManagerRemove(std::move(dev));
+  }
+  ASSERT_OK(ctx_.loop().RunUntilIdle());
+}
+
 TEST_F(CoreTest, RebindHasOneChild) {
   {
     uint32_t unbind_count = 0;

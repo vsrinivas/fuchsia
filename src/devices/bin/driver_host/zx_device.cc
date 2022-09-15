@@ -152,6 +152,72 @@ zx_status_t zx_device::SetPerformanceStates(
   return ZX_OK;
 }
 
+namespace {
+
+using fuchsia_hardware_power_statecontrol::wire::SystemPowerState;
+
+uint8_t get_suspend_reason(SystemPowerState power_state) {
+  switch (power_state) {
+    case SystemPowerState::kReboot:
+      return DEVICE_SUSPEND_REASON_REBOOT;
+    case SystemPowerState::kRebootRecovery:
+      return DEVICE_SUSPEND_REASON_REBOOT_RECOVERY;
+    case SystemPowerState::kRebootBootloader:
+      return DEVICE_SUSPEND_REASON_REBOOT_BOOTLOADER;
+    case SystemPowerState::kMexec:
+      return DEVICE_SUSPEND_REASON_MEXEC;
+    case SystemPowerState::kPoweroff:
+      return DEVICE_SUSPEND_REASON_POWEROFF;
+    case SystemPowerState::kSuspendRam:
+      return DEVICE_SUSPEND_REASON_SUSPEND_RAM;
+    case SystemPowerState::kRebootKernelInitiated:
+      return DEVICE_SUSPEND_REASON_REBOOT_KERNEL_INITIATED;
+    default:
+      return DEVICE_SUSPEND_REASON_SELECTIVE_SUSPEND;
+  }
+}
+}  // namespace
+
+zx_status_t zx_device_t::get_dev_power_state_from_mapping(
+    uint32_t flags, fuchsia_device::wire::SystemPowerStateInfo* info, uint8_t* suspend_reason) {
+  // TODO(fxbug.dev/109243) : When the usage of suspend flags is replaced with system power states,
+  // this function will not need the switch case. Some suspend flags might be translated to system
+  // power states with additional hints (ex: REBOOT/REBOOT_BOOTLOADER/REBOOT_RECOVERY/MEXEC). For
+  // now, each of these flags are treated as an individual state.
+  SystemPowerState sys_state;
+  switch (flags) {
+    case DEVICE_SUSPEND_FLAG_REBOOT:
+      sys_state = SystemPowerState::kReboot;
+      break;
+    case DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY:
+      sys_state = SystemPowerState::kRebootRecovery;
+      break;
+    case DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER:
+      sys_state = SystemPowerState::kRebootBootloader;
+      break;
+    case DEVICE_SUSPEND_FLAG_MEXEC:
+      sys_state = SystemPowerState::kMexec;
+      break;
+    case DEVICE_SUSPEND_FLAG_POWEROFF:
+      sys_state = SystemPowerState::kPoweroff;
+      break;
+    case DEVICE_SUSPEND_FLAG_REBOOT_KERNEL_INITIATED:
+      sys_state = SystemPowerState::kRebootKernelInitiated;
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  auto& sys_power_states = GetSystemPowerStateMapping();
+
+  // SystemPowerState (from FIDL) use a 1-based index, so subtract 1 for indexing into the array
+  auto sys_power_idx = static_cast<unsigned long>(sys_state) - 1;
+
+  *info = sys_power_states.at(sys_power_idx);
+  *suspend_reason = get_suspend_reason(sys_state);
+  return ZX_OK;
+}
+
 void zx_device::CloseAllConnections() {
   for (auto& child : children_) {
     if (child.flags_ & DEV_FLAG_INSTANCE) {
