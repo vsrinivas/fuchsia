@@ -13,7 +13,6 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
-	"strings"
 	"syscall"
 	"time"
 
@@ -154,13 +153,26 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 	testDurations := testsharder.NewTestDurationsMap(m.TestDurations())
 	shards = testsharder.AddExpectedDurationTags(shards, testDurations)
 
-	var modifiers []testsharder.ModifierMatch
 	if flags.modifiersPath != "" {
-		modifiers, err = testsharder.LoadTestModifiers(ctx, m.TestSpecs(), flags.modifiersPath)
+		modifiers, err := testsharder.LoadTestModifiers(ctx, m.TestSpecs(), flags.modifiersPath)
+		if err != nil {
+			return err
+		}
+		// Apply user-defined modifiers.
+		shards, err = testsharder.ApplyModifiers(shards, modifiers)
 		if err != nil {
 			return err
 		}
 	}
+
+	// Remove the multiplied shards from the set of shards to analyze for
+	// affected tests, as we want to run these shards regardless of whether
+	// the associated tests are affected.
+	multiplied := func(t testsharder.Test) bool {
+		return t.RunAlgorithm == testsharder.StopOnFailure
+	}
+	multipliedShards, nonMultipliedShards := testsharder.PartitionShards(shards, multiplied, "")
+	multipliedShards = testsharder.SplitOutMultipliers(ctx, multipliedShards, testDurations, targetDuration, flags.targetTestCount, testsharder.MultipliedShardPrefix)
 
 	if flags.affectedTestsPath != "" {
 		affectedModifiers, err := testsharder.AffectedModifiers(m.TestSpecs(), flags.affectedTestsPath, flags.affectedTestsMaxAttempts, flags.affectedTestsMultiplyThreshold)
@@ -173,35 +185,29 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 			// run all tests.
 			flags.skipUnaffected = false
 		}
-		modifiers = append(modifiers, affectedModifiers...)
+		// Apply affected modifiers to both multiplied and non-multiplied shards
+		// so that tests in all shards are correctly labeled as affected.
+		multipliedShards, err = testsharder.ApplyModifiers(multipliedShards, affectedModifiers)
+		if err != nil {
+			return err
+		}
+		nonMultipliedShards, err = testsharder.ApplyModifiers(nonMultipliedShards, affectedModifiers)
+		if err != nil {
+			return err
+		}
 	} else {
 		// If no affected-tests file was provided, we don't know which tests
 		// were affected, so run all tests.
 		flags.skipUnaffected = false
 	}
 
-	shards, err = testsharder.ApplyModifiers(shards, modifiers)
-	if err != nil {
-		return err
+	// Remove the multiplied affected shards from the set of shards to analyze for
+	// affected tests, as we want to run these shards separately from the rest.
+	multipliedAffected := func(t testsharder.Test) bool {
+		return t.Affected && t.RunAlgorithm == testsharder.StopOnFailure
 	}
-
-	// At this point, each test in each shard should be updated to tell
-	// whether they are affected and whether they should be multiplied with
-	// the max number of runs to run.
-	shards = testsharder.SplitOutMultipliers(ctx, shards, testDurations, targetDuration, flags.targetTestCount)
-
-	// Remove the multiplied shards from the set of shards to analyze for
-	// affected tests, as we want to run these shards regardless of whether
-	// the associated tests are affected.
-	var multipliedShards []*testsharder.Shard
-	var nonMultipliedShards []*testsharder.Shard
-	for _, shard := range shards {
-		if strings.HasPrefix(shard.Name, testsharder.MultipliedShardPrefix) {
-			multipliedShards = append(multipliedShards, shard)
-		} else {
-			nonMultipliedShards = append(nonMultipliedShards, shard)
-		}
-	}
+	multipliedAffectedShards, nonMultipliedShards := testsharder.PartitionShards(nonMultipliedShards, multipliedAffected, "")
+	multipliedAffectedShards = testsharder.SplitOutMultipliers(ctx, multipliedAffectedShards, testDurations, targetDuration, flags.targetTestCount, testsharder.AffectedShardPrefix)
 
 	var skippedShards []*testsharder.Shard
 	if flags.affectedOnly {
@@ -239,10 +245,12 @@ func execute(ctx context.Context, flags testsharderFlags, m buildModules) error 
 		// 3. Nonhermetic shards
 		shards = append(shards, nonhermeticShards...)
 	}
-	// Add the multiplied shards back into the list of shards to run.
-	shards = append(shards, multipliedShards...)
 
 	shards = testsharder.WithTargetDuration(shards, targetDuration, flags.targetTestCount, flags.maxShardsPerEnvironment, testDurations)
+
+	// Add the multiplied shards back into the list of shards to run.
+	shards = append(multipliedAffectedShards, shards...)
+	shards = append(shards, multipliedShards...)
 
 	if flags.imageDeps || flags.hermeticDeps {
 		for _, s := range shards {

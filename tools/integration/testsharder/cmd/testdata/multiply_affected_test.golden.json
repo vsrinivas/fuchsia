@@ -1,6 +1,6 @@
 [
     {
-        "name": "AEMU",
+        "name": "affected:AEMU",
         "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/affected-test#meta/affected-test.cm",
@@ -10,15 +10,32 @@
                 "os": "fuchsia",
                 "cpu": "x64",
                 "log_settings": {},
-                "runs": 1,
+                "runs": 120,
+                "run_algorithm": "STOP_ON_FAILURE",
+                "stop_repeating_after_secs": 120,
                 "affected": true,
                 "tags": [
                     {
                         "key": "expected_duration_milliseconds",
-                        "value": "0"
+                        "value": "1000"
                     }
                 ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
             },
+            "is_emu": true
+        },
+        "timeout_secs": 842,
+        "summary": {
+            "tests": null
+        }
+    },
+    {
+        "name": "AEMU",
+        "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/unaffected-test#meta/unaffected-test.cm",
                 "package_url": "fuchsia-pkg://fuchsia.com/unaffected-test#meta/unaffected-test.cm",
@@ -31,7 +48,7 @@
                 "tags": [
                     {
                         "key": "expected_duration_milliseconds",
-                        "value": "0"
+                        "value": "1000"
                     }
                 ]
             }
@@ -42,13 +59,13 @@
             },
             "is_emu": true
         },
-        "timeout_secs": 0,
+        "timeout_secs": 604,
         "summary": {
             "tests": null
         }
     },
     {
-        "name": "multiplied:AEMU-fuchsia-pkg:__fuchsia.com_multiplied-affected-test#meta_multiplied-affected-test.cm",
+        "name": "multiplied:AEMU",
         "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/multiplied-affected-test#meta/multiplied-affected-test.cm",
@@ -60,11 +77,12 @@
                 "log_settings": {},
                 "runs": 100,
                 "run_algorithm": "STOP_ON_FAILURE",
+                "stop_repeating_after_secs": 120,
                 "affected": true,
                 "tags": [
                     {
                         "key": "expected_duration_milliseconds",
-                        "value": "0"
+                        "value": "1000"
                     }
                 ]
             }
@@ -75,7 +93,7 @@
             },
             "is_emu": true
         },
-        "timeout_secs": 0,
+        "timeout_secs": 842,
         "summary": {
             "tests": null
         }

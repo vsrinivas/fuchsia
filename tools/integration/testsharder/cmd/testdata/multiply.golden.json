@@ -1,6 +1,6 @@
 [
     {
-        "name": "AEMU",
+        "name": "multiplied:AEMU",
         "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm",
@@ -10,29 +10,16 @@
                 "os": "fuchsia",
                 "cpu": "x64",
                 "log_settings": {},
-                "runs": 1,
+                "runs": 1000,
+                "run_algorithm": "STOP_ON_FAILURE",
+                "stop_repeating_after_secs": 5,
                 "tags": [
                     {
                         "key": "expected_duration_milliseconds",
-                        "value": "0"
+                        "value": "1"
                     }
                 ]
-            }
-        ],
-        "environment": {
-            "dimensions": {
-                "device_type": "AEMU"
             },
-            "is_emu": true
-        },
-        "timeout_secs": 0,
-        "summary": {
-            "tests": null
-        }
-    },
-    {
-        "name": "multiplied:AEMU-fuchsia-pkg:__fuchsia.com_foo#meta_foo.cm",
-        "tests": [
             {
                 "name": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
                 "package_url": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
@@ -43,10 +30,11 @@
                 "log_settings": {},
                 "runs": 50,
                 "run_algorithm": "STOP_ON_FAILURE",
+                "stop_repeating_after_secs": 5,
                 "tags": [
                     {
                         "key": "expected_duration_milliseconds",
-                        "value": "0"
+                        "value": "1"
                     }
                 ]
             }
@@ -57,7 +45,7 @@
             },
             "is_emu": true
         },
-        "timeout_secs": 0,
+        "timeout_secs": 614,
         "summary": {
             "tests": null
         }

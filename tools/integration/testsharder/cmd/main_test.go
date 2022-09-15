@@ -73,6 +73,9 @@ func TestExecute(t *testing.T) {
 		},
 		{
 			name: "multiply",
+			flags: testsharderFlags{
+				targetDurationSecs: 5,
+			},
 			testSpecs: []build.TestSpec{
 				fuchsiaTestSpec("foo"),
 				fuchsiaTestSpec("bar"),
@@ -81,6 +84,15 @@ func TestExecute(t *testing.T) {
 				{
 					Name:      "foo",
 					TotalRuns: 50,
+				},
+				{
+					Name: "bar",
+				},
+			},
+			testDurations: []build.TestDuration{
+				{
+					Name:           "*",
+					MedianDuration: time.Millisecond,
 				},
 			},
 		},
@@ -207,10 +219,20 @@ func TestExecute(t *testing.T) {
 		},
 		{
 			name: "multiply affected test",
+			flags: testsharderFlags{
+				affectedTestsMultiplyThreshold: 3,
+				targetDurationSecs:             int(2 * time.Minute.Seconds()),
+			},
 			testSpecs: []build.TestSpec{
 				fuchsiaTestSpec("multiplied-affected-test"),
 				fuchsiaTestSpec("affected-test"),
 				fuchsiaTestSpec("unaffected-test"),
+			},
+			testDurations: []build.TestDuration{
+				{
+					Name:           "*",
+					MedianDuration: time.Second,
+				},
 			},
 			affectedTests: []string{
 				packageURL("multiplied-affected-test"),

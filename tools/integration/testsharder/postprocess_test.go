@@ -8,11 +8,13 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,20 +64,32 @@ func TestSplitOutMultipliers(t *testing.T) {
 		}
 	}
 
-	multShard := func(env build.Environment, os string, id, runs, timeoutSecs int) *Shard {
-		test := makeTest(id, os)
-		test.Runs = runs
-		test.RunAlgorithm = StopOnFailure
-		test.StopRepeatingAfterSecs = timeoutSecs
+	multShard := func(env build.Environment, os string, runs, timeoutSecs int, ids ...int) *Shard {
+		tests := []Test{}
+		for _, id := range ids {
+			test := makeTest(id, os)
+			test.Runs = runs
+			test.RunAlgorithm = StopOnFailure
+			test.StopRepeatingAfterSecs = timeoutSecs
+			tests = append(tests, test)
+		}
 		return &Shard{
-			Name:  MultipliedShardPrefix + environmentName(env) + "-" + normalizeTestName(test.Name),
-			Tests: []Test{test},
-			Env:   env,
+			Name:        MultipliedShardPrefix + environmentName(env),
+			Tests:       tests,
+			Env:         env,
+			TimeoutSecs: int(computeShardTimeout(subshard{time.Duration(timeoutSecs) * time.Second, tests}).Seconds()),
 		}
 	}
 
-	affectedMultShard := func(env build.Environment, os string, id, runs, timeoutSecs int) *Shard {
-		shard := multShard(env, os, id, runs, timeoutSecs)
+	multShardWithIndex := func(env build.Environment, os string, runs, timeoutSecs, shardIndex int, ids ...int) *Shard {
+		shard := multShard(env, os, runs, timeoutSecs, ids...)
+		shard.Name = fmt.Sprintf("%s-(%d)", shard.Name, shardIndex)
+		return shard
+	}
+
+	affectedMultShard := func(env build.Environment, os string, runs, timeoutSecs int, ids ...int) *Shard {
+		shard := multShard(env, os, runs, timeoutSecs, ids...)
+		shard.Name = MultipliedShardPrefix + AffectedShardPrefix + strings.TrimPrefix(shard.Name, MultipliedShardPrefix)
 		for i := range shard.Tests {
 			shard.Tests[i].Affected = true
 		}
@@ -101,8 +115,8 @@ func TestSplitOutMultipliers(t *testing.T) {
 				makeModifierMatch(1, build.Environment{}, 5),
 			},
 			expected: []*Shard{
-				multShard(env2, "fuchsia", 1, 5, 0),
-				multShard(env1, "fuchsia", 1, 5, 0),
+				multShard(env2, "fuchsia", 5, 0, 1),
+				multShard(env1, "fuchsia", 5, 0, 1),
 			},
 		},
 		{
@@ -120,9 +134,9 @@ func TestSplitOutMultipliers(t *testing.T) {
 			expected: []*Shard{
 				shard(env2, "fuchsia", 2, 4),
 				// We multiplied the test with id 1 five times from the first two shards.
-				multShard(env3, "linux", 3, 3, 0),
-				multShard(env2, "fuchsia", 1, 5, 0),
-				multShard(env1, "fuchsia", 1, 5, 0),
+				multShard(env3, "linux", 3, 0, 3),
+				multShard(env2, "fuchsia", 5, 0, 1),
+				multShard(env1, "fuchsia", 5, 0, 1),
 			},
 		},
 		{
@@ -140,7 +154,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 			expected: []*Shard{
 				// The expected duration for this test is 1 second and our
 				// target duration is three seconds.
-				multShard(env1, "fuchsia", 1, 3, 3),
+				multShard(env1, "fuchsia", 3, 3, 1),
 			},
 		},
 		{
@@ -153,7 +167,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			targetTestCount: 4,
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 4, 0),
+				multShard(env1, "fuchsia", 4, 0, 1),
 			},
 		},
 		{
@@ -165,7 +179,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 				makeModifierMatch(1, env1, 0),
 			},
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 1, 0),
+				multShard(env1, "fuchsia", 1, 0, 1),
 			},
 		},
 		{
@@ -181,7 +195,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			targetDuration: (multipliedTestMaxRuns + 10) * time.Second,
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, multipliedTestMaxRuns, multipliedTestMaxRuns+10),
+				multShard(env1, "fuchsia", multipliedTestMaxRuns, multipliedTestMaxRuns+10, 1),
 			},
 		},
 		{
@@ -197,7 +211,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			targetDuration: 2 * time.Second,
 			expected: []*Shard{
-				multShard(env1, "fuchsia", 1, 1, 2),
+				multShard(env1, "fuchsia", 1, 2, 1),
 			},
 		},
 		{
@@ -209,7 +223,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 				makeModifierMatch(1, build.Environment{}, 5),
 			},
 			expected: []*Shard{
-				affectedMultShard(env1, "fuchsia", 1, 5, 0),
+				affectedMultShard(env1, "fuchsia", 5, 0, 1),
 			},
 		},
 		{
@@ -222,7 +236,135 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			expected: []*Shard{
 				shard(env1, "fuchsia", 2),
-				multShard(env1, "fuchsia", 1, 2, 0),
+				multShard(env1, "fuchsia", 2, 0, 1),
+			},
+		},
+		{
+			name: "fill up multiple tests in max shards",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3, 4, 5),
+			},
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
+				makeModifierMatch(2, env1, 0),
+				makeModifierMatch(3, env1, 0),
+				makeModifierMatch(4, env1, 0),
+				makeModifierMatch(5, env1, 0),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: 1 * time.Second},
+			},
+			targetDuration: 10 * time.Second,
+			expected: []*Shard{
+				multShardWithIndex(env1, "fuchsia", 10, 10, 1, 1),
+				multShardWithIndex(env1, "fuchsia", 5, 10, 2, 4, 2),
+				multShardWithIndex(env1, "fuchsia", 5, 10, 3, 5, 3),
+			},
+		},
+		{
+			name: "max tests in fewer shards",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3, 4, 5, 6),
+			},
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
+				makeModifierMatch(2, env1, 0),
+				makeModifierMatch(3, env1, 0),
+				makeModifierMatch(4, env1, 0),
+				makeModifierMatch(5, env1, 0),
+				makeModifierMatch(6, env1, 0),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: 1 * time.Millisecond},
+			},
+			targetDuration: 10 * time.Second,
+			expected: []*Shard{
+				multShard(env1, "fuchsia", 1000, 10, 4, 5, 6, 1, 2, 3),
+			},
+		},
+		{
+			name: "max tests split evenly",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3, 4, 5, 6),
+			},
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
+				makeModifierMatch(2, env1, 0),
+				makeModifierMatch(3, env1, 0),
+				makeModifierMatch(4, env1, 0),
+				makeModifierMatch(5, env1, 0),
+				makeModifierMatch(6, env1, 0),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: 5 * time.Millisecond},
+			},
+			targetDuration: 10 * time.Second,
+			expected: []*Shard{
+				multShardWithIndex(env1, "fuchsia", 1000, 10, 1, 6, 1),
+				multShardWithIndex(env1, "fuchsia", 1000, 10, 2, 4, 2),
+				multShardWithIndex(env1, "fuchsia", 1000, 10, 3, 5, 3),
+			},
+		},
+		{
+			name: "max tests split unevenly",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3, 4),
+			},
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 0),
+				makeModifierMatch(2, env1, 0),
+				makeModifierMatch(3, env1, 0),
+				makeModifierMatch(4, env1, 0),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: 7 * time.Millisecond},
+			},
+			targetDuration: 10 * time.Second,
+			expected: []*Shard{
+				multShardWithIndex(env1, "fuchsia", 1000, 10, 1, 1),
+				multShardWithIndex(env1, "fuchsia", 715, 10, 2, 4, 2),
+				multShardWithIndex(env1, "fuchsia", 1000, 10, 3, 3),
+			},
+		},
+		{
+			name: "run all total runs regardless of target duration",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3, 4, 5, 6),
+			},
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 500),
+				makeModifierMatch(2, env1, 500),
+				makeModifierMatch(3, env1, 500),
+				makeModifierMatch(4, env1, 500),
+				makeModifierMatch(5, env1, 500),
+				makeModifierMatch(6, env1, 500),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: 1 * time.Second},
+			},
+			targetDuration: 10 * time.Second,
+			expected: []*Shard{
+				multShardWithIndex(env1, "fuchsia", 500, 10, 1, 6, 1),
+				multShardWithIndex(env1, "fuchsia", 500, 10, 2, 4, 2),
+				multShardWithIndex(env1, "fuchsia", 500, 10, 3, 5, 3),
+			},
+		},
+		{
+			name: "only run each multiplier test in one shard",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2),
+			},
+			multipliers: []ModifierMatch{
+				makeModifierMatch(1, env1, 50),
+				makeModifierMatch(2, env1, 50),
+			},
+			testDurations: TestDurationsMap{
+				"*": {MedianDuration: 1 * time.Second},
+			},
+			targetDuration: 10 * time.Second,
+			expected: []*Shard{
+				multShardWithIndex(env1, "fuchsia", 50, 10, 1, 1),
+				multShardWithIndex(env1, "fuchsia", 50, 10, 2, 2),
 			},
 		},
 		{
@@ -237,7 +379,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 			},
 			expected: []*Shard{
 				shard(env1, "fuchsia", 2),
-				multShard(env1, "fuchsia", 1, 2, 0),
+				multShard(env1, "fuchsia", 2, 0, 1),
 			},
 		},
 	}
@@ -254,6 +396,7 @@ func TestSplitOutMultipliers(t *testing.T) {
 				tc.testDurations,
 				tc.targetDuration,
 				tc.targetTestCount,
+				MultipliedShardPrefix,
 			)
 			assertEqual(t, tc.expected, actual)
 		})

@@ -84,6 +84,13 @@ func (t *Test) minRequiredRuns() int {
 	return 1
 }
 
+func (t *Test) maxRuns() int {
+	if t.Runs == 0 {
+		return multipliedTestMaxRuns
+	}
+	return t.Runs
+}
+
 func (t *Test) applyTestListTags(tl build.TestListEntry) {
 	t.Tags = tl.Tags
 }

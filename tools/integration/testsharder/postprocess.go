@@ -34,6 +34,9 @@ const (
 	// fail if this is exceeded.
 	maxMatchesPerMultiplier = 5
 
+	// The maximum number of multiplied shards allowed per environment.
+	maxMultipliedShardsPerEnv = 3
+
 	// The prefix added to the names of shards that run affected hermetic tests.
 	AffectedShardPrefix = "affected:"
 
@@ -119,6 +122,7 @@ func SplitOutMultipliers(
 	// WithTargetDuration instead of the original target duration.
 	targetDuration time.Duration,
 	targetTestCount int,
+	prefix string,
 ) []*Shard {
 	shardIdxToMatches := make([]map[int]struct{}, len(shards))
 
@@ -127,29 +131,6 @@ func SplitOutMultipliers(
 		for ti, test := range shard.Tests {
 			if test.RunAlgorithm != StopOnFailure {
 				continue
-			}
-			if test.Runs == 0 {
-				if targetDuration > 0 {
-					// We both cap the number of runs and apply a safety factor because
-					// we want to keep the total runs to a reasonable number
-					// in case the test takes longer than expected. We're conservative because
-					// if a shard exceeds its timeout, it's really painful for users.
-					expectedDuration := testDurations.Get(test).MedianDuration
-					test.Runs = min(
-						int(float64(targetDuration)/float64(expectedDuration)),
-						multipliedTestMaxRuns,
-					)
-					if test.Runs == 0 {
-						// In the case where the TotalRuns is not set and the targetDuration is
-						// less than the expectedDuration, the calculated runs will be 0, but we
-						// still want to run the test so we should set the runs to 1.
-						test.Runs = 1
-					}
-				} else if targetTestCount > 0 {
-					test.Runs = min(targetTestCount, multipliedTestMaxRuns)
-				} else {
-					test.Runs = 1
-				}
 			}
 			test.StopRepeatingAfterSecs = int(targetDuration.Seconds())
 			shard.Tests[ti] = test
@@ -169,6 +150,11 @@ func SplitOutMultipliers(
 			shards = shards[:len(shards)-1]
 			shardRemoved = true
 		}
+		var multipliedTests []Test
+		totalTestsDuration := 0
+		maxTestsDuration := 0
+		totalTestCount := 0
+		maxTestCount := 0
 		for ti := len(shard.Tests) - 1; ti >= 0; ti-- {
 			if _, ok := matches[ti]; !ok {
 				// If there is no match associated with this test,
@@ -176,15 +162,17 @@ func SplitOutMultipliers(
 				continue
 			}
 			test := shard.Tests[ti]
-			// If a test is multiplied, it doesn't matter if it was originally
-			// in an affected shard or not and it's confusing for it to have
-			// two prefixes. So don't include the "affected" prefix.
-			shardName := strings.TrimPrefix(shard.Name, AffectedShardPrefix)
-			shards = append(shards, &Shard{
-				Name:  MultipliedShardPrefix + shardName + "-" + normalizeTestName(test.Name),
-				Tests: []Test{test},
-				Env:   shard.Env,
-			})
+			if targetDuration > 0 {
+				expectedDuration := testDurations.Get(test).MedianDuration
+				totalTestsDuration += int(expectedDuration) * max(1, test.Runs)
+				maxTestsDuration += int(expectedDuration) * test.maxRuns()
+			} else if targetTestCount > 0 {
+				totalTestCount += max(1, test.Runs)
+				maxTestCount += test.maxRuns()
+			} else {
+				test.Runs = max(test.Runs, 1)
+			}
+			multipliedTests = append(multipliedTests, test)
 			if shardRemoved {
 				continue
 			}
@@ -192,6 +180,67 @@ func SplitOutMultipliers(
 			copy(shard.Tests[ti:], shard.Tests[ti+1:])
 			shard.Tests = shard.Tests[:len(shard.Tests)-1]
 
+		}
+
+		if len(multipliedTests) > 0 {
+			maxMultipliedShards := maxMultipliedShardsPerEnv
+			if targetDuration > 0 {
+				maxMultipliedShards = min(maxMultipliedShards, divRoundUp(maxTestsDuration, int(targetDuration)))
+			} else if targetTestCount > 0 {
+				maxMultipliedShards = min(maxMultipliedShards, divRoundUp(maxTestCount, targetTestCount))
+			} else {
+				maxMultipliedShards = 1
+			}
+			numNewShards := min(len(multipliedTests), maxMultipliedShards)
+
+			multShard := &Shard{
+				Name:  prefix + shard.Name,
+				Tests: multipliedTests,
+				Env:   shard.Env,
+			}
+			newShards := shardByTime(multShard, testDurations, numNewShards)
+
+			for _, newShard := range newShards {
+				// Give priority to the tests that had a total_runs specified and
+				// use the remaining time/test count to fill up the rest of the
+				// shard with the remaining tests.
+				var usedUpDuration time.Duration
+				usedUpCount := 0
+				var fillUpTestIdxs []int
+				for i, test := range newShard.Tests {
+					if test.Runs > 0 {
+						if targetDuration > 0 {
+							usedUpDuration += testDurations.Get(test).MedianDuration * time.Duration(test.Runs)
+						} else if targetTestCount > 0 {
+							usedUpCount += test.Runs
+						}
+					} else {
+						fillUpTestIdxs = append(fillUpTestIdxs, i)
+					}
+				}
+
+				// Fill up the remainder of the shard with the remaining tests,
+				// splitting up the duration/count evenly between the tests and
+				// running each at least once.
+				for _, idx := range fillUpTestIdxs {
+					test := newShard.Tests[idx]
+					if targetDuration > 0 {
+						remainingDuration := max(0, int(targetDuration-usedUpDuration))
+						durationPerTest := divRoundUp(remainingDuration, len(fillUpTestIdxs))
+						test.Runs = max(1, divRoundUp(durationPerTest, int(testDurations.Get(test).MedianDuration)))
+						test.Runs = min(test.Runs, multipliedTestMaxRuns)
+					} else if targetTestCount > 0 {
+						remainingCount := max(0, targetTestCount-usedUpCount)
+						countPerTest := divRoundUp(remainingCount, len(fillUpTestIdxs))
+						test.Runs = max(1, countPerTest)
+					} else {
+						test.Runs = 1
+					}
+					newShard.Tests[idx] = test
+				}
+				newShard.TimeoutSecs = int(computeShardTimeout(subshard{targetDuration, newShard.Tests}).Seconds())
+			}
+			shards = append(shards, newShards...)
 		}
 	}
 
@@ -495,9 +544,16 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 	}
 
 	for _, test := range shard.Tests {
-		runsPerShard := divRoundUp(test.minRequiredRuns(), numNewShards)
-		extra := runsPerShard*numNewShards - test.minRequiredRuns()
-		for i := 0; i < numNewShards; i++ {
+		shardsPerTest := 1
+		// Only if the test must be run more than once and it's the only test
+		// in the shard should we split it across multiple shards.
+		splitAcrossShards := test.minRequiredRuns() > 1 && len(shard.Tests) == 1
+		if splitAcrossShards {
+			shardsPerTest = numNewShards
+		}
+		runsPerShard := divRoundUp(test.minRequiredRuns(), shardsPerTest)
+		extra := runsPerShard*shardsPerTest - test.minRequiredRuns()
+		for i := 0; i < shardsPerTest; i++ {
 			testCopy := test
 			var runs int
 			if i < numNewShards-extra {
@@ -508,9 +564,7 @@ func shardByTime(shard *Shard, testDurations TestDurationsMap, numNewShards int)
 			if runs == 0 {
 				break
 			}
-			// Only if the test must be run more than once should we split it
-			// across multiple shards.
-			if test.minRequiredRuns() > 1 {
+			if splitAcrossShards {
 				testCopy.Runs = runs
 			}
 			// Assign this test to the subshard with the lowest total expected

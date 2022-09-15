@@ -40,9 +40,11 @@ type TestModifier struct {
 	// present, this multiplier will match tests from any operating system.
 	OS string `json:"os,omitempty"`
 
-	// TotalRuns is the number of times to run the test. If not present,
-	// testsharder will try to produce exactly one full shard for this test
-	// using historical test duration data.
+	// TotalRuns is the number of times to run the test. If zero, testsharder
+	// will use historical test duration data to try to run this test along with
+	// other multiplied tests as many times as it can within the max allowed
+	// multiplied shards per environment. A negative value means to NOT designate
+	// this test as a multiplier test and to leave the original runs as-is.
 	TotalRuns int `json:"total_runs,omitempty"`
 
 	// Affected specifies whether the test is an affected test. If affected,
