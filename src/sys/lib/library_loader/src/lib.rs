@@ -9,9 +9,9 @@ use {
     fidl_fuchsia_ldsvc::{LoaderRequest, LoaderRequestStream},
     fuchsia_async as fasync, fuchsia_fs, fuchsia_zircon as zx,
     futures::{TryFutureExt, TryStreamExt},
-    log::*,
     std::path::Path,
     std::sync::Arc,
+    tracing::*,
 };
 
 /// Helper function to load `object_name` from `search_dirs`.
