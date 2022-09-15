@@ -4,7 +4,7 @@
 
 use {
     component_events::{
-        events::{self, Event, EventSource},
+        events::{self, Event, EventStream},
         matcher::{EventMatcher, ExitStatusMatcher},
         sequence::{self, EventSequence},
     },
@@ -40,9 +40,8 @@ async fn verify_routing_failure_messages() {
     let instance =
         builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
     let proxy =
-        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
-
-    let mut event_source = EventSource::from_proxy(proxy);
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
+    let event_stream = EventStream::new_v2(proxy);
 
     let expected = EventSequence::new()
         .has_subset(
@@ -121,9 +120,7 @@ async fn verify_routing_failure_messages() {
             ],
             sequence::Ordering::Unordered,
         )
-        .subscribe_and_expect(&mut event_source)
-        .await
-        .unwrap();
+        .expect(event_stream);
 
     instance.start_component_tree().await.unwrap();
     expected.await.unwrap();

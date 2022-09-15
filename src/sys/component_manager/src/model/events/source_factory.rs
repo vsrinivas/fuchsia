@@ -101,6 +101,10 @@ impl EventSourceFactory {
         EventSourceV2::new(self.create(target_moniker).await?, name).await
     }
 
+    pub async fn create_v2_for_debug(&self) -> Result<EventSourceV2, ModelError> {
+        EventSourceV2::new(self.create_for_debug().await?, CapabilityName::from("")).await
+    }
+
     /// Returns an EventSource. An EventSource holds an InstancedAbsoluteMoniker that
     /// corresponds to the component in which it will receive events.
     async fn on_capability_routed_async(

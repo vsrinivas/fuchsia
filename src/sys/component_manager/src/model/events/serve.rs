@@ -21,16 +21,17 @@ use {
     cm_util::io::clone_dir,
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fsys::EventStream2RequestStream,
     fuchsia_zircon::{
         self as zx, sys::ZX_CHANNEL_MAX_MSG_BYTES, sys::ZX_CHANNEL_MAX_MSG_HANDLES, HandleBased,
     },
-    futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt},
+    futures::{lock::Mutex, StreamExt, TryStreamExt},
     measure_tape_for_events::Measurable,
     moniker::{
         AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase, ExtendedMoniker,
         RelativeMoniker, RelativeMonikerBase,
     },
-    std::{collections::VecDeque, sync::Arc},
+    std::sync::Arc,
     tracing::{error, info, warn},
 };
 
@@ -253,7 +254,7 @@ pub fn validate_and_filter_event(
 
 async fn handle_get_next_request(
     event_stream: &mut EventStream,
-    buffer: &mut VecDeque<fsys::Event>,
+    pending_event: &mut Option<fsys::Event>,
 ) -> Option<Vec<fsys::Event>> {
     // Handle buffered state
     // TODO(https://fxbug.dev/98653): Replace this
@@ -261,20 +262,6 @@ async fn handle_get_next_request(
     let mut bytes_used: usize = FIDL_HEADER_BYTES + FIDL_VECTOR_HEADER_BYTES;
     let mut handles_used: usize = 0;
     let mut events = vec![];
-
-    /// Creates a FIDL object from an event, logs
-    /// an error and continues the loop on failure.
-    macro_rules! create_fidl_object_or_continue {
-        ($e: expr) => {
-            match create_event_fidl_object($e).await {
-                Ok(event_fidl_object) => event_fidl_object,
-                Err(error) => {
-                    warn!(?error, "Failed to create event object");
-                    continue;
-                }
-            }
-        };
-    }
 
     /// Measures the size of an event, increments bytes used,
     /// and returns the event Vec if full.
@@ -287,7 +274,10 @@ async fn handle_get_next_request(
             handles_used += measure_tape.num_handles;
             if bytes_used > ZX_CHANNEL_MAX_MSG_BYTES as usize
             || handles_used > ZX_CHANNEL_MAX_MSG_HANDLES as usize {
-                buffer.push_back($e);
+                if pending_event.is_some() {
+                    unreachable!("Overflowed twice");
+                }
+                *pending_event = Some($e);
                 if events.len() == 0 {
                     error!(
                         event_type = $event_type.as_str(),
@@ -301,8 +291,28 @@ async fn handle_get_next_request(
         }
     }
 
+    macro_rules! handle_and_filter_event {
+        ($event: expr, $route: expr) => {
+            if let Some(mut route) = $route {
+                route.reverse();
+                if !validate_and_filter_event(&mut $event.event.target_moniker, &route) {
+                    continue;
+                }
+            }
+            let event_type = $event.event.event_type().to_string();
+            let event_fidl_object = match create_event_fidl_object($event).await {
+                Ok(event_fidl_object) => event_fidl_object,
+                Err(error) => {
+                    warn!(?error, "Failed to create event object");
+                    continue;
+                }
+            };
+            handle_event!(event_fidl_object, event_type);
+        };
+    }
+
     // Read overflowed events from the buffer first
-    while let Some(event) = buffer.pop_front() {
+    if let Some(event) = pending_event.take() {
         let e_type = event
             .header
             .as_ref()
@@ -311,29 +321,27 @@ async fn handle_get_next_request(
         handle_event!(event, e_type);
     }
 
-    // Read events from the event stream
-    while let Some((mut event, Some(mut route))) = event_stream.next().await {
-        // The route comes in the wrong order, reverse it so that it is correct.
-        route.reverse();
-        if !validate_and_filter_event(&mut event.event.target_moniker, &route) {
-            continue;
+    if events.is_empty() {
+        // Block
+        // If not for the macro this would be an if let
+        // because the loop will only iterate once (therefore we block only 1 time)
+        while let Some((mut event, route)) = event_stream.next().await {
+            handle_and_filter_event!(event, route);
+            break;
         }
-        let event_type = event.event.event_type().to_string();
-        let event_fidl_object = create_fidl_object_or_continue!(event);
-        handle_event!(event_fidl_object, event_type);
-        while let Some(Some((mut event, Some(mut route)))) = event_stream.next().now_or_never() {
-            route.reverse();
-            if !validate_and_filter_event(&mut event.event.target_moniker, &route) {
-                // Event failed verification, check for next event
-                continue;
-            }
-            let event_type = event.event.event_type().to_string();
-            let event_fidl_object = create_fidl_object_or_continue!(event);
-            handle_event!(event_fidl_object, event_type);
-        }
-        return Some(events);
     }
-    None
+    loop {
+        if let Some(Some((mut event, route))) = event_stream.next_or_none().await {
+            handle_and_filter_event!(event, route);
+        } else {
+            break;
+        }
+    }
+    if events.is_empty() {
+        None
+    } else {
+        Some(events)
+    }
 }
 
 /// Tries to handle the next request.
@@ -341,7 +349,7 @@ async fn handle_get_next_request(
 async fn try_handle_get_next_request(
     event_stream: &mut EventStream,
     responder: fsys::EventStream2GetNextResponder,
-    buffer: &mut VecDeque<fsys::Event>,
+    buffer: &mut Option<fsys::Event>,
 ) -> bool {
     let events = handle_get_next_request(event_stream, buffer).await;
     if let Some(events) = events {
@@ -351,13 +359,14 @@ async fn try_handle_get_next_request(
     }
 }
 
-/// Serves EventStream FIDL requests received over the provided stream.
-pub async fn serve_event_stream_v2(
+/// Serves the event_stream_v2 protocol implemented for EventStream2RequestStream
+/// This is needed because we get the request stream directly as a stream from FDIO
+/// but as a ServerEnd from the hooks system.
+pub async fn serve_event_stream_v2_as_stream(
     mut event_stream: EventStream,
-    server_end: ServerEnd<fsys::EventStream2Marker>,
+    mut stream: EventStream2RequestStream,
 ) {
-    let mut buffer = VecDeque::new();
-    let mut stream = server_end.into_stream().unwrap();
+    let mut buffer = None;
     while let Some(Ok(request)) = stream.next().await {
         match request {
             fsys::EventStream2Request::GetNext { responder } => {
@@ -368,6 +377,15 @@ pub async fn serve_event_stream_v2(
             }
         }
     }
+}
+
+/// Serves EventStream FIDL requests received over the provided stream.
+pub async fn serve_event_stream_v2(
+    event_stream: EventStream,
+    server_end: ServerEnd<fsys::EventStream2Marker>,
+) {
+    let stream = server_end.into_stream().unwrap();
+    serve_event_stream_v2_as_stream(event_stream, stream).await;
 }
 
 async fn maybe_create_event_result(

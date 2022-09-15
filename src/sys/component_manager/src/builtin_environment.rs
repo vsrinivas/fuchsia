@@ -53,8 +53,9 @@ use {
             error::ModelError,
             event_logger::EventLogger,
             events::{
-                registry::{EventRegistry, ExecutionMode},
+                registry::{EventRegistry, EventSubscription, ExecutionMode},
                 running_provider::RunningProvider,
+                serve::serve_event_stream_v2_as_stream,
                 source_factory::EventSourceFactory,
                 stream_provider::EventStreamProvider,
             },
@@ -71,7 +72,7 @@ use {
         environment::{DebugRegistry, RunnerRegistry},
     },
     anyhow::{anyhow, format_err, Context as _, Error},
-    cm_rust::{CapabilityName, RunnerRegistration},
+    cm_rust::{CapabilityName, EventMode, RunnerRegistration},
     cm_types::Url,
     fidl::{
         endpoints::{create_proxy, ServerEnd},
@@ -1005,6 +1006,7 @@ impl BuiltinEnvironment {
         // root and offer it via ServiceFs to the outside world.
         if self.execution_mode.is_debug() {
             let event_source = self.event_source_factory.create_for_debug().await?;
+            let event_source_v2 = self.event_source_factory.create_v2_for_debug().await?;
             let scope = self.model.top_instance().task_scope().clone();
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
@@ -1017,6 +1019,56 @@ impl BuiltinEnvironment {
                             event_source.serve(stream).await;
                         })
                         .await;
+                })
+                .detach();
+            });
+
+            service_fs.dir("svc").add_fidl_service(move |stream| {
+                let mut event_source_v2 = event_source_v2.clone();
+                // Spawn a short-lived task that adds the EventSource serve to
+                // component manager's task scope.
+                fasync::Task::spawn(async move {
+                    serve_event_stream_v2_as_stream(
+                        event_source_v2
+                            .subscribe(vec![
+                                EventSubscription {
+                                    event_name: CapabilityName::from("started"),
+                                    mode: EventMode::Async,
+                                },
+                                EventSubscription {
+                                    event_name: CapabilityName::from("stopped"),
+                                    mode: EventMode::Async,
+                                },
+                                EventSubscription {
+                                    event_name: CapabilityName::from("capability_routed"),
+                                    mode: EventMode::Async,
+                                },
+                                EventSubscription {
+                                    event_name: CapabilityName::from("running"),
+                                    mode: EventMode::Async,
+                                },
+                                EventSubscription {
+                                    event_name: CapabilityName::from("destroyed"),
+                                    mode: EventMode::Async,
+                                },
+                                EventSubscription {
+                                    event_name: CapabilityName::from("discovered"),
+                                    mode: EventMode::Async,
+                                },
+                                EventSubscription {
+                                    event_name: CapabilityName::from("resolved"),
+                                    mode: EventMode::Async,
+                                },
+                                EventSubscription {
+                                    event_name: CapabilityName::from("unresolved"),
+                                    mode: EventMode::Async,
+                                },
+                            ])
+                            .await
+                            .unwrap(),
+                        stream,
+                    )
+                    .await;
                 })
                 .detach();
             });

@@ -12,7 +12,7 @@ use {
         hooks::{EventType, HasEventType},
     },
     cm_rust::EventMode,
-    futures::{channel::mpsc, task::Context, Stream, StreamExt},
+    futures::{channel::mpsc, poll, stream::Peekable, task::Context, Stream, StreamExt},
     moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
         pin::Pin,
@@ -23,7 +23,7 @@ use {
 
 pub struct EventStream {
     /// The receiving end of a channel of Events.
-    rx: mpsc::UnboundedReceiver<(Event, Option<Vec<ComponentEventRoute>>)>,
+    rx: Peekable<mpsc::UnboundedReceiver<(Event, Option<Vec<ComponentEventRoute>>)>>,
 
     /// The sending end of a channel of Events.
     tx: mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)>,
@@ -46,7 +46,7 @@ pub struct EventStream {
 impl EventStream {
     pub fn new() -> Self {
         let (tx, rx) = mpsc::unbounded();
-        Self { rx, tx, dispatchers: vec![], route: vec![], tasks: vec![] }
+        Self { rx: rx.peekable(), tx, dispatchers: vec![], route: vec![], tasks: vec![] }
     }
 
     pub fn create_dispatcher(
@@ -66,6 +66,15 @@ impl EventStream {
         ));
         self.dispatchers.push(dispatcher.clone());
         Arc::downgrade(&dispatcher)
+    }
+
+    pub async fn next_or_none(
+        &mut self,
+    ) -> Option<Option<(Event, Option<Vec<ComponentEventRoute>>)>> {
+        match poll!(Pin::new(&mut self.rx).peek()) {
+            Poll::Ready(_) => Some(self.rx.next().await),
+            Poll::Pending => None,
+        }
     }
 
     pub fn sender(&self) -> mpsc::UnboundedSender<(Event, Option<Vec<ComponentEventRoute>>)> {
