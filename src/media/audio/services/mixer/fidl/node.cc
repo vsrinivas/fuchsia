@@ -146,17 +146,17 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
 
   // The PipelineStages are updated asynchronously.
   global_queue.Push(dest_stage_thread_id,
-                    [dest_stage = dest->pipeline_stage(),   //
-                     src_stage = source->pipeline_stage(),  //
+                    [dest_stage = dest->pipeline_stage(),      //
+                     source_stage = source->pipeline_stage(),  //
                      dest_stage_thread_id, detached_thread]() {
                       FX_CHECK(dest_stage->thread()->id() == dest_stage_thread_id)
                           << dest_stage->thread()->id() << " != " << dest_stage_thread_id;
-                      FX_CHECK(src_stage->thread()->id() == dest_stage_thread_id)
-                          << src_stage->thread()->id() << " != " << dest_stage_thread_id;
+                      FX_CHECK(source_stage->thread()->id() == dest_stage_thread_id)
+                          << source_stage->thread()->id() << " != " << dest_stage_thread_id;
 
                       ScopedThreadChecker checker(dest_stage->thread()->checker());
-                      src_stage->set_thread(detached_thread);
-                      dest_stage->RemoveSource(src_stage);
+                      source_stage->set_thread(detached_thread);
+                      dest_stage->RemoveSource(source_stage);
                     });
 
   return fpromise::ok();
@@ -261,18 +261,18 @@ fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> Node::CreateEdgeInn
 
   // Update the PipelineStages asynchronously, on dest's thread.
   global_queue.Push(dest_stage_thread_id,
-                    [dest_stage = dest->pipeline_stage(),   //
-                     src_stage = source->pipeline_stage(),  //
+                    [dest_stage = dest->pipeline_stage(),      //
+                     source_stage = source->pipeline_stage(),  //
                      dest_stage_thread_id]() {
                       FX_CHECK(dest_stage->thread()->id() == dest_stage_thread_id)
                           << dest_stage->thread()->id() << " != " << dest_stage_thread_id;
-                      FX_CHECK(src_stage->thread()->id() == DetachedThread::kId)
-                          << src_stage->thread()->id() << " != " << DetachedThread::kId;
+                      FX_CHECK(source_stage->thread()->id() == DetachedThread::kId)
+                          << source_stage->thread()->id() << " != " << DetachedThread::kId;
 
                       ScopedThreadChecker checker(dest_stage->thread()->checker());
-                      src_stage->set_thread(dest_stage->thread());
+                      source_stage->set_thread(dest_stage->thread());
                       // TODO(fxbug.dev/87651): Pass in `gain_ids`.
-                      dest_stage->AddSource(src_stage, /*options=*/{});
+                      dest_stage->AddSource(source_stage, /*options=*/{});
                     });
 
   return fpromise::ok();

@@ -41,7 +41,7 @@ zx::duration ProducerNode::GetSelfPresentationDelayForSource(const NodePtr& sour
   return zx::duration(0);
 }
 
-bool ProducerNode::CanAcceptSource(NodePtr src) const {
+bool ProducerNode::CanAcceptSource(NodePtr source) const {
   // Producers do not have sources.
   return false;
 }

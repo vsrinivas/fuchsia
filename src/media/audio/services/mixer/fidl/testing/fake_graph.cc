@@ -44,9 +44,9 @@ void FakeNode::DestroyChildDest(NodePtr child_dest) {
   }
 }
 
-bool FakeNode::CanAcceptSource(NodePtr src) const {
+bool FakeNode::CanAcceptSource(NodePtr source) const {
   if (on_can_accept_source_) {
-    return on_can_accept_source_(src);
+    return on_can_accept_source_(source);
   }
   return true;
 }
@@ -66,17 +66,17 @@ FakeGraph::FakeGraph(Args args) : default_thread_(args.default_thread) {
 
   // Create all edges.
   for (auto& edge : args.edges) {
-    auto src = CreateOrdinaryNode(edge.src, nullptr);
+    auto source = CreateOrdinaryNode(edge.source, nullptr);
     auto dest = CreateOrdinaryNode(edge.dest, nullptr);
     // Ordinary nodes can have at most one destination.
-    if (src->dest()) {
-      FX_CHECK(src->dest() == dest)
-          << src->name() << " has ambiguous destination: " << src->dest()->name() << " vs "
+    if (source->dest()) {
+      FX_CHECK(source->dest() == dest)
+          << source->name() << " has ambiguous destination: " << source->dest()->name() << " vs "
           << dest->name();
     }
-    src->SetDest(dest);
-    dest->AddSource(src);
-    dest->pipeline_stage()->AddSource(src->pipeline_stage(), {});
+    source->SetDest(dest);
+    dest->AddSource(source);
+    dest->pipeline_stage()->AddSource(source->pipeline_stage(), {});
   }
 
   // Create all unconnected nodes.

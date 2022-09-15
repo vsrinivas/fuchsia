@@ -113,7 +113,7 @@ void MetaProducerNode::DestroyChildDest(NodePtr child_dest) {
   command_queues_.erase(it);
 }
 
-bool MetaProducerNode::CanAcceptSource(NodePtr src) const {
+bool MetaProducerNode::CanAcceptSource(NodePtr source) const {
   UNREACHABLE << "CanAcceptSource should not be called on meta nodes";
 }
 

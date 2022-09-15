@@ -85,16 +85,16 @@ Suppose X is assigned to mix thread T1
 Suppose Y is assigned to mix thread T2
 Suppose A,B,C,D are detached
 
-CreateEdge(dest=X, src=A)  // push (T1, AddSource(dest=X, src=A))
-CreateEdge(dest=X, src=B)  // push (T1, AddSource(dest=X, src=B))
-DeleteEdge(dest=X, src=A)  // push (T1, RemoveSource(dest=X, src=A))
-CreateEdge(dest=A, src=C)  // push (Invalid, AddSource(dest=A, src=C))
-CreateEdge(dest=A, src=D)  // push (Invalid, AddSource(dest=A, src=D))
-CreateEdge(dest=Y, src=A)  // push (T2, AddSource(dest=Y, src=A))
+CreateEdge(dest=X, source=A)  // push (T1, AddSource(dest=X, source=A))
+CreateEdge(dest=X, source=B)  // push (T1, AddSource(dest=X, source=B))
+DeleteEdge(dest=X, source=A)  // push (T1, RemoveSource(dest=X, source=A))
+CreateEdge(dest=A, source=C)  // push (Invalid, AddSource(dest=A, source=C))
+CreateEdge(dest=A, source=D)  // push (Invalid, AddSource(dest=A, source=D))
+CreateEdge(dest=Y, source=A)  // push (T2, AddSource(dest=Y, source=A))
 ```
 
-In the above example, `AddSource(dest, src)` creates an edge `dest -> src` in
-the pipeline forest, while `RemoveSource` removes that edge. The first three
+In the above example, `AddSource(dest, source)` creates an edge `dest -> source`
+in the pipeline forest, while `RemoveSource` removes that edge. The first three
 calls must happen on thread `T1` because `X` is assigned to `T1`. The fourth and
 fifth calls may happen on any thread because `A` is detached. It's even ok if
 these calls happen on different threads, since the calls are serialized by the

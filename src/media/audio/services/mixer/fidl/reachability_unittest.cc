@@ -45,11 +45,11 @@ TEST(ReachabilityTest, OrdinaryNodes) {
       {6, 4}, {6, 5}, {6, 6},          //
   };
 
-  for (NodeId src = 1; src <= 6; src++) {
+  for (NodeId source = 1; source <= 6; source++) {
     for (NodeId dest = 1; dest <= 6; dest++) {
-      bool expect_path = (paths.count({src, dest}) > 0);
-      EXPECT_EQ(ExistsPath(*graph.node(src), *graph.node(dest)), expect_path)
-          << "src=" << src << ", dest=" << dest;
+      bool expect_path = (paths.count({source, dest}) > 0);
+      EXPECT_EQ(ExistsPath(*graph.node(source), *graph.node(dest)), expect_path)
+          << "source=" << source << ", dest=" << dest;
     }
   }
 }
@@ -99,11 +99,11 @@ TEST(ReachabilityTest, MetaNodes) {
       {8, 9},                                          //
   };
 
-  for (NodeId src = 1; src <= 9; src++) {
+  for (NodeId source = 1; source <= 9; source++) {
     for (NodeId dest = 1; dest <= 9; dest++) {
-      bool expect_path = (paths.count({src, dest}) > 0);
-      EXPECT_EQ(ExistsPath(*graph.node(src), *graph.node(dest)), expect_path)
-          << "src=" << src << ", dest=" << dest;
+      bool expect_path = (paths.count({source, dest}) > 0);
+      EXPECT_EQ(ExistsPath(*graph.node(source), *graph.node(dest)), expect_path)
+          << "source=" << source << ", dest=" << dest;
     }
   }
 }
@@ -164,11 +164,11 @@ TEST(ReachabilityTest, MetaAndOrdinaryNodes) {
   };
 
   std::vector<NodeId> nodes{10, 21, 22, 23, 24, 25, 30, 40, 50, 61, 62, 63, 64, 64, 70};
-  for (auto src : nodes) {
+  for (auto source : nodes) {
     for (auto dest : nodes) {
-      bool expect_path = (paths.count({src, dest}) > 0);
-      EXPECT_EQ(ExistsPath(*graph.node(src), *graph.node(dest)), expect_path)
-          << "src=" << src << ", dest=" << dest;
+      bool expect_path = (paths.count({source, dest}) > 0);
+      EXPECT_EQ(ExistsPath(*graph.node(source), *graph.node(dest)), expect_path)
+          << "source=" << source << ", dest=" << dest;
     }
   }
 }

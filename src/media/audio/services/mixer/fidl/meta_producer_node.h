@@ -69,7 +69,7 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   NodePtr CreateNewChildSource() final;
   NodePtr CreateNewChildDest() final;
   void DestroyChildDest(NodePtr child_dest) final;
-  bool CanAcceptSource(NodePtr src) const final;
+  bool CanAcceptSource(NodePtr source) const final;
 
   const Format format_;
   const zx_koid_t reference_clock_koid_;

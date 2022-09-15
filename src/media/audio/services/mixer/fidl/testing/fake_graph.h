@@ -77,7 +77,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   NodePtr CreateNewChildDest() override;
   void DestroyChildSource(NodePtr child_source) override;
   void DestroyChildDest(NodePtr child_dest) override;
-  bool CanAcceptSource(NodePtr src) const override;
+  bool CanAcceptSource(NodePtr source) const override;
 
  private:
   // All FakeNodes belong to a FakeGraph. The constructor is private to ensure that it's impossible
@@ -138,7 +138,7 @@ class FakeGraph {
   };
 
   struct Edge {
-    NodeId src;
+    NodeId source;
     NodeId dest;
   };
 

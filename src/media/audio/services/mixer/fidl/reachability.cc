@@ -40,11 +40,11 @@ const Node* ParentOfChildSourceNode(const Node& n) {
 }
 }  // namespace
 
-bool ExistsPath(const Node& src, const Node& dest) {
+bool ExistsPath(const Node& source, const Node& dest) {
   std::unordered_set<const Node*> visited;
   std::vector<const Node*> stack;
 
-  const Node* n = &src;
+  const Node* n = &source;
   for (;;) {
     visited.insert(n);
 
