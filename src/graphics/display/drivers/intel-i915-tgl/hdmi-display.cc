@@ -6,6 +6,7 @@
 
 #include <lib/ddk/driver.h>
 #include <lib/edid/edid.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/time.h>
 
 #include <iterator>
@@ -20,29 +21,50 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
+namespace i915_tgl {
+
 // I2c functions
 
 namespace {
+
 // Recommended DDI buffer translation programming values
 
-struct ddi_buf_trans_entry {
-  uint32_t high_dword;
-  uint32_t low_dword;
+struct DdiPhyConfigEntry {
+  uint32_t entry2;
+  uint32_t entry1;
 };
 
-const ddi_buf_trans_entry hdmi_ddi_buf_trans_skl_uhs[11]{
+// The tables below have the values recommended by the documentation.
+//
+// Kaby Lake: IHD-OS-KBL-Vol 12-1.17 pages 187-190
+// Skylake: IHD-OS-SKL-Vol 12-05.16 pages 181-183
+//
+// TODO(fxbug.dev/108252): Per-entry Iboost values.
+
+constexpr DdiPhyConfigEntry kPhyConfigHdmiSkylakeUhs[11] = {
     {0x000000ac, 0x00000018}, {0x0000009d, 0x00005012}, {0x00000088, 0x00007011},
     {0x000000a1, 0x00000018}, {0x00000098, 0x00000018}, {0x00000088, 0x00004013},
     {0x000000cd, 0x80006012}, {0x000000df, 0x00000018}, {0x000000cd, 0x80003015},
     {0x000000c0, 0x80003015}, {0x000000c0, 0x80000018},
 };
 
-const ddi_buf_trans_entry hdmi_ddi_buf_trans_skl_y[11]{
+constexpr DdiPhyConfigEntry kPhyConfigHdmiSkylakeY[11] = {
     {0x000000a1, 0x00000018}, {0x000000df, 0x00005012}, {0x000000cb, 0x80007011},
     {0x000000a4, 0x00000018}, {0x0000009d, 0x00000018}, {0x00000080, 0x00004013},
     {0x000000c0, 0x80006012}, {0x0000008a, 0x00000018}, {0x000000c0, 0x80003015},
     {0x000000c0, 0x80003015}, {0x000000c0, 0x80000018},
 };
+
+cpp20::span<const DdiPhyConfigEntry> GetHdmiPhyConfigEntries(uint16_t device_id,
+                                                             uint8_t* default_iboost) {
+  if (is_skl_y(device_id) || is_kbl_y(device_id)) {
+    *default_iboost = 3;
+    return kPhyConfigHdmiSkylakeY;
+  }
+
+  *default_iboost = 1;
+  return kPhyConfigHdmiSkylakeUhs;
+}
 
 int ddi_to_pin(tgl_registers::Ddi ddi) {
   if (ddi == tgl_registers::DDI_B) {
@@ -153,8 +175,6 @@ bool i2c_send_byte(fdf::MmioBuffer* mmio_space, tgl_registers::Ddi ddi, uint8_t 
 }
 
 }  // namespace
-
-namespace i915_tgl {
 
 // Per the GMBUS Controller Programming Interface section of the Intel docs, GMBUS does not
 // directly support segment pointer addressing. Instead, the segment pointer needs to be
@@ -380,8 +400,6 @@ GMBusI2c::GMBusI2c(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space)
   ZX_ASSERT(mtx_init(&lock_, mtx_plain) == thrd_success);
 }
 
-}  // namespace i915_tgl
-
 // Modesetting functions
 
 namespace {
@@ -519,8 +537,6 @@ static bool calculate_params(uint32_t symbol_clock_khz, uint16_t* dco_int, uint1
 
 }  // namespace
 
-namespace i915_tgl {
-
 // On DisplayDevice creation we cannot determine whether it is an HDMI
 // display; this will be updated when intel-i915 Controller gets EDID
 // information for this device (before Init()).
@@ -644,48 +660,39 @@ bool HdmiDisplay::PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::
   trans_conf.WriteTo(mmio_space());
 
   // Configure voltage swing and related IO settings.
-  tgl_registers::DdiRegs ddi_regs(ddi());
-  auto ddi_buf_trans_hi = ddi_regs.DdiBufTransHi(9).ReadFrom(mmio_space());
-  auto ddi_buf_trans_lo = ddi_regs.DdiBufTransLo(9).ReadFrom(mmio_space());
-  auto disio_cr_tx_bmu = tgl_registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
 
   // kUseDefaultIdx always fails the idx-in-bounds check, so no additional handling is needed
   uint8_t idx = controller()->igd_opregion().GetHdmiBufferTranslationIndex(ddi());
   uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi(), false /* is_dp */);
 
-  const ddi_buf_trans_entry* entries;
   uint8_t default_iboost;
-  if (is_skl_y(controller()->device_id()) || is_kbl_y(controller()->device_id())) {
-    entries = hdmi_ddi_buf_trans_skl_y;
-    if (idx >= std::size(hdmi_ddi_buf_trans_skl_y)) {
-      idx = 8;  // Default index
-    }
-    default_iboost = 3;
-  } else {
-    entries = hdmi_ddi_buf_trans_skl_uhs;
-    if (idx >= std::size(hdmi_ddi_buf_trans_skl_uhs)) {
-      idx = 8;  // Default index
-    }
-    default_iboost = 1;
+  const cpp20::span<const DdiPhyConfigEntry> entries =
+      GetHdmiPhyConfigEntries(controller()->device_id(), &default_iboost);
+  if (idx >= entries.size()) {
+    idx = 8;  // Default index
   }
 
-  ddi_buf_trans_hi.set_reg_value(entries[idx].high_dword);
-  ddi_buf_trans_lo.set_reg_value(entries[idx].low_dword);
+  tgl_registers::DdiRegs ddi_regs(ddi());
+  auto phy_config_entry1 = ddi_regs.PhyConfigEntry1(9).FromValue(0);
+  phy_config_entry1.set_reg_value(entries[idx].entry1);
   if (i_boost_override) {
-    ddi_buf_trans_lo.set_balance_leg_enable(1);
+    phy_config_entry1.set_balance_leg_enable(1);
   }
-  disio_cr_tx_bmu.set_disable_balance_leg(0);
-  disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(i_boost_override ? i_boost_override
-                                                                    : default_iboost);
+  phy_config_entry1.WriteTo(mmio_space());
 
-  ddi_buf_trans_hi.WriteTo(mmio_space());
-  ddi_buf_trans_lo.WriteTo(mmio_space());
-  disio_cr_tx_bmu.WriteTo(mmio_space());
+  auto phy_config_entry2 = ddi_regs.PhyConfigEntry2(9).FromValue(0);
+  phy_config_entry2.set_reg_value(entries[idx].entry2).WriteTo(mmio_space());
+
+  auto phy_balance_control = tgl_registers::DdiPhyBalanceControl::Get().ReadFrom(mmio_space());
+  phy_balance_control.set_disable_balance_leg(0);
+  phy_balance_control.balance_leg_select_for_ddi(ddi()).set(i_boost_override ? i_boost_override
+                                                                             : default_iboost);
+  phy_balance_control.WriteTo(mmio_space());
 
   // Configure and enable DDI_BUF_CTL
-  auto ddi_buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-  ddi_buf_ctl.set_ddi_buffer_enable(1);
-  ddi_buf_ctl.WriteTo(mmio_space());
+  auto buffer_control = ddi_regs.BufferControl().ReadFrom(mmio_space());
+  buffer_control.set_enabled(true);
+  buffer_control.WriteTo(mmio_space());
 
   return true;
 }

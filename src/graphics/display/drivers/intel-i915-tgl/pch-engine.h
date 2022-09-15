@@ -288,7 +288,7 @@ class PchEngine {
   //
   // Calling this method will restore the PCH to the configuration it had before
   // entering a low-power (suspended) state, with the following exceptions:
-  // * The panel will be powered off, awaiting pipe and transceiver
+  // * The panel will be powered off, awaiting pipe and transcoder
   //   configuration.
   // * The backlight PWM will be disabled, since the panel is powered off.
   void RestoreNonClockParameters();

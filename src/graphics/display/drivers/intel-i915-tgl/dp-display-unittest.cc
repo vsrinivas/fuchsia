@@ -15,6 +15,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/power.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
@@ -174,13 +175,11 @@ TEST_F(DpDisplayTest, MultipleSinksNotSupported) {
   ASSERT_EQ(nullptr, MakeDisplay(tgl_registers::DDI_A));
 }
 
-// Tests that the maximum supported lane count is 2 when DDI_A lane capability control is not
-// supported.
-TEST_F(DpDisplayTest, ReducedMaxLaneCountWhenDdiALaneCapControlNotSupported) {
-  auto ddi_buf_ctl =
-      tgl_registers::DdiRegs(tgl_registers::DDI_A).DdiBufControl().ReadFrom(mmio_buffer());
-  ddi_buf_ctl.set_ddi_a_lane_capability_control(0);
-  ddi_buf_ctl.WriteTo(mmio_buffer());
+// Tests that the maximum supported lane count is 2 when DDI E is enabled.
+TEST_F(DpDisplayTest, ReducedMaxLaneCountWhenDdiEIsEnabled) {
+  auto buffer_control =
+      tgl_registers::DdiRegs(tgl_registers::DDI_A).BufferControl().ReadFrom(mmio_buffer());
+  buffer_control.set_ddi_e_disabled_kaby_lake(false).WriteTo(mmio_buffer());
 
   fake_dpcd()->SetMaxLaneCount(4);
 
@@ -189,14 +188,11 @@ TEST_F(DpDisplayTest, ReducedMaxLaneCountWhenDdiALaneCapControlNotSupported) {
   EXPECT_EQ(2, display->lane_count());
 }
 
-// Tests that the maximum supported lane count is selected when DDI_A lane capability control is
-// supported.
+// Tests that the maximum supported lane count is selected when DDI E is not enabled.
 TEST_F(DpDisplayTest, MaxLaneCount) {
-  auto ddi_buf_ctl =
-      tgl_registers::DdiRegs(tgl_registers::DDI_A).DdiBufControl().ReadFrom(mmio_buffer());
-  ddi_buf_ctl.set_ddi_a_lane_capability_control(1);
-  ddi_buf_ctl.WriteTo(mmio_buffer());
-
+  auto buffer_control =
+      tgl_registers::DdiRegs(tgl_registers::DDI_A).BufferControl().ReadFrom(mmio_buffer());
+  buffer_control.set_ddi_e_disabled_kaby_lake(true).WriteTo(mmio_buffer());
   fake_dpcd()->SetMaxLaneCount(4);
 
   auto display = MakeDisplay(tgl_registers::DDI_A);

@@ -286,7 +286,7 @@ class Controller : public DeviceType,
   uint32_t flags_;
 
   // Various configuration values set by the BIOS which need to be carried across suspend.
-  bool ddi_a_lane_capability_control_;
+  bool ddi_e_disabled_;
 
   std::optional<uint64_t> eld_display_id_;
 

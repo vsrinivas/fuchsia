@@ -7,7 +7,12 @@
 
 #include <zircon/assert.h>
 
+#include <cstdint>
+
 #include <hwreg/bitfields.h>
+
+// TODO(fxbug.com/109258): Remove the dependency on another registers-* header.
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 
 namespace tgl_registers {
 
@@ -33,11 +38,13 @@ enum Ddi {
 // - IMR (Interrupt Mask Register), also abbreviated to SDE_IMR
 // - IIR (Interrupt Identity Register), also abbreviated to SDE_IIR
 // - IER (Interrupt Enable Register), also abbreviated to SDE_IER
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1196-1197
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 820-821
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 800-801
 //
 // The individual bits in each register are covered in the South Display Engine
 // Interrupt Bit Definition, or SDE_INTERRUPT.
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1262-1264
 // DG1: IHD-OS-DG1-Vol 2c-2.21 Part 2 pages 1328-1329
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 874-875
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 854-855
@@ -324,45 +331,250 @@ class PchDisplayFuses : public hwreg::RegisterBase<PchDisplayFuses, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<PchDisplayFuses>(0xc2014); }
 };
 
-// DDI_BUF_CTL
-class DdiBufControl : public hwreg::RegisterBase<DdiBufControl, uint32_t> {
+// DDI_BUF_CTL (DDI Buffer Control)
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 352-355
+// DG1: IHD-OS-DG1-Vol 2c-2.21 pages 331-334
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 442-445
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 438-441
+class DdiBufferControl : public hwreg::RegisterBase<DdiBufferControl, uint32_t> {
  public:
-  static constexpr uint32_t kBaseAddr = 0x64000;
+  // If true, the DDI buffer is enabled.
+  DEF_BIT(31, enabled);
 
-  DEF_BIT(31, ddi_buffer_enable);
-  DEF_FIELD(27, 24, dp_vswing_emp_sel);
+  // If true, the DDI ignores PHY parameter changes during link training.
+  //
+  // The impacted PHY parameters include voltage swing and pre-emphasis. This
+  // field is generally set when using specific PHY parameters for the DDI.
+  //
+  // This field does not exist (is reserved) on Kaby Lake and Skylake.
+  DEF_BIT(29, override_training_tiger_lake);
+
+  // If true, the DDI uses adjusted PHY parameter values.
+  //
+  // The value is ignored if `override_training` is false.
+  //
+  // This field does not exist (is reserved) on Kaby Lake and Skylake.
+  DEF_BIT(28, adjust_phy_parameters_tiger_lake);
+
+  // Selects one of the DisplayPort PHY configurations set up in DDI_BUF_TRANS.
+  //
+  // DDIs A and E support indexes 0 through 9. DDIs B-D only support indexes 0
+  // through 8, because the 9th PHY configuration is used for HDMI.
+  //
+  // This field is meaningless for HDMI and DVI.
+  //
+  // This field does not exist (is reserved) on Tiger Lake and DG1.
+  DEF_FIELD(27, 24, display_port_phy_config_kaby_lake);
+
+  // If true, data is swapped on the lanes output by the port.
+  //
+  // This field must not be changed while the DDI is enabled.
+  //
+  // Tiger Lake and DG1:
+  //
+  // FIA handles lane reversal for Thunderbolt and USB-C DisplayPort Alt Mode,
+  // and this field should be set to false in those cases. Static and fixed
+  // connections (DisplayPort, HDMI) through the FIA only use this field in
+  // "No pin Assignment (Non Type-C DP)" static configurations. Other
+  // connections use the field.
+  //
+  // Kaby Lake and Skylake:
+  //
+  // For DDIs B-D, enabling swaps lanes 0 <-> 3 and lanes 1 <-> 2. If DDI E is
+  // enabled (in DDI A Lane Capability Control), then DDI A reversal swaps its
+  // two remaining lanes (0 <-> 1). If DDI E is disabled, DDI A reversal acts
+  // the same as B-D reversal (lanes 0 <-> 3 and 1 <->2 are swapped). DDI E does
+  // not support port reversal.
   DEF_BIT(16, port_reversal);
-  DEF_BIT(7, ddi_idle_status);
-  DEF_BIT(4, ddi_a_lane_capability_control);
-  DEF_FIELD(3, 1, dp_port_width_selection);
-  DEF_BIT(0, init_display_detected);
+
+  // Delay used to stagger the assertion/deassertion of the port lane enables.
+  //
+  // The value is expressed in multiples of the symbol clock period, so it
+  // depends on the link frequency.
+  //
+  // The delay should be at least 100ns when the port is used in USB Type C
+  // mode. In all other cases, the delay should be zero.
+  //
+  // This field does not exist (is reserved) on Kaby Lake and Skylake, which
+  // don't have Type C DDIs.
+  DEF_FIELD(15, 8, type_c_display_port_lane_staggering_delay_tiger_lake);
+
+  // If true, the DDI is idle.
+  DEF_BIT(7, is_idle);
+
+  // If false, two lanes from DDI A are repurposed to form DDI E.
+  //
+  // If true, DDI A has four lanes, and behaves similarly to DDIs B-D. If false,
+  //
+  // This field is only meaningful on DDI A, whose lanes get redistributed to
+  // DDI E. The field must be programmed at boot time (based on the board
+  // configuration) and must not be changed afterwards.
+  //
+  // This field does not exist (is reserved) on Tiger Lake or DG1.
+  DEF_BIT(4, ddi_e_disabled_kaby_lake);
+
+  // Selects the number of DisplayPort lanes enabled.
+  //
+  // The field's value is the number of lanes minus 1. 0 = x1 lane, 1 = x2
+  // lanes, 3 = x4 lanes. display_port_lane_count() and
+  // set_display_port_lane_count() take care of this encoding detail.
+  DEF_FIELD(3, 1, display_port_lane_count_selection);
+
+  // The number of DisplayPort lanes enabled.
+  //
+  // This field is not meaningful for HDMI, which always uses all the lanes.
+  //
+  // When the DDI is in DisplayPort mode, the field must match the corresponding
+  // setting in TRANS_DDI_FUNC_CTL for the transcoder attached to this DDI.
+  //
+  // On Kaby Lake and Skylake, DDI E only supports 1 and 2 lanes
+  // (if it's enabled), since it takes two lanes from DDI A. On the same
+  // hardware, DDI A always supports x1 and x2, and supports x4 if DDI E is
+  // disabled (and therefore not taking away 2 lanes from DDI A).
+  uint8_t display_port_lane_count() const {
+    // The addition will not overflow and the cast is lossless because
+    // display_port_lane_count_selection() is a 3-bit field.
+    return static_cast<int8_t>(display_port_lane_count_selection() + 1);
+  }
+
+  // See display_port_lane_count() for details.
+  DdiBufferControl& set_display_port_lane_count(uint8_t lane_count) {
+    switch (lane_count) {
+      case 1:
+      case 2:
+      case 4:
+        set_display_port_lane_count_selection(lane_count - 1);
+        return *this;
+    }
+    ZX_ASSERT_MSG(false, "Unsupported lane count: %d", lane_count);
+    return *this;
+  }
+
+  // The level of the port detect pin at boot time.
+  //
+  // This field is only meaningful on DDI A. On Skylake and Kaby Lake, the other
+  // DDIs' port detect pin status is communicated in SFUSE_STRAP.
+  DEF_BIT(0, boot_time_port_detect_pin_status);
+
+  // For Kaby Lake and Skylake DDI A - DDI E.
+  static auto GetForKabyLakeDdi(Ddi ddi) {
+    ZX_ASSERT(ddi >= DDI_A);
+    ZX_ASSERT(ddi <= DDI_E);
+
+    const int ddi_index = ddi - DDI_A;
+    return hwreg::RegisterAddr<DdiBufferControl>(0x64000 + 0x100 * ddi_index);
+  }
+
+  // For Tiger Lake and DG1.
+  static auto GetForTigerLakeDdi(Ddi ddi) {
+    ZX_ASSERT(ddi >= DDI_A);
+    ZX_ASSERT(ddi <= DDI_TC_6);
+
+    const int ddi_index = ddi - DDI_A;
+    return hwreg::RegisterAddr<DdiBufferControl>(0x64000 + 0x100 * ddi_index);
+  }
 };
 
-// High byte of DDI_BUF_TRANS
-class DdiBufTransHi : public hwreg::RegisterBase<DdiBufTransHi, uint32_t> {
+// Part 1 of DDI_BUF_TRANS (DDI Buffer Translation)
+//
+// Each DDI has 10 instances of the DDI_BUF_TRANS register, storing 10 entries
+// of the port's PHY configuration table. The MMIO addresses for the 10
+// instances are consecutive. The active entry is selected using the DDI_BUF_CTL
+// register.
+//
+// Each DDI_BUF_TRANS register instance (storing one entry in the PHY
+// configuration table) consists of two 32-bit parts (double-words). We don't
+// know if it's safe to use 64-bit MMIO accesses with the registers.
+//
+// DDI_BUF_TRANS is not documented on Tiger Lake or DG1.
+//
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 446-447
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 442-441
+class DdiPhyConfigEntry1 : public hwreg::RegisterBase<DdiPhyConfigEntry1, uint32_t> {
  public:
-  DEF_FIELD(20, 16, vref);
-  DEF_FIELD(10, 0, vswing);
-};
-
-// Low byte of DDI_BUF_TRANS
-class DdiBufTransLo : public hwreg::RegisterBase<DdiBufTransLo, uint32_t> {
- public:
+  // The PRMs do not go in depth on the meanings of the fields.
   DEF_BIT(31, balance_leg_enable);
   DEF_FIELD(17, 0, deemphasis_level);
+
+  static auto GetDdiInstance(Ddi ddi, int instance_index) {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_E);
+    ZX_ASSERT(instance_index >= 0);
+    ZX_ASSERT(instance_index < 10);
+
+    const int ddi_index = ddi - Ddi::DDI_A;
+    return hwreg::RegisterAddr<DdiPhyConfigEntry1>(0x64e00 + 0x60 * ddi_index + 8 * instance_index);
+  }
+};
+
+// Part 2 of DDI_BUF_TRANS (DDI Buffer Translation)
+//
+// See Part 1 above for documentation.
+class DdiPhyConfigEntry2 : public hwreg::RegisterBase<DdiPhyConfigEntry2, uint32_t> {
+ public:
+  // The PRMs do not go in depth on the meanings of the fields.
+  DEF_FIELD(20, 16, voltage_reference_select);
+  DEF_FIELD(10, 0, voltage_swing);
+
+  static auto GetDdiInstance(Ddi ddi, int instance_index) {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_E);
+    ZX_ASSERT(instance_index >= 0);
+    ZX_ASSERT(instance_index < 10);
+
+    const int ddi_index = ddi - Ddi::DDI_A;
+    return hwreg::RegisterAddr<DdiPhyConfigEntry2>(0x64e04 + 0x60 * ddi_index + 8 * instance_index);
+  }
 };
 
 // DISPIO_CR_TX_BMU_CR0
-class DisplayIoCtrlRegTxBmu : public hwreg::RegisterBase<DisplayIoCtrlRegTxBmu, uint32_t> {
+//
+// Involved in PHY parameters for transmission on all DDIs.
+//
+// This register does not exist on Tiger Lake or DG1.
+//
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 446-447
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 442-441
+class DdiPhyBalanceControl : public hwreg::RegisterBase<DdiPhyBalanceControl, uint32_t> {
  public:
+  // Not managed by driver software.
+  DEF_FIELD(31, 29, digital_analog);
+
+  // Not managed by driver software.
+  DEF_BIT(28, global_vs_local_voltage_reference_select);
+
+  // Must be zero for `balance_leg_select` fields to be used.
   DEF_FIELD(27, 23, disable_balance_leg);
 
-  hwreg::BitfieldRef<uint32_t> tx_balance_leg_select(Ddi ddi) {
-    int bit = 8 + 3 * ddi;
-    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit + 2, bit);
+  // For DDI4 - DDI E or DDI A when DDI E is disabled.
+  DEF_FIELD(22, 20, balance_leg_select_ddi_e);
+
+  // For DDI3 / DDI D.
+  DEF_FIELD(19, 17, balance_leg_select_ddi_d);
+
+  // For DDI2 / DDI C.
+  DEF_FIELD(16, 14, balance_leg_select_ddi_c);
+
+  // For DDI1 / DDI B.
+  DEF_FIELD(13, 11, balance_leg_select_ddi_b);
+
+  // For DDI0 / DDI A.
+  DEF_FIELD(10, 8, balance_leg_select_ddi_a);
+
+  // Not managed by driver software.
+  DEF_FIELD(7, 0, h_mode);
+
+  hwreg::BitfieldRef<uint32_t> balance_leg_select_for_ddi(Ddi ddi) {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_E);
+
+    const int ddi_index = ddi - Ddi::DDI_A;
+    const int bit_index = 8 + 3 * ddi_index;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index + 2, bit_index);
   }
 
-  static auto Get() { return hwreg::RegisterAddr<DisplayIoCtrlRegTxBmu>(0x6c00c); }
+  static auto Get() { return hwreg::RegisterAddr<DdiPhyBalanceControl>(0x6c00c); }
 };
 
 // DDI_AUX_CTL (DDI AUX Channel Control)
@@ -490,15 +702,8 @@ class DdiAuxControl : public hwreg::RegisterBase<DdiAuxControl, uint32_t> {
     ZX_ASSERT(ddi >= Ddi::DDI_A);
     ZX_ASSERT(ddi <= Ddi::DDI_TC_6);
 
-    if (ddi < Ddi::DDI_TC_1) {
-      // The addresses match the Kaby Lake and Skylake DDIs.
-      const int ddi_index = ddi - Ddi::DDI_A;
-      return hwreg::RegisterAddr<DdiAuxControl>(0x64010 + 0x100 * ddi_index);
-    }
-    // The addresses for Type C DDIs are right after the addresses for the Combo
-    // DDIs. The compiler will optimize the if away.
-    const int tc_ddi_index = ddi - Ddi::DDI_TC_1;
-    return hwreg::RegisterAddr<DdiAuxControl>(0x64310 + 0x100 * tc_ddi_index);
+    const int ddi_index = ddi - Ddi::DDI_A;
+    return hwreg::RegisterAddr<DdiAuxControl>(0x64010 + 0x100 * ddi_index);
   }
 };
 
@@ -579,52 +784,118 @@ class DdiAuxMutex : public hwreg::RegisterBase<DdiAuxMutex, uint32_t> {
   }
 };
 
-// DP_TP_CTL
-class DdiDpTransportControl : public hwreg::RegisterBase<DdiDpTransportControl, uint32_t> {
+// DP_TP_CTL (DisplayPort Transport Control)
+//
+// Tiger Lake: IHD-OS-TGL-Vol2c-12.21 Part 1 pages 600-603
+// DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 pages 572-575
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 517-520
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 515-518
+class DpTransportControl : public hwreg::RegisterBase<DpTransportControl, uint32_t> {
  public:
-  static constexpr uint32_t kBaseAddr = 0x64040;
+  // If true, the DisplayPort transport function is enabled for the DDI.
+  DEF_BIT(31, enabled);
 
-  DEF_BIT(31, transport_enable);
-  DEF_BIT(27, transport_mode_select);
-  DEF_BIT(25, force_act);
-  DEF_BIT(18, enhanced_framing_enable);
+  // If true, FEC (Forward Error Correction) coding is enabled.
+  //
+  // Must only be set to true after the `enabled` is set to true. Must only be
+  // set to false after `enabled` is set to false.
+  //
+  // This field does not exist on Kaby Lake and Skylake.
+  DEF_BIT(30, forward_error_correction_enabled_tiger_lake);
 
-  DEF_FIELD(10, 8, dp_link_training_pattern);
+  // True for MST (Multi Stream) mode, false for SST (Single Stream) mode.
+  //
+  // Kaby Lake and Skylake DDI A (eDP) and DDI E do not support MST.
+  //
+  // Must match the mode in the Transcoder DDI Function Control registers. Must
+  // not change while the DDI is enabled.
+  DEF_BIT(27, is_multi_stream);
+
+  // Forces MST ACT (Allocation Change Trigger) to be sent at the next link
+  // frame boundary. After the ACT is sent (indicated by DP_TP_STATUS), the bit
+  // can be reset and set again to force sending another ACT.
+  DEF_BIT(25, force_allocation_change_trigger);
+
+  // This field does not exist on Kaby Lake and Skylake.
+  DEF_FIELD(20, 19, training_pattern4_tiger_lake);
+  static constexpr int kTrainingPattern4a = 0;
+  static constexpr int kTrainingPattern4b = 1;
+  static constexpr int kTrainingPattern4c = 2;
+
+  // True if enhanced framing is enabled for SST. Must be false in MST mode.
+  //
+  // Must not change while the DDI is enabled.
+  DEF_BIT(18, sst_enhanced_framing);
+
+  // Training pattern 1 must be selected when a port is enabled.
+  //
+  // To re-train a link, the port must be disabled and re-enabled (with
+  // training pattern 1 selected).
+  DEF_FIELD(10, 8, training_pattern);
   static constexpr int kTrainingPattern1 = 0;
   static constexpr int kTrainingPattern2 = 1;
   static constexpr int kIdlePattern = 2;
   static constexpr int kSendPixelData = 3;
+  static constexpr int kTrainingPattern3 = 4;
 
-  DEF_BIT(6, alternate_sr_enable);
+  // Not supported on Kaby Lake and Skylake.
+  static constexpr int kTrainingPattern4TigerLake = 5;
+
+  // For eDP only. Must not change while the DDI is enabled.
+  DEF_BIT(6, alternate_scrambler_reset);
+
+  // For Kaby Lake and Skylake. DisplayPort control is implemented in DDIs.
+  static auto GetForKabyLakeDdi(Ddi ddi) {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_E);
+
+    const int ddi_index = ddi - Ddi::DDI_A;
+    return hwreg::RegisterAddr<DpTransportControl>(0x64040 + 0x100 * ddi_index);
+  }
+
+  // For Tiger Lake and DG1. Transport control is implemented in transcoders.
+  //
+  // TODO(fxbug.com/109258): Replace `transcoder_index` with an enum once that
+  //                         wouldn't require #including registers-transcoder.h.
+  static auto GetForTigerLakeTranscoder(Trans transcoder) {
+    ZX_ASSERT(transcoder >= Trans::TRANS_A);
+
+    // TODO(fxbug.dev/109278): Allow transcoder D, once we support it.
+    ZX_ASSERT(transcoder <= Trans::TRANS_C);
+
+    const int transcoder_index = transcoder - Trans::TRANS_A;
+    return hwreg::RegisterAddr<DpTransportControl>(0x60540 + 0x1000 * transcoder_index);
+  }
 };
 
 // An instance of DdiRegs represents the registers for a particular DDI.
 class DdiRegs {
  public:
-  DdiRegs(Ddi ddi) : ddi_number_((int)ddi) {}
+  explicit DdiRegs(Ddi ddi) : ddi_(ddi) {}
 
-  hwreg::RegisterAddr<tgl_registers::DdiBufControl> DdiBufControl() {
-    return GetReg<tgl_registers::DdiBufControl>();
+  hwreg::RegisterAddr<DdiBufferControl> BufferControl() {
+    // This works for Kaby Lake too, because the Ddi integer mapping takes
+    // advantage of MMIO address space.
+    return DdiBufferControl::GetForTigerLakeDdi(ddi_);
   }
-  hwreg::RegisterAddr<tgl_registers::DdiDpTransportControl> DdiDpTransportControl() {
-    return GetReg<tgl_registers::DdiDpTransportControl>();
+  hwreg::RegisterAddr<DpTransportControl> DpTransportControl() {
+    // This does not work for Tiger Lake.
+    return DpTransportControl::GetForKabyLakeDdi(ddi_);
   }
-  hwreg::RegisterAddr<tgl_registers::DdiBufTransHi> DdiBufTransHi(int index) {
-    return hwreg::RegisterAddr<tgl_registers::DdiBufTransHi>(0x64e00 + 0x60 * ddi_number_ +
-                                                             8 * index + 4);
+  hwreg::RegisterAddr<DdiPhyConfigEntry1> PhyConfigEntry1(int entry_index) const {
+    return DdiPhyConfigEntry1::GetDdiInstance(ddi_, entry_index);
   }
-  hwreg::RegisterAddr<tgl_registers::DdiBufTransLo> DdiBufTransLo(int index) {
-    return hwreg::RegisterAddr<tgl_registers::DdiBufTransLo>(0x64e00 + 0x60 * ddi_number_ +
-                                                             8 * index);
+  hwreg::RegisterAddr<DdiPhyConfigEntry2> PhyConfigEntry2(int entry_index) const {
+    return DdiPhyConfigEntry2::GetDdiInstance(ddi_, entry_index);
   }
 
  private:
   template <class RegType>
   hwreg::RegisterAddr<RegType> GetReg() {
-    return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x100 * ddi_number_);
+    return hwreg::RegisterAddr<RegType>(RegType::kBaseAddr + 0x100 * ddi_);
   }
 
-  uint32_t ddi_number_;
+  Ddi ddi_;
 };
 
 }  // namespace tgl_registers

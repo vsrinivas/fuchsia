@@ -413,19 +413,17 @@ bool Controller::ResetDdi(tgl_registers::Ddi ddi) {
   tgl_registers::DdiRegs ddi_regs(ddi);
 
   // Disable the port
-  auto ddi_buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-  bool was_enabled = ddi_buf_ctl.ddi_buffer_enable();
-  ddi_buf_ctl.set_ddi_buffer_enable(0);
-  ddi_buf_ctl.WriteTo(mmio_space());
+  auto ddi_buffer_control = ddi_regs.BufferControl().ReadFrom(mmio_space());
+  const bool was_enabled = ddi_buffer_control.enabled();
+  ddi_buffer_control.set_enabled(false).WriteTo(mmio_space());
 
-  auto ddi_dp_tp_ctl = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
-  ddi_dp_tp_ctl.set_transport_enable(0);
-  ddi_dp_tp_ctl.set_dp_link_training_pattern(ddi_dp_tp_ctl.kTrainingPattern1);
-  ddi_dp_tp_ctl.WriteTo(mmio_space());
+  auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
+  dp_transport_control.set_enabled(false)
+      .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
+      .WriteTo(mmio_space());
 
-  if (was_enabled &&
-      !PollUntil([&] { return ddi_regs.DdiBufControl().ReadFrom(mmio_space()).ddi_idle_status(); },
-                 zx::msec(1), 8)) {
+  if (was_enabled && !PollUntil([&] { return ddi_buffer_control.ReadFrom(mmio_space()).is_idle(); },
+                                zx::msec(1), 8)) {
     zxlogf(ERROR, "Port failed to go idle");
     return false;
   }
@@ -452,7 +450,7 @@ uint64_t Controller::SetupGttImage(const image_t* image, uint32_t rotation) {
 std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) {
   fbl::AllocChecker ac;
   if (igd_opregion_.SupportsDp(ddi)) {
-    zxlogf(DEBUG, "Checking for DisplayPort monitor");
+    zxlogf(DEBUG, "Checking for DisplayPort monitor at DDI %d", ddi);
     auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, next_id_, ddi, &dp_auxs_[ddi],
                                                        &pch_engine_.value(), &root_node_);
     if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
@@ -460,7 +458,7 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) 
     }
   }
   if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
-    zxlogf(DEBUG, "Checking for HDMI monitor");
+    zxlogf(DEBUG, "Checking for HDMI monitor at DDI %d", ddi);
     auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, next_id_, ddi);
     if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Query()) {
       return hdmi_disp;
@@ -473,8 +471,7 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi) 
 bool Controller::LoadHardwareState(tgl_registers::Ddi ddi, DisplayDevice* device) {
   tgl_registers::DdiRegs regs(ddi);
 
-  if (!power_->GetDdiIoPowerState(ddi) ||
-      !regs.DdiBufControl().ReadFrom(mmio_space()).ddi_buffer_enable()) {
+  if (!power_->GetDdiIoPowerState(ddi) || !regs.BufferControl().ReadFrom(mmio_space()).enabled()) {
     return false;
   }
 
@@ -1946,10 +1943,16 @@ void Controller::DdkResume(ddk::ResumeTxn txn) {
 
   pch_engine_->RestoreNonClockParameters();
 
+  // TODO(fxbug.dev/109227): Intel's documentation states that this field should
+  // only be written once, at system boot. Either delete this, or document an
+  // experiment confirming that this write works as intended.
+  //
+  // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 444
+  // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 page 440
   tgl_registers::DdiRegs(tgl_registers::DDI_A)
-      .DdiBufControl()
+      .BufferControl()
       .ReadFrom(mmio_space())
-      .set_ddi_a_lane_capability_control(ddi_a_lane_capability_control_)
+      .set_ddi_e_disabled_kaby_lake(ddi_e_disabled_)
       .WriteTo(mmio_space());
 
   for (auto& disp : display_devices_) {
@@ -2026,10 +2029,10 @@ zx_status_t Controller::Init() {
     dp_auxs_[dp_auxs_.size() - 1].aux_channel().Log();
   }
 
-  ddi_a_lane_capability_control_ = tgl_registers::DdiRegs(tgl_registers::DDI_A)
-                                       .DdiBufControl()
-                                       .ReadFrom(mmio_space())
-                                       .ddi_a_lane_capability_control();
+  ddi_e_disabled_ = tgl_registers::DdiRegs(tgl_registers::DDI_A)
+                        .BufferControl()
+                        .ReadFrom(mmio_space())
+                        .ddi_e_disabled_kaby_lake();
 
   zxlogf(TRACE, "Initializing interrupts");
   status = interrupts_.Init(fit::bind_member<&Controller::HandlePipeVsync>(this),

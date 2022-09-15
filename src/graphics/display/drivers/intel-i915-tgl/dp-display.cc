@@ -7,6 +7,7 @@
 #include <endian.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
 #include <math.h>
@@ -39,117 +40,115 @@ constexpr uint32_t kBitsPerPixel = 24;  // kPixelFormat
 
 // Recommended DDI buffer translation programming values
 
-struct ddi_buf_trans_entry {
-  uint32_t high_dword;
-  uint32_t low_dword;
+struct DdiPhyConfigEntry {
+  uint32_t entry2;
+  uint32_t entry1;
 };
 
-const ddi_buf_trans_entry dp_ddi_buf_trans_skl_hs[9] = {
+// The tables below have the values recommended by the documentation.
+//
+// Kaby Lake: IHD-OS-KBL-Vol 12-1.17 pages 187-190
+// Skylake: IHD-OS-SKL-Vol 12-05.16 pages 181-183
+//
+// TODO(fxbug.dev/108252): Per-entry Iboost values.
+
+constexpr DdiPhyConfigEntry kPhyConfigDpSkylakeHs[9] = {
     {0x000000a0, 0x00002016}, {0x0000009b, 0x00005012}, {0x00000088, 0x00007011},
     {0x000000c0, 0x80009010}, {0x0000009b, 0x00002016}, {0x00000088, 0x00005012},
     {0x000000c0, 0x80007011}, {0x000000df, 0x00002016}, {0x000000c0, 0x80005012},
 };
 
-const ddi_buf_trans_entry dp_ddi_buf_trans_skl_y[9] = {
+constexpr DdiPhyConfigEntry kPhyConfigDpSkylakeY[9] = {
     {0x000000a2, 0x00000018}, {0x00000088, 0x00005012}, {0x000000cd, 0x80007011},
     {0x000000c0, 0x80009010}, {0x0000009d, 0x00000018}, {0x000000c0, 0x80005012},
     {0x000000c0, 0x80007011}, {0x00000088, 0x00000018}, {0x000000c0, 0x80005012},
 };
 
-const ddi_buf_trans_entry dp_ddi_buf_trans_skl_u[9] = {
+constexpr DdiPhyConfigEntry kPhyConfigDpSkylakeU[9] = {
     {0x000000a2, 0x0000201b}, {0x00000088, 0x00005012}, {0x000000cd, 0x80007011},
     {0x000000c0, 0x80009010}, {0x0000009d, 0x0000201b}, {0x000000c0, 0x80005012},
     {0x000000c0, 0x80007011}, {0x00000088, 0x00002016}, {0x000000c0, 0x80005012},
 };
 
-const ddi_buf_trans_entry dp_ddi_buf_trans_kbl_hs[9] = {
+constexpr DdiPhyConfigEntry kPhyConfigDpKabyLakeHs[9] = {
     {0x000000a0, 0x00002016}, {0x0000009b, 0x00005012}, {0x00000088, 0x00007011},
     {0x000000c0, 0x80009010}, {0x0000009b, 0x00002016}, {0x00000088, 0x00005012},
     {0x000000c0, 0x80007011}, {0x00000097, 0x00002016}, {0x000000c0, 0x80005012},
 };
 
-const ddi_buf_trans_entry dp_ddi_buf_trans_kbl_y[9] = {
+constexpr DdiPhyConfigEntry kPhyConfigDpKabyLakeY[9] = {
     {0x000000a1, 0x00001017}, {0x00000088, 0x00005012}, {0x000000cd, 0x80007011},
     {0x000000c0, 0x8000800f}, {0x0000009d, 0x00001017}, {0x000000c0, 0x80005012},
     {0x000000c0, 0x80007011}, {0x0000004c, 0x00001017}, {0x000000c0, 0x80005012},
 };
 
-const ddi_buf_trans_entry dp_ddi_buf_trans_kbl_u[9] = {
+constexpr DdiPhyConfigEntry kPhyConfigDpKabyLakeU[9] = {
     {0x000000a1, 0x0000201b}, {0x00000088, 0x00005012}, {0x000000cd, 0x80007011},
     {0x000000c0, 0x80009010}, {0x0000009d, 0x0000201b}, {0x000000c0, 0x80005012},
     {0x000000c0, 0x80007011}, {0x0000004f, 0x00002016}, {0x000000c0, 0x80005012},
 };
 
-const ddi_buf_trans_entry edp_ddi_buf_trans_skl_hs[10] = {
+constexpr DdiPhyConfigEntry kPhyConfigEdpKabyLakeHs[10] = {
     {0x000000a8, 0x00000018}, {0x000000a9, 0x00004013}, {0x000000a2, 0x00007011},
     {0x0000009c, 0x00009010}, {0x000000a9, 0x00000018}, {0x000000a2, 0x00006013},
     {0x000000a6, 0x00007011}, {0x000000ab, 0x00000018}, {0x0000009f, 0x00007013},
     {0x000000df, 0x00000018},
 };
 
-const ddi_buf_trans_entry edp_ddi_buf_trans_skl_y[10] = {
+constexpr DdiPhyConfigEntry kPhyConfigEdpKabyLakeY[10] = {
     {0x000000a8, 0x00000018}, {0x000000ab, 0x00004013}, {0x000000a4, 0x00007011},
     {0x000000df, 0x00009010}, {0x000000aa, 0x00000018}, {0x000000a4, 0x00006013},
     {0x0000009d, 0x00007011}, {0x000000a0, 0x00000018}, {0x000000df, 0x00006012},
     {0x0000008a, 0x00000018},
 };
 
-const ddi_buf_trans_entry edp_ddi_buf_trans_skl_u[10] = {
+constexpr DdiPhyConfigEntry kPhyConfigEdpKabyLakeU[10] = {
     {0x000000a8, 0x00000018}, {0x000000a9, 0x00004013}, {0x000000a2, 0x00007011},
     {0x0000009c, 0x00009010}, {0x000000a9, 0x00000018}, {0x000000a2, 0x00006013},
     {0x000000a6, 0x00007011}, {0x000000ab, 0x00002016}, {0x0000009f, 0x00005013},
     {0x000000df, 0x00000018},
 };
 
-void GetDpDdiBufTransEntries(uint16_t device_id, const ddi_buf_trans_entry** entries,
-                             uint8_t* i_boost, unsigned* count) {
+cpp20::span<const DdiPhyConfigEntry> GetDpPhyConfigEntries(uint16_t device_id, uint8_t* i_boost) {
   if (is_skl(device_id)) {
     if (is_skl_u(device_id)) {
-      *entries = dp_ddi_buf_trans_skl_u;
       *i_boost = 0x1;
-      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_skl_u));
-    } else if (is_skl_y(device_id)) {
-      *entries = dp_ddi_buf_trans_skl_y;
-      *i_boost = 0x3;
-      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_skl_y));
-    } else {
-      *entries = dp_ddi_buf_trans_skl_hs;
-      *i_boost = 0x1;
-      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_skl_hs));
+      return kPhyConfigDpSkylakeU;
     }
-  } else if (is_kbl(device_id)) {
-    if (is_kbl_u(device_id)) {
-      *entries = dp_ddi_buf_trans_kbl_u;
-      *i_boost = 0x1;
-      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_kbl_u));
-    } else if (is_kbl_y(device_id)) {
-      *entries = dp_ddi_buf_trans_kbl_y;
+    if (is_skl_y(device_id)) {
       *i_boost = 0x3;
-      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_kbl_y));
-    } else {
-      *entries = dp_ddi_buf_trans_kbl_hs;
-      *i_boost = 0x3;
-      *count = static_cast<unsigned>(std::size(dp_ddi_buf_trans_kbl_hs));
+      return kPhyConfigDpSkylakeY;
     }
-  } else {
-    zxlogf(ERROR, "Unrecognized i915 device id: %#.4x", device_id);
-    *count = 0;
-    *i_boost = 0;
+    *i_boost = 0x1;
+    return kPhyConfigDpSkylakeHs;
   }
+  if (is_kbl(device_id)) {
+    if (is_kbl_u(device_id)) {
+      *i_boost = 0x1;
+      return kPhyConfigDpKabyLakeU;
+    }
+    if (is_kbl_y(device_id)) {
+      *i_boost = 0x3;
+      return kPhyConfigDpKabyLakeY;
+    }
+    *i_boost = 0x3;
+    return kPhyConfigDpKabyLakeHs;
+  }
+
+  zxlogf(ERROR, "Unsupported i915 device id: %x", device_id);
+  *i_boost = 0;
+  return {};
 }
 
-void GetEdpDdiBufTransEntries(uint16_t device_id, const ddi_buf_trans_entry** entries,
-                              unsigned* count) {
+cpp20::span<const DdiPhyConfigEntry> GetEdpPhyConfigEntries(uint16_t device_id, uint8_t* i_boost) {
+  *i_boost = 0x0;
   if (is_skl_u(device_id) || is_kbl_u(device_id)) {
-    *entries = edp_ddi_buf_trans_skl_u;
-    *count = static_cast<int>(std::size(edp_ddi_buf_trans_skl_u));
-  } else if (is_skl_y(device_id) || is_kbl_y(device_id)) {
-    *entries = edp_ddi_buf_trans_skl_y;
-    *count = static_cast<int>(std::size(edp_ddi_buf_trans_skl_y));
-  } else {
-    *entries = edp_ddi_buf_trans_skl_hs;
-    *count = static_cast<int>(std::size(edp_ddi_buf_trans_skl_hs));
+    return kPhyConfigEdpKabyLakeU;
   }
+  if (is_skl_y(device_id) || is_kbl_y(device_id)) {
+    return kPhyConfigEdpKabyLakeY;
+  }
+  return kPhyConfigEdpKabyLakeHs;
 }
 
 // Aux port functions
@@ -664,15 +663,17 @@ bool DpDisplay::DpcdReadPairedRegs(hwreg::RegisterBase<T, typename T::ValueType>
 
 bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
                                         dpcd::AdjustRequestLane* adjust) {
-  bool voltage_change = false;
-  uint8_t v = 0;
-  uint8_t pe = 0;
-  for (unsigned i = 0; i < dp_lane_count_; i++) {
-    if (adjust[i].voltage_swing(i).get() > v) {
-      v = static_cast<uint8_t>(adjust[i].voltage_swing(i).get());
+  bool voltage_changed = false;
+  uint8_t voltage_swing = 0;
+  uint8_t pre_emphasis = 0;
+  for (int lane_index = 0; lane_index < dp_lane_count_; ++lane_index) {
+    if (adjust[lane_index].voltage_swing(lane_index).get() > voltage_swing) {
+      // The cast is lossless because voltage_swing() is a 2-bit field.
+      voltage_swing = static_cast<uint8_t>(adjust[lane_index].voltage_swing(lane_index).get());
     }
-    if (adjust[i].pre_emphasis(i).get() > pe) {
-      pe = static_cast<uint8_t>(adjust[i].pre_emphasis(i).get());
+    if (adjust[lane_index].pre_emphasis(lane_index).get() > pre_emphasis) {
+      // The cast is lossless because pre-emphasis() is a 2-bit field.
+      pre_emphasis = static_cast<uint8_t>(adjust[lane_index].pre_emphasis(lane_index).get());
     }
   }
 
@@ -680,41 +681,49 @@ bool DpDisplay::DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training,
   // doc, the max voltage swing is 2/3 for DP/eDP and the max (voltage swing + pre-emphasis) is
   // 3. According to the v1.1a of the DP docs, if v + pe is too large then v should be reduced
   // to the highest supported value for the pe level (section 3.5.1.3)
-  static constexpr uint32_t kMaxVPlusPe = 3;
-  uint8_t max_v = controller()->igd_opregion().IsLowVoltageEdp(ddi()) ? 3 : 2;
-  if (v + pe > kMaxVPlusPe) {
-    v = static_cast<uint8_t>(kMaxVPlusPe - pe);
+  static constexpr uint32_t kMaxVoltageSwingPlusPreEmphasis = 3;
+  if (voltage_swing + pre_emphasis > kMaxVoltageSwingPlusPreEmphasis) {
+    voltage_swing = static_cast<uint8_t>(kMaxVoltageSwingPlusPreEmphasis - pre_emphasis);
   }
-  if (v > max_v) {
-    v = max_v;
-  }
-
-  for (unsigned i = 0; i < dp_lane_count_; i++) {
-    voltage_change |= (training[i].voltage_swing_set() != v);
-    training[i].set_voltage_swing_set(v);
-    training[i].set_max_swing_reached(v == max_v);
-    training[i].set_pre_emphasis_set(pe);
-    training[i].set_max_pre_emphasis_set(pe + v == kMaxVPlusPe);
+  const uint8_t max_port_voltage = controller()->igd_opregion().IsLowVoltageEdp(ddi()) ? 3 : 2;
+  if (voltage_swing > max_port_voltage) {
+    voltage_swing = max_port_voltage;
   }
 
-  // Compute the index into the programmed table
-  int level;
-  if (v == 0) {
-    level = pe;
-  } else if (v == 1) {
-    level = 4 + pe;
-  } else if (v == 2) {
-    level = 7 + pe;
-  } else {
-    level = 9;
+  for (int lane_index = 0; lane_index < dp_lane_count_; lane_index++) {
+    voltage_changed |= (training[lane_index].voltage_swing_set() != voltage_swing);
+    training[lane_index].set_voltage_swing_set(voltage_swing);
+    training[lane_index].set_max_swing_reached(voltage_swing == max_port_voltage);
+    training[lane_index].set_pre_emphasis_set(pre_emphasis);
+    training[lane_index].set_max_pre_emphasis_set(pre_emphasis + voltage_swing ==
+                                                  kMaxVoltageSwingPlusPreEmphasis);
+  }
+
+  // Compute the index into the PHY configuration table.
+  static constexpr int kFirstEntryForVoltageSwingLevel[] = {0, 4, 7, 9};
+
+  // The array access is safe because `voltage_swing` + `pre_emphasis` is at
+  // most 3. For the same reason, each (voltage_swing, pre_emphasis) index will
+  // result in a different entry
+  const int phy_config_index = kFirstEntryForVoltageSwingLevel[voltage_swing] + pre_emphasis;
+  ZX_ASSERT(phy_config_index < 10);
+  if (phy_config_index == 9) {
+    // Entry 9 in the PHY configuration table is only usable for DisplayPort on
+    // DDIs A and E, to support eDP displays. On DDIs B-D, entry 9 is dedicated
+    // to HDMI.
+    //
+    // Voltage swing level 3 is only valid for eDP, so we should be on DDI A or
+    // E, and should be servicing an eDP port.
+    ZX_ASSERT(controller()->igd_opregion().IsLowVoltageEdp(ddi()));
+    ZX_ASSERT(ddi() == 0 || ddi() == 4);
   }
 
   tgl_registers::DdiRegs ddi_regs(ddi());
-  auto buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-  buf_ctl.set_dp_vswing_emp_sel(level);
-  buf_ctl.WriteTo(mmio_space());
+  auto buffer_control = ddi_regs.BufferControl().ReadFrom(mmio_space());
+  buffer_control.set_display_port_phy_config_kaby_lake(phy_config_index);
+  buffer_control.WriteTo(mmio_space());
 
-  return voltage_change;
+  return voltage_changed;
 }
 
 bool DpDisplay::LinkTrainingSetup() {
@@ -723,53 +732,54 @@ bool DpDisplay::LinkTrainingSetup() {
   tgl_registers::DdiRegs ddi_regs(ddi());
 
   // Tell the source device to emit the training pattern.
-  auto dp_tp = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
-  dp_tp.set_transport_enable(1);
-  dp_tp.set_transport_mode_select(0);
-  dp_tp.set_enhanced_framing_enable(capabilities_->enhanced_frame_capability());
-  dp_tp.set_dp_link_training_pattern(dp_tp.kTrainingPattern1);
-  dp_tp.WriteTo(mmio_space());
+  auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
+  dp_transport_control.set_enabled(true)
+      .set_is_multi_stream(false)
+      .set_sst_enhanced_framing(capabilities_->enhanced_frame_capability())
+      .set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern1)
+      .WriteTo(mmio_space());
 
-  // Configure ddi voltage swing
+  // Configure DDI PHY parameters (voltage swing and pre-emphasis).
+  //
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 pages 187-190
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 pages 181-183
   // TODO(fxbug.dev/31313): Read the VBT to handle unique motherboard configs for kaby lake
-  unsigned count;
   uint8_t i_boost;
-  const ddi_buf_trans_entry* entries;
-  if (controller()->igd_opregion().IsLowVoltageEdp(ddi())) {
-    i_boost = 0;
-    GetEdpDdiBufTransEntries(controller()->device_id(), &entries, &count);
-  } else {
-    GetDpDdiBufTransEntries(controller()->device_id(), &entries, &i_boost, &count);
-  }
-  uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi(), true /* is_dp */);
+  const cpp20::span<const DdiPhyConfigEntry> entries =
+      controller()->igd_opregion().IsLowVoltageEdp(ddi())
+          ? GetEdpPhyConfigEntries(controller()->device_id(), &i_boost)
+          : GetDpPhyConfigEntries(controller()->device_id(), &i_boost);
+  const uint8_t i_boost_override = controller()->igd_opregion().GetIBoost(ddi(), /*is_dp=*/true);
 
-  for (unsigned i = 0; i < count; i++) {
-    auto ddi_buf_trans_high = ddi_regs.DdiBufTransHi(i).ReadFrom(mmio_space());
-    auto ddi_buf_trans_low = ddi_regs.DdiBufTransLo(i).ReadFrom(mmio_space());
-    ddi_buf_trans_high.set_reg_value(entries[i].high_dword);
-    ddi_buf_trans_low.set_reg_value(entries[i].low_dword);
+  for (int entry_index = 0; entry_index < static_cast<int>(entries.size()); ++entry_index) {
+    auto phy_config_entry1 =
+        tgl_registers::DdiPhyConfigEntry1::GetDdiInstance(ddi(), entry_index).FromValue(0);
+    phy_config_entry1.set_reg_value(entries[entry_index].entry1);
     if (i_boost_override) {
-      ddi_buf_trans_low.set_balance_leg_enable(1);
+      phy_config_entry1.set_balance_leg_enable(1);
     }
-    ddi_buf_trans_high.WriteTo(mmio_space());
-    ddi_buf_trans_low.WriteTo(mmio_space());
+    phy_config_entry1.WriteTo(mmio_space());
+
+    auto phy_config_entry2 =
+        tgl_registers::DdiPhyConfigEntry2::GetDdiInstance(ddi(), entry_index).FromValue(0);
+    phy_config_entry2.set_reg_value(entries[entry_index].entry2).WriteTo(mmio_space());
   }
 
   const uint8_t i_boost_val = i_boost_override ? i_boost_override : i_boost;
-  auto disio_cr_tx_bmu = tgl_registers::DisplayIoCtrlRegTxBmu::Get().ReadFrom(mmio_space());
-  disio_cr_tx_bmu.set_disable_balance_leg(!i_boost && !i_boost_override);
-  disio_cr_tx_bmu.tx_balance_leg_select(ddi()).set(i_boost_val);
+  auto balance_control = tgl_registers::DdiPhyBalanceControl::Get().ReadFrom(mmio_space());
+  balance_control.set_disable_balance_leg(!i_boost && !i_boost_override);
+  balance_control.balance_leg_select_for_ddi(ddi()).set(i_boost_val);
   if (ddi() == tgl_registers::DDI_A && dp_lane_count_ == 4) {
-    disio_cr_tx_bmu.tx_balance_leg_select(tgl_registers::DDI_E).set(i_boost_val);
+    balance_control.balance_leg_select_for_ddi(tgl_registers::DDI_E).set(i_boost_val);
   }
-  disio_cr_tx_bmu.WriteTo(mmio_space());
+  balance_control.WriteTo(mmio_space());
 
   // Enable and wait for DDI_BUF_CTL
-  auto buf_ctl = ddi_regs.DdiBufControl().ReadFrom(mmio_space());
-  buf_ctl.set_ddi_buffer_enable(1);
-  buf_ctl.set_dp_vswing_emp_sel(0);
-  buf_ctl.set_dp_port_width_selection(dp_lane_count_ - 1);
-  buf_ctl.WriteTo(mmio_space());
+  auto buffer_control = ddi_regs.BufferControl().ReadFrom(mmio_space());
+  buffer_control.set_enabled(true)
+      .set_display_port_phy_config_kaby_lake(0)
+      .set_display_port_lane_count(dp_lane_count_)
+      .WriteTo(mmio_space());
   zx_nanosleep(zx_deadline_after(ZX_USEC(518)));
 
   uint16_t link_rate_reg;
@@ -873,13 +883,13 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
   ZX_ASSERT(capabilities_);
 
   tgl_registers::DdiRegs ddi_regs(ddi());
-  auto dp_tp = ddi_regs.DdiDpTransportControl().ReadFrom(mmio_space());
+  auto dp_transport_control = ddi_regs.DpTransportControl().ReadFrom(mmio_space());
 
   dpcd::AdjustRequestLane adjust_req[dp_lane_count_];
   dpcd::LaneStatus lane_status[dp_lane_count_];
 
-  dp_tp.set_dp_link_training_pattern(dp_tp.kTrainingPattern2);
-  dp_tp.WriteTo(mmio_space());
+  dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kTrainingPattern2);
+  dp_transport_control.WriteTo(mmio_space());
 
   tp_set->set_training_pattern_set(tp_set->kTrainingPattern2);
   int poll_count = 0;
@@ -932,8 +942,8 @@ bool DpDisplay::LinkTrainingStage2(dpcd::TrainingPatternSet* tp_set, dpcd::Train
     DpcdHandleAdjustRequest(lanes, adjust_req);
   }
 
-  dp_tp.set_dp_link_training_pattern(dp_tp.kSendPixelData);
-  dp_tp.WriteTo(mmio_space());
+  dp_transport_control.set_training_pattern(tgl_registers::DpTransportControl::kSendPixelData)
+      .WriteTo(mmio_space());
 
   return true;
 }
@@ -1032,16 +1042,21 @@ bool DpDisplay::Query() {
     return false;
   }
 
-  uint8_t lane_count = 0;
-  if ((ddi() == tgl_registers::DDI_A || ddi() == tgl_registers::DDI_E) &&
-      capabilities_->max_lane_count() == 4 &&
-      !tgl_registers::DdiRegs(tgl_registers::DDI_A)
-           .DdiBufControl()
-           .ReadFrom(mmio_space())
-           .ddi_a_lane_capability_control()) {
-    lane_count = 2;
-  } else {
-    lane_count = capabilities_->max_lane_count();
+  uint8_t lane_count = capabilities_->max_lane_count();
+  // On Kaby Lake and Skylake, DDI E takes over two of DDI A's four lanes. In
+  // other words, if DDI E is enabled, DDI A only has two lanes available. DDI E
+  // always has two lanes available.
+  //
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 "Display Connections" > "DDIs" page 107
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 "Display Connections" > "DDIs" page 105
+  if (ddi() == tgl_registers::DDI_A || ddi() == tgl_registers::DDI_E) {
+    const bool ddi_e_enabled = !tgl_registers::DdiRegs(tgl_registers::DDI_A)
+                                    .BufferControl()
+                                    .ReadFrom(mmio_space())
+                                    .ddi_e_disabled_kaby_lake();
+    if (ddi_e_enabled) {
+      lane_count = std::min<uint8_t>(lane_count, 2);
+    }
   }
 
   dp_lane_count_ = lane_count;

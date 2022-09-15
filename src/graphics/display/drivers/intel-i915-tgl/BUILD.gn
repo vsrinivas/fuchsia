@@ -114,6 +114,7 @@ test("intel-i915-tgl-test") {
     "pipe-unittest.cc",
     "poll-until-unittest.cc",
     "power-unittest.cc",
+    "registers-ddi-unittest.cc",
     "registers-unittest.cc",
   ]
   deps = [
