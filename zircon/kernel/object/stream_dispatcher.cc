@@ -349,8 +349,7 @@ zx_status_t StreamDispatcher::Seek(zx_stream_seek_origin_t whence, int64_t offse
       break;
     }
     case ZX_STREAM_SEEK_ORIGIN_END: {
-      Guard<Mutex> content_size_guard{vmo_->content_size_manager().lock()};
-      uint64_t content_size = vmo_->content_size_manager().content_size_locked();
+      uint64_t content_size = vmo_->content_size_manager().GetContentSize();
       if (add_overflow(content_size, offset, &target)) {
         return ZX_ERR_INVALID_ARGS;
       }
@@ -382,11 +381,10 @@ void StreamDispatcher::GetInfo(zx_info_stream_t* info) const {
 
   Guard<CriticalMutex> options_guard{get_lock()};
   Guard<Mutex> seek_guard{&seek_lock_};
-  Guard<Mutex> content_size_guard{vmo_->content_size_manager().lock()};
 
   info->options = options_;
   info->seek = seek_;
-  info->content_size = vmo_->content_size_manager().content_size_locked();
+  info->content_size = vmo_->content_size_manager().GetContentSize();
 }
 
 zx_status_t StreamDispatcher::CreateWriteOpAndExpandVmo(size_t total_capacity, zx_off_t offset,

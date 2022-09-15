@@ -19,7 +19,7 @@
 #include <ktl/optional.h>
 #include <ktl/variant.h>
 
-// |ContentSizeManager| is a class that helps coordinate multiple, potentially concurrent changes
+// `ContentSizeManager` is a class that helps coordinate multiple, potentially concurrent changes
 // to a VMO's content size without needing to serialize the I/O of those operations. This is done by
 // maintaining queues of outstanding operations, allowing concurrent execution of the operations,
 // and then committing the content size effects of those operations in a particular order. This idea
@@ -152,9 +152,15 @@ class ContentSizeManager {
 
   Lock<Mutex>* lock() const TA_RET_CAP(lock_) { return &lock_; }
 
-  // Returns the current content size. Note this does not include changes made by pending
-  // operations.
-  uint64_t content_size_locked() const TA_REQ(lock_) { return content_size_; }
+  // Returns the current content size.
+  uint64_t GetContentSize() const {
+    // Loads from the operation the content size must be ordered with the acquire ordering to ensure
+    // that all memory operations from the VMO (i.e. reads) after the load are not reordered before
+    // reading the content size. Otherwise, reads from the VMO before acquiring content size may not
+    // see data that was written to the VMO just before content size was updated (via
+    // `SetContentSize`).
+    return content_size_.load(ktl::memory_order_acquire);
+  }
 
   // Marks and registers the beginning of an append operation.
   //
@@ -191,6 +197,18 @@ class ContentSizeManager {
       TA_REQ(lock_);
 
  private:
+  // Updates the content size to a new value.
+  //
+  // Note that this function should only be called by internal functions, as content size should
+  // only be modified by one operation at a time. This is enforced by the queues.
+  void SetContentSize(uint64_t new_content_size) {
+    // Stores to the content size must be ordered with release ordering to ensure that all memory
+    // operations (i.e. writes) to the VMO are visible *before* updating content size. Readers must
+    // see valid data in the VMO if the region being read is within content size. See
+    // `GetContentSize` as well.
+    content_size_.store(new_content_size, ktl::memory_order_release);
+  }
+
   // Blocks until the provided operation is at the head of the queue.
   //
   // Note that this function will drop the lock guarded by `lock_guard` while blocking and
@@ -204,11 +222,15 @@ class ContentSizeManager {
   void DequeueOperationLocked(Operation* op) TA_REQ(lock_);
 
   mutable DECLARE_MUTEX(ContentSizeManager) lock_;
-  uint64_t content_size_ TA_GUARDED(lock_) = 0;
-
   // These queues are usually very shallow, unless stream clients call many operations concurrently.
   fbl::DoublyLinkedList<Operation*, WriteQueueTag> write_q_ TA_GUARDED(lock_);
   fbl::DoublyLinkedList<Operation*, ReadQueueTag> read_q_ TA_GUARDED(lock_);
+
+  // `content_size_` is not guarded by a lock because the queues above maintains that only one
+  // operation can ever be mutating `content_size_` at any given point.
+  //
+  // Accessing this value should be done via `GetContentSize` and `SetContentSize`.
+  ktl::atomic<uint64_t> content_size_ = 0;
 };
 
 #endif  // ZIRCON_KERNEL_VM_INCLUDE_VM_CONTENT_SIZE_MANAGER_H_

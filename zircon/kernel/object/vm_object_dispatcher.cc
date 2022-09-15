@@ -242,8 +242,7 @@ zx_status_t VmObjectDispatcher::SetContentSize(uint64_t content_size) {
 uint64_t VmObjectDispatcher::GetContentSize() const {
   canary_.Assert();
 
-  Guard<Mutex> guard{content_size_mgr_.lock()};
-  return content_size_mgr_.content_size_locked();
+  return content_size_mgr_.GetContentSize();
 }
 
 zx_status_t VmObjectDispatcher::ExpandIfNecessary(uint64_t requested_vmo_size,

@@ -57,12 +57,17 @@ zx_status_t ContentSizeManager::BeginAppendLocked(uint64_t append_size, Guard<Mu
   // Block until head if there are any of the following operations preceding this one:
   //   * Appends or writes that exceed the current content size.
   //   * Set size
+  //
+  // Effectively, this checks for any content size modifying operations.
   bool should_block = false;
   auto iter = --write_q_.make_iterator(*out_op);
+
+  // It's okay to read the content size once here, since the lock is held.
+  uint64_t cur_content_size = GetContentSize();
   while (iter.IsValid()) {
     iter->AssertParentLockHeld();
     if (iter->GetType() == OperationType::SetSize || iter->GetType() == OperationType::Append ||
-        (iter->GetType() == OperationType::Write && iter->GetSizeLocked() > content_size_)) {
+        (iter->GetType() == OperationType::Write && iter->GetSizeLocked() > cur_content_size)) {
       should_block = true;
       break;
     }
@@ -71,9 +76,18 @@ zx_status_t ContentSizeManager::BeginAppendLocked(uint64_t append_size, Guard<Mu
 
   if (should_block) {
     BlockUntilHeadLocked(out_op, lock_guard);
+
+    // Must re-read the content size here, since `BlockUntilHeadLocked` would have dropped the lock,
+    // and content size may have been modified by the operations in front of this one.
+    cur_content_size = GetContentSize();
   }
 
-  if (add_overflow(content_size_, append_size, out_new_content_size)) {
+  // Using the previously read content size. In the case where this operation blocked until it was
+  // the head, content size was re-read with the lock held and with this operation at the head of
+  // the queue (no other content size mutating operations can proceed before this). In all other
+  // cases, the previous loop verified that no content size mutating operations are in front of this
+  // operation.
+  if (add_overflow(cur_content_size, append_size, out_new_content_size)) {
     // Dequeue operation since this change should not be committed.
     DequeueOperationLocked(out_op);
     return ZX_ERR_OUT_OF_RANGE;
@@ -108,11 +122,14 @@ void ContentSizeManager::BeginWriteLocked(uint64_t target_size, Guard<Mutex>* lo
 
   // If this write can potentially create a scenario where it expands content, block until it is the
   // head of the queue.
-  if (block_due_to_set || target_size > content_size_) {
+  if (block_due_to_set || target_size > GetContentSize()) {
     BlockUntilHeadLocked(out_op, lock_guard);
 
-    if (target_size > content_size_) {
-      *out_prev_content_size = content_size_;
+    // Must re-read the content size here, since `BlockUntilHeadLocked` would have dropped the lock,
+    // and content size may have been modified by the operations in front of this one.
+    uint64_t cur_content_size = GetContentSize();
+    if (target_size > cur_content_size) {
+      *out_prev_content_size = cur_content_size;
     }
   }
 }
@@ -125,7 +142,7 @@ void ContentSizeManager::BeginReadLocked(uint64_t target_size, uint64_t* out_con
   // Allow reads up to the smallest outstanding size.
   // Other concurrent, in-flight operations may or may not complete before this read, so it is okay
   // to be more conservative here and only read up to the guaranteed valid region.
-  *out_content_size_limit = content_size_;
+  *out_content_size_limit = GetContentSize();
   for (auto& op : read_q_) {
     if (op.GetType() != OperationType::SetSize) {
       continue;
@@ -157,12 +174,15 @@ void ContentSizeManager::BeginSetContentSizeLocked(uint64_t target_size, Operati
   //   * Set size
   bool should_block = false;
   auto write_iter = --write_q_.make_iterator(*out_op);
+
+  // It's okay to read the content size once here, since the lock is held.
+  uint64_t cur_content_size = GetContentSize();
   while (write_iter.IsValid()) {
     write_iter->AssertParentLockHeld();
     if (write_iter->GetType() == OperationType::SetSize ||
         write_iter->GetType() == OperationType::Append ||
         (write_iter->GetType() == OperationType::Write &&
-         write_iter->GetSizeLocked() > ktl::min(content_size_, target_size))) {
+         write_iter->GetSizeLocked() > ktl::min(cur_content_size, target_size))) {
       should_block = true;
       break;
     }
@@ -210,13 +230,13 @@ void ContentSizeManager::CommitAndDequeueOperationLocked(Operation* op) {
   op->AssertParentLockHeld();
   switch (op->type_) {
     case OperationType::Write:
-      content_size_ = ktl::max(op->GetSizeLocked(), content_size_);
+      SetContentSize(ktl::max(op->GetSizeLocked(), GetContentSize()));
       break;
     case OperationType::Append:
-      content_size_ += op->GetSizeLocked();
+      SetContentSize(GetContentSize() + op->GetSizeLocked());
       break;
     case OperationType::SetSize:
-      content_size_ = op->GetSizeLocked();
+      SetContentSize(op->GetSizeLocked());
       break;
     case OperationType::Read:
       // No-op
