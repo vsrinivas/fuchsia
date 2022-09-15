@@ -159,6 +159,14 @@ class TestLibrary final : public SharedInterface {
     return all_libraries()->AddAttributeSchema(std::move(name));
   }
 
+  // Read the source from an associated external file.
+  void AddFile(const std::filesystem::path& path) {
+    const std::ifstream reader("host_x64/fidlc-tests/" + path.string());
+    std::stringstream buffer;
+    buffer << reader.rdbuf();
+    AddSource(path.filename(), buffer.str());
+  }
+
   // TODO(pascallouis): remove, this does not use a library.
   bool Parse(std::unique_ptr<fidl::raw::File>* out_ast_ptr) {
     ZX_ASSERT_MSG(all_sources_.size() == 1, "parse can only be used with one source");

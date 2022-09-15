@@ -3,11 +3,22 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
+import("//build/testing/host_test_data.gni")
 import("//tools/fidl/fidlc/testdata/info.gni")
 
 group("tests") {
   testonly = true
   deps = [ ":fidlc-test($host_toolchain)" ]
+}
+
+host_test_data("bad_cases") {
+  sources = [ "fidl/bad/cannot_start_at_zero.test.fidl" ]
+  outputs = [ "$root_out_dir/fidlc-tests/bad/{{source_file_part}}" ]
+}
+
+host_test_data("good_cases") {
+  sources = [ "fidl/good/strict_union.test.fidl" ]
+  outputs = [ "$root_out_dir/fidlc-tests/good/{{source_file_part}}" ]
 }
 
 test("fidlc-test") {
@@ -64,6 +75,8 @@ test("fidlc-test") {
     "visitor_unittests.cc",
   ]
   deps = [
+    ":bad_cases",
+    ":good_cases",
     "//third_party/boringssl",
     "//tools/fidl/fidlc:fidl",
     "//zircon/system/ulib/zxtest",

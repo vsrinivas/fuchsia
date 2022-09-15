@@ -71,12 +71,8 @@ type Foo = flexible union {
 }
 
 TEST(UnionTests, GoodStrictUnion) {
-  TestLibrary library(R"FIDL(library test;
-
-type Foo = strict union {
-    1: bar string;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("good/strict_union.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -219,16 +215,9 @@ type Duplicates = strict union {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberName);
 }
 
-// TODO(fxbug.dev/108248): We should figure out how to use an embedded *.fidl file instead.
 TEST(UnionTests, BadCannotStartAtZero) {
-  TestLibrary library(R"FIDL(
-library test;
-
-type Foo = strict union {
-  0: foo uint32;
-  1: bar uint64;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/cannot_start_at_zero.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
