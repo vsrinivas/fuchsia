@@ -27,7 +27,6 @@ ffx_plugin("ffx_component") {
     "storage:ffx_component_storage",
   ]
   test_deps = [
-    "common:tests",
     "create:ffx_component_create_tests",
     "destroy:ffx_component_destroy_tests",
     "graph:ffx_component_graph_tests",
@@ -41,7 +40,6 @@ ffx_plugin("ffx_component") {
     "show:ffx_component_show_tests",
     "start:ffx_component_start_tests",
     "stop:ffx_component_stop_tests",
-    "storage:ffx_component_storage_tests",
   ]
 
   args_sources = [ "src/args.rs" ]

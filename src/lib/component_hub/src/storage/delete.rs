@@ -4,9 +4,8 @@
 
 use {
     super::RemotePath,
+    crate::io::Directory,
     anyhow::{anyhow, Result},
-    component_hub::io::Directory,
-    errors::ffx_error,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
@@ -27,7 +26,7 @@ pub async fn delete(storage_admin: StorageAdminProxy, path: String) -> Result<()
     storage_admin
         .open_component_storage_by_id(&remote_path.instance_id, server.into())
         .await?
-        .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
+        .map_err(|e| anyhow!("Could not open component storage: {:?}", e))?;
 
     if remote_path.relative_path.as_os_str().is_empty() {
         return Err(anyhow!("can't delete empty path"));

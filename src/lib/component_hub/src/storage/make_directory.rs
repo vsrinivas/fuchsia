@@ -4,9 +4,8 @@
 
 use {
     super::RemotePath,
-    anyhow::Result,
-    component_hub::io::Directory,
-    errors::{ffx_bail, ffx_error},
+    crate::io::Directory,
+    anyhow::{anyhow, bail, Result},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
@@ -25,14 +24,14 @@ pub async fn make_directory(storage_admin: StorageAdminProxy, path: String) -> R
     let storage_dir = Directory::from_proxy(dir_proxy);
 
     if remote_path.relative_path.as_os_str().is_empty() {
-        ffx_bail!("Remote path cannot be the root");
+        bail!("Remote path cannot be the root");
     }
 
     // Open the storage
     storage_admin
         .open_component_storage_by_id(&remote_path.instance_id, server.into())
         .await?
-        .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
+        .map_err(|e| anyhow!("Could not open component storage: {:?}", e))?;
 
     // Send a request to create the directory
     let dir = storage_dir.open_dir(

@@ -4,9 +4,8 @@
 
 use {
     super::{RemotePath, REMOTE_PATH_HELP},
-    anyhow::Result,
-    component_hub::io::Directory,
-    errors::{ffx_bail, ffx_error},
+    crate::io::Directory,
+    anyhow::{anyhow, bail, Result},
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2::StorageAdminProxy,
@@ -31,7 +30,7 @@ pub async fn copy(
     let storage_dir = Directory::from_proxy(dir_proxy);
 
     match (RemotePath::parse(&source_path), RemotePath::parse(&destination_path)) {
-        (Ok(_), Ok(_)) => ffx_bail!("Copying from remote to remote is not yet implemented"),
+        (Ok(_), Ok(_)) => bail!("Copying from remote to remote is not yet implemented"),
         (Ok(remote_source), _) => {
             // Copying from remote to host
             let remote_source_path = remote_source.relative_path;
@@ -40,10 +39,10 @@ pub async fn copy(
             storage_admin
                 .open_component_storage_by_id(&remote_source.instance_id, server.into())
                 .await?
-                .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
+                .map_err(|e| anyhow!("Could not open component storage: {:?}", e))?;
             let data = storage_dir.read_file_bytes(remote_source_path).await?;
             write(host_destination_path, data)
-                .map_err(|e| ffx_error!("Could not write file to host: {:?}", e))?;
+                .map_err(|e| anyhow!("Could not write file to host: {:?}", e))?;
             Ok(())
         }
         (_, Ok(remote_destination)) => {
@@ -54,14 +53,14 @@ pub async fn copy(
             storage_admin
                 .open_component_storage_by_id(&remote_destination.instance_id, server.into())
                 .await?
-                .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
+                .map_err(|e| anyhow!("Could not open component storage: {:?}", e))?;
             let data = read(host_source_path)
-                .map_err(|e| ffx_error!("Could not read file from host: {:?}", e))?;
+                .map_err(|e| anyhow!("Could not read file from host: {:?}", e))?;
             storage_dir.create_file(remote_destination_path, data.as_slice()).await?;
             Ok(())
         }
         (Err(_), Err(_)) => {
-            ffx_bail!("Source or destination must be a remote path. {}", REMOTE_PATH_HELP)
+            bail!("Source or destination must be a remote path. {}", REMOTE_PATH_HELP)
         }
     }
 }

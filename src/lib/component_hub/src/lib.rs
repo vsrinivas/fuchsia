@@ -8,3 +8,4 @@ pub mod io;
 pub mod list;
 pub mod select;
 pub mod show;
+pub mod storage;

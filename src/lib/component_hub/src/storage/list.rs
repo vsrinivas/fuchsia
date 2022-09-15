@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::RemotePath, anyhow::Result, component_hub::io::Directory, errors::ffx_error,
+    super::RemotePath, crate::io::Directory, anyhow::anyhow, anyhow::Result,
     fidl::endpoints::create_proxy, fidl_fuchsia_io as fio, fidl_fuchsia_sys2::StorageAdminProxy,
 };
 
@@ -23,7 +23,7 @@ pub async fn list(storage_admin: StorageAdminProxy, path: String) -> Result<Vec<
     storage_admin
         .open_component_storage_by_id(&remote_path.instance_id, server.into())
         .await?
-        .map_err(|e| ffx_error!("Could not open component storage: {:?}", e))?;
+        .map_err(|e| anyhow!("Could not open component storage: {:?}", e))?;
 
     let dir = if remote_path.relative_path.as_os_str().is_empty() {
         storage_dir

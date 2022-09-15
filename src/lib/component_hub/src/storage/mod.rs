@@ -3,8 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
-    errors::ffx_bail,
+    anyhow::{bail, Result},
     std::path::{Component, PathBuf},
 };
 
@@ -35,7 +34,7 @@ impl RemotePath {
         match input.split_once("::") {
             Some((first, second)) => {
                 if second.contains("::") {
-                    ffx_bail!(
+                    bail!(
                         "Remote path must contain exactly one `::` separator. {}",
                         REMOTE_PATH_HELP
                     )
@@ -51,16 +50,15 @@ impl RemotePath {
                         Component::Normal(c) => normalized_relative_path.push(c),
                         Component::RootDir => continue,
                         Component::CurDir => continue,
-                        c => ffx_bail!("Unsupported path object: {:?}. {}", c, REMOTE_PATH_HELP),
+                        c => bail!("Unsupported path object: {:?}. {}", c, REMOTE_PATH_HELP),
                     }
                 }
 
                 Ok(Self { instance_id, relative_path: normalized_relative_path })
             }
-            None => ffx_bail!(
-                "Remote path must contain exactly one `::` separator. {}",
-                REMOTE_PATH_HELP
-            ),
+            None => {
+                bail!("Remote path must contain exactly one `::` separator. {}", REMOTE_PATH_HELP)
+            }
         }
     }
 }
