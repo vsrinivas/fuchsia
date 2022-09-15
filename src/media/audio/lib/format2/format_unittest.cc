@@ -27,6 +27,21 @@ TEST(FormatTest, Create) {
   EXPECT_EQ(format.valid_bits_per_sample(), 24);
 }
 
+TEST(FormatTest, ToFidl) {
+  Format format = Format::CreateOrDie({
+      .sample_format = AudioSampleFormat::kSigned24In32,
+      .channel_count = 2,
+      .frames_per_second = 48000,
+  });
+
+  auto msg = format.ToFidl();
+  EXPECT_EQ(msg.sample_format, AudioSampleFormat::kSigned24In32);
+  EXPECT_EQ(msg.channel_count, 2u);
+  EXPECT_EQ(msg.frames_per_second, 48000u);
+  // This field must exist otherwise `msg` cannot be encoded on the wire.
+  EXPECT_FALSE(msg.channel_layout.has_invalid_tag());
+}
+
 TEST(FormatTest, OperatorEquals) {
   Format format1 = Format::CreateOrDie({
       .sample_format = AudioSampleFormat::kFloat,

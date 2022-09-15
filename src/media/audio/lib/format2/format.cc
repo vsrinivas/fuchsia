@@ -99,6 +99,7 @@ fuchsia_mediastreams::wire::AudioFormat Format::ToFidl() const {
       .sample_format = sample_format_,
       .channel_count = static_cast<uint32_t>(channels_),
       .frames_per_second = static_cast<uint32_t>(frames_per_second_),
+      .channel_layout = fuchsia_mediastreams::wire::AudioChannelLayout::WithPlaceholder(0),
   };
 }
 
