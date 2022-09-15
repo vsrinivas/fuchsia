@@ -113,7 +113,7 @@ Dispatcher::AsyncWait::AsyncWait(async_wait_t* original_wait, Dispatcher& dispat
   auto async_dispatcher = dispatcher.GetAsyncDispatcher();
   driver_runtime::Callback callback =
       [this, async_dispatcher](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
-                               fdf_status_t status) {
+                               zx_status_t status) {
         original_wait_->state.reserved[0] = 0;
         original_wait_->handler(async_dispatcher, original_wait_, status, &signal_packet_);
       };
@@ -242,7 +242,7 @@ std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::AsyncIrq::CreateCal
       std::make_unique<driver_runtime::CallbackRequest>(CallbackRequest::RequestType::kIrq);
   driver_runtime::Callback callback =
       [this, async_dispatcher](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
-                               fdf_status_t status) {
+                               zx_status_t status) {
         // We should not clear the reserved state, as this AsyncIrq object is still bound for
         // future interrupts.
         original_irq_->handler(async_dispatcher, original_irq_, status, &interrupt_packet_);
@@ -290,11 +290,11 @@ Dispatcher::Dispatcher(uint32_t options, std::string_view name, bool unsynchroni
 }
 
 // static
-fdf_status_t Dispatcher::CreateWithAdder(uint32_t options, std::string_view name,
-                                         std::string_view scheduler_role, const void* owner,
-                                         async_dispatcher_t* parent_dispatcher, ThreadAdder adder,
-                                         fdf_dispatcher_shutdown_observer_t* observer,
-                                         Dispatcher** out_dispatcher) {
+zx_status_t Dispatcher::CreateWithAdder(uint32_t options, std::string_view name,
+                                        std::string_view scheduler_role, const void* owner,
+                                        async_dispatcher_t* parent_dispatcher, ThreadAdder adder,
+                                        fdf_dispatcher_shutdown_observer_t* observer,
+                                        Dispatcher** out_dispatcher) {
   ZX_DEBUG_ASSERT(out_dispatcher);
 
   bool unsynchronized = options & FDF_DISPATCHER_OPTION_UNSYNCHRONIZED;
@@ -346,11 +346,11 @@ fdf_status_t Dispatcher::CreateWithAdder(uint32_t options, std::string_view name
   return ZX_OK;
 }
 
-fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, std::string_view name,
-                                        std::string_view scheduler_role, const void* owner,
-                                        async::Loop* loop,
-                                        fdf_dispatcher_shutdown_observer_t* observer,
-                                        Dispatcher** out_dispatcher) {
+zx_status_t Dispatcher::CreateWithLoop(uint32_t options, std::string_view name,
+                                       std::string_view scheduler_role, const void* owner,
+                                       async::Loop* loop,
+                                       fdf_dispatcher_shutdown_observer_t* observer,
+                                       Dispatcher** out_dispatcher) {
   return CreateWithAdder(
       options, name, scheduler_role, owner, loop->dispatcher(),
       [&]() { return loop->StartThread(); }, observer, out_dispatcher);
@@ -359,10 +359,10 @@ fdf_status_t Dispatcher::CreateWithLoop(uint32_t options, std::string_view name,
 // fdf_dispatcher_t implementation
 
 // static
-fdf_status_t Dispatcher::Create(uint32_t options, std::string_view name,
-                                std::string_view scheduler_role,
-                                fdf_dispatcher_shutdown_observer_t* observer,
-                                Dispatcher** out_dispatcher) {
+zx_status_t Dispatcher::Create(uint32_t options, std::string_view name,
+                               std::string_view scheduler_role,
+                               fdf_dispatcher_shutdown_observer_t* observer,
+                               Dispatcher** out_dispatcher) {
   return CreateWithAdder(
       options, name, scheduler_role, driver_context::GetCurrentDriver(),
       GetDispatcherCoordinator().loop()->dispatcher(),
@@ -664,7 +664,7 @@ void Dispatcher::Timer::Handler() {
 zx_status_t Dispatcher::PostTask(async_task_t* task) {
   driver_runtime::Callback callback =
       [this, task](std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
-                   fdf_status_t status) { task->handler(this, task, status); };
+                   zx_status_t status) { task->handler(this, task, status); };
 
   const zx::time now = zx::clock::get_monotonic();
   if (zx::time(task->deadline) <= now) {
@@ -782,7 +782,7 @@ std::unique_ptr<driver_runtime::CallbackRequest> Dispatcher::RegisterCallbackWit
 }
 
 void Dispatcher::QueueRegisteredCallback(driver_runtime::CallbackRequest* request,
-                                         fdf_status_t callback_reason) {
+                                         zx_status_t callback_reason) {
   ZX_ASSERT(request);
 
   auto idle_check = fit::defer([this]() {
@@ -935,7 +935,7 @@ std::unique_ptr<CallbackRequest> Dispatcher::CancelCallback(CallbackRequest& req
 }
 
 bool Dispatcher::SetCallbackReason(CallbackRequest* callback_to_update,
-                                   fdf_status_t callback_reason) {
+                                   zx_status_t callback_reason) {
   fbl::AutoLock lock(&callback_lock_);
   auto iter = callback_queue_.find_if(
       [callback_to_update](auto& callback) -> bool { return &callback == callback_to_update; });
@@ -1197,7 +1197,7 @@ zx_status_t Dispatcher::RegisterPendingToken(fdf_token_t* token) {
   return ZX_OK;
 }
 
-zx_status_t Dispatcher::ScheduleTokenCallback(fdf_token_t* token, fdf_status_t status,
+zx_status_t Dispatcher::ScheduleTokenCallback(fdf_token_t* token, zx_status_t status,
                                               fdf::Channel channel) {
   CallbackRequest* callback_request_ptr = nullptr;
 
@@ -1211,7 +1211,7 @@ zx_status_t Dispatcher::ScheduleTokenCallback(fdf_token_t* token, fdf_status_t s
     driver_runtime::Callback callback =
         [dispatcher = this, token, channel = std::move(channel)](
             std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
-            fdf_status_t status) mutable {
+            zx_status_t status) mutable {
           token->handler(static_cast<fdf_dispatcher_t*>(dispatcher), token, status,
                          channel.release());
         };
@@ -1255,7 +1255,7 @@ void DispatcherCoordinator::WaitUntilDispatchersDestroyed() {
 }
 
 // static
-fdf_status_t DispatcherCoordinator::ShutdownDispatchersAsync(
+zx_status_t DispatcherCoordinator::ShutdownDispatchersAsync(
     const void* driver, fdf_internal_driver_shutdown_observer_t* observer) {
   std::vector<fbl::RefPtr<Dispatcher>> dispatchers;
 
@@ -1304,19 +1304,19 @@ void DispatcherCoordinator::DestroyAllDispatchers() {
 }
 
 // static
-fdf_status_t DispatcherCoordinator::TokenRegister(zx_handle_t token, fdf_dispatcher_t* dispatcher,
-                                                  fdf_token_t* handler) {
+zx_status_t DispatcherCoordinator::TokenRegister(zx_handle_t token, fdf_dispatcher_t* dispatcher,
+                                                 fdf_token_t* handler) {
   DispatcherCoordinator& coordinator = GetDispatcherCoordinator();
   return coordinator.token_manager_.Register(token, dispatcher, handler);
 }
 
 // static
-fdf_status_t DispatcherCoordinator::TokenExchange(zx_handle_t token, fdf_handle_t handle) {
+zx_status_t DispatcherCoordinator::TokenExchange(zx_handle_t token, fdf_handle_t handle) {
   DispatcherCoordinator& coordinator = GetDispatcherCoordinator();
   return coordinator.token_manager_.Exchange(token, handle);
 }
 
-fdf_status_t DispatcherCoordinator::AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher) {
+zx_status_t DispatcherCoordinator::AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher) {
   fbl::AutoLock lock(&lock_);
 
   // Check if we already have a driver state object.

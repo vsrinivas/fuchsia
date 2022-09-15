@@ -19,7 +19,7 @@ __BEGIN_CDECLS
 // # Example
 //
 //   fdf_arena_t* arena;
-//   fdf_status_t status = fdf_arena_create(0, 'exam', 0, &arena);
+//   zx_status_t status = fdf_arena_create(0, 'exam', 0, &arena);
 //
 //   // Allocate new blocks of memory.
 //   void* addr1 = fdf_arena_allocate(arena, 0x1000);
@@ -44,7 +44,7 @@ typedef uint32_t fdf_arena_tag_t;
 // ZX_ERR_INVALID_ARGS: |options| is any value other than 0.
 //
 // ZX_ERR_NO_MEMORY: Failed due to a lack of memory.
-fdf_status_t fdf_arena_create(uint32_t options, fdf_arena_tag_t tag, fdf_arena_t** out_arena);
+zx_status_t fdf_arena_create(uint32_t options, fdf_arena_tag_t tag, fdf_arena_t** out_arena);
 
 // Returns a pointer to allocated memory of size |bytes|. The memory is managed by the arena
 // until it is freed by |fdf_arena_free|, or the arena is destroyed with |fdf_arena_destroy|.

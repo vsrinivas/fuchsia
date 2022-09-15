@@ -136,7 +136,7 @@ void DispatcherTest::RegisterAsyncReadReply(fdf_handle_t read_channel, fdf_dispa
                                             sync_completion_t* completion) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       read_channel, 0 /* options */,
-      [=](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [=](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);
 
         {
@@ -162,7 +162,7 @@ void DispatcherTest::RegisterAsyncReadBlock(fdf_handle_t ch, fdf_dispatcher_t* d
                                             libsync::Completion* complete_blocking_read) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       ch, 0 /* options */,
-      [=](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [=](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);
         entered_callback->Signal();
         ASSERT_OK(complete_blocking_read->Wait(zx::time::infinite()));
@@ -383,7 +383,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherAllowsParallelCallbacks) {
   for (uint32_t i = 0; i < kNumClients; i++) {
     auto channel_read = std::make_unique<fdf::ChannelRead>(
         local[i], 0 /* options */,
-        [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
           {
             fbl::AutoLock lock(&callback_lock);
             num_callbacks++;
@@ -453,7 +453,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherAllowsParallelCallbacksReentrant) {
   for (uint32_t i = 0; i < kNumClients; i++) {
     auto channel_read = std::make_unique<fdf::ChannelRead>(
         local[i], 0 /* options */,
-        [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
           {
             fbl::AutoLock lock(&callback_lock);
             num_callbacks++;
@@ -801,7 +801,7 @@ TEST_F(DispatcherTest, SyncDispatcherShutdownBeforeWrite) {
   // Registered, but not yet ready to run.
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_EQ(status, ZX_ERR_CANCELED);
         read_complete.Signal();
         delete channel_read;
@@ -883,7 +883,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherShutdown) {
   // write happens.
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_EQ(status, ZX_ERR_CANCELED);
         read_complete.Signal();
         delete channel_read;
@@ -927,7 +927,7 @@ TEST_F(DispatcherTest, UnsyncDispatcherShutdonwBeforeWrite) {
   // Registered, but not yet ready to run.
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_EQ(status, ZX_ERR_CANCELED);
         read_complete.Signal();
         delete channel_read;
@@ -996,7 +996,7 @@ TEST_F(DispatcherTest, ShutdownDispatcherInAsyncLoopCallback) {
   libsync::Completion completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0 /* options */,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);
         fdf_dispatcher_shutdown_async(dispatcher);
         completion.Signal();
@@ -1039,7 +1039,7 @@ TEST_F(DispatcherTest, ShutdownDispatcherFromTwoCallbacks) {
   libsync::Completion completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0 /* options */,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);
         fdf_dispatcher_shutdown_async(dispatcher);
         completion.Signal();
@@ -1049,7 +1049,7 @@ TEST_F(DispatcherTest, ShutdownDispatcherFromTwoCallbacks) {
   libsync::Completion completion2;
   auto channel_read2 = std::make_unique<fdf::ChannelRead>(
       remote_ch2_, 0 /* options */,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);
         fdf_dispatcher_shutdown_async(dispatcher);
         completion2.Signal();
@@ -1096,7 +1096,7 @@ TEST_F(DispatcherTest, ShutdownDispatcherQueueChannelReadCallback) {
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_EQ(status, ZX_ERR_CANCELED);
         // We should not be able to queue the read again.
         ASSERT_EQ(channel_read->Begin(dispatcher), ZX_ERR_UNAVAILABLE);
@@ -2035,7 +2035,7 @@ TEST_F(DispatcherTest, WaitUntilIdleCanceledRead) {
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       local_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_FALSE(true);  // This callback should never be called.
       });
   ASSERT_OK(channel_read->Begin(dispatcher));
@@ -2199,7 +2199,7 @@ TEST_F(DispatcherTest, ShutdownProcessAsyncLoop) {
   libsync::Completion entered_read;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       local_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         entered_read.Signal();
         // Do not let the read callback complete until the loop has entered a shutdown state.
         while (loop_.GetState() != ASYNC_LOOP_SHUTDOWN) {
@@ -2234,7 +2234,7 @@ TEST_F(DispatcherTest, SyncDispatcherCancelRequestDuringShutdown) {
   // Register a channel read that will be canceled by a posted task.
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       local_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_FALSE(true);  // This should never be called.
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(dispatcher)));
@@ -2278,7 +2278,7 @@ TEST_F(DispatcherTest, GetCurrentDispatcher) {
   // driver1 will wait on a message from driver2, then reply back.
   auto channel_read1 = std::make_unique<fdf::ChannelRead>(
       local_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);
         ASSERT_EQ(dispatcher1, fdf_dispatcher_get_current_dispatcher());
         // This reply will be reentrant and queued on the async loop.
@@ -2289,7 +2289,7 @@ TEST_F(DispatcherTest, GetCurrentDispatcher) {
   libsync::Completion got_reply;
   auto channel_read2 = std::make_unique<fdf::ChannelRead>(
       remote_ch_, 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);
         ASSERT_EQ(dispatcher2, fdf_dispatcher_get_current_dispatcher());
         got_reply.Signal();

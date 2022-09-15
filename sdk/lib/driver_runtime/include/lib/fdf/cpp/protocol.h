@@ -29,7 +29,7 @@ class Protocol : public fdf_token_t {
   // The status is |ZX_ERR_CANCELED| if the dispatcher was shut down before the
   // connection was made, or the peer token handle has been closed.
   using Handler = fit::function<void(fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol,
-                                     fdf_status_t status, fdf::Channel channel)>;
+                                     zx_status_t status, fdf::Channel channel)>;
 
   explicit Protocol(Handler handler);
 
@@ -48,12 +48,12 @@ class Protocol : public fdf_token_t {
   // Returns |ZX_ERR_INVALID_ARGS| if |handler| or |dispatcher| is NULL.
   // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down, or if this
   // has already registered a protocol.
-  fdf_status_t Register(zx::channel token, fdf_dispatcher_t* dispatcher);
+  zx_status_t Register(zx::channel token, fdf_dispatcher_t* dispatcher);
 
   bool is_pending() { return dispatcher_ != nullptr; }
 
  private:
-  static void CallHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, fdf_status_t status,
+  static void CallHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, zx_status_t status,
                           fdf_handle_t channel);
 
   Handler handler_;
@@ -70,7 +70,7 @@ class Protocol : public fdf_token_t {
 // Returns |ZX_ERR_BAD_HANDLE| if |token| is not a valid channel handle,
 // or |channel| is not a valid FDF channel handle.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
-fdf_status_t ProtocolConnect(zx::channel token, fdf::Channel channel);
+zx_status_t ProtocolConnect(zx::channel token, fdf::Channel channel);
 
 }  // namespace fdf
 

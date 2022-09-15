@@ -203,7 +203,7 @@ TEST_F(ChannelTest, WaitAsyncBeforeWrite) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) { sync_completion_signal(&read_completion); });
+                         zx_status_t status) { sync_completion_signal(&read_completion); });
   ASSERT_OK(channel_read->Begin(fdf_dispatcher_));
 
   constexpr uint32_t kNumBytes = 4096;
@@ -236,7 +236,7 @@ TEST_F(ChannelTest, ReadMultiple) {
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), data, kFirstMsgNumBytes, nullptr, 0));
         ASSERT_NO_FATAL_FAILURE(AssertRead(remote_.get(), data2, kSecondMsgNumBytes, nullptr, 0));
         // There should be no more messages.
@@ -262,7 +262,7 @@ TEST_F(ChannelTest, ReRegisterReadHandler) {
   sync_completion_t completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_NO_FATAL_FAILURE(
             AssertRead(remote_.get(), test_data[completed_reads].data(), kDataSize, nullptr, 0));
         completed_reads++;
@@ -292,7 +292,7 @@ TEST_F(ChannelTest, CloseSignalsPeerClosed) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) {
+                         zx_status_t status) {
         ASSERT_NOT_OK(status);
         sync_completion_signal(&read_completion);
       });
@@ -308,7 +308,7 @@ TEST_F(ChannelTest, CloseChannelInCallback) {
   libsync::Completion completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);
         remote_.reset();
         completion.Signal();
@@ -330,7 +330,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelUnqueuedRead) {
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_FALSE(true);  // This callback should never be called.
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher)));
@@ -358,7 +358,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedRead) {
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_FALSE(true);  // This callback should never be called.
       });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher)));
@@ -382,7 +382,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedRead) {
   channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) { sync_completion_signal(&read_completion); });
+                         zx_status_t status) { sync_completion_signal(&read_completion); });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher)));
 
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
@@ -412,7 +412,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedReadFromTask) {
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_FALSE(true);  // This callback should never be called.
       });
 
@@ -439,7 +439,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelQueuedReadFromTask) {
   channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) { sync_completion_signal(&read_completion); });
+                         zx_status_t status) { sync_completion_signal(&read_completion); });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(sync_dispatcher)));
 
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
@@ -472,7 +472,7 @@ TEST_F(ChannelTest, SyncDispatcherCancelTaskFromChannelRead) {
   sync_completion_t completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_EQ(sync_dispatcher->callback_queue_size_slow(), 1);
         // This should synchronously cancel the callback.
         task.Cancel();
@@ -513,7 +513,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelUnqueuedRead) {
   sync_completion_t completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_EQ(status, ZX_ERR_CANCELED);
         sync_completion_signal(&completion);
       });
@@ -544,7 +544,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
   sync_completion_t read_completion;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_EQ(status, ZX_ERR_CANCELED);
         sync_completion_signal(&read_completion);
       });
@@ -568,7 +568,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedRead) {
   channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) { sync_completion_signal(&read_completion); });
+                         zx_status_t status) { sync_completion_signal(&read_completion); });
   ASSERT_OK(channel_read->Begin(static_cast<fdf_dispatcher_t*>(unsync_dispatcher)));
 
   ASSERT_OK(sync_completion_wait(&read_completion, ZX_TIME_INFINITE));
@@ -603,7 +603,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedReadFails) {
   libsync::Completion read_block;
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         read_entered.Signal();
         ASSERT_OK(read_block.Wait(zx::time::infinite()));
         ASSERT_EQ(status, ZX_OK);
@@ -618,7 +618,7 @@ TEST_F(ChannelTest, UnsyncDispatcherCancelQueuedReadFails) {
   libsync::Completion read_complete;
   auto channel_read2 = std::make_unique<fdf::ChannelRead>(
       remote2.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_OK(status);  // We could not cancel this in time.
         read_complete.Signal();
       });
@@ -804,7 +804,7 @@ TEST_F(ChannelTest, OnFlightHandlesSignalledWhenPeerIsClosed) {
   sync_completion_t read_completion;
   auto channel_read_ = std::make_unique<fdf::ChannelRead>(
       on_flight_local, 0 /* options */,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         sync_completion_signal(&read_completion);
       });
   EXPECT_EQ(ZX_OK, channel_read_->Begin(fdf_dispatcher_));
@@ -872,7 +872,7 @@ class Message {
         num_handles_(static_cast<uint32_t>(handles.size())) {}
 
   // Writes a message to |channel|, with the data and handle buffers allocated using |arena|.
-  fdf_status_t Write(const fdf::Channel& channel, const fdf::Arena& arena, fdf_txid_t txid) const;
+  zx_status_t Write(const fdf::Channel& channel, const fdf::Arena& arena, fdf_txid_t txid) const;
 
   // Synchronously calls to |channel|, with the data and handle buffers allocated using |arena|.
   zx::status<fdf::Channel::ReadReturn> Call(const fdf::Channel& channel, const fdf::Arena& arena,
@@ -887,9 +887,8 @@ class Message {
   // The returned data buffer will contain |txid| and |data|,
   // and the returned handles buffer will either contain newly constructed event objects,
   // or the |handles_| set by the Message constructor.
-  fdf_status_t AllocateBuffers(const fdf::Arena& arena, fdf_txid_t txid, void** out_data,
-                               uint32_t* out_num_bytes,
-                               cpp20::span<zx_handle_t>* out_handles) const;
+  zx_status_t AllocateBuffers(const fdf::Arena& arena, fdf_txid_t txid, void** out_data,
+                              uint32_t* out_num_bytes, cpp20::span<zx_handle_t>* out_handles) const;
 
   uint32_t data_[kMaxDataSize] = {0};
   cpp20::span<zx_handle_t> handles_;
@@ -897,12 +896,12 @@ class Message {
   uint32_t num_handles_;
 };
 
-fdf_status_t Message::Write(const fdf::Channel& channel, const fdf::Arena& arena,
-                            fdf_txid_t txid) const {
+zx_status_t Message::Write(const fdf::Channel& channel, const fdf::Arena& arena,
+                           fdf_txid_t txid) const {
   void* data = nullptr;
   uint32_t num_bytes = 0;
   cpp20::span<zx_handle_t> handles;
-  fdf_status_t status = AllocateBuffers(arena, txid, &data, &num_bytes, &handles);
+  zx_status_t status = AllocateBuffers(arena, txid, &data, &num_bytes, &handles);
   if (status != ZX_OK) {
     return status;
   }
@@ -917,7 +916,7 @@ zx::status<fdf::Channel::ReadReturn> Message::Call(const fdf::Channel& channel,
   void* data = nullptr;
   uint32_t num_bytes = 0;
   cpp20::span<zx_handle_t> handles;
-  fdf_status_t status = AllocateBuffers(arena, 0, &data, &num_bytes, &handles);
+  zx_status_t status = AllocateBuffers(arena, 0, &data, &num_bytes, &handles);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -929,9 +928,9 @@ zx::status<fdf::Channel::ReadReturn> Message::Call(const fdf::Channel& channel,
 // The returned data buffer will contain |txid| and |data|,
 // and the returned handles buffer will either contain newly constructed event objects,
 // or the |handles_| set by the Message constructor.
-fdf_status_t Message::AllocateBuffers(const fdf::Arena& arena, fdf_txid_t txid, void** out_data,
-                                      uint32_t* out_num_bytes,
-                                      cpp20::span<zx_handle_t>* out_handles) const {
+zx_status_t Message::AllocateBuffers(const fdf::Arena& arena, fdf_txid_t txid, void** out_data,
+                                     uint32_t* out_num_bytes,
+                                     cpp20::span<zx_handle_t>* out_handles) const {
   uint32_t total_size = sizeof(fdf_txid_t) + data_size_;
 
   void* bytes = arena.Allocate(total_size);
@@ -1052,7 +1051,7 @@ void ReplyAndWait(const Message& request, uint32_t message_count, fdf::Channel s
       fdf_txid_t txid = *static_cast<fdf_txid_t*>(req.data);
 
       Message reply = Message(reply_data_size, reply_handle_count);
-      fdf_status_t status = reply.Write(svc, req.arena, txid);
+      zx_status_t status = reply.Write(svc, req.arena, txid);
       if (status != ZX_OK) {
         *error = "Failed to write reply.";
         return;
@@ -1164,7 +1163,7 @@ TEST_F(ChannelTest, CallManagedThreadAllowsSyncCalls) {
 
   auto sync_channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         // This is now running on a managed thread that allows sync calls.
         fdf::UnownedChannel unowned(channel_read->channel());
 
@@ -1187,7 +1186,7 @@ TEST_F(ChannelTest, CallManagedThreadAllowsSyncCalls) {
   // Wait for the call request and reply.
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       local_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         fdf::UnownedChannel unowned(channel_read->channel());
 
         auto read = unowned->Read(0);
@@ -1353,7 +1352,7 @@ TEST_F(ChannelTest, WriteWaitedHandle) {
 
   auto channel_read_ = std::make_unique<fdf::ChannelRead>(
       remote, 0 /* options */,
-      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {});
+      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {});
   ASSERT_OK(channel_read_->Begin(fdf_dispatcher_));
 
   void* handles_buf = arena_.Allocate(sizeof(fdf_handle_t));
@@ -1450,19 +1449,19 @@ TEST_F(ChannelTest, WaitAsyncClosedPeerNoPendingMsgs) {
 
   auto channel_read_ = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0 /* options */,
-      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {});
+      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {});
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, channel_read_->Begin(fdf_dispatcher_));
 }
 
 TEST_F(ChannelTest, WaitAsyncAlreadyWaiting) {
   auto channel_read_ = std::make_unique<fdf::ChannelRead>(
       local_.get(), 0 /* options */,
-      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {});
+      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {});
   EXPECT_OK(channel_read_->Begin(fdf_dispatcher_));
 
   auto channel_read2_ = std::make_unique<fdf::ChannelRead>(
       local_.get(), 0 /* options */,
-      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {});
+      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {});
   EXPECT_EQ(ZX_ERR_BAD_STATE, channel_read2_->Begin(fdf_dispatcher_));
 
   EXPECT_OK(fdf_channel_write(remote_.get(), 0, nullptr, nullptr, 0, nullptr, 0));
@@ -1577,7 +1576,7 @@ TEST_F(ChannelTest, CallTransferWaitedHandle) {
 
   auto channel_read_ = std::make_unique<fdf::ChannelRead>(
       channels->end0.get(), 0 /* options */,
-      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         ASSERT_EQ(status, ZX_ERR_PEER_CLOSED);
         delete channel_read;
       });
@@ -1657,7 +1656,7 @@ TEST_F(ChannelTest, CallManagedThreadDisallowsSyncCalls) {
 
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       remote_.get(), 0,
-      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         fdf::UnownedChannel unowned(channel_read->channel());
 
         auto read = unowned->Read(0);

@@ -80,7 +80,7 @@ class ChannelReadBase {
   // Returns |ZX_ERR_NOT_FOUND| if there was no pending wait either because it
   // is currently running (perhaps in a different thread), already scheduled to be run,
   // already completed, or had not been started.
-  fdf_status_t Cancel();
+  zx_status_t Cancel();
 
  protected:
   template <typename T>
@@ -110,7 +110,7 @@ class ChannelRead final : public ChannelReadBase {
   // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
   // the handler ran.
   using Handler = fit::function<void(fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                                     fdf_status_t status)>;
+                                     zx_status_t status)>;
 
   explicit ChannelRead(fdf_handle_t channel = ZX_HANDLE_INVALID, uint32_t options = 0,
                        Handler handler = nullptr);
@@ -122,7 +122,7 @@ class ChannelRead final : public ChannelReadBase {
 
  private:
   static void CallHandler(fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read,
-                          fdf_status_t status);
+                          zx_status_t status);
 
   Handler handler_;
 };

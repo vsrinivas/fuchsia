@@ -207,7 +207,7 @@ DriverWaiter::DriverWaiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
                                      fit::bind_member<&DriverWaiter::HandleChannelRead>(this)}} {}
 
 void DriverWaiter::HandleChannelRead(fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                                     fdf_status_t status) {
+                                     zx_status_t status) {
   if (status != ZX_OK) {
     fidl::UnbindInfo unbind_info;
     if (status == ZX_ERR_PEER_CLOSED) {
@@ -242,7 +242,7 @@ fidl::internal::DriverWaiter::CancellationResult DriverWaiter::Cancel() {
 
   if (options & FDF_DISPATCHER_OPTION_UNSYNCHRONIZED) {
     // Unsynchronized dispatcher.
-    fdf_status_t status = channel_read_.Cancel();
+    zx_status_t status = channel_read_.Cancel();
     ZX_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
 
     // When the dispatcher is unsynchronized, our |ChannelRead| handler will
@@ -257,7 +257,7 @@ fidl::internal::DriverWaiter::CancellationResult DriverWaiter::Cancel() {
   fdf_dispatcher_t* current_dispatcher = fdf_dispatcher_get_current_dispatcher();
   if (current_dispatcher == dispatcher) {
     // The binding is being torn down from a dispatcher thread.
-    fdf_status_t status = channel_read_.Cancel();
+    zx_status_t status = channel_read_.Cancel();
     switch (status) {
       case ZX_OK:
         return CancellationResult::kOk;

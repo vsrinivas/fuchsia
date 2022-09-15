@@ -94,12 +94,12 @@ void ProtocolTest::VerifyPeerClosed(fdf::Channel& channel, fdf::Dispatcher& disp
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       channel.get(), 0,
       [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) {
+                         zx_status_t status) {
         ASSERT_EQ(ZX_ERR_PEER_CLOSED, status);
         read_completion.Signal();
       });
   // Registering a channel read may fail if the peer is closed quickly enough.
-  fdf_status_t status = channel_read->Begin(dispatcher.get());
+  zx_status_t status = channel_read->Begin(dispatcher.get());
   ASSERT_TRUE((status == ZX_OK) || (status == ZX_ERR_PEER_CLOSED));
   if (status == ZX_OK) {
     ASSERT_OK(read_completion.Wait());
@@ -109,7 +109,7 @@ void ProtocolTest::VerifyPeerClosed(fdf::Channel& channel, fdf::Dispatcher& disp
 // Tests registering a protocol before a client connect request is received.
 TEST_F(ProtocolTest, RegisterThenConnect) {
   libsync::Completion callback_received;
-  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                      fdf::Channel channel) {
     ASSERT_EQ(dispatcher_remote_.get(), dispatcher);
     ASSERT_OK(status);
@@ -128,7 +128,7 @@ TEST_F(ProtocolTest, ConnectThenRegister) {
   ASSERT_OK(fdf::ProtocolConnect(std::move(token_local_), std::move(fdf_remote_)));
 
   libsync::Completion callback_received;
-  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                      fdf::Channel channel) {
     ASSERT_EQ(dispatcher_remote_.get(), dispatcher);
     ASSERT_OK(status);
@@ -169,7 +169,7 @@ TEST_F(ProtocolTest, MultiplePendingConnections) {
 
   for (uint32_t i = 0; i < kNumConns; i++) {
     libsync::Completion callback_received;
-    auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+    auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                        fdf::Channel channel) {
       ASSERT_EQ(dispatcher_remote_.get(), dispatcher);
       ASSERT_OK(status);
@@ -208,7 +208,7 @@ TEST_F(ProtocolTest, MultiplePendingConnectionsDifferentOrder) {
   for (uint32_t i = 0; i < kSkipSize; i++) {
     for (uint32_t j = i; j < kNumConns; j += kSkipSize) {
       libsync::Completion callback_received;
-      auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+      auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                          fdf::Channel channel) {
         ASSERT_EQ(dispatcher_remote_.get(), dispatcher);
         ASSERT_OK(status);
@@ -229,7 +229,7 @@ TEST_F(ProtocolTest, RegisterAfterDispatcherShutdown) {
   dispatcher_remote_.ShutdownAsync();
   ASSERT_OK(dispatcher_remote_shutdown_completion_.Wait());
 
-  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                      fdf::Channel channel) { ASSERT_FALSE(true); };
   fdf::Protocol protocol(handler);
   ASSERT_EQ(ZX_ERR_BAD_STATE,
@@ -240,7 +240,7 @@ TEST_F(ProtocolTest, RegisterAfterDispatcherShutdown) {
 // but before the connection callback has happened.
 TEST_F(ProtocolTest, DispatcherShutdown) {
   libsync::Completion callback_received;
-  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                      fdf::Channel channel) {
     ASSERT_EQ(dispatcher_remote_.get(), dispatcher);
     ASSERT_EQ(ZX_ERR_CANCELED, status);
@@ -264,7 +264,7 @@ TEST_F(ProtocolTest, DispatcherShutdown) {
 // Tests shutting down a dispatcher at the same time the peer token is being closed.
 TEST_F(ProtocolTest, DispatcherShutdownAndPeerClosed) {
   libsync::Completion callback_received;
-  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                      fdf::Channel channel) {
     ASSERT_EQ(dispatcher_remote_.get(), dispatcher);
     ASSERT_EQ(ZX_ERR_CANCELED, status);
@@ -287,7 +287,7 @@ TEST_F(ProtocolTest, DispatcherShutdownAndPeerClosed) {
 // without connecting.
 TEST_F(ProtocolTest, RegisterThenPeerClosed) {
   libsync::Completion callback_received;
-  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                      fdf::Channel channel) {
     ASSERT_EQ(dispatcher_remote_.get(), dispatcher);
     ASSERT_EQ(ZX_ERR_CANCELED, status);
@@ -307,7 +307,7 @@ TEST_F(ProtocolTest, PeerClosedThenRegister) {
   token_local_.reset();
 
   libsync::Completion callback_received;
-  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                      fdf::Channel channel) {
     ASSERT_EQ(dispatcher_remote_.get(), dispatcher);
     ASSERT_EQ(ZX_ERR_CANCELED, status);
@@ -346,7 +346,7 @@ TEST_F(ProtocolTest, ConnectWrongTokenType) {
   ASSERT_EQ(ZX_ERR_BAD_HANDLE, fdf_token_exchange(bad_token_local.release(), fdf_local_.release()));
 }
 
-void NotCalledHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, fdf_status_t status,
+void NotCalledHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, zx_status_t status,
                       fdf_handle_t channel) {
   ASSERT_TRUE(false);
 }
@@ -366,7 +366,7 @@ TEST_F(ProtocolTest, ConnectBadFdfHandle) {
 }
 
 TEST_F(ProtocolTest, RegisterNoDispatcher) {
-  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, fdf_status_t status,
+  auto handler = [&](fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol, zx_status_t status,
                      fdf::Channel channel) { ASSERT_FALSE(true); };
   fdf::Protocol protocol(handler);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, protocol.Register(std::move(token_remote_), nullptr));
@@ -375,13 +375,13 @@ TEST_F(ProtocolTest, RegisterNoDispatcher) {
 struct ProtocolHandler : fdf_token_t {
   ProtocolHandler() : fdf_token_t{&Handler} {}
 
-  void OnExchange(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, fdf_status_t status,
+  void OnExchange(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, zx_status_t status,
                   fdf_handle_t channel) {
     ASSERT_OK(status);
     completion.Signal();
   }
 
-  static void Handler(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, fdf_status_t status,
+  static void Handler(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, zx_status_t status,
                       fdf_handle_t channel) {
     ASSERT_OK(status);
 

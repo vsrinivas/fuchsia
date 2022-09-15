@@ -15,9 +15,9 @@
 
 namespace {
 
-fdf_status_t CheckReadArgs(uint32_t options, fdf_arena_t** out_arena, void** out_data,
-                           uint32_t* out_num_bytes, zx_handle_t** out_handles,
-                           uint32_t* out_num_handles) {
+zx_status_t CheckReadArgs(uint32_t options, fdf_arena_t** out_arena, void** out_data,
+                          uint32_t* out_num_bytes, zx_handle_t** out_handles,
+                          uint32_t* out_num_handles) {
   // |out_arena| is required except for empty messages.
   if (!out_arena && (out_data || out_handles)) {
     return ZX_ERR_INVALID_ARGS;
@@ -30,7 +30,7 @@ fdf_status_t CheckReadArgs(uint32_t options, fdf_arena_t** out_arena, void** out
 namespace driver_runtime {
 
 // static
-fdf_status_t Channel::Create(uint32_t options, fdf_handle_t* out0, fdf_handle_t* out1) {
+zx_status_t Channel::Create(uint32_t options, fdf_handle_t* out0, fdf_handle_t* out1) {
   auto shared_state0 = fbl::AdoptRef(new FdfChannelSharedState());
   auto shared_state1 = shared_state0;
 
@@ -71,9 +71,9 @@ void Channel::Init(const fbl::RefPtr<Channel>& peer) __TA_NO_THREAD_SAFETY_ANALY
   peer_ = peer;
 }
 
-fdf_status_t Channel::CheckWriteArgs(uint32_t options, fdf_arena_t* arena, void* data,
-                                     uint32_t num_bytes, zx_handle_t* handles,
-                                     uint32_t num_handles) {
+zx_status_t Channel::CheckWriteArgs(uint32_t options, fdf_arena_t* arena, void* data,
+                                    uint32_t num_bytes, zx_handle_t* handles,
+                                    uint32_t num_handles) {
   // Require an arena if data or handles are populated (empty messages are allowed).
   if (!arena && (data || handles)) {
     return ZX_ERR_INVALID_ARGS;
@@ -104,9 +104,9 @@ fdf_status_t Channel::CheckWriteArgs(uint32_t options, fdf_arena_t* arena, void*
   return ZX_OK;
 }
 
-fdf_status_t Channel::Write(uint32_t options, fdf_arena_t* arena, void* data, uint32_t num_bytes,
-                            zx_handle_t* handles, uint32_t num_handles) {
-  fdf_status_t status = CheckWriteArgs(options, arena, data, num_bytes, handles, num_handles);
+zx_status_t Channel::Write(uint32_t options, fdf_arena_t* arena, void* data, uint32_t num_bytes,
+                           zx_handle_t* handles, uint32_t num_handles) {
+  zx_status_t status = CheckWriteArgs(options, arena, data, num_bytes, handles, num_handles);
   if (status != ZX_OK) {
     return status;
   }
@@ -170,10 +170,10 @@ bool Channel::WriteSelfLocked(MessagePacketOwner msg, CallbackRequest** out_call
   return false;
 }
 
-fdf_status_t Channel::Read(uint32_t options, fdf_arena_t** out_arena, void** out_data,
-                           uint32_t* out_num_bytes, zx_handle_t** out_handles,
-                           uint32_t* out_num_handles) {
-  fdf_status_t status =
+zx_status_t Channel::Read(uint32_t options, fdf_arena_t** out_arena, void** out_data,
+                          uint32_t* out_num_bytes, zx_handle_t** out_handles,
+                          uint32_t* out_num_handles) {
+  zx_status_t status =
       CheckReadArgs(options, out_arena, out_data, out_num_bytes, out_handles, out_num_handles);
   if (status != ZX_OK) {
     return status;
@@ -200,8 +200,8 @@ fdf_status_t Channel::Read(uint32_t options, fdf_arena_t** out_arena, void** out
   return ZX_OK;
 }
 
-fdf_status_t Channel::WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_read_t* channel_read,
-                                uint32_t options) {
+zx_status_t Channel::WaitAsync(struct fdf_dispatcher* dispatcher, fdf_channel_read_t* channel_read,
+                               uint32_t options) {
   fbl::RefPtr<Dispatcher> dispatcher_ref;
   bool queue_callback = false;
   {
@@ -269,13 +269,13 @@ bool Channel::IsTxidInUseLocked(fdf_txid_t txid) {
   return false;
 }
 
-fdf_status_t Channel::Call(uint32_t options, zx_time_t deadline,
-                           const fdf_channel_call_args_t* args) {
+zx_status_t Channel::Call(uint32_t options, zx_time_t deadline,
+                          const fdf_channel_call_args_t* args) {
   if (!args) {
     return ZX_ERR_INVALID_ARGS;
   }
-  fdf_status_t status = CheckWriteArgs(options, args->wr_arena, args->wr_data, args->wr_num_bytes,
-                                       args->wr_handles, args->wr_num_handles);
+  zx_status_t status = CheckWriteArgs(options, args->wr_arena, args->wr_data, args->wr_num_bytes,
+                                      args->wr_handles, args->wr_num_handles);
   if (status != ZX_OK) {
     return status;
   }
@@ -359,7 +359,7 @@ fdf_status_t Channel::Call(uint32_t options, zx_time_t deadline,
   }
 }
 
-fdf_status_t Channel::CancelWait() {
+zx_status_t Channel::CancelWait() {
   fbl::RefPtr<Dispatcher> dispatcher;
   {
     fbl::AutoLock lock(get_lock());
@@ -462,7 +462,7 @@ std::unique_ptr<driver_runtime::CallbackRequest> Channel::TakeCallbackRequestLoc
   ZX_ASSERT(!callback_request_->IsPending());
   driver_runtime::Callback callback =
       [channel = fbl::RefPtr<Channel>(this)](
-          std::unique_ptr<driver_runtime::CallbackRequest> callback_request, fdf_status_t status) {
+          std::unique_ptr<driver_runtime::CallbackRequest> callback_request, zx_status_t status) {
         channel->DispatcherCallback(std::move(callback_request), status);
       };
   callback_request_->SetCallback(static_cast<fdf_dispatcher_t*>(dispatcher_.get()),
@@ -479,7 +479,7 @@ void Channel::ResetCallbackRequestStateLocked(std::unique_ptr<CallbackRequest> c
 }
 
 void Channel::DispatcherCallback(std::unique_ptr<driver_runtime::CallbackRequest> callback_request,
-                                 fdf_status_t status) {
+                                 zx_status_t status) {
   ZX_ASSERT(!callback_request->IsPending());
 
   fbl::RefPtr<Dispatcher> dispatcher = nullptr;

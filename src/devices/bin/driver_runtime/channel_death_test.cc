@@ -28,7 +28,7 @@ TEST(ChannelDeathTest, CloseCrashesIfPendingWaitNotCancelled) {
 
     auto channel_read = std::make_unique<fdf::ChannelRead>(
         remote.get(), 0,
-        [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        [](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
           ASSERT_FALSE(true);  // This should never be called.
         });
     ASSERT_OK(channel_read->Begin(dispatcher->get()));

@@ -32,8 +32,8 @@ zx::status<TokenManager::TokenId> ValidateToken(zx_handle_t token, bool use_prim
 
 }  // namespace
 
-fdf_status_t TokenManager::Register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
-                                    fdf_token_t* fdf_token) {
+zx_status_t TokenManager::Register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
+                                   fdf_token_t* fdf_token) {
   auto validate_status = ValidateToken(token, true /* use_primary_koid */);
   if (!validate_status.is_ok()) {
     zx_handle_close(token);
@@ -79,7 +79,7 @@ fdf_status_t TokenManager::Register(zx_handle_t token, fdf_dispatcher_t* dispatc
   return ZX_OK;
 }
 
-fdf_status_t TokenManager::Exchange(zx_handle_t token, fdf_handle_t handle) {
+zx_status_t TokenManager::Exchange(zx_handle_t token, fdf_handle_t handle) {
   // Retrieve the token id using the koid of the channel peer, so we can locate the
   // corresponding registered protocol.
   auto validate_status = ValidateToken(token, false /* use_primary_koid */);

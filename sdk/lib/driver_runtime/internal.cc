@@ -18,7 +18,7 @@ zx_status_t DriverShutdown::Begin(const void* driver, Handler shutdown_handler) 
   }
   driver_ = driver;
   handler_ = std::move(shutdown_handler);
-  fdf_status_t status = fdf_internal_shutdown_dispatchers_async(driver_, this);
+  zx_status_t status = fdf_internal_shutdown_dispatchers_async(driver_, this);
   if (status != ZX_OK) {
     driver_ = nullptr;
     handler_ = nullptr;

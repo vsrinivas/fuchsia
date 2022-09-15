@@ -25,8 +25,8 @@ class TokenManager {
   using TokenId = zx_koid_t;
 
   // Implementation of fdf_token_*.
-  fdf_status_t Register(zx_handle_t token, fdf_dispatcher_t* dispatcher, fdf_token_t* fdf_token);
-  fdf_status_t Exchange(zx_handle_t token, fdf_handle_t handle);
+  zx_status_t Register(zx_handle_t token, fdf_dispatcher_t* dispatcher, fdf_token_t* fdf_token);
+  zx_status_t Exchange(zx_handle_t token, fdf_handle_t handle);
 
   void SetGlobalDispatcher(async_dispatcher_t* dispatcher) {
     // We only expect this to be set once when the DispatcherCoordinator is created.

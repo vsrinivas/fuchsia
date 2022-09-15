@@ -11,7 +11,7 @@ Protocol::Protocol(Handler handler) : fdf_token_t{CallHandler}, handler_(std::mo
 
 Protocol::~Protocol() { ZX_DEBUG_ASSERT(!is_pending()); }
 
-fdf_status_t Protocol::Register(zx::channel token, fdf_dispatcher_t* dispatcher) {
+zx_status_t Protocol::Register(zx::channel token, fdf_dispatcher_t* dispatcher) {
   if (dispatcher_) {
     return ZX_ERR_BAD_STATE;
   }
@@ -26,7 +26,7 @@ fdf_status_t Protocol::Register(zx::channel token, fdf_dispatcher_t* dispatcher)
 }
 
 // static
-void Protocol::CallHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* token, fdf_status_t status,
+void Protocol::CallHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* token, zx_status_t status,
                            fdf_handle_t handle) {
   auto self = static_cast<Protocol*>(token);
   ZX_ASSERT(self->handler_);
@@ -34,7 +34,7 @@ void Protocol::CallHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* token, fdf
   self->handler_(dispatcher, self, status, fdf::Channel(handle));
 }
 
-fdf_status_t ProtocolConnect(zx::channel token, fdf::Channel channel) {
+zx_status_t ProtocolConnect(zx::channel token, fdf::Channel channel) {
   return fdf_token_exchange(token.release(), channel.release());
 }
 

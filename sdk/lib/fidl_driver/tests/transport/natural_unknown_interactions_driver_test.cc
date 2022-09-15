@@ -305,7 +305,7 @@ struct ReadResult {
     auto channel_read = std::make_unique<fdf::ChannelRead>(
         channel.get(), 0,
         [&read_completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                           fdf_status_t status) { read_completion.Signal(); });
+                           zx_status_t status) { read_completion.Signal(); });
     status = channel_read->Begin(dispatcher);
     if (status != ZX_OK)
       return;

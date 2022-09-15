@@ -30,7 +30,7 @@ zx::status<std::unique_ptr<fdf::ChannelRead>> RegisterChannelReadMultiple(
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       channel.get(), 0 /* options */,
       [=, num_read = 0u](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status) mutable {
+                         zx_status_t status) mutable {
         ASSERT_OK(status);
 
         fdf::UnownedChannel channel(channel_read->channel());
@@ -55,7 +55,7 @@ zx::status<std::unique_ptr<fdf::ChannelRead>> RegisterChannelReadMultiple(
         sync_completion_signal(completion);
       });
 
-  fdf_status_t status = channel_read->Begin(dispatcher.get());
+  zx_status_t status = channel_read->Begin(dispatcher.get());
   if (status != ZX_OK) {
     return zx::error(status);
   }

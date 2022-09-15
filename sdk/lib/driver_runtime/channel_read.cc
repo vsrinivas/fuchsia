@@ -24,7 +24,7 @@ zx_status_t ChannelReadBase::Begin(fdf_dispatcher_t* dispatcher) {
     dispatcher_ = dispatcher;
   }
 
-  fdf_status_t status = fdf_channel_wait_async(dispatcher, &channel_read_, channel_read_.options);
+  zx_status_t status = fdf_channel_wait_async(dispatcher, &channel_read_, channel_read_.options);
   if (status != ZX_OK) {
     std::lock_guard<std::mutex> lock(lock_);
     dispatcher_ = nullptr;
@@ -32,7 +32,7 @@ zx_status_t ChannelReadBase::Begin(fdf_dispatcher_t* dispatcher) {
   return status;
 }
 
-fdf_status_t ChannelReadBase::Cancel() {
+zx_status_t ChannelReadBase::Cancel() {
   std::lock_guard<std::mutex> lock(lock_);
 
   // Either the user has not called |Begin|, or the callback was dispatched before
@@ -42,7 +42,7 @@ fdf_status_t ChannelReadBase::Cancel() {
   }
   // It should be safe to hold the lock while we cancel, as we should not reentrantly
   // call into the driver.
-  fdf_status_t status = fdf_channel_cancel_wait(channel());
+  zx_status_t status = fdf_channel_cancel_wait(channel());
 
   // Check if we are expecting a callback (in the case of unsynchronized dispatchers),
   // in which case we will not clear |dispatcher_| until the callback is dispatched.
@@ -64,7 +64,7 @@ ChannelRead::~ChannelRead() {
 }
 
 void ChannelRead::CallHandler(fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read,
-                              fdf_status_t status) {
+                              zx_status_t status) {
   auto self = Dispatch<ChannelRead>(read);
   self->handler_(dispatcher, self, status);
 }

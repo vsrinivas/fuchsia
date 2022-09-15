@@ -53,12 +53,12 @@ void fdf_internal_pop_driver();
 //
 // |driver| is an opaque pointer to the driver object. It will be used to uniquely identify
 // the driver.
-fdf_status_t fdf_internal_dispatcher_create_with_owner(const void* driver, uint32_t options,
-                                                       const char* name, size_t name_len,
-                                                       const char* scheduler_role,
-                                                       size_t scheduler_role_len,
-                                                       fdf_dispatcher_shutdown_observer_t* observer,
-                                                       fdf_dispatcher_t** dispatcher);
+zx_status_t fdf_internal_dispatcher_create_with_owner(const void* driver, uint32_t options,
+                                                      const char* name, size_t name_len,
+                                                      const char* scheduler_role,
+                                                      size_t scheduler_role_len,
+                                                      fdf_dispatcher_shutdown_observer_t* observer,
+                                                      fdf_dispatcher_t** dispatcher);
 
 // Returns the driver on top of the the thread's current call stack.
 // Returns NULL if no drivers are on the stack.
@@ -99,7 +99,7 @@ void fdf_internal_wait_until_all_dispatchers_destroyed();
 // Returns ZX_OK if successful and |observer| will be notified.
 // Returns ZX_ERR_INVALID_ARGS if no driver matching |driver| was found.
 // Returns ZX_ERR_BAD_STATE if a driver shutdown observer was already registered.
-fdf_status_t fdf_internal_shutdown_dispatchers_async(
+zx_status_t fdf_internal_shutdown_dispatchers_async(
     const void* driver, fdf_internal_driver_shutdown_observer_t* observer);
 
 __END_CDECLS

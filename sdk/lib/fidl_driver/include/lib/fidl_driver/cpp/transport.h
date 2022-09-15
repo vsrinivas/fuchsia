@@ -97,7 +97,7 @@ class DriverWaiter : public TransportWaiter {
 
  private:
   void HandleChannelRead(fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                         fdf_status_t status);
+                         zx_status_t status);
 
   fidl_handle_t handle_;
   async_dispatcher_t* dispatcher_;

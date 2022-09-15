@@ -76,7 +76,7 @@ zx_status_t Device::OnRuntimeConnect(fdf::Channel channel) {
 
   channel_read_ = std::make_unique<fdf::ChannelRead>(
       client_.get(), 0 /* options */,
-      [this](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+      [this](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
         HandleRuntimeRequest(dispatcher, channel_read, status);
       });
   return channel_read_->Begin(dispatcher_.get());

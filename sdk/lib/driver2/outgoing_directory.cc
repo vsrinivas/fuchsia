@@ -24,7 +24,7 @@ OutgoingDirectory& OutgoingDirectory::operator=(OutgoingDirectory&& other) noexc
 void OutgoingDirectory::RegisterRuntimeToken(zx::channel token, AnyHandler handler) {
   auto token_connect_handler = [handler = std::move(handler)](
                                    fdf_dispatcher_t* dispatcher, fdf::Protocol* protocol,
-                                   fdf_status_t status, fdf::Channel channel) mutable {
+                                   zx_status_t status, fdf::Channel channel) mutable {
     if (status == ZX_OK) {
       ZX_ASSERT(channel.is_valid());
       handler(fidl::internal::MakeAnyTransport(std::move(channel)));

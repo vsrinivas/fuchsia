@@ -109,7 +109,7 @@ void Device::SendRequestAsync(fdf::Arena arena, void* req, uint32_t req_size,
       ch_to_parent_.get(), 0 /* options */,
       [async_completer = completer.ToAsync()](fdf_dispatcher_t* dispatcher,
                                               fdf::ChannelRead* channel_read,
-                                              fdf_status_t status) mutable {
+                                              zx_status_t status) mutable {
         fdf::UnownedChannel channel(channel_read->channel());
         auto read = channel->Read(0);
         if (read.is_error()) {

@@ -43,7 +43,7 @@ class RuntimeTestCase : public zxtest::Test {
   // Example usage:
   //   DispatcherShutdownObserver observer;
   //   driver_runtime::Dispatcher* dispatcher;
-  //   fdf_status_t status =
+  //   zx_status_t status =
   //       driver_runtime::Dispatcher::Create(..., observer.fdf_observer(), &dispatcher);
   //   ...
   //   dispatcher->Destroy();

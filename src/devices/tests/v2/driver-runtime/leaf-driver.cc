@@ -91,7 +91,7 @@ class LeafDriver {
     fpromise::bridge<void, zx_status_t> bridge;
     auto callback = [completer = std::move(bridge.completer), this](fdf_dispatcher_t* dispatcher,
                                                                     fdf::ChannelRead* channel_read,
-                                                                    fdf_status_t status) mutable {
+                                                                    zx_status_t status) mutable {
       if (status != ZX_OK) {
         FDF_LOG(ERROR, "ChannelRead callback got failed status: %u", status);
         completer.complete_error(status);

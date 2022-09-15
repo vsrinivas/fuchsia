@@ -37,7 +37,7 @@ __BEGIN_CDECLS
 //    ...
 //
 //    fdf_dispatcher_t* dispatcher;
-//    fdf_status_t status =
+//    zx_status_t status =
 //        fdf_dispatcher_create(0, scheduler_role, strlen(scheduler_role),
 //                              &my_observer.fdf_observer, &dispatcher);
 //
@@ -88,10 +88,10 @@ struct fdf_dispatcher_shutdown_observer {
 // and the dispatcher has completed its asynchronous shutdown.
 //
 // This must be called from a thread managed by the driver runtime.
-fdf_status_t fdf_dispatcher_create(uint32_t options, const char* name, size_t name_len,
-                                   const char* scheduler_role, size_t scheduler_role_len,
-                                   fdf_dispatcher_shutdown_observer_t* observer,
-                                   fdf_dispatcher_t** dispatcher);
+zx_status_t fdf_dispatcher_create(uint32_t options, const char* name, size_t name_len,
+                                  const char* scheduler_role, size_t scheduler_role_len,
+                                  fdf_dispatcher_shutdown_observer_t* observer,
+                                  fdf_dispatcher_t** dispatcher);
 
 // Returns the asynchronous dispatch interface.
 async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_t* dispatcher);

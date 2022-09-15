@@ -23,7 +23,7 @@ class CallbackRequest;
 // The inline target size is configured to fit the 3 arguments captured by the callback request
 // created in |Dispatcher::ScheduleTokenCallback|.
 using Callback =
-    fit::inline_callback<void(std::unique_ptr<CallbackRequest>, fdf_status_t), sizeof(void*) * 3>;
+    fit::inline_callback<void(std::unique_ptr<CallbackRequest>, zx_status_t), sizeof(void*) * 3>;
 
 // Wraps a callback so that it can be added to a list.
 class CallbackRequest
@@ -55,7 +55,7 @@ class CallbackRequest
   }
 
   // Calls the callback, returning ownership of the request back the original requester,
-  void Call(std::unique_ptr<CallbackRequest> callback_request, fdf_status_t status) {
+  void Call(std::unique_ptr<CallbackRequest> callback_request, zx_status_t status) {
     // If no particular callback reason was set, we will use the status provided by the dispatcher.
     if (reason_.has_value() && (*reason_ != ZX_OK)) {
       status = *reason_;
@@ -66,7 +66,7 @@ class CallbackRequest
     callback_(std::move(callback_request), status);
   }
 
-  void SetCallbackReason(fdf_status_t callback_reason) { reason_ = callback_reason; }
+  void SetCallbackReason(zx_status_t callback_reason) { reason_ = callback_reason; }
 
   // Returns whether a callback has been set via |SetCallback| and not yet been called.
   bool IsPending() { return !!callback_; }
@@ -95,7 +95,7 @@ class CallbackRequest
   struct fdf_dispatcher* dispatcher_ = nullptr;
   Callback callback_;
   // Reason for scheduling the callback.
-  std::optional<fdf_status_t> reason_;
+  std::optional<zx_status_t> reason_;
   // The async_dispatcher_t operation that this callback request is wrapping around.
   std::optional<void*> async_operation_;
 };

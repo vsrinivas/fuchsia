@@ -19,7 +19,7 @@ typedef struct fdf_channel_read fdf_channel_read_t;
 // The |status| is |ZX_ERR_CANCELED| if the dispatcher was shut down before
 // the read handler ran.
 typedef void(fdf_channel_read_handler_t)(fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read,
-                                         fdf_status_t status);
+                                         zx_status_t status);
 
 // Holds context for an asynchronous read operation and its handler.
 //

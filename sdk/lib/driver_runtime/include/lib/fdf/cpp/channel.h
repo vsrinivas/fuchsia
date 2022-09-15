@@ -37,7 +37,7 @@ namespace fdf {
 //
 //   auto channel_read = std::make_unique<fdf::ChannelRead>(
 //       channels->end0, 0,
-//       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+//       [&](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
 //         fdf::Channel channel(channel_read->channel());
 //         auto read_return = channel.Read(0);
 //         ...
@@ -185,7 +185,7 @@ class Channel {
         .rd_handles = &rd_handles,
         .rd_num_handles = &rd_num_handles,
     };
-    fdf_status_t status = fdf_channel_call(channel_, options, deadline.get(), &args);
+    zx_status_t status = fdf_channel_call(channel_, options, deadline.get(), &args);
     if (status != ZX_OK) {
       return zx::error(status);
     }

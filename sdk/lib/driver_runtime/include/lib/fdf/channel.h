@@ -19,12 +19,12 @@ __BEGIN_CDECLS
 // Example:
 //
 // // Read handler for asynchronous channel reads.
-// void handler(fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read, fdf_status_t status);
+// void handler(fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read, zx_status_t status);
 //
 // // Sends a request to the peer of |channel| and asynchronously waits for a response.
 // void send_request(fdf_handle_t channel, fdf_dispatcher_t* dispatcher dispatcher) {
 //   fdf_arena_t* arena;
-//   fdf_status_t status = fdf_arena_create(0, 'exam', 0, &arena);
+//   zx_status_t status = fdf_arena_create(0, 'exam', 0, &arena);
 //
 //   void* data = fdf_arena_allocate(arena, 0x1000);
 //   // Set the data to transfer
@@ -43,13 +43,13 @@ __BEGIN_CDECLS
 //   fdf_arena_destroy(arena);
 // }
 //
-// void handler(fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read, fdf_status_t status) {
+// void handler(fdf_dispatcher_t* dispatcher, fdf_channel_read_t* read, zx_status_t status) {
 //   fdf_arena_t* arena;
 //   void* data data;
 //   uint32_t data_size;
 //   zx_handle_t* handles;
 //   uint32_t num_handles;
-//   fdf_status_t status = fdf_channel_read(read->channel, 0, &arena, &data, &data_size,
+//   zx_status_t status = fdf_channel_read(read->channel, 0, &arena, &data, &data_size,
 //                                          &handles, &num_handles);
 //   // Process the read data.
 //   ...
@@ -64,7 +64,7 @@ __BEGIN_CDECLS
 // Defined in <lib/fdf/channel_read.h>
 struct fdf_channel_read;
 
-fdf_status_t fdf_channel_create(uint32_t options, fdf_handle_t* out0, fdf_handle_t* out1);
+zx_status_t fdf_channel_create(uint32_t options, fdf_handle_t* out0, fdf_handle_t* out1);
 
 // Attempts to write a message to the channel specified by |channel|.
 // The pointers |data| and |handles| may be NULL if their respective sizes are zero.
@@ -85,9 +85,9 @@ fdf_status_t fdf_channel_create(uint32_t options, fdf_handle_t* out0, fdf_handle
 // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
 //
 // This operation is thread-safe.
-fdf_status_t fdf_channel_write(fdf_handle_t channel, uint32_t options, fdf_arena_t* arena,
-                               void* data, uint32_t num_bytes, zx_handle_t* handles,
-                               uint32_t num_handles);
+zx_status_t fdf_channel_write(fdf_handle_t channel, uint32_t options, fdf_arena_t* arena,
+                              void* data, uint32_t num_bytes, zx_handle_t* handles,
+                              uint32_t num_handles);
 
 // Attempts to read the first message from the channel specified by |channel| into
 // the |data| and |handles| buffers.
@@ -105,9 +105,9 @@ fdf_status_t fdf_channel_write(fdf_handle_t channel, uint32_t options, fdf_arena
 // side of the channel is closed.
 //
 // This operation is thread-safe.
-fdf_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_t** arena,
-                              void** data, uint32_t* num_bytes, zx_handle_t** handles,
-                              uint32_t* num_handles);
+zx_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_t** arena,
+                             void** data, uint32_t* num_bytes, zx_handle_t** handles,
+                             uint32_t* num_handles);
 
 // Begins asynchronously waiting for the channel set in |channel_read| to be readable.
 // The |dispatcher| invokes the handler when the wait completes.
@@ -131,8 +131,8 @@ fdf_status_t fdf_channel_read(fdf_handle_t channel, uint32_t options, fdf_arena_
 // Returns |ZX_ERR_UNAVAILABLE| if |dispatcher| is shutting down.
 //
 // This operation is thread-safe.
-fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
-                                    struct fdf_channel_read* channel_read, uint32_t options);
+zx_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
+                                   struct fdf_channel_read* channel_read, uint32_t options);
 
 // Cancels any pending callback registered via |fdf_channel_wait_async|.
 // How it is handled depends on whether the dispatcher it was registered with is
@@ -147,7 +147,7 @@ fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
 // Returns |ZX_ERR_NOT_FOUND| if there was no pending wait either because it
 // is currently running (perhaps in a different thread), already scheduled to be run,
 // already completed, or had not been started.
-fdf_status_t fdf_channel_cancel_wait(fdf_handle_t handle);
+zx_status_t fdf_channel_cancel_wait(fdf_handle_t handle);
 
 // fdf_channel_call() is like a combined fdf_channel_write(), fdf_channel_wait_async(),
 // and fdf_channel_read(), with the addition of a feature where a transaction id at
@@ -187,8 +187,8 @@ fdf_status_t fdf_channel_cancel_wait(fdf_handle_t handle);
 // that does not allow sync calls.
 //
 // This operation is thread-safe.
-fdf_status_t fdf_channel_call(fdf_handle_t handle, uint32_t options, zx_time_t deadline,
-                              const fdf_channel_call_args_t* args);
+zx_status_t fdf_channel_call(fdf_handle_t handle, uint32_t options, zx_time_t deadline,
+                             const fdf_channel_call_args_t* args);
 
 // If there is a pending callback registered via |fdf_channel_wait_async|,
 // it must be cancelled before this is called. For unsynchronized dispatchers,

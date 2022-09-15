@@ -70,7 +70,7 @@ class RootDriver : public driver::RuntimeConnectorImpl {
     // Wait for messages from the child.
     auto channel_read = std::make_unique<fdf::ChannelRead>(
         channel.release(), 0 /* options */,
-        [this](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, fdf_status_t status) {
+        [this](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read, zx_status_t status) {
           if (status == ZX_OK) {
             zx_status_t status =
                 HandleChildRuntimeRequest(fdf::UnownedChannel(channel_read->channel()));

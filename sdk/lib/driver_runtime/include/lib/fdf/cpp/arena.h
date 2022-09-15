@@ -51,7 +51,7 @@ class Arena {
   // ZX_ERR_NO_MEMORY: Failed due to a lack of memory.
   static zx::status<Arena> Create(uint32_t options, fdf_arena_tag_t tag) {
     fdf_arena_t* arena;
-    fdf_status_t status = fdf_arena_create(options, tag, &arena);
+    zx_status_t status = fdf_arena_create(options, tag, &arena);
     if (status != ZX_OK) {
       return zx::error(status);
     }
@@ -116,7 +116,7 @@ class Arena {
  private:
   static fdf_arena_t* CreateArenaOrAssert(uint32_t tag) {
     fdf_arena_t* arena;
-    fdf_status_t status = fdf_arena_create(0, tag, &arena);
+    zx_status_t status = fdf_arena_create(0, tag, &arena);
     ZX_ASSERT(status == ZX_OK);
     return arena;
   }

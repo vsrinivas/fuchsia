@@ -19,7 +19,7 @@ typedef struct fdf_token fdf_token_t;
 // The status is |ZX_ERR_CANCELED| if the dispatcher was shut down before the
 // exchange was completed, or the peer token handle has been closed.
 typedef void(fdf_token_exchange_handler_t)(fdf_dispatcher_t* dispatcher, fdf_token_t* token,
-                                           fdf_status_t status, fdf_handle_t handle);
+                                           zx_status_t status, fdf_handle_t handle);
 
 // Holds context for a registered token which is pending exchange for a runtime handle.
 //
@@ -44,8 +44,8 @@ struct fdf_token {
 // Returns |ZX_ERR_INVALID_ARGS| if |handler| or |dispatcher| is NULL.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down, or |handler|
 // has already been registered.
-fdf_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
-                                fdf_token_t* handler);
+zx_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
+                               fdf_token_t* handler);
 
 // Exchanges |token| with a fdf handle. The token exchange handler which was,
 // or will be registered with the channel peer of |token| will receive |handle|.
@@ -57,7 +57,7 @@ fdf_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
 // Returns |ZX_ERR_BAD_HANDLE| if |token| is not a valid channel handle,
 // or |handle| is not a valid FDF handle.
 // Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
-fdf_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle);
+zx_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle);
 
 __END_CDECLS
 

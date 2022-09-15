@@ -18,7 +18,7 @@
 
 // fdf_arena_t interface
 
-__EXPORT fdf_status_t fdf_arena_create(uint32_t options, uint32_t tag, fdf_arena_t** out_arena) {
+__EXPORT zx_status_t fdf_arena_create(uint32_t options, uint32_t tag, fdf_arena_t** out_arena) {
   return fdf_arena::Create(options, tag, out_arena);
 }
 
@@ -37,16 +37,16 @@ __EXPORT void fdf_arena_destroy(fdf_arena_t* arena) { arena->Destroy(); }
 // fdf_channel_t interface
 
 __EXPORT
-fdf_status_t fdf_channel_create(uint32_t options, fdf_handle_t* out0, fdf_handle_t* out1) {
+zx_status_t fdf_channel_create(uint32_t options, fdf_handle_t* out0, fdf_handle_t* out1) {
   return driver_runtime::Channel::Create(options, out0, out1);
 }
 
 __EXPORT
-fdf_status_t fdf_channel_write(fdf_handle_t channel_handle, uint32_t options, fdf_arena_t* arena,
-                               void* data, uint32_t num_bytes, zx_handle_t* handles,
-                               uint32_t num_handles) {
+zx_status_t fdf_channel_write(fdf_handle_t channel_handle, uint32_t options, fdf_arena_t* arena,
+                              void* data, uint32_t num_bytes, zx_handle_t* handles,
+                              uint32_t num_handles) {
   fbl::RefPtr<driver_runtime::Channel> channel;
-  fdf_status_t status =
+  zx_status_t status =
       driver_runtime::Handle::GetObject<driver_runtime::Channel>(channel_handle, &channel);
   // TODO(fxbug.dev/87046): we may want to consider killing the process.
   ZX_ASSERT(status == ZX_OK);
@@ -54,11 +54,11 @@ fdf_status_t fdf_channel_write(fdf_handle_t channel_handle, uint32_t options, fd
 }
 
 __EXPORT
-fdf_status_t fdf_channel_read(fdf_handle_t channel_handle, uint32_t options, fdf_arena_t** arena,
-                              void** data, uint32_t* num_bytes, zx_handle_t** handles,
-                              uint32_t* num_handles) {
+zx_status_t fdf_channel_read(fdf_handle_t channel_handle, uint32_t options, fdf_arena_t** arena,
+                             void** data, uint32_t* num_bytes, zx_handle_t** handles,
+                             uint32_t* num_handles) {
   fbl::RefPtr<driver_runtime::Channel> channel;
-  fdf_status_t status =
+  zx_status_t status =
       driver_runtime::Handle::GetObject<driver_runtime::Channel>(channel_handle, &channel);
   // TODO(fxbug.dev/87046): we may want to consider killing the process.
   ZX_ASSERT(status == ZX_OK);
@@ -66,32 +66,32 @@ fdf_status_t fdf_channel_read(fdf_handle_t channel_handle, uint32_t options, fdf
 }
 
 __EXPORT
-fdf_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
-                                    fdf_channel_read_t* channel_read, uint32_t options) {
+zx_status_t fdf_channel_wait_async(struct fdf_dispatcher* dispatcher,
+                                   fdf_channel_read_t* channel_read, uint32_t options) {
   if (!channel_read) {
     return ZX_ERR_INVALID_ARGS;
   }
   fbl::RefPtr<driver_runtime::Channel> channel;
-  fdf_status_t status =
+  zx_status_t status =
       driver_runtime::Handle::GetObject<driver_runtime::Channel>(channel_read->channel, &channel);
   // TODO(fxbug.dev/87046): we may want to consider killing the process.
   ZX_ASSERT(status == ZX_OK);
   return channel->WaitAsync(dispatcher, channel_read, options);
 }
 
-__EXPORT fdf_status_t fdf_channel_call(fdf_handle_t channel_handle, uint32_t options,
-                                       zx_time_t deadline, const fdf_channel_call_args_t* args) {
+__EXPORT zx_status_t fdf_channel_call(fdf_handle_t channel_handle, uint32_t options,
+                                      zx_time_t deadline, const fdf_channel_call_args_t* args) {
   fbl::RefPtr<driver_runtime::Channel> channel;
-  fdf_status_t status =
+  zx_status_t status =
       driver_runtime::Handle::GetObject<driver_runtime::Channel>(channel_handle, &channel);
   // TODO(fxbug.dev/87046): we may want to consider killing the process.
   ZX_ASSERT(status == ZX_OK);
   return channel->Call(options, deadline, args);
 }
 
-__EXPORT fdf_status_t fdf_channel_cancel_wait(fdf_handle_t channel_handle) {
+__EXPORT zx_status_t fdf_channel_cancel_wait(fdf_handle_t channel_handle) {
   fbl::RefPtr<driver_runtime::Channel> channel;
-  fdf_status_t status =
+  zx_status_t status =
       driver_runtime::Handle::GetObject<driver_runtime::Channel>(channel_handle, &channel);
   // TODO(fxbug.dev/87046): we may want to consider killing the process.
   ZX_ASSERT(status == ZX_OK);
@@ -111,7 +111,7 @@ __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
   ZX_ASSERT(handle);
 
   fbl::RefPtr<driver_runtime::Channel> channel;
-  fdf_status_t status = handle->GetObject<driver_runtime::Channel>(&channel);
+  zx_status_t status = handle->GetObject<driver_runtime::Channel>(&channel);
   if (status != ZX_OK) {
     return;
   }
@@ -121,10 +121,10 @@ __EXPORT void fdf_handle_close(fdf_handle_t channel_handle) {
 }
 
 // fdf_dispatcher_t interface
-__EXPORT fdf_status_t fdf_dispatcher_create(uint32_t options, const char* name, size_t name_len,
-                                            const char* scheduler_role, size_t scheduler_role_len,
-                                            fdf_dispatcher_shutdown_observer_t* observer,
-                                            fdf_dispatcher_t** out_dispatcher) {
+__EXPORT zx_status_t fdf_dispatcher_create(uint32_t options, const char* name, size_t name_len,
+                                           const char* scheduler_role, size_t scheduler_role_len,
+                                           fdf_dispatcher_shutdown_observer_t* observer,
+                                           fdf_dispatcher_t** out_dispatcher) {
   driver_runtime::Dispatcher* dispatcher;
   auto status = driver_runtime::Dispatcher::Create(
       options, std::string_view(name, name_len),
@@ -158,12 +158,12 @@ __EXPORT fdf_dispatcher_t* fdf_dispatcher_get_current_dispatcher() {
   return static_cast<fdf_dispatcher_t*>(driver_context::GetCurrentDispatcher());
 }
 
-__EXPORT fdf_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
-                                         fdf_token_t* handler) {
+__EXPORT zx_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
+                                        fdf_token_t* handler) {
   return driver_runtime::DispatcherCoordinator::TokenRegister(token, dispatcher, handler);
 }
 
-__EXPORT fdf_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle) {
+__EXPORT zx_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle) {
   return driver_runtime::DispatcherCoordinator::TokenExchange(token, handle);
 }
 
@@ -171,7 +171,7 @@ __EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::Pus
 
 __EXPORT void fdf_internal_pop_driver() { driver_context::PopDriver(); }
 
-__EXPORT fdf_status_t fdf_internal_dispatcher_create_with_owner(
+__EXPORT zx_status_t fdf_internal_dispatcher_create_with_owner(
     const void* driver, uint32_t options, const char* name, size_t name_len,
     const char* scheduler_role, size_t scheduler_role_len,
     fdf_dispatcher_shutdown_observer_t* observer, fdf_dispatcher_t** out_dispatcher) {
@@ -201,7 +201,7 @@ __EXPORT void fdf_internal_wait_until_dispatcher_idle(fdf_dispatcher_t* dispatch
   return dispatcher->WaitUntilIdle();
 }
 
-__EXPORT fdf_status_t fdf_internal_shutdown_dispatchers_async(
+__EXPORT zx_status_t fdf_internal_shutdown_dispatchers_async(
     const void* driver, fdf_internal_driver_shutdown_observer_t* observer) {
   return driver_runtime::DispatcherCoordinator::ShutdownDispatchersAsync(driver, observer);
 }

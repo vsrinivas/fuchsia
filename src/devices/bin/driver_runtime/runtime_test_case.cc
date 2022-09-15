@@ -10,7 +10,7 @@ void RuntimeTestCase::SignalOnChannelReadable(fdf_handle_t ch, fdf_dispatcher_t*
   auto channel_read = std::make_unique<fdf::ChannelRead>(
       ch, 0 /* options */,
       [completion](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                   fdf_status_t status) {
+                   zx_status_t status) {
         sync_completion_signal(completion);
         delete channel_read;
       });

@@ -22,7 +22,7 @@ struct fdf_arena : public fbl::RefCounted<fdf_arena> {
   fdf_arena(fdf_arena& to_copy) = delete;
 
   // fdf_arena_t implementation
-  static fdf_status_t Create(uint32_t options, uint32_t tag, fdf_arena** out_arena);
+  static zx_status_t Create(uint32_t options, uint32_t tag, fdf_arena** out_arena);
   void* Allocate(size_t bytes);
   bool Contains(const void* data, size_t num_bytes);
   void Free(void* data);

@@ -106,11 +106,11 @@ class Dispatcher : public async_dispatcher_t,
   // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
   // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
   // the dispatcher will be deleted once all callbacks canclled or completed by the dispatcher.
-  static fdf_status_t CreateWithAdder(uint32_t options, std::string_view name,
-                                      std::string_view scheduler_role, const void* owner,
-                                      async_dispatcher_t* dispatcher, ThreadAdder adder,
-                                      fdf_dispatcher_shutdown_observer_t*,
-                                      Dispatcher** out_dispatcher);
+  static zx_status_t CreateWithAdder(uint32_t options, std::string_view name,
+                                     std::string_view scheduler_role, const void* owner,
+                                     async_dispatcher_t* dispatcher, ThreadAdder adder,
+                                     fdf_dispatcher_shutdown_observer_t*,
+                                     Dispatcher** out_dispatcher);
 
   // Creates a dispatcher which is backed by |loop|.
   // |loop| can be the |ProcessSharedLoop|, or a private async loop created by a test.
@@ -118,18 +118,18 @@ class Dispatcher : public async_dispatcher_t,
   // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
   // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
   // the dispatcher will be deleted once all callbacks canclled or completed by the dispatcher.
-  static fdf_status_t CreateWithLoop(uint32_t options, std::string_view name,
-                                     std::string_view scheduler_role, const void* owner,
-                                     async::Loop* loop, fdf_dispatcher_shutdown_observer_t*,
-                                     Dispatcher** out_dispatcher);
+  static zx_status_t CreateWithLoop(uint32_t options, std::string_view name,
+                                    std::string_view scheduler_role, const void* owner,
+                                    async::Loop* loop, fdf_dispatcher_shutdown_observer_t*,
+                                    Dispatcher** out_dispatcher);
 
   // fdf_dispatcher_t implementation
   // Returns ownership of the dispatcher in |out_dispatcher|. The caller should call
   // |Destroy| once they are done using the dispatcher. Once |Destroy| is called,
   // the dispatcher will be deleted once all callbacks cancelled or completed by the dispatcher.
-  static fdf_status_t Create(uint32_t options, std::string_view name,
-                             std::string_view scheduler_role, fdf_dispatcher_shutdown_observer_t*,
-                             Dispatcher** out_dispatcher);
+  static zx_status_t Create(uint32_t options, std::string_view name,
+                            std::string_view scheduler_role, fdf_dispatcher_shutdown_observer_t*,
+                            Dispatcher** out_dispatcher);
 
   // |dispatcher| must have been retrieved via `GetAsyncDispatcher`.
   static Dispatcher* FromAsyncDispatcher(async_dispatcher_t* dispatcher);
@@ -169,7 +169,7 @@ class Dispatcher : public async_dispatcher_t,
   // Depending on the dispatcher options set and which driver is calling this,
   // the callback can occur on the current thread or be queued up to run on a dispatcher thread.
   void QueueRegisteredCallback(CallbackRequest* unowned_callback_request,
-                               fdf_status_t callback_reason);
+                               zx_status_t callback_reason);
 
   // Adds wait to |waits_|.
   void AddWaitLocked(std::unique_ptr<AsyncWait> wait) __TA_REQUIRES(&callback_lock_);
@@ -194,7 +194,7 @@ class Dispatcher : public async_dispatcher_t,
   // Sets the callback reason for a currently queued callback request.
   // This may fail if the callback is already running or scheduled to run.
   // Returns true if a callback matching |callback_request| was found, false otherwise.
-  bool SetCallbackReason(CallbackRequest* callback_request, fdf_status_t callback_reason);
+  bool SetCallbackReason(CallbackRequest* callback_request, zx_status_t callback_reason);
 
   // Removes the callback that manages the async dispatcher |operation| and returns it.
   // May return nullptr if no such callback is found.
@@ -227,7 +227,7 @@ class Dispatcher : public async_dispatcher_t,
   // from the pending list. This is called when |fdf_token_register| and |fdf_token_exchange|
   // have been called for the same token.
   // TODO(fxbug.dev/105578): replace fdf::Channel with a generic C++ handle type when available.
-  zx_status_t ScheduleTokenCallback(fdf_token_t* token, fdf_status_t status, fdf::Channel channel);
+  zx_status_t ScheduleTokenCallback(fdf_token_t* token, zx_status_t status, fdf::Channel channel);
 
   // Returns the dispatcher options specified by the user.
   uint32_t options() const { return options_; }
@@ -542,13 +542,13 @@ class DispatcherCoordinator {
   static void DestroyAllDispatchers();
   static void WaitUntilDispatchersIdle();
   static void WaitUntilDispatchersDestroyed();
-  static fdf_status_t ShutdownDispatchersAsync(const void* driver,
-                                               fdf_internal_driver_shutdown_observer_t* observer);
+  static zx_status_t ShutdownDispatchersAsync(const void* driver,
+                                              fdf_internal_driver_shutdown_observer_t* observer);
 
   // Implementation of fdf_protocol_*.
-  static fdf_status_t TokenRegister(zx_handle_t token, fdf_dispatcher_t* dispatcher,
-                                    fdf_token_t* handler);
-  static fdf_status_t TokenExchange(zx_handle_t token, fdf_handle_t channel);
+  static zx_status_t TokenRegister(zx_handle_t token, fdf_dispatcher_t* dispatcher,
+                                   fdf_token_t* handler);
+  static zx_status_t TokenExchange(zx_handle_t token, fdf_handle_t channel);
 
   // Returns ZX_OK if |dispatcher| was added successfully.
   // Returns ZX_ERR_BAD_STATE if the driver is currently shutting down.
