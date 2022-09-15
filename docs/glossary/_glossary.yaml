@@ -1024,10 +1024,8 @@
 - term: "Moniker"
   short_description: "Identifies a specific component instance in the component
   tree using a topological path."
-  full_description: "A v1 component's moniker is defined as a tuple of (path to the component's
-  <a href=\"/docs/glossary#realm\">realm</a>, component URL).
-  <p>A v2 component's moniker is defined as a path to the component instance in the
-  <a href=\"/docs/glossary#component-instance-tree\">component instance tree</a>.</p>"
+  full_description: "A component's moniker is defined as a path to the component instance in the
+  <a href=\"/docs/glossary#component-instance-tree\">component instance tree</a>."
   see_also: ["<a href=\"/docs/concepts/components/v2/monikers.md\">Monikers</a>"]
   related_guides: [""]
   area: ["Component Framework"]
