@@ -889,6 +889,29 @@ TEST_F(DeviceTest, DevfsVnodeTestRebind) {
   ASSERT_TRUE(got_reply);
 }
 
+TEST_F(DeviceTest, DeviceRebind) {
+  auto [node, node_client] = CreateTestNode();
+  // Create a device.
+  zx_protocol_device_t ops{};
+  compat::Device device(compat::kDefaultDevice, &ops, nullptr, std::nullopt, logger(),
+                        dispatcher());
+  device.Bind({std::move(node_client), dispatcher()});
+
+  size_t add_count = 0;
+  node->SetAddChildHook([&add_count](TestNode::AddChildRequestView& request) { add_count++; });
+
+  zx_device_t* second_device;
+  device_add_args_t args{
+      .name = "second-device",
+  };
+  ASSERT_EQ(ZX_OK, device.Add(&args, &second_device));
+  ASSERT_EQ(ZX_OK, second_device->CreateNode());
+
+  ASSERT_EQ(ZX_OK, device_rebind(second_device));
+  ASSERT_TRUE(test_loop().RunUntilIdle());
+  ASSERT_EQ(add_count, 2u);
+}
+
 TEST_F(DeviceTest, CreateNodeProperties) {
   fidl::Arena<512> arena;
   driver::Logger logger;

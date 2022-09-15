@@ -23,7 +23,14 @@ __EXPORT void device_init_reply(zx_device_t* dev, zx_status_t status,
   dev->InitReply(status);
 }
 
-__EXPORT zx_status_t device_rebind(zx_device_t* dev) { return ZX_ERR_NOT_SUPPORTED; }
+__EXPORT zx_status_t device_rebind(zx_device_t* dev) {
+  auto promise = dev->RebindToLibname("").or_else([dev](const zx_status_t& status) mutable {
+    FDF_LOGL(WARNING, dev->logger(), "Rebind failed with status: %s", zx_status_get_string(status));
+  });
+
+  dev->executor().schedule_task(std::move(promise));
+  return ZX_OK;
+}
 
 __EXPORT void device_async_remove(zx_device_t* dev) { dev->Remove(); }
 
