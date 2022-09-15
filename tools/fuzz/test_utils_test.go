@@ -25,6 +25,17 @@ func expectPathAbsent(t *testing.T, path string) {
 	}
 }
 
+func getFlagFromArgs(t *testing.T, name string, args []string) string {
+	for j, arg := range args[:len(args)-1] {
+		if arg == name {
+			return args[j+1]
+		}
+	}
+
+	t.Fatalf("flag %s not found in args: %q", name, args)
+	return ""
+}
+
 // Must be cleaned up by caller
 func createTempfileWithContents(t *testing.T, contents string, extension string) string {
 	file, err := os.CreateTemp("", "*."+extension)

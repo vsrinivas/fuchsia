@@ -74,7 +74,7 @@ func TestInstanceHandle(t *testing.T) {
 
 func TestInstanceRepeatedStart(t *testing.T) {
 	i := newTestInstance()
-	i.Launcher = &mockLauncher{}
+	i.Launcher = NewMockLauncher(t)
 
 	if err := i.Start(); err != nil {
 		t.Fatalf("Error starting instance: %s", err)
@@ -87,7 +87,9 @@ func TestInstanceRepeatedStart(t *testing.T) {
 
 func TestInstanceStartWithLauncherFailure(t *testing.T) {
 	i := newTestInstance()
-	i.Launcher = &mockLauncher{shouldFailToStart: true}
+	launcher := NewMockLauncher(t)
+	launcher.shouldFailToStart = true
+	i.Launcher = launcher
 
 	if err := i.Start(); err == nil {
 		t.Fatalf("expected launcher failure but succeeded")
@@ -98,7 +100,10 @@ func TestInstanceStartWithLauncherEarlyExit(t *testing.T) {
 	i := newTestInstance()
 	// Only the first connection will fail, but no retries should be made
 	// because the launcher will have died.
-	i.Launcher = &mockLauncher{shouldFailToConnectCount: 1, shouldExitEarly: true}
+	launcher := NewMockLauncher(t)
+	launcher.shouldFailToConnectCount = 1
+	launcher.shouldExitEarly = true
+	i.Launcher = launcher
 
 	if err := i.Start(); err == nil {
 		t.Fatalf("expected launcher failure but succeeded")
@@ -115,7 +120,9 @@ func TestInstanceStartWithLauncherEarlyExit(t *testing.T) {
 
 func TestInstanceStartWithTemporaryConnectorFailure(t *testing.T) {
 	i := newTestInstance()
-	i.Launcher = &mockLauncher{shouldFailToConnectCount: maxInitialConnectAttempts - 1}
+	launcher := NewMockLauncher(t)
+	launcher.shouldFailToConnectCount = maxInitialConnectAttempts - 1
+	i.Launcher = launcher
 	i.reconnectInterval = 1 * time.Millisecond
 
 	if err := i.Start(); err != nil {
@@ -137,7 +144,9 @@ func TestInstanceStartWithTemporaryConnectorFailure(t *testing.T) {
 
 func TestInstanceStartWithPermanentConnectorFailure(t *testing.T) {
 	i := newTestInstance()
-	i.Launcher = &mockLauncher{shouldFailToConnectCount: maxInitialConnectAttempts}
+	launcher := NewMockLauncher(t)
+	launcher.shouldFailToConnectCount = maxInitialConnectAttempts
+	i.Launcher = launcher
 	i.reconnectInterval = 1 * time.Millisecond
 
 	if err := i.Start(); err == nil {
@@ -155,7 +164,9 @@ func TestInstanceStartWithPermanentConnectorFailure(t *testing.T) {
 
 func TestInstanceStartWithTemporaryCommandFailure(t *testing.T) {
 	i := newTestInstance()
-	i.Launcher = &mockLauncher{shouldFailToExecuteCount: maxInitialConnectAttempts - 1}
+	launcher := NewMockLauncher(t)
+	launcher.shouldFailToConnectCount = maxInitialConnectAttempts - 1
+	i.Launcher = launcher
 	i.reconnectInterval = 1 * time.Millisecond
 
 	if err := i.Start(); err != nil {
@@ -177,7 +188,9 @@ func TestInstanceStartWithTemporaryCommandFailure(t *testing.T) {
 
 func TestInstanceStartWithPermanentCommandFailure(t *testing.T) {
 	i := newTestInstance()
-	i.Launcher = &mockLauncher{shouldFailToExecuteCount: maxInitialConnectAttempts + 1}
+	launcher := NewMockLauncher(t)
+	launcher.shouldFailToConnectCount = maxInitialConnectAttempts + 1
+	i.Launcher = launcher
 	i.reconnectInterval = 1 * time.Millisecond
 
 	if err := i.Start(); err == nil {
@@ -195,7 +208,7 @@ func TestInstanceStartWithPermanentCommandFailure(t *testing.T) {
 
 func TestInstance(t *testing.T) {
 	i := newTestInstance()
-	i.Launcher = &mockLauncher{}
+	i.Launcher = NewMockLauncher(t)
 
 	if err := i.Start(); err != nil {
 		t.Fatalf("Error starting instance: %s", err)
@@ -278,7 +291,7 @@ func TestInstance(t *testing.T) {
 
 func TestInstanceRunFuzzerWithArtifactFetch(t *testing.T) {
 	i := newTestInstance()
-	i.Launcher = &mockLauncher{}
+	i.Launcher = NewMockLauncher(t)
 
 	if err := i.Start(); err != nil {
 		t.Fatalf("Error starting instance: %s", err)

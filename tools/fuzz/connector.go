@@ -109,16 +109,18 @@ type SSHConnector struct {
 	// authentication
 	Key string
 
-	build      Build
-	ffxPath    string
-	client     *ssh.Client
-	sftpClient *sftp.Client
+	build         Build
+	ffxPath       string
+	ffxIsolateDir string
+	client        *ssh.Client
+	sftpClient    *sftp.Client
 
 	// Retry configuration; defaults only need to be overridden for testing
 	reconnectInterval time.Duration
 
 	// This tempdir is used for storing the local filesystem cache described
-	// above. It shares a lifetime with the enclosing Instance (created on
+	// above, as well as the `ffxIsolateDir` supporting the ffx daemon for this
+	// instance. It shares a lifetime with the enclosing Instance (created on
 	// first ffx connection, deleted on `stop_instance`).
 	TmpDir string
 }
@@ -147,7 +149,7 @@ func NewSSHConnector(build Build, host string, port int, key string,
 	}
 }
 
-func (c *SSHConnector) initializeFfx() error {
+func (c *SSHConnector) initializeFfx() (returnErr error) {
 	// Resolve path to ffx tool
 	paths, err := c.build.Path("ffx")
 	if err != nil {
@@ -155,42 +157,54 @@ func (c *SSHConnector) initializeFfx() error {
 	}
 	c.ffxPath = paths[0]
 
-	// Need to stop the daemon in order to allow for the SSH config passed on
-	// the command-line to be picked up.
-	// TODO(fxbug.dev/106121): In theory, we don't need to do this each time,
-	// but then we'd need to figure out the state of ffx. Eventually, we should
-	// use isolated ffx daemons per-instance once this is supported, which
-	// would also make it easier to support multiple simultaneous connections
-	// to the same instance (not currently needed).
-	if _, err := c.FfxRun("", "daemon", "stop"); err != nil {
-		// Mark as uninitialized
-		c.ffxPath = ""
-		return fmt.Errorf("error stopping ffx daemon: %s", err)
+	// If we fail after this point, mark ffx as uninitialized so initialization
+	// can be re-attempted when called again as part of any higher-level retry
+	// logic.
+	defer func() {
+		if returnErr != nil {
+			c.ffxPath = ""
+		}
+	}()
+
+	if err := c.initializeTmpDirIfNecessary(); err != nil {
+		return fmt.Errorf("error initializing tmpdir: %s", err)
 	}
 
-	// Remove any old targets (same host, different and unknown port)
+	c.ffxIsolateDir = filepath.Join(c.TmpDir, "ffx-isolate")
+	if fileExists(c.ffxIsolateDir) {
+		// Already set up previously
+		return nil
+	}
+
+	// If we fail after this point, remove any partially-constructed isolate
+	// directory.
+	defer func() {
+		if returnErr != nil {
+			// This will kill the daemon once it sees its socket deleted
+			os.RemoveAll(c.ffxIsolateDir)
+		}
+	}()
+
+	if err := os.Mkdir(c.ffxIsolateDir, os.ModeDir|0755); err != nil {
+		return fmt.Errorf("error making isolate dir: %s", err)
+	}
+
+	// Add the target to the daemon (auto-starting it)
 	// Note: The SSH private key config needs to be provided on the first call
-	// after restarting the daemon.
-	if _, err := c.FfxRun("", "-c", "ssh.priv="+c.Key, "target",
-		"remove", c.Host); err != nil {
-		// Mark as uninitialized
-		c.ffxPath = ""
-		return fmt.Errorf("error removing target from ffx: %s", err)
+	// to a daemon.
+	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
+	if _, err := c.FfxRun("", "-c", "ssh.priv="+c.Key, "target", "add", addr); err != nil {
+		return fmt.Errorf("error adding target to ffx: %s", err)
 	}
 
-	// Add the target to the daemon
-	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
-	if _, err := c.FfxRun("", "target", "add", addr); err != nil {
-		// Mark as uninitialized
-		c.ffxPath = ""
-		return fmt.Errorf("error adding target to ffx: %s", err)
+	// Enable fuzz subcommand
+	if _, err := c.FfxRun("", "config", "set", "fuzzing", "true"); err != nil {
+		return fmt.Errorf("error enabling ffx fuzz: %s", err)
 	}
 
 	// Make sure the connection to fuzz manager is working
 	if _, err := c.FfxRun("", "fuzz", "list"); err != nil {
-		// Mark as uninitialized
-		c.ffxPath = ""
-		return fmt.Errorf("error initializing ffx fuzz: %s", err)
+		return fmt.Errorf("error testing ffx fuzz: %s", err)
 	}
 
 	return nil
@@ -624,10 +638,6 @@ func (c *SSHConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, 
 		}
 	}
 
-	if err := c.initializeTmpDirIfNecessary(); err != nil {
-		return nil, fmt.Errorf("error initializing tmpdir: %s", err)
-	}
-
 	// Set output directory for any artifacts, etc.
 	if ffxCommandRequiresOutputDir(args) && !fileExists(outputDir) {
 		return nil, fmt.Errorf("output directory required for command: %s", args)
@@ -645,7 +655,8 @@ func (c *SSHConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, 
 	}
 
 	addr := net.JoinHostPort(c.Host, strconv.Itoa(c.Port))
-	args = append([]string{"--target", addr}, args...)
+	args = append([]string{"--target", addr,
+		"--isolate-dir", c.ffxIsolateDir}, args...)
 
 	if outputDir != "" {
 		args = append(args, "-o", outputDir)
@@ -661,12 +672,20 @@ func (c *SSHConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, 
 func (c *SSHConnector) Cleanup() {
 	c.Close()
 
-	if c.TmpDir != "" {
-		if err := os.RemoveAll(c.TmpDir); err != nil {
-			glog.Warningf("failed to remove temp dir: %s", err)
-		}
-		c.TmpDir = ""
+	if c.TmpDir == "" {
+		return
 	}
+	// Best-effort at cleanly shutting down the daemon. Even if this fails,
+	// it should self-cleanup once it sees we've removed the isolate dir.
+	ffxIsolateDir := filepath.Join(c.TmpDir, "ffx-isolate")
+	if fileExists(ffxIsolateDir) {
+		c.FfxRun("", "daemon", "stop")
+	}
+
+	if err := os.RemoveAll(c.TmpDir); err != nil {
+		glog.Warningf("failed to remove temp dir: %s", err)
+	}
+	c.TmpDir = ""
 }
 
 // V2 target paths are given a special prefix to indicate that they refer to an

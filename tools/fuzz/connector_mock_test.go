@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"testing"
 )
 
 const mockFuzzerPid = 414141
@@ -26,6 +27,8 @@ type mockConnector struct {
 	shouldFailToExecuteCount uint
 	shouldFailToGetSysLog    bool
 
+	ffxIsolateDir string
+
 	// Store history of Get/Puts to enable basic checks
 	PathsGot           []transferCmd
 	PathsPut           []transferCmd
@@ -39,6 +42,10 @@ type mockConnector struct {
 	FfxHistory []string
 
 	CleanedUp bool
+}
+
+func NewMockConnector(t *testing.T) *mockConnector {
+	return &mockConnector{ffxIsolateDir: t.TempDir()}
 }
 
 func (c *mockConnector) Connect() error {
@@ -171,7 +178,8 @@ func (c *mockConnector) TargetPathExists(path string) bool {
 
 func (c *mockConnector) FfxCommand(outputDir string, args ...string) (*exec.Cmd, error) {
 	// Used only by Fuzzer.Run, which needs a full subprocess to work with
-	args = append([]string{"--target", "some-target"}, args...)
+	args = append([]string{"--target", "some-target",
+		"--isolate-dir", c.ffxIsolateDir}, args...)
 	if outputDir != "" {
 		args = append(args, "-o", outputDir)
 	}

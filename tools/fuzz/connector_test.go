@@ -123,6 +123,37 @@ func TestSSHCommand(t *testing.T) {
 	}
 }
 
+func TestFfxIsolateDir(t *testing.T) {
+	// Enable subprocess mocking (for ffx)
+	ExecCommand = mockCommand
+	defer func() { ExecCommand = exec.Command }()
+
+	c, _ := getFakeSSHConnector(t, 0)
+	defer c.Cleanup()
+
+	cmd, err := c.FfxCommand("", "fuzz", "list")
+	if err != nil {
+		t.Fatalf("error constructing ffx command: %s", err)
+	}
+
+	isolateDir := getFlagFromArgs(t, "--isolate-dir", cmd.Args)
+
+	cmd2, err := c.FfxCommand("", "fuzz", "list")
+	if err != nil {
+		t.Fatalf("error constructing ffx command: %s", err)
+	}
+
+	isolateDir2 := getFlagFromArgs(t, "--isolate-dir", cmd2.Args)
+
+	if isolateDir != isolateDir2 {
+		t.Fatalf("isolate dir changed between commands")
+	}
+
+	c.Cleanup()
+
+	expectPathAbsent(t, isolateDir)
+}
+
 func TestFfxRun(t *testing.T) {
 	// Enable subprocess mocking (for ffx)
 	ExecCommand = mockCommand
@@ -211,7 +242,7 @@ func TestFfxRunInvalidCommand(t *testing.T) {
 	c, _ := getFakeSSHConnector(t, 0)
 	defer c.Cleanup()
 
-	if _, err := c.FfxRun("", "daemon", "pet"); err == nil {
+	if _, err := c.FfxRun("", "config", "pet"); err == nil {
 		t.Fatalf("unexpectedly succeeded running invalid ffx command")
 	}
 }

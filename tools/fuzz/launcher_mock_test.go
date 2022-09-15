@@ -7,6 +7,7 @@ package fuzz
 import (
 	"fmt"
 	"io"
+	"testing"
 )
 
 type mockLauncher struct {
@@ -17,6 +18,13 @@ type mockLauncher struct {
 	// Failure modes that will be passed on to the Connector
 	shouldFailToConnectCount uint
 	shouldFailToExecuteCount uint
+
+	// We need a reference to this to pass to NewMockConnector
+	testEnv *testing.T
+}
+
+func NewMockLauncher(t *testing.T) *mockLauncher {
+	return &mockLauncher{testEnv: t}
 }
 
 func (l *mockLauncher) Prepare() error {
@@ -35,8 +43,10 @@ func (l *mockLauncher) Start() (Connector, error) {
 	l.Prepare()
 	l.running = !l.shouldExitEarly
 
-	return &mockConnector{shouldFailToConnectCount: l.shouldFailToConnectCount,
-		shouldFailToExecuteCount: l.shouldFailToExecuteCount}, nil
+	conn := NewMockConnector(l.testEnv)
+	conn.shouldFailToConnectCount = l.shouldFailToConnectCount
+	conn.shouldFailToExecuteCount = l.shouldFailToExecuteCount
+	return conn, nil
 }
 
 func (l *mockLauncher) IsRunning() (bool, error) {

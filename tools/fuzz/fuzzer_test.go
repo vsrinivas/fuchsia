@@ -110,7 +110,8 @@ func TestPrepare(t *testing.T) {
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
 
-	conn := &mockConnector{connected: true}
+	conn := NewMockConnector(t)
+	conn.connected = true
 	if err := f.Prepare(conn); err != nil {
 		t.Fatalf("failed to prepare fuzzer: %s", err)
 	}
@@ -131,7 +132,8 @@ func TestPrepareV2(t *testing.T) {
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
 
-	conn := &mockConnector{connected: true}
+	conn := NewMockConnector(t)
+	conn.connected = true
 	if err := f.Prepare(conn); err != nil {
 		t.Fatalf("failed to prepare fuzzer: %s", err)
 	}
@@ -176,7 +178,7 @@ const (
 // those listed above.
 func runFuzzer(t *testing.T, name string, args []string, scenario int) (string, []string, error) {
 	build, _ := newMockBuild()
-	conn := &mockConnector{}
+	conn := NewMockConnector(t)
 
 	switch scenario {
 	case FuzzerSymbolizerFailure:
@@ -288,7 +290,7 @@ func TestMissingFuzzerPackage(t *testing.T) {
 
 func TestSetCFFOptions(t *testing.T) {
 	build, _ := newMockBuild()
-	conn := &mockConnector{}
+	conn := NewMockConnector(t)
 
 	f, err := build.Fuzzer("cff/fuzzer")
 	if err != nil {
@@ -343,7 +345,7 @@ func TestSetCFFOptions(t *testing.T) {
 
 func TestMarkOutputCorpus(t *testing.T) {
 	build, _ := newMockBuild()
-	conn := &mockConnector{}
+	conn := NewMockConnector(t)
 
 	f, err := build.Fuzzer("cff/fuzzer")
 	if err != nil {
@@ -372,7 +374,7 @@ func TestMarkOutputCorpus(t *testing.T) {
 
 func TestParseArgsForFfx(t *testing.T) {
 	build, _ := newMockBuild()
-	conn := &mockConnector{}
+	conn := NewMockConnector(t)
 
 	f, err := build.Fuzzer("cff/fuzzer")
 	if err != nil {
@@ -483,7 +485,7 @@ func TestRunV2Fuzz(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
-	conn := &mockConnector{}
+	conn := NewMockConnector(t)
 	out, artifacts := runFuzzerV2(t, conn, f, []string{"data/corpus/out",
 		"data/corpus/in1", "data/corpus/in2"})
 
@@ -535,7 +537,7 @@ func TestRunV2Try(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
-	conn := &mockConnector{}
+	conn := NewMockConnector(t)
 
 	testcase := filepath.Join(t.TempDir(), "testcase")
 	touchRandomFile(t, testcase)
@@ -577,7 +579,7 @@ func TestRunV2Minimize(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
-	conn := &mockConnector{}
+	conn := NewMockConnector(t)
 
 	testcase := filepath.Join(t.TempDir(), "testcase")
 	touchRandomFile(t, testcase)
@@ -611,7 +613,7 @@ func TestRunV2Merge(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to load fuzzer: %s", err)
 	}
-	conn := &mockConnector{}
+	conn := NewMockConnector(t)
 
 	out, artifacts := runFuzzerV2(t, conn, f, []string{"-merge=1",
 		"-merge_control_file=data/.mergefile", "data/corpus/out",

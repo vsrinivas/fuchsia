@@ -160,21 +160,39 @@ func TestDoProcessMock(t *testing.T) {
 			params[args[i]] = args[i+1]
 			i += 2
 		}
+
 		// Validate presence of target parameter, but then ignore it
 		if _, ok := params["--target"]; !ok {
 			t.Fatalf("ffx call missing target parameter")
 		}
+
+		// Validate isolate dir exists
+		if isolateDir, ok := params["--isolate-dir"]; ok {
+			if !fileExists(isolateDir) {
+				t.Fatalf("isolate-dir %s doesn't exist", isolateDir)
+			}
+		} else {
+			t.Fatalf("ffx call missing isolate-dir parameter")
+		}
+
 		command := args[i]
 		args = args[i+1:]
 		switch command {
-		case "target":
-			if args[0] != "add" && args[0] != "remove" {
-				t.Fatalf("invalid ffx target command: %s", args)
+		case "config":
+			if args[0] != "set" {
+				// Return an error, but avoid emitting what looks like a test
+				// failure, because we know that TestFfxRunInvalidCommand will
+				// call this and echo the output.
+				out = fmt.Sprintf("invalid ffx config command: %s", args)
+				exitCode = 1
 			}
 		case "daemon":
 			if args[0] != "stop" {
-				out = fmt.Sprintf("invalid ffx daemon command: %s", args)
-				exitCode = 1
+				t.Fatalf("invalid ffx daemon command: %s", args)
+			}
+		case "target":
+			if args[0] != "add" && args[0] != "remove" {
+				t.Fatalf("invalid ffx target command: %s", args)
 			}
 		case "fuzz":
 			stdout, outputDir := getFfxFuzzOutput(t, args)
@@ -201,6 +219,7 @@ func TestDoProcessMock(t *testing.T) {
 				touchRandomFile(t, filepath.Join(corpusDir, "a"))
 				touchRandomFile(t, filepath.Join(corpusDir, "b"))
 			}
+			exitCode = 0
 		default:
 			t.Fatalf("invalid ffx command: %s", command)
 		}
