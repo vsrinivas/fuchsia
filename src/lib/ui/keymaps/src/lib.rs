@@ -5,9 +5,9 @@
 use anyhow::{format_err, Result};
 use fidl_fuchsia_input::{self, Key};
 use fidl_fuchsia_ui_input3::{KeyEventType, KeyMeaning, LockState, Modifiers, NonPrintableKey};
-use fuchsia_syslog::{fx_log_debug, fx_log_err};
 use lazy_static::lazy_static;
 use std::collections::{self, HashMap};
+use tracing::{debug, error};
 
 mod defs;
 
@@ -158,16 +158,12 @@ impl<'a> Keymap<'a> {
             .map(KeyMeaning::Codepoint)
             .or_else(|| try_into_nonprintable(key))
             .or_else(|| {
-                fx_log_debug!(
-                    concat!(
-                        "keymaps::Keymap::apply: no KeyMeaning for: ",
-                        "key: {:?}, HID usage: {:?}, ",
-                        "modifiers: {:?}, lock_state: {:?}",
-                    ),
-                    &key,
-                    &hid_usage,
-                    modifier_state,
-                    lock_state,
+                debug!(
+                    ?key,
+                    ?hid_usage,
+                    modifiers = ?modifier_state,
+                    ?lock_state,
+                    "keymaps::Keymap::apply: no KeyMeaning"
                 );
                 None
             })
@@ -507,12 +503,7 @@ impl LockStateKeys {
             | (KeyEventType::Pressed, Some(State::LockPressedSecondTime))
             | (KeyEventType::Released, None)
             | (KeyEventType::Released, Some(State::LockPressedAndReleased)) => {
-                fx_log_err!(
-                    "unexpected state transition: event: {:?}, key: {:?}, state: {:?}",
-                    &event,
-                    &key,
-                    &self.state
-                );
+                error!(?event, ?key, state = ?self.state, "unexpected state transition");
             }
 
             // SYNC and CANCEL don't change the lock state.
