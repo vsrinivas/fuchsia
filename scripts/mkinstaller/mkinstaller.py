@@ -405,6 +405,13 @@ def IsUsbDisk(path):
   return path in map(lambda a: a.split()[0], GetUsbDisks())
 
 
+def UnmountDisk(path):
+  """Unmount the given USB disk from the system."""
+  system = platform.system()
+  if system == 'Darwin':
+    subprocess.run(['diskutil', 'quiet', 'unmountDisk', path])
+
+
 def EjectDisk(path):
   """Eject the given USB disk from the system."""
   system = platform.system()
@@ -448,6 +455,8 @@ def Main(args):
     elif not os.access(path, os.W_OK):
       logging.critical('Cannot write to {}. Please check file permissions!'.format(path))
       return 1
+
+    UnmountDisk(path)
 
   build_dir = args.build_dir
   if build_dir == '':
