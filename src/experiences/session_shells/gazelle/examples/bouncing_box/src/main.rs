@@ -4,7 +4,7 @@
 
 use {
     anyhow::Error,
-    appkit::{Event, EventSender, Window, WindowBuilder, WindowEvent, WindowId},
+    appkit::{Event, EventSender, Window, WindowEvent, WindowId},
     fidl_fuchsia_input::Key,
     fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as ui_comp,
     fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus, KeyEventType},
@@ -83,10 +83,8 @@ impl<T> App<T> {
         match event {
             Event::Init => {
                 // Create the application's window.
-                let mut window = WindowBuilder::new()
-                    .with_title("Bouncing Box".to_owned())
-                    .build(self.event_sender.clone())
-                    .unwrap();
+                let mut window =
+                    Window::new(self.event_sender.clone()).with_title("Bouncing Box".to_owned());
                 window.create_view()?;
 
                 // Create the bouncer.
@@ -96,20 +94,20 @@ impl<T> App<T> {
 
                 self.windows.insert(window.id(), window);
             }
-            Event::WindowEvent(id, window_event) => {
+            Event::WindowEvent { window_id: id, event: window_event } => {
                 let window = self.windows.get_mut(&id).unwrap();
                 match window_event {
-                    WindowEvent::Resized(width, height) => {
+                    WindowEvent::Resized { width, height } => {
                         // Set the bouncer's size.
                         let size = fmath::SizeU { width, height };
                         self.bouncer.as_mut().map(|bouncer| bouncer.size = size);
                     }
-                    WindowEvent::NeedsRedraw(_presentation_time) => {
+                    WindowEvent::NeedsRedraw { .. } => {
                         // Update bouncer's position on every frame.
                         self.bouncer.as_mut().map(|bouncer| bouncer.update());
                         window.redraw();
                     }
-                    WindowEvent::Keyboard(event, responder) => {
+                    WindowEvent::Keyboard { event, responder } => {
                         // Quit app on 'q' is pressed.
                         if let KeyEvent {
                             type_: Some(KeyEventType::Pressed),
