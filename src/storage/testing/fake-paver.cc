@@ -265,15 +265,6 @@ void FakePaver::WriteBootloader(WriteBootloaderRequestView request,
   completer.Reply(status);
 }
 
-void FakePaver::WriteDataFile(WriteDataFileRequestView request,
-                              WriteDataFileCompleter::Sync& completer) {
-  fbl::AutoLock al(&lock_);
-  AppendCommand(Command::kWriteDataFile);
-  data_file_path_ = std::string(request->filename.data(), request->filename.size());
-  auto status = request->payload.size == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-  completer.Reply(status);
-}
-
 void FakePaver::WipeVolume(WipeVolumeCompleter::Sync& completer) {
   fbl::AutoLock al(&lock_);
   AppendCommand(Command::kWipeVolume);

@@ -1694,10 +1694,6 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   ValidateUnwrittenPages(8 * kPagesPerBlock - 1, 1);
 }
 
-TEST_F(PaverServiceSkipBlockTest, WriteDataFile) {
-  // TODO(fxbug.dev/33793): Figure out a way to test this.
-}
-
 TEST_F(PaverServiceSkipBlockTest, WriteVolumes) {
   // TODO(fxbug.dev/33793): Figure out a way to test this.
 }
@@ -2119,41 +2115,6 @@ TEST_F(PaverServiceLuisTest, SysconfigNotSupportedAndFailWithPeerClosed) {
   fidl::WireSyncClient<fuchsia_paver::Sysconfig> sysconfig(std::move(sysconfig_local));
   auto wipe_result = sysconfig->Wipe();
   ASSERT_EQ(wipe_result.status(), ZX_ERR_PEER_CLOSED);
-}
-
-TEST_F(PaverServiceLuisTest, WriteDataFileIgnoreDataPartitionFromOtherBlockDevices) {
-  // Create a second GPT device with an FVM data partition.
-  std::unique_ptr<BlockDevice> gpt_dev_other;
-  int64_t block_count = 0x30000;
-  ASSERT_NO_FATAL_FAILURE(BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count,
-                                              (uint32_t)block_size_, &gpt_dev_other));
-  const uint8_t data_guid[] = GUID_DATA_VALUE;
-  const std::vector<PartitionDescription> kLuisStartingPartitions = {
-      {fshost::kDataPartitionLabel.data(), data_guid, 0x10400, 0x10000},
-  };
-  ASSERT_NO_FATAL_FAILURE(
-      InitializeStartingGPTPartitions(gpt_dev_other.get(), kLuisStartingPartitions));
-
-  // The original gpt device that the paver operates on doesn't have the data partition.
-  ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
-  zx::channel gpt_chan;
-  ASSERT_OK(fdio_fd_clone(gpt_dev_->fd(), gpt_chan.reset_and_get_address()));
-  auto endpoints = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
-  ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
-  ASSERT_OK(client_->UseBlockDevice(std::move(gpt_chan), std::move(remote)));
-  fidl::WireSyncClient data_sink{std::move(local)};
-
-  fuchsia_mem::wire::Buffer payload;
-  CreatePayload(kPagesPerBlock, &payload);
-  auto result =
-      data_sink->WriteDataFile(fidl::StringView::FromExternal("somefile"), std::move(payload));
-  ASSERT_OK(result.status());
-  // Write should not succeed as there is no FVM data partition on the given block device set by
-  // UseBlockDevice(). Even though there is one on the other GPT device. Expected error should
-  // be ZX_ERR_TIMED_OUT, as OpenPartitionWithDevfs() should eventually timed out waiting for the
-  // data partition.
-  ASSERT_EQ(result.value().status, ZX_ERR_TIMED_OUT);
 }
 
 TEST_F(PaverServiceLuisTest, FindGPTDevicesIgnoreFvmPartitions) {

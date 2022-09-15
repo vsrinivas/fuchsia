@@ -136,9 +136,6 @@ class FakePaver : public fidl::WireServer<fuchsia_paver::Paver>,
   void WriteBootloader(WriteBootloaderRequestView request,
                        WriteBootloaderCompleter::Sync& completer) override;
 
-  void WriteDataFile(WriteDataFileRequestView request,
-                     WriteDataFileCompleter::Sync& completer) override;
-
   void WipeVolume(WipeVolumeCompleter::Sync& completer) override;
 
   void InitializePartitionTables(InitializePartitionTablesCompleter::Sync& completer) override;

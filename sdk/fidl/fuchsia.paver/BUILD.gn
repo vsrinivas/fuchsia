@@ -9,7 +9,6 @@ fidl("fuchsia.paver") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.block",
     "//sdk/fidl/fuchsia.hardware.block.volume",
-    "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.mem",
   ]
 }

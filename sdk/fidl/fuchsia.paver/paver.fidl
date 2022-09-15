@@ -5,7 +5,6 @@ library fuchsia.paver;
 
 using fuchsia.hardware.block;
 using fuchsia.hardware.block.volume;
-using fuchsia.io;
 using fuchsia.mem;
 using zx;
 
@@ -228,17 +227,6 @@ protocol DataSink {
     /// `ZX_VMO_CHILD_RESIZABLE`.
     @deprecated
     WriteBootloader(resource struct {
-        payload fuchsia.mem.Buffer;
-    }) -> (struct {
-        status zx.status;
-    });
-
-    /// DEPRECTATED, use `fuchsia.fshost.Admin.WriteDataFile`.
-    /// TODO(fxbug.dev/108768): Remove this.
-    /// Writes /data/`filename` with data from `payload`. Overwrites file if it already exists.
-    @deprecated
-    WriteDataFile(resource struct {
-        filename string:fuchsia.io.MAX_PATH;
         payload fuchsia.mem.Buffer;
     }) -> (struct {
         status zx.status;

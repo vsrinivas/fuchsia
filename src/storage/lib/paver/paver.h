@@ -91,8 +91,6 @@ class DataSinkImpl {
 
   zx::status<> WriteBootloader(fuchsia_mem::wire::Buffer payload);
 
-  zx::status<> WriteDataFile(fidl::StringView filename, fuchsia_mem::wire::Buffer payload);
-
   zx::status<zx::channel> WipeVolume();
 
   DevicePartitioner* partitioner() { return partitioner_.get(); }
@@ -152,12 +150,6 @@ class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
     completer.Reply(sink_.WriteBootloader(std::move(request->payload)).status_value());
   }
 
-  void WriteDataFile(WriteDataFileRequestView request,
-                     WriteDataFileCompleter::Sync& completer) override {
-    completer.Reply(
-        sink_.WriteDataFile(request->filename, std::move(request->payload)).status_value());
-  }
-
   void WipeVolume(WipeVolumeCompleter::Sync& completer) override;
 
   void Flush(FlushCompleter::Sync& completer) override {
@@ -213,12 +205,6 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
   void WriteBootloader(WriteBootloaderRequestView request,
                        WriteBootloaderCompleter::Sync& completer) override {
     completer.Reply(sink_.WriteBootloader(std::move(request->payload)).status_value());
-  }
-
-  void WriteDataFile(WriteDataFileRequestView request,
-                     WriteDataFileCompleter::Sync& completer) override {
-    completer.Reply(
-        sink_.WriteDataFile(request->filename, std::move(request->payload)).status_value());
   }
 
   void WipeVolume(WipeVolumeCompleter::Sync& completer) override;
