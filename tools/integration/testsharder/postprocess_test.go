@@ -736,7 +736,7 @@ func TestPartitionShards(t *testing.T) {
 			partitionFunc: func(t Test) bool {
 				return t.Affected
 			},
-			expectedPartition1: nil,
+			expectedPartition1: []*Shard{},
 			expectedPartition2: []*Shard{
 				shard(env1, "fuchsia", 1, 2, 3),
 				shard(env2, "linux", 1, 2, 3),
@@ -756,7 +756,7 @@ func TestPartitionShards(t *testing.T) {
 				affectedShard(env1, "fuchsia", 1, 2, 3),
 				affectedShard(env2, "linux", 1, 2, 3),
 			},
-			expectedPartition2: nil,
+			expectedPartition2: []*Shard{},
 		},
 	}
 

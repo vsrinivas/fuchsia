@@ -71,6 +71,7 @@ if (is_host) {
     "multiply",
     "multiply affected test",
     "multiply unaffected hermetic tests",
+    "no tests",
     "run all tests if no affected tests",
     "sharding by time",
     "skip unaffected tests",

@@ -308,8 +308,8 @@ func ApplyModifiers(shards []*Shard, modMatches []ModifierMatch) ([]*Shard, erro
 // PartitionShards splits a set of shards in two using the given partition
 // function.
 func PartitionShards(shards []*Shard, partitionFunc func(Test) bool, prefix string) ([]*Shard, []*Shard) {
-	var matchingShards []*Shard
-	var nonmatchingShards []*Shard
+	matchingShards := make([]*Shard, 0, len(shards))
+	nonmatchingShards := make([]*Shard, 0, len(shards))
 	for _, shard := range shards {
 		var matching []Test
 		var nonmatching []Test

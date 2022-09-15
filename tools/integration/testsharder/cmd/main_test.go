@@ -65,6 +65,9 @@ func TestExecute(t *testing.T) {
 		affectedTests []string
 	}{
 		{
+			name: "no tests",
+		},
+		{
 			name: "mixed device types",
 			testSpecs: []build.TestSpec{
 				fuchsiaTestSpec("foo"),
