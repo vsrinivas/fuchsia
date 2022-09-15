@@ -5,9 +5,11 @@
 #include "src/media/audio/services/mixer/fidl/meta_producer_node.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/producer_node.h"
+#include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_ring_buffer_producer_stage.h"
 
 namespace media_audio {
@@ -43,6 +45,12 @@ void MetaProducerNode::Stop(ProducerStage::StopCommand cmd) const {
   for (auto& [node, queues] : command_queues_) {
     queues.start_stop->push(cmd);
   }
+}
+
+zx::duration MetaProducerNode::GetSelfPresentationDelayForSource(const NodePtr& source) {
+  // Producers do not have internal delay contribution.
+  // TODO(fxbug.dev/87651): Add a method to introduce external delay.
+  return zx::duration(0);
 }
 
 NodePtr MetaProducerNode::CreateNewChildSource() {

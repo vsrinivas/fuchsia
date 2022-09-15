@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_TESTING_FAKE_NODE_H_
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <unordered_map>
 #include <unordered_set>
@@ -66,8 +67,12 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
     return std::static_pointer_cast<FakePipelineStage>(pipeline_stage());
   }
 
+  // Implements `Node`.
+  zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) override {
+    return zx::duration(0);
+  }
+
  protected:
-  // Implements Node.
   NodePtr CreateNewChildSource() override;
   NodePtr CreateNewChildDest() override;
   void DestroyChildSource(NodePtr child_source) override;

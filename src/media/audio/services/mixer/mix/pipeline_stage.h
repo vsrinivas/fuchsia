@@ -209,8 +209,6 @@ class PipelineStage {
   // - Must call from thread_, unless thread_ is the detached thread, then can call from anywhere
   void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
 
-  // TODO(fxbug.dev/87651): Add functionality to set presentation delay.
-
  protected:
   PipelineStage(std::string_view name, Format format, zx_koid_t reference_clock_koid)
       : name_(name),

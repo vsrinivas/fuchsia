@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
 #include <lib/fpromise/result.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 #include <string>
@@ -91,6 +92,21 @@ namespace media_audio {
 // never be reachable from any other thread. For more information, see ../README.md.
 class Node {
  public:
+  // Creates an edge from `source` -> `dest`. If `source` and `dest` are both ordinary nodes, this
+  // creates an ordinary edge. Otherwise, this creates a meta edge: `source` and `dest` will be
+  // connected indirectly through child nodes.
+  //
+  // Returns an error if the edge is not allowed.
+  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdge(
+      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest);
+
+  // Deletes the edge from `source` -> `dest`. This is the inverse of `CreateEdge`.
+  //
+  // Returns an error if the edge does not exist.
+  static fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> DeleteEdge(
+      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest,
+      DetachedThreadPtr detached_thread);
+
   // Returns the node's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
   std::string_view name() const { return name_; }
@@ -126,21 +142,15 @@ class Node {
   // REQUIRED: !is_meta()
   ThreadPtr pipeline_stage_thread() const;
 
-  // Creates an edge from src -> dest. If src and dest are both ordinary nodes,
-  // this creates an ordinary edge. Otherwise, this creates a meta edge: src and
-  // dest will be connected indirectly through child nodes.
-  //
-  // Returns an error if the edge is not allowed.
-  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdge(
-      GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest);
-
-  // Deletes the edge from src -> dest. This is the inverse of CreateEdge.
-  // Returns an error if the edge does not exist.
-  static fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> DeleteEdge(
-      GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest, DetachedThreadPtr detached_thread);
+  // Returns total "self" presentation delay contribution for this node if reached through `source`.
+  // This typically consists of the internal processing delay contribution of this node with respect
+  // to `source` edge, on top of any additional external delay contribution that is set via
+  // `set_external_presentation_delay`.
+  // REQUIRED: An edge exists from `source` to this node.
+  virtual zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) = 0;
 
  protected:
-  // REQUIRES: `parent` outlives this node.
+  // REQUIRED: `parent` outlives this node.
   Node(std::string_view name, bool is_meta, PipelineStagePtr pipeline_stage, NodePtr parent);
   virtual ~Node() = default;
 
@@ -187,22 +197,22 @@ class Node {
   // REQUIRED: is_meta()
   virtual void DestroyChildDest(NodePtr child_dest) {}
 
-  // Reports whether this node can accept source from the given src node.
+  // Reports whether this node can accept source from the given `source` node.
   //
   // REQUIRED: !is_meta()
-  virtual bool CanAcceptSource(NodePtr src) const = 0;
+  virtual bool CanAcceptSource(NodePtr source) const = 0;
 
  private:
   friend class FakeGraph;
+
+  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdgeInner(
+      GlobalTaskQueue& global_queue, NodePtr source, NodePtr dest);
 
   // Implementation of CreateEdge.
   void AddSource(NodePtr source);
   void SetDest(NodePtr dest);
   void AddChildSource(NodePtr child_source);
   void AddChildDest(NodePtr child_dest);
-
-  static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdgeInner(
-      GlobalTaskQueue& global_queue, NodePtr src, NodePtr dest);
 
   // Implementation of DeleteEdge.
   void RemoveSource(NodePtr source);

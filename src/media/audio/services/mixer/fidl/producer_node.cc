@@ -5,8 +5,10 @@
 #include "src/media/audio/services/mixer/fidl/producer_node.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include "src/media/audio/services/common/logging.h"
+#include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 
 namespace media_audio {
 
@@ -31,6 +33,12 @@ std::shared_ptr<ProducerNode> ProducerNode::Create(Args args) {
                                                std::move(args.parent));
   node->set_pipeline_stage_thread(args.detached_thread);
   return node;
+}
+
+zx::duration ProducerNode::GetSelfPresentationDelayForSource(const NodePtr& source) {
+  // Producers do not have internal delay contribution.
+  // TODO(fxbug.dev/87651): Add a method to introduce external delay.
+  return zx::duration(0);
 }
 
 bool ProducerNode::CanAcceptSource(NodePtr src) const {

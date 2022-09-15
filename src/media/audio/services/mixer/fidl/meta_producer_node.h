@@ -5,10 +5,13 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_META_PRODUCER_NODE_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_META_PRODUCER_NODE_H_
 
+#include <lib/zx/time.h>
+
 #include <unordered_map>
 #include <variant>
 
 #include "src/media/audio/services/mixer/fidl/node.h"
+#include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/producer_stage.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
@@ -46,6 +49,9 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   // Stops this producer. The command is forwarded to each outgoing command queue.
   void Stop(ProducerStage::StopCommand cmd) const;
 
+  // Implements `Node`.
+  zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) final;
+
  private:
   static inline constexpr size_t kStreamSinkServerIndex = 0;
   static inline constexpr size_t kRingBufferIndex = 1;
@@ -60,7 +66,6 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
         data_source_(std::move(args.data_source)),
         detached_thread_(std::move(args.detached_thread)) {}
 
-  // Implementation of Node.
   NodePtr CreateNewChildSource() final;
   NodePtr CreateNewChildDest() final;
   void DestroyChildDest(NodePtr child_dest) final;
