@@ -57,7 +57,7 @@
             to: "#ffx-laboratory",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
             to: "#ffx-laboratory",
         },

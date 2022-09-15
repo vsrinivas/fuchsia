@@ -680,7 +680,7 @@
                     "/core/factory",
                     "/core/factory_env",
                     "/core/factory_reset",
-                    "/core/ffx-laboratory:blackout-target",
+                    "/core/ffx-laboratory:**",
                     "/core/lowpan-ot-driver",
                     "/core/network/netcfg",
                     "/core/network/test-components:net-test-realm-controller",
