@@ -70,7 +70,7 @@ def main():
             print(
                 "  This is normally because the target is not in the 'default' build"
             )
-            print("  and the fix is to add the test to your 'universe'.")
+            print("  and the fix is to add the cpp_docgen target to your 'universe'.")
             print("\nclang-doc output:\n")
             print(bytes.decode(completed.stdout))
             return 1

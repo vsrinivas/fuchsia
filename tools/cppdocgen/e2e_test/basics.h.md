@@ -57,7 +57,7 @@ This is a C++ enum class with an explicit type and explicit values. It also has 
 title for the docstring.
 
 
-## SimpleTestStructure Struct {:#SimpleTestStructure}
+## SimpleTestStructure struct {:#SimpleTestStructure}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#23)
 
@@ -81,7 +81,7 @@ Some end-of-line documentation.
 
 Some documentation for the `b` member of the `SimpleTestStructure`.
 
-## StandaloneUnion Union {:#StandaloneUnion}
+## StandaloneUnion union {:#StandaloneUnion}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#32)
 
@@ -92,7 +92,7 @@ Some documentation for the `b` member of the `SimpleTestStructure`.
 };
 </pre>
 
-## UnnamedStructTypedef Struct {:#UnnamedStructTypedef}
+## UnnamedStructTypedef struct {:#UnnamedStructTypedef}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#59)
 

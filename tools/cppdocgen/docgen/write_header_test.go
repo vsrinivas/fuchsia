@@ -51,7 +51,7 @@ func TestWriteHeaderReference(t *testing.T) {
 
 [Header source code](http://example.com/main/src/lib/test/myheader.h)
 
-## MyClass Class {:#}
+## MyClass class {:#}
 
 [Declaration source code](http://example.com/main/src/lib/test/myheader.h#99)
 

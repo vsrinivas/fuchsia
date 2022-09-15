@@ -21,7 +21,7 @@ properly qualified.
 </pre>
 
 
-## myns::ClassInsideNamespace Class {:#myns::ClassInsideNamespace}
+## myns::ClassInsideNamespace class {:#myns::ClassInsideNamespace}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/namespace.h#29)
 
@@ -47,7 +47,7 @@ ClassInsideNamespace::<b>ClassInsideNamespace</b>();
 </pre>
 
 
-## myns::StructInsideNamespace Struct {:#myns::StructInsideNamespace}
+## myns::StructInsideNamespace struct {:#myns::StructInsideNamespace}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/namespace.h#15)
 

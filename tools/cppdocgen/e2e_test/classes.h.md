@@ -2,7 +2,7 @@
 
 [Header source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h)
 
-## BaseClass1 Class {:#BaseClass1}
+## BaseClass1 class {:#BaseClass1}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#43)
 
@@ -19,7 +19,7 @@
 Complicated documentation for BaseClass1Function.
 
 
-## BaseClass2 Class {:#BaseClass2}
+## BaseClass2 class {:#BaseClass2}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#49)
 
@@ -36,7 +36,7 @@ Complicated documentation for BaseClass1Function.
 Insightful documentation for BaseClass2Function.
 
 
-## DerivedClass Class {:#DerivedClass}
+## DerivedClass class {:#DerivedClass}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#55)
 
@@ -60,7 +60,7 @@ Insightful documentation for BaseClass2Function.
 An override with documentation. Note that the BaseClass1Function() is not overridden.
 
 
-## SimpleTestClass Class {:#SimpleTestClass}
+## SimpleTestClass class {:#SimpleTestClass}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#8)
 

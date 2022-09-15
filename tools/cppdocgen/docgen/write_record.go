@@ -85,7 +85,7 @@ func writeBaseClassFunctions(index *Index, r *clangdoc.RecordInfo, headingLevel 
 func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *clangdoc.RecordInfo, f io.Writer) {
 	fullName := recordFullName(r)
 	// Devsite uses {:#htmlId} to give the title a custom ID.
-	fmt.Fprintf(f, "## %s %s {:#%s}\n\n", fullName, r.TagType, recordHtmlId(index, r))
+	fmt.Fprintf(f, "## %s %s {:#%s}\n\n", fullName, recordKind(r), recordHtmlId(index, r))
 
 	// This prefix is used for function names. Don't include the full scope (like namespaces)
 	// because this will be printed as a declaration where namespaces are not used. This will
@@ -223,11 +223,6 @@ func memberFunctionLink(index *Index, r *clangdoc.RecordInfo, f *clangdoc.Functi
 
 func recordKind(r *clangdoc.RecordInfo) string {
 	// The TagType matches the C++ construct except for capitalization ("Class", "Struct", ...).
-	if len(r.TagType) == 0 {
-		// TODO clang-doc doesn't output a tag type for some structs. For example,
-		// in fdio: "typedef vnattr { ... } vnattr_t;" gets no TagType.
-		return "ClangDocTodoMissingTagType"
-	}
 	return strings.ToLower(r.TagType)
 }
 

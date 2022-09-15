@@ -33,7 +33,7 @@ Not grouped defines.
 </pre>
 
 
-## MyClass Class {:#MyClass}
+## MyClass class {:#MyClass}
 
 [Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/grouping.h#34)
 
