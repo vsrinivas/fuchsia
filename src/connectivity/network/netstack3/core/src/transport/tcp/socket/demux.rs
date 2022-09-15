@@ -42,9 +42,9 @@ use crate::{
 };
 
 impl<C: TcpNonSyncContext> BufferProvider<C::ReceiveBuffer, C::SendBuffer> for C {
-    type ActiveOpen = C::NetstackEndBuffers;
+    type ActiveOpen = C::ProvidedBuffers;
 
-    type PassiveOpen = C::ClientEndBuffers;
+    type PassiveOpen = C::ReturnedBuffers;
 
     fn new_passive_open_buffers() -> (C::ReceiveBuffer, C::SendBuffer, Self::PassiveOpen) {
         <C as TcpNonSyncContext>::new_passive_open_buffers()
@@ -59,8 +59,8 @@ where
         + BufferProvider<
             C::ReceiveBuffer,
             C::SendBuffer,
-            ActiveOpen = <C as TcpNonSyncContext>::NetstackEndBuffers,
-            PassiveOpen = <C as TcpNonSyncContext>::ClientEndBuffers,
+            ActiveOpen = <C as TcpNonSyncContext>::ProvidedBuffers,
+            PassiveOpen = <C as TcpNonSyncContext>::ReturnedBuffers,
         >,
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {

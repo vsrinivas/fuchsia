@@ -82,14 +82,15 @@ pub struct TimerId(ConnectionId, IpVersion);
 ///
 /// The relationship between buffers defined in the context is as follows:
 ///
-/// The application holds onto the client end buffers and uses them to read or
-/// write data. The peer end of those buffers will be held by the state machine
-/// inside the netstack. Specialized receive/send buffers will be derived from
-/// the netstack end buffers.
+/// The Bindings will receive the `ReturnedBuffers` so that it can: 1. give the
+/// application a handle to read/write data; 2. Observe whatever signal required
+/// from the application so that it can inform Core. The peer end of returned
+/// handle will be held by the state machine inside the netstack. Specialized
+/// receive/send buffers will be derived from `ProvidedBuffers` from Bindings.
 ///
 /// +-------------------------------+
 /// |       +--------------+        |
-/// |       |  client end  |        |
+/// |       |   returned   |        |
 /// |       |    buffers   |        |
 /// |       +------+-------+        |
 /// |              |     application|
@@ -98,7 +99,7 @@ pub struct TimerId(ConnectionId, IpVersion);
 /// +--------------+----------------+
 /// |              |        netstack|
 /// |   +---+------+-------+---+    |
-/// |   |   | netstack end |   |    |
+/// |   |   |  provided    |   |    |
 /// |   | +-+-  buffers   -+-+ |    |
 /// |   +-+-+--------------+-+-+    |
 /// |     v                  v      |
@@ -112,17 +113,17 @@ pub trait TcpNonSyncContext: TimerContext<TimerId> {
     /// The object that will be returned by the state machine when a passive
     /// open connection becomes established. The bindings can use this object
     /// to read/write bytes from/into the created buffers.
-    type ClientEndBuffers: Debug;
-    /// The object that is needed from the bindings to initiate a connection;
-    /// it will be later used to construct buffers when the connection becomes
-    /// established.
-    type NetstackEndBuffers: Debug + Takeable + IntoBuffers<Self::ReceiveBuffer, Self::SendBuffer>;
+    type ReturnedBuffers: Debug;
+    /// The object that is needed from the bindings to initiate a connection,
+    /// it is provided by the bindings and will be later used to construct
+    /// buffers when the connection becomes established.
+    type ProvidedBuffers: Debug + Takeable + IntoBuffers<Self::ReceiveBuffer, Self::SendBuffer>;
 
     /// A new connection is ready to be accepted on the listener.
     fn on_new_connection(&mut self, listener: ListenerId);
     /// Creates new buffers and returns the object that Bindings need to
     /// read/write from/into the created buffers.
-    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffers);
+    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers);
 }
 
 /// Sync context for TCP.
@@ -168,9 +169,9 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> SocketMapStateSpec for TcpSo
     type ListenerId = MaybeListenerId;
     type ConnId = ConnectionId;
 
-    type ListenerState = MaybeListener<C::ClientEndBuffers>;
+    type ListenerState = MaybeListener<C::ReturnedBuffers>;
     type ConnState =
-        Connection<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer, C::NetstackEndBuffers>;
+        Connection<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer, C::ProvidedBuffers>;
 
     type ListenerSharingState = ();
     type ConnSharingState = ();
@@ -278,7 +279,7 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpSockets<I, D, C> {
     fn get_listener_by_id_mut(
         &mut self,
         id: ListenerId,
-    ) -> Option<&mut Listener<C::ClientEndBuffers>> {
+    ) -> Option<&mut Listener<C::ReturnedBuffers>> {
         self.socketmap.listeners_mut().get_by_id_mut(&MaybeListenerId::from(id)).map(
             |(maybe_listener, _sharing, _local_addr)| match maybe_listener {
                 MaybeListener::Bound(_) => {
@@ -548,7 +549,7 @@ pub fn accept<I, SC, C>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: ListenerId,
-) -> Result<(ConnectionId, SocketAddr<I::Addr>, C::ClientEndBuffers), AcceptError>
+) -> Result<(ConnectionId, SocketAddr<I::Addr>, C::ReturnedBuffers), AcceptError>
 where
     I: IpExt,
     C: TcpNonSyncContext,
@@ -584,7 +585,7 @@ pub fn connect_bound<I, SC, C>(
     ctx: &mut C,
     id: BoundId,
     remote: SocketAddr<I::Addr>,
-    netstack_buffers: C::NetstackEndBuffers,
+    netstack_buffers: C::ProvidedBuffers,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
@@ -616,7 +617,7 @@ pub fn connect_unbound<I, SC, C>(
     ctx: &mut C,
     id: UnboundId,
     remote: SocketAddr<I::Addr>,
-    netstack_buffers: C::NetstackEndBuffers,
+    netstack_buffers: C::ProvidedBuffers,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
@@ -646,7 +647,7 @@ fn connect_inner<I, SC, C>(
     ip_sock: IpSock<I, SC::DeviceId, DefaultSendOptions>,
     local_port: NonZeroU16,
     remote_port: NonZeroU16,
-    netstack_buffers: C::NetstackEndBuffers,
+    netstack_buffers: C::ProvidedBuffers,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
@@ -1051,12 +1052,12 @@ mod tests {
     impl TcpNonSyncContext for TcpNonSyncCtx {
         type ReceiveBuffer = Rc<RefCell<RingBuffer>>;
         type SendBuffer = TestSendBuffer;
-        type ClientEndBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
-        type NetstackEndBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
+        type ReturnedBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
+        type ProvidedBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
 
         fn on_new_connection(&mut self, listener: ListenerId) {}
         fn new_passive_open_buffers(
-        ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffers) {
+        ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers) {
             let rb = Rc::new(RefCell::new(RingBuffer::default()));
             let sb = Rc::new(RefCell::new(Vec::new()));
             (Rc::clone(&rb), TestSendBuffer(Rc::clone(&sb), RingBuffer::default()), (rb, sb))

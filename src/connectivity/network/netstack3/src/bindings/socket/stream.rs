@@ -56,7 +56,7 @@ enum SocketId {
 }
 
 pub(crate) trait SocketWorkerDispatcher:
-    TcpNonSyncContext<NetstackEndBuffers = (), ClientEndBuffers = ()>
+    TcpNonSyncContext<ProvidedBuffers = (), ReturnedBuffers = ()>
 {
     /// Registers a newly created listener with its local zircon socket.
     ///
@@ -85,8 +85,8 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
     type SendBuffer = RingBuffer;
     // TODO(https://fxbug.dev/104013): These are `()` for now but should be
     // changed to zircon sockets.
-    type ClientEndBuffers = ();
-    type NetstackEndBuffers = ();
+    type ReturnedBuffers = ();
+    type ProvidedBuffers = ();
 
     fn on_new_connection(&mut self, listener: ListenerId) {
         self.tcp_listeners
@@ -96,7 +96,7 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
             .expect("failed to signal that the new connection is available");
     }
 
-    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffers)
+    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers)
     {
         (RingBuffer::default(), RingBuffer::default(), ())
     }

@@ -187,12 +187,12 @@ impl InstantContext for TestNonSyncCtx {
 impl TcpNonSyncContext for TestNonSyncCtx {
     type ReceiveBuffer = RingBuffer;
     type SendBuffer = RingBuffer;
-    type ClientEndBuffers = ();
-    type NetstackEndBuffers = ();
+    type ReturnedBuffers = ();
+    type ProvidedBuffers = ();
 
     fn on_new_connection(&mut self, _listener: ListenerId) {}
 
-    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ClientEndBuffers)
+    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers)
     {
         (RingBuffer::default(), RingBuffer::default(), ())
     }
