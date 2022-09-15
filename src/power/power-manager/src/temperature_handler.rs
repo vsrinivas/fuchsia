@@ -17,6 +17,7 @@ use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use fuchsia_inspect_contrib::{inspect_log, nodes::BoundedListNode};
 use fuchsia_zircon as zx;
+use log::*;
 use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::Cell;
@@ -108,6 +109,7 @@ impl<'a> TemperatureHandlerBuilder<'a> {
             last_temperature: Celsius(std::f64::NAN),
             last_poll_time: fasync::Time::INFINITE_PAST,
             driver_proxy: self.driver_proxy,
+            debug_temperature_override: None,
         };
 
         // Optionally use the default inspect root node
@@ -165,6 +167,10 @@ impl TemperatureHandler {
         );
 
         self.init_done.wait().await;
+
+        if let Some(temperature) = self.mutable_inner.borrow().debug_temperature_override {
+            return Ok(MessageReturn::ReadTemperature(temperature));
+        }
 
         let last_poll_time = self.mutable_inner.borrow().last_poll_time;
         let last_temperature = self.mutable_inner.borrow().last_temperature;
@@ -231,6 +237,50 @@ impl TemperatureHandler {
         })?;
         Ok(Celsius(temperature.into()))
     }
+
+    fn handle_debug_message(
+        &self,
+        command: &String,
+        args: &Vec<String>,
+    ) -> Result<MessageReturn, PowerManagerError> {
+        let print_help = || {
+            info!("Supported commands: set_temperature, clear_temperature");
+        };
+
+        match command.as_str() {
+            "set_temperature_override" => {
+                let temperature = Celsius(
+                    args.get(0)
+                        .ok_or(PowerManagerError::InvalidArgument(format!(
+                            "Must specify exactly one arg"
+                        )))?
+                        .parse::<f64>()
+                        .map_err(|_| {
+                            PowerManagerError::InvalidArgument(format!(
+                                "Couldn't parse f64 from arg {}",
+                                args[0]
+                            ))
+                        })?,
+                );
+                info!("Overriding temperature to {} C", temperature.0);
+                self.mutable_inner.borrow_mut().debug_temperature_override = Some(temperature);
+            }
+            "clear_temperature_override" => {
+                info!("Clearing temperature override");
+                self.mutable_inner.borrow_mut().debug_temperature_override = None;
+            }
+            "help" => {
+                print_help();
+            }
+            e => {
+                error!("Unsupported command {}", e);
+                print_help();
+                return Err(PowerManagerError::Unsupported);
+            }
+        }
+
+        Ok(MessageReturn::Debug)
+    }
 }
 
 struct MutableInner {
@@ -243,6 +293,10 @@ struct MutableInner {
     /// Proxy to the temperature driver. Populated during `init()` unless previously supplied (in a
     /// test).
     driver_proxy: Option<fthermal::DeviceProxy>,
+
+    /// Allow the debug service to set an override temperature. If set, `ReadTemperature` will
+    /// always respond with this temperature.
+    debug_temperature_override: Option<Celsius>,
 }
 
 #[async_trait(?Send)]
@@ -273,6 +327,7 @@ impl Node for TemperatureHandler {
         match msg {
             Message::ReadTemperature => self.handle_read_temperature().await,
             Message::GetDriverPath => self.handle_get_driver_path(),
+            Message::Debug(command, args) => self.handle_debug_message(command, args),
             _ => Err(PowerManagerError::Unsupported),
         }
     }
@@ -522,6 +577,48 @@ pub mod tests {
         assert!(poll!(&mut message_future).is_pending());
         assert_matches!(node.init().await, Ok(()));
         assert_matches!(message_future.await, Ok(MessageReturn::ReadTemperature(Celsius(_))));
+    }
+
+    /// Tests that the debug temperature override command correctly overrides temperature and can be
+    /// cleared as expected.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_debug_temperature_override() {
+        let node = TemperatureHandlerBuilder::new()
+            .driver_proxy(fake_temperature_driver(|| Celsius(10.0)))
+            .build_and_init()
+            .await;
+
+        assert_matches!(
+            node.handle_message(&Message::ReadTemperature).await.unwrap(),
+            MessageReturn::ReadTemperature(Celsius(t)) if t == 10.0
+        );
+
+        assert_matches!(
+            node.handle_message(&Message::Debug(
+                "set_temperature_override".into(),
+                vec!["20.0".into()]
+            ))
+            .await
+            .unwrap(),
+            MessageReturn::Debug
+        );
+
+        assert_matches!(
+            node.handle_message(&Message::ReadTemperature).await.unwrap(),
+            MessageReturn::ReadTemperature(Celsius(t)) if t == 20.0
+        );
+
+        assert_matches!(
+            node.handle_message(&Message::Debug("clear_temperature_override".into(), vec![]))
+                .await
+                .unwrap(),
+            MessageReturn::Debug
+        );
+
+        assert_matches!(
+            node.handle_message(&Message::ReadTemperature).await.unwrap(),
+            MessageReturn::ReadTemperature(Celsius(t)) if t == 10.0
+        );
     }
 }
 

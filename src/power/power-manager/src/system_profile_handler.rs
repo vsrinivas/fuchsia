@@ -193,6 +193,46 @@ impl SystemProfileHandler {
         Ok(MessageReturn::NotifyUserActiveChanged)
     }
 
+    fn handle_debug_message(
+        &self,
+        command: &String,
+        args: &Vec<String>,
+    ) -> Result<MessageReturn, PowerManagerError> {
+        let print_help = || {
+            info!("Supported commands: set_profile");
+        };
+
+        match command.as_str() {
+            "set_profile" => {
+                let profile_arg = args.get(0).ok_or(PowerManagerError::InvalidArgument(
+                    format!("Must specify exactly one arg"),
+                ))?;
+                let profile = match profile_arg.as_str() {
+                    "Idle" => Profile::Idle,
+                    "UserActive" => Profile::UserActive,
+                    "BackgroundActive" => Profile::BackgroundActive,
+                    p => {
+                        return Err(PowerManagerError::InvalidArgument(format!(
+                            "Invalid profile arg {}",
+                            p
+                        )))
+                    }
+                };
+                self.set_new_profile(profile);
+            }
+            "help" => {
+                print_help();
+            }
+            e => {
+                error!("Unsupported command {}", e);
+                print_help();
+                return Err(PowerManagerError::Unsupported);
+            }
+        }
+
+        Ok(MessageReturn::Debug)
+    }
+
     /// Handle a change to inputs that affect the power profile. Called each time any of the inputs
     /// changes.
     fn handle_inputs_changed(&self) {
@@ -252,6 +292,7 @@ impl Node for SystemProfileHandler {
         match msg {
             Message::NotifyMicEnabledChanged(enabled) => self.handle_mic_enabled_changed(*enabled),
             Message::NotifyUserActiveChanged(active) => self.handle_user_active_changed(*active),
+            Message::Debug(command, args) => self.handle_debug_message(command, args),
             _ => Err(PowerManagerError::Unsupported),
         }
     }
@@ -453,5 +494,25 @@ mod tests {
             exec.run_singlethreaded(watch_request).expect("watch call failed"),
             fprofile::Profile::BackgroundActive
         );
+    }
+
+    /// Tests that the debug command "set_profile" can be used to change the system power profile.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_debug_set_profile() {
+        let node = SystemProfileHandlerBuilder::new().build().unwrap();
+
+        // Idle initially
+        assert_eq!(node.inner.borrow().current_profile, Profile::Idle);
+
+        // Debug command to set the profile to "UserActive"
+        assert_matches!(
+            node.handle_message(&Message::Debug("set_profile".into(), vec!["UserActive".into()]))
+                .await
+                .unwrap(),
+            MessageReturn::Debug
+        );
+
+        // Verify the new profile was set correctly
+        assert_eq!(node.inner.borrow().current_profile, Profile::UserActive);
     }
 }

@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::error::PowerManagerError;
 use crate::log_if_err;
+use crate::message::Message;
+use crate::message::MessageReturn;
 use crate::node::Node;
 use crate::ok_or_default_err;
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use async_utils::hanging_get::server as hanging_get;
 use fidl_fuchsia_power_clientlevel as fpowerclient;
 use fidl_fuchsia_power_systemmode as fpowermode;
@@ -584,11 +588,83 @@ impl SystemPowerModeHandler {
 
         Ok(())
     }
+
+    fn handle_debug_message(
+        &self,
+        command: &String,
+        args: &Vec<String>,
+    ) -> Result<MessageReturn, PowerManagerError> {
+        let print_help = || {
+            info!("Supported commands: set_default_power_level");
+        };
+
+        match command.as_str() {
+            "set_default_power_level" => {
+                let client_type = match args
+                    .get(0)
+                    .ok_or(PowerManagerError::InvalidArgument(format!(
+                        "Expected client type argument"
+                    )))?
+                    .as_str()
+                {
+                    "wlan" => Ok(ClientType::Wlan),
+                    e => Err(PowerManagerError::InvalidArgument(format!(
+                        "Unknown client type {}",
+                        e
+                    ))),
+                }?;
+
+                let default_level = args
+                    .get(1)
+                    .ok_or(PowerManagerError::InvalidArgument(format!(
+                        "Expected default_level argument"
+                    )))?
+                    .parse::<u64>()
+                    .map_err(|_| {
+                        PowerManagerError::InvalidArgument(format!(
+                            "Couldn't parse u64 from arg {}",
+                            args[1]
+                        ))
+                    })?;
+
+                let mut config = ClientConfig { mode_matches: vec![], default_level };
+                self.client_states.get_config(client_type, |existing_config| {
+                    if let Some(c) = existing_config {
+                        config.mode_matches = c.mode_matches.clone();
+                    }
+                });
+
+                self.client_states.update_config(
+                    client_type,
+                    config,
+                    &self.system_power_modes.borrow(),
+                );
+            }
+            "help" => {
+                print_help();
+            }
+            e => {
+                error!("Unsupported command {}", e);
+                print_help();
+                return Err(PowerManagerError::Unsupported);
+            }
+        }
+
+        Ok(MessageReturn::Debug)
+    }
 }
 
+#[async_trait(?Send)]
 impl Node for SystemPowerModeHandler {
     fn name(&self) -> String {
         "SystemPowerModeHandler".to_string()
+    }
+
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
+        match msg {
+            Message::Debug(command, args) => self.handle_debug_message(command, args),
+            _ => Err(PowerManagerError::Unsupported),
+        }
     }
 }
 
@@ -992,5 +1068,45 @@ mod tests {
         // Verify the new config is now returned
         let config = fake_configurator.get_config(&mut executor, ClientType::Wlan);
         assert_eq!(config, Some(ClientConfig::new(1)));
+    }
+
+    /// Tests that the debug command "set_default_power_level" can be used to change a client's
+    /// default power level.
+    #[test]
+    fn test_debug_set_default_power_level() {
+        let mut executor = fasync::TestExecutor::new().unwrap();
+        let mut service_fs = ServiceFs::new_local();
+
+        // Create a test config with a `Wlan` client whose default power level is 0
+        let system_power_mode_config =
+            SystemPowerModeConfig::new().add_client_config(ClientType::Wlan, ClientConfig::new(0));
+
+        let node = SystemPowerModeHandlerBuilder::new()
+            .with_system_power_mode_config(system_power_mode_config)
+            .with_outgoing_svc_dir(service_fs.root_dir())
+            .build()
+            .unwrap();
+
+        let test_env = TestEnv::new(service_fs);
+
+        // Connect the client
+        let client = test_env.make_fake_client(ClientType::Wlan);
+
+        // First request gives initial power level of 0
+        assert_matches!(client.get_power_level(&mut executor), Ok(Some(0)));
+
+        // Debug command to set client's default power level to 1
+        assert_matches!(
+            executor
+                .run_singlethreaded(node.handle_message(&Message::Debug(
+                    "set_default_power_level".into(),
+                    vec!["wlan".into(), "1".into()]
+                )))
+                .unwrap(),
+            MessageReturn::Debug
+        );
+
+        // Verify the client now gets the new power level of 1
+        assert_matches!(client.get_power_level(&mut executor), Ok(Some(1)));
     }
 }
