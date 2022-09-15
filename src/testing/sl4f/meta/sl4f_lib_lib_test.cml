@@ -65,10 +65,6 @@
             storage: "tmp",
             path: "/tmp",
         },
-        {
-            protocol: "fuchsia.sys2.LifecycleController",
-            from: "framework",
-        },
     ],
     offer: [
         {
