@@ -218,7 +218,6 @@ func AddExpectedDurationTags(shards []*Shard, testDurations TestDurationsMap) []
 
 // ApplyModifiers applies the given test modifiers to tests in the given shards.
 func ApplyModifiers(shards []*Shard, modMatches []ModifierMatch) ([]*Shard, error) {
-	defaultModMatch := ModifierMatch{Modifier: TestModifier{TotalRuns: -1}}
 	modsPerEnv := make(map[string]ModifierMatch)
 	for _, modMatch := range modMatches {
 		if modMatch.Test == "" {
@@ -229,13 +228,17 @@ func ApplyModifiers(shards []*Shard, modMatches []ModifierMatch) ([]*Shard, erro
 			modsPerEnv[environmentName(modMatch.Env)] = modMatch
 		}
 	}
+	defaultEnv := build.Environment{}
+	if _, ok := modsPerEnv[environmentName(defaultEnv)]; !ok {
+		modsPerEnv[environmentName(defaultEnv)] = ModifierMatch{Modifier: TestModifier{TotalRuns: -1}}
+	}
 
 	for _, shard := range shards {
 		var modifiedTests []Test
 		for _, test := range shard.Tests {
 			defaultModForEnv, ok := modsPerEnv[environmentName(shard.Env)]
 			if !ok {
-				defaultModForEnv = defaultModMatch
+				defaultModForEnv = modsPerEnv[environmentName(defaultEnv)]
 			}
 			test.applyModifier(defaultModForEnv.Modifier)
 			for _, modMatch := range modMatches {

@@ -331,7 +331,7 @@ func TestApplyModifiers(t *testing.T) {
 		Tags:       []string{},
 	}
 
-	makeModifierMatch := func(id int, env build.Environment, affected bool, maxAttempts int) ModifierMatch {
+	makeModifierMatch := func(id int, env build.Environment, affected bool, maxAttempts, totalRuns int) ModifierMatch {
 		os := "fuchsia"
 		if env.Dimensions.OS != "" {
 			os = env.Dimensions.OS
@@ -341,27 +341,32 @@ func TestApplyModifiers(t *testing.T) {
 			Env:  env,
 			Modifier: TestModifier{
 				Affected:    affected,
-				TotalRuns:   -1,
+				TotalRuns:   totalRuns,
 				MaxAttempts: maxAttempts,
 			},
 		}
 	}
 
 	type modifyDetails struct {
-		index       int
-		affected    bool
-		maxAttempts int
+		index        int
+		affected     bool
+		runs         int
+		runAlgorithm RunAlgorithm
+	}
+
+	makeModifyDetails := func(runs int, runAlgorithm RunAlgorithm, affected bool, ids ...int) []modifyDetails {
+		var details []modifyDetails
+		for _, id := range ids {
+			details = append(details, modifyDetails{id, affected, runs, runAlgorithm})
+		}
+		return details
 	}
 
 	shardWithModify := func(s *Shard, md []modifyDetails) *Shard {
 		for _, m := range md {
 			i := m.index
-			s.Tests[i].Runs = m.maxAttempts
-			if m.maxAttempts > 1 {
-				s.Tests[i].RunAlgorithm = StopOnSuccess
-			} else {
-				s.Tests[i].RunAlgorithm = ""
-			}
+			s.Tests[i].Runs = m.runs
+			s.Tests[i].RunAlgorithm = m.runAlgorithm
 			if m.affected {
 				s.Tests[i].Affected = true
 			}
@@ -388,6 +393,34 @@ func TestApplyModifiers(t *testing.T) {
 			},
 		},
 		{
+			name: "default modifier for specific env",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []ModifierMatch{
+				{Env: env1, Modifier: TestModifier{Name: "*", OS: "fuchsia", TotalRuns: -1, MaxAttempts: 2}},
+			},
+			expected: []*Shard{
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), makeModifyDetails(2, StopOnSuccess, false, 0, 1, 2)),
+				shard(env2, "linux", 1, 2, 3),
+			},
+		},
+		{
+			name: "default modifier for all envs",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []ModifierMatch{
+				{Modifier: TestModifier{Name: "*", TotalRuns: -1, MaxAttempts: 2}},
+			},
+			expected: []*Shard{
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), makeModifyDetails(2, StopOnSuccess, false, 0, 1, 2)),
+				shardWithModify(shard(env2, "linux", 1, 2, 3), makeModifyDetails(2, StopOnSuccess, false, 0, 1, 2)),
+			},
+		},
+		{
 			name: "multiple default modifiers",
 			shards: []*Shard{
 				shard(env1, "fuchsia", 1, 2, 3),
@@ -406,10 +439,10 @@ func TestApplyModifiers(t *testing.T) {
 				shard(env2, "linux", 1, 2, 3),
 			},
 			modifiers: []ModifierMatch{
-				makeModifierMatch(1, env1, true, 0),
+				makeModifierMatch(1, env1, true, 0, -1),
 			},
 			expected: []*Shard{
-				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 1}}),
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), makeModifyDetails(1, "", true, 0)),
 				shard(env2, "linux", 1, 2, 3),
 			},
 		},
@@ -420,11 +453,11 @@ func TestApplyModifiers(t *testing.T) {
 				shard(env2, "linux", 1, 2, 3),
 			},
 			modifiers: []ModifierMatch{
-				makeModifierMatch(1, env1, true, 0),
-				makeModifierMatch(1, env1, false, 5),
+				makeModifierMatch(1, env1, true, 0, -1),
+				makeModifierMatch(1, env1, false, 5, -1),
 			},
 			expected: []*Shard{
-				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 5}}),
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), makeModifyDetails(5, StopOnSuccess, true, 0)),
 				shard(env2, "linux", 1, 2, 3),
 			},
 		},
@@ -435,13 +468,58 @@ func TestApplyModifiers(t *testing.T) {
 				shard(env2, "linux", 1, 2, 3),
 			},
 			modifiers: []ModifierMatch{
-				makeModifierMatch(1, env1, true, 0),
-				makeModifierMatch(2, env1, true, 0),
-				makeModifierMatch(1, env2, false, 5),
+				makeModifierMatch(1, env1, true, 0, -1),
+				makeModifierMatch(2, env1, true, 0, -1),
+				makeModifierMatch(1, env2, false, 5, -1),
 			},
 			expected: []*Shard{
-				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), []modifyDetails{{0, true, 1}, {1, true, 1}}),
-				shardWithModify(shard(env2, "linux", 1, 2, 3), []modifyDetails{{0, false, 5}}),
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), makeModifyDetails(1, "", true, 0, 1)),
+				shardWithModify(shard(env2, "linux", 1, 2, 3), makeModifyDetails(5, StopOnSuccess, false, 0)),
+			},
+		},
+		{
+			name: "total runs takes precedence over max attempts",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []ModifierMatch{
+				makeModifierMatch(1, env1, true, 0, 10),
+				makeModifierMatch(1, env1, false, 5, -1),
+			},
+			expected: []*Shard{
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), makeModifyDetails(10, StopOnFailure, true, 0)),
+				shard(env2, "linux", 1, 2, 3),
+			},
+		},
+		{
+			name: "choose specified total runs over unspecified",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []ModifierMatch{
+				makeModifierMatch(1, env1, true, 0, 10),
+				makeModifierMatch(1, env1, false, 0, 0),
+			},
+			expected: []*Shard{
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), makeModifyDetails(10, StopOnFailure, true, 0)),
+				shard(env2, "linux", 1, 2, 3),
+			},
+		},
+		{
+			name: "choose less runs",
+			shards: []*Shard{
+				shard(env1, "fuchsia", 1, 2, 3),
+				shard(env2, "linux", 1, 2, 3),
+			},
+			modifiers: []ModifierMatch{
+				makeModifierMatch(1, env1, true, 0, 10),
+				makeModifierMatch(1, env1, false, 0, 5),
+			},
+			expected: []*Shard{
+				shardWithModify(shard(env1, "fuchsia", 1, 2, 3), makeModifyDetails(5, StopOnFailure, true, 0)),
+				shard(env2, "linux", 1, 2, 3),
 			},
 		},
 	}
