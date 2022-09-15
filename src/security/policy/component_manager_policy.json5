@@ -677,8 +677,6 @@
                     "/core/bt-snoop",
                     "/core/camera_device_watcher",
                     "/core/cobalt_system_metrics",
-                    "/core/codec_factory",
-                    "/core/codec_factory/magma-codecs:**",
                     "/core/factory",
                     "/core/factory_env",
                     "/core/factory_reset",

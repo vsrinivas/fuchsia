@@ -17,18 +17,18 @@
     ],
     offer: [
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-mediacodec",
             to: "#codec_factory",
-            subdir: "class/media-codec",
+            subdir: "media-codec",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-gpu",
             to: "#codec_factory",
-            subdir: "class/gpu",
+            subdir: "gpu",
         },
         {
             protocol: "fuchsia.cobalt.LoggerFactory",
