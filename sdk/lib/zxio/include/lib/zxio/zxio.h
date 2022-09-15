@@ -61,7 +61,7 @@ ZXIO_EXPORT zx_status_t zxio_create_with_on_open(zx_handle_t handle, zxio_storag
 
 // Like zxio_create but the caller provides information about the handle.
 ZXIO_EXPORT zx_status_t zxio_create_with_info(zx_handle_t handle,
-                                              const zx_info_handle_basic_t* chandle_info,
+                                              const zx_info_handle_basic_t* handle_info,
                                               zxio_storage_t* storage);
 
 // Creates a new zxio_t object with a known type and type-specific parameters.

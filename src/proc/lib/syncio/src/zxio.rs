@@ -50,7 +50,7 @@ pub type zxio_t = zxio_tag;
 #[repr(C)]
 #[derive(Debug, Default, Copy, Clone)]
 pub struct zxio_private {
-    pub reserved: [u64; 8usize],
+    pub reserved: [u64; 26usize],
 }
 pub type zxio_private_t = zxio_private;
 #[repr(C)]
@@ -166,7 +166,7 @@ extern "C" {
 extern "C" {
     pub fn zxio_create_with_info(
         handle: zx_handle_t,
-        chandle_info: *const zx_info_handle_basic_t,
+        handle_info: *const zx_info_handle_basic_t,
         storage: *mut zxio_storage_t,
     ) -> zx_status_t;
 }
@@ -343,7 +343,11 @@ extern "C" {
     ) -> zx_status_t;
 }
 extern "C" {
-    pub fn zxio_shutdown(io: *mut zxio_t, options: zxio_shutdown_options_t) -> zx_status_t;
+    pub fn zxio_shutdown(
+        io: *mut zxio_t,
+        options: zxio_shutdown_options_t,
+        out_code: *mut i16,
+    ) -> zx_status_t;
 }
 extern "C" {
     pub fn zxio_open(
@@ -457,6 +461,66 @@ extern "C" {
         io: *mut zxio_t,
         addr: *const sockaddr,
         addrlen: socklen_t,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_connect(
+        io: *mut zxio_t,
+        addr: *const sockaddr,
+        addrlen: socklen_t,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_listen(
+        io: *mut zxio_t,
+        backlog: ::std::os::raw::c_int,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_accept(
+        io: *mut zxio_t,
+        addr: *mut sockaddr,
+        addrlen: *mut socklen_t,
+        out_storage: *mut zxio_storage_t,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_getsockname(
+        io: *mut zxio_t,
+        addr: *mut sockaddr,
+        addrlen: *mut socklen_t,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_getpeername(
+        io: *mut zxio_t,
+        addr: *mut sockaddr,
+        addrlen: *mut socklen_t,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_getsockopt(
+        io: *mut zxio_t,
+        level: ::std::os::raw::c_int,
+        optname: ::std::os::raw::c_int,
+        optval: *mut ::std::os::raw::c_void,
+        optlen: *mut socklen_t,
+        out_code: *mut i16,
+    ) -> zx_status_t;
+}
+extern "C" {
+    pub fn zxio_setsockopt(
+        io: *mut zxio_t,
+        level: ::std::os::raw::c_int,
+        optname: ::std::os::raw::c_int,
+        optval: *const ::std::os::raw::c_void,
+        optlen: socklen_t,
         out_code: *mut i16,
     ) -> zx_status_t;
 }
