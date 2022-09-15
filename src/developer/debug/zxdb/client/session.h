@@ -12,7 +12,9 @@
 #include <vector>
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/arch_info.h"
+#include "src/developer/debug/zxdb/client/component_observer.h"
 #include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/common/err.h"
@@ -73,22 +75,27 @@ class Session : public SettingStoreObserver {
   explicit Session(debug::StreamBuffer* stream);
   virtual ~Session();
 
-  fxl::WeakPtr<Session> GetWeakPtr();
+  fxl::WeakPtr<Session> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
   // The RempteAPI for sending messages to the debug_agent.
   RemoteAPI* remote_api() { return remote_api_.get(); }
 
-  void AddObserver(SessionObserver* observer);
-  void RemoveObserver(SessionObserver* observer);
+  void AddObserver(SessionObserver* observer) { observers_.AddObserver(observer); }
+  void RemoveObserver(SessionObserver* observer) { observers_.RemoveObserver(observer); }
 
-  void AddBreakpointObserver(BreakpointObserver* observer);
-  void RemoveBreakpointObserver(BreakpointObserver* observer);
+  void AddBreakpointObserver(BreakpointObserver* observer) {
+    breakpoint_observers_.AddObserver(observer);
+  }
+  void RemoveBreakpointObserver(BreakpointObserver* observer) {
+    breakpoint_observers_.RemoveObserver(observer);
+  }
 
-  void AddFilterObserver(FilterObserver* observer);
-  void RemoveFilterObserver(FilterObserver* observer);
-
-  void AddDownloadObserver(DownloadObserver* observer);
-  void RemoveDownloadObserver(DownloadObserver* observer);
+  void AddDownloadObserver(DownloadObserver* observer) {
+    download_observers_.AddObserver(observer);
+  }
+  void RemoveDownloadObserver(DownloadObserver* observer) {
+    download_observers_.RemoveObserver(observer);
+  }
 
   // Returns information about whether this session is connected to a minidump instead of a live
   // system.
@@ -144,6 +151,7 @@ class Session : public SettingStoreObserver {
   fxl::ObserverList<ThreadObserver>& thread_observers() { return thread_observers_; }
   fxl::ObserverList<BreakpointObserver>& breakpoint_observers() { return breakpoint_observers_; }
   fxl::ObserverList<DownloadObserver>& download_observers() { return download_observers_; }
+  fxl::ObserverList<ComponentObserver>& component_observers() { return component_observers_; }
 
   // Dispatches these particular notification types from the agent. These are public since tests
   // will commonly want to synthesize these events.
@@ -159,6 +167,8 @@ class Session : public SettingStoreObserver {
   void DispatchProcessStarting(const debug_ipc::NotifyProcessStarting&);
   void DispatchNotifyIO(const debug_ipc::NotifyIO& notify);
   void DispatchNotifyLog(const debug_ipc::NotifyLog& notify);
+  void DispatchNotifyComponentStarting(const debug_ipc::NotifyComponent& notify);
+  void DispatchNotifyComponentExiting(const debug_ipc::NotifyComponent& notify);
 
   // SettingStoreObserver
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
@@ -231,6 +241,7 @@ class Session : public SettingStoreObserver {
   fxl::ObserverList<ThreadObserver> thread_observers_;
   fxl::ObserverList<BreakpointObserver> breakpoint_observers_;
   fxl::ObserverList<DownloadObserver> download_observers_;
+  fxl::ObserverList<ComponentObserver> component_observers_;
 
   // Non-owning pointer to the connected stream. If this is non-null and connection_storage_ is
   // null, the connection is persistent (made via the constructor) and can't be disconnected.

@@ -14,8 +14,6 @@ static_library("shared") {
     "arch_x86.h",
     "buffered_fd.cc",
     "buffered_fd.h",
-    "component_utils.cc",
-    "component_utils.h",
     "handle_info.cc",
     "handle_info.h",
     "largest_less_or_equal.h",
@@ -108,7 +106,6 @@ source_set("tests") {
   testonly = true
   sources = [
     "address_range_unittest.cc",
-    "component_utils_unittest.cc",
     "handle_info_unittest.cc",
     "largest_less_or_equal_unittest.cc",
     "message_loop_unittest.cc",

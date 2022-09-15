@@ -1141,4 +1141,22 @@ TEST(Protocol, NotifyLog) {
   EXPECT_EQ(initial.log, second.log);
 }
 
+TEST(Protocol, NotifyComponent) {
+  NotifyComponent initial;
+  initial.timestamp = kTestTimestampDefault;
+  initial.component.moniker = "/moniker";
+  initial.component.url = "fuchsia-pkg://url";
+
+  MessageWriter writer;
+  WriteNotifyComponent(MsgHeader::Type::kNotifyComponentStarting, initial, &writer);
+
+  MessageReader reader(writer.MessageComplete());
+  NotifyComponent second;
+
+  ASSERT_TRUE(ReadNotifyComponent(&reader, &second));
+  EXPECT_EQ(initial.timestamp, second.timestamp);
+  EXPECT_EQ(initial.component.moniker, second.component.moniker);
+  EXPECT_EQ(initial.component.url, second.component.url);
+}
+
 }  // namespace debug_ipc

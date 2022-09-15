@@ -12,26 +12,10 @@
 #include "src/developer/debug/debug_agent/component_manager.h"
 #include "src/developer/debug/debug_agent/job_handle.h"
 #include "src/developer/debug/debug_agent/system_interface.h"
+#include "src/developer/debug/ipc/filter_utils.h"
 #include "src/developer/debug/ipc/records.h"
 
 namespace debug_agent {
-
-namespace {
-
-bool MatchComponentUrl(std::string_view url, std::string_view pattern) {
-  // Only deals with the most common case: the target URL contains a hash but the pattern doesn't.
-  // The hash will look like "?hash=xxx#".
-  const char* hash = "?hash=";
-  if (url.find(hash) != std::string_view::npos && url.find_last_of('#') != std::string_view::npos &&
-      pattern.find(hash) == std::string_view::npos) {
-    std::string new_url(url.substr(0, url.find(hash)));
-    new_url += url.substr(url.find_last_of('#'));
-    return new_url == pattern;
-  }
-  return url == pattern;
-}
-
-}  // namespace
 
 bool Filter::MatchesProcess(const ProcessHandle& process, SystemInterface& system_interface) const {
   if (filter_.job_koid) {
@@ -43,32 +27,18 @@ bool Filter::MatchesProcess(const ProcessHandle& process, SystemInterface& syste
       return false;
     }
   }
-  switch (filter_.type) {
-    case debug_ipc::Filter::Type::kProcessNameSubstr:
-      return process.GetName().find(filter_.pattern) != std::string::npos;
-    case debug_ipc::Filter::Type::kProcessName:
-      return process.GetName() == filter_.pattern;
-    case debug_ipc::Filter::Type::kUnset:
-      return false;
-    default:
-      break;  // Fall through
+  return debug_ipc::FilterMatches(
+      filter_, process.GetName(),
+      system_interface.GetComponentManager().FindComponentInfo(process));
+}
+
+bool Filter::MatchesComponent(const std::string& moniker, const std::string& url) const {
+  if (filter_.type == debug_ipc::Filter::Type::kComponentMoniker ||
+      filter_.type == debug_ipc::Filter::Type::kComponentName ||
+      filter_.type == debug_ipc::Filter::Type::kComponentUrl) {
+    return debug_ipc::FilterMatches(filter_, "",
+                                    debug_ipc::ComponentInfo{.moniker = moniker, .url = url});
   }
-  // All unhandled filter types at this point require component information.
-  auto info = system_interface.GetComponentManager().FindComponentInfo(process);
-  if (!info) {
-    return false;
-  }
-  switch (filter_.type) {
-    case debug_ipc::Filter::Type::kComponentName:
-      return info->url.substr(info->url.find_last_of('/') + 1) == filter_.pattern;
-    case debug_ipc::Filter::Type::kComponentUrl:
-      return MatchComponentUrl(info->url, filter_.pattern);
-    case debug_ipc::Filter::Type::kComponentMoniker:
-      return info->moniker == filter_.pattern;
-    default:
-      break;
-  }
-  FX_NOTREACHED();
   return false;
 }
 

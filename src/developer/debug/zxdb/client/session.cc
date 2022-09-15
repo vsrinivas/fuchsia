@@ -693,6 +693,18 @@ void Session::DispatchNotifyLog(const debug_ipc::NotifyLog& notify) {
       << notify.log;
 }
 
+void Session::DispatchNotifyComponentStarting(const debug_ipc::NotifyComponent& notify) {
+  for (auto& observer : component_observers_) {
+    observer.OnComponentStarted(notify.component.moniker, notify.component.url);
+  }
+}
+
+void Session::DispatchNotifyComponentExiting(const debug_ipc::NotifyComponent& notify) {
+  for (auto& observer : component_observers_) {
+    observer.OnComponentExited(notify.component.moniker, notify.component.url);
+  }
+}
+
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data) {
   debug_ipc::MessageReader reader(std::move(data));
 
@@ -748,6 +760,18 @@ void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vect
       debug_ipc::NotifyLog notify;
       if (debug_ipc::ReadNotifyLog(&reader, &notify))
         DispatchNotifyLog(notify);
+      break;
+    }
+    case debug_ipc::MsgHeader::Type::kNotifyComponentExiting:
+    case debug_ipc::MsgHeader::Type::kNotifyComponentStarting: {
+      debug_ipc::NotifyComponent notify;
+      if (!debug_ipc::ReadNotifyComponent(&reader, &notify))
+        break;
+      if (header.type == debug_ipc::MsgHeader::Type::kNotifyComponentExiting) {
+        DispatchNotifyComponentExiting(notify);
+      } else {
+        DispatchNotifyComponentStarting(notify);
+      }
       break;
     }
     default:
@@ -858,28 +882,6 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
         }
       });
 }
-
-void Session::AddObserver(SessionObserver* observer) { observers_.AddObserver(observer); }
-
-void Session::RemoveObserver(SessionObserver* observer) { observers_.RemoveObserver(observer); }
-
-void Session::AddBreakpointObserver(BreakpointObserver* observer) {
-  breakpoint_observers_.AddObserver(observer);
-}
-
-void Session::RemoveBreakpointObserver(BreakpointObserver* observer) {
-  breakpoint_observers_.RemoveObserver(observer);
-}
-
-void Session::AddDownloadObserver(DownloadObserver* observer) {
-  download_observers_.AddObserver(observer);
-}
-
-void Session::RemoveDownloadObserver(DownloadObserver* observer) {
-  download_observers_.RemoveObserver(observer);
-}
-
-fxl::WeakPtr<Session> Session::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 void Session::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {
   if (setting_name == ClientSettings::System::kAutoAttachLimbo) {

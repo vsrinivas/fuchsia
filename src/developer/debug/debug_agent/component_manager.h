@@ -35,15 +35,17 @@ class ComponentManager {
   // Find the component information if the process runs in the context of a component.
   std::optional<debug_ipc::ComponentInfo> FindComponentInfo(const ProcessHandle& process) const;
 
+  // Set the debug_agent. ComponentManager needs a debug_agent to notify component starting and
+  // exiting events.
+  virtual void SetDebugAgent(DebugAgent* debug_agent) = 0;
+
   // Launches the component with the given command line.
   //
   // The component URL is in argv[0].
   virtual debug::Status LaunchComponent(const std::vector<std::string>& argv) = 0;
 
-  // Launches a test. DebugAgent is needed here because Fuchsia test framework provides
-  // stdout/stderr after the process starts, so we need to |GetDebuggedProcess| to |SetStdout|.
-  virtual debug::Status LaunchTest(std::string url, std::vector<std::string> case_filters,
-                                   DebugAgent* debug_agent) = 0;
+  // Launches a test.
+  virtual debug::Status LaunchTest(std::string url, std::vector<std::string> case_filters) = 0;
 
   // Notification that a process has started.
   //

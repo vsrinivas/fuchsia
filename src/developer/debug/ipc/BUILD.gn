@@ -21,6 +21,8 @@ static_library("shared") {
     "automation_instruction.h",
     "decode_exception.cc",
     "decode_exception.h",
+    "filter_utils.cc",
+    "filter_utils.h",
     "message_reader.cc",
     "message_reader.h",
     "message_writer.cc",
@@ -71,6 +73,7 @@ source_set("tests") {
   sources = [
     "automation_instruction_unittests.cc",
     "decode_exception_unittests.cc",
+    "filter_utils_unittests.cc",
     "message_unittests.cc",
     "protocol_unittests.cc",
   ]

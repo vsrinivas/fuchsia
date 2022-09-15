@@ -26,10 +26,10 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
   ~ZirconComponentManager() override = default;
 
   // ComponentManager implementation.
+  void SetDebugAgent(DebugAgent* debug_agent) override { debug_agent_ = debug_agent; }
   std::optional<debug_ipc::ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const override;
   debug::Status LaunchComponent(const std::vector<std::string>& argv) override;
-  debug::Status LaunchTest(std::string url, std::vector<std::string> case_filters,
-                           DebugAgent* debug_agent) override;
+  debug::Status LaunchTest(std::string url, std::vector<std::string> case_filters) override;
   bool OnProcessStart(const ProcessHandle& process, StdioHandles* out_stdio,
                       std::string* process_name_override) override;
 
@@ -46,6 +46,8 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
   class TestLauncher;
 
   fit::callback<void()> ready_callback_ = []() {};
+
+  DebugAgent* debug_agent_ = nullptr;  // nullable.
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 

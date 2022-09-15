@@ -36,7 +36,6 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public 
   // client. It will not be read (that's the job of the provider of the
   // RemoteAPI).
   explicit DebugAgent(std::unique_ptr<SystemInterface> system_interface);
-  ~DebugAgent();
 
   fxl::WeakPtr<DebugAgent> GetWeakPtr();
 
@@ -57,6 +56,10 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public 
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
   void OnProcessStart(std::unique_ptr<ProcessHandle> process);
+
+  // Notified by ComponentManager.
+  void OnComponentStarted(const std::string& moniker, const std::string& url);
+  void OnComponentExited(const std::string& moniker, const std::string& url);
 
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
 

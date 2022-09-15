@@ -125,6 +125,8 @@ void WriteNotifyException(const NotifyException& notify, MessageWriter*);
 void WriteNotifyModules(const NotifyModules& notify, MessageWriter*);
 void WriteNotifyIO(const NotifyIO& notify, MessageWriter*);
 void WriteNotifyLog(const NotifyLog& notify, MessageWriter*);
+void WriteNotifyComponent(MsgHeader::Type type, const NotifyComponent& notify,
+                          MessageWriter* writer);
 
 }  // namespace debug_ipc
 

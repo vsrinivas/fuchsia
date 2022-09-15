@@ -95,7 +95,7 @@ struct ConfiguredProcess {
 // Go() is called in a separate thread to start the loop.  The other operations
 // - Initialize, Connect, Attach, etc - post tasks to that loop that are
 // executed by the other thread.
-class InterceptionWorkflow {
+class InterceptionWorkflow : public zxdb::ComponentObserver {
  public:
   friend class InterceptingThreadObserver;
   friend class DataForZxChannelTest;
@@ -189,6 +189,9 @@ class InterceptionWorkflow {
   InterceptionWorkflow& operator=(const InterceptionWorkflow&) = delete;
 
  private:
+  void OnComponentStarted(const std::string& moniker, const std::string& url) override;
+  void OnComponentExited(const std::string& moniker, const std::string& url) override;
+
   debug::BufferedFD buffer_;
   zxdb::Session* session_;
   std::vector<ProcessFilter> filters_;
@@ -202,6 +205,9 @@ class InterceptionWorkflow {
 
   // All the processes for which the breapoints have been set.
   std::map<zx_koid_t, ConfiguredProcess> configured_processes_;
+
+  // Main components that are running and we shouldn't quit.
+  std::set<std::string> running_main_components_;
 
   std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher_;
 

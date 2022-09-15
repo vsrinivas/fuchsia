@@ -28,7 +28,6 @@
 #include "src/developer/debug/debug_agent/stdio_handles.h"
 #include "src/developer/debug/debug_agent/zircon_utils.h"
 #include "src/developer/debug/ipc/records.h"
-#include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/developer/debug/shared/logging/logging.h"
 #include "src/developer/debug/shared/message_loop.h"
@@ -218,6 +217,9 @@ void ZirconComponentManager::OnEvent(fuchsia::sys2::Event event) {
   std::string moniker = event.header().moniker().substr(1);
   switch (event.header().event_type()) {
     case fuchsia::sys2::EventType::DEBUG_STARTED:
+      if (debug_agent_) {
+        debug_agent_->OnComponentStarted(moniker, event.header().component_url());
+      }
       if (event.event_result().payload().is_debug_started() &&
           event.event_result().payload().debug_started().has_runtime_dir()) {
         ReadElfJobId(
@@ -237,6 +239,9 @@ void ZirconComponentManager::OnEvent(fuchsia::sys2::Event event) {
       }
       break;
     case fuchsia::sys2::EventType::STOPPED: {
+      if (debug_agent_) {
+        debug_agent_->OnComponentExited(moniker, event.header().component_url());
+      }
       for (auto it = running_component_info_.begin(); it != running_component_info_.end(); it++) {
         if (it->second.moniker == moniker) {
           DEBUG_LOG(Process) << "Component stopped job_id=" << it->first
@@ -269,7 +274,7 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
                        ZirconComponentManager* component_manager, DebugAgent* debug_agent) {
     test_url_ = std::move(url);
     component_manager_ = component_manager->GetWeakPtr();
-    debug_agent_ = debug_agent->GetWeakPtr();
+    debug_agent_ = debug_agent ? debug_agent->GetWeakPtr() : nullptr;
 
     if (component_manager->running_tests_info_.count(test_url_))
       return debug::Status("Test " + test_url_ + " is already launched");
@@ -398,10 +403,9 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
 };
 
 debug::Status ZirconComponentManager::LaunchTest(std::string url,
-                                                 std::vector<std::string> case_filters,
-                                                 DebugAgent* debug_agent) {
+                                                 std::vector<std::string> case_filters) {
   return fxl::MakeRefCounted<TestLauncher>()->Launch(std::move(url), std::move(case_filters), this,
-                                                     debug_agent);
+                                                     debug_agent_);
 }
 
 debug::Status ZirconComponentManager::LaunchComponent(const std::vector<std::string>& argv) {

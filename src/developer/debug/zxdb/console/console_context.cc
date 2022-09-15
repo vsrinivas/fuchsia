@@ -57,6 +57,7 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
   session->target_observers().AddObserver(this);
   session->process_observers().AddObserver(this);
   session->thread_observers().AddObserver(this);
+  session->component_observers().AddObserver(this);
 
   session->system().AddObserver(this);
 
@@ -77,6 +78,7 @@ ConsoleContext::ConsoleContext(Session* session) : session_(session) {
 ConsoleContext::~ConsoleContext() {
   // Unregister for all observers.
   session_->system().RemoveObserver(this);
+  session_->component_observers().RemoveObserver(this);
   session_->target_observers().RemoveObserver(this);
   session_->process_observers().RemoveObserver(this);
   session_->thread_observers().RemoveObserver(this);
@@ -783,6 +785,24 @@ void ConsoleContext::OnBreakpointUpdateFailure(Breakpoint* breakpoint, const Err
 ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) {
   return const_cast<TargetRecord*>(
       const_cast<const ConsoleContext*>(this)->GetTargetRecord(target_id));
+}
+
+void ConsoleContext::OnComponentStarted(const std::string& moniker, const std::string& url) {
+  OutputBuffer out("Component Started");
+  out.Append(Syntax::kVariable, " moniker");
+  out.Append("=" + FormatConsoleString(moniker));
+  out.Append(Syntax::kVariable, " url");
+  out.Append("=" + FormatConsoleString(url));
+  Console::get()->Output(out);
+}
+
+void ConsoleContext::OnComponentExited(const std::string& moniker, const std::string& url) {
+  OutputBuffer out("Component Exited");
+  out.Append(Syntax::kVariable, " moniker");
+  out.Append("=" + FormatConsoleString(moniker));
+  out.Append(Syntax::kVariable, " url");
+  out.Append("=" + FormatConsoleString(url));
+  Console::get()->Output(out);
 }
 
 const ConsoleContext::TargetRecord* ConsoleContext::GetTargetRecord(int target_id) const {

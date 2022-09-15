@@ -27,6 +27,9 @@ class Filter {
   // the component info about a process and get the parent job of a process.
   bool MatchesProcess(const ProcessHandle& process, SystemInterface& system_interface) const;
 
+  // Returns whether the component matches the filter.
+  bool MatchesComponent(const std::string& moniker, const std::string& url) const;
+
   // Returns a list of processes that are under a job and matches the filter.
   std::vector<zx_koid_t> ApplyToJob(const JobHandle& job, SystemInterface& system_interface) const;
 

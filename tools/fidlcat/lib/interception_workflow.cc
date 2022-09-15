@@ -10,6 +10,8 @@
 #include <string>
 #include <thread>
 
+#include "src/developer/debug/ipc/filter_utils.h"
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
@@ -171,6 +173,7 @@ InterceptionWorkflow::InterceptionWorkflow()
   }
   session_->process_observers().AddObserver(&process_observer_);
   session_->thread_observers().AddObserver(&thread_observer_);
+  session_->component_observers().AddObserver(this);
 }
 
 InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session, debug::MessageLoop* loop)
@@ -182,9 +185,11 @@ InterceptionWorkflow::InterceptionWorkflow(zxdb::Session* session, debug::Messag
       thread_observer_(this) {
   session_->process_observers().AddObserver(&process_observer_);
   session_->thread_observers().AddObserver(&thread_observer_);
+  session_->component_observers().AddObserver(this);
 }
 
 InterceptionWorkflow::~InterceptionWorkflow() {
+  session_->component_observers().RemoveObserver(this);
   session_->thread_observers().RemoveObserver(&thread_observer_);
   session_->process_observers().RemoveObserver(&process_observer_);
   if (delete_session_) {
@@ -353,16 +358,37 @@ void InterceptionWorkflow::ProcessDetached(zx_koid_t koid, uint64_t timestamp) {
   Detach();
 }
 
-void InterceptionWorkflow::Detach() {
-  if (syscall_decoder_dispatcher()->decode_options().stay_alive) {
-    FX_LOGS(INFO) << "Waiting for more processes to monitor. Use Ctrl-C to exit fidlcat.";
-    return;
+void InterceptionWorkflow::OnComponentStarted(const std::string& moniker, const std::string& url) {
+  for (const auto& filter : filters_) {
+    if (filter.main_filter &&
+        debug_ipc::FilterMatches(filter.filter->filter(), "",
+                                 debug_ipc::ComponentInfo{.moniker = moniker, .url = url})) {
+      running_main_components_.emplace(moniker);
+      return;
+    }
   }
+}
+
+void InterceptionWorkflow::OnComponentExited(const std::string& moniker, const std::string& url) {
+  if (running_main_components_.erase(moniker)) {
+    Detach();
+  }
+}
+
+void InterceptionWorkflow::Detach() {
   for (const auto& configured_process : configured_processes_) {
     if (configured_process.second.main_process) {
       // One main process is still running => don't shutdown fidlcat.
       return;
     }
+  }
+  if (!running_main_components_.empty()) {
+    // There're main components running. Don't shutdown.
+    return;
+  }
+  if (syscall_decoder_dispatcher()->decode_options().stay_alive) {
+    FX_LOGS(INFO) << "Waiting for more processes to monitor. Use Ctrl-C to exit fidlcat.";
+    return;
   }
   if (!shutdown_done_) {
     shutdown_done_ = true;
@@ -448,7 +474,8 @@ void InterceptionWorkflow::SetBreakpoints(zxdb::Process* process, uint64_t times
 
   bool main_process = false;
   for (const auto& filter : filters_) {
-    if (process->GetName().find(filter.filter->pattern()) != std::string::npos) {
+    if (debug_ipc::FilterMatches(filter.filter->filter(), process->GetName(),
+                                 process->GetComponentInfo())) {
       main_process = filter.main_filter;
       break;
     }
@@ -543,19 +570,5 @@ void InterceptionWorkflow::Go() {
   current->Run();
   current->Cleanup();
 }
-
-namespace {
-
-// Makes sure we never get stuck in the workflow at a breakpoint.
-class AlwaysContinue {
- public:
-  explicit AlwaysContinue(zxdb::Thread* thread) : thread_(thread) {}
-  ~AlwaysContinue() { thread_->Continue(false); }
-
- private:
-  zxdb::Thread* thread_;
-};
-
-}  // namespace
 
 }  // namespace fidlcat

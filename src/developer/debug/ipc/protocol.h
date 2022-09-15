@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 49;
+constexpr uint32_t kProtocolVersion = 50;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -68,6 +68,8 @@ struct MsgHeader {
     kNotifyThreadExiting,
     kNotifyThreadStarting,
     kNotifyLog,
+    kNotifyComponentExiting,
+    kNotifyComponentStarting,
 
     kNumMessages
   };
@@ -505,6 +507,15 @@ struct NotifyLog {
   Severity severity = Severity::kInfo;
   Location location;
   std::string log;
+};
+
+// Notify that a component has started or exited.
+// Used by both |kNotifyComponentExiting| and |kNotifyComponentStarting|.
+// Only components of interest, i.e., those matching at least one of the filters, will be notified.
+struct NotifyComponent {
+  uint64_t timestamp = kTimestampDefault;
+
+  ComponentInfo component;
 };
 
 #pragma pack(pop)

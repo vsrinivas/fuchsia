@@ -19,6 +19,7 @@ static_library("client") {
     "breakpoint_settings.h",
     "client_eval_context_impl.h",
     "client_object.h",
+    "component_observer.h",
     "disassembler.h",
     "exception_settings.h",
     "execution_scope.h",

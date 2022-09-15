@@ -28,11 +28,8 @@ TEST(FormatTarget, FormatTarget) {
   MockProcess process(&session);
   target.SetRunningProcess(&process);
 
-  EXPECT_EQ(
-      "Process 2 state=Running koid=0 name=\"Mock process\"\n"
-      "  moniker=/moniker\n"
-      "  url=schema://url#meta/component.cm\n",
-      FormatTarget(&context, &target).AsString());
+  EXPECT_EQ("Process 2 state=Running koid=0 name=\"Mock process\" component=component.cm\n",
+            FormatTarget(&context, &target).AsString());
 }
 
 TEST(FormatTarget, DISABLED_FormatTargetList) {

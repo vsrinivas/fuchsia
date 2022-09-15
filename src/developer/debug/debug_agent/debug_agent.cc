@@ -69,18 +69,13 @@ std::string LogResumeRequest(const debug_ipc::ResumeRequest& request) {
 
 DebugAgent::DebugAgent(std::unique_ptr<SystemInterface> system_interface)
     : system_interface_(std::move(system_interface)), weak_factory_(this) {
-  // Set a callback to the LimboProvider to let us know when new processes enter the limbo.
+  // Register ourselves to receive component events and limbo events.
+  //
+  // It's safe to pass |this| here because |this| owns |system_interface|, which owns
+  // |ComponentManager| and |LimboProvider|.
+  system_interface_->GetComponentManager().SetDebugAgent(this);
   system_interface_->GetLimboProvider().set_on_enter_limbo(
-      [agent = GetWeakPtr()](const LimboProvider::Record& record) {
-        if (!agent)
-          return;
-        agent->OnProcessEnteredLimbo(record);
-      });
-}
-
-DebugAgent::~DebugAgent() {
-  // Clear the callback to prevent dangling pointers.
-  system_interface_->GetLimboProvider().set_on_enter_limbo(LimboProvider::OnEnterLimboCallback());
+      [this](const LimboProvider::Record& record) { OnProcessEnteredLimbo(record); });
 }
 
 fxl::WeakPtr<DebugAgent> DebugAgent::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
@@ -196,7 +191,7 @@ void DebugAgent::OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::La
       return;
     case debug_ipc::InferiorType::kTest:
       reply->status = system_interface_->GetComponentManager().LaunchTest(
-          request.argv[0], {request.argv.begin() + 1, request.argv.end()}, this);
+          request.argv[0], {request.argv.begin() + 1, request.argv.end()});
       return;
     case debug_ipc::InferiorType::kLast:
       reply->status = debug::Status("Invalid inferior type to launch.");
@@ -800,6 +795,36 @@ void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
   // In some edge-cases (see DebuggedProcess::RegisterDebugState() for more) the loader state is
   // known at startup. Send it if so.
   new_process->SuspendAndSendModulesIfKnown();
+}
+
+void DebugAgent::OnComponentStarted(const std::string& moniker, const std::string& url) {
+  if (std::any_of(filters_.begin(), filters_.end(),
+                  [&](const Filter& f) { return f.MatchesComponent(moniker, url); })) {
+    debug_ipc::NotifyComponent notify;
+    notify.component.moniker = moniker;
+    notify.component.url = url;
+    notify.timestamp = GetNowTimestamp();
+
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteNotifyComponent(debug_ipc::MsgHeader::Type::kNotifyComponentStarting, notify,
+                                    &writer);
+    stream()->Write(writer.MessageComplete());
+  }
+}
+
+void DebugAgent::OnComponentExited(const std::string& moniker, const std::string& url) {
+  if (std::any_of(filters_.begin(), filters_.end(),
+                  [&](const Filter& f) { return f.MatchesComponent(moniker, url); })) {
+    debug_ipc::NotifyComponent notify;
+    notify.component.moniker = moniker;
+    notify.component.url = url;
+    notify.timestamp = GetNowTimestamp();
+
+    debug_ipc::MessageWriter writer;
+    debug_ipc::WriteNotifyComponent(debug_ipc::MsgHeader::Type::kNotifyComponentExiting, notify,
+                                    &writer);
+    stream()->Write(writer.MessageComplete());
+  }
 }
 
 void DebugAgent::InjectProcessForTest(std::unique_ptr<DebuggedProcess> process) {

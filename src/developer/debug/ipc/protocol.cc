@@ -82,6 +82,10 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "NotifyLog";
     case MsgHeader::Type::kNumMessages:
       return "NumMessages";
+    case Type::kNotifyComponentExiting:
+      return "NotifyComponentExiting";
+    case Type::kNotifyComponentStarting:
+      return "NotifyComponentStarting";
   }
 
   FX_NOTREACHED();

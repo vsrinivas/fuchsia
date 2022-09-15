@@ -20,6 +20,8 @@ class MockComponentManager : public ComponentManager {
   auto& component_info() { return component_info_; }
 
   // ComponentManager implementation.
+  void SetDebugAgent(DebugAgent*) override {}
+
   std::optional<debug_ipc::ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const override {
     if (auto it = component_info_.find(job_koid); it != component_info_.end())
       return it->second;
@@ -30,8 +32,7 @@ class MockComponentManager : public ComponentManager {
     return debug::Status("Not supported");
   }
 
-  debug::Status LaunchTest(std::string url, std::vector<std::string> case_filters,
-                           DebugAgent* debug_agent) override {
+  debug::Status LaunchTest(std::string url, std::vector<std::string> case_filters) override {
     return debug::Status("Not supported");
   }
 

@@ -761,4 +761,14 @@ bool ReadNotifyLog(MessageReader* reader, NotifyLog* notify) {
   return reader->ReadString(&notify->log);
 }
 
+bool ReadNotifyComponent(MessageReader* reader, NotifyComponent* notify) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&notify->timestamp))
+    return false;
+
+  return Deserialize(reader, &notify->component);
+}
+
 }  // namespace debug_ipc

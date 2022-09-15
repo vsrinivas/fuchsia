@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_CONSOLE_CONTEXT_H_
 
 #include "src/developer/debug/zxdb/client/breakpoint_observer.h"
+#include "src/developer/debug/zxdb/client/component_observer.h"
 #include "src/developer/debug/zxdb/client/download_observer.h"
 #include "src/developer/debug/zxdb/client/pretty_stack_manager.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
@@ -36,7 +37,8 @@ class ConsoleContext : public ProcessObserver,
                        public TargetObserver,
                        public ThreadObserver,
                        public BreakpointObserver,
-                       public DownloadObserver {
+                       public DownloadObserver,
+                       public ComponentObserver {
  public:
   explicit ConsoleContext(Session* session);
   ~ConsoleContext();
@@ -151,6 +153,10 @@ class ConsoleContext : public ProcessObserver,
   // BreakpointObserver implementation.
   void OnBreakpointMatched(Breakpoint* breakpoint, bool user_requested) override;
   void OnBreakpointUpdateFailure(Breakpoint* breakpoint, const Err& err) override;
+
+  // ComponentObserver implementation.
+  void OnComponentStarted(const std::string& moniker, const std::string& url) override;
+  void OnComponentExited(const std::string& moniker, const std::string& url) override;
 
  private:
   struct ThreadRecord {

@@ -121,6 +121,8 @@ void RemoteAPIAdapter::OnStreamReadable() {
       case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
       case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
       case debug_ipc::MsgHeader::Type::kNotifyLog:
+      case debug_ipc::MsgHeader::Type::kNotifyComponentExiting:
+      case debug_ipc::MsgHeader::Type::kNotifyComponentStarting:
         break;  // Avoid warning
     }
 

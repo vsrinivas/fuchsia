@@ -675,4 +675,11 @@ void WriteNotifyLog(const NotifyLog& notify, MessageWriter* writer) {
   writer->WriteString(notify.log);
 }
 
+void WriteNotifyComponent(MsgHeader::Type type, const NotifyComponent& notify,
+                          MessageWriter* writer) {
+  writer->WriteHeader(type, 0);
+  writer->WriteUint64(notify.timestamp);
+  Serialize(notify.component, writer);
+}
+
 }  // namespace debug_ipc
