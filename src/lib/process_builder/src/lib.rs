@@ -80,13 +80,13 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, DurationNum, HandleBased},
     futures::prelude::*,
-    log::warn,
     std::convert::TryFrom,
     std::default::Default,
     std::ffi::{CStr, CString},
     std::iter,
     std::mem,
     thiserror::Error,
+    tracing::warn,
 };
 
 /// A container for a single namespace entry, containing a path and a directory handle. Used as an
