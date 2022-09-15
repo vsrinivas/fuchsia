@@ -53,7 +53,7 @@ pub(super) fn send_ip_frame<
 
 /// Gets the MTU associated with this device.
 pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(ctx: &SyncCtx<NonSyncCtx>) -> u32 {
-    ctx.state.device.devices.loopback.as_ref().unwrap().link.mtu
+    ctx.state.device.devices.read().loopback.as_ref().unwrap().link.mtu
 }
 
 #[cfg(test)]
