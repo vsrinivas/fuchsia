@@ -4,7 +4,6 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSI_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSI_H_
 
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <zircon/assert.h>
 

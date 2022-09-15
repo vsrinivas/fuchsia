@@ -7,7 +7,6 @@
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>

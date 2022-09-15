@@ -7,7 +7,6 @@
 #include <fidl/fuchsia.hardware.goldfish/cpp/common_types.h>
 #include <fidl/fuchsia.hardware.goldfish/cpp/wire.h>
 #include <fidl/fuchsia.hardware.pci/cpp/wire_test_base.h>
-#include <fuchsia/hardware/pci/cpp/banjo-mock.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/loop.h>
 #include <lib/fake-bti/bti.h>

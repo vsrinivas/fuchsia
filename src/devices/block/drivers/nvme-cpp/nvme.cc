@@ -4,7 +4,6 @@
 
 #include "src/devices/block/drivers/nvme-cpp/nvme.h"
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/driver.h>
 #include <lib/fdf/cpp/dispatcher.h>

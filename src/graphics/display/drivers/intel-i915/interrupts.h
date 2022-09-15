@@ -6,7 +6,6 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_INTERRUPTS_H_
 
 #include <fuchsia/hardware/intelgpucore/c/banjo.h>
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fit/function.h>
 #include <lib/mmio/mmio.h>

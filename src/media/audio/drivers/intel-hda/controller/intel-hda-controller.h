@@ -6,7 +6,6 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_HDA_CONTROLLER_H_
 
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/irq.h>
 #include <lib/ddk/device.h>

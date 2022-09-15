@@ -4,7 +4,6 @@
 
 #include "src/graphics/display/drivers/intel-i915/gtt.h"
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 #include <stdlib.h>

@@ -4,7 +4,6 @@
 
 #include "src/devices/bus/drivers/pci/bus.h"
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

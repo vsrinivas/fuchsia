@@ -5,11 +5,8 @@
 #include "pci-bus.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/device-protocol/pci.h>
-
-#include "fuchsia/hardware/pci/c/banjo.h"
 
 namespace ahci {
 

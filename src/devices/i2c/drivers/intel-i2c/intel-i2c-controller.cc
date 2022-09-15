@@ -12,7 +12,6 @@
 #include <fidl/fuchsia.hardware.i2c.businfo/cpp/wire.h>
 #include <fidl/fuchsia.hardware.pci/cpp/wire_types.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/binding_driver.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

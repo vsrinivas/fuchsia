@@ -5,7 +5,6 @@
 #include "intel-spi-flash.h"
 
 #include <fuchsia/hardware/nandinfo/c/banjo.h>
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>

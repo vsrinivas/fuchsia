@@ -8,7 +8,6 @@
 #include <fidl/fuchsia.hardware.pci/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>

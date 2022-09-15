@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_AHCI_PCI_BUS_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_AHCI_PCI_BUS_H_
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>

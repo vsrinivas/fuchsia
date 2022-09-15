@@ -30,7 +30,6 @@ fuchsia_driver("hdmi-audio-codec-driver") {
     ":ihda_codecs_hdmi_bind",
     "//sdk/banjo/fuchsia.hardware.intelhda.codec:fuchsia.hardware.intelhda.codec_banjo_cpp",
     "//src/devices/lib/driver",
-    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/lib/ddk",
     "//src/lib/eld",
     "//src/media/audio/drivers/lib/audio-driver-proto",

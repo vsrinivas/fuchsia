@@ -4,7 +4,6 @@
 
 #include "pci-sdhci.h"
 
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <fuchsia/hardware/sdhci/cpp/banjo.h>
 #include <inttypes.h>
 #include <lib/ddk/debug.h>

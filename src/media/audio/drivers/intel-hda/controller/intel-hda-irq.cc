@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <endian.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <string.h>
 #include <zircon/assert.h>
 

@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/intelgpucore/cpp/banjo.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/inspect/cpp/inspect.h>

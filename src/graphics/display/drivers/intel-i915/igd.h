@@ -5,7 +5,6 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_IGD_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_IGD_H_
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/zx/vmo.h>

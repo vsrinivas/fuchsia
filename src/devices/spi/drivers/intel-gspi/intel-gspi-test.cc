@@ -4,7 +4,6 @@
 
 #include "src/devices/spi/drivers/intel-gspi/intel-gspi.h"
 
-#include <fuchsia/hardware/pci/cpp/banjo-mock.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/device.h>
 #include <lib/zx/clock.h>

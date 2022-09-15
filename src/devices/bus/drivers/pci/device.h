@@ -6,8 +6,6 @@
 
 #include <assert.h>
 #include <fidl/fuchsia.hardware.pci/cpp/wire.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
-#include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>

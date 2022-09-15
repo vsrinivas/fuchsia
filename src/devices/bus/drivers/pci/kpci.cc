@@ -4,7 +4,6 @@
 
 #include "src/devices/bus/drivers/pci/kpci.h"
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>

@@ -5,7 +5,6 @@
 #include "src/virtualization/bin/vmm/pci.h"
 
 #include <endian.h>
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/stdcompat/bit.h>
 #include <lib/trace/event.h>
 #include <stdio.h>

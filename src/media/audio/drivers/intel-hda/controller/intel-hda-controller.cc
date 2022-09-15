@@ -4,7 +4,6 @@
 
 #include "intel-hda-controller.h"
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
