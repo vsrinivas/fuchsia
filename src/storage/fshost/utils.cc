@@ -21,20 +21,9 @@ constexpr uint64_t kDefaultVolumeSize = 24lu * 1024 * 1024;
 
 }  // namespace
 
-zx::status<> ResizeVolume(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume,
-                          uint64_t target_bytes, bool inside_zxcrypt) {
-  auto query_result = fidl::WireCall(volume)->GetVolumeInfo();
-  if (query_result.status() != ZX_OK) {
-    FX_PLOGS(ERROR, query_result.status()) << "Unable to query FVM information";
-    return zx::error(query_result.status());
-  }
-  if (query_result.value().status != ZX_OK) {
-    FX_PLOGS(ERROR, query_result.value().status) << "Unable to query FVM information";
-    return zx::error(query_result.value().status);
-  }
-
-  const uint64_t slice_size = query_result.value().manager->slice_size;
-
+zx::status<uint64_t> ResizeVolume(
+    fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume, uint64_t target_bytes,
+    bool inside_zxcrypt) {
   // Free all the existing slices.
   uint64_t slice = 1;
   // The -1 here is because of zxcrypt; zxcrypt will offset all slices by 1 to account for its
@@ -74,52 +63,53 @@ zx::status<> ResizeVolume(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::
     }
   }
 
+  auto query_result = fidl::WireCall(volume)->GetVolumeInfo();
+  if (query_result.status() != ZX_OK) {
+    return zx::error(query_result.status());
+  }
+  if (query_result.value().status != ZX_OK) {
+    return zx::error(query_result.value().status);
+  }
+  const uint64_t slice_size = query_result.value().manager->slice_size;
+
+  // Count the first slice (which is already allocated to the volume) as available.
+  const uint64_t slices_available = 1 + query_result.value().manager->slice_count -
+                                    query_result.value().manager->assigned_slice_count;
   uint64_t slice_count = target_bytes / slice_size;
   if (slice_count == 0) {
-    auto query_result = fidl::WireCall(volume)->GetVolumeInfo();
-    if (query_result.status() != ZX_OK) {
-      return zx::error(query_result.status());
-    }
-    if (query_result.value().status != ZX_OK) {
-      return zx::error(query_result.value().status);
-    }
     // If a size is not specified, limit the size of the data partition so as not to use up all
     // FVM's space (thus limiting blobfs growth).  10% or 24MiB (whichever is larger) should be
     // enough.
-    const uint64_t slices_available = query_result.value().manager->slice_count -
-                                      query_result.value().manager->assigned_slice_count;
-    if (slices_available == 0) {
-      return zx::error(ZX_ERR_NO_SPACE);
-    }
     const uint64_t default_slices = std::max<uint64_t>(
         query_result.value().manager->slice_count * kDefaultVolumePercentage / 100,
         kDefaultVolumeSize / slice_size);
     FX_LOGS(INFO) << "Using default size of " << default_slices * slice_size;
-    if (slices_available < default_slices) {
-      FX_LOGS(WARNING) << "Only " << slices_available << " slices available; some functionality "
-                       << "may be missing.";
-    }
     slice_count = std::min(slices_available, default_slices);
+  }
+  if (slices_available < slice_count) {
+    FX_LOGS(WARNING) << "Only " << slices_available << " slices available; some functionality "
+                     << "may be missing.";
+    slice_count = slices_available;
   }
 
   ZX_DEBUG_ASSERT(slice_count > 0);
   if (inside_zxcrypt) {
-    // Account for the slice that zxcrypt uses
-    if (--slice_count == 0) {
-      return zx::error(ZX_ERR_NO_SPACE);
+    // zxcrypt occupies an additional slice for its own metadata.
+    --slice_count;
+  }
+  if (slice_count > 1) {
+    auto extend_result = fidl::WireCall(volume)->Extend(
+        1,
+        slice_count - 1);  // -1 here because we get the first slice for free.
+    if (zx_status_t status =
+            extend_result.status() == ZX_OK ? extend_result->status : extend_result.status();
+        status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Unable to extend partition (slice_count: " << slice_count << ")";
+      return zx::error(status);
     }
   }
 
-  auto extend_result = fidl::WireCall(volume)->Extend(
-      1,
-      slice_count - 1);  // -1 here because we get the first slice for free.
-  if (zx_status_t status =
-          extend_result.status() == ZX_OK ? extend_result->status : extend_result.status();
-      status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Unable to extend partition (slice_count: " << slice_count << ")";
-    return zx::error(status);
-  }
-  return zx::ok();
+  return zx::ok(slice_count * slice_size);
 }
 
 zx::status<zx::channel> CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node> node) {

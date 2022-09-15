@@ -203,6 +203,14 @@ async fn write_data_file_unformatted() {
 }
 
 #[fuchsia::test]
+async fn write_data_file_unformatted_small_disk() {
+    let fixture = TestFixtureBuilder::default().with_sized_ramdisk(25165824).build().await;
+    // The expected size is everything left in the FVM block device.
+    const EXPECTED_VOLUME_SIZE: u64 = 23691264;
+    write_data_file_common(fixture, EXPECTED_VOLUME_SIZE).await;
+}
+
+#[fuchsia::test]
 async fn write_data_file_formatted() {
     let fixture = TestFixtureBuilder::default().format_data().with_ramdisk().build().await;
     // Matches the value we configured the volume to in TestFixture.

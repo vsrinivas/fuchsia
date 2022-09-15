@@ -16,12 +16,14 @@ namespace fshost {
 // Resizes `volume` to a contiguous range of up to `target_bytes` (rounded up to the nearest slice
 // size), freeing all other slices allocated to the volume.  This is destructive of any data stored
 // in the volume.
+// Returns the resulting size of the volume.
 // If `target_bytes` is 0, then the volume will be sized to the larger of 24MiB and 10% of the
 // available space.
 // If `inside_zxcrypt` is set, one less FVM slice is allocated, since the zxcrypt header occupies
 // one slice.
-zx::status<> ResizeVolume(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume,
-                          uint64_t target_bytes, bool inside_zxcrypt);
+zx::status<uint64_t> ResizeVolume(
+    fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume, uint64_t target_bytes,
+    bool inside_zxcrypt);
 
 // Clones the given node, returning a raw channel to it.
 zx::status<zx::channel> CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node> node);

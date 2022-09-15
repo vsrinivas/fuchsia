@@ -68,12 +68,18 @@ const METADATA_KEY: Aes256Key = Aes256Key::create([
 #[derive(Default)]
 pub struct TestFixtureBuilder {
     with_ramdisk: bool,
+    ramdisk_size: u64,
     format_data: bool,
 }
 
 impl TestFixtureBuilder {
-    pub fn with_ramdisk(mut self) -> Self {
+    pub fn with_ramdisk(self) -> Self {
+        self.with_sized_ramdisk(234881024)
+    }
+
+    pub fn with_sized_ramdisk(mut self, size: u64) -> Self {
         self.with_ramdisk = true;
+        self.ramdisk_size = size;
         self
     }
 
@@ -232,7 +238,7 @@ impl TestFixtureBuilder {
             .await
             .expect("recursive_wait_and_open_node failed");
 
-        let vmo = zx::Vmo::create(234881024).unwrap();
+        let vmo = zx::Vmo::create(self.ramdisk_size).unwrap();
         let vmo_dup = vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).unwrap();
         let ramdisk = VmoRamdiskClientBuilder::new(vmo).block_size(512).build().unwrap();
         let ramdisk_path = ramdisk.get_path();

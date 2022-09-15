@@ -268,11 +268,19 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
         target_size = std::max(target_size, kDefaultF2fsMinBytes);
       }
       FX_LOGS(INFO) << "Resizing data volume, target = " << target_size << " bytes";
-      if (zx::status status = ResizeVolume(volume_client, target_size, inside_zxcrypt);
-          status.is_error()) {
-        FX_PLOGS(ERROR, status.status_value()) << "Failed to resize volume";
-        completer.ReplyError(status.status_value());
+      auto actual_size = ResizeVolume(volume_client, target_size, inside_zxcrypt);
+      if (actual_size.is_error()) {
+        FX_PLOGS(ERROR, actual_size.status_value()) << "Failed to resize volume";
+        completer.ReplyError(actual_size.status_value());
         return;
+      }
+      if (format == fs_management::kDiskFormatF2fs && *actual_size < kDefaultF2fsMinBytes) {
+        FX_LOGS(ERROR) << "Only allocated " << *actual_size << " bytes but needed "
+                       << kDefaultF2fsMinBytes;
+        completer.ReplyError(ZX_ERR_NO_SPACE);
+        return;
+      } else if (*actual_size < target_size) {
+        FX_LOGS(WARNING) << "Only allocated " << *actual_size << " bytes";
       }
     }
     if (format == fs_management::kDiskFormatFxfs) {
