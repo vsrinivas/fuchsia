@@ -321,6 +321,54 @@ func TestExecute(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "various modifiers",
+			flags: testsharderFlags{
+				targetDurationSecs: 5,
+			},
+			testSpecs: []build.TestSpec{
+				fuchsiaTestSpec("foo"),
+				fuchsiaTestSpec("bar"),
+				fuchsiaTestSpec("baz"),
+			},
+			modifiers: []testsharder.TestModifier{
+				// default modifier
+				{
+					Name:        "*",
+					TotalRuns:   -1,
+					MaxAttempts: 2,
+				},
+				// multiplier
+				{
+					Name:        "foo",
+					MaxAttempts: 1,
+				},
+				// change maxAttempts (but multiplier takes precedence)
+				{
+					Name:        "foo",
+					TotalRuns:   -1,
+					MaxAttempts: 1,
+				},
+				// change maxAttempts, set affected
+				{
+					Name:        "bar",
+					Affected:    true,
+					TotalRuns:   -1,
+					MaxAttempts: 1,
+				},
+			},
+			testList: []build.TestListEntry{
+				testListEntry("foo", false),
+				testListEntry("bar", true),
+				testListEntry("baz", false),
+			},
+			testDurations: []build.TestDuration{
+				{
+					Name:           "*",
+					MedianDuration: time.Millisecond,
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

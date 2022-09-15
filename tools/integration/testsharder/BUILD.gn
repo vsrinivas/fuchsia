@@ -76,6 +76,7 @@ if (is_host) {
     "skip unaffected tests",
     "target test count",
     "test list with tags",
+    "various modifiers",
   ]
 
   _golden_dir = "${target_gen_dir}/goldens"

@@ -1,0 +1,112 @@
+[
+    {
+        "name": "affected:AEMU",
+        "tests": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm",
+                "path": "",
+                "label": "//src/something:bar(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1,
+                "run_algorithm": "STOP_ON_SUCCESS",
+                "affected": true,
+                "tags": [
+                    {
+                        "key": "hermetic",
+                        "value": "true"
+                    },
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "1"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
+            },
+            "is_emu": true
+        },
+        "timeout_secs": 602,
+        "summary": {
+            "tests": null
+        }
+    },
+    {
+        "name": "AEMU",
+        "tests": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm",
+                "path": "",
+                "label": "//src/something:baz(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 2,
+                "run_algorithm": "STOP_ON_SUCCESS",
+                "tags": [
+                    {
+                        "key": "hermetic",
+                        "value": "false"
+                    },
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "1"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
+            },
+            "is_emu": true
+        },
+        "timeout_secs": 602,
+        "summary": {
+            "tests": null
+        }
+    },
+    {
+        "name": "multiplied:AEMU",
+        "tests": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+                "path": "",
+                "label": "//src/something:foo(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1000,
+                "run_algorithm": "STOP_ON_FAILURE",
+                "stop_repeating_after_secs": 5,
+                "tags": [
+                    {
+                        "key": "hermetic",
+                        "value": "false"
+                    },
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "1"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
+            },
+            "is_emu": true
+        },
+        "timeout_secs": 612,
+        "summary": {
+            "tests": null
+        }
+    }
+]
