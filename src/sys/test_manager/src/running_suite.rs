@@ -615,6 +615,11 @@ async fn get_realm(
                 .capability(Capability::event_stream("running_v2"))
                 .capability(Capability::event_stream("stopped_v2"))
                 .capability(Capability::event_stream("destroyed_v2"))
+                .capability(
+                    Capability::event_stream("destroyed_v2")
+                        .as_("destroyed_downscoped")
+                        .with_scope(&test_root),
+                )
                 .capability(Capability::event_stream("capability_requested_v2"))
                 .capability(Capability::event_stream("directory_ready_v2"))
                 .from(Ref::parent())

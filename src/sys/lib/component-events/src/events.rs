@@ -152,6 +152,12 @@ impl EventStream {
         Ok(Self::new_v2(connect_to_protocol_at_path::<fsys::EventStream2Marker>(&path.into())?))
     }
 
+    pub fn open() -> Result<Self, Error> {
+        Ok(Self::new_v2(connect_to_protocol_at_path::<fsys::EventStream2Marker>(
+            "/svc/fuchsia.component.EventStream",
+        )?))
+    }
+
     pub async fn next(&mut self) -> Result<fsys::Event, EventStreamError> {
         if let Some(event) = self.buffer.pop_front() {
             return Ok(event);

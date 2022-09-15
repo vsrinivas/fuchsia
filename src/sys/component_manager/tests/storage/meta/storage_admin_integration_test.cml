@@ -30,18 +30,8 @@
             from: "#data",
         },
         {
-            protocol: "fuchsia.sys2.EventSource",
+            event_stream: "destroyed_downscoped",
             from: "parent",
-        },
-        {
-            event: [ "destroyed" ],
-            from: "framework",
-        },
-        {
-            event_stream_deprecated: "DestroyedStorageEventStream",
-            subscriptions: [
-                { event: "destroyed" },
-            ],
         },
     ],
     offer: [
