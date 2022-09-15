@@ -88,9 +88,6 @@ type NodeInfoDeprecated = strict resource union {
     };
 };
 
-@deprecated("transitional alias that exists until OOT usages have migrated to the new name")
-alias NodeInfo = NodeInfoDeprecated;
-
 /// The fields of 'attributes' which are used to update the Node are indicated
 /// by the 'flags' argument.
 type NodeAttributeFlags = strict bits : uint32 {
