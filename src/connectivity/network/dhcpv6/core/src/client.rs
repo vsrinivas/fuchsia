@@ -3649,7 +3649,8 @@ pub(crate) mod testutil {
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let request_transaction_id = *transaction_id;
-        assert_matches!(&state, Some(ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: got_client_id,
                 addresses: _,
                 server_id: got_server_id,
@@ -3658,12 +3659,14 @@ pub(crate) mod testutil {
                 retrans_timeout,
                 retrans_count,
                 solicit_max_rt,
-        })) if *got_client_id == client_id &&
-               *got_server_id == server_id &&
-               collected_advertise.is_empty() &&
-               *retrans_timeout == INITIAL_REQUEST_TIMEOUT &&
-               *retrans_count == 0 &&
-               *solicit_max_rt == MAX_SOLICIT_TIMEOUT);
+            } = assert_matches!(&state, Some(ClientState::Requesting(requesting)) => requesting);
+            assert_eq!(*got_client_id, client_id);
+            assert_eq!(*got_server_id, server_id);
+            assert!(collected_advertise.is_empty());
+            assert_eq!(*retrans_timeout, INITIAL_REQUEST_TIMEOUT);
+            assert_eq!(*retrans_count, 0);
+            assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+        }
         (client, request_transaction_id)
     }
 
@@ -3755,20 +3758,21 @@ pub(crate) mod testutil {
                 );
                 addrs
             });
-        assert_matches!(
+        let AddressAssigned {
+            client_id: got_client_id,
+            addresses,
+            server_id: got_server_id,
+            dns_servers,
+            solicit_max_rt,
+        } = assert_matches!(
             &state,
-            Some(ClientState::AddressAssigned(AddressAssigned {
-                client_id: got_client_id,
-                addresses,
-                server_id: got_server_id,
-                dns_servers,
-                solicit_max_rt,
-            })) if *got_client_id == client_id &&
-                   *addresses == expected_addresses &&
-                   *got_server_id == server_id &&
-                   dns_servers == expected_dns_servers &&
-                   *solicit_max_rt == MAX_SOLICIT_TIMEOUT
+            Some(ClientState::AddressAssigned(address_assigned)) => address_assigned
         );
+        assert_eq!(*got_client_id, client_id);
+        assert_eq!(*addresses, expected_addresses);
+        assert_eq!(*got_server_id, server_id);
+        assert_eq!(dns_servers, expected_dns_servers);
+        assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         (client, actions)
     }
 
@@ -3902,15 +3906,15 @@ pub(crate) mod testutil {
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let old_transaction_id = *transaction_id;
-        assert_matches!(
+        let AddressAssigned {
+            client_id: _,
+            addresses: _,
+            server_id: _,
+            dns_servers: _,
+            solicit_max_rt: _,
+        } = assert_matches!(
             state,
-            Some(ClientState::AddressAssigned(AddressAssigned {
-                client_id: _,
-                addresses: _,
-                server_id: _,
-                dns_servers: _,
-                solicit_max_rt: _,
-            }))
+            Some(ClientState::AddressAssigned(address_assigned)) => address_assigned
         );
         assert_matches!(
             &actions[..],
@@ -3933,21 +3937,22 @@ pub(crate) mod testutil {
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         // Assert that sending a renew starts a new transaction.
         assert_ne!(*transaction_id, old_transaction_id);
-        assert_matches!(
+        let Renewing {
+            client_id: got_client_id,
+            addresses: _,
+            server_id: got_server_id,
+            dns_servers,
+            first_renew_time: _,
+            retrans_timeout: _,
+            solicit_max_rt,
+        } = assert_matches!(
             state,
-            Some(ClientState::Renewing(Renewing {
-                client_id: got_client_id,
-                addresses: _,
-                server_id: got_server_id,
-                dns_servers,
-                first_renew_time: _,
-                retrans_timeout: _,
-                solicit_max_rt,
-            })) if *got_client_id == client_id &&
-                   *got_server_id == server_id &&
-                   *dns_servers == Vec::<Ipv6Addr>::new() &&
-                   *solicit_max_rt == MAX_SOLICIT_TIMEOUT
+            Some(ClientState::Renewing(renewing)) => renewing
         );
+        assert_eq!(*got_client_id, client_id);
+        assert_eq!(*got_server_id, server_id);
+        assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
+        assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(addresses_to_assign.iter().map(
@@ -4568,18 +4573,18 @@ mod tests {
         // advertise with preference 255.
         let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
-        assert_matches!(
+        let Requesting {
+            client_id: _,
+            addresses: _,
+            server_id: _,
+            collected_advertise: _,
+            first_request_time: _,
+            retrans_timeout: _,
+            retrans_count: _,
+            solicit_max_rt: _,
+        } = assert_matches!(
             state,
-            Some(ClientState::Requesting(Requesting {
-                client_id: _,
-                addresses: _,
-                server_id: _,
-                collected_advertise: _,
-                first_request_time: _,
-                retrans_timeout: _,
-                retrans_count: _,
-                solicit_max_rt: _,
-            }))
+            Some(ClientState::Requesting(requesting)) => requesting
         );
         let buf = assert_matches!(
             &actions[..],
@@ -4700,9 +4705,8 @@ mod tests {
                  *timeout == 2 * INITIAL_SOLICIT_TIMEOUT => buf
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
-        assert_matches!(
-            state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
+        {
+            let ServerDiscovery {
                 client_id: _,
                 configured_addresses: _,
                 first_solicit_time: _,
@@ -4710,8 +4714,12 @@ mod tests {
                 solicit_max_rt: _,
                 collected_advertise,
                 collected_sol_max_rt: _,
-            })) if collected_advertise.is_empty()
-        );
+            } = assert_matches!(
+                state,
+                Some(ClientState::ServerDiscovery(server_discovery)) => server_discovery
+            );
+            assert!(collected_advertise.is_empty());
+        }
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             CONFIGURED_ADDRESSES[0],
@@ -4748,18 +4756,18 @@ mod tests {
             ] if testutil::msg_type(buf) == v6::MessageType::Request
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
-        assert_matches!(
+        let Requesting {
+            client_id: _,
+            addresses: _,
+            server_id: _,
+            collected_advertise: _,
+            first_request_time: _,
+            retrans_timeout: _,
+            retrans_count: _,
+            solicit_max_rt: _,
+        } = assert_matches!(
             state,
-            Some(ClientState::Requesting(Requesting {
-                client_id: _,
-                addresses: _,
-                server_id: _,
-                collected_advertise: _,
-                first_request_time: _,
-                retrans_timeout: _,
-                retrans_count: _,
-                solicit_max_rt: _,
-            }))
+            Some(ClientState::Requesting(requesting )) => requesting
         );
     }
 
@@ -4822,9 +4830,8 @@ mod tests {
                     .map(|addr| AddressEntry::ToRequest(AddressToRequest::new(Some(*addr), None))),
             )
             .collect::<HashMap<v6::IAID, AddressEntry>>();
-        assert_matches!(
-            &state,
-            ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: _,
                 addresses: got_addresses,
                 server_id,
@@ -4833,9 +4840,10 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if server_id[..] == SERVER_ID[0] &&
-                  *got_addresses == expected_addresses
-        );
+            } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
+            assert_eq!(server_id[..], SERVER_ID[0]);
+            assert_eq!(*got_addresses, expected_addresses);
+        }
 
         // If the reply contains a top level UnspecFail status code, the reply
         // should be ignored.
@@ -4859,9 +4867,8 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id: got_transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
-        assert_matches!(
-            &state,
-            ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: _,
                 addresses: got_addresses,
                 server_id,
@@ -4870,9 +4877,10 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if server_id[..] == SERVER_ID[0] &&
-                  *got_addresses == expected_addresses
-        );
+            } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
+            assert_eq!(server_id[..], SERVER_ID[0]);
+            assert_eq!(*got_addresses, expected_addresses);
+        }
         assert_eq!(got_transaction_id, None);
         assert_eq!(actions[..], []);
 
@@ -4903,9 +4911,8 @@ mod tests {
             v6::IAID::new(0),
             AddressEntry::ToRequest(AddressToRequest::new(None, None)),
         )]);
-        assert_matches!(
-            &state,
-            ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: _,
                 addresses: got_addresses,
                 server_id,
@@ -4914,9 +4921,13 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if server_id[..] == SERVER_ID[0] &&
-                  *got_addresses == expected_addresses
-        );
+            } = assert_matches!(
+                &state,
+                ClientState::Requesting(requesting) => requesting
+            );
+            assert_eq!(server_id[..], SERVER_ID[0]);
+            assert_eq!(*got_addresses, expected_addresses);
+        }
         assert!(transaction_id.is_some());
 
         // If the reply contains no usable addresses, the client selects
@@ -4941,9 +4952,8 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
-        assert_matches!(
-            state,
-            ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: _,
                 addresses: _,
                 server_id,
@@ -4952,8 +4962,12 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-            }) if server_id[..] == SERVER_ID[1]
-        );
+            } = assert_matches!(
+                state,
+                ClientState::Requesting(requesting) => requesting
+            );
+            assert_eq!(server_id[..], SERVER_ID[1]);
+        }
         assert_matches!(
             &actions[..],
             [
@@ -5047,15 +5061,20 @@ mod tests {
                 )),
             ),
         ]);
-        assert_matches!(state,
-            ClientState::AddressAssigned(AddressAssigned {
+        {
+            let AddressAssigned {
                 client_id: _,
                 addresses,
                 server_id,
                 dns_servers: _,
                 solicit_max_rt: _,
-            }) if server_id[..] == SERVER_ID[0] &&
-                  addresses == expected_addresses);
+            } = assert_matches!(
+                state,
+                ClientState::AddressAssigned(address_assigned) => address_assigned
+            );
+            assert_eq!(server_id[..], SERVER_ID[0]);
+            assert_eq!(addresses, expected_addresses);
+        }
         assert_matches!(
             &actions[..],
             [
@@ -5129,33 +5148,33 @@ mod tests {
             // The client should transition to AddressAssigned if the reply contains
             // a valid IA.
             {
-                assert_matches!(
+                let AddressAssigned {
+                    client_id: _,
+                    addresses: _,
+                    server_id: _,
+                    dns_servers: _,
+                    solicit_max_rt: _,
+                } = assert_matches!(
                     state,
-                    ClientState::AddressAssigned(AddressAssigned {
-                        client_id: _,
-                        addresses: _,
-                        server_id: _,
-                        dns_servers: _,
-                        solicit_max_rt: _,
-                    })
-                )
+                    ClientState::AddressAssigned(address_assigned) => address_assigned
+                );
             }
             false =>
             // The client should transition to ServerDiscovery if the reply contains
             // no valid IAs.
             {
-                assert_matches!(
+                let ServerDiscovery {
+                    client_id: _,
+                    configured_addresses: _,
+                    first_solicit_time: _,
+                    retrans_timeout: _,
+                    solicit_max_rt: _,
+                    collected_advertise: _,
+                    collected_sol_max_rt: _,
+                } = assert_matches!(
                     state,
-                    ClientState::ServerDiscovery(ServerDiscovery {
-                        client_id: _,
-                        configured_addresses: _,
-                        first_solicit_time: _,
-                        retrans_timeout: _,
-                        solicit_max_rt: _,
-                        collected_advertise: _,
-                        collected_sol_max_rt: _,
-                    })
-                )
+                    ClientState::ServerDiscovery(server_discovery) => server_discovery
+                );
             }
         }
     }
@@ -5263,15 +5282,15 @@ mod tests {
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
             let Transition { state, actions, transaction_id: _ } =
                 state.reply_message_received(&[], &mut rng, msg, time);
-            assert_matches!(
+            let AddressAssigned {
+                client_id: _,
+                addresses: _,
+                server_id: _,
+                dns_servers: _,
+                solicit_max_rt: _,
+            } = assert_matches!(
                 state,
-                ClientState::AddressAssigned(AddressAssigned {
-                    client_id: _,
-                    addresses: _,
-                    server_id: _,
-                    dns_servers: _,
-                    solicit_max_rt: _,
-                })
+                ClientState::AddressAssigned(address_assigned) => address_assigned
             );
             match expected_t1 {
                 v6::NonZeroTimeValue::Finite(t1_val) => {
@@ -5331,17 +5350,17 @@ mod tests {
         assert_matches!(client.handle_message_receive(msg, time)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        assert_matches!(
+        let ServerDiscovery {
+            client_id: _,
+            configured_addresses: _,
+            first_solicit_time: _,
+            retrans_timeout: _,
+            solicit_max_rt: _,
+            collected_advertise: _,
+            collected_sol_max_rt: _,
+        } = assert_matches!(
             state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
-                client_id: _,
-                configured_addresses: _,
-                first_solicit_time: _,
-                retrans_timeout: _,
-                solicit_max_rt: _,
-                collected_advertise: _,
-                collected_sol_max_rt: _,
-            }))
+            Some(ClientState::ServerDiscovery(server_discovery)) => server_discovery
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
@@ -5368,17 +5387,17 @@ mod tests {
         assert_matches!(client.handle_message_receive(msg, time)[..], []);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        assert_matches!(
+        let ServerDiscovery {
+            client_id: _,
+            configured_addresses: _,
+            first_solicit_time: _,
+            retrans_timeout: _,
+            solicit_max_rt: _,
+            collected_advertise: _,
+            collected_sol_max_rt: _,
+        } = assert_matches!(
             state,
-            Some(ClientState::ServerDiscovery(ServerDiscovery {
-                client_id: _,
-                configured_addresses: _,
-                first_solicit_time: _,
-                retrans_timeout: _,
-                solicit_max_rt: _,
-                collected_advertise: _,
-                collected_sol_max_rt: _,
-            }))
+            Some(ClientState::ServerDiscovery(server_discovery)) => server_discovery
         );
 
         // The client should transition to Requesting and select the server that
@@ -5393,7 +5412,8 @@ mod tests {
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        assert_matches!(state, Some(ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: _,
                 addresses: _,
                 server_id,
@@ -5402,7 +5422,9 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt: _,
-        })) if server_id[..] == SERVER_ID[0]);
+            } = assert_matches!(state, Some(ClientState::Requesting(requesting)) => requesting);
+            assert_eq!(server_id[..], SERVER_ID[0]);
+        }
 
         for count in 1..REQUEST_MAX_RC + 1 {
             assert_matches!(
@@ -5416,20 +5438,18 @@ mod tests {
             );
             let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
                 &client;
-            assert_matches!(
-                state,
-                Some(ClientState::Requesting(Requesting {
-                    client_id: _,
-                    addresses: _,
-                    server_id,
-                    collected_advertise: _,
-                    first_request_time: _,
-                    retrans_timeout: _,
-                    retrans_count,
-                    solicit_max_rt: _,
-                })) if server_id[..] == SERVER_ID[0] &&
-                       *retrans_count == count
-            );
+            let Requesting {
+                client_id: _,
+                addresses: _,
+                server_id,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count,
+                solicit_max_rt: _,
+            } = assert_matches!(state, Some(ClientState::Requesting(requesting)) => requesting);
+            assert_eq!(server_id[..], SERVER_ID[0]);
+            assert_eq!(*retrans_count, count);
         }
 
         // When the retransmission count reaches REQUEST_MAX_RC, the client
@@ -5444,20 +5464,18 @@ mod tests {
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        assert_matches!(
-            state,
-            Some(ClientState::Requesting(Requesting {
-                client_id: _,
-                addresses: _,
-                server_id,
-                collected_advertise: _,
-                first_request_time: _,
-                retrans_timeout: _,
-                retrans_count,
-                solicit_max_rt: _,
-            })) if server_id[..] == SERVER_ID[1] &&
-                   *retrans_count == 0
-        );
+        let Requesting {
+            client_id: _,
+            addresses: _,
+            server_id,
+            collected_advertise: _,
+            first_request_time: _,
+            retrans_timeout: _,
+            retrans_count,
+            solicit_max_rt: _,
+        } = assert_matches!(state, Some(ClientState::Requesting(requesting)) => requesting);
+        assert_eq!(server_id[..], SERVER_ID[1]);
+        assert_eq!(*retrans_count, 0);
 
         for count in 1..REQUEST_MAX_RC + 1 {
             assert_matches!(
@@ -5471,20 +5489,18 @@ mod tests {
             );
             let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
                 &client;
-            assert_matches!(
-                state,
-                Some(ClientState::Requesting(Requesting {
-                    client_id: _,
-                    addresses: _,
-                    server_id,
-                    collected_advertise: _,
-                    first_request_time: _,
-                    retrans_timeout: _,
-                    retrans_count,
-                    solicit_max_rt: _,
-                })) if server_id[..] == SERVER_ID[1] &&
-                       *retrans_count == count
-            );
+            let Requesting {
+                client_id: _,
+                addresses: _,
+                server_id,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count,
+                solicit_max_rt: _,
+            } = assert_matches!(state, Some(ClientState::Requesting(requesting)) => requesting);
+            assert_eq!(server_id[..], SERVER_ID[1]);
+            assert_eq!(*retrans_count, count);
         }
 
         // When the retransmission count reaches REQUEST_MAX_RC, and the client
@@ -5529,15 +5545,15 @@ mod tests {
 
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        assert_matches!(
+        let AddressAssigned {
+            client_id: _,
+            addresses: _,
+            server_id: _,
+            dns_servers: _,
+            solicit_max_rt: _,
+        } = assert_matches!(
             state,
-            Some(ClientState::AddressAssigned(AddressAssigned {
-                client_id: _,
-                addresses: _,
-                server_id: _,
-                dns_servers: _,
-                solicit_max_rt: _,
-            }))
+            Some(ClientState::AddressAssigned(address_assigned)) => address_assigned
         );
         assert_matches!(
             &actions[..],
@@ -5592,8 +5608,8 @@ mod tests {
             &mut rng,
             time,
         );
-        assert_matches!(&state,
-            ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: _,
                 addresses: _,
                 server_id: _,
@@ -5602,8 +5618,9 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt,
-            }) if *solicit_max_rt == MAX_SOLICIT_TIMEOUT
-        );
+            } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
+            assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+        }
         let received_sol_max_rt = 4800;
 
         // If the reply does not contain a server ID, the reply should be
@@ -5633,8 +5650,8 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
-        assert_matches!(&state,
-            ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: _,
                 addresses: _,
                 server_id: _,
@@ -5643,8 +5660,9 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt,
-            }) if *solicit_max_rt == MAX_SOLICIT_TIMEOUT
-        );
+            } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
+            assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+        }
 
         // If the reply has a different client ID than the test client's client ID,
         // the `solicit_max_rt` should not be updated.
@@ -5667,8 +5685,8 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
-        assert_matches!(&state,
-            ClientState::Requesting(Requesting {
+        {
+            let Requesting {
                 client_id: _,
                 addresses: _,
                 server_id: _,
@@ -5677,8 +5695,9 @@ mod tests {
                 retrans_timeout: _,
                 retrans_count: _,
                 solicit_max_rt,
-            }) if *solicit_max_rt == MAX_SOLICIT_TIMEOUT
-        );
+            } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
+            assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+        }
 
         // If the client receives a valid reply containing a SOL_MAX_RT option,
         // the `solicit_max_rt` should be updated.
@@ -5701,15 +5720,16 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions: _, transaction_id: _ } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
-        assert_matches!(&state,
-            ClientState::AddressAssigned(AddressAssigned {
-                    client_id: _,
-                    addresses: _,
-                    server_id: _,
-                    dns_servers:_,
-                    solicit_max_rt,
-            }) if *solicit_max_rt == Duration::from_secs(received_sol_max_rt.into())
-        );
+        {
+            let AddressAssigned {
+                client_id: _,
+                addresses: _,
+                server_id: _,
+                dns_servers: _,
+                solicit_max_rt,
+            } = assert_matches!(&state, ClientState::AddressAssigned(address_assigned) => address_assigned);
+            assert_eq!(*solicit_max_rt, Duration::from_secs(received_sol_max_rt.into()));
+        }
     }
 
     #[test]
@@ -5743,15 +5763,15 @@ mod tests {
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        assert_matches!(
+        let AddressAssigned {
+            client_id: _,
+            addresses: _,
+            server_id: _,
+            dns_servers: _,
+            solicit_max_rt: _,
+        } = assert_matches!(
             state,
-            Some(ClientState::AddressAssigned(AddressAssigned {
-                client_id: _,
-                addresses: _,
-                server_id: _,
-                dns_servers: _,
-                solicit_max_rt: _,
-            }))
+            Some(ClientState::AddressAssigned(address_assigned)) => address_assigned
         );
         // Asserts that the actions do not include scheduling the renew timer.
         assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
@@ -5774,17 +5794,17 @@ mod tests {
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let expected_transaction_id = *transaction_id;
-        assert_matches!(
+        let Renewing {
+            client_id: _,
+            addresses: _,
+            server_id: _,
+            dns_servers: _,
+            first_renew_time: _,
+            retrans_timeout: _,
+            solicit_max_rt: _,
+        } = assert_matches!(
             state,
-            Some(ClientState::Renewing(Renewing {
-                client_id: _,
-                addresses: _,
-                server_id: _,
-                dns_servers: _,
-                first_renew_time: _,
-                retrans_timeout: _,
-                solicit_max_rt: _,
-            }))
+            Some(ClientState::Renewing(renewing)) => renewing
         );
 
         // Assert renew is retransmitted on retransmission timeout.
@@ -5799,9 +5819,8 @@ mod tests {
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         // Check that the retransmitted renew is part of the same transaction.
         assert_eq!(*transaction_id, expected_transaction_id);
-        assert_matches!(
-            state,
-            Some(ClientState::Renewing(Renewing {
+        {
+            let Renewing {
                 client_id,
                 addresses: _,
                 server_id,
@@ -5809,11 +5828,15 @@ mod tests {
                 first_renew_time: _,
                 retrans_timeout: _,
                 solicit_max_rt,
-            })) if client_id == &CLIENT_ID &&
-                   server_id[..] == SERVER_ID[0] &&
-                   dns_servers.as_slice() == &[] as &[Ipv6Addr] &&
-                   *solicit_max_rt == MAX_SOLICIT_TIMEOUT
-        );
+            } = assert_matches!(
+                state,
+                Some(ClientState::Renewing(renewing )) => renewing
+            );
+            assert_eq!(client_id, &CLIENT_ID);
+            assert_eq!(server_id[..], SERVER_ID[0]);
+            assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
+            assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+        }
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(addresses_to_assign.iter().map(
