@@ -11,6 +11,7 @@ use std::{
     marker::PhantomData,
     num::{NonZeroU16, NonZeroU8, TryFromIntError},
     ops::{ControlFlow, Deref as _, DerefMut as _},
+    sync::Arc,
 };
 
 use fidl_fuchsia_io as fio;
@@ -20,27 +21,22 @@ use fidl_fuchsia_posix_socket as fposix_socket;
 
 use assert_matches::assert_matches;
 use explicit::ResultExt as _;
-use fidl::{
-    endpoints::{RequestStream as _, ServerEnd},
-    AsyncChannel,
-};
+use fidl::endpoints::{ControlHandle as _, RequestStream as _, ServerEnd};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased as _, Peered as _};
-use futures::{StreamExt as _, TryFutureExt as _};
+use futures::{stream::FuturesUnordered, FutureExt as _, StreamExt as _, TryFutureExt as _};
 use log::{error, trace, warn};
 use net_types::{
     ip::{Ip, IpVersion, Ipv4, Ipv6},
     MulticastAddr, SpecifiedAddr, ZonedAddr,
 };
 use netstack3_core::{
-    data_structures::{
-        id_map::IdMap,
-        id_map_collection::{IdMapCollection, IdMapCollectionKey},
-    },
+    data_structures::id_map_collection::{IdMapCollection, IdMapCollectionKey},
     device::DeviceId,
     error::LocalAddressError,
     ip::{icmp, socket::IpSockSendError, IpDeviceIdContext, IpExt, TransportIpContext},
     socket::datagram::{MulticastInterfaceSelector, SetMulticastMembershipError},
+    sync::Mutex,
     transport::udp::{
         self as core_udp, BufferUdpContext, BufferUdpStateContext, BufferUdpStateNonSyncContext,
         UdpBoundId, UdpConnId, UdpConnInfo, UdpConnectListenerError, UdpContext, UdpListenerId,
@@ -62,10 +58,10 @@ use thiserror::Error;
 use crate::bindings::{
     devices::Devices,
     util::{
-        DeviceNotFoundError, IntoCore as _, TryFromFidlWithContext, TryIntoCoreWithContext,
+        self, DeviceNotFoundError, IntoCore as _, TryFromFidlWithContext, TryIntoCoreWithContext,
         TryIntoFidlWithContext,
     },
-    CommonInfo, Lockable, LockableContext,
+    CommonInfo, LockableContext,
 };
 
 use super::{
@@ -95,9 +91,9 @@ pub(crate) enum DatagramProtocol {
 /// A minimal abstraction over transport protocols that allows bindings-side state to be stored.
 pub(crate) trait Transport<I>: Debug + Sized {
     const PROTOCOL: DatagramProtocol;
-    type UnboundId: Debug + Copy + IdMapCollectionKey;
-    type ConnId: Debug + Copy + IdMapCollectionKey;
-    type ListenerId: Debug + Copy + IdMapCollectionKey;
+    type UnboundId: Debug + Copy + IdMapCollectionKey + Send + Sync;
+    type ConnId: Debug + Copy + IdMapCollectionKey + Send + Sync;
+    type ListenerId: Debug + Copy + IdMapCollectionKey + Send + Sync;
 }
 
 #[derive(Debug)]
@@ -118,19 +114,24 @@ impl<I, T: Transport<I>> From<BoundSocketId<I, T>> for SocketId<I, T> {
     }
 }
 
+/// Mapping from socket IDs to their receive queues.
+///
+/// Receive queues are shared between the collections here and the tasks
+/// handling socket requests. Since `SocketCollection` implements [`UdpContext`]
+/// and [`BufferUdpContext`], whose trait methods may be called from
+/// within Core in a locked context, once one of the [`MessageQueue`]s is
+/// locked, no calls may be made into [`netstack3_core`]. This prevents
+/// a potential deadlock where Core is waiting for a `MessageQueue` to be
+/// available and some bindings code here holds the `MessageQueue` and
+/// attempts to lock Core state via a `netstack3_core` call.
 pub(crate) struct SocketCollection<I: Ip, T: Transport<I>> {
-    binding_data: IdMap<BindingData<I, T>>,
-    conns: IdMapCollection<T::ConnId, usize>,
-    listeners: IdMapCollection<T::ListenerId, usize>,
+    conns: IdMapCollection<T::ConnId, Arc<Mutex<MessageQueue<I, T>>>>,
+    listeners: IdMapCollection<T::ListenerId, Arc<Mutex<MessageQueue<I, T>>>>,
 }
 
 impl<I: Ip, T: Transport<I>> Default for SocketCollection<I, T> {
     fn default() -> Self {
-        Self {
-            binding_data: Default::default(),
-            conns: Default::default(),
-            listeners: Default::default(),
-        }
+        Self { conns: Default::default(), listeners: Default::default() }
     }
 }
 
@@ -220,8 +221,8 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
     type ReconnectConnError: IntoErrno;
     type SetSocketDeviceError: IntoErrno;
     type SetMulticastMembershipError: IntoErrno;
-    type LocalIdentifier: OptionFromU16 + Into<u16>;
-    type RemoteIdentifier: OptionFromU16 + Into<u16>;
+    type LocalIdentifier: OptionFromU16 + Into<u16> + Send;
+    type RemoteIdentifier: OptionFromU16 + Into<u16> + Send;
 
     fn create_unbound(ctx: &mut SC) -> Self::UnboundId;
 
@@ -630,14 +631,13 @@ impl<
 
 impl<I: icmp::IcmpIpExt> UdpContext<I> for SocketCollection<I, Udp> {
     fn receive_icmp_error(&mut self, id: UdpBoundId<I>, err: I::ErrorCode) {
-        let Self { binding_data, conns, listeners } = self;
+        let Self { conns, listeners } = self;
         let id = match &id {
             UdpBoundId::Connected(conn) => conns.get(conn),
             UdpBoundId::Listening(listener) => listeners.get(listener),
         };
-        let binding_data = id.copied().and_then(|id| binding_data.get(id));
         // NB: Logging at error as a means of failing tests that provoke this condition.
-        error!("unimplemented receive_icmp_error {:?} on {:?}", err, binding_data)
+        error!("unimplemented receive_icmp_error {:?} on {:?}", err, id)
     }
 }
 
@@ -649,10 +649,9 @@ impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for SocketCollection<I, Udp>
         src_port: NonZeroU16,
         body: &B,
     ) {
-        let Self { binding_data, conns, listeners: _ } = self;
-        let binding_data =
-            conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
-        binding_data.receive_datagram(src_ip, src_port.get(), body.as_ref())
+        let Self { conns, listeners: _ } = self;
+        let conn = conns.get(&conn).unwrap();
+        conn.lock().receive(src_ip, src_port.get(), body.as_ref())
     }
 
     fn receive_udp_from_listen(
@@ -663,10 +662,9 @@ impl<I: IpExt, B: BufferMut> BufferUdpContext<I, B> for SocketCollection<I, Udp>
         src_port: Option<NonZeroU16>,
         body: &B,
     ) {
-        let Self { binding_data, conns: _, listeners } = self;
-        let binding_data =
-            listeners.get(&listener).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
-        binding_data.receive_datagram(src_ip, src_port.map_or(0, NonZeroU16::get), body.as_ref())
+        let Self { conns: _, listeners } = self;
+        let listeners = listeners.get(&listener).unwrap();
+        listeners.lock().receive(src_ip, src_port.map_or(0, NonZeroU16::get), body.as_ref())
     }
 }
 
@@ -1142,11 +1140,10 @@ where
 
 impl<I: icmp::IcmpIpExt> icmp::IcmpContext<I> for SocketCollection<I, IcmpEcho> {
     fn receive_icmp_error(&mut self, conn: icmp::IcmpConnId<I>, seq_num: u16, err: I::ErrorCode) {
-        let Self { binding_data, conns, listeners: _ } = self;
-        let binding_data =
-            conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
+        let Self { conns, listeners: _ } = self;
+        let conn_data = conns.get(&conn).unwrap();
         // NB: Logging at error as a means of failing tests that provoke this condition.
-        error!("unimplemented receive_icmp_error {:?} seq={} on {:?}", err, seq_num, binding_data)
+        error!("unimplemented receive_icmp_error {:?} seq={} on {:?}", err, seq_num, conn_data)
     }
 }
 
@@ -1176,10 +1173,9 @@ where
             .serialize_vec_outer()
         {
             Ok(body) => {
-                let Self { binding_data, conns, listeners: _ } = self;
-                let binding_data =
-                    conns.get(&conn).copied().and_then(|id| binding_data.get_mut(id)).unwrap();
-                binding_data.receive_datagram(src_ip, id, body.as_ref())
+                let Self { conns, listeners: _ } = self;
+                let available = conns.get(&conn).unwrap();
+                available.lock().receive(src_ip, id, body.as_ref())
             }
             Err((err, serializer)) => {
                 let _: packet::serialize::Nested<B, IcmpPacketBuilder<_, _, _>> = serializer;
@@ -1309,8 +1305,11 @@ impl<I: Ip, T: Transport<I>> MessageQueue<I, T> {
 struct BindingData<I: Ip, T: Transport<I>> {
     peer_event: zx::EventPair,
     info: SocketControlInfo<I, T>,
-    messages: MessageQueue<I, T>,
-    ref_count: usize,
+    /// The queue for messages received on this socket.
+    ///
+    /// The message queue is held here and also in the [`SocketCollection`]
+    /// to which the socket belongs.
+    messages: Arc<Mutex<MessageQueue<I, T>>>,
 }
 
 impl<I: Ip, T: Transport<I>> BindingData<I, T> {
@@ -1328,17 +1327,12 @@ impl<I: Ip, T: Transport<I>> BindingData<I, T> {
                 _properties: properties,
                 state: SocketState::Unbound { unbound_id },
             },
-            messages: MessageQueue {
+            messages: Arc::new(Mutex::new(MessageQueue {
                 queue: AvailableMessageQueue::new(),
                 local_event,
                 _marker: PhantomData,
-            },
-            ref_count: 1,
+            })),
         }
-    }
-
-    fn receive_datagram(&mut self, addr: I::Addr, port: u16, body: &[u8]) {
-        self.messages.receive(addr, port, body)
     }
 }
 
@@ -1416,21 +1410,15 @@ where
     }
 }
 
-struct SocketWorker<I, T, C> {
+struct SocketWorker<I: Ip, T: Transport<I>, C> {
     ctx: C,
-    id: usize,
-    rights: fio::OpenFlags,
+    data: BindingData<I, T>,
     _marker: PhantomData<(I, T)>,
 }
 
-impl<I, T, C> SocketWorker<I, T, C>
-where
-    C: LockableContext,
-{
-    async fn make_handler(&self) -> RequestHandler<'_, I, T, C> {
-        let ctx = self.ctx.lock().await;
-        RequestHandler { ctx, binding_id: self.id, rights: self.rights, _marker: PhantomData }
-    }
+struct NewStream {
+    stream: fposix_socket::SynchronousDatagramSocketRequestStream,
+    flags: fio::OpenFlags,
 }
 
 impl<I, T, SC> SocketWorker<I, T, SC>
@@ -1476,25 +1464,16 @@ where
         }
         fasync::Task::spawn(
             async move {
-                let id = {
+                let data = {
                     let mut guard = ctx.lock().await;
                     let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
+
                     let unbound_id = T::create_unbound(sync_ctx);
-                    let SocketCollection { binding_data, conns: _, listeners: _ } =
+                    let SocketCollection { conns: _, listeners: _ } =
                         I::get_collection_mut(non_sync_ctx);
-                    binding_data.push(BindingData::new(
-                        unbound_id,
-                        local_event,
-                        peer_event,
-                        properties,
-                    ))
+                    BindingData::new(unbound_id, local_event, peer_event, properties)
                 };
-                let worker = Self {
-                    ctx,
-                    id,
-                    rights: fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
-                    _marker: PhantomData,
-                };
+                let worker = Self { ctx, data, _marker: PhantomData };
 
                 worker.handle_stream(events).await
             }
@@ -1508,74 +1487,6 @@ where
         Ok(())
     }
 
-    async fn clone(&self) -> Self {
-        let mut handler = self.make_handler().await;
-        let state = handler.get_state_mut();
-        state.ref_count += 1;
-        Self { ctx: self.ctx.clone(), id: self.id, rights: self.rights, _marker: PhantomData }
-    }
-
-    // Starts servicing a [Clone request](fposix_socket::SynchronousDatagramSocketRequest::Clone).
-    fn clone_spawn(
-        &self,
-        flags: fio::OpenFlags,
-        object: ServerEnd<impl super::CanClone>,
-        mut worker: Self,
-    ) {
-        fasync::Task::spawn(
-            async move {
-                let channel = AsyncChannel::from_channel(object.into_channel())
-                    .expect("failed to create async channel");
-                let events =
-                    fposix_socket::SynchronousDatagramSocketRequestStream::from_channel(channel);
-                let control_handle = events.control_handle();
-                let send_on_open = |status: i32, info: Option<&mut fio::NodeInfoDeprecated>| {
-                    if let Err(e) = control_handle.send_on_open_(status, info) {
-                        error!("failed to send OnOpen event with status ({}): {}", status, e);
-                    }
-                };
-                // Datagram sockets don't understand the following flags.
-                let append = flags.intersects(fio::OpenFlags::APPEND);
-                // Datagram sockets are neither mountable nor executable.
-                let executable = flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE);
-                // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
-                // OPEN_RIGHT_* flags.
-                let conflicting_rights = flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS)
-                    && (flags.intersects(fio::OpenFlags::RIGHT_READABLE)
-                        || flags.intersects(fio::OpenFlags::RIGHT_WRITABLE));
-                // If CLONE_FLAG_SAME_RIGHTS is not set, then use the
-                // intersection of the inherited rights and the newly specified
-                // rights.
-                let new_rights =
-                    flags & (fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
-                let more_rights_than_original = new_rights.intersects(!worker.rights);
-                if !flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS)
-                    && !more_rights_than_original
-                {
-                    worker.rights &= new_rights;
-                }
-
-                if append || executable || conflicting_rights || more_rights_than_original {
-                    send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
-                    let () = worker.make_handler().await.close();
-                    return Ok(());
-                }
-
-                if flags.intersects(fio::OpenFlags::DESCRIBE) {
-                    let mut info = worker
-                        .make_handler()
-                        .await
-                        .describe()
-                        .map(fio::NodeInfoDeprecated::SynchronousDatagramSocket);
-                    send_on_open(zx::sys::ZX_OK, info.as_mut());
-                }
-                worker.handle_stream(events).await
-            }
-            .unwrap_or_else(|e: fidl::Error| error!("socket control request error: {:?}", e)),
-        )
-        .detach();
-    }
-
     /// Handles [a stream of POSIX socket requests].
     ///
     /// Returns when getting the first `Close` request.
@@ -1583,48 +1494,214 @@ where
     /// [a stream of POSIX socket requests]: fposix_socket::SynchronousDatagramSocketRequestStream
     async fn handle_stream(
         mut self,
-        mut events: fposix_socket::SynchronousDatagramSocketRequestStream,
+        events: fposix_socket::SynchronousDatagramSocketRequestStream,
     ) -> Result<(), fidl::Error> {
-        // We need to early return here to avoid `Close` requests being received
-        // on the same channel twice causing the incorrect decrease of refcount
-        // as now the bindings data are potentially shared by several distinct
-        // control channels.
-        while let Some(event) = events.next().await {
-            match event {
-                Ok(req) => match self.handle_request(req).await {
-                    ControlFlow::Continue(()) => (),
-                    ControlFlow::Break(()) => {
-                        // No need to close here since that was already done by
-                        // handle_request.
-                        return Ok(());
-                    }
-                },
-                Err(err) => {
-                    let () = self.make_handler().await.close();
-                    return Err(err);
+        // Construct the flags for the initial stream.
+        let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
+
+        // Define `with_flags` out of line so that when futures are pushed into
+        // the `FuturesUnordered`, they all use the same anonymous closure type.
+        let with_flags = |flags: fio::OpenFlags| move |x| (x, flags);
+        let events = events.into_future().map(with_flags(rights));
+
+        let mut futures: FuturesUnordered<_> = std::iter::once(events).collect();
+        while let Some(((request, request_stream), rights)) = futures.next().await {
+            let request = match request {
+                None => continue,
+                Some(Err(e)) => {
+                    log::log!(
+                        util::fidl_err_log_level(&e),
+                        "got error while polling for datagram requests: {}",
+                        e
+                    );
+                    // Continuing implicitly drops the request stream that
+                    // produced the error, which would otherwise be re-enqueued
+                    // below.
+                    continue;
                 }
-            }
+                Some(Ok(t)) => t,
+            };
+            match RequestHandler::new(&mut self, &rights).handle_request(request).await {
+                ControlFlow::Continue(None) => {}
+                ControlFlow::Break(()) => {
+                    request_stream.control_handle().shutdown();
+                    continue;
+                }
+                ControlFlow::Continue(Some(NewStream { stream, flags })) => {
+                    futures.push(stream.into_future().map(with_flags(flags)))
+                }
+            };
+            futures.push(request_stream.into_future().map(with_flags(rights)));
         }
-        // The loop breaks as the client side of the channel has been dropped,
-        // need to treat that as an implicit close request as well.
-        let () = self.make_handler().await.close();
+
+        self.close_core().await;
         Ok(())
     }
 
+    async fn close_core(self) {
+        let Self { ctx, data: BindingData { peer_event: _, info, messages: _ }, _marker } = self;
+        let mut ctx = ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+        let SocketControlInfo { _properties, state } = info;
+        match state {
+            SocketState::Unbound { unbound_id } => {
+                T::remove_unbound(sync_ctx, non_sync_ctx, unbound_id)
+            }
+            SocketState::BoundListen { listener_id } => {
+                // Remove from bindings:
+                assert_matches!(
+                    I::get_collection_mut(non_sync_ctx).listeners.remove(&listener_id),
+                    Some(_)
+                );
+                // Remove from core:
+                let _: (Option<ZonedAddr<I::Addr, _>>, T::LocalIdentifier) =
+                    T::remove_listener(sync_ctx, non_sync_ctx, listener_id);
+            }
+            SocketState::BoundConnect { conn_id, .. } => {
+                // Remove from bindings:
+                assert_matches!(
+                    I::get_collection_mut(non_sync_ctx).conns.remove(&conn_id),
+                    Some(_)
+                );
+                // Remove from core:
+                let _: (
+                    ZonedAddr<I::Addr, _>,
+                    T::LocalIdentifier,
+                    ZonedAddr<I::Addr, _>,
+                    T::RemoteIdentifier,
+                ) = T::remove_conn(sync_ctx, non_sync_ctx, conn_id);
+            }
+        }
+    }
+}
+
+/// A borrow into a [`SocketWorker`]'s state along with the flags used to handle
+/// any requests.
+struct RequestHandler<'a, I: Ip, T: Transport<I>, C> {
+    ctx: &'a mut C,
+    data: &'a mut BindingData<I, T>,
+    flags: &'a fio::OpenFlags,
+}
+
+impl<'a, I: Ip, T: Transport<I>, SC> RequestHandler<'a, I, T, SC> {
+    fn new(worker: &'a mut SocketWorker<I, T, SC>, flags: &'a fio::OpenFlags) -> Self {
+        let SocketWorker { ctx, data, _marker } = worker;
+        Self { ctx, data, flags }
+    }
+}
+
+impl<'a, I, T, SC> RequestHandler<'a, I, T, SC>
+where
+    I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
+    T: Transport<Ipv4>,
+    T: Transport<Ipv6>,
+    T: TransportState<
+        I,
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
+        SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
+    >,
+    T: BufferTransportState<
+        I,
+        Buf<Vec<u8>>,
+        <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
+        SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
+    >,
+    SC: RequestHandlerContext<I, T>,
+    T: Send + Sync + 'static,
+    SC: Clone + Send + Sync + 'static,
+    SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>:
+        TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx, DeviceId = DeviceId>,
+    DeviceId: TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>
+        + TryIntoFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
+    <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<Devices<DeviceId>>,
+{
+    /// Returns the intersection of the requested flags against the current
+    /// rights.
+    ///
+    /// If the requested flags contains invalid flags, or requests rights that
+    /// aren't held by `self.flags`, returns `None`. Otherwise returns the new
+    /// flags.
+    fn new_rights(&self, request_flags: fio::OpenFlags) -> Option<fio::OpenFlags> {
+        // Datagram sockets don't understand the following flags.
+        if request_flags.intersects(fio::OpenFlags::APPEND) {
+            return None;
+        }
+        // Datagram sockets are neither mountable nor executable.
+        if request_flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
+            return None;
+        }
+        // Cannot specify CLONE_FLAGS_SAME_RIGHTS together with
+        // OPEN_RIGHT_* flags.
+        if request_flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS)
+            && (request_flags.intersects(fio::OpenFlags::RIGHT_READABLE)
+                || request_flags.intersects(fio::OpenFlags::RIGHT_WRITABLE))
+        {
+            return None;
+        }
+        // If CLONE_SAME_RIGHTS is not set, then use the intersection of the
+        // inherited rights and the newly specified rights.
+        if request_flags.intersects(fio::OpenFlags::CLONE_SAME_RIGHTS) {
+            return Some(self.flags.clone());
+        }
+
+        // Check that the new rights are a subset of the current rights.
+        let new_rights =
+            request_flags & (fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
+        if !self.flags.contains(new_rights) {
+            return None;
+        }
+
+        Some(self.flags.clone() & new_rights)
+    }
+
+    fn handle_clone(
+        self,
+        request: ServerEnd<impl super::CanClone>,
+        requested_flags: fio::OpenFlags,
+    ) -> Option<(fposix_socket::SynchronousDatagramSocketRequestStream, fio::OpenFlags)> {
+        let channel = fidl::AsyncChannel::from_channel(request.into_channel())
+            .expect("failed to create async channel");
+        let request_stream =
+            fposix_socket::SynchronousDatagramSocketRequestStream::from_channel(channel);
+        let control_handle = request_stream.control_handle();
+        let send_on_open = |status: i32, info: Option<&mut fio::NodeInfoDeprecated>| {
+            let () = control_handle.send_on_open_(status, info).unwrap_or_else(|e| {
+                log::log!(
+                    util::fidl_err_log_level(&e),
+                    "failed to send OnOpen event with status ({}): {}",
+                    status,
+                    e
+                )
+            });
+        };
+
+        match self.new_rights(requested_flags) {
+            None => {
+                send_on_open(zx::sys::ZX_ERR_INVALID_ARGS, None);
+                None
+            }
+            Some(flags) => {
+                if requested_flags.intersects(fio::OpenFlags::DESCRIBE) {
+                    let mut info =
+                        self.describe().map(fio::NodeInfoDeprecated::SynchronousDatagramSocket);
+                    send_on_open(zx::sys::ZX_OK, info.as_mut());
+                }
+                Some((request_stream, flags))
+            }
+        }
+    }
+
     async fn handle_request(
-        &mut self,
-        req: fposix_socket::SynchronousDatagramSocketRequest,
-    ) -> ControlFlow<()> {
-        match req {
+        mut self,
+        request: fposix_socket::SynchronousDatagramSocketRequest,
+    ) -> ControlFlow<(), Option<NewStream>> {
+        match request {
             fposix_socket::SynchronousDatagramSocketRequest::DescribeDeprecated { responder } => {
                 // If the call to duplicate_handle fails, we have no
                 // choice but to drop the responder and close the
                 // channel, since Describe must be infallible.
-                if let Some(mut info) = self
-                    .make_handler()
-                    .await
-                    .describe()
-                    .map(fio::NodeInfoDeprecated::SynchronousDatagramSocket)
+                if let Some(mut info) =
+                    self.describe().map(fio::NodeInfoDeprecated::SynchronousDatagramSocket)
                 {
                     responder_send!(responder, &mut info);
                 }
@@ -1633,9 +1710,7 @@ where
                 // If the call to duplicate_handle fails, we have no
                 // choice but to drop the responder and close the
                 // channel, since Describe must be infallible.
-                if let Some(fio::SynchronousDatagramSocket { event }) =
-                    self.make_handler().await.describe()
-                {
+                if let Some(fio::SynchronousDatagramSocket { event }) = self.describe() {
                     responder_send!(
                         responder,
                         fposix_socket::SynchronousDatagramSocketDescribe2Response {
@@ -1650,21 +1725,25 @@ where
                 todo!("https://fxbug.dev/77623");
             }
             fposix_socket::SynchronousDatagramSocketRequest::Connect { addr, responder } => {
-                responder_send!(responder, &mut self.make_handler().await.connect(addr));
+                responder_send!(responder, &mut self.connect(addr).await);
             }
             fposix_socket::SynchronousDatagramSocketRequest::Disconnect { responder } => {
-                responder_send!(responder, &mut self.make_handler().await.disconnect());
+                responder_send!(responder, &mut self.disconnect().await);
             }
             fposix_socket::SynchronousDatagramSocketRequest::Clone { flags, object, .. } => {
-                let cloned_worker = self.clone().await;
-                self.clone_spawn(flags, object, cloned_worker);
+                if let Some((stream, flags)) = self.handle_clone(object, flags) {
+                    return ControlFlow::Continue(Some(NewStream { stream, flags }));
+                }
             }
             fposix_socket::SynchronousDatagramSocketRequest::Clone2 {
                 request,
                 control_handle: _,
             } => {
-                let cloned_worker = self.clone().await;
-                self.clone_spawn(fio::OpenFlags::CLONE_SAME_RIGHTS, request, cloned_worker);
+                if let Some((stream, flags)) =
+                    self.handle_clone(request, fio::OpenFlags::CLONE_SAME_RIGHTS)
+                {
+                    return ControlFlow::Continue(Some(NewStream { stream, flags }));
+                }
             }
             fposix_socket::SynchronousDatagramSocketRequest::Reopen {
                 rights_request,
@@ -1675,7 +1754,6 @@ where
                 todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
             }
             fposix_socket::SynchronousDatagramSocketRequest::Close { responder } => {
-                let () = self.make_handler().await.close();
                 responder_send!(responder, &mut Ok(()));
                 return ControlFlow::Break(());
             }
@@ -1716,7 +1794,7 @@ where
                 todo!("https://fxbug.dev/77623: payload={:?}", payload);
             }
             fposix_socket::SynchronousDatagramSocketRequest::Bind { addr, responder } => {
-                responder_send!(responder, &mut self.make_handler().await.bind(addr));
+                responder_send!(responder, &mut self.bind(addr).await);
             }
             fposix_socket::SynchronousDatagramSocketRequest::Query { responder } => {
                 responder_send!(
@@ -1728,13 +1806,13 @@ where
                 responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw(), None);
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetSockName { responder } => {
-                responder_send!(responder, &mut self.make_handler().await.get_sock_name());
+                responder_send!(responder, &mut self.get_sock_name().await);
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetPeerName { responder } => {
-                responder_send!(responder, &mut self.make_handler().await.get_peer_name());
+                responder_send!(responder, &mut self.get_peer_name().await);
             }
             fposix_socket::SynchronousDatagramSocketRequest::Shutdown { mode, responder } => {
-                responder_send!(responder, &mut self.make_handler().await.shutdown(mode))
+                responder_send!(responder, &mut self.shutdown(mode).await)
             }
             fposix_socket::SynchronousDatagramSocketRequest::RecvMsg {
                 want_addr,
@@ -1746,7 +1824,7 @@ where
                 // TODO(brunodalbo) handle control
                 responder_send!(
                     responder,
-                    &mut self.make_handler().await.recv_msg(want_addr, data_len as usize, flags)
+                    &mut self.recv_msg(want_addr, data_len as usize, flags).await
                 );
             }
             fposix_socket::SynchronousDatagramSocketRequest::SendMsg {
@@ -1757,10 +1835,7 @@ where
                 responder,
             } => {
                 // TODO(https://fxbug.dev/21106): handle control.
-                responder_send!(
-                    responder,
-                    &mut self.make_handler().await.send_msg(addr.map(|addr| *addr), data)
-                );
+                responder_send!(responder, &mut self.send_msg(addr.map(|addr| *addr), data).await);
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetFlags { responder } => {
                 responder_send!(
@@ -1773,7 +1848,7 @@ where
                 responder_send!(responder, zx::Status::NOT_SUPPORTED.into_raw());
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetInfo { responder } => {
-                responder_send!(responder, &mut self.make_handler().await.get_sock_info())
+                responder_send!(responder, &mut self.get_sock_info())
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetTimestamp { responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -1812,15 +1887,12 @@ where
                 responder,
             } => {
                 responder_send!(responder, &mut {
-                    self.make_handler().await.set_max_receive_buffer_size(value_bytes);
+                    self.set_max_receive_buffer_size(value_bytes);
                     Ok(())
                 });
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetReceiveBuffer { responder } => {
-                responder_send!(
-                    responder,
-                    &mut Ok(self.make_handler().await.get_max_receive_buffer_size())
-                );
+                responder_send!(responder, &mut Ok(self.get_max_receive_buffer_size()));
             }
             fposix_socket::SynchronousDatagramSocketRequest::SetReuseAddress {
                 value: _,
@@ -1832,12 +1904,10 @@ where
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
             }
             fposix_socket::SynchronousDatagramSocketRequest::SetReusePort { value, responder } => {
-                responder_send!(responder, {
-                    &mut self.make_handler().await.set_reuse_port(value)
-                });
+                responder_send!(responder, &mut self.set_reuse_port(value).await);
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetReusePort { responder } => {
-                responder_send!(responder, &mut Ok(self.make_handler().await.get_reuse_port()));
+                responder_send!(responder, &mut Ok(self.get_reuse_port().await));
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetAcceptConn { responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
@@ -1846,23 +1916,13 @@ where
                 value,
                 responder,
             } => {
-                responder_send!(
-                    responder,
-                    &mut async {
-                        let identifier = (!value.is_empty()).then_some(value.as_str());
-                        self.make_handler().await.bind_to_device(identifier)
-                    }
-                    .await
-                );
+                let identifier = (!value.is_empty()).then_some(value.as_str());
+                responder_send!(responder, &mut self.bind_to_device(identifier).await);
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetBindToDevice { responder } => {
                 responder_send!(
                     responder,
-                    &mut self
-                        .make_handler()
-                        .await
-                        .get_bound_device()
-                        .map(|d| d.unwrap_or("".to_string()))
+                    &mut self.get_bound_device().await.map(|d| d.unwrap_or("".to_string()))
                 );
             }
             fposix_socket::SynchronousDatagramSocketRequest::SetBroadcast {
@@ -1946,14 +2006,11 @@ where
             } => {
                 responder_send!(
                     responder,
-                    &mut self.make_handler().await.set_unicast_hop_limit(Ipv6::VERSION, value)
+                    &mut self.set_unicast_hop_limit(Ipv6::VERSION, value).await
                 )
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetIpv6UnicastHops { responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.make_handler().await.get_unicast_hop_limit(Ipv6::VERSION)
-                )
+                responder_send!(responder, &mut self.get_unicast_hop_limit(Ipv6::VERSION).await)
             }
             fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastHops {
                 value,
@@ -1961,14 +2018,11 @@ where
             } => {
                 responder_send!(
                     responder,
-                    &mut self.make_handler().await.set_multicast_hop_limit(Ipv6::VERSION, value)
+                    &mut self.set_multicast_hop_limit(Ipv6::VERSION, value).await
                 )
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetIpv6MulticastHops { responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.make_handler().await.get_multicast_hop_limit(Ipv6::VERSION)
-                )
+                responder_send!(responder, &mut self.get_multicast_hop_limit(Ipv6::VERSION).await)
             }
             fposix_socket::SynchronousDatagramSocketRequest::SetIpv6MulticastLoopback {
                 value,
@@ -1989,14 +2043,11 @@ where
             fposix_socket::SynchronousDatagramSocketRequest::SetIpTtl { value, responder } => {
                 responder_send!(
                     responder,
-                    &mut self.make_handler().await.set_unicast_hop_limit(Ipv4::VERSION, value)
+                    &mut self.set_unicast_hop_limit(Ipv4::VERSION, value).await
                 )
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetIpTtl { responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.make_handler().await.get_unicast_hop_limit(Ipv4::VERSION)
-                )
+                responder_send!(responder, &mut self.get_unicast_hop_limit(Ipv4::VERSION).await)
             }
             fposix_socket::SynchronousDatagramSocketRequest::SetIpMulticastTtl {
                 value,
@@ -2004,14 +2055,11 @@ where
             } => {
                 responder_send!(
                     responder,
-                    &mut self.make_handler().await.set_multicast_hop_limit(Ipv4::VERSION, value)
+                    &mut self.set_multicast_hop_limit(Ipv4::VERSION, value).await
                 )
             }
             fposix_socket::SynchronousDatagramSocketRequest::GetIpMulticastTtl { responder } => {
-                responder_send!(
-                    responder,
-                    &mut self.make_handler().await.get_multicast_hop_limit(Ipv4::VERSION)
-                )
+                responder_send!(responder, &mut self.get_multicast_hop_limit(Ipv4::VERSION).await)
             }
             fposix_socket::SynchronousDatagramSocketRequest::SetIpMulticastInterface {
                 iface: _,
@@ -2051,9 +2099,7 @@ where
             } => {
                 responder_send!(responder, &mut {
                     match I::MulticastMembership::new(membership) {
-                        Some(membership) => {
-                            self.make_handler().await.set_multicast_membership(membership, true)
-                        }
+                        Some(membership) => self.set_multicast_membership(membership, true).await,
                         None => Err(fposix::Errno::Enoprotoopt),
                     }
                 });
@@ -2064,9 +2110,7 @@ where
             } => {
                 responder_send!(responder, &mut {
                     match I::MulticastMembership::new(membership) {
-                        Some(membership) => {
-                            self.make_handler().await.set_multicast_membership(membership, false)
-                        }
+                        Some(membership) => self.set_multicast_membership(membership, false).await,
                         None => Err(fposix::Errno::Enoprotoopt),
                     }
                 });
@@ -2077,9 +2121,7 @@ where
             } => {
                 responder_send!(responder, &mut {
                     match I::MulticastMembership::new(membership) {
-                        Some(membership) => {
-                            self.make_handler().await.set_multicast_membership(membership, true)
-                        }
+                        Some(membership) => self.set_multicast_membership(membership, true).await,
                         None => Err(fposix::Errno::Enoprotoopt),
                     }
                 });
@@ -2090,9 +2132,7 @@ where
             } => {
                 responder_send!(responder, &mut {
                     match I::MulticastMembership::new(membership) {
-                        Some(membership) => {
-                            self.make_handler().await.set_multicast_membership(membership, false)
-                        }
+                        Some(membership) => self.set_multicast_membership(membership, false).await,
                         None => Err(fposix::Errno::Enoprotoopt),
                     }
                 });
@@ -2160,7 +2200,7 @@ where
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
             }
         }
-        ControlFlow::Continue(())
+        ControlFlow::Continue(None)
     }
 }
 
@@ -2214,13 +2254,6 @@ where
     type NonSyncCtx = C::NonSyncCtx;
 }
 
-struct RequestHandler<'a, I, T, C: LockableContext> {
-    ctx: <C as Lockable<'a, Ctx<C::NonSyncCtx>>>::Guard,
-    binding_id: usize,
-    rights: fio::OpenFlags,
-    _marker: PhantomData<(I, T)>,
-}
-
 impl<'a, I, T, C> RequestHandler<'a, I, T, C>
 where
     I: SocketCollectionIpExt<T> + IpExt + IpSockAddrExt,
@@ -2230,41 +2263,21 @@ where
     C: RequestHandlerContext<I, T>,
 {
     fn describe(&self) -> Option<fio::SynchronousDatagramSocket> {
-        self.get_state()
-            .peer_event
+        let Self { ctx: _, data: BindingData { peer_event, info: _, messages: _ }, flags: _ } =
+            self;
+        peer_event
             .duplicate_handle(zx::Rights::BASIC)
             .map(|peer| fio::SynchronousDatagramSocket { event: peer })
             .ok()
     }
 
-    fn get_state(&self) -> &BindingData<I, T> {
-        let Ctx { sync_ctx: _, non_sync_ctx } = self.ctx.deref();
-        I::get_collection(non_sync_ctx).binding_data.get(self.binding_id).unwrap()
-    }
-
-    fn get_state_mut(&mut self) -> &mut BindingData<I, T> {
-        let Ctx { sync_ctx: _, non_sync_ctx } = self.ctx.deref_mut();
-        I::get_collection_mut(non_sync_ctx).binding_data.get_mut(self.binding_id).unwrap()
-    }
-
     fn get_max_receive_buffer_size(&self) -> u64 {
-        let BindingData {
-            messages: MessageQueue { queue, local_event: _, _marker },
-            info: _,
-            peer_event: _,
-            ref_count: _,
-        } = self.get_state();
-        queue.max_available_messages_size.try_into().unwrap_or(u64::MAX)
+        let Self { ctx: _, data: BindingData { peer_event: _, info: _, messages }, flags: _ } =
+            self;
+        messages.lock().queue.max_available_messages_size.try_into().unwrap_or(u64::MAX)
     }
 
     fn set_max_receive_buffer_size(&mut self, max_bytes: u64) {
-        let BindingData {
-            messages: MessageQueue { queue, local_event: _, _marker },
-            info: _,
-            peer_event: _,
-            ref_count: _,
-        } = self.get_state_mut();
-
         let max_bytes = max_bytes
             .try_into()
             .ok_checked::<TryFromIntError>()
@@ -2273,7 +2286,9 @@ where
             std::cmp::max(max_bytes, MIN_OUTSTANDING_APPLICATION_MESSAGES_SIZE),
             MAX_OUTSTANDING_APPLICATION_MESSAGES_SIZE,
         );
-        queue.max_available_messages_size = max_bytes
+        let Self { ctx: _, data: BindingData { peer_event: _, info: _, messages }, flags: _ } =
+            self;
+        messages.lock().queue.max_available_messages_size = max_bytes
     }
 }
 
@@ -2296,21 +2311,21 @@ where
     /// Handles a [POSIX socket connect request].
     ///
     /// [POSIX socket connect request]: fposix_socket::SynchronousDatagramSocketRequest::Connect
-    fn connect(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
+    async fn connect(self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
         trace!("connect sockaddr: {:?}", sockaddr);
-        let (remote_addr, remote_port) = sockaddr
-            .try_into_core_with_ctx(&self.ctx.non_sync_ctx)
-            .map_err(IntoErrno::into_errno)?;
+        let (remote_addr, remote_port) =
+            sockaddr.try_into_core_with_ctx(&non_sync_ctx).map_err(IntoErrno::into_errno)?;
         let remote_port =
             T::RemoteIdentifier::from_u16(remote_port).ok_or(fposix::Errno::Econnrefused)?;
         // Emulate Linux, which was emulating BSD, by treating the unspecified
         // remote address as localhost.
         let remote_addr = remote_addr.unwrap_or(ZonedAddr::Unzoned(I::LOOPBACK_ADDRESS));
 
-        let conn_id = match self.get_state().info.state {
+        let (conn_id, messages) = match self.data.info.state {
             SocketState::Unbound { unbound_id } => {
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 // Use None for local_addr and local_port.
                 let conn_id = T::connect_unbound(
                     sync_ctx,
@@ -2320,18 +2335,16 @@ where
                     remote_port,
                 )
                 .map_err(IntoErrno::into_errno)?;
-                conn_id
+                (conn_id, self.data.messages.clone())
             }
             SocketState::BoundListen { listener_id } => {
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
-
                 // Whether connect_listener succeeds or fails, it will consume
                 // the existing listener.
                 // TODO(https://fxbug.dev/103049): Make T::connect_listener not
                 // remove the existing listener on failure.
-                assert_ne!(
+                let messages = assert_matches!(
                     I::get_collection_mut(non_sync_ctx).listeners.remove(&listener_id),
-                    None
+                    Some(t) => t
                 );
 
                 match T::connect_listener(
@@ -2341,16 +2354,16 @@ where
                     remote_addr,
                     remote_port,
                 ) {
-                    Ok(conn_id) => conn_id,
+                    Ok(conn_id) => (conn_id, messages),
                     Err((e, listener_id)) => {
                         // Replace the consumed listener with the new one.
-                        assert_eq!(
+                        assert_matches!(
                             I::get_collection_mut(non_sync_ctx)
                                 .listeners
-                                .insert(&listener_id, self.binding_id),
+                                .insert(&listener_id, messages),
                             None
                         );
-                        self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
+                        self.data.info.state = SocketState::BoundListen { listener_id };
                         return Err(e.into_errno());
                     }
                 }
@@ -2358,22 +2371,21 @@ where
             SocketState::BoundConnect { conn_id, shutdown_read, shutdown_write } => {
                 // if we're bound to a connect mode, we need to remove the
                 // connection, and retrieve the bound local addr and port.
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
 
                 // Whether reconnect_conn succeeds or fails, it will consume
                 // the existing socket.
-                assert_ne!(I::get_collection_mut(non_sync_ctx).conns.remove(&conn_id), None);
+                let messages = assert_matches!(
+                    I::get_collection_mut(non_sync_ctx).conns.remove(&conn_id),
+                    Some(t) => t);
 
                 match T::reconnect_conn(sync_ctx, non_sync_ctx, conn_id, remote_addr, remote_port) {
-                    Ok(conn_id) => conn_id,
+                    Ok(conn_id) => (conn_id, messages),
                     Err((e, conn_id)) => {
-                        assert_eq!(
-                            I::get_collection_mut(non_sync_ctx)
-                                .conns
-                                .insert(&conn_id, self.binding_id),
+                        assert_matches!(
+                            I::get_collection_mut(non_sync_ctx).conns.insert(&conn_id, messages),
                             None
                         );
-                        self.get_state_mut().info.state =
+                        self.data.info.state =
                             SocketState::BoundConnect { conn_id, shutdown_read, shutdown_write };
                         return Err(e.into_errno());
                     }
@@ -2381,41 +2393,50 @@ where
             }
         };
 
-        self.get_state_mut().info.state =
+        self.data.info.state =
             SocketState::BoundConnect { conn_id, shutdown_read: false, shutdown_write: false };
-        assert_eq!(
-            I::get_collection_mut(&mut self.ctx.non_sync_ctx)
-                .conns
-                .insert(&conn_id, self.binding_id),
-            None
-        );
+        assert_matches!(I::get_collection_mut(non_sync_ctx).conns.insert(&conn_id, messages), None);
         Ok(())
     }
 
     /// Handles a [POSIX socket bind request].
     ///
     /// [POSIX socket bind request]: fposix_socket::SynchronousDatagramSocketRequest::Bind
-    fn bind(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
+    async fn bind(self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
         trace!("bind sockaddr: {:?}", sockaddr);
+
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+
         let (sockaddr, port) =
-            TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.non_sync_ctx, sockaddr)
+            TryFromFidlWithContext::try_from_fidl_with_ctx(&non_sync_ctx, sockaddr)
                 .map_err(IntoErrno::into_errno)?;
-        let unbound_id = match self.get_state().info.state {
+        let unbound_id = match self.data.info.state {
             SocketState::Unbound { unbound_id } => Ok(unbound_id),
             SocketState::BoundListen { listener_id: _ }
             | SocketState::BoundConnect { conn_id: _, shutdown_read: _, shutdown_write: _ } => {
                 Err(fposix::Errno::Einval)
             }
         }?;
-        self.bind_inner(unbound_id, sockaddr, T::LocalIdentifier::from_u16(port))
-            .map(|_: <T as Transport<I>>::ListenerId| ())
+        let listener_id = Self::bind_inner(
+            sync_ctx,
+            non_sync_ctx,
+            unbound_id,
+            &self.data.messages,
+            sockaddr,
+            T::LocalIdentifier::from_u16(port),
+        )?;
+        self.data.info.state = SocketState::BoundListen { listener_id };
+        Ok(())
     }
 
     /// Helper function for common functionality to self.bind() and self.send_msg().
     fn bind_inner(
-        &mut self,
+        sync_ctx: &mut SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
+        non_sync_ctx: &mut <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
         unbound_id: <T as Transport<I>>::UnboundId,
+        available_data: &Arc<Mutex<MessageQueue<I, T>>>,
         local_addr: Option<ZonedAddr<I::Addr, DeviceId>>,
         local_port: Option<
             <T as TransportState<
@@ -2425,15 +2446,13 @@ where
             >>::LocalIdentifier,
         >,
     ) -> Result<<T as Transport<I>>::ListenerId, fposix::Errno> {
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
         let listener_id =
             T::listen_on_unbound(sync_ctx, non_sync_ctx, unbound_id, local_addr, local_port)
                 .map_err(IntoErrno::into_errno)?;
-        self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
-        assert_eq!(
-            I::get_collection_mut(&mut self.ctx.non_sync_ctx)
+        assert_matches!(
+            I::get_collection_mut(non_sync_ctx)
                 .listeners
-                .insert(&listener_id, self.binding_id),
+                .insert(&listener_id, available_data.clone()),
             None
         );
         Ok(listener_id)
@@ -2442,25 +2461,27 @@ where
     /// Handles a [POSIX socket disconnect request].
     ///
     /// [POSIX socket connect request]: fposix_socket::SynchronousDatagramSocketRequest::Disconnect
-    fn disconnect(mut self) -> Result<(), fposix::Errno> {
+    async fn disconnect(self) -> Result<(), fposix::Errno> {
         trace!("disconnect socket");
 
-        let listener_id = match self.get_state().info.state {
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+
+        let (listener_id, messages) = match self.data.info.state {
             SocketState::Unbound { unbound_id: _ }
             | SocketState::BoundListen { listener_id: _ } => return Err(fposix::Errno::Einval),
             SocketState::BoundConnect { conn_id, .. } => {
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
-
-                assert_ne!(I::get_collection_mut(non_sync_ctx).conns.remove(&conn_id), None);
-                T::disconnect_connected(sync_ctx, non_sync_ctx, conn_id)
+                let messages = assert_matches!(
+                    I::get_collection_mut(non_sync_ctx).conns.remove(&conn_id),
+                    Some(t) => t);
+                let listener_id = T::disconnect_connected(sync_ctx, non_sync_ctx, conn_id);
+                (listener_id, messages)
             }
         };
 
-        self.get_state_mut().info.state = SocketState::BoundListen { listener_id };
-        assert_eq!(
-            I::get_collection_mut(&mut self.ctx.non_sync_ctx)
-                .listeners
-                .insert(&listener_id, self.binding_id),
+        self.data.info.state = SocketState::BoundListen { listener_id };
+        assert_matches!(
+            I::get_collection_mut(non_sync_ctx).listeners.insert(&listener_id, messages),
             None
         );
         Ok(())
@@ -2469,26 +2490,26 @@ where
     /// Handles a [POSIX socket get_sock_name request].
     ///
     /// [POSIX socket get_sock_name request]: fposix_socket::SynchronousDatagramSocketRequest::GetSockName
-    fn get_sock_name(mut self) -> Result<fnet::SocketAddress, fposix::Errno> {
-        match self.get_state().info.state {
+    async fn get_sock_name(self) -> Result<fnet::SocketAddress, fposix::Errno> {
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+        match self.data.info.state {
             SocketState::Unbound { .. } => {
                 return Err(fposix::Errno::Enotsock);
             }
             SocketState::BoundConnect { conn_id, .. } => {
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (local_ip, local_port, _, _): (
                     _,
                     _,
                     ZonedAddr<I::Addr, _>,
                     T::RemoteIdentifier,
                 ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
-                (Some(local_ip), local_port.into()).try_into_fidl_with_ctx(&self.ctx.non_sync_ctx)
+                (Some(local_ip), local_port.into()).try_into_fidl_with_ctx(&non_sync_ctx)
             }
             SocketState::BoundListen { listener_id } => {
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (local_ip, local_port) =
                     T::get_listener_info(sync_ctx, non_sync_ctx, listener_id);
-                (local_ip, local_port.into()).try_into_fidl_with_ctx(&self.ctx.non_sync_ctx)
+                (local_ip, local_port.into()).try_into_fidl_with_ctx(&non_sync_ctx)
             }
         }
         .map(SockAddr::into_sock_addr)
@@ -2516,8 +2537,10 @@ where
     /// Handles a [POSIX socket get_peer_name request].
     ///
     /// [POSIX socket get_peer_name request]: fposix_socket::SynchronousDatagramSocketRequest::GetPeerName
-    fn get_peer_name(mut self) -> Result<fnet::SocketAddress, fposix::Errno> {
-        match self.get_state().info.state {
+    async fn get_peer_name(self) -> Result<fnet::SocketAddress, fposix::Errno> {
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+        match self.data.info.state {
             SocketState::Unbound { .. } => {
                 return Err(fposix::Errno::Enotsock);
             }
@@ -2525,7 +2548,6 @@ where
                 return Err(fposix::Errno::Enotconn);
             }
             SocketState::BoundConnect { conn_id, .. } => {
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 let (_, _, remote_ip, remote_port): (
                     ZonedAddr<I::Addr, _>,
                     T::LocalIdentifier,
@@ -2533,76 +2555,26 @@ where
                     _,
                 ) = T::get_conn_info(sync_ctx, non_sync_ctx, conn_id);
                 (Some(remote_ip), remote_port.into())
-                    .try_into_fidl_with_ctx(&self.ctx.non_sync_ctx)
+                    .try_into_fidl_with_ctx(&non_sync_ctx)
                     .map(SockAddr::into_sock_addr)
                     .map_err(IntoErrno::into_errno)
             }
         }
     }
 
-    fn close_core(
-        info: SocketControlInfo<I, T>,
-        sync_ctx: &mut SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx>,
-        ctx: &mut <SC as RequestHandlerContext<I, T>>::NonSyncCtx,
-    ) {
-        let SocketControlInfo { _properties, state } = info;
-        match state {
-            SocketState::Unbound { unbound_id } => T::remove_unbound(sync_ctx, ctx, unbound_id),
-            SocketState::BoundListen { listener_id } => {
-                // remove from bindings:
-                assert_ne!(I::get_collection_mut(ctx).listeners.remove(&listener_id), None);
-                // remove from core:
-                let _: (Option<ZonedAddr<I::Addr, _>>, T::LocalIdentifier) =
-                    T::remove_listener(sync_ctx, ctx, listener_id);
-            }
-            SocketState::BoundConnect { conn_id, .. } => {
-                // remove from bindings:
-                assert_ne!(I::get_collection_mut(ctx).conns.remove(&conn_id), None);
-                // remove from core:
-                let _: (
-                    ZonedAddr<I::Addr, _>,
-                    T::LocalIdentifier,
-                    ZonedAddr<I::Addr, _>,
-                    T::RemoteIdentifier,
-                ) = T::remove_conn(sync_ctx, ctx, conn_id);
-            }
-        }
-    }
-
-    fn close(mut self) {
-        let inner = self.get_state_mut();
-        if inner.ref_count == 1 {
-            let info = assert_matches!(
-                I::get_collection_mut(&mut self.ctx.non_sync_ctx)
-                    .binding_data
-                    .remove(self.binding_id),
-                Some(BindingData {
-                    info,
-                    ref_count: 1,
-                    peer_event: _,
-                    messages: _,
-                }) => info);
-            // always make sure the socket is closed with core.
-            let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
-            Self::close_core(info, sync_ctx, non_sync_ctx);
-        } else {
-            inner.ref_count -= 1;
-        }
-    }
-
     fn need_rights(&self, required: fio::OpenFlags) -> Result<(), fposix::Errno> {
-        if self.rights & required == required {
+        if *self.flags & required == required {
             Ok(())
         } else {
             Err(fposix::Errno::Eperm)
         }
     }
 
-    fn recv_msg(
-        &mut self,
+    async fn recv_msg(
+        self,
         want_addr: bool,
         data_len: usize,
-        flags: fposix_socket::RecvMsgFlags,
+        recv_flags: fposix_socket::RecvMsgFlags,
     ) -> Result<
         (
             Option<Box<fnet::SocketAddress>>,
@@ -2613,16 +2585,17 @@ where
         fposix::Errno,
     > {
         let () = self.need_rights(fio::OpenFlags::RIGHT_READABLE)?;
-        let state = self.get_state_mut();
-        let front = if flags.contains(fposix_socket::RecvMsgFlags::PEEK) {
-            state.messages.peek().cloned()
+        let Self { ctx: _, data: BindingData { peer_event: _, info, messages }, flags: _ } = self;
+        let mut messages = messages.lock();
+        let front = if recv_flags.contains(fposix_socket::RecvMsgFlags::PEEK) {
+            messages.peek().cloned()
         } else {
-            state.messages.pop()
+            messages.pop()
         };
         let available = if let Some(front) = front {
             front
         } else {
-            if let SocketState::BoundConnect { shutdown_read, .. } = state.info.state {
+            if let SocketState::BoundConnect { shutdown_read, .. } = info.state {
                 if shutdown_read {
                     // Return empty data to signal EOF.
                     return Ok((
@@ -2682,8 +2655,8 @@ where
         + TryIntoFidlWithContext<<I::SocketAddress as SockAddr>::Zone, Error = DeviceNotFoundError>,
     <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<Devices<DeviceId>>,
 {
-    fn send_msg(
-        &mut self,
+    async fn send_msg(
+        self,
         addr: Option<fnet::SocketAddress>,
         data: Vec<u8>,
     ) -> Result<i64, fposix::Errno> {
@@ -2699,15 +2672,25 @@ where
         };
         let len = data.len() as i64;
         let body = Buf::new(data, ..);
-        match self.get_state().info.state {
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+        match self.data.info.state {
             SocketState::Unbound { unbound_id } => match remote {
                 Some((addr, port)) => {
                     // On Linux, sending on an unbound socket is equivalent to
                     // first binding to a system-selected port for all IPs, then
                     // sending from that socket. Emulate that here by binding
                     // with an unspecified IP and port.
-                    self.bind_inner(unbound_id, None, None).and_then(|listener_id| {
-                        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+                    Self::bind_inner(
+                        sync_ctx,
+                        non_sync_ctx,
+                        unbound_id,
+                        &self.data.messages,
+                        None,
+                        None,
+                    )
+                    .and_then(|listener_id| {
+                        self.data.info.state = SocketState::BoundListen { listener_id };
                         T::send_listener(
                             sync_ctx,
                             non_sync_ctx,
@@ -2726,13 +2709,11 @@ where
                 if shutdown_write {
                     return Err(fposix::Errno::Epipe);
                 }
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 T::send_conn(sync_ctx, non_sync_ctx, conn_id, body, remote)
                     .map_err(|(_body, err)| err.into_errno())
             }
             SocketState::BoundListen { listener_id } => match remote {
                 Some((addr, port)) => {
-                    let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                     T::send_listener(sync_ctx, non_sync_ctx, listener_id, None, addr, port, body)
                         .map_err(|(_body, err)| err.into_errno())
                 }
@@ -2742,37 +2723,37 @@ where
         .map(|()| len)
     }
 
-    fn bind_to_device(mut self, device: Option<&str>) -> Result<(), fposix::Errno> {
+    async fn bind_to_device(self, device: Option<&str>) -> Result<(), fposix::Errno> {
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
         let device = device
             .map(|name| {
-                self.ctx
-                    .non_sync_ctx
+                non_sync_ctx
                     .as_ref()
                     .get_device_by_name(name)
                     .map(|d| d.core_id())
                     .ok_or(fposix::Errno::Enodev)
             })
             .transpose()?;
-        let state: &SocketState<_, _> = &self.get_state_mut().info.state;
+        let state: &SocketState<_, _> = &self.data.info.state;
         let id = state.into();
 
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
         T::set_socket_device(sync_ctx, non_sync_ctx, id, device).map_err(IntoErrno::into_errno)
     }
 
-    fn get_bound_device(mut self) -> Result<Option<String>, fposix::Errno> {
-        let state: &SocketState<_, _> = &self.get_state_mut().info.state;
+    async fn get_bound_device(self) -> Result<Option<String>, fposix::Errno> {
+        let ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref();
+        let state: &SocketState<_, _> = &self.data.info.state;
         let id = state.into();
 
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
         let device = match T::get_bound_device(sync_ctx, non_sync_ctx, id) {
             None => return Ok(None),
             Some(d) => d,
         };
-        let index =
-            TryIntoFidlWithContext::<u64>::try_into_fidl_with_ctx(device, &self.ctx.non_sync_ctx)
-                .map_err(IntoErrno::into_errno)?;
-        Ok(self.ctx.non_sync_ctx.as_ref().get_device(index).map(|device_info| {
+        let index = TryIntoFidlWithContext::<u64>::try_into_fidl_with_ctx(device, &non_sync_ctx)
+            .map_err(IntoErrno::into_errno)?;
+        Ok(non_sync_ctx.as_ref().get_device(index).map(|device_info| {
             let CommonInfo {
                 name,
                 mtu: _,
@@ -2785,10 +2766,11 @@ where
         }))
     }
 
-    fn set_reuse_port(mut self, reuse_port: bool) -> Result<(), fposix::Errno> {
-        match self.get_state_mut().info.state {
+    async fn set_reuse_port(self, reuse_port: bool) -> Result<(), fposix::Errno> {
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+        match self.data.info.state {
             SocketState::Unbound { unbound_id } => {
-                let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
                 T::set_reuse_port(sync_ctx, non_sync_ctx, unbound_id, reuse_port);
                 Ok(())
             }
@@ -2799,18 +2781,19 @@ where
         }
     }
 
-    fn get_reuse_port(self) -> bool {
-        let state = &self.get_state().info.state;
-        let id = state.into();
+    async fn get_reuse_port(self) -> bool {
+        let ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref();
 
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
-        T::get_reuse_port(sync_ctx, non_sync_ctx, id)
+        T::get_reuse_port(sync_ctx, non_sync_ctx, (&self.data.info.state).into())
     }
 
-    fn shutdown(mut self, how: fposix_socket::ShutdownMode) -> Result<(), fposix::Errno> {
+    async fn shutdown(self, how: fposix_socket::ShutdownMode) -> Result<(), fposix::Errno> {
+        let Self { data: BindingData { peer_event: _, info, messages }, ctx: _, flags: _ } = self;
+
         // Only "connected" sockets can be shutdown.
         if let SocketState::BoundConnect { ref mut shutdown_read, ref mut shutdown_write, .. } =
-            self.get_state_mut().info.state
+            info.state
         {
             if how.is_empty() {
                 return Err(fposix::Errno::Einval);
@@ -2822,9 +2805,8 @@ where
             }
             if how.contains(fposix_socket::ShutdownMode::READ) {
                 *shutdown_read = true;
-                if let Err(e) = self
-                    .get_state()
-                    .messages
+                if let Err(e) = messages
+                    .lock()
                     .local_event
                     .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_INCOMING)
                 {
@@ -2852,18 +2834,19 @@ where
         TransportIpContext<I, <SC as RequestHandlerContext<I, T>>::NonSyncCtx, DeviceId = DeviceId>,
     <SC as RequestHandlerContext<I, T>>::NonSyncCtx: AsRef<Devices<DeviceId>>,
 {
-    fn set_multicast_membership(
-        mut self,
+    async fn set_multicast_membership(
+        self,
         membership: I::MulticastMembership,
         want_membership: bool,
     ) -> Result<(), fposix::Errno> {
         let (mcast_addr, interface) = membership.into_addr_selector();
         let multicast_group = MulticastAddr::new(mcast_addr).ok_or(fposix::Errno::Einval)?;
 
-        let state: &SocketState<_, _> = &self.get_state().info.state;
-        let id = state.into();
+        let id = (&self.data.info.state).into();
 
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+
         let interface =
             interface.try_into_core_with_ctx(non_sync_ctx).map_err(IntoErrno::into_errno)?;
 
@@ -2878,8 +2861,8 @@ where
         .map_err(IntoErrno::into_errno)
     }
 
-    fn set_unicast_hop_limit(
-        mut self,
+    async fn set_unicast_hop_limit(
+        self,
         ip_version: IpVersion,
         hop_limit: fposix_socket::OptionalUint8,
     ) -> Result<(), fposix::Errno> {
@@ -2889,19 +2872,20 @@ where
             return Err(fposix::Errno::Enoprotoopt);
         }
 
-        let state: &SocketState<_, _> = &self.get_state().info.state;
-        let id = state.into();
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        let id = (&self.data.info.state).into();
 
         let hop_limit: Option<u8> = hop_limit.into_core();
         let hop_limit =
             hop_limit.map(|u| NonZeroU8::new(u).ok_or(fposix::Errno::Einval)).transpose()?;
+
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
         T::set_unicast_hop_limit(sync_ctx, non_sync_ctx, id, hop_limit);
         Ok(())
     }
 
-    fn set_multicast_hop_limit(
-        mut self,
+    async fn set_multicast_hop_limit(
+        self,
         ip_version: IpVersion,
         hop_limit: fposix_socket::OptionalUint8,
     ) -> Result<(), fposix::Errno> {
@@ -2911,43 +2895,45 @@ where
             return Err(fposix::Errno::Enoprotoopt);
         }
 
-        let state: &SocketState<_, _> = &self.get_state().info.state;
-        let id = state.into();
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref_mut();
+        let id = (&self.data.info.state).into();
 
         let hop_limit: Option<u8> = hop_limit.into_core();
         // TODO(https://fxbug.dev/108323): Support setting a multicast hop limit
         // of 0.
         let hop_limit =
             hop_limit.map(|u| NonZeroU8::new(u).ok_or(fposix::Errno::Einval)).transpose()?;
+
+        let mut ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
         T::set_multicast_hop_limit(sync_ctx, non_sync_ctx, id, hop_limit);
         Ok(())
     }
 
-    fn get_unicast_hop_limit(self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
+    async fn get_unicast_hop_limit(self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
         // TODO(https://fxbug.dev/21198): Allow reading hop limits for
         // dual-stack sockets.
         if ip_version != I::VERSION {
             return Err(fposix::Errno::Enoprotoopt);
         }
 
-        let state: &SocketState<_, _> = &self.get_state().info.state;
-        let id = state.into();
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
+        let id = (&self.data.info.state).into();
 
+        let ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref();
         Ok(T::get_unicast_hop_limit(sync_ctx, non_sync_ctx, id).get())
     }
 
-    fn get_multicast_hop_limit(self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
+    async fn get_multicast_hop_limit(self, ip_version: IpVersion) -> Result<u8, fposix::Errno> {
         // TODO(https://fxbug.dev/21198): Allow reading hop limits for
         // dual-stack sockets.
         if ip_version != I::VERSION {
             return Err(fposix::Errno::Enoprotoopt);
         }
 
-        let state: &SocketState<_, _> = &self.get_state().info.state;
-        let id = state.into();
-        let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
+        let id = (&self.data.info.state).into();
+
+        let ctx = self.ctx.lock().await;
+        let Ctx { sync_ctx, non_sync_ctx } = ctx.deref();
 
         Ok(T::get_multicast_hop_limit(sync_ctx, non_sync_ctx, id).get())
     }
@@ -3768,9 +3754,8 @@ mod tests {
         for i in 0..2 {
             t.get(i)
                 .with_ctx(|ctx| {
-                    let SocketCollection { binding_data, conns, listeners } =
+                    let SocketCollection { conns, listeners } =
                         <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                    assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
                     assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                     assert_matches!(listeners.iter().collect::<Vec<_>>()[..], [_]);
                 })
@@ -3794,9 +3779,8 @@ mod tests {
         for i in 0..2 {
             t.get(i)
                 .with_ctx(|ctx| {
-                    let SocketCollection { binding_data, conns, listeners } =
+                    let SocketCollection { conns, listeners } =
                         <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                    assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                     assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                     assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
                 })
@@ -3838,9 +3822,8 @@ mod tests {
         // empty
         test_stack
             .with_ctx(|ctx| {
-                let SocketCollection { binding_data, conns, listeners } =
+                let SocketCollection { conns, listeners } =
                     <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], [_]);
                 assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
@@ -3854,9 +3837,8 @@ mod tests {
         // Now it should become empty
         test_stack
             .with_ctx(|ctx| {
-                let SocketCollection { binding_data, conns, listeners } =
+                let SocketCollection { conns, listeners } =
                     <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
@@ -3890,9 +3872,8 @@ mod tests {
         // No socket should be there now.
         test_stack
             .with_ctx(|ctx| {
-                let SocketCollection { binding_data, conns, listeners } =
+                let SocketCollection { conns, listeners } =
                     <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
@@ -3953,9 +3934,8 @@ mod tests {
         // make sure we don't leak anything.
         test_stack
             .with_ctx(|ctx| {
-                let SocketCollection { binding_data, conns, listeners } =
+                let SocketCollection { conns, listeners } =
                     <A::AddrType as IpAddress>::Version::get_collection(&ctx.non_sync_ctx);
-                assert_matches!(binding_data.iter().collect::<Vec<_>>()[..], []);
                 assert_matches!(conns.iter().collect::<Vec<_>>()[..], []);
                 assert_matches!(listeners.iter().collect::<Vec<_>>()[..], []);
             })
@@ -4113,22 +4093,20 @@ mod tests {
 
         // Wait for all packets to be delivered before changing the buffer size.
         let stack = t.get(0);
-        let has_all_delivered =
-            |(_, BindingData { messages, peer_event: _, info: _, ref_count: _ }): (
-                usize,
-                &BindingData<_, _>,
-            )| { messages.queue.available_messages.len() == SENT_PACKETS.into() };
+        let has_all_delivered = |messages: &MessageQueue<_, _>| {
+            messages.queue.available_messages.len() == SENT_PACKETS.into()
+        };
         loop {
             let all_delivered = stack
                 .with_ctx(|Ctx { sync_ctx: _, non_sync_ctx }| {
-                    let SocketCollection { binding_data, conns: _, listeners: _ } =
+                    let SocketCollection { conns: _, listeners } =
                                 <<A::AddrType as IpAddress>::Version as SocketCollectionIpExt<
                                     Udp,
                                 >>::get_collection(non_sync_ctx);
                     // Check the lone socket to see if the packets were
                     // received.
-                    let socket = binding_data.iter().next().unwrap();
-                    has_all_delivered(socket)
+                    let messages = listeners.iter().next().unwrap();
+                    has_all_delivered(&messages.lock())
                 })
                 .await;
             if all_delivered {

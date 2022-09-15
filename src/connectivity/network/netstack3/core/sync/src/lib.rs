@@ -9,7 +9,7 @@
 use lock_guard::LockGuard;
 
 /// A [`std::sync::Mutex`] assuming lock poisoning will never occur.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct Mutex<T>(std::sync::Mutex<T>);
 
 impl<T> Mutex<T> {

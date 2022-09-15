@@ -39,7 +39,7 @@ pub mod error;
 mod fuzz;
 pub mod ip;
 pub mod socket;
-mod sync;
+pub mod sync;
 #[cfg(test)]
 mod testutil;
 pub mod transport;
