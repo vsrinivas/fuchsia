@@ -22,6 +22,7 @@ Symbols:
   - { Name: fdf_dispatcher_shutdown_async, Type: Func }
   - { Name: fdf_handle_close, Type: Func }
   - { Name: fdf_internal_destroy_all_dispatchers, Type: Func }
+  - { Name: fdf_internal_dispatcher_create_with_owner, Type: Func }
   - { Name: fdf_internal_dispatcher_has_queued_tasks, Type: Func }
   - { Name: fdf_internal_get_current_driver, Type: Func }
   - { Name: fdf_internal_pop_driver, Type: Func }

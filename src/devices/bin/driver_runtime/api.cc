@@ -8,6 +8,7 @@
 #include <lib/fdf/internal.h>
 #include <lib/fdf/testing.h>
 #include <lib/fdf/token.h>
+#include <lib/fit/defer.h>
 
 #include "src/devices/bin/driver_runtime/arena.h"
 #include "src/devices/bin/driver_runtime/channel.h"
@@ -169,6 +170,24 @@ __EXPORT fdf_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle)
 __EXPORT void fdf_internal_push_driver(const void* driver) { driver_context::PushDriver(driver); }
 
 __EXPORT void fdf_internal_pop_driver() { driver_context::PopDriver(); }
+
+__EXPORT fdf_status_t fdf_internal_dispatcher_create_with_owner(
+    const void* driver, uint32_t options, const char* name, size_t name_len,
+    const char* scheduler_role, size_t scheduler_role_len,
+    fdf_dispatcher_shutdown_observer_t* observer, fdf_dispatcher_t** out_dispatcher) {
+  driver_context::PushDriver(driver);
+  auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
+
+  driver_runtime::Dispatcher* dispatcher;
+  auto status = driver_runtime::Dispatcher::Create(
+      options, std::string_view(name, name_len),
+      std::string_view(scheduler_role, scheduler_role_len), observer, &dispatcher);
+  if (status != ZX_OK) {
+    return status;
+  }
+  *out_dispatcher = static_cast<fdf_dispatcher*>(dispatcher);
+  return ZX_OK;
+}
 
 __EXPORT const void* fdf_internal_get_current_driver() {
   return driver_context::GetCurrentDriver();

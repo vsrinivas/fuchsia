@@ -14,6 +14,11 @@
 
 #include <string>
 
+namespace fdf_internal {
+// Forward declaration to support friend declaration.
+class DispatcherBuilder;
+}  // namespace fdf_internal
+
 namespace fdf {
 
 // Usage Notes:
@@ -164,10 +169,10 @@ class Dispatcher {
 
   Unowned<Dispatcher> borrow() const { return Unowned<Dispatcher>(dispatcher_); }
 
- protected:
-  fdf_dispatcher_t* dispatcher_;
-
  private:
+  // Friend declaration is needed because the |DispatcherShutdownContext| is private.
+  friend class fdf_internal::DispatcherBuilder;
+
   class DispatcherShutdownContext {
    public:
     explicit DispatcherShutdownContext(ShutdownHandler handler)
@@ -188,6 +193,8 @@ class Dispatcher {
     fdf_dispatcher_shutdown_observer_t observer_;
     ShutdownHandler handler_;
   };
+
+  fdf_dispatcher_t* dispatcher_;
 };
 
 using UnownedDispatcher = Unowned<Dispatcher>;

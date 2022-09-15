@@ -18,7 +18,6 @@
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
 
-#include "driver_stack_manager.h"
 #include "src/devices/bin/driver_host/inspect.h"
 
 class DriverInspect;

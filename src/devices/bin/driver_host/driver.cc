@@ -5,20 +5,18 @@
 #include "src/devices/bin/driver_host/driver.h"
 
 #include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fdf/cpp/internal.h>
 
 #include <fbl/ref_ptr.h>
 #include <fbl/string_printf.h>
 
 #include "lib/fdf/dispatcher.h"
-#include "src/devices/bin/driver_host/driver_stack_manager.h"
 
 zx::status<fbl::RefPtr<Driver>> Driver::Create(zx_driver_t* zx_driver) {
   auto driver = fbl::MakeRefCounted<Driver>(zx_driver);
 
-  DriverStackManager dsm(driver.get());
-
-  auto dispatcher = fdf::Dispatcher::Create(
-      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
+  auto dispatcher = fdf_internal::DispatcherBuilder::CreateWithOwner(
+      driver.get(), FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
       fbl::StringPrintf("%s-default-%p", zx_driver->name(), driver.get()),
       [driver = driver.get()](fdf_dispatcher_t* dispatcher) { driver->released_.Signal(); });
   if (dispatcher.is_error()) {

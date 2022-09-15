@@ -35,7 +35,6 @@
 #include <fbl/vector.h>
 
 #include "driver.h"
-#include "driver_stack_manager.h"
 #include "inspect.h"
 
 class CompositeDevice;

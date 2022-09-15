@@ -196,12 +196,6 @@ uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& prog
 
 zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts) {
   auto name = GetManifest(driver->url());
-  // Let the driver runtime know which driver this dispatcher is for.
-  // Since we haven't entered the driver yet, the runtime cannot detect
-  // which driver this dispatcher is associated with.
-  fdf_internal_push_driver(driver.get());
-  auto pop_driver = fit::defer([]() { fdf_internal_pop_driver(); });
-
   // The dispatcher must be shutdown before the dispatcher is destroyed.
   // Usually we will wait for the callback from |fdf_internal::DriverShutdown| before destroying
   // the driver object (and hence the dispatcher).
@@ -211,8 +205,8 @@ zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_
   //
   // We do not destroy the dispatcher in the shutdown callback, to prevent crashes that
   // would happen if the driver attempts to access the dispatcher in its Stop hook.
-  return fdf::Dispatcher::Create(
-      dispatcher_opts,
+  return fdf_internal::DispatcherBuilder::CreateWithOwner(
+      driver.get(), dispatcher_opts,
       fbl::StringPrintf("%.*s-default-%p", (int)name.size(), name.data(), driver.get()),
       [driver_ref = driver](fdf_dispatcher_t* dispatcher) {});
 }

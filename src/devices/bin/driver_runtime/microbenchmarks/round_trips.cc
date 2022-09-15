@@ -6,6 +6,7 @@
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fdf/cpp/internal.h>
 #include <lib/fdf/internal.h>
 #include <lib/fit/function.h>
 #include <lib/sync/completion.h>
@@ -16,7 +17,6 @@
 #include <vector>
 
 #include "src/devices/bin/driver_runtime/microbenchmarks/assert.h"
-#include "src/devices/bin/driver_runtime/microbenchmarks/driver_stack_manager.h"
 #include "src/devices/bin/driver_runtime/microbenchmarks/test_runner.h"
 
 namespace {
@@ -75,24 +75,22 @@ class ChannelDispatcherTest {
     server_ = std::move(channel_pair->end1);
 
     {
-      DriverStackManager dsm(&client_fake_driver_);
-      auto dispatcher =
-          fdf::Dispatcher::Create(dispatcher_options, "client",
-                                  fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
+      auto dispatcher = fdf_internal::DispatcherBuilder::CreateWithOwner(
+          &client_fake_driver_, dispatcher_options, "client",
+          fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
       ASSERT_OK(dispatcher.status_value());
       client_dispatcher_ = *std::move(dispatcher);
     }
 
     {
-      DriverStackManager dsm(&server_fake_driver_);
-      auto dispatcher =
-          fdf::Dispatcher::Create(dispatcher_options, "server",
-                                  fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
+      auto dispatcher = fdf_internal::DispatcherBuilder::CreateWithOwner(
+          &server_fake_driver_, dispatcher_options, "server",
+          fit::bind_member(this, &ChannelDispatcherTest::ShutdownHandler));
       ASSERT_OK(dispatcher.status_value());
       server_dispatcher_ = *std::move(dispatcher);
     }
 
-    constexpr uint32 kTag = 'BNCH';
+    constexpr uint32_t kTag = 'BNCH';
     arena_ = fdf::Arena(kTag);
 
     // Create the messages to transfer.
@@ -117,7 +115,6 @@ class ChannelDispatcherTest {
     FX_CHECK(async_dispatcher != nullptr);
 
     ASSERT_OK(async::PostTask(async_dispatcher, [&, this] {
-      DriverStackManager dsm(&client_fake_driver_);
       for (const auto& msg : msgs_) {
         ASSERT_OK(
             client_.Write(0, arena_, msg, msg_size_, cpp20::span<zx_handle_t>()).status_value());

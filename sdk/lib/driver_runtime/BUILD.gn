@@ -81,9 +81,11 @@ sdk_source_set("driver_runtime_internal_cpp") {
   public = [ "include/lib/fdf/cpp/internal.h" ]
   public_configs = [ ":include" ]
   public_deps = [
+    ":driver_runtime_cpp",
     ":driver_runtime_internal",
     "//sdk/lib/fit",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxc",
   ]
   sources = [ "internal.cc" ]
 }

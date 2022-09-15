@@ -49,6 +49,17 @@ void fdf_internal_push_driver(const void* driver);
 // Removes the driver at the top of the thread's current call stack.
 void fdf_internal_pop_driver();
 
+// Creates a |fdf_dispatcher_t| which is owned by |driver|.
+//
+// |driver| is an opaque pointer to the driver object. It will be used to uniquely identify
+// the driver.
+fdf_status_t fdf_internal_dispatcher_create_with_owner(const void* driver, uint32_t options,
+                                                       const char* name, size_t name_len,
+                                                       const char* scheduler_role,
+                                                       size_t scheduler_role_len,
+                                                       fdf_dispatcher_shutdown_observer_t* observer,
+                                                       fdf_dispatcher_t** dispatcher);
+
 // Returns the driver on top of the the thread's current call stack.
 // Returns NULL if no drivers are on the stack.
 const void* fdf_internal_get_current_driver();

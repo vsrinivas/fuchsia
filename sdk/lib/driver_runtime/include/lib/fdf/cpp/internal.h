@@ -5,12 +5,39 @@
 #ifndef LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_INTERNAL_H_
 #define LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_INTERNAL_H_
 
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/internal.h>
 #include <lib/fit/function.h>
 
 #include <mutex>
 
 namespace fdf_internal {
+
+class DispatcherBuilder {
+ public:
+  // Creates a |fdf::Dispatcher| which is owned by |driver|.
+  //
+  // |driver| is an opaque pointer to the driver object. It will be used to uniquely identify
+  // the driver.
+  static zx::status<fdf::Dispatcher> CreateWithOwner(
+      const void* driver, uint32_t options, cpp17::string_view name,
+      fdf::Dispatcher::ShutdownHandler shutdown_handler, cpp17::string_view scheduler_role = {}) {
+    // We need to create an additional shutdown context in addition to the fdf::Dispatcher
+    // object, as the fdf::Dispatcher may be destructed before the shutdown handler
+    // is called. This can happen if the raw pointer is released from the fdf::Dispatcher.
+    auto dispatcher_shutdown_context =
+        std::make_unique<fdf::Dispatcher::DispatcherShutdownContext>(std::move(shutdown_handler));
+    fdf_dispatcher_t* dispatcher;
+    zx_status_t status = fdf_internal_dispatcher_create_with_owner(
+        driver, options, name.data(), name.size(), scheduler_role.data(), scheduler_role.size(),
+        dispatcher_shutdown_context->observer(), &dispatcher);
+    if (status != ZX_OK) {
+      return zx::error(status);
+    }
+    dispatcher_shutdown_context.release();
+    return zx::ok(fdf::Dispatcher(dispatcher));
+  }
+};
 
 // For shutting down all dispatchers owned by a driver.
 // This class is thread-safe.

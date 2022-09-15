@@ -2801,8 +2801,8 @@ TEST_F(DispatcherTest, CreateDispatcherOnNonRuntimeThreadFails) {
 TEST_F(DispatcherTest, ExtraThreadIsReused) {
   {
     void* driver = reinterpret_cast<void*>(uintptr_t(1));
-    fdf_internal_push_driver(driver);
-    auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
+    driver_context::PushDriver(driver);
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
     ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 1);
 
@@ -2840,8 +2840,8 @@ TEST_F(DispatcherTest, ExtraThreadIsReused) {
 TEST_F(DispatcherTest, MaximumTenThreads) {
   {
     void* driver = reinterpret_cast<void*>(uintptr_t(1));
-    fdf_internal_push_driver(driver);
-    auto deferred = fit::defer([]() { fdf_internal_pop_driver(); });
+    driver_context::PushDriver(driver);
+    auto pop_driver = fit::defer([]() { driver_context::PopDriver(); });
 
     ASSERT_EQ(driver_runtime::GetDispatcherCoordinator().num_threads(), 1);
 

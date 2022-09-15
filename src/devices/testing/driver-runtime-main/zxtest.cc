@@ -4,6 +4,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fdf/cpp/dispatcher.h>
+#include <lib/fdf/cpp/internal.h>
 #include <lib/fdf/dispatcher.h>
 #include <lib/fdf/internal.h>
 #include <lib/sync/cpp/completion.h>
@@ -15,10 +16,9 @@
 __EXPORT int main(int argc, char** argv) {
   setlinebuf(stdout);
   const void* driver = reinterpret_cast<void*>(0x12345678);
-  fdf_internal_push_driver(driver);
-  auto dispatcher = fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS,
-                                            "driver-runtime-test-main", [](fdf_dispatcher_t*) {});
-  fdf_internal_pop_driver();
+  auto dispatcher = fdf_internal::DispatcherBuilder::CreateWithOwner(
+      driver, FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "driver-runtime-test-main",
+      [](fdf_dispatcher_t*) {});
   if (dispatcher.is_error()) {
     return dispatcher.status_value();
   }
