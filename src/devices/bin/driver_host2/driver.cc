@@ -18,7 +18,26 @@ namespace fdh = fuchsia_driver_host;
 
 namespace dfv2 {
 
+namespace {
+
+std::string_view GetManifest(std::string_view url) {
+  auto index = url.rfind('/');
+  return index == std::string_view::npos ? url : url.substr(index + 1);
+}
+
+}  // namespace
+
 zx::status<fbl::RefPtr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
+  // Give the driver's VMO a name. We can't fit the entire URL in the name, so
+  // use the name of the manifest from the URL.
+  auto manifest = GetManifest(url);
+  zx_status_t status = vmo.set_property(ZX_PROP_NAME, manifest.data(), manifest.size());
+  if (status != ZX_OK) {
+    LOGF(ERROR, "Failed to start driver '%s',, could not name library VMO: %s", url.c_str(),
+         zx_status_get_string(status));
+    return zx::error(status);
+  }
+
   void* library = dlopen_vmo(vmo.get(), RTLD_NOW);
   if (library == nullptr) {
     LOGF(ERROR, "Failed to start driver '%s', could not load library: %s", url.data(), dlerror());
@@ -108,8 +127,8 @@ uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& prog
   return opts;
 }
 
-zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, std::string_view name,
-                                             uint32_t dispatcher_opts) {
+zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts) {
+  auto name = GetManifest(driver->url());
   // Let the driver runtime know which driver this dispatcher is for.
   // Since we haven't entered the driver yet, the runtime cannot detect
   // which driver this dispatcher is associated with.

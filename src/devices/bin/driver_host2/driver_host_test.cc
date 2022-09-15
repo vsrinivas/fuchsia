@@ -413,7 +413,7 @@ TEST_F(DriverHostTest, Start_InvalidStartArgs) {
                                                   std::move(endpoints->server));
     driver_host().Start(request, completer);
   }
-  EXPECT_EQ(ZX_ERR_NOT_FOUND, epitaph);
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, epitaph);
 
   endpoints = fidl::CreateEndpoints<fdh::Driver>();
   ASSERT_TRUE(endpoints.is_ok());

@@ -38,10 +38,11 @@ class DriverHost : public fidl::Server<fuchsia_driver_host::DriverHost> {
   void GetProcessKoid(GetProcessKoidRequest& request,
                       GetProcessKoidCompleter::Sync& completer) override;
 
-  // Extracts the default_dispatcher_opts from |program| and converts it to
-  // the options value expected by |fdf::Dispatcher::Create|.
-  // Returns zero if no options were specified.
-  uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& program);
+  zx::status<> StartDriver(fbl::RefPtr<Driver> driver,
+                           fuchsia_driver_framework::DriverStartArgs start_args,
+                           fdf::Dispatcher dispatcher,
+                           fidl::ServerEnd<fuchsia_driver_host::Driver> driver_request);
+  void ShutdownDriver(Driver* driver, fidl::ServerEnd<fuchsia_driver_host::Driver> server);
 
   async::Loop& loop_;
   std::mutex mutex_;

@@ -50,8 +50,7 @@ class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
 // Returns zero if no options were specified.
 uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& program);
 
-zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, std::string_view name,
-                                             uint32_t dispatcher_opts);
+zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts);
 
 }  // namespace dfv2
 

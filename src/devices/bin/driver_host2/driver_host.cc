@@ -43,11 +43,6 @@ class FileEventHandler : public fidl::AsyncEventHandler<fio::File> {
   std::string url_;
 };
 
-std::string_view GetManifest(std::string_view url) {
-  auto i = url.rfind('/');
-  return i == std::string_view::npos ? url : url.substr(i + 1);
-}
-
 // TODO(fxbug.dev/99679): This logic needs to be kept in sync with |driver::NsValue|.
 // Once we have the ability to produce a const view from FIDL natural types, we can
 // directly use |driver::NsValue| and delete this function.
@@ -63,6 +58,39 @@ zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
     }
   }
   return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+zx::status<fidl::ClientEnd<fio::File>> OpenDriverFile(
+    const fdf::DriverStartArgs& start_args, const fuchsia_data::wire::Dictionary& program) {
+  const auto& ns = start_args.ns();
+  auto pkg = ns ? NsValue(*ns, "/pkg") : zx::error(ZX_ERR_INVALID_ARGS);
+  if (pkg.is_error()) {
+    FX_SLOG(ERROR, "Failed to start driver, missing '/pkg' directory",
+            KV("status_str", zx_status_get_string(pkg.error_value())));
+    return pkg.take_error();
+  }
+
+  zx::status<std::string> binary = driver::ProgramValue(program, "binary");
+  if (binary.is_error()) {
+    FX_SLOG(ERROR, "Failed to start driver, missing 'binary' argument",
+            KV("status_str", zx_status_get_string(binary.error_value())));
+    return binary.take_error();
+  }
+  // Open the driver's binary within the driver's package.
+  auto endpoints = fidl::CreateEndpoints<fio::File>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  zx_status_t status = fdio_open_at(
+      pkg->channel()->get(), binary->data(),
+      static_cast<uint32_t>(fio::OpenFlags::kRightReadable | fio::OpenFlags::kRightExecutable),
+      endpoints->server.TakeChannel().release());
+  if (status != ZX_OK) {
+    FX_SLOG(ERROR, "Failed to start driver; could not open library",
+            KV("status_str", zx_status_get_string(status)));
+    return zx::error(status);
+  }
+  return zx::ok(std::move(endpoints->client));
 }
 
 }  // namespace
@@ -110,42 +138,22 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
     return;
   }
   const std::string& url = *request.start_args().url();
-  const auto& ns = request.start_args().ns();
-  auto pkg = ns ? NsValue(*ns, "/pkg") : zx::error(ZX_ERR_INVALID_ARGS);
-  if (pkg.is_error()) {
-    FX_SLOG(ERROR, "Failed to start driver, missing '/pkg' directory",
-            KV("status_str", zx_status_get_string(pkg.error_value())));
-    completer.Close(pkg.error_value());
+
+  if (!request.start_args().program().has_value()) {
+    FX_SLOG(ERROR, "Failed to start driver, missing 'program' argument");
+    completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
   fidl::Arena arena;
-  zx::status<std::string> binary = zx::error(ZX_ERR_INVALID_ARGS);
-  fuchsia_data::wire::Dictionary wire_program;
-  if (request.start_args().program().has_value()) {
-    wire_program = fidl::ToWire(arena, *request.start_args().program());
-    binary = driver::ProgramValue(wire_program, "binary");
-  }
-  if (binary.is_error()) {
-    FX_SLOG(ERROR, "Failed to start driver, missing 'binary' argument",
-            KV("status_str", zx_status_get_string(binary.error_value())));
-    completer.Close(binary.error_value());
-    return;
-  }
-  // Open the driver's binary within the driver's package.
-  auto endpoints = fidl::CreateEndpoints<fio::File>();
-  if (endpoints.is_error()) {
-    completer.Close(endpoints.error_value());
-    return;
-  }
-  zx_status_t status = fdio_open_at(
-      pkg->channel()->get(), binary->data(),
-      static_cast<uint32_t>(fio::OpenFlags::kRightReadable | fio::OpenFlags::kRightExecutable),
-      endpoints->server.TakeChannel().release());
-  if (status != ZX_OK) {
-    FX_SLOG(ERROR, "Failed to start driver; could not open library", KV("url", url.data()),
-            KV("status_str", zx_status_get_string(status)));
-    completer.Close(status);
+  fuchsia_data::wire::Dictionary wire_program =
+      fidl::ToWire(arena, *request.start_args().program());
+
+  auto driver_file = OpenDriverFile(request.start_args(), wire_program);
+  if (driver_file.is_error()) {
+    FX_SLOG(ERROR, "Failed to open driver file", KV("url", url.data()),
+            KV("status_str", driver_file.status_string()));
+    completer.Close(driver_file.error_value());
     return;
   }
 
@@ -154,7 +162,7 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
   // Once we receive the VMO from the call to GetBackingMemory, we can load the driver into this
   // driver host. We move the storage and encoded for start_args into this callback to extend its
   // lifetime.
-  fidl::SharedClient file(std::move(endpoints->client), loop_.dispatcher(),
+  fidl::SharedClient file(std::move(*driver_file), loop_.dispatcher(),
                           std::make_unique<FileEventHandler>(url));
   auto callback = [this, request = std::move(request.driver()), completer = completer.ToAsync(),
                    start_args = std::move(request.start_args()),
@@ -170,27 +178,14 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
       completer.Close(status);
       return;
     }
-    zx::vmo vmo = std::move(result->vmo());
-
-    // Give the driver's VMO a name. We can't fit the entire URL in the name, so
-    // use the name of the manifest from the URL.
-    auto manifest = GetManifest(url);
-    zx_status_t status = vmo.set_property(ZX_PROP_NAME, manifest.data(), manifest.size());
-    if (status != ZX_OK) {
-      FX_SLOG(ERROR, "Failed to start driver, could not name library VMO", KV("url", url.data()),
-              KV("status_str", zx_status_get_string(status)));
-      completer.Close(status);
-      return;
-    }
-    auto driver = Driver::Load(url, std::move(vmo));
+    auto driver = Driver::Load(url, std::move(result->vmo()));
     if (driver.is_error()) {
       completer.Close(driver.error_value());
       return;
     }
 
     zx::status<fdf::Dispatcher> driver_dispatcher =
-        CreateDispatcher(*driver, manifest, default_dispatcher_opts);
-    ;
+        CreateDispatcher(*driver, default_dispatcher_opts);
     if (driver_dispatcher.is_error()) {
       completer.Close(driver_dispatcher.status_value());
       return;
@@ -202,69 +197,11 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
     auto start_task = [this, request = std::move(request), completer = std::move(completer),
                        start_args = std::move(start_args), driver = std::move(*driver),
                        driver_dispatcher = std::move(*driver_dispatcher)]() mutable {
-      // We have to add the driver to this list before calling Start in order to have an accurate
-      // count of how many drivers exist in this driver host.
-      {
-        std::lock_guard<std::mutex> lock(mutex_);
-        drivers_.push_back(driver);
+      auto status = StartDriver(std::move(driver), std::move(start_args),
+                                std::move(driver_dispatcher), std::move(request));
+      if (status.is_error()) {
+        completer.Close(status.error_value());
       }
-      auto remove_driver = fit::defer([this, driver = driver.get()]() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        drivers_.erase(*driver);
-      });
-
-      // Save a ptr to the dispatcher so we can shut it down if starting the driver fails.
-      fdf::UnownedDispatcher unowned_dispatcher = driver_dispatcher.borrow();
-      auto start = driver->Start(std::move(start_args), std::move(driver_dispatcher));
-      if (start.is_error()) {
-        FX_SLOG(ERROR, "Failed to start driver", KV("url", driver->url().data()),
-                KV("status_str", start.status_string()));
-        completer.Close(start.error_value());
-        // If we fail to start the driver, we need to initiate shutting down the dispatcher.
-        unowned_dispatcher->ShutdownAsync();
-        // The dispatcher will be destroyed in the shutdown callback, when the last driver reference
-        // is released.
-        return;
-      }
-      FX_SLOG(INFO, "Started driver", KV("url", driver->url().data()));
-
-      auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info,
-                                    fidl::ServerEnd<fdh::Driver> server) {
-        if (!info.is_user_initiated()) {
-          FX_SLOG(WARNING, "Unexpected stop of driver", KV("url", driver->url().data()),
-                  KV("status_str", info.FormatDescription()).data());
-        }
-
-        // Request the driver runtime shutdown all dispatchers owned by the driver.
-        // Once we get the callback, we will stop the driver.
-        auto driver_shutdown = std::make_unique<fdf_internal::DriverShutdown>();
-        auto driver_shutdown_ptr = driver_shutdown.get();
-        auto shutdown_callback = [this, driver_shutdown = std::move(driver_shutdown), driver,
-                                  server = std::move(server)](const void* shutdown_driver) mutable {
-          ZX_ASSERT(driver == shutdown_driver);
-
-          std::lock_guard<std::mutex> lock(mutex_);
-          // This removes the driver's unique_ptr from the list, which will
-          // run the destructor and call the driver's Stop hook.
-          drivers_.erase(*driver);
-
-          // Send the epitaph to the driver runner letting it know we stopped
-          // the driver correctly.
-          server.Close(ZX_OK);
-
-          // If this is the last driver, shutdown the driver host.
-          if (drivers_.is_empty()) {
-            loop_.Quit();
-          }
-        };
-        // We always expect this call to succeed, as we should be the only entity
-        // that attempts to forcibly shutdown drivers.
-        ZX_ASSERT(ZX_OK == driver_shutdown_ptr->Begin(driver, std::move(shutdown_callback)));
-      };
-      auto bind = fidl::BindServer(loop_.dispatcher(), std::move(request), driver.get(),
-                                   std::move(unbind_callback));
-      driver->set_binding(std::move(bind));
-      remove_driver.cancel();
     };
     async::PostTask(driver_async_dispatcher, std::move(start_task));
   };
@@ -284,6 +221,78 @@ void DriverHost::GetProcessKoid(GetProcessKoidRequest& request,
     completer.Reply(zx::error(status));
   }
   completer.Reply(zx::ok(info.koid));
+}
+
+zx::status<> DriverHost::StartDriver(fbl::RefPtr<Driver> driver,
+                                     fuchsia_driver_framework::DriverStartArgs start_args,
+                                     fdf::Dispatcher dispatcher,
+                                     fidl::ServerEnd<fuchsia_driver_host::Driver> request) {
+  // We have to add the driver to this list before calling Start in order to have an accurate
+  // count of how many drivers exist in this driver host.
+  {
+    std::lock_guard<std::mutex> lock(mutex_);
+    drivers_.push_back(driver);
+  }
+  auto remove_driver = fit::defer([this, driver = driver.get()]() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    drivers_.erase(*driver);
+  });
+
+  // Save a ptr to the dispatcher so we can shut it down if starting the driver fails.
+  fdf::UnownedDispatcher unowned_dispatcher = dispatcher.borrow();
+  auto start = driver->Start(std::move(start_args), std::move(dispatcher));
+  if (start.is_error()) {
+    FX_SLOG(ERROR, "Failed to start driver", KV("url", driver->url().data()),
+            KV("status_str", start.status_string()));
+    // If we fail to start the driver, we need to initiate shutting down the dispatcher.
+    unowned_dispatcher->ShutdownAsync();
+    // The dispatcher will be destroyed in the shutdown callback, when the last driver reference
+    // is released.
+    return start.take_error();
+  }
+  FX_SLOG(INFO, "Started driver", KV("url", driver->url().data()));
+
+  auto unbind_callback = [this](Driver* driver, fidl::UnbindInfo info,
+                                fidl::ServerEnd<fdh::Driver> server) {
+    if (!info.is_user_initiated()) {
+      FX_SLOG(WARNING, "Unexpected stop of driver", KV("url", driver->url().data()),
+              KV("status_str", info.FormatDescription()).data());
+    }
+    ShutdownDriver(driver, std::move(server));
+  };
+  auto bind = fidl::BindServer(loop_.dispatcher(), std::move(request), driver.get(),
+                               std::move(unbind_callback));
+  driver->set_binding(std::move(bind));
+  remove_driver.cancel();
+  return zx::ok();
+}
+
+void DriverHost::ShutdownDriver(Driver* driver, fidl::ServerEnd<fdh::Driver> server) {
+  // Request the driver runtime shutdown all dispatchers owned by the driver.
+  // Once we get the callback, we will stop the driver.
+  auto driver_shutdown = std::make_unique<fdf_internal::DriverShutdown>();
+  auto driver_shutdown_ptr = driver_shutdown.get();
+  auto shutdown_callback = [this, driver_shutdown = std::move(driver_shutdown), driver,
+                            server = std::move(server)](const void* shutdown_driver) mutable {
+    ZX_ASSERT(driver == shutdown_driver);
+
+    std::lock_guard<std::mutex> lock(mutex_);
+    // This removes the driver's unique_ptr from the list, which will
+    // run the destructor and call the driver's Stop hook.
+    drivers_.erase(*driver);
+
+    // Send the epitaph to the driver runner letting it know we stopped
+    // the driver correctly.
+    server.Close(ZX_OK);
+
+    // If this is the last driver, shutdown the driver host.
+    if (drivers_.is_empty()) {
+      loop_.Quit();
+    }
+  };
+  // We always expect this call to succeed, as we should be the only entity
+  // that attempts to forcibly shutdown drivers.
+  ZX_ASSERT(ZX_OK == driver_shutdown_ptr->Begin(driver, std::move(shutdown_callback)));
 }
 
 }  // namespace dfv2
