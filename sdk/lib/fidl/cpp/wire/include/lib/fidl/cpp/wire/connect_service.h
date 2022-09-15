@@ -20,14 +20,6 @@ namespace fidl {
 
 #ifdef __Fuchsia__
 
-// Creates a synchronous FIDL client for the FIDL protocol `FidlProtocol`, bound to the
-// given channel.
-// TODO(fxbug.dev/108688): this method is deprecated. Use |WireSyncClient| instead.
-template <typename FidlProtocol>
-typename fidl::WireSyncClient<FidlProtocol> BindSyncClient(ClientEnd<FidlProtocol> client_end) {
-  return typename fidl::WireSyncClient<FidlProtocol>(std::move(client_end));
-}
-
 namespace internal {
 
 // The method signature required to implement the method that issues the Directory::Open

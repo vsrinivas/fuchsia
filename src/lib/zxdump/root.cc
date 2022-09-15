@@ -40,7 +40,7 @@ fitx::result<Error, T> GetFromService() {
     client = std::move(result).value();
   }
 
-  auto result = fidl::BindSyncClient(std::move(client))->Get();
+  auto result = fidl::WireSyncClient(std::move(client))->Get();
   if (result.ok()) {
     return fitx::ok(std::move(result.value().*Member));
   }

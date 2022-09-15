@@ -50,7 +50,7 @@ zx_status_t AmlDsp::Init() {
     return status;
   }
 
-  dsp_mailbox_ = fidl::BindSyncClient(std::move(endpoints->client));
+  dsp_mailbox_ = fidl::WireSyncClient(std::move(endpoints->client));
 
   return status;
 }

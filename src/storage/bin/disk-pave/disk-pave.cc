@@ -272,13 +272,13 @@ zx_status_t RealMain(Flags flags) {
     ERROR("Unable to open /svc/fuchsia.paver.Paver.\n");
     return paver_svc.error_value();
   }
-  auto paver_client = fidl::BindSyncClient(std::move(*paver_svc));
+  auto paver_client = fidl::WireSyncClient(std::move(*paver_svc));
   auto fshost_svc = service::Connect<fuchsia_fshost::Admin>();
   if (!fshost_svc.is_ok()) {
     ERROR("Unable to open /svc/fuchsia.fshost.Admin.\n");
     return fshost_svc.error_value();
   }
-  auto fshost_client = fidl::BindSyncClient(std::move(*fshost_svc));
+  auto fshost_client = fidl::WireSyncClient(std::move(*fshost_svc));
 
   switch (flags.cmd) {
     case Command::kFvm: {

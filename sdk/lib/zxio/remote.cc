@@ -1035,7 +1035,7 @@ zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::event event,
       .io = storage->io,
       .is_tty = is_tty,
       .event = std::move(event),
-      .client = fidl::BindSyncClient(std::move(client)),
+      .client = fidl::WireSyncClient(std::move(client)),
   };
   zxio_init(&remote.io, &zxio_remote_ops);
   return ZX_OK;
@@ -1204,7 +1204,7 @@ static constexpr zxio_ops_t zxio_dir_ops = []() {
 zx_status_t zxio_dir_init(zxio_storage_t* storage, fidl::ClientEnd<fio::Node> client) {
   auto& remote = *new (storage) zxio_remote_t{
       .io = storage->io,
-      .client = fidl::BindSyncClient(std::move(client)),
+      .client = fidl::WireSyncClient(std::move(client)),
   };
   zxio_init(&remote.io, &zxio_dir_ops);
   return ZX_OK;
@@ -1280,7 +1280,7 @@ zx_status_t zxio_file_init(zxio_storage_t* storage, zx::event event, zx::stream 
       .io = storage->io,
       .event = std::move(event),
       .stream = std::move(stream),
-      .client = fidl::BindSyncClient(std::move(client)),
+      .client = fidl::WireSyncClient(std::move(client)),
   };
   zxio_init(&remote.io, &zxio_file_ops);
   return ZX_OK;
