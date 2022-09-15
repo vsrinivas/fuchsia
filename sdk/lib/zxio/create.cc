@@ -92,11 +92,10 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
   switch (handle_info->type) {
     case ZX_OBJ_TYPE_CHANNEL: {
       fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
-      fidl::WireResult result = fidl::WireCall(node)->DescribeDeprecated();
-      if (!result.ok()) {
-        return result.status();
-      }
-      return zxio_create_with_nodeinfo(std::move(node), result.value().info, storage);
+      return zxio_with_nodeinfo(std::move(node), [storage](fidl::ClientEnd<fio::Node> node,
+                                                           fio::wire::NodeInfoDeprecated& info) {
+        return zxio_create_with_nodeinfo(std::move(node), info, storage);
+      });
     }
     case ZX_OBJ_TYPE_LOG: {
       zxio_debuglog_init(storage, zx::debuglog(std::move(handle)));

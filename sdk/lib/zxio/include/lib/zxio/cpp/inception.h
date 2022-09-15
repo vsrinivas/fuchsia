@@ -122,11 +122,6 @@ static_assert(sizeof(zxio_packet_socket_t) <= sizeof(zxio_storage_t),
 zx_status_t zxio_create_with_allocator(zx::handle handle, zxio_storage_alloc allocator,
                                        void** out_context);
 
-// Like zxio_create_with_allocator but the caller supplies handle info for the
-// handle.
-zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_basic_t& handle_info,
-                                       zxio_storage_alloc allocator, void** out_context);
-
 // Like zxio_create_with_allocator but the caller supplies information about
 // |channel| provided by the server through a Describe call or OnOpen event.
 //

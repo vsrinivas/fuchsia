@@ -63,19 +63,13 @@ int socket(int domain, int type, int protocol) {
     return ZX_ERR_INVALID_ARGS;
   };
 
-  void* context = nullptr;
   int16_t out_code;
-  const zx_status_t status = zxio_socket(service_connector, domain, type & kSockTypesMask, protocol,
-                                         fdio_zxio_allocator, &context, &out_code);
-  // If the status is ZX_ERR_NO_MEMORY, then zxio_create_with_allocator has not allocated
-  // anything and we can return immediately with no cleanup.
-  if (status == ZX_ERR_NO_MEMORY) {
-    ZX_ASSERT(context == nullptr);
-    return ERROR(status);
-  }
-
-  const fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
-  if (status != ZX_OK) {
+  zx::status result = fdio::create([&](zxio_storage_alloc allocator, void** out_context) {
+    return zxio_socket(service_connector, domain, type & kSockTypesMask, protocol, allocator,
+                       out_context, &out_code);
+  });
+  if (result.is_error()) {
+    const zx_status_t status = result.status_value();
     if (status == ZX_ERR_PEER_CLOSED) {
       // If we got a peer closed error, then it usually means that we
       // do not have the socket provider protocol in our sandbox which
@@ -87,6 +81,7 @@ int socket(int domain, int type, int protocol) {
   if (out_code) {
     return ERRNO(out_code);
   }
+  const fdio_ptr io = result.value();
 
   if (type & SOCK_NONBLOCK) {
     io->ioflag() |= IOFLAG_NONBLOCK;

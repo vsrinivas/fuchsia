@@ -178,4 +178,15 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
                                       fuchsia_io::wire::NodeInfoDeprecated& node_info,
                                       zxio_storage_t* storage);
 
+// This function takes a closure because the return is owned by the
+// fidl::WireResult; it can't be allowed to fall out of scope.
+template <typename F>
+zx_status_t zxio_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node, F fn) {
+  fidl::WireResult result = fidl::WireCall(node)->DescribeDeprecated();
+  if (!result.ok()) {
+    return result.status();
+  }
+  return fn(std::move(node), result.value().info);
+}
+
 #endif  // LIB_ZXIO_PRIVATE_H_

@@ -16,19 +16,22 @@ namespace fio = fuchsia_io;
 zx_status_t zxio_create_with_allocator(zx::handle handle, zxio_storage_alloc allocator,
                                        void** out_context) {
   zx_info_handle_basic_t handle_info = {};
-  zx_status_t status =
-      handle.get_info(ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), nullptr, nullptr);
-  if (status != ZX_OK) {
+  if (const zx_status_t status = handle.get_info(ZX_INFO_HANDLE_BASIC, &handle_info,
+                                                 sizeof(handle_info), nullptr, nullptr);
+      status != ZX_OK) {
     return status;
   }
-  return zxio_create_with_allocator(std::move(handle), handle_info, allocator, out_context);
-}
-
-zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_basic_t& handle_info,
-                                       zxio_storage_alloc allocator, void** out_context) {
   zxio_storage_t* storage = nullptr;
   zxio_object_type_t type = ZXIO_OBJECT_TYPE_NONE;
   switch (handle_info.type) {
+    case ZX_OBJ_TYPE_CHANNEL: {
+      fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
+      return zxio_with_nodeinfo(
+          std::move(node), [allocator, out_context](fidl::ClientEnd<fio::Node> node,
+                                                    fio::wire::NodeInfoDeprecated& info) {
+            return zxio_create_with_allocator(std::move(node), info, allocator, out_context);
+          });
+    }
     case ZX_OBJ_TYPE_LOG: {
       type = ZXIO_OBJECT_TYPE_DEBUGLOG;
       break;
@@ -42,8 +45,8 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, const zx_info_handle_b
       break;
     }
   }
-  zx_status_t status = allocator(type, &storage, out_context);
-  if (status != ZX_OK || storage == nullptr) {
+  if (const zx_status_t status = allocator(type, &storage, out_context);
+      status != ZX_OK || storage == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
   return zxio_create_with_info(handle.release(), &handle_info, storage);
