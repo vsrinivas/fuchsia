@@ -370,6 +370,33 @@ func (*singleStatCounterInspectImpl) GetChild(childName string) inspectInner {
 	return nil
 }
 
+var _ inspectInner = (*fidlStatsInspectImpl)(nil)
+
+type fidlStatsInspectImpl struct {
+	name                      string
+	fidlInterfaceWatcherStats *fidlInterfaceWatcherStats
+}
+
+func (impl *fidlStatsInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.name,
+		Metrics: []inspect.Metric{
+			{
+				Key:   "InterfaceWatcherCount",
+				Value: inspect.MetricValueWithIntValue(impl.fidlInterfaceWatcherStats.count.Load()),
+			},
+		},
+	}
+}
+
+func (*fidlStatsInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (*fidlStatsInspectImpl) GetChild(childName string) inspectInner {
+	return nil
+}
+
 var _ inspectInner = (*nicInfoMapInspectImpl)(nil)
 
 // Picking info to inspect from ifState in netstack.

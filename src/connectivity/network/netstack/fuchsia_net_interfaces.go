@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"sync/atomic"
 	"syscall/zx"
 	"syscall/zx/fidl"
 
@@ -229,7 +230,15 @@ var _ interfaceEvent = (*validUntilChanged)(nil)
 
 func (validUntilChanged) isInterfaceEvent() {}
 
-func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-chan interfaces.WatcherWithCtxInterfaceRequest) {
+type fidlInterfaceWatcherStats struct {
+	count atomic.Int64
+}
+
+func interfaceWatcherEventLoop(
+	eventChan <-chan interfaceEvent,
+	watcherChan <-chan interfaces.WatcherWithCtxInterfaceRequest,
+	fidlInterfaceWatcherStats *fidlInterfaceWatcherStats,
+) {
 	watchers := make(map[*interfaceWatcherImpl]struct{})
 	propertiesMap := make(map[tcpip.NICID]interfaces.Properties)
 	watcherClosedChan := make(chan *interfaceWatcherImpl)
@@ -426,6 +435,7 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 			impl.mu.queue = append(impl.mu.queue, interfaces.EventWithIdle(interfaces.Empty{}))
 
 			watchers[&impl] = struct{}{}
+			fidlInterfaceWatcherStats.count.Add(1)
 
 			go func() {
 				component.Serve(ctx, &interfaces.WatcherWithCtxStub{Impl: &impl}, watcher.Channel, component.ServeOptions{
@@ -439,6 +449,7 @@ func interfaceWatcherEventLoop(eventChan <-chan interfaceEvent, watcherChan <-ch
 			}()
 		case watcherClosed := <-watcherClosedChan:
 			delete(watchers, watcherClosed)
+			fidlInterfaceWatcherStats.count.Add(-1)
 		}
 	}
 }

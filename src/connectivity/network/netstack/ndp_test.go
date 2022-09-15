@@ -98,7 +98,7 @@ func TestInterfacesChangeEvent(t *testing.T) {
 
 	eventChan := make(chan interfaceEvent)
 	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
-	go interfaceWatcherEventLoop(eventChan, watcherChan)
+	go interfaceWatcherEventLoop(eventChan, watcherChan, &fidlInterfaceWatcherStats{})
 	si := &interfaceStateImpl{watcherChan: watcherChan}
 
 	ndpDisp := newNDPDispatcherForTest()

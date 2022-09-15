@@ -404,7 +404,8 @@ func Main() {
 
 	interfaceEventChan := make(chan interfaceEvent)
 	watcherChan := make(chan interfaces.WatcherWithCtxInterfaceRequest)
-	go interfaceWatcherEventLoop(interfaceEventChan, watcherChan)
+	fidlInterfaceWatcherStats := &fidlInterfaceWatcherStats{}
+	go interfaceWatcherEventLoop(interfaceEventChan, watcherChan, fidlInterfaceWatcherStats)
 	ns := &Netstack{
 		interfaceEventChan: interfaceEventChan,
 		dnsConfig:          dns.MakeServersConfig(stk.Clock()),
@@ -474,6 +475,16 @@ func Main() {
 					inner: &nicInfoMapInspectImpl{value: ns.getIfStateInfo(stk.NICInfo())},
 				}).asService()
 			},
+		},
+	})
+	componentCtx.OutgoingService.AddDiagnostics("fidlStats", &component.DirectoryWrapper{
+		Directory: &inspectDirectory{
+			asService: (&inspectImpl{
+				inner: &fidlStatsInspectImpl{
+					name:                      "Networking FIDL Protocol Stats",
+					fidlInterfaceWatcherStats: fidlInterfaceWatcherStats,
+				},
+			}).asService,
 		},
 	})
 	componentCtx.OutgoingService.AddDiagnostics("sockets", &component.DirectoryWrapper{
