@@ -16,9 +16,9 @@ use {
     fuchsia_url::{ComponentUrl, Hash, PackageUrl, RelativePackageUrl, RepositoryUrl},
     full_resolver_config::Config,
     futures::prelude::*,
-    log::*,
     std::collections::HashMap,
     thiserror::Error,
+    tracing::*,
 };
 
 enum IncomingService {
@@ -292,8 +292,9 @@ mod transitional {
             Ok(package_context) => Ok(Ok(package_context)),
             Err(err) => {
                 error!(
-                    "failed to fabricate package context: {:#}, given package_url={}",
-                    err, package_url
+                    %package_url,
+                    "failed to fabricate package context: {:#}",
+                    err
                 );
                 Ok(Err(fidl_fuchsia_pkg::ResolveError::Internal))
             }

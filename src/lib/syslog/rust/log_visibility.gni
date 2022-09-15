@@ -93,5 +93,4 @@ third_party_rust_crate_log_visibility = [
   "//src/sys/pkg/lib/fidl-fuchsia-update-installer-ext:*",
   "//src/sys/pkg/lib/isolated-swd:*",
   "//src/sys/pkg/lib/tuf:*",
-  "//src/sys/full-resolver:*",
 ]
