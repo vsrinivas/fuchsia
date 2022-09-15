@@ -59,7 +59,7 @@ fuchsia_test_package("netstack-fidl-tests") {
     "//src/connectivity/network/netstack:component-debug",
 
     # netstack3 is under test.
-    "//src/connectivity/network/netstack3:component",
+    "//src/connectivity/network/netstack3:component-debug",
   ]
 }
 
@@ -85,6 +85,6 @@ fuchsia_test_package("netstack-error-fidl-tests") {
     "//src/connectivity/network/netstack:component-debug",
 
     # netstack3 is under test.
-    "//src/connectivity/network/netstack3:component",
+    "//src/connectivity/network/netstack3:component-debug",
   ]
 }

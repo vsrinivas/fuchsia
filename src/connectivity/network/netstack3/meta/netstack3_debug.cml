@@ -4,6 +4,6 @@
 {
     include: [ "//src/connectivity/network/netstack3/meta/netstack3.shard.cml" ],
     program: {
-        binary: "bin/netstack3",
+        binary: "bin/netstack3-instrumented",
     },
 }

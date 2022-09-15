@@ -249,7 +249,7 @@ fuchsia_test_package("netstack-c-api-tests") {
     # netstack is under test.
     "//src/connectivity/network/netstack:component-debug",
     "//src/connectivity/network/netstack:component-with-fast-udp-debug",
-    "//src/connectivity/network/netstack3:component",
+    "//src/connectivity/network/netstack3:component-debug",
 
     # cat is used to test FD passing in :netstack_fuchsia_c_api_test.
     "//third_party/sbase:cat_bin",

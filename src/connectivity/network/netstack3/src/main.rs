@@ -7,6 +7,9 @@
 #![deny(unreachable_patterns)]
 #![recursion_limit = "256"]
 
+#[cfg(feature = "instrumented")]
+extern crate netstack3_core_instrumented as netstack3_core;
+
 mod bindings;
 
 use bindings::NetstackSeed;

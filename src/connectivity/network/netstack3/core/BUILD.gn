@@ -113,16 +113,32 @@ lib_not_fuzz_deps = [
   "fakestd",
 ]
 
-lib_not_benchmark_deps = [ "sync:netstack3_sync_instrumented" ]
+lib_instrumented_deps = [ "sync:netstack3_sync_instrumented" ]
 
-lib_benchmark_deps = [ "sync:netstack3_sync_not_instrumented" ]
+lib_not_instrumented_deps = [ "sync:netstack3_sync_not_instrumented" ]
 
 rustc_library("netstack3-core") {
-  name = "netstack3_core"
   version = "0.1.0"
   edition = "2021"
 
-  deps = lib_deps + lib_not_fuzz_deps + lib_not_benchmark_deps
+  deps = lib_deps + lib_not_fuzz_deps + lib_not_instrumented_deps
+
+  features = []
+
+  sources = lib_sources
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+# A variant of the netstack3-core library that has additional instrumentation
+# that is useful for debugging and testing, like recursive lock detection.
+rustc_library("netstack3-core-instrumented") {
+  version = "0.1.0"
+  edition = "2021"
+
+  deps = lib_deps + lib_not_fuzz_deps + lib_instrumented_deps
+
+  features = [ "instrumented" ]
 
   sources = lib_sources
 
@@ -133,7 +149,9 @@ rustc_test("netstack3-core_test") {
   name = "netstack3_core_lib_test"
   edition = "2021"
 
-  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps + lib_not_benchmark_deps
+  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps + lib_instrumented_deps
+
+  features = [ "instrumented" ]
 
   sources = lib_sources
 
@@ -158,8 +176,8 @@ rustc_library("netstack3-core-benchmarks") {
   testonly = true
   with_unit_tests = true
   sources = lib_sources
-  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps + lib_benchmark_deps +
-         [ "//third_party/rust_crates:criterion" ]
+  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps +
+         lib_not_instrumented_deps + [ "//third_party/rust_crates:criterion" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   configs += [ ":benchmark" ]
 }
@@ -176,7 +194,7 @@ rustc_fuzzer("fuzz-single-device") {
   rustfunction = "single_device_arbitrary_packets"
 
   sources = lib_sources
-  deps = lib_deps + lib_test_deps + lib_not_benchmark_deps + [
+  deps = lib_deps + lib_test_deps + lib_instrumented_deps + [
            "//src/connectivity/lib/fuzz-util",
            "//src/connectivity/lib/net-declare",
            "//src/connectivity/lib/net-types",
@@ -188,6 +206,7 @@ rustc_fuzzer("fuzz-single-device") {
          ]
 
   features = [
+    "instrumented",
     # Logging is turned off by default so that the fuzzer can run faster. It can
     # be enabled to be included in the output the fuzzer prints (only on
     # failure) by enabling any of the following features. Enabling multiple is

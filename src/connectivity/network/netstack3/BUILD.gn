@@ -5,87 +5,105 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
+common_deps = [
+  "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_rust",
+  "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+  "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
+  "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug_rust",
+  "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter_rust",
+  "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
+  "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin_rust",
+  "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
+  "//sdk/fidl/fuchsia.posix:fuchsia.posix_rust",
+  "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
+  "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_rust",
+  "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_rust",
+  "//sdk/fidl/fuchsia.unknown:fuchsia.unknown_rust",
+  "//src/connectivity/lib/net-types",
+  "//src/connectivity/lib/network-device/rust",
+  "//src/connectivity/lib/packet-formats",
+  "//src/connectivity/network/lib/explicit",
+  "//src/lib/async-utils",
+  "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia",
+  "//src/lib/fuchsia-async",
+  "//src/lib/fuchsia-component",
+  "//src/lib/network/ethernet",
+  "//src/lib/network/fidl_fuchsia_hardware_ethernet_ext",
+  "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
+  "//src/lib/network/packet",
+  "//src/lib/zircon/rust:fuchsia-zircon",
+  "//third_party/rust_crates:anyhow",
+  "//third_party/rust_crates:assert_matches",
+  "//third_party/rust_crates:derivative",
+  "//third_party/rust_crates:futures",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:rand",
+  "//third_party/rust_crates:thiserror",
+  "//third_party/rust_crates:tracing",
+]
+
+common_test_deps = [
+  "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
+  "//src/connectivity/lib/net-declare",
+  "//src/connectivity/network/testing/netemul/network-context/fidl:network_rust",
+  "//src/connectivity/network/testing/netemul/rust:lib",
+  "//src/lib/network/fidl_fuchsia_net_ext",
+  "//src/lib/testing/fixture",
+  "//src/lib/zircon/rust:fuchsia-zircon-status",
+  "//third_party/rust_crates:futures-lite",
+  "//third_party/rust_crates:itertools",
+  "//third_party/rust_crates:test-case",
+]
+
+common_sources = [
+  "src/bindings/context.rs",
+  "src/bindings/debug_fidl_worker.rs",
+  "src/bindings/devices.rs",
+  "src/bindings/ethernet_worker.rs",
+  "src/bindings/filter_worker.rs",
+  "src/bindings/integration_tests.rs",
+  "src/bindings/interfaces_admin.rs",
+  "src/bindings/interfaces_watcher.rs",
+  "src/bindings/macros.rs",
+  "src/bindings/mod.rs",
+  "src/bindings/netdevice_worker.rs",
+  "src/bindings/socket/datagram.rs",
+  "src/bindings/socket/mod.rs",
+  "src/bindings/socket/packet.rs",
+  "src/bindings/socket/raw.rs",
+  "src/bindings/socket/stream.rs",
+  "src/bindings/stack_fidl_worker.rs",
+  "src/bindings/timers.rs",
+  "src/bindings/util.rs",
+  "src/main.rs",
+]
+
 rustc_binary("bin") {
   name = "netstack3"
   edition = "2021"
   with_unit_tests = true
 
-  deps = [
-    "core:netstack3-core",
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_rust",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_rust",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
-    "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
-    "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug_rust",
-    "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter_rust",
-    "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
-    "//sdk/fidl/fuchsia.net.interfaces.admin:fuchsia.net.interfaces.admin_rust",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack_rust",
-    "//sdk/fidl/fuchsia.posix:fuchsia.posix_rust",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
-    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_rust",
-    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_rust",
-    "//sdk/fidl/fuchsia.unknown:fuchsia.unknown_rust",
-    "//src/connectivity/lib/net-types",
-    "//src/connectivity/lib/network-device/rust",
-    "//src/connectivity/lib/packet-formats",
-    "//src/connectivity/network/lib/explicit",
-    "//src/lib/async-utils",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/network/ethernet",
-    "//src/lib/network/fidl_fuchsia_hardware_ethernet_ext",
-    "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
-    "//src/lib/network/packet",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:derivative",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:tracing",
-  ]
+  deps = [ "core:netstack3-core" ] + common_deps
 
-  test_deps = [
-    "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
-    "//src/connectivity/lib/net-declare",
-    "//src/connectivity/network/testing/netemul/network-context/fidl:network_rust",
-    "//src/connectivity/network/testing/netemul/rust:lib",
-    "//src/lib/network/fidl_fuchsia_net_ext",
-    "//src/lib/testing/fixture",
-    "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//third_party/rust_crates:futures-lite",
-    "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:test-case",
-  ]
+  test_deps = common_test_deps
 
-  sources = [
-    "src/bindings/context.rs",
-    "src/bindings/debug_fidl_worker.rs",
-    "src/bindings/devices.rs",
-    "src/bindings/ethernet_worker.rs",
-    "src/bindings/filter_worker.rs",
-    "src/bindings/integration_tests.rs",
-    "src/bindings/interfaces_admin.rs",
-    "src/bindings/interfaces_watcher.rs",
-    "src/bindings/macros.rs",
-    "src/bindings/mod.rs",
-    "src/bindings/netdevice_worker.rs",
-    "src/bindings/socket/datagram.rs",
-    "src/bindings/socket/mod.rs",
-    "src/bindings/socket/packet.rs",
-    "src/bindings/socket/raw.rs",
-    "src/bindings/socket/stream.rs",
-    "src/bindings/stack_fidl_worker.rs",
-    "src/bindings/timers.rs",
-    "src/bindings/util.rs",
-    "src/main.rs",
-  ]
+  sources = common_sources
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
 
+rustc_binary("bin-instrumented") {
+  name = "netstack3-instrumented"
+  edition = "2021"
+  with_unit_tests = true
+
+  deps = [ "core:netstack3-core-instrumented" ] + common_deps
+  features = [ "instrumented" ]
+
+  test_deps = common_test_deps
+
+  sources = common_sources
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
@@ -95,19 +113,42 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-# Component that shows up in the package as #meta/netstack.cm and can be used
-# in place of Netstack2 when assembling images.
+# Component with debugging instrumentation enabled. This should be used for
+# tests but not benchmarks.
+fuchsia_component("component-debug") {
+  component_name = "netstack3"
+  manifest = "meta/netstack3_debug.cml"
+  deps = [ ":bin-instrumented" ]
+  testonly = true
+}
+
+# Variant of `:component` whose component name shows up in the package as
+# #meta/netstack.cm and can be used in place of Netstack2 when assembling
+# images.
 fuchsia_component("component-dropin") {
   component_name = "netstack"
   manifest = "meta/netstack3.cml"
   deps = [ ":bin" ]
 }
 
-fuchsia_unittest_package("netstack3-tests") {
-  component_name = "netstack3-bin-test"
+fuchsia_unittest_component("netstack3-bin_test") {
   deps = [
     ":bin_test",
     "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
+  ]
+}
+
+fuchsia_unittest_component("netstack3-bin-instrumented_test") {
+  deps = [
+    ":bin-instrumented_test",
+    "//src/connectivity/network/testing/netemul/service:netemul-sandbox",
+  ]
+}
+
+fuchsia_test_package("netstack3-tests") {
+  test_components = [
+    ":netstack3-bin_test",
+    ":netstack3-bin-instrumented_test",
   ]
 }
 

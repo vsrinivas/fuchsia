@@ -60,7 +60,7 @@ package_deps = [
   "//src/connectivity/network/netstack:component-with-fast-udp-debug",
 
   # netstack3 is under test.
-  "//src/connectivity/network/netstack3:component",
+  "//src/connectivity/network/netstack3:component-debug",
 
   # reachability monitor is under test.
   "//src/connectivity/network/reachability:component",
