@@ -145,15 +145,15 @@ pub fn vendor_sign_zbi(
     // The resultant file path
     let signed_path = outdir.as_ref().join(format!("{}.zbi.signed", zbi_config.name));
 
-    // The parameters of the script that are required:
+    // If the script config defines extra arguments, add them:
     let mut args = Vec::new();
+    args.extend_from_slice(&script.args[..]);
+
+    // Add the parameters of the script that are required:
     args.push("-z".to_string());
     args.push(zbi.as_ref().path_to_string()?);
     args.push("-o".to_string());
     args.push(signed_path.path_to_string()?);
-
-    // If the script config defines extra arguments, add them:
-    args.extend_from_slice(&script.args[..]);
 
     // Run the tool.
     signing_tool.run(&args)?;
@@ -334,12 +334,12 @@ mod tests {
                 {
                     "tool": "./host_x64/fake",
                     "args": [
+                        "arg1",
+                        "arg2",
                         "-z",
                         zbi_path.path_to_string().unwrap(),
                         "-o",
                         expected_output.path_to_string().unwrap(),
-                        "arg1",
-                        "arg2",
                     ]
                 }
             ]

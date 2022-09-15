@@ -18,6 +18,7 @@ declare_args() {
 _kernel_keyblock = "${vboot_keys}/kernel.keyblock"
 _private_keyblock = "${vboot_keys}/kernel_data_key.vbprivk"
 _futility_tool = "//prebuilt/tools/futility/${host_platform}/futility"
+_vboot_signing_script = "//build/images/vboot/vboot_sign.py"
 
 # These are details specific to the exact boot shim being used.  Different
 # switches to vbutil_kernel would be used here for a different boot shim.
@@ -53,17 +54,21 @@ vboot_action = {
     _vboot_shim.path,
     _kernel_keyblock,
     _private_keyblock,
+    _vboot_signing_script,
   ]
 
   # The action needs these additional GN deps corresponding to inputs.
   deps = [ _vboot_shim.label ]
 
   # GN path of the script to invoke.
-  script = "//build/images/vboot/vboot_sign.py"
+  script = python_exe_src
 
   # Arguments to pass to that script.  The action will also add the -z (--zbi)
   # and -o (--output) switches for the main input and output files.
-  args = [ "--tool=" + rebase_path(_futility_tool, root_build_dir) ]
+  args = [
+    rebase_path(_vboot_signing_script, root_build_dir),
+    "--tool=" + rebase_path(_futility_tool, root_build_dir),
+  ]
 
   if (vboot_verbose) {
     args += [ "--verbose" ]
