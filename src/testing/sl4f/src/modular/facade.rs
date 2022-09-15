@@ -2,18 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::common_utils::fidl::connect_in_paths,
     crate::modular::types::{
         BasemgrResult, KillBasemgrResult, RestartSessionResult, StartBasemgrRequest,
     },
     anyhow::{format_err, Error},
     fidl::prelude::*,
-    fidl_fuchsia_modular_internal as fmodular_internal, fidl_fuchsia_session as fsession,
+    fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_modular_internal as fmodular_internal,
+    fidl_fuchsia_session as fsession, fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_protocol,
     lazy_static::lazy_static,
     serde_json::{from_value, Value},
     std::path::PathBuf,
 };
+
+// The session runs as `./core/session-manager/session:session`. The parts are:
+const SESSION_PARENT: &str = "./core/session-manager";
+const SESSION_COLLECTION: &str = "session";
+const SESSION_CHILD: &str = "session";
 
 lazy_static! {
     /// Path to the session component hub directory, used when basemgr is running as a v2 session.
@@ -39,15 +44,6 @@ fn get_basemgr_runtime_state() -> Option<BasemgrRuntimeState> {
         return Some(BasemgrRuntimeState::V2Session);
     }
     None
-}
-
-/// Returns a BasemgrDebugProxy served by the currently running basemgr (v1 or session),
-/// or an Error if no session is running or the session does not expose this protocol.
-fn connect_to_basemgr_debug() -> Result<fmodular_internal::BasemgrDebugProxy, Error> {
-    connect_in_paths::<fmodular_internal::BasemgrDebugMarker>(&[BASEMGR_DEBUG_SESSION_EXEC_PATH
-        .to_str()
-        .unwrap()])?
-    .ok_or_else(|| format_err!("Unable to connect to BasemgrDebug protocol"))
 }
 
 /// Facade providing access to session testing interfaces.
@@ -81,12 +77,27 @@ impl ModularFacade {
         Ok(RestartSessionResult::Success)
     }
 
-    /// Facade to kill basemgr from Sl4f
+    /// Facade to kill basemgr from Sl4f.
     pub async fn kill_basemgr(&self) -> Result<KillBasemgrResult, Error> {
         if get_basemgr_runtime_state().is_none() {
             return Ok(KillBasemgrResult::NoBasemgrToKill);
         }
-        connect_to_basemgr_debug()?.shutdown()?;
+
+        // Use a root LifecycleController to kill the session. It will send a shutdown signal to the
+        // session so it can terminate gracefully.
+        let lifecycle_controller =
+            connect_to_protocol::<fsys::LifecycleControllerMarker>().unwrap();
+        lifecycle_controller
+            .destroy_child(
+                SESSION_PARENT,
+                &mut fdecl::ChildRef {
+                    name: SESSION_CHILD.to_string(),
+                    collection: Some(SESSION_COLLECTION.to_string()),
+                },
+            )
+            .await?
+            .map_err(|err| format_err!("failed to destroy session: {:?}", err))?;
+
         Ok(KillBasemgrResult::Success)
     }
 
@@ -137,15 +148,9 @@ impl ModularFacade {
 mod tests {
     use super::*;
     use {
-        crate::common_utils::namespace_binder::NamespaceBinder,
-        assert_matches::assert_matches,
-        fidl::endpoints::spawn_stream_handler,
-        fidl_fuchsia_modular_internal as fmodular_internal,
-        futures::channel::mpsc,
-        futures::{SinkExt, StreamExt, TryStreamExt},
-        lazy_static::lazy_static,
-        serde_json::json,
-        test_util::Counter,
+        crate::common_utils::namespace_binder::NamespaceBinder, assert_matches::assert_matches,
+        fidl::endpoints::spawn_stream_handler, fidl_fuchsia_modular_internal as fmodular_internal,
+        lazy_static::lazy_static, serde_json::json, test_util::Counter,
         vfs::execution_scope::ExecutionScope,
     };
 
@@ -185,77 +190,52 @@ mod tests {
         // The session should have been launched.
         assert_eq!(SESSION_LAUNCH_CALL_COUNT.get(), 1);
 
+        // There isn't actually a basemgr.
+        assert_matches!(facade.kill_basemgr().await, Ok(KillBasemgrResult::NoBasemgrToKill));
+
         Ok(())
     }
 
     #[fuchsia_async::run(2, test)]
     async fn test_start_basemgr_v2_shutdown_existing() -> Result<(), Error> {
-        const TEST_SESSION_URL: &str =
-            "fuchsia-pkg://fuchsia.com/test_session#meta/test_session.cm";
+        let scope = ExecutionScope::new();
+        let mut ns = NamespaceBinder::new(scope);
 
-        lazy_static! {
-            static ref SESSION_LAUNCH_CALL_COUNT: Counter = Counter::new(0);
-        }
+        // Serve the `fuchsia.modular.internal.BasemgrDebug` protocol in the hub path
+        // for the session. This simulates a running session.
+        ns.bind_at_path(
+            BASEMGR_DEBUG_SESSION_EXEC_PATH.to_str().unwrap(),
+            vfs::service::host(|_stream: fmodular_internal::BasemgrDebugRequestStream| async {
+                panic!("ModularFacade.is_basemgr_running should not connect to BasemgrDebug");
+            }),
+        )?;
 
-        let session_restarter = spawn_stream_handler(|_restarter_request| async {
-            panic!("fuchsia.session.Restarter should not be called when starting");
+        let session_launcher = spawn_stream_handler(|_launcher_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Launcher");
         })?;
 
-        let session_launcher = spawn_stream_handler(move |launcher_request| async move {
-            match launcher_request {
-                fsession::LauncherRequest::Launch { configuration, responder } => {
-                    assert!(configuration.session_url.is_some());
-                    let session_url = configuration.session_url.unwrap();
-                    assert!(session_url == TEST_SESSION_URL.to_string());
-
-                    SESSION_LAUNCH_CALL_COUNT.inc();
-                    let _ = responder.send(&mut Ok(()));
-                }
-            }
+        let session_restarter = spawn_stream_handler(|_restarter_request| async {
+            panic!("ModularFacade.is_basemgr_running should not use fuchsia.session.Restarter");
         })?;
 
         let facade = ModularFacade::new_with_proxies(session_launcher, session_restarter);
 
-        let scope = ExecutionScope::new();
-        let mut ns = NamespaceBinder::new(scope);
-
-        let (called_shutdown_tx, mut called_shutdown_rx) = mpsc::channel(0);
-
-        // Add an entry for the BasemgrDebug protocol into the hub under the session path
-        // so that `start_basemgr` knows there is a session running.
-        let basemgr_debug =
-            vfs::service::host(move |mut stream: fmodular_internal::BasemgrDebugRequestStream| {
-                let mut called_shutdown_tx = called_shutdown_tx.clone();
-                async move {
-                    while let Ok(Some(request)) = stream.try_next().await {
-                        match request {
-                            fmodular_internal::BasemgrDebugRequest::Shutdown { .. } => {
-                                called_shutdown_tx
-                                    .send(())
-                                    .await
-                                    .expect("could not send on channel");
-                            }
-                            _ => {
-                                panic!(
-                                    "BasemgrDebug methods other than Shutdown should not be called"
-                                );
-                            }
-                        }
-                    }
-                }
-            });
-        ns.bind_at_path(BASEMGR_DEBUG_SESSION_EXEC_PATH.to_str().unwrap(), basemgr_debug)?;
+        // It's not actually running, but it does have a path in the hub that
+        // get_basemgr_runtime_state() can find.
+        assert_matches!(facade.is_basemgr_running(), Ok(true));
 
         let start_basemgr_args = json!({
-            "session_url": TEST_SESSION_URL,
+            "session_url": "fuchsia-pkg://fuchsia.com/test_session#meta/test_session.cm",
         });
-        assert_matches!(facade.start_basemgr(start_basemgr_args).await, Ok(BasemgrResult::Success));
 
-        // The existing session should have been shut down.
-        assert_eq!(called_shutdown_rx.next().await, Some(()));
-
-        // The session should have been launched.
-        assert_eq!(SESSION_LAUNCH_CALL_COUNT.get(), 1);
+        // Attempt to restart. This will fail because start_basemgr() will find the existing basemgr
+        // (not as a component, but as a hub path) and try to kill it. But there is no component
+        // running, so lifecycle_controller will fail with an `InstanceNotFound` when it looks for
+        // it.
+        match facade.start_basemgr(start_basemgr_args).await {
+            Err(e) => assert!(format!("{:?}", e).contains("InstanceNotFound")),
+            Ok(_) => panic!("unexpected lifecycle_manager success"),
+        }
 
         Ok(())
     }
