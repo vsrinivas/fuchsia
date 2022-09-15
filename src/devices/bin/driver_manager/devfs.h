@@ -84,7 +84,7 @@ void devfs_connect_diagnostics(fidl::UnownedClientEnd<fuchsia_io::Directory> dia
 // traversing the given sub-path.
 // If ZX_OK is returned, then *device_out refers to the device at the given path
 // relative to the devnode.
-zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* device_out);
+zx_status_t devfs_walk(Devnode* dn, std::string_view path, fbl::RefPtr<Device>* device_out);
 
 // Exports `service_path` from `service_dir` to `devfs_path`, under `dn`. If
 // `protocol_id` matches a known protocol, `service_path` will also be exposed

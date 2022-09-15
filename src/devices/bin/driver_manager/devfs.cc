@@ -12,6 +12,7 @@
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <string.h>
@@ -49,8 +50,7 @@ std::unique_ptr<Devnode> zero_devnode;
 // Connection to diagnostics VFS server. Channel is owned by inspect manager.
 std::optional<fidl::UnownedClientEnd<fuchsia_io::Directory>> diagnostics_channel;
 
-const char kDiagnosticsDirName[] = "diagnostics";
-const size_t kDiagnosticsDirLen = strlen(kDiagnosticsDirName);
+constexpr std::string_view kDiagnosticsDirName = "diagnostics";
 
 zx::channel g_devfs_root;
 
@@ -404,90 +404,101 @@ zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t l
   return static_cast<zx_status_t>(ptr - static_cast<char*>(data));
 }
 
-zx_status_t devfs_walk(Devnode** dn_inout, char* path) {
+zx_status_t devfs_walk(Devnode** dn_inout, std::string_view path) {
   Devnode* dn = *dn_inout;
 
-again:
-  if ((path == nullptr) || (path[0] == 0)) {
-    *dn_inout = dn;
-    return ZX_OK;
-  }
-  char* name = path;
-  if ((path = strchr(path, '/')) != nullptr) {
-    *path++ = 0;
-  }
-  if (name[0] == 0) {
-    return ZX_ERR_BAD_PATH;
-  }
-  for (auto& child : dn->children) {
-    if (!strcmp(child.name.c_str(), name)) {
-      if (is_invisible(&child)) {
-        continue;
-      }
-      dn = &child;
-      goto again;
+  while (!path.empty()) {
+    const size_t i = path.find('/');
+    if (i == 0) {
+      return ZX_ERR_BAD_PATH;
     }
+    std::string_view name = path;
+    if (i != std::string::npos) {
+      name = path.substr(0, i);
+      path = path.substr(i + 1);
+    } else {
+      path = {};
+    }
+    auto it = std::find_if(dn->children.begin(), dn->children.end(), [name](const Devnode& child) {
+      if (std::string_view{child.name} != name) {
+        return false;
+      }
+      if (is_invisible(&child)) {
+        return false;
+      }
+      return true;
+    });
+    if (it == dn->children.end()) {
+      // The path only partially matched.
+      return ZX_ERR_NOT_FOUND;
+    }
+    dn = &*it;
   }
-  // The path only partially matched.
-  return ZX_ERR_NOT_FOUND;
+  *dn_inout = dn;
+  return ZX_OK;
 }
 
 void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, fidl::ServerEnd<fio::Node> ipc,
-                char* path, fio::OpenFlags flags) {
-  std::string_view path_view(path);
+                std::string_view path, fio::OpenFlags flags) {
   // Filter requests for diagnostics path and pass it on to diagnostics vfs server.
-  if (!strncmp(path, kDiagnosticsDirName, kDiagnosticsDirLen) &&
-      (path[kDiagnosticsDirLen] == '\0' || path[kDiagnosticsDirLen] == '/')) {
-    char* dir_path = path + kDiagnosticsDirLen;
-    char current_dir[] = ".";
-    if (dir_path[0] == '/') {
-      dir_path++;
-    } else {
-      dir_path = current_dir;
-    }
-    __UNUSED const fidl::WireResult result =
-        fidl::WireCall(*diagnostics_channel)
-            ->Open(flags, 0, fidl::StringView::FromExternal(dir_path), std::move(ipc));
-  } else if (path_view == kNullDevName || path_view == kZeroDevName) {
-    BuiltinDevices::Get(dispatcher)->HandleOpen(flags, std::move(ipc), path_view);
-  } else {
-    if (!strcmp(path, ".")) {
-      path = nullptr;
-    }
-
-    auto describe = [&ipc, describe = flags & fio::wire::OpenFlags::kDescribe](
-                        zx::status<fio::wire::NodeInfoDeprecated> node_info) {
-      if (describe) {
-        __UNUSED auto result = fidl::WireSendEvent(ipc)->OnOpen(
-            node_info.status_value(),
-            node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfoDeprecated());
+  if (cpp20::starts_with(path, kDiagnosticsDirName)) {
+    std::string_view dir_path = path.substr(kDiagnosticsDirName.size());
+    if (cpp20::starts_with(dir_path, '/') || dir_path.empty()) {
+      if (cpp20::starts_with(dir_path, '/')) {
+        dir_path = dir_path.substr(1);
       }
-    };
-
-    Devnode* dn = dirdn;
-    if (zx_status_t status = devfs_walk(&dn, path); status != ZX_OK) {
-      describe(zx::error(status));
+      if (dir_path.empty()) {
+        dir_path = ".";
+      }
+      __UNUSED const fidl::WireResult result =
+          fidl::WireCall(*diagnostics_channel)
+              ->Open(flags, 0, fidl::StringView::FromExternal(dir_path), std::move(ipc));
       return;
     }
-
-    // If we are a local-only node, or we are asked to open-as-a-directory, open locally:
-    if (devnode_is_local(dn) || (flags & fio::wire::OpenFlags::kDirectory)) {
-      auto ios = std::make_unique<DcIostate>(dn, dispatcher);
-      if (ios == nullptr) {
-        describe(zx::error(ZX_ERR_NO_MEMORY));
-        return;
-      }
-      fio::wire::DirectoryObject directory;
-      describe(zx::ok(fio::wire::NodeInfoDeprecated::WithDirectory(directory)));
-      DcIostate::Bind(std::move(ios), std::move(ipc));
-    } else if (dn->service_dir) {
-      __UNUSED const fidl::WireResult result =
-          fidl::WireCall(dn->service_dir)
-              ->Open(flags, 0, fidl::StringView::FromExternal(dn->service_path), std::move(ipc));
-    } else {
-      __UNUSED auto result = dn->device->device_controller()->Open(flags, 0, ".", std::move(ipc));
-    }
   }
+
+  if (path == kNullDevName || path == kZeroDevName) {
+    BuiltinDevices::Get(dispatcher)->HandleOpen(flags, std::move(ipc), path);
+    return;
+  }
+
+  if (path == ".") {
+    path = {};
+  }
+
+  auto describe = [&ipc, describe = flags & fio::wire::OpenFlags::kDescribe](
+                      zx::status<fio::wire::NodeInfoDeprecated> node_info) {
+    if (describe) {
+      __UNUSED auto result = fidl::WireSendEvent(ipc)->OnOpen(
+          node_info.status_value(),
+          node_info.is_ok() ? std::move(node_info.value()) : fio::wire::NodeInfoDeprecated());
+    }
+  };
+
+  Devnode* dn = dirdn;
+  if (zx_status_t status = devfs_walk(&dn, path); status != ZX_OK) {
+    describe(zx::error(status));
+    return;
+  }
+
+  // If we are a local-only node, or we are asked to open-as-a-directory, open locally:
+  if (devnode_is_local(dn) || (flags & fio::wire::OpenFlags::kDirectory)) {
+    auto ios = std::make_unique<DcIostate>(dn, dispatcher);
+    if (ios == nullptr) {
+      describe(zx::error(ZX_ERR_NO_MEMORY));
+      return;
+    }
+    describe(zx::ok(fio::wire::NodeInfoDeprecated::WithDirectory({})));
+    DcIostate::Bind(std::move(ios), std::move(ipc));
+    return;
+  }
+  if (dn->service_dir) {
+    __UNUSED const fidl::WireResult result =
+        fidl::WireCall(dn->service_dir)
+            ->Open(flags, 0, fidl::StringView::FromExternal(dn->service_path), std::move(ipc));
+    return;
+  }
+  __UNUSED auto result = dn->device->device_controller()->Open(flags, 0, ".", std::move(ipc));
 }
 
 void devfs_remove(Devnode* dn) {
@@ -679,20 +690,15 @@ void devfs_connect_diagnostics(fidl::UnownedClientEnd<fio::Directory> h) {
 }
 
 void DcIostate::Open(OpenRequestView request, OpenCompleter::Sync& completer) {
-  if (request->path.size() <= fio::wire::kMaxPath) {
-    fbl::StringBuffer<fio::wire::kMaxPath + 1> terminated_path;
-    terminated_path.Append(request->path.data(), request->path.size());
-    devfs_open(devnode_, dispatcher_, std::move(request->object), terminated_path.data(),
-               request->flags);
-  }
+  devfs_open(devnode_, dispatcher_, std::move(request->object), request->path.get(),
+             request->flags);
 }
 
 void DcIostate::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
   if (request->flags & fio::wire::OpenFlags::kCloneSameRights) {
     request->flags |= fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable;
   }
-  char path[] = ".";
-  devfs_open(devnode_, dispatcher_, std::move(request->object), path,
+  devfs_open(devnode_, dispatcher_, std::move(request->object), ".",
              request->flags | fio::wire::OpenFlags::kDirectory);
 }
 
@@ -814,16 +820,10 @@ void devfs_init(const fbl::RefPtr<Device>& device, async_dispatcher_t* dispatche
   __UNUSED auto ptr = root_devnode.release();
 }
 
-zx_status_t devfs_walk(Devnode* dn, const char* path, fbl::RefPtr<Device>* dev) {
+zx_status_t devfs_walk(Devnode* dn, std::string_view path, fbl::RefPtr<Device>* dev) {
   Devnode* inout = dn;
 
-  char path_copy[PATH_MAX];
-  if (strlen(path) + 1 > sizeof(path_copy)) {
-    return ZX_ERR_BUFFER_TOO_SMALL;
-  }
-  strcpy(path_copy, path);
-
-  zx_status_t status = devfs_walk(&inout, path_copy);
+  zx_status_t status = devfs_walk(&inout, path);
   if (status != ZX_OK) {
     return status;
   }
