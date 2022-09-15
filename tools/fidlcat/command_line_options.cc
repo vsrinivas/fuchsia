@@ -441,10 +441,9 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   decode_options->stay_alive = options->stay_alive;
   decode_options->stack_level = options->stack_level;
   if (options->syscall_filters.empty()) {
-    decode_options->syscall_filters.emplace_back(std::make_unique<re2::RE2>("zx_channel_.*"));
-    decode_options->syscall_filters.emplace_back(std::make_unique<re2::RE2>("zx_handle_close"));
-    decode_options->syscall_filters.emplace_back(
-        std::make_unique<re2::RE2>("zx_handle_close_many"));
+    decode_options->syscall_filters.emplace_back(std::make_unique<re2::RE2>("zx_channel_call.*"));
+    decode_options->syscall_filters.emplace_back(std::make_unique<re2::RE2>("zx_channel_read.*"));
+    decode_options->syscall_filters.emplace_back(std::make_unique<re2::RE2>("zx_channel_write.*"));
   } else if ((options->syscall_filters.size() != 1) || (options->syscall_filters[0] != ".*")) {
     for (const auto& filter : options->syscall_filters) {
       auto r = std::make_unique<re2::RE2>(filter);
