@@ -3,22 +3,47 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
-use crate::fidl_common::FidlResponseErrorLogger;
-use crate::fidl_hanging_get_responder;
-use crate::fidl_process;
-use crate::fidl_processor::settings::RequestContext;
 use crate::handler::base::Request;
+use crate::ingress::{request, watch, Scoped};
 use crate::input::types::{DeviceStateSource, InputDevice, InputDeviceType};
-use crate::request_respond;
-use fidl::endpoints::ProtocolMarker;
+use crate::job::source::{Error as JobError, ErrorResponder};
+use crate::job::Job;
+use fidl::endpoints::{ControlHandle, Responder};
 use fidl_fuchsia_settings::{
-    Error, InputMarker, InputRequest, InputSettings, InputState as FidlInputState,
+    InputRequest, InputSetResponder, InputSetResult, InputSettings, InputState as FidlInputState,
     InputWatchResponder,
 };
-use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_err;
+use fuchsia_syslog::{fx_log_err, fx_log_warn};
+use std::convert::TryFrom;
 
-fidl_hanging_get_responder!(InputMarker, InputSettings, InputWatchResponder);
+impl ErrorResponder for InputSetResponder {
+    fn id(&self) -> &'static str {
+        "Input_Set"
+    }
+
+    fn respond(self: Box<Self>, error: fidl_fuchsia_settings::Error) -> Result<(), fidl::Error> {
+        self.send(&mut Err(error))
+    }
+}
+
+impl request::Responder<Scoped<InputSetResult>> for InputSetResponder {
+    fn respond(self, Scoped(mut response): Scoped<InputSetResult>) {
+        let _ = self.send(&mut response);
+    }
+}
+
+impl watch::Responder<InputSettings, fuchsia_zircon::Status> for InputWatchResponder {
+    fn respond(self, response: Result<InputSettings, fuchsia_zircon::Status>) {
+        match response {
+            Ok(settings) => {
+                let _ = self.send(settings);
+            }
+            Err(error) => {
+                self.control_handle().shutdown_with_epitaph(error);
+            }
+        }
+    }
+}
 
 fn to_request(fidl_input_states: Vec<FidlInputState>) -> Option<Request> {
     // Every device requires at least a device type and state flags.
@@ -46,42 +71,25 @@ fn to_request(fidl_input_states: Vec<FidlInputState>) -> Option<Request> {
     Some(Request::SetInputStates(input_states))
 }
 
-fidl_process!(Input, SettingType::Input, process_request,);
-
-async fn process_request(
-    context: RequestContext<InputSettings, InputWatchResponder>,
-    req: InputRequest,
-) -> Result<Option<InputRequest>, anyhow::Error> {
-    // Support future expansion of FIDL.
-    #[allow(unreachable_patterns)]
-    match req {
-        InputRequest::Set { input_states, responder } => {
-            if let Some(request) = to_request(input_states) {
-                fasync::Task::spawn(async move {
-                    request_respond!(
-                        context,
-                        responder,
-                        SettingType::Input,
-                        request,
-                        Ok(()),
-                        Err(fidl_fuchsia_settings::Error::Failed),
-                        InputMarker
-                    );
-                })
-                .detach();
-            } else {
-                responder
-                    .send(&mut Err(Error::Unsupported))
-                    .log_fidl_response_error(InputMarker::DEBUG_NAME);
+impl TryFrom<InputRequest> for Job {
+    type Error = JobError;
+    fn try_from(req: InputRequest) -> Result<Self, Self::Error> {
+        // Support future expansion of FIDL.
+        #[allow(unreachable_patterns)]
+        match req {
+            InputRequest::Set { input_states, responder } => match to_request(input_states) {
+                Some(request) => {
+                    Ok(request::Work::new(SettingType::Input, request, responder).into())
+                }
+                None => Err(JobError::InvalidInput(Box::new(responder))),
+            },
+            InputRequest::Watch { responder } => {
+                Ok(watch::Work::new_job(SettingType::Input, responder))
+            }
+            _ => {
+                fx_log_warn!("Received a call to an unsupported API: {:?}", req);
+                Err(JobError::Unsupported)
             }
         }
-        InputRequest::Watch { responder } => {
-            context.watch(responder, true).await;
-        }
-        _ => {
-            return Ok(Some(req));
-        }
     }
-
-    Ok(None)
 }

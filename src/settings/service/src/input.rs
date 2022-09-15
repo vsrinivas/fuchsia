@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 pub use self::common::{MediaButtons, VolumeGain};
-pub(crate) use self::input_fidl_handler::fidl_io;
 pub mod common;
 pub mod input_controller;
 pub mod input_device_configuration;

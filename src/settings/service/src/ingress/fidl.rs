@@ -191,10 +191,10 @@ impl Interface {
     /// as defined by [Register].
     fn registration_fn(self) -> Register {
         Box::new(
-            move |delegate: &Delegate,
+            // TODO(fxb/79048): Remove the unused _delegate param.
+            move |_delegate: &Delegate,
                   seeder: &Seeder,
                   service_dir: &mut ServiceFsDir<'_, ServiceObj<'_, ()>>| {
-                let delegate = delegate.clone();
                 match self {
                     Interface::Audio => {
                         let seeder = seeder.clone();
@@ -242,8 +242,9 @@ impl Interface {
                         );
                     }
                     Interface::Input => {
+                        let seeder = seeder.clone();
                         let _ = service_dir.add_fidl_service(move |stream: InputRequestStream| {
-                            crate::input::fidl_io::spawn(delegate.clone(), stream);
+                            seeder.seed(stream);
                         });
                     }
                     Interface::Intl => {
@@ -306,7 +307,7 @@ impl Interface {
 
 #[cfg(test)]
 mod tests {
-    use fidl_fuchsia_settings::{InputMarker, PrivacyMarker};
+    use fidl_fuchsia_settings::PrivacyMarker;
     use fuchsia_async as fasync;
     use fuchsia_component::server::ServiceFs;
     use futures::StreamExt;
@@ -323,53 +324,6 @@ mod tests {
     use crate::service;
 
     use super::Interface;
-
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn test_fidl_bringup() {
-        let mut fs = ServiceFs::new();
-        let delegate = service::MessageHub::create_hub();
-        let job_manager_signature = delegate
-            .create(MessengerType::Unbound)
-            .await
-            .expect("messenger should be created")
-            .0
-            .get_signature();
-        let job_seeder = Seeder::new(&delegate, job_manager_signature).await;
-
-        let setting_type = SettingType::Input;
-
-        let registrant: Registrant = Interface::Input.registrant();
-
-        // Verify dependencies properly derived from the interface.
-        assert!(registrant
-            .get_dependencies()
-            .contains(&Dependency::Entity(Entity::Handler(setting_type))));
-
-        // Create handler to intercept messages.
-        let mut rx = delegate
-            .create(MessengerType::Addressable(service::Address::Handler(setting_type)))
-            .await
-            .expect("messenger should be created")
-            .1;
-
-        // Register and consume Registrant.
-        registrant.register(&delegate, &job_seeder, &mut fs.root_dir());
-
-        // Spawn nested environment.
-        let connector = fs.create_protocol_connector().expect("should create environment");
-        fasync::Task::spawn(fs.collect()).detach();
-
-        // Connect to the DoNotDisturb interface and request watching.
-        let do_not_disturb_proxy =
-            connector.connect_to_protocol::<InputMarker>().expect("should connect to protocol");
-        fasync::Task::spawn(async move {
-            let _ = do_not_disturb_proxy.watch().await;
-        })
-        .detach();
-
-        // Ensure handler receives request.
-        assert_matches!(rx.next_of::<Payload>().await, Ok((Payload::Request(Request::Listen), _)));
-    }
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_fidl_seeder_bringup() {

@@ -47,7 +47,6 @@ mod environment_tests;
 mod event_tests;
 mod factory_reset_tests;
 pub(crate) mod fakes;
-mod fidl_processor_tests;
 pub(crate) mod helpers;
 mod input_test_environment;
 mod input_tests;
