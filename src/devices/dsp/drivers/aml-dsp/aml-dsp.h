@@ -28,7 +28,8 @@ namespace aml_dsp {
 class AmlDsp;
 namespace FidlDsp = fuchsia_hardware_dsp;
 
-using DeviceType = ddk::Device<AmlDsp, ddk::Messageable<FidlDsp::DspDevice>::Mixin>;
+using DeviceType = ddk::Device<AmlDsp, ddk::Unbindable, ddk::Suspendable, ddk::Resumable,
+                               ddk::Messageable<FidlDsp::DspDevice>::Mixin>;
 
 class AmlDsp : public DeviceType {
  public:
@@ -45,10 +46,25 @@ class AmlDsp : public DeviceType {
   ~AmlDsp() = default;
   zx_status_t Init();
 
+  /* Load the dsp firmware to the specified address */
+  zx_status_t DspLoadFw(fidl::StringView fw_name);
+  /* Enable DSP clock and power on, start DSP */
+  zx_status_t DspStart();
+  zx_status_t DspSmcCall(uint32_t func_id, uint8_t arg1, uint32_t arg2, uint32_t arg3);
+  /* Disable DSP clock and power off, stop DSP */
+  zx_status_t DspStop();
+  void DspSuspend();
+  void DspResume();
+  /* According to the SCPI protocol, call the mailbox driver to transmit commands and data */
+  zx_status_t ScpiSendData(uint8_t* data, uint8_t size, uint8_t cmd);
+
   static zx_status_t Create(void* ctx, zx_device_t* parent);
   zx_status_t Bind();
 
   // Methods required by the ddk mixins.
+  void DdkUnbind(ddk::UnbindTxn txn);
+  void DdkSuspend(ddk::SuspendTxn txn);
+  void DdkResume(ddk::ResumeTxn txn);
   void DdkRelease();
 
   // |fidl::WireServer<fuchsia_hardware_dsp::DspDevice>|
@@ -60,6 +76,8 @@ class AmlDsp : public DeviceType {
  private:
   ddk::MmioBuffer dsp_addr_;
   ddk::MmioBuffer dsp_sram_addr_;
+  bool dsp_start_ = false;
+  bool firmware_loaded_ = false;
   zx::resource smc_resource_;
   const ddk::ClockProtocolClient dsp_clk_sel_;
   const ddk::ClockProtocolClient dsp_clk_gate_;
