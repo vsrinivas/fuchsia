@@ -9,6 +9,7 @@
 #include "backends.h"
 #include "fastboot_tcp.h"
 #include "gigaboot/src/netifc.h"
+#include "utils.h"
 #include "xefi.h"
 #include "zircon_boot_ops.h"
 
@@ -42,6 +43,12 @@ int main(int argc, char** argv) {
   }
 
   printf("netifc: network interface opened\n");
+
+  // Log TPM info if the device has one.
+  if (efi_status res = gigaboot::PrintTpm2Capability(); res != EFI_SUCCESS) {
+    printf("Failed to log TPM 2.0 capability %s. TPM 2.0 may not be supported\n",
+           gigaboot::EfiStatusToString(res));
+  }
 
   gigaboot::RebootMode reboot_mode = gigaboot::GetRebootMode();
   bool enter_fastboot = reboot_mode == gigaboot::RebootMode::kBootloader;

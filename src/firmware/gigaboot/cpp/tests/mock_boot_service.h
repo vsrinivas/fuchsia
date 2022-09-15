@@ -13,6 +13,7 @@
 #include <efi/protocol/block-io.h>
 #include <efi/protocol/device-path.h>
 #include <efi/protocol/disk-io.h>
+#include <efi/protocol/tcg2.h>
 #include <efi/types.h>
 #include <gtest/gtest.h>
 #include <phys/efi/protocol.h>
@@ -27,6 +28,7 @@ class Device {
   explicit Device(std::vector<std::string_view> paths) { InitDevicePathProtocol(paths); }
   virtual efi_block_io_protocol* GetBlockIoProtocol() { return nullptr; }
   virtual efi_disk_io_protocol* GetDiskIoProtocol() { return nullptr; }
+  virtual efi_tcg2_protocol* GetTcg2Protocol() { return nullptr; }
 
   efi_device_path_protocol* GetDevicePathProtocol() {
     return reinterpret_cast<efi_device_path_protocol*>(device_path_buffer_.data());
@@ -68,6 +70,18 @@ class BlockDevice : public Device {
   size_t total_blocks_;
 };
 
+class Tcg2Device : public Device {
+ public:
+  Tcg2Device();
+  efi_tcg2_protocol* GetTcg2Protocol() override { return &tcg2_protocol_; }
+
+ private:
+  efi_tcg2_protocol tcg2_protocol_;
+
+  static efi_status GetCapability(struct efi_tcg2_protocol*,
+                                  efi_tcg2_boot_service_capability*) EFIAPI;
+};
+
 // Check if the given guid correspond to the protocol of a efi protocol structure.
 // i.e. IsProtocol<efi_disk_io_protocol>().
 template <typename Protocol>
@@ -78,6 +92,8 @@ bool IsProtocol(const efi_guid& guid) {
 // A mock boot service implementation backed by `class Device` base objects.
 class MockStubService : public efi::StubBootServices {
  public:
+  virtual efi_status LocateProtocol(const efi_guid* protocol, void* registration,
+                                    void** intf) override;
   virtual efi_status LocateHandleBuffer(efi_locate_search_type search_type,
                                         const efi_guid* protocol, void* search_key,
                                         size_t* num_handles, efi_handle** buf) override;

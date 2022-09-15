@@ -10,6 +10,7 @@
 #include <efi/protocol/block-io.h>
 #include <efi/protocol/device-path.h>
 #include <efi/protocol/disk-io.h>
+#include <efi/protocol/tcg2.h>
 #include <efi/types.h>
 #include <phys/efi/protocol.h>
 
@@ -23,6 +24,9 @@ inline constexpr const efi_guid& kEfiProtocolGuid<efi_block_io_protocol> = Block
 
 template <>
 inline constexpr const efi_guid& kEfiProtocolGuid<efi_disk_io_protocol> = DiskIoProtocol;
+
+template <>
+inline constexpr const efi_guid& kEfiProtocolGuid<efi_tcg2_protocol> = Tcg2Protocol;
 
 namespace gigaboot {
 
@@ -83,6 +87,8 @@ uint64_t ToBigEndian(uint64_t val);
 uint64_t BigToHostEndian(uint64_t val);
 
 constexpr size_t kUefiPageSize = 4096;
+
+efi_status PrintTpm2Capability();
 
 }  // namespace gigaboot
 

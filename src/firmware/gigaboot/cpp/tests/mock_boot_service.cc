@@ -94,6 +94,31 @@ void BlockDevice::AddGptPartition(const gpt_entry_t& new_entry) {
   ASSERT_TRUE(false);
 }
 
+Tcg2Device::Tcg2Device() : Device({}) {
+  memset(&tcg2_protocol_, 0, sizeof(tcg2_protocol_));
+  tcg2_protocol_.GetCapability = Tcg2Device::GetCapability;
+}
+
+efi_status Tcg2Device::GetCapability(struct efi_tcg2_protocol*,
+                                     efi_tcg2_boot_service_capability* out) {
+  *out = {};
+  return EFI_SUCCESS;
+}
+
+efi_status MockStubService::LocateProtocol(const efi_guid* protocol, void* registration,
+                                           void** intf) {
+  if (IsProtocol<efi_tcg2_protocol>(*protocol)) {
+    for (auto& ele : devices_) {
+      if (auto protocol = ele->GetTcg2Protocol(); protocol) {
+        *intf = protocol;
+        return EFI_SUCCESS;
+      }
+    }
+  }
+
+  return EFI_UNSUPPORTED;
+}
+
 efi_status MockStubService::LocateHandleBuffer(efi_locate_search_type search_type,
                                                const efi_guid* protocol, void* search_key,
                                                size_t* num_handles, efi_handle** buf) {

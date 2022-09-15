@@ -5,6 +5,7 @@
 #include "utils.h"
 
 #include <lib/zbi/zbi.h>
+#include <stdio.h>
 
 #include <efi/types.h>
 
@@ -81,5 +82,60 @@ uint64_t ToBigEndian(uint64_t val) {
 }
 
 uint64_t BigToHostEndian(uint64_t val) { return ToBigEndian(val); }
+
+efi_status PrintTpm2Capability() {
+  auto tpm2_protocol = gigaboot::EfiLocateProtocol<efi_tcg2_protocol>();
+  if (tpm2_protocol.is_error()) {
+    return tpm2_protocol.error_value();
+  }
+
+  printf("Found TPM 2.0 EFI protocol.\n");
+
+  // Log TPM capability
+  efi_tcg2_boot_service_capability capability;
+  efi_status status = tpm2_protocol->GetCapability(tpm2_protocol.value().get(), &capability);
+  if (status != EFI_SUCCESS) {
+    return status;
+  }
+
+  printf("TPM 2.0 Capabilities:\n");
+
+#define PRINT_NAMED_VAL(field, format) printf(#field " = " format "\n", (field))
+
+  // Structure version
+  PRINT_NAMED_VAL(capability.StructureVersion.Major, "0x%02x");
+  PRINT_NAMED_VAL(capability.StructureVersion.Minor, "0x%02x");
+
+  // Protocol version
+  PRINT_NAMED_VAL(capability.ProtocolVersion.Major, "0x%02x");
+  PRINT_NAMED_VAL(capability.ProtocolVersion.Minor, "0x%02x");
+
+#define PRINT_NAMED_BIT(flags, bit) printf(#flags "." #bit "= %d\n", ((flags) & (bit)) ? 1 : 0)
+
+  // Supported hash algorithms
+  PRINT_NAMED_BIT(capability.HashAlgorithmBitmap, EFI_TCG2_BOOT_HASH_ALG_SHA1);
+  PRINT_NAMED_BIT(capability.HashAlgorithmBitmap, EFI_TCG2_BOOT_HASH_ALG_SHA256);
+  PRINT_NAMED_BIT(capability.HashAlgorithmBitmap, EFI_TCG2_BOOT_HASH_ALG_SHA384);
+  PRINT_NAMED_BIT(capability.HashAlgorithmBitmap, EFI_TCG2_BOOT_HASH_ALG_SHA512);
+  PRINT_NAMED_BIT(capability.HashAlgorithmBitmap, EFI_TCG2_BOOT_HASH_ALG_SM3_256);
+
+  // Supported event logs
+  PRINT_NAMED_BIT(capability.SupportedEventLogs, EFI_TCG2_EVENT_LOG_FORMAT_TCG_1_2);
+  PRINT_NAMED_BIT(capability.SupportedEventLogs, EFI_TCG2_EVENT_LOG_FORMAT_TCG_2);
+
+  // Others
+  PRINT_NAMED_VAL(capability.ProtocolVersion.Minor, "0x%02x");
+  PRINT_NAMED_VAL(capability.TPMPresentFlag, "0x%02x");
+  PRINT_NAMED_VAL(capability.MaxCommandSize, "0x%04x");
+  PRINT_NAMED_VAL(capability.MaxResponseSize, "0x%04x");
+  PRINT_NAMED_VAL(capability.ManufacturerID, "0x%08x");
+  PRINT_NAMED_VAL(capability.NumberOfPcrBanks, "0x%08x");
+  PRINT_NAMED_VAL(capability.ActivePcrBanks, "0x%08x");
+
+#undef PRINT_NAMED_VAL
+#undef PRINT_NAMED_BIT
+
+  return EFI_SUCCESS;
+}
 
 }  // namespace gigaboot

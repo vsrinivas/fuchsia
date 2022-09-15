@@ -18,6 +18,7 @@
 #include <efi/protocol/simple-network.h>
 #include <efi/protocol/simple-text-input.h>
 #include <efi/protocol/simple-text-output.h>
+#include <efi/protocol/tcg2.h>
 #include <efi/protocol/usb-io.h>
 
 const efi_guid BlockIoProtocol = EFI_BLOCK_IO_PROTOCOL_GUID;
@@ -38,3 +39,4 @@ const efi_guid SimpleTextOutputProtocol = EFI_SIMPLE_TEXT_OUTPUT_PROTOCOL_GUID;
 const efi_guid UsbIoProtocol = EFI_USB_IO_PROTOCOL_GUID;
 const efi_guid SerialIoProtocol = EFI_SERIAL_IO_PROTOCOL_GUID;
 const efi_guid ShellParametersProtocol = EFI_SHELL_PARAMETERS_PROTOCOL_GUID;
+const efi_guid Tcg2Protocol = EFI_TCG2_PROTOCOL_GUID;
