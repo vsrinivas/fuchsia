@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package checklicenses
+package main
 
 import (
 	"context"
@@ -32,7 +32,7 @@ func Execute(ctx context.Context, config *CheckLicensesConfig) error {
 	r := trace.StartRegion(ctx, "directory.NewDirectory("+config.Target+")")
 	startDirectory := time.Now()
 	log.Print("Discovering files and folders... ")
-	_, err := directory.NewDirectory(config.Target, nil)
+	_, err := directory.NewDirectory(config.FuchsiaDir, nil)
 	if err != nil {
 		log.Println("Error!")
 		return err

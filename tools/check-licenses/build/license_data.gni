@@ -56,7 +56,7 @@ template("license_data") {
     license_tool = "//tools/check-licenses($host_toolchain)"
     deps = [ license_tool ]
 
-    sources = [ "//tools/check-licenses/_config.json" ]
+    sources = [ "//tools/check-licenses/cmd/_config.json" ]
 
     out_dir = temp_out_dir
 

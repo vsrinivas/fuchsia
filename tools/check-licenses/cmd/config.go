@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package checklicenses
+package main
 
 import (
 	"encoding/json"
@@ -36,8 +36,10 @@ type Include struct {
 }
 
 type CheckLicensesConfig struct {
-	LogLevel int    `json:"logLevel"`
-	OutDir   string `json:"outDir"`
+	LogLevel int `json:"logLevel"`
+
+	FuchsiaDir string `json:"fuchsiaDir"`
+	OutDir     string `json:"outDir"`
 
 	Includes []Include `json:"includes"`
 
@@ -49,6 +51,8 @@ type CheckLicensesConfig struct {
 	World     *world.WorldConfig         `json:"world"`
 
 	Target string `json:"target"`
+
+	OutputLicenseFile bool `json:"outputLicenseFile"`
 }
 
 func NewCheckLicensesConfig(path string) (*CheckLicensesConfig, error) {
@@ -132,12 +136,19 @@ func (c *CheckLicensesConfig) Merge(other *CheckLicensesConfig) error {
 	c.World.Merge(other.World)
 
 	c.Includes = append(c.Includes, other.Includes...)
+
+	if c.FuchsiaDir == "" {
+		c.FuchsiaDir = other.FuchsiaDir
+	}
 	if c.OutDir == "" {
 		c.OutDir = other.OutDir
 	}
+
 	if other.LogLevel > c.LogLevel {
 		c.LogLevel = other.LogLevel
 	}
+
+	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
 
 	return nil
 }

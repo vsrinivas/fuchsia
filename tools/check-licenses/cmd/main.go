@@ -16,12 +16,16 @@ import (
 	"runtime/trace"
 	"strings"
 	"time"
-
-	checklicenses "go.fuchsia.dev/fuchsia/tools/check-licenses"
 )
 
 const (
-	defaultConfigFile = "{FUCHSIA_DIR}/tools/check-licenses/_config.json"
+	defaultConfigFile = "{FUCHSIA_DIR}/tools/check-licenses/cmd/_config.json"
+)
+
+var (
+	Config *CheckLicensesConfig
+
+	target string
 )
 
 var (
@@ -54,40 +58,56 @@ func mainImpl() error {
 		//return fmt.Errorf("--fuchsia_dir cannot be empty.")
 		*fuchsiaDir = "."
 	}
-	*fuchsiaDir, _ = filepath.Abs(*fuchsiaDir)
-	checklicenses.ConfigVars["{FUCHSIA_DIR}"] = *fuchsiaDir
+	if *fuchsiaDir, err = filepath.Abs(*fuchsiaDir); err != nil {
+		return fmt.Errorf("Failed to get absolute directory for *fuchsiaDir %v: %v", *fuchsiaDir, err)
+	}
+	ConfigVars["{FUCHSIA_DIR}"] = *fuchsiaDir
 
 	// diffTarget
 	if *diffTarget != "" {
-		*diffTarget, _ = filepath.Abs(*diffTarget)
+		*diffTarget, err = filepath.Abs(*diffTarget)
+		if err != nil {
+			return fmt.Errorf("Failed to get absolute directory for *diffTarget %v: %v", *diffTarget, err)
+		}
 	}
-	checklicenses.ConfigVars["{DIFF_TARGET}"] = *diffTarget
+
+	ConfigVars["{DIFF_TARGET}"] = *diffTarget
 
 	// buildDir
 	if *buildDir == "" && *outputLicenseFile {
 		return fmt.Errorf("--build_dir cannot be empty.")
 	}
-	*buildDir, _ = filepath.Abs(*buildDir)
-	checklicenses.ConfigVars["{BUILD_DIR}"] = *buildDir
+	if *buildDir, err = filepath.Abs(*buildDir); err != nil {
+		return fmt.Errorf("Failed to get absolute directory for *buildDir%v: %v", *buildDir, err)
+	}
+	ConfigVars["{BUILD_DIR}"] = *buildDir
 
 	// outDir
 	if *outDir != "" {
-		*outDir, _ = filepath.Abs(*outDir)
+		*outDir, err = filepath.Abs(*outDir)
+		if err != nil {
+			return fmt.Errorf("Failed to get absolute directory for *outDir %v: %v", *outDir, err)
+		}
 	}
 	if _, err := os.Stat(*outDir); os.IsNotExist(err) {
-		err := os.Mkdir(*outDir, 0755)
+		err := os.MkdirAll(*outDir, 0755)
 		if err != nil {
 			return fmt.Errorf("Failed to create out directory [%v]: %v\n", outDir, err)
 		}
 	}
-	checklicenses.ConfigVars["{OUT_DIR}"] = *outDir
+	ConfigVars["{OUT_DIR}"] = *outDir
 
 	// gnPath
 	if *gnPath == "" && *outputLicenseFile {
 		return fmt.Errorf("--gn_path cannot be empty.")
 	}
 	*gnPath = strings.ReplaceAll(*gnPath, "{FUCHSIA_DIR}", *fuchsiaDir)
-	checklicenses.ConfigVars["{GN_PATH}"] = *gnPath
+	*gnPath, err = filepath.Abs(*gnPath)
+	if err != nil {
+		return fmt.Errorf("Failed to get absolute directory for *gnPath %v: %v", *gnPath, err)
+	}
+
+	ConfigVars["{GN_PATH}"] = *gnPath
 
 	// logLevel
 	w, err := getLogWriters(*logLevel, *outDir)
@@ -97,14 +117,12 @@ func mainImpl() error {
 	log.SetOutput(w)
 
 	// target
-	target := ""
 	if flag.NArg() > 1 {
 		return fmt.Errorf("check-licenses takes a maximum of 1 positional argument (filepath or gn target), got %v\n", flag.NArg())
 	}
 	if flag.NArg() == 1 {
 		target = flag.Arg(0)
 	}
-
 	if *outputLicenseFile {
 		if isPath(target) {
 			target, _ = filepath.Abs(target)
@@ -144,18 +162,18 @@ func mainImpl() error {
 			log.Printf("Done. [%v]\n", time.Since(startGn))
 		}
 	}
-	checklicenses.ConfigVars["{TARGET}"] = target
+	ConfigVars["{TARGET}"] = target
 
 	// configFile
 	configFile := strings.ReplaceAll(defaultConfigFile, "{FUCHSIA_DIR}", *fuchsiaDir)
-	config, err := checklicenses.NewCheckLicensesConfig(configFile)
+	Config, err = NewCheckLicensesConfig(configFile)
 	if err != nil {
 		return err
 	}
 
 	// Set non-string config values directly.
-	config.Result.OutputLicenseFile = *outputLicenseFile
-	config.World.Filters = strings.Split(*filter, ",")
+	Config.Result.OutputLicenseFile = *outputLicenseFile
+	Config.World.Filters = strings.Split(*filter, ",")
 
 	// Tracing
 	if *tracefile != "" {
@@ -185,7 +203,7 @@ func mainImpl() error {
 		return err
 	}
 
-	if err := checklicenses.Execute(context.Background(), config); err != nil {
+	if err := Execute(context.Background(), Config); err != nil {
 		return fmt.Errorf("failed to analyze the given directory: %v", err)
 	}
 	return nil
