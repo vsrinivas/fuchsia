@@ -24,7 +24,7 @@
             to: "#driver_playground",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
             to: "#driver_playground",
             rights: [ "r*" ],
