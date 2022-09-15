@@ -168,6 +168,7 @@ executable("unittests") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders_cpp_wire",
+    "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/sync:sync-cpp",
   ]
 

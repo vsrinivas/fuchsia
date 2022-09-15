@@ -651,6 +651,19 @@ zx::status<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t d
   return zx::ok(std::move(response.profile));
 }
 
+zx::status<std::string> Driver::GetVariable(const char* name) {
+  auto boot_args = component::ConnectAt<fuchsia_boot::Arguments>(ns_.svc_dir());
+  if (boot_args.is_error()) {
+    return boot_args.take_error();
+  }
+
+  auto result = fidl::WireCall(*boot_args)->GetString(fidl::StringView::FromExternal(name));
+  if (!result.ok() || result->value.is_null() || result->value.empty()) {
+    return zx::error(ZX_ERR_NOT_FOUND);
+  }
+  return zx::ok(std::string(result->value.data(), result->value.size()));
+}
+
 zx::status<fit::deferred_callback> Driver::ExportToDevfsSync(
     fuchsia_device_fs::wire::ExportOptions options, fbl::RefPtr<fs::Vnode> dev_node,
     std::string name, std::string_view topological_path, uint32_t proto_id) {

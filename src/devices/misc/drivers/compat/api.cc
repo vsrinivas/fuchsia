@@ -225,6 +225,23 @@ __EXPORT zx_status_t device_get_variable(zx_device_t* device, const char* name, 
     out[1] = 0;
     return ZX_OK;
   }
+
+  if (strncmp(name, "driver.", strlen("driver.")) == 0 ||
+      strncmp(name, "clock.backstop", strlen("clock.backstop")) == 0) {
+    if (device == nullptr) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    auto variable = device->driver()->GetVariable(name);
+    if (variable.is_error()) {
+      return variable.status_value();
+    }
+    *size_actual = variable->size();
+    if (out_size < *size_actual) {
+      return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    strcpy(out, variable->c_str());
+    return ZX_OK;
+  }
   return ZX_ERR_NOT_FOUND;
 }
 
