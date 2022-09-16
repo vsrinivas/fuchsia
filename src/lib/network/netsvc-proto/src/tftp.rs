@@ -681,11 +681,11 @@ impl TftpOption {
         }
     }
 
-    pub fn not_forced(self) -> Forceable<TftpOption> {
+    pub const fn not_forced(self) -> Forceable<TftpOption> {
         Forceable { value: self, forced: false }
     }
 
-    pub fn forced(self) -> Forceable<TftpOption> {
+    pub const fn forced(self) -> Forceable<TftpOption> {
         Forceable { value: self, forced: true }
     }
 }

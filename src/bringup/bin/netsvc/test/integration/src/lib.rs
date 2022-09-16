@@ -802,28 +802,20 @@ async fn get_board_info_inner(sock: fuchsia_async::net::UdpSocket, scope_id: u32
     )
     .into();
 
-    let mut buffer = [0u8; BUFFER_SIZE];
-    {
-        let mut pb = &mut buffer[..];
-        let oack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
-            .await
-            .into_oack()
-            .expect("unexpected response");
-
-        assert_eq!(
-            oack.options().collect(),
-            tftp::AllOptions {
-                window_size: None,
-                block_size: None,
-                timeout: Some(tftp::Forceable { value: TIMEOUT_OPTION_SECS, forced: false }),
-                transfer_size: Some(tftp::Forceable {
-                    value: u64::try_from(std::mem::size_of::<BoardInfo>())
-                        .expect("doesn't fit u64"),
-                    forced: false
-                })
-            }
-        );
-    }
+    expect_oack(
+        &sock,
+        socket_addr,
+        tftp::AllOptions {
+            window_size: None,
+            block_size: None,
+            timeout: Some(tftp::Forceable { value: TIMEOUT_OPTION_SECS, forced: false }),
+            transfer_size: Some(tftp::Forceable {
+                value: u64::try_from(std::mem::size_of::<BoardInfo>()).expect("doesn't fit u64"),
+                forced: false,
+            }),
+        },
+    )
+    .await;
 
     // Acknowledge options by sending an ack.
     let () = send_message(
@@ -834,6 +826,7 @@ async fn get_board_info_inner(sock: fuchsia_async::net::UdpSocket, scope_id: u32
     .await;
 
     {
+        let mut buffer = [0u8; BUFFER_SIZE];
         let mut pb = &mut buffer[..];
         let data = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
             .await
@@ -866,6 +859,118 @@ async fn get_board_info<E: netemul::Endpoint>(name: &str) {
     with_netsvc_and_netstack::<E, _, _>(name, get_board_info_inner).await;
 }
 
+async fn start_transfer(
+    image_name: &str,
+    sock: &fuchsia_async::net::UdpSocket,
+    addr: std::net::Ipv6Addr,
+    scope_id: u32,
+    options: impl IntoIterator<Item = tftp::Forceable<tftp::TftpOption>>,
+) {
+    let () = send_message(
+        tftp::TransferRequestBuilder::new_with_options(
+            tftp::TransferDirection::Write,
+            image_name,
+            tftp::TftpMode::OCTET,
+            options,
+        )
+        .into_serializer(),
+        sock,
+        // The first message must always go to the INCOMING port. That's
+        // what's used to establish a new "session". See
+        // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/bringup/bin/netsvc/tftp.cc;l=165;drc=3c621e98789592de213e9899e7056400d29e3b1c.
+        std::net::SocketAddrV6::new(
+            addr,
+            tftp::INCOMING_PORT.get(),
+            /* flowinfo */ 0,
+            scope_id,
+        )
+        .into(),
+    )
+    .await;
+}
+
+fn pave_image_contents(block_size: u16) -> itertools::IntoChunks<impl Iterator<Item = u8>> {
+    (0u32..).map(u32::to_ne_bytes).flatten().take(PAVE_IMAGE_LEN_USIZE).chunks(block_size.into())
+}
+
+/// Helper function to stream paving data `contents` over TFTP over the
+/// connected socket `sock`. All responses are going to be asserted as coming
+/// from `socket_addr`.
+///
+/// Returns `Some` if there's a pending unacknowledged block index.
+async fn stream_contents<'a, I, B, const BLOCK_SIZE: usize, const WINDOW_SIZE: u16>(
+    sock: &fuchsia_async::net::UdpSocket,
+    socket_addr: std::net::SocketAddr,
+    contents: I,
+) -> Option<u16>
+where
+    I: IntoIterator<Item = itertools::Chunk<'a, B>>,
+    B: Iterator<Item = u8> + 'a,
+{
+    let mut buffer = [0u8; BUFFER_SIZE];
+    futures::stream::iter(contents.into_iter().enumerate().map(|(i, b)| (i + 1, b)))
+        .fold(None, |_, (index, block)| async move {
+            // NB: Collecting into ArrayVec panics if iterator doesn't fit
+            // in capacity. See
+            // https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html#impl-FromIterator%3CT%3E.
+            let block = block.collect::<arrayvec::ArrayVec<u8, BLOCK_SIZE>>();
+
+            let index = index.try_into().expect("index doesn't fit wire representation");
+
+            let () = send_message(
+                (&block[..]).into_serializer().encapsulate(tftp::DataPacketBuilder::new(index)),
+                &sock,
+                socket_addr,
+            )
+            .await;
+            // Every WINDOW_SIZE blocks must be acknowledged.
+            // See https://datatracker.ietf.org/doc/html/rfc7440#section-4.
+            if index % WINDOW_SIZE != 0 {
+                return Some(index);
+            }
+            // Wait for an acknowledgement.
+            loop {
+                let mut pb = &mut buffer[..];
+                let ack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+                    .await
+                    .into_ack()
+                    .expect("unexpected response");
+                if ack.block() == index {
+                    break None;
+                }
+                // If this is not an acknowledgement for the most recent
+                // block, we must be seeing either a retransmission of the
+                // acknowledgement on the previous block, or an
+                // acknowledgement within the current block if the server
+                // observes a timeout waiting for the next block of data.
+                let valid_range = (index - WINDOW_SIZE)..index;
+                assert!(
+                    valid_range.contains(&ack.block()),
+                    "acked block {} out of range {:?}",
+                    ack.block(),
+                    valid_range
+                );
+            }
+        })
+        .await
+}
+
+async fn expect_oack(
+    sock: &fuchsia_async::net::UdpSocket,
+    socket_addr: std::net::SocketAddr,
+    options: tftp::AllOptions,
+) {
+    let mut buffer = [0u8; BUFFER_SIZE];
+    let mut pb = &mut buffer[..];
+    let oack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+        .await
+        .into_oack()
+        .expect("unexpected response");
+
+    let all_options = oack.options().collect();
+    assert_eq!(all_options, options);
+}
+
 async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u32) {
     let device = discover(&sock, scope_id).await;
 
@@ -873,42 +978,15 @@ async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u
     const BLOCK_SIZE: u16 = 1024;
     const WINDOW_SIZE: u16 = 4;
 
-    async fn start_transfer(
-        image_name: &str,
-        sock: &fuchsia_async::net::UdpSocket,
-        addr: std::net::Ipv6Addr,
-        scope_id: u32,
-    ) {
-        let () = send_message(
-            tftp::TransferRequestBuilder::new_with_options(
-                tftp::TransferDirection::Write,
-                image_name,
-                tftp::TftpMode::OCTET,
-                [
-                    tftp::TftpOption::TransferSize(PAVE_IMAGE_LEN).not_forced(),
-                    // Request a very large timeout to make sure we don't get flakes.
-                    tftp::TftpOption::Timeout(TIMEOUT_OPTION_SECS).not_forced(),
-                    tftp::TftpOption::BlockSize(BLOCK_SIZE).not_forced(),
-                    tftp::TftpOption::WindowSize(WINDOW_SIZE).not_forced(),
-                ],
-            )
-            .into_serializer(),
-            sock,
-            // The first message must always go to the INCOMING port. That's
-            // what's used to establish a new "session". See
-            // https://cs.opensource.google/fuchsia/fuchsia/+/main:src/bringup/bin/netsvc/tftp.cc;l=165;drc=3c621e98789592de213e9899e7056400d29e3b1c.
-            std::net::SocketAddrV6::new(
-                addr,
-                tftp::INCOMING_PORT.get(),
-                /* flowinfo */ 0,
-                scope_id,
-            )
-            .into(),
-        )
-        .await;
-    }
+    const TRANSFER_OPTIONS: [tftp::Forceable<tftp::TftpOption>; 4] = [
+        tftp::TftpOption::TransferSize(PAVE_IMAGE_LEN).not_forced(),
+        // Request a very large timeout to make sure we don't get flakes.
+        tftp::TftpOption::Timeout(TIMEOUT_OPTION_SECS).not_forced(),
+        tftp::TftpOption::BlockSize(BLOCK_SIZE).not_forced(),
+        tftp::TftpOption::WindowSize(WINDOW_SIZE).not_forced(),
+    ];
 
-    let () = start_transfer(image_name, &sock, device, scope_id).await;
+    let () = start_transfer(image_name, &sock, device, scope_id, TRANSFER_OPTIONS).await;
 
     let socket_addr = std::net::SocketAddrV6::new(
         device,
@@ -918,84 +996,29 @@ async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u
     )
     .into();
 
-    let mut buffer = [0u8; BUFFER_SIZE];
-    {
-        let mut pb = &mut buffer[..];
-        let oack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
-            .await
-            .into_oack()
-            .expect("unexpected response");
-
-        let all_options = oack.options().collect();
-        assert_eq!(
-            all_options,
-            tftp::AllOptions {
-                window_size: Some(tftp::Forceable { value: WINDOW_SIZE, forced: false }),
-                block_size: Some(tftp::Forceable { value: BLOCK_SIZE, forced: false }),
-                timeout: Some(tftp::Forceable { value: TIMEOUT_OPTION_SECS, forced: false }),
-                transfer_size: Some(tftp::Forceable { value: PAVE_IMAGE_LEN, forced: false }),
-            }
-        );
-    }
-
-    let mut buffer = [0u8; BUFFER_SIZE];
+    expect_oack(
+        &sock,
+        socket_addr,
+        tftp::AllOptions {
+            window_size: Some(tftp::Forceable { value: WINDOW_SIZE, forced: false }),
+            block_size: Some(tftp::Forceable { value: BLOCK_SIZE, forced: false }),
+            timeout: Some(tftp::Forceable { value: TIMEOUT_OPTION_SECS, forced: false }),
+            transfer_size: Some(tftp::Forceable { value: PAVE_IMAGE_LEN, forced: false }),
+        },
+    )
+    .await;
 
     // Start sending blocks in.
-    let contents = (0u32..)
-        .map(u32::to_ne_bytes)
-        .flatten()
-        .take(PAVE_IMAGE_LEN_USIZE)
-        .chunks(BLOCK_SIZE.into());
-    let (unacked, sock) =
-        futures::stream::iter(contents.into_iter().enumerate().map(|(i, b)| (i + 1, b)))
-            .fold((None, sock), |(_, sock), (index, block)| async move {
-                // NB: Need a different constant here to use as const param in arrayvec.
-                const BLOCK_SIZE_USIZE: usize = BLOCK_SIZE as usize;
-                // NB: Collecting into ArrayVec panics if iterator doesn't fit
-                // in capacity. See
-                // https://docs.rs/arrayvec/latest/arrayvec/struct.ArrayVec.html#impl-FromIterator%3CT%3E.
-                let block = block.collect::<arrayvec::ArrayVec<u8, BLOCK_SIZE_USIZE>>();
-
-                let index = index.try_into().expect("index doesn't fit wire representation");
-
-                let () = send_message(
-                    (&block[..]).into_serializer().encapsulate(tftp::DataPacketBuilder::new(index)),
-                    &sock,
-                    socket_addr,
-                )
-                .await;
-                // Every WINDOW_SIZE blocks must be acknowledged.
-                // See https://datatracker.ietf.org/doc/html/rfc7440#section-4.
-                if index % WINDOW_SIZE != 0 {
-                    return (Some(index), sock);
-                }
-                // Wait for an acknowledgement.
-                loop {
-                    let mut pb = &mut buffer[..];
-                    let ack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
-                        .await
-                        .into_ack()
-                        .expect("unexpected response");
-                    if ack.block() == index {
-                        break (None, sock);
-                    }
-                    // If this is not an acknowledgement for the most recent
-                    // block, we must be seeing either a retransmission of the
-                    // acknowledgement on the previous block, or an
-                    // acknowledgement within the current block if the server
-                    // observes a timeout waiting for the next block of data.
-                    let valid_range = (index - WINDOW_SIZE)..index;
-                    assert!(
-                        valid_range.contains(&ack.block()),
-                        "acked block {} out of range {:?}",
-                        ack.block(),
-                        valid_range
-                    );
-                }
-            })
-            .await;
+    let contents = pave_image_contents(BLOCK_SIZE);
+    let unacked = stream_contents::<_, _, { BLOCK_SIZE as usize }, WINDOW_SIZE>(
+        &sock,
+        socket_addr,
+        &contents,
+    )
+    .await;
     if let Some(index) = unacked {
         // Wait for final acknowledgement.
+        let mut buffer = [0u8; BUFFER_SIZE];
         let mut pb = &mut buffer[..];
         let ack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
             .await
@@ -1007,7 +1030,8 @@ async fn pave(image_name: &str, sock: fuchsia_async::net::UdpSocket, scope_id: u
     // The best way to observe the paver terminating is to attempt to start a
     // new transfer.
     loop {
-        let () = start_transfer(image_name, &sock, device, scope_id).await;
+        let () = start_transfer(image_name, &sock, device, scope_id, TRANSFER_OPTIONS).await;
+        let mut buffer = [0u8; BUFFER_SIZE];
         let mut pb = &mut buffer[..];
         let pkt = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr).await;
         match pkt {
@@ -1180,4 +1204,104 @@ async fn survives_device_removal<E: netemul::Endpoint>(name: &str) {
         },
         () =  test_fut.fuse() => (),
     }
+}
+
+/// Tests that netsvc retransmits ACKs following the timeout option. Guards
+/// against a regression where netsvc was not sending ACKs when it was receiving
+/// retransmitted blocks from the host.
+#[variants_test]
+async fn retransmits_acks<E: netemul::Endpoint>(name: &str) {
+    with_netsvc_and_netstack::<E, _, _>(name, |sock, scope_id| async move {
+        let device = discover(&sock, scope_id).await;
+        let image_name = "<<image>>sparse.fvm";
+
+        /// This controls how often ACK retransmits will be sent. We don't use
+        /// the minimum value of 1 second here because the paver will timeout at
+        /// a fixed integer multiplier of the TFTP timeout. 2s here gives us
+        /// more leeway over there to protect against flakes without making this
+        /// test too slow.
+        const TIMEOUT_OPTION_SECS: u8 = 2;
+        const BLOCK_SIZE: u16 = 1024;
+        const WINDOW_SIZE: u16 = 2;
+
+        let () = start_transfer(
+            image_name,
+            &sock,
+            device,
+            scope_id,
+            [
+                tftp::TftpOption::TransferSize(PAVE_IMAGE_LEN).not_forced(),
+                tftp::TftpOption::Timeout(TIMEOUT_OPTION_SECS).not_forced(),
+                tftp::TftpOption::BlockSize(BLOCK_SIZE).not_forced(),
+                tftp::TftpOption::WindowSize(WINDOW_SIZE).not_forced(),
+            ],
+        )
+        .await;
+
+        let socket_addr = std::net::SocketAddrV6::new(
+            device,
+            tftp::OUTGOING_PORT.get(),
+            /* flowinfo */ 0,
+            scope_id,
+        )
+        .into();
+
+        expect_oack(
+            &sock,
+            socket_addr,
+            tftp::AllOptions {
+                window_size: Some(tftp::Forceable { value: WINDOW_SIZE, forced: false }),
+                block_size: Some(tftp::Forceable { value: BLOCK_SIZE, forced: false }),
+                timeout: Some(tftp::Forceable { value: TIMEOUT_OPTION_SECS, forced: false }),
+                transfer_size: Some(tftp::Forceable { value: PAVE_IMAGE_LEN, forced: false }),
+            },
+        )
+        .await;
+
+        // Only send the first window.
+        let contents = pave_image_contents(BLOCK_SIZE);
+        let contents = contents.into_iter().take(WINDOW_SIZE.into());
+        let unacked = stream_contents::<_, _, { BLOCK_SIZE as usize }, WINDOW_SIZE>(
+            &sock,
+            socket_addr,
+            contents,
+        )
+        .await;
+        assert_eq!(unacked, None);
+
+        // Wait to observe ack retransmits while blasting more traffic at the
+        // same time. The valid, but repeated, traffic received by netsvc should
+        // not keep it from sending its retransmissions.
+        let wait_acks = futures::stream::repeat(())
+            .take(2)
+            .then(|()| async {
+                let mut buffer = [0u8; BUFFER_SIZE];
+                let mut pb = &mut buffer[..];
+                let ack = read_message::<tftp::TftpPacket<_>, _>(&mut pb, &sock, socket_addr)
+                    .await
+                    .into_ack()
+                    .expect("unexpected response");
+                assert_eq!(ack.block(), WINDOW_SIZE);
+            })
+            .collect::<()>();
+
+        fuchsia_async::Interval::new(zx::Duration::from_millis(200))
+            .then(|()| async {
+                let contents = pave_image_contents(BLOCK_SIZE);
+                let contents = contents.into_iter().take(WINDOW_SIZE.into());
+                // Lie about window size here so stream_contents won't wait for acks.
+                let unacked =
+                    stream_contents::<_, _, { BLOCK_SIZE as usize }, { WINDOW_SIZE + 1 }>(
+                        &sock,
+                        socket_addr,
+                        contents,
+                    )
+                    .await;
+                assert_eq!(unacked, Some(WINDOW_SIZE));
+            })
+            .take_until(wait_acks)
+            .collect::<()>()
+            .await;
+    })
+    .await;
 }
