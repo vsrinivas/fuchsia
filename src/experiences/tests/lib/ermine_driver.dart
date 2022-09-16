@@ -8,7 +8,8 @@ import 'dart:io';
 import 'dart:math';
 
 // ignore_for_file: import_of_legacy_library_into_null_safe
-
+import 'package:fidl_fuchsia_input/fidl_async.dart' as input;
+import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' as input3;
 import 'package:fidl_fuchsia_input/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input3/fidl_async.dart' hide KeyEvent;
 import 'package:flutter_driver/flutter_driver.dart';
@@ -186,12 +187,12 @@ class ErmineDriver {
     const key1Release = Duration(milliseconds: 600);
 
     final input = Input(sl4f);
-    await input.keyEvents([
-      KeyEvent(modifier, key1Press, KeyEventType.pressed),
-      KeyEvent(key, key2Press, KeyEventType.pressed),
-      KeyEvent(key, key2Release, KeyEventType.released),
-      KeyEvent(modifier, key1Release, KeyEventType.released),
-    ]);
+    await input.sendKeyEvents([
+      InputKeyEvent(modifier, key1Press, KeyEventType.pressed),
+      InputKeyEvent(key, key2Press, KeyEventType.pressed),
+      InputKeyEvent(key, key2Release, KeyEventType.released),
+      InputKeyEvent(modifier, key1Release, KeyEventType.released),
+    ].map((e) => e.toJson()).toList());
     await driver.waitUntilNoTransientCallbacks();
   }
 
@@ -205,14 +206,14 @@ class ErmineDriver {
     const key1Release = Duration(milliseconds: 700);
 
     final input = Input(sl4f);
-    await input.keyEvents([
-      KeyEvent(modifier1, key1Press, KeyEventType.pressed),
-      KeyEvent(modifier2, key2Press, KeyEventType.pressed),
-      KeyEvent(key, key3Press, KeyEventType.pressed),
-      KeyEvent(key, key3Release, KeyEventType.released),
-      KeyEvent(modifier2, key2Release, KeyEventType.released),
-      KeyEvent(modifier1, key1Release, KeyEventType.released),
-    ]);
+    await input.sendKeyEvents([
+      InputKeyEvent(modifier1, key1Press, KeyEventType.pressed),
+      InputKeyEvent(modifier2, key2Press, KeyEventType.pressed),
+      InputKeyEvent(key, key3Press, KeyEventType.pressed),
+      InputKeyEvent(key, key3Release, KeyEventType.released),
+      InputKeyEvent(modifier2, key2Release, KeyEventType.released),
+      InputKeyEvent(modifier1, key1Release, KeyEventType.released),
+    ].map((e) => e.toJson()).toList());
     await driver.waitUntilNoTransientCallbacks();
   }
 
@@ -616,4 +617,21 @@ class ViewSnapshot {
     }
     return Rectangle(0, 0, 0, 0);
   }
+}
+
+/// Describes  single key event to pass into input_facade.
+class InputKeyEvent {
+  final input.Key _key;
+  final Duration _durationSinceStart;
+  final input3.KeyEventType _type;
+
+  /// Creates a new [KeyEvent].
+  InputKeyEvent(this._key, this._durationSinceStart, this._type);
+
+  /// Return this as a primitive object that can be JSON-encoded.
+  Map<String, dynamic> toJson() => {
+        'key': _key.$value,
+        'duration_millis': _durationSinceStart.inMilliseconds,
+        'type': _type.$value,
+      };
 }
