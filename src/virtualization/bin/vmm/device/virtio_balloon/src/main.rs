@@ -6,7 +6,7 @@ mod balloon_device;
 mod wire;
 
 use {
-    crate::balloon_device::BalloonDevice,
+    crate::balloon_device::{BalloonDevice, VmoMemoryBackend},
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::VirtioBalloonRequestStream,
@@ -53,7 +53,7 @@ async fn run_virtio_balloon(
 
     let negotiated_features =
         wire::VirtioBalloonFeatureFlags::from_bits(device.get_features()).unwrap();
-    let balloon_device = BalloonDevice::new(vmo);
+    let balloon_device = BalloonDevice::new(VmoMemoryBackend::new(vmo));
 
     let virtio_balloon_fidl: VirtioBalloonRequestStream = virtio_device_fidl.cast_stream();
     let bell = GuestBellTrap::complete_or_pending(device.take_bell_traps(), &device)
@@ -61,8 +61,12 @@ async fn run_virtio_balloon(
 
     let (sender, receiver) = mpsc::channel(10);
     futures::try_join!(
-        BalloonDevice::run_virtio_balloon_stream(virtio_balloon_fidl, &device, sender),
-        BalloonDevice::run_mem_stats_receiver(
+        BalloonDevice::<VmoMemoryBackend>::run_virtio_balloon_stream(
+            virtio_balloon_fidl,
+            &device,
+            sender
+        ),
+        BalloonDevice::<VmoMemoryBackend>::run_mem_stats_receiver(
             stats_stream,
             &guest_mem,
             &negotiated_features,
