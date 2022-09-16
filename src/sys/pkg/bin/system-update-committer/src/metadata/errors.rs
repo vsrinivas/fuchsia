@@ -35,11 +35,16 @@ pub enum PolicyError {
     CurrentConfigurationUnbootable(paver::Configuration),
 }
 
+#[derive(Debug, PartialEq, Eq)]
+pub enum VerifySource {
+    Blobfs,
+}
+
 /// Error condition that may be returned when doing health verification.
 #[derive(Error, Debug)]
 pub enum VerifyError {
-    #[error("the blobfs verification failed")]
-    BlobFs(#[source] VerifyFailureReason),
+    #[error("the {_0:?} verification failed")]
+    VerifyError(VerifySource, #[source] VerifyFailureReason),
 }
 
 #[derive(Error, Debug)]

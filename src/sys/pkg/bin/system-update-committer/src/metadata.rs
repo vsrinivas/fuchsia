@@ -85,7 +85,7 @@ fn unblock_fidl_server(
 #[cfg(test)]
 mod tests {
     use {
-        super::errors::{VerifyError, VerifyFailureReason},
+        super::errors::{VerifyError, VerifyFailureReason, VerifySource},
         super::*,
         crate::config::Mode,
         ::fidl::endpoints::create_proxy,
@@ -404,7 +404,10 @@ mod tests {
 
         assert_matches!(
             res,
-            Err(MetadataError::Verify(VerifyError::BlobFs(VerifyFailureReason::Verify(_))))
+            Err(MetadataError::Verify(VerifyError::VerifyError(
+                VerifySource::Blobfs,
+                VerifyFailureReason::Verify(_)
+            )))
         );
         assert_eq!(
             paver.take_events(),

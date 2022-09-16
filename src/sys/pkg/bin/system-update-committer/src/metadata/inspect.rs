@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::errors::{VerifyError, VerifyFailureReason},
+    super::errors::{VerifyError, VerifyFailureReason, VerifySource},
     fuchsia_inspect as finspect,
     std::{convert::TryInto, time::Duration},
 };
@@ -26,7 +26,9 @@ pub(super) fn write_to_inspect(
         }),
         Err(error) => {
             let (name, reason) = match error {
-                VerifyError::BlobFs(reason) => ("failure_blobfs", reason),
+                VerifyError::VerifyError(VerifySource::Blobfs, reason) => {
+                    ("failure_blobfs", reason)
+                }
             };
             node.record_child("ota_verification_duration", |duration_node| {
                 duration_node.record_uint(name, duration_u64)
@@ -71,7 +73,10 @@ mod tests {
 
         let () = write_to_inspect(
             inspector.root(),
-            &Err(VerifyError::BlobFs(VerifyFailureReason::Fidl(fidl::Error::ExtraBytes))),
+            &Err(VerifyError::VerifyError(
+                VerifySource::Blobfs,
+                VerifyFailureReason::Fidl(fidl::Error::ExtraBytes),
+            )),
             Duration::from_micros(2),
         );
 
@@ -94,7 +99,7 @@ mod tests {
 
         let () = write_to_inspect(
             inspector.root(),
-            &Err(VerifyError::BlobFs(VerifyFailureReason::Timeout)),
+            &Err(VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Timeout)),
             Duration::from_micros(2),
         );
 
@@ -117,7 +122,10 @@ mod tests {
 
         let () = write_to_inspect(
             inspector.root(),
-            &Err(VerifyError::BlobFs(VerifyFailureReason::Verify(verify::VerifyError::Internal))),
+            &Err(VerifyError::VerifyError(
+                VerifySource::Blobfs,
+                VerifyFailureReason::Verify(verify::VerifyError::Internal),
+            )),
             Duration::from_micros(2),
         );
 

@@ -4,7 +4,9 @@
 
 use {
     super::configuration::Configuration,
-    super::errors::{BootManagerError, BootManagerResultExt, PolicyError, VerifyError},
+    super::errors::{
+        BootManagerError, BootManagerResultExt, PolicyError, VerifyError, VerifySource,
+    },
     crate::config::{Config as ComponentConfig, Mode},
     fidl_fuchsia_paver as paver,
     fuchsia_syslog::fx_log_info,
@@ -83,7 +85,7 @@ impl PolicyEngine {
         res: Result<(), VerifyError>,
         config: &ComponentConfig,
     ) -> Result<(), VerifyError> {
-        if let Err(VerifyError::BlobFs(_)) = res {
+        if let Err(VerifyError::VerifyError(VerifySource::Blobfs, _)) = res {
             if config.blobfs() == &Mode::Ignore {
                 return Ok(());
             };
@@ -255,10 +257,16 @@ mod tests {
     }
 
     fn test_blobfs_verify_errors(config: ComponentConfig, expect_err: bool) {
-        let timeout_err = Err(VerifyError::BlobFs(VerifyFailureReason::Timeout));
-        let verify_err =
-            Err(VerifyError::BlobFs(VerifyFailureReason::Verify(verify::VerifyError::Internal)));
-        let fidl_err = Err(VerifyError::BlobFs(VerifyFailureReason::Fidl(fidl::Error::OutOfRange)));
+        let timeout_err =
+            Err(VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Timeout));
+        let verify_err = Err(VerifyError::VerifyError(
+            VerifySource::Blobfs,
+            VerifyFailureReason::Verify(verify::VerifyError::Internal),
+        ));
+        let fidl_err = Err(VerifyError::VerifyError(
+            VerifySource::Blobfs,
+            VerifyFailureReason::Fidl(fidl::Error::OutOfRange),
+        ));
 
         assert_eq!(PolicyEngine::apply_config(timeout_err, &config).is_err(), expect_err);
         assert_eq!(PolicyEngine::apply_config(verify_err, &config).is_err(), expect_err);

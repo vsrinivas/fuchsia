@@ -4,7 +4,7 @@
 
 use {
     super::{
-        errors::{VerifyError, VerifyFailureReason},
+        errors::{VerifyError, VerifyFailureReason, VerifySource},
         inspect::write_to_inspect,
     },
     fidl_fuchsia_update_verify as fidl,
@@ -37,7 +37,7 @@ pub fn do_health_verification<'a>(
             res.map_err(VerifyFailureReason::Verify)
         })
         .on_timeout(VERIFY_TIMEOUT, || Err(VerifyFailureReason::Timeout))
-        .map_err(VerifyError::BlobFs);
+        .map_err(|e| VerifyError::VerifyError(VerifySource::Blobfs, e));
     async move {
         let res = fut.await;
         let () = write_to_inspect(node, &res, now.elapsed());
@@ -71,7 +71,7 @@ mod tests {
 
         assert_matches!(
             do_health_verification(&proxy, &finspect::Node::default()).await,
-            Err(VerifyError::BlobFs(VerifyFailureReason::Verify(_)))
+            Err(VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Verify(_)))
         );
     }
 
@@ -84,7 +84,7 @@ mod tests {
 
         assert_matches!(
             do_health_verification(&proxy, &finspect::Node::default()).await,
-            Err(VerifyError::BlobFs(VerifyFailureReason::Fidl(_)))
+            Err(VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Fidl(_)))
         );
     }
 
@@ -126,7 +126,13 @@ mod tests {
         // Verify we get the Timeout error.
         match executor.run_until_stalled(&mut fut) {
             Poll::Ready(res) => {
-                assert_matches!(res, Err(VerifyError::BlobFs(VerifyFailureReason::Timeout)))
+                assert_matches!(
+                    res,
+                    Err(VerifyError::VerifyError(
+                        VerifySource::Blobfs,
+                        VerifyFailureReason::Timeout
+                    ))
+                )
             }
             Poll::Pending => panic!("future unexpectedly pending"),
         };
