@@ -811,15 +811,21 @@ test "${#remote_linker[@]}" = 0 || {
   esac
 
   # Linking with clang++ generally requires libc++.
-  libcxx_remote=( "${clang_dir_remote[0]}"/lib/"$clang_lib_triple"/libc++.a )
+  _libcxx_remote="${clang_dir_remote[0]}"/lib/"$clang_lib_triple"/libc++.a
+  if test -f "$project_root_rel/$_libcxx_remote"
+  then libcxx_remote=( "$_libcxx_remote" )
+  fi
 
   # Location of clang_rt.crt{begin,end}.o and libclang_rt.builtins.a
   # * is a version number like 14.0.0.
   # For now, we upload the entire rt lib dir.
   # From non-linux environments, point to the linux binaries, and the appropriate
   # target triple dir underneath it.
-  _rt_libdir_remote=( "$project_root_rel/$clang_dir_remote"/lib/clang/*/lib/"$clang_lib_triple" )
-  rt_libdir_remote=( "$(relpath "$project_root" "${_rt_libdir_remote[@]}" )" )
+  if ls "$project_root_rel/$clang_dir_remote"/lib/clang/*/lib/"$clang_lib_triple"
+  then
+    _rt_libdir_remote=( "$project_root_rel/$clang_dir_remote"/lib/clang/*/lib/"$clang_lib_triple" )
+    rt_libdir_remote=( "$(relpath "$project_root" "${_rt_libdir_remote[@]}" )" )
+  fi > /dev/null 2>&1
 }
 
 extra_inputs_rel_project_root=()
@@ -956,7 +962,7 @@ dump_vars() {
   debug_var "source root" "$top_source"
   debug_var "linker (remote)" "${remote_linker[@]}"
   debug_var "lld (remote)" "${lld_remote[@]}"
-  debug_var "libc++ (remote)" "$libcxx_remote"
+  debug_var "libc++ (remote)" "${libcxx_remote[@]}"
   debug_var "rt libdir (remote)" "${rt_libdir_remote[@]}"
   debug_var "link args" "${link_arg_files[@]}"
   debug_var "link sysroot" "${link_sysroot[@]}"
