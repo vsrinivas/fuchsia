@@ -97,6 +97,9 @@ not page aligned, or *op* is **ZX_PAGER_OP_FAIL** and *data* is not one of **ZX_
 
 **ZX_ERR_NOT_SUPPORTED**  *op* is not supported on the specified range in *pager_vmo*.
 
+**ZX_ERR_NOT_FOUND** *op* is **ZX_PAGER_OP_DIRTY** and the range denoted by *offset* and
+*length* contains unsupplied regions.
+
 ## See also
 
  - [`zx_pager_create_vmo()`]

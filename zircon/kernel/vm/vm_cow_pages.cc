@@ -4444,10 +4444,6 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
 
   ASSERT(page_source_);
 
-  if (!InRange(offset, len, size_)) {
-    return ZX_ERR_OUT_OF_RANGE;
-  }
-
   if (!page_source_->ShouldTrapDirtyTransitions()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -4455,6 +4451,34 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
 
   const uint64_t start_offset = offset;
   const uint64_t end_offset = offset + len;
+
+  if (start_offset > size_locked()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // Overflow check.
+  if (end_offset < start_offset) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  // After the above checks, the page source has tried to respond correctly to a range of dirty
+  // requests, so the kernel should resolve those outstanding dirty requests, even in the failure
+  // case. From a returned error, the page source currently has no ability to detect which ranges
+  // caused the error, so the kernel should either completely succeed or fail the request instead of
+  // holding onto a partial outstanding request that will block pager progress.
+  auto invalidate_requests_on_error = fit::defer([this, len, start_offset] {
+    AssertHeld(lock_);
+    DEBUG_ASSERT(size_locked() >= start_offset);
+
+    uint64_t invalidate_len = ktl::min(size_locked() - start_offset, len);
+    InvalidateDirtyRequestsLocked(start_offset, invalidate_len);
+  });
+
+  // The page source may have tried to mark a larger range than necessary as dirty. Invalidate the
+  // requests and return an error.
+  if (end_offset > size_locked()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
 
   // If any of the pages in the range are zero page markers (Clean zero pages), they need to be
   // forked in order to be dirtied (written to). Find the number of such pages that need to be
@@ -4474,7 +4498,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
           }
           return ZX_ERR_NEXT;
         },
-        [this](uint64_t start, uint64_t end) {
+        [](uint64_t start, uint64_t end) {
           // A gap indicates a page that has not been supplied yet. It will need to be supplied
           // first. Although we will never generate a DIRTY request for absent pages in the first
           // place, it is still possible for a clean page to get evicted after the DIRTY request was
@@ -4482,8 +4506,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
           //
           // Spuriously resolve the DIRTY page request, and let the waiter(s) retry looking up the
           // page, which will generate a READ request first to supply the missing page.
-          page_source_->OnPagesDirtied(start, end - start);
-          return ZX_ERR_NOT_SUPPORTED;
+          return ZX_ERR_NOT_FOUND;
         },
         start_offset, end);
 
@@ -4693,9 +4716,12 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
         return ZX_ERR_NEXT;
       },
       start_offset, end_offset);
-
   // We don't expect a failure from the traversal.
   DEBUG_ASSERT(status == ZX_OK);
+
+  // All pages have been dirtied successfully, so cancel the cleanup on error.
+  invalidate_requests_on_error.cancel();
+
   VMO_VALIDATION_ASSERT(DebugValidateSupplyZeroOffsetLocked());
   return status;
 }
