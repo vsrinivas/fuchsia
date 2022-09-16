@@ -2,9 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/lib/icu/third_party_icu_headers.gni")
+
 group("tests") {
   testonly = true
   public_deps = [ ":i18n_tests" ]
+}
+
+third_party_icu_headers("icu_headers") {
+  headers = [
+    "third_party/icu/source/common/unicode/ucnv.h",
+    "third_party/icu/source/i18n/unicode/msgfmt.h",
+  ]
 }
 
 executable("i18n_tests") {
@@ -16,6 +25,7 @@ executable("i18n_tests") {
   ]
 
   deps = [
+    ":icu_headers",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",

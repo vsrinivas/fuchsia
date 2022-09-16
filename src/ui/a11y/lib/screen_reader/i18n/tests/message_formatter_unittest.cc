@@ -8,8 +8,7 @@
 
 #include "src/lib/intl/lookup/cpp/lookup.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "third_party/icu/source/common/unicode/ucnv.h"
-#include "third_party/icu/source/i18n/unicode/msgfmt.h"
+#include "src/ui/a11y/lib/screen_reader/i18n/tests/icu_headers.h"
 
 namespace accessibility_test {
 namespace {
