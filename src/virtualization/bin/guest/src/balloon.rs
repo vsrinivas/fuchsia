@@ -90,17 +90,24 @@ pub async fn handle_balloon(
 pub async fn handle_balloon_stats(
     balloon_controller: BalloonControllerProxy,
 ) -> Result<String, Error> {
+    let (current_num_pages, requested_num_pages) =
+        balloon_controller.get_balloon_size().await.context("Failed to get balloon size")?;
+    let output = format!(
+        concat!("current-pages:       {}\n", "requested-pages:     {}\n"),
+        current_num_pages, requested_num_pages
+    );
     // If this errors we couldn't find the specified env at all
     let (status, mem_stats) =
         balloon_controller.get_mem_stats().await.context("Failed to get memory statistics")?;
     // mem_stats is an Option<Vec<MemStat>>,
     // and it can succeed with a None (usually on ZX_ERR_SHOULD_WAIT)
     let stats = mem_stats.ok_or(anyhow!(zx_status::Status::from_raw(status)))?;
-    Ok(stats
-        .into_iter()
-        .map(|stat| format!("{}{}", map_tag_name(stat.tag), stat.val))
-        .collect::<Vec<String>>()
-        .join("\n"))
+    Ok(output
+        + &stats
+            .into_iter()
+            .map(|stat| format!("{}{}", map_tag_name(stat.tag), stat.val))
+            .collect::<Vec<String>>()
+            .join("\n"))
 }
 
 #[cfg(test)]
@@ -141,7 +148,7 @@ mod test {
                 .await
                 .expect("Failed to read from stream")
                 .expect("Failed to parse request")
-                .into_get_mem_stats()
+                .into_get_balloon_size()
                 .expect("Unexpected call to Balloon Controller");
             stream.control_handle().shutdown();
         });
@@ -162,20 +169,30 @@ mod test {
         let mut test_stats: [MemStat; 0] = [];
 
         let _task = fasync::Task::spawn(async move {
-            let responder = stream
+            let get_balloon_size_responder = stream
+                .next()
+                .await
+                .expect("Failed to read from stream")
+                .expect("Failed to parse request")
+                .into_get_balloon_size()
+                .expect("Unexpected call to Balloon Controller");
+            get_balloon_size_responder.send(0, 0).expect("Failed to send request to proxy");
+
+            let get_mem_stats_responder = stream
                 .next()
                 .await
                 .expect("Failed to read from stream")
                 .expect("Failed to parse request")
                 .into_get_mem_stats()
                 .expect("Unexpected call to Balloon Controller");
-            responder
+            get_mem_stats_responder
                 .send(0, Some(&mut test_stats.iter_mut()))
                 .expect("Failed to send request to proxy");
         });
 
-        let res = handle_balloon_stats(proxy).await;
-        assert_eq!(res.unwrap(), "");
+        let res: String =
+            handle_balloon_stats(proxy).await.expect("Unexpected error result from Balloon Stats");
+        assert_eq!(res, concat!("current-pages:       0\n", "requested-pages:     0\n"));
     }
 
     #[fasync::run_until_stalled(test)]
@@ -183,14 +200,23 @@ mod test {
         let (proxy, mut stream) = create_proxy_and_stream::<BalloonControllerMarker>().unwrap();
 
         let _task = fasync::Task::spawn(async move {
-            let responder = stream
+            let get_balloon_size_responder = stream
+                .next()
+                .await
+                .expect("Failed to read from stream")
+                .expect("Failed to parse request")
+                .into_get_balloon_size()
+                .expect("Unexpected call to Balloon Controller");
+            get_balloon_size_responder.send(0, 0).expect("Failed to send request to proxy");
+
+            let get_mem_stats_responder = stream
                 .next()
                 .await
                 .expect("Failed to read from stream")
                 .expect("Failed to parse request")
                 .into_get_mem_stats()
                 .expect("Unexpected call to Balloon Controller");
-            responder
+            get_mem_stats_responder
                 .send(zx_status::Status::INTERNAL.into_raw(), None)
                 .expect("Failed to send request to proxy");
         });
@@ -206,23 +232,42 @@ mod test {
             MemStat { tag: VIRTIO_BALLOON_S_SWAP_OUT, val: 3 },
         ];
 
+        let current_num_pages = 6;
+        let requested_num_pages = 8;
         let (proxy, mut stream) = create_proxy_and_stream::<BalloonControllerMarker>().unwrap();
         let _task = fasync::Task::spawn(async move {
-            let responder = stream
+            let get_balloon_size_responder = stream
+                .next()
+                .await
+                .expect("Failed to read from stream")
+                .expect("Failed to parse request")
+                .into_get_balloon_size()
+                .expect("Unexpected call to Balloon Controller");
+            get_balloon_size_responder
+                .send(current_num_pages, requested_num_pages)
+                .expect("Failed to send request to proxy");
+
+            let get_mem_stats_responder = stream
                 .next()
                 .await
                 .expect("Failed to read from stream")
                 .expect("Failed to parse request")
                 .into_get_mem_stats()
                 .expect("Unexpected call to Balloon Controller");
-            responder
+            get_mem_stats_responder
                 .send(0, Some(&mut test_stats.iter_mut()))
                 .expect("Failed to send request to proxy");
         });
-
         let res: String =
             handle_balloon_stats(proxy).await.expect("Unexpected error result from Balloon Stats");
-        assert_eq!((&res).split_whitespace().collect::<String>().contains("swap-in:2"), true);
-        assert_eq!((&res).split_whitespace().collect::<String>().contains("swap-out:3"), true);
+        assert_eq!(
+            res,
+            concat!(
+                "current-pages:       6\n",
+                "requested-pages:     8\n",
+                "swap-in:             2\n",
+                "swap-out:            3",
+            )
+        );
     }
 }
