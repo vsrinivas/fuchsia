@@ -7,10 +7,12 @@ use {
         errors::{VerifyError, VerifyFailureReason, VerifySource},
         inspect::write_to_inspect,
     },
+    ::fidl::client::QueryResponseFut,
     fidl_fuchsia_update_verify as fidl,
+    fidl_fuchsia_update_verify::{VerifierVerifyResult, VerifyOptions},
     fuchsia_async::TimeoutExt as _,
     fuchsia_inspect as finspect,
-    futures::future::{FutureExt as _, TryFutureExt as _},
+    futures::future::{join_all, FutureExt as _, TryFutureExt as _},
     std::{
         future::Future,
         time::{Duration, Instant},
@@ -22,24 +24,45 @@ use {
 // logging verification durations locally to validate this constant is still apropos.
 const VERIFY_TIMEOUT: Duration = Duration::from_secs(60);
 
+pub trait VerifierProxy {
+    fn call_verify(&self, options: VerifyOptions) -> QueryResponseFut<VerifierVerifyResult>;
+    fn source(&self) -> VerifySource;
+}
+
+impl VerifierProxy for fidl::BlobfsVerifierProxy {
+    fn call_verify(&self, options: VerifyOptions) -> QueryResponseFut<VerifierVerifyResult> {
+        self.verify(options)
+    }
+    fn source(&self) -> VerifySource {
+        VerifySource::Blobfs
+    }
+}
+
 /// Do the health verification and handle associated errors. This is NOT to be confused with
 /// verified execution; health verification is a different process we use to determine if we should
 /// give up on the backup slot.
 pub fn do_health_verification<'a>(
-    proxy: &'a fidl::BlobfsVerifierProxy,
+    proxies: &'a [&dyn VerifierProxy],
     node: &'a finspect::Node,
 ) -> impl Future<Output = Result<(), VerifyError>> + 'a {
     let now = Instant::now();
-    let fut = proxy
-        .verify(fidl::VerifyOptions::EMPTY)
-        .map(|res| {
-            let res = res.map_err(VerifyFailureReason::Fidl)?;
-            res.map_err(VerifyFailureReason::Verify)
+    let futures: Vec<_> = proxies
+        .iter()
+        .map(|proxy| {
+            proxy
+                .call_verify(VerifyOptions::EMPTY)
+                .map(|res| {
+                    let res = res.map_err(VerifyFailureReason::Fidl)?;
+                    res.map_err(VerifyFailureReason::Verify)
+                })
+                .on_timeout(VERIFY_TIMEOUT, || Err(VerifyFailureReason::Timeout))
+                .map_err(|e| VerifyError::VerifyError(proxy.source(), e))
         })
-        .on_timeout(VERIFY_TIMEOUT, || Err(VerifyFailureReason::Timeout))
-        .map_err(|e| VerifyError::VerifyError(VerifySource::Blobfs, e));
+        .collect();
+
     async move {
-        let res = fut.await;
+        let res: Result<(), VerifyError> =
+            join_all(futures).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r));
         let () = write_to_inspect(node, &res, now.elapsed());
         res
     }
@@ -61,7 +84,10 @@ mod tests {
         let mock = Arc::new(MockVerifierService::new(|_| Ok(())));
         let (proxy, _server) = mock.spawn_blobfs_verifier_service();
 
-        assert_matches!(do_health_verification(&proxy, &finspect::Node::default()).await, Ok(()));
+        assert_matches!(
+            do_health_verification(&[&proxy], &finspect::Node::default()).await,
+            Ok(())
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -70,8 +96,34 @@ mod tests {
         let (proxy, _server) = mock.spawn_blobfs_verifier_service();
 
         assert_matches!(
-            do_health_verification(&proxy, &finspect::Node::default()).await,
+            do_health_verification(&[&proxy], &finspect::Node::default()).await,
             Err(VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Verify(_)))
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn blobfs_one_succeeds_one_fails() {
+        let mock_1 = Arc::new(MockVerifierService::new(|_| Err(fidl::VerifyError::Internal)));
+        let (proxy_1, _server_1) = mock_1.spawn_blobfs_verifier_service();
+        let mock_2 = Arc::new(MockVerifierService::new(|_| Ok(())));
+        let (proxy_2, _server_2) = mock_2.spawn_blobfs_verifier_service();
+
+        assert_matches!(
+            do_health_verification(&[&proxy_1, &proxy_2], &finspect::Node::default()).await,
+            Err(VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Verify(_)))
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn blobfs_both_succeed() {
+        let mock_1 = Arc::new(MockVerifierService::new(|_| Ok(())));
+        let (proxy_1, _server_1) = mock_1.spawn_blobfs_verifier_service();
+        let mock_2 = Arc::new(MockVerifierService::new(|_| Ok(())));
+        let (proxy_2, _server_2) = mock_2.spawn_blobfs_verifier_service();
+
+        assert_matches!(
+            do_health_verification(&[&proxy_1, &proxy_2], &finspect::Node::default()).await,
+            Ok(_)
         );
     }
 
@@ -83,7 +135,7 @@ mod tests {
         drop(server);
 
         assert_matches!(
-            do_health_verification(&proxy, &finspect::Node::default()).await,
+            do_health_verification(&[&proxy], &finspect::Node::default()).await,
             Err(VerifyError::VerifyError(VerifySource::Blobfs, VerifyFailureReason::Fidl(_)))
         );
     }
@@ -91,10 +143,7 @@ mod tests {
     /// Hook that will cause `verify` to never return.
     struct HangingVerifyHook;
     impl Hook for HangingVerifyHook {
-        fn verify(
-            &self,
-            _options: fidl::VerifyOptions,
-        ) -> BoxFuture<'static, fidl::VerifierVerifyResult> {
+        fn verify(&self, _options: VerifyOptions) -> BoxFuture<'static, VerifierVerifyResult> {
             futures::future::pending().boxed()
         }
     }
@@ -109,7 +158,8 @@ mod tests {
         let node = finspect::Node::default();
 
         // Start do_health_verification, which will internally create the timeout future.
-        let fut = do_health_verification(&proxy, &node);
+        let proxies: Vec<&dyn VerifierProxy> = vec![&proxy];
+        let fut = do_health_verification(&proxies, &node);
         pin_mut!(fut);
 
         // Since the timer has not expired, the future should still be pending.

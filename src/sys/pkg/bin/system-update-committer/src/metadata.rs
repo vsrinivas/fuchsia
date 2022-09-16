@@ -53,7 +53,7 @@ pub async fn put_metadata_in_happy_state(
             // At this point, the FIDL server should start responding to requests so that clients can
             // find out that the health verification is underway.
             unblocker = unblock_fidl_server(unblocker)?;
-            let res = do_health_verification(blobfs_verifier, node).await;
+            let res = do_health_verification(&[blobfs_verifier], node).await;
             let () = PolicyEngine::apply_config(res, config).map_err(MetadataError::Verify)?;
             let () =
                 do_commit(boot_manager, current_config).await.map_err(MetadataError::Commit)?;
