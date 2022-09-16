@@ -72,11 +72,12 @@ pub mod raw {
 pub mod processed {
     use crate::processes_data::raw;
     use fuchsia_zircon_types::{zx_koid_t, zx_obj_type_t};
+    use serde::Serialize;
     use std::collections::HashMap;
 
     /// Similar to raw::KernelObject, except it does not contain the
     /// object type.
-    #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
+    #[derive(Serialize, Clone, Copy, Eq, Hash, PartialEq, Debug, Default)]
     pub struct KernelObject {
         pub koid: zx_koid_t,
         pub related_koid: zx_koid_t,
@@ -85,7 +86,7 @@ pub mod processed {
 
     /// A structure containing all objects of the same type
     /// associated with the same process.
-    #[derive(PartialEq, Debug, Default)]
+    #[derive(Serialize, PartialEq, Debug, Default)]
     pub struct KernelObjectsByType {
         /// The type of the objects.
         pub objects_type: zx_obj_type_t,
@@ -98,7 +99,7 @@ pub mod processed {
 
     /// Similar to raw::KernelObject, except that objects are
     /// grouped by their type.
-    #[derive(PartialEq, Debug, Default)]
+    #[derive(Serialize, PartialEq, Debug, Default)]
     pub struct Process {
         pub koid: zx_koid_t,
         pub name: String,
@@ -110,7 +111,7 @@ pub mod processed {
 
     /// Similar to raw::ProcessesData, except that it contains an
     /// additional field that stores the number of processes.
-    #[derive(PartialEq, Debug)]
+    #[derive(Serialize, PartialEq, Debug)]
     pub struct ProcessesData {
         /// Number of processes found.
         pub processes_count: i64,

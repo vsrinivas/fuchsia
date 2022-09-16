@@ -10,6 +10,7 @@ use {
     anyhow::Result,
     ffx_core::ffx_plugin,
     ffx_process_explorer_args::QueryCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_process_explorer::QueryProxy,
     fuchsia_zircon_types as zx_types,
     futures::AsyncReadExt,
@@ -20,16 +21,25 @@ use {
 // TODO(fxbug.dev/107973): The plugin must remain experimental until the FIDL API is strongly typed.
 #[ffx_plugin("ffx_process_explorer", QueryProxy = "core/appmgr:out:fuchsia.process.explorer.Query")]
 /// Prints processes data.
-pub async fn print_processes_data(query_proxy: QueryProxy, _cmd: QueryCommand) -> Result<()> {
-    let s = get_processes_data(query_proxy).await?;
-    // TODO(fxbug.dev/#107974): Print the raw JSON only when "--machine=json" is passed.
-    pretty_print_processes_data(processed::ProcessesData::from(s))
+pub async fn print_processes_data(
+    query_proxy: QueryProxy,
+    _cmd: QueryCommand,
+    #[ffx(machine = processed::ProcessesData)] writer: Writer,
+) -> Result<()> {
+    let processes_data = get_processes_data(query_proxy).await?;
+    let output = processed::ProcessesData::from(processes_data);
+    if writer.is_machine() {
+        writer.machine(&output)?;
+        Ok(())
+    } else {
+        pretty_print_processes_data(writer, output)
+    }
 }
 
-/// Returns a JSON string containing all processes data obtained via the QueryProxyInterface.
-async fn get_processes_data(
+/// Returns a buffer containing the data obtained via the QueryProxyInterface.
+async fn get_raw_data(
     query_proxy: impl fidl_fuchsia_process_explorer::QueryProxyInterface,
-) -> Result<raw::ProcessesData> {
+) -> Result<Vec<u8>> {
     // Create a socket.
     let (rx, tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
 
@@ -40,14 +50,22 @@ async fn get_processes_data(
     let mut rx_async = fidl::AsyncSocket::from_socket(rx)?;
     let mut buffer = Vec::new();
     rx_async.read_to_end(&mut buffer).await?;
-    Ok(serde_json::from_slice(&buffer)?)
+
+    Ok(buffer)
 }
 
-/// Print to stdout a human-readable presentation of `processes_data`.
-fn pretty_print_processes_data(processes_data: processed::ProcessesData) -> Result<()> {
-    let stdout = std::io::stdout().lock();
-    let mut w = std::io::BufWriter::new(stdout);
-
+/// Returns data structured according to ProcessesData obtained via the `QueryProxyInterface`. Performs basic schema validation.
+async fn get_processes_data(
+    query_proxy: impl fidl_fuchsia_process_explorer::QueryProxyInterface,
+) -> Result<raw::ProcessesData> {
+    let buffer = get_raw_data(query_proxy).await?;
+    Ok(serde_json::from_slice(&buffer)?)
+}
+/// Print to 'w' a human-readable presentation of `processes_data`.
+fn pretty_print_processes_data(
+    mut w: Writer,
+    processes_data: processed::ProcessesData,
+) -> Result<()> {
     writeln!(w, "Total processes found:    {}", processes_data.processes_count)?;
     writeln!(w)?;
     for process in processes_data.processes {
@@ -170,12 +188,14 @@ mod tests {
             },
         ],
     };
+
+    static ref DATA_WRITTEN_BY_PROCESS_EXPLORER: Vec<u8> = serde_json::to_vec(&*EXPECTED_PROCESSES_DATA).unwrap();
+
     }
 
     use fidl_fuchsia_process_explorer::QueryRequest;
 
-    /// Returns a fake query service that writes `EXPECTED_PROCESSES_DATA` to the socket
-    /// when `WriteJsonProcessesData` is called.
+    /// Returns a fake query service that writes `EXPECTED_PROCESSES_DATA` serialized to JSON to the socket when `WriteJsonProcessesData` is called.
     fn setup_fake_query_svc() -> QueryProxy {
         setup_fake_query_proxy(|request| match request {
             QueryRequest::WriteJsonProcessesData { socket, .. } => {
@@ -190,7 +210,15 @@ mod tests {
         })
     }
 
-    /// Tests that `get_processes_data` properly reads data from the query service.
+    /// Tests that `get_raw_data` properly reads data from the process explorer query service.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_raw_data_test() {
+        let query_proxy = setup_fake_query_svc();
+        let raw_data = get_raw_data(query_proxy).await.expect("failed to get raw data");
+        assert_eq!(raw_data, *DATA_WRITTEN_BY_PROCESS_EXPLORER);
+    }
+
+    /// Tests that `get_processes_data` properly reads and parses data from the query service.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_processes_data_test() {
         let query_proxy = setup_fake_query_svc();

@@ -10,6 +10,7 @@ ffx_plugin("ffx_process_explorer") {
 
   deps = [
     "//sdk/fidl/fuchsia.process.explorer:fuchsia.process.explorer_rust",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon-types",
     "//third_party/rust_crates:anyhow",
