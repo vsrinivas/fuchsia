@@ -29,6 +29,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
+#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/sys/appmgr/constants.h"
 #include "src/sys/appmgr/startup_service.h"
 
@@ -131,40 +132,54 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
     }
   }
 
-  // 3. Prepare to run sysmgr and install callback to actually start it once the
-  //    logs are connected.
-  auto run_sysmgr = [this, dispatcher] {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = sysmgr_url_;
-    launch_info.arguments = fidl::Clone(sysmgr_args_);
-    sysmgr_.events().OnDirectoryReady = [this] { sysmgr_running_ = true; };
-    sysmgr_.events().OnTerminated = [dispatcher](zx_status_t exit_code,
-                                                 TerminationReason termination_reason) {
-      // If sysmgr exited for any reason, something went wrong, so trigger reboot.
-      FX_LOGS(ERROR) << "sysmgr exited with status " << exit_code;
-      fuchsia::hardware::power::statecontrol::AdminPtr power_admin;
-      zx_status_t status =
-          fdio_service_connect("/svc/fuchsia.hardware.power.statecontrol.Admin",
-                               power_admin.NewRequest(dispatcher).TakeChannel().release());
-      FX_CHECK(status == ZX_OK) << "Could not connect to power state control service: "
-                                << zx_status_get_string(status);
-      const auto reason = fuchsia::hardware::power::statecontrol::RebootReason::SYSMGR_FAILURE;
-      auto cb = [](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result result) {
-        if (result.is_err()) {
-          FX_LOGS(FATAL) << "Failed to reboot after sysmgr exited: "
-                         << zx_status_get_string(result.err());
-        }
+  // 3. Prepare to run sysmgr, if enabled, and install callback to actually start it once the logs
+  //    are connected.
+  if (!sysmgr_url_.empty()) {
+    auto run_sysmgr = [this, dispatcher] {
+      fuchsia::sys::LaunchInfo launch_info;
+      launch_info.url = sysmgr_url_;
+      launch_info.arguments = fidl::Clone(sysmgr_args_);
+      sysmgr_.events().OnTerminated = [dispatcher](zx_status_t exit_code,
+                                                   TerminationReason termination_reason) {
+        // If sysmgr exited for any reason, something went wrong, so trigger reboot.
+        FX_LOGS(ERROR) << "sysmgr exited with status " << exit_code;
+        fuchsia::hardware::power::statecontrol::AdminPtr power_admin;
+        zx_status_t status =
+            fdio_service_connect("/svc/fuchsia.hardware.power.statecontrol.Admin",
+                                 power_admin.NewRequest(dispatcher).TakeChannel().release());
+        FX_CHECK(status == ZX_OK) << "Could not connect to power state control service: "
+                                  << zx_status_get_string(status);
+        const auto reason = fuchsia::hardware::power::statecontrol::RebootReason::SYSMGR_FAILURE;
+        auto cb = [](fuchsia::hardware::power::statecontrol::Admin_Reboot_Result result) {
+          if (result.is_err()) {
+            FX_LOGS(FATAL) << "Failed to reboot after sysmgr exited: "
+                           << zx_status_get_string(result.err());
+          }
+        };
+        power_admin->Reboot(reason, cb);
       };
-      power_admin->Reboot(reason, cb);
+      root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
     };
-    root_realm_->CreateComponent(std::move(launch_info), sysmgr_.NewRequest());
-  };
-  root_realm_->log_connector()->OnReady(run_sysmgr);
+    root_realm_->log_connector()->OnReady(run_sysmgr);
+  } else {
+    FX_LOGS(INFO) << "Running appmgr without sysmgr";
+    auto run_sysmgr = [this, dispatcher] {
+      fuchsia::sys::EnvironmentOptions options = {.inherit_parent_services = true};
+      fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
+      sys_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
+      sys_vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher);
+      sys_vfs_->ServeDirectory(sys_dir_, service_list->host_directory.NewRequest().TakeChannel());
+      root_realm_->CreateNestedEnvironment(sys_env_.NewRequest(), sys_env_controller_.NewRequest(),
+                                           "sys", std::move(service_list), options);
+    };
+
+    root_realm_->log_connector()->OnReady(run_sysmgr);
+  }
 
   // 4. Publish outgoing directories.
   // Connect to the tracing service, and then publish the root realm's hub
-  // directory as 'hub/' and the first nested realm's (to be created by sysmgr)
-  // service directory as 'svc/'.
+  // directory as 'hub/' and the first nested realm's
+  // service directory as 'svc/' (either created by sysmgr, or appmgr itself if there is no sysmgr).
   zx::channel svc_client_chan, svc_server_chan;
   if (zx_status_t status = zx::channel::create(0, &svc_client_chan, &svc_server_chan);
       status != ZX_OK) {

@@ -33,6 +33,7 @@ struct AppmgrArgs {
   std::unordered_set<Moniker> lifecycle_allowlist;
   fuchsia::sys::ServiceListPtr root_realm_services;
   const std::shared_ptr<sys::ServiceDirectory> environment_services;
+  // empty for no sysmgr
   std::string sysmgr_url;
   fidl::VectorPtr<std::string> sysmgr_args;
   std::optional<fuchsia::sys::LoaderPtr> loader;
@@ -64,8 +65,6 @@ class Appmgr {
 
   Realm* RootRealm() { return root_realm_.get(); }
 
-  bool is_sysmgr_running() const { return sysmgr_running_; }
-
  private:
   // Initialize recording of appmgr's own CPU usage in the CpuWatcher.
   void RecordSelfCpuStats();
@@ -83,10 +82,17 @@ class Appmgr {
   fs::SynchronousVfs publish_vfs_;
   fbl::RefPtr<fs::PseudoDir> publish_dir_;
 
+  // Only populated if launch_sysmgr = false.
+  fuchsia::sys::EnvironmentPtr sys_env_;
+  fuchsia::sys::EnvironmentControllerPtr sys_env_controller_;
+  std::unique_ptr<fs::SynchronousVfs> sys_vfs_;
+  fbl::RefPtr<fs::PseudoDir> sys_dir_;
+
+  // Only populated if launch_sysmgr = true.
   fuchsia::sys::ComponentControllerPtr sysmgr_;
   std::string sysmgr_url_;
   fidl::VectorPtr<std::string> sysmgr_args_;
-  bool sysmgr_running_ = false;
+
   StorageWatchdog storage_watchdog_;
   StorageMetrics storage_metrics_;
 

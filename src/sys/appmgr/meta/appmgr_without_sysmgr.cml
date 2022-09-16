@@ -3,4 +3,7 @@
 // found in the LICENSE file.
 {
     include: [ "//src/sys/appmgr/meta/appmgr.common.cml" ],
+    program: {
+        args: [ "--launch_sysmgr=false" ],
+    },
 }

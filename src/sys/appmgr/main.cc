@@ -67,6 +67,8 @@ zx_status_t InitStdinSocket() {
 
 // Flag that allows overriding the "auto_update_packages" default set in GN. Useful for tests.
 const char kAutoUpdatePackages[] = "auto_update_packages";
+// Flag that determines whether sysmgr will be included.
+const char kLaunchSysmgr[] = "launch_sysmgr";
 
 int main(int argc, char** argv) {
   std::string auto_update_packages;
@@ -138,12 +140,25 @@ int main(int argc, char** argv) {
   if (!auto_update_packages.empty()) {
     sysmgr_args.push_back("--auto_update_packages=" + auto_update_packages);
   }
+  std::string sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx";
+  if (cmdline.HasOption(kLaunchSysmgr)) {
+    std::string s;
+    cmdline.GetOptionValue(kLaunchSysmgr, &s);
+    if (s == "true") {
+      // default
+    } else if (s == "false") {
+      sysmgr_url = "";
+    } else {
+      FX_LOGS(ERROR) << "Invalid value for --launch_sysmgr: " << s;
+      return ZX_ERR_INVALID_ARGS;
+    }
+  }
   component::AppmgrArgs args{.pa_directory_request = std::move(pa_directory_request),
                              .lifecycle_request = std::move(lifecycle_request),
                              .lifecycle_allowlist = std::move(lifecycle_allowlist),
                              .root_realm_services = std::move(root_realm_services),
                              .environment_services = std::move(environment_services),
-                             .sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx",
+                             .sysmgr_url = sysmgr_url,
                              .sysmgr_args = sysmgr_args,
                              .trace_server_channel = std::move(trace_server),
                              .stop_callback = [](zx_status_t status) { exit(status); }};

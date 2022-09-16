@@ -1,0 +1,148 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/appmgr",
+
+        // Run appmgr in a job with ZX_POL_AMBIENT_MARK_VMO_EXEC job policy, so that it can in turn
+        // implement the v1 'deprecated-ambient-replace-as-executable' feature.
+        job_policy_ambient_mark_vmo_exec: "true",
+        lifecycle: { stop_event: "notify" },
+    },
+    capabilities: [
+        {
+            directory: "hub-legacy",
+            rights: [ "rw*" ],
+            path: "/hub",
+        },
+
+        // These protocols exposed by appmgr are implemented by appmgr.
+        {
+            protocol: "fuchsia.appmgr.Startup",
+            path: "/appmgr_svc/fuchsia.appmgr.Startup",
+        },
+        {
+            protocol: "fuchsia.sys.internal.LogConnector",
+            from: "self",
+            path: "/appmgr_svc/fuchsia.sys.internal.LogConnector",
+        },
+        {
+            protocol: "fuchsia.sys.internal.ComponentEventProvider",
+            from: "self",
+            path: "/appmgr_svc/fuchsia.sys.internal.ComponentEventProvider",
+        },
+
+        // `svc_from_sys` and `svc_for_sys` contain protocols that are routed from `appmgr` to
+        // `core` and `core` to `appmgr` respectively. This makes it possible to add a declaration
+        // that routes a protocol to or from the `sys` realm without having to change `appmgr.cml`.
+        // This is particulary helpful for core shards, because it allows the routes between v1 and
+        // v2 to be contained within the core shard itself. `core` runs a `core_proxy` executable
+        // which manages the task of proxying protocols used by or offered from `self` to or from
+        // these directories.
+        //
+        // For more information on how to route protocols between v1 and v2, read:
+        // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/components#v1-component-provides-service
+        // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/components#route-to-v1
+        {
+            directory: "svc_from_sys",
+            rights: [ "rw*" ],
+            path: "/svc",
+        },
+    ],
+    use: [
+        {
+            directory: "svc_for_sys",
+            rights: [ "rw*" ],
+            path: "/svc_for_sys",
+        },
+        {
+            directory: "blob",
+            rights: [ "rw*" ],
+            path: "/blob",
+        },
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot",
+        },
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+        {
+            directory: "durable",
+            rights: [ "rw*" ],
+            path: "/durable",
+        },
+        {
+            directory: "factory",
+            rights: [ "r*" ],
+            path: "/factory",
+        },
+        {
+            directory: "data",
+            rights: [ "rw*" ],
+            path: "/data",
+        },
+        {
+            directory: "mnt",
+            rights: [ "rw*" ],
+            path: "/mnt",
+        },
+        {
+            directory: "pkgfs",
+            rights: [ "rx*" ],
+            path: "/pkgfs",
+        },
+        {
+            directory: "system",
+            rights: [ "rx*" ],
+            path: "/system",
+        },
+        {
+            directory: "tmp",
+            rights: [ "rw*" ],
+            path: "/tmp",
+        },
+        {
+            directory: "hub",
+            rights: [ "rw*" ],
+            path: "/hub-v2",
+        },
+
+        // These services are used by appmgr directly
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+
+                // For triggering reboot when sysmgr exits
+                "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.process.Launcher",
+            ],
+        },
+    ],
+    expose: [
+        {
+            directory: [
+                "hub-legacy",
+                "svc_from_sys",
+            ],
+            from: "self",
+        },
+        {
+            protocol: [
+                "fuchsia.appmgr.Startup",
+                "fuchsia.sys.internal.ComponentEventProvider",
+                "fuchsia.sys.internal.LogConnector",
+            ],
+            from: "self",
+        },
+    ],
+}
