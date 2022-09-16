@@ -7,9 +7,9 @@ toc:
 - title: "Visual Studio Code"
   section:
   - heading: "Extensions"
-  - title: "Installing the Fuchsia developer extension"
+  - title: "Installing the Fuchsia extension"
     path: /docs/reference/tools/editors/vscode/fuchsia-ext-install.md
-  - title: "Using the Fuchsia developer extension"
+  - title: "Using the Fuchsia extension"
     path: /docs/reference/tools/editors/vscode/fuchsia-ext-using.md
   - title: "Additional VS Code extensions for Fuchsia"
     path: /docs/reference/tools/editors/vscode/extensions.md

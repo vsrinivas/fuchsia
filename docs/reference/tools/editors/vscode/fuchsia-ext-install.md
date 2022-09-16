@@ -1,10 +1,10 @@
 {% include "docs/reference/tools/editors/vscode/_common/_vscode_header.md" %}
 
-# Installing the Fuchsia developer extension
+# Installing the Fuchsia extension for VS Code
 
-The [Fuchsia developer extension][extension-link]{: .external} provides support for debugging
-Fuchsia devices, logging, and syntax highlighting. This extension is Fuchsia’s official extension 
-and can be used with the source tree and the SDK. 
+The [Fuchsia extension for VS Code][extension-link]{: .external} provides support for debugging
+Fuchsia devices, logging, and syntax highlighting. This extension is Fuchsia’s official extension
+and can be used with the source tree and the SDK.
 
 ### Prerequisites
 
@@ -24,13 +24,13 @@ For more information on configuring Vs Code, see
 * Download the [Fuchsia extension][extension-link]{: .external} from the Visual
   Studio Marketplace.
 
-Note: The extension automatically detects the appropriate settings for each workspace that you use,
-including the location of relevant tools such as ffx.  If these settings are incorrect or not set automatically,
-follow the section below.
+The extension automatically detects the appropriate settings for each workspace that you use,
+including the location of relevant tools such as ffx.  If these settings are incorrect or not set
+automatically, follow the section below.
 
 * {SDK}
 
-    Note: For more information about the Fuchsia SDK and how to configure your environment, 
+    Note: For more information about the Fuchsia SDK and how to configure your environment,
     see [SDK fundamentals][sdk-fundamentals].
 
     1. Open your desired workspace. For example, open the
@@ -70,9 +70,9 @@ follow the section below.
     exit: 2: null
     ```
 
-You have successfully configured the Fuchsia developer extension! To see more
-information on how to use the Fuchsia developer extension, see
-[Using the Fuchsia developer extension][using-fuchsia-ext].
+You have successfully configured the Fuchsia extension! To see more
+information on how to use the Fuchsia extension, see
+[Using the Fuchsia extension for VS Code][using-fuchsia-ext].
 
 <!-- Reference links -->
 [sdk-fundamentals]: /docs/get-started/sdk/learn

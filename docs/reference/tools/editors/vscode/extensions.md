@@ -7,14 +7,14 @@ for Fuchsia:
 
 ## Official Fuchsia-specific extensions
 
-Fuchsia-specific extensions provide support with custom Fuchsia files. These extensions are developed
-and are currently supported by Fuchsia developers.
+Fuchsia-specific extensions provide support for working with Fuchsia software
+and systems. These extensions are currently supported by the Fuchsia project.
 
-### Fuchsia developer extension
+### Fuchsia extension for VS Code
 
-The [Fuchsia developer extension][extension-link]{: .external} provides support for debugging
-Fuchsia devices, logging, and syntax highlighting. This extension is Fuchsia’s official extension 
-and can be used with the source tree and the SDK. For more information see the 
+The [Fuchsia extension for VS Code][extension-link]{: .external} provides support for debugging
+Fuchsia devices, logging, and syntax highlighting. This extension is Fuchsia’s official extension
+and can be used with the source tree and the SDK. For more information see the
 [Fuchsia developer extension page][extension-install].
 
 <img class="vscode-image vscode-image-center"

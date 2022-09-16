@@ -4,8 +4,6 @@ Fuchsia recommends that you use an IDE (integrated development environment)
 to develop Fuchsia and to build software on Fuchsia. An IDE consolidates
 multiple tools in a single GUI to help you develop.
 
-There are multiple ways to develop, but Fuchsia has developed multiple VS Code
-extensions.
 
 ## VS Code {#vs-code}
 
@@ -30,8 +28,8 @@ VS Code supports a large amount of extensions which can help you customize
 your IDE. Fuchsia has developed several extensions that are specific for
 developing the Fuchsia platform and for developing on Fuchsia with the SDK.
 
-* [Fuchsia developer][fuchsia-dev-ext]: This extension integrates key
-  [ffx][ffx-ref] functionality into VS Code such as connecting, debugging,
+* [Fuchsia extension for VS Code][fuchsia-dev-ext]: This extension integrates key
+  Fuchsia-specific functionality into VS Code such as connecting, debugging,
   analyzing logs for Fuchsia devices, and functionality to help you edit and
   debug code as you develop for Fuchsia.
 * [Additional Fuchsia extensions][fuchsia-source-ext]: This guide lists

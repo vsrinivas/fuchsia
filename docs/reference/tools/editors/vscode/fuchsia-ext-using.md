@@ -1,34 +1,37 @@
 {% include "docs/reference/tools/editors/vscode/_common/_vscode_header.md" %}
 
-# Using the Fuchsia developer extension
+# Using the Fuchsia extension for VS Code
 
-This extension adds some [ffx][ffx-ref] features to VS Code such as:
+This extension adds support for working with Fuchsia targets and source code, including:
 
-* Connecting to a device through `ffx target`.
-* Debugging with `ffx debug`.
-* Analyzing logs for Fuchsia devices with `ffx log`.
-
-It also includes functionality to help you edit and debug code as you develop
-for Fuchsia.
+* Connecting to a device.
+* Debugging C++ and Rust code (supported by `zxdb`).
+* Analyzing logs from Fuchsia devices.
 
 Note: To see how to perform the initial installation and configuration of the
-extension, see [Installing the Fuchsia developer VS Code extension][fuchsia-dev-ext].
+extension, see [Installing the Fuchsia extension for VS Code][fuchsia-dev-ext].
+
+## Compatibility
+
+The Fuchsia extension is compatible with ffx `9.20220803.3.1` and forward.
 
 ## Edit code
 
 By default, VS code provides provides syntax highlighting, errors and warnings,
 jumping to a definition, and lists references for C++.
 
+Note: The Fuchsia extension does not directly implement support for C++
+editor. Instead, it relies on additional VS Code extensions for that functionality.
+
 VS Code actively analyzes your code in the background and can show you various
 warnings or errors. For more information, see
 [Errors and warnings][vscode-errors]{: .external}.
 
-The Fuchsia developer extension also provides [FIDL][fidl-docs] syntax
-highlighting.
+The Fuchsia extension also provides [FIDL][fidl-docs] syntax highlighting.
 
 ## Connect to a Fuchsia device
 
-The Fuchsia developer extension allows you to connect to a Fuchsia target which
+The Fuchsia extension allows you to connect to a Fuchsia target which
 can be a physical device or an emulator. The extension supports multiple
 target devices and allows you to easily switch between various Fuchsia devices.
 You can only connect to a single device at any given time.
@@ -68,7 +71,7 @@ VS Code command palette. In most cases, you have the following options:
   Fuchsia device. This is equivalent to running
   `ffx target default set <device-name>`.
 * **Show log for `<device-name>`**: This option opens the **Fuchsia logs** tab of
-  the Fuchsia developer extension. For more information, see
+  the Fuchsia extension. For more information, see
   [View Fuchsia logs](#view-fuchsia-logs). This is equivalent to running
   `ffx log`.
 * **Reboot `<device-name>`**: This options restarts your Fuchsia device. This is
@@ -80,7 +83,7 @@ VS Code command palette. In most cases, you have the following options:
 
 ## View Fuchsia logs {#view-fuchsia-logs}
 
-The Fuchsia developer extension allows you to view the symbolized logs
+The Fuchsia extension allows you to view the symbolized logs
 (human-readable stack traces) for your connected Fuchsia device. This is equivalent
 to running `ffx log`. For more information on `ffx log`, see
 [Monitor device logs][monitor-device-logs].
@@ -92,7 +95,7 @@ to load all of the available Fuchsia logs. If no logs display, it may be an
 indication that you do not have connected a Fuchsia device or an emulator.
 
 <img class="vscode-image vscode-image-center"
-     alt="This figure shows the Fuchsia logs from the Fuchsia VS Code extension.
+     alt="This figure shows the Fuchsia logs from the Fuchsia extension.
      There is a filter to see all INFO severity logs that don't include any
      network or vulkan component monikers."
      src="images/extensions/ext-fuchsia-logs.png"/>
@@ -272,7 +275,7 @@ The filtering supports the following operators:
 
 ### Clearing the Fuchsia logs
 
-Once the Fuchsia developer extension has streamed the Fuchsia logs, you can
+Once the Fuchsia extension has streamed the Fuchsia logs, you can
 clear the listed Fuchsia logs to see the incoming logging events for your Fuchsia
 device.
 
@@ -282,7 +285,7 @@ tab.
 
 ## Debug code
 
-The Fuchsia developer extension allows you to run the Fuchsia debugger,
+The Fuchsia extension allows you to run the Fuchsia debugger,
 [zxdb][zxdb-docs]. This integrates the zxdb debugger into the VS Code IDE to
 let you set break points and other debugger settings as you are working with
 source code.
