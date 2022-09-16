@@ -4,15 +4,13 @@
 
 #![cfg(test)]
 
-use std::{borrow::Cow, collections::HashMap, os::unix::io::AsRawFd as _};
+use std::{collections::HashMap, os::unix::io::AsRawFd as _};
 
 use anyhow::Context as _;
 use assert_matches::assert_matches;
 use fidl_fuchsia_net as fnet;
-use fidl_fuchsia_net_interfaces as fnet_interfaces;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
-use fidl_fuchsia_netemul_network as fnetemul_network;
 use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async::{
@@ -26,8 +24,7 @@ use futures::{
     TryFutureExt as _, TryStreamExt as _,
 };
 use net_declare::{
-    fidl_ip, fidl_ip_v4, fidl_ip_v4_with_prefix, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip_v4,
-    std_socket_addr,
+    fidl_ip, fidl_ip_v4, fidl_ip_v6, fidl_mac, fidl_subnet, std_ip_v4, std_socket_addr,
 };
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
@@ -692,7 +689,7 @@ async fn run_tcp_socket_test(
 // once we can support IPv6 in `join_network`, then we can parametrize this test
 // and exercise IPv6 code paths for TCP as well.
 async fn tcp_socket_accept_cross_ns<Client: Netstack, Server: Netstack, E: netemul::Endpoint>(
-    name: &str,
+    name: String,
 ) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let net = sandbox.create_network("net").await.expect("failed to create network");
@@ -700,26 +697,20 @@ async fn tcp_socket_accept_cross_ns<Client: Netstack, Server: Netstack, E: netem
     let client = sandbox
         .create_netstack_realm::<Client, _>(format!("{}_client", name))
         .expect("failed to create client realm");
-    let _client_interface = join_network::<E, Client, _>(
-        &client,
-        &net,
-        "client-ep",
-        fidl_ip_v4_with_prefix!("192.168.0.2/24"),
-    )
-    .await
-    .expect("install interface in netstack");
+    let client_interface = client
+        .join_network::<E, _>(&net, "client-ep")
+        .await
+        .expect("failed to join network in realm");
+    client_interface.add_address_and_subnet_route(CLIENT_SUBNET).await.expect("configure address");
 
     let server = sandbox
         .create_netstack_realm::<Server, _>(format!("{}_client", name))
         .expect("failed to create server realm");
-    let _server_interface = join_network::<E, Server, _>(
-        &server,
-        &net,
-        "server-ep",
-        fidl_ip_v4_with_prefix!("192.168.0.1/24"),
-    )
-    .await
-    .expect("install interface in netstack");
+    let server_interface = server
+        .join_network::<E, _>(&net, "server-ep")
+        .await
+        .expect("failed to join network in realm");
+    server_interface.add_address_and_subnet_route(SERVER_SUBNET).await.expect("configure address");
 
     let fidl_fuchsia_net_ext::IpAddress(client_ip) = CLIENT_SUBNET.addr.into();
 
@@ -738,13 +729,11 @@ async fn tcp_socket_accept_cross_ns<Client: Netstack, Server: Netstack, E: netem
     assert_eq!(from.ip(), client_ip);
 }
 
-// TODO(https://fxbug.dev/88796): parameterize this test over endpoint types
-// once Netstack3 fully supports admin API surface.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn tcp_socket_accept() {
+#[variants_test]
+async fn tcp_socket_accept<E: netemul::Endpoint>(name: &str) {
     let ((), ()) = futures::join!(
-        tcp_socket_accept_cross_ns::<Netstack2, Netstack3, netemul::Ethernet>("2to3"),
-        tcp_socket_accept_cross_ns::<Netstack3, Netstack2, netemul::Ethernet>("3to2"),
+        tcp_socket_accept_cross_ns::<Netstack2, Netstack3, E>(format!("{}_2to3", name)),
+        tcp_socket_accept_cross_ns::<Netstack3, Netstack2, E>(format!("{}_3to2", name)),
     );
 }
 
@@ -1365,14 +1354,14 @@ async fn socket_clone_bind<N: Netstack>(name: &str, socket_type: SocketType) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let network = sandbox.create_network("net").await.expect("failed to create network");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let _interface = join_network::<netemul::Ethernet, N, _>(
-        &realm,
-        &network,
-        "stack",
-        fidl_ip_v4_with_prefix!("192.168.1.10/16"),
-    )
-    .await
-    .expect("join network failed");
+    let interface = realm
+        .join_network::<netemul::Ethernet, _>(&network, "stack")
+        .await
+        .expect("join network failed");
+    interface
+        .add_address_and_subnet_route(fidl_subnet!("192.168.1.10/16"))
+        .await
+        .expect("configure address");
 
     let socket = match socket_type {
         SocketType::Udp => realm
@@ -1412,14 +1401,14 @@ async fn udp_sendto_unroutable_leaves_socket_bound<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let network = sandbox.create_network("net").await.expect("failed to create network");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
-    let _interface = join_network::<netemul::Ethernet, N, _>(
-        &realm,
-        &network,
-        "stack",
-        fidl_ip_v4_with_prefix!("192.168.1.10/16"),
-    )
-    .await
-    .expect("join network failed");
+    let interface = realm
+        .join_network::<netemul::Ethernet, _>(&network, "stack")
+        .await
+        .expect("join network failed");
+    interface
+        .add_address_and_subnet_route(fidl_subnet!("192.168.1.10/16"))
+        .await
+        .expect("configure address");
 
     let socket = realm
         .datagram_socket(fposix_socket::Domain::Ipv4, fposix_socket::DatagramSocketProtocol::Udp)
@@ -1455,49 +1444,6 @@ struct MultiNicAndPeerConfig {
     multinic_socket: UdpSocket,
     peer_ip: std::net::Ipv4Addr,
     peer_socket: UdpSocket,
-}
-
-// TODO(https://fxbug.dev/88796): Replace this with TestNetwork::join_network
-// once Netstack3 supports fuchsia.net.interfaces.admin.
-async fn join_network<'a, E: netemul::Endpoint, N: Netstack, S: Into<Cow<'a, str>>>(
-    realm: &netemul::TestRealm<'a>,
-    network: &netemul::TestNetwork<'a>,
-    ep_name: S,
-    fnet::Ipv4AddressWithPrefix { addr, prefix_len }: fnet::Ipv4AddressWithPrefix,
-) -> Result<TestInterface<'a>> {
-    let endpoint =
-        network.create_endpoint::<E, _>(ep_name).await.context("create endpoint failed")?;
-    let interface =
-        endpoint.into_interface_in_realm(realm).await.context("failed to add endpoint")?;
-    interface.set_link_up(true).await.expect("failed to start endpoint");
-    // Ethernet Devices start enabled in Netstack3.
-    let expect_enable = !(E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap
-        && N::VERSION == NetstackVersion::Netstack3);
-    assert_eq!(
-        expect_enable,
-        interface.control().enable().await.expect("send enable").expect("enable interface")
-    );
-    // Netstack3 won't add an address to an interface that's offline, so wait
-    // for it to come up before proceeding.
-    let interface_state = realm
-        .connect_to_protocol::<fnet_interfaces::StateMarker>()
-        .context("failed to connect to fuchsia.net.interfaces/State")?;
-    let () = fnet_interfaces_ext::wait_interface_with_id(
-        fnet_interfaces_ext::event_stream_from_state(&interface_state)?,
-        &mut fnet_interfaces_ext::InterfaceState::Unknown(interface.id()),
-        |&fnet_interfaces_ext::Properties { online, .. }| online.then_some(()),
-    )
-    .await
-    .context("failed to observe interface up")?;
-    let subnet = fnet::Subnet { addr: fnet::IpAddress::Ipv4(addr), prefix_len };
-    interface
-        .stack()
-        .add_interface_address_deprecated(interface.id(), &mut subnet.clone())
-        .await
-        .squash_result()
-        .context("failed to add address")?;
-    interface.add_subnet_route(subnet).await?;
-    Ok(interface)
 }
 
 /// Sets up [`num_peers`]+1 realms: `num_peers` peers and 1 multi-nic host. Each
@@ -1550,17 +1496,32 @@ async fn with_multinic_and_peers<
             let peer = sandbox
                 .create_netstack_realm::<N, _>(format!("{name}_peer_{i}"))
                 .expect("create realm");
-            let peer_iface =
-                join_network::<E, N, _>(&peer, &network, format!("peer-{i}-ep"), peer_ip)
-                    .await
-                    .expect("install interface in peer netstack");
+            let peer_iface = peer
+                .join_network::<E, _>(&network, format!("peer-{i}-ep"))
+                .await
+                .expect("install interface in peer netstack");
+            peer_iface
+                .add_address_and_subnet_route(fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv4(peer_ip.addr),
+                    prefix_len: peer_ip.prefix_len,
+                })
+                .await
+                .expect("configure address");
             (peer, Interface { iface: peer_iface, ip: peer_ip })
         };
         let multinic_interface = {
             let name = format!("multinic-ep-{i}");
-            let multinic_iface = join_network::<E, N, _>(multinic, &network, name, multinic_ip)
+            let multinic_iface = multinic
+                .join_network::<E, _>(&network, name)
                 .await
                 .expect("adding interface failed");
+            multinic_iface
+                .add_address_and_subnet_route(fnet::Subnet {
+                    addr: fnet::IpAddress::Ipv4(multinic_ip.addr),
+                    prefix_len: multinic_ip.prefix_len,
+                })
+                .await
+                .expect("configure address");
             Interface { iface: multinic_iface, ip: multinic_ip }
         };
         Network { peer, _network: network, multinic_interface }
@@ -1632,8 +1593,6 @@ async fn with_multinic_and_peers<
     call_with_sockets(config).await
 }
 
-// TODO(https://fxbug.dev/88796): parameterize this test over endpoint types
-// once Netstack3 fully supports admin API surface.
 #[variants_test]
 async fn receive_on_bound_to_devices<N: Netstack>(name: &str) {
     const NUM_PEERS: u8 = 3;
@@ -1687,8 +1646,6 @@ async fn receive_on_bound_to_devices<N: Netstack>(name: &str) {
     .await
 }
 
-// TODO(https://fxbug.dev/88796): parameterize this test over endpoint types
-// once Netstack3 fully supports admin API surface.
 #[variants_test]
 async fn send_from_bound_to_device<N: Netstack>(name: &str) {
     const NUM_PEERS: u8 = 3;
@@ -1750,14 +1707,12 @@ async fn get_bound_device_errors_after_device_deleted<N: Netstack, E: netemul::E
 
     let host = sandbox.create_netstack_realm::<N, _>(format!("{name}_host")).expect("create realm");
 
-    let bound_interface = join_network::<E, N, _>(
-        &host,
-        &net,
-        "bound-device",
-        fidl_ip_v4_with_prefix!("192.168.0.1/16"),
-    )
-    .await
-    .expect("install interface in netstack");
+    let bound_interface =
+        host.join_network::<E, _>(&net, "bound-device").await.expect("host failed to join network");
+    bound_interface
+        .add_address_and_subnet_route(fidl_subnet!("192.168.0.1/16"))
+        .await
+        .expect("configure address");
 
     let host_sock =
         fasync::net::UdpSocket::bind_in_realm(&host, (std::net::Ipv4Addr::UNSPECIFIED, 0).into())
