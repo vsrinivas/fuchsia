@@ -397,24 +397,6 @@ template("fidl_library") {
       deps = sdk_deps
     }
 
-    api_normalize_target_name = "${target_name}_normalize"
-    normalized_file = "$target_gen_dir/${target_name}.normalized"
-    to_normalize = []
-    foreach(file, all_files) {
-      to_normalize += [ file.source ]
-    }
-    action(api_normalize_target_name) {
-      script = "//build/fidl/normalize.py"
-      inputs = to_normalize
-      outputs = [ normalized_file ]
-
-      args = [
-               "--out",
-               rebase_path(normalized_file, root_build_dir),
-               "--files",
-             ] + rebase_path(to_normalize, root_build_dir)
-    }
-
     sdk_atom("${target_name}_sdk") {
       id = "sdk://fidl/$library_name"
 
@@ -456,7 +438,6 @@ template("fidl_library") {
       }
 
       non_sdk_deps = [
-                       ":$api_normalize_target_name",
                        ":$compilation_target_name",
                        ":$meta_target_name",
                      ] + sdk_atom_deps
