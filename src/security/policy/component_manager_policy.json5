@@ -677,6 +677,7 @@
                     "/core/bt-snoop",
                     "/core/camera_device_watcher",
                     "/core/cobalt_system_metrics",
+                    "/core/driver_playground",
                     "/core/factory",
                     "/core/factory_env",
                     "/core/factory_reset",
