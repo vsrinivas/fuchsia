@@ -185,16 +185,16 @@ impl InstantContext for TestNonSyncCtx {
 }
 
 impl TcpNonSyncContext for TestNonSyncCtx {
-    type ReceiveBuffer = RingBuffer;
+    type ReceiveBuffer = stream::ReceiveBufferWithZirconSocket;
     type SendBuffer = RingBuffer;
-    type ReturnedBuffers = ();
-    type ProvidedBuffers = ();
+    type ReturnedBuffers = fuchsia_zircon::Socket;
+    type ProvidedBuffers = stream::LocalZirconSocket;
 
     fn on_new_connection(&mut self, _listener: ListenerId) {}
 
     fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers)
     {
-        (RingBuffer::default(), RingBuffer::default(), ())
+        BindingsNonSyncCtxImpl::new_passive_open_buffers()
     }
 }
 

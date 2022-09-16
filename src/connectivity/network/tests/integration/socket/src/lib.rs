@@ -688,9 +688,21 @@ async fn run_tcp_socket_test(
 // TODO(https://fxbug.dev/104974): This currently only tests for IPv4 addresses,
 // once we can support IPv6 in `join_network`, then we can parametrize this test
 // and exercise IPv6 code paths for TCP as well.
-async fn tcp_socket_accept_cross_ns<Client: Netstack, Server: Netstack, E: netemul::Endpoint>(
+// Note: This methods returns the two end of the established connection through
+// a continuation, this is if we return them directly, the endpoints created
+// inside the function will be dropped so no packets can be possibly sent and
+// ultimately fail the tests. Using a closure allows us to execute the rest of
+// test within the context where the endpoints are still alive.
+async fn tcp_socket_accept_cross_ns<
+    Client: Netstack,
+    Server: Netstack,
+    E: netemul::Endpoint,
+    Fut: Future,
+    F: FnOnce(fasync::net::TcpStream, fasync::net::TcpStream) -> Fut,
+>(
     name: String,
-) {
+    f: F,
+) -> Fut::Output {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
     let net = sandbox.create_network("net").await.expect("failed to create network");
 
@@ -721,20 +733,50 @@ async fn tcp_socket_accept_cross_ns<Client: Netstack, Server: Netstack, E: netem
         .await
         .expect("failed to create server socket");
 
-    let _client = fasync::net::TcpStream::connect_in_realm(&client, server_addr)
+    let client = fasync::net::TcpStream::connect_in_realm(&client, server_addr)
         .await
         .expect("failed to create client socket");
 
-    let (_, _accepted, from) = listener.accept().await.expect("accept failed");
+    let (_, accepted, from) = listener.accept().await.expect("accept failed");
     assert_eq!(from.ip(), client_ip);
+
+    f(client, accepted).await
 }
 
+// TODO(https://fxbug.dev/109648): Parametrize netstack versions using variants_test.
 #[variants_test]
 async fn tcp_socket_accept<E: netemul::Endpoint>(name: &str) {
     let ((), ()) = futures::join!(
-        tcp_socket_accept_cross_ns::<Netstack2, Netstack3, E>(format!("{}_2to3", name)),
-        tcp_socket_accept_cross_ns::<Netstack3, Netstack2, E>(format!("{}_3to2", name)),
+        tcp_socket_accept_cross_ns::<Netstack2, Netstack3, E, _, _>(
+            format!("{}_2to3", name),
+            |_ns2_client, _ns3_server| async {}
+        ),
+        tcp_socket_accept_cross_ns::<Netstack3, Netstack2, E, _, _>(
+            format!("{}_3to2", name),
+            |_ns3_client, _ns2_server| async {}
+        ),
     );
+}
+
+// TODO(https://fxbug.dev/109648): Parametrize netstack versions using variants_test.
+#[variants_test]
+async fn tcp_socket_send_recv<E: netemul::Endpoint>(name: &str) {
+    tcp_socket_accept_cross_ns::<Netstack2, Netstack3, E, _, _>(
+        format!("{}_2to3", name),
+        |mut ns2_sender, mut ns3_receiver| async move {
+            const PAYLOAD: &'static [u8] = b"Hello World";
+            let write_count =
+                ns2_sender.write(PAYLOAD).await.expect("write to tcp client stream failed");
+
+            assert_eq!(write_count, PAYLOAD.len());
+            let mut buf = [0u8; 16];
+            let read_count =
+                ns3_receiver.read(&mut buf).await.expect("read from tcp server stream failed");
+            assert_eq!(read_count, write_count);
+            assert_eq!(&buf[..read_count], PAYLOAD);
+        },
+    )
+    .await;
 }
 
 #[variants_test]

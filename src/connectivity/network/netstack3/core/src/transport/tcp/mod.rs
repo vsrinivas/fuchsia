@@ -6,10 +6,10 @@
 
 pub mod buffer;
 mod rtt;
-mod segment;
+pub mod segment;
 mod seqnum;
 pub mod socket;
-mod state;
+pub mod state;
 
 use rand::RngCore;
 

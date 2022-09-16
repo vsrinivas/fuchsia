@@ -155,7 +155,7 @@ pub struct RingBuffer {
 
 impl RingBuffer {
     /// Creates a new `RingBuffer`.
-    pub(super) fn new(capacity: usize) -> Self {
+    pub fn new(capacity: usize) -> Self {
         Self { storage: vec![0; capacity], head: 0, len: 0 }
     }
 }
@@ -191,7 +191,7 @@ impl RingBuffer {
     ///
     /// Panics if the closure wants to discard more bytes than possible, i.e.,
     /// the value returned by `f` is greater than `self.len()`.
-    pub(super) fn read_with<'a, F>(&'a mut self, f: F) -> usize
+    pub fn read_with<'a, F>(&'a mut self, f: F) -> usize
     where
         F: for<'b> FnOnce(&'b [&'a [u8]]) -> usize,
     {

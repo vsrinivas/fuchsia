@@ -8,6 +8,7 @@ use std::{
     convert::Infallible as Never,
     num::{NonZeroU16, NonZeroUsize},
     ops::{ControlFlow, DerefMut as _},
+    sync::Arc,
 };
 
 use assert_matches::assert_matches;
@@ -37,26 +38,28 @@ use crate::bindings::{
 use netstack3_core::{
     ip::{socket::BufferIpSocketHandler, IpExt, TransportIpContext},
     transport::tcp::{
-        buffer::RingBuffer,
+        buffer::{Buffer, IntoBuffers, ReceiveBuffer, RingBuffer},
+        segment::Payload,
         socket::{
             accept, bind, connect_bound, connect_unbound, create_socket, listen, AcceptError,
             BindError, BoundId, BoundInfo, ConnectError, ConnectionId, ListenerId,
             LocallyBoundSocketId as _, SocketAddr, TcpNonSyncContext, TcpSyncContext, UnboundId,
         },
+        state::Takeable,
     },
     Ctx, SyncCtx,
 };
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug)]
 enum SocketId {
-    Unbound(UnboundId),
-    Bound(BoundId),
+    Unbound(UnboundId, LocalZirconSocket),
+    Bound(BoundId, LocalZirconSocket),
     Connection(ConnectionId),
     Listener(ListenerId),
 }
 
 pub(crate) trait SocketWorkerDispatcher:
-    TcpNonSyncContext<ProvidedBuffers = (), ReturnedBuffers = ()>
+    TcpNonSyncContext<ProvidedBuffers = LocalZirconSocket, ReturnedBuffers = zx::Socket>
 {
     /// Registers a newly created listener with its local zircon socket.
     ///
@@ -80,13 +83,33 @@ impl SocketWorkerDispatcher for crate::bindings::BindingsNonSyncCtxImpl {
     }
 }
 
+/// Local end of a zircon socket pair which will be later provided to state
+/// machine inside Core.
+#[derive(Debug)]
+pub(crate) struct LocalZirconSocket(zx::Socket);
+
+impl IntoBuffers<ReceiveBufferWithZirconSocket, RingBuffer> for LocalZirconSocket {
+    fn into_buffers(self) -> (ReceiveBufferWithZirconSocket, RingBuffer) {
+        let Self(socket) = self;
+        socket
+            .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_CONNECTED)
+            .expect("failed to signal that the connection is established");
+        (ReceiveBufferWithZirconSocket::new(Arc::new(socket)), RingBuffer::default())
+    }
+}
+
+impl Takeable for LocalZirconSocket {
+    fn take(&mut self) -> Self {
+        let Self(socket) = self;
+        Self(std::mem::replace(socket, zx::Socket::from_handle(zx::Handle::invalid())))
+    }
+}
+
 impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
-    type ReceiveBuffer = RingBuffer;
+    type ReceiveBuffer = ReceiveBufferWithZirconSocket;
     type SendBuffer = RingBuffer;
-    // TODO(https://fxbug.dev/104013): These are `()` for now but should be
-    // changed to zircon sockets.
-    type ReturnedBuffers = ();
-    type ProvidedBuffers = ();
+    type ReturnedBuffers = zx::Socket;
+    type ProvidedBuffers = LocalZirconSocket;
 
     fn on_new_connection(&mut self, listener: ListenerId) {
         self.tcp_listeners
@@ -98,26 +121,94 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
 
     fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers)
     {
-        (RingBuffer::default(), RingBuffer::default(), ())
+        let (local, peer) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create sockets");
+        let (rbuf, sbuf) = LocalZirconSocket(local).into_buffers();
+        (rbuf, sbuf, peer)
+    }
+}
+
+#[derive(Debug)]
+pub(crate) struct ReceiveBufferWithZirconSocket {
+    socket: Arc<zx::Socket>,
+    capacity: usize,
+    out_of_order: RingBuffer,
+}
+
+impl ReceiveBufferWithZirconSocket {
+    fn new(socket: Arc<zx::Socket>) -> Self {
+        let capacity = socket.info().expect("failed to get socket info").tx_buf_max;
+        Self { capacity, socket, out_of_order: RingBuffer::default() }
+    }
+}
+
+impl Takeable for ReceiveBufferWithZirconSocket {
+    fn take(&mut self) -> Self {
+        core::mem::replace(
+            self,
+            Self {
+                capacity: self.capacity,
+                socket: Arc::clone(&self.socket),
+                out_of_order: RingBuffer::new(0),
+            },
+        )
+    }
+}
+
+impl Buffer for ReceiveBufferWithZirconSocket {
+    fn len(&self) -> usize {
+        let info = self.socket.info().expect("failed to get socket info");
+        info.tx_buf_size
+    }
+
+    fn cap(&self) -> usize {
+        self.capacity
+    }
+}
+
+impl From<ReceiveBufferWithZirconSocket> for () {
+    fn from(_: ReceiveBufferWithZirconSocket) -> () {
+        ()
+    }
+}
+
+impl ReceiveBuffer for ReceiveBufferWithZirconSocket {
+    // We don't need to store anything in our process during passive close: all
+    // bytes left that are not yet read by our user will be stored in a zircon
+    // socket in the kernel.
+    type Residual = ();
+
+    fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
+        self.out_of_order.write_at(offset, data)
+    }
+
+    fn make_readable(&mut self, count: usize) {
+        self.out_of_order.make_readable(count);
+        let nread = self.out_of_order.read_with(|avail| {
+            let mut total = 0;
+            for chunk in avail {
+                assert_eq!(
+                    self.socket.write(*chunk).expect("failed to write into the zircon socket"),
+                    chunk.len()
+                );
+                total += chunk.len();
+            }
+            total
+        });
+        assert_eq!(count, nread);
     }
 }
 
 struct SocketWorker<I: IpExt, C> {
     id: SocketId,
     ctx: C,
-    // TODO(https://fxbug.dev/104976): We may be able to not store this in this
-    // struct, if not, this should be an `Arc` to be explicit that it will be
-    // shared with Core.
-    local: zx::Socket,
     peer: zx::Socket,
     _marker: IpVersionMarker<I>,
 }
 
 impl<I: IpExt, C> SocketWorker<I, C> {
-    fn new(id: SocketId, ctx: C) -> Result<Self, fposix::Errno> {
-        let (local, peer) = zx::Socket::create(zx::SocketOpts::STREAM)
-            .map_err(|_: zx::Status| fposix::Errno::Enobufs)?;
-        Ok(Self { id, ctx, local, peer, _marker: Default::default() })
+    fn new(id: SocketId, ctx: C, peer: zx::Socket) -> Self {
+        Self { id, ctx, peer, _marker: Default::default() }
     }
 }
 
@@ -132,23 +223,31 @@ where
     C: Clone + Send + Sync + 'static,
     C::NonSyncCtx: SocketWorkerDispatcher,
 {
+    let (local, peer) = zx::Socket::create(zx::SocketOpts::STREAM)
+        .map_err(|_: zx::Status| fposix::Errno::Enobufs)?;
     match (domain, proto) {
         (fposix_socket::Domain::Ipv4, fposix_socket::StreamSocketProtocol::Tcp) => {
             let id = {
                 let mut guard = ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-                SocketId::Unbound(create_socket::<Ipv4, _, _>(sync_ctx, non_sync_ctx))
+                SocketId::Unbound(
+                    create_socket::<Ipv4, _, _>(sync_ctx, non_sync_ctx),
+                    LocalZirconSocket(local),
+                )
             };
-            let worker = SocketWorker::<Ipv4, C>::new(id, ctx.clone())?;
+            let worker = SocketWorker::<Ipv4, C>::new(id, ctx.clone(), peer);
             Ok(worker.spawn(request_stream))
         }
         (fposix_socket::Domain::Ipv6, fposix_socket::StreamSocketProtocol::Tcp) => {
             let id = {
                 let mut guard = ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-                SocketId::Unbound(create_socket::<Ipv6, _, _>(sync_ctx, non_sync_ctx))
+                SocketId::Unbound(
+                    create_socket::<Ipv6, _, _>(sync_ctx, non_sync_ctx),
+                    LocalZirconSocket(local),
+                )
             };
-            let worker = SocketWorker::<Ipv6, C>::new(id, ctx.clone())?;
+            let worker = SocketWorker::<Ipv6, C>::new(id, ctx.clone(), peer);
             Ok(worker.spawn(request_stream))
         }
     }
@@ -227,7 +326,7 @@ where
 
             // TODO(https://fxbug.dev/103979): Remove socket from core.
             match self.id {
-                SocketId::Unbound(_) | SocketId::Bound(_) | SocketId::Connection(_) => {}
+                SocketId::Unbound(_, _) | SocketId::Bound(_, _) | SocketId::Connection(_) => {}
                 SocketId::Listener(listener) => {
                     self.ctx.lock().await.non_sync_ctx.unregister_listener(listener)
                 }
@@ -238,7 +337,7 @@ where
 
     async fn bind(&mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
         match self.id {
-            SocketId::Unbound(unbound) => {
+            SocketId::Unbound(unbound, ref mut local_socket) => {
                 let addr = I::SocketAddress::from_sock_addr(addr)?;
                 let mut guard = self.ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
@@ -250,10 +349,10 @@ where
                     NonZeroU16::new(addr.port()),
                 )
                 .map_err(IntoErrno::into_errno)?;
-                self.id = SocketId::Bound(bound);
+                self.id = SocketId::Bound(bound, local_socket.take());
                 Ok(())
             }
-            SocketId::Bound(_) | SocketId::Connection(_) | SocketId::Listener(_) => {
+            SocketId::Bound(_, _) | SocketId::Connection(_) | SocketId::Listener(_) => {
                 Err(fposix::Errno::Einval)
             }
         }
@@ -266,36 +365,28 @@ where
         let mut guard = self.ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
         match self.id {
-            SocketId::Bound(bound) => {
+            SocketId::Bound(bound, ref mut local_socket) => {
                 let connected = connect_bound::<I, _, _>(
                     sync_ctx,
                     non_sync_ctx,
                     bound,
                     SocketAddr { ip, port },
-                    (),
+                    local_socket.take(),
                 )
                 .map_err(IntoErrno::into_errno)?;
                 self.id = SocketId::Connection(connected);
-                // TODO(https://fxbug.dev/104302): Signal
-                // only if the connection is established.
-                self.local
-                    .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_CONNECTED)
-                    .expect("failed to signal that the connection is established");
                 Ok(())
             }
-            SocketId::Unbound(unbound) => {
+            SocketId::Unbound(unbound, ref mut local_socket) => {
                 let connected = connect_unbound::<I, _, _>(
                     sync_ctx,
                     non_sync_ctx,
                     unbound,
                     SocketAddr { ip, port },
-                    (),
+                    local_socket.take(),
                 )
                 .map_err(IntoErrno::into_errno)?;
                 self.id = SocketId::Connection(connected);
-                self.local
-                    .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_CONNECTED)
-                    .expect("failed to signal that the connection is established");
                 Ok(())
             }
             SocketId::Listener(_) => Err(fposix::Errno::Einval),
@@ -305,21 +396,17 @@ where
 
     async fn listen(&mut self, backlog: i16) -> Result<(), fposix::Errno> {
         match self.id {
-            SocketId::Bound(bound) => {
+            SocketId::Bound(bound, ref mut local_socket) => {
                 let mut guard = self.ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 let backlog = NonZeroUsize::new(backlog as usize).ok_or(fposix::Errno::Einval)?;
                 let listener = listen::<I, _, _>(sync_ctx, non_sync_ctx, bound, backlog);
-                non_sync_ctx.register_listener(
-                    listener,
-                    self.local
-                        .duplicate_handle(zx::Rights::SIGNAL_PEER)
-                        .expect("failed to duplicate handle"),
-                );
+                let LocalZirconSocket(local) = local_socket.take();
+                non_sync_ctx.register_listener(listener, local);
                 self.id = SocketId::Listener(listener);
                 Ok(())
             }
-            SocketId::Unbound(_) | SocketId::Connection(_) | SocketId::Listener(_) => {
+            SocketId::Unbound(_, _) | SocketId::Connection(_) | SocketId::Listener(_) => {
                 Err(fposix::Errno::Einval)
             }
         }
@@ -329,8 +416,8 @@ where
         let mut guard = self.ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
         match self.id {
-            SocketId::Unbound(_) => Err(fposix::Errno::Einval),
-            SocketId::Bound(id) => Ok({
+            SocketId::Unbound(_, _) => Err(fposix::Errno::Einval),
+            SocketId::Bound(id, _) => Ok({
                 let BoundInfo { addr, port } = id.get_info(sync_ctx, non_sync_ctx);
                 (addr, port).into_fidl()
             }),
@@ -356,29 +443,23 @@ where
             SocketId::Listener(listener) => {
                 let mut guard = self.ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-                let (accepted, addr) = accept::<I, _, _>(sync_ctx, non_sync_ctx, listener)
-                    .map(|(x, a, ())| {
-                        (
-                            x,
-                            I::SocketAddress::new(Some(ZonedAddr::Unzoned(a.ip)), a.port.get())
-                                .into_sock_addr(),
-                        )
-                    })
-                    .map_err(IntoErrno::into_errno)?;
+                let (accepted, SocketAddr { ip, port }, peer) =
+                    accept::<I, _, _>(sync_ctx, non_sync_ctx, listener)
+                        .map_err(IntoErrno::into_errno)?;
+                let addr = I::SocketAddress::new(Some(ZonedAddr::Unzoned(ip)), port.get())
+                    .into_sock_addr();
                 let (client, request_stream) =
                     fidl::endpoints::create_request_stream::<fposix_socket::StreamSocketMarker>()
                         .expect("failed to create new fidl endpoints");
-                let worker =
-                    SocketWorker::<I, C>::new(SocketId::Connection(accepted), self.ctx.clone())
-                        .expect("failed to create new worker");
-                worker
-                    .local
-                    .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_CONNECTED)
-                    .expect("failed to signal that the connection is established");
+                let worker = SocketWorker::<I, C>::new(
+                    SocketId::Connection(accepted),
+                    self.ctx.clone(),
+                    peer,
+                );
                 worker.spawn(request_stream);
                 Ok((want_addr.then(|| Box::new(addr)), client))
             }
-            SocketId::Unbound(_) | SocketId::Connection(_) | SocketId::Bound(_) => {
+            SocketId::Unbound(_, _) | SocketId::Connection(_) | SocketId::Bound(_, _) => {
                 Err(fposix::Errno::Einval)
             }
         }
@@ -836,5 +917,26 @@ where
     fn try_into_fidl(self) -> Result<<A::Version as IpSockAddrExt>::SocketAddress, Self::Error> {
         let Self { ip, port } = self;
         Ok((Some(ip), port).into_fidl())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn receive_buffer() {
+        let (local, peer) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create zircon socket");
+        let mut rbuf = ReceiveBufferWithZirconSocket::new(Arc::new(local));
+        const TEST_BYTES: &'static [u8] = b"Hello";
+        assert_eq!(rbuf.write_at(0, &TEST_BYTES), TEST_BYTES.len());
+        assert_eq!(rbuf.write_at(TEST_BYTES.len() * 2, &TEST_BYTES), TEST_BYTES.len());
+        assert_eq!(rbuf.write_at(TEST_BYTES.len(), &TEST_BYTES), TEST_BYTES.len());
+        rbuf.make_readable(TEST_BYTES.len() * 3);
+        let mut buf = [0u8; TEST_BYTES.len() * 3];
+        assert_eq!(rbuf.len(), TEST_BYTES.len() * 3);
+        assert_eq!(peer.read(&mut buf), Ok(TEST_BYTES.len() * 3));
+        assert_eq!(&buf, b"HelloHelloHello");
     }
 }
