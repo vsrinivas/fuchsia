@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/lib/vulkan/vulkan.gni")
 
 fuchsia_component("vulkaninfo-cmp") {
   manifest = "meta/vulkaninfo.cml"
@@ -17,4 +18,8 @@ fuchsia_component("vulkaninfo-cmp") {
 
 fuchsia_test_package("vulkaninfo") {
   test_components = [ ":vulkaninfo-cmp" ]
+
+  test_specs = {
+    environments = vulkan_envs
+  }
 }
