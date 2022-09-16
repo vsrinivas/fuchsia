@@ -23,6 +23,7 @@ rustc_library("wlan-stash") {
   test_deps = [
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:rand",
   ]
 
   sources = [

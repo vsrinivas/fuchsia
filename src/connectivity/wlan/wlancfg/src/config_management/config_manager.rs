@@ -26,7 +26,7 @@ use {
     rand::Rng,
     std::{
         clone::Clone,
-        collections::{hash_map::Entry, HashMap},
+        collections::{hash_map::Entry, HashMap, HashSet},
         fs,
         path::Path,
     },
@@ -289,12 +289,43 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                     )
                     .await
                     .map_err(|_| NetworkConfigError::StashWriteError)?;
+                // If there was only one config with this ID before removing it, remove the ID.
+                if network_configs.is_empty() {
+                    _ = saved_networks.remove(&network_id);
+                }
                 return Ok(true);
             } else {
-                info!("No matching network with the provided credential was found to remove.");
+                // Log whether there were any matching credential types without logging specific
+                // network data
+                let credential_types = network_configs
+                    .iter()
+                    .map(|nc| nc.credential.type_str())
+                    .collect::<HashSet<_>>();
+                if credential_types.contains(credential.type_str()) {
+                    info!("No matching network with the provided credential was found to remove.");
+                } else {
+                    info!(
+                        "No credential matching type {:?} found to remove for this network identifier. Help: found credential type(s): {:?}",
+                        credential.type_str(), credential_types
+                    );
+                }
             }
         } else {
-            info!("No network was found to remove with the provided SSID and security.");
+            // Check whether there is another network with the same SSID but different security
+            // type to remove.
+            let mut found_securities = SecurityType::list_variants();
+            found_securities.retain(|security| {
+                let id = NetworkIdentifier::new(network_id.ssid.clone(), security.clone());
+                saved_networks.contains_key(&id)
+            });
+            if found_securities.is_empty() {
+                info!("No network was found to remove with the provided SSID.");
+            } else {
+                info!(
+                    "No config to remove with security type {:?}. Help: found different config(s) for this SSID with security {:?}",
+                    network_id.security_type, found_securities
+                );
+            }
         }
         Ok(false)
     }
@@ -870,6 +901,8 @@ mod tests {
                 .expect("removing 'foo' failed")
         );
         assert_eq!(0, saved_networks.known_network_count().await);
+        // Check that the key in the saved networks manager's internal hashmap was removed.
+        assert!(saved_networks.saved_networks.lock().await.get(&network_id).is_none());
 
         // If we try to remove the network again, we won't get an error and nothing happens
         assert_eq!(

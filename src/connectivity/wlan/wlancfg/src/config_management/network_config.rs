@@ -397,6 +397,14 @@ impl Credential {
             _ => SecurityType::Wpa2,
         }
     }
+
+    pub fn type_str(&self) -> &str {
+        match self {
+            Credential::None => "None",
+            Credential::Password(_) => "Password",
+            Credential::Psk(_) => "PSK",
+        }
+    }
 }
 
 impl TryFrom<fidl_policy::Credential> for Credential {
@@ -505,6 +513,19 @@ impl From<SecurityType> for fidl_policy::SecurityType {
             SecurityType::Wpa2 => fidl_policy::SecurityType::Wpa2,
             SecurityType::Wpa3 => fidl_policy::SecurityType::Wpa3,
         }
+    }
+}
+
+impl SecurityType {
+    /// List all security type variants.
+    pub fn list_variants() -> Vec<Self> {
+        vec![
+            SecurityType::None,
+            SecurityType::Wep,
+            SecurityType::Wpa,
+            SecurityType::Wpa2,
+            SecurityType::Wpa3,
+        ]
     }
 }
 
@@ -1479,5 +1500,31 @@ mod tests {
         has_wpa3_support: bool,
     ) -> Option<fidl_security::Authentication> {
         super::select_authentication_method(security_type_detailed, credential, has_wpa3_support)
+    }
+
+    #[test_case(SecurityType::None)]
+    #[test_case(SecurityType::Wep)]
+    #[test_case(SecurityType::Wpa)]
+    #[test_case(SecurityType::Wpa2)]
+    #[test_case(SecurityType::Wpa3)]
+    fn test_security_type_list_includes_type(security: SecurityType) {
+        let types = SecurityType::list_variants();
+        assert!(types.contains(&security));
+    }
+
+    // If this test doesn't compile, add the security type to this test and list_security_types().
+    #[fuchsia::test]
+    fn test_security_type_list_completeness() {
+        // Any variant works here.
+        let security = SecurityType::Wpa;
+        // This will not compile if a new variant is added until this test is updated. Do not
+        // a wildcard branch.
+        match security {
+            SecurityType::None => {}
+            SecurityType::Wep => {}
+            SecurityType::Wpa => {}
+            SecurityType::Wpa2 => {}
+            SecurityType::Wpa3 => {}
+        }
     }
 }

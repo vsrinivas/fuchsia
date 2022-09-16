@@ -167,7 +167,14 @@ impl PolicyStash {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fuchsia_async as fasync, ieee80211::Ssid, std::convert::TryFrom,
+        super::*,
+        fuchsia_async as fasync,
+        ieee80211::Ssid,
+        rand::{
+            distributions::{Alphanumeric, DistString as _},
+            thread_rng,
+        },
+        std::convert::TryFrom,
         wlan_stash_constants::StashedSsid,
     };
 
@@ -353,6 +360,24 @@ mod tests {
         assert!(loaded_configs.is_empty());
     }
 
+    #[fasync::run_singlethreaded(test)]
+    async fn load_stash_does_not_load_empty_list() {
+        let stash_id = rand_string();
+        let stash = new_stash(&stash_id).await;
+
+        // add a network identifier with no configs
+        let net_id = NetworkIdentifier {
+            ssid: Ssid::try_from(rand_string()).unwrap().to_vec(),
+            security_type: SecurityType::Wpa2,
+        };
+        stash.write(&net_id, &vec![]).await.expect("failed to write value");
+
+        // recreate the stash to load it
+        let stash = new_stash(&stash_id).await;
+        let loaded_configs = stash.load().await.expect("failed to load stash");
+        assert!(loaded_configs.is_empty());
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn clear_stash() {
         let stash_id = "clear_stash";
@@ -428,5 +453,9 @@ mod tests {
 
     fn network_id(ssid: impl Into<StashedSsid>, security_type: SecurityType) -> NetworkIdentifier {
         NetworkIdentifier { ssid: ssid.into(), security_type }
+    }
+
+    fn rand_string() -> String {
+        Alphanumeric.sample_string(&mut thread_rng(), 20)
     }
 }
