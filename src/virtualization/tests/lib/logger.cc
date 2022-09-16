@@ -12,13 +12,16 @@ Logger& Logger::Get() {
   return logger;
 }
 
-void Logger::Write(std::string_view buffer) {
+void Logger::Write(std::string_view buffer, bool append_newline) {
   {
     std::lock_guard<std::mutex> guard(mutex_);
     buffer_.append(buffer);
+    if (append_newline) {
+      buffer_.append("\n");
+    }
   }
   if (kLogAllGuestOutput) {
-    std::cout << buffer;
+    std::cout << buffer << (append_newline ? "\n" : "");
   }
 }
 

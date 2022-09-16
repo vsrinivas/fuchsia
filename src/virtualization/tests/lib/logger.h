@@ -23,7 +23,10 @@ class Logger {
   void Reset();
 
   // Append the given string to the log.
-  void Write(std::string_view buffer);
+  void Write(std::string_view buffer) { Write(buffer, false); }
+
+  // Append the given string to the log, appending a newline character.
+  void WriteLine(std::string_view buffer) { Write(buffer, true); }
 
   // Return a copy of the current log.
   std::string Buffer() const;
@@ -36,6 +39,8 @@ class Logger {
   static constexpr bool kLogAllGuestOutput = true;
 
  private:
+  void Write(std::string_view buffer, bool append_newline);
+
   Logger() = default;
 
   Logger(const Logger&) = delete;

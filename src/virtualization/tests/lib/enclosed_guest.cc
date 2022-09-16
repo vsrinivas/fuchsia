@@ -746,14 +746,21 @@ zx_status_t TerminaEnclosedGuest::Execute(const std::vector<std::string>& comman
                                           const std::unordered_map<std::string, std::string>& env,
                                           zx::time deadline, std::string* result,
                                           int32_t* return_code) {
-  std::vector<std::string> argv = {"sh", "-c", JoinArgVector(command)};
+  std::string command_string = JoinArgVector(command);
+  Logger::Get().WriteLine(command_string);
+
+  std::vector<std::string> argv = {"sh", "-c", std::move(command_string)};
   auto command_result = command_runner_->Execute({argv, env});
   if (command_result.is_error()) {
     return command_result.error();
   }
   if (result) {
+    Logger::Get().WriteLine("stdout:");
+    Logger::Get().WriteLine(command_result.value().out);
     *result = std::move(command_result.value().out);
     if (!command_result.value().err.empty()) {
+      Logger::Get().WriteLine("stderr:");
+      Logger::Get().WriteLine(command_result.value().err);
       *result += "\n";
       *result += command_result.value().err;
     }
