@@ -72,6 +72,7 @@ class FakeDriverHost : public fidl::WireServer<fdm::DriverHostController> {
   }
 
   void Restart(RestartCompleter::Sync& completer) override {}
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override {}
 
  private:
   const char* expected_driver_;

@@ -29,6 +29,7 @@
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/inspect.h"
 #include "src/devices/bin/driver_manager/metadata.h"
+#include "src/devices/bin/driver_manager/v2/node.h"
 
 namespace fio = fuchsia_io;
 
@@ -89,8 +90,9 @@ struct DeviceDriverHostListTag {};
 struct DeviceAllDevicesListTag {};
 }  // namespace internal
 
-class Device
-    : public fbl::RefCounted<Device>,
+class Device final
+    : public dfv2::NodeManager,
+      public fbl::RefCounted<Device>,
       public fidl::WireServer<fuchsia_device_manager::Coordinator>,
       public fbl::ContainableBaseClasses<
           fbl::TaggedDoublyLinkedListable<Device*, internal::DeviceChildListTag>,
@@ -501,6 +503,7 @@ class Device
   const fbl::String& name() const { return name_; }
   const fbl::String& libname() const { return libname_; }
   const fbl::String& args() const { return args_; }
+  std::shared_ptr<dfv2::Node>& bound_node() { return bound_node_; }
 
   Coordinator* coordinator;
   uint32_t flags = 0;
@@ -516,6 +519,7 @@ class Device
 
   const fbl::String& link_name() const { return link_name_; }
   void set_link_name(fbl::String link_name) { link_name_ = std::move(link_name); }
+  void set_bound_node(std::shared_ptr<dfv2::Node> node) { bound_node_ = std::move(node); }
 
   // TODO(teisenbe): We probably want more states.
 #define STATE_VALUES(macro)                                                                        \
@@ -589,6 +593,13 @@ class Device
   bool IsAlreadyBound() const;
 
  private:
+  // dfv2::NodeManager
+  void Bind(dfv2::Node& node, std::shared_ptr<dfv2::BindResultTracker> result_tracker) override {}
+
+  zx::status<dfv2::DriverHost*> CreateDriverHost() override {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
+  }
+
   fidl::WireSharedClient<fuchsia_device_manager::DeviceController> device_controller_;
   std::optional<fidl::ServerBindingRef<fuchsia_device_manager::Coordinator>> coordinator_binding_;
 
@@ -684,6 +695,9 @@ class Device
 
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;
+
+  // If this is not null, there is a DFv2 node and DFv2 driver bound to this device.
+  std::shared_ptr<dfv2::Node> bound_node_;
 
   DeviceInspect inspect_;
 };

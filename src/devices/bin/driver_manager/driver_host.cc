@@ -4,6 +4,7 @@
 
 #include "driver_host.h"
 
+#include <lib/driver2/start_args.h>
 #include <lib/fdio/spawn-actions.h>
 #include <lib/fdio/spawn.h>
 #include <zircon/status.h>
@@ -14,6 +15,9 @@
 #include "fdio.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
+
+namespace fdh = fuchsia_driver_host;
+namespace frunner = fuchsia_component_runner;
 
 DriverHost::DriverHost(Coordinator* coordinator,
                        fidl::ClientEnd<fuchsia_device_manager::DriverHostController> controller,
@@ -136,4 +140,41 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
   LOGF(INFO, "Launching driver_host '%s' (pid %zu)", config.name, host->koid());
   *out = std::move(host);
   return ZX_OK;
+}
+
+zx::status<fidl::ClientEnd<fdh::Driver>> DriverHost::Start(
+    fidl::ClientEnd<fdf::Node> client_end,
+    fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
+    frunner::wire::ComponentStartInfo start_info) {
+  auto endpoints = fidl::CreateEndpoints<fdh::Driver>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+
+  auto binary = driver::ProgramValue(start_info.program(), "binary").value_or("");
+  fidl::Arena arena;
+  fdf::wire::DriverStartArgs args(arena);
+  args.set_node(std::move(client_end))
+      .set_url(arena, start_info.resolved_url())
+      .set_program(arena, start_info.program())
+      .set_ns(arena, start_info.ns())
+      .set_outgoing_dir(std::move(start_info.outgoing_dir()));
+
+  auto status = dfv2::SetEncodedConfig(args, start_info);
+  if (status.is_error()) {
+    return status.take_error();
+  }
+
+  if (!symbols.empty()) {
+    args.set_symbols(arena, symbols);
+  }
+
+  auto start = controller_->Start(args, std::move(endpoints->server));
+  if (!start.ok()) {
+    LOGF(ERROR, "Failed to start driver '%s' in driver host: %s", binary.data(),
+         start.FormatDescription().data());
+    return zx::error(start.status());
+  }
+
+  return zx::ok(std::move(endpoints->client));
 }

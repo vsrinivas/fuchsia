@@ -74,6 +74,9 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
  public:
   Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
        async_dispatcher_t* dispatcher);
+  Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
+       async_dispatcher_t* dispatcher, DriverHost* driver_host);
+
   ~Node() override;
 
   static zx::status<std::shared_ptr<Node>> CreateCompositeNode(

@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework v2-v1 lifecycle test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}

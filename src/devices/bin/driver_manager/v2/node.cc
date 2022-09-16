@@ -21,6 +21,11 @@ namespace dfv2 {
 
 namespace {
 
+// The driver's component name is based on the node name, which means that the
+// node name cam only have [a-z0-9-_.] characters. DFv1 composites contain ':'
+// which is not allowed, so replace those characters.
+void TransformToValidName(std::string& name) { std::replace(name.begin(), name.end(), ':', '_'); }
+
 template <typename R, typename F>
 std::optional<R> VisitOffer(fdecl::wire::Offer& offer, F apply) {
   // Note, we access each field of the union as mutable, so that `apply` can
@@ -258,17 +263,23 @@ Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_
       parents_(std::move(parents)),
       node_manager_(node_manager),
       dispatcher_(dispatcher) {
-  // The driver's component name is based on the node name, which means that the
-  // node name cam only have [a-z0-9-_.] characters. DFv1 composites contain ':'
-  // which is not allowed, so replace those characters.
-  std::replace(name_.begin(), name_.end(), ':', '_');
-
+  TransformToValidName(name_);
   if (auto primary_parent = PrimaryParent(parents_)) {
     // By default, we set `driver_host_` to match the primary parent's
     // `driver_host_`. If the node is then subsequently bound to a driver in a
     // different driver host, this value will be updated to match.
     driver_host_ = primary_parent->driver_host_;
   }
+}
+
+Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_manager,
+           async_dispatcher_t* dispatcher, DriverHost* driver_host)
+    : name_(name),
+      parents_(std::move(parents)),
+      node_manager_(node_manager),
+      dispatcher_(dispatcher),
+      driver_host_(driver_host) {
+  TransformToValidName(name_);
 }
 
 zx::status<std::shared_ptr<Node>> Node::CreateCompositeNode(

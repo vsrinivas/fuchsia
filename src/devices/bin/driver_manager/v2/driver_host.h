@@ -40,6 +40,9 @@ class DriverHostComponent final
   fidl::WireSharedClient<fuchsia_driver_host::DriverHost> driver_host_;
 };
 
+zx::status<> SetEncodedConfig(fuchsia_driver_framework::wire::DriverStartArgs& args,
+                              fuchsia_component_runner::wire::ComponentStartInfo& start_info);
+
 }  // namespace dfv2
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V2_DRIVER_HOST_H_

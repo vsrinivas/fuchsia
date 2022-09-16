@@ -525,6 +525,21 @@ zx_status_t Coordinator::NewDriverHost(const char* name, fbl::RefPtr<DriverHost>
   return ZX_OK;
 }
 
+zx_status_t Coordinator::CreateAndStartDFv2Component(const Dfv2Driver& driver,
+                                                     const fbl::RefPtr<Device>& dev) {
+  char path[fuchsia_device_manager::wire::kDevicePathMax + 1];
+  GetTopologicalPath(dev, path, sizeof(path));
+  std::replace(path, path + sizeof(path), '/', '.');
+
+  dev->flags |= DEV_CTX_BOUND;
+  dev->set_bound_node(std::make_shared<dfv2::Node>(std::string_view(path + 1),
+                                                   std::vector<dfv2::Node*>(), dev.get(),
+                                                   dispatcher_, dev->host().get()));
+
+  return driver_runner_->StartDriver(*dev->bound_node(), driver.url, driver.package_type)
+      .status_value();
+}
+
 zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
   if (dev->state() == Device::State::kDead) {
     return ZX_ERR_BAD_STATE;
@@ -712,8 +727,13 @@ zx_status_t Coordinator::PrepareNewProxy(const fbl::RefPtr<Device>& dev,
 
 zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
                                      const fbl::RefPtr<Device>& dev) {
+  // Cannot bind driver to an already bound device.
+  if (dev->IsAlreadyBound()) {
+    return ZX_ERR_ALREADY_BOUND;
+  }
+
   if (!matched_driver.is_v1()) {
-    return ZX_ERR_NOT_SUPPORTED;
+    return CreateAndStartDFv2Component(matched_driver.v2(), dev);
   }
 
   auto drv = matched_driver.v1();
@@ -723,10 +743,6 @@ zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
     return ZX_ERR_BAD_STATE;
   }
 
-  // cannot bind driver to already bound device
-  if (dev->IsAlreadyBound()) {
-    return ZX_ERR_ALREADY_BOUND;
-  }
   if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
     VLOGF(1, "Binding driver to %s in same driver host as parent", dev->name().data());
     // non-busdev is pretty simple

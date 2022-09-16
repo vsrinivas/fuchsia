@@ -70,6 +70,10 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   // Only exposed for testing.
   DeviceGroupManager& device_group_manager() { return device_group_manager_; }
 
+  // Create a driver component with `url` against a given `node`.
+  zx::status<> StartDriver(Node& node, std::string_view url,
+                           fuchsia_driver_index::DriverPackageType package_type);
+
  private:
   // fidl::WireServer<fuchsia_component_runner::ComponentRunner>
   void Start(StartRequestView request, StartCompleter::Sync& completer) override;
@@ -78,9 +82,6 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   // A nullptr for result_tracker is acceptable if the caller doesn't intend to
   // track the results.
   void Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) override;
-
-  zx::status<> StartDriver(Node& node, std::string_view url,
-                           fuchsia_driver_index::DriverPackageType package_type);
 
   zx::status<DriverHost*> CreateDriverHost() override;
   // The untracked version of TryBindAllOrphans.

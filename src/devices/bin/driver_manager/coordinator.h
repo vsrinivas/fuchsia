@@ -56,6 +56,7 @@
 #include "src/devices/bin/driver_manager/v1/suspend_resume_manager.h"
 #include "src/devices/bin/driver_manager/v1/suspend_task.h"
 #include "src/devices/bin/driver_manager/v1/unbind_task.h"
+#include "src/devices/bin/driver_manager/v2/driver_runner.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
@@ -194,6 +195,8 @@ class Coordinator : public CompositeManagerBridge,
   void set_loader_service_connector(LoaderServiceConnector loader_service_connector) {
     loader_service_connector_ = std::move(loader_service_connector);
   }
+  // Set the DFv2 driver runner. `runner` must outlive this class.
+  void set_driver_runner(dfv2::DriverRunner* runner) { driver_runner_ = runner; }
 
   SystemStateManager& system_state_manager() { return system_state_manager_; }
 
@@ -277,6 +280,9 @@ class Coordinator : public CompositeManagerBridge,
 
   zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
+  // Creates a DFv2 component with a given `url` and attaches it to `dev`.
+  zx_status_t CreateAndStartDFv2Component(const Dfv2Driver& driver, const fbl::RefPtr<Device>& dev);
+
   CoordinatorConfig config_;
   async_dispatcher_t* const dispatcher_;
   bool running_ = false;
@@ -318,6 +324,9 @@ class Coordinator : public CompositeManagerBridge,
   std::unique_ptr<DeviceGroupManager> device_group_manager_;
 
   std::unique_ptr<BindDriverManager> bind_driver_manager_;
+
+  // The runner for DFv2 components. This needs to outlive `coordinator`.
+  dfv2::DriverRunner* driver_runner_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_H_

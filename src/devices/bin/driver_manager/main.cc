@@ -245,12 +245,31 @@ int main(int argc, char** argv) {
 
   devfs_init(coordinator.root_device(), loop.dispatcher());
 
-  std::optional<dfv2::DriverRunner> driver_runner;
   std::optional<driver_manager::DriverDevelopmentService> driver_development_service;
-  std::optional<driver_manager::DevfsExporter> devfs_exporter;
+
+  // Launch devfs_exporter.
+  auto devfs_exporter =
+      driver_manager::DevfsExporter(coordinator.root_device()->devnode(), loop.dispatcher());
+  devfs_exporter.PublishExporter(outgoing);
+
+  // Launch DriverRunner for DFv2 drivers.
+  auto realm_result = service::Connect<fuchsia_component::Realm>();
+  if (realm_result.is_error()) {
+    return realm_result.error_value();
+  }
+  auto driver_index_result = service::Connect<fuchsia_driver_index::DriverIndex>();
+  if (driver_index_result.is_error()) {
+    LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_result.error_value());
+    return driver_index_result.error_value();
+  }
+  auto driver_runner =
+      dfv2::DriverRunner(std::move(realm_result.value()), std::move(driver_index_result.value()),
+                         inspect_manager.inspector(), loop.dispatcher());
+  driver_runner.PublishComponentRunner(outgoing);
 
   // Find and load v1 or v2 Drivers.
   if (!driver_manager_params.use_dfv2) {
+    coordinator.set_driver_runner(&driver_runner);
     coordinator.PublishDriverDevelopmentService(outgoing);
 
     // V1 Drivers.
@@ -264,32 +283,14 @@ int main(int argc, char** argv) {
   } else {
     // V2 Drivers.
     LOGF(INFO, "Starting DriverRunner with root driver URL: %s", root_driver.c_str());
-
-    auto realm_result = service::Connect<fuchsia_component::Realm>();
-    if (realm_result.is_error()) {
-      return realm_result.error_value();
-    }
-
-    auto driver_index_result = service::Connect<fuchsia_driver_index::DriverIndex>();
-    if (driver_index_result.is_error()) {
-      LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_result.error_value());
-      return driver_index_result.error_value();
-    }
-
-    driver_runner.emplace(std::move(realm_result.value()), std::move(driver_index_result.value()),
-                          inspect_manager.inspector(), loop.dispatcher());
-    driver_runner->PublishComponentRunner(outgoing);
-    auto start = driver_runner->StartRootDriver(root_driver);
+    auto start = driver_runner.StartRootDriver(root_driver);
     if (start.is_error()) {
       return start.error_value();
     }
-    driver_development_service.emplace(driver_runner.value(), loop.dispatcher());
+    driver_development_service.emplace(driver_runner, loop.dispatcher());
     driver_development_service->Publish(outgoing);
 
-    devfs_exporter.emplace(coordinator.root_device()->devnode(), loop.dispatcher());
-    devfs_exporter->PublishExporter(outgoing);
-
-    driver_runner->ScheduleBaseDriversBinding();
+    driver_runner.ScheduleBaseDriversBinding();
   }
 
   devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());

@@ -14,8 +14,6 @@ namespace fdf = fuchsia_driver_framework;
 
 namespace dfv2 {
 
-namespace {
-
 zx::status<> SetEncodedConfig(fdf::wire::DriverStartArgs& args,
                               frunner::wire::ComponentStartInfo& start_info) {
   if (!start_info.has_encoded_config()) {
@@ -48,7 +46,6 @@ zx::status<> SetEncodedConfig(fdf::wire::DriverStartArgs& args,
   args.set_config(std::move(vmo));
   return zx::ok();
 }
-}  // namespace
 
 DriverHostComponent::DriverHostComponent(
     fidl::ClientEnd<fdh::DriverHost> driver_host, async_dispatcher_t* dispatcher,

@@ -1,0 +1,71 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/rust/rustc_test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":dfv2_v1_lifecycle" ]
+}
+
+fidl("fuchsia.devfs.test") {
+  testonly = true
+  sources = [ "devfs.test.fidl" ]
+}
+
+driver_bind_rules("lifecycle_bind") {
+  bind_output = "lifecycle.bindbc"
+  rules = "lifecycle.bind"
+  deps = [ "//src/devices/bind/fuchsia.test" ]
+}
+
+fuchsia_driver("lifecycle_driver") {
+  testonly = true
+  output_name = "v1_lifecycle_driver"
+  sources = [ "lifecycle_driver.cc" ]
+  deps = [
+    ":fuchsia.devfs.test_cpp_wire",
+    ":lifecycle_bind",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp",
+    "//sdk/lib/driver2:cpp",
+    "//sdk/lib/sys/component/cpp",
+    "//src/devices/lib/driver:driver_runtime",
+    "//zircon/system/ulib/service:service-llcpp",
+  ]
+}
+
+fuchsia_driver_component("lifecycle") {
+  info = "lifecycle-info.json"
+  testonly = true
+  manifest = "meta/lifecycle.cml"
+  deps = [ ":lifecycle_driver" ]
+}
+
+rustc_test("bin") {
+  edition = "2021"
+  testonly = true
+  output_name = "dfv2_v1_lifecyce_test"
+  source_root = "test.rs"
+  sources = [ "test.rs" ]
+  deps = [
+    ":fuchsia.devfs.test_rust",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
+    "//sdk/lib/device-watcher/rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//third_party/rust_crates:anyhow",
+  ]
+}
+
+fuchsia_unittest_package("dfv2_v1_lifecycle") {
+  deps = [
+    ":bin",
+    ":lifecycle",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}

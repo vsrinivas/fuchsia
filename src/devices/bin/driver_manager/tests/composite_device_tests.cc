@@ -81,6 +81,7 @@ class FakeCompositeDevhost : public fidl::WireServer<fuchsia_device_manager::Dri
   }
 
   void Restart(RestartCompleter::Sync& completer) override {}
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override {}
 
  private:
   const char* expected_name_;
@@ -109,6 +110,7 @@ class FakeNewProxyDevhost : public fidl::WireServer<fuchsia_device_manager::Driv
     }
     completer.Reply(ZX_ERR_INTERNAL);
   }
+  void Start(StartRequestView request, StartCompleter::Sync& completer) override {}
 
   void Restart(RestartCompleter::Sync& completer) override {}
 

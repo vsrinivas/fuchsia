@@ -18,6 +18,7 @@
 #include "driver.h"
 #include "inspect.h"
 #include "lock.h"
+#include "src/devices/bin/driver_host2/driver.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "zx_device.h"
 #include "zx_driver.h"
@@ -118,6 +119,9 @@ class DriverHostContext {
   zx_status_t FindDriver(std::string_view libname, zx::vmo vmo, fbl::RefPtr<zx_driver_t>* out,
                          fbl::RefPtr<Driver>* out_driver);
 
+  void AddDriver(fbl::RefPtr<dfv2::Driver> driver);
+  void RemoveDriver(dfv2::Driver& driver);
+
   // Called when a zx_device_t has run out of references and needs its destruction finalized.
   void QueueDeviceForFinalization(zx_device_t* device) TA_REQ(api_lock_);
 
@@ -159,6 +163,7 @@ class DriverHostContext {
   ApiLock api_lock_;
 
   fbl::DoublyLinkedList<fbl::RefPtr<zx_driver>> drivers_;
+  fbl::DoublyLinkedList<fbl::RefPtr<dfv2::Driver>> dfv2_drivers_;
 
   fbl::TaggedDoublyLinkedList<zx_device*, zx_device::DeferListTag> defer_device_list_
       TA_GUARDED(api_lock_);

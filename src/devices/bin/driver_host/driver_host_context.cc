@@ -37,3 +37,9 @@ zx_status_t DriverHostContext::DeviceConnect(const fbl::RefPtr<zx_device_t>& dev
 
   return vfs_.Serve(std::move(target), std::move(c), options);
 }
+
+void DriverHostContext::AddDriver(fbl::RefPtr<dfv2::Driver> driver) {
+  dfv2_drivers_.push_back(std::move(driver));
+}
+
+void DriverHostContext::RemoveDriver(dfv2::Driver& driver) { dfv2_drivers_.erase(driver); }

@@ -40,6 +40,7 @@ source_set("common") {
     "proxy_iostate.cc",
     "scheduler_profile.cc",
     "tracing.cc",
+    "v2.cc",
     "zx_device.cc",
     "zx_driver.cc",
   ]
@@ -55,11 +56,13 @@ source_set("common") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_cpp_wire",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_cpp_wire",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/driver_runtime:driver_runtime_internal",
     "//sdk/lib/driver_runtime:driver_runtime_internal_cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fit-promise",
+    "//src/devices/bin/driver_host2:driver",
     "//src/devices/lib/log",
     "//src/lib/ddk",
 

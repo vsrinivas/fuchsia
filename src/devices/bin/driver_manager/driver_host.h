@@ -20,6 +20,7 @@
 
 #include "device.h"
 #include "fdio.h"
+#include "src/devices/bin/driver_manager/v2/driver_host.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 
 using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;
@@ -39,8 +40,9 @@ struct DriverHostConfig {
   Coordinator* coordinator;
 };
 
-class DriverHost : public fbl::RefCounted<DriverHost>,
-                   public fbl::DoublyLinkedListable<DriverHost*> {
+class DriverHost final : public dfv2::DriverHost,
+                         public fbl::RefCounted<DriverHost>,
+                         public fbl::DoublyLinkedListable<DriverHost*> {
  public:
   enum Flags : uint32_t {
     kDying = 1 << 0,
@@ -75,6 +77,14 @@ class DriverHost : public fbl::RefCounted<DriverHost>,
   uint64_t new_device_id() { return next_device_id_++; }
 
  private:
+  // dfv2::DriverHost
+  zx::status<fidl::ClientEnd<fuchsia_driver_host::Driver>> Start(
+      fidl::ClientEnd<fuchsia_driver_framework::Node> client_end,
+      fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
+      fuchsia_component_runner::wire::ComponentStartInfo start_info) override;
+
+  virtual zx::status<uint64_t> GetProcessKoid() const override { return zx::ok(koid_); }
+
   Coordinator* coordinator_;
 
   fidl::WireClient<fuchsia_device_manager::DriverHostController> controller_;
