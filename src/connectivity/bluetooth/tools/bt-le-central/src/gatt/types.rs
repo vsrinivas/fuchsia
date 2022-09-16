@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_bluetooth_gatt::{
-        self as fidl_gatt, Characteristic as FidlCharacteristic, ServiceInfo,
+    fidl_fuchsia_bluetooth_gatt2::{
+        self as fidl_gatt, Characteristic as FidlCharacteristic, ServiceInfo, ServiceKind,
     },
     fuchsia_bluetooth::assigned_numbers::{
         find_characteristic_number, find_descriptor_number, find_service_uuid,
     },
+    fuchsia_bluetooth::types::Uuid,
     std::fmt,
 };
 
@@ -35,10 +36,20 @@ impl Service {
 
 impl fmt::Display for Service {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let type_pretty =
-            find_service_uuid(&self.info.type_).map(|an| an.name).unwrap_or(&self.info.type_);
-        let kind_pretty = if self.info.primary { "primary" } else { "secondary" };
-        write!(f, "[{} service: id: {}, type: {}]", kind_pretty, self.info.id, type_pretty)?;
+        let type_pretty = match &self.info.type_ {
+            Some(fidl_uuid) => {
+                let uuid = Uuid::from(fidl_uuid).to_string();
+                find_service_uuid(&uuid).map(|an| String::from(an.name)).unwrap_or(uuid)
+            }
+            None => String::from("(unknown type)"),
+        };
+        let kind_pretty = match self.info.kind {
+            Some(ServiceKind::Primary) => "primary",
+            Some(ServiceKind::Secondary) => "secondary",
+            None => "(unknown kind)",
+        };
+        let id = self.info.handle.map_or(0u64, |h| h.value);
+        write!(f, "[{} service: id: {}, type: {}]", kind_pretty, id, type_pretty)?;
         if let Some(ref chrcs) = self.characteristics {
             let mut i: i32 = 0;
             for ref chrc in chrcs {
@@ -54,21 +65,31 @@ struct Characteristic(FidlCharacteristic);
 
 impl fmt::Display for Characteristic {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let type_pretty =
-            find_characteristic_number(&self.0.type_).map(|an| an.name).unwrap_or(&self.0.type_);
-        write!(
-            f,
-            "[chara.: id: {}, type: {}, prop.: {}]",
-            self.0.id,
-            type_pretty,
-            props_to_string(self.0.properties)
-        )?;
+        let type_pretty = match &self.0.type_ {
+            Some(fidl_uuid) => {
+                let uuid = Uuid::from(fidl_uuid).to_string();
+                find_characteristic_number(&uuid).map(|an| String::from(an.name)).unwrap_or(uuid)
+            }
+            None => String::from("(unknown)"),
+        };
+        let id = &self.0.handle.map_or(0u64, |h| h.value);
+        let props_pretty =
+            self.0.properties.map_or(String::from("unknown"), |p| props_to_string(p));
+        write!(f, "[chara.: id: {}, type: {}, prop.: {}]", id, type_pretty, props_pretty)?;
         if let Some(ref descrs) = self.0.descriptors {
             let mut i: i32 = 0;
             for ref descr in descrs {
-                let type_pretty =
-                    find_descriptor_number(&descr.type_).map(|an| an.name).unwrap_or(&descr.type_);
-                write!(f, "\n          {}: [descr.: id: {}, type: {}]", i, descr.id, type_pretty)?;
+                let type_pretty = match &descr.type_ {
+                    Some(fidl_uuid) => {
+                        let uuid = Uuid::from(fidl_uuid).to_string();
+                        find_descriptor_number(&uuid)
+                            .map(|an| String::from(an.name))
+                            .unwrap_or(uuid)
+                    }
+                    None => String::from("unknown"),
+                };
+                let id = &descr.handle.map_or(0u64, |h| h.value);
+                write!(f, "\n          {}: [descr.: id: {}, type: {}]", i, id, type_pretty)?;
                 i += 1;
             }
         }
@@ -76,34 +97,34 @@ impl fmt::Display for Characteristic {
     }
 }
 
-fn props_to_string(props: u32) -> String {
+fn props_to_string(props: fidl_gatt::CharacteristicPropertyBits) -> String {
     let mut prop_strs = vec![];
 
-    if props & fidl_gatt::PROPERTY_BROADCAST != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::BROADCAST) {
         prop_strs.push("broadcast");
     }
-    if props & fidl_gatt::PROPERTY_READ != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::READ) {
         prop_strs.push("read");
     }
-    if props & fidl_gatt::PROPERTY_WRITE_WITHOUT_RESPONSE != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::WRITE_WITHOUT_RESPONSE) {
         prop_strs.push("write (without response)");
     }
-    if props & fidl_gatt::PROPERTY_WRITE != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::WRITE) {
         prop_strs.push("write");
     }
-    if props & fidl_gatt::PROPERTY_NOTIFY != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::NOTIFY) {
         prop_strs.push("notify");
     }
-    if props & fidl_gatt::PROPERTY_INDICATE != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::INDICATE) {
         prop_strs.push("indicate");
     }
-    if props & fidl_gatt::PROPERTY_AUTHENTICATED_SIGNED_WRITES != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::AUTHENTICATED_SIGNED_WRITES) {
         prop_strs.push("write (signed)");
     }
-    if props & fidl_gatt::PROPERTY_RELIABLE_WRITE != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::RELIABLE_WRITE) {
         prop_strs.push("write (reliable)");
     }
-    if props & fidl_gatt::PROPERTY_WRITABLE_AUXILIARIES != 0 {
+    if props.contains(fidl_gatt::CharacteristicPropertyBits::WRITABLE_AUXILIARIES) {
         prop_strs.push("writable aux.");
     }
 

@@ -6,18 +6,21 @@ use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints;
 use fidl_fuchsia_bluetooth_le::{CentralMarker, Filter, ScanOptions, ScanResultWatcherMarker};
 use fuchsia_async as fasync;
-use fuchsia_bluetooth::{assigned_numbers, error::Error as BTError, types::Uuid};
+use fuchsia_bluetooth::{
+    assigned_numbers,
+    error::Error as BTError,
+    types::{PeerId, Uuid},
+};
 use futures::{try_join, TryFutureExt};
 use getopts::Options;
 use std::str::FromStr;
 
-use crate::central::{connect_peripheral, listen_central_events, CentralState, CentralStatePtr};
+use crate::central::{CentralState, CentralStatePtr};
 
 mod central;
 mod gatt;
 
-/// Returns a bool indicating whether help was requested on success, otherwise returns an error.
-async fn do_scan(appname: &String, args: &[String], state: CentralStatePtr) -> Result<bool, Error> {
+async fn do_scan(appname: &String, args: &[String], state: CentralStatePtr) -> Result<(), Error> {
     let mut opts = Options::new();
 
     let _ = opts.optflag("h", "help", "");
@@ -44,7 +47,7 @@ async fn do_scan(appname: &String, args: &[String], state: CentralStatePtr) -> R
             appname
         );
         print!("{}", opts.usage(&brief));
-        return Ok(/*help=*/ true);
+        return Ok(());
     }
 
     state.write().remaining_scan_results = match matches.opt_str("s") {
@@ -112,7 +115,7 @@ async fn do_scan(appname: &String, args: &[String], state: CentralStatePtr) -> R
 
     let watch_fut = central::watch_scan_results(state, result_watcher_client);
 
-    try_join!(scan_fut, watch_fut).map(|_| /*help=*/false)
+    try_join!(scan_fut, watch_fut).map(|_| ())
 }
 
 async fn do_connect<'a>(state: CentralStatePtr, args: &'a [String]) -> Result<(), Error> {
@@ -130,10 +133,12 @@ async fn do_connect<'a>(state: CentralStatePtr, args: &'a [String]) -> Result<()
     let uuid = match possible_uuid {
         None => None,
         Some(Ok(uuid)) => Some(uuid),
-        Some(Err(_parse_error)) => return Err(BTError::new("invalid UUID").into()),
+        Some(Err(_)) => return Err(BTError::new("invalid UUID").into()),
     };
 
-    connect_peripheral(&state, args[0].clone(), uuid).await
+    let peer_id: PeerId = PeerId::from_str(&args[0]).map_err(|_| format_err!("invalid peer id"))?;
+
+    central::connect(&state, peer_id, uuid).await
 }
 
 fn usage(appname: &str) -> () {
@@ -165,21 +170,14 @@ fn main() -> Result<(), Error> {
     let command = &args[1];
     let fut = async {
         match command.as_str() {
-            "scan" => match do_scan(appname, &args[2..], state.clone()).await {
-                Ok(/*help=*/ false) => (),
-                Ok(/*help=*/ true) => return Ok(()),
-                Err(e) => return Err(e),
-            },
-            "connect" => do_connect(state.clone(), &args[2..]).await?,
+            "scan" => do_scan(appname, &args[2..], state.clone()).await,
+            "connect" => do_connect(state.clone(), &args[2..]).await,
             _ => {
                 println!("Invalid command: {}", command);
                 usage(appname);
-                return Err(BTError::new("invalid input").into());
+                Err(BTError::new("invalid input").into())
             }
         }
-
-        listen_central_events(state).await;
-        Ok(())
     };
 
     executor.run_singlethreaded(fut)

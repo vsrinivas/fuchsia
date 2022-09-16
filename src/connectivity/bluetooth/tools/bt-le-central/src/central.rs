@@ -5,18 +5,19 @@
 // TODO(armansito): Remove this once a server channel can be killed using a Controller
 #![allow(unreachable_code)]
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use fidl::{endpoints, endpoints::Proxy};
+use fidl_fuchsia_bluetooth_gatt2::ClientMarker;
 use fidl_fuchsia_bluetooth_le::{
-    CentralEvent, CentralProxy, ConnectionOptions, ScanResultWatcherProxy,
+    CentralProxy, ConnectionMarker, ConnectionOptions, ScanResultWatcherProxy,
 };
 use fuchsia_bluetooth::{
     error::Error as BTError,
-    types::{le::Peer, le::RemoteDevice, Uuid},
+    types::{le::Peer, PeerId, Uuid},
 };
-use futures::prelude::*;
+use futures::{future::FutureExt, pin_mut, select};
 use parking_lot::RwLock;
-use std::{convert::TryFrom, process::exit, sync::Arc};
+use std::{convert::TryFrom, sync::Arc};
 
 use crate::gatt::repl::start_gatt_loop;
 
@@ -63,6 +64,9 @@ impl CentralState {
     }
 }
 
+/// Watch for scan results from the given `result_watcher`. If `state.connect`, then try to connect
+/// to the first connectable peer and stop scanning. Returns when `state.remaining_scan_results`
+/// results have been received, or after the connected peer disconnects (whichever happens first).
 pub async fn watch_scan_results(
     state: CentralStatePtr,
     result_watcher: ScanResultWatcherProxy,
@@ -88,7 +92,7 @@ pub async fn watch_scan_results(
             if state.read().connect && peer.connectable {
                 // connect_peripheral will log errors, so the result can be ignored.
                 // TODO(fxbug.dev/108816): Use Central.Connect instead of deprecated Central.ConnectPeripheral.
-                let _ = connect_peripheral(&state, peer.id.to_string(), None).await;
+                let _ = connect(&state, peer.id, None).await;
             }
 
             return Ok(());
@@ -96,102 +100,40 @@ pub async fn watch_scan_results(
     }
 }
 
-pub async fn listen_central_events(state: CentralStatePtr) {
-    const MAX_CONCURRENT: usize = 1000;
-    let evt_stream = state.read().get_svc().take_event_stream();
-    let state = &state;
-    let for_each_fut = evt_stream.try_for_each_concurrent(MAX_CONCURRENT, move |evt| {
-        async move {
-            match evt {
-                CentralEvent::OnScanStateChanged { scanning } => {
-                    eprintln!("  scan state changed: {}", scanning);
-                    Ok(())
-                }
-                CentralEvent::OnDeviceDiscovered { device } => {
-                    let device = match RemoteDevice::try_from(device) {
-                        Ok(d) => d,
-                        Err(e) => {
-                            eprintln!("received malformed scan result: {}", e);
-                            exit(0);
-                        }
-                    };
-                    let id = device.identifier.clone();
-
-                    eprintln!(" {}", device);
-
-                    let mut central = state.write();
-                    if central.decrement_scan_count() {
-                        // Continue scanning
-                        return Ok(());
-                    }
-
-                    // Stop scanning.
-                    if let Err(e) = central.svc.stop_scan() {
-                        eprintln!("request to stop scan failed: {}", e);
-                        // TODO(armansito): kill the channel here instead
-                        exit(0);
-                        Ok(())
-                    } else if central.connect && device.connectable {
-                        // Drop lock so it isn't held during .await
-                        drop(central);
-                        match connect_peripheral(state, id, None).await {
-                            Ok(()) => Ok(()),
-                            Err(_) => Ok(()),
-                        }
-                    } else {
-                        exit(0)
-                    }
-                }
-                CentralEvent::OnPeripheralDisconnected { identifier } => {
-                    eprintln!("  peer disconnected: {}", identifier);
-                    // TODO(armansito): Close the channel here instead
-                    exit(0)
-                }
-            }
-        }
-    });
-
-    if let Err(e) = for_each_fut.await {
-        eprintln!("failed to subscribe to BLE Central events: {:?}", e);
-    }
-}
-
-// Attempts to connect to the peripheral with the given |id| and begins the
-// GATT REPL if this succeeds.
-pub async fn connect_peripheral(
+/// Attempts to connect to the peripheral with the given `peer_id` and begins the GATT REPL if this succeeds.
+/// If `service_uuid` is specified, limit GATT service discovery to services with the indicated UUID.
+pub async fn connect(
     state: &CentralStatePtr,
-    mut id: String,
-    optional_service_uuid: Option<Uuid>,
+    peer_id: PeerId,
+    service_uuid: Option<Uuid>,
 ) -> Result<(), Error> {
-    let (proxy, server) =
-        endpoints::create_proxy().map_err(|_| BTError::new("Failed to create Client pair"))?;
+    let (conn_proxy, conn_server) = endpoints::create_proxy::<ConnectionMarker>()
+        .context("Failed to create Connection endpoints")?;
+
     let conn_opts = ConnectionOptions {
         bondable_mode: Some(true),
-        service_filter: optional_service_uuid.map(|u| u.into()),
+        service_filter: service_uuid.map(Into::into),
         ..ConnectionOptions::EMPTY
     };
-    let connect_peripheral_fut = state.read().svc.connect_peripheral(&mut id, conn_opts, server);
 
-    let status = connect_peripheral_fut
-        .await
-        .map_err(|e| BTError::new(&format!("failed to initiate connect request: {}", e)))?;
+    state
+        .read()
+        .svc
+        .connect(&mut peer_id.into(), conn_opts, conn_server)
+        .context("Failed to connect")?;
 
-    match status.error {
-        Some(e) => {
-            println!(
-                "  failed to connect to peripheral: {}",
-                match &e.description {
-                    None => "unknown error",
-                    Some(msg) => msg,
-                }
-            );
-            return Err(BTError::from(*e).into());
-        }
-        None => {
-            println!("  device connected: {}", id);
-        }
+    let (gatt_proxy, gatt_server) = endpoints::create_proxy::<ClientMarker>()
+        .context("Failed to create GATT Client endpoints")?;
+    conn_proxy.request_gatt_client(gatt_server).context("GATT client request failed")?;
+
+    let mut conn_closed_fut = conn_proxy.on_closed().fuse();
+    let gatt_loop_fut = start_gatt_loop(gatt_proxy).fuse();
+    pin_mut!(gatt_loop_fut);
+    select! {
+        result = gatt_loop_fut => result,
+        _ = conn_closed_fut => {
+            println!("connection closed");
+            Ok(())
+        },
     }
-
-    start_gatt_loop(proxy).await?;
-    Ok(())
 }

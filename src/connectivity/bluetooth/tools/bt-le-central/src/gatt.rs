@@ -2,31 +2,39 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Error,
-    fidl::encoding::Decodable as FidlDecodable,
-    fidl::endpoints,
-    fidl_fuchsia_bluetooth,
-    fidl_fuchsia_bluetooth_gatt::{
-        Characteristic as FidlCharacteristic, ClientProxy, ReliableMode, RemoteServiceEvent,
-        RemoteServiceProxy, ServiceInfo, WriteOptions,
-    },
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::error::Error as BTError,
-    fuchsia_bluetooth::types::Uuid,
-    futures::{TryFutureExt, TryStreamExt},
-    num::Num,
-    parking_lot::RwLock,
-    std::num::ParseIntError,
-    std::str::FromStr,
-    std::sync::Arc,
+use anyhow::{format_err, Context, Error};
+use fidl::{encoding::Decodable, endpoints};
+use fidl_fuchsia_bluetooth;
+use fidl_fuchsia_bluetooth_gatt2::{
+    Characteristic as FidlCharacteristic, CharacteristicNotifierMarker,
+    CharacteristicNotifierRequest, ClientProxy, Handle, LongReadOptions, ReadByTypeResult,
+    ReadOptions, ReadValue, RemoteServiceMarker, RemoteServiceProxy, ServiceInfo, ShortReadOptions,
+    WriteMode, WriteOptions,
 };
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::error::Error as BTError;
+use fuchsia_bluetooth::types::Uuid;
+use futures::StreamExt;
+use num::Num;
+use parking_lot::RwLock;
+use std::{collections::HashMap, num::ParseIntError, str::FromStr, sync::Arc};
 
 use self::{commands::Cmd, types::Service};
 
 pub mod commands;
 pub mod repl;
 pub mod types;
+
+struct ActiveService {
+    proxy: RemoteServiceProxy,
+    notifiers: HashMap<u64, fasync::Task<()>>,
+}
+
+impl ActiveService {
+    fn new(proxy: RemoteServiceProxy) -> Self {
+        ActiveService { proxy: proxy, notifiers: HashMap::new() }
+    }
+}
 
 type GattClientPtr = Arc<RwLock<GattClient>>;
 
@@ -39,8 +47,8 @@ struct GattClient {
     // The index of the currently connected service, if any.
     active_index: usize,
 
-    // FIDL proxy to the currently connected service, if any.
-    active_proxy: Option<RemoteServiceProxy>,
+    // Proxy and associated state for the currently connected service, if any.
+    active_service: Option<ActiveService>,
 }
 
 impl GattClient {
@@ -49,7 +57,7 @@ impl GattClient {
             proxy: proxy,
             services: vec![],
             active_index: 0,
-            active_proxy: None,
+            active_service: None,
         }))
     }
 
@@ -63,6 +71,10 @@ impl GattClient {
 
     fn active_service(&mut self) -> Option<&mut Service> {
         self.services.get_mut(self.active_index)
+    }
+
+    fn try_clone_proxy(&self) -> Option<RemoteServiceProxy> {
+        self.active_service.as_ref().map(|s| s.proxy.clone())
     }
 
     fn on_discover_characteristics(&mut self, chrcs: Vec<FidlCharacteristic>) {
@@ -86,48 +98,23 @@ impl GattClient {
 async fn discover_characteristics(
     svc: &RemoteServiceProxy,
 ) -> Result<Vec<FidlCharacteristic>, Error> {
-    let (status, chrcs) =
-        svc.discover_characteristics().await.map_err(|_| BTError::new("Failed to send message"))?;
-
-    if let Some(e) = status.error {
-        let e = BTError::from(*e);
-        println!("Failed to read characteristics: {}", e);
-        return Err(e.into());
-    }
-
-    let mut event_stream = svc.take_event_stream();
-
-    fasync::Task::spawn(
-        async move {
-            while let Some(evt) = event_stream.try_next().await? {
-                match evt {
-                    RemoteServiceEvent::OnCharacteristicValueUpdated { id, value } => {
-                        print!("{}{}", repl::CLEAR_LINE, repl::CHA);
-                        println!(
-                            "(id = {}) value updated: {:X?} {}",
-                            id,
-                            value,
-                            decoded_string_value(&value)
-                        );
-                    }
-                }
-            }
-            Ok::<(), fidl::Error>(())
-        }
-        .unwrap_or_else(|e| eprintln!("Failed to listen for RemoteService events {:?}", e)),
-    )
-    .detach();
-
+    let chrcs: Vec<FidlCharacteristic> = svc
+        .discover_characteristics()
+        .await
+        .map_err(|_| format_err!("Failed to discover characteristics"))?;
     Ok(chrcs)
 }
 
 async fn read_characteristic(svc: &RemoteServiceProxy, id: u64) -> Result<(), Error> {
-    let (status, value) =
-        svc.read_characteristic(id).await.map_err(|_| BTError::new("Failed to send message"))?;
+    let mut options = ReadOptions::ShortRead(ShortReadOptions {});
+    let value: ReadValue = svc
+        .read_characteristic(&mut Handle { value: id }, &mut options)
+        .await
+        .map_err(|e| format_err!("Failed to read characteristic: {}", BTError::from(e)))?
+        .map_err(|e| format_err!("Failed to read characteristic: {:?}", e))?;
 
-    match status.error {
-        Some(e) => println!("Failed to read characteristic: {}", BTError::from(*e)),
-        None => println!("(id = {}) value: {:X?} {}", id, value, decoded_string_value(&value)),
+    if let Some(value) = value.value {
+        println!("(id = {}) value: {:X?} {}", id, &value, decoded_string_value(&value[..]));
     }
 
     Ok(())
@@ -139,14 +126,26 @@ async fn read_long_characteristic(
     offset: u16,
     max_bytes: u16,
 ) -> Result<(), Error> {
-    let (status, value) = svc
-        .read_long_characteristic(id, offset, max_bytes)
-        .await
-        .map_err(|_| BTError::new("Failed to send message"))?;
+    let mut options = ReadOptions::LongRead(LongReadOptions {
+        offset: Some(offset),
+        max_bytes: Some(max_bytes),
+        ..LongReadOptions::EMPTY
+    });
 
-    match status.error {
-        Some(e) => println!("Failed to read characteristic: {}", BTError::from(*e)),
-        None => println!("(id = {}, offset = {}) value: {:X?}", id, offset, value),
+    let value: ReadValue = svc
+        .read_characteristic(&mut Handle { value: id }, &mut options)
+        .await
+        .map_err(|e| format_err!("Failed to read characteristic: {}", BTError::from(e)))?
+        .map_err(|e| format_err!("Failed to read characteristic: {:?}", e))?;
+
+    if let Some(value) = value.value {
+        println!(
+            "(id = {}, offset = {}) value: {:X?} {}",
+            id,
+            offset,
+            &value,
+            decoded_string_value(&value)
+        );
     }
 
     Ok(())
@@ -155,58 +154,34 @@ async fn read_long_characteristic(
 async fn write_characteristic(
     svc: &RemoteServiceProxy,
     id: u64,
-    value: Vec<u8>,
-) -> Result<(), Error> {
-    let status = svc
-        .write_characteristic(id, &value)
-        .await
-        .map_err(|_| BTError::new("Failed to send message"))?;
-
-    match status.error {
-        Some(e) => println!("Failed to write to characteristic: {}", BTError::from(*e)),
-        None => println!("(id = {}) done", id),
-    }
-
-    Ok(())
-}
-
-async fn write_long_characteristic(
-    svc: &RemoteServiceProxy,
-    reliable_mode: ReliableMode,
-    id: u64,
+    mode: WriteMode,
     offset: u16,
     value: Vec<u8>,
 ) -> Result<(), Error> {
-    let status = svc
-        .write_long_characteristic(
-            id,
-            offset,
-            &value,
-            WriteOptions { reliable_mode: Some(reliable_mode), ..WriteOptions::new_empty() },
-        )
+    let options =
+        WriteOptions { write_mode: Some(mode), offset: Some(offset), ..WriteOptions::EMPTY };
+    svc.write_characteristic(&mut Handle { value: id }, &value, options)
         .await
-        .map_err(|_| BTError::new("Failed to send message"))?;
+        .context("Failed to write characteristic")?
+        .map_err(|e| format_err!("Failed to write characteristic: {:?}", e))?;
 
-    match status.error {
-        Some(e) => println!("Failed to write long characteristic: {}", BTError::from(*e)),
-        None => println!("(id = {}, offset = {}) done", id, offset),
-    }
+    println!("(id = {}, offset = {}) done", id, offset);
 
     Ok(())
 }
 
-fn write_without_response(svc: &RemoteServiceProxy, id: u64, value: Vec<u8>) -> Result<(), Error> {
-    svc.write_characteristic_without_response(id, &value)
-        .map_err(|_| BTError::new("Failed to send message").into())
-}
-
 async fn read_descriptor(svc: &RemoteServiceProxy, id: u64) -> Result<(), Error> {
-    let (status, value) =
-        svc.read_descriptor(id).await.map_err(|_| BTError::new("Failed to send message"))?;
+    let value: ReadValue = svc
+        .read_descriptor(
+            &mut Handle { value: id },
+            &mut ReadOptions::ShortRead(ShortReadOptions::new_empty()),
+        )
+        .await
+        .context("Failed to read descriptor")?
+        .map_err(|e| format_err!("Failed to read descriptor: {:?}", e))?;
 
-    match status.error {
-        Some(e) => println!("Failed to read descriptor: {}", BTError::from(*e)),
-        None => println!("(id = {}) value: {:X?}", id, value),
+    if let Some(value) = value.value {
+        println!("(id = {}) value: {:X?}", id, value);
     }
 
     Ok(())
@@ -218,48 +193,43 @@ async fn read_long_descriptor(
     offset: u16,
     max_bytes: u16,
 ) -> Result<(), Error> {
-    let (status, value) = svc
-        .read_long_descriptor(id, offset, max_bytes)
+    let value: ReadValue = svc
+        .read_descriptor(
+            &mut Handle { value: id },
+            &mut ReadOptions::LongRead(LongReadOptions {
+                offset: Some(offset),
+                max_bytes: Some(max_bytes),
+                ..LongReadOptions::EMPTY
+            }),
+        )
         .await
-        .map_err(|_| BTError::new("Failed to send message"))?;
+        .context("Failed to read descriptor")?
+        .map_err(|e| format_err!("Failed to read descriptor: {:?}", e))?;
 
-    match status.error {
-        Some(e) => println!("Failed to read long descriptor: {}", BTError::from(*e)),
-        None => println!("(id = {}, offset = {}) value: {:X?}", id, offset, value),
+    if let Some(value) = value.value {
+        println!("(id = {}, offset = {}) value: {:X?}", id, offset, value);
     }
 
     Ok(())
 }
 
-async fn write_descriptor(svc: &RemoteServiceProxy, id: u64, value: Vec<u8>) -> Result<(), Error> {
-    let status = svc
-        .write_descriptor(id, &value)
-        .await
-        .map_err(|_| BTError::new("Failed to send message"))?;
-
-    match status.error {
-        Some(e) => println!("Failed to write to descriptor: {}", BTError::from(*e)),
-        None => println!("(id = {}) done", id),
-    }
-
-    Ok(())
-}
-
-async fn write_long_descriptor(
+async fn write_descriptor(
     svc: &RemoteServiceProxy,
     id: u64,
+    mode: WriteMode,
     offset: u16,
     value: Vec<u8>,
 ) -> Result<(), Error> {
-    let status = svc
-        .write_long_descriptor(id, offset, &value)
-        .await
-        .map_err(|_| BTError::new("Failed to send message"))?;
+    svc.write_descriptor(
+        &mut Handle { value: id },
+        &value,
+        WriteOptions { write_mode: Some(mode), offset: Some(offset), ..WriteOptions::EMPTY },
+    )
+    .await
+    .context("Failed to write descriptor")?
+    .map_err(|e| format_err!("Failed to write descriptor: {:?}", e))?;
 
-    match status.error {
-        Some(e) => println!("Failed to write long descriptor: {}", BTError::from(*e)),
-        None => println!("(id = {}, offset = {}) done", id, offset),
-    }
+    println!("(id = {}, offset = {}) done", id, offset);
 
     Ok(())
 }
@@ -288,27 +258,26 @@ async fn do_connect<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> Resul
         Ok(i) => i,
     };
 
-    let svc_id = match client.read().services.get(index) {
+    let mut svc_handle = match client.read().services.get(index) {
         None => {
             println!("index out of bounds! ({})", index);
             return Ok(());
         }
-        Some(s) => s.info.id,
+        Some(s) => s.info.handle.expect("service missing handle"),
     };
 
     // Initialize the remote service proxy.
-    let (proxy, server) = endpoints::create_proxy()?;
+    let (proxy, server) = endpoints::create_proxy::<RemoteServiceMarker>()
+        .context("Failed to create RemoteService endpoints")?;
 
     // First close the connection to the currently active service.
-    if client.read().active_proxy.is_some() {
-        client.write().active_proxy = None;
-    }
+    let _ = client.write().active_service.take();
 
-    client.read().proxy.connect_to_service(svc_id, server)?;
+    client.read().proxy.connect_to_service(&mut svc_handle, server)?;
     let chrcs = discover_characteristics(&proxy).await?;
 
     client.write().active_index = index;
-    client.write().active_proxy = Some(proxy);
+    client.write().active_service = Some(ActiveService::new(proxy));
     client.write().on_discover_characteristics(chrcs);
 
     Ok(())
@@ -328,8 +297,8 @@ async fn do_read_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> Resu
         Ok(i) => i,
     };
 
-    match &client.read().active_proxy {
-        Some(svc) => read_characteristic(svc, id).await,
+    match &client.read().active_service {
+        Some(svc) => read_characteristic(&svc.proxy, id).await,
         None => {
             println!("no service connected");
             Ok(())
@@ -367,8 +336,9 @@ async fn do_read_long_chr<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
         Ok(i) => i,
     };
 
-    match &client.read().active_proxy {
-        Some(svc) => read_long_characteristic(svc, id, offset, max_bytes).await,
+    let proxy_opt = client.read().try_clone_proxy();
+    match proxy_opt {
+        Some(proxy) => read_long_characteristic(&proxy, id, offset, max_bytes).await,
         None => {
             println!("no service connected");
             Ok(())
@@ -382,10 +352,12 @@ async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> 
         return Ok(());
     }
 
-    let without_response: bool = args[0] == "-w";
-    if without_response {
+    let mode = if args[0] == "-w" {
         let _ = args.remove(0);
-    }
+        WriteMode::WithoutResponse
+    } else {
+        WriteMode::Default
+    };
 
     let id: u64 = match parse_int(args[0]) {
         Err(_) => {
@@ -402,14 +374,8 @@ async fn do_write_chr<'a>(mut args: Vec<&'a str>, client: &'a GattClientPtr) -> 
             println!("invalid value");
             Ok(())
         }
-        Ok(v) => match &client.read().active_proxy {
-            Some(svc) => {
-                if without_response {
-                    write_without_response(svc, id, v)
-                } else {
-                    write_characteristic(svc, id, v).await
-                }
-            }
+        Ok(v) => match &client.read().active_service {
+            Some(svc) => write_characteristic(&svc.proxy, id, mode, 0, v).await,
             None => {
                 println!("no service connected");
                 Ok(())
@@ -427,11 +393,11 @@ async fn do_write_long_chr<'a>(
         return Ok(());
     }
 
-    let reliable_mode: ReliableMode = if args[0] == "-r" {
+    let mode = if args[0] == "-r" {
         let _ = args.remove(0);
-        ReliableMode::Enabled
+        WriteMode::Reliable
     } else {
-        ReliableMode::Disabled
+        WriteMode::Default
     };
 
     let id: u64 = match parse_int(args[0]) {
@@ -457,8 +423,8 @@ async fn do_write_long_chr<'a>(
             println!("invalid value");
             Ok(())
         }
-        Ok(v) => match &client.read().active_proxy {
-            Some(svc) => write_long_characteristic(svc, reliable_mode, id, offset, v).await,
+        Ok(v) => match &client.read().active_service {
+            Some(svc) => write_characteristic(&svc.proxy, id, mode, offset, v).await,
             None => {
                 println!("no service connected");
                 Ok(())
@@ -481,8 +447,8 @@ async fn do_read_desc<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> Res
         Ok(i) => i,
     };
 
-    match &client.read().active_proxy {
-        Some(svc) => read_descriptor(svc, id).await,
+    match &client.read().active_service {
+        Some(svc) => read_descriptor(&svc.proxy, id).await,
         None => {
             println!("no service connected");
             Ok(())
@@ -523,8 +489,8 @@ async fn do_read_long_desc<'a>(
         Ok(i) => i,
     };
 
-    match &client.read().active_proxy {
-        Some(svc) => read_long_descriptor(svc, id, offset, max_bytes).await,
+    match &client.read().active_service {
+        Some(svc) => read_long_descriptor(&svc.proxy, id, offset, max_bytes).await,
         None => {
             println!("no service connected");
             Ok(())
@@ -553,8 +519,8 @@ async fn do_write_desc<'a>(args: Vec<&'a str>, client: &'a GattClientPtr) -> Res
             println!("invalid value");
             Ok(())
         }
-        Ok(v) => match &client.read().active_proxy {
-            Some(svc) => write_descriptor(svc, id, v).await,
+        Ok(v) => match &client.read().active_service {
+            Some(svc) => write_descriptor(&svc.proxy, id, WriteMode::Default, 0, v).await,
             None => {
                 println!("no service connected");
                 Ok(())
@@ -595,8 +561,8 @@ async fn do_write_long_desc<'a>(
             println!("invalid value");
             Ok(())
         }
-        Ok(v) => match &client.read().active_proxy {
-            Some(svc) => write_long_descriptor(svc, id, offset, v).await,
+        Ok(v) => match &client.read().active_service {
+            Some(svc) => write_descriptor(&svc.proxy, id, WriteMode::Default, offset, v).await,
             None => {
                 println!("no service connected");
                 Ok(())
@@ -605,12 +571,13 @@ async fn do_write_long_desc<'a>(
     }
 }
 
-fn print_read_by_type_result(result: &fidl_fuchsia_bluetooth_gatt::ReadByTypeResult) {
+fn print_read_by_type_result(result: &ReadByTypeResult) {
     match (result.value.as_ref(), result.error.as_ref()) {
         (Some(value), None) => {
+            let value = value.value.as_ref().expect("read by value response value");
             println!(
                 "[id: {}, value: {:X?} {}]",
-                result.id.as_ref().expect("read by value response id"),
+                result.handle.as_ref().expect("read by value response handle").value,
                 value,
                 decoded_string_value(value)
             );
@@ -618,7 +585,7 @@ fn print_read_by_type_result(result: &fidl_fuchsia_bluetooth_gatt::ReadByTypeRes
         (None, Some(error)) => {
             println!(
                 "[id: {}, error: {:?}]",
-                result.id.as_ref().expect("read by value response id"),
+                result.handle.as_ref().expect("read by value response id").value,
                 error
             );
         }
@@ -643,8 +610,8 @@ async fn do_read_by_type<'a>(args: &'a [&'a str], client: &'a GattClientPtr) -> 
     };
 
     let mut fidl_uuid = fidl_fuchsia_bluetooth::Uuid::from(uuid);
-    match &client.read().active_proxy {
-        Some(svc) => match svc.read_by_type(&mut fidl_uuid).await {
+    match &client.read().active_service {
+        Some(svc) => match svc.proxy.read_by_type(&mut fidl_uuid).await {
             Ok(Ok(results)) => {
                 if results.len() == 0 {
                     println!("No results received.");
@@ -682,23 +649,74 @@ async fn do_enable_notify<'a>(args: &'a [&'a str], client: &'a GattClientPtr) ->
         Ok(i) => i,
     };
 
-    match &client.read().active_proxy {
-        Some(svc) => {
-            let status = svc
-                .notify_characteristic(id, true)
-                .await
-                .map_err(|_| BTError::new("Failed to send message"))?;
-            match status.error {
-                Some(e) => println!("Failed to enable notifications: {}", BTError::from(*e)),
-                None => println!("(id = {}) done", id),
+    let active_service_valid = || -> bool {
+        match &client.read().active_service {
+            None => {
+                println!("no service connected");
+                return false;
             }
-            Ok(())
-        }
-        None => {
-            println!("no service connected");
-            Ok(())
-        }
+            Some(svc) => {
+                if svc.notifiers.contains_key(&id) {
+                    println!("(id = {}) notifications already enabled", id);
+                    return false;
+                } else {
+                    return true;
+                }
+            }
+        };
+    };
+    if !active_service_valid() {
+        return Ok(());
     }
+
+    let (notifier_client, mut notifier_req_stream) =
+        endpoints::create_request_stream::<CharacteristicNotifierMarker>()?;
+    let proxy = client.read().try_clone_proxy().unwrap();
+    proxy
+        .register_characteristic_notifier(&mut Handle { value: id }, notifier_client)
+        .await
+        .context("Failed to register characteristic notifier")?
+        .map_err(|e| format_err!("Failed to register characteristic notifier: {:?}", e))?;
+
+    // The service could have closed during the async FIDL call above, or another notifier could have been registered (making this one redundant).
+    if !active_service_valid() {
+        return Ok(());
+    }
+
+    let task = fasync::Task::spawn(async move {
+        while let Some(req) = notifier_req_stream.next().await {
+            match req {
+                Ok(event) => match event {
+                    CharacteristicNotifierRequest::OnNotification { value, responder } => {
+                        if let Some(value) = value.value {
+                            print!("{}{}", repl::CLEAR_LINE, repl::CHA);
+                            println!(
+                                "(id = {}) value updated: {:X?} {}",
+                                id,
+                                value,
+                                decoded_string_value(&value)
+                            );
+                        }
+                        if let Err(e) = responder.send() {
+                            println!("(id = {}) notifier closed due to responder error: {}", id, e);
+                            return;
+                        }
+                    }
+                },
+                Err(e) => {
+                    println!("(id = {}) notifier closed due to error: {}", id, e);
+                    return;
+                }
+            }
+        }
+        println!("(id = {}) notifier closed", id);
+    });
+
+    let old_value = client.write().active_service.as_mut().unwrap().notifiers.insert(id, task);
+    assert!(old_value.is_none());
+
+    println!("(id = {}) done", id);
+    Ok(())
 }
 
 async fn do_disable_notify<'a>(
@@ -718,23 +736,21 @@ async fn do_disable_notify<'a>(
         Ok(i) => i,
     };
 
-    match &client.read().active_proxy {
-        Some(svc) => {
-            let status = svc
-                .notify_characteristic(id, false)
-                .await
-                .map_err(|_| BTError::new("Failed to send message"))?;
-            match status.error {
-                Some(e) => println!("Failed to disable notifications: {}", BTError::from(*e)),
-                None => println!("(id = {}) done", id),
-            }
-            Ok(())
-        }
+    let task = match client.write().active_service.as_mut() {
+        Some(svc) => svc.notifiers.remove(&id),
         None => {
             println!("no service connected");
-            Ok(())
+            return Ok(());
         }
-    }
+    };
+    match task {
+        Some(task) => {
+            let _ = task.cancel().await;
+            println!("(id = {}) done", id);
+        }
+        None => println!("(id = {}) notifications not enabled", id),
+    };
+    Ok(())
 }
 
 /// Attempt to decode the value as a utf-8 string, replacing any invalid byte sequences with '.'
@@ -765,17 +781,18 @@ where
 mod tests {
     use super::*;
 
-    use {
-        bt_fidl_mocks::gatt::RemoteServiceMock,
-        fidl::endpoints::create_proxy_and_stream,
-        fidl_fuchsia_bluetooth_gatt::{ClientMarker, RemoteServiceReadByTypeResult},
-        fuchsia_zircon::DurationNum,
-        futures::join,
+    use bt_fidl_mocks::gatt2::{ClientMock, RemoteServiceMock};
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_bluetooth_gatt2::{
+        ClientMarker, RemoteServiceReadByTypeResult, ServiceHandle,
     };
+    use fuchsia_zircon::DurationNum;
+    use futures::{future::FutureExt, join, pin_mut, select};
+    use std::vec::Vec;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_read_by_type() -> Result<(), Error> {
-        let (client, _stream) = create_proxy_and_stream::<ClientMarker>()?;
+    #[fuchsia::test]
+    async fn test_read_by_type() {
+        let (client, _stream) = create_proxy_and_stream::<ClientMarker>().unwrap();
         let gatt_client = GattClient::new(client);
 
         let args = vec!["0000180d-0000-1000-8000-00805f9b34fb"];
@@ -784,7 +801,7 @@ mod tests {
         let (service_proxy, mut service_mock) =
             RemoteServiceMock::new(20.seconds()).expect("failed to create mock");
 
-        gatt_client.write().active_proxy = Some(service_proxy);
+        gatt_client.write().active_service = Some(ActiveService::new(service_proxy));
 
         let expected_uuid = Uuid::new16(0x180d);
         let result: RemoteServiceReadByTypeResult = Ok(vec![]);
@@ -793,6 +810,57 @@ mod tests {
         let (read_result, expect_result) = join!(read_fut, expect_fut);
         let _ = read_result.expect("do read by type failed");
         let _ = expect_result.expect("read by type expectation not satisfied");
-        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_connect_and_enable_notify() {
+        let (client_proxy, mut client_mock) =
+            ClientMock::new(20.seconds()).expect("failed to create mock");
+        let gatt_client = GattClient::new(client_proxy);
+
+        let services =
+            vec![ServiceInfo { handle: Some(ServiceHandle { value: 1 }), ..ServiceInfo::EMPTY }];
+        gatt_client.write().set_services(services);
+
+        let args = vec!["0"]; // service index
+        let connect_fut = do_connect(&args, &gatt_client).fuse();
+        let expect_connect_fut =
+            client_mock.expect_connect_to_service(ServiceHandle { value: 1 }).fuse();
+        pin_mut!(connect_fut, expect_connect_fut);
+
+        let (_, service_server) = select! {
+            _ = connect_fut =>  panic!("connect_fut completed prematurely (characteristics haven't been discovered)"),
+            result = expect_connect_fut => result.expect("expect connect failed"),
+        };
+        let service_stream =
+            service_server.into_stream().expect("failed to turn server into stream");
+        let mut service_mock = RemoteServiceMock::from_stream(service_stream, 20.seconds());
+
+        let characteristics = Vec::new();
+        let expect_discover_fut = service_mock.expect_discover_characteristics(&characteristics);
+
+        let (connect_result, expect_discover_result) = join!(connect_fut, expect_discover_fut);
+        connect_result.expect("failed to connect");
+        expect_discover_result.expect("expect discover failed");
+
+        let args = vec!["2"]; // characteristic handle
+        let register_fut = do_enable_notify(&args, &gatt_client);
+        let expect_register_fut =
+            service_mock.expect_register_characteristic_notifier(Handle { value: 2 });
+
+        let (register_result, expect_register_result) = join!(register_fut, expect_register_fut);
+        register_result.expect("failed to register notifier");
+        let notifier_client = expect_register_result.expect("expect register failed");
+        let notifier = notifier_client.into_proxy().expect("failed to turn notifier into proxy");
+
+        let notification_value = ReadValue {
+            handle: Some(Handle { value: 2 }),
+            value: Some(vec![0x00, 0x01, 0x02]),
+            maybe_truncated: Some(false),
+            ..ReadValue::EMPTY
+        };
+
+        // The notification should immediately receive a flow control response.
+        notifier.on_notification(notification_value).await.expect("on_notification");
     }
 }

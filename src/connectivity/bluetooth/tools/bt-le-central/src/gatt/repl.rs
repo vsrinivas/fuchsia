@@ -2,18 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{Context as _, Error},
-    fidl_fuchsia_bluetooth_gatt::ClientProxy,
-    fuchsia_async as fasync,
-    fuchsia_bluetooth::error::Error as BTError,
-    futures::{
-        channel::mpsc::{channel, SendError},
-        Sink, SinkExt, Stream, StreamExt,
-    },
-    rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
-    std::thread,
+use anyhow::{Context as _, Error};
+use fidl_fuchsia_bluetooth_gatt2::ClientProxy;
+use fuchsia_async as fasync;
+use fuchsia_bluetooth::error::Error as BTError;
+use futures::{
+    channel::mpsc::{channel, SendError},
+    Sink, SinkExt, Stream, StreamExt,
 };
+use rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor};
+use std::thread;
 
 use super::{
     commands::{Cmd, CmdHelper},
@@ -36,22 +34,16 @@ pub async fn start_gatt_loop<'a>(proxy: ClientProxy) -> Result<(), Error> {
     let client = GattClient::new(proxy);
 
     println!("  discovering services...");
-    let list_services = client.read().proxy.list_services(None);
 
-    let (status, services) = list_services.await.map_err(|e| {
-        let err = BTError::new(&format!("failed to list services: {}", e));
-        println!("{}", e);
-        err
-    })?;
-
-    match status.error {
-        None => client.write().set_services(services),
-        Some(e) => {
-            let err = BTError::from(*e).into();
-            println!("failed to list services: {}", err);
-            return Err(err);
-        }
-    }
+    // TODO(fxbug.dev/109239): This only gets the list of initial services. We should watch for
+    // future service updates as well.
+    let (services, _) = client
+        .read()
+        .proxy
+        .watch_services(&mut Vec::new().into_iter())
+        .await
+        .context("Failed to watch services")?;
+    client.write().set_services(services);
 
     let (mut commands, mut acks) = cmd_stream();
     while let Some(cmd) = commands.next().await {
