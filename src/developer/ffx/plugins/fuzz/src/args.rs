@@ -89,7 +89,7 @@ pub enum FuzzShellSubcommand {
     Status(StatusShellSubcommand),
     Fetch(FetchShellSubcommand),
     Detach(DetachShellSubcommand),
-    Stop(StopShellSubcommand),
+    Stop(StopSubcommand),
     Exit(ExitShellSubcommand),
     Clear(ClearShellSubcommand),
     History(HistoryShellSubcommand),
@@ -256,7 +256,6 @@ impl AttachShellSubcommand {
             FuzzSubcommand::Merge(MergeSubcommand { url, output, .. }) => (url, output),
             FuzzSubcommand::Status(StatusSubcommand { url, output, .. }) => (url, output),
             FuzzSubcommand::Fetch(FetchSubcommand { url, output, .. }) => (url, output),
-            FuzzSubcommand::Stop(StopSubcommand { url, output, .. }) => (url, output),
             _ => return None,
         };
         Some(Self { url: url.to_string(), output: output.clone() })
@@ -478,16 +477,23 @@ impl Autocomplete for DetachShellSubcommand {
     const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] = &[];
 }
 
-/// Command to stop a fuzzer and detach from it.
-#[valid_when(FuzzerState::Idle, FuzzerState::Running)]
-#[derive_subcommand]
+/// Command to stop a fuzzer.
+#[valid_when(FuzzerState::Detached, FuzzerState::Idle, FuzzerState::Running)]
 #[derive(Clone, Debug, FromArgs, PartialEq)]
-#[argh(subcommand, name = "stop", description = "Stops the attached fuzzer.")]
-pub struct StopShellSubcommand {}
+#[argh(subcommand, name = "stop", description = "Stops a fuzzer.")]
+pub struct StopSubcommand {
+    /// package URL for the fuzzer. The attached fuzzer is stopped by default.
+    #[argh(positional)]
+    pub url: Option<String>,
 
-impl Autocomplete for StopShellSubcommand {
-    const POSITIONAL_TYPES: &'static [ParameterType] = &[];
-    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] = &[];
+    /// if present, suppress non-error output from the ffx tool itself
+    #[argh(switch, short = 'q')]
+    pub quiet: bool,
+}
+
+impl Autocomplete for StopSubcommand {
+    const POSITIONAL_TYPES: &'static [ParameterType] = &[ParameterType::Url];
+    const OPTION_TYPES: &'static [(&'static str, Option<ParameterType>)] = &[("--quiet", None)];
 }
 
 /// Command to stop the fuzzer shell.
@@ -775,15 +781,19 @@ mod tests {
     #[fuchsia::test]
     async fn test_stop() {
         let cmdline = format!("stop {}", TEST_URL);
-        let cmd = FuzzShellSubcommand::Stop(StopShellSubcommand {});
-        let expected = create_session_commands(&cmd, None);
+        let mut stop = StopSubcommand { url: Some(TEST_URL.to_string()), quiet: false };
+        let exit = FuzzShellSubcommand::Exit(ExitShellSubcommand {});
+        let expected = shell_cmds(vec![FuzzShellSubcommand::Stop(stop.clone()), exit.clone()]);
         assert_eq!(get_session(cmdline), Session::Verbose(expected));
 
-        let cmdline = format!("stop --output path -q {}", TEST_URL);
-        let expected = create_session_commands(&cmd, Some("path"));
+        let cmdline = format!("stop -q {}", TEST_URL);
+        stop.quiet = true;
+        let expected = shell_cmds(vec![FuzzShellSubcommand::Stop(stop.clone()), exit.clone()]);
         assert_eq!(get_session(cmdline), Session::Quiet(expected.clone()));
 
-        let cmdline = format!("stop {} --quiet -o path", TEST_URL);
+        let cmdline = "stop --quiet";
+        stop.url = None;
+        let expected = shell_cmds(vec![FuzzShellSubcommand::Stop(stop.clone()), exit.clone()]);
         assert_eq!(get_session(cmdline), Session::Quiet(expected));
     }
 

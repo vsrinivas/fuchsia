@@ -204,6 +204,13 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
                 self.writer.println("No fuzzer attached.");
                 Ok(NextAction::Prompt)
             }
+            FuzzShellSubcommand::Stop(StopSubcommand { url, .. }) => {
+                match url {
+                    Some(url) => self.stop(&url).await.context("failed to stop fuzzer")?,
+                    None => self.writer.error("invalid command: no fuzzer attached."),
+                };
+                Ok(NextAction::Prompt)
+            }
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}) => {
                 if self.reader.borrow().is_interactive() {
                     self.writer.println("Exiting...");
@@ -248,16 +255,14 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
                 let corpus_type = get_corpus_type(seed);
                 fuzzer.fetch(corpus_type).await.context("failed to fetch corpus from fuzzer")?;
             }
-            FuzzShellSubcommand::Stop(StopShellSubcommand {}) => {
-                self.writer.println(format!("Stopping '{}'...", fuzzer.url()));
-                self.manager.stop(&fuzzer.url()).await.context("failed to stop fuzzer")?;
-                self.set_state(FuzzerState::Detached);
-                self.writer.println(format!("Stopped."));
-            }
             FuzzShellSubcommand::Detach(DetachShellSubcommand {}) => {
                 self.writer.println(format!("Detaching from '{}'...", fuzzer.url()));
                 self.detach();
                 self.writer.println(format!("Detached."));
+            }
+            FuzzShellSubcommand::Stop(StopSubcommand { url, .. }) => {
+                let url = url.unwrap_or(fuzzer.url().to_string());
+                self.stop(&url).await.context("failed to stop fuzzer")?;
             }
             FuzzShellSubcommand::Exit(ExitShellSubcommand {}) => {
                 self.writer.println("Exiting...");
@@ -534,6 +539,15 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         self.writer.println(format!("To reconnect later, use the 'attach' command."));
         self.writer.println(format!("To stop this fuzzer, use 'stop'. command"));
         self.set_state(FuzzerState::Detached);
+    }
+
+    async fn stop(&self, url: &str) -> Result<()> {
+        let url = Url::parse(url).context("invalid fuzzer URL")?;
+        self.writer.println(format!("Stopping '{}'...", url));
+        self.manager.stop(&url).await.context("manager failed to stop fuzzer")?;
+        self.set_state(FuzzerState::Detached);
+        self.writer.println(format!("Stopped."));
+        Ok(())
     }
 
     // Helper functions to make it easier to access and mutate `Arc` and `RefCell` fields, and to

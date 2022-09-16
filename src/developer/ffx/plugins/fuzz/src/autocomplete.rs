@@ -120,7 +120,7 @@ impl FuzzHelper {
         StatusShellSubcommand::add_if_valid(&mut commands, *state);
         FetchShellSubcommand::add_if_valid(&mut commands, *state);
         DetachShellSubcommand::add_if_valid(&mut commands, *state);
-        StopShellSubcommand::add_if_valid(&mut commands, *state);
+        StopSubcommand::add_if_valid(&mut commands, *state);
         ExitShellSubcommand::add_if_valid(&mut commands, *state);
         ClearShellSubcommand::add_if_valid(&mut commands, *state);
         HistoryShellSubcommand::add_if_valid(&mut commands, *state);
@@ -250,7 +250,7 @@ fn get_parameter_types(
     StatusShellSubcommand::autocomplete(command, &mut positional, &mut longopts);
     FetchShellSubcommand::autocomplete(command, &mut positional, &mut longopts);
     DetachShellSubcommand::autocomplete(command, &mut positional, &mut longopts);
-    StopShellSubcommand::autocomplete(command, &mut positional, &mut longopts);
+    StopSubcommand::autocomplete(command, &mut positional, &mut longopts);
     ExitShellSubcommand::autocomplete(command, &mut positional, &mut longopts);
     ClearShellSubcommand::autocomplete(command, &mut positional, &mut longopts);
     HistoryShellSubcommand::autocomplete(command, &mut positional, &mut longopts);
@@ -356,7 +356,8 @@ mod tests {
 
         // Not attached.
         let result = helper.complete("", 0)?;
-        let candidates = vec!["list", "attach", "status", "exit", "clear", "help", "history"];
+        let candidates =
+            vec!["list", "attach", "status", "stop", "exit", "clear", "help", "history"];
         verify_pairs(result.1, candidates, Replacements::Exact);
 
         // Not already running.
@@ -650,8 +651,8 @@ mod tests {
         let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
 
         // 'status' is always available.
-        let result = helper.complete("s", 0)?;
-        verify_pairs(result.1, vec!["status"], Replacements::except("s"));
+        let result = helper.complete("sta", 0)?;
+        verify_pairs(result.1, vec!["status"], Replacements::except("sta"));
 
         set_state(Arc::clone(&state), FuzzerState::Idle);
         let result = helper.complete("sta", 0)?;
@@ -717,9 +718,9 @@ mod tests {
         let state = Arc::new(Mutex::new(FuzzerState::Detached));
         let helper = FuzzHelper::new(test.root_dir(), Arc::clone(&state));
 
-        // 'stop' is only suggested when attached.
+        // 'stop' is always available.
         let result = helper.complete("sto", 0)?;
-        assert!(result.1.is_empty());
+        verify_pairs(result.1, vec!["stop"], Replacements::except("sto"));
 
         set_state(Arc::clone(&state), FuzzerState::Idle);
         let result = helper.complete("sto", 0)?;
