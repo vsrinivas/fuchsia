@@ -137,10 +137,10 @@ class PipeManager {
 };
 
 // Instantiation of PipeManager for gen9 devices (Skylake, Kaby Lake, etc.)
-class SklPipeManager : public PipeManager {
+class PipeManagerSkylake : public PipeManager {
  public:
-  explicit SklPipeManager(Controller* controller);
-  ~SklPipeManager() override = default;
+  explicit PipeManagerSkylake(Controller* controller);
+  ~PipeManagerSkylake() override = default;
 
   void ResetInactiveTranscoders() override;
 
@@ -151,7 +151,7 @@ class SklPipeManager : public PipeManager {
   Pipe* GetAvailablePipe() override;
   Pipe* GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) override;
 
-  static std::vector<std::unique_ptr<Pipe>> SklPipes(fdf::MmioBuffer* mmio_space, Power* power);
+  static std::vector<std::unique_ptr<Pipe>> GetPipes(fdf::MmioBuffer* mmio_space, Power* power);
 
   fdf::MmioBuffer* mmio_space_;
 };

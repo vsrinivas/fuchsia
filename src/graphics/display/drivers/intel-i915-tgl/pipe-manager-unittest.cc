@@ -82,8 +82,8 @@ class FakeDisplay : public DisplayDevice {
 
 // This tests if the PipeManager can allocate pipe for display devices and
 // bind the display correctly.
-TEST_F(PipeManagerTest, SklAllocatePipe) {
-  controller_.SetPipeManagerForTesting(std::make_unique<SklPipeManager>(controller()));
+TEST_F(PipeManagerTest, SkylakeAllocatePipe) {
+  controller_.SetPipeManagerForTesting(std::make_unique<PipeManagerSkylake>(controller()));
   PipeManager* pm = controller_.pipe_manager();
 
   // Allocate pipe for DP display.
@@ -122,8 +122,8 @@ TEST_F(PipeManagerTest, SklAllocatePipe) {
 
 // This tests if the driver can reclaim used pipe and transcoder when the
 // display is removed so that the pipes can be used for future devices.
-TEST_F(PipeManagerTest, SklReclaimUsedPipe) {
-  controller_.SetPipeManagerForTesting(std::make_unique<SklPipeManager>(controller()));
+TEST_F(PipeManagerTest, SkylakeReclaimUsedPipe) {
+  controller_.SetPipeManagerForTesting(std::make_unique<PipeManagerSkylake>(controller()));
   PipeManager* pm = controller_.pipe_manager();
 
   for (size_t display_id = 1u;

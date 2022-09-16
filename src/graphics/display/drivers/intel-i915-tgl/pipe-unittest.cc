@@ -73,7 +73,7 @@ layer_t CreatePrimaryLayerConfig(uint64_t handle, uint32_t z_index = 1u) {
 // Verifies that GetVsyncConfigStamp() could return the correct config stamp
 // given different image handles from device registers.
 TEST_F(PipeTest, GetVsyncConfigStamp) {
-  SklPipe pipe(&*mmio_buffer_, tgl_registers::Pipe::PIPE_A, {});
+  PipeSkylake pipe(&*mmio_buffer_, tgl_registers::Pipe::PIPE_A, {});
 
   uint64_t kImageHandle1 = 0x1111u;
   uint64_t kImageHandle2 = 0x2222u;

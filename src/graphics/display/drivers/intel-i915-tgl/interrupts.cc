@@ -27,7 +27,7 @@ struct HotplugDetectionResult {
   std::bitset<kMaxAllowedDdis> long_pulse;
 };
 
-HotplugDetectionResult SklDetectHotplug(fdf::MmioBuffer* mmio_space) {
+HotplugDetectionResult DetectHotplugSkylake(fdf::MmioBuffer* mmio_space) {
   HotplugDetectionResult result;
 
   auto sde_int_identity =
@@ -50,7 +50,7 @@ HotplugDetectionResult SklDetectHotplug(fdf::MmioBuffer* mmio_space) {
   return result;
 }
 
-HotplugDetectionResult TglDetectHotplug(fdf::MmioBuffer* mmio_space) {
+HotplugDetectionResult DetectHotplugTigerLake(fdf::MmioBuffer* mmio_space) {
   HotplugDetectionResult result;
 
   auto sde_int_identity =
@@ -106,7 +106,7 @@ HotplugDetectionResult TglDetectHotplug(fdf::MmioBuffer* mmio_space) {
   return result;
 }
 
-void SklEnableHotplugInterrupts(fdf::MmioBuffer* mmio_space) {
+void EnableHotplugInterruptsSkylake(fdf::MmioBuffer* mmio_space) {
   auto pch_fuses = tgl_registers::PchDisplayFuses::Get().ReadFrom(mmio_space);
 
   for (const auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kKabyLake>()) {
@@ -150,7 +150,7 @@ void SklEnableHotplugInterrupts(fdf::MmioBuffer* mmio_space) {
   }
 }
 
-void TglEnableHotplugInterrupts(fdf::MmioBuffer* mmio_space) {
+void EnableHotplugInterruptsTigerLake(fdf::MmioBuffer* mmio_space) {
   constexpr zx_off_t kSHPD_FILTER_CNT = 0xc4038;
   constexpr uint32_t kSHPD_FILTER_CNT_500_ADJ = 0x001d9;
   mmio_space->Write32(kSHPD_FILTER_CNT_500_ADJ, kSHPD_FILTER_CNT);
@@ -241,8 +241,8 @@ int Interrupts::IrqLoop() {
                                   (is_tgl(device_id_) && interrupt_ctrl.de_hpd_int_pending());
 
     if (has_hot_plug_interrupt) {
-      auto detect_result =
-          is_tgl(device_id_) ? TglDetectHotplug(mmio_space_) : SklDetectHotplug(mmio_space_);
+      auto detect_result = is_tgl(device_id_) ? DetectHotplugTigerLake(mmio_space_)
+                                              : DetectHotplugSkylake(mmio_space_);
       for (auto ddi : GetDdis(device_id_)) {
         if (detect_result.detected[ddi]) {
           zxlogf(TRACE, "Detected hot plug interrupt on ddi %d", ddi);
@@ -412,9 +412,9 @@ void Interrupts::FinishInit() {
 
 void Interrupts::Resume() {
   if (is_tgl(device_id_)) {
-    TglEnableHotplugInterrupts(mmio_space_);
+    EnableHotplugInterruptsTigerLake(mmio_space_);
   } else {
-    SklEnableHotplugInterrupts(mmio_space_);
+    EnableHotplugInterruptsSkylake(mmio_space_);
   }
 }
 

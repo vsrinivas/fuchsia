@@ -6,6 +6,7 @@
 
 #include <lib/mmio/mmio-buffer.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
@@ -67,13 +68,13 @@ PipeManager::PipeConstIterator PipeManager::begin() const {
 }
 PipeManager::PipeConstIterator PipeManager::end() const { return PipeConstIterator(pipes_.cend()); }
 
-SklPipeManager::SklPipeManager(Controller* controller)
-    : PipeManager(SklPipes(controller->mmio_space(), controller->power())),
+PipeManagerSkylake::PipeManagerSkylake(Controller* controller)
+    : PipeManager(GetPipes(controller->mmio_space(), controller->power())),
       mmio_space_(controller->mmio_space()) {
   ZX_DEBUG_ASSERT(controller);
 }
 
-void SklPipeManager::ResetInactiveTranscoders() {
+void PipeManagerSkylake::ResetInactiveTranscoders() {
   bool has_edp = false;
   for (Pipe* pipe : *this) {
     if (pipe->in_use()) {
@@ -97,7 +98,7 @@ void SklPipeManager::ResetInactiveTranscoders() {
   }
 }
 
-Pipe* SklPipeManager::GetAvailablePipe() {
+Pipe* PipeManagerSkylake::GetAvailablePipe() {
   for (Pipe* pipe : *this) {
     if (!pipe->in_use()) {
       return pipe;
@@ -106,7 +107,7 @@ Pipe* SklPipeManager::GetAvailablePipe() {
   return nullptr;
 }
 
-Pipe* SklPipeManager::GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) {
+Pipe* PipeManagerSkylake::GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer* mmio_space) {
   // In Skylake, DDI_A always maps to eDP display.
   if (ddi == tgl_registers::DDI_A) {
     tgl_registers::TranscoderRegs regs(tgl_registers::TRANS_EDP);
@@ -138,12 +139,12 @@ Pipe* SklPipeManager::GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBuffer
 }
 
 // static
-std::vector<std::unique_ptr<Pipe>> SklPipeManager::SklPipes(fdf::MmioBuffer* mmio_space,
-                                                            Power* power) {
+std::vector<std::unique_ptr<Pipe>> PipeManagerSkylake::GetPipes(fdf::MmioBuffer* mmio_space,
+                                                                Power* power) {
   std::vector<std::unique_ptr<Pipe>> pipes;
-  for (const auto pipe_enum : kPipeEnums) {
-    pipes.push_back(
-        std::make_unique<SklPipe>(mmio_space, pipe_enum, power->GetPipePowerWellRef(pipe_enum)));
+  for (const auto pipe_enum : tgl_registers::Pipes<tgl_registers::Platform::kSkylake>()) {
+    pipes.push_back(std::make_unique<PipeSkylake>(mmio_space, pipe_enum,
+                                                  power->GetPipePowerWellRef(pipe_enum)));
   }
   return pipes;
 }

@@ -63,7 +63,7 @@ bool CompareDpllStates(const DpllState& a, const DpllState& b) {
   return false;
 }
 
-std::optional<tgl_registers::DpllControl1::LinkRate> DpBitRateMhzToSklLinkRate(
+std::optional<tgl_registers::DpllControl1::LinkRate> DpBitRateMhzToSkylakeLinkRate(
     uint32_t dp_bit_rate_mhz) {
   switch (dp_bit_rate_mhz) {
     case 5400:
@@ -83,7 +83,8 @@ std::optional<tgl_registers::DpllControl1::LinkRate> DpBitRateMhzToSklLinkRate(
   }
 }
 
-std::optional<uint32_t> SklLinkRateToDpBitRateMhz(tgl_registers::DpllControl1::LinkRate link_rate) {
+std::optional<uint32_t> SkylakeLinkRateToDpBitRateMhz(
+    tgl_registers::DpllControl1::LinkRate link_rate) {
   switch (link_rate) {
     case tgl_registers::DpllControl1::LinkRate::k2700Mhz:
       return 5400;
@@ -155,10 +156,10 @@ bool DisplayPllManager::PllNeedsReset(tgl_registers::Ddi ddi, const DpllState& n
   return !CompareDpllStates(ddi_to_dpll_[ddi]->state(), new_state);
 }
 
-SklDpll::SklDpll(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll)
+DpllSkylake::DpllSkylake(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll)
     : DisplayPll(dpll), mmio_space_(mmio_space) {}
 
-bool SklDpll::Enable(const DpllState& state) {
+bool DpllSkylake::Enable(const DpllState& state) {
   if (enabled_) {
     zxlogf(ERROR, "DPLL (%s) Enable(): Already enabled!", name().c_str());
     return false;
@@ -176,12 +177,12 @@ bool SklDpll::Enable(const DpllState& state) {
   return enabled_;
 }
 
-bool SklDpll::EnableDp(const DpDpllState& dp_state) {
+bool DpllSkylake::EnableDp(const DpDpllState& dp_state) {
   // Configure this DPLL to produce a suitable clock signal.
   auto dpll_ctrl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space_);
   dpll_ctrl1.dpll_hdmi_mode(dpll()).set(0);
   dpll_ctrl1.dpll_ssc_enable(dpll()).set(0);
-  auto dp_rate = DpBitRateMhzToSklLinkRate(dp_state.dp_bit_rate_mhz);
+  auto dp_rate = DpBitRateMhzToSkylakeLinkRate(dp_state.dp_bit_rate_mhz);
   if (!dp_rate.has_value()) {
     zxlogf(ERROR, "Invalid DP bit rate: %u MHz", dp_state.dp_bit_rate_mhz);
     return false;
@@ -207,7 +208,7 @@ bool SklDpll::EnableDp(const DpDpllState& dp_state) {
   return true;
 }
 
-bool SklDpll::EnableHdmi(const HdmiDpllState& hdmi_state) {
+bool DpllSkylake::EnableHdmi(const HdmiDpllState& hdmi_state) {
   // Set the DPLL control settings
   auto dpll_ctrl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space_);
   dpll_ctrl1.dpll_hdmi_mode(dpll()).set(1);
@@ -250,7 +251,7 @@ bool SklDpll::EnableHdmi(const HdmiDpllState& hdmi_state) {
   return true;
 }
 
-bool SklDpll::Disable() {
+bool DpllSkylake::Disable() {
   if (!enabled_) {
     zxlogf(INFO, "Dpll %s Disable(): Already disabled", name().c_str());
     return true;
@@ -267,15 +268,15 @@ bool SklDpll::Disable() {
   return true;
 }
 
-SklDpllManager::SklDpllManager(fdf::MmioBuffer* mmio_space) : mmio_space_(mmio_space) {
+DpllManagerSkylake::DpllManagerSkylake(fdf::MmioBuffer* mmio_space) : mmio_space_(mmio_space) {
   plls_.resize(tgl_registers::Dplls<tgl_registers::Platform::kSkylake>().size());
   for (const auto dpll : tgl_registers::Dplls<tgl_registers::Platform::kSkylake>()) {
-    plls_[dpll] = std::unique_ptr<SklDpll>(new SklDpll(mmio_space, dpll));
+    plls_[dpll] = std::unique_ptr<DpllSkylake>(new DpllSkylake(mmio_space, dpll));
     ref_count_[plls_[dpll].get()] = 0;
   }
 }
 
-bool SklDpllManager::MapImpl(tgl_registers::Ddi ddi, tgl_registers::Dpll dpll) {
+bool DpllManagerSkylake::MapImpl(tgl_registers::Ddi ddi, tgl_registers::Dpll dpll) {
   // Direct the DPLL to the DDI
   auto dpll_ctrl2 = tgl_registers::DpllControl2::Get().ReadFrom(mmio_space_);
   dpll_ctrl2.ddi_select_override(ddi).set(1);
@@ -286,7 +287,7 @@ bool SklDpllManager::MapImpl(tgl_registers::Ddi ddi, tgl_registers::Dpll dpll) {
   return true;
 }
 
-bool SklDpllManager::UnmapImpl(tgl_registers::Ddi ddi) {
+bool DpllManagerSkylake::UnmapImpl(tgl_registers::Ddi ddi) {
   auto dpll_ctrl2 = tgl_registers::DpllControl2::Get().ReadFrom(mmio_space_);
   dpll_ctrl2.ddi_clock_off(ddi).set(1);
   dpll_ctrl2.WriteTo(mmio_space_);
@@ -294,7 +295,7 @@ bool SklDpllManager::UnmapImpl(tgl_registers::Ddi ddi) {
   return true;
 }
 
-std::optional<DpllState> SklDpllManager::LoadState(tgl_registers::Ddi ddi) {
+std::optional<DpllState> DpllManagerSkylake::LoadState(tgl_registers::Ddi ddi) {
   auto dpll_ctrl2 = tgl_registers::DpllControl2::Get().ReadFrom(mmio_space_);
   if (dpll_ctrl2.ddi_clock_off(ddi).get()) {
     return std::nullopt;
@@ -334,7 +335,7 @@ std::optional<DpllState> SklDpllManager::LoadState(tgl_registers::Ddi ddi) {
         .cf = static_cast<uint8_t>(dpll_cfg2.central_freq()),
     };
   } else {
-    auto dp_bit_rate_mhz = SklLinkRateToDpBitRateMhz(dpll_ctrl1.GetLinkRate(dpll));
+    auto dp_bit_rate_mhz = SkylakeLinkRateToDpBitRateMhz(dpll_ctrl1.GetLinkRate(dpll));
     if (!dp_bit_rate_mhz.has_value()) {
       zxlogf(ERROR, "Invalid DPLL link rate from DPLL %d", dpll);
       return std::nullopt;
@@ -348,8 +349,8 @@ std::optional<DpllState> SklDpllManager::LoadState(tgl_registers::Ddi ddi) {
   return std::make_optional(new_state);
 }
 
-DisplayPll* SklDpllManager::FindBestDpll(tgl_registers::Ddi ddi, bool is_edp,
-                                         const DpllState& state) {
+DisplayPll* DpllManagerSkylake::FindBestDpll(tgl_registers::Ddi ddi, bool is_edp,
+                                             const DpllState& state) {
   DisplayPll* res = nullptr;
   if (is_edp) {
     ZX_DEBUG_ASSERT(std::holds_alternative<DpDpllState>(state));

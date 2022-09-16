@@ -63,15 +63,16 @@ bool WriteToGtMailbox(fdf::MmioBuffer* mmio_space, GtDriverMailboxOp op) {
 
 }  // namespace
 
-SklCoreDisplayClock::SklCoreDisplayClock(fdf::MmioBuffer* mmio_space) : mmio_space_(mmio_space) {
+CoreDisplayClockSkylake::CoreDisplayClockSkylake(fdf::MmioBuffer* mmio_space)
+    : mmio_space_(mmio_space) {
   bool current_freq_is_valid = LoadState();
   ZX_DEBUG_ASSERT(current_freq_is_valid);
 }
 
-bool SklCoreDisplayClock::LoadState() {
+bool CoreDisplayClockSkylake::LoadState() {
   auto dpll_enable = tgl_registers::DpllEnable::Get(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
   if (!dpll_enable.enable_dpll()) {
-    zxlogf(ERROR, "SKL CDCLK LoadState: DPLL0 is disabled");
+    zxlogf(ERROR, "Skylake CDCLK LoadState: DPLL0 is disabled");
     return false;
   }
 
@@ -104,7 +105,7 @@ bool SklCoreDisplayClock::LoadState() {
   return true;
 }
 
-bool SklCoreDisplayClock::PreChangeFreq() {
+bool CoreDisplayClockSkylake::PreChangeFreq() {
   bool raise_voltage_result = WriteToGtMailbox(mmio_space_, {
                                                                 .addr = 0x80000007,
                                                                 .val = 0x3,
@@ -119,7 +120,7 @@ bool SklCoreDisplayClock::PreChangeFreq() {
   return true;
 }
 
-bool SklCoreDisplayClock::PostChangeFreq(uint32_t freq_khz) {
+bool CoreDisplayClockSkylake::PostChangeFreq(uint32_t freq_khz) {
   bool set_voltage_result = WriteToGtMailbox(mmio_space_, {
                                                               .addr = 0x80000007,
                                                               .val = FreqToVoltageLevel(freq_khz),
@@ -134,10 +135,10 @@ bool SklCoreDisplayClock::PostChangeFreq(uint32_t freq_khz) {
   return true;
 }
 
-bool SklCoreDisplayClock::CheckFrequency(uint32_t freq_khz) {
+bool CoreDisplayClockSkylake::CheckFrequency(uint32_t freq_khz) {
   auto dpll_enable = tgl_registers::DpllEnable::Get(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
   if (!dpll_enable.enable_dpll()) {
-    zxlogf(ERROR, "SKL CDCLK CheckFrequency: DPLL0 is disabled");
+    zxlogf(ERROR, "Skylake CDCLK CheckFrequency: DPLL0 is disabled");
     return false;
   }
 
@@ -153,7 +154,7 @@ bool SklCoreDisplayClock::CheckFrequency(uint32_t freq_khz) {
   return freq_khz == 337'500 || freq_khz == 450'000 || freq_khz == 540'000 || freq_khz == 675'000;
 }
 
-bool SklCoreDisplayClock::ChangeFreq(uint32_t freq_khz) {
+bool CoreDisplayClockSkylake::ChangeFreq(uint32_t freq_khz) {
   // Set the cd_clk frequency to |freq_khz|.
   auto cd_clk = tgl_registers::CdClockCtl::Get().ReadFrom(mmio_space_);
   switch (freq_khz) {
@@ -182,9 +183,9 @@ bool SklCoreDisplayClock::ChangeFreq(uint32_t freq_khz) {
   return true;
 }
 
-bool SklCoreDisplayClock::SetFrequency(uint32_t freq_khz) {
+bool CoreDisplayClockSkylake::SetFrequency(uint32_t freq_khz) {
   if (!CheckFrequency(freq_khz)) {
-    zxlogf(ERROR, "SKL CDCLK ChangeFreq: Invalid frequency %u KHz", freq_khz);
+    zxlogf(ERROR, "Skylake CDCLK ChangeFreq: Invalid frequency %u KHz", freq_khz);
     return false;
   }
 
@@ -204,7 +205,7 @@ bool SklCoreDisplayClock::SetFrequency(uint32_t freq_khz) {
 }
 
 // static
-uint32_t SklCoreDisplayClock::FreqToVoltageLevel(uint32_t freq_khz) {
+uint32_t CoreDisplayClockSkylake::FreqToVoltageLevel(uint32_t freq_khz) {
   if (freq_khz > 540'000) {
     return 0x3;
   }
@@ -219,12 +220,13 @@ uint32_t SklCoreDisplayClock::FreqToVoltageLevel(uint32_t freq_khz) {
 
 // Tiger Lake
 
-TglCoreDisplayClock::TglCoreDisplayClock(fdf::MmioBuffer* mmio_space) : mmio_space_(mmio_space) {
+CoreDisplayClockTigerLake::CoreDisplayClockTigerLake(fdf::MmioBuffer* mmio_space)
+    : mmio_space_(mmio_space) {
   bool load_state_result = LoadState();
   ZX_DEBUG_ASSERT(load_state_result);
 }
 
-bool TglCoreDisplayClock::LoadState() {
+bool CoreDisplayClockTigerLake::LoadState() {
   // Load ref clock frequency.
   auto dssm = tgl_registers::Dssm::Get().ReadFrom(mmio_space_);
   switch (dssm.GetRefFrequency()) {
@@ -279,7 +281,7 @@ bool TglCoreDisplayClock::LoadState() {
   return true;
 }
 
-std::optional<TglCoreDisplayClock::State> TglCoreDisplayClock::FreqToState(
+std::optional<CoreDisplayClockTigerLake::State> CoreDisplayClockTigerLake::FreqToState(
     uint32_t freq_khz) const {
   switch (ref_clock_khz_) {
     case 19'200:
@@ -290,12 +292,12 @@ std::optional<TglCoreDisplayClock::State> TglCoreDisplayClock::FreqToState(
         case 307'200:
         case 556'800:
         case 652'800:
-          return TglCoreDisplayClock::State{
+          return CoreDisplayClockTigerLake::State{
               .cd2x_divider = 1,
               .pll_ratio = freq_khz * 2 / ref_clock_khz_,
           };
         case 326'400:
-          return TglCoreDisplayClock::State{
+          return CoreDisplayClockTigerLake::State{
               .cd2x_divider = 2,
               .pll_ratio = freq_khz * 4 / ref_clock_khz_,
           };
@@ -310,12 +312,12 @@ std::optional<TglCoreDisplayClock::State> TglCoreDisplayClock::FreqToState(
         case 312'000:
         case 552'000:
         case 648'000:
-          return TglCoreDisplayClock::State{
+          return CoreDisplayClockTigerLake::State{
               .cd2x_divider = 1,
               .pll_ratio = freq_khz * 2 / ref_clock_khz_,
           };
         case 324'000:
-          return TglCoreDisplayClock::State{
+          return CoreDisplayClockTigerLake::State{
               .cd2x_divider = 2,
               .pll_ratio = freq_khz * 4 / ref_clock_khz_,
           };
@@ -330,13 +332,13 @@ std::optional<TglCoreDisplayClock::State> TglCoreDisplayClock::FreqToState(
   }
 }
 
-bool TglCoreDisplayClock::CheckFrequency(uint32_t freq_khz) {
+bool CoreDisplayClockTigerLake::CheckFrequency(uint32_t freq_khz) {
   return freq_khz == 0 || FreqToState(freq_khz).has_value();
 }
 
-bool TglCoreDisplayClock::SetFrequency(uint32_t freq_khz) {
+bool CoreDisplayClockTigerLake::SetFrequency(uint32_t freq_khz) {
   if (!CheckFrequency(freq_khz)) {
-    zxlogf(ERROR, "TGL CDCLK SetFrequency: Invalid frequency %u KHz", freq_khz);
+    zxlogf(ERROR, "Tiger Lake CDCLK SetFrequency: Invalid frequency %u KHz", freq_khz);
     return false;
   }
 
@@ -355,7 +357,7 @@ bool TglCoreDisplayClock::SetFrequency(uint32_t freq_khz) {
   return true;
 }
 
-bool TglCoreDisplayClock::PreChangeFreq() {
+bool CoreDisplayClockTigerLake::PreChangeFreq() {
   bool raise_voltage_result = WriteToGtMailbox(mmio_space_, {
                                                                 .addr = 0x80000007,
                                                                 .val = 0x3,
@@ -370,7 +372,7 @@ bool TglCoreDisplayClock::PreChangeFreq() {
   return true;
 }
 
-bool TglCoreDisplayClock::PostChangeFreq(uint32_t freq_khz) {
+bool CoreDisplayClockTigerLake::PostChangeFreq(uint32_t freq_khz) {
   bool set_voltage_result = WriteToGtMailbox(mmio_space_, {
                                                               .addr = 0x80000007,
                                                               .val = FreqToVoltageLevel(freq_khz),
@@ -385,7 +387,7 @@ bool TglCoreDisplayClock::PostChangeFreq(uint32_t freq_khz) {
   return true;
 }
 
-bool TglCoreDisplayClock::Enable(uint32_t freq_khz, State state) {
+bool CoreDisplayClockTigerLake::Enable(uint32_t freq_khz, State state) {
   if (enabled_) {
     // We shouldn't enable the CDCLK twice, unless the target state
     // is exactly the same as current state, in which case it will be a no-op.
@@ -406,7 +408,7 @@ bool TglCoreDisplayClock::Enable(uint32_t freq_khz, State state) {
   // 200 us.
   if (!PollUntil([&] { return cdclk_pll_enable.ReadFrom(mmio_space_).pll_lock(); }, zx::usec(1),
                  200)) {
-    zxlogf(ERROR, "TGL CDCLK Enable: Timeout");
+    zxlogf(ERROR, "Tiger Lake CDCLK Enable: Timeout");
     return false;
   }
 
@@ -433,7 +435,7 @@ bool TglCoreDisplayClock::Enable(uint32_t freq_khz, State state) {
   return true;
 }
 
-bool TglCoreDisplayClock::Disable() {
+bool CoreDisplayClockTigerLake::Disable() {
   if (!enabled_) {
     // No-op if CDCLK is always disabled.
     return true;
@@ -448,14 +450,14 @@ bool TglCoreDisplayClock::Disable() {
   // after 200 us.
   if (!PollUntil([&] { return !cdclk_pll_enable.ReadFrom(mmio_space_).pll_lock(); }, zx::usec(1),
                  200)) {
-    zxlogf(ERROR, "TGL CDCLK Disable: Timeout");
+    zxlogf(ERROR, "Tiger Lake CDCLK Disable: Timeout");
     return false;
   }
   enabled_ = false;
   return true;
 }
 
-bool TglCoreDisplayClock::ChangeFreq(uint32_t freq_khz) {
+bool CoreDisplayClockTigerLake::ChangeFreq(uint32_t freq_khz) {
   if (freq_khz == 0) {
     return Disable();
   }
@@ -506,7 +508,7 @@ bool TglCoreDisplayClock::ChangeFreq(uint32_t freq_khz) {
 }
 
 // static
-uint32_t TglCoreDisplayClock::FreqToVoltageLevel(uint32_t freq_khz) {
+uint32_t CoreDisplayClockTigerLake::FreqToVoltageLevel(uint32_t freq_khz) {
   if (freq_khz > 556'800) {
     return 0x3;
   }

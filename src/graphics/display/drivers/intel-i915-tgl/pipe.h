@@ -132,11 +132,11 @@ class Pipe {
   std::unordered_map<uintptr_t, uint64_t> latest_config_seqno_of_image_;
 };
 
-class SklPipe : public Pipe {
+class PipeSkylake : public Pipe {
  public:
-  SklPipe(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
+  PipeSkylake(fdf::MmioBuffer* mmio_space, tgl_registers::Pipe pipe, PowerWellRef pipe_power)
       : Pipe(mmio_space, pipe, std::move(pipe_power)) {}
-  ~SklPipe() override = default;
+  ~PipeSkylake() override = default;
 
   tgl_registers::Trans transcoder() const override {
     return attached_edp() ? tgl_registers::TRANS_EDP : static_cast<tgl_registers::Trans>(pipe());

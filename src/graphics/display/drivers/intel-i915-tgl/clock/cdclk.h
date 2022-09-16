@@ -39,10 +39,10 @@ class CoreDisplayClock {
 
 // Skylake CD Clock
 
-class SklCoreDisplayClock final : public CoreDisplayClock {
+class CoreDisplayClockSkylake final : public CoreDisplayClock {
  public:
-  explicit SklCoreDisplayClock(fdf::MmioBuffer* mmio_space);
-  ~SklCoreDisplayClock() override = default;
+  explicit CoreDisplayClockSkylake(fdf::MmioBuffer* mmio_space);
+  ~CoreDisplayClockSkylake() override = default;
 
   bool CheckFrequency(uint32_t freq_khz) override;
   bool SetFrequency(uint32_t freq_khz) override;
@@ -61,10 +61,10 @@ class SklCoreDisplayClock final : public CoreDisplayClock {
 
 // Tiger Lake CD Clock
 
-class TglCoreDisplayClock final : public CoreDisplayClock {
+class CoreDisplayClockTigerLake final : public CoreDisplayClock {
  public:
-  explicit TglCoreDisplayClock(fdf::MmioBuffer* mmio_space);
-  ~TglCoreDisplayClock() override = default;
+  explicit CoreDisplayClockTigerLake(fdf::MmioBuffer* mmio_space);
+  ~CoreDisplayClockTigerLake() override = default;
 
   // Clients could set |freq_khz| to 0 to disable the CDCLK PLL, or
   // set it to a non-zero value to enable the PLL; |freq_khz| should

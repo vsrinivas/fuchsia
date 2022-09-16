@@ -86,7 +86,7 @@ class TestPipeManager : public i915_tgl::PipeManager {
   static std::vector<std::unique_ptr<i915_tgl::Pipe>> DefaultPipes(
       i915_tgl::Controller* controller) {
     std::vector<std::unique_ptr<i915_tgl::Pipe>> pipes;
-    pipes.push_back(std::make_unique<i915_tgl::SklPipe>(
+    pipes.push_back(std::make_unique<i915_tgl::PipeSkylake>(
         controller->mmio_space(), tgl_registers::PIPE_A, i915_tgl::PowerWellRef{}));
     return pipes;
   }

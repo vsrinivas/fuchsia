@@ -217,12 +217,12 @@ class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), index, index);
   }
 
-  hwreg::BitfieldRef<uint32_t> skl_ddi_io_power_request(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> ddi_io_power_request_skylake(Ddi ddi) {
     int bit = 2 + ((ddi == DDI_A || ddi == DDI_E) ? 0 : ddi * 2) + 1;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> skl_ddi_io_power_state(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> ddi_io_power_state_skylake(Ddi ddi) {
     int bit = 2 + ((ddi == DDI_A || ddi == DDI_E) ? 0 : ddi * 2);
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
@@ -239,13 +239,13 @@ class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t
 // Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 2 pages 1072-1075
 class PowerWellControlDdi2 : public hwreg::RegisterBase<PowerWellControlDdi2, uint32_t> {
  public:
-  hwreg::BitfieldRef<uint32_t> tgl_ddi_io_power_request(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> ddi_io_power_request_tiger_lake(Ddi ddi) {
     // DDI A-C: bits 1/3/5. DDI TC1-6: bits 7/9/11/13/15/17.
     int bit = ddi * 2 + 1;
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
-  hwreg::BitfieldRef<uint32_t> tgl_ddi_io_power_state(Ddi ddi) {
+  hwreg::BitfieldRef<uint32_t> ddi_io_power_state_tiger_lake(Ddi ddi) {
     int bit = ddi * 2;  // DDI A-C: bits 0/2/4. DDI TC1-6: bits 6/8/10/12/14/16.
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }

@@ -109,10 +109,10 @@ class DisplayPllManager {
 
 // Skylake DPLL implementation
 
-class SklDpll : public DisplayPll {
+class DpllSkylake : public DisplayPll {
  public:
-  SklDpll(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll);
-  ~SklDpll() override = default;
+  DpllSkylake(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll);
+  ~DpllSkylake() override = default;
 
   // |DisplayPll|
   bool Enable(const DpllState& state) final;
@@ -128,10 +128,10 @@ class SklDpll : public DisplayPll {
   bool enabled_ = false;
 };
 
-class SklDpllManager : public DisplayPllManager {
+class DpllManagerSkylake : public DisplayPllManager {
  public:
-  explicit SklDpllManager(fdf::MmioBuffer* mmio_space);
-  ~SklDpllManager() override = default;
+  explicit DpllManagerSkylake(fdf::MmioBuffer* mmio_space);
+  ~DpllManagerSkylake() override = default;
 
   // |DisplayPllManager|
   std::optional<DpllState> LoadState(tgl_registers::Ddi ddi) final;

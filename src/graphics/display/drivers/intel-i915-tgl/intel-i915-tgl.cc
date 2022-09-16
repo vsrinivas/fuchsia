@@ -324,13 +324,13 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     }
 
     // Enable cd_clk and set the frequency to minimum.
-    cd_clk_ = std::make_unique<SklCoreDisplayClock>(mmio_space());
+    cd_clk_ = std::make_unique<CoreDisplayClockSkylake>(mmio_space());
     if (!cd_clk_->SetFrequency(337'500)) {
       zxlogf(ERROR, "Failed to configure CD clock frequency");
       return false;
     }
   } else {
-    cd_clk_ = std::make_unique<SklCoreDisplayClock>(mmio_space());
+    cd_clk_ = std::make_unique<CoreDisplayClockSkylake>(mmio_space());
     zxlogf(INFO, "CDCLK already assigned by BIOS: frequency: %u KHz", cd_clk_->current_freq_khz());
   }
 
@@ -2090,10 +2090,10 @@ zx_status_t Controller::Init() {
 
   {
     fbl::AutoLock lock(&display_lock_);
-    pipe_manager_ = std::make_unique<SklPipeManager>(this);
+    pipe_manager_ = std::make_unique<PipeManagerSkylake>(this);
   }
 
-  dpll_manager_ = std::make_unique<SklDpllManager>(mmio_space());
+  dpll_manager_ = std::make_unique<DpllManagerSkylake>(mmio_space());
 
   status = DdkAdd(ddk::DeviceAddArgs("intel_i915")
                       .set_inspect_vmo(inspector_.DuplicateVmo())

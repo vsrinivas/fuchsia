@@ -54,7 +54,7 @@ bool SetPowerWellImpl(const PowerWellInfo& power_well_info, bool enable,
   return true;
 }
 
-const std::unordered_map<PowerWellId, PowerWellInfo> kTestPowerWellInfo = {
+const std::unordered_map<PowerWellId, PowerWellInfo> kPowerWellInfoTestDevice = {
     {PowerWellId::PG1,
      {
          .name = "Power Well 1",
@@ -69,7 +69,8 @@ const std::unordered_map<PowerWellId, PowerWellInfo> kTestPowerWellInfo = {
 // A fake power well implementation used only for integration tests.
 class TestPowerWell : public Power {
  public:
-  explicit TestPowerWell(fdf::MmioBuffer* mmio_space) : Power(mmio_space, &kTestPowerWellInfo) {}
+  explicit TestPowerWell(fdf::MmioBuffer* mmio_space)
+      : Power(mmio_space, &kPowerWellInfoTestDevice) {}
   void Resume() override {}
 
   PowerWellRef GetCdClockPowerWellRef() override { return PowerWellRef(this, PowerWellId::PG1); }
@@ -95,7 +96,7 @@ class TestPowerWell : public Power {
   std::unordered_map<registers::Ddi, bool> ddi_state_;
 };
 
-const std::unordered_map<PowerWellId, PowerWellInfo> kSklPowerWellInfo = {
+const std::unordered_map<PowerWellId, PowerWellInfo> kPowerWellInfoSkylake = {
     {PowerWellId::PG1,
      {
          .name = "Power Well 1",
@@ -118,9 +119,9 @@ const std::unordered_map<PowerWellId, PowerWellInfo> kSklPowerWellInfo = {
 };
 
 // Power implementation for Sky lake and Kaby lake platforms.
-class SklPower : public Power {
+class PowerSkylake : public Power {
  public:
-  explicit SklPower(fdf::MmioBuffer* mmio_space) : Power(mmio_space, &kSklPowerWellInfo) {}
+  explicit PowerSkylake(fdf::MmioBuffer* mmio_space) : Power(mmio_space, &kPowerWellInfoSkylake) {}
   void Resume() override {
     if (ref_count().find(PowerWellId::PG2) != ref_count().end()) {
       SetPowerWell(PowerWellId::PG2, /* enable */ true);
@@ -164,7 +165,7 @@ class SklPower : public Power {
 //
 // FUSE_STATUS bits from IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 990-991.
 // PWR_WELL_CTL bits from IHD-OS-TGL-Vol 2c-12.21 Part 2 pages 1063-1065.
-const std::unordered_map<PowerWellId, PowerWellInfo> kTglPowerWellInfo = {
+const std::unordered_map<PowerWellId, PowerWellInfo> kPowerWellInfoTigerLake = {
     // PG0 not tracked because it's managed by the CPU power controller.
     {PowerWellId::PG1,
      {
@@ -210,9 +211,10 @@ const std::unordered_map<PowerWellId, PowerWellInfo> kTglPowerWellInfo = {
 };
 
 // Power well implementation for Tiger lake platforms.
-class TglPower : public Power {
+class PowerTigerLake : public Power {
  public:
-  explicit TglPower(fdf::MmioBuffer* mmio_space) : Power(mmio_space, &kTglPowerWellInfo) {}
+  explicit PowerTigerLake(fdf::MmioBuffer* mmio_space)
+      : Power(mmio_space, &kPowerWellInfoTigerLake) {}
   void Resume() override {
     constexpr PowerWellId kPowerWellEnableSeq[] = {
         PowerWellId::PG2,
@@ -364,10 +366,10 @@ void Power::DecRefCount(PowerWellId power_well) {
 // static
 std::unique_ptr<Power> Power::New(fdf::MmioBuffer* mmio_space, uint16_t device_id) {
   if (is_skl(device_id) || is_kbl(device_id)) {
-    return std::make_unique<SklPower>(mmio_space);
+    return std::make_unique<PowerSkylake>(mmio_space);
   }
   if (is_tgl(device_id)) {
-    return std::make_unique<TglPower>(mmio_space);
+    return std::make_unique<PowerTigerLake>(mmio_space);
   }
   if (is_test_device(device_id)) {
     return std::make_unique<TestPowerWell>(mmio_space);

@@ -61,7 +61,7 @@ bool CompareDpllStates(const DpllState& a, const DpllState& b) {
   return false;
 }
 
-std::optional<registers::DpllControl1::LinkRate> DpBitRateMhzToSklLinkRate(
+std::optional<registers::DpllControl1::LinkRate> DpBitRateMhzToSkylakeLinkRate(
     uint32_t dp_bit_rate_mhz) {
   switch (dp_bit_rate_mhz) {
     case 5400:
@@ -179,7 +179,7 @@ bool SklDpll::EnableDp(const DpDpllState& dp_state) {
   auto dpll_ctrl1 = registers::DpllControl1::Get().ReadFrom(mmio_space_);
   dpll_ctrl1.dpll_hdmi_mode(dpll()).set(0);
   dpll_ctrl1.dpll_ssc_enable(dpll()).set(0);
-  auto dp_rate = DpBitRateMhzToSklLinkRate(dp_state.dp_bit_rate_mhz);
+  auto dp_rate = DpBitRateMhzToSkylakeLinkRate(dp_state.dp_bit_rate_mhz);
   if (!dp_rate.has_value()) {
     zxlogf(ERROR, "Invalid DP bit rate: %u MHz", dp_state.dp_bit_rate_mhz);
     return false;

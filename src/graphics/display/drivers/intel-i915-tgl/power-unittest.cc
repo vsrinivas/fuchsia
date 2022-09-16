@@ -39,7 +39,7 @@ class PowerTest : public ::testing::Test {
 };
 
 // Verify setting Power Well 2 status on Skylake platform.
-TEST_F(PowerTest, Skl_PowerWell2) {
+TEST_F(PowerTest, Skylake_PowerWell2) {
   auto kPwrWellCtlIndex = tgl_registers::PowerWellControl2::Get().addr() / sizeof(uint32_t);
   auto kFuseStatusIndex = tgl_registers::FuseStatus::Get().addr() / sizeof(uint32_t);
 
@@ -52,23 +52,23 @@ TEST_F(PowerTest, Skl_PowerWell2) {
 
   regs_[kFuseStatusIndex].SetReadCallback([&pg2_status]() -> uint64_t { return pg2_status << 25; });
 
-  constexpr uint16_t kSklDeviceId = 0x191b;
-  auto skl_power = Power::New(&*mmio_buffer_, kSklDeviceId);
+  constexpr uint16_t kDeviceIdSkylake = 0x191b;
+  auto power = Power::New(&*mmio_buffer_, kDeviceIdSkylake);
 
   {
-    auto power_well2_ref = PowerWellRef(skl_power.get(), PowerWellId::PG2);
+    auto power_well2_ref = PowerWellRef(power.get(), PowerWellId::PG2);
     EXPECT_TRUE(pg2_status);
   }
   EXPECT_FALSE(pg2_status);
 
   // Test resuming power well state.
   {
-    auto power_well2_ref = PowerWellRef(skl_power.get(), PowerWellId::PG2);
+    auto power_well2_ref = PowerWellRef(power.get(), PowerWellId::PG2);
     EXPECT_TRUE(pg2_status);
 
     pg2_status = false;
 
-    skl_power->Resume();
+    power->Resume();
     EXPECT_TRUE(pg2_status);
   }
   EXPECT_FALSE(pg2_status);
@@ -78,7 +78,7 @@ TEST_F(PowerTest, Skl_PowerWell2) {
   constexpr size_t kNumRefs = 10;
   std::vector<PowerWellRef> refs(kNumRefs);
   for (size_t i = 0; i < kNumRefs; i++) {
-    refs[i] = PowerWellRef(skl_power.get(), PowerWellId::PG2);
+    refs[i] = PowerWellRef(power.get(), PowerWellId::PG2);
   }
 
   for (size_t i = 0; i < kNumRefs; i++) {
@@ -89,7 +89,7 @@ TEST_F(PowerTest, Skl_PowerWell2) {
 }
 
 // Verify setting Power Well status on Tiger lake platform.
-TEST_F(PowerTest, Tgl_PowerWell) {
+TEST_F(PowerTest, TigerLake_PowerWell) {
   auto kPwrWellCtlIndex = tgl_registers::PowerWellControl2::Get().addr() / sizeof(uint32_t);
   auto kFuseStatusIndex = tgl_registers::FuseStatus::Get().addr() / sizeof(uint32_t);
 
@@ -121,12 +121,12 @@ TEST_F(PowerTest, Tgl_PowerWell) {
            (pg_status[PowerWellId::PG5] << 22);
   });
 
-  constexpr uint16_t kTglDeviceId = 0x9a49;
-  auto tgl_power = Power::New(&*mmio_buffer_, kTglDeviceId);
+  constexpr uint16_t kDeviceIdTigerLake = 0x9a49;
+  auto power = Power::New(&*mmio_buffer_, kDeviceIdTigerLake);
 
   // When we enable a power well, all its dependencies will be enabled as well.
   {
-    auto power_well5_ref = PowerWellRef(tgl_power.get(), PowerWellId::PG5);
+    auto power_well5_ref = PowerWellRef(power.get(), PowerWellId::PG5);
     EXPECT_TRUE(pg_status[PowerWellId::PG1]);
     EXPECT_TRUE(pg_status[PowerWellId::PG2]);
     EXPECT_TRUE(pg_status[PowerWellId::PG3]);
@@ -143,8 +143,8 @@ TEST_F(PowerTest, Tgl_PowerWell) {
   // Verify that a power well is disabled only when *all* power well refs that
   // depends on that power well have been removed.
   {
-    auto power_well5_ref = PowerWellRef(tgl_power.get(), PowerWellId::PG5);
-    auto power_well3_ref = PowerWellRef(tgl_power.get(), PowerWellId::PG3);
+    auto power_well5_ref = PowerWellRef(power.get(), PowerWellId::PG5);
+    auto power_well3_ref = PowerWellRef(power.get(), PowerWellId::PG3);
     EXPECT_TRUE(pg_status[PowerWellId::PG1]);
     EXPECT_TRUE(pg_status[PowerWellId::PG2]);
     EXPECT_TRUE(pg_status[PowerWellId::PG3]);
@@ -166,7 +166,7 @@ TEST_F(PowerTest, Tgl_PowerWell) {
 
   // Test resuming power well state.
   {
-    auto power_well4_ref = PowerWellRef(tgl_power.get(), PowerWellId::PG4);
+    auto power_well4_ref = PowerWellRef(power.get(), PowerWellId::PG4);
     EXPECT_TRUE(pg_status[PowerWellId::PG2]);
     EXPECT_TRUE(pg_status[PowerWellId::PG3]);
     EXPECT_TRUE(pg_status[PowerWellId::PG4]);
@@ -175,7 +175,7 @@ TEST_F(PowerTest, Tgl_PowerWell) {
     pg_status[PowerWellId::PG2] = pg_status[PowerWellId::PG3] = pg_status[PowerWellId::PG4] =
         pg_status[PowerWellId::PG5] = false;
 
-    tgl_power->Resume();
+    power->Resume();
     EXPECT_TRUE(pg_status[PowerWellId::PG2]);
     EXPECT_TRUE(pg_status[PowerWellId::PG3]);
     EXPECT_TRUE(pg_status[PowerWellId::PG4]);
