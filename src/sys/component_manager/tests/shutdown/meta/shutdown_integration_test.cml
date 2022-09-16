@@ -17,13 +17,9 @@
             from: "framework",
         },
         {
-            event_stream_deprecated: "stopped_stream",
-            subscriptions: [
-                { event: "stopped" },
-            ],
+            event_stream: "stopped_v2",
+            from: "parent",
         },
-        {
-            protocol: "fuchsia.sys2.EventSource"
-        }
-    ]
+        { protocol: "fuchsia.sys2.EventSource" },
+    ],
 }
