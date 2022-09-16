@@ -449,6 +449,90 @@ void Scheduler::InitializeThread(Thread* thread, const zx_sched_deadline_params_
   thread->scheduler_state().expected_runtime_ns_ = SchedDuration{params.capacity};
 }
 
+// Initialize the first thread to run on the current CPU.  Called from
+// thread_construct_first, this method will initialize the thread's scheduler
+// state, then mark the thread as being "active" in its cpu's scheduler.
+void Scheduler::InitializeFirstThread(Thread* thread) {
+  cpu_num_t current_cpu = arch_curr_cpu_num();
+
+  // Construct our scheduler state and assign a "priority"
+  InitializeThread(thread, HIGHEST_PRIORITY);
+
+  // Fill out other details about the thread, making sure to assign it to the
+  // current CPU with hard affinity.
+  SchedulerState& ss = thread->scheduler_state();
+  ss.state_ = THREAD_RUNNING;
+  ss.curr_cpu_ = current_cpu;
+  ss.last_cpu_ = current_cpu;
+  ss.next_cpu_ = INVALID_CPU;
+  ss.hard_affinity_ = cpu_num_to_mask(current_cpu);
+
+  // Finally, make sure that the thread is the active thread for the scheduler,
+  // and that the weight_total bookkeeping is accurate.
+  Scheduler* sched = Get(current_cpu);
+  {
+    Guard<MonitoredSpinLock, NoIrqSave> queue_guard{&sched->queue_lock_, SOURCE_TAG};
+    ss.active_ = true;
+    sched->active_thread_ = thread;
+    sched->weight_total_ = ss.fair_.weight;
+    sched->runnable_fair_task_count_++;
+    sched->UpdateTotalExpectedRuntime(ss.expected_runtime_ns_);
+  }
+}
+
+// Remove the impact of a CPUs first thread from the scheduler's bookkeeping.
+//
+// During initial startup, threads are not _really_ being scheduled, yet they
+// can still do things like obtain locks and block, resulting in profile
+// inheritance.  In order to hold the scheduler's bookkeeping invariants, we
+// assign these threads a fair weight, and include it in the total fair weight
+// tracked by the scheduler instance.  When the thread either becomes the idle
+// thread (as the boot CPU first thread does), or exits (as secondary CPU first
+// threads do), it is important that we remove this weight from the total
+// bookkeeping.  However, this is not as simple as just changing the thread's
+// weight via ChangeWeight, as idle threads are special cases who contribute no
+// weight to the total.
+//
+// So, this small method simply fixes up the bookkeeping before allowing the
+// thread to move on to become the idle thread (boot CPU), or simply exiting
+// (secondary CPU).
+void Scheduler::RemoveFirstThread(Thread* thread) {
+  cpu_num_t current_cpu = arch_curr_cpu_num();
+  Scheduler* sched = Get(current_cpu);
+  SchedulerState& ss = thread->scheduler_state();
+
+  // Since this is becoming an idle thread, it must have been one of the CPU's
+  // first threads.  It should already be bound to this core with hard affinity.
+  // Assert this.
+  DEBUG_ASSERT(ss.last_cpu_ == current_cpu);
+  DEBUG_ASSERT(ss.curr_cpu_ == current_cpu);
+  DEBUG_ASSERT(ss.hard_affinity_ == cpu_num_to_mask(current_cpu));
+
+  {
+    Guard<MonitoredSpinLock, NoIrqSave> queue_guard{&sched->queue_lock_, SOURCE_TAG};
+
+    // We are becoming the idle thread.  We should currently be running with a
+    // fair (not deadline) profile, and we should not be holding any locks
+    // (therefore, we should not be inheriting any profile pressure).
+    DEBUG_ASSERT(ss.discipline_ == SchedDiscipline::Fair);
+    DEBUG_ASSERT(ss.inherited_priority_ = -1);
+
+    // We should also be the currently active thread on this core, but no
+    // longer.  We are about to either exit, or "UnblockIdle".
+    DEBUG_ASSERT(sched->active_thread_ == thread);
+    DEBUG_ASSERT(sched->runnable_fair_task_count_ > 0);
+    ss.active_ = false;
+    sched->active_thread_ = nullptr;
+    sched->weight_total_ -= ss.fair_.weight;
+    sched->runnable_fair_task_count_--;
+    sched->UpdateTotalExpectedRuntime(-ss.expected_runtime_ns_);
+
+    ss.fair_.weight = PriorityToWeight(IDLE_PRIORITY);
+    ss.base_priority_ = IDLE_PRIORITY;
+    ss.effective_priority_ = IDLE_PRIORITY;
+  }
+}
+
 // Removes the thread at the head of the first eligible run queue. If there is
 // an eligible deadline thread, it takes precedence over available fair
 // threads. If there is no eligible work, attempt to steal work from other busy

@@ -158,6 +158,8 @@ class Scheduler {
 
   static void InitializeThread(Thread* thread, int priority);
   static void InitializeThread(Thread* thread, const zx_sched_deadline_params_t& params);
+  static void InitializeFirstThread(Thread* thread);
+  static void RemoveFirstThread(Thread* thread);
   static void Block() TA_REQ(thread_lock);
   static void Yield() TA_REQ(thread_lock);
   static void Preempt() TA_REQ(thread_lock);

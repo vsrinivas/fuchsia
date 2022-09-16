@@ -273,7 +273,7 @@ class SchedulerState {
   // Tracks the exponential moving average of the runtime of the thread.
   SchedDuration expected_runtime_ns_{0};
 
-  // Tracks runtime accumulated until voluntarily blocking or exhausiting the
+  // Tracks runtime accumulated until voluntarily blocking or exhausting the
   // allocated time slice. Used to exclude involuntary preemption when updating
   // the expected runtime estimate to improve accuracy.
   SchedDuration banked_runtime_ns_{0};

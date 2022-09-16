@@ -1225,18 +1225,11 @@ cpu_num_t Thread::LastCpuLocked() const { return scheduler_state_.last_cpu_; }
 void thread_construct_first(Thread* t, const char* name) {
   DEBUG_ASSERT(arch_ints_disabled());
 
-  cpu_num_t cpu = arch_curr_cpu_num();
-
   init_thread_struct(t, name);
   t->set_detached(true);
 
-  // Setup the scheduler state before directly manipulating its members.
-  Scheduler::InitializeThread(t, HIGHEST_PRIORITY);
-  t->scheduler_state().state_ = THREAD_RUNNING;
-  t->scheduler_state().curr_cpu_ = cpu;
-  t->scheduler_state().last_cpu_ = cpu;
-  t->scheduler_state().next_cpu_ = INVALID_CPU;
-  t->scheduler_state().hard_affinity_ = cpu_num_to_mask(cpu);
+  // Setup the scheduler state.
+  Scheduler::InitializeFirstThread(t);
 
   // Start out with preemption disabled to avoid attempts to reschedule until
   // threading is fulling enabled. This simplifies code paths shared between
@@ -1384,12 +1377,10 @@ void Thread::Current::BecomeIdle() {
 
   // Mark ourself as idle
   t->flags_ |= THREAD_FLAG_IDLE;
-  Scheduler::InitializeThread(t, IDLE_PRIORITY);
 
-  // Pin the thread on the current cpu and mark it as already running
-  t->scheduler_state_.last_cpu_ = curr_cpu;
-  t->scheduler_state_.curr_cpu_ = curr_cpu;
-  t->scheduler_state_.hard_affinity_ = cpu_num_to_mask(curr_cpu);
+  // Now that we are the idle thread, make sure that we drop out of the
+  // scheduler's bookkeeping altogether.
+  Scheduler::RemoveFirstThread(t);
   t->set_running();
 
   // Cpu is active.
@@ -1452,6 +1443,9 @@ void thread_secondary_cpu_entry() {
   mp_set_curr_cpu_active(true);
 
   percpu::GetCurrent().dpc_queue.InitForCurrentCpu();
+
+  // Remove ourselves from the Scheduler's bookkeeping
+  Scheduler::RemoveFirstThread(Thread::Current::Get());
 
   // Exit from our bootstrap thread, and enter the scheduler on this cpu
   Thread::Current::Exit(0);
