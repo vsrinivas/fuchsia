@@ -273,6 +273,7 @@ remote_rustc_command=("$env")
 # arch-vendor-os
 target_triple=
 
+crate_type=
 extra_filename=
 llvm_ir_output="no"
 llvm_bc_output="no"
@@ -408,6 +409,8 @@ EOF
 
     -Zsave-analysis=yes | save-analysis=yes) save_analysis=1 ;;
     -Zllvm-time-trace | llvm-time-trace) llvm_time_trace=1 ;;
+
+    --crate-type) prev_opt=crate_type ;;
 
     # Rewrite this token to only generate dependency information (locally),
     # and do no other compilation/linking.
@@ -821,11 +824,16 @@ test "${#remote_linker[@]}" = 0 || {
   # For now, we upload the entire rt lib dir.
   # From non-linux environments, point to the linux binaries, and the appropriate
   # target triple dir underneath it.
-  if ls "$project_root_rel/$clang_dir_remote"/lib/clang/*/lib/"$clang_lib_triple"
-  then
-    _rt_libdir_remote=( "$project_root_rel/$clang_dir_remote"/lib/clang/*/lib/"$clang_lib_triple" )
-    rt_libdir_remote=( "$(relpath "$project_root" "${_rt_libdir_remote[@]}" )" )
-  fi > /dev/null 2>&1
+  case "$crate_type" in
+    bin | proc-macro | dylib | cdylib )
+      if test -d "$project_root_rel/${clang_dir_remote[0]}"/lib/clang/*/lib/"$clang_lib_triple"
+      then
+        _rt_libdir_remote=( "$project_root_rel/${clang_dir_remote[0]}"/lib/clang/*/lib/"$clang_lib_triple" )
+        rt_libdir_remote=( "$(relpath "$project_root" "${_rt_libdir_remote[0]}" )" )
+      fi
+      ;;
+    # other crate types don't need the runtime libs
+  esac
 }
 
 extra_inputs_rel_project_root=()
@@ -909,7 +917,7 @@ test "${#link_sysroot[@]}" = 0 || {
 #     * libc++ [$libcxx_remote]
 #   * linker binary (called by the driver) [$lld_remote]
 #       For example: -Clinker=.../lld
-#   * run-time libraries [$rt_libdir_remote]
+#   * compiler run-time libraries [$rt_libdir_remote]
 #   * sysroot libraries [$sysroot_files]
 #   * additional data dependencies [$extra_inputs_rel_project_root]
 
