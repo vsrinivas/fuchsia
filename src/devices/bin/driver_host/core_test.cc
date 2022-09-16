@@ -246,9 +246,10 @@ TEST_F(CoreTest, SystemPowerStateMapping) {
   ASSERT_EQ(suspend_reason, DEVICE_SUSPEND_REASON_MEXEC);
   ASSERT_EQ(state_info.performance_state, 5);
 
-  ASSERT_STATUS(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_SUSPEND_RAM, &state_info,
-                                                      &suspend_reason),
-                ZX_ERR_INVALID_ARGS);
+  ASSERT_OK(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_SUSPEND_RAM, &state_info,
+                                                  &suspend_reason));
+  ASSERT_EQ(suspend_reason, DEVICE_SUSPEND_REASON_SUSPEND_RAM);
+  ASSERT_EQ(state_info.performance_state, 6);
 
   ASSERT_OK(dev->get_dev_power_state_from_mapping(DEVICE_SUSPEND_FLAG_REBOOT_KERNEL_INITIATED,
                                                   &state_info, &suspend_reason));

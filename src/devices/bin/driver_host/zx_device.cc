@@ -201,6 +201,9 @@ zx_status_t zx_device_t::get_dev_power_state_from_mapping(
     case DEVICE_SUSPEND_FLAG_POWEROFF:
       sys_state = SystemPowerState::kPoweroff;
       break;
+    case DEVICE_SUSPEND_FLAG_SUSPEND_RAM:
+      sys_state = SystemPowerState::kSuspendRam;
+      break;
     case DEVICE_SUSPEND_FLAG_REBOOT_KERNEL_INITIATED:
       sys_state = SystemPowerState::kRebootKernelInitiated;
       break;
