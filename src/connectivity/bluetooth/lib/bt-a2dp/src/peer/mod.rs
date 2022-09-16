@@ -4,7 +4,6 @@
 
 use {
     anyhow::Context as _,
-    bt_a2dp_metrics as metrics,
     bt_avdtp::{
         self as avdtp, MediaCodecType, ServiceCapability, ServiceCategory, StreamEndpoint,
         StreamEndpointId,
@@ -169,17 +168,10 @@ fn report_occurrences<I: 'static + IntoIterator<Item = u32> + std::marker::Send>
     fasync::Task::spawn(async move {
         for code in event_codes {
             let res = metrics_proxy.log_occurrence(metric_id, 1, &[code]).await;
-            log_metrics_failure(res);
+            bt_metrics::log_on_failure(res);
         }
     })
     .detach();
-}
-
-fn log_metrics_failure(result: Result<Result<(), fidl_fuchsia_metrics::Error>, fidl::Error>) {
-    match result {
-        Ok(Ok(())) => (),
-        e => warn!("failed to log metrics: {:?}", e),
-    };
 }
 
 fn report_integer(
@@ -189,7 +181,9 @@ fn report_integer(
     event_codes: Vec<u32>,
 ) {
     fasync::Task::spawn(async move {
-        log_metrics_failure(metrics_proxy.log_integer(metric_id, int_val, &event_codes[..]).await);
+        bt_metrics::log_on_failure(
+            metrics_proxy.log_integer(metric_id, int_val, &event_codes[..]).await,
+        );
     })
     .detach();
 }
@@ -330,7 +324,7 @@ impl Peer {
             .collect();
         report_occurrences(
             metrics.clone(),
-            metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
+            bt_metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
             codec_metrics,
         );
 
@@ -342,14 +336,14 @@ impl Peer {
                     .iter()
                     .filter_map(|t| capability_to_metric(t))
                     .chain(std::iter::once(
-                        metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Basic,
+                        bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Basic,
                     ))
                     .map(|t| t as u32)
             })
             .collect();
         report_occurrences(
             metrics.clone(),
-            metrics::A2DP_REMOTE_PEER_CAPABILITIES_METRIC_ID,
+            bt_metrics::A2DP_REMOTE_PEER_CAPABILITIES_METRIC_ID,
             cap_metrics,
         );
     }
@@ -956,7 +950,7 @@ impl PeerInner {
                 if let Some(sender) = &self.metrics {
                     report_integer(
                         sender.clone(),
-                        metrics::AVDTP_DELAY_REPORT_IN_NANOSECONDS_METRIC_ID,
+                        bt_metrics::AVDTP_DELAY_REPORT_IN_NANOSECONDS_METRIC_ID,
                         delay_ns,
                         Vec::new(),
                     );
@@ -988,48 +982,48 @@ impl WatchedStream {
 
 fn codectype_to_availability_metric(
     codec_type: &MediaCodecType,
-) -> metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec {
+) -> bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec {
     match codec_type {
         &MediaCodecType::AUDIO_SBC => {
-            metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Sbc
+            bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Sbc
         }
         &MediaCodecType::AUDIO_MPEG12 => {
-            metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Mpeg12
+            bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Mpeg12
         }
         &MediaCodecType::AUDIO_AAC => {
-            metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Aac
+            bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Aac
         }
         &MediaCodecType::AUDIO_ATRAC => {
-            metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Atrac
+            bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Atrac
         }
         &MediaCodecType::AUDIO_NON_A2DP => {
-            metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::VendorSpecific
+            bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::VendorSpecific
         }
-        _ => metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Unknown,
+        _ => bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Unknown,
     }
 }
 
 fn capability_to_metric(
     cap: &ServiceCapability,
-) -> Option<metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability> {
+) -> Option<bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability> {
     match cap {
         ServiceCapability::DelayReporting => {
-            Some(metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::DelayReport)
+            Some(bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::DelayReport)
         }
         ServiceCapability::Reporting => {
-            Some(metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Reporting)
+            Some(bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Reporting)
         }
         ServiceCapability::Recovery { .. } => {
-            Some(metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Recovery)
+            Some(bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Recovery)
         }
         ServiceCapability::ContentProtection { .. } => {
-            Some(metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::ContentProtection)
+            Some(bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::ContentProtection)
         }
         ServiceCapability::HeaderCompression { .. } => {
-            Some(metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::HeaderCompression)
+            Some(bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::HeaderCompression)
         }
         ServiceCapability::Multiplexing { .. } => {
-            Some(metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Multiplexing)
+            Some(bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Multiplexing)
         }
         // We ignore capabilities that we don't care to track.
         other => {
@@ -1044,12 +1038,13 @@ mod tests {
     use super::*;
 
     use assert_matches::assert_matches;
+    use bt_metrics::respond_to_metrics_req_for_test;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_bluetooth::ErrorCode;
     use fidl_fuchsia_bluetooth_bredr::{
         ProfileMarker, ProfileRequest, ProfileRequestStream, ServiceClassProfileIdentifier,
     };
-    use fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload};
+    use fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload};
     use futures::{future::FutureExt, pin_mut, select};
     use std::convert::TryInto;
     use std::task::Poll;
@@ -1064,31 +1059,6 @@ mod tests {
     ) {
         fidl::endpoints::create_proxy_and_stream::<fidl_fuchsia_metrics::MetricEventLoggerMarker>()
             .expect("failed to create MetricsEventLogger proxy")
-    }
-
-    fn respond_to_metric_req(
-        request: fidl_fuchsia_metrics::MetricEventLoggerRequest,
-    ) -> fidl_fuchsia_metrics::MetricEvent {
-        match request {
-            MetricEventLoggerRequest::LogOccurrence {
-                metric_id,
-                count,
-                event_codes,
-                responder,
-            } => {
-                let _ = responder.send(&mut Ok(())).unwrap();
-                MetricEvent { metric_id, event_codes, payload: MetricEventPayload::Count(count) }
-            }
-            MetricEventLoggerRequest::LogInteger { metric_id, value, event_codes, responder } => {
-                let _ = responder.send(&mut Ok(())).unwrap();
-                MetricEvent {
-                    metric_id,
-                    event_codes,
-                    payload: MetricEventPayload::IntegerValue(value),
-                }
-            }
-            _ => panic!("unexpected logging to Cobalt"),
-        }
     }
 
     fn setup_avdtp_peer() -> (avdtp::Peer, Channel) {
@@ -1308,29 +1278,29 @@ mod tests {
         let mut recv = cobalt_receiver.expect("should have receiver");
         let mut log_events = Vec::new();
         while let Poll::Ready(Some(Ok(req))) = exec.run_until_stalled(&mut recv.next()) {
-            log_events.push(respond_to_metric_req(req));
+            log_events.push(respond_to_metrics_req_for_test(req));
         }
 
         // Should have sent two metric events for codec and one for capability.
         assert_eq!(3, log_events.len());
         assert!(log_events.contains(&MetricEvent {
-            metric_id: metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
+            metric_id: bt_metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
             event_codes: vec![
-                metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Sbc as u32
+                bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Sbc as u32
             ],
             payload: MetricEventPayload::Count(1),
         }));
         assert!(log_events.contains(&MetricEvent {
-            metric_id: metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
+            metric_id: bt_metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
             event_codes: vec![
-                metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Atrac as u32
+                bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Atrac as u32
             ],
             payload: MetricEventPayload::Count(1),
         }));
         assert!(log_events.contains(&MetricEvent {
-            metric_id: metrics::A2DP_REMOTE_PEER_CAPABILITIES_METRIC_ID,
+            metric_id: bt_metrics::A2DP_REMOTE_PEER_CAPABILITIES_METRIC_ID,
             event_codes: vec![
-                metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Basic as u32
+                bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Basic as u32
             ],
             payload: MetricEventPayload::Count(1),
         }));
@@ -1439,36 +1409,36 @@ mod tests {
         let mut recv = cobalt_receiver.expect("should have receiver");
         let mut log_events = Vec::new();
         while let Poll::Ready(Some(Ok(req))) = exec.run_until_stalled(&mut recv.next()) {
-            log_events.push(respond_to_metric_req(req));
+            log_events.push(respond_to_metrics_req_for_test(req));
         }
 
         // Should have sent two metric events for codec and two for capability.
         assert_eq!(4, log_events.len());
         assert!(log_events.contains(&MetricEvent {
-            metric_id: metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
+            metric_id: bt_metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
             event_codes: vec![
-                metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Unknown as u32
+                bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Unknown as u32
             ],
             payload: MetricEventPayload::Count(1),
         }));
         assert!(log_events.contains(&MetricEvent {
-            metric_id: metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
+            metric_id: bt_metrics::A2DP_CODEC_AVAILABILITY_MIGRATED_METRIC_ID,
             event_codes: vec![
-                metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Sbc as u32
+                bt_metrics::A2dpCodecAvailabilityMigratedMetricDimensionCodec::Sbc as u32
             ],
             payload: MetricEventPayload::Count(1),
         }));
         assert!(log_events.contains(&MetricEvent {
-            metric_id: metrics::A2DP_REMOTE_PEER_CAPABILITIES_METRIC_ID,
+            metric_id: bt_metrics::A2DP_REMOTE_PEER_CAPABILITIES_METRIC_ID,
             event_codes: vec![
-                metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Basic as u32
+                bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::Basic as u32
             ],
             payload: MetricEventPayload::Count(1),
         }));
         assert!(log_events.contains(&MetricEvent {
-            metric_id: metrics::A2DP_REMOTE_PEER_CAPABILITIES_METRIC_ID,
+            metric_id: bt_metrics::A2DP_REMOTE_PEER_CAPABILITIES_METRIC_ID,
             event_codes: vec![
-                metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::DelayReport as u32
+                bt_metrics::A2dpRemotePeerCapabilitiesMetricDimensionCapability::DelayReport as u32
             ],
             payload: MetricEventPayload::Count(1),
         }));
@@ -1920,8 +1890,8 @@ mod tests {
 
         match cobalt_recv_fut.await {
             Some(Ok(req)) => {
-                let got = respond_to_metric_req(req);
-                assert_eq!(metrics::AVDTP_DELAY_REPORT_IN_NANOSECONDS_METRIC_ID, got.metric_id);
+                let got = respond_to_metrics_req_for_test(req);
+                assert_eq!(bt_metrics::AVDTP_DELAY_REPORT_IN_NANOSECONDS_METRIC_ID, got.metric_id);
                 assert_eq!(MetricEventPayload::IntegerValue(0xc0de * 100000), got.payload);
             }
             _ => panic!("expected cobalt metric event log request"),

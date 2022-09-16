@@ -26,5 +26,10 @@
             from: "#bluetooth-core",
             to: [ "#bt-avrcp" ],
         },
+        {
+            protocol: "fuchsia.metrics.MetricEventLoggerFactory",
+            from: "#cobalt",
+            to: [ "#bt-avrcp" ],
+        },
     ],
 }

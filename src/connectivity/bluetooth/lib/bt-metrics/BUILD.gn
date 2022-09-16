@@ -1,0 +1,33 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+import("//third_party/cobalt/metrics_registry.gni")
+
+metrics_registry("bt_metrics_registry") {
+  # This must match the ID of our Cobalt project as specified in:
+  # third_party/cobalt_config/projects.yaml
+  project_id = 2322225253
+  generate_rust = true
+  generate_binarypb = false
+}
+
+rustc_library("bt-metrics") {
+  edition = "2021"
+  with_unit_tests = true
+
+  deps = [
+    ":bt_metrics_registry_rustlib",
+    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/lib.rs" ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}

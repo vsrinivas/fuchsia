@@ -4,28 +4,19 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
-import("//third_party/cobalt/metrics_registry.gni")
-
-metrics_registry("bt_a2dp_metrics") {
-  # This must match the ID of our Cobalt project as specified in:
-  # third_party/cobalt_config/projects.yaml
-  project_id = 2322225253
-  generate_rust = true
-  generate_binarypb = false
-}
 
 rustc_library("bt-a2dp") {
   edition = "2021"
   with_unit_tests = true
 
   deps = [
-    ":bt_a2dp_metrics_rustlib",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth_rust",
     "//sdk/fidl/fuchsia.bluetooth.avdtp:fuchsia.bluetooth.avdtp_rust",
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr_rust",
     "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
     "//src/connectivity/bluetooth/lib/bt-avdtp",
+    "//src/connectivity/bluetooth/lib/bt-metrics",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/rust",

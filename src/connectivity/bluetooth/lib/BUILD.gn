@@ -12,6 +12,7 @@ group("lib") {
     "bt-avdtp",
     "bt-device-watcher",
     "bt-fidl-mocks",
+    "bt-metrics",
     "bt-rfcomm",
     "cpp-string",
     "cpp-type",

@@ -235,7 +235,6 @@ mod tests {
     use async_utils::PollExt;
     use bt_avctp::{AvcCommand, AvcPeer, AvcResponseType};
     use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream};
-    use fidl_fuchsia_bluetooth_avrcp as fidl_avrcp;
     use fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileProxy, ProfileRequestStream};
     use fuchsia_bluetooth::{profile::Psm, types::Channel};
     use packet_encoding::Decodable;
@@ -800,7 +799,8 @@ mod tests {
         pin_mut!(get_play_status_fut);
         expected_commands += 1;
 
-        let attribute_ids = vec![fidl_avrcp::PlayerApplicationSettingAttributeId::Equalizer];
+        let attribute_ids =
+            vec![fidl_fuchsia_bluetooth_avrcp::PlayerApplicationSettingAttributeId::Equalizer];
         let get_player_application_settings_fut =
             controller_proxy.get_player_application_settings(&mut attribute_ids.into_iter()).fuse();
         pin_mut!(get_player_application_settings_fut);
@@ -813,9 +813,9 @@ mod tests {
         pin_mut!(get_all_player_application_settings_fut);
         expected_commands += 1;
 
-        let mut settings = fidl_avrcp::PlayerApplicationSettings::EMPTY;
-        settings.scan_mode = Some(fidl_avrcp::ScanMode::GroupScan);
-        settings.shuffle_mode = Some(fidl_avrcp::ShuffleMode::Off);
+        let mut settings = fidl_fuchsia_bluetooth_avrcp::PlayerApplicationSettings::EMPTY;
+        settings.scan_mode = Some(fidl_fuchsia_bluetooth_avrcp::ScanMode::GroupScan);
+        settings.shuffle_mode = Some(fidl_fuchsia_bluetooth_avrcp::ShuffleMode::Off);
         let set_player_application_settings_fut =
             controller_proxy.set_player_application_settings(settings).fuse();
         pin_mut!(set_player_application_settings_fut);
@@ -1134,7 +1134,7 @@ mod tests {
                 res = get_play_status_fut => {
                     expected_commands -= 1;
                     let play_status = res.unwrap().expect("unable to parse play status");
-                    assert_eq!(play_status.playback_status, Some(fidl_avrcp::PlaybackStatus::Stopped).into());
+                    assert_eq!(play_status.playback_status, Some(fidl_fuchsia_bluetooth_avrcp::PlaybackStatus::Stopped).into());
                     assert_eq!(play_status.song_length, Some(100));
                     assert_eq!(play_status.song_position, None);
                 }
@@ -1147,19 +1147,19 @@ mod tests {
                     assert!(settings.repeat_status_mode.is_none());
                     assert!(settings.shuffle_mode.is_none());
                     let eq = settings.equalizer.unwrap();
-                    assert_eq!(eq, fidl_avrcp::Equalizer::Off);
+                    assert_eq!(eq, fidl_fuchsia_bluetooth_avrcp::Equalizer::Off);
                 }
                 res = get_all_player_application_settings_fut => {
                     expected_commands -= 1;
                     let settings = res.unwrap().expect("unable to parse get player application settings");
                     assert!(settings.equalizer.is_some());
-                    assert_eq!(settings.equalizer.unwrap(), fidl_avrcp::Equalizer::Off);
+                    assert_eq!(settings.equalizer.unwrap(), fidl_fuchsia_bluetooth_avrcp::Equalizer::Off);
                 }
                 res = set_player_application_settings_fut => {
                     expected_commands -= 1;
                     let set_settings = res.unwrap().expect("unable to parse set player application settings");
-                    assert_eq!(set_settings.scan_mode, Some(fidl_avrcp::ScanMode::GroupScan));
-                    assert_eq!(set_settings.shuffle_mode, Some(fidl_avrcp::ShuffleMode::Off));
+                    assert_eq!(set_settings.scan_mode, Some(fidl_fuchsia_bluetooth_avrcp::ScanMode::GroupScan));
+                    assert_eq!(set_settings.shuffle_mode, Some(fidl_fuchsia_bluetooth_avrcp::ShuffleMode::Off));
                 }
                 res = inform_battery_status_fut => {
                     expected_commands -= 1;

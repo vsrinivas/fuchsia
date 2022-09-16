@@ -14,7 +14,6 @@ use {
         permits::Permits,
         stream,
     },
-    bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, ServiceCapability, ServiceCategory, StreamEndpoint},
     fidl_fuchsia_bluetooth_a2dp::{AudioModeRequest, AudioModeRequestStream, Role},
     fidl_fuchsia_bluetooth_bredr as bredr,
@@ -497,31 +496,6 @@ fn setup_profiles(
     Ok(profile)
 }
 
-// Connects to the MetricEventLoggerFactory service to create a MetricEventLoggerProxy for
-// the caller.
-async fn create_metrics_logger() -> Result<cobalt::MetricEventLoggerProxy, Error> {
-    let factory_proxy =
-        fuchsia_component::client::connect_to_protocol::<cobalt::MetricEventLoggerFactoryMarker>()
-            .context("failed to connect to metrics service")?;
-
-    let (cobalt_proxy, cobalt_server) =
-        fidl::endpoints::create_proxy::<cobalt::MetricEventLoggerMarker>()
-            .context("failed to create MetricEventLoggerMarker endponts")?;
-
-    let project_spec = cobalt::ProjectSpec {
-        customer_id: None, // defaults to fuchsia
-        project_id: Some(metrics::PROJECT_ID),
-        ..cobalt::ProjectSpec::EMPTY
-    };
-
-    factory_proxy
-        .create_metric_event_logger(project_spec, cobalt_server)
-        .await?
-        .map_err(|e| format_err!("error response {:?}", e))?;
-
-    Ok(cobalt_proxy)
-}
-
 /// The number of allowed active streams across the whole profile.
 /// If a peer attempts to start an audio stream and there are already this many active, it will
 /// be suspended immediately.
@@ -562,13 +536,10 @@ async fn main() -> Result<(), Error> {
     };
 
     // Set up cobalt 1.1 logger.
-    let cobalt = match create_metrics_logger().await {
-        Ok(c) => Some(c),
-        Err(e) => {
-            warn!("Failed to create metrics logger: {}", e);
-            None
-        }
-    };
+    let cobalt = bt_metrics::create_metrics_logger()
+        .await
+        .map_err(|e| warn!("Failed to create metrics: {e}"))
+        .ok();
 
     let stream_builder = StreamsBuilder::system_available(cobalt.clone(), &config).await?;
 

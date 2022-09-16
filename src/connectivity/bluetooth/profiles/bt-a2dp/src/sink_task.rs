@@ -5,7 +5,6 @@
 use {
     anyhow::Error,
     bt_a2dp::{codec::MediaCodecConfig, media_task::*},
-    bt_a2dp_metrics as metrics,
     bt_avdtp::{self as avdtp, MediaStream},
     fidl::endpoints::create_request_stream,
     fidl_fuchsia_media as media, fidl_fuchsia_media_sessions2 as sessions2,
@@ -325,17 +324,17 @@ async fn report_stream_metrics(
 ) {
     let codec = match codec_type {
         &avdtp::MediaCodecType::AUDIO_SBC => {
-            metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Sbc
+            bt_metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Sbc
         }
         &avdtp::MediaCodecType::AUDIO_AAC => {
-            metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Aac
+            bt_metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Aac
         }
-        _ => metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Unknown,
+        _ => bt_metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Unknown,
     };
 
     match metrics_proxy
         .log_integer(
-            metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
+            bt_metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
             duration_seconds,
             &[codec as u32],
         )
@@ -353,13 +352,14 @@ mod tests {
     use {
         async_test_helpers::run_while,
         async_utils::PollExt,
+        bt_metrics::respond_to_metrics_req_for_test,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_media::{
             AudioConsumerRequest, AudioConsumerStatus, SessionAudioConsumerFactoryMarker,
             StreamSinkRequest,
         },
         fidl_fuchsia_media_sessions2::{PublisherMarker, PublisherRequest},
-        fidl_fuchsia_metrics::{MetricEvent, MetricEventLoggerRequest, MetricEventPayload},
+        fidl_fuchsia_metrics::MetricEventPayload,
         fuchsia_bluetooth::types::Channel,
         fuchsia_inspect as inspect,
         fuchsia_inspect_derive::WithInspect,
@@ -373,22 +373,6 @@ mod tests {
     ) -> (cobalt::MetricEventLoggerProxy, cobalt::MetricEventLoggerRequestStream) {
         fidl::endpoints::create_proxy_and_stream::<cobalt::MetricEventLoggerMarker>()
             .expect("failed to create MetricsEventLogger proxy")
-    }
-
-    fn respond_to_metric_req(
-        request: fidl_fuchsia_metrics::MetricEventLoggerRequest,
-    ) -> fidl_fuchsia_metrics::MetricEvent {
-        match request {
-            MetricEventLoggerRequest::LogInteger { metric_id, value, event_codes, responder } => {
-                assert!(responder.send(&mut Ok(())).is_ok());
-                MetricEvent {
-                    metric_id,
-                    event_codes,
-                    payload: MetricEventPayload::IntegerValue(value),
-                }
-            }
-            _ => panic!("unexpected logging to Cobalt"),
-        }
     }
 
     #[fuchsia::test]
@@ -477,9 +461,9 @@ mod tests {
         // Should receive a metrics report.
         match exec.run_until_stalled(&mut recv.next()).expect("should be ready") {
             Some(Ok(req)) => {
-                let got = respond_to_metric_req(req);
+                let got = respond_to_metrics_req_for_test(req);
                 assert_eq!(
-                    metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
+                    bt_metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
                     got.metric_id
                 );
             }
@@ -508,14 +492,14 @@ mod tests {
 
         match exec.run_until_stalled(&mut recv.next()).expect("should be ready") {
             Some(Ok(req)) => {
-                let got = respond_to_metric_req(req);
+                let got = respond_to_metrics_req_for_test(req);
                 assert_eq!(
-                    metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
+                    bt_metrics::A2DP_STREAM_DURATION_IN_SECONDS_MIGRATED_METRIC_ID,
                     got.metric_id
                 );
                 assert_eq!(
                     vec![
-                        metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Aac
+                        bt_metrics::A2dpStreamDurationInSecondsMigratedMetricDimensionCodec::Aac
                             as u32
                     ],
                     got.event_codes
