@@ -52,6 +52,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/sta.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/time-event.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/tof.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/align.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/ieee80211.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/rcu.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
@@ -1576,41 +1577,12 @@ static uint64_t iwl_mvm_prepare_multicast(struct ieee80211_hw* hw,
 }
 #endif  // NEEDS_PORTING
 
+// Since we haven't define a MLME interface to call iwl_mvm_prepare_multicast() yet, we let the
+// firmware to forward all multicast packets to the driver (for all IPv4/IPv6 multicast packets).
+//
 void iwl_mvm_configure_filter(struct iwl_mvm* mvm) {
-  // There are 3 multicast addresses we want firmware to pass it to driver.
-  // TODO(51238): remove the hardcoded mcast_addrs after iwl_mvm_prepare_multicast() is implemented.
-  uint8_t mcast_addrs[][ETH_ALEN] = {
-      {
-          // IPv6 mutlicast address
-          0x33,
-          0x33,
-          0x00,
-          0x00,
-          0x00,
-          0x01,
-      },
-      {
-          // IPv6 mutlicast address
-          0x33,
-          0x33,
-          0x00,
-          0x00,
-          0x00,
-          0x02,
-      },
-      {
-          // IPv4 mutlicast address
-          0x01,
-          0x00,
-          0x5e,
-          0x00,
-          0x00,
-          0x01,
-      },
-  };
-
-  struct iwl_mcast_filter_cmd* cmd =
-      calloc(1, sizeof(struct iwl_mcast_filter_cmd) + sizeof(mcast_addrs));
+  size_t len = IWL_ALIGN(sizeof(struct iwl_mcast_filter_cmd), 4);
+  struct iwl_mcast_filter_cmd* cmd = calloc(1, len);
 
   mtx_lock(&mvm->mutex);
 
@@ -1621,15 +1593,8 @@ void iwl_mvm_configure_filter(struct iwl_mvm* mvm) {
     goto out;
   }
 
-  if (cmd->pass_all) {
-    cmd->count = 0;
-  }
-
-  for (size_t i = 0; i < ARRAY_SIZE(mcast_addrs); i++) {
-    size_t offset = i * ETH_ALEN;
-    memcpy(&cmd->addr_list[offset], mcast_addrs[i], ETH_ALEN);
-  }
-  cmd->count = ARRAY_SIZE(mcast_addrs);
+  cmd->pass_all = 1;
+  // Assume cmd->count is zero-ed above.
 
 #ifdef CPTCFG_IWLMVM_VENDOR_CMDS
   iwl_mvm_active_rx_filters(mvm);

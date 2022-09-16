@@ -289,10 +289,8 @@ class McastFilterTestWithoutIface : public Mac80211Test, public MockTrans {
                               uint32_t,  // hcmd->id
                               uint8_t,   // mcast_cmd->port_id
                               uint8_t,   // mcast_cmd->count
-                              uint8_t,   // mcast_cmd->bssid[0]
-                              uint8_t,   // mcast_cmd->addr_list[0 * ETH_ALEN + 0]
-                              uint8_t,   // mcast_cmd->addr_list[1 * ETH_ALEN + 5]
-                              uint8_t    // mcast_cmd->addr_list[2 * ETH_ALEN + 2]
+                              uint8_t,   // mcast_cmd->pass_all
+                              uint8_t    // mcast_cmd->bssid[0]
                               >
       mock_send_cmd_;
 
@@ -301,9 +299,8 @@ class McastFilterTestWithoutIface : public Mac80211Test, public MockTrans {
 
     auto test = GET_TEST(McastFilterTestWithoutIface, trans);
     return test->mock_send_cmd_.Call(hcmd->id, mcast_cmd->port_id, mcast_cmd->count,
-                                     mcast_cmd->bssid[0], mcast_cmd->addr_list[0 * ETH_ALEN + 0],
-                                     mcast_cmd->addr_list[1 * ETH_ALEN + 5],
-                                     mcast_cmd->addr_list[2 * ETH_ALEN + 2]);
+                                     mcast_cmd->pass_all,
+                                     mcast_cmd->bssid[0]);
   }
 
  protected:
@@ -326,11 +323,9 @@ TEST_F(McastFilterTest, McastFilterNormal) {
   // Test if we can configure the mcast filter.
   mock_send_cmd_.ExpectCall(ZX_OK, WIDE_ID(LONG_GROUP, MCAST_FILTER_CMD),  // hcmd->id
                             0,                                             // mcast_cmd->port_id
-                            3,                                             // mcast_cmd->count
-                            0x00,                                          // mcast_cmd->bssid[0]
-                            0x33,  // mcast_cmd->addr_list[0 * ETH_ALEN + 0]
-                            0x02,  // mcast_cmd->addr_list[1 * ETH_ALEN + 5]
-                            0x5e   // mcast_cmd->addr_list[2 * ETH_ALEN + 2]
+                            0,                                             // mcast_cmd->count
+                            1,                                             // mcast_cmd->pass_all
+                            0x00                                           // mcast_cmd->bssid[0]
   );
   iwl_mvm_configure_filter(mvm_);
 
