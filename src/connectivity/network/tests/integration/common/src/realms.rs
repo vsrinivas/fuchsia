@@ -68,6 +68,7 @@ impl NetstackVersion {
                 fposix_socket_packet::ProviderMarker::PROTOCOL_NAME,
                 fposix_socket_raw::ProviderMarker::PROTOCOL_NAME,
                 fposix_socket::ProviderMarker::PROTOCOL_NAME,
+                fnet_debug::DiagnosticsMarker::PROTOCOL_NAME,
                 $($name),*
             ]};
             // Strip trailing comma.
@@ -77,7 +78,6 @@ impl NetstackVersion {
             NetstackVersion::Netstack2
             | NetstackVersion::ProdNetstack2
             | NetstackVersion::Netstack2WithFastUdp => &common_services_and!(
-                fnet_debug::DiagnosticsMarker::PROTOCOL_NAME,
                 fnet_multicast_admin::Ipv4RoutingTableControllerMarker::PROTOCOL_NAME,
                 fnet_multicast_admin::Ipv6RoutingTableControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ControllerMarker::PROTOCOL_NAME,

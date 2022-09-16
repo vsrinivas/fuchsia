@@ -747,8 +747,9 @@ enum Service {
     RawSocket(fidl_fuchsia_posix_socket_raw::ProviderRequestStream),
     Interfaces(fidl_fuchsia_net_interfaces::StateRequestStream),
     InterfacesAdmin(fidl_fuchsia_net_interfaces_admin::InstallerRequestStream),
-    Debug(fidl_fuchsia_net_debug::InterfacesRequestStream),
     Filter(fidl_fuchsia_net_filter::FilterRequestStream),
+    DebugInterfaces(fidl_fuchsia_net_debug::InterfacesRequestStream),
+    DebugDiagnostics(fidl::endpoints::ServerEnd<fidl_fuchsia_net_debug::DiagnosticsMarker>),
 }
 
 enum WorkItem {
@@ -887,7 +888,8 @@ impl NetstackSeed {
         let mut fs = ServiceFs::new_local();
         let _: &mut ServiceFsDir<'_, _> = fs
             .dir("svc")
-            .add_fidl_service(Service::Debug)
+            .add_service_connector(Service::DebugDiagnostics)
+            .add_fidl_service(Service::DebugInterfaces)
             .add_fidl_service(Service::Stack)
             .add_fidl_service(Service::Socket)
             .add_fidl_service(Service::PacketSocket)
@@ -906,6 +908,7 @@ impl NetstackSeed {
             services.map(WorkItem::Incoming),
             task_stream.map(WorkItem::Task),
         );
+        let diagnostics_handler = debug_fidl_worker::DiagnosticsHandler::default();
         let work_items_fut = work_items.for_each_concurrent(None, |wi| async {
             match wi {
                 WorkItem::Incoming(Service::Stack(stack)) => {
@@ -948,8 +951,13 @@ impl NetstackSeed {
                             )
                         })
                 }
-                WorkItem::Incoming(Service::Debug(debug)) => {
-                    debug.serve_with(|rs| debug_fidl_worker::serve(netstack.clone(), rs)).await
+                WorkItem::Incoming(Service::DebugInterfaces(debug_interfaces)) => {
+                    debug_interfaces
+                        .serve_with(|rs| debug_fidl_worker::serve_interfaces(netstack.clone(), rs))
+                        .await
+                }
+                WorkItem::Incoming(Service::DebugDiagnostics(debug_diagnostics)) => {
+                    diagnostics_handler.serve_diagnostics(debug_diagnostics).await
                 }
                 WorkItem::Incoming(Service::Filter(filter)) => {
                     filter.serve_with(|rs| filter_worker::serve(rs)).await
