@@ -13,10 +13,19 @@ _idk_deps = [
   "modular_testing",
 ]
 
+# Generates a manifest of CTF release artifacts to upload to remote storage.
 build_api_module("ctf_artifacts") {
   testonly = true
   data_keys = [ "cts_artifacts" ]
-  deps = [ "//sdk/ctf" ]
+  deps = [
+    ":ctf",
+
+    # Build both json files. This allows the cts-artifacts builder to build
+    # this :ctf_artifacts target while still reading the old
+    # out/default/cts/cts_artifacts.json file.
+    # We'll soft-transition it to the new filename.
+    "//sdk/cts:cts_artifacts",
+  ]
 }
 
 generated_file("generated_test_manifest") {
