@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/extract_imported_symbols.gni")
+import("//build/cpp/verify_imported_symbols.gni")
+import("//build/cpp/verify_public_symbols.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/graphics/lib/magma/src/libmagma/hermetic_static_library.gni")
 
@@ -69,6 +72,7 @@ config("libmagma_lib") {
 # --localize-hidden to hide all the unwanted symbols.
 hermetic_static_library("magma_client") {
   deps = [ ":libmagma_static" ]
+  localize_symbols = [ "trace_generate_nonce" ]
 }
 
 # Targets can depend on this to link in the hermetic magma client library.
@@ -81,4 +85,51 @@ group("magma_hermetic") {
 # out-of-tree targets.
 group("magma_deps") {
   deps = [ ":zxio($shlib_toolchain)" ]
+}
+
+shared_library("magma_shared") {
+  # This library is only used to generate a .ifs file, so it shouldn't be used anywhere outside this file.
+  visibility = [ ":*" ]
+  deps = [ ":magma_client" ]
+  inputs = [ "$target_out_dir/libmagma_client.a" ]
+  ldflags = [
+    "-Wl,--whole-archive",
+    rebase_path("$target_out_dir/libmagma_client.a", root_build_dir),
+    "-Wl,--no-whole-archive",
+  ]
+}
+
+shared_lib_target = ":magma_shared($shlib_toolchain)"
+
+verify_public_symbols("magma_verify_exported_symbols") {
+  testonly = true
+  deps = [ shared_lib_target ]
+  shared_out_dir = get_label_info(shared_lib_target, "root_out_dir")
+  current = "$shared_out_dir/libmagma_shared.ifs"
+  reference = "magma.ifs"
+  library_name = "magma_shared"
+}
+
+generated_imported_symbols_file = "$target_gen_dir/magma.imported_symbols.list"
+extract_imported_symbols("magma_extract_imported_symbols") {
+  library_target = shared_lib_target
+  symbols = generated_imported_symbols_file
+}
+
+verify_imported_symbols("magma_verify_imported_symbols") {
+  current = generated_imported_symbols_file
+  allowlist = "//src/graphics/lib/magma/gnbuild/imported_symbols.allowlist"
+  library_name = "magma_shared"
+  deps = [ ":magma_extract_imported_symbols" ]
+}
+
+group("verify_magma") {
+  testonly = true
+  deps = [ ":magma_verify_exported_symbols" ]
+
+  # Only verify the imported symbols in uninstrumented variants as some variants
+  # such as ASan / UBSan insert additional runtime dependencies.
+  if (!toolchain_variant.instrumented) {
+    deps += [ ":magma_verify_imported_symbols" ]
+  }
 }

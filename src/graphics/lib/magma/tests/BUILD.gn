@@ -16,6 +16,7 @@ group("tests") {
     ":magma_nonhardware_tests",
     "codegen",
     "icd_strip",
+    "//src/graphics/lib/magma/src/libmagma:verify_magma",
     "//src/graphics/lib/magma/src/tools:tests",
   ]
 

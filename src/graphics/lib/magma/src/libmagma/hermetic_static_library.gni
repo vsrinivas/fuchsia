@@ -97,6 +97,12 @@ template("hermetic_static_library") {
       rebase_path(outputs[0], root_build_dir),
     ]
 
+    if (defined(invoker.localize_symbols)) {
+      foreach(symbol, invoker.localize_symbols) {
+        args += [ "--localize-symbol=" + symbol ]
+      }
+    }
+
     if (defined(invoker.globalize_symbols_file)) {
       inputs += [ invoker.globalize_symbols_file ]
       args += [
