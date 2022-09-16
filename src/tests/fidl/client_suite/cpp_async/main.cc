@@ -189,7 +189,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
 
       void on_fidl_error(fidl::UnbindInfo error) override {
         auto report_result =
-            reporter_->ReportEvent(fidl_clientsuite::ClosedTargetEvent::WithFidlError(
+            reporter_->ReportEvent(fidl_clientsuite::ClosedTargetEventReport::WithFidlError(
                 clienttest_util::ClassifyError(error.ToError())));
         if (report_result.is_error()) {
           if (report_result.error_value().is_peer_closed()) {
@@ -236,7 +236,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
 
       // Report an event to the harness. If the reporter is closed, return
       // false. If reporting succeeded, returns true.
-      bool ReportEvent(fidl_clientsuite::AjarTargetEvent event) {
+      bool ReportEvent(fidl_clientsuite::AjarTargetEventReport event) {
         auto report_result = reporter_->ReportEvent(std::move(event));
         if (report_result.is_error()) {
           if (report_result.error_value().is_peer_closed()) {
@@ -251,12 +251,12 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
 
       void handle_unknown_event(
           fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) override {
-        ReportEvent(fidl_clientsuite::AjarTargetEvent::WithUnknownEvent(
+        ReportEvent(fidl_clientsuite::AjarTargetEventReport::WithUnknownEvent(
             {{.ordinal = metadata.method_ordinal}}));
       }
 
       void on_fidl_error(fidl::UnbindInfo error) override {
-        if (ReportEvent(fidl_clientsuite::AjarTargetEvent::WithFidlError(
+        if (ReportEvent(fidl_clientsuite::AjarTargetEventReport::WithFidlError(
                 clienttest_util::ClassifyError(error.ToError())))) {
           auto waiter = std::make_unique<async::WaitOnce>(reporter_.client_end().channel().get(),
                                                           ZX_CHANNEL_PEER_CLOSED);
@@ -296,7 +296,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
 
       // Report an event to the harness. If the reporter is closed, return
       // false. If reporting succeeded, returns true.
-      bool ReportEvent(fidl_clientsuite::OpenTargetEvent event) {
+      bool ReportEvent(fidl_clientsuite::OpenTargetEventReport event) {
         auto report_result = reporter_->ReportEvent(std::move(event));
         if (report_result.is_error()) {
           if (report_result.error_value().is_peer_closed()) {
@@ -310,21 +310,21 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
       }
 
       void StrictEvent(fidl::Event<fidl_clientsuite::OpenTarget::StrictEvent>& event) override {
-        ReportEvent(fidl_clientsuite::OpenTargetEvent::WithStrictEvent({}));
+        ReportEvent(fidl_clientsuite::OpenTargetEventReport::WithStrictEvent({}));
       }
 
       void FlexibleEvent(fidl::Event<fidl_clientsuite::OpenTarget::FlexibleEvent>& event) override {
-        ReportEvent(fidl_clientsuite::OpenTargetEvent::WithFlexibleEvent({}));
+        ReportEvent(fidl_clientsuite::OpenTargetEventReport::WithFlexibleEvent({}));
       }
 
       void handle_unknown_event(
           fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) override {
-        ReportEvent(fidl_clientsuite::OpenTargetEvent::WithUnknownEvent(
+        ReportEvent(fidl_clientsuite::OpenTargetEventReport::WithUnknownEvent(
             {{.ordinal = metadata.method_ordinal}}));
       }
 
       void on_fidl_error(fidl::UnbindInfo error) override {
-        if (ReportEvent(fidl_clientsuite::OpenTargetEvent::WithFidlError(
+        if (ReportEvent(fidl_clientsuite::OpenTargetEventReport::WithFidlError(
                 clienttest_util::ClassifyError(error.ToError())))) {
           auto waiter = std::make_unique<async::WaitOnce>(reporter_.client_end().channel().get(),
                                                           ZX_CHANNEL_PEER_CLOSED);

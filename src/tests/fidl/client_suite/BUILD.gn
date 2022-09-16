@@ -8,5 +8,6 @@ group("client_suite") {
     "cpp_async",
     "cpp_sync",
     "cpp_wire_sync",
+    "rust_sync",
   ]
 }

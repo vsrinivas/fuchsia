@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "fidl/fidl.clientsuite/cpp/common_types.h"
+#include "fidl/fidl.clientsuite/cpp/natural_types.h"
 #include "src/tests/fidl/client_suite/harness/harness.h"
 #include "src/tests/fidl/client_suite/harness/ordinals.h"
 
@@ -824,6 +826,24 @@ CLIENT_TEST(UnknownFlexibleServerInitiatedTwoWay) {
 
   ASSERT_EQ(1u, reporter->NumReceivedEvents());
   auto event = reporter->TakeNextEvent();
+  std::cout << "UnknownFlexibleServerInitiatedTwoWay Reported Event: ";
+  switch (event.Which()) {
+    case fidl_clientsuite::OpenTargetEventReport::Tag::kFlexibleEvent:
+      std::cout << "FlexibleEvent" << std::endl;
+      break;
+    case fidl_clientsuite::OpenTargetEventReport::Tag::kStrictEvent:
+      std::cout << "StrictEvent" << std::endl;
+      break;
+    case fidl_clientsuite::OpenTargetEventReport::Tag::kUnknownEvent:
+      std::cout << "UnknownEvent " << event.unknown_event().value().ordinal() << std::endl;
+      break;
+    case fidl_clientsuite::OpenTargetEventReport::Tag::kFidlError:
+      std::cout << "FidlError " << static_cast<int>(event.fidl_error().value()) << std::endl;
+      break;
+    case fidl_clientsuite::OpenTargetEventReport::Tag::kUnknown:
+      std::cout << "Unknown union variant" << std::endl;
+      break;
+  }
   ASSERT_TRUE(event.fidl_error().has_value());
   ASSERT_EQ(fidl_clientsuite::FidlErrorKind::kUnexpectedMessage, event.fidl_error().value());
 

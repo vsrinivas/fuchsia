@@ -232,7 +232,7 @@ closed protocol ClosedTarget {
 
 // An event received in the [`ClosedTarget`]. Used to report the received event
 // to the test harness.
-type ClosedTargetEvent = union {
+type ClosedTargetEventReport = union {
     // Set if an error was received by the event handler.
     1: fidl_error FidlErrorKind;
 };
@@ -241,14 +241,14 @@ type ClosedTargetEvent = union {
 // [`ClosedTarget`], it will use this protocol to report to the test harness
 // whenever an event is received.
 closed protocol ClosedTargetEventReporter {
-    strict ReportEvent(ClosedTargetEvent);
+    strict ReportEvent(ClosedTargetEventReport);
 };
 
 ajar protocol AjarTarget {};
 
 // An event received in the [`AjarTarget`]. Used to report the received event to
 // the test harness.
-type AjarTargetEvent = union {
+type AjarTargetEventReport = union {
     // Set if an error was received by the event handler.
     1: fidl_error FidlErrorKind;
     // Set if an unknown event was received.
@@ -259,7 +259,7 @@ type AjarTargetEvent = union {
 // [`AjarTarget`], it will use this protocol to report to the test harness
 // whenever an event is received.
 closed protocol AjarTargetEventReporter {
-    strict ReportEvent(AjarTargetEvent);
+    strict ReportEvent(AjarTargetEventReport);
 };
 
 // The tests use the [`Runner`] protocol to instruct the client to make calls to
@@ -282,7 +282,7 @@ open protocol OpenTarget {
 
 // An event received in the [`OpenTarget`]. Used to report the received event to
 // the test harness.
-type OpenTargetEvent = union {
+type OpenTargetEventReport = union {
     // Set if an error was received by the event handler.
     1: fidl_error FidlErrorKind;
     // Set if an unknown event was received.
@@ -297,7 +297,7 @@ type OpenTargetEvent = union {
 // [`OpenTarget`], it will use this protocol to report to the test harness
 // whenever an event is received.
 closed protocol OpenTargetEventReporter {
-    strict ReportEvent(OpenTargetEvent);
+    strict ReportEvent(OpenTargetEventReport);
 };
 
 type Test = flexible enum : uint32 {

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fidl_serversuite::EventType;
-
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{ControlHandle, ServerEnd, UnknownMethodDirection},
@@ -12,7 +10,7 @@ use {
         AjarTargetMarker, AjarTargetRequest, AnyTarget, ClosedTargetMarker, ClosedTargetRequest,
         ClosedTargetTwoWayResultRequest, ClosedTargetTwoWayTablePayloadResponse,
         ClosedTargetTwoWayUnionPayloadRequest, ClosedTargetTwoWayUnionPayloadResponse, Empty,
-        OpenTargetFlexibleTwoWayErrRequest, OpenTargetFlexibleTwoWayFieldsErrRequest,
+        EventType, OpenTargetFlexibleTwoWayErrRequest, OpenTargetFlexibleTwoWayFieldsErrRequest,
         OpenTargetMarker, OpenTargetRequest, OpenTargetStrictTwoWayErrRequest,
         OpenTargetStrictTwoWayFieldsErrRequest, ReporterProxy, RunnerRequest, RunnerRequestStream,
         Test, UnknownMethodType,

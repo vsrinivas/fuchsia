@@ -53,12 +53,12 @@ class EventReporter : public fidl::Server<Reporter> {
   std::deque<Event> received_events_;
 };
 
-using ClosedTargetEventReporter =
-    EventReporter<fidl_clientsuite::ClosedTargetEventReporter, fidl_clientsuite::ClosedTargetEvent>;
-using AjarTargetEventReporter =
-    EventReporter<fidl_clientsuite::AjarTargetEventReporter, fidl_clientsuite::AjarTargetEvent>;
-using OpenTargetEventReporter =
-    EventReporter<fidl_clientsuite::OpenTargetEventReporter, fidl_clientsuite::OpenTargetEvent>;
+using ClosedTargetEventReporter = EventReporter<fidl_clientsuite::ClosedTargetEventReporter,
+                                                fidl_clientsuite::ClosedTargetEventReport>;
+using AjarTargetEventReporter = EventReporter<fidl_clientsuite::AjarTargetEventReporter,
+                                              fidl_clientsuite::AjarTargetEventReport>;
+using OpenTargetEventReporter = EventReporter<fidl_clientsuite::OpenTargetEventReporter,
+                                              fidl_clientsuite::OpenTargetEventReport>;
 
 class ClientTest : public ::loop_fixture::RealLoop, public ::testing::Test {
  protected:

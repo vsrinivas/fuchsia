@@ -5,8 +5,8 @@
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 
-rustc_binary("server_suite_under_test_rust") {
-  output_name = "server_suite_under_test_rust"
+rustc_binary("bin") {
+  name = "server_suite_under_test_rust"
   sources = [ "src/main.rs" ]
   edition = "2021"
   deps = [
@@ -23,7 +23,7 @@ rustc_binary("server_suite_under_test_rust") {
 fuchsia_component("rust_server") {
   component_name = "server"
   manifest = "meta/server.cml"
-  deps = [ ":server_suite_under_test_rust" ]
+  deps = [ ":bin" ]
 }
 
 fuchsia_component("harness_rust") {

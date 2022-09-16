@@ -158,7 +158,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
                            ReceiveClosedEventsCompleter::Sync& completer) override {
     class EventHandler : public fidl::SyncEventHandler<fidl_clientsuite::ClosedTarget> {
      public:
-      std::optional<fidl_clientsuite::ClosedTargetEvent> received_event;
+      std::optional<fidl_clientsuite::ClosedTargetEventReport> received_event;
     };
 
     std::thread([client = fidl::SyncClient(std::move(request.target())),
@@ -167,7 +167,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
         EventHandler event_handler;
         auto handle_result = client.HandleOneEvent(event_handler);
         if (!handle_result.ok()) {
-          event_handler.received_event = fidl_clientsuite::ClosedTargetEvent::WithFidlError(
+          event_handler.received_event = fidl_clientsuite::ClosedTargetEventReport::WithFidlError(
               clienttest_util::ClassifyError(handle_result));
         }
         ZX_ASSERT(event_handler.received_event.has_value());
@@ -203,12 +203,12 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
       void handle_unknown_event(
           fidl::UnknownEventMetadata<fidl_clientsuite::AjarTarget> metadata) override {
         ZX_ASSERT(!received_event.has_value());
-        received_event = fidl_clientsuite::AjarTargetEvent::WithUnknownEvent(
+        received_event = fidl_clientsuite::AjarTargetEventReport::WithUnknownEvent(
             {{.ordinal = metadata.method_ordinal}});
       }
 
      public:
-      std::optional<fidl_clientsuite::AjarTargetEvent> received_event;
+      std::optional<fidl_clientsuite::AjarTargetEventReport> received_event;
     };
 
     std::thread([client = fidl::SyncClient(std::move(request.target())),
@@ -217,7 +217,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
         EventHandler event_handler;
         auto handle_result = client.HandleOneEvent(event_handler);
         if (!handle_result.ok()) {
-          event_handler.received_event = fidl_clientsuite::AjarTargetEvent::WithFidlError(
+          event_handler.received_event = fidl_clientsuite::AjarTargetEventReport::WithFidlError(
               clienttest_util::ClassifyError(handle_result));
         }
         ZX_ASSERT(event_handler.received_event.has_value());
@@ -252,23 +252,23 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
     class EventHandler : public fidl::SyncEventHandler<fidl_clientsuite::OpenTarget> {
       void StrictEvent(fidl::Event<fidl_clientsuite::OpenTarget::StrictEvent>& event) override {
         ZX_ASSERT(!received_event.has_value());
-        received_event = fidl_clientsuite::OpenTargetEvent::WithStrictEvent({});
+        received_event = fidl_clientsuite::OpenTargetEventReport::WithStrictEvent({});
       }
 
       void FlexibleEvent(fidl::Event<fidl_clientsuite::OpenTarget::FlexibleEvent>& event) override {
         ZX_ASSERT(!received_event.has_value());
-        received_event = fidl_clientsuite::OpenTargetEvent::WithFlexibleEvent({});
+        received_event = fidl_clientsuite::OpenTargetEventReport::WithFlexibleEvent({});
       }
 
       void handle_unknown_event(
           fidl::UnknownEventMetadata<fidl_clientsuite::OpenTarget> metadata) override {
         ZX_ASSERT(!received_event.has_value());
-        received_event = fidl_clientsuite::OpenTargetEvent::WithUnknownEvent(
+        received_event = fidl_clientsuite::OpenTargetEventReport::WithUnknownEvent(
             {{.ordinal = metadata.method_ordinal}});
       }
 
      public:
-      std::optional<fidl_clientsuite::OpenTargetEvent> received_event;
+      std::optional<fidl_clientsuite::OpenTargetEventReport> received_event;
     };
 
     std::thread([client = fidl::SyncClient(std::move(request.target())),
@@ -277,7 +277,7 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
         EventHandler event_handler;
         auto handle_result = client.HandleOneEvent(event_handler);
         if (!handle_result.ok()) {
-          event_handler.received_event = fidl_clientsuite::OpenTargetEvent::WithFidlError(
+          event_handler.received_event = fidl_clientsuite::OpenTargetEventReport::WithFidlError(
               clienttest_util::ClassifyError(handle_result));
         }
         ZX_ASSERT(event_handler.received_event.has_value());
