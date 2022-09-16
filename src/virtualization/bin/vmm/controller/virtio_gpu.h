@@ -26,8 +26,6 @@ class VirtioGpu
  public:
   explicit VirtioGpu(const PhysMem& phys_mem);
 
-  zx_status_t AddPublicService(sys::ComponentContext* context);
-
   zx_status_t Start(
       const zx::guest& guest,
       fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,

@@ -4,7 +4,6 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
-
 group("tests") {
   testonly = true
   deps = [ ":virtio_input_unittests" ]
@@ -44,11 +43,12 @@ fuchsia_unittest_package("virtio_input_unittests") {
 }
 
 fuchsia_package("virtio_input_rs") {
+  package_name = "virtio_input"
   deps = [ ":virtio_input_component" ]
 }
 
 fuchsia_component("virtio_input_component") {
   manifest = "meta/virtio_input.cml"
   deps = [ ":virtio_input_bin" ]
-  component_name = "virtio_input_rs"
+  component_name = "virtio_input"
 }

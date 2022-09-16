@@ -4,8 +4,6 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_gpu.h"
 
-#include <fuchsia/ui/app/cpp/fidl.h>
-
 #include "src/virtualization/bin/vmm/controller/realm_utils.h"
 
 VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
@@ -15,18 +13,6 @@ VirtioGpu::VirtioGpu(const PhysMem& phys_mem)
   config_.num_scanouts = 1;
 }
 
-zx_status_t VirtioGpu::AddPublicService(sys::ComponentContext* context) {
-  zx_status_t status = context->outgoing()->AddPublicService(
-      fidl::InterfaceRequestHandler<fuchsia::ui::app::ViewProvider>(
-          [this](auto request) { services_->Connect(std::move(request)); }));
-  if (status != ZX_OK) {
-    return status;
-  }
-  return context->outgoing()->AddPublicService(
-      fidl::InterfaceRequestHandler<fuchsia::ui::views::View>(
-          [this](auto request) { services_->Connect(std::move(request)); }));
-}
-
 zx_status_t VirtioGpu::Start(
     const zx::guest& guest,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::KeyboardListener> keyboard_listener,
@@ -34,11 +20,7 @@ zx_status_t VirtioGpu::Start(
     fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher) {
   constexpr auto kComponentName = "virtio_gpu";
   constexpr auto kComponentCollectionName = "virtio_gpu_devices";
-#ifdef USE_RUST_VIRTIO_GPU_INPUT
-  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu_rs#meta/virtio_gpu_rs.cm";
-#else
   constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
-#endif
 
   auto endpoints = fidl::CreateEndpoints<fuchsia_virtualization_hardware::VirtioGpu>();
   auto [client_end, server_end] = std::move(endpoints.value());

@@ -21,13 +21,10 @@ namespace {
 constexpr uint16_t kNumQueues = 2;
 constexpr uint16_t kQueueSize = 16;
 
-constexpr auto kCppComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
-constexpr auto kRustComponentUrl =
-    "fuchsia-pkg://fuchsia.com/virtio_input_rs#meta/virtio_input_rs.cm";
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
 
 struct VirtioInputTestParam {
   std::string test_name;
-  std::string component_url;
   bool configure_status_queue;
 };
 
@@ -49,7 +46,7 @@ class VirtioInputTest : public TestWithDevice,
     constexpr auto kComponentName = "virtio_input";
 
     auto realm_builder = RealmBuilder::Create();
-    realm_builder.AddChild(kComponentName, GetParam().component_url);
+    realm_builder.AddChild(kComponentName, kComponentUrl);
 
     realm_builder
         .AddRoute(Route{.capabilities =
@@ -116,8 +113,6 @@ class VirtioInputTest : public TestWithDevice,
     return zx::ok(std::move(result));
   }
 
-  bool IsRustComponent() { return GetParam().component_url == kRustComponentUrl; }
-
   // Note: use of sync can be problematic here if the test environment needs to handle
   // some incoming FIDL requests.
   fuchsia::virtualization::hardware::VirtioInputSyncPtr input_;
@@ -143,18 +138,10 @@ TEST_P(VirtioInputTest, Keyboard) {
 
   // Inject a key event.
   std::optional<fuchsia::ui::input3::KeyEventStatus> key_status = std::nullopt;
-  if (IsRustComponent()) {
-    fuchsia::ui::input3::KeyEvent keyboard;
-    keyboard.set_type(fuchsia::ui::input3::KeyEventType::PRESSED);
-    keyboard.set_key(fuchsia::input::Key::A);
-    keyboard_listener_->OnKeyEvent(std::move(keyboard), [&](auto result) { key_status = result; });
-  } else {
-    fuchsia::ui::input::KeyboardEvent keyboard = {
-        .phase = fuchsia::ui::input::KeyboardEventPhase::PRESSED,
-        .hid_usage = 4,
-    };
-    keyboard_listener_->OnKeyboardEvent(std::move(keyboard));
-  }
+  fuchsia::ui::input3::KeyEvent keyboard;
+  keyboard.set_type(fuchsia::ui::input3::KeyEventType::PRESSED);
+  keyboard.set_key(fuchsia::input::Key::A);
+  keyboard_listener_->OnKeyEvent(std::move(keyboard), [&](auto result) { key_status = result; });
 
   // Expect the virtio event.
   status = WaitOnInterrupt();
@@ -171,9 +158,7 @@ TEST_P(VirtioInputTest, Keyboard) {
 
 TEST_P(VirtioInputTest, PointerMove) {
   // TODO(fxbug.dev/104229): Enable this test.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
+  GTEST_SKIP();
 
   pointer_listener_->OnSizeChanged({1, 1});
   fuchsia::ui::input::PointerEvent pointer = {
@@ -209,9 +194,7 @@ TEST_P(VirtioInputTest, PointerMove) {
 
 TEST_P(VirtioInputTest, PointerUp) {
   // TODO(fxbug.dev/104229): Enable this test.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
+  GTEST_SKIP();
 
   pointer_listener_->OnSizeChanged({1, 1});
   fuchsia::ui::input::PointerEvent pointer = {
@@ -250,11 +233,11 @@ TEST_P(VirtioInputTest, PointerUp) {
   EXPECT_EQ(VIRTIO_INPUT_EV_SYN, event_4->type);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    VirtioInputComponentsTest, VirtioInputTest,
-    testing::Values(VirtioInputTestParam{"cpp", kCppComponentUrl, true},
-                    VirtioInputTestParam{"rust", kRustComponentUrl, true},
-                    VirtioInputTestParam{"rust_nostatusq", kRustComponentUrl, false}),
-    [](const testing::TestParamInfo<VirtioInputTestParam>& info) { return info.param.test_name; });
+INSTANTIATE_TEST_SUITE_P(VirtioInputComponentsTest, VirtioInputTest,
+                         testing::Values(VirtioInputTestParam{"statusq", true},
+                                         VirtioInputTestParam{"nostatusq", false}),
+                         [](const testing::TestParamInfo<VirtioInputTestParam>& info) {
+                           return info.param.test_name;
+                         });
 
 }  // namespace

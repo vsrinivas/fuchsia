@@ -16,7 +16,6 @@
 #include "fuchsia/logger/cpp/fidl.h"
 #include "fuchsia/virtualization/hardware/cpp/fidl.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
-#include "src/virtualization/bin/vmm/device/gpu.h"
 #include "src/virtualization/bin/vmm/device/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue_fake.h"
 
@@ -36,13 +35,14 @@ constexpr size_t kPixelSizeInBytes = 4;
 constexpr uint32_t kResourceId = 1;
 constexpr uint32_t kScanoutId = 0;
 
-constexpr auto kCppComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
-constexpr auto kRustComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu_rs#meta/virtio_gpu_rs.cm";
+static constexpr uint32_t kGpuStartupWidth = 1280;
+static constexpr uint32_t kGpuStartupHeight = 720;
+
+constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
 constexpr auto kGraphicalPresenterUrl = "#meta/test_graphical_presenter.cm";
 
 struct VirtioGpuTestParam {
   std::string test_name;
-  std::string component_url;
   bool configure_cursor_queue;
 };
 
@@ -63,16 +63,9 @@ class VirtioGpuTest : public TestWithDevice,
 
     ui_testing::UITestRealm::Config ui_config;
     ui_config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
-    // The c++ component is still using the scenic API, but the rust component is implemented on top
-    // of Flatland.
-    if (IsRustComponent()) {
-      ui_config.use_flatland = true;
-      ui_config.ui_to_client_services = {fuchsia::ui::composition::Flatland::Name_,
-                                         fuchsia::ui::composition::Allocator::Name_};
-    } else {
-      ui_config.use_flatland = false;
-      ui_config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
-    }
+    ui_config.use_flatland = true;
+    ui_config.ui_to_client_services = {fuchsia::ui::composition::Flatland::Name_,
+                                       fuchsia::ui::composition::Allocator::Name_};
     ui_config.exposed_client_services = {fuchsia::virtualization::hardware::VirtioGpu::Name_};
 
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(ui_config));
@@ -81,7 +74,7 @@ class VirtioGpuTest : public TestWithDevice,
     constexpr auto kGraphicalPresenterComponentName = "graphical_presenter";
 
     auto realm_builder = ui_test_manager_->AddSubrealm();
-    realm_builder.AddChild(kComponentName, GetParam().component_url);
+    realm_builder.AddChild(kComponentName, kComponentUrl);
     realm_builder.AddChild(kGraphicalPresenterComponentName, kGraphicalPresenterUrl);
 
     realm_builder
@@ -165,22 +158,16 @@ class VirtioGpuTest : public TestWithDevice,
     return ui_test_manager_->FindViewFromSnapshotByKoid(presenter->children()[0]);
   }
 
-  bool IsRustComponent() { return GetParam().component_url == kRustComponentUrl; }
-
   zx::status<std::pair<uint32_t, uint32_t>> WaitForScanout() {
-    if (IsRustComponent()) {
-      bool view_created =
-          RunLoopWithTimeoutOrUntil([this] { return FindGpuView().has_value(); }, zx::sec(20));
-      if (!view_created) {
-        return zx::error(ZX_ERR_TIMED_OUT);
-      }
-      auto gpu_view = *FindGpuView();
-      const auto& extent = gpu_view.layout().extent;
-      return zx::ok(std::make_pair(std::round(extent.max.x - extent.min.x),
-                                   std::round(extent.max.y - extent.min.y)));
-    } else {
-      return zx::ok(std::make_pair(kGpuStartupWidth, kGpuStartupHeight));
+    bool view_created =
+        RunLoopWithTimeoutOrUntil([this] { return FindGpuView().has_value(); }, zx::sec(20));
+    if (!view_created) {
+      return zx::error(ZX_ERR_TIMED_OUT);
     }
+    auto gpu_view = *FindGpuView();
+    const auto& extent = gpu_view.layout().extent;
+    return zx::ok(std::make_pair(std::round(extent.max.x - extent.min.x),
+                                 std::round(extent.max.y - extent.min.y)));
   }
 
   template <typename T>
@@ -337,10 +324,10 @@ TEST_P(VirtioGpuTest, InvalidTransferToHostParams) {
   EXPECT_EQ(response->type, VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    VirtioGpuComponentsTest, VirtioGpuTest,
-    testing::Values(VirtioGpuTestParam{"cpp", kCppComponentUrl, true},
-                    VirtioGpuTestParam{"rust", kRustComponentUrl, true},
-                    VirtioGpuTestParam{"rust_nocursorq", kRustComponentUrl, false}),
-    [](const testing::TestParamInfo<VirtioGpuTestParam>& info) { return info.param.test_name; });
+INSTANTIATE_TEST_SUITE_P(VirtioGpuComponentsTest, VirtioGpuTest,
+                         testing::Values(VirtioGpuTestParam{"cursorq", true},
+                                         VirtioGpuTestParam{"nocursorq", false}),
+                         [](const testing::TestParamInfo<VirtioGpuTestParam>& info) {
+                           return info.param.test_name;
+                         });
 }  // namespace

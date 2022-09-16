@@ -502,15 +502,6 @@ fitx::result<GuestError> Vmm::AddPublicServices(sys::ComponentContext* context) 
     FX_PLOGS(ERROR, status) << "Failed to add guest controller public service";
     return fitx::error(GuestError::DUPLICATE_PUBLIC_SERVICES);
   }
-
-  if (gpu_ != nullptr) {
-    status = gpu_->AddPublicService(context);
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to add GPU public service";
-      return fitx::error(GuestError::DUPLICATE_PUBLIC_SERVICES);
-    }
-  }
-
   return fitx::ok();
 }
 

@@ -71,12 +71,7 @@ VirtioInput::VirtioInput(const PhysMem& phys_mem, VirtioInputType type)
 zx_status_t VirtioInput::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
                                async_dispatcher_t* dispatcher, std::string component_name) {
   constexpr auto kComponentCollectionName = "virtio_input_devices";
-#ifdef USE_RUST_VIRTIO_GPU_INPUT
-  constexpr auto kComponentUrl =
-      "fuchsia-pkg://fuchsia.com/virtio_input_rs#meta/virtio_input_rs.cm";
-#else
   constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
-#endif
 
   zx_status_t status = CreateDynamicComponent(
       realm, kComponentCollectionName, component_name.c_str(), kComponentUrl,

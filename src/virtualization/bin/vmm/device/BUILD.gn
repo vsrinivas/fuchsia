@@ -27,8 +27,6 @@ group("tests") {
 group("packages") {
   deps = [
     ":virtio_console",
-    ":virtio_gpu",
-    ":virtio_input",
     ":virtio_magma",
     ":virtio_wl",
     "virtio_balloon",
@@ -94,49 +92,6 @@ executable("virtio_console_bin") {
 fuchsia_package_with_single_component("virtio_console") {
   manifest = "../meta/virtio_console.cml"
   deps = [ ":virtio_console_bin" ]
-}
-
-executable("virtio_input_bin") {
-  visibility = [ ":*" ]
-
-  output_name = "virtio_input"
-  sources = [ "virtio_input.cc" ]
-  deps = [ ":virtio" ]
-}
-
-fuchsia_package_with_single_component("virtio_input") {
-  manifest = "../meta/virtio_input.cml"
-  deps = [ ":virtio_input_bin" ]
-}
-
-executable("virtio_gpu_bin") {
-  visibility = [ ":*" ]
-
-  output_name = "virtio_gpu"
-  sources = [
-    "gpu_resource.cc",
-    "gpu_resource.h",
-    "gpu_scanout.cc",
-    "gpu_scanout.h",
-    "guest_view.cc",
-    "guest_view.h",
-    "virtio_gpu.cc",
-  ]
-  deps = [
-    ":virtio",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/ui/scenic/cpp",
-    "//src/lib/ui/base_view",
-    "//zircon/system/ulib/zxc",
-    "//zircon/third_party/ulib/safemath",
-  ]
-}
-
-fuchsia_package_with_single_component("virtio_gpu") {
-  manifest = "../meta/virtio_gpu.cml"
-  deps = [ ":virtio_gpu_bin" ]
 }
 
 source_set("magma_image") {
