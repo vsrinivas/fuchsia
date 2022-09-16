@@ -10,6 +10,8 @@
 #include "src/ui/a11y/lib/magnifier/gfx_magnifier_delegate.h"
 #include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
+#include "src/ui/a11y/lib/util/util.h"
+#include "src/ui/a11y/lib/view/view_coordinate_converter.h"
 
 namespace a11y_manager {
 
@@ -142,6 +144,17 @@ void App::FinishSetUp() {
 
   // Start watching setui for current settings
   WatchSetui();
+
+  // Configures a View Coordinate Converter. Done at this point because the a11y view is guaranteed
+  // to be initialized.
+  auto a11y_view = view_manager_->a11y_view();
+  FX_DCHECK(a11y_view);
+  auto view_ref = a11y_view->view_ref();
+  FX_DCHECK(view_ref);
+  auto view_ref_koid = a11y::GetKoid(*view_ref);
+  auto view_coordinate_converter =
+      std::make_unique<a11y::ViewCoordinateConverter>(context_, view_ref_koid);
+  view_manager_->SetViewCoordinateConverter(std::move(view_coordinate_converter));
 }
 
 void App::SetState(A11yManagerState state) {

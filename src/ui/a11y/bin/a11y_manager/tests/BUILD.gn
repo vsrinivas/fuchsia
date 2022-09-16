@@ -61,4 +61,9 @@ fuchsia_unittest_package("a11y-tests") {
     # be loaded from a file instead.
     "//src/intl:icudtl",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

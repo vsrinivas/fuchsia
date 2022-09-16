@@ -130,6 +130,9 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
       std::unique_ptr<ViewCoordinateConverter> view_coordinate_converter) {
     view_coordinate_converter_ = std::move(view_coordinate_converter);
   }
+  ViewCoordinateConverter* GetViewCoordinateConverterForTest() {
+    return view_coordinate_converter_.get();
+  }
 
  private:
   // Helper function to retrieve the semantic tree corresponding to |koid|.
