@@ -81,6 +81,24 @@ async fn connect_to_cobalt(specs: &MetricSpecs) -> Result<MetricEventLoggerProxy
 }
 
 impl MetricLogger {
+    /// Provides MetricLogger for testing.
+    #[cfg(test)]
+    fn init_for_testing(
+        specs: MetricSpecs,
+        component_map: ComponentEventCodeMap,
+        proxy: MetricEventLoggerProxy,
+    ) -> Self {
+        Self {
+            specs,
+            proxy,
+            component_map,
+            current_interval_errors: HashSet::new(),
+            next_interval_index: 0,
+            reached_capacity: false,
+            last_cobalt_failure_time: 0,
+        }
+    }
+
     /// Create a MetricLogger that logs the given MetricSpecs.
     pub async fn new(
         specs: MetricSpecs,
@@ -105,11 +123,15 @@ impl MetricLogger {
         if log.metadata.component_url.is_none() {
             return Ok(());
         }
-        let url = log.metadata.component_url.as_ref().unwrap();
-        self.maybe_clear_errors_and_send_ping().await?;
+
+        // No need to process the logs if Severity is not Error or Fatal.
         if log.metadata.severity != Severity::Error && log.metadata.severity != Severity::Fatal {
             return Ok(());
         }
+
+        let url = log.metadata.component_url.as_ref().unwrap();
+
+        self.maybe_clear_errors_and_send_ping().await?;
         let log_identifier = LogIdentifier::try_from(log).unwrap_or(LogIdentifier {
             file_path: UNKNOWN_SOURCE_FILE_PATH.to_string(),
             line_no: EMPTY_LINE_NUMBER,
@@ -201,6 +223,344 @@ impl MetricLogger {
                 self.last_cobalt_failure_time = now;
                 Err(anyhow::format_err!("Cobalt returned error: {}", e as u8))
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+    use diagnostics_data::BuilderArgs;
+    use diagnostics_data::LogsDataBuilder;
+    use fidl_fuchsia_metrics::{
+        MetricEventLoggerMarker, MetricEventLoggerRequest, MetricEventLoggerRequestStream,
+    };
+    use fuchsia_zircon as zx;
+    use futures::StreamExt;
+    use futures::TryStreamExt;
+
+    const TEST_URL: &'static str = "fake-test-env/test-component.cmx";
+    const TEST_MONIKER: &'static str = "fuchsia-pkg://fuchsia.com/testing123#test-component.cmx";
+    const TEST_METRIC_SPECS: MetricSpecs = MetricSpecs {
+        customer_id: 1,
+        project_id: 1,
+        granular_error_count_metric_id: 1,
+        granular_error_interval_count_metric_id: 1,
+    };
+
+    /// Test scenario where MetricLogger.log_metric() is successfully able to log the Cobalt Metrics
+    #[fasync::run_singlethreaded(test)]
+    async fn test_logged_metric_successfully() {
+        let specs = TEST_METRIC_SPECS;
+        let component_map = ComponentEventCodeMap::new();
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let log_identifier_and_component = LogIdentifierAndComponent {
+            log_identifier: LogIdentifier { file_path: String::from("xyz"), line_no: 1 },
+            component_event_code: 1,
+        };
+        let expected_log_identifier_and_component = log_identifier_and_component.clone();
+        let mut stream = fake_metric_event_provider.metric_event_logger_stream;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.log_metric(1, &log_identifier_and_component).await;
+        })
+        .detach();
+
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            1,
+            String::from("xyz"),
+            expected_log_identifier_and_component,
+        )
+        .await;
+    }
+
+    /// Test scenario where MetricLogger.log_metric() is unable to log the Cobalt Metrics
+    #[fasync::run_singlethreaded(test)]
+    async fn test_logged_metric_unsuccessfully() {
+        let specs = TEST_METRIC_SPECS;
+        let component_map = ComponentEventCodeMap::new();
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let log_identifier_and_component = LogIdentifierAndComponent {
+            log_identifier: LogIdentifier { file_path: String::from("xyz"), line_no: 1 },
+            component_event_code: 1,
+        };
+
+        fasync::Task::spawn(async move {
+            assert!(metric_logger.log_metric(1, &log_identifier_and_component).await.is_err());
+        })
+        .detach();
+    }
+
+    /// Test scenario where MetricLogger.maybe_clear_errors_and_send_ping is able to clear the errors and send ping to Cobalt.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_successfully_cleared_errors_and_sent_ping() {
+        let specs = TEST_METRIC_SPECS;
+        let component_map = ComponentEventCodeMap::new();
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let mut stream = fake_metric_event_provider.metric_event_logger_stream;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.maybe_clear_errors_and_send_ping().await;
+        })
+        .detach();
+
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            1,
+            PING_FILE_PATH.to_string(),
+            get_ping_log_identifier_and_component(),
+        )
+        .await;
+    }
+
+    /// Test scenario where MetricLogger.maybe_clear_errors_and_send_ping doesn't need to clear the errors and send ping to Cobalt.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_no_need_to_clear_errors_and_send_ping() {
+        let specs = TEST_METRIC_SPECS;
+        let component_map = ComponentEventCodeMap::new();
+        let mut fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        metric_logger.next_interval_index =
+            fasync::Time::now().into_nanos() as u64 / 1_000_000_000 / 60 / INTERVAL_IN_MINUTES + 1;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.maybe_clear_errors_and_send_ping().await;
+        })
+        .detach();
+
+        assert!(fake_metric_event_provider.metric_event_logger_stream.next().await.is_none());
+    }
+
+    /// MetricLogger.process() doesn't process Severity::Info
+    #[fasync::run_singlethreaded(test)]
+    async fn test_non_error_log_process() -> Result<(), anyhow::Error> {
+        let specs = TEST_METRIC_SPECS;
+        let mut component_map = ComponentEventCodeMap::new();
+        component_map.insert(TEST_URL.to_string(), 1);
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let data = get_sample_logs_data_with_severity(Severity::Info);
+        metric_logger.process(&data).await
+    }
+
+    /// MetricLogger.process() processes and reports logs to Cobalt Metrics if the severity is  Severity::Error
+    #[fasync::run_singlethreaded(test)]
+    async fn test_logs_proccessed_successfully() {
+        let specs = TEST_METRIC_SPECS;
+        let mut component_map = ComponentEventCodeMap::new();
+        component_map.insert(TEST_URL.to_string(), 1);
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let data = get_sample_logs_data_with_severity(Severity::Error);
+        let expected_log_identifier_and_component = LogIdentifierAndComponent {
+            log_identifier: LogIdentifier {
+                file_path: "path/to/file.cc".to_string(),
+                line_no: 123u64,
+            },
+            component_event_code: 1,
+        };
+        let mut stream = fake_metric_event_provider.metric_event_logger_stream;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.process(&data).await;
+        })
+        .detach();
+
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            1,
+            PING_FILE_PATH.to_string(),
+            get_ping_log_identifier_and_component(),
+        )
+        .await;
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            1,
+            "path/to/file.cc".to_string(),
+            expected_log_identifier_and_component.clone(),
+        )
+        .await;
+    }
+
+    /// MetricLogger.process() processes and reports log to Cobalt Metrics with severity Error with OTHER_EVENT_CODE
+    #[fasync::run_singlethreaded(test)]
+    async fn test_log_with_other_event_code() {
+        let specs = TEST_METRIC_SPECS;
+        let component_map = ComponentEventCodeMap::new();
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let data = get_sample_logs_data_with_severity(Severity::Error);
+        let expected_log_identifier_and_component = LogIdentifierAndComponent {
+            log_identifier: LogIdentifier { file_path: "path".to_string(), line_no: 123u64 },
+            component_event_code: OTHER_EVENT_CODE,
+        };
+        let mut stream = fake_metric_event_provider.metric_event_logger_stream;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.process(&data).await;
+        })
+        .detach();
+
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            1,
+            PING_FILE_PATH.to_string(),
+            get_ping_log_identifier_and_component(),
+        )
+        .await;
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            1,
+            "path/to/file.cc".to_string(),
+            expected_log_identifier_and_component.clone(),
+        )
+        .await;
+    }
+
+    /// MetricLogger.process() processes and reports unparsable log to Cobalt Metrics with
+    /// severity Error, OTHER_EVENT_CODE, UNKNOWN_SOURCE_FILE_PATH and EMPTY_LINE_NUMBER
+    #[fasync::run_singlethreaded(test)]
+    async fn test_unparsable_logs_data_proccess() {
+        let specs = TEST_METRIC_SPECS;
+        let component_map = ComponentEventCodeMap::new();
+        let fake_metric_event_provider = FakeMetricEventProvider::new();
+        let mut metric_logger = MetricLogger::init_for_testing(
+            specs,
+            component_map,
+            fake_metric_event_provider.metric_event_logger_proxy,
+        );
+        let data = LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: zx::Time::from_nanos(1).into(),
+            component_url: Some(TEST_URL.to_string()),
+            moniker: TEST_MONIKER.to_string(),
+            severity: Severity::Fatal,
+        })
+        .build();
+        let expected_log_identifier_and_component = LogIdentifierAndComponent {
+            log_identifier: LogIdentifier {
+                file_path: UNKNOWN_SOURCE_FILE_PATH.to_string(),
+                line_no: EMPTY_LINE_NUMBER,
+            },
+            component_event_code: OTHER_EVENT_CODE,
+        };
+        let mut stream = fake_metric_event_provider.metric_event_logger_stream;
+
+        fasync::Task::spawn(async move {
+            let _ = metric_logger.process(&data).await;
+        })
+        .detach();
+
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            1,
+            PING_FILE_PATH.to_string(),
+            get_ping_log_identifier_and_component(),
+        )
+        .await;
+        verify_single_logged_string_metric(
+            stream.try_next().await.unwrap(),
+            1,
+            UNKNOWN_SOURCE_FILE_PATH.to_string(),
+            expected_log_identifier_and_component.clone(),
+        )
+        .await;
+    }
+
+    async fn verify_single_logged_string_metric(
+        metric_event: Option<MetricEventLoggerRequest>,
+        expected_metric_id: u32,
+        expected_string_value: String,
+        expected_log_identifier_and_component: LogIdentifierAndComponent,
+    ) {
+        if let Some(MetricEventLoggerRequest::LogString {
+            metric_id,
+            string_value,
+            event_codes,
+            responder,
+            ..
+        }) = metric_event
+        {
+            assert_eq!(metric_id, expected_metric_id);
+            assert_eq!(string_value, expected_string_value);
+            assert_eq!(
+                event_codes,
+                &[
+                    expected_log_identifier_and_component.log_identifier.line_no as u32,
+                    expected_log_identifier_and_component.component_event_code
+                ]
+            );
+            let _ = responder.send(&mut Ok(()));
+        } else {
+            assert!(false);
+        }
+    }
+
+    struct FakeMetricEventProvider {
+        metric_event_logger_stream: MetricEventLoggerRequestStream,
+        metric_event_logger_proxy: MetricEventLoggerProxy,
+    }
+
+    impl FakeMetricEventProvider {
+        fn new() -> Self {
+            let (metric_event_logger_proxy, metric_event_logger_stream) =
+                fidl::endpoints::create_proxy_and_stream::<MetricEventLoggerMarker>().unwrap();
+            Self { metric_event_logger_stream, metric_event_logger_proxy }
+        }
+    }
+
+    fn get_sample_logs_data_with_severity(severity: Severity) -> LogsData {
+        LogsDataBuilder::new(BuilderArgs {
+            timestamp_nanos: zx::Time::from_nanos(1).into(),
+            component_url: Some(TEST_URL.to_string()),
+            moniker: TEST_MONIKER.to_string(),
+            severity,
+        })
+        .set_message("[irrelevant_tag(32)] Hello".to_string())
+        .set_line(123u64)
+        .set_file("path/to/file.cc".to_string())
+        .build()
+    }
+
+    fn get_ping_log_identifier_and_component() -> LogIdentifierAndComponent {
+        LogIdentifierAndComponent {
+            log_identifier: LogIdentifier {
+                file_path: PING_FILE_PATH.to_string(),
+                line_no: EMPTY_LINE_NUMBER,
+            },
+            component_event_code: OTHER_EVENT_CODE,
         }
     }
 }
