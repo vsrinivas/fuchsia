@@ -165,8 +165,7 @@ pub trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>: IpSocketHandler<I, C
                 .send_ip_packet(ctx, &tmp, get_body_from_src_ip(*tmp.local_ip()), mtu)
                 .map_err(|(body, err)| match err {
                     IpSockSendError::Mtu => {
-                        let (_, options): (IpSockDefinition<_, _>, _) =
-                            tmp.into_definition_options();
+                        let IpSock { options, definition: _ } = tmp;
                         (body, IpSockCreateAndSendError::Mtu, options)
                     }
                     IpSockSendError::Unroutable(_) => {
@@ -261,21 +260,31 @@ impl<I: IpExt, D, O> IpSock<I, D, O> {
         &self.definition.remote_ip
     }
 
-    pub(crate) fn into_definition_options(self) -> (IpSockDefinition<I, D>, O) {
-        let Self { definition, options } = self;
-        (definition, options)
-    }
-
-    pub(crate) fn from_definition_options(definition: IpSockDefinition<I, D>, options: O) -> Self {
-        Self { definition: definition, options }
-    }
-
     pub(crate) fn options(&self) -> &O {
         &self.options
     }
 
     pub(crate) fn options_mut(&mut self) -> &mut O {
         &mut self.options
+    }
+
+    /// Swaps in `new_options` for the existing options and returns the old
+    /// options.
+    pub(crate) fn replace_options(&mut self, new_options: O) -> O {
+        core::mem::replace(self.options_mut(), new_options)
+    }
+
+    pub(crate) fn take_options(&mut self) -> O
+    where
+        O: Default,
+    {
+        self.replace_options(Default::default())
+    }
+
+    /// Consumes the socket and returns the contained options.
+    pub(crate) fn into_options(self) -> O {
+        let Self { definition: _, options } = self;
+        options
     }
 }
 
@@ -1022,7 +1031,7 @@ mod tests {
     use packet::{Buf, InnerPacketBuilder, ParseBuffer};
     use packet_formats::{
         icmp::{IcmpEchoReply, IcmpIpExt, IcmpMessage, IcmpUnusedCode},
-        ip::{IpExt, IpPacket},
+        ip::{IpExt, IpPacket, Ipv4Proto},
         ipv4::{Ipv4OnlyMeta, Ipv4Packet},
         testutil::{parse_ethernet_frame, parse_ip_packet_in_ethernet_frame},
     };
@@ -1681,5 +1690,27 @@ mod tests {
             // is used.
             assert_eq!(hop_limit, crate::ip::DEFAULT_HOP_LIMITS.unicast.get());
         }
+    }
+
+    #[test]
+    fn manipulate_options() {
+        // The values here don't matter since we won't actually be using this
+        // socket to send anything.
+        let definition = IpSockDefinition::<Ipv4, ()> {
+            remote_ip: Ipv4::LOOPBACK_ADDRESS,
+            local_ip: Ipv4::LOOPBACK_ADDRESS,
+            device: None,
+            proto: Ipv4Proto::Icmp,
+        };
+
+        const START_OPTION: usize = 23;
+        const DEFAULT_OPTION: usize = 0;
+        const NEW_OPTION: usize = 55;
+        let mut socket = IpSock { definition, options: START_OPTION };
+
+        assert_eq!(socket.take_options(), START_OPTION);
+        assert_eq!(socket.replace_options(NEW_OPTION), DEFAULT_OPTION);
+        assert_eq!(socket.options(), &NEW_OPTION);
+        assert_eq!(socket.into_options(), NEW_OPTION);
     }
 }

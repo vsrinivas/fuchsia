@@ -22,7 +22,7 @@ use crate::{
     },
     error::{LocalAddressError, ZonedAddressError},
     ip::{
-        socket::{IpSock, IpSockDefinition, SendOptions},
+        socket::{IpSock, SendOptions},
         HopLimits, IpDeviceId, IpExt,
     },
     socket::{
@@ -350,8 +350,7 @@ where
             bound.conns_mut().remove(&id).expect("UDP connection not found");
         (state, addr)
     });
-    let (_, IpOptions { multicast_memberships, hop_limits: _ }): (IpSockDefinition<_, _>, _) =
-        socket.into_definition_options();
+    let IpOptions { multicast_memberships, hop_limits: _ } = socket.into_options();
 
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
     addr
@@ -551,7 +550,7 @@ where
             bound.conns_mut().remove(&id).expect("connection not found");
 
         let ConnState { socket } = state;
-        let (_, ip_options): (IpSockDefinition<_, _>, _) = socket.into_definition_options();
+        let ip_options = socket.into_options();
 
         let ConnAddr { ip: ConnIpAddr { local: (local_ip, identifier), remote: _ }, device } = addr;
         let addr = ListenerAddr { ip: ListenerIpAddr { addr: Some(local_ip), identifier }, device };
