@@ -242,7 +242,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
 
   // Check if request is initialized and initialize it if it isn't (it can be initialized
   // for batch requests).
-  if (request->offset_ == UINT64_MAX) {
+  if (!request->IsInitialized()) {
     request->Init(fbl::RefPtr<PageRequestInterface>(this), offset, page_request_type::READ,
                   vmo_debug_info);
     LTRACEF_LEVEL(2, "%p offset %lx\n", this, offset);
@@ -473,7 +473,7 @@ zx_status_t PageSource::RequestDirtyTransition(PageRequest* request, uint64_t of
   canary_.Assert();
   ASSERT(request);
 
-  if (request->offset_ != UINT64_MAX) {
+  if (request->IsInitialized()) {
     // If the request was previously initialized, it could only have been in batch accepting mode.
     // Finalize that batch first since we are going to create a new batch below.
     DEBUG_ASSERT(request->batch_state_ == PageRequest::BatchState::Accepting);
