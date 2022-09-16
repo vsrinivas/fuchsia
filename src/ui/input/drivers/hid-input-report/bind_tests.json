@@ -1,16 +1,100 @@
 [
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.DIGITIZER__TOUCH_SCREEN": "true"
         },
         "expected": "abort",
         "name": "Incorrect_Protocol"
     },
     {
         "device": {
-            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE"
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.FIDO_ALLIANCE": "true"
+        },
+        "expected": "abort",
+        "name": "Missing_HidPageUsage"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.CONSUMER__CONSUMER_CONTROL": "true"
         },
         "expected": "match",
-        "name": "Correct_Protocol"
+        "name": "ConsumerControl"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.DIGITIZER__TOUCH_PAD": "true"
+        },
+        "expected": "match",
+        "name": "TouchPad"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.DIGITIZER__TOUCH_SCREEN": "true"
+        },
+        "expected": "match",
+        "name": "TouchScreen"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.DIGITIZER__TOUCH_SCREEN_CONFIGURATION": "true"
+        },
+        "expected": "match",
+        "name": "TouchScreenConfiguration"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.GENERIC_DESKTOP__KEYBOARD": "true"
+        },
+        "expected": "match",
+        "name": "Keyboard"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.GENERIC_DESKTOP__MOUSE": "true"
+        },
+        "expected": "match",
+        "name": "Mouse"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.SENSOR": "true"
+        },
+        "expected": "match",
+        "name": "Sensor"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.GENERIC_DESKTOP__MOUSE": "true",
+            "fuchsia.hid.SENSOR": "true"
+        },
+        "expected": "match",
+        "name": "MultipleMatches"
+    }, 
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.GENERIC_DESKTOP__MOUSE": "false"
+        },
+        "expected": "abort",
+        "name": "WrongValue"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
+            "fuchsia.hid.FIDO_ALLIANCE": "true",
+            "fuchsia.hid.SENSOR": "true"
+        },
+        "expected": "match",
+        "name": "Subset"
     }
 ]

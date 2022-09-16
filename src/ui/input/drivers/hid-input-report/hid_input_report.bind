@@ -5,3 +5,20 @@
 using fuchsia.hid;
 
 fuchsia.BIND_PROTOCOL == fuchsia.hid.BIND_PROTOCOL.DEVICE;
+if fuchsia.hid.CONSUMER__CONSUMER_CONTROL == true {
+    true;
+} else if fuchsia.hid.DIGITIZER__TOUCH_PAD == true {
+    true;
+} else if fuchsia.hid.DIGITIZER__TOUCH_SCREEN == true {
+    true;
+} else if fuchsia.hid.DIGITIZER__TOUCH_SCREEN_CONFIGURATION == true {
+    true;
+} else if fuchsia.hid.GENERIC_DESKTOP__KEYBOARD == true {
+    true;
+} else if fuchsia.hid.GENERIC_DESKTOP__MOUSE == true {
+    true;
+} else if fuchsia.hid.SENSOR == true {
+    true;
+} else {
+    false;
+}

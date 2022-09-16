@@ -4,7 +4,7 @@
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
-            "fuchsia.hid.USAGE_PAGE_FIDO_ALLIANCE": "true"
+            "fuchsia.hid.FIDO_ALLIANCE": "true"
         }
     },
     {
@@ -12,7 +12,7 @@
         "expected": "abort",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
-            "fuchsia.hid.USAGE_PAGE_FIDO_ALLIANCE": "false"
+            "fuchsia.hid.FIDO_ALLIANCE": "false"
         }
     },
     {
@@ -20,7 +20,7 @@
         "expected": "match",
         "device": {
             "fuchsia.BIND_PROTOCOL": "fuchsia.hid.BIND_PROTOCOL.DEVICE",
-            "fuchsia.hid.USAGE_PAGE_FIDO_ALLIANCE": "true"
+            "fuchsia.hid.FIDO_ALLIANCE": "true"
         }
     }
 ]

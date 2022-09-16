@@ -10,40 +10,20 @@ extend uint fuchsia.BIND_PROTOCOL {
 };
 
 /// TODO (fxbug.dev/103439): Until bind language can handle lists/vectors better.
-/// Usage pages corresponding to HID spec.
-/// Should also match zircon/system/ulib/hid-parser/include/hid-parser/usages.h
-/// If value is true, HID descriptor has the usage page. If value is false or does
-/// not exist, HID descriptor does not have the usage page.
-bool USAGE_PAGE_UNDEFINED;               // 0x00
-bool USAGE_PAGE_GENERIC_DESKTOP;         // 0x01
-bool USAGE_PAGE_SIMULATION_CTRLS;        // 0x02
-bool USAGE_PAGE_VR_CTRLS;                // 0x03
-bool USAGE_PAGE_SPORTS_CTRLS;            // 0x04
-bool USAGE_PAGE_GAME_CTRLS;              // 0x05
-bool USAGE_PAGE_GENERIC_DEVICE_CTRLS;    // 0x06
-bool USAGE_PAGE_KEYBOARD_KEYPAD;         // 0x07
-bool USAGE_PAGE_LEDS;                    // 0x08
-bool USAGE_PAGE_BUTTON;                  // 0x09
-bool USAGE_PAGE_ORDINAL;                 // 0x0a
-bool USAGE_PAGE_TELEPHONY;               // 0x0b
-bool USAGE_PAGE_CONSUMER;                // 0x0c
-bool USAGE_PAGE_DIGITIZER;               // 0x0d
-bool USAGE_PAGE_PHYSICAL_INTERFACE;      // 0x0f
-bool USAGE_PAGE_UNICODE;                 // 0x10
-bool USAGE_PAGE_ALPHANUMERIC_DISPLAY;    // 0x14
-bool USAGE_PAGE_SENSOR;                  // 0x20
-bool USAGE_PAGE_MEDICAL_INSTRUMENT;      // 0x40
-bool USAGE_PAGE_MONITOR;                 // 0x80
-bool USAGE_PAGE_MONITOR_ENUMERATED;      // 0x81
-bool USAGE_PAGE_VESA_CTRLS;              // 0x82
-bool USAGE_PAGE_VESA_COMMAND;            // 0x83
-bool USAGE_PAGE_POWER_DEVICE;            // 0x84
-bool USAGE_PAGE_BATTERY_SYSTEM;          // 0x85
-bool USAGE_PAGE_BARCODE_SCANNER;         // 0x8c
-bool USAGE_PAGE_SCALE;                   // 0x8d
-bool USAGE_PAGE_MAGNETIC_STRIPE_READER;  // 0x8e
-bool USAGE_PAGE_POINT_OF_SALE_DEVICE;    // 0x8f
-bool USAGE_PAGE_CAMERA_CONTROL;          // 0x90
-bool USAGE_PAGE_ARCADE_CONTROL;          // 0x91
-bool USAGE_PAGE_FIDO_ALLIANCE;           // 0xf1d0
-bool USAGE_PAGE_VENDOR;                  // 0xff00 - 0xffff
+/// Incomplete list of Page + Usage pairs corresponding to HID spec in the format
+/// of PAGE__USAGE. New values can be added on demand.
+/// If value is true, HID descriptor has the Page + Usage pair. If value is false
+/// or does not exist, HID descriptor does not have the Page + Usage pair.
+bool CONSUMER__CONSUMER_CONTROL;
+bool DIGITIZER__TOUCH_PAD;
+bool DIGITIZER__TOUCH_SCREEN;
+bool DIGITIZER__TOUCH_SCREEN_CONFIGURATION;
+bool GENERIC_DESKTOP__KEYBOARD;
+bool GENERIC_DESKTOP__MOUSE;
+
+/// Incomplete list of Pages corresponding to HID spec. New values can be added on
+/// demand.
+/// If value is true, HID descriptor has the Page. If value is false or does not exist,
+/// HID descriptor does not have the Page.
+bool FIDO_ALLIANCE;
+bool SENSOR;

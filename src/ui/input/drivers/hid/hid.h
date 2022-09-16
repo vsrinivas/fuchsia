@@ -31,6 +31,14 @@
 namespace hid_driver {
 
 typedef uint8_t input_report_id_t;
+struct HidPageUsage {
+  uint16_t page;
+  uint32_t usage;
+
+  friend bool operator<(const HidPageUsage& l, const HidPageUsage& r) {
+    return std::tie(l.page, l.usage) < std::tie(r.page, r.usage);
+  }
+};
 
 class HidDevice;
 
@@ -88,7 +96,7 @@ class HidDevice : public HidDeviceType,
 
   void ParseUsagePage(const hid::ReportDescriptor* descriptor);
 
-  std::set<uint16_t> usage_pages_;
+  std::set<HidPageUsage> page_usage_;
   hid_info_t info_ = {};
   ddk::HidbusProtocolClient hidbus_;
 

@@ -481,6 +481,15 @@ enum class Telephony : uint32_t {
   kPhoneMute = 0x2F,
 };
 
+enum class FidoAlliance : uint32_t {
+  kUndefined = 0x00,
+
+  kU2FAuthenticatorDevice = 0x01,
+
+  kInputReportData = 0x20,
+  kOutputReportData = 0x21,
+};
+
 }  // namespace usage
 }  // namespace hid
 

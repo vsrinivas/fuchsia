@@ -31,42 +31,41 @@ namespace hid_driver {
 
 namespace {
 
-std::map<uint16_t, const std::string> kBindPropKeyMap{
-    {static_cast<uint16_t>(hid::usage::Page::kUndefined), bind_fuchsia_hid::USAGE_PAGE_UNDEFINED},
-    {static_cast<uint16_t>(hid::usage::Page::kGenericDesktop), bind_fuchsia_hid::USAGE_PAGE_GENERIC_DESKTOP},
-    {static_cast<uint16_t>(hid::usage::Page::kSimulationCtrls), bind_fuchsia_hid::USAGE_PAGE_SIMULATION_CTRLS},
-    {static_cast<uint16_t>(hid::usage::Page::kVRCtrls), bind_fuchsia_hid::USAGE_PAGE_VR_CTRLS},
-    {static_cast<uint16_t>(hid::usage::Page::kSportsCtrls), bind_fuchsia_hid::USAGE_PAGE_SPORTS_CTRLS},
-    {static_cast<uint16_t>(hid::usage::Page::kGameCtrls), bind_fuchsia_hid::USAGE_PAGE_GAME_CTRLS},
-    {static_cast<uint16_t>(hid::usage::Page::kGenericDeviceCtrls), bind_fuchsia_hid::USAGE_PAGE_GENERIC_DEVICE_CTRLS},
-    {static_cast<uint16_t>(hid::usage::Page::kKeyboardKeypad), bind_fuchsia_hid::USAGE_PAGE_KEYBOARD_KEYPAD},
-    {static_cast<uint16_t>(hid::usage::Page::kLEDs), bind_fuchsia_hid::USAGE_PAGE_LEDS},
-    {static_cast<uint16_t>(hid::usage::Page::kButton), bind_fuchsia_hid::USAGE_PAGE_BUTTON},
-    {static_cast<uint16_t>(hid::usage::Page::kOrdinal), bind_fuchsia_hid::USAGE_PAGE_ORDINAL},
-    {static_cast<uint16_t>(hid::usage::Page::kTelephony), bind_fuchsia_hid::USAGE_PAGE_TELEPHONY},
-    {static_cast<uint16_t>(hid::usage::Page::kConsumer), bind_fuchsia_hid::USAGE_PAGE_CONSUMER},
-    {static_cast<uint16_t>(hid::usage::Page::kDigitizer), bind_fuchsia_hid::USAGE_PAGE_DIGITIZER},
-    {static_cast<uint16_t>(hid::usage::Page::kPhysicalInterface), bind_fuchsia_hid::USAGE_PAGE_PHYSICAL_INTERFACE},
-    {static_cast<uint16_t>(hid::usage::Page::kUnicode), bind_fuchsia_hid::USAGE_PAGE_UNICODE},
-    {static_cast<uint16_t>(hid::usage::Page::kAlphanumericDisplay), bind_fuchsia_hid::USAGE_PAGE_ALPHANUMERIC_DISPLAY},
-    {static_cast<uint16_t>(hid::usage::Page::kSensor), bind_fuchsia_hid::USAGE_PAGE_SENSOR},
-    {static_cast<uint16_t>(hid::usage::Page::kMedicalInstrument), bind_fuchsia_hid::USAGE_PAGE_MEDICAL_INSTRUMENT},
-    {static_cast<uint16_t>(hid::usage::Page::kMonitor), bind_fuchsia_hid::USAGE_PAGE_MONITOR},
-    {static_cast<uint16_t>(hid::usage::Page::kMonitorEnumerated), bind_fuchsia_hid::USAGE_PAGE_MONITOR_ENUMERATED},
-    {static_cast<uint16_t>(hid::usage::Page::kVESACtrls), bind_fuchsia_hid::USAGE_PAGE_VESA_CTRLS},
-    {static_cast<uint16_t>(hid::usage::Page::kVESACommand), bind_fuchsia_hid::USAGE_PAGE_VESA_COMMAND},
-    {static_cast<uint16_t>(hid::usage::Page::kPowerDevice), bind_fuchsia_hid::USAGE_PAGE_POWER_DEVICE},
-    {static_cast<uint16_t>(hid::usage::Page::kBatterySystem), bind_fuchsia_hid::USAGE_PAGE_BATTERY_SYSTEM},
-    {static_cast<uint16_t>(hid::usage::Page::kBarcodeScanner), bind_fuchsia_hid::USAGE_PAGE_BARCODE_SCANNER},
-    {static_cast<uint16_t>(hid::usage::Page::kScale), bind_fuchsia_hid::USAGE_PAGE_SCALE},
-    {static_cast<uint16_t>(hid::usage::Page::kMagneticStripeReader), bind_fuchsia_hid::USAGE_PAGE_MAGNETIC_STRIPE_READER},
-    {static_cast<uint16_t>(hid::usage::Page::kPointOfSaleDevice), bind_fuchsia_hid::USAGE_PAGE_POINT_OF_SALE_DEVICE},
-    {static_cast<uint16_t>(hid::usage::Page::kCameraControl), bind_fuchsia_hid::USAGE_PAGE_CAMERA_CONTROL},
-    {static_cast<uint16_t>(hid::usage::Page::kArcadeControl), bind_fuchsia_hid::USAGE_PAGE_ARCADE_CONTROL},
-    {static_cast<uint16_t>(hid::usage::Page::kFidoAlliance), bind_fuchsia_hid::USAGE_PAGE_FIDO_ALLIANCE},
-    {static_cast<uint16_t>(hid::usage::Page::kVendorDefinedStart), bind_fuchsia_hid::USAGE_PAGE_VENDOR},
-    {static_cast<uint16_t>(hid::usage::Page::kVendorDefinedEnd), bind_fuchsia_hid::USAGE_PAGE_VENDOR},
-};
+#define MAKE_KEY(PAGE, USAGE)                                  \
+  HidPageUsage {                                               \
+    .page = static_cast<uint16_t>(hid::usage::Page::k##PAGE),  \
+    .usage = static_cast<uint32_t>(hid::usage::PAGE::k##USAGE) \
+  }
+
+std::map<HidPageUsage, const std::string> kBindPropKeyMap({
+    {MAKE_KEY(Consumer, ConsumerControl), bind_fuchsia_hid::CONSUMER__CONSUMER_CONTROL},
+    {MAKE_KEY(Digitizer, TouchPad), bind_fuchsia_hid::DIGITIZER__TOUCH_PAD},
+    {MAKE_KEY(Digitizer, TouchScreen), bind_fuchsia_hid::DIGITIZER__TOUCH_SCREEN},
+    {MAKE_KEY(Digitizer, TouchScreenConfiguration),
+     bind_fuchsia_hid::DIGITIZER__TOUCH_SCREEN_CONFIGURATION},
+    {MAKE_KEY(FidoAlliance, Undefined), bind_fuchsia_hid::FIDO_ALLIANCE},  // only match page
+    {MAKE_KEY(GenericDesktop, Keyboard), bind_fuchsia_hid::GENERIC_DESKTOP__KEYBOARD},
+    {MAKE_KEY(GenericDesktop, Mouse), bind_fuchsia_hid::GENERIC_DESKTOP__MOUSE},
+    {MAKE_KEY(Sensor, Undefined), bind_fuchsia_hid::SENSOR},  // only match page
+});
+
+zx::status<HidPageUsage> FindProp(HidPageUsage key) {
+  if (kBindPropKeyMap.find(key) != kBindPropKeyMap.end()) {
+    return zx::ok(key);
+  }
+
+  // Only match page for kBindPropKeyMap entries where usage is Undefined
+  for (auto const& [page_usage, value] : kBindPropKeyMap) {
+    if (page_usage.usage) {
+      continue;
+    }
+
+    if (page_usage.page == key.page) {  // pages match
+      return zx::ok(page_usage);
+    }
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
 
 }  // namespace
 
@@ -76,7 +75,8 @@ void HidDevice::ParseUsagePage(const hid::ReportDescriptor* descriptor) {
     return;
   }
 
-  usage_pages_.insert(collection->usage.page);
+  page_usage_.insert(
+      HidPageUsage{.page = collection->usage.page, .usage = collection->usage.usage});
 }
 
 size_t HidDevice::GetReportSizeById(input_report_id_t id, ReportType type) {
@@ -462,14 +462,16 @@ zx_status_t HidDevice::Bind(ddk::HidbusProtocolClient hidbus_proto) {
   }
 
   std::vector<zx_device_str_prop_t> props;
-  props.reserve(usage_pages_.size());
-  for (const auto& prop : usage_pages_) {
-    if (kBindPropKeyMap.find(prop) == kBindPropKeyMap.end()) {
-      zxlogf(WARNING, "Usage page %hu not supported as a bind property yet. Skipping.", prop);
+  props.reserve(page_usage_.size());
+  for (const auto& prop : page_usage_) {
+    auto bind = FindProp(prop);
+    if (bind.is_error()) {
+      zxlogf(DEBUG, "Page %x Usage %x not supported as a bind property yet. Skipping.", prop.page,
+             prop.usage);
       continue;
     }
     props.emplace_back(zx_device_str_prop_t{
-        .key = kBindPropKeyMap[prop].c_str(),
+        .key = kBindPropKeyMap[*bind].c_str(),
         .property_value = str_prop_bool_val(true),
     });
   }
