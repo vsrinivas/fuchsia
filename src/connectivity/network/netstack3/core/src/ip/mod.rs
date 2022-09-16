@@ -417,7 +417,7 @@ impl IpLayerIpExt for Ipv6 {
 
 /// An extension trait providing IP layer state properties.
 pub(crate) trait IpLayerStateIpExt<I: Instant, DeviceId>: IpLayerIpExt {
-    type State: AsRef<IpStateInner<Self, I, DeviceId>> + AsMut<IpStateInner<Self, I, DeviceId>>;
+    type State: AsRef<IpStateInner<Self, I, DeviceId>>;
 }
 
 impl<I: Instant, DeviceId> IpLayerStateIpExt<I, DeviceId> for Ipv4 {
@@ -439,9 +439,6 @@ pub(crate) trait IpStateContext<
 {
     /// Calls the function with an immutable reference to IP layer state.
     fn with_ip_layer_state<O, F: FnOnce(&I::State) -> O>(&self, cb: F) -> O;
-
-    /// Calls the function with a mutable reference to IP layer state.
-    fn with_ip_layer_state_mut<O, F: FnOnce(&mut I::State) -> O>(&mut self, cb: F) -> O;
 }
 
 /// The IP device context provided to the IP layer.
@@ -671,13 +668,6 @@ impl<NonSyncCtx: NonSyncContext> IpStateContext<Ipv4, NonSyncCtx::Instant> for S
     ) -> O {
         cb(&self.state.ipv4)
     }
-
-    fn with_ip_layer_state_mut<O, F: FnOnce(&mut Ipv4State<NonSyncCtx::Instant, DeviceId>) -> O>(
-        &mut self,
-        cb: F,
-    ) -> O {
-        cb(&mut self.state.ipv4)
-    }
 }
 
 impl<NonSyncCtx: NonSyncContext> IpStateContext<Ipv6, NonSyncCtx::Instant> for SyncCtx<NonSyncCtx> {
@@ -686,13 +676,6 @@ impl<NonSyncCtx: NonSyncContext> IpStateContext<Ipv6, NonSyncCtx::Instant> for S
         cb: F,
     ) -> O {
         cb(&self.state.ipv6)
-    }
-
-    fn with_ip_layer_state_mut<O, F: FnOnce(&mut Ipv6State<NonSyncCtx::Instant, DeviceId>) -> O>(
-        &mut self,
-        cb: F,
-    ) -> O {
-        cb(&mut self.state.ipv6)
     }
 }
 
@@ -959,19 +942,13 @@ impl<I: Instant, DeviceId> AsRef<IpStateInner<Ipv4, I, DeviceId>> for Ipv4State<
     }
 }
 
-impl<I: Instant, DeviceId> AsMut<IpStateInner<Ipv4, I, DeviceId>> for Ipv4State<I, DeviceId> {
-    fn as_mut(&mut self) -> &mut IpStateInner<Ipv4, I, DeviceId> {
-        &mut self.inner
-    }
-}
-
 fn gen_ipv4_packet_id<I: Instant, C: IpStateContext<Ipv4, I>>(sync_ctx: &mut C) -> u16 {
     // Relaxed ordering as we only need atomicity without synchronization. See
     // https://en.cppreference.com/w/cpp/atomic/memory_order#Relaxed_ordering
     // for more details.
     //
     // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
-    sync_ctx.with_ip_layer_state_mut(|state| state.next_packet_id.fetch_add(1, Ordering::Relaxed))
+    sync_ctx.with_ip_layer_state(|state| state.next_packet_id.fetch_add(1, Ordering::Relaxed))
 }
 
 pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
@@ -982,12 +959,6 @@ pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
 impl<I: Instant, DeviceId> AsRef<IpStateInner<Ipv6, I, DeviceId>> for Ipv6State<I, DeviceId> {
     fn as_ref(&self) -> &IpStateInner<Ipv6, I, DeviceId> {
         &self.inner
-    }
-}
-
-impl<I: Instant, DeviceId> AsMut<IpStateInner<Ipv6, I, DeviceId>> for Ipv6State<I, DeviceId> {
-    fn as_mut(&mut self) -> &mut IpStateInner<Ipv6, I, DeviceId> {
-        &mut self.inner
     }
 }
 
@@ -2102,18 +2073,18 @@ fn lookup_route<
     })
 }
 
-fn with_ip_layer_state_inner_mut<
+fn with_ip_layer_state_inner<
     'a,
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
     O,
-    F: FnOnce(&mut IpStateInner<I, C::Instant, SC::DeviceId>) -> O,
+    F: FnOnce(&IpStateInner<I, C::Instant, SC::DeviceId>) -> O,
 >(
     sync_ctx: &mut SC,
     cb: F,
 ) -> O {
-    sync_ctx.with_ip_layer_state_mut(|state| cb(state.as_mut()))
+    sync_ctx.with_ip_layer_state(|state| cb(state.as_ref()))
 }
 
 /// Add a route to the forwarding table, returning `Err` if the subnet
@@ -2128,7 +2099,7 @@ pub(crate) fn add_route<
     subnet: Subnet<I::Addr>,
     next_hop: SpecifiedAddr<I::Addr>,
 ) -> Result<(), AddRouteError> {
-    with_ip_layer_state_inner_mut(sync_ctx, |state| state.table.write().add_route(subnet, next_hop))
+    with_ip_layer_state_inner(sync_ctx, |state| state.table.write().add_route(subnet, next_hop))
 }
 
 /// Add a device route to the forwarding table, returning `Err` if the
@@ -2143,7 +2114,7 @@ pub(crate) fn add_device_route<
     subnet: Subnet<I::Addr>,
     device: SC::DeviceId,
 ) -> Result<(), ExistsError> {
-    with_ip_layer_state_inner_mut(sync_ctx, |state| {
+    with_ip_layer_state_inner(sync_ctx, |state| {
         state.table.write().add_device_route(subnet, device).map(|()| {
             ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
         })
@@ -2161,7 +2132,7 @@ pub(crate) fn del_route<
     ctx: &mut C,
     subnet: Subnet<I::Addr>,
 ) -> Result<(), NotFoundError> {
-    with_ip_layer_state_inner_mut(sync_ctx, |state| {
+    with_ip_layer_state_inner(sync_ctx, |state| {
         state.table.write().del_route(subnet).map(|removed| {
             removed.into_iter().for_each(|types::Entry { subnet, device, gateway }| match gateway {
                 None => ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
@@ -2180,7 +2151,7 @@ pub(crate) fn del_device_routes<
     _ctx: &mut C,
     to_delete: &SC::DeviceId,
 ) {
-    with_ip_layer_state_inner_mut(sync_ctx, |state| {
+    with_ip_layer_state_inner(sync_ctx, |state| {
         state
             .table
             .write()

@@ -33,7 +33,7 @@ impl<
         &mut self,
         cb: F,
     ) -> O {
-        self.with_ip_layer_state_mut(|state| cb(&mut state.as_mut().fragment_cache.lock()))
+        self.with_ip_layer_state(|state| cb(&mut state.as_ref().fragment_cache.lock()))
     }
 }
 
@@ -44,7 +44,7 @@ impl<
     > PmtuStateContext<I, Instant> for SC
 {
     fn with_state_mut<F: FnOnce(&mut PmtuCache<I, Instant>)>(&mut self, cb: F) {
-        self.with_ip_layer_state_mut(|state| cb(&mut state.as_mut().pmtu_cache.lock()))
+        self.with_ip_layer_state(|state| cb(&mut state.as_ref().pmtu_cache.lock()))
     }
 }
 
