@@ -4289,6 +4289,57 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroPinned, ZX_VMO_RESIZABLE) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, ranges, sizeof(ranges) / sizeof(zx_vmo_dirty_range_t)));
 }
 
+// Tests that zeroing the tail unblocks any previous read requests.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(OpZeroUnblocksReadRequest, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, create_option, &vmo));
+
+  // Supply the first page.
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // No dirty ranges yet.
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Read from the second (and last) page.
+  uint8_t data[zx_system_get_page_size()];
+  TestThread t([vmo, &data]() -> bool {
+    return vmo->vmo().read(data, zx_system_get_page_size(), sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+
+  // Now zero the last page.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_ZERO, zx_system_get_page_size(),
+                                zx_system_get_page_size(), nullptr, 0));
+
+  // This should unblock the previous read request, as the kernel has been able to expand the tail
+  // and will supply zeroes for this page from this point on.
+  ASSERT_TRUE(t.Wait());
+
+  // Verify VMO contents.
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+
+  // The last page should be dirty.
+  zx_vmo_dirty_range_t range = {.offset = 1, .length = 1, .options = ZX_VMO_DIRTY_RANGE_IS_ZERO};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // The last page should have read as zeroes.
+  ASSERT_EQ(0,
+            memcmp(data, expected.data() + zx_system_get_page_size(), zx_system_get_page_size()));
+
+  // No other page requests seen.
+  uint64_t offset, length;
+  ASSERT_FALSE(pager.GetPageDirtyRequest(vmo, 0, &offset, &length));
+  ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+}
+
 // Tests that dirty pages can be written back after detach.
 TEST_WITH_AND_WITHOUT_TRAP_DIRTY(WritebackDirtyPagesAfterDetach, 0) {
   UserPager pager;

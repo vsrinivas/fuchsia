@@ -3027,6 +3027,11 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   if (is_source_preserving_page_content_locked() &&
       (start < supply_zero_offset_ && supply_zero_offset_ <= end) &&
       !AnyPagesPinnedLocked(start, supply_zero_offset_ - start)) {
+    // Resolve any read requests that might exist in the range [start, supply_zero_offset_), since
+    // this range is now going to be supplied as zeroes by the kernel; the user pager cannot supply
+    // pages in this range anymore.
+    InvalidateReadRequestsLocked(start, supply_zero_offset_ - start);
+
     UpdateSupplyZeroOffsetLocked(start);
   }
 
