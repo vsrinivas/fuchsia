@@ -36,7 +36,9 @@ RingBuffer::RingBuffer(Args args)
       producer_frames_(args.producer_frames),
       consumer_frames_(args.consumer_frames) {
   FX_CHECK(buffer_);
-  FX_CHECK(total_frames_ >= producer_frames_ + consumer_frames_);
+  FX_CHECK(total_frames_ >= producer_frames_ + consumer_frames_)
+      << "total_frames=" << total_frames_ << ", producer_frames=" << producer_frames_
+      << ", consumer_frames=" << consumer_frames_;
   FX_CHECK(producer_frames_ > 0);
   FX_CHECK(consumer_frames_ > 0);
 }

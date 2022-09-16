@@ -80,6 +80,8 @@ class ClockRegistry {
   //
   // Errors:
   // * ZX_ERR_ALREADY_EXISTS if a clock with the same koid already exists.
+  //
+  // TODO(fxbug.dev/87651): need to allow clocks shared by multiple nodes
   zx::status<> AddClock(std::shared_ptr<Clock> clock);
 
   // Looks up the Clock with the same koid as `handle`.
@@ -93,6 +95,8 @@ class ClockRegistry {
   //
   // Errors:
   // * ZX_ERR_BAD_HANDLE if the handle is invalid.
+  //
+  // TODO(fxbug.dev/87651): need to allow clocks shared by multiple nodes
   zx::status<> ForgetClock(const zx::clock& handle);
 
   // Uses the underlying factory to create a timer.

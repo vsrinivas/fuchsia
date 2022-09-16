@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
+#include "src/media/audio/services/common/fidl_thread.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/graph_server.h"
 #include "src/media/audio/services/mixer/fidl/real_clock_factory.h"
@@ -36,9 +37,15 @@ void GraphCreatorServer::Create(CreateRequestView request, CreateCompleter::Sync
     args.name = std::string(request->name().get());
   }
 
-  if (request->has_realtime_fidl_thread_deadline_profile()) {
-    args.realtime_fidl_thread_deadline_profile =
-        std::move(request->realtime_fidl_thread_deadline_profile());
+  args.realtime_fidl_thread = FidlThread::CreateFromNewThread("RealtimeFidlThread");
+  if (request->has_realtime_fidl_thread_deadline_profile() &&
+      request->realtime_fidl_thread_deadline_profile().is_valid()) {
+    args.realtime_fidl_thread->PostTask(
+        [profile = std::move(request->realtime_fidl_thread_deadline_profile())]() {
+          if (auto status = zx::thread::self()->set_profile(profile, 0); status != ZX_OK) {
+            FX_PLOGS(WARNING, status) << "Failed to set deadline profile for 'RealtimeFidlThread'";
+          }
+        });
   }
 
   if (request->has_synthetic_clock_realm()) {

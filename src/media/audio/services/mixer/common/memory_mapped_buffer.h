@@ -5,8 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_MEMORY_MAPPED_BUFFER_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_MEMORY_MAPPED_BUFFER_H_
 
+#include <lib/fpromise/result.h>
 #include <lib/fzl/vmo-mapper.h>
-#include <lib/zx/status.h>
 
 #include <memory>
 
@@ -17,8 +17,10 @@ namespace media_audio {
 // the mixer service, such as when producing captured audio.
 class MemoryMappedBuffer {
  public:
-  // Creates a MemoryMappedBuffer from the given VMO.
-  static zx::status<std::shared_ptr<MemoryMappedBuffer>> Create(const zx::vmo& vmo, bool writable);
+  // Creates a MemoryMappedBuffer from the given object, which must be a valid, readable,
+  // non-resizable, and mappable VMO, and if `writable`, the VMO must be writable.
+  static fpromise::result<std::shared_ptr<MemoryMappedBuffer>, std::string> Create(
+      const zx::vmo& vmo, bool writable);
 
   // Creates a MemoryMappedBuffer with the given size, crashing if the buffer cannot be created.
   // Intended for uses in tests.

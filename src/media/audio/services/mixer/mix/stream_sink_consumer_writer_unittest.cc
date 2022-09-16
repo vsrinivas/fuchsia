@@ -70,7 +70,7 @@ TestHarness MakeTestHarness(TimelineRate media_ticks_per_ns = kFormat.frames_per
   }
 
   auto buffer_result = MemoryMappedBuffer::Create(std::move(vmo), /*writable=*/true);
-  FX_CHECK(buffer_result.is_ok()) << buffer_result.error_value();
+  FX_CHECK(buffer_result.is_ok()) << buffer_result.error();
   h.buffer = std::move(buffer_result.value());
   return h;
 }

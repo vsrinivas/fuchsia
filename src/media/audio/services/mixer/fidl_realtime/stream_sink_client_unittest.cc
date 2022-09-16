@@ -66,7 +66,7 @@ std::shared_ptr<MemoryMappedBuffer> MakeMemoryMappedBuffer(int64_t bytes) {
   }
 
   auto buffer_result = MemoryMappedBuffer::Create(std::move(vmo), /*writable=*/true);
-  FX_CHECK(buffer_result.is_ok()) << buffer_result.status_string();
+  FX_CHECK(buffer_result.is_ok()) << buffer_result.error();
   return std::move(buffer_result.value());
 }
 
