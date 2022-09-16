@@ -37,9 +37,6 @@ or directly from the Fuchsia target.
 To record a trace for a Fuchsia target from a development host,
 run the following command:
 
-Note: You can also configure parameters of tracing with a
-[tracing specification file](/docs/reference/tracing/trace-specification-file.md).
-
 ```posix-terminal
 ffx trace start [--duration <SECONDS>]
 ```
@@ -61,9 +58,6 @@ Once you have the trace output file, you can
 
 To record a trace directly from a Fuchsia target, run the following
 command in a shell on your target:
-
-Note: You can also configure parameters of tracing with a
-[tracing specification file](/docs/reference/tracing/trace-specification-file.md).
 
 <pre class="prettyprint">
 <code class="devsite-terminal">trace record</code>
