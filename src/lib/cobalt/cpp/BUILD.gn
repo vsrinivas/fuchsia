@@ -27,7 +27,6 @@ source_set("cobalt_logger") {
   visibility = [
     "//src/lib/cobalt/*",
     "//src/media/audio/audio_core:audio_core_lib",
-    "//src/storage/minfs",
   ]
 }
 
