@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::framebuffer_server::{
-    spawn_view_provider, FramebufferServer, IMAGE_HEIGHT, IMAGE_WIDTH,
-};
 use crate::device::DeviceOps;
 use crate::fs::*;
 use crate::lock::RwLock;
@@ -21,7 +18,6 @@ pub struct Framebuffer {
     vmo: zx::Vmo,
     vmo_len: u32,
     info: RwLock<fb_var_screeninfo>,
-    server: Arc<FramebufferServer>,
 }
 
 impl Framebuffer {
@@ -29,8 +25,8 @@ impl Framebuffer {
         let mut info = fb_var_screeninfo::default();
 
         // Hardcode a phone-sized screen with the pixel format Android expects
-        info.xres = IMAGE_WIDTH;
-        info.yres = IMAGE_HEIGHT;
+        info.xres = 480;
+        info.yres = 800;
         info.xres_virtual = info.xres;
         info.yres_virtual = info.yres;
         info.bits_per_pixel = 32;
@@ -39,21 +35,13 @@ impl Framebuffer {
         info.blue = fb_bitfield { offset: 16, length: 8, msb_right: 0 };
         info.transp = fb_bitfield { offset: 24, length: 8, msb_right: 0 };
 
-        let server = Arc::new(FramebufferServer::new()?);
-        let vmo = server.get_vmo()?;
-        let vmo_len = vmo.info().map_err(|_| errno!(EINVAL))?.size_bytes as u32;
-        // Fill the buffer with white pixels as a placeholder.
-        vmo.write(&vec![0xff; vmo_len as usize], 0).expect("");
+        let vmo_len = info.xres * info.yres * (info.bits_per_pixel / 8);
+        let vmo = zx::Vmo::create(vmo_len as u64).map_err(|s| match s {
+            zx::Status::NO_MEMORY => errno!(ENOMEM),
+            _ => impossible_error(s),
+        })?;
 
-        Ok(Arc::new(Self { vmo, vmo_len, server, info: RwLock::new(info) }))
-    }
-
-    /// Starts serving a view based on this framebuffer in `outgoing_dir`.
-    pub fn start_server(
-        &self,
-        outgoing_dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
-    ) {
-        spawn_view_provider(self.server.clone(), outgoing_dir);
+        Ok(Arc::new(Self { vmo, vmo_len, info: RwLock::new(info) }))
     }
 }
 

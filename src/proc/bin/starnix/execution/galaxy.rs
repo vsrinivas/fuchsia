@@ -13,7 +13,7 @@ use std::ffi::CString;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
-use crate::device::run_features;
+use crate::device::{framebuffer, run_features};
 use crate::execution::*;
 use crate::fs::layeredfs::LayeredFs;
 use crate::fs::tmpfs::TmpFs;
@@ -78,10 +78,8 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     )
     .context("failed to open /pkg")?;
     let pkg_dir_proxy = fio::DirectorySynchronousProxy::new(client);
-
     let mut kernel = Kernel::new(&to_cstr(&CONFIG.name), &CONFIG.features)?;
     kernel.cmdline = CONFIG.kernel_cmdline.as_bytes().to_vec();
-
     let kernel = Arc::new(kernel);
 
     let mut init_task = create_init_task(&kernel)?;
@@ -101,6 +99,11 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     // TODO: This should probably be part of the "feature" CONFIGuration.
     let kernel = init_task.kernel().clone();
     let root_fs = init_task.fs().clone();
+
+    kernel
+        .device_registry
+        .write()
+        .register_chrdev_major(framebuffer::Framebuffer::new()?, FB_MAJOR)?;
 
     let startup_file_path = if CONFIG.startup_file_path.is_empty() {
         None
