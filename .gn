@@ -7,16 +7,14 @@
 # The location of the build configuration file.
 buildconfig = "//build/config/BUILDCONFIG.gn"
 
-# The secondary source root is a parallel directory tree where
-# GN build files are placed when they can not be placed directly
-# in the source tree, e.g. for third party source trees.
+# The secondary source root is a parallel directory tree where GN build files are placed when they
+# can not be placed directly in the source tree, e.g. for third party source trees.
 secondary_source = "//build/secondary/"
 
-# The executable used to execute scripts in action and exec_script.
-# This is often an interpreter for projects that use a primary scripting
-# language. In this project, we use several different kinds of programs
-# including scripts in different languages and native binaries. An empty
-# script_executable string tells GN to directly run the "script".
+# The executable used to execute scripts in action and exec_script. This is often an interpreter for
+# projects that use a primary scripting language. In this project, we use several different kinds of
+# programs including scripts in different languages and native binaries. An empty script_executable
+# string tells GN to directly run the "script".
 script_executable = ""
 
 # Require Ninja 1.10.0 to support multiple outputs from a rule with a depfile.
@@ -37,6 +35,10 @@ exec_script_whitelist = [
 ]
 
 check_system_includes = true
+
+# Causes a Clang compilation database to be written to $root_build_dir/compile_commands.json. It
+# will contain the compilation commands for these patterns and all of their recursive dependencies.
+export_compile_commands = [ "//:default" ]
 
 # These arguments override the default values for items in a declare_args block. "gn args" in turn
 # can override these.
