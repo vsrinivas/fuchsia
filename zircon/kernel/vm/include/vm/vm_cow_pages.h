@@ -930,6 +930,9 @@ class VmCowPages final
   // Helper to invalidate any DIRTY requests in the specified range by spuriously resolving them.
   void InvalidateDirtyRequestsLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
 
+  // Helper to invalidate any READ requests in the specified range by spuriously resolving them.
+  void InvalidateReadRequestsLocked(uint64_t offset, uint64_t len) TA_REQ(lock_);
+
   // Initializes and adds as a child the given VmCowPages as a full clone of this one such that the
   // VmObjectPaged backlink can be moved from this to the child, keeping all page offsets, sizes and
   // other requirements (see VmObjectPaged::SetCowPagesReferenceLocked) are valid. This does also

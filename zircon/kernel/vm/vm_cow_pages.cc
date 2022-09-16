@@ -3852,6 +3852,26 @@ void VmCowPages::ReleaseCowParentPagesLocked(uint64_t start, uint64_t end,
   }
 }
 
+void VmCowPages::InvalidateReadRequestsLocked(uint64_t offset, uint64_t len) {
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
+  DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
+  DEBUG_ASSERT(InRange(offset, len, size_));
+
+  DEBUG_ASSERT(page_source_);
+
+  const uint64_t start = offset;
+  const uint64_t end = offset + len;
+
+  zx_status_t status = page_list_.ForEveryPageAndGapInRange(
+      [](const auto* p, uint64_t off) { return ZX_ERR_NEXT; },
+      [this](uint64_t gap_start, uint64_t gap_end) {
+        page_source_->OnPagesSupplied(gap_start, gap_end - gap_start);
+        return ZX_ERR_NEXT;
+      },
+      start, end);
+  DEBUG_ASSERT(status == ZX_OK);
+}
+
 void VmCowPages::InvalidateDirtyRequestsLocked(uint64_t offset, uint64_t len) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
@@ -3952,14 +3972,7 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
     if (page_source_) {
       // Tell the page source that any non-resident pages that are now out-of-bounds
       // were supplied, to ensure that any reads of those pages get woken up.
-      zx_status_t status = page_list_.ForEveryPageAndGapInRange(
-          [](const auto* p, uint64_t off) { return ZX_ERR_NEXT; },
-          [this](uint64_t gap_start, uint64_t gap_end) {
-            page_source_->OnPagesSupplied(gap_start, gap_end - gap_start);
-            return ZX_ERR_NEXT;
-          },
-          start, end);
-      DEBUG_ASSERT(status == ZX_OK);
+      InvalidateReadRequestsLocked(start, len);
 
       // If DIRTY requests are supported, also tell the page source that any non-Dirty pages that
       // are now out-of-bounds were dirtied (without actually dirtying them), to ensure that any
