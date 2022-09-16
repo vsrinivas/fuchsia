@@ -196,17 +196,20 @@ class Controller : public DeviceType,
   // plane 0 of the failing displays will be set to UINT16_MAX.
   bool CalculateMinimumAllocations(
       cpp20::span<const display_config_t*> display_configs,
-      uint16_t min_allocs[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount])
-      __TA_REQUIRES(display_lock_);
+      uint16_t min_allocs[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                         [tgl_registers::kImagePlaneCount]) __TA_REQUIRES(display_lock_);
   // Updates plane_buffers_ based pipe_buffers_ and the given parameters
   void UpdateAllocations(
-      const uint16_t min_allocs[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount],
-      const uint64_t display_rate[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount])
-      __TA_REQUIRES(display_lock_);
+      const uint16_t min_allocs[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                               [tgl_registers::kImagePlaneCount],
+      const uint64_t display_rate[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                                 [tgl_registers::kImagePlaneCount]) __TA_REQUIRES(display_lock_);
   // Reallocates the pipe buffers when a pipe comes online/goes offline. This is a
   // long-running operation, as shifting allocations between pipes requires waiting
   // for vsync.
-  void DoPipeBufferReallocation(buffer_allocation_t active_allocation[tgl_registers::kPipeCount])
+  void DoPipeBufferReallocation(
+      buffer_allocation_t
+          active_allocation[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()])
       __TA_REQUIRES(display_lock_);
   // Reallocates plane buffers based on the given layer config.
   void ReallocatePlaneBuffers(cpp20::span<const display_config_t*> display_configs,
@@ -217,8 +220,9 @@ class Controller : public DeviceType,
   bool CheckDisplayLimits(cpp20::span<const display_config_t*> display_configs,
                           uint32_t** layer_cfg_results) __TA_REQUIRES(display_lock_);
 
-  bool CalculatePipeAllocation(cpp20::span<const display_config_t*> display_configs,
-                               uint64_t alloc[tgl_registers::kPipeCount])
+  bool CalculatePipeAllocation(
+      cpp20::span<const display_config_t*> display_configs,
+      uint64_t alloc[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()])
       __TA_REQUIRES(display_lock_);
 
   zx_device_t* zx_gpu_dev_ = nullptr;
@@ -272,13 +276,14 @@ class Controller : public DeviceType,
   fbl::Vector<DpAux> dp_auxs_;
 
   // Plane buffer allocation. If no alloc, start == end == tgl_registers::PlaneBufCfg::kBufferCount.
-  buffer_allocation_t plane_buffers_[tgl_registers::kPipeCount]
-                                    [tgl_registers::kImagePlaneCount] __TA_GUARDED(
-                                        plane_buffers_lock_) = {};
+  buffer_allocation_t
+      plane_buffers_[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                    [tgl_registers::kImagePlaneCount] __TA_GUARDED(plane_buffers_lock_) = {};
   mtx_t plane_buffers_lock_;
 
   // Buffer allocations for pipes
-  buffer_allocation_t pipe_buffers_[tgl_registers::kPipeCount] __TA_GUARDED(display_lock_) = {};
+  buffer_allocation_t pipe_buffers_[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>()
+                                        .size()] __TA_GUARDED(display_lock_) = {};
   bool initial_alloc_ = true;
 
   uint16_t device_id_;

@@ -126,7 +126,9 @@ TEST_F(PipeManagerTest, SklReclaimUsedPipe) {
   controller_.SetPipeManagerForTesting(std::make_unique<SklPipeManager>(controller()));
   PipeManager* pm = controller_.pipe_manager();
 
-  for (size_t display_id = 1u; display_id <= tgl_registers::kPipeCount * 10; display_id++) {
+  for (size_t display_id = 1u;
+       display_id <= tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size() * 10;
+       display_id++) {
     std::unique_ptr<DisplayDevice> display = std::make_unique<FakeDisplay>(
         controller(), display_id, tgl_registers::DDI_B, DisplayDevice::Type::kDp);
     Pipe* pipe = pm->RequestPipe(*display);

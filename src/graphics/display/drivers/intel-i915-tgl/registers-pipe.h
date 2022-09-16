@@ -12,18 +12,9 @@
 
 #include <hwreg/bitfields.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
+
 namespace tgl_registers {
-
-// Number of pipes that the hardware provides.
-static constexpr uint32_t kPipeCount = 3;
-
-enum Pipe { PIPE_A, PIPE_B, PIPE_C, PIPE_INVALID };
-
-static const Pipe kPipes[kPipeCount] = {
-    PIPE_A,
-    PIPE_B,
-    PIPE_C,
-};
 
 static constexpr uint32_t kImagePlaneCount = 3;
 static constexpr uint32_t kCursorPlane = 2;

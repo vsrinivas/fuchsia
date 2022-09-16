@@ -11,25 +11,9 @@
 
 #include <hwreg/bitfields.h>
 
-// TODO(fxbug.com/109258): Remove the dependency on another registers-* header.
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 
 namespace tgl_registers {
-
-enum Ddi {
-  DDI_A = 0,
-  DDI_B,
-  DDI_C,
-  DDI_D,
-  DDI_E,
-
-  DDI_TC_1 = DDI_D,
-  DDI_TC_2,
-  DDI_TC_3,
-  DDI_TC_4,
-  DDI_TC_5,
-  DDI_TC_6,
-};
 
 // Interrupt registers for the south (in the PCH) display engine.
 //

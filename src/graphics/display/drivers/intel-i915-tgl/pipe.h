@@ -95,7 +95,8 @@ class Pipe {
   PowerWellRef pipe_power_;
 
   // For any scaled planes, this contains the (1-based) index of the active scaler
-  uint32_t scaled_planes_[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount] = {};
+  uint32_t scaled_planes_[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                         [tgl_registers::kImagePlaneCount] = {};
 
   // On each Vsync, the driver should return the stamp of the *oldest*
   // configuration that has been fully applied to the device. We use the

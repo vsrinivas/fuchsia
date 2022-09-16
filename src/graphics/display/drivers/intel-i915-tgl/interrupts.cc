@@ -35,7 +35,7 @@ HotplugDetectionResult SklDetectHotplug(fdf::MmioBuffer* mmio_space) {
           .ReadFrom(mmio_space);
   auto hp_ctrl1 = tgl_registers::SouthHotplugCtrl ::Get(tgl_registers::DDI_A).ReadFrom(mmio_space);
   auto hp_ctrl2 = tgl_registers::SouthHotplugCtrl ::Get(tgl_registers::DDI_E).ReadFrom(mmio_space);
-  for (auto ddi : kSklDdis) {
+  for (auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kKabyLake>()) {
     auto hp_ctrl = ddi < tgl_registers::DDI_E ? hp_ctrl1 : hp_ctrl2;
     result.detected[ddi] =
         sde_int_identity.skl_ddi_bit(ddi).get() &
@@ -68,7 +68,7 @@ HotplugDetectionResult TglDetectHotplug(fdf::MmioBuffer* mmio_space) {
   auto tbt_ctrl = tgl_registers::TbtHotplugCtrl::Get().ReadFrom(mmio_space);
   auto tc_ctrl = tgl_registers::TcHotplugCtrl::Get().ReadFrom(mmio_space);
 
-  for (auto ddi : kTglDdis) {
+  for (auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kTigerLake>()) {
     switch (ddi) {
       case tgl_registers::DDI_A:
       case tgl_registers::DDI_B:
@@ -109,7 +109,7 @@ HotplugDetectionResult TglDetectHotplug(fdf::MmioBuffer* mmio_space) {
 void SklEnableHotplugInterrupts(fdf::MmioBuffer* mmio_space) {
   auto pch_fuses = tgl_registers::PchDisplayFuses::Get().ReadFrom(mmio_space);
 
-  for (const auto ddi : kSklDdis) {
+  for (const auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kKabyLake>()) {
     bool enabled = false;
     switch (ddi) {
       case tgl_registers::DDI_A:
@@ -155,7 +155,7 @@ void TglEnableHotplugInterrupts(fdf::MmioBuffer* mmio_space) {
   constexpr uint32_t kSHPD_FILTER_CNT_500_ADJ = 0x001d9;
   mmio_space->Write32(kSHPD_FILTER_CNT_500_ADJ, kSHPD_FILTER_CNT);
 
-  for (const auto ddi : kTglDdis) {
+  for (const auto ddi : tgl_registers::Ddis<tgl_registers::Platform::kTigerLake>()) {
     switch (ddi) {
       case tgl_registers::DDI_TC_1:
       case tgl_registers::DDI_TC_2:

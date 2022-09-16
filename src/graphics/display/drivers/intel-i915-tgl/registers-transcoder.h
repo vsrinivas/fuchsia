@@ -7,20 +7,9 @@
 
 #include <hwreg/bitfields.h>
 
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 
 namespace tgl_registers {
-
-static constexpr uint32_t kTransCount = 4;
-
-enum Trans { TRANS_A, TRANS_B, TRANS_C, TRANS_EDP };
-
-static const Trans kTrans[kTransCount] = {
-    TRANS_A,
-    TRANS_B,
-    TRANS_C,
-    TRANS_EDP,
-};
 
 // TRANS_HTOTAL, TRANS_HBLANK,
 // TRANS_VTOTAL, TRANS_VBLANK

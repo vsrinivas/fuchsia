@@ -10,6 +10,7 @@
 #include <optional>
 #include <variant>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
@@ -267,15 +268,8 @@ bool SklDpll::Disable() {
 }
 
 SklDpllManager::SklDpllManager(fdf::MmioBuffer* mmio_space) : mmio_space_(mmio_space) {
-  plls_.resize(tgl_registers::kDpllCount);
-  constexpr std::array<tgl_registers::Dpll, 4> kSklDplls = {
-      tgl_registers::Dpll::DPLL_0,
-      tgl_registers::Dpll::DPLL_1,
-      tgl_registers::Dpll::DPLL_2,
-      tgl_registers::Dpll::DPLL_3,
-  };
-
-  for (const auto dpll : kSklDplls) {
+  plls_.resize(tgl_registers::Dplls<tgl_registers::Platform::kSkylake>().size());
+  for (const auto dpll : tgl_registers::Dplls<tgl_registers::Platform::kSkylake>()) {
     plls_[dpll] = std::unique_ptr<SklDpll>(new SklDpll(mmio_space, dpll));
     ref_count_[plls_[dpll].get()] = 0;
   }

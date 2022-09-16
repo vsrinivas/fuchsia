@@ -838,13 +838,14 @@ bool Controller::GetPlaneLayer(Pipe* pipe, uint32_t plane,
 }
 
 uint16_t Controller::CalculateBuffersPerPipe(size_t active_pipe_count) {
-  ZX_ASSERT(active_pipe_count < tgl_registers::kPipeCount);
+  ZX_ASSERT(active_pipe_count < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size());
   return static_cast<uint16_t>(tgl_registers::PlaneBufCfg::kBufferCount / active_pipe_count);
 }
 
 bool Controller::CalculateMinimumAllocations(
     cpp20::span<const display_config_t*> display_configs,
-    uint16_t min_allocs[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount]) {
+    uint16_t min_allocs[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                       [tgl_registers::kImagePlaneCount]) {
   // This fn ignores layers after kImagePlaneCount. Displays with too many layers already
   // failed in ::CheckConfiguration, so it doesn't matter if we incorrectly say they pass here.
   bool success = true;
@@ -902,11 +903,15 @@ bool Controller::CalculateMinimumAllocations(
 }
 
 void Controller::UpdateAllocations(
-    const uint16_t min_allocs[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount],
-    const uint64_t data_rate[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount]) {
-  uint16_t allocs[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount];
+    const uint16_t min_allocs[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                             [tgl_registers::kImagePlaneCount],
+    const uint64_t data_rate[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                            [tgl_registers::kImagePlaneCount]) {
+  uint16_t allocs[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                 [tgl_registers::kImagePlaneCount];
 
-  for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
+  for (unsigned pipe_num = 0;
+       pipe_num < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size(); pipe_num++) {
     uint64_t total_data_rate = 0;
     for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
       total_data_rate += data_rate[pipe_num][plane_num];
@@ -952,7 +957,8 @@ void Controller::UpdateAllocations(
   // Do the actual allocation, using the buffers that are assigned to each pipe.
   {
     fbl::AutoLock lock(&plane_buffers_lock_);
-    for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
+    for (unsigned pipe_num = 0;
+         pipe_num < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size(); pipe_num++) {
       uint16_t start = pipe_buffers_[pipe_num].start;
       for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
         auto cur = &plane_buffers_[pipe_num][plane_num];
@@ -966,7 +972,8 @@ void Controller::UpdateAllocations(
         }
         start = static_cast<uint16_t>(start + allocs[pipe_num][plane_num]);
 
-        tgl_registers::Pipe pipe = tgl_registers::kPipes[pipe_num];
+        tgl_registers::Pipe pipe =
+            tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>()[pipe_num];
         tgl_registers::PipeRegs pipe_regs(pipe);
 
         // These are latched on the surface address register, so we don't yet need to
@@ -1007,14 +1014,16 @@ void Controller::ReallocatePlaneBuffers(cpp20::span<const display_config_t*> dis
     return;
   }
 
-  uint16_t min_allocs[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount];
+  uint16_t min_allocs[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                     [tgl_registers::kImagePlaneCount];
   if (!CalculateMinimumAllocations(display_configs, min_allocs)) {
     // The allocation should have been checked, so this shouldn't fail
     ZX_ASSERT(false);
   }
 
   // Calculate the data rates and store the minimum allocations
-  uint64_t data_rate[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount];
+  uint64_t data_rate[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+                    [tgl_registers::kImagePlaneCount];
   for (Pipe* pipe : *pipe_manager_) {
     tgl_registers::Pipe pipe_num = pipe->pipe();
     for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
@@ -1045,7 +1054,8 @@ void Controller::ReallocatePlaneBuffers(cpp20::span<const display_config_t*> dis
     reallocate_pipes = true;
   }
 
-  buffer_allocation_t active_allocation[tgl_registers::kPipeCount];
+  buffer_allocation_t
+      active_allocation[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()];
   if (reallocate_pipes) {
     // Allocate buffers to each pipe, but save the old allocation to use
     // when progressively updating the allocation.
@@ -1081,7 +1091,8 @@ void Controller::ReallocatePlaneBuffers(cpp20::span<const display_config_t*> dis
 }
 
 void Controller::DoPipeBufferReallocation(
-    buffer_allocation_t active_allocation[tgl_registers::kPipeCount]) {
+    buffer_allocation_t
+        active_allocation[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]) {
   // Given that the order of the allocations is fixed, an allocation X_i is contained completely
   // within its old allocation if {new len of allocations preceding X_i} >= {start of old X_i} and
   // {new len of allocations preceding X_i + new len of X_i} <= {end of old X_i}. For any i,
@@ -1094,7 +1105,8 @@ void Controller::DoPipeBufferReallocation(
   bool done = false;
   while (!done) {
     done = true;
-    for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
+    for (unsigned pipe_num = 0;
+         pipe_num < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size(); pipe_num++) {
       auto active_alloc = active_allocation + pipe_num;
       auto goal_alloc = pipe_buffers_ + pipe_num;
 
@@ -1105,7 +1117,9 @@ void Controller::DoPipeBufferReallocation(
       // Look through all the other active pipe allocations for overlap
       bool overlap = false;
       if (goal_alloc->start != goal_alloc->end) {
-        for (unsigned other_pipe = 0; other_pipe < tgl_registers::kPipeCount; other_pipe++) {
+        for (unsigned other_pipe = 0;
+             other_pipe < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size();
+             other_pipe++) {
           if (other_pipe == pipe_num) {
             continue;
           }
@@ -1126,7 +1140,8 @@ void Controller::DoPipeBufferReallocation(
       if (!overlap) {
         // Flush the pipe allocation, wait for it to be active, and update
         // what is current active.
-        tgl_registers::PipeRegs pipe_regs(tgl_registers::kPipes[pipe_num]);
+        tgl_registers::PipeRegs pipe_regs(
+            tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>()[pipe_num]);
         for (unsigned j = 0; j < tgl_registers::kImagePlaneCount; j++) {
           pipe_regs.PlaneSurface(j).ReadFrom(mmio_space()).WriteTo(mmio_space());
         }
@@ -1244,7 +1259,7 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
     return CONFIG_DISPLAY_OK;
   }
 
-  uint64_t pipe_alloc[tgl_registers::kPipeCount];
+  uint64_t pipe_alloc[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()];
   if (!CalculatePipeAllocation(display_configs, pipe_alloc)) {
     return CONFIG_DISPLAY_TOO_MANY;
   }
@@ -1398,7 +1413,8 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
 
   // CalculateMinimumAllocations ignores layers after kImagePlaneCount. That's fine, since
   // that case already fails from an earlier check.
-  uint16_t arr[tgl_registers::kPipeCount][tgl_registers::kImagePlaneCount];
+  uint16_t arr[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
+              [tgl_registers::kImagePlaneCount];
   if (!CalculateMinimumAllocations(display_configs, arr)) {
     // Find any displays whose allocation fails and set the return code. Overwrite
     // any previous errors, since they get solved by the merge.
@@ -1425,12 +1441,14 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
   return CONFIG_DISPLAY_OK;
 }
 
-bool Controller::CalculatePipeAllocation(cpp20::span<const display_config_t*> display_configs,
-                                         uint64_t alloc[tgl_registers::kPipeCount]) {
-  if (display_configs.size() > tgl_registers::kPipeCount) {
+bool Controller::CalculatePipeAllocation(
+    cpp20::span<const display_config_t*> display_configs,
+    uint64_t alloc[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]) {
+  if (display_configs.size() > tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()) {
     return false;
   }
-  memset(alloc, 0, sizeof(uint64_t) * tgl_registers::kPipeCount);
+  memset(alloc, 0,
+         sizeof(uint64_t) * tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size());
   // Keep any allocated pipes on the same display
   for (const display_config_t* config : display_configs) {
     DisplayDevice* display = FindDevice(config->display_id);
@@ -1442,7 +1460,9 @@ bool Controller::CalculatePipeAllocation(cpp20::span<const display_config_t*> di
   for (const display_config_t* config : display_configs) {
     DisplayDevice* display = FindDevice(config->display_id);
     if (display != nullptr && display->pipe() == nullptr) {
-      for (unsigned pipe_num = 0; pipe_num < tgl_registers::kPipeCount; pipe_num++) {
+      for (unsigned pipe_num = 0;
+           pipe_num < tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size();
+           pipe_num++) {
         if (!alloc[pipe_num]) {
           alloc[pipe_num] = config->display_id;
           break;

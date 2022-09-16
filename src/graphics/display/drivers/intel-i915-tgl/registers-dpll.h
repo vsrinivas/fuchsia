@@ -13,23 +13,6 @@
 
 namespace tgl_registers {
 
-static constexpr uint32_t kDpllCount = 4;
-
-enum Dpll {
-  DPLL_INVALID = -1,
-  DPLL_0 = 0,
-  DPLL_1,
-  DPLL_2,
-  DPLL_3,
-};
-
-static const Dpll kDplls[kDpllCount] = {
-    DPLL_0,
-    DPLL_1,
-    DPLL_2,
-    DPLL_3,
-};
-
 // DPLL_CTRL1
 class DpllControl1 : public hwreg::RegisterBase<DpllControl1, uint32_t> {
  public:
