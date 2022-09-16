@@ -9,16 +9,11 @@
     ],
     program: {
         runner: "driver",
-        compat: "driver/compat-runtime-v1-root.so",
-        bind: "meta/bind/root.bindbc",
+        compat: "driver/compat-runtime-v1-leaf.so",
+        bind: "meta/bind/leaf.bindbc",
+        colocate: "true",
     },
-    capabilities: [
+    use: [
         { service: "fuchsia.compat.runtime.Service" },
-    ],
-    expose: [
-        {
-            service: "fuchsia.compat.runtime.Service",
-            from: "self",
-        },
     ],
 }

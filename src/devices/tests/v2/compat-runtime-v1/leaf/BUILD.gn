@@ -36,7 +36,5 @@ fuchsia_driver_component("component") {
   component_name = "leaf"
   deps = [ ":driver" ]
   info = "leaf-info.json"
-  colocate = true
-
-  default_dispatcher_opts = [ "allow_sync_calls" ]
+  manifest = "meta/leaf.cml"
 }

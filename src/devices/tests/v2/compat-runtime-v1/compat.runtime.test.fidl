@@ -17,3 +17,7 @@ protocol Root {
         response string:MAX;
     });
 };
+
+service Service {
+    root client_end:Root;
+};

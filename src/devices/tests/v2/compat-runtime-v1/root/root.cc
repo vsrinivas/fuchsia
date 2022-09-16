@@ -12,6 +12,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/driver2/outgoing_directory.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/inspect/cpp/inspect.h>
 
@@ -25,10 +26,12 @@
 namespace root {
 
 class Root;
-using DeviceType = ddk::Device<Root, ddk::Initializable, ddk::ServiceConnectable>;
+using DeviceType = ddk::Device<Root>;
 class Root : public DeviceType, public fdf::Server<fuchsia_compat_runtime::Root> {
  public:
-  explicit Root(zx_device_t* root) : DeviceType(root) {}
+  explicit Root(zx_device_t* root)
+      : DeviceType(root),
+        outgoing_(driver::OutgoingDirectory::Create(fdf::Dispatcher::GetCurrent()->get())) {}
   virtual ~Root() = default;
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev) {
@@ -42,24 +45,42 @@ class Root : public DeviceType, public fdf::Server<fuchsia_compat_runtime::Root>
     return ZX_OK;
   }
 
-  zx_status_t Bind() { return DdkAdd(ddk::DeviceAddArgs("root").set_proto_id(ZX_PROTOCOL_PARENT)); }
+  zx_status_t Bind() {
+    driver::ServiceInstanceHandler handler;
+    fuchsia_compat_runtime::Service::Handler service(&handler);
 
-  void DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
-
-  void DdkRelease() { delete this; }
-
-  zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel) {
-    if (std::string_view(service_name) !=
-        fidl::DiscoverableProtocolName<fuchsia_compat_runtime::Root>) {
-      return ZX_ERR_NOT_SUPPORTED;
+    auto protocol = [this](fdf::ServerEnd<fuchsia_compat_runtime::Root> server_end) {
+      fdf::BindServer<fdf::Server<fuchsia_compat_runtime::Root>>(
+          fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), this);
+    };
+    auto status = service.add_root(std::move(protocol));
+    if (status.is_error()) {
+      return status.status_value();
+    }
+    status = outgoing_.AddService<fuchsia_compat_runtime::Service>(std::move(handler));
+    if (status.is_error()) {
+      return status.status_value();
+    }
+    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    if (endpoints.is_error()) {
+      return endpoints.status_value();
+    }
+    auto result = outgoing_.Serve(std::move(endpoints->server));
+    if (result.is_error()) {
+      return result.status_value();
     }
 
-    fdf::ServerEnd<fuchsia_compat_runtime::Root> server_end(std::move(channel));
-    fdf::BindServer<fdf::Server<fuchsia_compat_runtime::Root>>(fdf::Dispatcher::GetCurrent()->get(),
-                                                               std::move(server_end), this);
+    std::array offers = {
+        fuchsia_compat_runtime::Service::Name,
+    };
 
-    return ZX_OK;
+    return DdkAdd(ddk::DeviceAddArgs("root")
+                      .set_proto_id(ZX_PROTOCOL_PARENT)
+                      .set_runtime_service_offers(offers)
+                      .set_outgoing_dir(endpoints->client.TakeChannel()));
   }
+
+  void DdkRelease() { delete this; }
 
   // fdf::Server<ft::Root>
   void GetString(GetStringRequest& request, GetStringCompleter::Sync& completer) override {
@@ -67,6 +88,9 @@ class Root : public DeviceType, public fdf::Server<fuchsia_compat_runtime::Root>
     strcpy(str, "hello world!");
     completer.Reply(std::string(str));
   }
+
+ private:
+  driver::OutgoingDirectory outgoing_;
 };
 
 static zx_driver_ops_t root_driver_ops = []() -> zx_driver_ops_t {

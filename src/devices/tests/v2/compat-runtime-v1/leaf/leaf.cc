@@ -40,25 +40,11 @@ class Leaf : public DeviceType {
   zx_status_t Bind() { return DdkAdd(ddk::DeviceAddArgs("leaf")); }
 
   void DdkInit(ddk::InitTxn txn) {
-    auto endpoints = fdf::CreateEndpoints<fuchsia_compat_runtime::Root>();
-    if (endpoints.is_error()) {
-      return txn.Reply(endpoints.status_value());
+    auto client_end = DdkConnectRuntimeProtocol<fuchsia_compat_runtime::Service::Root>();
+    if (client_end.is_error()) {
+      return txn.Reply(client_end.status_value());
     }
-
-    auto channels = fdf::ChannelPair::Create(0);
-    if (channels.is_error()) {
-      return txn.Reply(channels.status_value());
-    }
-    // Connect to our parent driver.
-    zx_status_t status =
-        DdkServiceConnect(fidl::DiscoverableProtocolName<fuchsia_compat_runtime::Root>,
-                          endpoints->server.TakeHandle());
-    if (status != ZX_OK) {
-      return txn.Reply(status);
-    }
-    root_client_ = fdf::Client<fuchsia_compat_runtime::Root>(std::move(endpoints->client),
-                                                             fdf::Dispatcher::GetCurrent()->get());
-
+    root_client_.Bind(std::move(*client_end), fdf::Dispatcher::GetCurrent()->get());
     txn.Reply(ZX_OK);
   }
 

@@ -20,6 +20,7 @@ fuchsia_driver("driver") {
   deps = [
     ":bind",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",
@@ -37,4 +38,5 @@ fuchsia_driver_component("component") {
   component_name = "root"
   deps = [ ":driver" ]
   info = "root-info.json"
+  manifest = "meta/root.cml"
 }
