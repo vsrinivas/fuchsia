@@ -4,10 +4,13 @@
 
 use argh::EarlyExit;
 use argh::FromArgs;
+use errors::ffx_error;
+use ffx_config::EnvironmentContext;
 use ffx_config::FfxConfigBacked;
 use ffx_core::ffx_command;
 use ffx_lib_sub_command::SubCommand;
 use ffx_writer::Format;
+use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// The environment variable name used for overriding the command name in help
@@ -107,6 +110,47 @@ impl Ffx {
             );
             early_exit
         })
+    }
+
+    fn set_buildid_config(&self, buildid: &str) -> Result<Option<String>, anyhow::Error> {
+        let runtime = format!("{}={}", ffx_build_version::CURRENT_EXE_BUILDID, buildid);
+        match self.runtime_config_overrides() {
+            Some(s) => {
+                if s.is_empty() {
+                    Ok(Some(runtime))
+                } else {
+                    let new_overrides = format!("{},{}", s, runtime);
+                    Ok(Some(new_overrides))
+                }
+            }
+            None => Ok(Some(runtime)),
+        }
+    }
+
+    pub fn load_context(&self, buildid: &str) -> Result<EnvironmentContext, anyhow::Error> {
+        // Configuration initialization must happen before ANY calls to the config (or the cache won't
+        // properly have the runtime parameters.
+        let overrides = self.set_buildid_config(buildid)?;
+        let runtime_args = ffx_config::runtime::populate_runtime(&*self.config, overrides)?;
+        let env_path = self.env.as_ref().map(PathBuf::from);
+
+        // If we're given an isolation setting, use that. Otherwise do a normal detection of the environment.
+        match (self, std::env::var_os("FFX_ISOLATE_DIR")) {
+            (Ffx { isolate_dir: Some(path), .. }, _) => Ok(EnvironmentContext::isolated(
+                path.to_path_buf(),
+                HashMap::from_iter(std::env::vars()),
+                runtime_args,
+                env_path,
+            )),
+            (_, Some(path_str)) => Ok(EnvironmentContext::isolated(
+                PathBuf::from(path_str),
+                HashMap::from_iter(std::env::vars()),
+                runtime_args,
+                env_path,
+            )),
+            _ => EnvironmentContext::detect(runtime_args, std::env::current_dir()?, env_path)
+                .map_err(|e| ffx_error!(e).into()),
+        }
     }
 }
 

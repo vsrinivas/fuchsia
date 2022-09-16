@@ -6,17 +6,15 @@ use analytics::{add_crash_event, get_notice, opt_out_for_this_invocation};
 use anyhow::{Context as _, Result};
 use buildid;
 use errors::{ffx_error, ResultExt as _};
-use ffx_config::{get_log_dirs, EnvironmentContext};
+use ffx_config::get_log_dirs;
 use ffx_core::Injector;
 use ffx_daemon_proxy::Injection;
 use ffx_lib_args::{from_env, redact_arg_values, Ffx};
 use ffx_lib_sub_command::SubCommand;
 use ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc};
 use fuchsia_async::TimeoutExt;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Write;
-use std::path::PathBuf;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
@@ -32,22 +30,6 @@ fn is_daemon(subcommand: &Option<SubCommand>) -> bool {
 
 fn is_schema(subcommand: &Option<SubCommand>) -> bool {
     matches!(subcommand, Some(SubCommand::FfxSchema(_)))
-}
-
-fn set_buildid_config(overrides: Option<String>) -> Result<Option<String>> {
-    let runtime =
-        format!("{}={}", ffx_build_version::CURRENT_EXE_BUILDID, buildid::get_build_id()?);
-    match overrides {
-        Some(s) => {
-            if s.is_empty() {
-                Ok(Some(runtime))
-            } else {
-                let new_overrides = format!("{},{}", s, runtime);
-                Ok(Some(new_overrides))
-            }
-        }
-        None => Ok(Some(runtime)),
-    }
 }
 
 async fn report_log_hint(writer: &mut dyn std::io::Write) {
@@ -93,28 +75,7 @@ async fn run() -> Result<()> {
     // `let Hoist = hoist::Hoist::new()...`
     let hoist = hoist::init_hoist().context("initializing hoist")?;
 
-    // Configuration initialization must happen before ANY calls to the config (or the cache won't
-    // properly have the runtime parameters.
-    let overrides = set_buildid_config(app.runtime_config_overrides())?;
-    let runtime_args = ffx_config::runtime::populate_runtime(&*app.config, overrides)?;
-    let env_path = app.env.as_ref().map(PathBuf::from);
-
-    // If we're given an isolation setting, use that. Otherwise do a normal detection of the environment.
-    let context = match (&app, std::env::var_os("FFX_ISOLATE_DIR")) {
-        (Ffx { isolate_dir: Some(path), .. }, _) => EnvironmentContext::isolated(
-            path.to_path_buf(),
-            HashMap::from_iter(std::env::vars()),
-            runtime_args,
-            env_path,
-        ),
-        (_, Some(path_str)) => EnvironmentContext::isolated(
-            PathBuf::from(path_str),
-            HashMap::from_iter(std::env::vars()),
-            runtime_args,
-            env_path,
-        ),
-        _ => EnvironmentContext::detect(runtime_args, std::env::current_dir()?, env_path)?,
-    };
+    let context = app.load_context(&buildid::get_build_id()?)?;
 
     ffx_config::init(&context).await?;
 
