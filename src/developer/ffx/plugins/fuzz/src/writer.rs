@@ -8,7 +8,7 @@ use {
     serde_json::to_vec_pretty,
     std::cell::RefCell,
     std::fmt::{Debug, Display},
-    std::fs::File,
+    std::fs::{create_dir_all, File},
     std::io::{self, Write},
     std::path::{Path, PathBuf},
     std::rc::Rc,
@@ -77,9 +77,16 @@ impl<O: OutputSink> Writer<O> {
     /// Creates a new `Writer` that is a clone of this object, except that it duplicates its output
     /// and writes it to a file created from `dirname` and `filename`.
     pub fn tee<P: AsRef<Path>, S: AsRef<str>>(&self, dirname: P, filename: S) -> Result<Writer<O>> {
-        let mut path = PathBuf::from(dirname.as_ref());
+        let dirname = dirname.as_ref();
+        create_dir_all(dirname)
+            .with_context(|| format!("failed to create directory: {}", dirname.display()))?;
+        let mut path = PathBuf::from(dirname);
         path.push(filename.as_ref());
-        let file = File::create(path).context("failed to create file")?;
+        let file = File::options()
+            .append(true)
+            .create(true)
+            .open(&path)
+            .with_context(|| format!("failed to open file: {}", path.display()))?;
         Ok(Self {
             output: self.output.clone(),
             muted: self.muted,
@@ -138,7 +145,8 @@ impl<O: OutputSink> Writer<O> {
     /// The display format loosely imitates that of `ffx log` as implemented by that plugin's
     /// `DefaultLogFormatter`.
     pub fn log(&self, logs_data: LogsData) {
-        let serialized = to_vec_pretty(&logs_data).expect("failed to serialize");
+        let mut serialized = to_vec_pretty(&logs_data).expect("failed to serialize");
+        serialized.push('\n' as u8);
         self.write_all_to_file(&serialized).expect("failed to write log to file");
         if self.muted {
             return;
