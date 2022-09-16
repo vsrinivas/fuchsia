@@ -37,10 +37,7 @@ rustc_test("activity_manager_test") {
     "//third_party/rust_crates:test-case",
   ]
 
-  sources = [
-    "src/lib.rs",
-    "src/main.rs",
-  ]
+  sources = [ "src/lib.rs" ]
 }
 
 fuchsia_component("activity-manager-test-component") {
