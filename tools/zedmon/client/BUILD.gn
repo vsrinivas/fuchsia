@@ -40,14 +40,15 @@ if (is_host) {
   }
 }
 
-dart_test("zedmon_client_manual_test") {
-  sources = [ "zedmon_client_manual_test.dart" ]
-  deps = [ "//third_party/dart-pkg/pub/test" ]
-  non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
+# TODO(fxbug.dev/109244): Enable once test has been ported to a supported (non-Dart) language
+# dart_test("zedmon_client_manual_test") {
+#   sources = [ "zedmon_client_manual_test.dart" ]
+#   deps = [ "//third_party/dart-pkg/pub/test" ]
+#   non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
 
-  # This test should only be run manually for now.
-  environments = []
-}
+#   # This test should only be run manually for now.
+#   environments = []
+# }
 
 if (is_host) {
   host_test_data("runtime_deps") {
@@ -74,7 +75,8 @@ group("client") {
 group("tests") {
   public_deps = [
     ":bin_test($host_toolchain)",
-    ":zedmon_client_manual_test($host_toolchain)",
+    # TODO(fxbug.dev/109244): Enable once test has been ported to a supported (non-Dart) language
+    # ":zedmon_client_manual_test($host_toolchain)",
   ]
   testonly = true
 }
