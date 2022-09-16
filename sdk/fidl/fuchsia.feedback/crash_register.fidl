@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.feedback;
 
-using fuchsia.sys;
-
 /// Allows a component to choose a different crash reporting product to file crashes for that
 /// component under.
 ///
@@ -21,7 +19,8 @@ protocol CrashReportingProductRegister {
     /// Prefer UpsertWithAck() if the component also files crash reports itself, to avoid race
     /// conditions and mis-attribution.
     Upsert(struct {
-        component_url fuchsia.sys.component_url;
+        // 2083 is the maximum expected component URL length.
+        component_url string:2083;
         product CrashReportingProduct;
     });
 
@@ -32,7 +31,8 @@ protocol CrashReportingProductRegister {
     /// attributed to the wrong product, leading to potentially incorrect crash data.
     @transitional
     UpsertWithAck(struct {
-        component_url fuchsia.sys.component_url;
+        // 2083 is the maximum expected component URL length.
+        component_url string:2083;
         product CrashReportingProduct;
     }) -> ();
 };

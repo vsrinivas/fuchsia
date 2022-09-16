@@ -17,7 +17,6 @@ fostr_fidl("fuchsia.feedback") {
   deps = [
     "//src/lib/fostr/fidl/fuchsia.math",
     "//src/lib/fostr/fidl/fuchsia.mem",
-    "//src/lib/fostr/fidl/fuchsia.sys",
   ]
 }
 

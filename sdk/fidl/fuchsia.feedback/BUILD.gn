@@ -23,7 +23,6 @@ fidl("fuchsia.feedback") {
   public_deps = [
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.mem",
-    "//sdk/fidl/fuchsia.sys",
     "//zircon/vdso/zx",
   ]
 }
