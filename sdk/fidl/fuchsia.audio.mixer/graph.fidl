@@ -249,12 +249,10 @@ protocol Graph {
         /// Required.
         3: dest_format fuchsia.mediastreams.AudioFormat;
 
-        /// Clock for this node's destination stream. The clock must be
-        /// ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with ZX_RIGHT_READ.
-        /// See "Clocks" under the description for [`Graph`].
+        /// Clock for this node's destination stream.
         ///
         /// Required.
-        4: dest_reference_clock zx.handle:CLOCK;
+        4: dest_reference_clock ReferenceClock;
 
         /// Size of the internal mix buffer. This defines the maximum number of
         /// frames that can be mixed at one time.
@@ -295,12 +293,10 @@ protocol Graph {
         /// Required.
         4: consumer ConsumerOptions;
 
-        /// Clock for this node's source and destination streams. The clock must
-        /// be ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with
-        /// ZX_RIGHT_READ. See "Clocks" under the description for [`Graph`].
+        /// Clock for this node's source and destination streams.
         ///
         /// Required.
-        5: reference_clock zx.handle:CLOCK;
+        5: reference_clock ReferenceClock;
     }) -> (table {
         /// ID of the newly-created node. Guaranteed to be unique.
         1: id NodeId;
@@ -358,12 +354,10 @@ protocol Graph {
         /// is not used and this field must not be specified.
         4: consumer ConsumerOptions;
 
-        /// Clock for this node's source and destination streams. The clock must
-        /// be ZX_CLOCK_OPT_MONOTONIC and ZX_CLOCK_OPT_CONTINUOUS with
-        /// ZX_RIGHT_READ. See "Clocks" under the description for [`Graph`].
+        /// Clock for this node's source and destination streams.
         ///
         /// Required.
-        5: reference_clock zx.handle:CLOCK;
+        5: reference_clock ReferenceClock;
     }) -> (resource table {
         /// ID of the newly-created node. Guaranteed to be unique.
         1: id NodeId;
@@ -550,8 +544,16 @@ type CreateGraphError = flexible enum {
 
 /// Type of errors return by CreateNode methods.
 type CreateNodeError = flexible enum {
-    /// A provided `zx.handle:CLOCK` was invalid or had incorrect rights.
-    INVALID_CLOCK = 1;
+    /// A required field was not provided.
+    MISSING_REQUIRED_FIELD = 1;
+
+    /// A flexible field had an unsupported option. This can happen when a
+    /// client built with API version X+1 talks to a server built with API
+    /// version X.
+    UNSUPPORTED_OPTION = 2;
+
+    /// A parameter had an invalid value.
+    INVALID_PARAMETER = 3;
 };
 
 /// Type of errors return by [`DeleteNode`].

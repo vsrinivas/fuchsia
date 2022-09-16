@@ -157,8 +157,16 @@ type RingBuffer = resource table {
     4: consumer_bytes uint64;
 
     /// Reference clock for the ring buffer.
+    ///
     /// Required.
     5: reference_clock zx.handle:CLOCK;
+
+    /// Domain of `reference_clock`. See `fuchsia.hardware.audio.clock_domain`.
+    /// TODO(fxbug.dev/87651): If fuchsia.hardware.audio doesn't need to import
+    /// fuchsia.audio, we can use that type directly below.
+    ///
+    /// Optional. If not specified, defaults to CLOCK_DOMAIN_EXTERNAL.
+    6: reference_clock_domain uint32;
 
     /// Offset between time T and the time when the frame at SafeWritePos(T) is
     /// actually presented at an external device.
@@ -173,5 +181,5 @@ type RingBuffer = resource table {
     ///
     /// The presentation offset is unlikely to be zero because that would imply
     /// instantaneous presentation.
-    6: presentation_offset zx.duration;
+    7: presentation_offset zx.duration;
 };
