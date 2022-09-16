@@ -6,8 +6,10 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::ok_or_default_err;
 use crate::platform_metrics::PlatformMetric;
 use crate::types::ThermalLoad;
+use crate::utils::result_debug_panic::ResultDebugPanic;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use async_utils::hanging_get::server as hanging_get;
@@ -61,6 +63,7 @@ pub struct ThermalStateHandlerBuilder<'a, 'b> {
 }
 
 impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
+    /// Default path to the thermal config file. Can be overridden by JSON configuration.
     const THERMAL_CONFIG_PATH: &'static str = "/pkg/config/power_manager/thermal_config.json";
 
     pub fn new_from_json(
@@ -69,19 +72,34 @@ impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Self {
         #[derive(Deserialize)]
+        struct Config {
+            thermal_config_path: String,
+        }
+
+        #[derive(Deserialize)]
         struct Dependencies {
             platform_metrics_node: String,
         }
 
         #[derive(Deserialize)]
         struct JsonData {
+            config: Option<Config>,
             dependencies: Dependencies,
         }
 
         let data: JsonData = json::from_value(json_data).unwrap();
 
+        // Use `thermal_config_path` if it was provided, otherwise default to `THERMAL_CONFIG_PATH`
+        let config_path = data
+            .config
+            .map(|c| c.thermal_config_path)
+            .unwrap_or(Self::THERMAL_CONFIG_PATH.to_string());
+
+        // Read the thermal config file from `config_path`
+        let thermal_config = ThermalConfig::read(&Path::new(&config_path)).ok();
+
         Self {
-            thermal_config: None,
+            thermal_config,
             outgoing_svc_dir: Some(service_fs.dir("svc")),
             inspect_root: None,
             platform_metrics: nodes[&data.dependencies.platform_metrics_node].clone(),
@@ -89,18 +107,14 @@ impl<'a, 'b> ThermalStateHandlerBuilder<'a, 'b> {
     }
 
     pub fn build(self) -> Result<Rc<ThermalStateHandler>, Error> {
+        let thermal_config = ok_or_default_err!(self.thermal_config).or_debug_panic()?;
+
         // Create the root Inspect node for the ThermalStateHandler node. Allow inspect_root
         // override for tests.
         let inspect = self
             .inspect_root
             .unwrap_or(inspect::component::inspector().root())
             .create_child("ThermalStateHandler");
-
-        // Read the thermal config file from `THERMAL_CONFIG_PATH`. Allow override for testing.
-        let thermal_config = match self.thermal_config {
-            Some(thermal_config) => thermal_config,
-            None => ThermalConfig::read(&Path::new(Self::THERMAL_CONFIG_PATH))?,
-        };
 
         let metrics_tracker =
             MetricsTracker::new(inspect.create_child("ThermalLoadStates"), self.platform_metrics);
