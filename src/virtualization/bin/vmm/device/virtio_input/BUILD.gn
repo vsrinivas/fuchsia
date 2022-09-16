@@ -42,7 +42,7 @@ fuchsia_unittest_package("virtio_input_unittests") {
   deps = [ ":virtio_input_bin_test" ]
 }
 
-fuchsia_package("virtio_input_rs") {
+fuchsia_package("virtio_input") {
   package_name = "virtio_input"
   deps = [ ":virtio_input_component" ]
 }

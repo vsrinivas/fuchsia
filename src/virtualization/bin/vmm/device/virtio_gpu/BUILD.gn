@@ -72,7 +72,7 @@ fuchsia_unittest_package("virtio_gpu_unittests") {
   deps = [ ":virtio_gpu_bin_test" ]
 }
 
-fuchsia_package("virtio_gpu_rs") {
+fuchsia_package("virtio_gpu") {
   package_name = "virtio_gpu"
   deps = [ ":virtio_gpu_component" ]
 }
