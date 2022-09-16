@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use crate::fs::*;
 use crate::lock::RwLock;
+use crate::task::CurrentTask;
 use crate::types::*;
 
 /// The mutable state for an FsContext.
@@ -80,9 +81,11 @@ impl FsContext {
     }
 
     /// Change the current working directory.
-    pub fn chdir(&self, name: NamespaceNode) {
+    pub fn chdir(&self, current_task: &CurrentTask, name: NamespaceNode) -> Result<(), Errno> {
+        name.entry.node.check_access(current_task, Access::EXEC)?;
         let mut state = self.state.write();
         state.cwd = name;
+        Ok(())
     }
 
     /// Change the root.
@@ -140,7 +143,7 @@ mod test {
         assert_eq!(b"/".to_vec(), current_task.fs().cwd().path());
 
         let bin = current_task.open_file(b"bin", OpenFlags::RDONLY).expect("missing bin directory");
-        current_task.fs().chdir(bin.name.clone());
+        current_task.fs().chdir(&current_task, bin.name.clone()).expect("Failed to chdir");
         assert_eq!(b"/bin".to_vec(), current_task.fs().cwd().path());
 
         // Now that we have changed directories to bin, we're opening a file
@@ -150,26 +153,34 @@ mod test {
         // However, bin still exists in the root directory.
         assert!(current_task.open_file(b"/bin", OpenFlags::RDONLY).is_ok());
 
-        current_task.fs().chdir(
-            current_task
-                .open_file(b"..", OpenFlags::RDONLY)
-                .expect("failed to open ..")
-                .name
-                .clone(),
-        );
+        current_task
+            .fs()
+            .chdir(
+                &current_task,
+                current_task
+                    .open_file(b"..", OpenFlags::RDONLY)
+                    .expect("failed to open ..")
+                    .name
+                    .clone(),
+            )
+            .expect("Failed to chdir");
         assert_eq!(b"/".to_vec(), current_task.fs().cwd().path());
 
         // Now bin exists again because we've gone back to the root.
         assert!(current_task.open_file(b"bin", OpenFlags::RDONLY).is_ok());
 
         // Repeating the .. doesn't do anything because we're already at the root.
-        current_task.fs().chdir(
-            current_task
-                .open_file(b"..", OpenFlags::RDONLY)
-                .expect("failed to open ..")
-                .name
-                .clone(),
-        );
+        current_task
+            .fs()
+            .chdir(
+                &current_task,
+                current_task
+                    .open_file(b"..", OpenFlags::RDONLY)
+                    .expect("failed to open ..")
+                    .name
+                    .clone(),
+            )
+            .expect("Failed to chdir");
         assert_eq!(b"/".to_vec(), current_task.fs().cwd().path());
         assert!(current_task.open_file(b"bin", OpenFlags::RDONLY).is_ok());
     }
