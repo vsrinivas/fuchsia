@@ -5,9 +5,11 @@
 use anyhow::{format_err, Error};
 use at_commands as at;
 
+pub mod codec_connection_setup;
 pub mod phone_status;
 pub mod slc_initialization;
 
+use codec_connection_setup::CodecConnectionSetupProcedure;
 use phone_status::PhoneStatusProcedure;
 use slc_initialization::SlcInitProcedure;
 
@@ -19,6 +21,8 @@ pub enum ProcedureMarker {
     SlcInitialization,
     /// The Transfer of Phone Status procedures as defined in HFP v1.8 Section 4.4 - 4.7.
     PhoneStatus,
+    /// The Codec Connection Setup where the AG informs the HF which codeic ID will be used.
+    CodecConnectionSetup,
 }
 
 impl ProcedureMarker {
@@ -27,6 +31,7 @@ impl ProcedureMarker {
         match self {
             Self::SlcInitialization => Box::new(SlcInitProcedure::new()),
             Self::PhoneStatus => Box::new(PhoneStatusProcedure::new()),
+            Self::CodecConnectionSetup => Box::new(CodecConnectionSetupProcedure::new()),
         }
     }
 
@@ -51,6 +56,9 @@ impl ProcedureMarker {
         } else {
             match response {
                 at::Response::Success(at::Success::Ciev { .. }) => Ok(Self::PhoneStatus),
+                at::Response::Success(at::Success::Bcs { .. }) | at::Response::Ok => {
+                    Ok(Self::CodecConnectionSetup)
+                }
                 _ => Err(format_err!("Other procedures not implemented yet.")),
             }
         }

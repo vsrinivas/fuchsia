@@ -13,7 +13,7 @@ use super::indicators::{AgIndicators, HfIndicators};
 use super::procedure::{Procedure, ProcedureMarker};
 
 use crate::config::HandsFreeFeatureSupport;
-use crate::features::{AgFeatures, CallHoldAction, HfFeatures};
+use crate::features::{AgFeatures, CallHoldAction, HfFeatures, CVSD};
 
 pub struct SlcState {
     /// Collection of active procedures.
@@ -40,6 +40,10 @@ pub struct SharedState {
     pub indicators_update_enabled: bool,
     /// Features supported from the three-way calling or call waiting
     pub three_way_features: Vec<CallHoldAction>,
+    /// The negotiated coded for this connection between the AG and HF.
+    pub selected_codec: Option<u8>,
+    /// The codec(s) supported by the HF.
+    pub supported_codecs: Vec<u8>,
 }
 
 // TODO(fxbug.dev/104703): More fields for SLCI
@@ -80,6 +84,8 @@ impl SharedState {
             initialized: false,
             indicators_update_enabled: true,
             three_way_features: Vec::new(),
+            selected_codec: None,
+            supported_codecs: vec![CVSD],
         }
     }
 

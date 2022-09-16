@@ -68,6 +68,7 @@ impl Procedure for SlcInitProcedure {
                         state.ag_features = AgFeatures::from_bits_truncate(features);
                         if state.supports_codec_negotiation() {
                             self.state = Stages::CodecNegotiation;
+                            state.supported_codecs.push(MSBC);
                             // By default, we support the CVSD and MSBC codecs.
                             return Ok(vec![at::Command::Bac {
                                 codecs: vec![CVSD.into(), MSBC.into()],
