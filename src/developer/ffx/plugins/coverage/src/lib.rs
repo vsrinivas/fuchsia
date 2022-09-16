@@ -8,6 +8,7 @@ use {
     ffx_coverage_args::CoverageCommand,
     glob::glob,
     std::{
+        fs::File,
         path::{Path, PathBuf},
         process::{Command, Stdio},
     },
@@ -45,18 +46,27 @@ pub async fn coverage(cmd: CoverageCommand) -> Result<()> {
         show_binary_id,
     )?;
 
-    match cmd.export_html {
-        Some(html_export_path) => export_coverage_html(
+    match (cmd.export_html, cmd.export_lcov) {
+        (Some(ref html_export_dir), _) => {
+            export_html(&llvm_cov_bin, &merged_profile, &bin_files, &cmd.src_files, html_export_dir)
+                .context(format!(
+                    "failed to export HTML coverage report to {:?}",
+                    html_export_dir
+                ))?
+        }
+        (_, Some(ref lcov_export_path)) => export_lcov(
             &llvm_cov_bin,
             &merged_profile,
             &bin_files,
             &cmd.src_files,
-            &html_export_path,
+            lcov_export_path,
         )
-        .context("failed to export coverage HTML"),
-        None => show_coverage(&llvm_cov_bin, &merged_profile, &bin_files, &cmd.src_files)
-            .context("failed to show coverage"),
+        .context(format!("failed to export LCOV to {:?}", lcov_export_path))?,
+        (None, None) => show_coverage(&llvm_cov_bin, &merged_profile, &bin_files, &cmd.src_files)
+            .context("failed to show coverage")?,
     }
+
+    Ok(())
 }
 
 /// Merges input `profraws` using llvm-profdata and writes output to `output_path`.
@@ -174,7 +184,8 @@ fn show_coverage(
     }
 }
 
-fn export_coverage_html(
+/// Calls `llvm-cov show -format html` to write HTML pages for collected test coverage.
+fn export_html(
     llvm_cov_bin: &Path,
     merged_profile: &Path,
     bin_files: &[PathBuf],
@@ -200,7 +211,38 @@ fn export_coverage_html(
             code,
             String::from_utf8_lossy(&show_cmd.stderr)
         )),
-        None => Err(anyhow!("coverage display terminated by signal unexpectedly")),
+        None => Err(anyhow!("coverage HTML export terminated by signal unexpectedly")),
+    }
+}
+
+/// Calls `llvm-cov export -format lcov` to write a LCOV file for collected test coverage.
+fn export_lcov(
+    llvm_cov_bin: &Path,
+    merged_profile: &Path,
+    bin_files: &[PathBuf],
+    src_files: &[PathBuf],
+    lcov_export_path: &Path,
+) -> Result<()> {
+    let output_lcov = File::create(lcov_export_path)?;
+    let bin_file_args = to_llvm_cov_args(bin_files);
+    let show_cmd = Command::new(llvm_cov_bin)
+        .args(["export", "-format", "lcov", "-skip-expansions", "-skip-functions"])
+        .arg("-instr-profile")
+        .arg(merged_profile)
+        .args(&bin_file_args)
+        .args(src_files)
+        .stdout(output_lcov)
+        .stderr(Stdio::inherit())
+        .output()
+        .context("failed to show coverage")?;
+    match show_cmd.status.code() {
+        Some(0) => Ok(()),
+        Some(code) => Err(anyhow!(
+            "failed to show coverage: status code {}, stderr: {}",
+            code,
+            String::from_utf8_lossy(&show_cmd.stderr)
+        )),
+        None => Err(anyhow!("LCOV export terminated by signal unexpectedly")),
     }
 }
 
@@ -216,7 +258,7 @@ mod tests {
         super::*,
         assert_matches::assert_matches,
         std::{
-            fs::{create_dir, set_permissions, File, Permissions},
+            fs::{create_dir, set_permissions, Permissions},
             io::Write,
             os::unix::fs::PermissionsExt,
         },
@@ -262,6 +304,7 @@ mod tests {
             clang_dir: PathBuf::from(&test_dir_path),
             symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
             export_html: None,
+            export_lcov: None,
             src_files: Vec::new(),
         })
         .await
@@ -277,6 +320,7 @@ mod tests {
             clang_dir: PathBuf::from(&test_dir_path),
             symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
             export_html: None,
+            export_lcov: None,
             src_files: Vec::new(),
         })
         .await
@@ -292,6 +336,7 @@ mod tests {
                 clang_dir: PathBuf::from(&test_dir_path),
                 symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
                 export_html: None,
+                export_lcov: None,
                 src_files: Vec::new(),
             })
             .await,
@@ -305,11 +350,26 @@ mod tests {
                 clang_dir: PathBuf::from(&test_dir_path),
                 symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
                 export_html: Some(PathBuf::from(&test_dir_path)),
+                export_lcov: None,
                 src_files: Vec::new(),
             })
             .await,
             Ok(())
-        )
+        );
+
+        // Export LCOV.
+        assert_matches!(
+            coverage(CoverageCommand {
+                test_output_dir: PathBuf::from(&test_dir_path),
+                clang_dir: PathBuf::from(&test_dir_path),
+                symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
+                export_html: None,
+                export_lcov: Some(PathBuf::from(&test_dir_path).join("test.lcov")),
+                src_files: Vec::new(),
+            })
+            .await,
+            Ok(())
+        );
     }
 
     #[test]
