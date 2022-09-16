@@ -9,11 +9,10 @@ use {
     errors::ffx_bail,
     gcs::{
         client::{Client, ClientFactory, ProgressResult, ProgressState},
+        error::GcsError,
         gs_url::split_gs_url,
-        token_store::{
-            new_refresh_token, read_boto_refresh_token, write_boto_refresh_token, GcsError,
-            TokenStore,
-        },
+        oauth2::new_refresh_token,
+        token_store::{read_boto_refresh_token, write_boto_refresh_token, TokenStore},
     },
     std::path::{Path, PathBuf},
 };
