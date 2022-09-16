@@ -2907,6 +2907,32 @@
               "returnType": "Future<bool>",
               "type": "MethodDeclarationImpl"
             },
+            "sendKeyEvents": {
+              "SimpleFormalParameterImpl": {
+                "events": {
+                  "isConst": false,
+                  "isFinal": true,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "events",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "List<dynamic>"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "sendKeyEvents",
+              "returnType": "Future<bool>",
+              "type": "MethodDeclarationImpl"
+            },
             "swipe": {
               "SimpleFormalParameterImpl": {
                 "duration": {

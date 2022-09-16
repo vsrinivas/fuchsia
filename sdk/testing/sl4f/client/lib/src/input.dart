@@ -277,8 +277,17 @@ class Input {
   /// ```
   ///
   /// Returns `true` on success, or false otherwise.
+  /// TODO To Deprecate
   Future<bool> keyEvents(final List<KeyEvent> keyEvents) async {
     final events = keyEvents.map((e) => e.toJson()).toList();
+    final result = await _sl4f.request('input_facade.KeyEvents', {
+      'key_events': events,
+    });
+    return result == 'Success';
+  }
+
+  /// Method that allows the caller to serialize key events.
+  Future<bool> sendKeyEvents(final List<dynamic> events) async {
     final result = await _sl4f.request('input_facade.KeyEvents', {
       'key_events': events,
     });
