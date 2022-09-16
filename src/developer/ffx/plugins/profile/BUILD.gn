@@ -11,8 +11,8 @@ ffx_plugin("ffx_profile") {
     "cpu:ffx_cpu",
     "gpu:ffx_gpu",
     "memory:ffx_profile_memory",
-    "power:ffx_power",
-    "temperature:ffx_temperature",
+    "power:ffx_profile_power",
+    "temperature:ffx_profile_temperature",
   ]
 
   args_sources = [ "src/args.rs" ]

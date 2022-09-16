@@ -64,6 +64,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/overnet:ffx_overnet_plugin",
       "//src/developer/ffx/plugins/package:ffx_package",
       "//src/developer/ffx/plugins/platform:ffx_platform",
+      "//src/developer/ffx/plugins/power:ffx_power",
       "//src/developer/ffx/plugins/process_explorer:ffx_process_explorer",
       "//src/developer/ffx/plugins/product:ffx_product",
       "//src/developer/ffx/plugins/product_bundle:ffx_product_bundle",

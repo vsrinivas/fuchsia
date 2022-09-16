@@ -4,9 +4,18 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_profile_power") {
+ffx_plugin("ffx_power_manager") {
   version = "0.1.0"
   edition = "2021"
-  plugin_deps = [ "logger:ffx_power_logger" ]
+  with_unit_tests = true
+
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.power.manager.debug:fuchsia.power.manager.debug_rust",
+    "//src/developer/ffx/lib/errors:lib",
+  ]
+
+  test_deps = [ "//src/lib/fuchsia-async" ]
+
   args_sources = [ "src/args.rs" ]
 }
