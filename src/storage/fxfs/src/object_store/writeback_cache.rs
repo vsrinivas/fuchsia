@@ -489,7 +489,9 @@ impl<B: DataBuffer> WritebackCache<B> {
     /// to the caller in block-aligned ranges.  This is not thread-safe with respect to cache
     /// mutations; the caller must ensure that no changes can be made to the cache for the duration
     /// of this call.  The content size returned will only ever increase the size of the object.
-    /// Truncation must be dealt with by calling take_flushable_metadata.
+    /// Truncation must be dealt with by calling take_flushable_metadata. |reserver| and
+    /// |reservation| must both be storing reserved bytes under the same object owner, or it will
+    /// corrupt the allocator accounting.
     pub fn take_flushable<'a, F>(
         &'a self,
         block_size: u64,
@@ -526,7 +528,9 @@ impl<B: DataBuffer> WritebackCache<B> {
             return Flushable { cache: self, metadata, data: None };
         }
 
-        // Transfer reserved bytes into the supplied reservation.
+        // Transfer reserved bytes into the supplied reservation. This is only safe if the caller
+        // has been creating reservations in the reserver and the reservation under the same object
+        // owner.
         reservation.add(reserver.reservation_needed(inner.dirty_bytes));
         inner.dirty_bytes = 0;
 
@@ -674,11 +678,11 @@ mod tests {
         fn reserve(&self, amount: u64) -> Result<Reservation, Error> {
             self.inner
                 .clone()
-                .reserve(round_up(amount, self.granularity).unwrap())
+                .reserve(None, round_up(amount, self.granularity).unwrap())
                 .ok_or(anyhow!("No Space"))
         }
         fn wrap_reservation(&self, amount: u64) -> Reservation {
-            Reservation::new(self.inner.clone(), amount)
+            Reservation::new(self.inner.clone(), None, amount)
         }
     }
 
@@ -742,7 +746,11 @@ mod tests {
             unreachable!();
         }
 
-        fn reserve(self: Arc<Self>, amount: u64) -> Option<Reservation> {
+        fn reserve(
+            self: Arc<Self>,
+            owner_object_id: Option<u64>,
+            amount: u64,
+        ) -> Option<Reservation> {
             {
                 let mut inner = self.amount.lock().unwrap();
                 if *inner < amount {
@@ -751,10 +759,14 @@ mod tests {
                     *inner -= amount;
                 }
             }
-            Some(Reservation::new(self, amount))
+            Some(Reservation::new(self, owner_object_id, amount))
         }
 
-        fn reserve_at_most(self: Arc<Self>, _amount: u64) -> Reservation {
+        fn reserve_at_most(
+            self: Arc<Self>,
+            _owner_object_id: Option<u64>,
+            _amount: u64,
+        ) -> Reservation {
             unreachable!();
         }
 
@@ -772,7 +784,7 @@ mod tests {
     }
 
     impl ReservationOwner for FakeReserverInner {
-        fn release_reservation(&self, amount: u64) {
+        fn release_reservation(&self, _owner_object_id: Option<u64>, amount: u64) {
             let mut inner = self.amount.lock().unwrap();
             *inner += amount;
             assert!(*inner <= self.limit);

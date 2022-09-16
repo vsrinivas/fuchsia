@@ -107,7 +107,7 @@ impl TransactionHandler for FakeFilesystem {
         let reservation = if options.borrow_metadata_space {
             MetadataReservation::Borrowed
         } else {
-            MetadataReservation::Reservation(self.allocator().reserve_at_most(10000))
+            MetadataReservation::Reservation(self.allocator().reserve_at_most(None, 10000))
         };
         Ok(Transaction::new(self, reservation, &[], locks).await)
     }

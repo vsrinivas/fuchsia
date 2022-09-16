@@ -52,7 +52,8 @@ use {
 };
 
 /// Allocators must implement this.  An allocator is responsible for allocating ranges on behalf of
-/// an object-store.
+/// an object-store. Methods often require an owner_object_id parameter, which represents the object
+/// under the root object store the data should be accounted for.
 #[async_trait]
 pub trait Allocator: ReservationOwner {
     /// Returns the object ID for the allocator.
@@ -95,7 +96,6 @@ pub trait Allocator: ReservationOwner {
     ) -> Result<(), Error>;
 
     /// Sets the limits for an owner object in terms of usage.
-    /// TODO: Add an unset for volume deletion.
     async fn set_bytes_limit(
         &self,
         transaction: &mut Transaction<'_>,
@@ -112,12 +112,13 @@ pub trait Allocator: ReservationOwner {
     /// that happened.
     async fn did_flush_device(&self, flush_log_offset: u64);
 
-    /// Returns a reservation that can be used later, or None if there is insufficient space.
-    fn reserve(self: Arc<Self>, amount: u64) -> Option<Reservation>;
+    /// Returns a reservation that can be used later, or None if there is insufficient space. The
+    /// |owner_object_id| indicates which object in the root object store the reservation is for.
+    fn reserve(self: Arc<Self>, owner_object_id: Option<u64>, amount: u64) -> Option<Reservation>;
 
     /// Like reserve, but returns as much as available if not all of amount is available, which
     /// could be zero bytes.
-    fn reserve_at_most(self: Arc<Self>, amount: u64) -> Reservation;
+    fn reserve_at_most(self: Arc<Self>, owner_object_id: Option<u64>, amount: u64) -> Reservation;
 
     /// Returns the total number of allocated bytes.
     fn get_allocated_bytes(&self) -> u64;
@@ -133,16 +134,22 @@ pub trait Allocator: ReservationOwner {
 
 /// This trait is implemented by things that own reservations.
 pub trait ReservationOwner: Send + Sync {
-    fn release_reservation(&self, amount: u64);
+    /// Report that bytes are being released from the reservation back to the the |ReservationOwner|
+    /// where |owner_object_id| is the owner under the root object store associated with the
+    /// reservation.
+    fn release_reservation(&self, owner_object_id: Option<u64>, amount: u64);
 }
 
 /// A reservation guarantees that when it comes time to actually allocate, it will not fail due to
 /// lack of space.  Sub-reservations (a.k.a. holds) are possible which effectively allows part of a
 /// reservation to be set aside until it's time to commit.  Reservations do offer some
 /// thread-safety, but some responsibility is born by the caller: e.g. calling `forget` and
-/// `reserve` at the same time from different threads is unsafe.
+/// `reserve` at the same time from different threads is unsafe. Reservations are have an
+/// |owner_object_id| which associates it with an object under the root object store that the
+/// reservation is accounted against.
 pub struct ReservationImpl<T: Borrow<U>, U: ReservationOwner + ?Sized> {
     owner: T,
+    owner_object_id: Option<u64>,
     inner: Mutex<ReservationInner>,
     phantom: PhantomData<U>,
 }
@@ -163,12 +170,17 @@ impl<T: Borrow<U>, U: ReservationOwner + ?Sized> std::fmt::Debug for Reservation
 }
 
 impl<T: Borrow<U> + Clone + Send + Sync, U: ReservationOwner + ?Sized> ReservationImpl<T, U> {
-    pub fn new(owner: T, amount: u64) -> Self {
+    pub fn new(owner: T, owner_object_id: Option<u64>, amount: u64) -> Self {
         Self {
             owner,
+            owner_object_id,
             inner: Mutex::new(ReservationInner { amount, reserved: 0 }),
             phantom: PhantomData,
         }
+    }
+
+    pub fn owner_object_id(&self) -> Option<u64> {
+        self.owner_object_id
     }
 
     /// Returns the total amount of the reservation, not accounting for anything that might be held.
@@ -211,7 +223,7 @@ impl<T: Borrow<U> + Clone + Send + Sync, U: ReservationOwner + ?Sized> Reservati
         let mut inner = self.inner.lock().unwrap();
         let taken = std::cmp::min(amount, inner.amount - inner.reserved);
         inner.reserved += taken;
-        ReservationImpl::new(self, taken)
+        ReservationImpl::new(self, self.owner_object_id, taken)
     }
 
     /// Reserves *exactly* amount if possible.
@@ -221,7 +233,7 @@ impl<T: Borrow<U> + Clone + Send + Sync, U: ReservationOwner + ?Sized> Reservati
             None
         } else {
             inner.reserved += amount;
-            Some(ReservationImpl::new(self, amount))
+            Some(ReservationImpl::new(self, self.owner_object_id, amount))
         }
     }
 
@@ -237,12 +249,12 @@ impl<T: Borrow<U> + Clone + Send + Sync, U: ReservationOwner + ?Sized> Reservati
     pub fn take(&self) -> Self {
         let mut inner = self.inner.lock().unwrap();
         assert_eq!(inner.reserved, 0);
-        Self::new(self.owner.clone(), std::mem::take(&mut inner.amount))
+        Self::new(self.owner.clone(), self.owner_object_id, std::mem::take(&mut inner.amount))
     }
 
     /// Returns some of the reservation.
     pub fn give_back(&self, amount: u64) {
-        self.owner.borrow().release_reservation(amount);
+        self.owner.borrow().release_reservation(self.owner_object_id, amount);
         let mut inner = self.inner.lock().unwrap();
         inner.amount -= amount;
         assert!(inner.reserved <= inner.amount);
@@ -254,6 +266,7 @@ impl<T: Borrow<U> + Clone + Send + Sync, U: ReservationOwner + ?Sized> Reservati
         other: &ReservationImpl<V, W>,
         amount: u64,
     ) {
+        assert_eq!(self.owner_object_id, other.owner_object_id());
         self.inner.lock().unwrap().amount -= amount;
         other.add(amount);
     }
@@ -263,8 +276,11 @@ impl<T: Borrow<U>, U: ReservationOwner + ?Sized> Drop for ReservationImpl<T, U> 
     fn drop(&mut self) {
         let inner = self.inner.get_mut().unwrap();
         assert_eq!(inner.reserved, 0);
+        let owner_object_id = self.owner_object_id;
         if inner.amount > 0 {
-            self.owner.borrow().release_reservation(std::mem::take(&mut inner.amount));
+            self.owner
+                .borrow()
+                .release_reservation(owner_object_id, std::mem::take(&mut inner.amount));
         }
     }
 }
@@ -272,8 +288,11 @@ impl<T: Borrow<U>, U: ReservationOwner + ?Sized> Drop for ReservationImpl<T, U> 
 impl<T: Borrow<U> + Send + Sync, U: ReservationOwner + ?Sized> ReservationOwner
     for ReservationImpl<T, U>
 {
-    fn release_reservation(&self, amount: u64) {
+    fn release_reservation(&self, owner_object_id: Option<u64>, amount: u64) {
+        // Sub-reservations should belong to the same owner (or lack thereof).
+        assert_eq!(owner_object_id, self.owner_object_id);
         let mut inner = self.inner.lock().unwrap();
+        assert!(inner.reserved >= amount, "{} >= {}", inner.reserved, amount);
         inner.reserved -= amount;
     }
 }
@@ -407,6 +426,50 @@ pub struct SimpleAllocator {
     stats: SimpleAllocatorStats,
 }
 
+/// Tracks the different stages of byte allocations for an individual owner.
+#[derive(Debug, Default, PartialEq)]
+struct ByteTracking {
+    /// This value is the up-to-date count of the number of allocated bytes per owner_object_id
+    /// whereas the value in `Info::allocated_bytes` is the value as it was when we last flushed.
+    /// This is i64 because it can be negative during replay.
+    allocated_bytes: i64,
+    /// This value is the number of bytes allocated to uncommitted allocations.
+    uncommitted_allocated_bytes: u64,
+    /// This value is the number of bytes allocated to reservations.
+    reserved_bytes: u64,
+    /// Committed deallocations that we cannot use until they are flushed to the device.  Each entry
+    /// in this list is the log file offset at which it was committed and an array of deallocations
+    /// that occurred at that time.
+    committed_deallocated_bytes: u64,
+}
+
+impl ByteTracking {
+    // Returns the total number of bytes that are taken either from reservations, allocations or
+    // uncommitted allocations.
+    fn used_bytes(&self) -> u64 {
+        self.allocated_bytes as u64 + self.uncommitted_allocated_bytes + self.reserved_bytes
+    }
+
+    // Returns the amount that is not available to be allocated, which includes actually allocated
+    // bytes, bytes that have been allocated for a transaction but the transaction hasn't committed
+    // yet, and bytes that have been deallocated, but the device hasn't been flushed yet so we can't
+    // reuse those bytes yet.
+    fn unavailable_bytes(&self) -> u64 {
+        self.allocated_bytes as u64
+            + self.uncommitted_allocated_bytes
+            + self.committed_deallocated_bytes
+    }
+}
+
+struct CommittedDeallocation {
+    // The offset at which this deallocation was committed.
+    log_file_offset: u64,
+    // The device range being deallocated.
+    range: Range<u64>,
+    // The owning object id which originally allocated it.
+    owner_object_id: u64,
+}
+
 struct Inner {
     info: AllocatorInfo,
     // The allocator can only be opened if there have been no allocations and it has not already
@@ -417,20 +480,14 @@ struct Inner {
     // array of dropped_allocations and update reserved_allocations the next time we try to
     // allocate.
     dropped_allocations: Vec<AllocatorItem>,
-    // This value is the up-to-date count of the number of allocated bytes per owner_object_id
-    // whereas the value in `info` is the value as it was when we last flushed.
-    // This is i64 because it can be negative during replay.
-    allocated_bytes: BTreeMap<u64, i64>,
-    // This value is the number of bytes allocated to uncommitted allocations.
-    uncommitted_allocated_bytes: u64,
-    // This value is the number of bytes allocated to reservations.
-    reserved_bytes: u64,
-    // Committed deallocations that we cannot use until they are flushed to the device.  Each entry
-    // in this list is the log file offset at which it was committed and an array of deallocations
-    // that occurred at that time.
-    committed_deallocated: VecDeque<(u64, Range<u64>)>,
-    // The total number of committed deallocated bytes.
-    committed_deallocated_bytes: u64,
+    // The per-owner counters for bytes at various stages of the data life-cycle. From initial
+    // reservation through until the bytes are unallocated and eventually uncommitted.
+    owner_bytes: BTreeMap<u64, ByteTracking>,
+    // This value is the number of bytes allocated to reservations but not tracked as part of a
+    // particular volume.
+    unattributed_reserved_bytes: u64,
+    // Committed deallocations that we cannot use until they are flushed to the device.
+    committed_deallocated: VecDeque<CommittedDeallocation>,
     // A map of of |owner_object_id| to log offset and bytes allocated.
     // Once the journal has been flushed beyond 'log_offset', we replace entries here with
     // an entry in AllocatorInfo to have all iterators ignore owner_object_id. That entry is
@@ -439,23 +496,84 @@ struct Inner {
 }
 
 impl Inner {
+    fn allocated_bytes(&self) -> i64 {
+        self.owner_bytes.values().map(|x| &x.allocated_bytes).sum()
+    }
+
+    fn uncommitted_allocated_bytes(&self) -> u64 {
+        self.owner_bytes.values().map(|x| &x.uncommitted_allocated_bytes).sum()
+    }
+
+    fn reserved_bytes(&self) -> u64 {
+        self.owner_bytes.values().map(|x| &x.reserved_bytes).sum::<u64>()
+            + self.unattributed_reserved_bytes
+    }
+
+    fn owner_id_limit_bytes(&self, owner_object_id: u64) -> u64 {
+        match self.info.limit_bytes.get(&owner_object_id) {
+            Some(v) => *v,
+            None => u64::MAX,
+        }
+    }
+
+    fn owner_id_bytes_left(&self, owner_object_id: u64) -> u64 {
+        let limit = self.owner_id_limit_bytes(owner_object_id);
+        let used = match self.owner_bytes.get(&owner_object_id) {
+            Some(b) => b.used_bytes(),
+            None => 0,
+        };
+        if limit > used {
+            limit - used
+        } else {
+            0
+        }
+    }
+
     // Returns the amount that is not available to be allocated, which includes actually allocated
     // bytes, bytes that have been allocated for a transaction but the transaction hasn't committed
     // yet, and bytes that have been deallocated, but the device hasn't been flushed yet so we can't
     // reuse those bytes yet.
     fn unavailable_bytes(&self) -> u64 {
-        self.allocated_bytes.values().sum::<i64>() as u64
-            + self.uncommitted_allocated_bytes
-            + self.committed_deallocated_bytes
+        self.owner_bytes.values().map(|x| x.unavailable_bytes()).sum::<u64>()
             + self.committed_marked_for_deletion.values().map(|(_, x)| x).sum::<u64>()
     }
 
     // Returns the total number of bytes that are taken either from reservations, allocations or
     // uncommitted allocations.
-    fn taken_bytes(&self) -> u64 {
-        self.allocated_bytes.values().sum::<i64>() as u64
-            + self.uncommitted_allocated_bytes
-            + self.reserved_bytes
+    fn used_bytes(&self) -> u64 {
+        self.owner_bytes.values().map(|x| x.used_bytes()).sum::<u64>()
+            + self.unattributed_reserved_bytes
+    }
+
+    fn add_reservation(&mut self, owner_object_id: Option<u64>, amount: u64) {
+        match owner_object_id {
+            Some(owner) => self.owner_bytes.entry(owner).or_default().reserved_bytes += amount,
+            None => self.unattributed_reserved_bytes += amount,
+        };
+    }
+
+    fn remove_reservation(&mut self, owner_object_id: Option<u64>, amount: u64) {
+        match owner_object_id {
+            Some(owner) => {
+                let owner_entry = self.owner_bytes.entry(owner).or_default();
+                assert!(
+                    owner_entry.reserved_bytes >= amount,
+                    "{} >= {}",
+                    owner_entry.reserved_bytes,
+                    amount
+                );
+                owner_entry.reserved_bytes -= amount;
+            }
+            None => {
+                assert!(
+                    self.unattributed_reserved_bytes >= amount,
+                    "{} >= {}",
+                    self.unattributed_reserved_bytes,
+                    amount
+                );
+                self.unattributed_reserved_bytes -= amount
+            }
+        };
     }
 }
 
@@ -474,11 +592,9 @@ impl SimpleAllocator {
                 info: AllocatorInfo::default(),
                 opened: false,
                 dropped_allocations: Vec::new(),
-                allocated_bytes: BTreeMap::new(),
-                uncommitted_allocated_bytes: 0,
-                reserved_bytes: 0,
+                owner_bytes: BTreeMap::new(),
+                unattributed_reserved_bytes: 0,
                 committed_deallocated: VecDeque::new(),
-                committed_deallocated_bytes: 0,
                 committed_marked_for_deletion: BTreeMap::new(),
             }),
             allocation_mutex: futures::lock::Mutex::new(()),
@@ -573,8 +689,8 @@ impl SimpleAllocator {
                     let amount: i64 = (*bytes).try_into().map_err(|_| {
                         anyhow!(FxfsError::Inconsistent).context("Allocated bytes inconsistent")
                     })?;
-                    let entry = inner.allocated_bytes.entry(*owner_object_id).or_insert(0);
-                    match entry.checked_add(amount) {
+                    let entry = inner.owner_bytes.entry(*owner_object_id).or_default();
+                    match entry.allocated_bytes.checked_add(amount) {
                         None => {
                             bail!(anyhow!(FxfsError::Inconsistent)
                                 .context("Allocated bytes overflow"));
@@ -584,7 +700,7 @@ impl SimpleAllocator {
                                 .context("Allocated bytes inconsistent"));
                         }
                         Some(value) => {
-                            *entry = value;
+                            entry.allocated_bytes = value;
                         }
                     };
                 }
@@ -626,14 +742,27 @@ impl SimpleAllocator {
         // allocation requests.
         self.inner.lock().unwrap().unavailable_bytes() >= self.device_size
     }
+
+    // TODO(fxbug.dev/107753): Privatize this method, it allows back doors to going over quota.
+    /// Updates the accounting to track that a byte reservation has been moved out of an owner to
+    /// the unattributed pool.
+    pub fn disown_reservation(&self, old_owner_object_id: Option<u64>, amount: u64) {
+        if old_owner_object_id.is_none() || amount == 0 {
+            return;
+        }
+        // These 2 mutations should behave as though they're a single atomic mutation.
+        let mut inner = self.inner.lock().unwrap();
+        inner.remove_reservation(old_owner_object_id, amount);
+        inner.add_reservation(None, amount);
+    }
 }
 
 impl Drop for SimpleAllocator {
     fn drop(&mut self) {
         let inner = self.inner.lock().unwrap();
         // Uncommitted and reserved should be released back using RAII, so they should be zero.
-        assert_eq!(inner.uncommitted_allocated_bytes, 0);
-        assert_eq!(inner.reserved_bytes, 0);
+        assert_eq!(inner.uncommitted_allocated_bytes(), 0);
+        assert_eq!(inner.reserved_bytes(), 0);
     }
 }
 
@@ -659,19 +788,28 @@ impl Allocator for SimpleAllocator {
 
         // Make sure we have space reserved before we try and find the space.
         let reservation = if let Some(reservation) = transaction.allocator_reservation {
+            // The reservation, if it has an owner, should not be different than the allocating
+            // owner.
+            assert_eq!(
+                owner_object_id,
+                reservation.owner_object_id().unwrap_or(owner_object_id),
+                "The reservation should either have no owner or the same owner as the allocation."
+            );
             let r = reservation.reserve_at_most(len);
             len = r.amount();
             Left(r)
         } else {
             let mut inner = self.inner.lock().unwrap();
             assert!(inner.opened);
+            // Do not exceed the limit for the owner or the device.
+            let device_used = inner.used_bytes();
+            let owner_bytes_left = inner.owner_id_bytes_left(owner_object_id);
             // We must take care not to use up space that might be reserved.
-            len = round_down(
-                std::cmp::min(len, self.device_size - inner.taken_bytes()),
-                self.block_size,
-            );
-            inner.reserved_bytes += len;
-            Right(ReservationImpl::<_, Self>::new(self, len))
+            let limit = std::cmp::min(owner_bytes_left, self.device_size - device_used);
+            len = round_down(std::cmp::min(len, limit), self.block_size);
+            let mut owner_entry = inner.owner_bytes.entry(owner_object_id).or_default();
+            owner_entry.reserved_bytes += len;
+            Right(ReservationImpl::<_, Self>::new(self, Some(owner_object_id), len))
         };
 
         ensure!(len > 0, FxfsError::NoSpace);
@@ -751,12 +889,25 @@ impl Allocator for SimpleAllocator {
         debug!(device_range = ?result, "allocate");
 
         let len = result.length().unwrap();
-        reservation.either(|l| l.forget_some(len), |r| r.forget_some(len));
+        let reservation_owner = reservation.either(
+            // Left means we got an outside reservation.
+            |l| {
+                l.forget_some(len);
+                l.owner_object_id()
+            },
+            |r| {
+                r.forget_some(len);
+                r.owner_object_id()
+            },
+        );
 
         {
             let mut inner = self.inner.lock().unwrap();
-            inner.reserved_bytes -= len;
-            inner.uncommitted_allocated_bytes += len;
+            let mut owner_entry = inner.owner_bytes.entry(owner_object_id).or_default();
+            owner_entry.uncommitted_allocated_bytes += len;
+            // If the reservation has an owner, ensure they are the same.
+            assert_eq!(owner_object_id, reservation_owner.unwrap_or(owner_object_id));
+            inner.remove_reservation(reservation_owner, len);
         }
 
         let item = AllocatorItem::new(
@@ -782,16 +933,20 @@ impl Allocator for SimpleAllocator {
             let len = device_range.length().map_err(|_| FxfsError::InvalidArgs)?;
 
             let mut inner = self.inner.lock().unwrap();
+            let device_used = inner.used_bytes();
+            let owner_id_bytes_left = inner.owner_id_bytes_left(owner_object_id);
+            let mut owner_entry = inner.owner_bytes.entry(owner_object_id).or_default();
             ensure!(
                 device_range.end <= self.device_size
-                    && self.device_size - inner.taken_bytes() >= len,
+                    && self.device_size - device_used >= len
+                    && owner_id_bytes_left >= len,
                 FxfsError::NoSpace
             );
             if let Some(reservation) = &mut transaction.allocator_reservation {
                 // The transaction takes ownership of this hold.
                 reservation.reserve(len).ok_or(FxfsError::NoSpace)?.forget();
             }
-            inner.uncommitted_allocated_bytes += len;
+            owner_entry.uncommitted_allocated_bytes += len;
         }
         let item = AllocatorItem::new(
             AllocatorKey { device_range: device_range.clone() },
@@ -908,16 +1063,14 @@ impl Allocator for SimpleAllocator {
     }
 
     async fn did_flush_device(&self, flush_log_offset: u64) {
-        let mut total = 0;
-
         // First take out the deallocations that we now know to be flushed.  The list is maintained
         // in order, so we can stop on the first entry that we find that should not be unreserved
         // yet.
         #[allow(clippy::never_loop)] // Loop used as a for {} else {}.
         let deallocs = 'deallocs_outer: loop {
             let mut inner = self.inner.lock().unwrap();
-            for (index, (dealloc_log_offset, _)) in inner.committed_deallocated.iter().enumerate() {
-                if *dealloc_log_offset >= flush_log_offset {
+            for (index, dealloc) in inner.committed_deallocated.iter().enumerate() {
+                if dealloc.log_file_offset >= flush_log_offset {
                     let mut deallocs = inner.committed_deallocated.split_off(index);
                     // Swap because we want the opposite of what split_off does.
                     std::mem::swap(&mut inner.committed_deallocated, &mut deallocs);
@@ -928,16 +1081,23 @@ impl Allocator for SimpleAllocator {
         };
         // Now we can erase those elements from reserved_allocations (whilst we're not holding the
         // lock on inner).
-        for (_, device_range) in deallocs {
-            total += device_range.length().unwrap();
-            self.reserved_allocations.erase(&AllocatorKey { device_range }).await;
+        let mut totals = BTreeMap::<u64, u64>::new();
+        for dealloc in deallocs {
+            *(totals.entry(dealloc.owner_object_id).or_default()) +=
+                dealloc.range.length().unwrap();
+            self.reserved_allocations.erase(&AllocatorKey { device_range: dealloc.range }).await;
         }
 
         let mut inner = self.inner.lock().unwrap();
         // This *must* come after we've removed the records from reserved reservations because the
         // allocator uses this value to decide whether or not a device-flush is required and it must
         // be possible to find free space if it thinks no device-flush is required.
-        inner.committed_deallocated_bytes -= total;
+        for (owner_object_id, total) in totals {
+            match inner.owner_bytes.get_mut(&owner_object_id) {
+                Some(counters) => counters.committed_deallocated_bytes -= total,
+                None => panic!("Failed to decrement for unknown owner: {}", owner_object_id),
+            }
+        }
 
         // We can now reuse any marked_for_deletion extents that have been committed to journal.
         let committed_marked_for_deletion =
@@ -951,44 +1111,68 @@ impl Allocator for SimpleAllocator {
         }
     }
 
-    fn reserve(self: Arc<Self>, amount: u64) -> Option<Reservation> {
+    fn reserve(self: Arc<Self>, owner_object_id: Option<u64>, amount: u64) -> Option<Reservation> {
         {
             let mut inner = self.inner.lock().unwrap();
-            if self.device_size - inner.taken_bytes() < amount {
+
+            let limit = match owner_object_id {
+                Some(id) => std::cmp::min(
+                    inner.owner_id_bytes_left(id),
+                    self.device_size - inner.used_bytes(),
+                ),
+                None => self.device_size - inner.used_bytes(),
+            };
+            if limit < amount {
                 return None;
             }
-            inner.reserved_bytes += amount;
+            inner.add_reservation(owner_object_id, amount);
         }
-        Some(Reservation::new(self, amount))
+        Some(Reservation::new(self, owner_object_id, amount))
     }
 
-    fn reserve_at_most(self: Arc<Self>, mut amount: u64) -> Reservation {
+    fn reserve_at_most(
+        self: Arc<Self>,
+        owner_object_id: Option<u64>,
+        mut amount: u64,
+    ) -> Reservation {
         {
             let mut inner = self.inner.lock().unwrap();
-            amount = std::cmp::min(self.device_size - inner.taken_bytes(), amount);
-            inner.reserved_bytes += amount;
+            let limit = match owner_object_id {
+                Some(id) => std::cmp::min(
+                    inner.owner_id_bytes_left(id),
+                    self.device_size - inner.used_bytes(),
+                ),
+                None => self.device_size - inner.used_bytes(),
+            };
+            amount = std::cmp::min(limit, amount);
+            inner.add_reservation(owner_object_id, amount);
         }
-        Reservation::new(self, amount)
+        Reservation::new(self, owner_object_id, amount)
     }
 
     fn get_allocated_bytes(&self) -> u64 {
-        self.inner.lock().unwrap().allocated_bytes.values().sum::<i64>() as u64
+        self.inner.lock().unwrap().allocated_bytes() as u64
     }
 
     fn get_owner_allocated_bytes(&self) -> BTreeMap<u64, i64> {
-        self.inner.lock().unwrap().allocated_bytes.iter().map(|(k, v)| (*k, *v)).collect()
+        self.inner
+            .lock()
+            .unwrap()
+            .owner_bytes
+            .iter()
+            .map(|(k, v)| (*k, v.allocated_bytes))
+            .collect()
     }
 
     fn get_used_bytes(&self) -> u64 {
         let inner = self.inner.lock().unwrap();
-        inner.allocated_bytes.values().sum::<i64>() as u64 + inner.reserved_bytes
+        inner.used_bytes()
     }
 }
 
 impl ReservationOwner for SimpleAllocator {
-    fn release_reservation(&self, amount: u64) {
-        let mut inner = self.inner.lock().unwrap();
-        inner.reserved_bytes -= amount;
+    fn release_reservation(&self, owner_object_id: Option<u64>, amount: u64) {
+        self.inner.lock().unwrap().remove_reservation(owner_object_id, amount);
     }
 }
 
@@ -1003,17 +1187,22 @@ impl JournalingObject for SimpleAllocator {
         match mutation {
             Mutation::Allocator(AllocatorMutation::MarkForDeletion(owner_object_id)) => {
                 let mut inner = self.inner.lock().unwrap();
-                if let Some(bytes) = inner.allocated_bytes.remove(&owner_object_id) {
+                let mut old_allocated_bytes: Option<i64> = None;
+                if let Some(entry) = inner.owner_bytes.get_mut(&owner_object_id) {
                     // If live, we haven't serialized this yet so we track the commitment in RAM.
                     // If we're replaying the journal, we know this is already on storage and
                     // MUST happen so we can update the StoreInfo (to be written at next allocator
                     // flush time).
+                    old_allocated_bytes = Some(entry.allocated_bytes);
+                    entry.allocated_bytes = 0;
+                }
+                if let Some(old_bytes) = old_allocated_bytes {
                     if context.mode.is_replay() {
                         inner.info.marked_for_deletion.insert(owner_object_id);
                     } else {
                         inner.committed_marked_for_deletion.insert(
                             owner_object_id,
-                            (context.checkpoint.file_offset, bytes as u64),
+                            (context.checkpoint.file_offset, old_bytes as u64),
                         );
                     }
                 }
@@ -1035,10 +1224,10 @@ impl JournalingObject for SimpleAllocator {
                     self.reserved_allocations.erase(&item.key).await;
                 }
                 let mut inner = self.inner.lock().unwrap();
-                let entry = inner.allocated_bytes.entry(owner_object_id).or_insert(0);
-                *entry = entry.saturating_add(len as i64);
+                let entry = inner.owner_bytes.entry(owner_object_id).or_default();
+                entry.allocated_bytes = entry.allocated_bytes.saturating_add(len as i64);
                 if let ApplyMode::Live(transaction) = context.mode {
-                    inner.uncommitted_allocated_bytes -= len;
+                    entry.uncommitted_allocated_bytes -= len;
                     if let Some(reservation) = transaction.allocator_reservation {
                         reservation.commit(len);
                     }
@@ -1069,22 +1258,26 @@ impl JournalingObject for SimpleAllocator {
 
                 {
                     let mut inner = self.inner.lock().unwrap();
-                    let entry = inner.allocated_bytes.entry(owner_object_id).or_insert(0);
-                    *entry = entry.saturating_sub(len as i64);
+                    {
+                        let mut entry = inner.owner_bytes.entry(owner_object_id).or_default();
+                        entry.allocated_bytes = entry.allocated_bytes.saturating_sub(len as i64);
+                        if context.mode.is_live() {
+                            entry.committed_deallocated_bytes += len;
+                        }
+                    }
                     if context.mode.is_live() {
-                        inner.committed_deallocated.push_back((
-                            context.checkpoint.file_offset,
-                            item.key.device_range.clone(),
-                        ));
-                        inner.committed_deallocated_bytes +=
-                            item.key.device_range.length().unwrap();
+                        inner.committed_deallocated.push_back(CommittedDeallocation {
+                            log_file_offset: context.checkpoint.file_offset,
+                            range: item.key.device_range.clone(),
+                            owner_object_id,
+                        });
                     }
                     if let ApplyMode::Live(Transaction {
                         allocator_reservation: Some(reservation),
                         ..
                     }) = context.mode
                     {
-                        inner.reserved_bytes += len;
+                        inner.add_reservation(reservation.owner_object_id(), len);
                         reservation.add(len);
                     }
                 }
@@ -1111,7 +1304,7 @@ impl JournalingObject for SimpleAllocator {
                 // info file when flush completes.
                 let mut inner = self.inner.lock().unwrap();
                 let allocated_bytes =
-                    inner.allocated_bytes.iter().map(|(k, v)| (*k, *v as u64)).collect();
+                    inner.owner_bytes.iter().map(|(k, v)| (*k, v.allocated_bytes as u64)).collect();
                 inner.info.allocated_bytes = allocated_bytes;
             }
             Mutation::EndFlush => {
@@ -1126,7 +1319,8 @@ impl JournalingObject for SimpleAllocator {
                     let allocated_bytes: Vec<(u64, i64)> =
                         inner.info.allocated_bytes.iter().map(|(k, v)| (*k, *v as i64)).collect();
                     for (k, v) in allocated_bytes {
-                        *inner.allocated_bytes.entry(k).or_insert(0) -= v as i64;
+                        let mut entry = inner.owner_bytes.entry(k).or_default();
+                        entry.allocated_bytes -= v as i64;
                     }
                 }
             }
@@ -1138,12 +1332,17 @@ impl JournalingObject for SimpleAllocator {
     fn drop_mutation(&self, mutation: Mutation, transaction: &Transaction<'_>) {
         match mutation {
             Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
-                let mut inner = self.inner.lock().unwrap();
                 let len = device_range.length().unwrap();
-                inner.uncommitted_allocated_bytes -= len;
+                let mut inner = self.inner.lock().unwrap();
+                inner
+                    .owner_bytes
+                    .entry(owner_object_id)
+                    .or_default()
+                    .uncommitted_allocated_bytes -= len;
                 if let Some(reservation) = transaction.allocator_reservation {
-                    reservation.release_reservation(len);
-                    inner.reserved_bytes += len;
+                    let res_owner = reservation.owner_object_id();
+                    inner.add_reservation(res_owner, len);
+                    reservation.release_reservation(res_owner, len);
                 }
                 let item = AllocatorItem::new(
                     AllocatorKey { device_range },

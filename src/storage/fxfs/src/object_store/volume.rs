@@ -304,8 +304,12 @@ mod tests {
             root_volume.delete_volume("vol").await.expect("delete_volume");
             // Confirm data allocation is gone.
             assert_eq!(
-                filesystem.allocator().get_owner_allocated_bytes().get(&store_object_id),
-                None
+                filesystem
+                    .allocator()
+                    .get_owner_allocated_bytes()
+                    .get(&store_object_id)
+                    .unwrap_or(&0i64),
+                &0i64,
             );
             // Confirm volume entry is gone.
             root_volume

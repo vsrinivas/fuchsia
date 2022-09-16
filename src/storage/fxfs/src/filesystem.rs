@@ -10,7 +10,7 @@ use {
         log::*,
         metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_store::{
-            allocator::{Allocator, Hold, Reservation, ReservationOwner, SimpleAllocator},
+            allocator::{Allocator, Hold, Reservation, SimpleAllocator},
             directory::Directory,
             graveyard::Graveyard,
             journal::{super_block::SuperBlock, Journal, JournalCheckpoint, JournalOptions},
@@ -422,7 +422,7 @@ impl FxFilesystem {
                 None => {
                     let reservation = self
                         .allocator()
-                        .reserve(TRANSACTION_METADATA_MAX_AMOUNT)
+                        .reserve(None, TRANSACTION_METADATA_MAX_AMOUNT)
                         .ok_or(FxfsError::NoSpace)?;
                     MetadataReservation::Reservation(reservation)
                 }
@@ -530,11 +530,13 @@ impl TransactionHandler for FxFilesystem {
 
     fn drop_transaction(&self, transaction: &mut Transaction<'_>) {
         // If we placed a hold for metadata space, return it now.
-        if let MetadataReservation::Hold(hold_amount) = &mut transaction.metadata_reservation {
-            transaction
+        if let MetadataReservation::Hold(hold_amount) = &transaction.metadata_reservation {
+            let hold = transaction
                 .allocator_reservation
                 .unwrap()
-                .release_reservation(std::mem::take(hold_amount));
+                .reserve(0)
+                .expect("Zero should always succeed.");
+            hold.add(*hold_amount);
         }
         self.objects.drop_transaction(transaction);
         self.lock_manager.drop_transaction(transaction);

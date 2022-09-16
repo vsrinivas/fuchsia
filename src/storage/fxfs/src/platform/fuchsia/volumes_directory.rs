@@ -432,10 +432,10 @@ mod tests {
             platform::fuchsia::testing::open_file_checked,
             platform::fuchsia::volumes_directory::VolumesDirectory,
         },
-        fidl::endpoints::create_request_stream,
-        fidl::{encoding::Decodable, endpoints::ServerEnd},
+        fidl::encoding::Decodable,
+        fidl::endpoints::{create_request_stream, ServerEnd},
         fidl_fuchsia_fs::AdminMarker,
-        fidl_fuchsia_fxfs::{KeyPurpose, MountOptions, VolumeMarker},
+        fidl_fuchsia_fxfs::{KeyPurpose, MountOptions, VolumeMarker, VolumeProxy},
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_component::client::connect_to_protocol_at_dir_svc,
         fuchsia_zircon::Status,
@@ -905,5 +905,228 @@ mod tests {
         fsck(&filesystem, None).await.expect("Fsck");
         let limits = (filesystem.allocator() as Arc<SimpleAllocator>).owner_byte_limits();
         assert_eq!(limits.len(), 0);
+    }
+
+    struct VolumeInfo {
+        volume_proxy: VolumeProxy,
+        file_proxy: fio::FileProxy,
+    }
+
+    impl VolumeInfo {
+        async fn new(volumes_directory: &Arc<VolumesDirectory>, name: &'static str) -> Self {
+            let volume = volumes_directory
+                .create_volume(name, None)
+                .await
+                .expect("create unencrypted volume failed");
+
+            let (volume_dir_proxy, dir_server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                    .expect("Create dir proxy to succeed");
+            volumes_directory
+                .serve_volume(&volume, dir_server_end)
+                .await
+                .expect("serve_volume failed");
+
+            let (volume_proxy, volume_server_end) =
+                fidl::endpoints::create_proxy::<VolumeMarker>().expect("Create proxy to succeed");
+            volumes_directory.directory_node().clone().open(
+                ExecutionScope::new(),
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                0,
+                Path::validate_and_split(name).unwrap(),
+                volume_server_end.into_channel().into(),
+            );
+
+            let (root_proxy, root_server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+                    .expect("Create dir proxy to succeed");
+            volume_dir_proxy
+                .open(
+                    fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+                    fio::MODE_TYPE_DIRECTORY,
+                    "root",
+                    ServerEnd::new(root_server_end.into_channel()),
+                )
+                .expect("Failed to open volume root");
+
+            let file_proxy = open_file_checked(
+                &root_proxy,
+                fio::OpenFlags::CREATE
+                    | fio::OpenFlags::RIGHT_READABLE
+                    | fio::OpenFlags::RIGHT_WRITABLE,
+                fio::MODE_TYPE_FILE,
+                "foo",
+            )
+            .await;
+            VolumeInfo { volume_proxy, file_proxy }
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_limit_bytes() {
+        const BYTES_LIMIT: u64 = 262_144; // 256KiB
+        const BLOCK_SIZE: usize = 8192; // 8KiB
+        let device = DeviceHolder::new(FakeDevice::new(BLOCK_SIZE.try_into().unwrap(), 512));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
+        let volumes_directory =
+            VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
+
+        let vol = VolumeInfo::new(&volumes_directory, "foo").await;
+        vol.volume_proxy.set_limit(BYTES_LIMIT).await.unwrap().expect("To set limits");
+
+        let zeros = vec![0u8; BLOCK_SIZE];
+        // First write should succeed.
+        assert_eq!(
+            <u64 as TryInto<usize>>::try_into(
+                vol.file_proxy
+                    .write(&zeros)
+                    .await
+                    .expect("Failed Write message")
+                    .expect("Failed write")
+            )
+            .unwrap(),
+            BLOCK_SIZE
+        );
+        // Likely to run out of space before writing the full limit due to overheads.
+        for _ in (BLOCK_SIZE..BYTES_LIMIT as usize).step_by(BLOCK_SIZE) {
+            match vol.file_proxy.write(&zeros).await.expect("Failed Write message") {
+                Err(_) => break,
+                Ok(b) if b < BLOCK_SIZE.try_into().unwrap() => break,
+                _ => (),
+            };
+        }
+
+        // Any further writes should fail with out of space.
+        assert_eq!(
+            vol.file_proxy
+                .write(&zeros)
+                .await
+                .expect("Failed write message")
+                .expect_err("Write should have been limited"),
+            Status::NO_SPACE.into_raw()
+        );
+
+        // Double the limit and try again. We should have write space again.
+        vol.volume_proxy.set_limit(BYTES_LIMIT * 2).await.unwrap().expect("To set limits");
+        assert_eq!(
+            <u64 as TryInto<usize>>::try_into(
+                vol.file_proxy
+                    .write(&zeros)
+                    .await
+                    .expect("Failed Write message")
+                    .expect("Failed write")
+            )
+            .unwrap(),
+            BLOCK_SIZE
+        );
+
+        vol.file_proxy.close().await.unwrap().expect("Failed to close file");
+        volumes_directory.terminate().await;
+        std::mem::drop(volumes_directory);
+        filesystem.close().await.expect("close filesystem failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_limit_bytes_two_hit_device_limit() {
+        const BYTES_LIMIT: u64 = 3_145_728; // 3MiB
+        const BLOCK_SIZE: usize = 8192; // 8KiB
+        const BLOCK_COUNT: u32 = 512;
+        let device =
+            DeviceHolder::new(FakeDevice::new(BLOCK_SIZE.try_into().unwrap(), BLOCK_COUNT));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
+        let volumes_directory =
+            VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
+
+        let a = VolumeInfo::new(&volumes_directory, "foo").await;
+        let b = VolumeInfo::new(&volumes_directory, "bar").await;
+        a.volume_proxy.set_limit(BYTES_LIMIT).await.unwrap().expect("To set limits");
+        b.volume_proxy.set_limit(BYTES_LIMIT).await.unwrap().expect("To set limits");
+        let mut a_written: u64 = 0;
+        let mut b_written: u64 = 0;
+
+        // Write chunks of BLOCK_SIZE.
+        let zeros = vec![0u8; BLOCK_SIZE];
+
+        // First write should succeed for both.
+        assert_eq!(
+            <u64 as TryInto<usize>>::try_into(
+                a.file_proxy
+                    .write(&zeros)
+                    .await
+                    .expect("Failed Write message")
+                    .expect("Failed write")
+            )
+            .unwrap(),
+            BLOCK_SIZE
+        );
+        a_written += BLOCK_SIZE as u64;
+        assert_eq!(
+            <u64 as TryInto<usize>>::try_into(
+                b.file_proxy
+                    .write(&zeros)
+                    .await
+                    .expect("Failed Write message")
+                    .expect("Failed write")
+            )
+            .unwrap(),
+            BLOCK_SIZE
+        );
+        b_written += BLOCK_SIZE as u64;
+
+        // Likely to run out of space before writing the full limit due to overheads.
+        for _ in (BLOCK_SIZE..BYTES_LIMIT as usize).step_by(BLOCK_SIZE) {
+            match a.file_proxy.write(&zeros).await.expect("Failed Write message") {
+                Err(_) => break,
+                Ok(bytes) => {
+                    a_written += bytes;
+                    if bytes < BLOCK_SIZE.try_into().unwrap() {
+                        break;
+                    }
+                }
+            };
+        }
+        // Any further writes should fail with out of space.
+        assert_eq!(
+            a.file_proxy
+                .write(&zeros)
+                .await
+                .expect("Failed write message")
+                .expect_err("Write should have been limited"),
+            Status::NO_SPACE.into_raw()
+        );
+
+        // Now write to the second volume. Likely to run out of space before writing the full limit
+        // due to overheads.
+        for _ in (BLOCK_SIZE..BYTES_LIMIT as usize).step_by(BLOCK_SIZE) {
+            match b.file_proxy.write(&zeros).await.expect("Failed Write message") {
+                Err(_) => break,
+                Ok(bytes) => {
+                    b_written += bytes;
+                    if bytes < BLOCK_SIZE.try_into().unwrap() {
+                        break;
+                    }
+                }
+            };
+        }
+        // Any further writes should fail with out of space.
+        assert_eq!(
+            b.file_proxy
+                .write(&zeros)
+                .await
+                .expect("Failed write message")
+                .expect_err("Write should have been limited"),
+            Status::NO_SPACE.into_raw()
+        );
+
+        // Second volume should have failed very early.
+        assert!(BLOCK_SIZE as u64 * BLOCK_COUNT as u64 - BYTES_LIMIT >= b_written);
+        // First volume should have gotten further.
+        assert!(BLOCK_SIZE as u64 * BLOCK_COUNT as u64 - BYTES_LIMIT <= a_written);
+
+        a.file_proxy.close().await.unwrap().expect("Failed to close file");
+        b.file_proxy.close().await.unwrap().expect("Failed to close file");
+        volumes_directory.terminate().await;
+        std::mem::drop(volumes_directory);
+        filesystem.close().await.expect("close filesystem failed");
     }
 }

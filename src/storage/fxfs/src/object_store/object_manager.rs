@@ -504,6 +504,18 @@ impl ObjectManager {
                     "MetadataReservation::Borrowed should be used."
                 );
                 txn_reservation.commit(txn_space);
+                if txn_reservation.owner_object_id() != reservation.owner_object_id() {
+                    assert_eq!(
+                        reservation.owner_object_id(),
+                        None,
+                        "Should not be mixing attributed owners."
+                    );
+                    inner
+                        .allocator
+                        .as_ref()
+                        .unwrap()
+                        .disown_reservation(txn_reservation.owner_object_id(), txn_space);
+                }
                 *hold_amount -= txn_space;
                 reservation.add(txn_space);
             }
@@ -602,7 +614,7 @@ impl ObjectManager {
                     .as_ref()
                     .cloned()
                     .unwrap()
-                    .reserve(inner.required_reservation() - inner.borrowed_metadata_space)
+                    .reserve(None, inner.required_reservation() - inner.borrowed_metadata_space)
                     .expect(&format!(
                         "Failed to reserve {} - {} = {} bytes",
                         inner.required_reservation(),
