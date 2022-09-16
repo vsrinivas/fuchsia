@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod lib;
+mod helpers;
 
 use {
-    crate::lib::run_test,
+    crate::helpers::run_test,
     fidl_fuchsia_test_manager::{CaseStatus, SuiteStatus},
     test_manager_test_lib::{GroupRunEventByTestCase as _, RunEvent},
 };

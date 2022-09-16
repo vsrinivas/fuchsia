@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod lib;
+mod helpers;
 
 use {
-    crate::lib::{assert_events_eq, run_test},
+    crate::helpers::{assert_events_eq, run_test},
     fidl_fuchsia_test_manager as ftest_manager,
     ftest_manager::{CaseStatus, SuiteStatus},
     maplit::hashset,

@@ -21,7 +21,7 @@ rustc_test("tests_bin") {
   ]
 
   sources = [
-    "lib.rs",
+    "helpers.rs",
     "tests.rs",
   ]
 
@@ -48,7 +48,7 @@ rustc_test("stress_tests_bin") {
   ]
 
   sources = [
-    "lib.rs",
+    "helpers.rs",
     "stress_tests.rs",
   ]
 }
