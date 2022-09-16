@@ -184,20 +184,9 @@ class OutgoingDirectory final {
     return component_outgoing_dir_.RemoveDirectoryAt(path, directory_name);
   }
 
-  // TODO(http://fxbug.dev/107155): Remove once all protocol routing is migrated to services.
-  template <typename Protocol>
-  zx::status<> AddProtocol(fidl::WireServer<Protocol>* impl,
-                           cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
-    return component_outgoing_dir_.AddProtocol(impl, name);
-  }
-
-  // TODO(http://fxbug.dev/107155): Remove once all protocol routing is migrated to services.
-  // Same as above but for natural types.
-  template <typename Protocol>
-  zx::status<> AddProtocol(fidl::Server<Protocol>* impl,
-                           cpp17::string_view name = fidl::DiscoverableProtocolName<Protocol>) {
-    return component_outgoing_dir_.AddProtocol(impl, name);
-  }
+  // Get the underlying component outgoing directory. These APIs will only support
+  // FIDL, they do not support DriverTransport.
+  component::OutgoingDirectory& component() { return component_outgoing_dir_; }
 
  private:
   template <typename T>
