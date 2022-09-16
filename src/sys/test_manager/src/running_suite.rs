@@ -612,8 +612,23 @@ async fn get_realm(
         .add_route(
             Route::new()
                 .capability(Capability::event_stream("started_v2"))
+                .capability(
+                    Capability::event_stream("started_v2")
+                        .as_("started_downscoped")
+                        .with_scope(&test_root),
+                )
                 .capability(Capability::event_stream("running_v2"))
+                .capability(
+                    Capability::event_stream("running_v2")
+                        .as_("running_downscoped")
+                        .with_scope(&test_root),
+                )
                 .capability(Capability::event_stream("stopped_v2"))
+                .capability(
+                    Capability::event_stream("stopped_v2")
+                        .as_("stopped_downscoped")
+                        .with_scope(&test_root),
+                )
                 .capability(Capability::event_stream("destroyed_v2"))
                 .capability(
                     Capability::event_stream("destroyed_v2")
@@ -621,7 +636,17 @@ async fn get_realm(
                         .with_scope(&test_root),
                 )
                 .capability(Capability::event_stream("capability_requested_v2"))
+                .capability(
+                    Capability::event_stream("capability_requested_v2")
+                        .as_("capability_requested_downscoped")
+                        .with_scope(&test_root),
+                )
                 .capability(Capability::event_stream("directory_ready_v2"))
+                .capability(
+                    Capability::event_stream("directory_ready_v2")
+                        .as_("directory_ready_downscoped")
+                        .with_scope(&test_root),
+                )
                 .from(Ref::parent())
                 .to(&test_root),
         )
