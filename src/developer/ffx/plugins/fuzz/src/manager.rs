@@ -74,11 +74,14 @@ impl<O: OutputSink> Manager<O> {
     /// Requests that the `fuzz-manager` stop a running fuzzer instance.
     ///
     /// As a result of this call, the fuzzer component will cease an ongoing workflow and exit.
-    pub async fn stop(&self, url: &Url) -> Result<()> {
+    ///
+    /// Returns whether a fuzzer was stopped.
+    pub async fn stop(&self, url: &Url) -> Result<bool> {
         let raw = self.proxy.stop(url.as_str()).await.context(fidl_name("Stop"))?;
-        match zx::Status::ok(raw) {
-            Ok(_) => Ok(()),
-            Err(e) => bail!("failed to stop fuzzer: {}", e),
+        match zx::Status::from_raw(raw) {
+            zx::Status::OK => Ok(true),
+            zx::Status::NOT_FOUND => Ok(false),
+            status => bail!("failed to stop fuzzer: {}", status),
         }
     }
 }
@@ -120,9 +123,14 @@ pub mod test_fixtures {
                         Some(create_task(serve_controller(stream, fuzzer.clone()), writer.clone()));
                 }
                 Ok(fuzz::ManagerRequest::Stop { fuzzer_url, responder }) => {
-                    fuzzer.set_url(fuzzer_url);
-                    task = None;
-                    responder.send(zx::Status::OK.into_raw())?;
+                    let running = fuzzer.url().unwrap_or(String::default());
+                    fuzzer.set_url(&fuzzer_url);
+                    if fuzzer_url == running {
+                        task = None;
+                        responder.send(zx::Status::OK.into_raw())?;
+                    } else {
+                        responder.send(zx::Status::NOT_FOUND.into_raw())?;
+                    }
                 }
                 Err(e) => bail!("error serving `Manager`: {:?}", e),
             };

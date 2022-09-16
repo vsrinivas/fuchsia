@@ -556,8 +556,12 @@ impl<R: Reader, O: OutputSink> Shell<R, O> {
         let manager = Manager::with_remote_control(&self.rc, &self.writer)
             .await
             .context("failed to connect to manager")?;
-        manager.stop(&url).await.context("manager failed to stop fuzzer")?;
-        self.writer.println(format!("Stopped."));
+        let stopped = manager.stop(&url).await.context("manager failed to stop fuzzer")?;
+        if stopped {
+            self.writer.println("Stopped.");
+        } else {
+            self.writer.println("Fuzzer is not running.");
+        }
         Ok(())
     }
 
@@ -1265,9 +1269,21 @@ mod tests {
         let mut test = Test::try_new()?;
         let mut script = ShellScript::try_new(&mut test)?;
 
-        // Cannot 'detach' when detached.
+        // Cannot 'stop' without a URL when detached.
         script.add(&mut test, "stop");
         test.output_includes("invalid command: no fuzzer attached.");
+
+        // Trying to 'stop'  a stopped fuzzer using its URL doesn't do anything.
+        script.add(&mut test, format!("stop {}", script.url()));
+        test.output_matches(format!("Stopping '{}'...", script.url()));
+        test.output_matches("Fuzzer is not running.");
+
+        // Can 'stop' a detached fuzzer using its URL.
+        script.attach(&mut test);
+        script.detach(&mut test).await;
+        script.add(&mut test, format!("stop {}", script.url()));
+        test.output_matches(format!("Stopping '{}'...", script.url()));
+        test.output_matches("Stopped.");
 
         // Can 'stop' when idle.
         script.attach(&mut test);

@@ -659,9 +659,9 @@ pub mod test_fixtures {
         }
 
         /// Sets the URL of the fuzzer.
-        pub fn set_url(&self, url: String) {
+        pub fn set_url<S: AsRef<str>>(&self, url: S) {
             let mut url_mut = self.url.borrow_mut();
-            *url_mut = Some(url);
+            *url_mut = Some(url.as_ref().to_string());
         }
 
         /// Simulates a call to `fuchsia.fuzzer.Manager/Connect` without a `fuzz-manager`.
