@@ -13,8 +13,6 @@ class HelloWorldCTS : public zxtest::Test {
   void SetUp() override {}
 };
 
-TEST_F(HelloWorldCTS, HelloCTS) {
-  ASSERT_EQ(HelloWorldUtil::get_hello_world(), "Hello, World!");
-}
+TEST_F(HelloWorldCTS, HelloCTS) { ASSERT_EQ(HelloWorldUtil::get_hello_world(), "Hello, World!"); }
 
 }  // namespace

@@ -46,7 +46,7 @@ ALLOWED_RUST_DEPS = [
 ]
 
 ALLOWED_EXPERIMENTAL_FIDL =
-    [ "//sdk/ctf/examples/experimental_fidl:fuchsia.cts.experimental" ]
+    [ "//sdk/ctf/tests/examples/experimental_fidl:fuchsia.cts.experimental" ]
 
 # All targets in these directories and their subdirectories are approved for use in CTF.
 ALLOWED_CTS_DIRS = [

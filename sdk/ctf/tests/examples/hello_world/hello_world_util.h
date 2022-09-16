@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CTS_TESTS_HELLO_WORLD_HELLO_WORLD_UTIL_H_
-#define CTS_TESTS_HELLO_WORLD_HELLO_WORLD_UTIL_H_
+#ifndef CTF_TESTS_EXAMPLES_HELLO_WORLD_HELLO_WORLD_UTIL_H_
+#define CTF_TESTS_EXAMPLES_HELLO_WORLD_HELLO_WORLD_UTIL_H_
 #include <string>
 
 namespace {
@@ -12,4 +12,4 @@ class HelloWorldUtil {
   static std::string get_hello_world() { return "Hello, World!"; }
 };
 }  // namespace
-#endif  // CTS_TESTS_HELLO_WORLD_HELLO_WORLD_UTIL_H_
+#endif  // CTF_TESTS_EXAMPLES_HELLO_WORLD_HELLO_WORLD_UTIL_H_

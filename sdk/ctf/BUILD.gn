@@ -6,13 +6,6 @@ import("//build/config/build_api_module.gni")
 import("//sdk/ctf/build/ctf.gni")
 import("//sdk/ctf/build/verify_sdk_compatibility.gni")
 
-_idk_deps = [
-  "core",
-  "core_testing",
-  "e2e_testing",
-  "modular_testing",
-]
-
 # Generates a manifest of CTF release artifacts to upload to remote storage.
 build_api_module("ctf_artifacts") {
   testonly = true
@@ -28,111 +21,95 @@ build_api_module("ctf_artifacts") {
   ]
 }
 
-generated_file("generated_test_manifest") {
+group("ctf") {
+  testonly = true
+  deps = [
+    ":host_test_manifest",
+    ":plasa_manifest",
+    ":test_manifest",
+    ":tests",
+    ":verify_idk_deps",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "build/scripts:tests",
+    "tests",
+    "tests:e2e_tests",
+  ]
+}
+
+generated_file("test_manifest") {
   testonly = true
   outputs = [ "$root_out_dir/cts/test_manifest.json" ]
   output_conversion = "json"
   data_keys = [ "test_manifest" ]
-  deps = [
-    "examples:tests",
-    "tests",
-  ]
+  deps = [ "tests" ]
 
   metadata = {
     cts_artifacts = [ "cts/test_manifest.json" ]
   }
 }
 
-generated_file("generated_host_test_manifest") {
+generated_file("host_test_manifest") {
   testonly = true
   outputs = [ "$root_out_dir/cts/host_test_manifest.json" ]
   output_conversion = "json"
   data_keys = [ "host_test_manifest" ]
-  deps = [ "examples/host_tool:tests($host_toolchain)" ]
+  deps = [ "tests/examples/host_tool:tests($host_toolchain)" ]
 
   metadata = {
     cts_artifacts = [ "cts/host_test_manifest.json" ]
   }
 }
 
-group("test_manifest") {
-  testonly = true
-  deps = [
-    ":generated_host_test_manifest",
-    ":generated_test_manifest",
-  ]
-}
-
-group("cts_no_e2e") {
-  testonly = true
-  assert_no_deps = e2e_test_libs
-
-  deps = [
-    "build/scripts:tests",
-    "examples:tests_no_e2e",
-    "tests:tests_no_e2e",
-  ]
-}
-
-group("ctf") {
-  testonly = true
-  deps = [
-    ":cts_no_e2e",
-    ":plasa",
-    ":test_manifest",
-    ":verify_idk_deps",
-    "examples:tests",
-    "tests",
-  ]
-}
-
 # A manifest of the plasa elements that are vended in CTS.
 generated_file("plasa_manifest") {
   testonly = true
-  data_keys = [ "plasa" ]
-  outputs = [ "$root_build_dir/manifest.ctf.plasa.json" ]
+  outputs = [ "$root_build_dir/cts/manifest.ctf.plasa.json" ]
   output_conversion = "json"
+  data_keys = [ "plasa" ]
   deps = [ "//sdk/fidl:plasa" ]
+
+  metadata = {
+    cts_artifacts = [ "cts/manifest.ctf.plasa.json" ]
+  }
 }
 
-group("plasa") {
-  testonly = true
-  deps = [
-    ":plasa_manifest_copy",
-    "//sdk/fidl:plasa",
-  ]
-}
-
-copy("plasa_manifest_copy") {
-  testonly = true
-  sources = get_target_outputs(":plasa_manifest")
-  outputs = [ "$root_build_dir/ctf/{{source_file_part}}" ]
-  deps = [ ":plasa_manifest" ]
-}
-
-idk_verify_ct = []
-foreach(idk, _idk_deps) {
-  # Generate SDK directory layout golden file.
-  generate_sdk_layout_golden_file("${idk}_sdk_layout") {
+_idks = [
+  "core",
+  "core_testing",
+  "e2e_testing",
+  "modular_testing",
+]
+_verify_idk_deps = []
+foreach(idk, _idks) {
+  golden_file_target = "${idk}_sdk_layout"
+  generate_sdk_layout_golden_file(golden_file_target) {
     testonly = true
     sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
     deps = [ "//sdk:${idk}_archive" ]
   }
-  idk_verify_ct += [ ":${idk}_sdk_layout" ]
 
-  # Prevents backwards breaking changes to the core SDK directory layout.
-  verify_sdk_compatibility("verify_${idk}_sdk_compatibility") {
+  verify_compatibility_target = "verify_${idk}_sdk_compatibility"
+  verify_sdk_compatibility(verify_compatibility_target) {
     testonly = true
     sdk_archive = "$root_out_dir/sdk/archive/${idk}.tar.gz"
     golden_file = "//sdk/manifests/layouts/${target_cpu}/sdk_directory_${idk}.golden_layout"
     deps = [ "//sdk:${idk}_archive" ]
   }
-  idk_verify_ct += [ ":verify_${idk}_sdk_compatibility" ]
+
+  _verify_idk_deps += [
+    ":$golden_file_target",
+    ":$verify_compatibility_target",
+  ]
 }
 
 group("verify_idk_deps") {
   testonly = true
-  deps = idk_verify_ct
+  deps = _verify_idk_deps
 }
 
 # Tests that we want to run in an FYI builder.

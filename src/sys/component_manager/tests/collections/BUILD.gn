@@ -4,6 +4,7 @@
 
 import("//sdk/ctf/build/ctf.gni")
 
+# TODO(109696): Add this to //sdk/ctf/tests.
 ctf_rustc_test("collections_integration_test_bin") {
   name = "collections_integration_test"
   edition = "2021"

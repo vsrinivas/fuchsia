@@ -3,19 +3,18 @@
 # found in the LICENSE file.
 import("//sdk/ctf/build/ctf.gni")
 
-group("tests_no_e2e") {
+group("tests") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
+
   deps = [
     "experimental_fidl:tests",
     "hello_world:tests",
     "rust:tests",
   ]
-  testonly = true
 }
 
-group("tests") {
-  deps = [
-    ":tests_no_e2e",
-    "host_tool:tests($host_toolchain)",
-  ]
+group("e2e_tests") {
+  deps = [ "host_tool:tests($host_toolchain)" ]
   testonly = true
 }

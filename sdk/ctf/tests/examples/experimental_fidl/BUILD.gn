@@ -10,7 +10,7 @@ import("//sdk/ctf/build/ctf.gni")
 fidl("fuchsia.cts.experimental") {
   sdk_category = "experimental"
   name = "fuchsia.cts.experimental"
-  sources = [ "experimental.fidl" ]
+  sources = [ "experimental.test.fidl" ]
 }
 
 ctf_executable("experimental-bin") {
