@@ -39,15 +39,17 @@ namespace vmm {
 
 class Vmm : public fuchsia::virtualization::Guest {
  public:
-  explicit Vmm(std::shared_ptr<async::Loop> vmm_loop) : vmm_loop_(std::move(vmm_loop)) {}
+  Vmm() = default;
   ~Vmm() override;
 
   // Instantiate all VMM objects and configure the guest kernel.
-  fitx::result<::fuchsia::virtualization::GuestError> Initialize(
-      ::fuchsia::virtualization::GuestConfig cfg, ::sys::ComponentContext* context);
+  virtual fitx::result<::fuchsia::virtualization::GuestError> Initialize(
+      ::fuchsia::virtualization::GuestConfig cfg, ::sys::ComponentContext* context,
+      async_dispatcher_t* dispatcher);
 
   // Start the primary VCPU. This will begin guest execution.
-  fitx::result<::fuchsia::virtualization::GuestError> StartPrimaryVcpu();
+  virtual fitx::result<::fuchsia::virtualization::GuestError> StartPrimaryVcpu(
+      fit::function<void(fitx::result<::fuchsia::virtualization::GuestError>)> stop_callback);
 
   // |fuchsia::virtualization::Guest|
   void GetSerial(GetSerialCallback callback) override;
@@ -72,9 +74,7 @@ class Vmm : public fuchsia::virtualization::Guest {
   fitx::result<::fuchsia::virtualization::GuestError> AddPublicServices(
       sys::ComponentContext* context);
 
-  // Dispatch loop for the VMM and device controllers.
-  std::shared_ptr<async::Loop> vmm_loop_;
-
+  // Must be destroyed first (see comment in destructor).
   std::unique_ptr<::Guest> guest_;
 
   // Platform devices.

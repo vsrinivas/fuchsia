@@ -74,6 +74,8 @@ source_set("lib") {
     "virtio_pci.h",
     "vmm.cc",
     "vmm.h",
+    "vmm_controller.cc",
+    "vmm_controller.h",
     "zircon.cc",
     "zircon.h",
   ]
@@ -207,6 +209,7 @@ executable("vmm_unittests") {
     "guest_unittest.cc",
     "pci_unittest.cc",
     "phys_mem_fake.h",
+    "vmm_controller_unittest.cc",
   ]
 
   if (current_cpu == "x64") {
@@ -222,6 +225,9 @@ executable("vmm_unittests") {
 
   deps = [
     ":lib",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",

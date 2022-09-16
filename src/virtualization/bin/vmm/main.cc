@@ -34,13 +34,14 @@ int main(int argc, char** argv) {
 
   // Note that Initialize and StartPrimaryVcpu will be invoked by different GuestLifecycle
   // FIDL calls once this has been migrated to use a VmmController.
-  vmm::Vmm vmm(loop);
-  fitx::result<GuestError> result = vmm.Initialize(std::move(cfg), context.get());
+  vmm::Vmm vmm;
+  fitx::result<GuestError> result =
+      vmm.Initialize(std::move(cfg), context.get(), loop->dispatcher());
   if (!result.is_ok()) {
     return static_cast<int32_t>(result.error_value());
   }
 
-  result = vmm.StartPrimaryVcpu();
+  result = vmm.StartPrimaryVcpu([loop](fitx::result<GuestError> unused_result) { loop->Quit(); });
   if (!result.is_ok()) {
     return static_cast<int32_t>(result.error_value());
   }

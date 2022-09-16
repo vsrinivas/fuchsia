@@ -42,6 +42,16 @@ type GuestError = strict enum {
 
     /// A VCPU encountered a fatal error while running.
     VCPU_RUNTIME_FAILURE = 12;
+
+    /// The VMM was asked to run before it was created.
+    NOT_CREATED = 13;
+
+    /// A VMM is already running. The VMM must be stopped and a new VMM must be created before it
+    /// can be run again.
+    ALREADY_RUNNING = 14;
+
+    /// A running VMM was forced to stop by the VMM controller.
+    CONTROLLER_FORCED_HALT = 15;
 };
 
 /// The guest control plane allowing for creating, starting, and stopping the guest.
@@ -49,15 +59,25 @@ type GuestError = strict enum {
 protocol GuestLifecycle {
     /// Create a VMM configured with the provided config. This instantiates all devices and loads
     /// the kernel without starting the VCPU or device dispatch loops.
+    ///
+    /// Possible errors:
+    ///     - ALREADY_RUNNING: A VMM instance is already running, and must be stopped before being
+    ///         recreated.
+    ///
+    /// All other errors are related to VMM initialization.
     Create(resource struct {
         guest_config GuestConfig;
     }) -> (struct {}) error GuestError;
 
-    /// Start the VCPU and device dispatch loops. This will not return until the dispatch loops
-    /// exit. On a clean shutdown (either guest or client initiated) this will return success.
+    /// Start the primary VCPU and any dispatch loop. This will not return until the VMM stops
+    /// running. On a clean shutdown (either guest or client initiated) this will return success.
     ///
-    /// If forced to stop by the guest manager calling stop, a SHUTDOWN_FORCED error will be
-    /// returned. This will also return any runtime error that forces the guest to stop.
+    /// Possible errors:
+    ///     - ALREADY_RUNING: The VMM has already been started.
+    ///     - NOT_CREATED: Run was called before the VMM was created.
+    ///     - CONTROLLER_FORCED_HALT: Stop was called on a running VMM.
+    ///     - VCPU_START_FAILURE: Failed to start the primary VCPU.
+    ///     - VCPU_RUNTIME_FAILURE: A VCPU encountered a fatal error while running the guest.
     Run() -> (struct {}) error GuestError;
 
     /// Stop a running VMM. Returns once the dispatch loops have stopped. After Stop returns,

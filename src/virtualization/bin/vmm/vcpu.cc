@@ -18,8 +18,8 @@
 
 static thread_local Vcpu* thread_vcpu = nullptr;
 
-Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop)
-    : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr), loop_(loop) {}
+Vcpu::Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr)
+    : id_(id), guest_(guest), entry_(entry), boot_ptr_(boot_ptr) {}
 
 Vcpu::~Vcpu() {
   if (thread_.has_value()) {
@@ -87,12 +87,21 @@ zx_status_t Vcpu::Loop(std::promise<zx_status_t> barrier) {
   // Unblock VCPU startup barrier.
   barrier.set_value(ZX_OK);
 
-  // Quit the main loop if we return.
-  auto deferred = fit::defer([this] { loop_->Quit(); });
+  zx_status_t status = ZX_OK;
+
+  // Invoke the stop callback if this function returns. This callback will ultimately result in
+  // the VMM being destroyed.
+  auto deferred = fit::defer([this, &status] {
+    if (status == ZX_ERR_CANCELED) {
+      this->guest_->Stop(fitx::ok());
+    } else {
+      this->guest_->Stop(fitx::error(::fuchsia::virtualization::GuestError::VCPU_RUNTIME_FAILURE));
+    }
+  });
 
   while (true) {
     zx_port_packet_t packet;
-    zx_status_t status = vcpu_.enter(&packet);
+    status = vcpu_.enter(&packet);
     switch (status) {
       case ZX_OK:
         break;
@@ -158,7 +167,7 @@ zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet, uint64_t trap
     case ZX_PKT_GUEST_VCPU_INTERRUPT:
       return guest_->Interrupt(packet.interrupt.mask, packet.interrupt.vector);
     case ZX_PKT_GUEST_VCPU_STARTUP:
-      return guest_->StartVcpu(packet.startup.id, packet.startup.entry, boot_ptr_, loop_);
+      return guest_->StartVcpu(packet.startup.id, packet.startup.entry, boot_ptr_);
     default:
       return ZX_ERR_NOT_SUPPORTED;
   }

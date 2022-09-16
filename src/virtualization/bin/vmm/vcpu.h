@@ -21,7 +21,7 @@ class Vcpu {
  public:
   Vcpu(const Vcpu&) = delete;
   Vcpu& operator=(const Vcpu&) = delete;
-  Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr, async::Loop* loop);
+  Vcpu(uint64_t id, Guest* guest, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr);
   ~Vcpu();
 
   // Begin VCPU execution.
@@ -57,7 +57,6 @@ class Vcpu {
   Guest* const guest_;
   const zx_gpaddr_t entry_;
   const zx_gpaddr_t boot_ptr_;
-  async::Loop* const loop_;
 
   zx::vcpu vcpu_;
   std::optional<std::thread> thread_;

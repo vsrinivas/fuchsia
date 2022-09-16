@@ -319,8 +319,7 @@ zx_status_t Guest::CreateSubVmar(uint64_t addr, size_t size, zx::vmar* vmar) {
                         &guest_addr);
 }
 
-zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr,
-                             async::Loop* loop) {
+zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_ptr) {
   if (id >= kMaxVcpus) {
     FX_PLOGS(ERROR, ZX_ERR_OUT_OF_RANGE)
         << "Failed to start VCPU-" << id << ", up to " << kMaxVcpus << " VCPUs are supported";
@@ -338,7 +337,7 @@ zx_status_t Guest::StartVcpu(uint64_t id, zx_gpaddr_t entry, zx_gpaddr_t boot_pt
     // on the first. So, we ignore subsequent requests.
     return ZX_OK;
   }
-  vcpus_[id].emplace(id, this, entry, boot_ptr, loop);
+  vcpus_[id].emplace(id, this, entry, boot_ptr);
   return vcpus_[id]->Start();
 }
 
@@ -359,4 +358,14 @@ zx_status_t Guest::Interrupt(uint64_t mask, uint32_t vector) {
 #endif
   }
   return ZX_OK;
+}
+
+void Guest::set_stop_callback(
+    fit::function<void(fitx::result<::fuchsia::virtualization::GuestError>)> stop_callback) {
+  stop_callback_ = std::move(stop_callback);
+}
+
+void Guest::Stop(fitx::result<::fuchsia::virtualization::GuestError> result) {
+  FX_CHECK(stop_callback_);
+  stop_callback_(result);
 }
