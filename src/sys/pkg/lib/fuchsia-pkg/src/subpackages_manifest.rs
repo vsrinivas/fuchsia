@@ -8,12 +8,12 @@ use {
     camino::{Utf8Path, Utf8PathBuf},
     fuchsia_merkle::Hash,
     fuchsia_url::RelativePackageUrl,
-    serde::{de::Deserializer, Deserialize},
+    serde::{de::Deserializer, Deserialize, Serialize},
     std::{fs, io},
 };
 
 /// Helper type for reading the subpackage manifest.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SubpackagesManifest(SubpackagesManifestV0);
 
 impl SubpackagesManifest {
@@ -48,9 +48,14 @@ impl SubpackagesManifest {
     pub fn deserialize(reader: impl io::BufRead) -> Result<Self> {
         Ok(SubpackagesManifest(serde_json::from_reader(reader)?))
     }
+
+    /// Serializes a `SubpackagesManifest` to json.
+    pub fn serialize(&self, writer: impl io::Write) -> Result<()> {
+        Ok(serde_json::to_writer(writer, &self.0.entries)?)
+    }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 struct SubpackagesManifestV0 {
     entries: Vec<SubpackagesManifestEntry>,
 }
@@ -104,6 +109,29 @@ impl<'de> Deserialize<'de> for SubpackagesManifestV0 {
 pub struct SubpackagesManifestEntry {
     kind: SubpackagesManifestEntryKind,
     merkle_file: Utf8PathBuf,
+}
+
+impl Serialize for SubpackagesManifestEntry {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        #[derive(Serialize)]
+        struct Helper<'a> {
+            #[serde(skip_serializing_if = "Option::is_none")]
+            name: Option<&'a RelativePackageUrl>,
+            #[serde(skip_serializing_if = "Option::is_none")]
+            meta_package_file: Option<&'a Utf8PathBuf>,
+            merkle_file: &'a Utf8PathBuf,
+        }
+        let mut helper =
+            Helper { name: None, meta_package_file: None, merkle_file: &self.merkle_file };
+        match &self.kind {
+            SubpackagesManifestEntryKind::Url(url) => helper.name = Some(url),
+            SubpackagesManifestEntryKind::File(path) => helper.meta_package_file = Some(path),
+        }
+        helper.serialize(serializer)
+    }
 }
 
 impl SubpackagesManifestEntry {
@@ -287,5 +315,60 @@ mod tests {
         // It should work once we write the file.
         std::fs::write(&pkg_merkle_file, pkg_hash.to_string().as_bytes()).unwrap();
         assert_eq!(manifest.to_subpackages().unwrap(), vec![(pkg_url, pkg_hash)]);
+    }
+
+    #[test]
+    fn test_serialize() {
+        let entries = vec![
+            SubpackagesManifestEntry::new(
+                SubpackagesManifestEntryKind::Url("subpackage-name".parse().unwrap()),
+                "merkle-path-0".into(),
+            ),
+            SubpackagesManifestEntry::new(
+                SubpackagesManifestEntryKind::File("file-path".into()),
+                "merkle-path-1".into(),
+            ),
+        ];
+        let manifest = SubpackagesManifest::from(entries);
+
+        let mut bytes = vec![];
+        let () = manifest.serialize(&mut bytes).unwrap();
+        let actual_json: serde_json::Value = serde_json::from_slice(&bytes).unwrap();
+
+        assert_eq!(
+            actual_json,
+            json!([
+                {
+                    "name": "subpackage-name",
+                    "merkle_file": "merkle-path-0"
+                },
+                {
+                    "meta_package_file": "file-path",
+                    "merkle_file": "merkle-path-1"
+                },
+            ])
+        );
+    }
+
+    #[test]
+    fn test_serialize_deserialize() {
+        let entries = vec![
+            SubpackagesManifestEntry::new(
+                SubpackagesManifestEntryKind::Url("subpackage-name".parse().unwrap()),
+                "merkle-path-0".into(),
+            ),
+            SubpackagesManifestEntry::new(
+                SubpackagesManifestEntryKind::File("file-path".into()),
+                "merkle-path-1".into(),
+            ),
+        ];
+        let manifest = SubpackagesManifest::from(entries);
+
+        let mut bytes = vec![];
+        let () = manifest.serialize(&mut bytes).unwrap();
+        let deserialized =
+            SubpackagesManifest::deserialize(io::BufReader::new(bytes.as_slice())).unwrap();
+
+        assert_eq!(deserialized, manifest);
     }
 }
