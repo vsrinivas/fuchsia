@@ -5,13 +5,8 @@
 #include <fidl/fuchsia.compat.runtime.test/cpp/driver/fidl.h>
 #include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/node_add_args.h>
-#include <lib/driver2/record_cpp.h>
-#include <lib/driver2/runtime.h>
-#include <lib/driver2/runtime_connector_impl.h>
-#include <lib/sys/component/cpp/outgoing_directory.h>
+#include <lib/driver2/driver2_cpp.h>
+#include <lib/driver2/outgoing_directory.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 
@@ -26,46 +21,27 @@ namespace ft = fuchsia_compat_runtime_test;
 
 namespace {
 
-class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnectorImpl {
+class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
  public:
-  RootDriver(fdf::UnownedDispatcher dispatcher, fidl::WireSharedClient<fdf::Node> node,
-             driver::Namespace ns, driver::Logger logger, component::OutgoingDirectory outgoing)
-      : driver::RuntimeConnectorImpl(dispatcher->async_dispatcher()),
-        dispatcher_(dispatcher->async_dispatcher()),
-        fdf_dispatcher_(std::move(dispatcher)),
-        node_(std::move(node)),
-        ns_(std::move(ns)),
-        logger_(std::move(logger)),
-        outgoing_(std::move(outgoing)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
+      : DriverBase("root", std::move(start_args), std::move(dispatcher)),
+        node_(fidl::WireClient(std::move(node()), async_dispatcher())) {}
 
   static constexpr const char* Name() { return "root"; }
 
-  static zx::status<std::unique_ptr<RootDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                       fdf::UnownedDispatcher dispatcher,
-                                                       fidl::WireSharedClient<fdf::Node> node,
-                                                       driver::Namespace ns,
-                                                       driver::Logger logger) {
-    auto outgoing = component::OutgoingDirectory::Create(dispatcher->async_dispatcher());
-    auto driver =
-        std::make_unique<RootDriver>(std::move(dispatcher), std::move(node), std::move(ns),
-                                     std::move(logger), std::move(outgoing));
-
-    auto serve = driver->outgoing_.Serve(std::move(start_args.outgoing_dir()));
-    if (serve.is_error()) {
-      return serve.take_error();
+  zx::status<> Start() override {
+    // Since our child is a V1 driver, we need to serve a VFS to pass to the |compat::DeviceServer|.
+    zx_status_t status = ServeRuntimeProtocolForV1();
+    if (status != ZX_OK) {
+      return zx::error(status);
     }
-    auto result = driver->Run();
+
+    // Start the driver.
+    auto result = AddChild();
     if (result.is_error()) {
-      return result.take_error();
+      return zx::error(ZX_ERR_INTERNAL);
     }
-    return zx::ok(std::move(driver));
-  }
-
-  // Called when a new connection to the ft::Root driver transport protocol is requested.
-  zx_status_t OnConnectRoot(fdf::Channel channel) {
-    fdf::ServerEnd<ft::Root> server_end(std::move(channel));
-    fdf::BindServer<fdf::Server<ft::Root>>(fdf_dispatcher_->get(), std::move(server_end), this);
-    return ZX_OK;
+    return zx::ok();
   }
 
   // fdf::Server<ft::Root>
@@ -76,29 +52,18 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
   }
 
  private:
-  zx::status<> Run() {
-    // Since our child is a V1 driver, we need to serve a VFS to pass to the |compat::DeviceServer|.
-    zx_status_t status = ServeRuntimeProtocolForV1();
-    if (status != ZX_OK) {
-      return zx::error(status);
-    }
-
-    // Start the driver.
-    auto result = AddChild();
-    if (result.is_error()) {
-      UnbindNode(result.error_value());
-      return zx::error(ZX_ERR_INTERNAL);
-    }
-    return zx::ok();
-  }
-
   zx_status_t ServeRuntimeProtocolForV1() {
-    // Setup the outgoing directory.
-    auto service = [this](fidl::ServerEnd<fdf::RuntimeConnector> server_end) {
-      fidl::BindServer<fidl::WireServer<fdf::RuntimeConnector>>(dispatcher_, std::move(server_end),
-                                                                this);
+    driver::ServiceInstanceHandler handler;
+    ft::Service::Handler service(&handler);
+
+    auto root = [this](fdf::ServerEnd<ft::Root> server_end) {
+      fdf::BindServer<fdf::Server<ft::Root>>(dispatcher()->get(), std::move(server_end), this);
     };
-    zx::status<> status = outgoing_.AddProtocol<fdf::RuntimeConnector>(std::move(service));
+    auto status = service.add_root(std::move(root));
+    if (status.is_error()) {
+      return status.status_value();
+    }
+    status = context().outgoing()->AddService<ft::Service>(std::move(handler));
     if (status.is_error()) {
       return status.status_value();
     }
@@ -106,23 +71,25 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
     if (endpoints.is_error()) {
       return endpoints.status_value();
     }
-    auto serve =
-        outgoing_.Serve(fidl::ServerEnd<fuchsia_io::Directory>(endpoints->server.TakeChannel()));
+    auto serve = context().outgoing()->Serve(
+        fidl::ServerEnd<fuchsia_io::Directory>(endpoints->server.TakeChannel()));
     if (serve.is_error()) {
       return serve.status_value();
     }
 
     vfs_client_ = fidl::ClientEnd<fuchsia_io::Directory>(endpoints->client.TakeChannel());
 
-    RegisterProtocol(fidl::DiscoverableProtocolName<ft::Root>,
-                     fit::bind_member(this, &RootDriver::OnConnectRoot));
     return ZX_OK;
   }
 
   fitx::result<fdf::NodeError> AddChild() {
-    child_ = compat::DeviceServer("v1", 0, "root/v1", compat::MetadataMap(),
-                                  compat::ServiceOffersV1("v1", std::move(vfs_client_), {}));
-    zx_status_t status = child_->Serve(dispatcher_, &outgoing_);
+    std::vector<std::string> service_offers;
+    service_offers.push_back(std::string(ft::Service::Name));
+
+    child_ = compat::DeviceServer(
+        "v1", 0, "root/v1", compat::MetadataMap(),
+        compat::ServiceOffersV1("v1", std::move(vfs_client_), std::move(service_offers)));
+    zx_status_t status = child_->Serve(async_dispatcher(), context().outgoing().get());
     if (status != ZX_OK) {
       return fitx::error(fdf::NodeError::kInternal);
     }
@@ -164,24 +131,13 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
     if (add_result->is_error()) {
       return fitx::error(add_result->error_value());
     }
-    controller_.Bind(std::move(endpoints->client), dispatcher_);
+    controller_.Bind(std::move(endpoints->client), async_dispatcher());
     return fitx::ok();
   }
 
-  void UnbindNode(const fdf::NodeError& error) {
-    FDF_LOG(ERROR, "Failed to start root driver: %d", error);
-    node_.AsyncTeardown();
-  }
-
-  async_dispatcher_t* const dispatcher_;
-  fdf::UnownedDispatcher fdf_dispatcher_;
-
-  fidl::WireSharedClient<fdf::Node> node_;
+  fidl::WireClient<fdf::Node> node_;
   fidl::WireSharedClient<fdf::NodeController> controller_;
-  driver::Namespace ns_;
-  driver::Logger logger_;
 
-  component::OutgoingDirectory outgoing_;
   compat::device_t compat_device_ = compat::kDefaultDevice;
   std::optional<compat::DeviceServer> child_;
   fidl::ClientEnd<fuchsia_io::Directory> vfs_client_;
@@ -189,4 +145,4 @@ class RootDriver : public fdf::Server<ft::Root>, public driver::RuntimeConnector
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V1(RootDriver);
+FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<RootDriver>);

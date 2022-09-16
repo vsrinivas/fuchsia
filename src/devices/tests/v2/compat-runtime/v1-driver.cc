@@ -4,8 +4,6 @@
 
 #include <fidl/fuchsia.compat.runtime.test/cpp/driver/fidl.h>
 #include <fidl/fuchsia.compat.runtime.test/cpp/fidl.h>
-#include <lib/driver2/runtime.h>
-#include <lib/driver2/runtime_connector_impl.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/dispatcher.h>
 
@@ -59,17 +57,11 @@ class V1 : public DeviceType {
   }
 
   zx_status_t ConnectToRootRuntimeProtocol() {
-    auto endpoints = fdf::CreateEndpoints<ft::Root>();
-    if (endpoints.is_error()) {
-      return endpoints.status_value();
+    auto client_end = DdkConnectRuntimeProtocol<ft::Service::Root>();
+    if (client_end.is_error()) {
+      return client_end.status_value();
     }
-    zx_status_t status = device_service_connect(parent(), fidl::DiscoverableProtocolName<ft::Root>,
-                                                endpoints->server.TakeHandle().release());
-    if (status != ZX_OK) {
-      return status;
-    }
-    client_ =
-        fdf::Client<ft::Root>(std::move(endpoints->client), fdf::Dispatcher::GetCurrent()->get());
+    client_.Bind(std::move(*client_end), fdf::Dispatcher::GetCurrent()->get());
     return ZX_OK;
   }
 

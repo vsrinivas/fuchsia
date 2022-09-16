@@ -18,6 +18,10 @@ protocol Root {
     });
 };
 
+service Service {
+    root client_end:Root;
+};
+
 @discoverable
 protocol Waiter {
     Ack();

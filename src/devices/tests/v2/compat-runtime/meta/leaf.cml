@@ -1,0 +1,19 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/devices/lib/compat/compat.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "driver",
+        compat: "driver/compat-runtime-v1.so",
+        bind: "meta/bind/v1.bindbc",
+        colocate: "true",
+    },
+    use: [
+        { service: "fuchsia.compat.runtime.test.Service" },
+    ],
+}

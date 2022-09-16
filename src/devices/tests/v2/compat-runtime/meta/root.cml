@@ -13,10 +13,15 @@
     },
     capabilities: [
         { service: "fuchsia.driver.compat.Service" },
+        { service: "fuchsia.compat.runtime.test.Service" },
     ],
     expose: [
         {
             service: "fuchsia.driver.compat.Service",
+            from: "self",
+        },
+        {
+            service: "fuchsia.compat.runtime.test.Service",
             from: "self",
         },
     ],

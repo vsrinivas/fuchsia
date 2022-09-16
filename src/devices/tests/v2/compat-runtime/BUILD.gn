@@ -85,8 +85,7 @@ fuchsia_driver("v1-driver") {
 
 fuchsia_driver_component("v1") {
   testonly = true
-  colocate = true
-  default_dispatcher_opts = [ "allow_sync_calls" ]
+  manifest = "meta/leaf.cml"
   deps = [
     ":v1-driver",
     "//src/devices/misc/drivers/compat:driver",

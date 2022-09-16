@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/driver2/node_add_args.h>
+#include <lib/fdf/cpp/protocol.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/stdcompat/span.h>
@@ -68,10 +69,14 @@ bool HasOp(const zx_protocol_device_t* ops, T member) {
   return ops != nullptr && ops->*member != nullptr;
 }
 
-std::vector<std::string> MakeFidlServiceOffers(device_add_args_t* zx_args) {
+std::vector<std::string> MakeServiceOffers(device_add_args_t* zx_args) {
   std::vector<std::string> offers;
   for (const auto& offer :
        cpp20::span(zx_args->fidl_service_offers, zx_args->fidl_service_offer_count)) {
+    offers.push_back(std::string(offer));
+  }
+  for (const auto& offer :
+       cpp20::span(zx_args->runtime_service_offers, zx_args->runtime_service_offer_count)) {
     offers.push_back(std::string(offer));
   }
   return offers;
@@ -253,7 +258,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     service_offers = ServiceOffersV1(
         outgoing_name,
         fidl::ClientEnd<fuchsia_io::Directory>(zx::channel(zx_args->outgoing_dir_channel)),
-        MakeFidlServiceOffers(zx_args));
+        MakeServiceOffers(zx_args));
 
   } else if (HasOp(device->ops_, &zx_protocol_device_t::service_connect)) {
     // To support driver runtime protocol discovery, we need to implement the |RuntimeConnector|
@@ -844,6 +849,21 @@ zx_status_t Device::ConnectRuntime(const char* protocol_name, fdf::Channel reque
     return result.status();
   }
   return ZX_OK;
+}
+
+zx_status_t Device::ConnectRuntime(const char* service_name, const char* protocol_name,
+                                   fdf::Channel request) {
+  zx::channel client_token, server_token;
+  auto status = zx::channel::create(0, &client_token, &server_token);
+  if (status != ZX_OK) {
+    return status;
+  }
+  status = fdf::ProtocolConnect(std::move(client_token), std::move(request));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return ConnectFragmentFidl("default", service_name, protocol_name, std::move(server_token));
 }
 
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Device::ServeRuntimeConnectorProtocol() {
