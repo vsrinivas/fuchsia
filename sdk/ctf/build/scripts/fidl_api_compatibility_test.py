@@ -12,6 +12,7 @@ from enum import Enum
 
 # TODO(kjharland): Write unit tests.
 
+
 class Policy(Enum):
     # update_golden tells this script to overwrite the existing golden with
     # the current golden. This is useful for batch updates.
@@ -112,10 +113,6 @@ def main():
         '--fidl_api_diff_path',
         help='Path to the fidl_api_diff binary',
         required=True)
-    parser.add_argument(
-        '--warn_on_changes',
-        help='Treat compatibility violations as warnings',
-        action='store_true')
     args = parser.parse_args()
 
     dependencies = [args.current, args.golden]
@@ -148,10 +145,6 @@ def main():
         stamp_file.write('Golden!\n')
 
     if not err:
-        return 0
-
-    if args.warn_on_changes:
-        print("\nWARNING: ", err)
         return 0
 
     print("\nERROR: ", err)

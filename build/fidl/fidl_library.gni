@@ -37,7 +37,6 @@ declare_args() {
 #   excluded_checks
 #   experimental_flags
 #   goldens_dir
-#   lenient_api_summary
 #   name
 #   non_fidl_deps
 #   public_deps
@@ -222,14 +221,6 @@ template("fidl_library") {
   # Enforce compatibility checks for all published SDK FIDLs in the Fuchsia
   # namespace.
   if (is_sdk_included_publishable) {
-    # A kill switch for API summarization and compatibility testing.
-    # Set to true to permit compilations that have summary errors.
-    lenient_api_summary = false
-    not_needed([ "lenient_api_summary" ])
-    if (defined(invoker.lenient_api_summary)) {
-      lenient_api_summary = invoker.lenient_api_summary
-    }
-
     # The current level might be a supported level. Don't double count it.
     current_level = platform_version.in_development_api_level
     policy_for_current_level = "no_breaking_changes"
@@ -280,7 +271,6 @@ template("fidl_library") {
         test_target = "${target_name}_${level}_compatibility_test"
         fidl_api_compatibility_test(test_target) {
           forward_variables_from(invoker, [ "testonly" ])
-          warn_on_changes = lenient_api_summary
           target_api_level = level
           current = "$target_gen_dir/$level/$library_name.api_summary.json"
 

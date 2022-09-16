@@ -53,12 +53,6 @@ template("fidl_api_compatibility_test") {
       policy,
     ]
 
-    warn_on_changes =
-        defined(invoker.warn_on_changes) && invoker.warn_on_changes
-    if (warn_on_changes) {
-      args += [ "--warn_on_changes" ]
-    }
-
     deps += [ "//tools/fidl/fidl_api_diff:host" ]
   }
 }
