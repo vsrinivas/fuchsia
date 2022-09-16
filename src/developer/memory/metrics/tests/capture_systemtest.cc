@@ -28,7 +28,8 @@ TEST_F(CaptureSystemTest, KMEM) {
   EXPECT_LT(0U, c.kmem().total_bytes);
 }
 
-TEST_F(CaptureSystemTest, VMO) {
+// TODO(https://fxbug.dev/108307): deflake and reenable.
+TEST_F(CaptureSystemTest, DISABLED_VMO) {
   CaptureState state;
   auto ret = Capture::GetCaptureState(&state);
   ASSERT_EQ(ZX_OK, ret) << zx_status_get_string(ret);

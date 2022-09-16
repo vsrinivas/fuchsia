@@ -60,8 +60,7 @@ fuchsia_test_component("memory_metrics_systemtests_component") {
 
 fuchsia_test_package("memory_metrics_tests") {
   test_components = [
-    # TODO(fxbug.dev/108307): Re-enable this test after deflaking.
-    # ":memory_metrics_systemtests_component",
+    ":memory_metrics_systemtests_component",
     ":memory_metrics_unittests_component",
   ]
 }
