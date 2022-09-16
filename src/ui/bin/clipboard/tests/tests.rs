@@ -5,9 +5,10 @@
 //! Basic integration tests for the Clipboard service.
 
 use {
-    anyhow::{ensure, Error},
+    anyhow::{ensure, format_err, Error},
     async_utils::hanging_get::client::HangingGetStream,
     clipboard_test_helpers::*,
+    diagnostics_reader::{assert_data_tree, ArchiveReader, DiagnosticsHierarchy, Inspect},
     fidl_fuchsia_ui_clipboard as fclip, fidl_fuchsia_ui_focus as focus,
     fidl_fuchsia_ui_views::ViewRef,
     focus_chain_provider::{FocusChainProviderPublisher, FocusChainProviderRequestStreamHandler},
@@ -138,6 +139,25 @@ impl TestHandles {
         Ok(handles)
     }
 
+    fn clipboard_moniker_for_selectors(&self) -> String {
+        let child_name = self.realm.root.child_name();
+        format!("realm_builder\\:{child_name}/{CLIPBOARD_SERVICE_MONIKER}")
+    }
+
+    pub async fn get_inspect_hierarchy(&self) -> Result<DiagnosticsHierarchy, Error> {
+        let clipboard_moniker = self.clipboard_moniker_for_selectors();
+        // This boilerplate is from
+        // https://fuchsia.dev/fuchsia-src/development/diagnostics/inspect/codelab/codelab.
+        ArchiveReader::new()
+            .add_selector(format!("{clipboard_moniker}:root"))
+            .snapshot::<Inspect>()
+            .await?
+            .into_iter()
+            .next()
+            .and_then(|result| result.payload)
+            .ok_or(format_err!("expected one inspect hierarchy"))
+    }
+
     pub fn get_writer_registry(&self) -> Result<fclip::FocusedWriterRegistryProxy, Error> {
         Ok(self
             .realm
@@ -235,6 +255,17 @@ async fn test_basic_copy_paste_across_different_view_refs() -> Result<(), Error>
                 expected_focus_subscriber_count
             );
         }
+
+        // Just confirming that some minimal Inspect hierarchy is present.
+        let inspect_hierarchy = handles.get_inspect_hierarchy().await?;
+        assert_data_tree!(inspect_hierarchy, root: contains {
+            clipboard: contains {
+                reader_registry_client_count: 1u64,
+                writer_registry_client_count: 1u64,
+                reader_count: 1u64,
+                writer_count: 1u64,
+            }
+        });
 
         // The scope of this test is limited to verifying that the clipboard service properly
         // exposes its FIDL services, and properly connects to the services it needs. (Semantic

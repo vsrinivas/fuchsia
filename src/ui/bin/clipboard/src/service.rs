@@ -4,8 +4,8 @@
 
 use {
     crate::{
-        errors::ClipboardError, items::ClipboardItem, shared::ViewRefPrinter,
-        tasks::LocalTaskTracker,
+        errors::ClipboardError, inspect, inspect::ServiceInspectData, items::ClipboardItem,
+        shared::ViewRefPrinter, tasks::LocalTaskTracker,
     },
     anyhow::{Context, Error},
     async_utils::hanging_get::client::HangingGetStream,
@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_ui_clipboard as fclip, fidl_fuchsia_ui_focus as focus,
     fidl_fuchsia_ui_views::ViewRef,
     fuchsia_async::{self as fasync, Task},
-    fuchsia_zircon as zx,
+    fuchsia_inspect as finspect, fuchsia_zircon as zx,
     futures::{future::Shared, select_biased, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
     once_cell::unsync::OnceCell,
     std::{
@@ -63,11 +63,16 @@ impl ViewRefState {
     }
 }
 
+/// Declares the dependency types for [`Service`]. These can be overridden in tests.
+pub(crate) trait ServiceDependencies: std::fmt::Debug + 'static {
+    type Clock: Clock;
+}
+
 /// Represents the Clipboard service.
 ///
 /// Must be wrapped in `Rc`. Instantiate using [`Self::new`].
 #[derive(Debug)]
-pub struct Service {
+pub(crate) struct Service<T: ServiceDependencies> {
     // Each of these fields can be mutated independently on different channels, hence the separate
     // mutable containers.
     /// Tracks the focused leaf view.
@@ -76,6 +81,8 @@ pub struct Service {
     clipboard_item: RefCell<Option<ClipboardItem>>,
     /// Keeps track of the registration state for each `ViewRef`'s koid.
     view_ref_koid_to_view_ref_state: RefCell<HashMap<zx::Koid, ViewRefState>>,
+
+    inspect_data: ServiceInspectData<T>,
 
     /// Retains the pending `Task` in which the clipboard service listens for focus chain updates.
     focus_watcher_task: OnceCell<Task<()>>,
@@ -86,14 +93,20 @@ pub struct Service {
     tracked_tasks: LocalTaskTracker,
 }
 
-impl Service {
+impl<T: ServiceDependencies> Service<T> {
     /// Creates a new instance of the service and immediately connects to
     /// `fuchsia.ui.focus.FocusChainProvider` to watch for focus changes.
-    pub fn new(focus_provider_proxy: focus::FocusChainProviderProxy) -> Rc<Self> {
+    pub fn new(
+        clock: T::Clock,
+        focus_provider_proxy: focus::FocusChainProviderProxy,
+        inspect_root: &finspect::Node,
+    ) -> Rc<Self> {
+        let inspect_data = ServiceInspectData::new(inspect_root, clock.clone());
         let svc = Rc::new(Self {
             focused_view_ref_koid: RefCell::new(None),
             clipboard_item: RefCell::new(None),
             view_ref_koid_to_view_ref_state: RefCell::new(HashMap::new()),
+            inspect_data,
             focus_watcher_task: OnceCell::new(),
             tracked_tasks: LocalTaskTracker::new(),
         });
@@ -132,7 +145,7 @@ impl Service {
         while let Some(this) = weak_this.upgrade() {
             match stream.next().await {
                 Some(Ok(focus_koid_chain)) => {
-                    let focused_view_ref_koid = focus_koid_chain
+                    let focused_view_ref_koid: Option<zx::Koid> = focus_koid_chain
                         .focus_chain
                         .as_ref()
                         .and_then(|focus_chain| focus_chain.into_iter().last())
@@ -140,12 +153,25 @@ impl Service {
                     let old_view_ref_koid =
                         this.focused_view_ref_koid.replace(focused_view_ref_koid);
                     if old_view_ref_koid != focused_view_ref_koid {
+                        this.inspect_data.record_event(inspect::EventType::FocusUpdated);
                         debug!(
                             "Focus changed from {old_view_ref_koid:?} to {focused_view_ref_koid:?}"
                         );
+                        if old_view_ref_koid.is_some() != focused_view_ref_koid.is_some() {
+                            match &focused_view_ref_koid {
+                                Some(_) => {
+                                    this.inspect_data.set_healthy();
+                                }
+                                None => {
+                                    this.inspect_data.set_unhealthy("No focused view");
+                                }
+                            }
+                        }
                     }
                 }
                 Some(Err(service_error)) => {
+                    // TODO(fxbug.dev/109359): Make this a recoverable error.
+                    this.inspect_data.set_unhealthy("Error in focus watcher stream");
                     error!("Error {service_error:?} in focus watcher stream");
                     break;
                 }
@@ -167,8 +193,12 @@ impl Service {
         stream: fclip::FocusedWriterRegistryRequestStream,
     ) {
         let task = Task::local(
-            Self::focused_writer_registry_task(Rc::downgrade(self), stream)
-                .unwrap_or_else(|e: Error| error!("Error focused_writer_registry_task: {e:?}")),
+            Self::focused_writer_registry_task(
+                Rc::downgrade(self),
+                stream,
+                self.inspect_data.scoped_increment_writer_registry_client_count(),
+            )
+            .unwrap_or_else(|e: Error| error!("Error focused_writer_registry_task: {e:?}")),
         );
         self.tracked_tasks.track(task);
     }
@@ -176,6 +206,7 @@ impl Service {
     async fn focused_writer_registry_task(
         weak_this: Weak<Self>,
         mut stream: fclip::FocusedWriterRegistryRequestStream,
+        _instance_counter: impl Drop,
     ) -> Result<(), Error> {
         use fclip::FocusedWriterRegistryRequest::*;
 
@@ -223,11 +254,15 @@ impl Service {
     /// Spawns a task that handles the write requests of a single `ViewRef`.
     fn spawn_writer(self: &Rc<Self>, stream: fclip::WriterRequestStream, view_ref_koid: zx::Koid) {
         let task = Task::local(
-            Self::writer_task(Rc::downgrade(self), stream, view_ref_koid).unwrap_or_else(
-                |e: Error| {
-                    error!("Error in writer_task: {e:?}");
-                },
-            ),
+            Self::writer_task(
+                Rc::downgrade(self),
+                stream,
+                view_ref_koid,
+                self.inspect_data.scoped_increment_writer_count(),
+            )
+            .unwrap_or_else(|e: Error| {
+                error!("Error in writer_task: {e:?}");
+            }),
         );
         self.tracked_tasks.track(task);
     }
@@ -236,6 +271,7 @@ impl Service {
         weak_this: Weak<Self>,
         mut stream: fclip::WriterRequestStream,
         view_ref_koid: zx::Koid,
+        _instance_counter: impl Drop,
     ) -> Result<(), Error> {
         while let Some(this) = weak_this.upgrade() {
             // `select_biased!` is used here to ensure that if the "ViewRef closed" future and a new
@@ -291,16 +327,23 @@ impl Service {
         view_ref_koid: zx::Koid,
     ) -> Result<(), ClipboardError> {
         debug!("handle_set_item for ViewRef {view_ref_koid:?}");
-        self.ensure_view_is_focused(view_ref_koid)?;
-        let item = fidl_item.try_into()?;
+        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::WriteAccessDenied)?;
+        let item = fidl_item.try_into().map_err(|e| {
+            self.inspect_data.record_event(inspect::EventType::WriteError);
+            e
+        })?;
+        self.inspect_data.record_item(&item, true);
         self.clipboard_item.replace(Some(item));
+        self.inspect_data.record_event(inspect::EventType::Write);
         Ok(())
     }
 
     fn handle_clear(self: &Rc<Self>, view_ref_koid: zx::Koid) -> Result<(), ClipboardError> {
         debug!("handle_clear for ViewRef {view_ref_koid:?}");
-        self.ensure_view_is_focused(view_ref_koid)?;
+        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::WriteAccessDenied)?;
         self.clipboard_item.take();
+        self.inspect_data.clear_items();
+        self.inspect_data.record_event(inspect::EventType::Clear);
         Ok(())
     }
 
@@ -312,8 +355,12 @@ impl Service {
         stream: fclip::FocusedReaderRegistryRequestStream,
     ) {
         let task = Task::local(
-            Self::focused_reader_registry_task(Rc::downgrade(self), stream)
-                .unwrap_or_else(|e: Error| error!("Error in focused_reader_registry_task: {e:?}")),
+            Self::focused_reader_registry_task(
+                Rc::downgrade(self),
+                stream,
+                self.inspect_data.scoped_increment_reader_registry_client_count(),
+            )
+            .unwrap_or_else(|e: Error| error!("Error in focused_reader_registry_task: {e:?}")),
         );
         self.tracked_tasks.track(task);
     }
@@ -321,6 +368,7 @@ impl Service {
     async fn focused_reader_registry_task(
         weak_this: Weak<Self>,
         mut stream: fclip::FocusedReaderRegistryRequestStream,
+        _instance_counter: impl Drop,
     ) -> Result<(), Error> {
         use fclip::FocusedReaderRegistryRequest::*;
 
@@ -369,8 +417,13 @@ impl Service {
 
     fn spawn_reader(self: &Rc<Self>, stream: fclip::ReaderRequestStream, view_ref_koid: zx::Koid) {
         Task::local(
-            Self::reader_task(Rc::downgrade(self), stream, view_ref_koid)
-                .unwrap_or_else(|e: Error| error!("Error in reader_task: {e:?}")),
+            Self::reader_task(
+                Rc::downgrade(self),
+                stream,
+                view_ref_koid,
+                self.inspect_data.scoped_increment_reader_count(),
+            )
+            .unwrap_or_else(|e: Error| error!("Error in reader_task: {e:?}")),
         )
         .detach();
     }
@@ -379,6 +432,7 @@ impl Service {
         weak_this: Weak<Self>,
         mut stream: fclip::ReaderRequestStream,
         view_ref_koid: zx::Koid,
+        _instance_counter: impl Drop,
     ) -> Result<(), Error> {
         while let Some(this) = weak_this.upgrade() {
             // `select_biased!` is used here to ensure that if the "ViewRef closed" future and a new
@@ -426,7 +480,8 @@ impl Service {
         view_ref_koid: zx::Koid,
     ) -> Result<fclip::ClipboardItem, ClipboardError> {
         debug!("get_item for ViewRef {view_ref_koid:?}");
-        self.ensure_view_is_focused(view_ref_koid)?;
+        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::ReadAccessDenied)?;
+        self.inspect_data.record_event(inspect::EventType::Read);
         let item = self.clipboard_item.borrow().as_ref().map(Into::into);
         match item {
             None => Err(ClipboardError::Empty),
@@ -482,12 +537,14 @@ impl Service {
     fn ensure_view_is_focused(
         self: &Rc<Self>,
         view_ref_koid: zx::Koid,
+        error_event_type: inspect::EventType,
     ) -> Result<(), ClipboardError> {
         match self.focused_view_ref_koid.borrow().as_ref() {
             None => {
                 warn!(
                     "Asserted ViewRef {view_ref_koid:?} was focused before a focus chain was set",
                 );
+                self.inspect_data.record_event(error_event_type);
                 Err(ClipboardError::internal_from_status(zx::Status::UNAVAILABLE))
             }
             Some(focused_view_ref_koid) => {
@@ -495,6 +552,7 @@ impl Service {
                     Ok(())
                 } else {
                     info!("ViewRef {view_ref_koid:?} is not focused");
+                    self.inspect_data.record_event(error_event_type);
                     Err(ClipboardError::Unauthorized)
                 }
             }
@@ -611,6 +669,27 @@ impl std::fmt::Display for RegisterFor {
             RegisterFor::Writer => "writer",
             RegisterFor::Reader => "reader",
         })
+    }
+}
+
+/// Generic clock trait.
+pub(crate) trait Clock: Clone + std::fmt::Debug {
+    fn now(&self) -> zx::Time;
+}
+
+/// Production version of the clock.
+#[derive(Debug, Default, Clone)]
+pub(crate) struct MonotonicClock;
+
+impl MonotonicClock {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Clock for MonotonicClock {
+    fn now(&self) -> zx::Time {
+        zx::Time::get_monotonic()
     }
 }
 

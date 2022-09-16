@@ -26,6 +26,18 @@ impl ClipboardItem {
             .unwrap_or_else(|| defaults::MIME_TYPE_HINT.to_string());
         Self { mime_type_hint, payload: Payload::Text { text: text.as_ref().to_string() } }
     }
+
+    /// Returns the MIME type hint.
+    pub fn mime_type_hint(&self) -> &str {
+        &self.mime_type_hint
+    }
+
+    /// Returns the size of the payload in bytes.
+    pub fn payload_size_bytes(&self) -> usize {
+        match &self.payload {
+            Payload::Text { text } => text.as_bytes().len(),
+        }
+    }
 }
 
 /// Equivalent to [`fidl_fuchsia_ui_clipboard::ClipboardItemData`].

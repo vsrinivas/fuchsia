@@ -7,7 +7,10 @@
 #![cfg(test)]
 
 use {
-    crate::{service::Service, test_helpers::*},
+    crate::{
+        service::{Clock, Service, ServiceDependencies},
+        test_helpers::*,
+    },
     anyhow::{Context, Error},
     assert_matches::assert_matches,
     fclip::{
@@ -21,17 +24,55 @@ use {
     focus_chain_provider::FocusChainProviderPublisher,
     fuchsia_async::Task,
     fuchsia_async::{self as fasync, DurationExt},
+    fuchsia_inspect::{assert_data_tree, Inspector},
     fuchsia_scenic::{self as scenic, ViewRefPair},
-    fuchsia_zircon::DurationNum,
-    std::rc::Rc,
+    fuchsia_zircon::{self as zx, DurationNum},
+    std::{
+        cell::{Cell, RefCell},
+        rc::Rc,
+    },
 };
+
+#[derive(Debug)]
+enum TestServiceDependencies {/* not instantiable */}
+impl ServiceDependencies for TestServiceDependencies {
+    type Clock = FakeClock;
+}
+
+/// Can be cloned so that one instance can be passed into the service and the other manipulated
+/// in the test code.
+#[derive(Debug, Clone)]
+struct FakeClock {
+    now: Rc<Cell<zx::Time>>,
+}
+
+#[allow(dead_code)]
+impl FakeClock {
+    fn new(now: zx::Time) -> Self {
+        Self { now: Rc::new(Cell::new(now)) }
+    }
+
+    fn set_time(&self, time: zx::Time) {
+        self.now.set(time)
+    }
+}
+
+impl Clock for FakeClock {
+    fn now(&self) -> zx::Time {
+        self.now.get()
+    }
+}
 
 /// Holds on to structs instances that are needed for testing, including a copy of the `Service`
 /// itself.
+#[allow(dead_code)]
 struct TestHandles {
-    service: Rc<Service>,
+    service: Rc<Service<TestServiceDependencies>>,
+    clock: FakeClock,
     focus_chain_publisher: FocusChainProviderPublisher,
-    _focus_chain_provider_task: Task<()>,
+    /// Mutable so that it can be removed to simulate error conditions.
+    focus_chain_provider_task: RefCell<Option<Task<()>>>,
+    inspector: Inspector,
 }
 
 impl TestHandles {
@@ -43,15 +84,32 @@ impl TestHandles {
         let focus_chain_provider_task =
             focus_chain_stream_handler.handle_request_stream(focus_chain_provider_stream);
 
-        let service = Service::new(focus_chain_provider_proxy);
+        let inspector = Inspector::new();
+        let clock = FakeClock::new(zx::Time::from_nanos(0));
+
+        let service = Service::<TestServiceDependencies>::new(
+            clock.clone(),
+            focus_chain_provider_proxy,
+            inspector.root(),
+        );
 
         let handles = TestHandles {
             service: service.clone(),
+            clock,
             focus_chain_publisher,
-            _focus_chain_provider_task: focus_chain_provider_task,
+            focus_chain_provider_task: RefCell::new(Some(focus_chain_provider_task)),
+            inspector,
         };
 
         Ok(handles)
+    }
+
+    fn set_time(&self, time: zx::Time) {
+        self.clock.set_time(time);
+    }
+
+    fn set_time_ns(&self, nanos: i64) {
+        self.set_time(zx::Time::from_nanos(nanos))
     }
 
     fn get_writer_registry(&self) -> Result<FocusedWriterRegistryProxy, Error> {
@@ -95,6 +153,15 @@ impl TestHandles {
 
         Ok(())
     }
+
+    async fn kill_focus_chain_provider(&self) {
+        let task = self.focus_chain_provider_task.borrow_mut().take();
+        drop(task);
+
+        // The timer duration doesn't matter here; we just need to give the executor a chance to
+        // clean up the dropped task, which doesn't happen until the task is polled again.
+        fasync::Timer::new(1_i64.nanos().after_now()).await;
+    }
 }
 
 #[fuchsia::test]
@@ -104,6 +171,7 @@ async fn test_basic_copy_paste_across_different_view_refs() -> Result<(), Error>
     let ViewRefPair { control_ref: _control_ref_a, view_ref: view_ref_a } = ViewRefPair::new()?;
     let ViewRefPair { control_ref: _control_ref_b, view_ref: view_ref_b } = ViewRefPair::new()?;
 
+    handles.set_time_ns(10);
     handles.set_focus_chain(vec![&view_ref_a]).await?;
 
     let writer_registry = handles.get_writer_registry()?;
@@ -112,15 +180,47 @@ async fn test_basic_copy_paste_across_different_view_refs() -> Result<(), Error>
     let reader_registry = handles.get_reader_registry()?;
     let reader_b = reader_registry.get_reader(&view_ref_b).await?;
 
+    handles.set_time_ns(20);
     let item_to_copy = make_clipboard_item("text/json".to_string(), "{}".to_string());
     let _ = writer_a.set_item(item_to_copy).flatten_err().await?;
 
+    handles.set_time_ns(30);
     handles.set_focus_chain(vec![&view_ref_b]).await?;
 
+    handles.set_time_ns(40);
     let pasted_item = reader_b.get_item(fclip::ReaderGetItemRequest::EMPTY).flatten_err().await?;
 
     let expected_item = make_clipboard_item("text/json".to_string(), "{}".to_string());
     assert_eq!(pasted_item, expected_item);
+
+    assert_data_tree!(handles.inspector, root: contains {
+        clipboard: {
+            events: contains {
+                focus_updated: {
+                    event_count: 2u64,
+                    last_seen_ns: 30i64,
+                },
+                write: {
+                    event_count: 1u64,
+                    last_seen_ns: 20i64,
+                },
+                read: {
+                    event_count: 1u64,
+                    last_seen_ns: 40i64,
+                },
+            },
+            reader_registry_client_count: 1u64,
+            writer_registry_client_count: 1u64,
+            reader_count: 1u64,
+            writer_count: 1u64,
+            last_modified_ns: 20i64,
+            items: {
+                "text/json": {
+                    size_bytes: 2u64, // "{}"
+                },
+            }
+        }
+    });
 
     Ok(())
 }
@@ -384,6 +484,49 @@ async fn test_copy_and_paste_default_mime_type() -> Result<(), Error> {
     let expected_item =
         make_clipboard_item("text/plain;charset=utf-8".to_string(), "abc".to_string());
     assert_eq!(pasted_item, expected_item);
+
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn test_inspect_health_and_focus() -> Result<(), Error> {
+    let handles = TestHandles::new()?;
+
+    assert_data_tree!(handles.inspector, root: contains {
+        "fuchsia.inspect.Health": contains {
+            status: "STARTING_UP"
+        }
+    });
+
+    let ViewRefPair { control_ref: _control_ref, view_ref } = ViewRefPair::new()?;
+    handles.set_focus_chain(vec![&view_ref]).await.context("set_focus_chain")?;
+
+    assert_data_tree!(handles.inspector, root: contains {
+        "fuchsia.inspect.Health": contains {
+            status: "OK"
+        }
+    });
+
+    Ok(())
+}
+
+#[fuchsia::test]
+async fn test_inspect_health_and_focus_error() -> Result<(), Error> {
+    let handles = TestHandles::new()?;
+
+    assert_data_tree!(handles.inspector, root: contains {
+        "fuchsia.inspect.Health": contains {
+            status: "STARTING_UP"
+        }
+    });
+
+    handles.kill_focus_chain_provider().await;
+
+    assert_data_tree!(handles.inspector, root: contains {
+        "fuchsia.inspect.Health": contains {
+            status: "UNHEALTHY"
+        }
+    });
 
     Ok(())
 }
