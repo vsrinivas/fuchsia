@@ -29,6 +29,14 @@ pub struct CoverageCommand {
     #[argh(option)]
     pub export_lcov: Option<PathBuf>,
 
+    /// "<from>,<to>" remapping of source file paths passed through to llvm-cov
+    #[argh(option)]
+    pub path_remappings: Vec<String>,
+
+    /// path to the directory used as a base for relative coverage mapping paths, passed through to llvm-cov
+    #[argh(option)]
+    pub compilation_dir: Option<PathBuf>,
+
     /// paths to source files to show coverage for
     #[argh(positional)]
     pub src_files: Vec<PathBuf>,

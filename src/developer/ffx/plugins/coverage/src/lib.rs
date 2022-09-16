@@ -18,6 +18,15 @@ use {
 // The line found right above build ID in `llvm-profdata show --binary-ids` output.
 const BINARY_ID_LINE: &str = "Binary IDs:";
 
+/// A convenient struct grouping common parameters to export/show functions.
+struct ExportParams<'a> {
+    llvm_cov_bin: PathBuf,
+    merged_profile: PathBuf,
+    bin_files_args: Vec<&'a str>,
+    src_files: Vec<PathBuf>,
+    extra_args: Vec<&'a str>,
+}
+
 #[ffx_plugin("coverage")]
 pub async fn coverage(cmd: CoverageCommand) -> Result<()> {
     let clang_bin_dir = cmd.clang_dir.join("bin");
@@ -46,24 +55,20 @@ pub async fn coverage(cmd: CoverageCommand) -> Result<()> {
         show_binary_id,
     )?;
 
+    let params = ExportParams {
+        llvm_cov_bin,
+        merged_profile,
+        bin_files_args: to_llvm_cov_args(&bin_files),
+        src_files: cmd.src_files,
+        extra_args: to_extra_export_args(&cmd.path_remappings, cmd.compilation_dir.as_ref()),
+    };
+
     match (cmd.export_html, cmd.export_lcov) {
-        (Some(ref html_export_dir), _) => {
-            export_html(&llvm_cov_bin, &merged_profile, &bin_files, &cmd.src_files, html_export_dir)
-                .context(format!(
-                    "failed to export HTML coverage report to {:?}",
-                    html_export_dir
-                ))?
-        }
-        (_, Some(ref lcov_export_path)) => export_lcov(
-            &llvm_cov_bin,
-            &merged_profile,
-            &bin_files,
-            &cmd.src_files,
-            lcov_export_path,
-        )
-        .context(format!("failed to export LCOV to {:?}", lcov_export_path))?,
-        (None, None) => show_coverage(&llvm_cov_bin, &merged_profile, &bin_files, &cmd.src_files)
-            .context("failed to show coverage")?,
+        (Some(ref html_export_dir), _) => export_html(&params, html_export_dir)
+            .context(format!("failed to export HTML coverage report to {:?}", html_export_dir))?,
+        (_, Some(ref lcov_export_path)) => export_lcov(&params, lcov_export_path)
+            .context(format!("failed to export LCOV to {:?}", lcov_export_path))?,
+        (None, None) => show_coverage(&params).context("failed to show coverage")?,
     }
 
     Ok(())
@@ -155,20 +160,34 @@ fn to_llvm_cov_args(bin_files: &[PathBuf]) -> Vec<&str> {
     })
 }
 
+fn to_extra_export_args<'a>(
+    path_remappings: &'a [String],
+    compilation_dir: Option<&'a PathBuf>,
+) -> Vec<&'a str> {
+    match path_remappings {
+        &[] => Vec::new(),
+        _ => ["-path-equivalence"]
+            .into_iter()
+            .chain(path_remappings.iter().map(|s| s.as_str()))
+            .collect(),
+    }
+    .into_iter()
+    .chain(match compilation_dir {
+        Some(dir) => vec!["-compilation-dir", dir.to_str().unwrap()],
+        None => Vec::new(),
+    })
+    .collect()
+}
+
 /// Calls `llvm-cov show` to display coverage from `merged_profile` for `bin_files`.
 /// `src_files` can be used to filter coverage for selected source files.
-fn show_coverage(
-    llvm_cov_bin: &Path,
-    merged_profile: &Path,
-    bin_files: &[PathBuf],
-    src_files: &[PathBuf],
-) -> Result<()> {
-    let bin_file_args = to_llvm_cov_args(bin_files);
-    let show_cmd = Command::new(llvm_cov_bin)
+fn show_coverage(params: &ExportParams<'_>) -> Result<()> {
+    let show_cmd = Command::new(&params.llvm_cov_bin)
         .args(["show", "-instr-profile"])
-        .arg(merged_profile)
-        .args(&bin_file_args)
-        .args(src_files)
+        .arg(&params.merged_profile)
+        .args(&params.extra_args)
+        .args(&params.bin_files_args)
+        .args(&params.src_files)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -185,21 +204,15 @@ fn show_coverage(
 }
 
 /// Calls `llvm-cov show -format html` to write HTML pages for collected test coverage.
-fn export_html(
-    llvm_cov_bin: &Path,
-    merged_profile: &Path,
-    bin_files: &[PathBuf],
-    src_files: &[PathBuf],
-    html_export_path: &Path,
-) -> Result<()> {
-    let bin_file_args = to_llvm_cov_args(bin_files);
-    let show_cmd = Command::new(llvm_cov_bin)
+fn export_html(params: &ExportParams<'_>, html_export_path: &Path) -> Result<()> {
+    let show_cmd = Command::new(&params.llvm_cov_bin)
         .args(["show", "-format", "html", "-output-dir"])
         .arg(html_export_path)
         .arg("-instr-profile")
-        .arg(merged_profile)
-        .args(&bin_file_args)
-        .args(src_files)
+        .arg(&params.merged_profile)
+        .args(&params.extra_args)
+        .args(&params.bin_files_args)
+        .args(&params.src_files)
         .stdout(Stdio::inherit())
         .stderr(Stdio::inherit())
         .output()
@@ -216,21 +229,15 @@ fn export_html(
 }
 
 /// Calls `llvm-cov export -format lcov` to write a LCOV file for collected test coverage.
-fn export_lcov(
-    llvm_cov_bin: &Path,
-    merged_profile: &Path,
-    bin_files: &[PathBuf],
-    src_files: &[PathBuf],
-    lcov_export_path: &Path,
-) -> Result<()> {
+fn export_lcov(params: &ExportParams<'_>, lcov_export_path: &Path) -> Result<()> {
     let output_lcov = File::create(lcov_export_path)?;
-    let bin_file_args = to_llvm_cov_args(bin_files);
-    let show_cmd = Command::new(llvm_cov_bin)
+    let show_cmd = Command::new(&params.llvm_cov_bin)
         .args(["export", "-format", "lcov", "-skip-expansions", "-skip-functions"])
         .arg("-instr-profile")
-        .arg(merged_profile)
-        .args(&bin_file_args)
-        .args(src_files)
+        .arg(&params.merged_profile)
+        .args(&params.extra_args)
+        .args(&params.bin_files_args)
+        .args(&params.src_files)
         .stdout(output_lcov)
         .stderr(Stdio::inherit())
         .output()
@@ -305,6 +312,8 @@ mod tests {
             symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
             export_html: None,
             export_lcov: None,
+            path_remappings: Vec::new(),
+            compilation_dir: None,
             src_files: Vec::new(),
         })
         .await
@@ -321,6 +330,8 @@ mod tests {
             symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
             export_html: None,
             export_lcov: None,
+            path_remappings: Vec::new(),
+            compilation_dir: None,
             src_files: Vec::new(),
         })
         .await
@@ -337,6 +348,8 @@ mod tests {
                 symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
                 export_html: None,
                 export_lcov: None,
+                path_remappings: Vec::new(),
+                compilation_dir: None,
                 src_files: Vec::new(),
             })
             .await,
@@ -351,6 +364,8 @@ mod tests {
                 symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
                 export_html: Some(PathBuf::from(&test_dir_path)),
                 export_lcov: None,
+                path_remappings: Vec::new(),
+                compilation_dir: None,
                 src_files: Vec::new(),
             })
             .await,
@@ -365,6 +380,27 @@ mod tests {
                 symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
                 export_html: None,
                 export_lcov: Some(PathBuf::from(&test_dir_path).join("test.lcov")),
+                path_remappings: Vec::new(),
+                compilation_dir: None,
+                src_files: Vec::new(),
+            })
+            .await,
+            Ok(())
+        );
+
+        // Export with non-empty path_remappings and compilation_dir.
+        assert_matches!(
+            coverage(CoverageCommand {
+                test_output_dir: PathBuf::from(&test_dir_path),
+                clang_dir: PathBuf::from(&test_dir_path),
+                symbol_index_json: Some(PathBuf::from(&test_symbol_index_json)),
+                export_html: None,
+                export_lcov: None,
+                path_remappings: vec![
+                    "from_path,to_path".to_string(),
+                    "from_path2,to_path2".to_string()
+                ],
+                compilation_dir: Some(PathBuf::from("path/to/comp/dir")),
                 src_files: Vec::new(),
             })
             .await,
@@ -488,5 +524,22 @@ mod tests {
             |_: &Path, _: &Path| Ok("a".to_string()),
         )
         .is_err())
+    }
+
+    #[test]
+    fn test_to_extra_export_args() {
+        assert_eq!(to_extra_export_args(&[], None), Vec::<&str>::new());
+        assert_eq!(
+            to_extra_export_args(&["from,to".to_string(), "path1,path2".to_string()], None),
+            vec!["-path-equivalence", "from,to", "path1,path2"]
+        );
+        assert_eq!(
+            to_extra_export_args(&[], Some(&PathBuf::from("path/to/comp/dir"))),
+            vec!["-compilation-dir", "path/to/comp/dir"]
+        );
+        assert_eq!(
+            to_extra_export_args(&["p1,p2".to_string()], Some(&PathBuf::from("comp_dir"))),
+            vec!["-path-equivalence", "p1,p2", "-compilation-dir", "comp_dir"]
+        );
     }
 }
