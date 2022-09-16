@@ -169,9 +169,7 @@ async fn main() -> Result<(), Error> {
         handle: Some(BATTERY_CHARACTERISTIC_HANDLE),
         type_: Uuid::from_str(BATTERY_LEVEL_UUID).ok().map(Into::into),
         properties: Some(
-            (gatt::CharacteristicPropertyBits::READ | gatt::CharacteristicPropertyBits::NOTIFY)
-                .bits()
-                .into(),
+            gatt::CharacteristicPropertyBits::READ | gatt::CharacteristicPropertyBits::NOTIFY,
         ),
         permissions: Some(gatt::AttributePermissions {
             read: Some(security.clone()),

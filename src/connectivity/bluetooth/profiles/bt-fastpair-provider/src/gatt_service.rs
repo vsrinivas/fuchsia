@@ -153,7 +153,7 @@ impl GattService {
         let model_id = Characteristic {
             handle: Some(MODEL_ID_CHARACTERISTIC_HANDLE),
             type_: Uuid::from_str(MODEL_ID_CHARACTERISTIC_UUID).ok().map(Into::into),
-            properties: Some(CharacteristicPropertyBits::READ.bits().into()),
+            properties: Some(CharacteristicPropertyBits::READ),
             permissions: Some(AttributePermissions {
                 read: Some(SecurityRequirements::EMPTY),
                 ..AttributePermissions::EMPTY
@@ -167,9 +167,7 @@ impl GattService {
             handle: Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE),
             type_: Uuid::from_str(KEY_BASED_PAIRING_CHARACTERISTIC_UUID).ok().map(Into::into),
             properties: Some(
-                (CharacteristicPropertyBits::WRITE | CharacteristicPropertyBits::NOTIFY)
-                    .bits()
-                    .into(),
+                CharacteristicPropertyBits::WRITE | CharacteristicPropertyBits::NOTIFY,
             ),
             permissions: Some(AttributePermissions {
                 write: Some(SecurityRequirements::EMPTY),
@@ -184,9 +182,7 @@ impl GattService {
             handle: Some(PASSKEY_CHARACTERISTIC_HANDLE),
             type_: Uuid::from_str(PASSKEY_CHARACTERISTIC_UUID).ok().map(Into::into),
             properties: Some(
-                (CharacteristicPropertyBits::WRITE | CharacteristicPropertyBits::NOTIFY)
-                    .bits()
-                    .into(),
+                CharacteristicPropertyBits::WRITE | CharacteristicPropertyBits::NOTIFY,
             ),
             permissions: Some(AttributePermissions {
                 write: Some(SecurityRequirements::EMPTY),
@@ -200,7 +196,7 @@ impl GattService {
         let account_key = Characteristic {
             handle: Some(ACCOUNT_KEY_CHARACTERISTIC_HANDLE),
             type_: Uuid::from_str(ACCOUNT_KEY_CHARACTERISTIC_UUID).ok().map(Into::into),
-            properties: Some(CharacteristicPropertyBits::WRITE.bits().into()),
+            properties: Some(CharacteristicPropertyBits::WRITE),
             permissions: Some(AttributePermissions {
                 write: Some(SecurityRequirements::EMPTY),
                 ..AttributePermissions::EMPTY
@@ -212,7 +208,7 @@ impl GattService {
         let firmware_revision = Characteristic {
             handle: Some(FIRMWARE_REVISION_CHARACTERISTIC_HANDLE),
             type_: Some(Uuid::new16(FIRMWARE_REVISION_CHARACTERISTIC_UUID).into()),
-            properties: Some(CharacteristicPropertyBits::READ.bits().into()),
+            properties: Some(CharacteristicPropertyBits::READ),
             permissions: Some(AttributePermissions {
                 read: Some(SecurityRequirements::EMPTY),
                 ..AttributePermissions::EMPTY

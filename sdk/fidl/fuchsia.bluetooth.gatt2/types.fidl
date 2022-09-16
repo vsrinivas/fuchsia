@@ -265,10 +265,9 @@ type Characteristic = table {
     /// Always present. Mandatory for local characteristics.
     2: type bt.Uuid;
 
-    /// The characteristic properties bitfield. See `CharacteristicPropertyBits`
-    /// above for possible values.
+    /// The characteristic properties bitfield.
     /// Always present. Mandatory for local characteristics.
-    3: properties uint32;
+    3: properties CharacteristicPropertyBits;
 
     /// The attribute permissions of this characteristic. For remote
     /// characteristics, this value will not be present until the permissions are
