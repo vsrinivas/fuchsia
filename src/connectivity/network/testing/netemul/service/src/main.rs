@@ -1491,7 +1491,7 @@ mod tests {
                         ])),
                         ..fnetemul::ChildDef::EMPTY
                     },
-                    // TODO(https://fxbug.dev/74868): when we can allow ERROR logs for routing
+                    // TODO(https://fxbug.dev/65359): when we can allow ERROR logs for routing
                     // errors, add a child component that does not `use` NetworkContext, and verify
                     // that we cannot get at NetworkContext through it. It should result in a
                     // zx::Status::UNAVAILABLE error.
@@ -1516,7 +1516,7 @@ mod tests {
     }
 
     #[fixture(with_sandbox)]
-    // TODO(https://fxbug.dev/74868): when we can allowlist particular ERROR logs in a test, we can
+    // TODO(https://fxbug.dev/65359): when we can allowlist particular ERROR logs in a test, we can
     // use #[fuchsia::test] which initializes syslog.
     #[fasync::run_singlethreaded(test)]
     async fn create_realm_invalid_options(sandbox: fnetemul::SandboxProxy) {
@@ -1892,7 +1892,7 @@ mod tests {
                 .expect("fuchsia.netemul.test/CounterB.increment call failed"),
             2,
         );
-        // TODO(https://fxbug.dev/74868): once we can allow the ERROR logs that result from the
+        // TODO(https://fxbug.dev/65359): once we can allow the ERROR logs that result from the
         // routing failure, verify that counter-b does *not* have access to counter-a's protocol.
     }
 
@@ -2126,7 +2126,7 @@ mod tests {
                         ])),
                         ..fnetemul::ChildDef::EMPTY
                     },
-                    // TODO(https://fxbug.dev/74868): when we can allow ERROR logs for routing
+                    // TODO(https://fxbug.dev/65359): when we can allow ERROR logs for routing
                     // errors, add a child component that does not `use` `devfs`, and verify that we
                     // cannot get at the realm's `devfs` through it. It should result in a
                     // zx::Status::UNAVAILABLE error.
@@ -2388,7 +2388,7 @@ mod tests {
     }
 
     #[fixture(with_sandbox)]
-    // TODO(https://fxbug.dev/74868): when we can allowlist particular ERROR logs in a test, we can
+    // TODO(https://fxbug.dev/65359): when we can allowlist particular ERROR logs in a test, we can
     // use #[fuchsia::test] which initializes syslog.
     #[fasync::run_singlethreaded(test)]
     async fn add_remove_device_invalid_path(sandbox: fnetemul::SandboxProxy) {

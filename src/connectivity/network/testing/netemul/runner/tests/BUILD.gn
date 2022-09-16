@@ -71,7 +71,7 @@ fuchsia_unittest_package("netemul-runner-errors-tests") {
     "//src/sys/test_manager:test_manager_for_test_cmp",
   ]
 
-  # TODO(https://fxbug.dev/74868): allowlist ERROR logs from netemul_test_runner
+  # TODO(https://fxbug.dev/65359): allowlist ERROR logs from netemul_test_runner
   # when testing invalid test configurations that cause it to emit ERROR logs.
   test_specs = {
     log_settings = {

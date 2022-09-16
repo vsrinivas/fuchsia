@@ -68,7 +68,7 @@ fuchsia_test_component("netstack-interfaces-error-fidl-test") {
   deps = [ "interfaces:error" ]
 }
 
-# TODO(https://fxbug.dev/74868): Merge this with the above package once it is
+# TODO(https://fxbug.dev/65359): Merge this with the above package once it is
 # supported to configure acceptable error log lines.
 fuchsia_test_package("netstack-error-fidl-tests") {
   test_components = [ ":netstack-interfaces-error-fidl-test" ]
