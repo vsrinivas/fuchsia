@@ -2,16 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <lib/fidl/cpp/fuzzing/server_provider.h>
 
 #include <chrono>
-#include <future>
 
 #include "lib/async/default.h"
-#include "lib/sys/cpp/component_context.h"
-#include "src/cobalt/bin/app/logger_impl.h"
-#include "src/cobalt/bin/app/timer_manager.h"
+#include "src/cobalt/bin/app/metric_event_logger_impl.h"
 #include "src/cobalt/bin/utils/base64.h"
 #include "third_party/cobalt/src/lib/util/posix_file_system.h"
 #include "third_party/cobalt/src/public/cobalt_service.h"
@@ -21,8 +18,8 @@
 
 namespace {
 
-::fidl::fuzzing::ServerProvider<::fuchsia::cobalt::Logger, ::cobalt::LoggerImpl>*
-    fuzzer_server_provider;
+::fidl::fuzzing::ServerProvider<::fuchsia::metrics::MetricEventLogger,
+                                ::cobalt::MetricEventLoggerImpl>* fuzzer_server_provider;
 
 std::unique_ptr<cobalt::CobaltRegistry> ToRegistry(const std::string& registry) {
   auto cobalt_registry = std::make_unique<cobalt::CobaltRegistry>();
@@ -62,8 +59,6 @@ cobalt::CobaltConfig cfg = {
 
 std::unique_ptr<cobalt::CobaltService> cobalt_service;
 
-cobalt::TimerManager timer_manager(nullptr);
-
 }  // namespace
 
 // See https://fuchsia.dev/fuchsia-src/development/workflows/libfuzzer_fidl for explanations and
@@ -72,7 +67,8 @@ extern "C" {
 zx_status_t fuzzer_init() {
   if (fuzzer_server_provider == nullptr) {
     fuzzer_server_provider =
-        new ::fidl::fuzzing::ServerProvider<::fuchsia::cobalt::Logger, ::cobalt::LoggerImpl>(
+        new ::fidl::fuzzing::ServerProvider<::fuchsia::metrics::MetricEventLogger,
+                                            ::cobalt::MetricEventLoggerImpl>(
             ::fidl::fuzzing::ServerProviderDispatcherMode::kFromCaller);
   }
 
@@ -85,16 +81,14 @@ zx_status_t fuzzer_init() {
       cobalt::logger::kConfig);
   auto factory = std::make_shared<cobalt::logger::ProjectContextFactory>(config);
   return fuzzer_server_provider->Init(
-      cobalt_service->NewLogger(factory->TakeSingleProjectContext()), &timer_manager);
+      cobalt_service->NewLogger(factory->TakeSingleProjectContext()));
 }
 
 zx_status_t fuzzer_connect(zx_handle_t channel_handle, async_dispatcher_t* dispatcher) {
-  timer_manager.UpdateDispatcher(dispatcher);
   return fuzzer_server_provider->Connect(channel_handle, dispatcher);
 }
 
 zx_status_t fuzzer_disconnect(zx_handle_t channel_handle, async_dispatcher_t* dispatcher) {
-  timer_manager.UpdateDispatcher(nullptr);
   return fuzzer_server_provider->Disconnect(channel_handle, dispatcher);
 }
 
