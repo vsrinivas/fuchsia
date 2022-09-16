@@ -18,6 +18,7 @@ sdk_source_set("driver_runtime") {
     "include/lib/fdf/channel.h",
     "include/lib/fdf/channel_read.h",
     "include/lib/fdf/dispatcher.h",
+    "include/lib/fdf/handle.h",
     "include/lib/fdf/token.h",
     "include/lib/fdf/types.h",
   ]

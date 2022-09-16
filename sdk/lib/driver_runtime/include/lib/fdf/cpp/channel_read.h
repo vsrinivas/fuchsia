@@ -58,28 +58,35 @@ class ChannelReadBase {
   // shutting down (being destroyed), the handlers of any remaining wait
   // may be invoked with a status of |ZX_ERR_CANCELED|.
   //
-  // Returns |ZX_OK| if the wait was successfully begun.
-  // Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
+  // # Errors
+  //
+  // ZX_ERR_INVALID_ARGS: |dispatcher| is an invalid pointer or NULL,
+  // or |options| is any value other than 0.
+  //
+  // ZX_ERR_PEER_CLOSED: There are no available messages and the other
   // side of the channel is closed.
-  // Returns |ZX_ERR_BAD_STATE| if there is already a dispatcher waiting
-  // on this channel.
-  // Returns |ZX_ERR_UNAVAILABLE| if |dispatcher| is shutting down.
+  //
+  // ZX_ERR_BAD_STATE: There is already a dispatcher waiting on this channel.
+  //
+  // ZX_ERR_UNAVAILABLE: |dispatcher| is shutting down.
   zx_status_t Begin(fdf_dispatcher_t* dispatcher);
 
   // Cancels the wait.
   //
   // Whether the wait handler will run depends on whether the dispatcher it
   // was registered with is synchronized.
+  //
   // If the dispatcher is synchronized, this must only be called from a dispatcher
   // thread, and any pending callback will be canceled synchronously.
-  // If the dispatcher is unsynchronized, the callback will be scheduled to be called.
   //
-  // Returns |ZX_OK| if the wait was pending and it has been successfully
-  // canceled; if the dispatcher is unsynchronized, its handler will run with
-  // status ZX_ERR_CANCELED.
-  // Returns |ZX_ERR_NOT_FOUND| if there was no pending wait either because it
-  // is currently running (perhaps in a different thread), already scheduled to be run,
-  // already completed, or had not been started.
+  // If the dispatcher is unsynchronized, the callback will be scheduled to be called
+  // with status |ZX_ERR_CANCELED|.
+  //
+  // # Errors
+  //
+  // ZX_ERR_NOT_FOUND: There was no pending wait either because it is currently running
+  // (perhaps in a different thread), already scheduled to be run, already completed,
+  // or had not been started.
   zx_status_t Cancel();
 
  protected:

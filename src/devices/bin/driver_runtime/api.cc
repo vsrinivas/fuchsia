@@ -38,6 +38,9 @@ __EXPORT void fdf_arena_destroy(fdf_arena_t* arena) { arena->Destroy(); }
 
 __EXPORT
 zx_status_t fdf_channel_create(uint32_t options, fdf_handle_t* out0, fdf_handle_t* out1) {
+  if (!out0 || !out1) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   return driver_runtime::Channel::Create(options, out0, out1);
 }
 

@@ -14,12 +14,14 @@
 
 namespace fdf {
 
-// Usage Notes:
-//
 // C++ wrapper for a channel, with RAII semantics. Automatically closes
 // the channel when it goes out of scope.
 //
-// Example:
+// # Thread safety
+//
+// This class is thread-compatible.
+//
+// # Example
 //
 //   constexpr uint32_t kTag = 'EXAM';
 //   fdf::Arena arena(kTag);
@@ -43,7 +45,6 @@ namespace fdf {
 //         ...
 //  });
 //  zx_status_t status = channel_read->Begin(dispatcher_.get());
-//
 class Channel {
  public:
   using HandleType = fdf_handle_t;
@@ -60,31 +61,47 @@ class Channel {
     return *this;
   }
 
-  // If there is a pending callback registered via |ChannelRead::Begin|,
+  // Closes the handle, causing the underlying object to be reclaimed by the runtime
+  // if no other handles to it exist.
+  //
+  // If there is a pending callback registered via |fdf_channel_wait_async|,
   // it must be cancelled before this is called. For unsynchronized dispatchers,
   // cancellation is not considered complete until the callback is invoked.
-  // This is safe to call from any thread.
+  //
+  // It is not an error to close the special "never a valid handle" FDF_HANDLE_INVALID,
+  // similar to free(NULL) being a valid call.
+  //
+  // Closing the last handle to a peered object using |fdf_handle_close| can affect the
+  // state of the object's peer (if any).
   ~Channel() { close(); }
 
   // Attempts to write a message to the channel.
   //
+  // The caller retains ownership of |arena|, which must be destroyed via |fdf_arena_destroy|.
+  // It is okay to destroy the arena as soon as the write call returns as the lifetime of
+  // the arena is extended until the data is read.
+  //
   // The pointers |data| and |handles| may be NULL if their respective sizes are zero.
-  // |data| and |handles| must be a pointers managed by |arena| if they are not NULL.
+  // |data| and |handles| must be pointers managed by |arena| if they are not NULL.
   // |handles| may be a mix of zircon handles and fdf handles.
   //
-  // The caller retains ownership of |arena|, which will be destroyed when it goes out
-  // of scope. It is okay to destroy the arena as soon as the write call returns as
-  // the lifetime of the arena is extended until the data is read.
+  // Handles with a pending callback registered via |fdf_channel_wait_async| cannot be transferred.
   //
-  // Handles with a pending callback registered via a ChannelRead cannot be transferred.
+  // On success, all |num_handles| of the handles in the handles array are attached to the
+  // message and will become available to the reader of that message from the opposite end of the
+  // channel.
+  //
   // All handles are consumed and are no longer available to the caller, on success or failure.
   //
-  // Returns |ZX_OK| if the write was successful.
-  // Returns |ZX_ERR_BAD_HANDLE| if the channel is not a valid handle.
-  // Returns |ZX_ERR_INVALID_ARGS| if |data| or the handles contained in |handles|
-  // are not managed by |arena|, or at least one of |handles| has a pending callback registered
-  // via a ChannelRead.
-  // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
+  // # Errors
+  //
+  // ZX_ERR_INVALID_ARGS: |data| or |handles| are not pointers managed by |arena|,
+  // or any element in |handles| is not a valid handle,
+  // or at least one of |handles| has a pending callback registered via |fdf_channel_wait_async|.
+  //
+  // ZX_ERR_NO_MEMORY: Failed due to a lack of memory.
+  //
+  // ZX_ERR_PEER_CLOSED: The other side of the channel is closed.
   //
   // This operation is thread-safe.
   zx::status<> Write(uint32_t options, const Arena& arena, void* data, uint32_t num_bytes,
@@ -99,6 +116,7 @@ class Channel {
     Arena arena;
     // The lifetime of |data| and |handles| are tied to the lifetime of |arena|.
     void* data;
+    // The length of |data| in bytes.
     uint32_t num_bytes;
     // |handles| may be a mix of zircon handles and fdf handles.
     cpp20::span<zx_handle_t> handles;
@@ -106,11 +124,11 @@ class Channel {
 
   // Attempts to read the first message from the channel and returns a |ReadReturn|.
   //
-  // Returns |ZX_OK| if the read was successful.
-  // Returns |ZX_ERR_BAD_HANDLE| if the channel is not a valid handle.
-  // Returns |ZX_ERR_INVALID_ARGS| if |arena| is NULL when |data| or |handles| are non-NULL.
-  // Returns |ZX_ERR_SHOULD_WAIT| if the channel contained no messages to read.
-  // Returns |ZX_ERR_PEER_CLOSED| if there are no available messages and the other
+  // # Errors
+  //
+  // ZX_ERR_SHOULD_WAIT: The channel contained no messages to read.
+  //
+  // ZX_ERR_PEER_CLOSED: There are no available messages and the other
   // side of the channel is closed.
   //
   // This operation is thread-safe.
@@ -153,15 +171,19 @@ class Channel {
   // All written handles are consumed and are no longer available to the caller,
   // on success or failure.
   //
-  // Returns |ZX_OK| if the call completed successfully.
-  // Returns |ZX_ERR_BAD_HANDLE| if the channel is not a valid handle.
-  // Returns |ZX_ERR_INVALID_ARGS| if |data| or the handles contained in |handles|
-  // are not managed by |arena|, or |num_bytes| is less than four,
+  // # Errors
+  //
+  // ZX_ERR_INVALID_ARGS: |data| or |handles| are not pointers managed by |arena|,
+  // are not managed by |arena|, or element in |handles| is not a valid handle,
+  // or |num_bytes| is less than four,
   // or at least one of |handles| has a pending callback registered via a ChannelRead.
-  // Returns |ZX_ERR_PEER_CLOSED| if the other side of the channel is closed.
-  // Returns |ZX_ERR_TIMED_OUT| if |deadline| passed before a reply matching
+  //
+  // ZX_ERR_PEER_CLOSED: The other side of the channel is closed.
+  //
+  // ZX_ERR_TIMED_OUT: |deadline| passed before a reply matching
   // the correct txid was received.
-  // Returns |ZX_ERR_BAD_STATE| if this is called from a driver runtime managed thread
+  //
+  // ZX_ERR_BAD_STATE: This is called from a driver runtime managed thread
   // that does not allow sync calls.
   //
   // This operation is thread-safe.
