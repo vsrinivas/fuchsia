@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::lib::AudioFacade;
 use anyhow::{Context, Error};
 use fidl_fuchsia_test_audio_recording::{
     AudioRecordingControlRequest, AudioRecordingControlRequestStream, AudioRecordingError,
@@ -13,7 +12,10 @@ use futures::stream::{StreamExt, TryStreamExt};
 use std::convert::TryInto;
 use std::sync::Arc;
 use tracing::error;
-mod lib;
+
+mod audio_facade;
+
+use crate::audio_facade::AudioFacade;
 
 async fn handle_audio_request(
     facade: Arc<AudioFacade>,
