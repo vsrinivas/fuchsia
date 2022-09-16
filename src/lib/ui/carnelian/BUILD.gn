@@ -63,7 +63,6 @@ rustc_library("carnelian") {
     "//src/lib/fuchsia-runtime",
     "//src/lib/mapped-vmo",
     "//src/lib/storage/fuchsia-vfs-watcher",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/ui/fuchsia-framebuffer",
     "//src/lib/ui/fuchsia-scenic",
@@ -79,6 +78,7 @@ rustc_library("carnelian") {
     "//third_party/rust_crates:smallvec",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:toml",
+    "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:ttf-parser",
   ]
 
