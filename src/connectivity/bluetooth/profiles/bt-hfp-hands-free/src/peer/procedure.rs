@@ -40,6 +40,8 @@ impl ProcedureMarker {
                 at::Response::Success(at::Success::Brsf { .. })
                 | at::Response::Success(at::Success::Cind { .. })
                 | at::Response::RawBytes(_)
+                | at::Response::Success(at::Success::BindList { .. })
+                | at::Response::Success(at::Success::BindStatus { .. })
                 | at::Response::Ok => Ok(Self::SlcInitialization),
                 _ => Err(format_err!(
                     "Non-SLCI AT response received when SLCI has not completed: {:?}",

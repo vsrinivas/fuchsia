@@ -8,13 +8,8 @@ use at_commands as at;
 use super::{Procedure, ProcedureMarker};
 
 use crate::features::{extract_features_from_command, AgFeatures, CVSD, MSBC};
+use crate::peer::indicators::{BATTERY_LEVEL, ENHANCED_SAFETY, INDICATOR_REPORTING_MODE};
 use crate::peer::service_level_connection::SharedState;
-
-/// This mode's behavior is to forward unsolicited result codes directly per
-/// 3GPP TS 27.007 version 6.8.0, Section 8.10.
-/// This is the only supported mode in the Event Reporting Enabling AT command (AT+CMER).
-/// Defined in HFP v1.8 Section 4.34.2.
-pub const INDICATOR_REPORTING_MODE: i64 = 3;
 
 #[derive(Debug)]
 pub enum Stages {
@@ -24,9 +19,11 @@ pub enum Stages {
     EnableIndicators,
     IndicatorStatusUpdate,
     CallHoldAndMultiParty,
+    HfIndicator,
+    HfIndicatorRequest,
+    HfIndicatorEnable,
 }
 
-// TODO(fxbug.dev/104703): Still work in progress
 pub struct SlcInitProcedure {
     terminated: bool,
     state: Stages,
@@ -142,6 +139,11 @@ impl Procedure for SlcInitProcedure {
                     if state.supports_three_way_calling() {
                         self.state = Stages::CallHoldAndMultiParty;
                         return Ok(vec![at::Command::ChldTest {}]);
+                    } else if state.supports_hf_indicators() {
+                        self.state = Stages::HfIndicator;
+                        return Ok(vec![at::Command::Bind {
+                            indicators: vec![ENHANCED_SAFETY as i64, BATTERY_LEVEL as i64],
+                        }]);
                     } else {
                         self.terminated = true;
                         return Ok(vec![]);
@@ -159,8 +161,10 @@ impl Procedure for SlcInitProcedure {
                 [at::Response::Success(at::Success::Chld { commands }), at::Response::Ok] => {
                     state.three_way_features = extract_features_from_command(&commands)?;
                     if state.supports_hf_indicators() {
-                        // TODO implement in follow up
-                        return Ok(vec![]);
+                        self.state = Stages::HfIndicator;
+                        return Ok(vec![at::Command::Bind {
+                            indicators: vec![ENHANCED_SAFETY as i64, BATTERY_LEVEL as i64],
+                        }]);
                     } else {
                         self.terminated = true;
                         return Ok(vec![]);
@@ -174,6 +178,58 @@ impl Procedure for SlcInitProcedure {
                     ));
                 }
             },
+            Stages::HfIndicator => match update[..] {
+                [at::Response::Ok] => {
+                    self.state = Stages::HfIndicatorRequest;
+                    return Ok(vec![at::Command::BindTest {}]);
+                }
+                _ => {
+                    return Err(format_err!(
+                        "Wrong responses at {:?} stage of SLCI with response(s): {:?}.",
+                        self.state,
+                        update
+                    ));
+                }
+            },
+            Stages::HfIndicatorRequest => match &update[..] {
+                [at::Response::Success(at::Success::BindList { indicators }), at::Response::Ok] => {
+                    state.hf_indicators.set_supported_indicators(indicators);
+                    self.state = Stages::HfIndicatorEnable;
+                    return Ok(vec![at::Command::BindRead {}]);
+                }
+                _ => {
+                    return Err(format_err!(
+                        "Wrong responses at {:?} stage of SLCI with response(s): {:?}.",
+                        self.state,
+                        update
+                    ));
+                }
+            },
+            Stages::HfIndicatorEnable => {
+                for response in update {
+                    match response {
+                        at::Response::Success(cmd @ at::Success::BindStatus { .. }) => {
+                            state.hf_indicators.change_indicator_state(cmd)?;
+                        }
+                        at::Response::Ok => {
+                            self.terminated = true;
+                            return Ok(vec![]);
+                        }
+                        _ => {
+                            return Err(format_err!(
+                                "Wrong responses at {:?} stage of SLCI with response(s): {:?}.",
+                                self.state,
+                                update
+                            ));
+                        }
+                    }
+                }
+                return Err(format_err!(
+                    "Did not receive Ok from AG at {:?} stage of SLCI with response(s): {:?}.",
+                    self.state,
+                    update
+                ));
+            }
         }
     }
 
@@ -186,7 +242,7 @@ impl Procedure for SlcInitProcedure {
 mod tests {
     use super::*;
 
-    use crate::{config::HandsFreeFeatureSupport, features::CallHoldAction};
+    use crate::{config::HandsFreeFeatureSupport, features::CallHoldAction, features::HfFeatures};
     use assert_matches::assert_matches;
 
     // TODO(fxb/71668) Stop using raw bytes.
@@ -246,16 +302,108 @@ mod tests {
     }
 
     #[fuchsia::test]
+    fn slci_hf_indicator_properly_works() {
+        let mut procedure = SlcInitProcedure::new();
+        // Hf indicators needed for optional procedure.
+        let mut hf_features = HfFeatures::default();
+        let mut ag_features = AgFeatures::default();
+        hf_features.set(HfFeatures::HF_INDICATORS, true);
+        ag_features.set(AgFeatures::HF_INDICATORS, true);
+        let mut state = SharedState::load_with_set_features(hf_features, ag_features);
+
+        assert!(!state.hf_indicators.enhanced_safety.1);
+        assert!(!state.hf_indicators.battery_level.1);
+        assert!(!state.hf_indicators.enhanced_safety.0.enabled);
+        assert!(!state.hf_indicators.battery_level.0.enabled);
+        assert!(!procedure.is_terminated());
+
+        let response1 = vec![
+            at::Response::Success(at::Success::Brsf { features: ag_features.bits() }),
+            at::Response::Ok,
+        ];
+        let expected_command1 = vec![at::Command::CindTest {}];
+
+        assert_eq!(procedure.ag_update(&mut state, &response1).unwrap(), expected_command1);
+        assert_matches!(procedure.state, Stages::ListIndicators);
+
+        let indicator_msg = CIND_TEST_RESPONSE_BYTES.to_vec();
+        let response2 = vec![at::Response::RawBytes(indicator_msg), at::Response::Ok];
+        let expected_command2 = vec![at::Command::CindRead {}];
+
+        assert_eq!(procedure.ag_update(&mut state, &response2).unwrap(), expected_command2);
+        assert_matches!(procedure.state, Stages::EnableIndicators);
+
+        let response3 = vec![
+            at::Response::Success(at::Success::Cind {
+                service: false,
+                call: false,
+                callsetup: 0,
+                callheld: 0,
+                signal: 0,
+                roam: false,
+                battchg: 0,
+            }),
+            at::Response::Ok,
+        ];
+        let expected_command3 =
+            vec![at::Command::Cmer { mode: INDICATOR_REPORTING_MODE, keyp: 0, disp: 0, ind: 1 }];
+
+        assert_eq!(procedure.ag_update(&mut state, &response3).unwrap(), expected_command3);
+        assert_matches!(procedure.state, Stages::IndicatorStatusUpdate);
+
+        let response4 = vec![at::Response::Ok];
+        let expected_command4 = vec![at::Command::Bind {
+            indicators: vec![ENHANCED_SAFETY as i64, BATTERY_LEVEL as i64],
+        }];
+        assert_eq!(procedure.ag_update(&mut state, &response4).unwrap(), expected_command4);
+        assert_matches!(procedure.state, Stages::HfIndicator);
+
+        let response5 = vec![at::Response::Ok];
+        let expected_command5 = vec![at::Command::BindTest {}];
+        assert_eq!(procedure.ag_update(&mut state, &response5).unwrap(), expected_command5);
+        assert_matches!(procedure.state, Stages::HfIndicatorRequest);
+
+        let response6 = vec![
+            at::Response::Success(at::Success::BindList {
+                indicators: vec![
+                    at::BluetoothHFIndicator::BatteryLevel,
+                    at::BluetoothHFIndicator::EnhancedSafety,
+                ],
+            }),
+            at::Response::Ok,
+        ];
+        let expected_command6 = vec![at::Command::BindRead {}];
+        assert_eq!(procedure.ag_update(&mut state, &response6).unwrap(), expected_command6);
+        assert!(state.hf_indicators.enhanced_safety.1);
+        assert!(state.hf_indicators.battery_level.1);
+        assert_matches!(procedure.state, Stages::HfIndicatorEnable);
+
+        let response7 = vec![
+            at::Response::Success(at::Success::BindStatus {
+                anum: at::BluetoothHFIndicator::EnhancedSafety,
+                state: true,
+            }),
+            at::Response::Success(at::Success::BindStatus {
+                anum: at::BluetoothHFIndicator::BatteryLevel,
+                state: true,
+            }),
+            at::Response::Ok,
+        ];
+        let expected_command7 = Vec::<at::Command>::new();
+        assert_eq!(procedure.ag_update(&mut state, &response7).unwrap(), expected_command7);
+        assert!(state.hf_indicators.enhanced_safety.0.enabled);
+        assert!(state.hf_indicators.battery_level.0.enabled);
+        assert!(procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
     fn slci_codec_negotiation_properly_works() {
         let mut procedure = SlcInitProcedure::new();
-        //wide band needed for codec negotiation.
-        let config = HandsFreeFeatureSupport {
-            wide_band_speech: true,
-            ..HandsFreeFeatureSupport::default()
-        };
+        let mut hf_features = HfFeatures::default();
+        hf_features.set(HfFeatures::CODEC_NEGOTIATION, true);
         let mut ag_features = AgFeatures::default();
         ag_features.set(AgFeatures::CODEC_NEGOTIATION, true);
-        let mut state = SharedState::load_with_set_ag_features(config, ag_features);
+        let mut state = SharedState::load_with_set_features(hf_features, ag_features);
 
         assert!(!procedure.is_terminated());
 
@@ -279,20 +427,12 @@ mod tests {
     #[fuchsia::test]
     fn slci_three_way_feature_proper_works() {
         let mut procedure = SlcInitProcedure::new();
-        //three way calling needed for stage.
-        let config = HandsFreeFeatureSupport {
-            ec_or_nr: false,
-            call_waiting_or_three_way_calling: true,
-            cli_presentation_capability: false,
-            voice_recognition_activation: false,
-            remote_volume_control: false,
-            wide_band_speech: false,
-            enhanced_voice_recognition: false,
-            enhanced_voice_recognition_with_text: false,
-        };
+        // Three way calling needed for stage progression.
+        let mut hf_features = HfFeatures::default();
+        hf_features.set(HfFeatures::THREE_WAY_CALLING, true);
         let mut ag_features = AgFeatures::default();
         ag_features.set(AgFeatures::THREE_WAY_CALLING, true);
-        let mut state = SharedState::load_with_set_ag_features(config, ag_features);
+        let mut state = SharedState::load_with_set_features(hf_features, ag_features);
 
         assert!(!procedure.is_terminated());
 
@@ -378,13 +518,11 @@ mod tests {
     #[fuchsia::test]
     fn error_when_incorrect_response_at_codec_negotiation_stage() {
         let mut procedure = SlcInitProcedure::start_at_state(Stages::CodecNegotiation);
-        let config = HandsFreeFeatureSupport {
-            wide_band_speech: true,
-            ..HandsFreeFeatureSupport::default()
-        };
+        let mut hf_features = HfFeatures::default();
+        hf_features.set(HfFeatures::CODEC_NEGOTIATION, true);
         let mut ag_features = AgFeatures::default();
         ag_features.set(AgFeatures::CODEC_NEGOTIATION, true);
-        let mut state = SharedState::load_with_set_ag_features(config, ag_features);
+        let mut state = SharedState::load_with_set_features(hf_features, ag_features);
 
         assert!(!procedure.is_terminated());
 
@@ -483,6 +621,65 @@ mod tests {
         ];
 
         assert_matches!(procedure.ag_update(&mut state, &response), Err(_));
+        assert!(!procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn error_when_incorrect_response_at_hf_indicator_stage() {
+        let mut procedure = SlcInitProcedure::start_at_state(Stages::HfIndicator);
+        let config = HandsFreeFeatureSupport::default();
+        let mut state = SharedState::new(config);
+
+        assert!(!procedure.is_terminated());
+
+        // Did not receive expected Ok response as should result in error.
+        let wrong_response = vec![at::Response::Success(at::Success::TestResponse {})];
+        assert_matches!(procedure.ag_update(&mut state, &wrong_response), Err(_));
+        assert!(!procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn error_when_incorrect_response_at_hf_indicator_request_stage() {
+        let mut procedure = SlcInitProcedure::start_at_state(Stages::HfIndicatorRequest);
+        let config = HandsFreeFeatureSupport::default();
+        let mut state = SharedState::new(config);
+
+        assert!(!procedure.is_terminated());
+
+        // Did not receive expected Ok response as should result in error.
+        let wrong_response = vec![at::Response::Success(at::Success::TestResponse {})];
+        assert_matches!(procedure.ag_update(&mut state, &wrong_response), Err(_));
+        assert!(!procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn error_when_incorrect_response_at_hf_indicator_enable_stage() {
+        let mut procedure = SlcInitProcedure::start_at_state(Stages::HfIndicatorEnable);
+        let config = HandsFreeFeatureSupport::default();
+        let mut state = SharedState::new(config);
+
+        assert!(!procedure.is_terminated());
+
+        // Did not receive expected Ok response as should result in error.
+        let wrong_response = vec![at::Response::Success(at::Success::TestResponse {})];
+        assert_matches!(procedure.ag_update(&mut state, &wrong_response), Err(_));
+        assert!(!procedure.is_terminated());
+    }
+
+    #[fuchsia::test]
+    fn error_when_no_ok_at_hf_indicator_enable_stage() {
+        let mut procedure = SlcInitProcedure::start_at_state(Stages::HfIndicatorEnable);
+        let config = HandsFreeFeatureSupport::default();
+        let mut state = SharedState::new(config);
+
+        assert!(!procedure.is_terminated());
+
+        // Did not receive expected Ok response as should result in error.
+        let wrong_response = vec![at::Response::Success(at::Success::BindStatus {
+            anum: at::BluetoothHFIndicator::BatteryLevel,
+            state: true,
+        })];
+        assert_matches!(procedure.ag_update(&mut state, &wrong_response), Err(_));
         assert!(!procedure.is_terminated());
     }
 

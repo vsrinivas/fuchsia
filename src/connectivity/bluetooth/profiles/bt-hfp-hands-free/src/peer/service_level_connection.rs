@@ -9,7 +9,7 @@ use fuchsia_bluetooth::types::Channel;
 use std::collections::hash_map::HashMap;
 use tracing::warn;
 
-use super::indicators::AgIndicators;
+use super::indicators::{AgIndicators, HfIndicators};
 use super::procedure::{Procedure, ProcedureMarker};
 
 use crate::config::HandsFreeFeatureSupport;
@@ -23,7 +23,7 @@ pub struct SlcState {
     pub shared_state: SharedState,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SharedState {
     /// Featuers that the HF supports.
     pub hf_features: HfFeatures,
@@ -31,6 +31,8 @@ pub struct SharedState {
     pub ag_features: AgFeatures,
     /// The current indicator status of the AG.
     pub ag_indicators: AgIndicators,
+    /// The current indicator status of the HF
+    pub hf_indicators: HfIndicators,
     /// Determines whether the SLCI procedure has completed and
     /// can proceed to do other procedures.
     pub initialized: bool,
@@ -74,6 +76,7 @@ impl SharedState {
             hf_features: config.into(),
             ag_features: AgFeatures::default(),
             ag_indicators: AgIndicators::default(),
+            hf_indicators: HfIndicators::default(),
             initialized: false,
             indicators_update_enabled: true,
             three_way_features: Vec::new(),
@@ -96,11 +99,8 @@ impl SharedState {
     }
 
     #[cfg(test)]
-    pub fn load_with_set_ag_features(
-        config: HandsFreeFeatureSupport,
-        ag_features: AgFeatures,
-    ) -> Self {
-        Self { ag_features, ..SharedState::new(config) }
+    pub fn load_with_set_features(hf_features: HfFeatures, ag_features: AgFeatures) -> Self {
+        Self { hf_features, ag_features, ..SharedState::default() }
     }
 }
 
