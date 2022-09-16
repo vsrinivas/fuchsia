@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async/cpp/task.h>
+#include <lib/backtrace-request/backtrace-request.h>
 #include <lib/zx/channel.h>
 
 #include <cstdio>
@@ -133,6 +136,16 @@ TEST(Surface, CreateImagePipeSurfaceDynamicSymbol) { TestSurface(false).CreateSu
 // Flaking: see https://fxbug.dev/65248
 TEST(Surface, DISABLED_CreateFramebufferSurface) { TestSurface(true).CreateSurface(false); }
 
-TEST(Surface, CreateFramebufferSurfaceDynamicSymbol) { TestSurface(true).CreateSurface(true); }
+TEST(Surface, CreateFramebufferSurfaceDynamicSymbol) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  loop.StartThread();
+  // Perform a backtrace if the test takes too long to try to diagnose fxbug.dev/109002
+  async::PostDelayedTask(
+      loop.dispatcher(), []() { backtrace_request(); }, zx::sec(20));
+
+  TestSurface(true).CreateSurface(true);
+  // Cancels the backtrace request if it hasn't yet executed.
+  loop.Shutdown();
+}
 
 TEST(Surface, GetPresentModes) { TestSurface(true).GetPresentModes(); }

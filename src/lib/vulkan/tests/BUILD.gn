@@ -44,6 +44,7 @@ test("test_image_pipe_swapchain") {
     "//src/lib/testing/loop_fixture",
     "//src/lib/vulkan",
     "//src/lib/vulkan/flatland_view",
+    "//zircon/system/ulib/backtrace-request",
     "//zircon/system/ulib/zx",
   ]
 
