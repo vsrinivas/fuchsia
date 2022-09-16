@@ -29,7 +29,7 @@ use {
         repo_info::RepoInfo,
     },
     ::gcs::client::{DirectoryProgress, FileProgress, ProgressResult},
-    anyhow::{bail, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
     fms::Entries,
     futures::TryStreamExt as _,
     itertools::Itertools as _,
@@ -143,6 +143,43 @@ pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
     Ok(entries)
 }
 
+/// The default behavior for when there are more than one matching
+/// product-bundle.
+///
+/// This function should only be called with an iterator of `url::Url`s that has
+/// 2 or more entries, and has already been sorted & reversed.
+fn default_pbm_of_many<I>(mut urls: I, looking_for: Option<String>) -> Result<url::Url>
+where
+    I: Iterator<Item = url::Url> + Clone,
+{
+    let extra_message = if let Some(looking_for) = looking_for {
+        format!(" for `{}`", looking_for)
+    } else {
+        String::new()
+    };
+    let formatted =
+        urls.clone().map(|url| format!("`{}`", url)).collect::<Vec<String>>().join("\n");
+    println!(
+        "Multiple product bundles found{extra_message}. To run a specific product, pass \
+        in a full URL from the following:\n{formatted}",
+        extra_message = extra_message,
+        formatted = formatted
+    );
+    let first = match urls.next() {
+        Some(first) => first,
+        None => {
+            return Err(anyhow!(
+                "This function should only be called with an iterator with at least 2 entries."
+            ))
+        }
+    };
+    println!(
+        "Defaulting to the first product-bundle in sorted order: `{first}`",
+        first = first.to_string()
+    );
+    Ok(first)
+}
+
 /// Find a product bundle url and name for `product_url`.
 ///
 /// If product_url is
@@ -157,6 +194,8 @@ pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
 pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::Url> {
     tracing::debug!("select_product_bundle");
     let mut urls = product_bundle_urls().await.context("getting product bundle URLs")?;
+    // Sort the URLs lexigraphically, then reverse them so the most recent
+    // version strings will be first.
     urls.sort();
     urls.reverse();
     if let Some(looking_for) = &looking_for {
@@ -170,29 +209,13 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
                 "{}",
                 "A product bundle with that name was not found, please check the spelling and try again."
             ),
-            // This branch can only happen with looking_for matches more than
-            // one fragment--full urls can only ever match once.
-            Err(matches) => {
-                let printable_matches =
-                    matches.map(|url| url.to_string()).collect::<Vec<String>>().join("\n");
-                bail!(
-                    "Multiple product bundles match for: '{}':\n{}",
-                    looking_for,
-                    printable_matches
-                )
-            }
+            Err(matches) => default_pbm_of_many(matches, Some(looking_for.to_string())),
         }
     } else {
         match urls.into_iter().at_most_one() {
             Ok(Some(url)) => Ok(url),
             Ok(None) => bail!("There are no product bundles available."),
-            Err(urls) => {
-                let printable_urls =
-                    urls.map(|url| url.to_string()).collect::<Vec<String>>().join("\n");
-                bail!(
-                    "There is more than one product bundle available, please pass in a product bundle URL:\n{}", printable_urls
-                )
-            }
+            Err(urls) => default_pbm_of_many(urls, None),
         }
     }
 }
