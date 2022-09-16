@@ -20,7 +20,7 @@ use {
     },
     fuchsia_url::{ComponentUrl, PackageUrl},
     futures::prelude::*,
-    log::*,
+    tracing::*,
 };
 
 pub(crate) async fn main() -> anyhow::Result<()> {

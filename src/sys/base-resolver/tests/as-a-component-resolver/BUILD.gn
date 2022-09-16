@@ -49,12 +49,12 @@ rustc_binary("fake_dependencies_bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
     "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/fuchsia-url",
     "//src/lib/storage/vfs/rust:vfs",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
@@ -62,6 +62,7 @@ rustc_binary("fake_dependencies_bin") {
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:tracing",
   ]
   sources = [ "fake_dependencies.rs" ]
 }

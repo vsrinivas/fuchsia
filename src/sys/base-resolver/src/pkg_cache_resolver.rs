@@ -18,11 +18,11 @@ use {
         future::TryFutureExt as _,
         stream::{StreamExt as _, TryStreamExt as _},
     },
-    log::error,
+    tracing::error,
 };
 
 pub(crate) async fn main() -> anyhow::Result<()> {
-    log::info!("started");
+    tracing::info!("started");
 
     let mut service_fs = ServiceFs::new_local();
     service_fs.dir("svc").add_fidl_service(Services::PkgCacheResolver);
@@ -86,7 +86,7 @@ async fn serve_impl(
         match request {
             ResolverRequest::Resolve { component_url, responder } => {
                 if &component_url != fuchsia_pkg_cache_component_url().as_str() {
-                    error!("failed to resolve invalid pkg-cache URL {:?}", component_url);
+                    error!(?component_url, "failed to resolve invalid pkg-cache URL");
                     responder
                         .send(&mut Err(fresolution::ResolverError::InvalidArgs))
                         .context("failed sending invalid URL error")?;
@@ -105,7 +105,7 @@ async fn serve_impl(
             }
 
             ResolverRequest::ResolveWithContext { component_url, context, responder } => {
-                error!("pkg_cache_resolver does not support ResolveWithContext, and could not resolve component URL {:?} with context {:?}", component_url, context);
+                error!(?component_url, ?context, "pkg_cache_resolver does not support ResolveWithContext, and could not resolve URL");
                 responder
                     .send(&mut Err(fresolution::ResolverError::InvalidArgs))
                     .context("failed sending response")?;

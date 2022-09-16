@@ -15,7 +15,7 @@ async fn main() -> anyhow::Result<()> {
         ["/pkg/bin/base_resolver", "base_resolver"] => base_resolver::main().await,
         ["/pkg/bin/base_resolver", "pkg_cache_resolver"] => pkg_cache_resolver::main().await,
         _ => {
-            log::error!("invalid args {:?}", args);
+            tracing::error!("invalid args {:?}", args);
             anyhow::bail!("invalid args {:?}", args)
         }
     }

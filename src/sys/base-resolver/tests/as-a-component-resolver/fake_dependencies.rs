@@ -11,12 +11,12 @@ use {
     },
     fidl_fuchsia_pkg_ext::BlobId,
     fuchsia_async as fasync,
-    fuchsia_syslog::fx_log_err,
     fuchsia_url::UnpinnedAbsolutePackageUrl,
     futures::prelude::*,
     maplit::hashmap,
     std::collections::HashMap,
     std::sync::Arc,
+    tracing::{error, info},
     vfs::directory::entry::DirectoryEntry as _,
 };
 
@@ -41,10 +41,9 @@ static MOCK_PACKAGE_HASH: &'static str =
 // data/static_packages file, which points the pkg-cache-resolver at the "pkg-cache" meta.far, which
 // is actually the meta.far for the test package all this is running from.
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main]
 async fn main() {
-    fuchsia_syslog::init().expect("failed to initialize logging");
-    fuchsia_syslog::fx_log_info!("started");
+    info!("started");
 
     let this_pkg = fuchsia_pkg_testing::Package::identity().await.unwrap();
 
@@ -173,7 +172,7 @@ impl MockPackageCacheService {
                 Ok(())
             }
             .unwrap_or_else(|e: fidl::Error| {
-                fx_log_err!("while serving package index iterator: {:?}", e)
+                error!("while serving package index iterator: {:?}", e)
             }),
         )
         .detach();
