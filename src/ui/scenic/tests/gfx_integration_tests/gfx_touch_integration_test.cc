@@ -308,9 +308,14 @@ TEST_F(GfxTouchIntegrationTest, InjectorChannel_ShouldClose_WhenSceneBreaks) {
 
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref));
 
-  // Break the scene graph relation that the pointerinjector relies on. Observe the channel close.
+  // Break the scene graph relation that the pointerinjector relies on. Observe the channel close
+  // (lazily).
   view.DetachChild(holder_2);
   BlockingPresent(*root_session_->session);
+
+  // Inject an event to trigger the channel closure.
+  Inject(0, 0, fupi_EventPhase::ADD);
+  RunLoopUntil([this] { return injector_channel_closed_; });  // Succeeds or times out.
 }
 
 // In this test we set up the context and the target. We apply a scale, rotation and translation
@@ -831,8 +836,7 @@ TEST_F(GfxTouchIntegrationTest, InjectionOutsideViewport_ShouldLimitOnADD) {
   Inject(50, 0, fupi_EventPhase::CHANGE);
   Inject(50, 50, fupi_EventPhase::CHANGE);
   Inject(0, 50, fupi_EventPhase::REMOVE);
-  RunLoopUntil([&child_events] { return child_events.size() >= 4u; });  // Succeeds or times out.
-  EXPECT_EQ(child_events.size(), 4u);
+  RunLoopUntil([&child_events] { return child_events.size() == 4u; });  // Succeeds or times out.
 
   {
     const auto& viewport_to_view_transform =
@@ -878,8 +882,7 @@ TEST_F(GfxTouchIntegrationTest, Exclusive_TargetDisconnectedMidStream_ShouldCanc
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref));
   Inject(0, 0, fupi_EventPhase::ADD);
   Inject(5, 0, fupi_EventPhase::CHANGE);
-  RunLoopUntil([&child_events] { return child_events.size() >= 2u; });  // Succeeds or times out.
-  EXPECT_EQ(child_events.size(), 2u);
+  RunLoopUntil([&child_events] { return child_events.size() == 2u; });  // Succeeds or times out.
 
   // Disrupt the scene graph.
   view.DetachChild(holder_2);
@@ -889,10 +892,9 @@ TEST_F(GfxTouchIntegrationTest, Exclusive_TargetDisconnectedMidStream_ShouldCanc
   // target)
   Inject(5, 5, fupi_EventPhase::CHANGE);
   EXPECT_TRUE(injector_channel_closed_);
-  RunLoopUntil([&child_events] { return child_events.size() >= 3u; });  // Succeeds or times out.
+  RunLoopUntil([&child_events] { return child_events.size() == 3u; });  // Succeeds or times out.
 
   {
-    ASSERT_EQ(child_events.size(), 3u);
     ASSERT_TRUE(child_events.back().has_pointer_sample());
     const auto& sample = child_events.back().pointer_sample();
     ASSERT_TRUE(sample.has_phase());
@@ -932,8 +934,7 @@ TEST_F(GfxTouchIntegrationTest, Exclusive_TargetDyingMidStream_ShouldKillChannel
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref));
   Inject(0, 0, fupi_EventPhase::ADD);
   Inject(5, 0, fupi_EventPhase::CHANGE);
-  RunLoopUntil([&child_events] { return child_events.size() >= 2u; });  // Succeeds or times out.
-  EXPECT_EQ(child_events.size(), 2u);
+  RunLoopUntil([&child_events] { return child_events.size() == 2u; });  // Succeeds or times out.
 
   // Kill the child.
   bool child_view_died = false;
@@ -1008,7 +1009,6 @@ TEST_F(GfxTouchIntegrationTest, HitTested_ViewDisconnectedMidContest_ShouldLoseC
   Inject(0, 0, fupi_EventPhase::ADD);
   Inject(5, 0, fupi_EventPhase::CHANGE);
   RunLoopUntil([&child2_events] { return child2_events.size() == 2u; });  // Succeeds or times out.
-  EXPECT_EQ(child2_events.size(), 2u);
 
   // Detach view Child2 from the scene graph.
   view.DetachChild(child2_holder);
@@ -1020,11 +1020,9 @@ TEST_F(GfxTouchIntegrationTest, HitTested_ViewDisconnectedMidContest_ShouldLoseC
   RunLoopUntil([&child2_events] { return child2_events.size() == 3u; });  // Succeeds or times out.
   RunLoopUntil([&child1_events] { return child1_events.size() == 5u; });  // Succeeds or times out.
 
-  ASSERT_EQ(child2_events.size(), 3u);
   ASSERT_TRUE(child2_events.back().has_interaction_result());
   EXPECT_EQ(child2_events.back().interaction_result().status, TouchInteractionStatus::DENIED);
 
-  EXPECT_EQ(child1_events.size(), 5u);
   EXPECT_TRUE(std::any_of(child1_events.begin(), child1_events.end(), [](const TouchEvent& event) {
     return event.has_interaction_result() &&
            event.interaction_result().status == TouchInteractionStatus::GRANTED;
@@ -1084,8 +1082,7 @@ TEST_F(GfxTouchIntegrationTest, HitTested_ViewDisconnectedAfterWinning_ShouldCan
   Inject(5, 0, fupi_EventPhase::CHANGE);
 
   // Child2 should win the contest.
-  RunLoopUntil([&child2_events] { return child2_events.size() >= 3u; });  // Succeeds or times out.
-  ASSERT_EQ(child2_events.size(), 3u);
+  RunLoopUntil([&child2_events] { return child2_events.size() == 3u; });  // Succeeds or times out.
   EXPECT_TRUE(std::any_of(child2_events.begin(), child2_events.end(), [](const TouchEvent& event) {
     return event.has_interaction_result() &&
            event.interaction_result().status == TouchInteractionStatus::GRANTED;
@@ -1097,8 +1094,7 @@ TEST_F(GfxTouchIntegrationTest, HitTested_ViewDisconnectedAfterWinning_ShouldCan
 
   // Next event should deliver CANCEL to Child2.
   Inject(5, 5, fupi_EventPhase::CHANGE);
-  RunLoopUntil([&child2_events] { return child2_events.size() >= 4u; });  // Succeeds or times out.
-  ASSERT_EQ(child2_events.size(), 4u);
+  RunLoopUntil([&child2_events] { return child2_events.size() == 4u; });  // Succeeds or times out.
   ASSERT_TRUE(child2_events.back().has_pointer_sample());
   ASSERT_TRUE(child2_events.back().pointer_sample().has_phase());
   EXPECT_EQ(child2_events.back().pointer_sample().phase(), EventPhase::CANCEL);

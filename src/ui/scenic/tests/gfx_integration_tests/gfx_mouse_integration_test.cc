@@ -351,9 +351,14 @@ TEST_F(GfxMouseIntegrationTest, InjectorChannel_ShouldClose_WhenSceneBreaks) {
 
   RegisterInjector(std::move(root_view_ref), std::move(child_view_ref));
 
-  // Break the scene graph relation that the pointerinjector relies on. Observe the channel close.
+  // Break the scene graph relation that the pointerinjector relies on. Observe the channel close
+  // (lazily).
   view.DetachChild(holder_2);
   BlockingPresent(*root_session_->session);
+
+  // Inject an event to trigger the channel closure.
+  Inject(0, 0, EventPhase::ADD);
+  RunLoopUntil([this] { return injector_channel_closed_; });  // Succeeds or times out.
 }
 
 // In this test we set up the context and the target. We apply a scale, rotation and translation
@@ -809,8 +814,7 @@ TEST_F(GfxMouseIntegrationTest, InjectionOutsideViewport_ShouldLimitOnClick) {
   Inject(50, 50, EventPhase::CHANGE, button_vec);
   Inject(0, 50, EventPhase::CHANGE, button_vec);
   Inject(1, 1, EventPhase::CHANGE);  // Inside viewport. Button up.
-  RunLoopUntil([&child_events] { return child_events.size() >= 6u; });  // Succeeds or times out.
-  EXPECT_EQ(child_events.size(), 6u);
+  RunLoopUntil([&child_events] { return child_events.size() == 6u; });  // Succeeds or times out.
 
   {
     const auto& viewport_to_view_transform =
@@ -873,8 +877,7 @@ TEST_F(GfxMouseIntegrationTest, HoverTest) {
   // Inside viewport.
   Inject(1, 1, EventPhase::CHANGE);  // "View entered".
 
-  RunLoopUntil([&child_events] { return child_events.size() >= 5u; });  // Succeeds or times out.
-  EXPECT_EQ(child_events.size(), 5u);
+  RunLoopUntil([&child_events] { return child_events.size() == 5u; });  // Succeeds or times out.
 
   {
     const auto& viewport_to_view_transform =
@@ -942,8 +945,7 @@ TEST_F(GfxMouseIntegrationTest, InjectorDeath_ShouldCauseViewExitedEvent) {
   RegisterInjector(fidl::Clone(root_view_ref), fidl::Clone(child_view_ref),
                    fuchsia::ui::pointerinjector::DispatchPolicy::MOUSE_HOVER_AND_LATCH_IN_TARGET);
 
-  RunLoopUntil([&child_events] { return child_events.size() >= 2u; });  // Succeeds or times out.
-  EXPECT_EQ(child_events.size(), 2u);
+  RunLoopUntil([&child_events] { return child_events.size() == 2u; });  // Succeeds or times out.
 
   {
     const auto& event = child_events[0];
@@ -988,8 +990,7 @@ TEST_F(GfxMouseIntegrationTest, REMOVEandCANCEL_ShouldCauseViewExitedEvents) {
   Inject(2.5f, 2.5f, EventPhase::ADD);     // "View entered".
   Inject(2.5f, 2.5f, EventPhase::REMOVE);  // "View exited".
 
-  RunLoopUntil([&child_events] { return child_events.size() >= 2u; });  // Succeeds or times out.
-  EXPECT_EQ(child_events.size(), 2u);
+  RunLoopUntil([&child_events] { return child_events.size() == 2u; });  // Succeeds or times out.
 
   {
     const auto& event = child_events[0];
@@ -1008,8 +1009,7 @@ TEST_F(GfxMouseIntegrationTest, REMOVEandCANCEL_ShouldCauseViewExitedEvents) {
   Inject(2.5f, 2.5f, EventPhase::ADD);     // "View entered".
   Inject(2.5f, 2.5f, EventPhase::CANCEL);  // "View exited".
 
-  RunLoopUntil([&child_events] { return child_events.size() >= 2u; });  // Succeeds or times out.
-  EXPECT_EQ(child_events.size(), 2u);
+  RunLoopUntil([&child_events] { return child_events.size() == 2u; });  // Succeeds or times out.
 
   {
     const auto& event = child_events[0];
