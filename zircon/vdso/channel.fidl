@@ -114,7 +114,7 @@ protocol channel {
     /// [`zx_object_wait_async()`]: object_wait_async.md
     /// [`zx_object_wait_many()`]: object_wait_many.md
     /// [`zx_object_wait_one()`]: object_wait_one.md
-    channel_create(struct {
+    create(struct {
         options uint32;
     }) -> (resource struct {
         status status;
@@ -229,7 +229,7 @@ protocol channel {
     @arg_reorder(
             "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles")
     @handle_unchecked
-    channel_read(resource struct {
+    read(resource struct {
         handle handle:CHANNEL;
         options uint32;
     }) -> (resource struct {
@@ -347,7 +347,7 @@ protocol channel {
     /// [`zx_object_wait_one()`]: object_wait_one.md
     @arg_reorder(
             "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles")
-    channel_read_etc(resource struct {
+    read_etc(resource struct {
         handle handle:CHANNEL;
         options uint32;
     }) -> (resource struct {
@@ -505,7 +505,7 @@ protocol channel {
     /// [`zx_object_wait_async()`]: object_wait_async.md
     /// [`zx_object_wait_many()`]: object_wait_many.md
     /// [`zx_object_wait_one()`]: object_wait_one.md
-    channel_write(resource struct {
+    write(resource struct {
         handle handle:CHANNEL;
         options uint32;
         bytes vector_void_u32size;
@@ -686,7 +686,7 @@ protocol channel {
     /// [`zx_channel_write()`]: channel_write.md
     /// [`zx_handle_duplicate()`]: handle_duplicate.md
     /// [`zx_handle_replace()`]: handle_replace.md
-    channel_write_etc(resource struct {
+    write_etc(resource struct {
         handle handle:CHANNEL;
         options uint32;
         bytes vector_void_u32size;
@@ -696,7 +696,7 @@ protocol channel {
     });
 
     @internal
-    channel_call_noretry(resource struct {
+    call_noretry(resource struct {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
@@ -708,7 +708,7 @@ protocol channel {
     });
 
     @internal
-    channel_call_finish(resource struct {
+    call_finish(resource struct {
         deadline time;
         args ChannelCallArgs;
     }) -> (struct {
@@ -900,7 +900,7 @@ protocol channel {
     /// [`zx_object_wait_one()`]: object_wait_one.md
     @blocking
     @vdsocall
-    channel_call(resource struct {
+    call(resource struct {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
@@ -912,7 +912,7 @@ protocol channel {
     });
 
     @internal
-    channel_call_etc_noretry(resource struct {
+    call_etc_noretry(resource struct {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
@@ -924,7 +924,7 @@ protocol channel {
     });
 
     @internal
-    channel_call_etc_finish(resource struct {
+    call_etc_finish(resource struct {
         deadline time;
         args mutable_ChannelCallEtcArgs;
     }) -> (struct {
@@ -1072,7 +1072,7 @@ protocol channel {
     @blocking
     @vdsocall
     // TODO(scottmg): Express "All wr_handles of args must have ZX_RIGHT_TRANSFER."
-    channel_call_etc(resource struct {
+    call_etc(resource struct {
         handle handle:CHANNEL;
         options uint32;
         deadline time;

@@ -92,7 +92,7 @@ protocol guest {
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmo_create()`]: vmo_create.md
-    guest_create(resource struct {
+    create(resource struct {
         resource handle:RESOURCE;
         options uint32;
     }) -> (resource struct {
@@ -222,7 +222,7 @@ protocol guest {
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    guest_set_trap(resource struct {
+    set_trap(resource struct {
         handle handle:GUEST;
         kind uint32;
         addr vaddr;

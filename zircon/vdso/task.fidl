@@ -95,7 +95,7 @@ protocol task {
     /// [`zx_process_start()`]: process_start.md
     /// [`zx_task_kill()`]: task_kill.md
     /// [`zx_thread_start()`]: thread_start.md
-    task_suspend(resource struct {
+    suspend(resource struct {
         handle handle;
     }) -> (resource struct {
         status status;
@@ -163,7 +163,7 @@ protocol task {
     /// [`zx_handle_close()`]: handle_close.md
     /// [`zx_task_kill()`]: task_kill.md
     /// [`zx_task_suspend()`]: task_suspend.md
-    task_suspend_token(resource struct {
+    suspend_token(resource struct {
         handle handle;
     }) -> (resource struct {
         status status;
@@ -255,7 +255,7 @@ protocol task {
     /// [exceptions]: /docs/concepts/kernel/exceptions.md
     /// [`zx_channel_read()`]: channel_read.md
     /// [`zx_object_get_property()`]: object_get_property.md
-    task_create_exception_channel(resource struct {
+    create_exception_channel(resource struct {
         handle handle;
         options uint32;
     }) -> (resource struct {
@@ -322,7 +322,7 @@ protocol task {
     /// [`zx_job_create()`]: job_create.md
     /// [`zx_object_get_info()`]: object_get_info.md
     /// [`zx_process_create()`]: process_create.md
-    task_kill(resource struct {
+    kill(resource struct {
         handle handle;
     }) -> (struct {
         status status;

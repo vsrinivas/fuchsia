@@ -43,7 +43,7 @@ protocol process {
     /// [`zx_object_get_info()`]: object_get_info.md
     /// [`zx_process_create()`]: process_create.md
     @noreturn
-    process_exit(struct {
+    exit(struct {
         retcode int64;
     });
 
@@ -145,7 +145,7 @@ protocol process {
     /// [`zx_thread_create()`]: thread_create.md
     /// [`zx_thread_exit()`]: thread_exit.md
     /// [`zx_thread_start()`]: thread_start.md
-    process_create(resource struct {
+    create(resource struct {
         job handle:JOB;
         name string;
         options uint32;
@@ -223,7 +223,7 @@ protocol process {
     ///  - [`zx_process_create()`]
     ///
     /// [`zx_process_create()`]: process_create.md
-    process_create_shared(resource struct {
+    create_shared(resource struct {
         shared_proc handle:PROCESS;
         options uint32;
         name string;
@@ -335,7 +335,7 @@ protocol process {
     /// [`zx_thread_exit()`]: thread_exit.md
     /// [`zx_thread_start()`]: thread_start.md
     /// [`zx_vmo_create()`]: vmo_create.md
-    process_start(resource struct {
+    start(resource struct {
         handle handle:PROCESS;
         thread handle:THREAD;
         entry vaddr;
@@ -416,7 +416,7 @@ protocol process {
     ///  - [`zx_process_write_memory()`]
     ///
     /// [`zx_process_write_memory()`]: process_write_memory.md
-    process_read_memory(resource struct {
+    read_memory(resource struct {
         handle handle:PROCESS;
         vaddr vaddr;
     }) -> (struct {
@@ -500,7 +500,7 @@ protocol process {
     ///  - [`zx_process_read_memory()`]
     ///
     /// [`zx_process_read_memory()`]: process_read_memory.md
-    process_write_memory(resource struct {
+    write_memory(resource struct {
         handle handle:PROCESS;
         vaddr vaddr;
         buffer vector_void;

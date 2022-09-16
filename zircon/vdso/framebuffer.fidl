@@ -40,7 +40,7 @@ protocol framebuffer {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    framebuffer_get_info(resource struct {
+    get_info(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
         status status;
@@ -88,7 +88,7 @@ protocol framebuffer {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    framebuffer_set_range(resource struct {
+    set_range(resource struct {
         resource handle:RESOURCE;
         vmo handle:VMO;
         len uint32;

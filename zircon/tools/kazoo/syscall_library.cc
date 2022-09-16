@@ -609,6 +609,7 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
 
     std::string protocol_name = protocol["name"].GetString();
     std::string category = GetCategory(protocol, protocol_name);
+    bool protocol_prefix = !HasAttributeWithNoArgs(protocol, "no_protocol_prefix");
 
     for (const auto& method : protocol["methods"].GetArray()) {
       auto syscall = std::make_unique<Syscall>();
@@ -616,10 +617,11 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
       syscall->original_name_ = method["name"].GetString();
       syscall->category_ = category;
       std::string snake_name = CamelToSnake(method["name"].GetString());
-      if (!StartsWith(snake_name, category)) {
-        snake_name = category + (category.empty() ? "" : "_") + snake_name;
+      if (protocol_prefix) {
+        syscall->name_ = category + "_" + snake_name;
+      } else {
+        syscall->name_ = snake_name;
       }
-      syscall->name_ = snake_name;
       syscall->is_noreturn_ = !method["has_response"].GetBool();
       const auto doc_attribute = GetDocAttribute(method);
       if (method.HasMember("maybe_attributes")) {

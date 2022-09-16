@@ -85,7 +85,7 @@ protocol stream {
     /// [`zx_stream_seek()`]: stream_seek.md
     /// [`zx_stream_writev()`]: stream_writev.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
-    stream_create(resource struct {
+    create(resource struct {
         options uint32;
         vmo handle:VMO;
         seek off;
@@ -181,7 +181,7 @@ protocol stream {
     /// [`zx_stream_seek()`]: stream_seek.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
-    stream_writev(resource struct {
+    writev(resource struct {
         handle handle:STREAM;
         options uint32;
         vector vector_iovec;
@@ -274,7 +274,7 @@ protocol stream {
     /// [`zx_stream_seek()`]: stream_seek.md
     /// [`zx_stream_writev()`]: stream_writev.md
     @blocking
-    stream_writev_at(resource struct {
+    writev_at(resource struct {
         handle handle:STREAM;
         options uint32;
         offset off;
@@ -359,7 +359,7 @@ protocol stream {
     /// [`zx_stream_writev()`]: stream_writev.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
-    stream_readv(resource struct {
+    readv(resource struct {
         handle handle:STREAM;
         options uint32;
     }) -> (struct {
@@ -420,9 +420,7 @@ protocol stream {
     ///
     /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_READ** right.
     ///
-    /// **ZX_ERR_INVALID_ARGS**  vector is an invalid `zx_iovec_t` or *options* is
-    /// nonzero.
-    ///
+    /// **ZX_ERR_INVALID_ARGS**  vector is an invalid `zx_iovec_t` or *o@no_protocol_prefix
     /// **ZX_ERR_NOT_FOUND**  the *vector* address, or an address specified within
     /// *vector* does not map to address in address space.
     ///
@@ -442,7 +440,7 @@ protocol stream {
     /// [`zx_stream_writev()`]: stream_writev.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
-    stream_readv_at(resource struct {
+    readv_at(resource struct {
         handle handle:STREAM;
         options uint32;
         offset off;
@@ -525,7 +523,7 @@ protocol stream {
     /// [`zx_stream_readv_at()`]: stream_readv_at.md
     /// [`zx_stream_writev()`]: stream_writev.md
     /// [`zx_stream_writev_at()`]: stream_writev_at.md
-    stream_seek(resource struct {
+    seek(resource struct {
         handle handle:STREAM;
         whence stream_seek_origin;
         offset int64;

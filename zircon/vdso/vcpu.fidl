@@ -98,7 +98,7 @@ protocol vcpu {
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    vcpu_create(resource struct {
+    create(resource struct {
         guest handle:GUEST;
         options uint32;
         entry vaddr;
@@ -180,7 +180,7 @@ protocol vcpu {
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     @blocking
-    vcpu_enter(resource struct {
+    enter(resource struct {
         handle handle:VCPU;
     }) -> (struct {
         status status;
@@ -241,7 +241,7 @@ protocol vcpu {
     /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    vcpu_kick(resource struct {
+    kick(resource struct {
         handle handle:VCPU;
     }) -> (struct {
         status status;
@@ -301,7 +301,7 @@ protocol vcpu {
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    vcpu_interrupt(resource struct {
+    interrupt(resource struct {
         handle handle:VCPU;
         vector uint32;
     }) -> (struct {
@@ -373,7 +373,7 @@ protocol vcpu {
     /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
-    vcpu_read_state(resource struct {
+    read_state(resource struct {
         handle handle:VCPU;
         kind uint32;
     }) -> (struct {
@@ -446,7 +446,7 @@ protocol vcpu {
     /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
     /// [`zx_vcpu_kick()`]: vcpu_kick.md
     /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
-    vcpu_write_state(resource struct {
+    write_state(resource struct {
         handle handle:VCPU;
         kind uint32;
         buffer vector_void;

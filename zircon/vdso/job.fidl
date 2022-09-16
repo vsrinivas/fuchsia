@@ -72,7 +72,7 @@ protocol job {
     /// [`zx_object_get_property()`]: object_get_property.md
     /// [`zx_process_create()`]: process_create.md
     /// [`zx_task_kill()`]: task_kill.md
-    job_create(resource struct {
+    create(resource struct {
         parent_job handle:JOB;
         options uint32;
     }) -> (resource struct {
@@ -287,7 +287,7 @@ protocol job {
     /// [`zx_object_get_info()`]: object_get_info.md
     /// [`zx_process_create()`]: process_create.md
     /// [`zx_vmo_replace_as_executable()`]: vmo_replace_as_executable.md
-    job_set_policy(resource struct {
+    set_policy(resource struct {
         handle handle:JOB;
         options uint32;
         topic uint32;
@@ -356,7 +356,7 @@ protocol job {
     /// [`zx_job_create()`]: job_create.md
     /// [`zx_process_create()`]: process_create.md
     /// [`zx_task_kill()`]: task_kill.md
-    job_set_critical(resource struct {
+    set_critical(resource struct {
         job handle:JOB;
         options uint32;
         process handle:PROCESS;

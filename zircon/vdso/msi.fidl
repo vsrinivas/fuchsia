@@ -55,7 +55,7 @@ protocol msi {
     ///  - [`zx_msi_create()`]
     ///
     /// [`zx_msi_create()`]: msi_create.md
-    msi_allocate(resource struct {
+    allocate(resource struct {
         handle handle:RESOURCE;
         count uint32;
     }) -> (resource struct {
@@ -150,7 +150,7 @@ protocol msi {
     /// [`zx_vmo_create_contiguous()`]: vmo_create_contiguous.md
     /// [`zx_vmo_create_physical()`]: vmo_create_physical.md
     /// [`zx_vmo_set_cache_policy()`]: vmo_set_cache_policy.md
-    msi_create(resource struct {
+    create(resource struct {
         handle handle;
         options uint32;
         msi_id uint32;

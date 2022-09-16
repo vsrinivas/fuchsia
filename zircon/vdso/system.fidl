@@ -55,7 +55,7 @@ protocol system {
     /// TODO(fxbug.dev/32938)
     @const
     @vdsocall
-    system_get_dcache_line_size() -> (struct {
+    get_dcache_line_size() -> (struct {
         size uint32;
     });
 
@@ -98,7 +98,7 @@ protocol system {
     /// [`zx_system_get_physmem()`]: system_get_physmem.md
     @const
     @vdsocall
-    system_get_num_cpus() -> (struct {
+    get_num_cpus() -> (struct {
         count uint32;
     });
 
@@ -150,7 +150,7 @@ protocol system {
     ///
     @const
     @vdsocall
-    system_get_version_string() -> (struct {
+    get_version_string() -> (struct {
         version string_view;
     });
 
@@ -206,7 +206,7 @@ protocol system {
     /// [`zx_vmo_create()`]: vmo_create.md
     @const
     @vdsocall
-    system_get_page_size() -> (struct {
+    get_page_size() -> (struct {
         size uint32;
     });
 
@@ -250,7 +250,7 @@ protocol system {
     ///
     /// [`zx_system_get_num_cpus()`]: system_get_num_cpus.md
     @vdsocall
-    system_get_physmem() -> (struct {
+    get_physmem() -> (struct {
         physmem uint64;
     });
 
@@ -305,7 +305,7 @@ protocol system {
     /// [`zx_system_get_num_cpus()`]: system_get_num_cpus.md
     /// [`zx_system_get_physmem()`]: system_get_physmem.md
     @vdsocall
-    system_get_features(struct {
+    get_features(struct {
         kind uint32;
     }) -> (struct {
         status status;
@@ -405,7 +405,7 @@ protocol system {
     ///
     /// **ZX_ERR_INVALID_ARGS** *kind* was not one of the supported values specified
     /// above.
-    system_get_event(resource struct {
+    get_event(resource struct {
         root_job handle:JOB;
         kind uint32;
     }) -> (resource struct {
@@ -489,7 +489,7 @@ protocol system {
     ///  - [`zx_system_get_performance_info()`]
     ///
     /// [`zx_system_get_performance_info()`]: system_get_performance_info.md
-    system_set_performance_info(resource struct {
+    set_performance_info(resource struct {
         resource handle:RESOURCE;
         topic uint32;
         info const_voidptr;
@@ -587,7 +587,7 @@ protocol system {
     ///  - [`zx_system_set_performance_info()`]
     ///
     /// [`zx_system_set_performance_info()`]: system_set_performance_info.md
-    system_get_performance_info(resource struct {
+    get_performance_info(resource struct {
         resource handle:RESOURCE;
         topic uint32;
         count usize;
@@ -650,7 +650,7 @@ protocol system {
     ///  - [`zx_system_mexec_payload_get()`]
     ///
     /// [`zx_system_mexec_payload_get()`]: system_mexec_payload_get.md
-    system_mexec(resource struct {
+    mexec(resource struct {
         resource handle:RESOURCE;
         kernel_vmo handle:VMO;
         bootimage_vmo handle:VMO;
@@ -708,7 +708,7 @@ protocol system {
     ///  - [`zx_system_mexec()`]
     ///
     /// [`zx_system_mexec()`]: system_mexec.md
-    system_mexec_payload_get(resource struct {
+    mexec_payload_get(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
         status status;
@@ -773,7 +773,7 @@ protocol system {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    system_powerctl(resource struct {
+    powerctl(resource struct {
         resource handle:RESOURCE;
         cmd uint32;
         arg SystemPowerctlArg;

@@ -61,7 +61,7 @@ protocol socket {
     /// [`zx_socket_read()`]: socket_read.md
     /// [`zx_socket_set_disposition()`]: socket_set_disposition.md
     /// [`zx_socket_write()`]: socket_write.md
-    socket_create(struct {
+    create(struct {
         options uint32;
     }) -> (resource struct {
         status status;
@@ -149,7 +149,7 @@ protocol socket {
     /// [`zx_socket_create()`]: socket_create.md
     /// [`zx_socket_read()`]: socket_read.md
     /// [`zx_socket_set_disposition()`]: socket_set_disposition.md
-    socket_write(resource struct {
+    write(resource struct {
         handle handle:SOCKET;
         options uint32;
         buffer vector_void;
@@ -233,7 +233,7 @@ protocol socket {
     /// [`zx_socket_create()`]: socket_create.md
     /// [`zx_socket_set_disposition()`]: socket_set_disposition.md
     /// [`zx_socket_write()`]: socket_write.md
-    socket_read(resource struct {
+    read(resource struct {
         handle handle:SOCKET;
         options uint32;
     }) -> (struct {
@@ -316,7 +316,7 @@ protocol socket {
     /// [`zx_socket_create()`]: socket_create.md
     /// [`zx_socket_read()`]: socket_read.md
     /// [`zx_socket_write()`]: socket_write.md
-    socket_set_disposition(resource struct {
+    set_disposition(resource struct {
         handle handle:<SOCKET, rights.MANAGE_SOCKET>;
         disposition uint32;
         disposition_peer uint32;

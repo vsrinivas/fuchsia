@@ -50,7 +50,7 @@ protocol pager {
     /// [`zx_pager_create_vmo()`]: pager_create_vmo.md
     /// [`zx_pager_detach_vmo()`]: pager_detach_vmo.md
     /// [`zx_pager_supply_pages()`]: pager_supply_pages.md
-    pager_create(struct {
+    create(struct {
         options uint32;
     }) -> (resource struct {
         status status;
@@ -163,7 +163,7 @@ protocol pager {
     /// [`zx_pager_supply_pages()`]: pager_supply_pages.md
     /// [`zx_port_wait()`]: port_wait.md
     /// [`zx_vmo_create()`]: vmo_create.md
-    pager_create_vmo(resource struct {
+    create_vmo(resource struct {
         pager handle:PAGER;
         options uint32;
         port handle:PORT;
@@ -229,7 +229,7 @@ protocol pager {
     /// [`zx_pager_create_vmo()`]: pager_create_vmo.md
     /// [`zx_pager_op_range()`]: pager_op_range.md
     /// [`zx_pager_query_dirty_ranges()`]: pager_query_dirty_ranges.md
-    pager_detach_vmo(resource struct {
+    detach_vmo(resource struct {
         pager handle:PAGER;
         vmo handle:VMO;
     }) -> (struct {
@@ -308,7 +308,7 @@ protocol pager {
     /// [`zx_pager_detach_vmo()`]: pager_detach_vmo.md
     /// [`zx_pager_op_range()`]: pager_op_range.md
     /// [`zx_vmo_create()`]: vmo_create.md
-    pager_supply_pages(resource struct {
+    supply_pages(resource struct {
         pager handle:PAGER;
         pager_vmo handle:VMO;
         offset uint64;
@@ -429,7 +429,7 @@ protocol pager {
     /// [`zx_vmo_op_range()`]: vmo_op_range.md
     /// [`zx_vmo_read()`]: vmo_read.md
     /// [`zx_vmo_write()`]: vmo_write.md
-    pager_op_range(resource struct {
+    op_range(resource struct {
         pager handle:PAGER;
         op uint32;
         pager_vmo handle:VMO;
@@ -561,7 +561,7 @@ protocol pager {
     /// [`zx_pager_query_vmo_stats()`]: pager_query_vmo_stats.md
     /// [`zx_pager_supply_pages()`]: pager_supply_pages.md
     @next
-    pager_query_dirty_ranges(resource struct {
+    query_dirty_ranges(resource struct {
         pager handle:PAGER;
         pager_vmo handle:VMO;
         offset uint64;
@@ -650,7 +650,7 @@ protocol pager {
     /// [`zx_pager_query_dirty_ranges()`]: pager_query_dirty_ranges.md
     /// [`zx_pager_supply_pages()`]: pager_supply_pages.md
     @next
-    pager_query_vmo_stats(resource struct {
+    query_vmo_stats(resource struct {
         pager handle:PAGER;
         pager_vmo handle:VMO;
         options uint32;

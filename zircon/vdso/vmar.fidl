@@ -139,7 +139,7 @@ protocol vmar {
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_protect()`]: vmar_protect.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
-    vmar_allocate(resource struct {
+    allocate(resource struct {
         parent_vmar handle:VMAR;
         options VmOption;
         offset usize;
@@ -204,7 +204,7 @@ protocol vmar {
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_protect()`]: vmar_protect.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
-    vmar_destroy(resource struct {
+    destroy(resource struct {
         handle handle:VMAR;
     }) -> (struct {
         status status;
@@ -366,7 +366,7 @@ protocol vmar {
     /// [`zx_vmar_destroy()`]: vmar_destroy.md
     /// [`zx_vmar_protect()`]: vmar_protect.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
-    vmar_map(resource struct {
+    map(resource struct {
         handle handle:VMAR;
         options VmOption;
         vmar_offset usize;
@@ -436,7 +436,7 @@ protocol vmar {
     /// [`zx_vmar_destroy()`]: vmar_destroy.md
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_protect()`]: vmar_protect.md
-    vmar_unmap(resource struct {
+    unmap(resource struct {
         handle handle:VMAR;
         addr vaddr;
         len usize;
@@ -526,7 +526,7 @@ protocol vmar {
     /// [`zx_vmar_destroy()`]: vmar_destroy.md
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
-    vmar_protect(resource struct {
+    protect(resource struct {
         handle handle:VMAR;
         options VmOption;
         addr vaddr;
@@ -637,7 +637,7 @@ protocol vmar {
     /// [`zx_vmar_map()`]: vmar_map.md
     /// [`zx_vmar_unmap()`]: vmar_unmap.md
     /// [`zx_vmo_op_range()`]: vmo_op_range.md
-    vmar_op_range(resource struct {
+    op_range(resource struct {
         handle handle:VMAR;
         op uint32;
         address vaddr;

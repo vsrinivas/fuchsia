@@ -80,7 +80,7 @@ protocol smc {
     /// **ZX_ERR_NOT_SUPPORTED**  smc_call is not supported on this system.
     ///
     /// **ZX_ERR_INVALID_ARGS**  *parameters* or *out_smc_result* a null pointer
-    smc_call(resource struct {
+    call(resource struct {
         handle handle:RESOURCE;
         parameters SmcParameters;
     }) -> (struct {

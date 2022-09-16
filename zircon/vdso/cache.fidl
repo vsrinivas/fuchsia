@@ -59,7 +59,7 @@ protocol cache {
     ///
     /// **ZX_ERR_INVALID_ARGS** *options* is invalid.
     @vdsocall
-    cache_flush(struct {
+    flush(struct {
         addr const_voidptr;
         size usize;
         options uint32;

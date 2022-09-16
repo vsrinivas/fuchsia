@@ -38,7 +38,7 @@ protocol ioports {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    ioports_request(resource struct {
+    request(resource struct {
         resource handle:RESOURCE;
         io_addr uint16;
         len uint32;
@@ -79,7 +79,7 @@ protocol ioports {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    ioports_release(resource struct {
+    release(resource struct {
         resource handle:RESOURCE;
         io_addr uint16;
         len uint32;

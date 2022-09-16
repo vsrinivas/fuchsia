@@ -59,7 +59,7 @@ zx_host_tool("kazoo") {
 group("tests") {
   testonly = true
   deps = [
-    ":kazoo-unittests",
+    ":kazoo-unittests($host_toolchain)",
 
     # This target performs golden file diffing on kazoo's "zx" outputs.
     "//zircon/vdso:tests($default_toolchain)",

@@ -7,7 +7,7 @@ alias voidptr = uint64;
 
 @transport("Syscall")
 protocol Ovp {
-    ovp_void_pointer_out(resource struct {
+    void_pointer_out(resource struct {
         handle handle;
     }) -> (struct {
         status status;

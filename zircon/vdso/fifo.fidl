@@ -65,7 +65,7 @@ protocol fifo {
     ///
     /// [`zx_fifo_read()`]: fifo_read.md
     /// [`zx_fifo_write()`]: fifo_write.md
-    fifo_create(struct {
+    create(struct {
         elem_count usize;
         elem_size usize;
         options uint32;
@@ -145,7 +145,7 @@ protocol fifo {
     ///
     /// [`zx_fifo_create()`]: fifo_create.md
     /// [`zx_fifo_write()`]: fifo_write.md
-    fifo_read(resource struct {
+    read(resource struct {
         handle handle:FIFO;
         elem_size usize;
     }) -> (struct {
@@ -222,7 +222,7 @@ protocol fifo {
     ///
     /// [`zx_fifo_create()`]: fifo_create.md
     /// [`zx_fifo_read()`]: fifo_read.md
-    fifo_write(resource struct {
+    write(resource struct {
         handle handle:FIFO;
         elem_size usize;
         data const_voidptr;

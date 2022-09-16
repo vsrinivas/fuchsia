@@ -102,7 +102,7 @@ protocol resource {
     /// [`zx_ioports_request()`]: ioports_request.md
     /// [`zx_object_get_info()`]: object_get_info.md
     /// [`zx_vmo_create_physical()`]: vmo_create_physical.md
-    resource_create(resource struct {
+    create(resource struct {
         parent_rsrc handle:RESOURCE;
         options uint32;
         base uint64;

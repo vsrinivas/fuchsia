@@ -49,7 +49,7 @@ protocol ktrace {
     ///
     /// TODO(fxbug.dev/32938)
     @arg_reorder("handle, data, offset, data_size, actual")
-    ktrace_read(resource struct {
+    read(resource struct {
         handle handle:RESOURCE;
         offset uint32;
     }) -> (struct {
@@ -97,7 +97,7 @@ protocol ktrace {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    ktrace_control(resource struct {
+    control(resource struct {
         handle handle:RESOURCE;
         action uint32;
         options uint32;
@@ -144,7 +144,7 @@ protocol ktrace {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    ktrace_write(resource struct {
+    write(resource struct {
         handle handle:RESOURCE;
         id uint32;
         arg0 uint32;

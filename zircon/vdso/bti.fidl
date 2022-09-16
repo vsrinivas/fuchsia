@@ -67,7 +67,7 @@ protocol bti {
     /// [`zx_bti_pin()`]: bti_pin.md
     /// [`zx_bti_release_quarantine()`]: bti_release_quarantine.md
     /// [`zx_pmt_unpin()`]: pmt_unpin.md
-    bti_create(resource struct {
+    create(resource struct {
         iommu handle:IOMMU;
         options uint32;
         bti_id uint64;
@@ -211,7 +211,7 @@ protocol bti {
     /// [`zx_vmo_create_physical()`]: vmo_create_physical.md
     /// [`zx_vmo_op_range()`]: vmo_op_range.md
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
-    bti_pin(resource struct {
+    pin(resource struct {
         handle handle:BTI;
         options uint32;
         vmo handle:VMO;
@@ -266,7 +266,7 @@ protocol bti {
     ///
     /// [`zx_bti_pin()`]: bti_pin.md
     /// [`zx_pmt_unpin()`]: pmt_unpin.md
-    bti_release_quarantine(resource struct {
+    release_quarantine(resource struct {
         handle handle:BTI;
     }) -> (struct {
         status status;

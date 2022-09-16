@@ -50,7 +50,7 @@ protocol exception {
     /// [exceptions]: /docs/concepts/kernel/exceptions.md
     /// [`zx_exception_get_process()`]: exception_get_process.md
     /// [`zx_task_create_exception_channel()`]: task_create_exception_channel.md
-    exception_get_thread(resource struct {
+    get_thread(resource struct {
         handle handle:EXCEPTION;
     }) -> (resource struct {
         status status;
@@ -107,7 +107,7 @@ protocol exception {
     /// [exceptions]: /docs/concepts/kernel/exceptions.md
     /// [`zx_exception_get_thread()`]: exception_get_thread.md
     /// [`zx_task_create_exception_channel()`]: task_create_exception_channel.md
-    exception_get_process(resource struct {
+    get_process(resource struct {
         handle handle:EXCEPTION;
     }) -> (resource struct {
         status status;

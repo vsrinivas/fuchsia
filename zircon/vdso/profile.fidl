@@ -116,7 +116,7 @@ protocol profile {
     ///  - [`zx_object_set_profile()`]
     ///
     /// [`zx_object_set_profile()`]: object_set_profile.md
-    profile_create(resource struct {
+    create(resource struct {
         root_job handle:JOB;
         options uint32;
         profile ProfileInfo;

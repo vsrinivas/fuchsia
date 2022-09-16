@@ -45,7 +45,7 @@ protocol mtrace {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    mtrace_control(resource struct {
+    control(resource struct {
         handle handle:RESOURCE;
         kind uint32;
         action uint32;

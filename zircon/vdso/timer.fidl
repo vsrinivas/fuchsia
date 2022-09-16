@@ -73,7 +73,7 @@ protocol timer {
     /// [`zx_handle_close()`]: handle_close.md
     /// [`zx_timer_cancel()`]: timer_cancel.md
     /// [`zx_timer_set()`]: timer_set.md
-    timer_create(struct {
+    create(struct {
         options uint32;
         clock_id clock;
     }) -> (resource struct {
@@ -149,7 +149,7 @@ protocol timer {
     /// [`zx_deadline_after()`]: deadline_after.md
     /// [`zx_timer_cancel()`]: timer_cancel.md
     /// [`zx_timer_create()`]: timer_create.md
-    timer_set(resource struct {
+    set(resource struct {
         handle handle:TIMER;
         deadline time;
         slack duration;
@@ -205,7 +205,7 @@ protocol timer {
     ///
     /// [`zx_timer_create()`]: timer_create.md
     /// [`zx_timer_set()`]: timer_set.md
-    timer_cancel(resource struct {
+    cancel(resource struct {
         handle handle:TIMER;
     }) -> (struct {
         status status;

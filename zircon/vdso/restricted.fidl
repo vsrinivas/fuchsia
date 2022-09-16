@@ -80,7 +80,7 @@ protocol restricted {
     /// [`zx_process_create_shared()`]: process_create_shared.md
     /// [address spaces]: /docs/concepts/memory/address_spaces.md
     @next
-    restricted_enter(struct {
+    enter(struct {
         options uint32;
         vector_table_ptr uintptr;
         context uintptr;
@@ -146,7 +146,7 @@ protocol restricted {
     /// [`zx_restricted_enter()`]: restricted_enter.md
     /// [`zx_restricted_read_state()`]: restricted_read_state.md
     @next
-    restricted_write_state(struct {
+    write_state(struct {
         buffer vector_void;
     }) -> (struct {
         status status;
@@ -210,7 +210,7 @@ protocol restricted {
     /// [`zx_restricted_enter()`]: restricted_enter.md
     /// [`zx_restricted_write_state()`]: restricted_write_state.md
     @next
-    restricted_read_state() -> (struct {
+    read_state() -> (struct {
         status status;
         buffer vector_void;
     });

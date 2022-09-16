@@ -57,7 +57,7 @@ protocol debuglog {
     ///
     /// [`zx_debuglog_read()`]: debuglog_read.md
     /// [`zx_debuglog_write()`]: debuglog_write.md
-    debuglog_create(resource struct {
+    create(resource struct {
         resource handle:RESOURCE;
         options uint32;
     }) -> (resource struct {
@@ -125,7 +125,7 @@ protocol debuglog {
     /// [`zx_debug_write()`]: debug_write.md
     /// [`zx_debuglog_create()`]: debuglog_create.md
     /// [`zx_debuglog_read()`]: debuglog_read.md
-    debuglog_write(resource struct {
+    write(resource struct {
         handle handle:LOG;
         options uint32;
         buffer vector_void;
@@ -234,7 +234,7 @@ protocol debuglog {
     ///
     /// [`zx_debuglog_create()`]: debuglog_create.md
     /// [`zx_debuglog_write()`]: debuglog_write.md
-    debuglog_read(resource struct {
+    read(resource struct {
         handle handle:LOG;
         options uint32;
     }) -> (struct {

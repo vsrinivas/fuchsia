@@ -90,7 +90,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    interrupt_create(resource struct {
+    create(resource struct {
         src_obj handle:RESOURCE;
         src_num uint32;
         options uint32;
@@ -194,7 +194,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    interrupt_bind(resource struct {
+    bind(resource struct {
         handle handle:INTERRUPT;
         port_handle handle:PORT;
         key uint64;
@@ -269,7 +269,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_port_wait()`]: port_wait.md
     @blocking
-    interrupt_wait(resource struct {
+    wait(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
         status status;
@@ -343,7 +343,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    interrupt_destroy(resource struct {
+    destroy(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
         status status;
@@ -415,7 +415,7 @@ protocol interrupt {
     /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    interrupt_ack(resource struct {
+    ack(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
         status status;
@@ -483,7 +483,7 @@ protocol interrupt {
     /// [`zx_interrupt_destroy()`]: interrupt_destroy.md
     /// [`zx_interrupt_wait()`]: interrupt_wait.md
     /// [`zx_port_wait()`]: port_wait.md
-    interrupt_trigger(resource struct {
+    trigger(resource struct {
         handle handle:INTERRUPT;
         options uint32;
         timestamp time;

@@ -79,7 +79,7 @@ protocol iommu {
     /// [`zx_bti_create()`]: bti_create.md
     /// [`zx_bti_pin()`]: bti_pin.md
     /// [`zx_pmt_unpin()`]: pmt_unpin.md
-    iommu_create(resource struct {
+    create(resource struct {
         resource handle:RESOURCE;
         type uint32;
         desc vector_void;
