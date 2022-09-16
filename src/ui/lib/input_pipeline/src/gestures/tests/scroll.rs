@@ -55,23 +55,13 @@ mod test {
         assert_eq!(got.len(), 2);
         assert_eq!(got[0].as_slice(), []);
         assert_matches!(got[1].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_gt!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_gt!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
     }
@@ -127,23 +117,13 @@ mod test {
         assert_eq!(got[2].as_slice(), []);
         assert_eq!(got[3].as_slice(), []);
         assert_matches!(got[4].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_gt!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_gt!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
     }
@@ -172,43 +152,23 @@ mod test {
         assert_eq!(got.len(), 3);
         assert_eq!(got[0].as_slice(), []);
         assert_matches!(got[1].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_gt!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_gt!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
         assert_matches!(got[2].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_eq!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_eq!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
     }
@@ -235,23 +195,13 @@ mod test {
         assert_eq!(got.len(), 3);
         assert_eq!(got[0].as_slice(), []);
         assert_matches!(got[1].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_gt!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_gt!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
         assert_eq!(got[2].as_slice(), []);
@@ -282,52 +232,28 @@ mod test {
         assert_eq!(got.len(), 4);
         assert_eq!(got[0].as_slice(), []);
         assert_matches!(got[1].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_gt!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_gt!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
         assert_eq!(got[2].as_slice(), []);
         assert_matches!(got[3].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                pressed_buttons: pressed_button_a,
-                affected_buttons: affected_button_a,
-                ..
-              },
-            ),
-          ..
-          },
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                pressed_buttons: pressed_button_b,
-                affected_buttons: affected_button_b,
-                ..
-              },
-            ),
-          ..
-          }
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+          utils::expect_mouse_event!(phase: phase_b, pressed_buttons: pressed_button_b, affected_buttons: affected_button_b, location: location_b),
         ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
           assert_eq!(pressed_button_a, &hashset! {1});
           assert_eq!(affected_button_a, &hashset! {1});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+          assert_eq!(phase_b, &mouse_binding::MousePhase::Up);
           assert_eq!(pressed_button_b, &hashset! {});
           assert_eq!(affected_button_b, &hashset! {1});
+          assert_eq!(location_b, &utils::NO_MOVEMENT_LOCATION);
         });
     }
 
@@ -363,23 +289,13 @@ mod test {
         assert_eq!(got.len(), 5);
         assert_eq!(got[0].as_slice(), []);
         assert_matches!(got[1].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_gt!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_gt!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
         assert_eq!(got[2].as_slice(), []);
@@ -417,37 +333,20 @@ mod test {
         assert_eq!(got.len(), 4);
         assert_eq!(got[0].as_slice(), []);
         assert_matches!(got[1].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_gt!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_gt!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
         assert_eq!(got[2].as_slice(), []);
         assert_matches!(got[3].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location: mouse_binding::MouseLocation::Relative(location_a),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase_a, location: location_a),
         ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Move);
           assert_near!(location_a.millimeters.x, 0.0, utils::EPSILON);
           assert_gt!(location_a.millimeters.y, 0.0);
         });
@@ -477,23 +376,13 @@ mod test {
         assert_eq!(got.len(), 4);
         assert_eq!(got[0].as_slice(), []);
         assert_matches!(got[1].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location,
-                wheel_delta_v: Some(mouse_binding::WheelDelta{
-                  raw_data: mouse_binding::RawWheelDelta::Millimeters(delta_v),
-                  physical_pixel: None,
-                }),
-                wheel_delta_h: None,
-                is_precision_scroll: Some(mouse_binding::PrecisionScroll::Yes),
-                ..
-              },
-            ),
-          ..
-          },
+          utils::expect_mouse_event!(phase: phase, delta_v: delta_v, delta_h: delta_h, location: location),
         ] => {
-          assert_gt!(*delta_v, 0.0);
+          assert_eq!(phase, &mouse_binding::MousePhase::Wheel);
+          assert_matches!(delta_v, utils::extract_wheel_delta!(delta) => {
+            assert_gt!(*delta, 0.0);
+          });
+          assert_eq!(*delta_h, None);
           assert_eq!(location, &utils::NO_MOVEMENT_LOCATION);
         });
         assert_eq!(got[2].as_slice(), []);

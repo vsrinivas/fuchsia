@@ -46,31 +46,17 @@ mod tests {
         assert_eq!(got.len(), 2);
         assert_eq!(got[0].as_slice(), []);
         assert_matches!(got[1].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                pressed_buttons: pressed_button_a,
-                affected_buttons: affected_button_a,
-                ..
-              },
-            ),
-          ..
-          },
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                pressed_buttons: pressed_button_b,
-                affected_buttons: affected_button_b,
-                ..
-              },
-            ),
-          ..
-          }
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+          utils::expect_mouse_event!(phase: phase_b, pressed_buttons: pressed_button_b, affected_buttons: affected_button_b, location: location_b),
         ] => {
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
           assert_eq!(pressed_button_a, &hashset! {1});
           assert_eq!(affected_button_a, &hashset! {1});
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+          assert_eq!(phase_b, &mouse_binding::MousePhase::Up);
           assert_eq!(pressed_button_b, &hashset! {});
           assert_eq!(affected_button_b, &hashset! {1});
+          assert_eq!(location_b, &utils::NO_MOVEMENT_LOCATION);
         });
     }
 
@@ -99,35 +85,17 @@ mod tests {
         assert_eq!(got[0].as_slice(), []);
         assert_eq!(got[1].as_slice(), []);
         assert_matches!(got[2].as_slice(), [
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location: location_a,
-                pressed_buttons: pressed_button_a,
-                affected_buttons: affected_button_a,
-                ..
-              },
-            ),
-          ..
-          },
-          input_device::InputEvent {
-            device_event: input_device::InputDeviceEvent::Mouse(
-              mouse_binding::MouseEvent {
-                location: location_b,
-                pressed_buttons: pressed_button_b,
-                affected_buttons: affected_button_b,
-                ..
-              },
-            ),
-          ..
-          }
+          utils::expect_mouse_event!(phase: phase_a, pressed_buttons: pressed_button_a, affected_buttons: affected_button_a, location: location_a),
+          utils::expect_mouse_event!(phase: phase_b, pressed_buttons: pressed_button_b, affected_buttons: affected_button_b, location: location_b),
         ] => {
-          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+          assert_eq!(phase_a, &mouse_binding::MousePhase::Down);
           assert_eq!(pressed_button_a, &hashset! {1});
           assert_eq!(affected_button_a, &hashset! {1});
-          assert_eq!(location_b, &utils::NO_MOVEMENT_LOCATION);
+          assert_eq!(location_a, &utils::NO_MOVEMENT_LOCATION);
+          assert_eq!(phase_b, &mouse_binding::MousePhase::Up);
           assert_eq!(pressed_button_b, &hashset! {});
           assert_eq!(affected_button_b, &hashset! {1});
+          assert_eq!(location_b, &utils::NO_MOVEMENT_LOCATION);
         });
     }
 

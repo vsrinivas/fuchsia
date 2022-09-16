@@ -69,8 +69,80 @@ pub(super) fn make_touchpad_event(
 }
 
 pub(super) const EPSILON: f32 = 1.0 / 100_000.0;
-pub(super) const NO_MOVEMENT_LOCATION: mouse_binding::MouseLocation =
-    mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+
+pub(super) const NO_MOVEMENT_LOCATION: mouse_binding::RelativeLocation =
+    mouse_binding::RelativeLocation {
         counts: Position { x: 0.0, y: 0.0 },
         millimeters: Position { x: 0.0, y: 0.0 },
-    });
+    };
+
+/// [`expect_mouse_event`] is a helper marco extracts mouse information.
+/// - motion event:
+///   ```rust
+///   expect_mouse_event(phase: phase, location: loc)
+///   ```
+/// - button event:
+///   ```rust
+///   expect_mouse_event(
+///        phase: phase,
+///        pressed_buttons: pb,
+///        affected_buttons: ab,
+///        location: loc)
+///   ```
+/// - wheel event:
+///   ```rust
+///   expect_mouse_event(
+///        phase: phase,
+///        delta_v: dv,
+///        delta_h: dh,
+///        location: loc)
+///   ```
+macro_rules! expect_mouse_event {
+    (phase: $phase : ident, location: $location: ident) => {
+        input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                phase: $phase,
+                location: mouse_binding::MouseLocation::Relative($location),
+                ..
+            }),
+            ..
+        }
+    };
+    (phase: $phase : ident, pressed_buttons: $pressed_buttons: ident, affected_buttons: $affected_buttons: ident, location: $location: ident) => {
+        input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                phase: $phase,
+                location: mouse_binding::MouseLocation::Relative($location),
+                pressed_buttons: $pressed_buttons,
+                affected_buttons: $affected_buttons,
+                ..
+            }),
+            ..
+        }
+    };
+    (phase: $phase : ident, delta_v: $delta_v: ident, delta_h: $delta_h: ident,location: $location: ident) => {
+        input_device::InputEvent {
+            device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                phase: $phase,
+                location: mouse_binding::MouseLocation::Relative($location),
+                wheel_delta_v: $delta_v,
+                wheel_delta_h: $delta_h,
+                ..
+            }),
+            ..
+        }
+    };
+}
+
+pub(super) use expect_mouse_event;
+
+macro_rules! extract_wheel_delta {
+    ($delta: ident) => {
+        Some(mouse_binding::WheelDelta {
+            raw_data: mouse_binding::RawWheelDelta::Millimeters($delta),
+            ..
+        })
+    };
+}
+
+pub(super) use extract_wheel_delta;
