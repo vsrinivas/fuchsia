@@ -43,45 +43,21 @@ fn read_mem_stat<'a, 'b, N: DriverNotify, M: DriverMem>(
     }
 }
 
-pub trait BalloonBackend {
-    fn decommit_range(&self, offset: u64, size: u64) -> Result<(), zx::Status>;
-}
-
-pub struct VmoMemoryBackend {
+pub struct BalloonDevice {
     vmo: zx::Vmo,
 }
 
-impl VmoMemoryBackend {
+impl BalloonDevice {
     pub fn new(vmo: zx::Vmo) -> Self {
         Self { vmo }
-    }
-}
-
-impl BalloonBackend for VmoMemoryBackend {
-    fn decommit_range(&self, offset: u64, size: u64) -> Result<(), zx::Status> {
-        self.vmo.op_range(zx::VmoOp::ZERO, offset, size)
-    }
-}
-
-pub struct BalloonDevice<B: BalloonBackend> {
-    backend: B,
-}
-
-impl<B: BalloonBackend> BalloonDevice<B> {
-    pub fn new(backend: B) -> Self {
-        Self { backend }
     }
 
     pub fn process_deflate_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
         &self,
-        chain: ReadableChain<'a, 'b, N, M>,
+        mut chain: ReadableChain<'a, 'b, N, M>,
     ) {
-        match chain.remaining() {
-            Ok(chain_size) => {
-                // each PFN is LE32, so we divide the amount of memory in read chain by 4
-                tracing::trace!("Deflated {} KiB", chain_size / 4 * PAGE_SIZE / 1024);
-            }
-            Err(_) => {}
+        while let Some(pfn) = read_pfn(&mut chain) {
+            tracing::trace!("deflate pfn {}", pfn);
         }
     }
 
@@ -89,50 +65,32 @@ impl<B: BalloonBackend> BalloonDevice<B> {
         &self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
-        // each PFN is LE32, so we divide the amount of memory in read chain by 4
-        let inflated_amount = chain.remaining()? / 4 * PAGE_SIZE;
         let mut base = 0;
         let mut run = 0;
-        // Normally Linux driver will send out descending list of PFNs
-        // However, occasionally we get ascending list of PFNs
-        // So we'll support runs in both directions
-        let mut dir: i64 = 1;
         while let Some(pfn) = read_pfn(&mut chain) {
             // If the driver writes contiguous PFNs, we will combine them into runs.
             if run > 0 {
-                if run == 1 && pfn == base - run {
-                    // Detected descending run
-                    // Flip the run direction
-                    dir = -1;
-                }
-                if pfn as i64 == base as i64 + run as i64 * dir {
-                    // If this is part of the current run, extend it.
+                // If this is part of the current run, extend it.
+                if pfn == base + run {
                     run += 1;
                     continue;
                 }
                 // We have completed a run, so process it before starting a new run.
-                if dir == -1 {
-                    assert!(run > 1);
-                    // For the descending run we want to offset the base position
-                    base -= run - 1;
-                }
-                tracing::trace!("inflate pfn range base={}, size={} dir={}", base, run, dir);
-                self.backend.decommit_range(base * PAGE_SIZE as u64, run * PAGE_SIZE as u64)?;
+                tracing::trace!("inflate pfn range base={}, size={}", base, run);
+                self.vmo.op_range(
+                    zx::VmoOp::ZERO,
+                    base * PAGE_SIZE as u64,
+                    run * PAGE_SIZE as u64,
+                )?;
             }
             base = pfn;
             run = 1;
-            dir = 1;
         }
         if run > 0 {
             // Process the final run.
-            if dir == -1 {
-                // For the descending run we want to offset the base position
-                base -= run;
-            }
-            tracing::trace!("inflate pfn range base={}, size={} dir={}", base - run, run, dir);
-            self.backend.decommit_range(base * PAGE_SIZE as u64, run * PAGE_SIZE as u64)?;
+            tracing::trace!("inflate pfn range base={}, size={}", base, run);
+            self.vmo.op_range(zx::VmoOp::ZERO, base * PAGE_SIZE as u64, run * PAGE_SIZE as u64)?;
         }
-        tracing::trace!("Inflated {} KiB", inflated_amount / 1024);
         Ok(())
     }
 
@@ -219,33 +177,12 @@ impl<B: BalloonBackend> BalloonDevice<B> {
 
 #[cfg(test)]
 mod tests {
-    use std::cell::RefCell;
-
     use {
         super::*,
         crate::wire::{LE16, LE64},
-        std::ops::Range,
         virtio_device::chain::ReadableChain,
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
     };
-
-    pub struct TestBalloonBackend {
-        inner: VmoMemoryBackend,
-        calls: RefCell<Vec<Range<u64>>>,
-    }
-
-    impl TestBalloonBackend {
-        pub fn new(vmo: zx::Vmo) -> Self {
-            Self { inner: VmoMemoryBackend::new(vmo), calls: RefCell::new(Vec::new()) }
-        }
-    }
-
-    impl BalloonBackend for TestBalloonBackend {
-        fn decommit_range(&self, offset: u64, size: u64) -> Result<(), zx::Status> {
-            self.calls.borrow_mut().push(offset..offset + size);
-            self.inner.decommit_range(offset, size)
-        }
-    }
 
     #[fuchsia::test]
     fn test_deflate_command() {
@@ -257,7 +194,7 @@ mod tests {
 
         // Process the chain.
         let vmo = zx::Vmo::create(VMO_SIZE).unwrap();
-        let device = BalloonDevice::new(TestBalloonBackend::new(vmo));
+        let device = BalloonDevice::new(vmo);
 
         // Process the request.
         device.process_deflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem));
@@ -267,7 +204,7 @@ mod tests {
     fn test_inflate_command() {
         let mem = IdentityDriverMem::new();
         let mut state = TestQueue::new(32, &mem);
-        let pfns: [u32; 10] = [4, 5, 8, 9, 11, 7, 14, 13, 12, 1];
+        let pfns: [u32; 6] = [4, 5, 8, 9, 11, 7];
         const VMO_SIZE: u64 = 16 * PAGE_SIZE as u64;
         state.fake_queue.publish(ChainBuilder::new().readable(&pfns, &mem).build()).unwrap();
 
@@ -279,15 +216,15 @@ mod tests {
             vmo.write(&ones, i * PAGE_SIZE as u64).unwrap();
         }
         // Process the chain.
-        let device = BalloonDevice::new(TestBalloonBackend::new(vmo));
+        let device = BalloonDevice::new(vmo);
 
-        let prev_commited_bytes = device.backend.inner.vmo.info().unwrap().committed_bytes;
+        let prev_commited_bytes = device.vmo.info().unwrap().committed_bytes;
         // Process the request.
         device
             .process_inflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
             .expect("Failed to process inflate chain");
 
-        let cur_commited_bytes = device.backend.inner.vmo.info().unwrap().committed_bytes;
+        let cur_commited_bytes = device.vmo.info().unwrap().committed_bytes;
         assert_eq!(
             (prev_commited_bytes - cur_commited_bytes) / PAGE_SIZE as u64,
             pfns.len() as u64
@@ -295,23 +232,11 @@ mod tests {
 
         for i in 0..(VMO_SIZE / PAGE_SIZE as u64) {
             let mut arr: [u8; PAGE_SIZE] = [2u8; PAGE_SIZE];
-            device.backend.inner.vmo.read(&mut arr, i * PAGE_SIZE as u64).unwrap();
+            device.vmo.read(&mut arr, i * PAGE_SIZE as u64).unwrap();
             let expected =
                 if pfns.contains(&(i as u32)) { [0u8; PAGE_SIZE] } else { [1u8; PAGE_SIZE] };
             assert_eq!(expected, arr);
         }
-
-        assert_eq!(
-            device.backend.calls.into_inner(),
-            vec!(
-                4 * PAGE_SIZE as u64..(4 + 2) * PAGE_SIZE as u64,
-                8 * PAGE_SIZE as u64..(8 + 2) * PAGE_SIZE as u64,
-                11 * PAGE_SIZE as u64..(11 + 1) * PAGE_SIZE as u64,
-                7 * PAGE_SIZE as u64..(7 + 1) * PAGE_SIZE as u64,
-                12 * PAGE_SIZE as u64..(12 + 3) * PAGE_SIZE as u64,
-                1 * PAGE_SIZE as u64..(1 + 1) * PAGE_SIZE as u64
-            )
-        );
     }
 
     #[fuchsia::test]
@@ -324,7 +249,7 @@ mod tests {
         state.fake_queue.publish(ChainBuilder::new().readable(&pfns, &mem).build()).unwrap();
         let vmo = zx::Vmo::create(VMO_SIZE).unwrap();
         // Process the chain.
-        let device = BalloonDevice::new(TestBalloonBackend::new(vmo));
+        let device = BalloonDevice::new(vmo);
         // Process the request.
         assert!(device
             .process_inflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
@@ -341,9 +266,10 @@ mod tests {
             VirtioBalloonMemStat { tag: LE16::from(3), val: LE64::from(33) },
         ];
         state.fake_queue.publish(ChainBuilder::new().readable(&mem_stats, &mem).build()).unwrap();
-        let mem_stats = BalloonDevice::<TestBalloonBackend>::process_stats_chain(
-            &mut ReadableChain::new(state.queue.next_chain().unwrap(), &mem),
-        );
+        let mem_stats = BalloonDevice::process_stats_chain(&mut ReadableChain::new(
+            state.queue.next_chain().unwrap(),
+            &mem,
+        ));
         assert_eq!(
             mem_stats,
             vec![
