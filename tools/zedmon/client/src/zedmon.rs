@@ -50,7 +50,7 @@ fn zedmon_match(ifc: &InterfaceInfo) -> Option<String> {
     }
 }
 
-/// Used by ZedmonClient to determine when data reporting should stop.
+/// Used by Client to determine when data reporting should stop.
 pub trait StopSignal {
     fn should_stop(&mut self, timestamp_micros: u64) -> Result<bool, Error>;
 }
@@ -82,13 +82,13 @@ impl StopSignal for DurationStopper {
     }
 }
 
-/// Properties that can be queried using ZedmonClient::describe.
+/// Properties that can be queried using Client::describe.
 pub const DESCRIBABLE_PROPERTIES: [&'static str; 3] =
     ["shunt_resistance", "csv_header", "time_offset"];
 
-/// A single record of output from ZedmonClient.
+/// A single record of output from Client.
 #[derive(Debug, Default, Deserialize, Serialize)]
-struct ZedmonRecord {
+struct Record {
     timestamp_micros: u64,
     shunt_voltage: f32,
     bus_voltage: f32,
@@ -98,7 +98,7 @@ struct ZedmonRecord {
 #[derive(Debug)]
 struct DownsamplerState {
     last_output_micros: u64,
-    prev_record: ZedmonRecord,
+    prev_record: Record,
     bus_voltage_integral: f32,
     shunt_voltage_integral: f32,
     power_integral: f32,
@@ -115,7 +115,7 @@ impl Downsampler {
         Self { interval_micros, state: None }
     }
 
-    /// Process a new record. If `record` completes a resampling interval, returns a ZedmonRecord
+    /// Process a new record. If `record` completes a resampling interval, returns a Record
     /// containing values averaged over the interval. Otherwise, returns None.
     ///
     /// The average value of y(t) over the interval [t_low, t_high] is computed using the definition
@@ -123,7 +123,7 @@ impl Downsampler {
     /// As each record is processed, the integral is udpated over the previous time interval using
     /// trapezoid rule integration, i.e.
     ///     \int_{t_1}^{t_2} y(s) ds \approx (t2 - t1) * (y(t1) + y(t2)) / 2.
-    fn process(&mut self, record: ZedmonRecord) -> Option<ZedmonRecord> {
+    fn process(&mut self, record: Record) -> Option<Record> {
         // Initialize self.state if it is unset; otherwise grab a reference to it.
         let state = match self.state.as_mut() {
             None => {
@@ -201,7 +201,7 @@ impl Downsampler {
 
         // Divide each integral by the total length of the integration interval to get an average
         // value of the measured quanity. This populates the output record.
-        let record_out = ZedmonRecord {
+        let record_out = Record {
             timestamp_micros: output_micros,
             shunt_voltage: state.shunt_voltage_integral / (self.interval_micros as f32),
             bus_voltage: state.bus_voltage_integral / (self.interval_micros as f32),
@@ -225,7 +225,7 @@ impl Downsampler {
     }
 }
 
-/// Options to customize the behavior of ZedmonClient::read_reports.
+/// Options to customize the behavior of Client::read_reports.
 pub struct ReportingOptions {
     /// Time interval on which to resample data.
     pub interval: Option<Duration>,
@@ -234,13 +234,13 @@ pub struct ReportingOptions {
     /// rather than Zedmon time.
     pub use_host_timestamps: bool,
 
-    /// Whether to output just the power calculation (and not the entire `ZedmonRecord`).
+    /// Whether to output just the power calculation (and not the entire `Record`).
     pub output_power_only: bool,
 }
 
 /// Interface to a Zedmon device.
 #[derive(Debug)]
-pub struct ZedmonClient<InterfaceType>
+pub struct Client<InterfaceType>
 where
     InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write,
 {
@@ -256,7 +256,7 @@ where
     v_bus_index: usize,
 }
 
-impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<InterfaceType> {
+impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> Client<InterfaceType> {
     /// Enumerates all connected Zedmons. Returns a `Vec<String>` of their serial numbers.
     fn enumerate() -> Vec<String> {
         let mut serials = Vec::new();
@@ -314,7 +314,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         ));
     }
 
-    /// Creates a new ZedmonClient instance.
+    /// Creates a new Client instance.
     // TODO(fxbug.dev/61148): Make the behavior predictable if multiple Zedmons are attached.
     fn new(mut interface: InterfaceType) -> Result<Self, Error> {
         // Query parameters, disabling reporting and draining packets if a packet of the wrong type
@@ -362,13 +362,13 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         })
     }
 
-    /// Describes properties of the Zedmon device and/or ZedmonClient.
+    /// Describes properties of the Zedmon device and/or zedmon Client.
     pub fn describe(&self, name: &str) -> Result<json::Value, Error> {
         match name {
             "shunt_resistance" => Ok(json::json!(self.shunt_resistance)),
             "csv_header" => {
                 let mut writer = csv::Writer::from_writer(Vec::new());
-                writer.serialize(ZedmonRecord::default())?;
+                writer.serialize(Record::default())?;
                 let lines = String::from_utf8(writer.into_inner()?)?;
                 let header = lines.split('\n').nth(0).unwrap();
                 Ok(json::json!(header))
@@ -508,7 +508,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
                         report.timestamp_micros + (time_offset_micros as u64)
                     };
 
-                    let record = ZedmonRecord {
+                    let record = Record {
                         timestamp_micros,
                         shunt_voltage,
                         bus_voltage,
@@ -743,11 +743,11 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
 
 /// Lists the serial numbers of all connected Zedmons.
 pub fn list() -> Vec<String> {
-    ZedmonClient::<usb_bulk::Interface>::enumerate()
+    Client::<usb_bulk::Interface>::enumerate()
 }
 
 #[derive(Debug, Error)]
-pub enum ZedmonInitError {
+pub enum InitError {
     #[error("No Zedmon devices are connected")]
     NoDevices,
 
@@ -758,7 +758,7 @@ pub enum ZedmonInitError {
     MissingDevice,
 }
 
-/// Attempts to open a `ZedmonClient`.
+/// Attempts to open a `Client`.
 ///
 /// If `serial` is specified and an attached Zedmon device is not found with that serial then an
 /// error is returned.
@@ -767,18 +767,18 @@ pub enum ZedmonInitError {
 /// default.
 ///
 /// If `serial` is not specified and multiple Zedmon devices are attached then an error is returned.
-pub fn zedmon(serial: Option<&str>) -> Result<ZedmonClient<usb_bulk::Interface>, ZedmonInitError> {
+pub fn zedmon(serial: Option<&str>) -> Result<Client<usb_bulk::Interface>, InitError> {
     const MAX_ATTEMPTS: u32 = 3;
 
     // Figure out the serial of the Zedmon device we intend to connect with
     let target_serial = if let Some(s) = serial {
         s.to_string()
     } else {
-        let mut attached_serials = ZedmonClient::<usb_bulk::Interface>::enumerate();
+        let mut attached_serials = Client::<usb_bulk::Interface>::enumerate();
         match attached_serials.len() {
-            0 => Err(ZedmonInitError::NoDevices),
+            0 => Err(InitError::NoDevices),
             1 => Ok(attached_serials.remove(0)),
-            _ => Err(ZedmonInitError::MultipleDevices),
+            _ => Err(InitError::MultipleDevices),
         }?
     };
 
@@ -788,12 +788,12 @@ pub fn zedmon(serial: Option<&str>) -> Result<ZedmonClient<usb_bulk::Interface>,
                 Some(serial) => serial == target_serial,
                 None => false,
             })
-            .map_err(|_| ZedmonInitError::MissingDevice)?;
+            .map_err(|_| InitError::MissingDevice)?;
 
-        match ZedmonClient::new(interface) {
+        match Client::new(interface) {
             Ok(z) => return Ok(z),
             Err(e) => {
-                eprintln!("Error initializing ZedmonClient: {:?}", e);
+                eprintln!("Error initializing zedmon client: {:?}", e);
                 if attempt < MAX_ATTEMPTS {
                     eprintln!("Will retry in 1 second.");
                     std::thread::sleep(Duration::from_secs(1));
@@ -899,7 +899,7 @@ mod tests {
         }
 
         // No devices connected
-        let serials = ZedmonClient::<FakeEnumerationInterface>::enumerate();
+        let serials = Client::<FakeEnumerationInterface>::enumerate();
         assert!(serials.is_empty());
 
         // One device: not-a-zedmon-1
@@ -911,7 +911,7 @@ mod tests {
             ifc_protocol: ZEDMON_PROTOCOL_ID,
             serial_number: "not-a-zedmon-1",
         });
-        let serials = ZedmonClient::<FakeEnumerationInterface>::enumerate();
+        let serials = Client::<FakeEnumerationInterface>::enumerate();
         assert!(serials.is_empty());
 
         // Two devices: not-a-zedmon-1, zedmon-1
@@ -923,7 +923,7 @@ mod tests {
             ifc_protocol: ZEDMON_PROTOCOL_ID,
             serial_number: "zedmon-1",
         });
-        let serials = ZedmonClient::<FakeEnumerationInterface>::enumerate();
+        let serials = Client::<FakeEnumerationInterface>::enumerate();
         assert_eq!(serials, ["zedmon-1"]);
 
         // Three devices: not-a-zedmon-1, zedmon-1, not-a-zedmon-2
@@ -935,7 +935,7 @@ mod tests {
             ifc_protocol: ZEDMON_PROTOCOL_ID,
             serial_number: "not-a-zedmon-2",
         });
-        let serials = ZedmonClient::<FakeEnumerationInterface>::enumerate();
+        let serials = Client::<FakeEnumerationInterface>::enumerate();
         assert_eq!(serials, ["zedmon-1"]);
 
         // Four devices: not-a-zedmon-1, zedmon-1, not-a-zedmon-2, zedmon-2
@@ -947,13 +947,13 @@ mod tests {
             ifc_protocol: ZEDMON_PROTOCOL_ID,
             serial_number: "zedmon-2",
         });
-        let serials = ZedmonClient::<FakeEnumerationInterface>::enumerate();
+        let serials = Client::<FakeEnumerationInterface>::enumerate();
         assert_eq!(serials, ["zedmon-1", "zedmon-2"]);
     }
 
-    // Provides test support for ZedmonClient functionality that interacts with a Zedmon device. It
+    // Provides test support for Client functionality that interacts with a Zedmon device. It
     // chiefly provides:
-    //  - FakeZedmonInterface, for faking ZedmonClient's access to a Zedmon device.
+    //  - FakeZedmonInterface, for faking Client's access to a Zedmon device.
     //  - Coordinator, for coordinating activity between the test and a FakeZedmonInterface.
     //  - CoordinatorBuilder, for producing a Coordinator instance with its various optional
     //    settings.
@@ -966,20 +966,20 @@ mod tests {
 
         // Coordinates interactions between FakeZedmonInterface and a test.
         //
-        // To test ZedmonClient::read_reports:
+        // To test Client::read_reports:
         //  - Use CoordinatorBuilder::with_report_queue to populate the `report_queue` field. Each
         //    entry in the queue is a Vec<Report> that will be serialized into a single packet. The
         //    caller will need to ensure that reports are written to an accessible location.
-        //  - Create ZedmonClient with a DurationStopper whose duration is spanned by the enqueued
+        //  - Create Client with a DurationStopper whose duration is spanned by the enqueued
         //    Reports.
         //
-        // To test ZedmonClient::get_time_offset_nanos, use CoordinatorBuilder::with_offset_time to
+        // To test Client::get_time_offset_nanos, use CoordinatorBuilder::with_offset_time to
         // populate `offset_time`. Timestamps will be reported as `host_time - offset_time`; the
         // fake Zedmon's clock will run perfectly in parallel to the host clock. Note that only
         // timestamps reported in Timestamp packets are affected by `offset_time`; timestamps in
         // Report packets are directly specified by the test, via `report_queue`.
         //
-        // To test ZedmonClient::set_relay, use CoordinatorBuilder::with_relay_enabled to
+        // To test Client::set_relay, use CoordinatorBuilder::with_relay_enabled to
         // populate the relay state, and Coordinator::relay_enabled to check expectations.
         pub struct Coordinator {
             // Constants that define the fake device.
@@ -1028,7 +1028,7 @@ mod tests {
         }
 
         // Constants that are inherent to a Zedmon device. Even if these values are not exercised by
-        // a test, dummy values will be required by ZedmonClient::new().
+        // a test, dummy values will be required by Client::new().
         #[derive(Clone, Debug)]
         pub struct DeviceConfiguration {
             pub shunt_resistance: f32,
@@ -1274,7 +1274,7 @@ mod tests {
     fn run_zedmon_reporting_with_options<
         InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write,
     >(
-        zedmon: &ZedmonClient<InterfaceType>,
+        zedmon: &Client<InterfaceType>,
         test_duration: Duration,
         options: ReportingOptions,
     ) -> Result<Vec<u8>, Error> {
@@ -1312,7 +1312,7 @@ mod tests {
     }
 
     fn run_zedmon_reporting<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write>(
-        zedmon: &ZedmonClient<InterfaceType>,
+        zedmon: &Client<InterfaceType>,
         test_duration: Duration,
         reporting_interval: Option<Duration>,
     ) -> Result<Vec<u8>, Error> {
@@ -1325,7 +1325,7 @@ mod tests {
         run_zedmon_reporting_with_options(zedmon, test_duration, options)
     }
 
-    // Tests that ZedmonClient will disable reporting and drain enqueued packets on initialization.
+    // Tests that Client will disable reporting and drain enqueued packets on initialization.
     #[test]
     fn test_disable_reporting_and_drain_packets() {
         // Interface that responds to reads with Report packets until reporting is disabled and an
@@ -1406,7 +1406,7 @@ mod tests {
         let coordinator = builder.build();
         let interface = StillReportingInterface::new(coordinator);
 
-        assert!(ZedmonClient::new(interface).is_ok());
+        assert!(Client::new(interface).is_ok());
     }
 
     // Represents USB read responses enqueued by TransientFailureInterface.
@@ -1415,7 +1415,7 @@ mod tests {
         Error(std::io::Error),
     }
 
-    // Acts as an intermediary between ZedmonClient and a FakeZedmonInterface, injecting
+    // Acts as an intermediary between Client and a FakeZedmonInterface, injecting
     // `num_failures` read errors at the beginning of the report stream.
     struct TransientFailureInterface {
         inner: fake_device::FakeZedmonInterface,
@@ -1511,12 +1511,12 @@ mod tests {
                 .build();
             let interface = TransientFailureInterface::new(coordinator, num_failures);
 
-            let zedmon = ZedmonClient::new(interface).expect("Error building ZedmonClient");
+            let zedmon = Client::new(interface).expect("Error building zedmon client");
 
             run_zedmon_reporting(&zedmon, test_duration, None)
         };
 
-        let max_failures = ZedmonClient::<TransientFailureInterface>::num_usb_read_retries();
+        let max_failures = Client::<TransientFailureInterface>::num_usb_read_retries();
 
         // Test that reporting proceeds in the event of a few consecutive USB read failures.
         let result = run_reporting(max_failures);
@@ -1524,7 +1524,7 @@ mod tests {
         let output = result.unwrap();
         let mut reader =
             csv::ReaderBuilder::new().has_headers(false).from_reader(output.as_slice());
-        assert_eq!(reader.deserialize::<ZedmonRecord>().count(), 11);
+        assert_eq!(reader.deserialize::<Record>().count(), 11);
 
         // Test that reporting terminates with an error if too many consecutive read failures occur.
         let result = run_reporting(max_failures + 1);
@@ -1560,14 +1560,14 @@ mod tests {
             .with_report_queue(report_queue.clone())
             .build();
         let interface = fake_device::FakeZedmonInterface::new(coordinator);
-        let zedmon = ZedmonClient::new(interface).expect("Error building ZedmonClient");
+        let zedmon = Client::new(interface).expect("Error building zedmon client");
 
         let output = run_zedmon_reporting(&zedmon, test_duration, None)?;
         let mut reader =
             csv::ReaderBuilder::new().has_headers(false).from_reader(output.as_slice());
 
         let mut num_records = 0;
-        for result in reader.deserialize::<ZedmonRecord>() {
+        for result in reader.deserialize::<Record>() {
             let record = result?;
             num_records = num_records + 1;
 
@@ -1625,7 +1625,7 @@ mod tests {
             .with_report_queue(report_queue.clone())
             .build();
         let interface = fake_device::FakeZedmonInterface::new(coordinator);
-        let zedmon = ZedmonClient::new(interface).expect("Error building ZedmonClient");
+        let zedmon = Client::new(interface).expect("Error building zedmon client");
 
         let output = run_zedmon_reporting(&zedmon, test_duration, Some(reporting_interval))?;
         let mut reader =
@@ -1640,7 +1640,7 @@ mod tests {
 
         let mut num_records = 0;
         let mut prev_timestamp = 0;
-        for result in reader.deserialize::<ZedmonRecord>() {
+        for result in reader.deserialize::<Record>() {
             let record = result?;
 
             num_records = num_records + 1;
@@ -1685,7 +1685,7 @@ mod tests {
                 fake_device::CoordinatorBuilder::new(device_config).with_offset_time(zedmon_offset);
             let coordinator = builder.build();
             let interface = fake_device::FakeZedmonInterface::new(coordinator);
-            let zedmon = ZedmonClient::new(interface)?;
+            let zedmon = Client::new(interface)?;
 
             let (reported_offset, uncertainty) = zedmon.get_time_offset_micros()?;
 
@@ -1710,7 +1710,7 @@ mod tests {
         let builder = fake_device::CoordinatorBuilder::new(device_config).with_relay_enabled(false);
         let coordinator = builder.build();
         let interface = fake_device::FakeZedmonInterface::new(coordinator.clone());
-        let zedmon = ZedmonClient::new(interface)?;
+        let zedmon = Client::new(interface)?;
 
         // Test true->false and false->true transitions, and no-ops in each state.
         zedmon.set_relay(true)?;
@@ -1777,7 +1777,7 @@ mod tests {
         let mut t_micros = t_start_micros;
         let mut records_out = Vec::new();
         while t_micros <= t_start_micros + duration_micros {
-            let record = ZedmonRecord {
+            let record = Record {
                 timestamp_micros: t_micros,
                 shunt_voltage: shunt_voltage_raw(t_micros),
                 bus_voltage: bus_voltage_raw(t_micros),
@@ -1835,7 +1835,7 @@ mod tests {
         let mut records_out = Vec::new();
         while t_micros <= duration_micros {
             if t_micros < raw_data_gap_micros[0] || t_micros > raw_data_gap_micros[1] {
-                let record = ZedmonRecord {
+                let record = Record {
                     timestamp_micros: t_micros,
                     shunt_voltage: 1.0,
                     bus_voltage: 1.0,
@@ -1871,7 +1871,7 @@ mod tests {
         let builder = fake_device::CoordinatorBuilder::new(device_config);
         let coordinator = builder.with_report_queue(report_queue.clone()).build();
         let interface = fake_device::FakeZedmonInterface::new(coordinator);
-        let zedmon = ZedmonClient::new(interface).expect("Error building ZedmonClient");
+        let zedmon = Client::new(interface).expect("Error building zedmon client");
 
         let reporting_options = ReportingOptions {
             interval: None,

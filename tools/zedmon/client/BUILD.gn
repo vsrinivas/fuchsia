@@ -33,9 +33,9 @@ if (is_host) {
     ]
 
     sources = [
-      "src/lib.rs",
       "src/main.rs",
       "src/protocol.rs",
+      "src/zedmon.rs",
     ]
   }
 }

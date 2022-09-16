@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod lib;
 mod protocol;
+mod zedmon;
 
 use {
     anyhow::{format_err, Error},
@@ -86,7 +86,7 @@ fn main() -> Result<(), Error> {
                         JSON format.")
                     .required(false)
                     .index(1)
-                    .possible_values(&lib::DESCRIBABLE_PROPERTIES),
+                    .possible_values(&zedmon::DESCRIBABLE_PROPERTIES),
                 ).arg(
                     Arg::with_name("serial")
                         .help(
@@ -215,11 +215,11 @@ fn main() -> Result<(), Error> {
 }
 
 fn run_describe(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
-    let zedmon = lib::zedmon(arg_matches.value_of("serial"))?;
+    let zedmon = zedmon::zedmon(arg_matches.value_of("serial"))?;
     match arg_matches.value_of("name") {
         Some(name) => println!("{}", zedmon.describe(name).unwrap().to_string()),
         None => {
-            let params = lib::DESCRIBABLE_PROPERTIES
+            let params = zedmon::DESCRIBABLE_PROPERTIES
                 .iter()
                 .map(|name| (name.to_string(), zedmon.describe(name).unwrap()))
                 .collect();
@@ -231,7 +231,7 @@ fn run_describe(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
 
 /// Runs the "list" subcommand.
 fn run_list() -> Result<(), Error> {
-    let serials = lib::list();
+    let serials = zedmon::list();
     if serials.is_empty() {
         Err(format_err!("No Zedmon devices found"))
     } else {
@@ -270,7 +270,7 @@ impl StdinStopper {
     }
 }
 
-impl lib::StopSignal for StdinStopper {
+impl zedmon::StopSignal for StdinStopper {
     fn should_stop(&mut self, _: u64) -> Result<bool, Error> {
         match self.receiver.try_recv() {
             Ok(()) => self.stopped = true,
@@ -305,16 +305,18 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
         ),
     };
 
-    let zedmon = lib::zedmon(arg_matches.value_of("serial"))?;
+    let zedmon = zedmon::zedmon(arg_matches.value_of("serial"))?;
 
     println!("Recording to {}.", dest_name);
-    let options = lib::ReportingOptions {
+    let options = zedmon::ReportingOptions {
         interval: reporting_interval,
         use_host_timestamps: arg_matches.is_present("host_timestamps"),
         output_power_only: arg_matches.is_present("power"),
     };
     match duration {
-        Some(duration) => zedmon.read_reports(output, lib::DurationStopper::new(duration), options),
+        Some(duration) => {
+            zedmon.read_reports(output, zedmon::DurationStopper::new(duration), options)
+        }
         None => {
             println!("Press ENTER to stop.");
             zedmon.read_reports(output, StdinStopper::new(), options)
@@ -324,7 +326,7 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
 
 /// Runs the "relay" subcommand.
 fn run_relay(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
-    let zedmon = lib::zedmon(arg_matches.value_of("serial"))?;
+    let zedmon = zedmon::zedmon(arg_matches.value_of("serial"))?;
     zedmon.set_relay(arg_matches.value_of("state").unwrap() == "on")?;
     Ok(())
 }
