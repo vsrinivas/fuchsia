@@ -4,8 +4,6 @@
     "blacklisted":         "denied, blocked",
     "blacklisting":        "denying, blocking",
     "blacklists":          "denylists, blocklists",
-    "citizen":             "priority",
-    "citizens":            "priorities",
     "cop":                 "build gardener, build monitor, supervisor, primary",
     "cops":                "build gardeners, build monitors, supervisors, primaries",
     "crazier":             "unexpected, catastrophic, incoherent",
