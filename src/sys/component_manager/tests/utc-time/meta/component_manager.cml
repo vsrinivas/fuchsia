@@ -23,6 +23,7 @@
         {
             protocol: [
                 "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.EventStream2",
                 "fuchsia.sys2.LifecycleController",
             ],
         },
@@ -49,6 +50,7 @@
         {
             protocol: [
                 "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.EventStream2",
                 "fuchsia.sys2.LifecycleController",
             ],
             from: "self",

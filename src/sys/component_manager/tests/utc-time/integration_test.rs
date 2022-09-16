@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use component_events::{
-    events::*,
     matcher::*,
     sequence::{EventSequence, Ordering},
 };
@@ -105,12 +104,9 @@ async fn builtin_time_service_and_clock_routed() {
     let instance = component_manager_realm.build().await.unwrap();
 
     let proxy =
-        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
 
-    let event_source = EventSource::from_proxy(proxy);
-
-    let event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let event_stream = component_events::events::EventStream::new_v2(proxy);
 
     // Unblock the component_manager.
     debug!("starting component tree");
@@ -120,7 +116,7 @@ async fn builtin_time_service_and_clock_routed() {
     // The child components do several assertions on UTC time properties.
     // If any assertion fails, the component will fail with non-zero exit code.
     EventSequence::new()
-        .all_of(
+        .has_subset(
             vec![
                 EventMatcher::ok()
                     .stop(Some(ExitStatusMatcher::Clean))
