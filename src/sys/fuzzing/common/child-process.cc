@@ -366,6 +366,7 @@ ZxPromise<> ChildProcess::Kill() {
                }
                if (!wait) {
                  process_.kill();
+                 killed_ = true;
                  for (auto& stream : streams_) {
                    close(stream.fd);
                  }
@@ -399,6 +400,7 @@ void ChildProcess::Reset() {
     stream.fd_waiter = std::make_unique<fsl::FDWaiter>(executor_->dispatcher());
   }
   memset(&info_, 0, sizeof(info_));
+  killed_ = false;
 }
 
 }  // namespace fuzzing

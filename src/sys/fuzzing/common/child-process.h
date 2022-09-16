@@ -35,6 +35,8 @@ class ChildProcess {
   ~ChildProcess() = default;
 
   bool is_verbose() const { return verbose_; }
+  bool is_killed() const { return killed_; }
+
   void set_verbose(bool verbose) { verbose_ = verbose; }
 
   // Adds a command line argument for the process. The first |arg| added should be the executable
@@ -111,6 +113,7 @@ class ChildProcess {
 
   ExecutorPtr executor_;
   bool verbose_ = false;
+  bool killed_ = false;
 
   // Parameters for |fdio_spawn_etc|.
   std::vector<std::string> args_;

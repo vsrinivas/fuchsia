@@ -478,8 +478,8 @@ ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
 
 ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
   return fpromise::make_promise(
-      [this, read_line = ZxFuture<std::string>(),
-       result = FuzzResult::NO_ERRORS](Context& context) mutable -> ZxResult<FuzzResult> {
+      [this, read_line = ZxFuture<std::string>(), result = FuzzResult::NO_ERRORS,
+       pid = int64_t(-1)](Context& context) mutable -> ZxResult<FuzzResult> {
         while (true) {
           if (!read_line) {
             read_line = process_.ReadFromStderr();
@@ -491,6 +491,12 @@ ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
             auto status = read_line.error();
             if (status != ZX_ERR_STOP) {
               return fpromise::error(status);
+            }
+            // TODO(fxbug.dev/109100): Rarely, the process output will be truncated. This causes
+            // problems for tooling like undercoat.
+            if (pid < 0 && !process_.is_killed()) {
+              FX_LOGS(ERROR) << "libFuzzer output terminated prematurely.";
+              return fpromise::error(ZX_ERR_IO);
             }
             return fpromise::ok(result);
           }
@@ -504,8 +510,12 @@ ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
             continue;
           }
 
-          // These patterns should match libFuzzer's |Fuzzer::PrintStats|.
           re2::StringPiece input(std::move(line));
+          if (re2::RE2::Consume(&input, "==(\\d+)==", &pid)) {
+            continue;
+          }
+
+          // These patterns should match libFuzzer's |Fuzzer::PrintStats|.
           uint32_t runs;
           if (!re2::RE2::Consume(&input, "#(\\d+)", &runs)) {
             continue;

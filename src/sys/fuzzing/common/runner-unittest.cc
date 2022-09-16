@@ -569,6 +569,15 @@ void RunnerTest::Stop() {
                     artifact = std::move(result);
                     return fpromise::ok();
                   })
+                  .or_else([](zx_status_t& status) -> ZxResult<> {
+                    // TODO(fxbug.dev/109100): fdio sometimes truncates the fuzzer output when
+                    // stopping, and this leads to errors being returned. For the sake of this test,
+                    // ignore those errors.
+                    if (status != ZX_ERR_IO) {
+                      return fpromise::error(status);
+                    }
+                    return fpromise::ok();
+                  })
                   .wrap_with(barrier);
   FUZZING_EXPECT_OK(std::move(task));
   FUZZING_EXPECT_OK(executor()
