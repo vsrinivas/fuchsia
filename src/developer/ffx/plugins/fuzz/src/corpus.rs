@@ -32,8 +32,8 @@ pub fn get_name(corpus_type: fuzz::Corpus) -> &'static str {
 }
 
 /// Basic corpus information returned by `read`.
-#[derive(Debug, PartialEq)]
-pub struct CorpusStats {
+#[derive(Debug, Default, PartialEq)]
+pub struct Stats {
     pub num_inputs: usize,
     pub total_size: usize,
 }
@@ -47,7 +47,7 @@ pub struct CorpusStats {
 pub async fn read<P: AsRef<Path>>(
     stream: fuzz::CorpusReaderRequestStream,
     out_dir: P,
-) -> Result<CorpusStats> {
+) -> Result<Stats> {
     // Without these `RefCell`s, the compiler will complain about references in the async block
     // below that escape the closure.
     let num_inputs: RefCell<usize> = RefCell::new(0);
@@ -75,7 +75,7 @@ pub async fn read<P: AsRef<Path>>(
         .context("failed to handle fuchsia.fuzzer.CorpusReader request")?;
     let num_inputs = num_inputs.borrow();
     let total_size = total_size.borrow();
-    Ok(CorpusStats { num_inputs: *num_inputs, total_size: *total_size })
+    Ok(Stats { num_inputs: *num_inputs, total_size: *total_size })
 }
 
 #[cfg(test)]
@@ -104,10 +104,10 @@ mod test_fixtures {
 mod tests {
     use {
         super::test_fixtures::send_one_input,
-        super::{get_name, get_type, read, CorpusStats},
+        super::{get_name, get_type, read, Stats},
         crate::input::test_fixtures::verify_saved,
+        crate::test_fixtures::Test,
         crate::util::digest_path,
-        crate::util::test_fixtures::Test,
         anyhow::{Error, Result},
         fidl_fuchsia_fuzzer as fuzz,
         futures::join,
@@ -145,7 +145,7 @@ mod tests {
         };
         let send_fut = send_fut();
         let results = join!(read_fut, send_fut);
-        assert_eq!(results.0.ok(), Some(CorpusStats { num_inputs: 3, total_size: 10 }));
+        assert_eq!(results.0.ok(), Some(Stats { num_inputs: 3, total_size: 10 }));
         assert!(results.1.is_ok());
         for input in cloned.iter() {
             let saved = digest_path(&corpus_dir, None, input);

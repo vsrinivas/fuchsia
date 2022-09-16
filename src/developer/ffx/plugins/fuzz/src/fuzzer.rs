@@ -9,11 +9,11 @@ use {
     crate::options,
     crate::util::{create_artifact_dir, create_corpus_dir, create_dir_at},
     crate::writer::{OutputSink, Writer},
-    anyhow::{anyhow, Context as _, Error, Result},
-    fidl::endpoints::{create_request_stream, ProtocolMarker},
+    anyhow::{bail, Context as _, Error, Result},
+    fidl::endpoints::create_request_stream,
     fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
     fuchsia_zircon_status as zx,
-    futures::{join, try_join},
+    futures::{pin_mut, select, try_join, Future, FutureExt},
     std::path::{Path, PathBuf},
     url::Url,
     walkdir::WalkDir,
@@ -79,8 +79,12 @@ impl<O: OutputSink> Fuzzer<O> {
     ///   * `name` is provided but does not match a known option.
     ///
     pub async fn get<S: AsRef<str>>(&self, name: Option<S>) -> Result<()> {
-        let fuzz_options =
-            self.proxy.get_options().await.context(fidl_name("GetOptions failed"))?;
+        let fuzz_options = self
+            .proxy
+            .get_options()
+            .await
+            .map_err(Error::msg)
+            .context("`fuchsia.fuzzer.Controller/GetOptions` failed")?;
         match name {
             Some(name) => {
                 let name = name.as_ref();
@@ -120,9 +124,7 @@ impl<O: OutputSink> Fuzzer<O> {
         let mut fuzz_options = fuzz::Options::EMPTY;
         // TODO(fxbug.dev/90015): Add flag to read options from a JSON file.
         options::set(&mut fuzz_options, name, value)?;
-        let response = self.proxy.configure(fuzz_options).await.context(fidl_name("Configure"))?;
-        map_zx_response(response).context(fidl_name("Configure"))?;
-
+        self.configure(fuzz_options).await?;
         self.writer.println(format!("Option '{}' set to {}", name, value));
         Ok(())
     }
@@ -153,19 +155,25 @@ impl<O: OutputSink> Fuzzer<O> {
                     .context("failed to get input to add")?;
                 input_pairs.push(input_pair);
             }
-        };
+        }
         let mut num_inputs = 0;
         let mut num_bytes = 0;
         for (mut fidl_input, input) in input_pairs.into_iter() {
             num_inputs += 1;
             num_bytes += fidl_input.size;
-            let (response, _) = try_join!(
+            let (raw, _) = try_join!(
                 async {
                     self.proxy.add_to_corpus(corpus_type, &mut fidl_input).await.map_err(Error::msg)
                 },
                 input.send(),
-            )?;
-            map_zx_response(response).context(fidl_name("AddToCorpus"))?;
+            )
+            .context("`fuchsia.fuzzer.Controller/AddToCorpus` failed")?;
+            match zx::Status::from_raw(raw) {
+                zx::Status::OK => {}
+                status => {
+                    bail!("`fuchsia.fuzzer.Controller/AddToCorpus` returned: ZX_ERR_{}", status)
+                }
+            };
         }
         let units = match num_inputs {
             1 => "input",
@@ -183,24 +191,39 @@ impl<O: OutputSink> Fuzzer<O> {
     ///
     /// Writes the result of execution to this object's internal `Writer`.
     ///
+    /// Returns `ZX_ERR_CANCELED` if the workflow was interrupted by a call to
+    /// `fuchsia.fuzzer.Controller/Stop`, or `ZX_OK` if it ran to completion.
+    ///
     /// Returns an error if:
     ///   * Converting the input to an `Input`/`fuchsia.fuzzer.Input` pair fails.
     ///   * Communicating with the fuzzer fails.
     ///   * The fuzzer returns an error, e.g. it is already performing another workflow.
     ///
-    pub async fn try_one<S: AsRef<str>>(&self, test_input: S) -> Result<()> {
+    pub async fn try_one<S: AsRef<str>>(&self, test_input: S) -> Result<zx::Status> {
         let (mut fidl_input, input) =
             Input::from_str(test_input, &self.writer).context("failed to get input to try")?;
         self.writer.println(format!("Trying an input of {} bytes...", input.len()));
-        let (response, _, _) = try_join!(
-            async { self.proxy.execute(&mut fidl_input).await.map_err(Error::msg) },
-            input.send(),
-            self.forwarder.forward_all(),
-        )
-        .context(fidl_name("Execute"))?;
-        let result = map_zx_result(response).context(fidl_name("Execute"))?;
-        self.writer.println(get_try_result(&result));
-        Ok(())
+        let fidl_fut = || async move {
+            let result = match self.proxy.execute(&mut fidl_input).await {
+                Err(fidl::Error::ClientChannelClosed { status, .. })
+                    if status == zx::Status::PEER_CLOSED =>
+                {
+                    return Ok(zx::Status::CANCELED)
+                }
+                Err(e) => bail!("`fuchsia.fuzzer.Controller/Execute` failed: {:?}", e),
+                Ok(result) => result.map_err(|raw| zx::Status::from_raw(raw)),
+            };
+            let fuzz_result = match result {
+                Err(zx::Status::BAD_STATE) => bail!("another long-running workflow is in progress"),
+                Err(status) => {
+                    bail!("`fuchsia.fuzzer.Controller/Execute` returned: ZX_ERR_{}", status)
+                }
+                Ok(fuzz_result) => fuzz_result,
+            };
+            self.writer.println(get_try_result(&fuzz_result));
+            Ok(zx::Status::OK)
+        };
+        self.with_forwarding(fidl_fut(), Some(input)).await
     }
 
     /// Runs the fuzzer in a loop to generate and test new inputs.
@@ -212,27 +235,46 @@ impl<O: OutputSink> Fuzzer<O> {
     ///   * An input triggers a fatal error, e.g. death by AddressSanitizer.
     ///   * `fuchsia.fuzzer.Controller/Stop` is called.
     ///
+    /// Returns `ZX_ERR_CANCELED` if the workflow was interrupted by a call to
+    /// `fuchsia.fuzzer.Controller/Stop`, or `ZX_OK` if it ran to completion.
+    ///
     /// Returns an error if:
     ///   * Either `runs` or `time` is provided but cannot be parsed to  a valid value.
     ///   * Communicating with the fuzzer fails.
     ///   * The fuzzer returns an error, e.g. it is already performing another workflow.
     ///   * The error-causing input, or "artifact", fails to be received and saved.
     ///
-    pub async fn run<S: AsRef<str>>(&self, runs: Option<S>, time: Option<S>) -> Result<()> {
+    pub async fn run<S: AsRef<str>>(&self, runs: Option<S>, time: Option<S>) -> Result<zx::Status> {
         self.set_bounds(runs, time).await.context("failed to bound fuzzing")?;
         self.writer.println("Running fuzzer...");
-        let results = join!(self.proxy.fuzz(), self.forwarder.forward_all(),);
-        let response = results.0.context(fidl_name("Fuzz"))?;
-        let (result, error_input) = map_zx_result(response).context(fidl_name("Fuzz"))?;
-        self.writer.println(get_run_result(&result));
-        if let Some(prefix) = get_prefix(&result) {
-            let artifact_dir = self.artifact_dir();
-            let path = save_input(error_input, &artifact_dir, Some(prefix))
-                .await
-                .context("failed to save error input")?;
-            self.writer.println(format!("Input saved to '{}'", path.to_string_lossy()));
-        }
-        Ok(())
+        let fidl_fut = || async move {
+            let result = match self.proxy.fuzz().await {
+                Err(fidl::Error::ClientChannelClosed { status, .. })
+                    if status == zx::Status::PEER_CLOSED =>
+                {
+                    return Ok(zx::Status::CANCELED);
+                }
+                Err(e) => bail!("`fuchsia.fuzzer.Controller/Fuzz` failed: {:?}", e),
+                Ok(result) => result.map_err(|raw| zx::Status::from_raw(raw)),
+            };
+            let (fuzz_result, error_input) = match result {
+                Err(zx::Status::BAD_STATE) => bail!("another long-running workflow is in progress"),
+                Err(status) => {
+                    bail!("`fuchsia.fuzzer.Controller/Fuzz` returned: ZX_ERR_{}", status)
+                }
+                Ok((fuzz_result, error_input)) => (fuzz_result, error_input),
+            };
+            self.writer.println(get_run_result(&fuzz_result));
+            if let Some(prefix) = get_prefix(&fuzz_result) {
+                let artifact_dir = self.artifact_dir();
+                let path = save_input(error_input, &artifact_dir, Some(prefix))
+                    .await
+                    .context("failed to save error input")?;
+                self.writer.println(format!("Input saved to '{}'", path.to_string_lossy()));
+            }
+            Ok(zx::Status::OK)
+        };
+        self.with_forwarding(fidl_fut(), None).await
     }
 
     /// Replaces bytes in a error-causing input with PII-safe bytes, e.g. spaces.
@@ -240,35 +282,54 @@ impl<O: OutputSink> Fuzzer<O> {
     /// The fuzzer will try to reproduce the error caused by the input with each byte replaced by a
     /// fixed number of "clean" candidates.
     ///
+    /// Returns `ZX_ERR_CANCELED` if the workflow was interrupted by a call to
+    /// `fuchsia.fuzzer.Controller/Stop`, or `ZX_OK` if it ran to completion.
+    ///
     /// Returns an error if:
     ///   * Converting the input to an `Input`/`fuchsia.fuzzer.Input` pair fails.
     ///   * Communicating with the fuzzer fails.
     ///   * The fuzzer returns an error, e.g. it is already performing another workflow.
     ///   * The cleansed input fails to be received and saved.
     ///
-    pub async fn cleanse<S: AsRef<str>>(&self, test_input: S) -> Result<()> {
+    pub async fn cleanse<S: AsRef<str>>(&self, test_input: S) -> Result<zx::Status> {
         let (mut fidl_input, input) =
             Input::from_str(test_input, &self.writer).context("failed to get input to cleanse")?;
         self.writer.println(format!("Attempting to cleanse an input of {} bytes...", input.len()));
-        let (response, _, _) = try_join!(
-            async { self.proxy.cleanse(&mut fidl_input).await.map_err(Error::msg) },
-            input.send(),
-            self.forwarder.forward_all(),
-        )
-        .context(fidl_name("Cleanse"))?;
-        let cleansed = map_zx_result(response).context(fidl_name("Clease"))?;
-        let artifact_dir = self.artifact_dir();
-        let path = save_input(cleansed, &artifact_dir, Some("cleansed"))
-            .await
-            .context("failed to save cleansed input")?;
-        self.writer.println(format!("Cleansed input written to '{}'", path.to_string_lossy()));
-        Ok(())
+        let fidl_fut = || async move {
+            let result = match self.proxy.cleanse(&mut fidl_input).await {
+                Err(fidl::Error::ClientChannelClosed { status, .. })
+                    if status == zx::Status::PEER_CLOSED =>
+                {
+                    return Ok(zx::Status::CANCELED)
+                }
+                Err(e) => bail!("`fuchsia.fuzzer.Controller/Cleanse` failed: {:?}", e),
+                Ok(result) => result.map_err(|raw| zx::Status::from_raw(raw)),
+            };
+            let cleansed = match result {
+                Err(zx::Status::BAD_STATE) => bail!("another long-running workflow is in progress"),
+                Err(zx::Status::INVALID_ARGS) => bail!("the provided input did not cause an error"),
+                Err(status) => {
+                    bail!("`fuchsia.fuzzer.Controller/Cleanse` returned: ZX_ERR_{}", status)
+                }
+                Ok(cleansed) => cleansed,
+            };
+            let artifact_dir = self.artifact_dir();
+            let path = save_input(cleansed, &artifact_dir, Some("cleansed"))
+                .await
+                .context("failed to save cleansed input")?;
+            self.writer.println(format!("Cleansed input written to '{}'", path.to_string_lossy()));
+            Ok(zx::Status::OK)
+        };
+        self.with_forwarding(fidl_fut(), Some(input)).await
     }
 
     /// Reduces the length of an error-causing input while preserving the error.
     ///
     /// The fuzzer will bound its attempt to find shorter inputs using the given `runs` or `time`,
     /// if provided, or the defaults from `options::add_defaults`.
+    ///
+    /// Returns `ZX_ERR_CANCELED` if the workflow was interrupted by a call to
+    /// `fuchsia.fuzzer.Controller/Stop`, or `ZX_OK` if it ran to completion.
     ///
     /// Returns an error if:
     ///   * Either `runs` or `time` is provided but cannot be parsed to  a valid value.
@@ -282,24 +343,37 @@ impl<O: OutputSink> Fuzzer<O> {
         test_input: S,
         runs: Option<S>,
         time: Option<S>,
-    ) -> Result<()> {
+    ) -> Result<zx::Status> {
         self.set_bounds(runs, time).await.context("failed to bound input minimization")?;
         let (mut fidl_input, input) =
             Input::from_str(test_input, &self.writer).context("failed to get input to minimize")?;
         self.writer.println(format!("Attempting to minimize an input of {} bytes...", input.len()));
-        let (response, _, _) = try_join!(
-            async { self.proxy.minimize(&mut fidl_input).await.map_err(Error::msg) },
-            input.send(),
-            self.forwarder.forward_all(),
-        )
-        .context(fidl_name("Minimize"))?;
-        let minimized = map_zx_result(response).context(fidl_name("Minimize"))?;
-        let artifact_dir = self.artifact_dir();
-        let path = save_input(minimized, &artifact_dir, Some("minimized"))
-            .await
-            .context("failed to save minimized input")?;
-        self.writer.println(format!("Minimized input written to '{}'", path.to_string_lossy()));
-        Ok(())
+        let fidl_fut = || async move {
+            let result = match self.proxy.minimize(&mut fidl_input).await {
+                Err(fidl::Error::ClientChannelClosed { status, .. })
+                    if status == zx::Status::PEER_CLOSED =>
+                {
+                    return Ok(zx::Status::CANCELED)
+                }
+                Err(e) => bail!("`fuchsia.fuzzer.Controller/Minimize` failed: {:?}", e),
+                Ok(result) => result.map_err(|raw| zx::Status::from_raw(raw)),
+            };
+            let minimized = match result {
+                Err(zx::Status::BAD_STATE) => bail!("another long-running workflow is in progress"),
+                Err(zx::Status::INVALID_ARGS) => bail!("the provided input did not cause an error"),
+                Err(status) => {
+                    bail!("`fuchsia.fuzzer.Controller/Minimize` returned: ZX_ERR_{}", status)
+                }
+                Ok(minimized) => minimized,
+            };
+            let artifact_dir = self.artifact_dir();
+            let path = save_input(minimized, &artifact_dir, Some("minimized"))
+                .await
+                .context("failed to save minimized input")?;
+            self.writer.println(format!("Minimized input written to '{}'", path.to_string_lossy()));
+            Ok(zx::Status::OK)
+        };
+        self.with_forwarding(fidl_fut(), Some(input)).await
     }
 
     /// Removes inputs from the corpus that produce duplicate coverage.
@@ -309,17 +383,36 @@ impl<O: OutputSink> Fuzzer<O> {
     /// coverage. Once complete, the compacted fuzzer is saved to the `corpus_dir`, if provided, or
     /// the current working directory.
     ///
+    /// Returns `ZX_ERR_CANCELED` if the workflow was interrupted by a call to
+    /// `fuchsia.fuzzer.Controller/Stop`, or `ZX_OK` if it ran to completion.
+    ///
     /// Returns an error if:
     ///   * Communicating with the fuzzer fails.
     ///   * The fuzzer returns an error, e.g. it is already performing another workflow.
     ///   * One or more inputs fails to be received and saved.
     ///
-    pub async fn merge(&self) -> Result<()> {
-        self.writer.println(format!("Compacting fuzzer corpus..."));
-        let results = join!(self.proxy.merge(), self.forwarder.forward_all(),);
-        let response = results.0.context(fidl_name("Merge"))?;
-        map_zx_response(response).context(fidl_name("Merge"))?;
-        self.fetch(fuzz::Corpus::Live).await
+    pub async fn merge(&self) -> Result<zx::Status> {
+        self.writer.println("Compacting fuzzer corpus...");
+        let fidl_fut = || async move {
+            let status = match self.proxy.merge().await {
+                Err(fidl::Error::ClientChannelClosed { status, .. })
+                    if status == zx::Status::PEER_CLOSED =>
+                {
+                    return Ok(zx::Status::CANCELED)
+                }
+                Err(e) => bail!("`fuchsia.fuzzer.Controller/Merge` failed: {:?}", e),
+                Ok(raw) => zx::Status::from_raw(raw),
+            };
+            match status {
+                zx::Status::OK => {}
+                zx::Status::BAD_STATE => bail!("another long-running workflow is in progress"),
+                zx::Status::INVALID_ARGS => bail!("an input in the seed corpus triggered an error"),
+                status => bail!("`fuchsia.fuzzer.Controller/Merge` returned: ZX_ERR_{}", status),
+            };
+            self.fetch(fuzz::Corpus::Live).await?;
+            Ok(zx::Status::OK)
+        };
+        self.with_forwarding(fidl_fut(), None).await
     }
 
     /// Returns information about fuzzer execution.
@@ -330,7 +423,15 @@ impl<O: OutputSink> Fuzzer<O> {
     /// Refer to `fuchsia.fuzzer.Status` for precise details on the returned information.
     ///
     pub async fn status(&self) -> Result<fuzz::Status> {
-        self.proxy.get_status().await.map_err(|e| anyhow!(e)).context(fidl_name("GetStatus"))
+        match self.proxy.get_status().await {
+            Err(fidl::Error::ClientChannelClosed { status, .. })
+                if status == zx::Status::PEER_CLOSED =>
+            {
+                return Ok(fuzz::Status { ..fuzz::Status::EMPTY })
+            }
+            Err(e) => bail!("`fuchsia.fuzzer.Controller/GetStatus` failed: {:?}", e),
+            Ok(fuzz_status) => Ok(fuzz_status),
+        }
     }
 
     /// Retrieves test inputs from one of the fuzzer's corpora.
@@ -343,22 +444,15 @@ impl<O: OutputSink> Fuzzer<O> {
     ///   * One or more inputs fails to be received and saved.
     ///
     pub async fn fetch(&self, corpus_type: fuzz::Corpus) -> Result<()> {
-        let (client_end, stream) = create_request_stream::<fuzz::CorpusReaderMarker>()
-            .context("failed to create fuchsia.fuzzer.CorpusReader stream")?;
         self.writer.println(format!("Retrieving fuzzer corpus..."));
         let corpus_dir = self.corpus_dir(corpus_type);
+        let (client_end, stream) = create_request_stream::<fuzz::CorpusReaderMarker>()
+            .context("failed to create fuchsia.fuzzer.CorpusReader stream")?;
         let (_, corpus_stats) = try_join!(
-            async {
-                self.proxy
-                    .read_corpus(corpus_type, client_end)
-                    .await
-                    .map_err(Error::msg)
-                    .context(fidl_name("ReadCorpus"))
-            },
-            async {
-                corpus::read(stream, corpus_dir).await.context("failed to read fetched corpus")
-            },
-        )?;
+            async { self.proxy.read_corpus(corpus_type, client_end).await.map_err(Error::msg) },
+            async { corpus::read(stream, corpus_dir).await },
+        )
+        .context("`fuchsia.fuzzer.Controller/ReadCorpus` failed")?;
         let units = match corpus_stats.num_inputs {
             1 => "input",
             _ => "inputs",
@@ -371,6 +465,58 @@ impl<O: OutputSink> Fuzzer<O> {
         Ok(())
     }
 
+    // Runs the given |fidl_fut| along with futures to optionally send an |input| and forward
+    // fuzzer output.
+    async fn with_forwarding<F>(&self, fidl_fut: F, input: Option<Input>) -> Result<zx::Status>
+    where
+        F: Future<Output = Result<zx::Status>>,
+    {
+        let fidl_fut = fidl_fut.fuse();
+        let send_fut = || async move {
+            match input {
+                Some(input) => input.send().await,
+                None => Ok(()),
+            }
+        };
+        let send_fut = send_fut().fuse();
+        let forward_fut = self.forwarder.forward_all().fuse();
+        pin_mut!(fidl_fut, send_fut, forward_fut);
+        loop {
+            select! {
+                result = fidl_fut => {
+                    let status = result?;
+                    // If `fidl_fut` completes with e.g. `Ok(zx::Status::CANCELED)`, drop the
+                    // `send_fut` and `forward_fut` futures.
+                    if status != zx::Status::OK {
+                        return Ok(status);
+                    }
+                }
+                result = send_fut => {
+                    result?;
+                }
+                result = forward_fut => {
+                    result?;
+                }
+                complete => return Ok(zx::Status::OK),
+            };
+        }
+    }
+
+    // Helper methods for configuring the fuzzer.
+
+    async fn configure(&self, options: fuzz::Options) -> Result<()> {
+        self.writer.println("Configuring fuzzer...");
+        let status = match self.proxy.configure(options).await {
+            Err(e) => bail!("`fuchsia.fuzzer.Controller/Configure` failed: {:?}", e),
+            Ok(raw) => zx::Status::from_raw(raw),
+        };
+        match status {
+            zx::Status::OK => Ok(()),
+            zx::Status::BAD_STATE => bail!("a long-running workflow is in progress"),
+            status => bail!("`fuchsia.fuzzer.Controller/Configure` returned: ZX_ERR_{}", status),
+        }
+    }
+
     async fn set_bounds<S: AsRef<str>>(&self, runs: Option<S>, time: Option<S>) -> Result<()> {
         let mut fuzz_options = fuzz::Options::EMPTY;
         if let Some(runs) = runs {
@@ -381,23 +527,8 @@ impl<O: OutputSink> Fuzzer<O> {
             options::set(&mut fuzz_options, "max_total_time", time.as_ref())
                 .context("failed to set 'max_total_time'")?;
         }
-        self.writer.println("Configuring fuzzer...");
-        let response = self.proxy.configure(fuzz_options).await.context(fidl_name("Configure"))?;
-        map_zx_response(response).context(fidl_name("Configure"))?;
-        Ok(())
+        self.configure(fuzz_options).await
     }
-}
-
-fn fidl_name(method: &str) -> String {
-    format!("{}/{}", fuzz::ControllerMarker::DEBUG_NAME, method)
-}
-
-fn map_zx_response(result: i32) -> Result<()> {
-    zx::Status::ok(result).map_err(Error::msg)
-}
-
-fn map_zx_result<T>(result: std::result::Result<T, i32>) -> Result<T> {
-    result.map_err(|raw| zx::Status::from_raw(raw)).map_err(Error::msg)
 }
 
 fn get_prefix(result: &FuzzResult) -> Option<&str> {
@@ -446,7 +577,7 @@ pub mod test_fixtures {
         crate::diagnostics::test_fixtures::send_log_entry,
         crate::input::Input,
         crate::options::test_fixtures::add_defaults,
-        crate::util::test_fixtures::{create_task, Test, TEST_URL},
+        crate::test_fixtures::{create_task, Test, TEST_URL},
         crate::writer::test_fixtures::BufferSink,
         anyhow::{anyhow, Context as _, Result},
         fidl::endpoints::create_proxy_and_stream,
@@ -488,12 +619,14 @@ pub mod test_fixtures {
     /// Rhese fields are Rc<RefCell<_>> in order to be cloned and shared with the `Task` serving the
     /// controller. Unit tests can use this object to query values passed in FIDL requests and set
     /// values returned by FIDL responses.
+    #[derive(Debug)]
     pub struct FakeFuzzer {
+        url: Rc<RefCell<Option<String>>>,
         corpus_type: Rc<RefCell<fuzz::Corpus>>,
         input_to_send: Rc<RefCell<Vec<u8>>>,
         options: Rc<RefCell<fuzz::Options>>,
         received_input: Rc<RefCell<Vec<u8>>>,
-        result: Rc<RefCell<FuzzResult>>,
+        result: Rc<RefCell<Result<FuzzResult, zx::Status>>>,
         status: Rc<RefCell<fuzz::Status>>,
         stdout: Rc<RefCell<Option<fasync::Socket>>>,
         stderr: Rc<RefCell<Option<fasync::Socket>>>,
@@ -507,16 +640,28 @@ pub mod test_fixtures {
             let mut options = fuzz::Options::EMPTY;
             add_defaults(&mut options);
             Self {
+                url: Rc::new(RefCell::new(None)),
                 corpus_type: Rc::new(RefCell::new(fuzz::Corpus::Seed)),
                 input_to_send: Rc::new(RefCell::new(Vec::new())),
                 options: Rc::new(RefCell::new(options)),
                 received_input: Rc::new(RefCell::new(Vec::new())),
-                result: Rc::new(RefCell::new(FuzzResult::NoErrors)),
+                result: Rc::new(RefCell::new(Ok(FuzzResult::NoErrors))),
                 status: Rc::new(RefCell::new(status)),
                 stdout: Rc::new(RefCell::new(None)),
                 stderr: Rc::new(RefCell::new(None)),
                 syslog: Rc::new(RefCell::new(None)),
             }
+        }
+
+        /// Returns the fuzzer's URL as a string, if set.
+        pub fn url(&self) -> Option<String> {
+            self.url.borrow().clone()
+        }
+
+        /// Sets the URL of the fuzzer.
+        pub fn set_url(&self, url: String) {
+            let mut url_mut = self.url.borrow_mut();
+            *url_mut = Some(url);
         }
 
         /// Simulates a call to `fuchsia.fuzzer.Manager/Connect` without a `fuzz-manager`.
@@ -586,12 +731,12 @@ pub mod test_fixtures {
         }
 
         /// Returns the fuzzing result to be sent via a FIDL response.
-        pub fn get_result(&self) -> FuzzResult {
+        pub fn get_result(&self) -> Result<FuzzResult, zx::Status> {
             self.result.borrow().clone()
         }
 
         /// Sets the fuzzing result to be sent via a FIDL response.
-        pub fn set_result(&self, result: FuzzResult) {
+        pub fn set_result(&self, result: Result<FuzzResult, zx::Status>) {
             let mut result_mut = self.result.borrow_mut();
             *result_mut = result;
         }
@@ -629,6 +774,7 @@ pub mod test_fixtures {
     impl Clone for FakeFuzzer {
         fn clone(&self) -> Self {
             Self {
+                url: Rc::clone(&self.url),
                 corpus_type: Rc::clone(&self.corpus_type),
                 input_to_send: Rc::clone(&self.input_to_send),
                 options: Rc::clone(&self.options),
@@ -683,9 +829,15 @@ pub mod test_fixtures {
                 }
                 Some(Ok(fuzz::ControllerRequest::Execute { test_input, responder })) => {
                     fake.receive_input(test_input).await?;
-                    let mut response = Ok(fake.get_result());
-                    responder.send(&mut response)?;
-                    fake.send_output(fuzz::DONE_MARKER).await?;
+                    match fake.get_result() {
+                        Ok(fuzz_result) => {
+                            responder.send(&mut Ok(fuzz_result))?;
+                            fake.send_output(fuzz::DONE_MARKER).await?;
+                        }
+                        Err(status) => {
+                            responder.send(&mut Err(status.into_raw()))?;
+                        }
+                    }
                 }
                 Some(Ok(fuzz::ControllerRequest::Minimize { test_input, responder })) => {
                     fake.receive_input(test_input).await?;
@@ -707,21 +859,24 @@ pub mod test_fixtures {
                     let result = fake.get_result();
                     let options = fake.get_options();
                     match (options.runs, options.max_total_time, result) {
-                        (Some(0), Some(0), FuzzResult::NoErrors) => {
+                        (Some(0), Some(0), Ok(FuzzResult::NoErrors)) => {
                             let mut status = fake.get_status();
                             status.running = Some(true);
                             fake.set_status(status);
                             // Prevent the responder being dropped and closing the stream.
                             _responder = Some(responder);
-                            continue;
                         }
-                        _ => {}
+                        (_, _, Ok(fuzz_result)) => {
+                            let (fidl_input, input) = Input::create(fake.get_input_to_send())?;
+                            let mut response = Ok((fuzz_result, fidl_input));
+                            responder.send(&mut response)?;
+                            input.send().await?;
+                            fake.send_output(fuzz::DONE_MARKER).await?;
+                        }
+                        (_, _, Err(status)) => {
+                            responder.send(&mut Err(status.into_raw()))?;
+                        }
                     };
-                    let (fidl_input, input) = Input::create(fake.get_input_to_send())?;
-                    let mut response = Ok((result, fidl_input));
-                    responder.send(&mut response)?;
-                    input.send().await?;
-                    fake.send_output(fuzz::DONE_MARKER).await?;
                 }
                 Some(Ok(fuzz::ControllerRequest::Merge { responder })) => {
                     responder.send(zx::Status::OK.into_raw())?;
@@ -743,11 +898,12 @@ mod tests {
         crate::input::test_fixtures::verify_saved,
         crate::options,
         crate::options::test_fixtures::add_defaults,
+        crate::test_fixtures::Test,
         crate::util::digest_path,
-        crate::util::test_fixtures::Test,
         crate::writer::test_fixtures::BufferSink,
         anyhow::Result,
         fidl_fuchsia_fuzzer::{self as fuzz, Result_ as FuzzResult},
+        fuchsia_zircon_status as zx,
     };
 
     #[fuchsia::test]
@@ -799,8 +955,10 @@ mod tests {
         let mut test = Test::try_new()?;
         let (_fake, fuzzer, _task) = perform_test_setup(&test)?;
         fuzzer.set("runs", "10").await?;
-        assert!(fuzzer.set("invalid", "nonsense").await.is_err());
+        test.output_matches("Configuring fuzzer...");
         test.output_matches("Option 'runs' set to 10");
+
+        assert!(fuzzer.set("invalid", "nonsense").await.is_err());
         test.verify_output()
     }
 
@@ -841,8 +999,9 @@ mod tests {
             test: &mut Test,
         ) -> Result<()> {
             let test_input = hex::encode(input_data);
-            fake.set_result(result);
-            fuzzer.try_one(test_input).await?;
+            fake.set_result(Ok(result));
+            let status = fuzzer.try_one(test_input).await?;
+            assert_eq!(status, zx::Status::OK);
             test.output_matches(format!("Trying an input of {} bytes...", input_data.len()));
             test.output_matches(get_try_result(&result));
             let received_input = fake.get_received_input();
@@ -874,9 +1033,10 @@ mod tests {
             result: FuzzResult,
             test: &mut Test,
         ) -> Result<Option<String>> {
-            fake.set_result(result);
+            fake.set_result(Ok(result));
             fake.set_input_to_send(input_data);
-            fuzzer.run(runs.clone(), time.clone()).await?;
+            let status = fuzzer.run(runs.clone(), time.clone()).await?;
+            assert_eq!(status, zx::Status::OK);
             test.output_matches("Configuring fuzzer...");
             test.output_matches("Running fuzzer...");
             let mut expected = fuzz::Options::EMPTY;
@@ -927,7 +1087,8 @@ mod tests {
         let (fake, fuzzer, _task) = perform_test_setup(&test)?;
         let test_input = hex::encode("hello");
         fake.set_input_to_send(b"world");
-        fuzzer.cleanse(test_input).await?;
+        let status = fuzzer.cleanse(test_input).await?;
+        assert_eq!(status, zx::Status::OK);
         test.output_matches("Attempting to cleanse an input of 5 bytes...");
         let artifact = digest_path(fuzzer.artifact_dir(), Some("cleansed"), b"world");
         verify_saved(&artifact, b"world")?;
@@ -942,7 +1103,8 @@ mod tests {
         let test_input = hex::encode("hello");
 
         fake.set_input_to_send(b"world");
-        fuzzer.minimize(test_input.clone(), None, None).await?;
+        let status = fuzzer.minimize(test_input.clone(), None, None).await?;
+        assert_eq!(status, zx::Status::OK);
         test.output_matches("Configuring fuzzer...");
         test.output_matches("Attempting to minimize an input of 5 bytes...");
         let artifact = digest_path(fuzzer.artifact_dir(), Some("minimized"), b"world");
@@ -952,7 +1114,9 @@ mod tests {
         fake.set_input_to_send(b"world");
         let runs = "10";
         let time = "10s";
-        fuzzer.minimize(test_input, Some(runs.to_string()), Some(time.to_string())).await?;
+        let status =
+            fuzzer.minimize(test_input, Some(runs.to_string()), Some(time.to_string())).await?;
+        assert_eq!(status, zx::Status::OK);
         test.output_matches("Configuring fuzzer...");
         test.output_matches("Attempting to minimize an input of 5 bytes...");
         let artifact = digest_path(fuzzer.artifact_dir(), Some("minimized"), b"world");
@@ -973,7 +1137,8 @@ mod tests {
         let (fake, fuzzer, _task) = perform_test_setup(&test)?;
 
         fake.set_input_to_send(b"hello");
-        fuzzer.merge().await?;
+        let status = fuzzer.merge().await?;
+        assert_eq!(status, zx::Status::OK);
         test.output_matches("Compacting fuzzer corpus...");
         test.output_matches("Retrieving fuzzer corpus...");
         test.output_matches("Retrieved 1 input totaling 5 bytes from the live corpus.");

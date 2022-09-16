@@ -19,6 +19,7 @@ ffx_plugin("ffx_fuzz") {
     "src/options.rs",
     "src/reader.rs",
     "src/shell.rs",
+    "src/test_fixtures.rs",
     "src/util.rs",
     "src/writer.rs",
   ]

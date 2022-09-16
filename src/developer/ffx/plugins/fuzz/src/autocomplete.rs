@@ -261,7 +261,7 @@ fn get_parameter_types(
 mod test_fixtures {
     use {
         super::FuzzHelper,
-        crate::util::test_fixtures::Test,
+        crate::test_fixtures::Test,
         anyhow::{Context as _, Result},
         ffx_fuzz_args::FuzzerState,
         rustyline::completion::{Completer, Pair},
@@ -341,7 +341,7 @@ mod tests {
     use {
         super::test_fixtures::{set_state, verify_files, verify_pairs, Replacements},
         super::FuzzHelper,
-        crate::util::test_fixtures::Test,
+        crate::test_fixtures::Test,
         anyhow::Result,
         ffx_fuzz_args::FuzzerState,
         rustyline::completion::Completer,

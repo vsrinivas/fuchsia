@@ -153,8 +153,8 @@ mod tests {
     use {
         super::test_fixtures::verify_saved,
         super::{save_input, Input},
+        crate::test_fixtures::Test,
         crate::util::digest_path,
-        crate::util::test_fixtures::Test,
         anyhow::Result,
         fidl_fuchsia_fuzzer::Input as FidlInput,
         futures::{join, AsyncReadExt},

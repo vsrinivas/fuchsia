@@ -5,9 +5,11 @@
 use {
     crate::fuzzer::Fuzzer,
     crate::writer::{OutputSink, Writer},
-    anyhow::{bail, Context as _, Result},
+    anyhow::{anyhow, bail, Context as _, Result},
     fidl::endpoints::{create_proxy, ProtocolMarker},
-    fidl_fuchsia_fuzzer as fuzz, fuchsia_zircon_status as zx,
+    fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_fuzzer as fuzz,
+    fuchsia_zircon_status as zx,
+    selectors::{parse_selector, VerboseError},
     std::path::Path,
     url::Url,
 };
@@ -26,6 +28,27 @@ impl<O: OutputSink> Manager<O> {
     /// device. Any output produced by this object will be written using the given `writer`.
     pub fn new(proxy: fuzz::ManagerProxy, writer: &Writer<O>) -> Self {
         Self { proxy, writer: writer.clone() }
+    }
+
+    /// Creates a new `Manager`.
+    ///
+    /// Uses `fuchsia.developer.remotecontrol` to create and connect the `fuchsia.fuzzer.Manager`
+    /// proxy.
+    pub async fn with_remote_control(
+        rc: &rcs::RemoteControlProxy,
+        writer: &Writer<O>,
+    ) -> Result<Self> {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<fuzz::ManagerMarker>()
+            .context("failed to create proxy for fuchsia.fuzzer.Manager")?;
+        let selector = format!("core/fuzz-manager:expose:{}", fuzz::ManagerMarker::DEBUG_NAME);
+        let parsed =
+            parse_selector::<VerboseError>(&selector).context("failed to parse selector")?;
+        let result = rc
+            .connect(parsed, server_end.into_channel())
+            .await
+            .context(format!("{}/Connect", rcs::RemoteControlMarker::DEBUG_NAME))?;
+        result.map_err(|e| anyhow!("{:?}", e)).context("failed to connect to fuzz-manager")?;
+        Ok(Manager::new(proxy, writer))
     }
 
     /// Requests that the `fuzz-manager` connect to a fuzzer instance.
@@ -67,117 +90,86 @@ fn fidl_name(method: &str) -> String {
 #[cfg(test)]
 pub mod test_fixtures {
     use {
-        super::Manager,
         crate::fuzzer::test_fixtures::{serve_controller, FakeFuzzer},
-        crate::util::test_fixtures::{create_task, Test},
+        crate::test_fixtures::create_task,
         crate::writer::test_fixtures::BufferSink,
         crate::writer::Writer,
-        anyhow::{anyhow, Result},
-        fidl::endpoints::{create_proxy, ServerEnd},
-        fidl_fuchsia_fuzzer as fuzz, fuchsia_async as fasync, fuchsia_zircon_status as zx,
+        anyhow::{bail, Result},
+        fidl::endpoints::ServerEnd,
+        fidl_fuchsia_fuzzer as fuzz, fuchsia_zircon_status as zx,
         futures::StreamExt,
-        std::cell::RefCell,
-        std::rc::Rc,
     };
 
-    /// Set up the test fixtures for unit testing `Manager`.
-    pub fn perform_test_setup(test: &Test) -> Result<(FakeManager, Manager<BufferSink>)> {
-        let (proxy, server_end) = create_proxy::<fuzz::ManagerMarker>()?;
-        let manager = Manager::new(proxy, test.writer());
-        let fake = FakeManager::new(server_end, test);
-        Ok((fake, manager))
-    }
-
-    /// Test fake used to serve the `fuchsia.fuzzer.Manager` protocol to tests.
-    pub struct FakeManager {
-        fuzzer: FakeFuzzer,
-        url: Rc<RefCell<Option<String>>>,
-        _task: fasync::Task<()>,
-    }
-
-    impl FakeManager {
-        /// Creates a new `fuzz-manager` test fake.
-        ///
-        /// Serves `fuchsia.fuzzer.Manager` on the given `server_end` of a FIDL channel, and writes
-        /// any output produced to the given `writer`.
-        pub fn new(server_end: ServerEnd<fuzz::ManagerMarker>, test: &Test) -> Self {
-            let fuzzer = FakeFuzzer::new();
-            let url = Rc::new(RefCell::new(None));
-            let writer = test.writer();
-            let task = serve_manager(server_end, fuzzer.clone(), Rc::clone(&url), writer.clone());
-            Self { fuzzer, url, _task: create_task(task, writer.clone()) }
-        }
-
-        /// Clones the fake fuzzer "connected" by the fake manager.
-        pub fn clone_fuzzer(&self) -> FakeFuzzer {
-            self.fuzzer.clone()
-        }
-
-        /// Returns the URL captured from serving `Manager` requests.
-        pub fn take_url(&self) -> Option<String> {
-            self.url.borrow_mut().take()
-        }
-    }
-
-    async fn serve_manager(
+    /// Serves `fuchsia.fuzzer.Manager` on the given `server_end` of a FIDL channel.
+    pub async fn serve_manager(
         server_end: ServerEnd<fuzz::ManagerMarker>,
-        fake: FakeFuzzer,
-        url: Rc<RefCell<Option<String>>>,
+        fuzzer: FakeFuzzer,
         writer: Writer<BufferSink>,
     ) -> Result<()> {
         let mut stream = server_end.into_stream()?;
-        let mut _task = None;
-        loop {
-            let fuzzer_url = match stream.next().await {
-                Some(Ok(fuzz::ManagerRequest::Connect { fuzzer_url, controller, responder })) => {
+        let mut task = None;
+        while let Some(request) = stream.next().await {
+            match request {
+                Ok(fuzz::ManagerRequest::Connect { fuzzer_url, controller, responder }) => {
                     let stream = controller.into_stream()?;
-                    let (stdout, stderr, syslog) = fake.connect()?;
-                    let task = serve_controller(stream, fake.clone());
-                    _task = Some(create_task(task, writer.clone()));
+                    fuzzer.set_url(fuzzer_url);
+                    let (stdout, stderr, syslog) = fuzzer.connect()?;
                     let mut response = Ok((stdout, stderr, syslog));
                     responder.send(&mut response)?;
-                    Ok(fuzzer_url)
+                    task =
+                        Some(create_task(serve_controller(stream, fuzzer.clone()), writer.clone()));
                 }
-                Some(Ok(fuzz::ManagerRequest::Stop { fuzzer_url, responder })) => {
-                    _task = None;
+                Ok(fuzz::ManagerRequest::Stop { fuzzer_url, responder }) => {
+                    fuzzer.set_url(fuzzer_url);
+                    task = None;
                     responder.send(zx::Status::OK.into_raw())?;
-                    Ok(fuzzer_url)
                 }
-                Some(Err(e)) => Err(anyhow!(e)),
-                None => Err(anyhow!("fuchsia.fuzzer.Manager client closed prematurely")),
-            }?;
-            let mut url_mut = url.borrow_mut();
-            *url_mut = Some(fuzzer_url);
+                Err(e) => bail!("error serving `Manager`: {:?}", e),
+            };
         }
+        if let Some(task) = task.take() {
+            task.await;
+        }
+        Ok(())
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        super::test_fixtures::perform_test_setup,
-        crate::util::test_fixtures::{Test, TEST_URL},
+        super::Manager,
+        crate::test_fixtures::{Test, TEST_URL},
         anyhow::Result,
         url::Url,
     };
 
     #[fuchsia::test]
     async fn test_connect() -> Result<()> {
-        let test = Test::try_new()?;
-        let (fake, manager) = perform_test_setup(&test)?;
+        let mut test = Test::try_new()?;
+        let proxy = test.rcs()?;
+        let manager = Manager::with_remote_control(&proxy, test.writer()).await?;
+
         let url = Url::parse(TEST_URL)?;
         manager.connect(url.clone(), test.root_dir()).await?;
-        assert_eq!(fake.take_url(), Some(url.to_string()));
+
+        let actual = test.fuzzer().url();
+        let expected = Some(url.to_string());
+        assert_eq!(actual, expected);
         Ok(())
     }
 
     #[fuchsia::test]
     async fn test_stop() -> Result<()> {
-        let test = Test::try_new()?;
-        let (fake, manager) = perform_test_setup(&test)?;
+        let mut test = Test::try_new()?;
+        let proxy = test.rcs()?;
+        let manager = Manager::with_remote_control(&proxy, test.writer()).await?;
+
         let url = Url::parse(TEST_URL)?;
         manager.stop(&url).await?;
-        assert_eq!(fake.take_url(), Some(url.to_string()));
+
+        let actual = test.fuzzer().url();
+        let expected = Some(url.to_string());
+        assert_eq!(actual, expected);
         Ok(())
     }
 }

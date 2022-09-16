@@ -280,7 +280,8 @@ impl OutputSink for StdioSink {
     }
 
     fn error<D: Display>(&self, message: D) {
-        eprintln!("{}", message);
+        let formatted = format!("{}\n", message);
+        self.raw_write(io::stderr(), formatted.as_bytes()).expect("failed to write to stderr");
     }
 }
 

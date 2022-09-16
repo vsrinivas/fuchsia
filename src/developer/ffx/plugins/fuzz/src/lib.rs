@@ -6,13 +6,11 @@ use {
     crate::reader::{CommandReader, Reader, ShellReader},
     crate::shell::Shell,
     crate::writer::{OutputSink, StdioSink, Writer},
-    anyhow::{Context as _, Result},
+    anyhow::Result,
     errors::ffx_bail,
     ffx_core::ffx_plugin,
     ffx_fuzz_args::{FuzzCommand, Session},
-    fidl::endpoints::ProtocolMarker,
-    fidl_fuchsia_developer_remotecontrol as remotecontrol, fidl_fuchsia_fuzzer as fuzz,
-    selectors::{parse_selector, VerboseError},
+    fidl_fuchsia_developer_remotecontrol as rcs,
     std::env,
 };
 
@@ -28,6 +26,9 @@ mod shell;
 mod util;
 mod writer;
 
+#[cfg(test)]
+mod test_fixtures;
+
 /// The `ffx fuzz` plugin.
 ///
 /// This plugin is designed to connect to the `fuzz-manager` on a target device, and use it to
@@ -40,10 +41,7 @@ mod writer;
 /// in which `main` has an attribute of `#[fuchsia_async::run_singlethreaded]`.
 ///
 #[ffx_plugin("fuzzing")]
-pub async fn fuzz(
-    remote_control: remotecontrol::RemoteControlProxy,
-    command: FuzzCommand,
-) -> Result<()> {
+pub async fn fuzz(remote_control: rcs::RemoteControlProxy, command: FuzzCommand) -> Result<()> {
     let session = command.as_session();
     let (is_tty, muted, use_colors) = match session {
         Session::Interactive => (true, false, true),
@@ -65,7 +63,7 @@ pub async fn fuzz(
 }
 
 async fn run_session<R: Reader, O: OutputSink>(
-    rc: remotecontrol::RemoteControlProxy,
+    rc: rcs::RemoteControlProxy,
     reader: R,
     writer: &Writer<O>,
 ) -> Result<()> {
@@ -81,18 +79,6 @@ async fn run_session<R: Reader, O: OutputSink>(
             ffx_bail!("{}", err_msgs.join(""));
         }
     };
-    let (mut shell, server_end) =
-        Shell::create(&fuchsia_dir, reader, writer).context("failed to create shell")?;
-    let selector = format!("core/fuzz-manager:expose:{}", fuzz::ManagerMarker::DEBUG_NAME);
-    let parsed = parse_selector::<VerboseError>(&selector).context("failed to parse selector")?;
-    let result =
-        rc.connect(parsed, server_end.into_channel()).await.context(fidl_name("Connect"))?;
-    if let Err(e) = result {
-        ffx_bail!("Failed to connect to fuzz-manager: {:?}", e);
-    }
+    let mut shell = Shell::new(&fuchsia_dir, rc, reader, writer);
     shell.run().await
-}
-
-fn fidl_name(method: &str) -> String {
-    format!("{}/{}", remotecontrol::RemoteControlMarker::DEBUG_NAME, method)
 }

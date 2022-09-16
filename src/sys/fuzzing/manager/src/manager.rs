@@ -50,21 +50,31 @@ impl<T: FidlEndpoint<test_manager::RunBuilderMarker>> Manager<T> {
         &self,
         mut receiver: mpsc::UnboundedReceiver<fuzz::ManagerRequest>,
     ) -> Result<()> {
-        while let Some(request) = receiver.next().await {
-            let result = match request {
-                fuzz::ManagerRequest::Connect { fuzzer_url, controller, responder } => {
-                    let mut response =
-                        self.connect(&fuzzer_url, controller).await.context("failed to connect")?;
-                    responder.send(&mut response)
+        loop {
+            match receiver.next().await {
+                Some(fuzz::ManagerRequest::Connect { fuzzer_url, controller, responder }) => {
+                    match self.connect(&fuzzer_url, controller).await {
+                        Ok(mut response) => {
+                            if let Err(e) = responder.send(&mut response) {
+                                warn!("failed to send response for `Connect`: {:?}", e);
+                            }
+                        }
+                        Err(e) => warn!("failed to connect: {:?}", e),
+                    };
                 }
-                fuzz::ManagerRequest::Stop { fuzzer_url, responder } => {
-                    let response = self.stop(&fuzzer_url).await.context("failed to stop")?;
-                    responder.send(response)
+                Some(fuzz::ManagerRequest::Stop { fuzzer_url, responder }) => {
+                    match self.stop(&fuzzer_url).await {
+                        Ok(response) => {
+                            if let Err(e) = responder.send(response) {
+                                warn!("failed to send response for `Stop`: {:?}", e);
+                            }
+                        }
+                        Err(e) => warn!("failed to stop: {:?}", e),
+                    }
                 }
+                None => return Ok(()),
             };
-            result.context("failed response")?;
         }
-        Ok(())
     }
 
     // Requests that given |controller| be connected to the fuzzer given by |fuzzer_url|, starting

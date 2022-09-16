@@ -4,7 +4,7 @@
 
 use {
     crate::writer::{OutputSink, Writer},
-    anyhow::{anyhow, Context as _, Result},
+    anyhow::{anyhow, bail, Context as _, Result},
     diagnostics_data::LogsData,
     fidl_fuchsia_fuzzer as fuzz,
     futures::io::ReadHalf,
@@ -62,9 +62,9 @@ impl<O: OutputSink> Forwarder<O> {
     /// Forwards output from the fuzzer to the `Writer` using each of the `SocketForwarder`s.
     pub async fn forward_all(&self) -> Result<()> {
         let results = join!(
-            self.stdout.forward_text(),
-            self.stderr.forward_text(),
-            self.syslog.forward_json(),
+            self.stdout.forward_text("stdout"),
+            self.stderr.forward_text("stderr"),
+            self.syslog.forward_json("syslog"),
         );
         results.0.context("failed to forward stdout")?;
         results.1.context("failed to forward stderr")?;
@@ -86,7 +86,7 @@ impl<O: OutputSink> SocketForwarder<O> {
         Ok(Self { reader: RefCell::new(reader), writer })
     }
 
-    async fn forward_text(&self) -> Result<()> {
+    async fn forward_text(&self, name: &str) -> Result<()> {
         let mut reader = self.reader.borrow_mut();
         let mut buf: [u8; 2048] = [0; 2048];
         let mut raw = Vec::new();
@@ -94,10 +94,14 @@ impl<O: OutputSink> SocketForwarder<O> {
         let done_marker = format!("{}\n", fuzz::DONE_MARKER);
         let done_marker = done_marker.as_bytes();
         loop {
-            match reader.read(&mut buf).await.context("failed to read text data from socket")? {
+            match reader
+                .read(&mut buf)
+                .await
+                .context(format!("failed to read text data from {} socket", name))?
+            {
                 0 => {
                     self.writer.write_all(&raw);
-                    return Ok(());
+                    bail!("{} from fuzzer ended prematurely", name);
                 }
                 num_read => raw.extend_from_slice(&buf[0..num_read]),
             };
@@ -115,15 +119,19 @@ impl<O: OutputSink> SocketForwarder<O> {
         }
     }
 
-    async fn forward_json(&self) -> Result<()> {
+    async fn forward_json(&self, name: &str) -> Result<()> {
         let mut reader = self.reader.borrow_mut();
         let mut buf: [u8; 2048] = [0; 2048];
         let mut raw = Vec::new();
         loop {
-            match reader.read(&mut buf).await.context("failed to read JSON data from socket")? {
+            match reader
+                .read(&mut buf)
+                .await
+                .context(format!("failed to read JSON data from {} socket", name))?
+            {
                 0 => {
                     self.writer.write_all(&raw);
-                    return Ok(());
+                    bail!("{} from fuzzer ended prematurely", name);
                 }
                 num_read => raw.extend_from_slice(&buf[0..num_read]),
             };
@@ -192,7 +200,7 @@ mod tests {
     use {
         super::test_fixtures::send_log_entry,
         super::{Forwarder, SocketForwarder},
-        crate::util::test_fixtures::Test,
+        crate::test_fixtures::Test,
         anyhow::{Error, Result},
         diagnostics_data::LogsData,
         fidl::{Socket, SocketOpts},
@@ -206,7 +214,7 @@ mod tests {
         let mut test = Test::try_new()?;
         let (tx, rx) = Socket::create(SocketOpts::STREAM)?;
         let forwarder = SocketForwarder::try_new(rx, test.writer().clone())?;
-        let forward_fut = forwarder.forward_text();
+        let forward_fut = forwarder.forward_text("test");
         let socket_fut = || async move {
             let mut tx = fidl::AsyncSocket::from_socket(tx)?;
             tx.write_all(b"hello\nworld!\n").await?;
@@ -228,7 +236,7 @@ mod tests {
         let mut test = Test::try_new()?;
         let (tx, rx) = Socket::create(SocketOpts::STREAM)?;
         let forwarder = SocketForwarder::try_new(rx, test.writer().clone())?;
-        let forward_fut = forwarder.forward_json();
+        let forward_fut = forwarder.forward_json("test");
         let socket_fut = || async move {
             let mut tx = fidl::AsyncSocket::from_socket(tx)?;
             send_log_entry(&mut tx, "hello world").await?;
@@ -322,7 +330,8 @@ mod tests {
         };
         let sockets_fut = sockets_fut();
         let results = join!(forward_fut, sockets_fut);
-        assert!(results.0.is_ok());
+        // No DONE_MARKER was sent, so an error is expected.
+        assert!(results.0.is_err());
         assert!(results.1.is_ok());
         assert_eq!(fs::read(logs_dir.join("fuzzer.stdout.txt"))?, b"hello world!");
         assert_eq!(fs::read(logs_dir.join("fuzzer.stderr.txt"))?, b"hello world!");

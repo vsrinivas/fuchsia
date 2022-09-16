@@ -17,7 +17,7 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     futures::channel::mpsc,
-    futures::{join, SinkExt, StreamExt, TryStreamExt},
+    futures::{try_join, SinkExt, StreamExt, TryStreamExt},
     tracing::warn,
 };
 
@@ -34,16 +34,14 @@ impl manager::FidlEndpoint<test_manager::RunBuilderMarker> for RunBuilderEndpoin
 }
 
 #[fuchsia::main(logging = true)]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<()> {
     let (sender, receiver) = mpsc::unbounded::<fuzz::ManagerRequest>();
     let registry = connect_to_protocol::<fuzz::RegistryMarker>()
         .context("failed to connect to fuchsia.fuzzing.Registry")?;
     let run_builder = RunBuilderEndpoint {};
     let manager = Manager::new(registry, run_builder);
-    let results = join!(multiplex_requests(sender), manager.serve(receiver));
-    results.0.context("failed to multiplex requests")?;
-    results.1.context("failed to serve fuchsia.fuzzer.Manager")?;
-    Ok(())
+    let results = try_join!(multiplex_requests(sender), manager.serve(receiver));
+    results.and(Ok(()))
 }
 
 // Concurrent calls to `connect` and `stop` can become complicated, especially given that the state
@@ -60,7 +58,7 @@ async fn multiplex_requests(sender: mpsc::UnboundedSender<fuzz::ManagerRequest>)
         let sender = sender.clone();
         let result = stream.map_err(Error::msg).forward(sender.sink_map_err(Error::msg)).await;
         if let Err(e) = result {
-            warn!("{:?}", e);
+            warn!("failed to forward fuzz-manager request: {:?}", e);
         }
     })
     .await;

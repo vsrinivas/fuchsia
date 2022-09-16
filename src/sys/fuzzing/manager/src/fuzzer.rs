@@ -5,10 +5,10 @@
 use {
     crate::diagnostics::{forward_all, SocketTrio},
     crate::events::{handle_run_events, handle_suite_events, LaunchResult},
-    anyhow::{anyhow, Context as _, Error, Result},
+    anyhow::{anyhow, Context as _, Result},
     fidl_fuchsia_test_manager as test_manager, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::channel::{mpsc, oneshot},
-    futures::{join, SinkExt},
+    futures::{pin_mut, select, FutureExt, SinkExt},
     std::cell::RefCell,
     std::rc::Rc,
     test_manager::{Artifact, LaunchError, RunControllerProxy, SuiteControllerProxy},
@@ -67,14 +67,22 @@ impl Fuzzer {
         let (kill_sender, kill_receiver) = oneshot::channel::<()>();
         self.sender = Some(sockets_sender);
         self.kill = Some(kill_sender);
-        self.task = Some(fasync::Task::local(run_fuzzer(
-            Rc::clone(&self.state),
-            run_proxy,
-            suite_proxy,
-            sockets_receiver,
-            start_sender,
-            kill_receiver,
-        )));
+        let state = Rc::clone(&self.state);
+        let task = || async move {
+            if let Err(e) = run_fuzzer(
+                state,
+                run_proxy,
+                suite_proxy,
+                sockets_receiver,
+                start_sender,
+                kill_receiver,
+            )
+            .await
+            {
+                warn!("failed to run fuzzer: {:?}", e);
+            }
+        };
+        self.task = Some(fasync::Task::local(task()));
 
         // Wait for the task to indicate it has launched (or failed).
         let launch_result = match start_receiver.await {
@@ -140,29 +148,38 @@ async fn run_fuzzer(
     sockets_receiver: mpsc::UnboundedReceiver<SocketTrio>,
     start_sender: oneshot::Sender<LaunchResult>,
     kill_receiver: oneshot::Receiver<()>,
-) {
+) -> Result<()> {
     let (artifact_sender, artifact_receiver) = mpsc::unbounded::<Artifact>();
     let (stop_sender, stop_receiver) = oneshot::channel::<()>();
-    let events_fut = async move {
-        let results = join!(
-            handle_run_events(run_proxy, artifact_sender.clone(), kill_receiver),
-            handle_suite_events(suite_proxy, artifact_sender, start_sender),
-        );
-        results.0?;
-        results.1?;
-        stop_sender.send(()).map_err(|_| anyhow!("failed to stop output forwarding"))?;
-        Ok::<(), Error>(())
-    };
-    let results =
-        join!(events_fut, forward_all(artifact_receiver, sockets_receiver, stop_receiver),);
-    {
-        let mut state = state.borrow_mut();
-        *state = FuzzerState::Stopped;
-    }
-    if let Err(e) = results.0 {
-        warn!("{:?}", e);
-    }
-    if let Err(e) = results.1 {
-        warn!("{:?}", e);
+    let run_fut = handle_run_events(run_proxy, artifact_sender.clone(), kill_receiver).fuse();
+    let suite_fut = handle_suite_events(suite_proxy, artifact_sender, start_sender).fuse();
+    let forward_fut = forward_all(artifact_receiver, sockets_receiver, stop_receiver).fuse();
+    pin_mut!(run_fut, suite_fut, forward_fut);
+    let mut event_futs = 2;
+    let mut stop_sender = Some(stop_sender);
+    loop {
+        select! {
+            result = run_fut => {
+                result.context("failed to handle RunEvent")?;
+                event_futs -= 1;
+            }
+            result = suite_fut => {
+                result.context("failed to handle SuiteEvent")?;
+                event_futs -= 1;
+            }
+            result = forward_fut => {
+                result.context("failed to forward fuzzer output")?;
+            }
+            complete => {
+                let mut state = state.borrow_mut();
+                *state = FuzzerState::Stopped;
+                return Ok(());
+            }
+        }
+        if event_futs == 0 {
+            if let Some(stop_sender) = stop_sender.take() {
+                stop_sender.send(()).map_err(|_| anyhow!("failed to send 'stop' signal"))?;
+            }
+        }
     }
 }
