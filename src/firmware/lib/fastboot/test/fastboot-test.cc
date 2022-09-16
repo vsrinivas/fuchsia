@@ -529,6 +529,27 @@ TEST_F(FastbootFlashTest, FlashBooloaderUnsupportedFirmwareType) {
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
 }
 
+TEST_F(FastbootFlashTest, FlashFuchsiaEsp) {
+  Fastboot fastboot(0x40000, std::move(svc_chan()));
+
+  std::vector<uint8_t> download_content(256, 1);
+  ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+
+  paver_test::FakePaver& fake_paver = paver();
+  fake_paver.set_expected_payload_size(download_content.size());
+
+  std::string command = "flash:fuchsia-esp";
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_ok());
+  std::vector<std::string> expected_packets = {"OKAY"};
+  ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
+
+  ASSERT_EQ(fake_paver.last_firmware_config(), fuchsia_paver::wire::Configuration::kA);
+  ASSERT_EQ(fake_paver.last_firmware_type(), "");
+}
+
 TEST_F(FastbootFlashTest, FlashAssetZirconA) {
   TestFlashAsset("zircon_a", fuchsia_paver::wire::Configuration::kA,
                  fuchsia_paver::wire::Asset::kKernel);

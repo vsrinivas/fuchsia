@@ -307,6 +307,11 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
         info.configuration ? *info.configuration : fuchsia_paver::wire::Configuration::kA;
     std::string_view firmware_type = args.size() == 3 ? args[2] : "";
     return WriteFirmware(config, firmware_type, transport, data_sink);
+  } else if (info.partition == "fuchsia-esp") {
+    // x64 platform uses 'fuchsia-esp' for bootloader partition . We should eventually move to use
+    // "bootloader"
+    // For legacy `fuchsia-esp` we don't consider firmware ABR or type.
+    return WriteFirmware(fuchsia_paver::wire::Configuration::kA, "", transport, data_sink);
   } else if (info.partition == "zircon" && info.configuration) {
     return WriteAsset(*info.configuration, fuchsia_paver::wire::Asset::kKernel, transport,
                       data_sink);
