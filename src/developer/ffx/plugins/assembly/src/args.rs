@@ -238,6 +238,10 @@ pub struct ProductSizeCheckArgs {
     /// path where to write the size breakdown.
     #[argh(option)]
     pub size_breakdown_output: Option<PathBuf>,
+    /// maximum amount that the size of blobfs can increase in one CL.
+    /// This value is propagated to the gerrit size report.
+    #[argh(option)]
+    pub blobfs_creep_budget: Option<u64>,
 }
 
 fn default_blobfs_layout() -> BlobFSLayout {

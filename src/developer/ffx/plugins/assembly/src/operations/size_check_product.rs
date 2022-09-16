@@ -14,9 +14,10 @@ use serde_json::json;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::fs;
 use std::str::FromStr;
-use url::Url;
 
 use super::size_check::PackageBlobSizeInfo;
+
+const TOTAL_BLOBFS_GERRIT_COMPONENT_NAME: &str = "Total BlobFS contents";
 
 // The tree structure that needs to be generated for the HTML visualization.
 // See "tree_data" in template/D3BlobTreeMap.js.
@@ -102,13 +103,18 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<bool> {
     }
 
     if let Some(gerrit_output) = args.gerrit_output {
+        let max_contents_size = max_contents_size
+            .ok_or(format_err!("Cannot create gerrit report when max_contents_size is none"))?;
+        let blobfs_creep_budget = args
+            .blobfs_creep_budget
+            .ok_or(format_err!("Cannot create gerrit report when blobfs_creep_budget is none"))?;
         fs::write(
             gerrit_output,
             serde_json::to_string(&create_gerrit_report(
-                &package_sizes,
                 total_blobfs_size,
                 max_contents_size,
-            )?)?,
+                blobfs_creep_budget,
+            ))?,
         )
         .context("writing gerrit report")?;
     }
@@ -619,24 +625,15 @@ fn calculate_proportional_size(blob: &PackageBlobSizeInfo) -> f64 {
 
 /// Builds a report with the gerrit size format.
 fn create_gerrit_report(
-    packages_sizes: &Vec<PackageSizeInfo>,
     total_blobfs_size: u64,
-    max_contents_size: Option<u64>,
-) -> Result<serde_json::Value> {
-    let mut gerrit_output = serde_json::Map::new();
-    for entry in packages_sizes.iter() {
-        gerrit_output.insert(entry.name.clone(), json!(entry.proportional_size));
-        let url = Url::parse_with_params(
-            "http://go/fuchsia-size-stats/packages/",
-            &[("f", format!("package:in:{}", entry.name))],
-        )?;
-        gerrit_output.insert(format!("{}.owner", entry.name), json!(url.to_string()));
-    }
-    gerrit_output.insert("Total".to_string(), json!(total_blobfs_size));
-    if let Some(max_contents_size) = max_contents_size {
-        gerrit_output.insert("Total.budget".to_string(), json!(max_contents_size));
-    }
-    Ok(serde_json::to_value(gerrit_output)?)
+    max_contents_size: u64,
+    blobfs_creep_budget: u64,
+) -> serde_json::Value {
+    json!({
+        TOTAL_BLOBFS_GERRIT_COMPONENT_NAME: total_blobfs_size,
+        format!("{}.budget", TOTAL_BLOBFS_GERRIT_COMPONENT_NAME): max_contents_size,
+        format!("{}.creepBudget", TOTAL_BLOBFS_GERRIT_COMPONENT_NAME): blobfs_creep_budget
+    })
 }
 
 #[cfg(test)]
@@ -647,7 +644,7 @@ mod tests {
         extract_blobfs_contents, generate_package_level_diff_output,
         generate_product_level_diff_output, generate_visualization_tree,
         merge_package_and_product_diffs, PackageBlobSizeInfo, PackageLevelDiff, PackageSizeInfo,
-        PackageSizeInfos, ProductLevelDiff,
+        PackageSizeInfos, ProductLevelDiff, TOTAL_BLOBFS_GERRIT_COMPONENT_NAME,
     };
     use crate::util::write_json_file;
     use anyhow::Result;
@@ -987,6 +984,7 @@ test_base_package                                                            65 
             visualization_dir: None,
             gerrit_output: None,
             size_breakdown_output: None,
+            blobfs_creep_budget: None,
         };
 
         assert!(!verify_product_budgets(product_size_check_args)?);
@@ -1089,6 +1087,7 @@ test_base_package                                                            65 
             visualization_dir: None,
             gerrit_output: None,
             size_breakdown_output: None,
+            blobfs_creep_budget: None,
         };
 
         let res = verify_product_budgets(product_size_check_args);
@@ -1199,45 +1198,16 @@ test_base_package                                                            65 
     }
 
     #[test]
-    fn gerrit_report_test() -> Result<()> {
-        let package_sizes = vec![
-            PackageSizeInfo {
-                name: "package1".to_string(),
-                used_space_in_blobfs: 80,
-                proportional_size: 50,
-                blobs: vec![],
-            },
-            PackageSizeInfo {
-                name: "package2".to_string(),
-                used_space_in_blobfs: 201,
-                proportional_size: 100,
-                blobs: vec![],
-            },
-        ];
-        let gerrit_report = create_gerrit_report(&package_sizes, 151, Some(200))?;
+    fn gerrit_report_test() {
+        let gerrit_report = create_gerrit_report(151, 200, 20);
         assert_eq!(
             gerrit_report,
             json!({
-                        "package1": 50,
-                        "package1.owner": "http://go/fuchsia-size-stats/packages/?f=package%3Ain%3Apackage1",
-                        "package2": 100,
-                        "package2.owner": "http://go/fuchsia-size-stats/packages/?f=package%3Ain%3Apackage2",
-                        "Total": 151,
-                        "Total.budget": 200
+                TOTAL_BLOBFS_GERRIT_COMPONENT_NAME: 151,
+                format!("{}.budget", TOTAL_BLOBFS_GERRIT_COMPONENT_NAME): 200,
+                format!("{}.creepBudget", TOTAL_BLOBFS_GERRIT_COMPONENT_NAME): 20,
             })
-        );
-        let gerrit_report_no_budget = create_gerrit_report(&package_sizes, 151, None)?;
-        assert_eq!(
-            gerrit_report_no_budget,
-            json!({
-                "package1": 50,
-                "package1.owner": "http://go/fuchsia-size-stats/packages/?f=package%3Ain%3Apackage1",
-                "package2": 100,
-                "package2.owner": "http://go/fuchsia-size-stats/packages/?f=package%3Ain%3Apackage2",
-                "Total": 151,
-            })
-        );
-        Ok(())
+        )
     }
 
     #[test]

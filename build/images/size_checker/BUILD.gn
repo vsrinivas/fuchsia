@@ -39,6 +39,18 @@ ffx_action("run_product_size_checker") {
     "--size-breakdown-output",
     rebase_path("$target_out_dir/size_breakdown.txt", root_build_dir),
   ]
+
+  # Only create gerrit size report if necessary.
+  if (size_checker_input != {
+      }) {
+    args += [
+      "--gerrit-output",
+      rebase_path("$target_out_dir/size_report_product.json", root_build_dir),
+      "--blobfs-creep-budget",
+      "$blobfs_size_creep_limit",
+    ]
+    outputs += [ "$target_out_dir/size_report_product.json" ]
+  }
   deps = [ "//build/images/fuchsia:fuchsia.image_assembler" ]
   metadata = {
     product_size_checker_output = [
@@ -243,9 +255,11 @@ if (blobfs_capacity != false && max_blob_contents_size != false &&
     sources = [
       "$target_out_dir/size_report_blobfs.json",
       "$target_out_dir/size_report_non_blobfs.json",
+      "$target_out_dir/size_report_product.json",
     ]
     testonly = true
     deps = [
+      ":run_product_size_checker",
       ":verbose_output.json",
       ":verify_size_budget_blobfs",
       ":verify_size_budget_non_blobfs",
