@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Test
+### Runs test and exports coverage data.
+
+## usage: fx coverage [--lcov-output-path <path>] [--html-output-dir <directory>] [-h|--help] [testName ...]
+##
+## Runs test and exports coverage data.
+##
+## --html-output-dir: directory to output test coverage HTML to
+## --lcov-output-path: path to write output lcov to
+## -h|--help: prints help message
+
+set -euo pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/dart_utils.sh || exit $?
+fx-config-read
+
+function main() {
+  local lcov_output_path=''
+  local html_output_dir=''
+
+  while [[ $# -ge 1 ]]; do
+    case "$1" in
+      --lcov-output-path)
+        shift
+        # Get absolute path because `ffx coverage` is executed in a different
+        # dir.
+        lcov_output_path="$(realpath ${1})"
+        ;;
+      --html-output-dir)
+        shift
+        # Get absolute path because `ffx coverage` is executed in a different
+        # dir.
+        html_output_dir="$(realpath ${1})"
+        ;;
+      -h|--help)
+        fx-command-help
+        exit 0
+        ;;
+      *)
+        break
+        ;;
+    esac
+    shift
+  done
+
+  readonly _TEST_OUT_DIR="$(mktemp -d)"
+  trap "rm -rf ${_TEST_OUT_DIR}" EXIT
+
+  # Use `fxtest` to run test, which knows to how to fuzzy match test names, plus
+  # rebuild targets when necessary,
+  #
+  # Execute in subshell because `run-dart-tool` exits.
+  fx-command-run test --device --ffx-output-directory "${_TEST_OUT_DIR}" "${@}"
+
+  echo "Exporting coverage data ..."
+
+  local ffx_cov_args=
+  if [[ -n "${lcov_output_path}" ]]; then
+    ffx_cov_args+=" --export-lcov ${lcov_output_path}"
+  fi
+  if [[ -n "${html_output_dir}" ]]; then
+    ffx_cov_args+=" --export-html ${html_output_dir}"
+  fi
+
+  # TODO(https://fxbug.dev/103896): realpath is not available on Mac, use a
+  # platform-neutral implementation instead.
+  readonly _REL_BUILD_DIR="$(realpath -s --relative-to="${FUCHSIA_BUILD_DIR}" "${FUCHSIA_DIR}")"
+
+  fx-command-run host-tool ffx coverage \
+    --clang-dir "${PREBUILT_CLANG_DIR}" \
+    --test-output-dir "${_TEST_OUT_DIR}" ${ffx_cov_args[@]} \
+    --path-remappings "${_REL_BUILD_DIR},${FUCHSIA_DIR}" \
+    --compilation-dir "${FUCHSIA_BUILD_DIR}"
+
+  if [[ -n "${lcov_output_path}" ]]; then
+    echo "Coverage LCOV exported to ${lcov_output_path}"
+  fi
+  if [[ -n "${html_output_dir}" ]]; then
+    echo "Coverage HTML exported to ${html_output_dir}"
+  fi
+}
+
+main $@
