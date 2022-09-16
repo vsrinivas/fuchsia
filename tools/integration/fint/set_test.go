@@ -172,25 +172,6 @@ func TestRunGen(t *testing.T) {
 			expectedOptions: []string{"--tracelog=/tmp/gn_trace.json"},
 		},
 		{
-			name: "generate compdb",
-			staticSpec: &fintpb.Static{
-				GenerateCompdb: true,
-				CompdbTargets:  []string{"foo", "bar"},
-			},
-			expectedOptions: []string{
-				"--export-compile-commands=foo,bar",
-			},
-		},
-		{
-			name: "generate compdb with no targets",
-			staticSpec: &fintpb.Static{
-				GenerateCompdb: true,
-			},
-			expectedOptions: []string{
-				"--export-compile-commands",
-			},
-		},
-		{
 			name: "generate IDE files",
 			staticSpec: &fintpb.Static{
 				IdeFiles: []string{"json", "vs"},

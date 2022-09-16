@@ -409,8 +409,6 @@ func TestConstructStaticSpec(t *testing.T) {
 				Board:             "boards/x64.gni",
 				Product:           "products/core.gni",
 				Optimize:          fintpb.Static_DEBUG,
-				GenerateCompdb:    true,
-				CompdbTargets:     []string{"default"},
 				ExportRustProject: true,
 			}
 			proto.Merge(expected, tc.expected)

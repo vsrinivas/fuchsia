@@ -175,15 +175,6 @@ func runGen(
 	if gnTracePath != "" {
 		genCmd = append(genCmd, fmt.Sprintf("--tracelog=%s", gnTracePath))
 	}
-	if staticSpec.GenerateCompdb {
-		arg := "--export-compile-commands"
-		if len(staticSpec.CompdbTargets) > 0 {
-			arg = fmt.Sprintf("%s=%s", arg, strings.Join(staticSpec.CompdbTargets, ","))
-		}
-		genCmd = append(genCmd, arg)
-	} else if len(staticSpec.CompdbTargets) > 0 {
-		return "", fmt.Errorf("compdb_targets is only supported when generate_compdb is set")
-	}
 	if staticSpec.ExportRustProject {
 		genCmd = append(genCmd, "--export-rust-project")
 	}

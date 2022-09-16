@@ -401,8 +401,6 @@ func constructStaticSpec(ctx context.Context, fx fxRunner, checkoutDir string, a
 		UseGoma:           useGomaFinal,
 		IdeFiles:          args.ideFiles,
 		JsonIdeScripts:    args.jsonIDEScripts,
-		GenerateCompdb:    true,
-		CompdbTargets:     []string{"default"},
 		ExportRustProject: true,
 	}, nil
 }

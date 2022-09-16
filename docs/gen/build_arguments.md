@@ -7173,13 +7173,6 @@ From //build/config/fuchsia/BUILD.gn:138
 
 From //build/images/args.gni:100
 
-### zircon_compdb_filter
-Compilation database filter. Gets passed to --export-compile-commands=<filter>.
-
-**Current value (from the default):** `"default"`
-
-From //build/zircon/build_args.gni:16
-
 ### zircon_kernel_disable_asserts
 Forcibly disable all assertions for the Zircon kernel. If this is set, the
 default is to use the value of zx_assert_level to control assertions when
