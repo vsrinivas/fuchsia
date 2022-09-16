@@ -4,11 +4,9 @@
 
 #include <fidl/fuchsia.driver.compat/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/async/cpp/executor.h>
 #include <lib/ddk/debug.h>
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/driver2_cpp.h>
-#include <lib/fpromise/scope.h>
 #include <lib/inspect/component/cpp/component.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <zircon/errors.h>
@@ -28,7 +26,6 @@ class InputReportDriver : public driver::DriverBase {
       : DriverBase("InputReport", std::move(start_args), std::move(dispatcher)) {}
 
   zx::status<> Start() override {
-    executor_.emplace(async_dispatcher());
     auto parent_symbol = driver::GetSymbol<compat::device_t*>(symbols(), compat::kDeviceSymbol);
 
     hid_device_protocol_t proto = {};
@@ -67,49 +64,14 @@ class InputReportDriver : public driver::DriverBase {
     }
     parent_client_.Bind(std::move(result.value()), async_dispatcher());
 
-    auto compat_connect =
-        fpromise::make_result_promise<void, zx_status_t>(fpromise::ok())
-            .and_then([this]() {
-              fpromise::bridge<void, zx_status_t> topo_bridge;
-              parent_client_->GetTopologicalPath().Then(
-                  [this, completer = std::move(topo_bridge.completer)](
-                      fidl::Result<fuchsia_driver_compat::Device::GetTopologicalPath>&
-                          result) mutable {
-                    if (result.is_error()) {
-                      completer.complete_error(result.error_value().status());
-                      return;
-                    }
-                    parent_topo_path_ = result->path();
-                    completer.complete_ok();
-                  });
-              return topo_bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED));
-            })
-            // Create our child device and FIDL server.
-            .and_then([this]() -> fpromise::promise<void, zx_status_t> {
-              child_ = compat::DeviceServer("InputReport", ZX_PROTOCOL_INPUTREPORT,
-                                            parent_topo_path_ + "/InputReport", {});
-              auto status =
-                  context().outgoing()->component().AddProtocol<fuchsia_input_report::InputDevice>(
-                      &input_report_.value(), "InputReport");
-              if (status.is_error()) {
-                return fpromise::make_result_promise<void, zx_status_t>(
-                    fpromise::error(status.error_value()));
-              }
-              auto export_status =
-                  exporter_.ExportSync(std::string("svc/").append(child_->name()),
-                                       child_->topological_path(), {}, ZX_PROTOCOL_INPUTREPORT);
-              if (export_status != ZX_OK) {
-                FDF_LOG(WARNING, "Failed to export to devfs: %s",
-                        zx_status_get_string(export_status));
-              }
-              return fpromise::make_result_promise<void, zx_status_t>(fpromise::ok());
-            })
-            // Error handling.
-            .or_else([this](zx_status_t& result) {
-              FDF_LOG(WARNING, "Device setup failed with: %s", zx_status_get_string(result));
-            });
-    executor_->schedule_task(std::move(compat_connect));
-
+    // Get the topological path and create our child when it completes.
+    parent_client_->GetTopologicalPath().Then([this](auto& result) {
+      auto status = CreateAndServeDevice(std::move(result->path()));
+      if (!status.is_ok()) {
+        FDF_LOG(ERROR, "Call to CreateAndServeDevice failed: %s", status.status_string());
+        ScheduleStop();
+      }
+    });
     return zx::ok();
   }
 
@@ -136,18 +98,35 @@ class InputReportDriver : public driver::DriverBase {
     return zx::ok();
   }
 
+  zx::status<> CreateAndServeDevice(std::string topological_path) {
+    // Create our child device and FIDL server.
+    child_ = compat::DeviceServer("InputReport", ZX_PROTOCOL_INPUTREPORT,
+                                  topological_path + "/InputReport", {});
+    auto status = context().outgoing()->component().AddProtocol<fuchsia_input_report::InputDevice>(
+        &input_report_.value(), "InputReport");
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    exporter_.Export(std::string("svc/").append(child_->name()), child_->topological_path(), {},
+                     ZX_PROTOCOL_INPUTREPORT, [this](zx_status_t status) {
+                       if (status != ZX_OK) {
+                         FDF_LOG(WARNING, "Failed to export to devfs: %s",
+                                 zx_status_get_string(status));
+                         ScheduleStop();
+                       }
+                     });
+    return zx::ok();
+  }
+
+  // Calling this function drops our node handle, which tells the DriverFramework to call Stop
+  // on the Driver.
+  void ScheduleStop() { node().reset(); }
+
   std::optional<hid_input_report_dev::InputReport> input_report_;
-  std::optional<async::Executor> executor_;
-
   std::optional<inspect::ComponentInspector> exposed_inspector_;
-
   std::optional<compat::DeviceServer> child_;
-  std::string parent_topo_path_;
   fidl::Client<fuchsia_driver_compat::Device> parent_client_;
   driver::DevfsExporter exporter_;
-
-  // NOTE: Must be the last member.
-  fpromise::scope scope_;
 };
 
 }  // namespace
