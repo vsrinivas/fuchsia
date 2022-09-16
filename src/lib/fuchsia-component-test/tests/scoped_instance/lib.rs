@@ -29,12 +29,9 @@ async fn scoped_instances(root_component: &'static str) {
     let instance =
         builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
     let proxy =
-        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
 
-    let event_source = EventSource::from_proxy(proxy);
-
-    let mut event_stream =
-        event_source.subscribe(vec![EventSubscription::new(vec![Stopped::NAME])]).await.unwrap();
+    let mut event_stream = EventStream::new_v2(proxy);
 
     instance.start_component_tree().await.unwrap();
 
