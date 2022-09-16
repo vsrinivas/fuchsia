@@ -8,6 +8,7 @@ use crate::message::Message;
 use crate::message::MessageReturn;
 use crate::node::Node;
 use crate::ok_or_default_err;
+use crate::utils::result_debug_panic::ResultDebugPanic;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use async_utils::hanging_get::server as hanging_get;
@@ -19,6 +20,7 @@ use fuchsia_inspect::{self as inspect, NumericProperty, Property};
 use futures::prelude::*;
 use futures::TryStreamExt;
 use log::*;
+use serde_derive::Deserialize;
 use serde_json as json;
 use std::cell::RefCell;
 use std::collections::{HashMap, HashSet};
@@ -58,21 +60,50 @@ pub struct SystemPowerModeHandlerBuilder<'a, 'b> {
 }
 
 impl<'a, 'b> SystemPowerModeHandlerBuilder<'a, 'b> {
+    /// Default path to the system power mode config file. Can be overridden by JSON configuration.
     const SYSTEM_POWER_MODE_CONFIG_PATH: &'static str =
         "/pkg/config/power_manager/system_power_mode_config.json";
 
+    #[cfg(test)]
     pub fn new() -> Self {
         Self { system_power_mode_config: None, outgoing_svc_dir: None, inspect_root: None }
     }
 
     pub fn new_from_json(
-        _json_data: json::Value,
+        json_data: json::Value,
         _nodes: &HashMap<String, Rc<dyn Node>>,
         service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
     ) -> Self {
-        Self::new().with_outgoing_svc_dir(service_fs.dir("svc"))
+        #[derive(Deserialize)]
+        struct Config {
+            system_power_mode_config_path: String,
+        }
+
+        #[derive(Deserialize)]
+        struct JsonData {
+            config: Option<Config>,
+        }
+
+        let data: JsonData = json::from_value(json_data).unwrap();
+
+        // Use `system_power_mode_config_path` if it was provided, otherwise default to
+        // `SYSTEM_POWER_MODE_CONFIG_PATH`
+        let config_path = data
+            .config
+            .map(|c| c.system_power_mode_config_path)
+            .unwrap_or(Self::SYSTEM_POWER_MODE_CONFIG_PATH.to_string());
+
+        // Read the system power mode config file from `config_path`
+        let system_power_mode_config = SystemPowerModeConfig::read(&Path::new(&config_path)).ok();
+
+        Self {
+            system_power_mode_config,
+            outgoing_svc_dir: Some(service_fs.dir("svc")),
+            inspect_root: None,
+        }
     }
 
+    #[cfg(test)]
     pub fn with_outgoing_svc_dir(
         mut self,
         outgoing_svc_dir: ServiceFsDir<'a, ServiceObjLocal<'b, ()>>,
@@ -94,19 +125,15 @@ impl<'a, 'b> SystemPowerModeHandlerBuilder<'a, 'b> {
     }
 
     pub fn build(self) -> Result<Rc<SystemPowerModeHandler>, Error> {
+        let system_power_mode_config =
+            ok_or_default_err!(self.system_power_mode_config).or_debug_panic()?;
+
         // Create the root Inspect node for the `SystemPowerModeHandler` node. Allow inspect_root
         // override for tests.
         let inspect_root = self
             .inspect_root
             .unwrap_or(inspect::component::inspector().root())
             .create_child("SystemPowerModeHandler");
-
-        // Read the system power mode config file from `SYSTEM_POWER_MODE_CONFIG_PATH`. Allow
-        // override for testing.
-        let system_power_mode_config = match self.system_power_mode_config {
-            Some(system_power_mode_config) => system_power_mode_config,
-            None => SystemPowerModeConfig::read(&Path::new(Self::SYSTEM_POWER_MODE_CONFIG_PATH))?,
-        };
 
         // Create the `ClientStates` to manage states for all clients
         let client_states =
