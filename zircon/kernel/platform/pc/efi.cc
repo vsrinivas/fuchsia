@@ -27,9 +27,9 @@ fbl::RefPtr<VmAspace> efi_aspace;
 void PanicFriendlySwitchAspace(VmAspace* aspace) {
   InterruptDisableGuard interrupt_guard;
   if (thread_lock.IsHeld()) {
-    vmm_set_active_aspace_locked(efi_aspace.get());
+    vmm_set_active_aspace_locked(aspace);
   } else {
-    vmm_set_active_aspace(efi_aspace.get());
+    vmm_set_active_aspace(aspace);
   }
 }
 

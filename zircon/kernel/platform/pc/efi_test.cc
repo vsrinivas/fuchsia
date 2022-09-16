@@ -36,12 +36,20 @@ bool IsEfiExpected(ktl::string_view manufacturer, ktl::string_view product) {
 NO_ASAN bool TestEfiPresent() {
   BEGIN_TEST;
 
+  // Grab our current aspace.
+  VmAspace* old_aspace = Thread::Current::Get()->aspace();
+
   // Attempt to fetch EFI services.
   EfiServicesActivation services = TryActivateEfiServices();
 
   // Ensure we got back a valid result if EFI meant to be present.
   if (IsEfiExpected(manufacturer, product)) {
     EXPECT_TRUE(services.valid());
+    // This should switch back to the old aspace.
+    services.reset();
+
+    // Make sure it actually did.
+    EXPECT_EQ(old_aspace, Thread::Current::Get()->aspace());
   } else {
     printf(
         "Unknown if EFI is expected to be supported on platform "
