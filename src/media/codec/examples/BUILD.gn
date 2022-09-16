@@ -749,10 +749,8 @@ vp9_decoder_canary_conformance_test(
       astro_env,
       sherlock_env,
       vim3_env,
-
-      # TODO(fxbug.dev/106060): Enable on x64
-      #nuc_env,
-      #atlas_env,
+      nuc_env,
+      atlas_env,
     ]
   }
 }
