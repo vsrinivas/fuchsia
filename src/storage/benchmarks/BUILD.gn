@@ -50,7 +50,10 @@ rustc_binary("storage-benchmarks") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
   ]
-  data_deps = [ "//src/storage/bin/f2fs" ]
+  data_deps = [
+    "//src/storage/bin/f2fs",
+    "//src/storage/bin/minfs",
+  ]
   test_deps = [
     "//src/lib/test_util",
     "//third_party/rust_crates:futures",
@@ -85,7 +88,6 @@ fuchsia_test_package("storage-benchmarks-tests-package") {
   test_components = [ ":storage-benchmarks-tests-component" ]
   deps = [
     "//src/storage/benchmarks/memfs-component",
-    "//src/storage/bin/minfs",
     "//src/storage/fxfs:fxfs_component",
     "//src/storage/fxfs-crypt",
   ]
