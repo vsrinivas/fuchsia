@@ -14,6 +14,7 @@ group("tests") {
 test("ddktl-test") {
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
   sources = [
+    "device-group-tests.cc",
     "device-tests.cc",
     "ethernet-tests.cc",
   ]

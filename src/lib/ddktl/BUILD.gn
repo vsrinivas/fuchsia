@@ -15,6 +15,7 @@ config("include") {
 
 source_set("ddktl") {
   sources = [
+    "include/ddktl/device-group.h",
     "include/ddktl/device-internal.h",
     "include/ddktl/device.h",
     "include/ddktl/fidl.h",

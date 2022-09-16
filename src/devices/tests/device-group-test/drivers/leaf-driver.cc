@@ -18,44 +18,25 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
   }
 
   // Add device group.
-  const device_bind_prop_value_t node_1_bind_rule_1_values[] = {
-      device_bind_prop_int_val(10),
-      device_bind_prop_int_val(3),
-  };
-
+  const uint32_t node_1_bind_rule_1_values[] = {10, 3};
   const ddk::DeviceGroupBindRule node_1_bind_rules[] = {
-      ddk::DeviceGroupBindRule::AcceptList(device_bind_prop_int_key(50), node_1_bind_rule_1_values),
-      ddk::DeviceGroupBindRule::RejectValue(device_bind_prop_str_key("sandpiper"),
-                                            device_bind_prop_bool_val(true)),
+      ddk::BindRuleAcceptIntList(50, node_1_bind_rule_1_values),
+      ddk::BindRuleRejectBool("sandpiper", true),
   };
 
   const device_bind_prop_t node_1_bind_properties[] = {
-      {
-          .key = device_bind_prop_int_key(BIND_PROTOCOL),
-          .value = device_bind_prop_int_val(100),
-      },
-      {
-          .key = device_bind_prop_int_key(BIND_USB_VID),
-          .value = device_bind_prop_int_val(20),
-      }};
-
-  const device_bind_prop_value_t node_2_props_values_1[] = {
-      device_bind_prop_str_val("whimbrel"),
-      device_bind_prop_str_val("dunlin"),
+      ddk::BindPropertyInt(BIND_PROTOCOL, 100),
+      ddk::BindPropertyInt(BIND_USB_VID, 20),
   };
 
+  const char* node_2_props_values_1[] = {"whimbrel", "dunlin"};
   const ddk::DeviceGroupBindRule node_2_bind_rules[] = {
-      ddk::DeviceGroupBindRule::AcceptList(device_bind_prop_str_key("willet"),
-                                           node_2_props_values_1),
-      ddk::DeviceGroupBindRule::RejectValue(device_bind_prop_int_key(20),
-                                            device_bind_prop_int_val(10)),
+      ddk::BindRuleAcceptStringList("willet", node_2_props_values_1),
+      ddk::BindRuleRejectInt(20, 10),
   };
 
   const device_bind_prop_t node_2_bind_properties[] = {
-      {
-          .key = device_bind_prop_int_key(BIND_PROTOCOL),
-          .value = device_bind_prop_int_val(20),
-      },
+      ddk::BindPropertyInt(BIND_PROTOCOL, 20),
   };
 
   status = dev->DdkAddDeviceGroup("device_group",
