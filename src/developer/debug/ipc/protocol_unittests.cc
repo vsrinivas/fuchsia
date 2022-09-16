@@ -689,7 +689,8 @@ TEST(Protocol, AspaceReply) {
   initial.map[0] = AddressRegion{"proc:5616", 0x1000000, 127 * kOneT, 0};
   initial.map[1] = AddressRegion{"root", 0x1000000, 127 * kOneT, 0};
   initial.map[2] = AddressRegion{"useralloc", 0x371f1276000, 12 * 1024, 1};
-  initial.map[3] = AddressRegion{"initial-thread", 0x371f1277000, 4 * 1024, 2, 56789, 0x1000, 3};
+  initial.map[3] =
+      AddressRegion{"initial-thread", 0x371f1277000, 4 * 1024, 2, 0b11, 56789, 0x1000, 3};
 
   AddressSpaceReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
@@ -711,6 +712,7 @@ TEST(Protocol, AspaceReply) {
   EXPECT_EQ(initial.map[3].base, second.map[3].base);
   EXPECT_EQ(initial.map[3].size, second.map[3].size);
   EXPECT_EQ(initial.map[3].depth, second.map[3].depth);
+  EXPECT_EQ(initial.map[3].mmu_flags, second.map[3].mmu_flags);
   EXPECT_EQ(initial.map[3].vmo_koid, second.map[3].vmo_koid);
   EXPECT_EQ(initial.map[3].vmo_offset, second.map[3].vmo_offset);
   EXPECT_EQ(initial.map[3].committed_pages, second.map[3].committed_pages);

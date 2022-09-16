@@ -79,6 +79,14 @@ std::string PrintRegionName(uint64_t depth, const std::string& name) {
   return std::string(depth * 2, ' ') + name;
 }
 
+std::string PrintRegionMmuFlags(uint32_t flags) {
+  std::string str;
+  str += flags & (1u << 0) ? 'r' : '-';
+  str += flags & (1u << 1) ? 'w' : '-';
+  str += flags & (1u << 2) ? 'x' : '-';
+  return str;
+}
+
 void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map,
                       bool print_totals) {
   Console* console = Console::get();
@@ -102,7 +110,8 @@ void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map,
     bool has_koid = region.vmo_koid != 0;
     rows.push_back(std::vector<std::string>{
         to_hex_string(region.base), to_hex_string(region.base + region.size),
-        PrintRegionSize(region.size), has_koid ? std::to_string(region.vmo_koid) : std::string(),
+        PrintRegionMmuFlags(region.mmu_flags), PrintRegionSize(region.size),
+        has_koid ? std::to_string(region.vmo_koid) : std::string(),
         has_koid ? to_hex_string(region.vmo_offset) : std::string(),
         has_koid ? std::to_string(region.committed_pages) : std::string(),
         PrintRegionName(region.depth, region.name)});
@@ -115,9 +124,9 @@ void OnAspaceComplete(const Err& err, std::vector<debug_ipc::AddressRegion> map,
 
   OutputBuffer out;
   FormatTable({ColSpec(Align::kRight, 0, "Start", 2), ColSpec(Align::kRight, 0, "End", 2),
-               ColSpec(Align::kRight, 0, "Size", 1), ColSpec(Align::kRight, 0, "Koid", 1),
-               ColSpec(Align::kRight, 0, "Offset", 1), ColSpec(Align::kRight, 0, "Cmt.Pgs", 1),
-               ColSpec(Align::kLeft, 0, "Name", 1)},
+               ColSpec(Align::kLeft, 0, "Prot", 1), ColSpec(Align::kRight, 0, "Size", 1),
+               ColSpec(Align::kRight, 0, "Koid", 1), ColSpec(Align::kRight, 0, "Offset", 1),
+               ColSpec(Align::kRight, 0, "Cmt.Pgs", 1), ColSpec(Align::kLeft, 0, "Name", 1)},
               rows, &out);
 
   // Format the section at the bottom showing statistics. These are formatted so the "=" align

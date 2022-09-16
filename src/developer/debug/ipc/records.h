@@ -374,6 +374,7 @@ struct AddressRegion {
   uint64_t base = 0;
   uint64_t size = 0;
   uint64_t depth = 0;
+  uint32_t mmu_flags = 0;
   uint64_t vmo_koid = 0;
   uint64_t vmo_offset = 0;
   uint64_t committed_pages = 0;
