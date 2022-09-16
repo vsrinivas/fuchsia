@@ -68,7 +68,7 @@ class ManifestImage:
 # and the partition types they will have (passed to cgpt)
 IMAGES_RECOVERY_INSTALLER = [
     # The recovery image for chromebook-x64.
-    ManifestImage('recovery-installer.signed', ['kernel'], 'zbi.signed', 'zircon-r'),
+    ManifestImage('recovery-installer', ['kernel'], 'zbi.signed', 'zircon-r'),
 
     # The recovery image and a bootloader for x64.
     ManifestImage('recovery-installer', [ZIRCON_R_GPT_GUID], 'zbi', 'zircon-r'),
@@ -94,7 +94,7 @@ IMAGES_RECOVERY_INSTALLER = [
 # fastboot.
 IMAGES_RECOVERY_FASTBOOT = [
     # The recovery-eng image for chromebook-x64.
-    ManifestImage('recovery-eng.signed', ['kernel'], 'zbi.signed', 'zircon-r'),
+    ManifestImage('recovery-eng', ['kernel'], 'zbi.signed', 'zircon-r'),
 
     # The recovery-eng image and a bootloader for x64.
     ManifestImage('recovery-eng', [ZIRCON_R_GPT_GUID], 'zbi', 'zircon-r'),
