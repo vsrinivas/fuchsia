@@ -59,16 +59,7 @@ class ObjectView final {
   }
 
   bool operator==(std::nullptr_t) const noexcept { return object_ == nullptr; }
-  template <typename T2>
-  bool operator==(ObjectView<T2> other) const noexcept {
-    return object_ == other.object_;
-  }
-
   bool operator!=(std::nullptr_t) const noexcept { return object_ != nullptr; }
-  template <typename T2>
-  bool operator!=(ObjectView<T2> other) const noexcept {
-    return object_ != other.object_;
-  }
 
   T* get() const noexcept { return object_; }
 

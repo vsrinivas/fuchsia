@@ -237,8 +237,7 @@ TEST(WireToNaturalConversion, ObjectView) {
 
 TEST(NaturalToWireConversion, ObjectView) {
   fidl::Arena arena;
-  EXPECT_EQ(fidl::ObjectView<test_types::wire::CopyableStruct>(),
-            fidl::ToWire(arena, std::unique_ptr<test_types::CopyableStruct>(nullptr)));
+  EXPECT_EQ(nullptr, fidl::ToWire(arena, std::unique_ptr<test_types::CopyableStruct>(nullptr)));
 
   fidl::ObjectView<test_types::wire::CopyableStruct> val =
       fidl::ToWire(arena, std::make_unique<test_types::CopyableStruct>(123));

@@ -108,7 +108,7 @@ void QueryInfo(const char* path, fuchsia_io::wire::FilesystemInfo* info) {
   auto result = fidl::WireCall(caller.node())->QueryFilesystem();
   ASSERT_OK(result.status());
   ASSERT_OK(result->s);
-  ASSERT_NOT_NULL(result->info);
+  ASSERT_NOT_NULL(result->info.get());
   *info = *(result->info);
   const char* kFsName = "memfs";
   const char* name = reinterpret_cast<const char*>(info->name.data());
