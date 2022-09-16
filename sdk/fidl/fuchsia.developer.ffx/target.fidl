@@ -199,6 +199,28 @@ type AddTargetConfig = table {
     1: verify_connection bool;
 };
 
+type AddTargetError = table {
+    /// An error with the target connection.
+    1: connection_error TargetConnectionError;
+
+    /// Ancillary information about how the connection failed.
+    /// Example: if there's an ABI mismatch, the specific mismatch is reported
+    /// here.
+    2: connection_error_logs vector<string:MAX>:MAX;
+};
+
+/// Defines the responses from the `AddTarget` method of the [TargetCollection]
+/// protocol. This is to assist in reporting structured errors to the client.
+protocol AddTargetResponder {
+    /// Called when `AddTarget()` succeeds.
+    Success();
+
+    /// Called when `AddTarget()` fails.
+    Error(struct {
+        err AddTargetError;
+    });
+};
+
 /// A protocol defining a collection of Fuchsia targets. This is used to inspect
 /// and interact with fuchsia targets that the daemon has discovered.
 @discoverable
@@ -248,7 +270,8 @@ protocol TargetCollection {
     AddTarget(resource struct {
         ip TargetAddrInfo;
         config AddTargetConfig;
-    }) -> (struct {}) error TargetConnectionError;
+        add_target_responder client_end:AddTargetResponder;
+    });
 
     /// Manually adds a target that cannot be discovered via mDNS. This target
     /// will be retained in the target collection until it establishes an RCS

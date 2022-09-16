@@ -216,7 +216,10 @@ impl FidlProtocol for TargetCollectionProtocol {
                 self.tasks.spawn(TargetHandle::new(target, cx.clone(), target_handle)?);
                 responder.send(&mut Ok(())).map_err(Into::into)
             }
-            ffx::TargetCollectionRequest::AddTarget { ip, config, responder } => {
+            ffx::TargetCollectionRequest::AddTarget {
+                ip, config, add_target_responder, ..
+            } => {
+                let add_target_responder = add_target_responder.into_proxy()?;
                 let addr = target_addr_info_to_socketaddr(ip);
                 match config.verify_connection {
                     Some(true) => {}
@@ -228,7 +231,7 @@ impl FidlProtocol for TargetCollectionProtocol {
                             None,
                         )
                         .await;
-                        return responder.send(&mut Ok(())).map_err(Into::into);
+                        return add_target_responder.success().map_err(Into::into);
                     }
                 };
                 // The drop guard is here for the impatient user: if the user closes their channel
@@ -271,10 +274,21 @@ impl FidlProtocol for TargetCollectionProtocol {
                             Ok(_) => {
                                 let _ = drop_guard.0.take();
                             }
-                            Err(e) => return responder.send(&mut Err(e)).map_err(Into::into),
+                            Err(e) => {
+                                return add_target_responder
+                                    .error(ffx::AddTargetError {
+                                        connection_error: Some(e),
+                                        connection_error_logs: Some(
+                                            target.host_pipe_log_buffer().lines(),
+                                        ),
+                                        ..ffx::AddTargetError::EMPTY
+                                    })
+                                    .map_err(Into::into)
+                            }
                         }
                     }
                     Err(e) => {
+                        let logs = target.host_pipe_log_buffer().lines();
                         let _ = remove_manual_target(
                             self.manual_targets.clone(),
                             &target_collection,
@@ -282,10 +296,16 @@ impl FidlProtocol for TargetCollectionProtocol {
                         )
                         .await;
                         let _ = drop_guard.0.take();
-                        return responder.send(&mut Err(e)).map_err(Into::into);
+                        return add_target_responder
+                            .error(ffx::AddTargetError {
+                                connection_error: Some(e),
+                                connection_error_logs: Some(logs),
+                                ..ffx::AddTargetError::EMPTY
+                            })
+                            .map_err(Into::into);
                     }
                 }
-                responder.send(&mut Ok(())).map_err(Into::into)
+                add_target_responder.success().map_err(Into::into)
             }
             ffx::TargetCollectionRequest::AddEphemeralTarget {
                 ip,
@@ -638,6 +658,26 @@ mod tests {
         assert_eq!(tc.targets()[0].serial().as_deref(), Some("12345"));
     }
 
+    fn make_target_add_fut(
+        server: fidl::endpoints::ServerEnd<ffx::AddTargetResponder_Marker>,
+    ) -> impl std::future::Future<Output = Result<(), ffx::AddTargetError>> {
+        async {
+            let mut stream = server.into_stream().unwrap();
+            if let Ok(Some(req)) = stream.try_next().await {
+                match req {
+                    ffx::AddTargetResponder_Request::Success { .. } => {
+                        return Ok(());
+                    }
+                    ffx::AddTargetResponder_Request::Error { err, .. } => {
+                        return Err(err);
+                    }
+                }
+            } else {
+                panic!("connection lost to stream. This should not be reachable");
+            }
+        }
+    }
+
     #[derive(Default)]
     struct FakeMdns {}
 
@@ -696,11 +736,11 @@ mod tests {
             .build();
         let target_addr = TargetAddr::new("[::1]:0").unwrap();
         let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
-        proxy
-            .add_target(&mut target_addr.into(), ffx::AddTargetConfig::EMPTY)
-            .await
-            .unwrap()
-            .unwrap();
+        let (client, server) =
+            fidl::endpoints::create_endpoints::<ffx::AddTargetResponder_Marker>().unwrap();
+        let target_add_fut = make_target_add_fut(server);
+        proxy.add_target(&mut target_addr.into(), ffx::AddTargetConfig::EMPTY, client).unwrap();
+        target_add_fut.await.unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         let target = target_collection.get(target_addr.to_string()).unwrap();
         assert_eq!(target.addrs().len(), 1);
@@ -732,11 +772,11 @@ mod tests {
             .build();
         let target_addr = TargetAddr::new("[::1]:8022").unwrap();
         let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
-        proxy
-            .add_target(&mut target_addr.into(), ffx::AddTargetConfig::EMPTY)
-            .await
-            .unwrap()
-            .unwrap();
+        let (client, server) =
+            fidl::endpoints::create_endpoints::<ffx::AddTargetResponder_Marker>().unwrap();
+        let target_add_fut = make_target_add_fut(server);
+        proxy.add_target(&mut target_addr.into(), ffx::AddTargetConfig::EMPTY, client).unwrap();
+        target_add_fut.await.unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         let target = target_collection.get(target_addr.to_string()).unwrap();
         assert_eq!(target.addrs().len(), 1);
@@ -767,6 +807,9 @@ mod tests {
             .register_fidl_protocol::<FakeFastboot>()
             .inject_fidl_protocol(tc_impl.clone())
             .build();
+        let (client, server) =
+            fidl::endpoints::create_endpoints::<ffx::AddTargetResponder_Marker>().unwrap();
+        let target_add_fut = make_target_add_fut(server);
         let proxy = fake_daemon.open_proxy::<ffx::TargetCollectionMarker>().await;
         proxy
             .add_target(
@@ -778,10 +821,10 @@ mod tests {
                     scope_id: 1,
                 }),
                 ffx::AddTargetConfig::EMPTY,
+                client,
             )
-            .await
-            .unwrap()
             .unwrap();
+        target_add_fut.await.unwrap();
         let target_collection = Context::new(fake_daemon).get_target_collection().await.unwrap();
         assert_eq!(1, target_collection.targets().len());
         let mut map = Map::<String, Value>::new();

@@ -4,11 +4,12 @@
 
 use {
     anyhow::Result,
-    errors::{ffx_error, FfxError},
+    errors::{ffx_bail, ffx_error, FfxError},
     ffx_core::ffx_plugin,
     ffx_target_add_args::AddCommand,
     fidl_fuchsia_developer_ffx::{self as ffx, TargetCollectionProxy},
     fidl_fuchsia_net as net,
+    futures::TryStreamExt,
     netext::parse_address_parts,
     std::net::IpAddr,
 };
@@ -40,28 +41,32 @@ pub async fn add(target_collection_proxy: TargetCollectionProxy, cmd: AddCommand
         ffx::TargetAddrInfo::Ip(ffx::TargetIp { ip, scope_id })
     };
 
-    target_collection_proxy
-        .add_target(
-            &mut addr,
-            ffx::AddTargetConfig {
-                verify_connection: Some(!cmd.nowait),
-                ..ffx::AddTargetConfig::EMPTY
-            },
-        )
-        .await?
-        .map_err(|e| {
-            FfxError::TargetConnectionError {
-                err: e,
-                target: Some(format!("{}", cmd.addr)),
-                is_default_target: false,
-                logs: None,
-            }
-            .into()
-        })
+    let (client, server) = fidl::endpoints::create_endpoints::<ffx::AddTargetResponder_Marker>()?;
+    target_collection_proxy.add_target(
+        &mut addr,
+        ffx::AddTargetConfig {
+            verify_connection: Some(!cmd.nowait),
+            ..ffx::AddTargetConfig::EMPTY
+        },
+        client,
+    )?;
+    let mut stream = server.into_stream()?;
+    let res = if let Ok(Some(req)) = stream.try_next().await {
+        match req {
+            ffx::AddTargetResponder_Request::Success { .. } => Ok(()),
+            ffx::AddTargetResponder_Request::Error { err, .. } => Err(err),
+        }
+    } else {
+        ffx_bail!("ffx lost connection to the daemon before receiving a response.");
+    };
+    res.map_err(|e| {
+        let err = e.connection_error.unwrap();
+        let logs = e.connection_error_logs.map(|v| v.join("\n"));
+        let is_default_target = false;
+        let target = Some(format!("{}", cmd.addr));
+        FfxError::TargetConnectionError { err, target, is_default_target, logs }.into()
+    })
 }
-
-////////////////////////////////////////////////////////////////////////////////
-// tests
 
 #[cfg(test)]
 mod test {
@@ -71,9 +76,12 @@ mod test {
         test: T,
     ) -> TargetCollectionProxy {
         setup_fake_target_collection_proxy(move |req| match req {
-            ffx::TargetCollectionRequest::AddTarget { ip, config: _, responder, .. } => {
+            ffx::TargetCollectionRequest::AddTarget {
+                ip, config: _, add_target_responder, ..
+            } => {
+                let add_target_responder = add_target_responder.into_proxy().unwrap();
                 test(ip);
-                responder.send(&mut Ok(())).unwrap();
+                add_target_responder.success().unwrap();
             }
             _ => assert!(false),
         })

@@ -17,6 +17,8 @@ ffx_plugin("ffx_target_add") {
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/netext:lib",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:futures",
   ]
   test_deps = [ "//src/lib/fuchsia-async" ]
 }
