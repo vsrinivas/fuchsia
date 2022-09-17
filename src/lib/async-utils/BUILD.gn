@@ -49,6 +49,7 @@ rustc_library("async-utils") {
     "src/stream.rs",
     "src/stream/flatten_unordered.rs",
     "src/stream/future_map.rs",
+    "src/stream/one_or_many.rs",
     "src/stream/stream_map.rs",
     "src/traits.rs",
   ]

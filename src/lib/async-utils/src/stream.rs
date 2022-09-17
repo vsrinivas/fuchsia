@@ -24,12 +24,14 @@ use {
 
 mod flatten_unordered;
 mod future_map;
+mod one_or_many;
 mod stream_map;
 
 pub use flatten_unordered::{
     FlattenUnordered, FlattenUnorderedExt, TryFlattenUnordered, TryFlattenUnorderedExt,
 };
 pub use future_map::FutureMap;
+pub use one_or_many::OneOrMany;
 pub use stream_map::StreamMap;
 
 /// Values returned from a stream with an epitaph are of type `StreamItem`.
