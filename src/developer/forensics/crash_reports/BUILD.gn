@@ -329,6 +329,7 @@ source_set("snapshot_collector") {
 
   deps = [
     ":errors",
+    ":report_util",
     "//sdk/lib/syslog/cpp",
     "//src/lib/uuid",
   ]

@@ -149,24 +149,9 @@ TEST_F(SnapshotStoreTest, Check_GetSnapshot) {
   EXPECT_EQ(snapshot.LockArchive()->key, kDefaultArchiveKey);
 }
 
-TEST_F(SnapshotStoreTest, Check_SetsPresenceAnnotations) {
-  AddDefaultSnapshot();
-
-  auto snapshot = AsManaged(snapshot_store_->GetSnapshot(kTestUuid));
-  ASSERT_TRUE(snapshot.LockArchive());
-
-  std::map<std::string, std::string> annotations(kDefaultAnnotations.begin(),
-                                                 kDefaultAnnotations.end());
-  annotations["debug.snapshot.shared-request.num-clients"] = std::to_string(1);
-  annotations["debug.snapshot.shared-request.uuid"] = kTestUuid;
-
-  EXPECT_THAT(snapshot.Annotations(), UnorderedElementsAreArray(Vector(annotations)));
-  EXPECT_THAT(snapshot.PresenceAnnotations(), IsEmpty());
-}
-
 TEST_F(SnapshotStoreTest, Check_AnnotationsMaxSizeIsEnforced) {
   // Initialize the manager to only hold the default annotations and the debug annotations.
-  SetUpSnapshotStore(StorageSize::Bytes(256), StorageSize::Megabytes(1));
+  SetUpSnapshotStore(StorageSize::Bytes(128), StorageSize::Megabytes(1));
   AddDefaultSnapshot();
 
   EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
@@ -226,8 +211,6 @@ TEST_F(SnapshotStoreTest, Check_ArchivesMaxSizeIsEnforced) {
               UnorderedElementsAreArray({
                   Pair("annotation.key.one", "annotation.value.one"),
                   Pair("annotation.key.two", "annotation.value.two"),
-                  Pair("debug.snapshot.shared-request.num-clients", "1"),
-                  Pair("debug.snapshot.shared-request.uuid", kTestUuid.c_str()),
               }));
   EXPECT_THAT(AsManaged(snapshot_store_->GetSnapshot(kTestUuid)).PresenceAnnotations(),
               UnorderedElementsAreArray({

@@ -17,7 +17,9 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/forensics/crash_reports/report_id.h"
+#include "src/developer/forensics/crash_reports/product.h"
+#include "src/developer/forensics/crash_reports/report.h"
+#include "src/developer/forensics/crash_reports/reporting_policy_watcher.h"
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/crash_reports/snapshot_store.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
@@ -37,10 +39,15 @@ class SnapshotCollector {
                     feedback_data::DataProviderInternal* data_provider,
                     SnapshotStore* snapshot_store, zx::duration shared_request_window);
 
-  // Returns a promise of a snapshot uuid for a snapshot that contains the most up-to-date system
-  // data (a new snapshot will be created if all existing snapshots contain data that is
-  // out-of-date). No uuid will be returned if |timeout| expires.
-  ::fpromise::promise<SnapshotUuid> GetSnapshotUuid(zx::duration timeout, ReportId report_id);
+  // Returns a promise of a report. The report may have a snapshot uuid, with that snapshot
+  // containing the most up-to-date system data (a new snapshot will be created if all existing
+  // snapshots contain data that is out-of-date). No snapshot will be saved if |timeout| expires.
+  ::fpromise::promise<Report> GetReport(zx::duration timeout,
+                                        fuchsia::feedback::CrashReport fidl_report,
+                                        ReportId report_id,
+                                        std::optional<timekeeper::time_utc> current_utc_time,
+                                        const Product& product, bool is_hourly_snapshot,
+                                        ReportingPolicy reporting_policy);
 
   // Shuts down the snapshot manager by cancelling any pending FIDL calls and provides waiting
   // clients with a UUID for a generic "shutdown" snapshot.
@@ -73,6 +80,14 @@ class SnapshotCollector {
     async::TaskClosure delayed_get_snapshot;
   };
 
+  struct ReportResults {
+    // The uuid of the report's snapshot.
+    SnapshotUuid uuid;
+
+    // The annotations manually added plus annotations extracted from the report's snapshot.
+    std::shared_ptr<feedback::Annotations> annotations;
+  };
+
   // Determine if the most recent SnapshotRequest's delayed call to
   // fuchsia.feedback.DataProvider/GetSnapshopt has executed.
   bool UseLatestRequest() const;
@@ -100,6 +115,10 @@ class SnapshotCollector {
   // cautious using the function!
   void EnforceSizeLimits();
 
+  // Retrieves the MissingSnapshot from the store and returns the combination of annotations and
+  // presence annotations.
+  feedback::Annotations GetMissingSnapshotAnnotations(const SnapshotUuid& uuid);
+
   async_dispatcher_t* dispatcher_;
   std::shared_ptr<sys::ServiceDirectory> services_;
   timekeeper::Clock* clock_;
@@ -110,7 +129,7 @@ class SnapshotCollector {
   zx::duration shared_request_window_;
 
   std::vector<std::unique_ptr<SnapshotRequest>> snapshot_requests_;
-  std::map<uint64_t, std::optional<SnapshotUuid>> report_results_;
+  std::map<uint64_t, std::optional<ReportResults>> report_results_;
 
   bool shutdown_{false};
 };

@@ -27,22 +27,22 @@ std::optional<SizedData> MakeAttachment(const fuchsia::mem::Buffer& buffer) {
 
 }  // namespace
 
-std::optional<Report> Report::MakeReport(const ReportId report_id,
-                                         const std::string& program_shortname,
-                                         const AnnotationMap& annotations,
-                                         std::map<std::string, fuchsia::mem::Buffer> attachments,
-                                         forensics::crash_reports::SnapshotUuid snapshot_uuid,
-                                         std::optional<fuchsia::mem::Buffer> minidump,
-                                         const bool is_hourly_report) {
+fpromise::result<Report> Report::MakeReport(const ReportId report_id,
+                                            const std::string& program_shortname,
+                                            const AnnotationMap& annotations,
+                                            std::map<std::string, fuchsia::mem::Buffer> attachments,
+                                            forensics::crash_reports::SnapshotUuid snapshot_uuid,
+                                            std::optional<fuchsia::mem::Buffer> minidump,
+                                            const bool is_hourly_report) {
   std::map<std::string, SizedData> attachment_copies;
   for (const auto& [k, v] : attachments) {
     if (k.empty()) {
-      return std::nullopt;
+      return fpromise::error();
     }
 
     auto attachment = MakeAttachment(v);
     if (!attachment) {
-      return std::nullopt;
+      return fpromise::error();
     }
     attachment_copies.emplace(k, std::move(attachment.value()));
   }
@@ -50,8 +50,9 @@ std::optional<Report> Report::MakeReport(const ReportId report_id,
   std::optional<SizedData> minidump_copy =
       minidump.has_value() ? MakeAttachment(minidump.value()) : std::nullopt;
 
-  return Report(report_id, program_shortname, annotations, std::move(attachment_copies),
-                std::move(snapshot_uuid), std::move(minidump_copy), is_hourly_report);
+  return fpromise::ok(Report(report_id, program_shortname, annotations,
+                             std::move(attachment_copies), std::move(snapshot_uuid),
+                             std::move(minidump_copy), is_hourly_report));
 }
 
 Report::Report(const ReportId report_id, const std::string& program_shortname,

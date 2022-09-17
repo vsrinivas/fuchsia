@@ -19,6 +19,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/tests/scoped_test_report_store.h"
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/testing/gmatchers.h"
@@ -27,6 +28,7 @@
 #include "src/developer/forensics/testing/unit_test_fixture.h"
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
+#include "src/lib/timekeeper/clock.h"
 #include "src/lib/timekeeper/test_clock.h"
 
 namespace forensics {
@@ -47,10 +49,20 @@ const std::map<std::string, std::string> kDefaultAnnotations = {
 };
 
 const std::string kDefaultArchiveKey = "snapshot.key";
+constexpr char kProgramName[] = "crashing_program";
 
 MissingSnapshot AsMissing(Snapshot snapshot) {
   FX_CHECK(std::holds_alternative<MissingSnapshot>(snapshot));
   return std::get<MissingSnapshot>(snapshot);
+}
+
+feedback::Annotations BuildFeedbackAnnotations(
+    const std::map<std::string, std::string>& annotations) {
+  feedback::Annotations ret_annotations;
+  for (const auto& [key, value] : annotations) {
+    ret_annotations.insert({key, value});
+  }
+  return ret_annotations;
 }
 
 class SnapshotCollectorTest : public UnitTestFixture {
@@ -99,9 +111,23 @@ class SnapshotCollectorTest : public UnitTestFixture {
     data_provider_server_ = std::move(data_provider_server);
   }
 
-  void ScheduleGetSnapshotUuidAndThen(const zx::duration timeout, ReportId report_id,
-                                      ::fit::function<void(const std::string&)> and_then) {
-    executor_.schedule_task(snapshot_collector_->GetSnapshotUuid(timeout, report_id)
+  void ScheduleGetReportAndThen(const zx::duration timeout, ReportId report_id,
+                                ::fit::function<void(Report&)> and_then) {
+    timekeeper::time_utc utc_time;
+    FX_CHECK(clock_.UtcNow(&utc_time) == ZX_OK);
+
+    Product product{
+        .name = "some name",
+        .version = "some version",
+        .channel = "some channel",
+    };
+
+    fuchsia::feedback::CrashReport report;
+    report.set_program_name(kProgramName);
+
+    executor_.schedule_task(snapshot_collector_
+                                ->GetReport(timeout, std::move(report), report_id, utc_time,
+                                            product, false, ReportingPolicy::kUpload)
                                 .and_then(std::move(and_then))
                                 .or_else([]() { FX_CHECK(false); }));
   }
@@ -126,75 +152,76 @@ class SnapshotCollectorTest : public UnitTestFixture {
   std::string path_;
 };
 
-TEST_F(SnapshotCollectorTest, Check_GetSnapshotUuid) {
+TEST_F(SnapshotCollectorTest, Check_GetReport) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
-  std::optional<std::string> uuid{std::nullopt};
-  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), 0,
-                                 ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
-  // |uuid| should only have a value once |kWindow| has passed.
+  std::optional<Report> report{std::nullopt};
+  ScheduleGetReportAndThen(zx::duration::infinite(), 0,
+                           ([&report](Report& new_report) { report = std::move(new_report); }));
+
+  // |report| should only have a value once |kWindow| has passed.
   RunLoopUntilIdle();
-  ASSERT_FALSE(uuid.has_value());
+  ASSERT_FALSE(report.has_value());
 
   RunLoopFor(kWindow);
-  ASSERT_TRUE(uuid.has_value());
+  ASSERT_TRUE(report.has_value());
 }
 
-TEST_F(SnapshotCollectorTest, Check_GetSnapshotUuidRequestsCombined) {
+TEST_F(SnapshotCollectorTest, Check_GetReportRequestsCombined) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
   const size_t kNumRequests{5u};
 
-  size_t num_uuid1{0};
-  std::optional<std::string> uuid1{std::nullopt};
+  size_t num_snapshot_uuid1{0};
+  std::optional<std::string> snapshot_uuid1{std::nullopt};
   for (size_t i = 0; i < kNumRequests; ++i) {
-    ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), i,
-                                   ([&uuid1, &num_uuid1](const std::string& new_uuid) {
-                                     if (!uuid1.has_value()) {
-                                       uuid1 = new_uuid;
-                                     } else {
-                                       FX_CHECK(uuid1.value() == new_uuid);
-                                     }
-                                     ++num_uuid1;
-                                   }));
+    ScheduleGetReportAndThen(zx::duration::infinite(), i,
+                             ([&snapshot_uuid1, &num_snapshot_uuid1](Report& new_report) {
+                               if (!snapshot_uuid1.has_value()) {
+                                 snapshot_uuid1 = new_report.SnapshotUuid();
+                               } else {
+                                 FX_CHECK(snapshot_uuid1.value() == new_report.SnapshotUuid());
+                               }
+                               ++num_snapshot_uuid1;
+                             }));
   }
   RunLoopFor(kWindow);
-  ASSERT_EQ(num_uuid1, kNumRequests);
+  ASSERT_EQ(num_snapshot_uuid1, kNumRequests);
 
-  size_t num_uuid2{0};
-  std::optional<std::string> uuid2{std::nullopt};
+  size_t num_snapshot_uuid2{0};
+  std::optional<std::string> snapshot_uuid2{std::nullopt};
   for (size_t i = 0; i < kNumRequests; ++i) {
-    ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), kNumRequests + i,
-                                   ([&uuid2, &num_uuid2](const std::string& new_uuid) {
-                                     if (!uuid2.has_value()) {
-                                       uuid2 = new_uuid;
-                                     } else {
-                                       FX_CHECK(uuid2.value() == new_uuid);
-                                     }
-                                     ++num_uuid2;
-                                   }));
+    ScheduleGetReportAndThen(zx::duration::infinite(), kNumRequests + i,
+                             ([&snapshot_uuid2, &num_snapshot_uuid2](Report& new_report) {
+                               if (!snapshot_uuid2.has_value()) {
+                                 snapshot_uuid2 = new_report.SnapshotUuid();
+                               } else {
+                                 FX_CHECK(snapshot_uuid2.value() == new_report.SnapshotUuid());
+                               }
+                               ++num_snapshot_uuid2;
+                             }));
   }
   RunLoopFor(kWindow);
-  ASSERT_EQ(num_uuid2, kNumRequests);
+  ASSERT_EQ(num_snapshot_uuid2, kNumRequests);
 
-  ASSERT_TRUE(uuid1.has_value());
-  ASSERT_TRUE(uuid2.has_value());
-  EXPECT_NE(uuid1.value(), uuid2.value());
+  ASSERT_TRUE(snapshot_uuid1.has_value());
+  ASSERT_TRUE(snapshot_uuid2.has_value());
+  EXPECT_NE(snapshot_uuid1.value(), snapshot_uuid2.value());
 }
 
 TEST_F(SnapshotCollectorTest, Check_Timeout) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
-  std::optional<std::string> uuid{std::nullopt};
-  ScheduleGetSnapshotUuidAndThen(zx::sec(0), 0,
-                                 ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
+  std::optional<Report> report{std::nullopt};
+  ScheduleGetReportAndThen(zx::sec(0), 0,
+                           ([&report](Report& new_report) { report = std::move(new_report); }));
   RunLoopFor(kWindow);
 
-  ASSERT_TRUE(uuid.has_value());
-  auto snapshot = AsMissing(GetSnapshot(uuid.value()));
+  ASSERT_TRUE(report.has_value());
+  auto snapshot = AsMissing(GetSnapshot(report->SnapshotUuid()));
   EXPECT_THAT(snapshot.PresenceAnnotations(), UnorderedElementsAreArray({
                                                   Pair("debug.snapshot.error", "timeout"),
                                                   Pair("debug.snapshot.present", "false"),
@@ -205,30 +232,48 @@ TEST_F(SnapshotCollectorTest, Check_Shutdown) {
   SetUpDefaultDataProviderServer();
   SetUpDefaultSnapshotManager();
 
-  std::optional<std::string> uuid{std::nullopt};
-  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), 0,
-                                 ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
+  std::optional<Report> report{std::nullopt};
+  ScheduleGetReportAndThen(zx::duration::infinite(), 0,
+                           ([&report](Report& new_report) { report = std::move(new_report); }));
   snapshot_collector_->Shutdown();
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(uuid.has_value());
-  auto snapshot = AsMissing(GetSnapshot(uuid.value()));
+  ASSERT_TRUE(report.has_value());
+  auto snapshot = AsMissing(GetSnapshot(report->SnapshotUuid()));
   EXPECT_THAT(snapshot.PresenceAnnotations(), IsSupersetOf({
                                                   Pair("debug.snapshot.error", "system shutdown"),
                                                   Pair("debug.snapshot.present", "false"),
                                               }));
 
-  uuid = std::nullopt;
-  ScheduleGetSnapshotUuidAndThen(zx::duration::infinite(), 1,
-                                 ([&uuid](const std::string& new_uuid) { uuid = new_uuid; }));
+  report = std::nullopt;
+  ScheduleGetReportAndThen(zx::duration::infinite(), 1,
+                           ([&report](Report& new_report) { report = std::move(new_report); }));
   RunLoopUntilIdle();
 
-  ASSERT_TRUE(uuid.has_value());
-  snapshot = AsMissing(GetSnapshot(uuid.value()));
+  ASSERT_TRUE(report.has_value());
+  snapshot = AsMissing(GetSnapshot(report->SnapshotUuid()));
   EXPECT_THAT(snapshot.PresenceAnnotations(), IsSupersetOf({
                                                   Pair("debug.snapshot.error", "system shutdown"),
                                                   Pair("debug.snapshot.present", "false"),
                                               }));
+}
+
+TEST_F(SnapshotCollectorTest, Check_SetsPresenceAnnotations) {
+  SetUpDefaultDataProviderServer();
+  SetUpDefaultSnapshotManager();
+
+  std::optional<Report> report{std::nullopt};
+  ScheduleGetReportAndThen(zx::duration::infinite(), 0,
+                           ([&report](Report& new_report) { report = std::move(new_report); }));
+
+  RunLoopFor(kWindow);
+  ASSERT_TRUE(report.has_value());
+
+  EXPECT_THAT(BuildFeedbackAnnotations(report->Annotations().Raw()),
+              IsSupersetOf({
+                  Pair("debug.snapshot.shared-request.num-clients", std::to_string(1)),
+                  Pair("debug.snapshot.shared-request.uuid", report->SnapshotUuid()),
+              }));
 }
 
 }  // namespace

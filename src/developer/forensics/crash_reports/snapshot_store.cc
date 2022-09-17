@@ -11,20 +11,6 @@
 namespace forensics::crash_reports {
 namespace {
 
-using fuchsia::feedback::Annotation;
-using fuchsia::feedback::GetSnapshotParameters;
-
-template <typename V>
-void AddAnnotation(const std::string& key, const V& value, feedback::Annotations& annotations) {
-  annotations.insert({key, std::to_string(value)});
-}
-
-template <>
-void AddAnnotation<std::string>(const std::string& key, const std::string& value,
-                                feedback::Annotations& annotations) {
-  annotations.insert({key, value});
-}
-
 // Helper function to make a shared_ptr from a rvalue-reference of a type.
 template <typename T>
 std::shared_ptr<T> MakeShared(T&& t) {
@@ -108,6 +94,13 @@ Snapshot SnapshotStore::GetSnapshot(const SnapshotUuid& uuid) {
   return ManagedSnapshot(data->annotations, data->presence_annotations, data->archive);
 }
 
+MissingSnapshot SnapshotStore::GetMissingSnapshot(const SnapshotUuid& uuid) {
+  const auto snapshot = GetSnapshot(uuid);
+  FX_CHECK(std::holds_alternative<MissingSnapshot>(snapshot));
+
+  return std::get<MissingSnapshot>(snapshot);
+}
+
 void SnapshotStore::IncrementClientCount(const SnapshotUuid& uuid) {
   auto* data = FindSnapshotData(uuid);
   FX_CHECK(data);
@@ -162,12 +155,6 @@ void SnapshotStore::AddSnapshotData(const SnapshotUuid& uuid, feedback::Annotati
 
   data->presence_annotations = std::make_shared<feedback::Annotations>();
 
-  // Add annotations about the snapshot. These are not "presence" annotations because
-  // they're unchanging and not the result of the SnapshotManager's data management.
-  AddAnnotation("debug.snapshot.shared-request.num-clients", data->num_clients_with_uuid,
-                annotations);
-  AddAnnotation("debug.snapshot.shared-request.uuid", uuid, annotations);
-
   // Take ownership of |annotations| and then record the size of the annotations and archive.
   data->annotations = MakeShared(std::move(annotations));
 
@@ -185,10 +172,6 @@ void SnapshotStore::AddSnapshotData(const SnapshotUuid& uuid, feedback::Annotati
     data->archive_size += StorageSize::Bytes(data->archive->key.size());
     data->archive_size += StorageSize::Bytes(data->archive->value.size());
     current_archives_size_ += data->archive_size;
-  }
-
-  if (data->archive == nullptr) {
-    data->presence_annotations->insert({"debug.snapshot.present", "false"});
   }
 }
 

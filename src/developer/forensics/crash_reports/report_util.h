@@ -34,7 +34,7 @@ std::string Shorten(std::string program_name);
 std::string Logname(std::string name);
 
 // Methods to build annotations from various data collected during report creation.
-AnnotationMap GetReportAnnotations(const Snapshot& snapshot);
+AnnotationMap GetReportAnnotations(const feedback::Annotations& snapshot_annotations);
 AnnotationMap GetReportAnnotations(Product product, const AnnotationMap& annotations);
 
 // Builds the final report to add to the queue.
@@ -45,10 +45,11 @@ AnnotationMap GetReportAnnotations(Product product, const AnnotationMap& annotat
 //
 // * Some attachments are report-specific, e.g., Dart exception stack trace.
 // * Adds any attachments from |report|.
-std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report, ReportId report_id,
-                                 const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
-                                 const std::optional<timekeeper::time_utc>& current_time,
-                                 Product product, bool is_hourly_report);
+fpromise::result<Report> MakeReport(fuchsia::feedback::CrashReport input_report, ReportId report_id,
+                                    const SnapshotUuid& snapshot_uuid,
+                                    const feedback::Annotations& snapshot_annotations,
+                                    const std::optional<timekeeper::time_utc>& current_time,
+                                    Product product, bool is_hourly_report);
 
 }  // namespace crash_reports
 }  // namespace forensics

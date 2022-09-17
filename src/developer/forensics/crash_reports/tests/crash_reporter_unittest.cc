@@ -286,6 +286,8 @@ class CrashReporterTest : public UnitTestFixture {
 
   // Files one crash report.
   ::fpromise::result<void, zx_status_t> FileOneCrashReport(CrashReport report) {
+    // Run loop to start the clock.
+    RunLoopUntilIdle();
     FX_CHECK(crash_reporter_ != nullptr)
         << "crash_reporter_ is nullptr. Call SetUpCrashReporter() or one of its variants "
            "at the beginning of a test case.";

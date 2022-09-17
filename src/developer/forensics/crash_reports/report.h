@@ -23,13 +23,12 @@ namespace crash_reports {
 // An in-memory representation of a report that will be uploaded to the crash server.
 class Report {
  public:
-  // Return a Report unless there are issues reading a fuchsia::mem::Buffer.
-  static std::optional<Report> MakeReport(ReportId report_id, const std::string& program_shortname,
-                                          const AnnotationMap& annotations,
-                                          std::map<std::string, fuchsia::mem::Buffer> attachments,
-                                          forensics::crash_reports::SnapshotUuid snapshot_uuid,
-                                          std::optional<fuchsia::mem::Buffer> minidump,
-                                          bool is_hourly_report = false);
+  // Return fpromise::ok with a Report unless there are issues reading a fuchsia::mem::Buffer.
+  static fpromise::result<Report> MakeReport(
+      ReportId report_id, const std::string& program_shortname, const AnnotationMap& annotations,
+      std::map<std::string, fuchsia::mem::Buffer> attachments,
+      forensics::crash_reports::SnapshotUuid snapshot_uuid,
+      std::optional<fuchsia::mem::Buffer> minidump, bool is_hourly_report = false);
 
   Report(ReportId report_id, const std::string& program_shortname, const AnnotationMap& annotations,
          std::map<std::string, SizedData> attachments, SnapshotUuid snapshot_uuid,

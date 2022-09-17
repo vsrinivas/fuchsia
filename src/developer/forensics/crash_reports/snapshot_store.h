@@ -58,6 +58,11 @@ class SnapshotStore {
   // drop the Snapshot, freeing up space for new data.
   Snapshot GetSnapshot(const SnapshotUuid& uuid);
 
+  // Returns the snapshot for |uuid|. Check-fails that |uuid| results in the return of a
+  // MissingSnapshot. A MissingSnapshot is guaranteed to be generated if |uuid| is the uuid of a
+  // SpecialCaseSnapshot.
+  MissingSnapshot GetMissingSnapshot(const SnapshotUuid& uuid);
+
   // Tell SnapshotStore that a client no longer needs the snapshot for |uuid|. If the difference
   // between the number of calls to AddClient and Release reaches 0, the snapshot for |uuid| will be
   // dropped by SnapshotStore and the function will return true.

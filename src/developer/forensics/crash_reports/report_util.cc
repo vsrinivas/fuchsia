@@ -258,7 +258,7 @@ AnnotationMap GetReportAnnotations(Product product, const AnnotationMap& annotat
   return added_annotations;
 }
 
-AnnotationMap GetReportAnnotations(const Snapshot& snapshot) {
+AnnotationMap GetReportAnnotations(const feedback::Annotations& snapshot_annotations) {
   // The underlying snapshot may have been garbage collected or its collection timed out
   // (possibly due to shutdown). If so, add the annotations that the snapshot manager could collect
   // itself and annotations indicating why the annotations and archive collected from
@@ -274,34 +274,26 @@ AnnotationMap GetReportAnnotations(const Snapshot& snapshot) {
   // triggered before the store is used.
   AnnotationMap added_annotations;
 
-  const auto& annotations = std::holds_alternative<ManagedSnapshot>(snapshot)
-                                ? std::get<ManagedSnapshot>(snapshot).Annotations()
-                                : std::get<MissingSnapshot>(snapshot).Annotations();
-  const auto& presence_annotations =
-      std::holds_alternative<ManagedSnapshot>(snapshot)
-          ? std::get<ManagedSnapshot>(snapshot).PresenceAnnotations()
-          : std::get<MissingSnapshot>(snapshot).PresenceAnnotations();
-
-  auto Get = [&annotations](const std::string& key) -> ErrorOr<std::string> {
-    if (annotations.count(key) != 0) {
-      return annotations.at(key);
+  auto Get = [&snapshot_annotations](const std::string& key) -> ErrorOr<std::string> {
+    if (snapshot_annotations.count(key) != 0) {
+      return snapshot_annotations.at(key);
     }
 
     return Error::kMissingValue;
   };
 
-  added_annotations.Set(annotations)
-      .Set(presence_annotations)
+  added_annotations.Set(snapshot_annotations)
       .Set(feedback::kOSVersionKey, Get(feedback::kBuildVersionKey))
       .Set(feedback::kOSChannelKey, Get(feedback::kSystemUpdateChannelCurrentKey));
 
   return added_annotations;
 }
 
-std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const ReportId report_id,
-                                 const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
-                                 const std::optional<timekeeper::time_utc>& current_time,
-                                 Product product, const bool is_hourly_report) {
+fpromise::result<Report> MakeReport(fuchsia::feedback::CrashReport report, const ReportId report_id,
+                                    const SnapshotUuid& snapshot_uuid,
+                                    const feedback::Annotations& snapshot_annotations,
+                                    const std::optional<timekeeper::time_utc>& current_time,
+                                    Product product, const bool is_hourly_report) {
   const std::string program_name = report.program_name();
   const std::string shortname = Shorten(program_name);
 
@@ -313,7 +305,7 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
   ExtractAnnotationsAndAttachments(std::move(report), &annotations, &attachments, &minidump);
 
   // Snapshot annotations specific to this crash report.
-  annotations.Set(GetReportAnnotations(snapshot));
+  annotations.Set(GetReportAnnotations(snapshot_annotations));
   annotations.Set(GetReportAnnotations(std::move(product), annotations));
 
   // Crash server annotations common to all crash reports.

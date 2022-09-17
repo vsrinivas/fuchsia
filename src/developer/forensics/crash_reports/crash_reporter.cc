@@ -177,41 +177,31 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
     FX_LOGST(INFO, tags_->Get(report_id)) << "Generating report";
   }
 
-  ::fpromise::promise<SnapshotUuid> get_snapshot_uuid =
-      ::fpromise::make_ok_promise(std::string(kNoUuidSnapshotUuid));
-  // Only generate a snapshot if the report won't be immediately archived in the filesystem in order
-  // to save time during crash report creation.
-  if (reporting_policy_watcher_->CurrentPolicy() != ReportingPolicy::kArchive) {
-    get_snapshot_uuid = snapshot_collector_->GetSnapshotUuid(kSnapshotTimeout, report_id);
-  }
+  const auto current_time = utc_provider_.CurrentTime();
 
-  auto p =
-      std::move(get_snapshot_uuid)
-          .and_then([this, fidl_report = std::move(report), product = std::move(product), report_id,
-                     is_hourly_snapshot, record_failure](const std::string& snapshot_uuid) mutable {
-            const auto snapshot = snapshot_store_->GetSnapshot(snapshot_uuid);
-            const auto current_time = utc_provider_.CurrentTime();
-            auto report = MakeReport(std::move(fidl_report), report_id, snapshot_uuid, snapshot,
-                                     current_time, std::move(product), is_hourly_snapshot);
+  auto p = snapshot_collector_
+               ->GetReport(kSnapshotTimeout, std::move(report), report_id, current_time, product,
+                           is_hourly_snapshot, reporting_policy_watcher_->CurrentPolicy())
+               .then([this, report_id, is_hourly_snapshot,
+                      record_failure](fpromise::result<Report>& result) {
+                 if (is_hourly_snapshot) {
+                   FX_LOGST(INFO, tags_->Get(report_id)) << "Generated hourly snapshot";
+                 } else {
+                   FX_LOGST(INFO, tags_->Get(report_id)) << "Generated report";
+                 }
 
-            if (is_hourly_snapshot) {
-              FX_LOGST(INFO, tags_->Get(report_id)) << "Generated hourly snapshot";
-            } else {
-              FX_LOGST(INFO, tags_->Get(report_id)) << "Generated report";
-            }
+                 if (!result.is_ok()) {
+                   return record_failure(cobalt::CrashState::kDropped,
+                                         "Failed to file report: MakeReport failed. Won't retry");
+                 }
 
-            if (!report.has_value()) {
-              return record_failure(cobalt::CrashState::kDropped,
-                                    "Failed to file report: MakeReport failed. Won't retry");
-            }
+                 if (!queue_.Add(std::move(result.value()))) {
+                   return record_failure(cobalt::CrashState::kDropped,
+                                         "Failed to file report: Queue::Add failed. Won't retry");
+                 }
 
-            if (!queue_.Add(std::move(*report))) {
-              return record_failure(cobalt::CrashState::kDropped,
-                                    "Failed to file report: Queue::Add failed. Won't retry");
-            }
-
-            info_.LogCrashState(cobalt::CrashState::kFiled);
-          });
+                 info_.LogCrashState(cobalt::CrashState::kFiled);
+               });
 
   executor_.schedule_task(std::move(p));
 }
