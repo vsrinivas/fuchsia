@@ -679,6 +679,7 @@
                     "/core/driver_playground",
                     "/core/factory",
                     "/core/factory_env",
+                    "/core/factory/framework",
                     "/core/factory_reset",
                     "/core/ffx-laboratory:**",
                     "/core/lowpan-ot-driver",
