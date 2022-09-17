@@ -54,8 +54,15 @@ impl FidlProtocol for ListenerProtocol {
                     let mut path: String = "/tmp/agis".to_owned();
                     path.push_str(&global_id.to_string());
                     let socket_path = Path::new(&path);
+                    tracing::info!("FFX Daemon Agis is listening on {:?}", socket_path);
 
-                    let unix_stream = UnixStream::connect(socket_path).await.unwrap();
+                    let unix_stream = match UnixStream::connect(socket_path).await {
+                        Ok(stream) => stream,
+                        Err(_) => {
+                            tracing::error!("UnixStream::connect failed at {:?}", socket_path);
+                            return;
+                        }
+                    };
 
                     // Split sockets for bi-directional communication.
                     let (read_half_ffx, mut write_half_ffx) =

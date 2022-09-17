@@ -20,6 +20,20 @@ executable("test-bin") {
   ]
 }
 
+executable("vtc-test-bin") {
+  output_name = "vtc_test"
+  sources = [ "vtc_test.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.gpu.agis",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/zxio",
+    "//sdk/lib/zxio:create_with_type",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
 fuchsia_component("test") {
   testonly = true
   component_name = "agis-test"
@@ -41,10 +55,24 @@ executable("agis-bin") {
   ]
 }
 
+fuchsia_component("vtc-test-cmp") {
+  component_name = "vtc-test"
+  manifest = "meta/vtc-test.cml"
+  deps = [ ":vtc-test-bin" ]
+}
+
 fuchsia_component("agis-cmp") {
   component_name = "agis"
   manifest = "meta/agis.cml"
   deps = [ ":agis-bin" ]
+}
+
+# Instructions on how to run vtc-test can be found in vtc_test.cc.
+fuchsia_package("vtc-test") {
+  deps = [
+    ":vtc-test-cmp",
+    "//build/validate:non_production_tag",
+  ]
 }
 
 fuchsia_test_package("agis-test") {
