@@ -62,6 +62,9 @@ type Properties = table {
     /// even if the device is removed and subsequently re-added. Immutable.
     1: id fuchsia.net.interface_id;
     /// The addresses currently assigned to the interface.
+    ///
+    /// Addresses are sorted on [`Address.addr`], and no two addresses can
+    /// have the same `Address.addr` value.
     2: addresses vector<@generated_name("Address") table {
         /// The address and prefix length.
         ///
