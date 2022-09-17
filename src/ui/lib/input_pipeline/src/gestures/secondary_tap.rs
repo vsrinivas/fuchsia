@@ -4,8 +4,8 @@
 
 use {
     super::gesture_arena::{
-        self, ExamineEventResult, ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent,
-        VerifyEventResult, SECONDARY_BUTTON,
+        self, ExamineEventResult, MismatchData, MismatchDetails, ProcessBufferedEventsResult,
+        RecognizedGesture, TouchpadEvent, VerifyEventResult, SECONDARY_BUTTON,
     },
     crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
     crate::utils::{euclidean_distance, Position},
@@ -52,18 +52,30 @@ impl InitialContender {
 
 impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
-        if event.pressed_buttons.len() != 0 {
-            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons != 0 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: Some(0),
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
-        match event.contacts.len() {
+        let num_contacts = event.contacts.len();
+        match num_contacts {
             1 => {
                 ExamineEventResult::Contender(self.into_one_finger_contact_contender(event.clone()))
             }
             2 => ExamineEventResult::Contender(
                 self.into_two_finger_contacts_contender(event.clone()),
             ),
-            0 | _ => ExamineEventResult::Mismatch("wanted 1 or 2 contacts"),
+            0 | _ => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(2),
+                actual: num_contacts,
+            })),
         }
     }
 
@@ -103,21 +115,28 @@ impl OneFingerContactContender {
 impl gesture_arena::Contender for OneFingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if !is_valid_event_time(event, &self.one_finger_contact_event, self.max_time_elapsed) {
-            return ExamineEventResult::Mismatch("too much time elapsed");
+            return ExamineEventResult::Mismatch(MismatchData::Basic("too much time elapsed"));
         }
 
-        if event.pressed_buttons.len() != 0 {
-            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons != 0 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: Some(0),
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
-        match event.contacts.len() {
+        let num_contacts = event.contacts.len();
+        match num_contacts {
             1 => {
                 if !position_is_in_tap_threshold(
                     position_from_event(event, 0),
                     position_from_event(&self.one_finger_contact_event, 0),
                     self.max_finger_displacement_in_mm,
                 ) {
-                    return ExamineEventResult::Mismatch("too much motion");
+                    return ExamineEventResult::Mismatch(MismatchData::Basic("too much motion"));
                 }
                 ExamineEventResult::Contender(self)
             }
@@ -127,13 +146,18 @@ impl gesture_arena::Contender for OneFingerContactContender {
                     position_from_event(&self.one_finger_contact_event, 0),
                     self.max_finger_displacement_in_mm,
                 ) {
-                    return ExamineEventResult::Mismatch("too much motion");
+                    return ExamineEventResult::Mismatch(MismatchData::Basic("too much motion"));
                 }
                 ExamineEventResult::Contender(
                     self.into_two_finger_contacts_contender(event.clone()),
                 )
             }
-            0 | _ => ExamineEventResult::Mismatch("wanted 1 or 2 contacts"),
+            0 | _ => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(2),
+                actual: num_contacts,
+            })),
         }
     }
 }
@@ -177,14 +201,21 @@ impl TwoFingerContactsContender {
 impl gesture_arena::Contender for TwoFingerContactsContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if !is_valid_event_time(event, &self.two_finger_contacts_event, self.max_time_elapsed) {
-            return ExamineEventResult::Mismatch("too much time elapsed");
+            return ExamineEventResult::Mismatch(MismatchData::Basic("too much time elapsed"));
         }
 
-        if event.pressed_buttons.len() != 0 {
-            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons != 0 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: Some(0),
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
-        match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
+        let num_contacts = u8::try_from(event.contacts.len()).unwrap_or(u8::MAX);
+        match num_contacts {
             0 => ExamineEventResult::MatchedContender(self.into_matched_contender(event.clone())),
             1 => {
                 match &self
@@ -200,15 +231,15 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
                             contact.position,
                             self.max_finger_displacement_in_mm,
                         )) {
-                            return ExamineEventResult::Mismatch(
+                            return ExamineEventResult::Mismatch(MismatchData::Basic(
                                 "too much motion for remaining contact",
-                            );
+                            ));
                         }
                     }
                     None => {
-                        return ExamineEventResult::Mismatch(
+                        return ExamineEventResult::Mismatch(MismatchData::Basic(
                             "remaining contact id differs from initial two finger contacts",
-                        );
+                        ));
                     }
                 }
 
@@ -221,7 +252,9 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
                     position_from_event(&self.two_finger_contacts_event, 0),
                     self.max_finger_displacement_in_mm,
                 )) {
-                    return ExamineEventResult::Mismatch("too much motion for first contact");
+                    return ExamineEventResult::Mismatch(MismatchData::Basic(
+                        "too much motion for first contact",
+                    ));
                 }
 
                 // Acceptable displacement on the second touch contact.
@@ -230,12 +263,19 @@ impl gesture_arena::Contender for TwoFingerContactsContender {
                     position_from_event(&self.two_finger_contacts_event, 1),
                     self.max_finger_displacement_in_mm,
                 )) {
-                    return ExamineEventResult::Mismatch("too much motion for second contact");
+                    return ExamineEventResult::Mismatch(MismatchData::Basic(
+                        "too much motion for second contact",
+                    ));
                 }
 
                 ExamineEventResult::Contender(self)
             }
-            3.. => ExamineEventResult::Mismatch("wanted 0 or 2 contacts, got >= 3"),
+            3.. => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(0),
+                max: Some(2),
+                actual: usize::from(num_contacts),
+            })),
         }
     }
 }
@@ -272,14 +312,21 @@ impl OneFingerRaisedContender {
 impl gesture_arena::Contender for OneFingerRaisedContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if !is_valid_event_time(event, &self.two_finger_contacts_event, self.max_time_elapsed) {
-            return ExamineEventResult::Mismatch("too much time elapsed");
+            return ExamineEventResult::Mismatch(MismatchData::Basic("too much time elapsed"));
         }
 
-        if event.pressed_buttons.len() != 0 {
-            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons != 0 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: Some(0),
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
-        match u8::try_from(event.contacts.len()).unwrap_or(u8::MAX) {
+        let num_contacts = u8::try_from(event.contacts.len()).unwrap_or(u8::MAX);
+        match num_contacts {
             0 => ExamineEventResult::MatchedContender(self.into_matched_contender(event.clone())),
             1 => {
                 match &self
@@ -295,21 +342,26 @@ impl gesture_arena::Contender for OneFingerRaisedContender {
                             contact.position,
                             self.max_finger_displacement_in_mm,
                         )) {
-                            return ExamineEventResult::Mismatch(
+                            return ExamineEventResult::Mismatch(MismatchData::Basic(
                                 "too much motion for remaining contact",
-                            );
+                            ));
                         }
                     }
                     None => {
-                        return ExamineEventResult::Mismatch(
+                        return ExamineEventResult::Mismatch(MismatchData::Basic(
                             "remaining contact id differs from initial two finger contacts",
-                        );
+                        ));
                     }
                 }
 
                 ExamineEventResult::Contender(self)
             }
-            2.. => ExamineEventResult::Mismatch("wanted 0 or 1 contacts, got >= 2"),
+            2.. => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(0),
+                max: Some(1),
+                actual: usize::from(num_contacts),
+            })),
         }
     }
 }
@@ -332,15 +384,27 @@ struct MatchedContender {
 impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
         if !is_valid_event_time(event, &self.two_finger_contacts_event, self.max_time_elapsed) {
-            return VerifyEventResult::Mismatch("too much time elapsed");
+            return VerifyEventResult::Mismatch(MismatchData::Basic("too much time elapsed"));
         }
 
-        if event.contacts.len() != 0 {
-            return VerifyEventResult::Mismatch("wanted 0 contacts");
+        let num_contacts = event.contacts.len();
+        if num_contacts != 0 {
+            return VerifyEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(0),
+                max: Some(0),
+                actual: num_contacts,
+            }));
         }
 
-        if event.pressed_buttons.len() != 0 {
-            return VerifyEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons != 0 {
+            return VerifyEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: Some(0),
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
         VerifyEventResult::MatchedContender(self)

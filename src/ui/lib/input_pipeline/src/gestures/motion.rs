@@ -4,8 +4,9 @@
 
 use {
     super::gesture_arena::{
-        self, EndGestureEvent, ExamineEventResult, MouseEvent, ProcessBufferedEventsResult,
-        ProcessNewEventResult, RecognizedGesture, TouchpadEvent, VerifyEventResult,
+        self, EndGestureEvent, ExamineEventResult, MismatchData, MismatchDetails, MouseEvent,
+        ProcessBufferedEventsResult, ProcessNewEventResult, RecognizedGesture, TouchpadEvent,
+        VerifyEventResult,
     },
     crate::mouse_binding,
     crate::utils::{euclidean_distance, Position},
@@ -55,12 +56,24 @@ impl InitialContender {
 
 impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
-        if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch("wanted 1 contact");
+        let num_contacts = event.contacts.len();
+        if num_contacts != 1 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(1),
+                actual: num_contacts,
+            }));
         }
 
-        if event.pressed_buttons.len() > 0 {
-            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons > 0 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: None,
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
         ExamineEventResult::Contender(
@@ -77,12 +90,24 @@ impl FingerContactContender {
 
 impl gesture_arena::Contender for FingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
-        if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch("wanted 1 contact");
+        let num_contacts = event.contacts.len();
+        if num_contacts != 1 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(1),
+                actual: num_contacts,
+            }));
         }
 
-        if event.pressed_buttons.len() > 0 {
-            return ExamineEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons > 0 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: None,
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
         let distance = euclidean_distance(event.contacts[0].position, self.initial_position);
@@ -102,12 +127,24 @@ impl MatchedContender {
 
 impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
-        if event.contacts.len() != 1 {
-            return VerifyEventResult::Mismatch("wanted 1 contact");
+        let num_contacts = event.contacts.len();
+        if num_contacts != 1 {
+            return VerifyEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(1),
+                actual: num_contacts,
+            }));
         }
 
-        if event.pressed_buttons.len() > 0 {
-            return VerifyEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons > 0 {
+            return VerifyEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: None,
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
         VerifyEventResult::MatchedContender(self)

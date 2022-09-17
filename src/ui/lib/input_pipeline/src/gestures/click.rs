@@ -4,8 +4,8 @@
 
 use {
     super::gesture_arena::{
-        self, ExamineEventResult, ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent,
-        VerifyEventResult,
+        self, ExamineEventResult, MismatchData, MismatchDetails, ProcessBufferedEventsResult,
+        RecognizedGesture, TouchpadEvent, VerifyEventResult,
     },
     crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
     crate::utils::{euclidean_distance, Position},
@@ -44,11 +44,18 @@ impl InitialContender {
 
 impl gesture_arena::Contender for InitialContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
-        if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch("wanted 1 contact");
+        let num_contacts = event.contacts.len();
+        if num_contacts != 1 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(1),
+                actual: num_contacts,
+            }));
         }
 
-        match event.pressed_buttons.len() {
+        let num_pressed_buttons = event.pressed_buttons.len();
+        match num_pressed_buttons {
             0 => ExamineEventResult::Contender(
                 self.into_unpressed_contender(position_from_event(event)),
             ),
@@ -56,7 +63,12 @@ impl gesture_arena::Contender for InitialContender {
             // More than one button is a Mismatch for now, but in practice
             // we do not expect to receive more than one button from the
             // touchpad driver.
-            _ => ExamineEventResult::Mismatch("wanted < 2 buttons"),
+            _ => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: Some(0),
+                max: Some(1),
+                actual: num_pressed_buttons,
+            })),
         }
     }
 }
@@ -87,8 +99,14 @@ impl UnpressedContender {
 
 impl gesture_arena::Contender for UnpressedContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
-        if event.contacts.len() != 1 {
-            return ExamineEventResult::Mismatch("wanted 1 contact");
+        let num_contacts = event.contacts.len();
+        if num_contacts != 1 {
+            return ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(1),
+                max: Some(1),
+                actual: num_contacts,
+            }));
         }
 
         if !position_is_in_click_threshold(
@@ -96,13 +114,19 @@ impl gesture_arena::Contender for UnpressedContender {
             self.initial_position,
             self.max_finger_displacement_in_mm,
         ) {
-            return ExamineEventResult::Mismatch("too much motion");
+            return ExamineEventResult::Mismatch(MismatchData::Basic("too much motion"));
         }
 
-        match event.pressed_buttons.len() {
+        let num_pressed_buttons = event.pressed_buttons.len();
+        match num_pressed_buttons {
             0 => ExamineEventResult::Contender(self),
             1 => ExamineEventResult::Contender(self.into_pressed_contender(event.clone())),
-            _ => ExamineEventResult::Mismatch("wanted < 2 contacts"),
+            _ => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: Some(0),
+                max: Some(1),
+                actual: num_pressed_buttons,
+            })),
         }
     }
 }
@@ -130,7 +154,8 @@ impl PressedContender {
 
 impl gesture_arena::Contender for PressedContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
-        match event.contacts.len() {
+        let num_contacts = event.contacts.len();
+        match num_contacts {
             0 => ExamineEventResult::MatchedContender(self.into_matched_contender(event.clone())),
             1 => {
                 if !position_is_in_click_threshold(
@@ -138,17 +163,28 @@ impl gesture_arena::Contender for PressedContender {
                     position_from_event(&self.pressed_event),
                     self.max_finger_displacement_in_mm,
                 ) {
-                    return ExamineEventResult::Mismatch("too much motion");
+                    return ExamineEventResult::Mismatch(MismatchData::Basic("too much motion"));
                 }
-                match event.pressed_buttons.len() {
+                let num_pressed_buttons = event.pressed_buttons.len();
+                match num_pressed_buttons {
                     0 => ExamineEventResult::MatchedContender(
                         self.into_matched_contender(event.clone()),
                     ),
                     1 => ExamineEventResult::Contender(self),
-                    _ => ExamineEventResult::Mismatch("wanted < 2 buttons"),
+                    _ => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                        criterion: "num_pressed_buttons",
+                        min: Some(0),
+                        max: Some(1),
+                        actual: num_pressed_buttons,
+                    })),
                 }
             }
-            _ => ExamineEventResult::Mismatch("wanted < 2 contacts"),
+            _ => ExamineEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: Some(0),
+                max: Some(1),
+                actual: num_contacts,
+            })),
         }
     }
 }
@@ -166,15 +202,27 @@ struct MatchedContender {
 
 impl gesture_arena::MatchedContender for MatchedContender {
     fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult {
-        if event.pressed_buttons.len() > 0 {
-            return VerifyEventResult::Mismatch("wanted 0 pressed buttons");
+        let num_pressed_buttons = event.pressed_buttons.len();
+        if num_pressed_buttons > 0 {
+            return VerifyEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_pressed_buttons",
+                min: None,
+                max: Some(0),
+                actual: num_pressed_buttons,
+            }));
         }
 
         // Note: One potential pitfall is that this MatchedContender
         // may verify tap-like events which alternate reporting 0 and 1 touch
         // contacts.
-        if event.contacts.len() > 1 {
-            return VerifyEventResult::Mismatch("wanted < 2 contacts");
+        let num_contacts = event.contacts.len();
+        if num_contacts > 1 {
+            return VerifyEventResult::Mismatch(MismatchData::Detailed(MismatchDetails {
+                criterion: "num_contacts",
+                min: None,
+                max: Some(1),
+                actual: num_contacts,
+            }));
         }
 
         VerifyEventResult::MatchedContender(self)
