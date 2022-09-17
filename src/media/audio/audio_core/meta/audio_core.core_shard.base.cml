@@ -20,18 +20,18 @@
     ],
     offer: [
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-audio-input",
             to: "#audio_core",
-            subdir: "class/audio-input",
+            subdir: "audio-input",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-audio-output",
             to: "#audio_core",
-            subdir: "class/audio-output",
+            subdir: "audio-output",
         },
         {
             protocol: "fuchsia.cobalt.LoggerFactory",

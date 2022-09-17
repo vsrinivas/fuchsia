@@ -669,7 +669,6 @@
                     "/bootstrap/vboot-fwparam",
                     "/core/account/password_authenticator",
                     "/core/appmgr",
-                    "/core/audio_core",
                     "/core/audio_recording",
                     "/core/auto-brightness",
                     "/core/bluetooth-core/bt-gap",
