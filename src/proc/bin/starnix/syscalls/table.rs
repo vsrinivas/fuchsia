@@ -226,6 +226,7 @@ pub fn dispatch_syscall(
         tkill[2],
         truncate[2],
         umask[1],
+        umount2[2],
         uname[1],
         unlink[1],
         unlinkat[3],

@@ -109,8 +109,7 @@ gvisor_tests = [
 
   # "mlock_test",
   "mmap_test",
-
-  # "mount_test",
+  "mount_test",
   "mremap_test",
 
   # "msgqueue_test",

@@ -507,28 +507,35 @@ impl NamespaceNode {
     }
 
     pub fn mount(&self, root: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
-        if let Some(namespace) = self.namespace() {
-            let mut mounts_hash = namespace.mount_points.write();
-            let mounts_at_point = mounts_hash.entry(self.clone()).or_default();
-            let mount = self.mount.as_ref().unwrap();
-            let (fs, root) = match root {
-                WhatToMount::Fs(fs) => {
-                    let root = fs.root().clone();
-                    (fs, root)
-                }
-                WhatToMount::Dir(entry) => (entry.node.fs(), entry),
-            };
-            mounts_at_point.push(Arc::new(Mount::new(
-                mount.namespace.clone(),
-                Some((Arc::downgrade(mount), self.entry.clone())),
-                root,
-                flags,
-                fs,
-            )));
-            Ok(())
-        } else {
-            error!(EBUSY)
-        }
+        let namespace = self.namespace().expect("a mountpoint must be in a namespace");
+        let mut mounts_hash = namespace.mount_points.write();
+        let mounts_at_point = mounts_hash.entry(self.clone()).or_default();
+        let mount = self.mount.as_ref().unwrap();
+        let (fs, root) = match root {
+            WhatToMount::Fs(fs) => {
+                let root = fs.root().clone();
+                (fs, root)
+            }
+            WhatToMount::Dir(entry) => (entry.node.fs(), entry),
+        };
+        mounts_at_point.push(Arc::new(Mount::new(
+            mount.namespace.clone(),
+            Some((Arc::downgrade(mount), self.entry.clone())),
+            root,
+            flags,
+            fs,
+        )));
+        Ok(())
+    }
+
+    /// Unmount the topmost filesystem from this mount point.
+    /// Make sure you call this on the mount point and not the mount root (i.e. use escape_mount.)
+    pub fn unmount(&self) -> Result<(), Errno> {
+        let namespace = self.namespace().expect("a mountpoint must be in a namespace");
+        let mut mounts_hash = namespace.mount_points.write();
+        let mounts_at_point = mounts_hash.get_mut(self).ok_or_else(|| errno!(EINVAL))?;
+        mounts_at_point.pop().ok_or_else(|| errno!(EINVAL))?;
+        Ok(())
     }
 
     pub fn mount_eq(a: &NamespaceNode, b: &NamespaceNode) -> bool {

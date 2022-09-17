@@ -1080,8 +1080,9 @@ pub fn sys_memfd_create(
 fn lookup_for_mount(
     current_task: &CurrentTask,
     path_addr: UserCString,
+    flags: LookupFlags,
 ) -> Result<NamespaceNode, Errno> {
-    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, LookupFlags::default())?;
+    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, flags)?;
     Ok(node.escape_mount())
 }
 
@@ -1093,6 +1094,10 @@ pub fn sys_mount(
     flags: u32,
     data_addr: UserCString,
 ) -> Result<(), Errno> {
+    if !current_task.creds().has_capability(CAP_SYS_ADMIN) {
+        return error!(EPERM);
+    }
+
     let flags = MountFlags::from_bits(flags).ok_or_else(|| {
         not_implemented!(
             current_task,
@@ -1110,7 +1115,7 @@ pub fn sys_mount(
         return Ok(());
     }
 
-    let target = lookup_for_mount(current_task, target_addr)?;
+    let target = lookup_for_mount(current_task, target_addr, LookupFlags::default())?;
 
     if flags.contains(MountFlags::BIND) {
         strace!(current_task, "mount(MS_BIND)");
@@ -1119,7 +1124,7 @@ pub fn sys_mount(
             not_implemented!(current_task, "MS_REC unimplemented");
         }
 
-        let source = lookup_for_mount(current_task, source_addr)?;
+        let source = lookup_for_mount(current_task, source_addr, LookupFlags::default())?;
         target.mount(WhatToMount::Dir(source.entry), flags)?;
     } else {
         let mut buf = [0u8; PATH_MAX as usize];
@@ -1145,6 +1150,24 @@ pub fn sys_mount(
     }
 
     Ok(())
+}
+
+pub fn sys_umount2(
+    current_task: &CurrentTask,
+    target_addr: UserCString,
+    flags: u32,
+) -> Result<(), Errno> {
+    if !current_task.creds().has_capability(CAP_SYS_ADMIN) {
+        return error!(EPERM);
+    }
+
+    let flags = if flags & UMOUNT_NOFOLLOW != 0 {
+        LookupFlags::no_follow()
+    } else {
+        LookupFlags::default()
+    };
+    let target = lookup_for_mount(current_task, target_addr, flags)?;
+    target.unmount()
 }
 
 pub fn sys_eventfd(current_task: &CurrentTask, value: u32) -> Result<FdNumber, Errno> {

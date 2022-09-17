@@ -178,6 +178,11 @@ pub const MSG_CMSG_COMPAT: u32 = 0;
 pub const EPOLLONESHOT: u32 = 1 << 30;
 pub const EPOLLET: u32 = 1 << 31;
 
+pub const MNT_FORCE: u32 = 1;
+pub const MNT_DETACH: u32 = 2;
+pub const MNT_EXPIRE: u32 = 4;
+pub const UMOUNT_NOFOLLOW: u32 = 8;
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, AsBytes, FromBytes)]
 pub struct sockaddr_un {
