@@ -284,7 +284,7 @@ func TestUpdateTakesABIRevisionAndWritesABIRevision(t *testing.T) {
 	}
 }
 
-func TestUpdateRequiresABIRevision(t *testing.T) {
+func TestUpdateDoesNotRequireABIRevision(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
@@ -292,8 +292,8 @@ func TestUpdateRequiresABIRevision(t *testing.T) {
 
 	TestPackage(cfg)
 
-	if err := Update(cfg); err == nil {
-		t.Fatalf("expected update to fail because ABI revision was not specified")
+	if err := Update(cfg); err != nil {
+		t.Fatalf("expected update to not fail because ABI revision was not specified")
 	}
 }
 
@@ -321,8 +321,6 @@ func TestUpdateRequiresManifestABIRevisionToMatchCliABIRevision(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
 
-	cfg.PkgABIRevision = TestABIRevision
-
 	TestPackage(cfg)
 	addTestABIRevisionToManifest(cfg, TestABIRevision2)
 
@@ -345,8 +343,6 @@ func TestUpdateRequiresManifestABIRevisionToMatchCliABIRevision(t *testing.T) {
 func TestValidate(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	cfg.PkgABIRevision = TestABIRevision
 
 	TestPackage(cfg)
 
@@ -378,8 +374,6 @@ func TestValidate(t *testing.T) {
 func TestSeal(t *testing.T) {
 	cfg := TestConfig()
 	defer os.RemoveAll(filepath.Dir(cfg.TempDir))
-
-	cfg.PkgABIRevision = TestABIRevision
 
 	TestPackage(cfg)
 
