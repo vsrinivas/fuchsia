@@ -29,7 +29,9 @@ import("//sdk/ctf/build/write_ctf_file.gni")
 #     Type: bool
 template("ctf_fuchsia_test_package") {
   if (current_toolchain == default_toolchain) {
-    assert(defined(invoker.package_name), "package_name must be defined.")
+    if (!defined(invoker.package_name)) {
+      invoker.package_name = target_name
+    }
     if (cts_version != "") {
       invoker.package_name += "_$cts_version"
     }
