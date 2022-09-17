@@ -26,9 +26,13 @@ class GoldenFileGenerationError(Exception):
         return (
             f"Detected invalid file within the SDK archive "
             f"tarfile:\n{self.invalid}\n"
-            f"Golden file will not be generated if "
-            f"the tarfile contains this file type. Please update\n"
-            f"{self.tarfile}\naccordingly.\n")
+            f"Golden file will not be generated if the tarfile contains this file type.\n"
+            f"Please update\n"
+            f" {self.tarfile}\n"
+            f" accordingly.\n"
+            f"If you're seeing this in CQ but not in your local build, you will need\n"
+            f" to rebuild locally with the same CPU architecture (x64/arm64) as this\n"
+            f" builder and add '//sdk/ctf:verify_idk_deps' into your local build args.\n")
 
 
 class MissingInputError(Exception):
@@ -78,7 +82,9 @@ class NotifyOnAdditions(Exception):
             f"paths not found in the golden file.\n{self.additions}\n"
             f"If this is an intentional change, follow the instructions"
             f" below based on where you encountered this message:\n"
-            f"  - in CQ: rebuild with '//sdk/ctf:verify_idk_deps' in your local build args.\n"
+            f"  - in CQ: rebuild locally with the same CPU architecture (x64/arm64)\n"
+            f"           as this builder and add '//sdk/ctf:verify_idk_deps' into\n"
+            f"           your local build args.\n"
             f"  - in your local build: run the following command: {cmd}\n")
 
 
