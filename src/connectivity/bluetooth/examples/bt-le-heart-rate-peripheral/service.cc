@@ -13,6 +13,8 @@
 #include <iterator>
 #include <limits>
 
+#include "heart_model.h"
+
 using fuchsia::bluetooth::Status;
 
 namespace gatt = fuchsia::bluetooth::gatt;
@@ -153,9 +155,7 @@ void Service::PublishService(gatt::ServerPtr* gatt_server) {
 }
 
 void Service::NotifyMeasurement() {
-  HeartModel::Measurement measurement = {};
-  if (!heart_model_->ReadMeasurement(&measurement))
-    return;
+  HeartModel::Measurement measurement = heart_model_->ReadMeasurement();
 
   const auto payload = MakeMeasurementPayload(measurement.rate, &measurement.contact,
                                               &measurement.energy_expended, nullptr);

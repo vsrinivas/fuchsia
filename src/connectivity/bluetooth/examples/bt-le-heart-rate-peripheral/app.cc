@@ -10,6 +10,8 @@
 #include <functional>
 #include <iostream>
 
+#include "heart_model.h"
+
 namespace ble = fuchsia::bluetooth::le;
 
 namespace bt_le_heart_rate {

@@ -6,24 +6,19 @@ executable("bt-le-heart-rate-peripheral") {
   sources = [
     "app.cc",
     "app.h",
+    "heart_model.cc",
+    "heart_model.h",
     "main.cc",
     "service.cc",
     "service.h",
-    "system_load_heart_model.cc",
-    "system_load_heart_model.h",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.le",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }

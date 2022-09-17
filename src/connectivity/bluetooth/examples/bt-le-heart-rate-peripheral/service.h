@@ -73,22 +73,6 @@ class Service final : fuchsia::bluetooth::gatt::LocalServiceDelegate {
   fxl::WeakPtrFactory<Service> weak_factory_;
 };
 
-// Interface for heart rate measurement sensors
-class HeartModel {
- public:
-  struct Measurement {
-    bool contact;         // True if measured while sensor was in contact.
-    int rate;             // Heart rate in beats per minute (BPM).
-    int energy_expended;  // Energy expended since reset in kilojoules (kJ).
-  };
-
-  virtual ~HeartModel() {}
-
-  virtual bool ReadMeasurement(Measurement* measurement) = 0;
-
-  virtual void ResetEnergyExpended() = 0;
-};
-
 enum class BodySensorLocation : uint8_t {
   kOther = 0,
   kChest = 1,
