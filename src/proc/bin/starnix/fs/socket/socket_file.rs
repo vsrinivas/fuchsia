@@ -122,7 +122,7 @@ impl SocketFile {
 
             actual += bytes_written;
 
-            if !self.socket.socket_type.is_stream() && actual < requested {
+            if actual < requested {
                 return error!(EAGAIN);
             }
 

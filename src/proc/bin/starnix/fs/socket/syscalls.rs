@@ -10,6 +10,7 @@ use super::*;
 use crate::fs::buffers::*;
 use crate::fs::*;
 use crate::logging::{not_implemented, strace};
+use crate::mm::vmo::round_up_to_increment;
 use crate::task::*;
 use crate::types::*;
 
@@ -415,9 +416,11 @@ fn recvmsg_internal(
             current_task
                 .mm
                 .write_memory(message_header.msg_control + cmsg_bytes_written, &message_bytes)?;
-            cmsg_bytes_written += message_bytes.len();
+            cmsg_bytes_written +=
+                round_up_to_increment(message_bytes.len(), std::mem::size_of::<usize>())?;
         }
     }
+
     // TODO(fxb/79405): This length is not correct according to gVisor's socket_test. The
     // expected length is calculated by a CMSG_SPACE macro, which seems to do some alignment.
     message_header.msg_controllen = cmsg_bytes_written;
