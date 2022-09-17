@@ -22,9 +22,6 @@ const (
 	NeedsBackfill Classification = "NeedsBackfill"
 	// APIBreaking change will break compilation for clients.
 	APIBreaking Classification = "APIBreaking"
-	// Transitionable change can be made as a sequence of SourceCompatible
-	// changes.
-	Transitionable Classification = "Transitionable"
 	// SourceCompatible change does not break compilation.
 	SourceCompatible Classification = "SourceCompatible"
 )
@@ -124,7 +121,21 @@ func (r *Report) add(item *summarize.ElementStr) {
 	case summarize.StructMemberKind:
 		ret.Conclusion = APIBreaking
 	case summarize.ProtocolMemberKind:
-		ret.Conclusion = Transitionable
+		// TODO(fxbug.dev/107567): Technically, adding a method is API breaking
+		// because server implementations will fail to compile if they don't
+		// handle the new method. To avoid this you can use the @transitional
+		// attribute, and remove it once all servers are updated. We are not
+		// tracking this now for two reasons:
+		//
+		// 1. It's common to add methods to protocols that have no server
+		//    implementations outside the platform. Requiring @transitional
+		//    in these cases is unnecessary and will slow us down.
+		//
+		// 2. Removing the @transitional attribute requires duplicating the
+		//    method definition: https://fuchsia.dev/fuchsia-src/reference/fidl/language/versioning?hl=en#swapping.
+		//    We should improve the syntax (e.g. integrate into @available)
+		//    before requiring all new methods to be @transitional.
+		ret.Conclusion = SourceCompatible
 	default:
 		panic(fmt.Sprintf("unexpected item kind: %+v", item))
 	}
@@ -157,10 +168,9 @@ func (r *Report) compare(before, after *summarize.ElementStr) {
 	case before.Kind != after.Kind,
 		before.Decl != after.Decl,
 		before.Value != after.Value,
-		before.Resourceness != after.Resourceness:
+		before.Resourceness != after.Resourceness,
+		before.Strictness != after.Strictness:
 		ret.Conclusion = APIBreaking
-	case before.Strictness != after.Strictness:
-		ret.Conclusion = Transitionable
 	default:
 		panic(fmt.Sprintf("unexpected difference: before = %+v, after = %+v", before, after))
 	}

@@ -20,7 +20,7 @@ func TestReportJSON(t *testing.T) {
   "api_diff": [
     {
       "name": "foo",
-      "conclusion": "Transitionable"
+      "conclusion": "APIBreaking"
     }
   ]
 }

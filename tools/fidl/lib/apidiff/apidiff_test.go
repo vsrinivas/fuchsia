@@ -406,7 +406,7 @@ type Bits = flexible bits {
                 "name": "l/Bits",
                 "declaration": "uint32"
             },
-            "conclusion": "Transitionable"
+            "conclusion": "APIBreaking"
         }
     ]
 }
@@ -443,7 +443,7 @@ type Bits = strict bits {
                 "name": "l/Bits",
                 "declaration": "uint32"
             },
-            "conclusion": "Transitionable"
+            "conclusion": "APIBreaking"
         }
     ]
 }
@@ -758,7 +758,7 @@ type Enum = flexible enum {
                 "name": "l/Enum",
                 "declaration": "uint32"
             },
-            "conclusion": "Transitionable"
+            "conclusion": "APIBreaking"
         }
     ]
 }
@@ -795,7 +795,7 @@ type Enum = strict enum {
                 "name": "l/Enum",
                 "declaration": "uint32"
             },
-            "conclusion": "Transitionable"
+            "conclusion": "APIBreaking"
         }
     ]
 }
@@ -1785,7 +1785,7 @@ protocol T {
                 "name": "l/T.Test",
                 "declaration": "(int32 t) -> ()"
             },
-            "conclusion": "Transitionable"
+            "conclusion": "SourceCompatible"
         }
     ]
 }
