@@ -236,6 +236,10 @@ func fuchsiaLogChecks() []FailureModeCheck {
 		&stringInLogCheck{String: "intel-i915: No displays detected.", Type: syslogType},
 		// For fxbug.dev/105382 dwc2 bug that breaks usb cdc networking
 		&stringInLogCheck{String: "diepint.timeout", Type: serialLogType, SkipPassedTask: true},
+		// For devices which, typically as a result of wear, fail to read any copy of the
+		// sys_config partition, give up on booting the intended slot, boot the R slot, and
+		// severely confuse anyone who was expecting that to be something else.
+		&stringInLogCheck{String: "sys_config: ERROR failed to read any copy", Type: serialLogType},
 	}
 
 	oopsExceptBlocks := []*logBlock{
