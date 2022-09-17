@@ -20,7 +20,8 @@
 //		--add Microsoft.VisualStudio.Component.VC.Tools.ARM64 ^
 //		--add Microsoft.VisualStudio.Component.Windows10SDK ^
 //		--add Microsoft.VisualStudio.Component.Windows10SDK.19041 ^
-//		--add Microsoft.VisualStudio.Component.VC.Redist.14.Latest
+//		--add Microsoft.VisualStudio.Component.VC.Redist.14.Latest ^
+//		--add Microsoft.VisualStudio.Component.VC.ATLMFC ^
 //
 // To make this go script runnable from anywhere, please avoid adding third-party
 // dependencies.
@@ -249,6 +250,7 @@ func buildFileList(vsPath, vcToolsPath, vcrtVersion string) ([]packedFile, error
 		{filepath.Join(vcToolsPath, "crt"), ""},
 		{filepath.Join(vcToolsPath, "bin"), ""},
 		{filepath.Join(vcToolsPath, "include"), ""},
+		{filepath.Join(vcToolsPath, "atlmfc"), ""},
 		// "onecore" lib will be removed later.
 		{filepath.Join(vcToolsPath, "lib"), ""},
 		// VC Runtime x64.
