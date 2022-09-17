@@ -185,12 +185,14 @@ impl<T> Window<T> {
                     (view_creation_token, Some(viewport_creation_token))
                 }
             };
+        let (focused, focused_request) = create_proxy::<ui_views::ViewRefFocusedMarker>()?;
         let (view_focuser, view_focuser_request) = create_proxy::<ui_views::FocuserMarker>()?;
 
         self.id = WindowId::from_view_creation_token(&view_creation_token);
         self.focuser = Some(view_focuser);
 
         let view_bound_protocols = ui_comp::ViewBoundProtocols {
+            view_ref_focused: Some(focused_request),
             view_focuser: Some(view_focuser_request),
             ..ui_comp::ViewBoundProtocols::EMPTY
         };
@@ -210,6 +212,9 @@ impl<T> Window<T> {
             parent_viewport_watcher,
             self.event_sender.clone(),
         );
+
+        let viewref_focused_fut =
+            Self::serve_view_ref_focused_watcher(self.id(), focused, self.event_sender.clone());
 
         // If we created a viewport_creation_token earlier, we intend to present to the system's
         // GraphicalPresenter. Connect to it to present the window.
@@ -247,7 +252,12 @@ impl<T> Window<T> {
 
         // Collect all futures into an abortable spawned task. The task is aborted in [Drop].
         let task = fasync::Task::spawn(async move {
-            futures::join!(flatland_and_layout_watcher_fut, graphical_presenter_fut, keyboard_fut);
+            futures::join!(
+                flatland_and_layout_watcher_fut,
+                viewref_focused_fut,
+                graphical_presenter_fut,
+                keyboard_fut
+            );
         });
         self.running_tasks.push(task);
 
@@ -412,6 +422,38 @@ impl<T> Window<T> {
                 }
                 Err(fidl_error) => {
                     warn!("ParentViewportWatcher GetLayout() error: {:?}", fidl_error);
+                }
+            }
+        }
+    }
+
+    async fn serve_view_ref_focused_watcher(
+        window_id: WindowId,
+        focused: ui_views::ViewRefFocusedProxy,
+        event_sender: EventSender<T>,
+    ) {
+        let mut focused_stream =
+            HangingGetStream::new(focused, ui_views::ViewRefFocusedProxy::watch);
+        while let Some(result) = focused_stream.next().await {
+            match result {
+                Ok(ui_views::FocusState { focused: Some(focused), .. }) => {
+                    event_sender
+                        .send(Event::WindowEvent {
+                            window_id,
+                            event: WindowEvent::Focused { focused },
+                        })
+                        .expect("Failed to send WindowEvent::Focused event");
+                }
+                Ok(ui_views::FocusState { focused: None, .. }) => {
+                    error!("Missing required field FocusState.focused");
+                }
+                Err(fidl::Error::ClientChannelClosed { .. }) => {
+                    error!("ViewRefFocused connection closed.");
+                    break;
+                }
+                Err(fidl_error) => {
+                    error!("ViewRefFocused fidl error: {:?}", fidl_error);
+                    break;
                 }
             }
         }

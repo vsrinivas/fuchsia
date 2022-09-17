@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_element as felement,
     fidl_fuchsia_input::Key,
     fidl_fuchsia_ui_app as ui_app,
-    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus},
+    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus, KeyEventType},
     fidl_fuchsia_ui_test_input as ui_test_input, fidl_fuchsia_ui_test_scene as ui_test_scene,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -62,16 +62,6 @@ async fn test_appkit() -> Result<(), Error> {
         services_registration,
     );
 
-    // TODO(fxb/108823): Use keyboard to test keyboard events.
-    let (_keyboard, keyboard_server) = create_proxy::<ui_test_input::KeyboardMarker>()?;
-    let input_registry = connect_to_protocol::<ui_test_input::RegistryMarker>()?;
-    input_registry
-        .register_keyboard(ui_test_input::RegistryRegisterKeyboardRequest {
-            device: Some(keyboard_server),
-            ..ui_test_input::RegistryRegisterKeyboardRequest::EMPTY
-        })
-        .await?;
-
     let mut app = TestApp::new();
     // Declare an event handler that does not allow blocking async calls within it.
     let mut event_handler = |event| {
@@ -101,7 +91,6 @@ async fn test_appkit() -> Result<(), Error> {
                         "Redraw event received before window was resized"
                     );
                 }
-
                 _ => {}
             },
             Event::SystemEvent { event: system_event } => match system_event {
@@ -136,8 +125,9 @@ async fn test_appkit() -> Result<(), Error> {
                         );
                         window.redraw();
                     }
-                    ChildViewEvent::Attached { .. } => {
-                        event_sender.send(Event::Exit).expect("Failed to send Event::Exit event");
+                    ChildViewEvent::Attached { view_ref } => {
+                        // Set focus to child view.
+                        window.request_focus(view_ref);
                     }
                     ChildViewEvent::Detached => {}
                 }
@@ -205,6 +195,7 @@ async fn start_view_provider(event_sender: EventSender<TestEvent>) {
                     })
                     .expect("Failed to send SystemEvent::ViewCreationToken event");
             }
+            // Panic for all other CreateView requests and errors to fail the test.
             _ => panic!("ViewProvider impl only handles CreateView2()"),
         }
     };
@@ -257,6 +248,15 @@ async fn create_child_view_spec(
     };
     let _ = graphical_presenter.present_view(view_spec, None, None).await;
 
+    let (keyboard, keyboard_server) = create_proxy::<ui_test_input::KeyboardMarker>()?;
+    let input_registry = connect_to_protocol::<ui_test_input::RegistryMarker>()?;
+    input_registry
+        .register_keyboard(ui_test_input::RegistryRegisterKeyboardRequest {
+            device: Some(keyboard_server),
+            ..ui_test_input::RegistryRegisterKeyboardRequest::EMPTY
+        })
+        .await?;
+
     fasync::Task::local(async move {
         let (sender, mut receiver) = futures::channel::mpsc::unbounded::<Event<TestEvent>>();
         let event_sender = EventSender::<TestEvent>(sender);
@@ -273,21 +273,35 @@ async fn create_child_view_spec(
                     window.create_view().expect("Failed to create window for child view");
                     _window_holder = Some(window);
                 }
-                Event::WindowEvent {
-                    window_id: _,
-                    event: WindowEvent::Keyboard { event, responder },
-                } => {
-                    if let KeyEvent { key: Some(Key::Q), .. } = event {
-                        parent_sender.send(Event::Exit).expect("Failed to send Event::Exit event");
-                        responder
-                            .send(KeyEventStatus::Handled)
-                            .expect("Failed to respond to keyboard event");
-                    } else {
-                        responder
-                            .send(KeyEventStatus::NotHandled)
-                            .expect("Failed to respond to keyboard event");
+                Event::WindowEvent { event: window_event, .. } => match window_event {
+                    WindowEvent::Focused { focused } => {
+                        // Upon gaining focus, we can receive keyboard events. Inject 'q' to quit.
+                        if focused {
+                            // Send key event to child view.
+                            inject_text("q".to_string(), keyboard.clone());
+                        }
                     }
-                }
+                    WindowEvent::Keyboard { event, responder } => {
+                        if let KeyEvent {
+                            key: Some(Key::Q),
+                            type_: Some(KeyEventType::Pressed),
+                            ..
+                        } = event
+                        {
+                            parent_sender
+                                .send(Event::Exit)
+                                .expect("Failed to send Event::Exit event");
+                            responder
+                                .send(KeyEventStatus::Handled)
+                                .expect("Failed to respond to keyboard event");
+                        } else {
+                            responder
+                                .send(KeyEventStatus::NotHandled)
+                                .expect("Failed to respond to keyboard event");
+                        }
+                    }
+                    _ => {}
+                },
                 _ => {}
             }
         }
@@ -297,8 +311,7 @@ async fn create_child_view_spec(
     Ok(())
 }
 
-// TODO(fxb/108823): Use inject_text to test keyboard events.
-fn _inject_text(text: String, keyboard: ui_test_input::KeyboardProxy) {
+fn inject_text(text: String, keyboard: ui_test_input::KeyboardProxy) {
     fasync::Task::local(async move {
         keyboard
             .simulate_us_ascii_text_entry(ui_test_input::KeyboardSimulateUsAsciiTextEntryRequest {
