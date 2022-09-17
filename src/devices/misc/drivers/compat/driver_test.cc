@@ -13,6 +13,7 @@
 #include <fidl/fuchsia.scheduler/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async-testing/test_loop.h>
 #include <lib/fdf/testing.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
@@ -22,12 +23,12 @@
 #include <gtest/gtest.h>
 #include <mock-boot-arguments/server.h>
 
+#include "sdk/lib/driver_runtime/testing/loop_fixture/test_loop_fixture.h"
 #include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/v1_test.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/service.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fboot = fuchsia_boot;
 namespace fdata = fuchsia_data;
@@ -247,24 +248,13 @@ class TestExporter : public fidl::testing::WireTestBase<fuchsia_device_fs::Expor
 
 }  // namespace
 
-class DriverTest : public gtest::TestLoopFixture {
+class DriverTest : public gtest::DriverTestLoopFixture {
  protected:
   TestNode& node() { return node_; }
   TestFile& compat_file() { return compat_file_; }
 
   void SetUp() override {
-    TestLoopFixture::SetUp();
-
-    // When creating a new dispatcher, we need to associate it with some owner so that the driver
-    // runtime library doesn't complain.
-    fdf_testing_push_driver(this);
-    auto pop_driver = fit::defer([]() { fdf_testing_pop_driver(); });
-
-    auto dispatcher = fdf::Dispatcher::Create(
-        0, "compat-test", [this](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown_.Signal(); });
-    EXPECT_EQ(ZX_OK, dispatcher.status_value());
-    dispatcher_ = *std::move(dispatcher);
-
+    DriverTestLoopFixture::SetUp();
     fidl_loop_.StartThread("fidl-server-thread");
 
     std::map<std::string, std::string> arguments;
@@ -275,7 +265,7 @@ class DriverTest : public gtest::TestLoopFixture {
   }
 
   void TearDown() override {
-    TestLoopFixture::TearDown();
+    DriverTestLoopFixture::TearDown();
 
     vfs_->Shutdown([](auto status) {});
     RunUntilDispatchersIdle();
@@ -295,8 +285,6 @@ class DriverTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(compat_service_endpoints.is_ok());
 
     // Setup the node.
-    fidl::WireSharedClient<fuchsia_driver_framework::Node> node(std::move(node_endpoints->client),
-                                                                dispatcher());
     fidl::BindServer(dispatcher(), std::move(node_endpoints->server), &node_);
 
     // Setup and bind "/pkg" directory.
@@ -377,55 +365,51 @@ class DriverTest : public gtest::TestLoopFixture {
       vfs_->ServeDirectory(svc, std::move(svc_endpoints->server));
     }
 
-    // Setup the namespace.
-    fidl::Arena arena;
-    fidl::VectorView<frunner::wire::ComponentNamespaceEntry> ns_entries(arena, 2);
-    ns_entries[0].Allocate(arena);
-    ns_entries[0].set_path(arena, "/pkg");
-    ns_entries[0].set_directory(std::move(pkg_endpoints->client));
-    ns_entries[1].Allocate(arena);
-    ns_entries[1].set_path(arena, "/svc");
-    ns_entries[1].set_directory(std::move(svc_endpoints->client));
-    auto ns = driver::Namespace::Create(ns_entries);
-    EXPECT_EQ(ZX_OK, ns.status_value());
+    auto entry_pkg = frunner::ComponentNamespaceEntry(
+        {.path = std::string("/pkg"), .directory = std::move(pkg_endpoints->client)});
+    auto entry_svc = frunner::ComponentNamespaceEntry(
+        {.path = std::string("/svc"), .directory = std::move(svc_endpoints->client)});
+    std::vector<frunner::ComponentNamespaceEntry> ns_entries;
+    ns_entries.push_back(std::move(entry_pkg));
+    ns_entries.push_back(std::move(entry_svc));
 
-    // Setup the logger.
-    auto logger = driver::Logger::Create(*ns, dispatcher(), compat::Driver::Name());
-    EXPECT_EQ(ZX_OK, logger.status_value());
+    std::vector<fdf::NodeSymbol> symbols(
+        {fdf::NodeSymbol({.name = compat::kOps, .address = reinterpret_cast<uint64_t>(ops)})});
 
-    // Setup start args.
-    fidl::VectorView<fdf::wire::NodeSymbol> symbols(arena, 1);
-    symbols[0].Allocate(arena);
-    symbols[0].set_name(arena, compat::kOps);
-    symbols[0].set_address(arena, reinterpret_cast<uint64_t>(ops));
+    auto program_entry =
+        fdata::DictionaryEntry("compat", std::make_unique<fdata::DictionaryValue>(
+                                             fdata::DictionaryValue::WithStr("driver/v1_test.so")));
+    std::vector<fdata::DictionaryEntry> program_vec;
+    program_vec.push_back(std::move(program_entry));
+    fdata::Dictionary program({.entries = std::move(program_vec)});
 
-    fidl::VectorView<fdata::wire::DictionaryEntry> program_entries(arena, 1);
-    program_entries[0].key.Set(arena, "compat");
-    program_entries[0].value = fdata::wire::DictionaryValue::WithStr(arena, "driver/v1_test.so");
-    fdata::wire::Dictionary program(arena);
-    program.set_entries(arena, std::move(program_entries));
-
-    fdf::wire::DriverStartArgs start_args(arena);
-    start_args.set_url(arena, "fuchsia-pkg://fuchsia.com/driver#meta/driver.cm");
-    start_args.set_symbols(arena, std::move(symbols));
-    start_args.set_program(arena, std::move(program));
-    start_args.set_outgoing_dir(std::move(outgoing_dir_endpoints->server));
-    start_args.set_ns(arena, ns_entries);
+    driver::DriverStartArgs start_args(
+        {.node = std::move(node_endpoints->client),
+         .symbols = std::move(symbols),
+         .url = std::string("fuchsia-pkg://fuchsia.com/driver#meta/driver.cm"),
+         .program = std::move(program),
+         .ns = std::move(ns_entries),
+         .outgoing_dir = std::move(outgoing_dir_endpoints->server),
+         .config = std::nullopt});
 
     // Start driver.
-    auto result = compat::Driver::Start(start_args, dispatcher_.borrow(), std::move(node),
-                                        std::move(*ns), std::move(*logger));
+    auto result =
+        compat::DriverFactory::CreateDriver(std::move(start_args), driver_dispatcher().borrow());
     EXPECT_EQ(ZX_OK, result.status_value());
-    return std::move(result.value());
+    auto* driver = result.value().release();
+    auto* casted = static_cast<compat::Driver*>(driver);
+    return std::unique_ptr<compat::Driver>(casted);
   }
 
   void RunUntilDispatchersIdle() {
     bool ran = false;
     do {
-      fdf_testing_wait_until_all_dispatchers_idle();
-      ran = RunLoopUntilIdle();
+      WaitUntilIdle();
+      ran = RunTestLoopUntilIdle();
     } while (ran);
   }
+
+  bool RunTestLoopUntilIdle() { return test_loop_.RunUntilIdle(); }
 
   void WaitForChildDeviceAdded() {
     while (!node().HasChildren()) {
@@ -434,10 +418,7 @@ class DriverTest : public gtest::TestLoopFixture {
     EXPECT_TRUE(node().HasChildren());
   }
 
-  void ShutdownDriverDispatcher() {
-    dispatcher_.ShutdownAsync();
-    EXPECT_EQ(ZX_OK, dispatcher_shutdown_.Wait());
-  }
+  async_dispatcher_t* dispatcher() { return test_loop_.dispatcher(); }
 
   TestProfileProvider profile_provider_;
 
@@ -457,9 +438,7 @@ class DriverTest : public gtest::TestLoopFixture {
   // This loop is for FIDL servers that get called in a sync fashion from
   // the driver.
   async::Loop fidl_loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-
-  fdf::Dispatcher dispatcher_;
-  libsync::Completion dispatcher_shutdown_;
+  async::TestLoop test_loop_;
 };
 
 TEST_F(DriverTest, Start) {
@@ -487,7 +466,7 @@ TEST_F(DriverTest, Start) {
   // Verify v1_test.so state after release.
   ShutdownDriverDispatcher();
   driver.reset();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(RunTestLoopUntilIdle());
   {
     const std::lock_guard<std::mutex> lock(v1_test->lock);
     EXPECT_TRUE(v1_test->did_release);
@@ -517,7 +496,7 @@ TEST_F(DriverTest, Start_WithCreate) {
   // Verify v1_test.so state after release.
   ShutdownDriverDispatcher();
   driver.reset();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(RunTestLoopUntilIdle());
   {
     const std::lock_guard<std::mutex> lock(v1_test->lock);
     EXPECT_TRUE(v1_test->did_release);
@@ -645,7 +624,7 @@ TEST_F(DriverTest, Start_BindFailed) {
   // Verify v1_test.so state after release.
   ShutdownDriverDispatcher();
   driver.reset();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(RunTestLoopUntilIdle());
 
   {
     const std::lock_guard<std::mutex> lock(v1_test->lock);
@@ -690,7 +669,7 @@ TEST_F(DriverTest, LoadFirwmareAsync) {
 
   ShutdownDriverDispatcher();
   driver.reset();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
 TEST_F(DriverTest, GetProfile) {
@@ -724,7 +703,7 @@ TEST_F(DriverTest, GetProfile) {
 
   ShutdownDriverDispatcher();
   driver.reset();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
 TEST_F(DriverTest, GetDeadlineProfile) {
@@ -763,7 +742,7 @@ TEST_F(DriverTest, GetDeadlineProfile) {
 
   ShutdownDriverDispatcher();
   driver.reset();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
 TEST_F(DriverTest, GetVariable) {
@@ -807,7 +786,7 @@ TEST_F(DriverTest, GetVariable) {
 
   ShutdownDriverDispatcher();
   driver.reset();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(RunTestLoopUntilIdle());
 }
 
 TEST_F(DriverTest, SetProfileByRole) {
@@ -846,5 +825,5 @@ TEST_F(DriverTest, SetProfileByRole) {
 
   ShutdownDriverDispatcher();
   driver.reset();
-  ASSERT_TRUE(RunLoopUntilIdle());
+  ASSERT_TRUE(RunTestLoopUntilIdle());
 }

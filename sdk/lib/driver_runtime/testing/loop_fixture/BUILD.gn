@@ -1,0 +1,19 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("gtest") {
+  testonly = true
+
+  sources = [ "test_loop_fixture.h" ]
+
+  deps = [ "//sdk/lib/driver_runtime:driver_runtime_internal" ]
+
+  public_deps = [
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/driver_runtime:testing",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/sync:sync-cpp",
+  ]
+}

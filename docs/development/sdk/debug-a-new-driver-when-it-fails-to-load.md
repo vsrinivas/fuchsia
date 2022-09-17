@@ -251,12 +251,12 @@ similar to the following in the device logs ([`ffx log`][ffx-log]):
 Failed to start driver; driver record not found url=<DRIVER_URL>
 ```
 
-If you run into this error, make sure that the `FUCHSIA_DRIVER_RECORD_CPP_V1()` macro is added
+If you run into this error, make sure that the `FUCHSIA_DRIVER_RECORD_CPP_V2()` macro is added
 at the end of your driver component’s source code, for example:
 
 ```none {:.devsite-disable-click-to-copy}
 // Register driver hooks with the framework
-FUCHSIA_DRIVER_RECORD_CPP_V1(qemu_edu::QemuEduDriver);
+FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<qemu_edu::QemuEduDriver>);
 ```
 
 For more information on this macro, see [Implement driver hooks][implement-driver-hooks] in

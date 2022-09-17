@@ -9,8 +9,7 @@
 #include <fidl/fuchsia.scheduler/cpp/markers.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/driver2/devfs_exporter.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
+#include <lib/driver2/driver2_cpp.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fpromise/scope.h>
 
@@ -29,21 +28,13 @@ std::vector<std::string> GetFragmentNames(
     fuchsia_driver_framework::wire::DriverStartArgs& start_args);
 
 // Driver is the compatibility driver that loads DFv1 drivers.
-class Driver {
+class Driver : public driver::DriverBase {
  public:
-  Driver(async_dispatcher_t* dispatcher,
-         fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
-         driver::Logger logger, std::string_view url, device_t device,
-         const zx_protocol_device_t* ops, component::OutgoingDirectory outgoing);
-  ~Driver();
+  Driver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher, device_t device,
+         const zx_protocol_device_t* ops, std::string_view driver_path);
+  ~Driver() override;
 
-  static constexpr const char* Name() { return "compat"; }
-
-  static zx::status<std::unique_ptr<Driver>> Start(
-      fuchsia_driver_framework::wire::DriverStartArgs& start_args,
-      fdf::UnownedDispatcher dispatcher,
-      fidl::WireSharedClient<fuchsia_driver_framework::Node> node, driver::Namespace ns,
-      driver::Logger logger);
+  zx::status<> Start() override;
 
   // Returns the context that DFv1 driver provided.
   void* Context() const;
@@ -69,20 +60,19 @@ class Driver {
       std::string name, std::string_view topological_path, uint32_t proto_id);
 
   Device& GetDevice() { return device_; }
-  const driver::Namespace& driver_namespace() { return ns_; }
-  async_dispatcher_t* dispatcher() { return dispatcher_; }
   Sysmem& sysmem() { return sysmem_; }
-  driver::Logger& logger() { return logger_; }
   const driver::DevfsExporter& devfs_exporter() const { return devfs_exporter_; }
-  component::OutgoingDirectory& outgoing() { return outgoing_; }
+
+  // These accessors are used by other classes in the compat driver so we want to expose
+  // them publicly since they are protected in DriverBase.
+  async_dispatcher_t* dispatcher() { return async_dispatcher(); }
+  const driver::Namespace& driver_namespace() { return *context().incoming(); }
+  driver::Logger& logger() { return logger_; }
+  driver::OutgoingDirectory& outgoing() { return *context().outgoing(); }
 
   uint32_t GetNextDeviceId() { return next_device_id_++; }
 
  private:
-  // Run the driver at `driver_path`.
-  zx::status<> Run(fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
-                   std::string_view driver_path);
-
   // Gets the root resource for the DFv1 driver.
   fpromise::promise<zx::resource, zx_status_t> GetRootResource(
       const fidl::WireSharedClient<fuchsia_boot::RootResource>& root_resource);
@@ -110,9 +100,8 @@ class Driver {
   fpromise::promise<void, zx_status_t> ConnectToParentDevices();
   fpromise::promise<void, zx_status_t> GetDeviceInfo();
 
-  async_dispatcher_t* const dispatcher_;
   async::Executor executor_;
-  component::OutgoingDirectory outgoing_;
+  std::string driver_path_;
 
   // The vfs to serve nodes that we are putting into devfs.
   std::unique_ptr<fs::SynchronousVfs> devfs_vfs_;
@@ -120,10 +109,6 @@ class Driver {
   fbl::RefPtr<fs::PseudoDir> devfs_dir_;
   driver::DevfsExporter devfs_exporter_;
 
-  const driver::Namespace ns_;
-  driver::Logger logger_;
-
-  const std::string url_;
   driver::Logger inner_logger_;
   Device device_;
 
@@ -146,6 +131,12 @@ class Driver {
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;
+};
+
+class DriverFactory {
+ public:
+  static zx::status<std::unique_ptr<driver::DriverBase>> CreateDriver(
+      driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher);
 };
 
 class DriverList {

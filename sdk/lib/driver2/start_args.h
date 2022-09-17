@@ -5,10 +5,9 @@
 #ifndef LIB_DRIVER2_START_ARGS_H_
 #define LIB_DRIVER2_START_ARGS_H_
 
-#include <fidl/fuchsia.component.runner/cpp/wire.h>
-#include <fidl/fuchsia.data/cpp/wire.h>
+#include <fidl/fuchsia.component.runner/cpp/fidl.h>
+#include <fidl/fuchsia.data/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <lib/zx/status.h>
 
 #include <vector>
@@ -122,12 +121,50 @@ inline zx::status<std::vector<std::string>> ProgramValueAsVector(
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
+// Returns the list of values for |key| as a vector of strings.
+inline zx::status<std::vector<std::string>> ProgramValueAsVector(
+    const fuchsia_data::Dictionary& program, std::string_view key) {
+  auto program_entries = program.entries();
+  if (program_entries.has_value()) {
+    for (auto& entry : program_entries.value()) {
+      auto& entry_key = entry.key();
+      auto& entry_value = entry.value();
+
+      if (key != entry_key) {
+        continue;
+      }
+
+      if (entry_value->Which() != fuchsia_data::DictionaryValue::Tag::kStrVec) {
+        return zx::error(ZX_ERR_WRONG_TYPE);
+      }
+
+      return zx::ok(entry_value->str_vec().value());
+    }
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
 inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
     const fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries,
     std::string_view path) {
   for (auto& entry : entries) {
     if (std::equal(path.begin(), path.end(), entry.path().begin())) {
       return zx::ok<fidl::UnownedClientEnd<fuchsia_io::Directory>>(entry.directory());
+    }
+  }
+  return zx::error(ZX_ERR_NOT_FOUND);
+}
+
+inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
+    const std::vector<fuchsia_component_runner::ComponentNamespaceEntry>& entries,
+    std::string_view path) {
+  for (auto& entry : entries) {
+    auto entry_path = entry.path();
+    ZX_ASSERT(entry_path.has_value());
+    if (path == entry_path.value()) {
+      auto& entry_directory = entry.directory();
+      ZX_ASSERT(entry_directory.has_value());
+      return zx::ok<fidl::UnownedClientEnd<fuchsia_io::Directory>>(entry_directory.value());
     }
   }
   return zx::error(ZX_ERR_NOT_FOUND);
