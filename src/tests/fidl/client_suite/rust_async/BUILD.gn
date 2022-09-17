@@ -1,0 +1,47 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "client_suite_under_test_rust_async"
+  sources = [ "src/main.rs" ]
+  edition = "2021"
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/tests/fidl/client_suite/fidl:fidl.clientsuite_rust",
+    "//src/tests/fidl/client_suite/rust_util:rust_util",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//zircon/vdso/zx:zx_rust",
+  ]
+}
+
+fuchsia_component("rust_async_client") {
+  testonly = true
+  component_name = "client"
+  manifest = "meta/client.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("harness_rust_async") {
+  testonly = true
+  component_name = "harness"
+  manifest = "meta/harness_rust_async.cml"
+  deps = [ "//src/tests/fidl/client_suite/harness:bin" ]
+}
+
+fuchsia_test_package("fidl-client-suite-rust-async-test") {
+  test_components = [ ":harness_rust_async" ]
+  deps = [ ":rust_async_client" ]
+}
+
+group("rust_async") {
+  testonly = true
+  deps = [ ":fidl-client-suite-rust-async-test" ]
+}
