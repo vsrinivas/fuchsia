@@ -162,11 +162,17 @@ impl WebdriverFacadeInternal {
     /// Locate debug service published in the Hub.
     async fn get_path_to_debug() -> Result<String, Error> {
         // Find debug service in the Hub.
-        let glob_query = format!("/hub-v2/children/core/children/appmgr/exec/out/hub/r/sys/*/c/context_provider.cmx/*/out/debug/{}", DebugMarker::PROTOCOL_NAME);
+        let glob_query = format!("/hub-v2/children/core/children/context_provider/exec/out/debug/{}", DebugMarker::PROTOCOL_NAME);
         if let Some(found_path) = glob(&glob_query)?.filter_map(|entry| entry.ok()).next() {
             Ok(found_path.to_string_lossy().to_string())
         } else {
-            Err(format_err!("Failed to find debug service."))
+            // Fallback to v1.
+            let glob_query = format!("/hub-v2/children/core/children/appmgr/exec/out/hub/r/sys/*/c/context_provider.cmx/*/out/debug/{}", DebugMarker::PROTOCOL_NAME);
+            if let Some(found_path) = glob(&glob_query)?.filter_map(|entry| entry.ok()).next() {
+                Ok(found_path.to_string_lossy().to_string())
+            } else {
+                Err(format_err!("Failed to find debug service."))
+            }
         }
     }
 
