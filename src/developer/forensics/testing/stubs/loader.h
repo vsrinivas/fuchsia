@@ -9,6 +9,7 @@
 #include <fuchsia/net/http/cpp/fidl_test_base.h>
 
 #include <optional>
+#include <string>
 #include <vector>
 
 #include "src/developer/forensics/testing/stubs/fidl_server.h"
@@ -37,10 +38,12 @@ class Loader : public LoaderBase {
   ~Loader();
 
   void Fetch(fuchsia::net::http::Request request, FetchCallback callback) override;
+  std::string LastRequestUrl() const;
 
  private:
   std::vector<LoaderResponse> responses_;
   std::vector<LoaderResponse>::const_iterator next_response_;
+  std::string url_;
 };
 
 }  // namespace stubs

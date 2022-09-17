@@ -18,6 +18,7 @@
 #include "src/lib/fsl/socket/blocking_drain.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/vector.h"
+#include "src/lib/fxl/strings/substitute.h"
 #include "third_party/crashpad/util/net/http_body.h"
 #include "third_party/crashpad/util/net/http_headers.h"
 #include "third_party/crashpad/util/net/http_multipart_builder.h"
@@ -122,12 +123,20 @@ void CrashServer::MakeRequest(const Report& report, const Snapshot& snapshot,
     file_readers.emplace("uploadFileMinidump", &attachment_readers.back());
   }
 
+  // Append the product and version parameters to the URL.
+  const std::map<std::string, std::string> annotations = PrepareAnnotations(report, snapshot);
+  FX_CHECK(annotations.count("product") != 0);
+  FX_CHECK(annotations.count("version") != 0);
+  const std::string url = fxl::Substitute("$0?product=$1&version=$2", url_,
+                                          crashpad::URLEncode(annotations.at("product")),
+                                          crashpad::URLEncode(annotations.at("version")));
+
   // We have to build the MIME multipart message ourselves as all the public Crashpad helpers are
   // asynchronous and we won't be able to know the upload status nor the server report ID.
   crashpad::HTTPMultipartBuilder http_multipart_builder;
   http_multipart_builder.SetGzipEnabled(true);
 
-  for (const auto& [key, value] : PrepareAnnotations(report, snapshot)) {
+  for (const auto& [key, value] : annotations) {
     http_multipart_builder.SetFormData(key, value);
   }
 
@@ -153,7 +162,7 @@ void CrashServer::MakeRequest(const Report& report, const Snapshot& snapshot,
   }
   request_builder.SetBodyStream(http_multipart_builder.GetBodyStream());
   request_builder.SetTimeout(60.0);  // 1 minute.
-  request_builder.SetURL(url_);
+  request_builder.SetURL(url);
 
   auto request = std::move(request_builder).Build();
   if (!request.has_value()) {

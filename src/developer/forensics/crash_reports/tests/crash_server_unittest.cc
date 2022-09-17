@@ -32,11 +32,16 @@ using ::testing::UnorderedElementsAreArray;
 
 const std::string kUrl{"http://www.foo.com"};
 const std::string kSnapshotUuid{"snapshot-uuid"};
-const Report kReport{
-    /*report_id=*/0,          /*program_shortname=*/"program-shortname",
-    /*annotations=*/{},
-    /*attachments=*/{},       /*snapshot_uuid=*/kSnapshotUuid,
-    /*minidump=*/std::nullopt};
+const Report kReport{/*report_id=*/0,
+                     /*program_shortname=*/"program-shortname",
+                     /*annotations=*/
+                     {
+                         {"product", "some-product"},
+                         {"version", "some-version"},
+                     },
+                     /*attachments=*/{},
+                     /*snapshot_uuid=*/kSnapshotUuid,
+                     /*minidump=*/std::nullopt};
 
 class CrashServerTest : public UnitTestFixture {
  protected:
@@ -65,6 +70,8 @@ class CrashServerTest : public UnitTestFixture {
                            });
   }
 
+  std::string LoaderLastRequestUrl() const { return loader_server_->LastRequestUrl(); }
+
  private:
   sys::testing::ComponentContextProvider loader_context_provider_;
   std::unique_ptr<stubs::Loader> loader_server_;
@@ -74,6 +81,44 @@ class CrashServerTest : public UnitTestFixture {
   LogTags tags_;
   std::unique_ptr<CrashServer> crash_server_;
 };
+
+TEST_F(CrashServerTest, UrlWithEncodedParameter) {
+  SetUpLoader({
+      stubs::LoaderResponse::WithBody(200, "body-200"),
+      stubs::LoaderResponse::WithBody(201, "body-201"),
+  });
+
+  std::optional<CrashServer::UploadStatus> upload_status{std::nullopt};
+  crash_server().MakeRequest(
+      kReport, GetSnapshot(),
+      [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kSuccess);
+  EXPECT_EQ(LoaderLastRequestUrl(), kUrl + "?product=some-product&version=some-version");
+
+  upload_status = std::nullopt;
+  const Report another_report{/*report_id=*/0,
+                              /*program_shortname=*/"program-shortname",
+                              /*annotations=*/
+                              {
+                                  {"product", "!product"},
+                                  {"version", "#version"},
+                              },
+                              /*attachments=*/{},
+                              /*snapshot_uuid=*/kSnapshotUuid,
+                              /*minidump=*/std::nullopt};
+
+  crash_server().MakeRequest(
+      another_report, GetSnapshot(),
+      [&](CrashServer::UploadStatus status, std::string) { upload_status = status; });
+  RunLoopUntilIdle();
+
+  ASSERT_TRUE(upload_status.has_value());
+  EXPECT_EQ(upload_status.value(), CrashServer::UploadStatus::kSuccess);
+  EXPECT_EQ(LoaderLastRequestUrl(), kUrl + "?product=%21product&version=%23version");
+}
 
 TEST_F(CrashServerTest, Fails_OnError) {
   SetUpLoader({stubs::LoaderResponse::WithError(fuchsia::net::http::Error::CONNECT)});

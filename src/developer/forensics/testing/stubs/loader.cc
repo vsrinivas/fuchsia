@@ -49,6 +49,9 @@ Loader::~Loader() {
 }
 
 void Loader::Fetch(Request request, FetchCallback callback) {
+  if (request.has_url()) {
+    url_ = request.url();
+  }
   FX_CHECK(next_response_ != responses_.end())
       << fxl::StringPrintf("no more calls to Fetch() expected (%lu/%lu calls made)",
                            std::distance(responses_.cbegin(), next_response_), responses_.size());
@@ -69,6 +72,8 @@ void Loader::Fetch(Request request, FetchCallback callback) {
   next_response_++;
   callback(std::move(response));
 }
+
+std::string Loader::LastRequestUrl() const { return url_; }
 
 }  // namespace stubs
 }  // namespace forensics
