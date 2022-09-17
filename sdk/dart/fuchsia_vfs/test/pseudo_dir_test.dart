@@ -854,7 +854,7 @@ void main() {
         PseudoDir dir = _setUpDir();
 
         final proxy = _getProxyForDir(dir);
-        final paths = ['.', './', './/', './//', './/.//./'];
+        final paths = ['.'];
         for (final path in paths) {
           DirectoryProxy newProxy = DirectoryProxy();
           await proxy.open(OpenFlags.rightReadable, 0, path,
@@ -871,7 +871,7 @@ void main() {
         final proxy = _getProxyForDir(dir);
 
         // open file 1 check contents.
-        final paths = ['file1', './file1', './/file1', './//file1'];
+        final paths = ['file1', '/file1'];
         for (final path in paths) {
           await _openFileAndAssert(proxy, path, 100, 'file1');
         }

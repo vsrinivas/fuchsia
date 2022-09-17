@@ -123,7 +123,7 @@ void main() {
 
       expect(await _readFileContents(proxy, 'subdir/bar/file2.txt'), 'bar');
       expect(await _readFileContents(proxy, 'subdir/file1.txt'), 'foo');
-      expect(await _readFileContents(proxy, 'subdir/./file1.txt'), 'foo');
+      expect(await _readFileContents(proxy, '/subdir/file1.txt'), 'foo');
 
       proxy.ctrl.close();
     });

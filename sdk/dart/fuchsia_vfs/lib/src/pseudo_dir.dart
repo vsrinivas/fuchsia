@@ -157,48 +157,45 @@ class PseudoDir extends Vnode {
   void open(OpenFlags flags, int mode, String path,
       fidl.InterfaceRequest<Node> request,
       [OpenFlags? parentFlags]) {
-    if (path.startsWith('/') || path == '') {
-      sendErrorEvent(flags, ZX.ERR_BAD_PATH, request);
-      return;
-    }
-    var p = path;
-    // remove all ./, .//, etc
-    while (p.startsWith('./')) {
-      var index = 2;
-      while (index < p.length && p[index] == '/') {
-        index++;
-      }
-      p = p.substring(index);
-    }
-
     parentFlags ??= Flags.fsRightsDefault();
-    if (p == '.' || p == '') {
+    if (path == '.') {
       connect(flags, mode, request, parentFlags);
       return;
     }
-    final index = p.indexOf('/');
-    final key = index == -1 ? p : p.substring(0, index);
+    if (path.startsWith('/')) {
+      path = path.substring(1);
+    }
+    if (path == '') {
+      sendErrorEvent(flags, ZX.ERR_BAD_PATH, request);
+      return;
+    }
+
+    final index = path.indexOf('/');
+    final key = index == -1 ? path : path.substring(0, index);
     if (!_isLegalObjectName(key)) {
       sendErrorEvent(flags, ZX.ERR_BAD_PATH, request);
-    } else if (_entries.containsKey(key)) {
-      final e = _entries[key];
-      // final element, open it
-      if (index == -1) {
-        e!.node!.connect(flags, mode, request, parentFlags);
-        return;
-      } else if (index == p.length - 1) {
-        // '/' is at end, should be a directory, add flag
-        e!.node!
-            .connect(flags | OpenFlags.directory, mode, request, parentFlags);
-        return;
-      } else {
-        // forward request to child Vnode and let it handle rest of path.
-        return e!.node!
-            .open(flags, mode, p.substring(index + 1), request, parentFlags);
-      }
-    } else {
-      sendErrorEvent(flags, ZX.ERR_NOT_FOUND, request);
+      return;
     }
+    final entry = _entries[key];
+    if (entry == null) {
+      sendErrorEvent(flags, ZX.ERR_NOT_FOUND, request);
+      return;
+    }
+    // node is never null; it is optional only to support `nearest`.
+    final node = entry.node!;
+    // Final element, open it.
+    if (index == -1) {
+      node.connect(flags, mode, request, parentFlags);
+      return;
+    }
+    if (index == path.length - 1) {
+      // '/' is at end, should be a directory, add flag.
+      node.connect(flags | OpenFlags.directory, mode, request, parentFlags);
+      return;
+    }
+    // Forward request to child and let it handle rest of path.
+    return node.open(
+        flags, mode, path.substring(index + 1), request, parentFlags);
   }
 
   /// Removes all directory entries.
