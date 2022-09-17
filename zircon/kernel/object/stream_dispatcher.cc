@@ -165,15 +165,26 @@ zx_status_t StreamDispatcher::WriteVector(VmAspace* current_aspace, user_in_iove
 
   size_t length = 0u;
   ContentSizeManager::Operation op;
+  ktl::optional<uint64_t> prev_content_size;
 
   Guard<Mutex> seek_guard{&seek_lock_};
 
-  status = CreateWriteOpAndExpandVmo(total_capacity, seek_, &length, &op);
+  status = CreateWriteOpAndExpandVmo(total_capacity, seek_, &length, &prev_content_size, &op);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = vmo_->WriteVector(current_aspace, user_data, length, seek_, out_actual);
+  if (prev_content_size) {
+    status =
+        vmo_->WriteVector(current_aspace, user_data, length, seek_, out_actual,
+                          [&prev_content_size, &op](const uint64_t write_offset, const size_t len) {
+                            if (write_offset + len > *prev_content_size) {
+                              op.UpdateContentSizeFromProgress(write_offset + len);
+                            }
+                          });
+  } else {
+    status = vmo_->WriteVector(current_aspace, user_data, length, seek_, out_actual);
+  }
 
   // Reacquire the lock to potentially shrink and commit the operation.
   Guard<Mutex> content_size_guard{op.parent()->lock()};
@@ -216,13 +227,24 @@ zx_status_t StreamDispatcher::WriteVectorAt(VmAspace* current_aspace, user_in_io
 
   size_t length = 0u;
   ContentSizeManager::Operation op;
+  ktl::optional<uint64_t> prev_content_size;
 
-  status = CreateWriteOpAndExpandVmo(total_capacity, offset, &length, &op);
+  status = CreateWriteOpAndExpandVmo(total_capacity, offset, &length, &prev_content_size, &op);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = vmo_->WriteVector(current_aspace, user_data, length, offset, out_actual);
+  if (prev_content_size) {
+    status =
+        vmo_->WriteVector(current_aspace, user_data, length, offset, out_actual,
+                          [&prev_content_size, &op](const uint64_t write_offset, const size_t len) {
+                            if (write_offset + len > *prev_content_size) {
+                              op.UpdateContentSizeFromProgress(write_offset + len);
+                            }
+                          });
+  } else {
+    status = vmo_->WriteVector(current_aspace, user_data, length, offset, out_actual);
+  }
 
   // Reacquire the lock to potentially shrink and commit the operation.
   Guard<Mutex> content_size_guard{op.parent()->lock()};
@@ -270,12 +292,14 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
   {
     Guard<Mutex> content_size_guard{vmo_->content_size_manager().lock()};
 
-    uint64_t new_content_size = 0u;
-    status = vmo_->content_size_manager().BeginAppendLocked(total_capacity, &content_size_guard,
-                                                            &new_content_size, &op);
+    status =
+        vmo_->content_size_manager().BeginAppendLocked(total_capacity, &content_size_guard, &op);
     if (status != ZX_OK) {
       return status;
     }
+
+    op.AssertParentLockHeld();
+    uint64_t new_content_size = op.GetSizeLocked();
 
     offset = new_content_size - total_capacity;
 
@@ -284,7 +308,6 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
     if (status != ZX_OK) {
       if (vmo_size <= offset) {
         // Unable to expand to requested size and cannot even perform partial write.
-        op.AssertParentLockHeld();
         op.CancelLocked();
 
         // Return `ZX_ERR_OUT_OF_RANGE` for range errors. Otherwise, clients expect all other errors
@@ -297,18 +320,21 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
 
     if (vmo_size < new_content_size) {
       // Unable to expand to requested size but able to perform a partial write.
-      op.AssertParentLockHeld();
-      op.ShrinkSizeLocked(vmo_size - offset);
+      op.ShrinkSizeLocked(vmo_size);
     }
 
     length = ktl::min(vmo_size, new_content_size) - offset;
   }
 
-  status = vmo_->WriteVector(current_aspace, user_data, length, offset, out_actual);
+  status = vmo_->WriteVector(current_aspace, user_data, length, offset, out_actual,
+                             [&op](const uint64_t write_offset, const size_t len) {
+                               op.UpdateContentSizeFromProgress(write_offset + len);
+                             });
   seek_ = offset + *out_actual;
 
   // Reacquire the lock to potentially shrink and commit the operation.
-  Guard<Mutex> content_size_guard{op.parent()->lock()};
+  Guard<Mutex> content_size_guard{vmo_->content_size_manager().lock()};
+  op.AssertParentLockHeld();
 
   // Update the content size operation if operation was partially successful.
   if (*out_actual < length) {
@@ -319,7 +345,7 @@ zx_status_t StreamDispatcher::AppendVector(VmAspace* current_aspace, user_in_iov
       op.CancelLocked();
       return status;
     } else {
-      op.ShrinkSizeLocked(*out_actual);
+      op.ShrinkSizeLocked(offset + *out_actual);
     }
   }
 
@@ -387,14 +413,13 @@ void StreamDispatcher::GetInfo(zx_info_stream_t* info) const {
   info->content_size = vmo_->content_size_manager().GetContentSize();
 }
 
-zx_status_t StreamDispatcher::CreateWriteOpAndExpandVmo(size_t total_capacity, zx_off_t offset,
-                                                        uint64_t* out_length,
-                                                        ContentSizeManager::Operation* out_op) {
+zx_status_t StreamDispatcher::CreateWriteOpAndExpandVmo(
+    size_t total_capacity, zx_off_t offset, uint64_t* out_length,
+    ktl::optional<uint64_t>* out_prev_content_size, ContentSizeManager::Operation* out_op) {
   DEBUG_ASSERT(out_op);
   DEBUG_ASSERT(out_length);
 
   zx_status_t status = ZX_OK;
-  ktl::optional<uint64_t> prev_content_size;
 
   {
     Guard<Mutex> content_size_guard{vmo_->content_size_manager().lock()};
@@ -405,7 +430,7 @@ zx_status_t StreamDispatcher::CreateWriteOpAndExpandVmo(size_t total_capacity, z
     }
 
     vmo_->content_size_manager().BeginWriteLocked(requested_content_size, &content_size_guard,
-                                                  &prev_content_size, out_op);
+                                                  out_prev_content_size, out_op);
 
     uint64_t vmo_size = 0u;
     status = vmo_->ExpandIfNecessary(requested_content_size, &vmo_size);
@@ -435,8 +460,9 @@ zx_status_t StreamDispatcher::CreateWriteOpAndExpandVmo(size_t total_capacity, z
   }
 
   // Zero content between the previous content size and the start of the write.
-  if (prev_content_size && *prev_content_size < offset) {
-    status = vmo_->vmo()->ZeroRange(*prev_content_size, offset - *prev_content_size);
+  if (out_prev_content_size->has_value() && out_prev_content_size->value() < offset) {
+    status = vmo_->vmo()->ZeroRange(out_prev_content_size->value(),
+                                    offset - out_prev_content_size->value());
     if (status != ZX_OK) {
       Guard<Mutex> content_size_guard{out_op->parent()->lock()};
       out_op->CancelLocked();

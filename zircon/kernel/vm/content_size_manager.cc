@@ -10,12 +10,16 @@
 
 uint64_t ContentSizeManager::Operation::GetSizeLocked() const {
   DEBUG_ASSERT(IsValid());
+  // Reading the size for `Append` operations should only occur after it's been initialized.
+  DEBUG_ASSERT(type_ != OperationType::Append || size_ > 0);
 
   return size_;
 }
 
 void ContentSizeManager::Operation::ShrinkSizeLocked(uint64_t new_size) {
   DEBUG_ASSERT(IsValid());
+  // If `new_size` is 0, the operation should be cancelled instead.
+  DEBUG_ASSERT(new_size > 0);
   // This function may only be called on expanding content write operations.
   ASSERT(type_ == OperationType::Append || type_ == OperationType::Write);
   ASSERT(new_size <= size_);
@@ -35,6 +39,15 @@ void ContentSizeManager::Operation::CancelLocked() {
   parent()->DequeueOperationLocked(this);
 }
 
+void ContentSizeManager::Operation::UpdateContentSizeFromProgress(uint64_t new_content_size) {
+  DEBUG_ASSERT(IsValid());
+  DEBUG_ASSERT(type_ == OperationType::Write || type_ == OperationType::Append);
+  DEBUG_ASSERT(new_content_size <= size_);
+  DEBUG_ASSERT(new_content_size > parent_->GetContentSize());
+
+  parent_->SetContentSize(new_content_size);
+}
+
 void ContentSizeManager::Operation::Initialize(ContentSizeManager* parent, uint64_t size,
                                                OperationType type) {
   DEBUG_ASSERT(!IsValid());
@@ -46,12 +59,12 @@ void ContentSizeManager::Operation::Initialize(ContentSizeManager* parent, uint6
 }
 
 zx_status_t ContentSizeManager::BeginAppendLocked(uint64_t append_size, Guard<Mutex>* lock_guard,
-                                                  uint64_t* out_new_content_size,
                                                   Operation* out_op) {
-  DEBUG_ASSERT(out_new_content_size);
   DEBUG_ASSERT(out_op);
+  DEBUG_ASSERT(append_size > 0);
 
-  out_op->Initialize(this, append_size, OperationType::Append);
+  // Temporarily initialize an `Append` operation with zero size until the size is known.
+  out_op->Initialize(this, 0, OperationType::Append);
   write_q_.push_back(out_op);
 
   // Block until head if there are any of the following operations preceding this one:
@@ -62,7 +75,13 @@ zx_status_t ContentSizeManager::BeginAppendLocked(uint64_t append_size, Guard<Mu
   bool should_block = false;
   auto iter = --write_q_.make_iterator(*out_op);
 
-  // It's okay to read the content size once here, since the lock is held.
+  // It's okay to read the content size once here, since the lock is held. This means that content
+  // size can only be increased if the front-most content size modifying operation is an expanding
+  // write or append. Not re-reading content size and seeing a potentially smaller content size here
+  // is valid, since it will only pessimize (i.e. blocking until head) this operation for a very
+  // small number of cases within an extremely narrow timing window. There are no correctness
+  // issues with pessimization. Since the pessimizing case is so rare, prefer reading once over
+  // continuously re-reading the atomic in a loop.
   uint64_t cur_content_size = GetContentSize();
   while (iter.IsValid()) {
     iter->AssertParentLockHeld();
@@ -87,7 +106,7 @@ zx_status_t ContentSizeManager::BeginAppendLocked(uint64_t append_size, Guard<Mu
   // the queue (no other content size mutating operations can proceed before this). In all other
   // cases, the previous loop verified that no content size mutating operations are in front of this
   // operation.
-  if (add_overflow(cur_content_size, append_size, out_new_content_size)) {
+  if (add_overflow(cur_content_size, append_size, &out_op->size_)) {
     // Dequeue operation since this change should not be committed.
     DequeueOperationLocked(out_op);
     return ZX_ERR_OUT_OF_RANGE;
@@ -175,7 +194,13 @@ void ContentSizeManager::BeginSetContentSizeLocked(uint64_t target_size, Operati
   bool should_block = false;
   auto write_iter = --write_q_.make_iterator(*out_op);
 
-  // It's okay to read the content size once here, since the lock is held.
+  // It's okay to read the content size once here, since the lock is held. This means that content
+  // size can only be increased if the front-most content size modifying operation is an expanding
+  // write or append. Not re-reading content size and seeing a potentially smaller content size here
+  // is valid, since it will only pessimize (i.e. blocking until head) this operation for a very
+  // small number of cases within an extremely narrow timing window. There are no correctness
+  // issues with pessimization. Since the pessimizing case is so rare, prefer reading once over
+  // continuously re-reading the atomic in a loop.
   uint64_t cur_content_size = GetContentSize();
   while (write_iter.IsValid()) {
     write_iter->AssertParentLockHeld();
@@ -233,8 +258,6 @@ void ContentSizeManager::CommitAndDequeueOperationLocked(Operation* op) {
       SetContentSize(ktl::max(op->GetSizeLocked(), GetContentSize()));
       break;
     case OperationType::Append:
-      SetContentSize(GetContentSize() + op->GetSizeLocked());
-      break;
     case OperationType::SetSize:
       SetContentSize(op->GetSizeLocked());
       break;
@@ -281,7 +304,7 @@ void ContentSizeManager::DequeueOperationLocked(Operation* op) {
       break;
   }
 
-  // Just in case, signal the ready event of |op| in case another thread is blocking on it.
+  // Just in case, signal the ready event of `op` in case another thread is blocking on it.
   //
   // Note that this should never usually occur, since only the owning thread of the operation should
   // be blocking or dequeueing.

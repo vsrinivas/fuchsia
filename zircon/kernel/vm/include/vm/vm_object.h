@@ -372,19 +372,30 @@ class VmObject : public VmHierarchyBase,
   // The |out_actual| field will be set to the number of bytes successfully processed, even upon
   // error. This allows for callers to still pass on this bytes transferred if a particular
   // error was expected.
+  //
   // May block on user pager requests and must be called without locks held.
+  //
+  // Bytes are guaranteed to be transferred in order from low to high offset.
   virtual zx_status_t ReadUser(VmAspace* current_aspace, user_out_ptr<char> ptr, uint64_t offset,
                                size_t len, size_t* out_actual) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual zx_status_t ReadUserVector(VmAspace* current_aspace, user_out_iovec_t vec,
                                      uint64_t offset, size_t len, size_t* out_actual);
+
+  // |OnWriteBytesTransferredCallback| is guaranteed to be called after bytes have been successfully
+  // transferred from the user source to the VMO and will be called before the VMO lock is dropped.
+  // As a result, operations performed within the callback should not take any other locks or be
+  // long-running.
+  using OnWriteBytesTransferredCallback = fit::inline_function<void(uint64_t offset, size_t len)>;
   virtual zx_status_t WriteUser(VmAspace* current_aspace, user_in_ptr<const char> ptr,
-                                uint64_t offset, size_t len, size_t* out_actual) {
+                                uint64_t offset, size_t len, size_t* out_actual,
+                                const OnWriteBytesTransferredCallback& on_bytes_transferred) {
     return ZX_ERR_NOT_SUPPORTED;
   }
   virtual zx_status_t WriteUserVector(VmAspace* current_aspace, user_in_iovec_t vec,
-                                      uint64_t offset, size_t len, size_t* out_actual);
+                                      uint64_t offset, size_t len, size_t* out_actual,
+                                      const OnWriteBytesTransferredCallback& on_bytes_transferred);
 
   // Removes the pages from this vmo in the range [offset, offset + len) and returns
   // them in pages.  This vmo must be a paged vmo with no parent, and it cannot have any

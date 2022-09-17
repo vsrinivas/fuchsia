@@ -24,6 +24,9 @@ extern "C" __WEAK zx_handle_t get_root_resource(void);
 
 namespace {
 
+// This value corresponds to `VmObject::LookupInfo::kMaxPages`
+static constexpr uint64_t kMaxPagesBatch = 16;
+
 void CheckRights(const zx::stream& stream, zx_rights_t expected_rights, const char* message) {
   zx_info_handle_basic_t info = {};
   EXPECT_OK(stream.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
@@ -1050,9 +1053,10 @@ TEST(StreamTestCase, ReadWriteShrinkRace) {
 
       size_t actual = 42u;
       ASSERT_OK(stream.readv_at(0, 0u, &vec, 1u, &actual));
-      // If the read happens first, the read should read the entire VMO. Otherwise, it should read
-      // the truncated size.
-      ASSERT_TRUE(actual == kInitialVmoSize || actual == kTruncateToSize);
+      // If the write happens after the truncate, the read may see a content size in the range
+      // [kTruncateToSize, kInitialVmoSize] because of a partial expanding write updating content
+      // size as it progresses.
+      ASSERT_TRUE(actual >= kTruncateToSize || actual <= kInitialVmoSize);
     });
 
     write_thread.join();
@@ -1104,6 +1108,44 @@ TEST(StreamTestCase, ExpandOverflow) {
   EXPECT_EQ(2 * zx_system_get_page_size(), vmo_size);
   ASSERT_OK(vmo.get_prop_content_size(&content_size));
   EXPECT_EQ(2 * zx_system_get_page_size(), content_size);
+}
+
+// Tests that content size is updated as soon as bytes are committed to the VMO.
+TEST(StreamTestCase, ContentSizeUpdatedOnPartialWrite) {
+  constexpr uint64_t kNumPagesToWrite = kMaxPagesBatch * 3;
+
+  pager_tests::UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  pager_tests::Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_RESIZABLE | ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_OK(vmo->vmo().set_prop_content_size(0));
+
+  zx::stream stream;
+  ASSERT_OK(
+      zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, vmo->vmo(), 0u, &stream));
+
+  std::thread write_thread([&] {
+    std::vector<char> buffer(kNumPagesToWrite * zx_system_get_page_size(), 'a');
+    zx_iovec_t vec = {
+        .buffer = buffer.data(),
+        .capacity = buffer.size(),
+    };
+    size_t actual;
+    ASSERT_OK(stream.writev(0, &vec, 1, &actual));
+
+    ASSERT_EQ(actual, buffer.size());
+  });
+
+  for (uint64_t page_num = 0; page_num < kNumPagesToWrite; page_num += kMaxPagesBatch) {
+    const uint64_t num_pages_to_dirty = std::min(kMaxPagesBatch, kNumPagesToWrite - page_num);
+
+    pager.WaitForPageDirty(vmo, page_num, num_pages_to_dirty, ZX_TIME_INFINITE);
+    ASSERT_EQ(GetContentSize(vmo->vmo()), page_num * zx_system_get_page_size());
+    pager.DirtyPages(vmo, page_num, num_pages_to_dirty);
+  }
+
+  write_thread.join();
 }
 
 }  // namespace

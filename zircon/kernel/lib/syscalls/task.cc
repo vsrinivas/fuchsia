@@ -535,7 +535,7 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
   size_t out_actual = 0;
   zx_status_t st =
       vmo->WriteUser(Thread::Current::Get()->aspace(), buffer.reinterpret<const char>(), offset,
-                     buffer_size, &out_actual);
+                     buffer_size, &out_actual, /*on_bytes_transferred=*/nullptr);
   if (st != ZX_OK) {
     // Do not write |out_actual| to |actual| on error~
     return st;

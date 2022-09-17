@@ -43,6 +43,7 @@ class StreamDispatcher final : public SoloDispatcher<StreamDispatcher, ZX_DEFAUL
 
   zx_status_t CreateWriteOpAndExpandVmo(size_t total_capacity, zx_off_t offset,
                                         uint64_t* out_length,
+                                        ktl::optional<uint64_t>* out_prev_content_size,
                                         ContentSizeManager::Operation* out_op);
 
   uint32_t options_ TA_GUARDED(get_lock());

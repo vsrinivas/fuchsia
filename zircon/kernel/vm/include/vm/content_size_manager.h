@@ -93,8 +93,7 @@ class ContentSizeManager {
       parent()->lock()->capability().AssertHeld();
     }
 
-    // Gets the size of the operation. The semantics of this value is dependent on the operation
-    // type.
+    // Gets the content size that the operation will expand to once it is completed.
     //
     // Note:
     //  * This may only be called on a valid operation.
@@ -109,6 +108,7 @@ class ContentSizeManager {
     // Note:
     //  * This may only be called on a valid operation.
     //  * This must only be called when holding the parent `ContentSizeManager` lock.
+    //  * The `new_size` passed in must be greater than 0.
     //  * The `new_size` passed in must be less than or equal to the current size.
     //  * This must only be called for `OperationType::Append` and `OperationType::Write` ops.
     void ShrinkSizeLocked(uint64_t new_size) TA_REQ(parent()->lock());
@@ -127,6 +127,13 @@ class ContentSizeManager {
     //  * This must only be called when holding the parent `ContentSizeManager` lock.
     void CancelLocked() TA_REQ(parent()->lock());
 
+    // Updates the content size when progress is made from the operation.
+    //
+    // Note:
+    //  * This may only be called on a valid `Append` or `Write` operation.
+    //  * The content size must be larger than the current content size.
+    void UpdateContentSizeFromProgress(uint64_t new_content_size);
+
    private:
     friend class ContentSizeManager;
 
@@ -140,7 +147,8 @@ class ContentSizeManager {
     ContentSizeManager* parent_ = nullptr;
     OperationType type_;
 
-    // Holds the target size. For appends, this holds the append size.
+    // Holds the target size. For appends, this will only be valid once the operation is at the head
+    // of the queue.
     uint64_t size_;
 
     Event ready_event_;
@@ -168,8 +176,9 @@ class ContentSizeManager {
   // Notes:
   //  * This function may block until other conflicting operations complete.
   //  * This function may drop and reacquire the lock guarded by `lock_guard`.
-  zx_status_t BeginAppendLocked(uint64_t append_size, Guard<Mutex>* lock_guard,
-                                uint64_t* out_new_content_size, Operation* out_op) TA_REQ(lock_);
+  //  * `append_size` must be greater than 0.
+  zx_status_t BeginAppendLocked(uint64_t append_size, Guard<Mutex>* lock_guard, Operation* out_op)
+      TA_REQ(lock_);
 
   // Marks and registers the beginning of a write operation.
   //
