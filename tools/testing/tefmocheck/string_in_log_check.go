@@ -239,7 +239,9 @@ func fuchsiaLogChecks() []FailureModeCheck {
 		// For devices which, typically as a result of wear, fail to read any copy of the
 		// sys_config partition, give up on booting the intended slot, boot the R slot, and
 		// severely confuse anyone who was expecting that to be something else.
-		&stringInLogCheck{String: "sys_config: ERROR failed to read any copy", Type: serialLogType},
+		// Skip if the task passed; we aim to tolerate failing ECC until we are failing
+		// tasks as a result.
+		&stringInLogCheck{String: "sys_config: ERROR failed to read any copy", Type: serialLogType, SkipPassedTask: true},
 	}
 
 	oopsExceptBlocks := []*logBlock{
