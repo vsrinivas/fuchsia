@@ -133,7 +133,12 @@ func (c *Client) LocalAddr() net.Addr {
 	defer c.mu.Unlock()
 	c.conn.mu.Lock()
 	defer c.conn.mu.Unlock()
-	return c.conn.mu.client.LocalAddr()
+	client := c.conn.mu.client
+	var addr net.Addr
+	if client != nil {
+		addr = c.conn.mu.client.LocalAddr()
+	}
+	return addr
 }
 
 // NewSFTPClient returns an SFTP client that uses the currently underlying

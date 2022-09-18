@@ -259,7 +259,11 @@ func (t *target) AddPackageRepository(client *sshutil.Client, repoURL, blobURL s
 	localhost := strings.Contains(repoURL, localhostPlaceholder) || strings.Contains(blobURL, localhostPlaceholder)
 	lScopedRepoURL := repoURL
 	if localhost {
-		host := localScopedLocalHost(client.LocalAddr().String())
+		localAddr := client.LocalAddr()
+		if localAddr == nil {
+			return fmt.Errorf("failed to get local addr for ssh client")
+		}
+		host := localScopedLocalHost(localAddr.String())
 		lScopedRepoURL = strings.Replace(repoURL, localhostPlaceholder, host, 1)
 		logger.Infof(t.targetCtx, "local-scoped package repository address: %s\n", lScopedRepoURL)
 	}
