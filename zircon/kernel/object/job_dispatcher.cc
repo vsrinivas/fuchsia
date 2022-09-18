@@ -393,39 +393,54 @@ bool JobDispatcher::Kill(int64_t return_code) {
   JobList jobs_to_kill;
   ProcessList procs_to_kill;
 
-  bool should_die = false;
-  {
-    Guard<CriticalMutex> guard{get_lock()};
-    if (state_ != State::READY)
-      return false;
+  // Helper that transitions the given job to the KILLING state and adds the children to *_to_kill
+  // lists for further cleanup.
+  auto kill = [&jobs_to_kill, &procs_to_kill, return_code](JobDispatcher* job) {
+    bool should_die = false;
+    {
+      Guard<CriticalMutex> guard{job->get_lock()};
+      if (job->state_ != State::READY)
+        return false;
 
-    return_code_ = return_code;
-    state_ = State::KILLING;
-    __UNUSED zx_status_t result;
+      job->return_code_ = return_code;
+      job->state_ = State::KILLING;
+      __UNUSED zx_status_t result;
 
-    // Gather the refs for our children. We can use |ForEachChildKeepAliveInLocked| since we will be
-    // recording and keeping alive the RefPtrs in the callback in the *_to_kill lists.
-    result = TakeEachChildLocked(jobs_, [&jobs_to_kill](fbl::RefPtr<JobDispatcher>&& job) {
-      jobs_to_kill.push_front(ktl::move(job));
-      return ZX_OK;
-    });
-    DEBUG_ASSERT(result == ZX_OK);
-    result = TakeEachChildLocked(procs_, [&procs_to_kill](fbl::RefPtr<ProcessDispatcher>&& proc) {
-      procs_to_kill.push_front(ktl::move(proc));
-      return ZX_OK;
-    });
-    DEBUG_ASSERT(result == ZX_OK);
+      // Gather the refs for our children. We can use |TakeEachChildLocked| since we will be
+      // recording and keeping alive the RefPtrs in the callback in the *_to_kill lists.
+      result =
+          job->TakeEachChildLocked(job->jobs_, [&jobs_to_kill](fbl::RefPtr<JobDispatcher>&& job) {
+            jobs_to_kill.push_front(ktl::move(job));
+            return ZX_OK;
+          });
+      DEBUG_ASSERT(result == ZX_OK);
+      result = job->TakeEachChildLocked(job->procs_,
+                                        [&procs_to_kill](fbl::RefPtr<ProcessDispatcher>&& proc) {
+                                          procs_to_kill.push_front(ktl::move(proc));
+                                          return ZX_OK;
+                                        });
+      DEBUG_ASSERT(result == ZX_OK);
 
-    should_die = IsReadyForDeadTransitionLocked();
+      should_die = job->IsReadyForDeadTransitionLocked();
+    }
+
+    if (should_die)
+      job->FinishDeadTransitionUnlocked();
+    return true;
+  };
+
+  // First transition our 'root' Job that into the KILLING state. If this cannot be done then we
+  // consider the Kill to have failed, otherwise it succeeds and we clean all the children up.
+  if (!kill(this)) {
+    DEBUG_ASSERT(jobs_to_kill.is_empty());
+    DEBUG_ASSERT(procs_to_kill.is_empty());
+    return false;
   }
-
-  if (should_die)
-    FinishDeadTransitionUnlocked();
 
   // Since we kill the child jobs first we have a depth-first massacre.
   while (!jobs_to_kill.is_empty()) {
-    // TODO(cpu): This recursive call can overflow the stack.
-    jobs_to_kill.pop_front()->Kill(return_code);
+    fbl::RefPtr<JobDispatcher> job = jobs_to_kill.pop_front();
+    kill(&*job);
   }
 
   while (!procs_to_kill.is_empty()) {
