@@ -225,13 +225,21 @@ func (p *PackageServer) Close() error {
 	if p.downloadManifestPath != "" {
 		p.c.writeDownloadManifest(p.downloadManifestPath)
 	}
+	// Calculate the bandwidth of package serving when the package server has
+	// to fetch blobs from GCS.
+	gcsFetchBandwidth := float64(p.c.totalBytesFetched) / p.c.gcsFetchTimeSec
+	// Calculate the bandwidth of package serving when the package server is
+	// serving blobs from disk.
+	localServingBandwitdh := float64(p.c.totalBytesServed-p.c.totalBytesFetched) / (p.c.serveTimeSec - p.c.gcsFetchTimeSec)
 	logger.Debugf(p.loggerCtx, "----------------------------------------------------")
 	logger.Debugf(p.loggerCtx, "Package server data")
 	logger.Debugf(p.loggerCtx, "----------------------------------------------------")
 	logger.Debugf(p.loggerCtx, "Total data served (bytes): %d", p.c.totalBytesServed)
 	logger.Debugf(p.loggerCtx, "Total time spent serving (seconds): %f", p.c.serveTimeSec)
+	logger.Debugf(p.loggerCtx, "Bandwidth using local package serving (bytes per second): %f", localServingBandwitdh)
 	logger.Debugf(p.loggerCtx, "Total data fetched from GCS (bytes): %d", p.c.totalBytesFetched)
 	logger.Debugf(p.loggerCtx, "Total time spent downloading from GCS (seconds): %f", p.c.gcsFetchTimeSec)
+	logger.Debugf(p.loggerCtx, "Bandwidth using GCS downloads (bytes per second): %f", gcsFetchBandwidth)
 	logger.Debugf(p.loggerCtx, "----------------------------------------------------")
 	return p.srv.Close()
 }
