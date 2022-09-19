@@ -5,13 +5,13 @@
 #include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
 #include <lib/async-testing/test_loop.h>
 #include <lib/driver2/logger.h>
+#include <lib/driver_compat/symbols.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <fbl/ref_ptr.h>
 #include <gtest/gtest.h>
 
 #include "sdk/lib/driver_runtime/testing/loop_fixture/test_loop_fixture.h"
-#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/device.h"
 #include "src/devices/misc/drivers/compat/driver.h"
 

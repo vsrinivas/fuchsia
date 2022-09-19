@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "device-watcher:tests",
     "driver2:tests",
+    "driver_compat:tests",
     "driver_test_realm:tests",
     "fdio:tests",
     "file-lock:tests",

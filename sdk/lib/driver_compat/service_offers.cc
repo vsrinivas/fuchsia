@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/devices/lib/compat/service_offers.h"
-
 #include <lib/driver2/node_add_args.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/driver_compat/service_offers.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 namespace compat {
 
@@ -27,7 +26,7 @@ zx_status_t ServiceOffersV1::Serve(async_dispatcher_t* dispatcher,
   // via the offer.
   for (const auto& service_name : offers_) {
     const auto instance_path = std::string("svc/").append(service_name).append("/default");
-    auto client = service::ConnectAt<fuchsia_io::Directory>(dir_, instance_path.c_str());
+    auto client = component::ConnectAt<fuchsia_io::Directory>(dir_, instance_path.c_str());
     if (client.is_error()) {
       return client.status_value();
     }
@@ -49,7 +48,7 @@ zx_status_t ServiceOffersV1::Serve(async_dispatcher_t* dispatcher,
   // via the offer.
   for (const auto& service_name : offers_) {
     const auto instance_path = std::string("svc/").append(service_name).append("/default");
-    auto client = service::ConnectAt<fuchsia_io::Directory>(dir_, instance_path.c_str());
+    auto client = component::ConnectAt<fuchsia_io::Directory>(dir_, instance_path.c_str());
     if (client.is_error()) {
       return client.status_value();
     }

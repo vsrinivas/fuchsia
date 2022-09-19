@@ -104,7 +104,7 @@ def main():
         manifest["include"] = [
             'inspect/client.shard.cml',
             'syslog/client.shard.cml',
-            '//src/devices/lib/compat/compat.shard.cml',
+            '//sdk/lib/driver_compat/compat.shard.cml',
         ]
     else:
         manifest["program"]["binary"] = program

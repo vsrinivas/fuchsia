@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/binding_priv.h>
 #include <lib/driver2/node_add_args.h>
+#include <lib/driver_compat/symbols.h>
 #include <lib/fdf/cpp/protocol.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/bridge.h>
@@ -17,7 +18,6 @@
 #include <zircon/errors.h>
 
 #include "driver.h"
-#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/composite.h"
 
 namespace fdf {

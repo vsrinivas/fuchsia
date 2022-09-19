@@ -2,16 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_COMPAT_DEVICE_SERVER_H_
-#define SRC_DEVICES_LIB_COMPAT_DEVICE_SERVER_H_
+#ifndef LIB_DRIVER_COMPAT_DEVICE_SERVER_H_
+#define LIB_DRIVER_COMPAT_DEVICE_SERVER_H_
 
 #include <fidl/fuchsia.component.decl/cpp/wire.h>
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <lib/driver2/handlers.h>
 #include <lib/driver2/outgoing_directory.h>
+#include <lib/driver_compat/service_offers.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
-
-#include "src/devices/lib/compat/service_offers.h"
 
 namespace compat {
 
@@ -35,9 +34,11 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
   zx_status_t GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual);
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
 
+  // Serve this interface in an outgoing directory.
   zx_status_t Serve(async_dispatcher_t* dispatcher, component::OutgoingDirectory* outgoing);
   zx_status_t Serve(async_dispatcher_t* dispatcher, driver::OutgoingDirectory* outgoing);
 
+  // Create offers to offer this interface to another component.
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
 
   std::string_view name() const { return name_; }
@@ -62,4 +63,4 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
 
 }  // namespace compat
 
-#endif  // SRC_DEVICES_LIB_COMPAT_DEVICE_SERVER_H_
+#endif  // LIB_DRIVER_COMPAT_DEVICE_SERVER_H_

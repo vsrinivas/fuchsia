@@ -32,8 +32,8 @@ fuchsia_driver("root_driver") {
   deps = [
     ":root_bind",
     "//sdk/lib/driver2:cpp-promise",
+    "//sdk/lib/driver_compat",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
-    "//src/devices/lib/compat",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//zircon/system/ulib/async:async-cpp",

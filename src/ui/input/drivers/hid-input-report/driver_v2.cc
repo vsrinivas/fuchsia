@@ -7,12 +7,12 @@
 #include <lib/ddk/debug.h>
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/driver2_cpp.h>
+#include <lib/driver_compat/compat.h>
+#include <lib/driver_compat/symbols.h>
 #include <lib/inspect/component/cpp/component.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <zircon/errors.h>
 
-#include "src/devices/lib/compat/compat.h"
-#include "src/devices/lib/compat/symbols.h"
 #include "src/ui/input/drivers/hid-input-report/input-report.h"
 
 namespace fdf2 = fuchsia_driver_framework;

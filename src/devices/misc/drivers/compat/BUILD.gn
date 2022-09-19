@@ -35,7 +35,7 @@ source_set("lib") {
     "sysmem.cc",
     "sysmem.h",
   ]
-  deps = [ "//src/devices/lib/compat" ]
+  deps = [ "//sdk/lib/driver_compat" ]
   public_deps = [
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
@@ -164,9 +164,9 @@ executable("unittests") {
     ":lib",
     ":test-firmware-file",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp_wire_testing",
+    "//sdk/lib/driver_compat",
     "//sdk/lib/driver_runtime:testing",
     "//sdk/lib/driver_runtime/testing/loop_fixture:gtest",
-    "//src/devices/lib/compat",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//src/testing/fidl:placeholders_cpp_wire",

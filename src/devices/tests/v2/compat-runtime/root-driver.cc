@@ -7,11 +7,10 @@
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
 #include <lib/driver2/driver2_cpp.h>
 #include <lib/driver2/outgoing_directory.h>
+#include <lib/driver_compat/compat.h>
+#include <lib/driver_compat/symbols.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
-
-#include "src/devices/lib/compat/compat.h"
-#include "src/devices/lib/compat/symbols.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

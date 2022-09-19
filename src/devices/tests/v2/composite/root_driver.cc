@@ -10,11 +10,11 @@
 #include <lib/driver2/node_add_args.h>
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
+#include <lib/driver_compat/compat.h>
 #include <lib/fpromise/scope.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 
-#include "src/devices/lib/compat/compat.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 

@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/driver_compat/connect.h>
 #include <lib/fdio/directory.h>
 
 #include <memory>
@@ -11,7 +12,6 @@
 #include <fbl/ref_ptr.h>
 #include <zxtest/zxtest.h>
 
-#include "src/devices/lib/compat/connect.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/pseudo_file.h"

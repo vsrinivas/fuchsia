@@ -14,6 +14,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-testing/test_loop.h>
+#include <lib/driver_compat/symbols.h>
 #include <lib/fdf/testing.h>
 #include <lib/fdio/directory.h>
 #include <lib/fit/defer.h>
@@ -24,7 +25,6 @@
 #include <mock-boot-arguments/server.h>
 
 #include "sdk/lib/driver_runtime/testing/loop_fixture/test_loop_fixture.h"
-#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/v1_test.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

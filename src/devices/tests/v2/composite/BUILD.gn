@@ -31,8 +31,8 @@ fuchsia_driver("root_driver") {
     ":root_bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
     "//sdk/lib/driver2:cpp-promise",
+    "//sdk/lib/driver_compat",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
-    "//src/devices/lib/compat",
     "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/service:service-llcpp",
   ]

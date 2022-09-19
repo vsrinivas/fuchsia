@@ -10,12 +10,12 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/driver2_cpp.h>
+#include <lib/driver_compat/compat.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fpromise/scope.h>
 
 #include <unordered_set>
 
-#include "src/devices/lib/compat/compat.h"
 #include "src/devices/misc/drivers/compat/device.h"
 #include "src/devices/misc/drivers/compat/sysmem.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

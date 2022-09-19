@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire_test_base.h>
 #include <fidl/test.placeholders/cpp/wire.h>
 #include <lib/ddk/metadata.h>
+#include <lib/driver_compat/symbols.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/transaction.h>
 
@@ -18,7 +19,6 @@
 #include "lib/ddk/debug.h"
 #include "lib/ddk/device.h"
 #include "lib/ddk/driver.h"
-#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/driver.h"
 #include "src/lib/storage/vfs/cpp/service.h"

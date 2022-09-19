@@ -3,9 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
 
-source_set("compat") {
+sdk_source_set("driver_compat") {
+  category = "experimental"
+  sdk_name = "driver_compat"
+  include_base = "//sdk"
   sources = [
     "compat.h",
     "connect.cc",
@@ -16,12 +20,11 @@ source_set("compat") {
     "service_offers.h",
     "symbols.h",
   ]
+
   public_deps = [
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp_wire",
     "//sdk/lib/driver2:cpp",
-    "//sdk/lib/driver2:devfs_exporter",
     "//sdk/lib/sys/component/cpp",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
@@ -29,7 +32,7 @@ test("test") {
   output_name = "compat-lib-test"
   sources = [ "test.cc" ]
   deps = [
-    ":compat",
+    ":driver_compat",
     "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

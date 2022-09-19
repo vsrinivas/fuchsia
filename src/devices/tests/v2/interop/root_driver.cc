@@ -10,15 +10,14 @@
 #include <lib/driver2/node_add_args.h>
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
+#include <lib/driver_compat/compat.h>
+#include <lib/driver_compat/symbols.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/result.h>
 #include <lib/fpromise/scope.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
-
-#include "src/devices/lib/compat/compat.h"
-#include "src/devices/lib/compat/symbols.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

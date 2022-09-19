@@ -10,6 +10,7 @@
 #include <lib/driver2/promise.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/driver2/start_args.h>
+#include <lib/driver_compat/connect.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/promise.h>
@@ -17,7 +18,6 @@
 #include <lib/service/llcpp/service.h>
 #include <zircon/dlfcn.h>
 
-#include "src/devices/lib/compat/connect.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/devices/misc/drivers/compat/loader.h"
 

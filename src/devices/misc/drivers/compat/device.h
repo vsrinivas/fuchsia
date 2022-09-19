@@ -13,6 +13,8 @@
 #include <lib/ddk/driver.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/runtime_connector_impl.h>
+#include <lib/driver_compat/compat.h>
+#include <lib/driver_compat/symbols.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
@@ -24,8 +26,6 @@
 
 #include <fbl/intrusive_double_list.h>
 
-#include "src/devices/lib/compat/compat.h"
-#include "src/devices/lib/compat/symbols.h"
 #include "src/devices/misc/drivers/compat/devfs_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 

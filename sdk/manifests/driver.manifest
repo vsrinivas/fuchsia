@@ -35,6 +35,7 @@ sdk://pkg/async-cpp
 sdk://pkg/async-default
 sdk://pkg/driver2-record
 sdk://pkg/driver2_cpp
+sdk://pkg/driver_compat
 sdk://pkg/driver_runtime
 sdk://pkg/driver_runtime_cpp
 sdk://pkg/driver_runtime_shared_lib
