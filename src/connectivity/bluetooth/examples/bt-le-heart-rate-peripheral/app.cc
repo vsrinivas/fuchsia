@@ -10,6 +10,8 @@
 #include <functional>
 #include <iostream>
 
+#include <src/lib/fxl/strings/string_printf.h>
+
 #include "heart_model.h"
 
 namespace ble = fuchsia::bluetooth::le;
@@ -26,14 +28,6 @@ App::App(std::unique_ptr<HeartModel> heart_model)
 
   peripheral_ = context_->svc()->Connect<ble::Peripheral>();
   FX_DCHECK(peripheral_);
-  peripheral_.events().OnPeerConnected = fit::bind_member(this, &App::OnPeerConnected);
-
-  adv_handle_.set_error_handler([](zx_status_t s) {
-    std::cout << "LE advertising was stopped: " << zx_status_get_string(s) << std::endl;
-  });
-  connection_.set_error_handler([](zx_status_t s) {
-    std::cout << "connection to peer dropped: " << zx_status_get_string(s) << std::endl;
-  });
 }
 
 void App::StartAdvertising() {
@@ -44,14 +38,16 @@ void App::StartAdvertising() {
   ad.set_service_uuids({{uuid}});
 
   ble::AdvertisingParameters params;
-  params.set_connectable(true);
+  params.set_connection_options(ble::ConnectionOptions());
   params.set_data(std::move(ad));
   params.set_mode_hint(ble::AdvertisingModeHint::FAST);
 
-  peripheral_->StartAdvertising(std::move(params), adv_handle_.NewRequest(), [](auto result) {
-    if (result.is_err()) {
-      std::cout << "StartAdvertising failed: ";
-      switch (result.err()) {
+  fidl::InterfaceHandle<ble::AdvertisedPeripheral> handle;
+  advertised_peripheral_.emplace(this, handle.NewRequest());
+  peripheral_->Advertise(std::move(params), std::move(handle), [](auto stopped_result) {
+    if (stopped_result.is_err()) {
+      std::cout << "Advertise error: ";
+      switch (stopped_result.err()) {
         case ble::PeripheralError::NOT_SUPPORTED:
           std::cout << "not supported";
           break;
@@ -70,16 +66,36 @@ void App::StartAdvertising() {
           break;
       }
       std::cout << std::endl;
-    } else {
-      std::cout << "started advertising" << std::endl;
     }
+  });
+
+  std::cout << "started advertising" << std::endl;
+}
+
+App::AdvertisedPeripheral::AdvertisedPeripheral(
+    App* app, fidl::InterfaceRequest<ble::AdvertisedPeripheral> request)
+    : app_(app), binding_(this, std::move(request)) {
+  binding_.set_error_handler([this](zx_status_t status) {
+    std::cout << "advertising stopped with status: " << zx_status_get_string(status) << std::endl;
+    app_->advertised_peripheral_.reset();
   });
 }
 
-void App::OnPeerConnected(fuchsia::bluetooth::le::Peer peer,
-                          fidl::InterfaceHandle<fuchsia::bluetooth::le::Connection> handle) {
-  std::cout << "received connection from peer (id: " << peer.id().value << ")" << std::endl;
-  connection_.Bind(std::move(handle));
+void App::AdvertisedPeripheral::OnConnected(
+    fuchsia::bluetooth::le::Peer peer,
+    fidl::InterfaceHandle<fuchsia::bluetooth::le::Connection> connection,
+    OnConnectedCallback callback) {
+  std::string peer_id = fxl::StringPrintf("%.16lx", peer.id().value);
+  std::cout << "received connection (peer: " << peer_id << ")" << std::endl;
+
+  app_->connection_.Bind(std::move(connection));
+
+  app_->connection_.set_error_handler([peer_id](zx_status_t status) {
+    std::cout << "connection to peer " << peer_id
+              << " closed with status: " << zx_status_get_string(status) << std::endl;
+  });
+
+  callback();
 }
 
 }  // namespace bt_le_heart_rate

@@ -28,8 +28,20 @@ class App final {
  private:
   static constexpr char kDeviceName[] = "FX BLE Heart Rate";
 
-  void OnPeerConnected(fuchsia::bluetooth::le::Peer,
-                       fidl::InterfaceHandle<fuchsia::bluetooth::le::Connection>);
+  // Server for an active advertisement.
+  class AdvertisedPeripheral final : fuchsia::bluetooth::le::AdvertisedPeripheral {
+   public:
+    AdvertisedPeripheral(
+        App* app, fidl::InterfaceRequest<fuchsia::bluetooth::le::AdvertisedPeripheral> request);
+
+    void OnConnected(fuchsia::bluetooth::le::Peer peer,
+                     fidl::InterfaceHandle<fuchsia::bluetooth::le::Connection> connection,
+                     OnConnectedCallback callback) override;
+
+   private:
+    App* app_;
+    fidl::Binding<fuchsia::bluetooth::le::AdvertisedPeripheral> binding_;
+  };
 
   // Application
   std::unique_ptr<sys::ComponentContext> context_;
@@ -42,7 +54,9 @@ class App final {
 
   // Proxy to the le.Peripheral service which we use for advertising to solicit connections.
   fuchsia::bluetooth::le::PeripheralPtr peripheral_;
-  fidl::InterfacePtr<fuchsia::bluetooth::le::AdvertisingHandle> adv_handle_;
+
+  // Server for active advertisement.
+  std::optional<AdvertisedPeripheral> advertised_peripheral_;
 
   // Connection from a peer that connected to our advertisement.
   fidl::InterfacePtr<fuchsia::bluetooth::le::Connection> connection_;
