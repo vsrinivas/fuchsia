@@ -14,6 +14,7 @@ rustc_library("lib") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings_rust",
     "//sdk/fidl/fuchsia.ui.activity:fuchsia.ui.activity_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -32,6 +33,7 @@ rustc_library("lib") {
   sources = [
     "src/lib.rs",
     "src/mocks/activity_service.rs",
+    "src/mocks/input_settings_service.rs",
     "src/mocks/mod.rs",
   ]
 }
