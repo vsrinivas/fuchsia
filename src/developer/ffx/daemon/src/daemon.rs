@@ -410,8 +410,13 @@ impl Daemon {
         // Start the ascendd socket only after we have registered our protocols.
         tracing::info!("Starting ascendd");
 
+        let client_routing = false; // Don't route between ffx clients
         let ascendd = Ascendd::new(
-            ascendd::Opt { sockpath: Some(self.socket_path.clone()), ..Default::default() },
+            ascendd::Opt {
+                sockpath: Some(self.socket_path.clone()),
+                client_routing,
+                ..Default::default()
+            },
             &hoist,
             // TODO: this just prints serial output to stdout - ffx probably wants to take a more
             // nuanced approach here.

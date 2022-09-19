@@ -56,7 +56,7 @@ use rand::Rng;
 use std::{
     collections::{btree_map, BTreeMap, HashMap},
     convert::TryInto,
-    sync::atomic::{AtomicU32, AtomicU64, Ordering},
+    sync::atomic::{AtomicBool, AtomicU32, AtomicU64, Ordering},
     sync::{Arc, Weak},
     task::{Context, Poll, Waker},
     time::Duration,
@@ -251,6 +251,14 @@ impl Drop for ConnectingLinkToken {
     }
 }
 
+/// Whether this node's ascendd clients should be routed to each other
+pub enum AscenddClientRouting {
+    /// Ascendd client routing is allowed
+    Enabled,
+    /// Ascendd client routing is prevented
+    Disabled,
+}
+
 /// Router maintains global state for one node_id.
 /// `LinkData` is a token identifying a link for layers above Router.
 /// `Time` is a representation of time for the Router, to assist injecting different platforms
@@ -271,6 +279,8 @@ pub struct Router {
     task: Mutex<Option<Task<()>>>,
     connecting_links: AtomicU64,
     implementation: AtomicU32,
+    /// Hack to prevent the n^2 scaling of a fully-connected graph of ffxs
+    ascendd_client_routing: AtomicBool,
 }
 
 struct ProxiedHandle {
@@ -334,6 +344,8 @@ impl Router {
             implementation: AtomicU32::new(
                 options.diagnostics.unwrap_or(Implementation::Unknown).into_primitive(),
             ),
+            // Default is to route all clients to each other. Ffx daemon disabled client routing.
+            ascendd_client_routing: AtomicBool::new(true),
         });
 
         let link_state_observable = Observable::new(BTreeMap::new());
@@ -387,9 +399,14 @@ impl Router {
     ) -> Result<(), Error> {
         tracing::info!(debug_id = ?routing.debug_id(), "publish link");
         self.links.lock().await.insert(routing.id(), Arc::downgrade(&routing));
+        let client_type = if routing.is_ascendd_client() {
+            routes::ClientType::Ascendd
+        } else {
+            routes::ClientType::Other
+        };
         self.link_state_publisher
             .clone()
-            .send((routing.id(), routing.peer_node_id(), rtt_observer))
+            .send((routing.id(), routing.peer_node_id(), client_type, rtt_observer))
             .await?;
         drop(connecting_link_token);
         Ok(())
@@ -415,6 +432,24 @@ impl Router {
     /// Setter for the Implementation of this router.
     pub fn set_implementation(&self, imp: Implementation) {
         self.implementation.store(imp.into_primitive(), std::sync::atomic::Ordering::SeqCst)
+    }
+
+    /// Accessor for whether to route ascendd clients to each other
+    pub fn client_routing(&self) -> AscenddClientRouting {
+        if self.ascendd_client_routing.load(std::sync::atomic::Ordering::SeqCst) {
+            AscenddClientRouting::Enabled
+        } else {
+            AscenddClientRouting::Disabled
+        }
+    }
+
+    /// Setter for whether to route ascendd clients to each other
+    pub fn set_client_routing(&self, client_routing: AscenddClientRouting) {
+        let client_routing = match client_routing {
+            AscenddClientRouting::Enabled => true,
+            AscenddClientRouting::Disabled => false,
+        };
+        self.ascendd_client_routing.store(client_routing, std::sync::atomic::Ordering::SeqCst);
     }
 
     pub(crate) fn service_map(&self) -> &ServiceMap {

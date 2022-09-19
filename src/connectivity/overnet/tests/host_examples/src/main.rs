@@ -526,6 +526,13 @@ mod tests {
             Ok(())
         })
     }
+
+    // TODO (fxb/109641): Add "no client routing" test. Currently difficult
+    // because to test it, we would want to be able to time-out on a
+    // child, which means either using the "wait_timeout" crate (which
+    // doesn't have global visibility from 3p/rust_crates), or building
+    // two clients internally instead of invoking external processes
+    // which may be possible now that HOIST is no longer a global variable.
 }
 
 #[derive(Clone, Copy)]

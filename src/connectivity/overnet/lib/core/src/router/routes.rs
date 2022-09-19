@@ -44,6 +44,26 @@ impl ForwardingTable {
         }
     }
 
+    pub(crate) fn filter_out_clients(self) -> ForwardingTable {
+        ForwardingTable {
+            table: Arc::new(
+                self.table
+                    .iter()
+                    .filter(
+                        |(_, metrics)| {
+                            if let ClientType::Other = metrics.client_type {
+                                true
+                            } else {
+                                false
+                            }
+                        },
+                    )
+                    .map(|(destination, metrics)| (*destination, metrics.clone()))
+                    .collect(),
+            ),
+        }
+    }
+
     pub(crate) fn is_significantly_different_to(&self, other: &Self) -> bool {
         if !self.table.keys().eq(other.table.keys()) {
             return true;
@@ -81,10 +101,17 @@ fn score_rtt(rtt: Option<Duration>) -> impl PartialOrd {
     rtt.map(|d| -d.as_secs_f32())
 }
 
+#[derive(Clone, Copy, Debug)]
+pub(crate) enum ClientType {
+    Ascendd,
+    Other,
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct LinkMetrics {
     pub round_trip_time: Option<Duration>,
     pub node_link_id: NodeLinkId,
+    pub client_type: ClientType,
 }
 
 impl LinkMetrics {
@@ -98,6 +125,7 @@ pub(crate) struct Metrics {
     round_trip_time: Option<Duration>,
     intermediate_hops: Vec<NodeId>,
     node_link_id: NodeLinkId,
+    client_type: ClientType,
 }
 
 impl From<&Metrics> for RouteMetrics {
@@ -118,6 +146,7 @@ impl From<&LinkMetrics> for Metrics {
             round_trip_time: metrics.round_trip_time,
             intermediate_hops: Vec::new(),
             node_link_id: metrics.node_link_id,
+            client_type: metrics.client_type,
         }
     }
 }
@@ -130,6 +159,7 @@ impl Metrics {
             round_trip_time: received.round_trip_time.zip(link.round_trip_time).map(|(a, b)| a + b),
             node_link_id: link.node_link_id,
             intermediate_hops,
+            client_type: ClientType::Other, // We only care about direct links to ffx clients; don't update this indirect route
         }
     }
 
@@ -286,11 +316,19 @@ mod test {
             .edit(|db| {
                 db.links.insert(
                     NodeId(NODE_ID),
-                    LinkMetrics { round_trip_time: None, node_link_id: NodeLinkId(NODE_LINK_ID) },
+                    LinkMetrics {
+                        round_trip_time: None,
+                        node_link_id: NodeLinkId(NODE_LINK_ID),
+                        client_type: ClientType::Other,
+                    },
                 );
                 db.links.insert(
                     NodeId(UNRELATED_NODE_ID),
-                    LinkMetrics { round_trip_time: None, node_link_id: NodeLinkId(NODE_LINK_ID) },
+                    LinkMetrics {
+                        round_trip_time: None,
+                        node_link_id: NodeLinkId(NODE_LINK_ID),
+                        client_type: ClientType::Other,
+                    },
                 );
                 db.routes.push(Route {
                     destination: NodeId(FOREIGN_NODE_ID),
@@ -314,7 +352,11 @@ mod test {
         let mut updated = BTreeMap::new();
         updated.insert(
             NodeId(UNRELATED_NODE_ID),
-            LinkMetrics { round_trip_time: None, node_link_id: NodeLinkId(NODE_LINK_ID) },
+            LinkMetrics {
+                round_trip_time: None,
+                node_link_id: NodeLinkId(NODE_LINK_ID),
+                client_type: ClientType::Other,
+            },
         );
 
         let link_state = Observable::new(updated);

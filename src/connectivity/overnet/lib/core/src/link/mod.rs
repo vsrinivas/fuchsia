@@ -15,7 +15,7 @@ use crate::{
     coding::{self, decode_fidl_with_context, encode_fidl_with_context},
     future_help::{log_errors, Observable, Observer},
     labels::{NodeId, NodeLinkId},
-    router::{ConnectingLinkToken, ForwardingTable, Router},
+    router::{AscenddClientRouting, ConnectingLinkToken, ForwardingTable, Router},
 };
 use anyhow::{bail, format_err, Context as _, Error};
 use cutex::{AcquisitionPredicate, Cutex, CutexGuard, CutexTicket};
@@ -23,8 +23,8 @@ use fidl_fuchsia_net::{
     Ipv4Address, Ipv4SocketAddress, Ipv6Address, Ipv6SocketAddress, SocketAddress,
 };
 use fidl_fuchsia_overnet_protocol::{
-    LinkControlFrame, LinkControlMessage, LinkControlPayload, LinkDiagnosticInfo, LinkIntroduction,
-    Route, SetRoute,
+    LinkConfig, LinkControlFrame, LinkControlMessage, LinkControlPayload, LinkDiagnosticInfo,
+    LinkIntroduction, Route, SetRoute,
 };
 use fuchsia_async::{Task, TimeoutExt, Timer};
 use futures::{
@@ -535,6 +535,7 @@ async fn run_link_inner(
         debug_id = ?output.debug_id(),
         "perform link handshake"
     );
+    let client_routing = get_router()?.client_routing();
     let (peer_node_id, _peer_introduction_facts) =
         link_handshake(&output, &mut input, introduction_facts).await?;
     tracing::trace!(
@@ -555,7 +556,13 @@ async fn run_link_inner(
             connecting_link_token,
         ),
         publish_rtt(output.clone(), rtt_observable),
-        send_state(output, peer_node_id, forwarding_table, forwarding_forwarding_table),
+        send_state(
+            output,
+            peer_node_id,
+            forwarding_table,
+            forwarding_forwarding_table,
+            client_routing,
+        ),
         process_control(input, peer_node_id, router),
     )
     .await
@@ -694,6 +701,7 @@ async fn send_state(
     peer_node_id: NodeId,
     mut forwarding_table: Observer<ForwardingTable>,
     forwarding_forwarding_table: Arc<Mutex<ForwardingTable>>,
+    client_routing: AscenddClientRouting,
 ) -> Result<(), Error> {
     let mut last_emitted = ForwardingTable::empty();
     loop {
@@ -710,7 +718,13 @@ async fn send_state(
         );
         *forwarding_forwarding_table.lock().await = forwarding_table.clone();
         // Remove any routes that would cause a loop to form.
-        let forwarding_table = forwarding_table.filter_out_via(peer_node_id);
+        let mut forwarding_table = forwarding_table.filter_out_via(peer_node_id);
+        if let AscenddClientRouting::Disabled = client_routing {
+            // Remove any routes from one ascendd client to another
+            if output.is_ascendd_client() {
+                forwarding_table = forwarding_table.filter_out_clients();
+            }
+        }
         // Only send an update if the delta is 'significant' -- either routes have changed,
         // or metrics have changed so significantly that downstream routes are likely to need
         // to be updated (this is a heuristic).
@@ -766,6 +780,13 @@ impl LinkOutput {
 
     pub(crate) async fn is_closed(&self) -> bool {
         !self.queue.lock().await.open
+    }
+
+    pub(crate) fn is_ascendd_client(&self) -> bool {
+        match (self.config)() {
+            Some(LinkConfig::AscenddServer(_)) => true,
+            _ => false,
+        }
     }
 
     /// Send a control message to our peer with some payload.
@@ -872,6 +893,10 @@ impl LinkRouting {
 
     pub(crate) async fn is_closed(&self) -> bool {
         self.output.is_closed().await
+    }
+
+    pub(crate) fn is_ascendd_client(&self) -> bool {
+        self.output.is_ascendd_client()
     }
 
     pub(crate) async fn diagnostic_info(&self) -> LinkDiagnosticInfo {

@@ -13,6 +13,7 @@ use fuchsia_async::Task;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use hoist::Hoist;
+use overnet_core::AscenddClientRouting;
 use std::io::{
     ErrorKind::{self, TimedOut},
     Write,
@@ -46,6 +47,12 @@ pub struct Opt {
     /// communicate with them, or a path to a serial device to communicate over *that* device.
     /// If not provided, this will default to 'none'.
     pub serial: Option<String>,
+
+    #[argh(option, long = "client-routing", default = "true")]
+    /// route Ascendd clients to each other. Can be turned off to avoid scaling issues
+    /// when multiple ffxs are run concurrently, with no requirement to have
+    /// them interact. (Normally set to false iff run as ffx daemon.)
+    pub client_routing: bool,
 }
 
 #[derive(Debug)]
@@ -59,9 +66,17 @@ impl Ascendd {
         hoist: &Hoist,
         stdout: impl AsyncWrite + Unpin + Send + 'static,
     ) -> Result<Self, Error> {
-        let (sockpath, serial, incoming) = bind_listener(opt, hoist).await?;
-        let task = Task::spawn(run_ascendd(hoist.clone(), sockpath, serial, incoming, stdout));
-        Ok(Self { task })
+        let (sockpath, serial, client_routing, incoming) = bind_listener(opt, hoist).await?;
+        Ok(Self {
+            task: Task::spawn(run_ascendd(
+                hoist.clone(),
+                sockpath,
+                serial,
+                incoming,
+                client_routing,
+                stdout,
+            )),
+        })
     }
 }
 
@@ -95,12 +110,16 @@ pub fn run_stream<'a>(
     run_stream_link(node, rx, tx, Default::default(), config)
 }
 
-async fn bind_listener(opt: Opt, hoist: &Hoist) -> Result<(PathBuf, String, UnixListener), Error> {
-    let Opt { sockpath, serial } = opt;
-
+async fn bind_listener(
+    opt: Opt,
+    hoist: &Hoist,
+) -> Result<(PathBuf, String, AscenddClientRouting, UnixListener), Error> {
+    let Opt { sockpath, serial, client_routing } = opt;
     let sockpath = sockpath.unwrap_or(default_ascendd_path());
     let serial = serial.unwrap_or("none".to_string());
 
+    let client_routing =
+        if client_routing { AscenddClientRouting::Enabled } else { AscenddClientRouting::Disabled };
     tracing::info!(
         node_id = hoist.node().node_id().0,
         "starting ascendd on {}",
@@ -147,7 +166,7 @@ async fn bind_listener(opt: Opt, hoist: &Hoist) -> Result<(PathBuf, String, Unix
     if let Err(e) = write_pidfile(&sockpath, std::process::id()) {
         tracing::warn!("failed to write pidfile alongside {}: {e:?}", sockpath.display());
     }
-    Ok((sockpath, serial, incoming))
+    Ok((sockpath, serial, client_routing, incoming))
 }
 
 /// Writes a pid file alongside the socketpath so we know what pid last successfully tried to
@@ -165,10 +184,12 @@ async fn run_ascendd(
     sockpath: PathBuf,
     serial: String,
     incoming: UnixListener,
+    client_routing: AscenddClientRouting,
     stdout: impl AsyncWrite + Unpin + Send,
 ) -> Result<(), Error> {
     let node = hoist.node();
     node.set_implementation(fidl_fuchsia_overnet_protocol::Implementation::Ascendd);
+    node.set_client_routing(client_routing);
 
     tracing::info!("ascendd listening to socket {}", sockpath.display());
 

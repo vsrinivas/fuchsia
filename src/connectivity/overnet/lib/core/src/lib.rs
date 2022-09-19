@@ -25,7 +25,7 @@ pub use link::{
     ConfigProducer, LinkIntroductionFacts, LinkReceiver, LinkSender, SendFrame, MAX_FRAME_LENGTH,
 };
 pub use router::security_context::{SecurityContext, SimpleSecurityContext};
-pub use router::{generate_node_id, ListPeersContext, Router, RouterOptions};
+pub use router::{generate_node_id, AscenddClientRouting, ListPeersContext, Router, RouterOptions};
 
 pub use test_util::{test_security_context, NodeIdGenerator};
 
