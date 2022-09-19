@@ -16,14 +16,14 @@ executable("hello_fidl") {
   sources = [ "//tests/package/hello.cc" ]
 }
 
-fuchsia_component("test_fidl_cmx") {
-  manifest = "meta/fidl_component.cmx"
+fuchsia_component("test_fidl_cm") {
+  manifest = "meta/fidl_component.cml"
   data_deps = [ ":hello_fidl" ]
   deps = [ ":hello_fidl" ]
 }
 
 fuchsia_package("static_fidl_test_package") {
-  deps = [ ":test_fidl_cmx" ]
+  deps = [ ":test_fidl_cm" ]
 }
 
 # Copy test script to the output dir. This script is used

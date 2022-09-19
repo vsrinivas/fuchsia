@@ -1,0 +1,6 @@
+{
+    program: {
+        runner: "elf",
+        binary: "hello_fidl",
+    },
+}
