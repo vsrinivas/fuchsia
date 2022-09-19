@@ -12,7 +12,7 @@ rustc_test("echo_client_compiletest") {
   source_root = "src/echo_client_test.rs"
   sources = [
     "src/echo_client_test.rs",
-    "src/lib.rs",
+    "src/testgen.rs",
   ]
   deps = [
     "//examples/components/routing/fidl:echo_rust",

@@ -1,7 +1,7 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::lib::{EchoClientTest, Mocks};
+use crate::testgen::{EchoClientTest, Mocks};
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fidl_examples_routing_echo::*;
@@ -10,7 +10,7 @@ use fuchsia_component::server::ServiceFs;
 use fuchsia_component_test::LocalComponentHandles;
 use futures::{StreamExt, TryStreamExt};
 
-mod lib;
+mod testgen;
 
 #[async_trait]
 impl Mocks for EchoClientTest {

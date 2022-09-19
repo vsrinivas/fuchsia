@@ -58,7 +58,7 @@ if (is_host) {
       "rust_mock/BUILD.gn.golden",
       "rust_mock/meta/echo_client_test.cml.golden",
       "rust_mock/src/echo_client_test.rs.golden",
-      "rust_mock/src/lib.rs.golden",
+      "rust_mock/src/testgen.rs.golden",
     ]
     outputs = [ "${_golden_rust_mock_path}/{{source_file_part}}" ]
   }
@@ -69,7 +69,7 @@ if (is_host) {
       "rust_nomock/BUILD.gn.golden",
       "rust_nomock/meta/echo_server_test.cml.golden",
       "rust_nomock/src/echo_server_test.rs.golden",
-      "rust_nomock/src/lib.rs.golden",
+      "rust_nomock/src/testgen.rs.golden",
     ]
     outputs = [ "${_golden_rust_nomock_path}/{{source_file_part}}" ]
   }

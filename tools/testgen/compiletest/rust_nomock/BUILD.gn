@@ -12,7 +12,7 @@ rustc_test("bin") {
   source_root = "src/echo_server_test.rs"
   sources = [
     "src/echo_server_test.rs",
-    "src/lib.rs",
+    "src/testgen.rs",
   ]
   deps = [
     "//examples/components/routing/fidl:echo_rust",

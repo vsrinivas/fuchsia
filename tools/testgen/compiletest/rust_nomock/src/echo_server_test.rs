@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::lib::EchoServerTest;
-mod lib;
+use crate::testgen::EchoServerTest;
+mod testgen;
 
 #[fuchsia::test]
 async fn test_echomarker() {

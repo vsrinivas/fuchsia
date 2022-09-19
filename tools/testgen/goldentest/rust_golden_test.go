@@ -112,7 +112,7 @@ func compareGolden(t *testing.T) {
 		} else {
 			diff(t, filepath.Join(output, "src/echo_server_test.rs"), filepath.Join(golden_abs, "echo_server_test.rs.golden"))
 		}
-		diff(t, filepath.Join(output, "src/lib.rs"), filepath.Join(golden_abs, "lib.rs.golden"))
+		diff(t, filepath.Join(output, "src/testgen.rs"), filepath.Join(golden_abs, "testgen.rs.golden"))
 	}
 	if *language == "cpp" {
 		diff(t, filepath.Join(output, "src/echo_server_test.cc"), filepath.Join(golden_abs, "echo_server_test.cc.golden"))

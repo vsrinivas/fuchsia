@@ -7,7 +7,7 @@ use crate::cm_parser::read_cm;
 use crate::generate_build::{CppBuildGenerator, RustBuildGenerator};
 use crate::generate_cpp_test::{CppTestCode, CppTestCodeGenerator};
 use crate::generate_manifest::{CppManifestGenerator, RustManifestGenerator};
-use crate::generate_rust_test::{RustLibGenerator, RustTestCode, RustTestCodeGenerator};
+use crate::generate_rust_test::{RustTestCode, RustTestCodeGenerator, RustTestGenGenerator};
 use crate::test_code::{convert_to_snake, CodeGenerator, TestCodeBuilder};
 use ansi_term::Colour::*;
 use anyhow::{format_err, Result};
@@ -198,10 +198,10 @@ fn write_rust(
 
     // Write rust test lib file
     let mut lib_code_dest = code_dest.clone();
-    lib_code_dest.push("lib.rs");
-    let rust_lib_code_generator = RustLibGenerator { code, copyright: !input.nocopyright };
+    lib_code_dest.push("testgen.rs");
+    let rust_lib_code_generator = RustTestGenGenerator { code, copyright: !input.nocopyright };
     println!(
-        "writing lib.rs to {}, {}",
+        "writing testgen.rs to {}, {}",
         lib_code_dest.display(),
         Blue.paint("this file will be regenerated each time, edit with caution!")
     );
