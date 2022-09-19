@@ -79,6 +79,7 @@ Journal::~Journal() {
     return SignalSyncComplete(&completion);
   }));
   sync_completion_wait(&completion, ZX_TIME_INFINITE);
+  executor_.Terminate();
 }
 
 void Journal::FlushPending() {

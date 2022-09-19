@@ -19,7 +19,11 @@ namespace f2fs {
 // F2fs flushes dirty pages when the number of dirty data pages exceeds a half of
 // |kMaxDirtyDataPages|.
 constexpr int kMaxDirtyDataPages = 51200;
-class Writer {
+
+// This class is final because there might be background threads running when its destructor runs
+// and that would be unsafe if this class had overridden virtual methods that might get called from
+// those background threads.
+class Writer final {
  public:
   Writer(Bcache *bc, size_t capacity);
   Writer() = delete;

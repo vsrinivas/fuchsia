@@ -167,7 +167,8 @@ class TransactionalFs {
   virtual Allocator& GetInodeAllocator() = 0;
 };
 
-// Marked final for cleaning up async thread references in destructor.
+// Constructor is private and we mark the class final because the destructor will call Terminate
+// which will join threads and that won't be safe if it's been derived from.
 class Minfs final : public TransactionalFs {
  public:
   // Not copyable or movable
@@ -180,6 +181,10 @@ class Minfs final : public TransactionalFs {
 
   // Destroys a "minfs" object, but take back ownership of the bcache object.
   static std::unique_ptr<Bcache> Destroy(std::unique_ptr<Minfs> minfs);
+
+  // Terminates Minfs and joins all background threads.  This will not necessarily guarantee all
+  // all data has been flushed. Call Sync first if that matters.
+  void Terminate();
 
   [[nodiscard]] static zx::status<std::unique_ptr<Minfs>> Create(FuchsiaDispatcher dispatcher,
                                                                  std::unique_ptr<Bcache> bc,

@@ -12,7 +12,10 @@
 namespace fs {
 namespace {
 
-TEST(BackgroundExecutorTest, Creation) { BackgroundExecutor executor; }
+TEST(BackgroundExecutorTest, Creation) {
+  BackgroundExecutor executor;
+  executor.Terminate();
+}
 
 // Ensure we can destroy an executor with scheduled tasks.
 TEST(BackgroundExecutorTest, DestructorCompletesOneScheduledTask) {
@@ -24,6 +27,7 @@ TEST(BackgroundExecutorTest, DestructorCompletesOneScheduledTask) {
       called = true;
       return fpromise::ok();
     }));
+    executor.Terminate();
   }
   ASSERT_TRUE(called);
 }
@@ -45,6 +49,7 @@ TEST(BackgroundExecutorTest, DestructorCompletesManyScheduledTasks) {
         return fpromise::ok();
       }));
     }
+    executor.Terminate();
   }
   ASSERT_EQ(counter, kTotalTasks);
 }
@@ -64,6 +69,7 @@ TEST(BackgroundExecutorTest, ScheduleNotStalledUntilDestructor) {
   }));
   std::unique_lock<std::mutex> lock(mutex);
   cvar.wait(lock, [&called] { return called; });
+  executor.Terminate();
   ASSERT_TRUE(called);
 }
 
