@@ -72,8 +72,6 @@ type ServiceList = resource struct {
     provider client_end:<ServiceProvider, optional>;
 
     /// A channel to the directory hosting the services in `names`.
-    // TODO(fxbug.dev/31262): Support `host_directory` for CreateComponent and deprecate
-    // `provider`.
     @available(removed=10)
     host_directory zx.handle:<CHANNEL, optional>;
     @available(added=10)
