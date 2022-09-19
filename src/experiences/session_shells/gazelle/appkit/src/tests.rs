@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_element as felement,
     fidl_fuchsia_input::Key,
     fidl_fuchsia_ui_app as ui_app,
-    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus, KeyEventType},
+    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus},
     fidl_fuchsia_ui_test_input as ui_test_input, fidl_fuchsia_ui_test_scene as ui_test_scene,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
@@ -90,6 +90,18 @@ async fn test_appkit() -> Result<(), Error> {
                         app.width > 0 && app.height > 0,
                         "Redraw event received before window was resized"
                     );
+                }
+                WindowEvent::Keyboard { event, responder } => {
+                    if let KeyEvent { key: Some(Key::Q), .. } = event {
+                        event_sender.send(Event::Exit).expect("Failed to send Event::Exit event");
+                        responder
+                            .send(KeyEventStatus::Handled)
+                            .expect("Failed to respond to keyboard event");
+                    } else {
+                        responder
+                            .send(KeyEventStatus::NotHandled)
+                            .expect("Failed to respond to keyboard event");
+                    }
                 }
                 _ => {}
             },
@@ -282,12 +294,7 @@ async fn create_child_view_spec(
                         }
                     }
                     WindowEvent::Keyboard { event, responder } => {
-                        if let KeyEvent {
-                            key: Some(Key::Q),
-                            type_: Some(KeyEventType::Pressed),
-                            ..
-                        } = event
-                        {
+                        if let KeyEvent { key: Some(Key::Q), .. } = event {
                             parent_sender
                                 .send(Event::Exit)
                                 .expect("Failed to send Event::Exit event");
