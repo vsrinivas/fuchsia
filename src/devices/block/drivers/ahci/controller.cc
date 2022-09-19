@@ -125,7 +125,7 @@ int Controller::WorkerLoop() {
       bool txns_in_progress = port->Complete();
       // Process queued txns.
       bool txns_added = port->ProcessQueued();
-      port_active = txns_in_progress || txns_added;
+      port_active |= txns_in_progress || txns_added;
     }
 
     // Exit only when there are no more transactions in flight.

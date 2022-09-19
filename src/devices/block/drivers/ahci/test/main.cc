@@ -4,6 +4,7 @@
 
 #include <byteswap.h>
 #include <lib/zx/clock.h>
+#include <thread>
 
 #include <zxtest/zxtest.h>
 
@@ -18,7 +19,8 @@ class AhciTestFixture : public zxtest::Test {
   void SetUp() override {}
   void TearDown() override;
 
-  zx_status_t PortEnable(Port* port);
+  void PortEnable(Bus* bus, Port* port);
+  void BusAndPortEnable(Port* port);
 
   // If non-null, this pointer is owned by Controller::bus_
   std::unique_ptr<FakeBus> fake_bus_;
@@ -28,14 +30,10 @@ class AhciTestFixture : public zxtest::Test {
 
 void AhciTestFixture::TearDown() { fake_bus_.reset(); }
 
-zx_status_t AhciTestFixture::PortEnable(Port* port) {
-  zx_device_t* fake_parent = nullptr;
-  std::unique_ptr<FakeBus> bus(new FakeBus());
-  EXPECT_OK(bus->Configure(fake_parent));
-
+void AhciTestFixture::PortEnable(Bus* bus, Port* port) {
   uint32_t cap;
   EXPECT_OK(bus->RegRead(kHbaCapabilities, &cap));
-  EXPECT_OK(port->Configure(0, bus.get(), kHbaPorts, cap));
+  EXPECT_OK(port->Configure(0, bus, kHbaPorts, cap));
   EXPECT_OK(port->Enable());
 
   // Fake detect of device.
@@ -45,9 +43,16 @@ zx_status_t AhciTestFixture::PortEnable(Port* port) {
   EXPECT_TRUE(port->is_implemented());
   EXPECT_TRUE(port->is_valid());
   EXPECT_FALSE(port->is_paused());
+}
+
+void AhciTestFixture::BusAndPortEnable(Port* port) {
+  zx_device_t* fake_parent = nullptr;
+  std::unique_ptr<FakeBus> bus(new FakeBus());
+  EXPECT_OK(bus->Configure(fake_parent));
+
+  PortEnable(bus.get(), port);
 
   fake_bus_ = std::move(bus);
-  return ZX_OK;
 }
 
 void string_fix(uint16_t* buf, size_t size);
@@ -154,7 +159,7 @@ TEST(AhciTest, HbaReset) {
 
 TEST_F(AhciTestFixture, PortTestEnable) {
   Port port;
-  EXPECT_OK(PortEnable(&port));
+  BusAndPortEnable(&port);
 }
 
 void cb_status(void* cookie, zx_status_t status, block_op_t* bop) {
@@ -165,7 +170,7 @@ void cb_assert(void* cookie, zx_status_t status, block_op_t* bop) { EXPECT_TRUE(
 
 TEST_F(AhciTestFixture, PortCompleteNone) {
   Port port;
-  EXPECT_OK(PortEnable(&port));
+  BusAndPortEnable(&port);
 
   // Complete with no running transactions.
 
@@ -174,7 +179,7 @@ TEST_F(AhciTestFixture, PortCompleteNone) {
 
 TEST_F(AhciTestFixture, PortCompleteRunning) {
   Port port;
-  EXPECT_OK(PortEnable(&port));
+  BusAndPortEnable(&port);
 
   // Complete with running transaction. No completion should occur, cb_assert should not fire.
 
@@ -201,7 +206,7 @@ TEST_F(AhciTestFixture, PortCompleteRunning) {
 
 TEST_F(AhciTestFixture, PortCompleteSuccess) {
   Port port;
-  EXPECT_OK(PortEnable(&port));
+  BusAndPortEnable(&port);
 
   // Transaction has successfully completed.
 
@@ -232,7 +237,7 @@ TEST_F(AhciTestFixture, PortCompleteSuccess) {
 
 TEST_F(AhciTestFixture, PortCompleteTimeout) {
   Port port;
-  EXPECT_OK(PortEnable(&port));
+  BusAndPortEnable(&port);
 
   // Transaction has successfully completed.
 
@@ -260,6 +265,67 @@ TEST_F(AhciTestFixture, PortCompleteTimeout) {
   EXPECT_FALSE(port.Complete());
   // Set by completion callback.
   EXPECT_NOT_OK(status);
+}
+
+TEST_F(AhciTestFixture, ShutdownWaitsForTransactionsInFlight) {
+  zx_device_t* fake_parent = nullptr;
+  std::unique_ptr<FakeBus> bus(new FakeBus());
+  FakeBus* bus_ptr = bus.get();
+
+  std::unique_ptr<Controller> con;
+  EXPECT_OK(Controller::CreateWithBus(fake_parent, std::move(bus), &con));
+
+  Port& port = *con->port(0);
+  PortEnable(bus_ptr, &port);
+
+  // Set up a transaction that will timeout in 5 seconds.
+
+  zx_status_t status = ZX_OK;  // Value to be overwritten by callback.
+
+  sata_txn_t txn = {};
+  txn.timeout = zx::clock::get_monotonic() + zx::sec(5);
+  txn.completion_cb = cb_status;
+  txn.cookie = &status;
+
+  uint32_t slot = 0;
+
+  // Set txn as running.
+  port.TestSetRunning(&txn, slot);
+  // Set the running bit in the bus.
+  bus_ptr->PortRegOverride(0, kPortSataActive, (1u << slot));
+
+  // Set interrupt for successful transfer completion.
+  bus_ptr->PortRegOverride(0, kPortInterruptStatus, AHCI_PORT_INT_DP);
+  // Kick off interrupt-handler and worker threads.
+  EXPECT_OK(con->LaunchIrqAndWorkerThreads());
+
+  // True means there are running command(s).
+  EXPECT_TRUE(port.Complete());
+
+  bool shutdown_complete = false;
+  zx::duration shutdown_duration;
+
+  std::thread shutdown_thread([&]() {
+    zx::time time = zx::clock::get_monotonic();
+    con->Shutdown();
+    shutdown_duration = zx::clock::get_monotonic() - time;
+    shutdown_complete = true;
+  });
+
+  // TODO(fxbug.dev/109707): This should be handled by a watchdog in the driver.
+  std::thread watchdog_thread([&]() {
+    while (!shutdown_complete) {
+      con->SignalWorker();
+    }
+  });
+
+  shutdown_thread.join();
+  watchdog_thread.join();
+  // The shutdown duration should be around 5 seconds (+/-). Conservatively check for > 2.5 seconds.
+  EXPECT_GT(shutdown_duration, zx::msec(2500));
+
+  // Set by completion callback.
+  EXPECT_EQ(status, ZX_ERR_TIMED_OUT);
 }
 
 }  // namespace ahci

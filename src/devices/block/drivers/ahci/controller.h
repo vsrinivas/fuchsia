@@ -89,6 +89,7 @@ class Controller {
   void SignalWorker() { sync_completion_signal(&worker_completion_); }
 
   Bus* bus() { return bus_.get(); }
+  Port* port(uint32_t portnr) { return &ports_[portnr]; }
   zx_device_t** zxdev_ptr() { return &zxdev_; }
 
  private:
