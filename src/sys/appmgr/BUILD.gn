@@ -245,14 +245,7 @@ fuchsia_package_with_single_component("appmgr") {
   deps = [ ":bin" ]
 }
 
-fuchsia_package_with_single_component("appmgr_without_sysmgr") {
-  package_name = "appmgr"
-  manifest = "meta/appmgr_without_sysmgr.cml"
-  deps = [ ":bin" ]
-}
-
-# TODO(fxbug.dev/108016): Migrate all products using appmgr to this and then
-# default appmgr to without sysmgr.
+# TODO(fxbug.dev/108016): Remove this when sysmgr is deleted.
 fuchsia_package_with_single_component("appmgr_with_sysmgr") {
   package_name = "appmgr"
   manifest = "meta/appmgr_with_sysmgr.cml"
