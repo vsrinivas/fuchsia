@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_syslog::fx_log_warn, fuchsia_zircon as zx};
+use {fuchsia_zircon as zx, tracing::warn};
 
 /// A safe, RAII wrapper around a VMAR mapping.
 pub struct MappedVmo {
@@ -40,7 +40,7 @@ impl Drop for MappedVmo {
         unsafe {
             fuchsia_runtime::vmar_root_self().unmap(self.address, self.size).unwrap_or_else(|e| {
                 // Not much we can do other than warn here.
-                fx_log_warn!("Failed to unmap VMAR: {:?}", e);
+                warn!("Failed to unmap VMAR: {:?}", e);
             });
         }
     }
@@ -50,7 +50,7 @@ impl Drop for MappedVmo {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn test_map_vmo() {
         let buffer: [u8; 10] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
         let vmo = zx::Vmo::create(buffer.len() as u64).unwrap();

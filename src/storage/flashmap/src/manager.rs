@@ -9,11 +9,11 @@ use {
     fidl_fuchsia_device::ControllerProxy,
     fidl_fuchsia_nand::BrokerProxy,
     fidl_fuchsia_nand_flashmap::{FlashmapMarker, ManagerRequest, ManagerRequestStream},
-    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::TryStreamExt,
     std::{collections::HashMap, sync::Arc},
+    tracing::warn,
 };
 
 pub struct Manager {
@@ -36,7 +36,7 @@ impl Manager {
                     let path = Self::get_topo_path(&control).await.unwrap();
                     let broker = BrokerProxy::new(control.into_channel().unwrap());
                     if let Err(e) = self.find_or_start(broker, path, server).await {
-                        fx_log_warn!("failed to find fmap: {:?}", e);
+                        warn!("failed to find fmap: {:?}", e);
                     }
                 }
             }
@@ -73,7 +73,7 @@ impl Manager {
         fuchsia_async::Task::spawn(async move {
             match flashmap.serve(server).await {
                 Ok(()) => {}
-                Err(e) => fx_log_warn!("Failed while serving flashmap requests: {:?}", e),
+                Err(e) => warn!("Failed while serving flashmap requests: {:?}", e),
             };
         })
         .detach();

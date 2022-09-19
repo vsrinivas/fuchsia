@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_hardware_nand::Info as NandInfo,
     fidl_fuchsia_nand::{BrokerProxy, BrokerRequestData, BrokerRequestDataBytes},
     fidl_fuchsia_nand_flashmap::{FlashmapRequest, FlashmapRequestStream},
-    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     futures::{lock::Mutex, TryStreamExt},
     std::{
@@ -17,6 +16,7 @@ use {
         convert::{TryFrom, TryInto},
         ffi::CStr,
     },
+    tracing::warn,
 };
 
 #[repr(C, packed)]
@@ -155,9 +155,7 @@ impl Flashmap {
                 .try_into()
                 .map(|v| (v, false))
                 .unwrap_or_else(|_| {
-                    fx_log_warn!(
-                        "Suggested address is too large, falling back to a linear search."
-                    );
+                    warn!("Suggested address is too large, falling back to a linear search.");
                     (0, true)
                 }),
         };
@@ -310,12 +308,9 @@ impl Flashmap {
     ) -> Result<fidl_fuchsia_mem::Range, zx::Status> {
         let area = self.areas.get(name).ok_or(zx::Status::NOT_FOUND)?;
         if offset.checked_add(size).ok_or(zx::Status::OUT_OF_RANGE)? > area.size {
-            fx_log_warn!(
+            warn!(
                 "Read {} at {:x} size={:x} is larger than area size {:x}",
-                name,
-                offset,
-                size,
-                area.size
+                name, offset, size, area.size
             );
             return Err(zx::Status::OUT_OF_RANGE);
         }
@@ -345,7 +340,7 @@ impl Flashmap {
         };
 
         let (status, _) = self.device.read(&mut request).await.map_err(|e| {
-            fx_log_warn!("Send read failed: {:?}", e);
+            warn!("Send read failed: {:?}", e);
             zx::Status::INTERNAL
         })?;
         zx::ok(status)?;
@@ -365,12 +360,9 @@ impl Flashmap {
             .ok_or(zx::Status::OUT_OF_RANGE)?
             > area.size
         {
-            fx_log_warn!(
+            warn!(
                 "Write {} at {:x} size={:x} is larger than area size {:x}",
-                name,
-                offset,
-                data.size,
-                area.size
+                name, offset, data.size, area.size
             );
             return Err(zx::Status::OUT_OF_RANGE);
         }
@@ -385,7 +377,7 @@ impl Flashmap {
         };
 
         let status = self.device.write_bytes(&mut request).await.map_err(|e| {
-            fx_log_warn!("Send write failed: {:?}", e);
+            warn!("Send write failed: {:?}", e);
             zx::Status::INTERNAL
         })?;
         zx::ok(status)?;
@@ -401,12 +393,9 @@ impl Flashmap {
     ) -> Result<(), zx::Status> {
         let area = self.areas.get(name).ok_or(zx::Status::NOT_FOUND)?;
         if offset.checked_add(range).ok_or(zx::Status::OUT_OF_RANGE)? > area.size {
-            fx_log_warn!(
+            warn!(
                 "Erase {} at {:x} size={:x} is larger than area size {:x}",
-                name,
-                offset,
-                range,
-                area.size
+                name, offset, range, area.size
             );
             return Err(zx::Status::OUT_OF_RANGE);
         }
@@ -435,7 +424,7 @@ impl Flashmap {
         };
 
         let status = self.device.erase(&mut request).await.map_err(|e| {
-            fx_log_warn!("Send erase failed: {:?}", e);
+            warn!("Send erase failed: {:?}", e);
             zx::Status::INTERNAL
         })?;
         zx::ok(status)?;
@@ -665,7 +654,7 @@ pub mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_find_flashmap_header() {
         let header = FlashmapHeader::default();
 
@@ -681,7 +670,7 @@ pub mod tests {
         assert_eq!(result, &header);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_find_flashmap_header_invalid_version() {
         let mut header = FlashmapHeader::default();
         header.ver_minor = 32;
@@ -694,7 +683,7 @@ pub mod tests {
         assert_eq!(Flashmap::find_flashmap_header(&data_buffer).is_none(), true);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_find_flashmap_header_name_not_null_terminated() {
         let mut header = FlashmapHeader::default();
         header.name.copy_from_slice(&[0xab; 32]);

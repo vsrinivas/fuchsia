@@ -13,10 +13,9 @@ use {
     fidl_fuchsia_nand_flashmap::ManagerRequestStream,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::{component, health::Reporter},
-    fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     futures::prelude::*,
-    tracing,
+    tracing::{debug, warn},
 };
 
 const FLASH_PHYS_BASE: u64 = 0xff000000;
@@ -40,7 +39,7 @@ async fn main() -> Result<(), anyhow::Error> {
         match device.get_flashmap_address().await.context("Sending get flashmap address")? {
             Ok(value) => Some(value - FLASH_PHYS_BASE),
             Err(e) => {
-                fx_log_warn!("Failed to get flashmap address: {:?}", zx::Status::from_raw(e));
+                warn!("Failed to get flashmap address: {:?}", zx::Status::from_raw(e));
                 None
             }
         };
@@ -51,7 +50,7 @@ async fn main() -> Result<(), anyhow::Error> {
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
 
     component::health().set_ok();
-    tracing::debug!("Initialized.");
+    debug!("Initialized.");
 
     let manager_ref = &manager;
     service_fs
