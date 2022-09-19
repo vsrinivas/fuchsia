@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library examples.keyvaluestore;
+
+/// An item in the store. The key must match the regex `^[A-z][A-z0-9_\.\/]{2,62}[A-z0-9]$`. That
+/// is, it must start with a letter, end with a letter or number, contain only letters, numbers,
+/// periods, and slashes, and be between 4 and 64 characters long.
+type Item = struct {
+    key string:128;
+    value vector<byte>:64000;
+};
+
+/// An enumeration of things that may go wrong when trying to write a value to our store.
+type WriteError = flexible enum {
+    UNKNOWN = 0;
+    INVALID_KEY = 1;
+    INVALID_VALUE = 2;
+    ALREADY_EXISTS = 3;
+};
+
+/// A very basic key-value store - so basic, in fact, that one may only write to it, never read!
+@discoverable
+protocol Store {
+    /// Writes an item to the store.
+    WriteItem(struct {
+        attempt Item;
+    }) -> (struct {}) error WriteError;
+};

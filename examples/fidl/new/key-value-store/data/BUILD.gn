@@ -1,0 +1,49 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dist/resource.gni")
+
+resource("error_invalid_key_") {
+  sources = [ "error_invalid_key_.txt" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+resource("error_invalid_value") {
+  sources = [ "error_invalid_value.txt" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+resource("verse_1") {
+  sources = [ "verse_1.txt" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+resource("verse_2") {
+  sources = [ "verse_2.txt" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+resource("verse_3") {
+  sources = [ "verse_3.txt" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+resource("verse_4") {
+  sources = [ "verse_4.txt" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+# These are files that are meant to be included with our client component. Each file represents a
+# write "attempt" to the key-value store, where the name of the file (sans extension) serving as the
+# key, and the contents serving as the value.
+group("resources") {
+  deps = [
+    ":error_invalid_key_",
+    ":error_invalid_value",
+    ":verse_1",
+    ":verse_2",
+    ":verse_3",
+    ":verse_4",
+  ]
+}

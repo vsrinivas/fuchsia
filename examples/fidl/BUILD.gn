@@ -25,5 +25,6 @@ group("tests") {
     "echo-realm:tests",
     "go:tests",
     "hlcpp:tests",
+    "new:tests",
   ]
 }

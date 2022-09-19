@@ -1,0 +1,1 @@
+This value should never be admitted into the cache.
