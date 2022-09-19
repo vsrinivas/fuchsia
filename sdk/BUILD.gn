@@ -614,6 +614,7 @@ sdk("driver") {
     ":driver_fidl",
     ":driver_host_tools",
     "//sdk/lib/driver2:cpp_sdk",
+    "//sdk/lib/driver2:devfs_exporter_sdk",
     "//sdk/lib/driver_compat:driver_compat_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_cpp_sdk",
     "//sdk/lib/driver_runtime:driver_runtime_sdk",

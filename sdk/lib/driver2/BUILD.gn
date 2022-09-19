@@ -21,7 +21,12 @@ sdk_source_set("record") {
   public_deps = [ "//sdk/lib/driver_runtime:driver_runtime" ]
 }
 
-source_set("devfs_exporter") {
+sdk_source_set("devfs_exporter") {
+  category = "experimental"
+  sdk_name = "driver2_devfs_exporter"
+
+  include_base = "//sdk"
+
   sources = [
     "devfs_exporter.cc",
     "devfs_exporter.h",
