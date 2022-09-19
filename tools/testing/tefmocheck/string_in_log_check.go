@@ -242,6 +242,12 @@ func fuchsiaLogChecks() []FailureModeCheck {
 		// Skip if the task passed; we aim to tolerate failing ECC until we are failing
 		// tasks as a result.
 		&stringInLogCheck{String: "sys_config: ERROR failed to read any copy", Type: serialLogType, SkipPassedTask: true},
+		// Infra expects all devices to be locked when running tasks.  Certain requests may
+		// be impossible to fulfill when the device is unlocked because they require secrets
+		// which are only available when locked.  If a device is somehow running tasks while
+		// unlocked, if the task attempts to make use of those secrets and can't, we'll see
+		// this message in the log, and then an infra engineer should go re-lock the device.
+		&stringInLogCheck{String: "Please re-lock the device", Type: serialLogType},
 	}
 
 	oopsExceptBlocks := []*logBlock{
