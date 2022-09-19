@@ -30,7 +30,7 @@ fuchsia_driver("root_driver") {
     ":fuchsia.composite.test_cpp_wire",
     ":root_bind",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp_wire",
-    "//sdk/lib/driver2:cpp-promise",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_compat",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver:driver_runtime",
@@ -62,7 +62,7 @@ fuchsia_driver("leaf_driver") {
   deps = [
     ":composite_leaf_bind",
     ":fuchsia.composite.test_cpp_wire",
-    "//sdk/lib/driver2:cpp-promise",
+    "//sdk/lib/driver2:cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/async:async-cpp",
   ]

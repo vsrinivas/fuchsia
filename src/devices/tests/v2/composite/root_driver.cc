@@ -3,15 +3,9 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.composite.test/cpp/wire.h>
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/async/cpp/executor.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/node_add_args.h>
-#include <lib/driver2/promise.h>
-#include <lib/driver2/record_cpp.h>
+#include <lib/driver2/driver2_cpp.h>
+#include <lib/driver2/service_client.h>
 #include <lib/driver_compat/compat.h>
-#include <lib/fpromise/scope.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 
@@ -25,11 +19,6 @@ using namespace fuchsia_driver_framework;
 namespace fcd = fuchsia_component_decl;
 namespace fio = fuchsia_io;
 namespace ft = fuchsia_composite_test;
-
-using fpromise::error;
-using fpromise::ok;
-using fpromise::promise;
-using fpromise::result;
 
 namespace {
 
@@ -48,69 +37,26 @@ class NumberServer : public fidl::WireServer<ft::Device> {
   uint32_t number_;
 };
 
-class RootDriver {
+class RootDriver : public driver::DriverBase {
  public:
-  RootDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
-             driver::Namespace ns, driver::Logger logger, component::OutgoingDirectory outgoing)
-      : dispatcher_(dispatcher),
-        executor_(dispatcher),
-        node_(std::move(node)),
-        ns_(std::move(ns)),
-        logger_(std::move(logger)),
-        outgoing_(std::move(outgoing)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
+      : driver::DriverBase("root", std::move(start_args), std::move(dispatcher)) {}
 
-  static constexpr const char* Name() { return "root"; }
-
-  static zx::status<std::unique_ptr<RootDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                       fdf::UnownedDispatcher dispatcher,
-                                                       fidl::WireSharedClient<fdf::Node> node,
-                                                       driver::Namespace ns,
-                                                       driver::Logger logger) {
-    auto outgoing = component::OutgoingDirectory::Create(dispatcher->async_dispatcher());
-    auto driver =
-        std::make_unique<RootDriver>(dispatcher->async_dispatcher(), std::move(node), std::move(ns),
-                                     std::move(logger), std::move(outgoing));
-
-    auto serve = driver->outgoing_.Serve(std::move(start_args.outgoing_dir()));
-    if (serve.is_error()) {
-      return serve.take_error();
-    }
-
-    auto status = driver->Run();
-    if (status.is_error()) {
-      return status.take_error();
-    }
-    return zx::ok(std::move(driver));
-  }
-
- private:
-  zx::status<> Run() {
-    vfs_.SetDispatcher(dispatcher_);
-    service_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-
-    auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
-    if (endpoints.is_error()) {
-      return endpoints.take_error();
-    }
-    zx_status_t serve_status = vfs_.Serve(service_dir_, endpoints->server.TakeChannel(),
-                                          fs::VnodeConnectionOptions::ReadWrite());
-    if (serve_status != ZX_OK) {
-      return zx::error(serve_status);
-    }
-
+  zx::status<> Start() override {
+    node_client_.Bind(std::move(node()), async_dispatcher());
     // Add service "left".
     {
-      component::ServiceHandler handler;
+      driver::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
-        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher_, std::move(server_end),
+        fidl::BindServer<fidl::WireServer<ft::Device>>(async_dispatcher(), std::move(server_end),
                                                        &this->left_server_);
       };
       zx::status<> status = service.add_device(std::move(device));
       if (status.is_error()) {
         FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
       }
-      status = outgoing_.AddService<ft::Service>(std::move(handler), kLeftName);
+      status = context().outgoing()->AddService<ft::Service>(std::move(handler), kLeftName);
       if (status.is_error()) {
         FDF_LOG(ERROR, "Failed to add service %s", status.status_string());
       }
@@ -118,35 +64,51 @@ class RootDriver {
 
     // Add service "right".
     {
-      component::ServiceHandler handler;
+      driver::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
-        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher_, std::move(server_end),
+        fidl::BindServer<fidl::WireServer<ft::Device>>(async_dispatcher(), std::move(server_end),
                                                        &this->right_server_);
       };
       zx::status<> status = service.add_device(std::move(device));
       if (status.is_error()) {
         FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
       }
-      status = outgoing_.AddService<ft::Service>(std::move(handler), kRightName);
+      status = context().outgoing()->AddService<ft::Service>(std::move(handler), kRightName);
       if (status.is_error()) {
         FDF_LOG(ERROR, "Failed to add service %s", status.status_string());
       }
     }
 
-    // Start the driver.
-    auto task = AddChild(kLeftName, bind_fuchsia_test::BIND_PROTOCOL_DEVICE, left_controller_)
-                    .and_then(AddChild(kRightName, bind_fuchsia_test::BIND_PROTOCOL_POWER_CHILD,
-                                       right_controller_))
-                    .or_else(fit::bind_member(this, &RootDriver::UnbindNode))
-                    .wrap_with(scope_);
-    executor_.schedule_task(std::move(task));
+    auto success = StartChildren();
+    if (!success) {
+      DropNode();
+      return zx::error(ZX_ERR_INTERNAL);
+    }
+
     return zx::ok();
   }
 
-  promise<void, fdf::wire::NodeError> AddChild(
-      std::string_view name, int protocol,
-      fidl::WireSharedClient<fdf::NodeController>& controller) {
+ private:
+  bool StartChildren() {
+    auto left = AddChild(kLeftName, bind_fuchsia_test::BIND_PROTOCOL_DEVICE, left_controller_);
+    if (!left) {
+      FDF_LOG(ERROR, "Failed to start left child.");
+      return false;
+    }
+
+    auto right =
+        AddChild(kRightName, bind_fuchsia_test::BIND_PROTOCOL_POWER_CHILD, right_controller_);
+    if (!right) {
+      FDF_LOG(ERROR, "Failed to start right child.");
+      return false;
+    }
+
+    return true;
+  }
+
+  bool AddChild(std::string_view name, int protocol,
+                fidl::WireSharedClient<fdf::NodeController>& controller) {
     fidl::Arena arena;
 
     // Set the properties of the node that a driver will bind to.
@@ -167,42 +129,42 @@ class RootDriver {
     // Create endpoints of the `NodeController` for the node.
     auto endpoints = fidl::CreateEndpoints<fdf::NodeController>();
     if (endpoints.is_error()) {
-      return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
+      return false;
     }
 
-    return driver::AddChild(node_, std::move(args), std::move(endpoints->server), {})
-        .and_then([this, &controller, client = std::move(endpoints->client)]() mutable {
-          controller.Bind(std::move(client), dispatcher_);
-        });
+    auto add_callback = [&, client = std::move(endpoints->client)](
+                            fidl::WireUnownedResult<fdf::Node::AddChild>& result) mutable {
+      if (!result.ok()) {
+        FDF_LOG(ERROR, "Adding child failed: %s", result.error().status_string());
+        DropNode();
+        return;
+      }
+
+      if (result->is_error()) {
+        FDF_LOG(ERROR, "Adding child failed: %d", result->error_value());
+        DropNode();
+        return;
+      }
+
+      controller.Bind(std::move(client), async_dispatcher());
+      FDF_LOG(INFO, "Successfully added child.");
+    };
+
+    node_client_->AddChild(args, std::move(endpoints->server), {}).Then(std::move(add_callback));
+    return true;
   }
 
-  result<> UnbindNode(const fdf::wire::NodeError& error) {
-    FDF_LOG(ERROR, "Failed to start root driver: %d", error);
-    node_.AsyncTeardown();
-    return ok();
-  }
+  void DropNode() { node_client_ = {}; }
 
-  async_dispatcher_t* const dispatcher_;
-  async::Executor executor_;
-
-  fidl::WireSharedClient<fdf::Node> node_;
   fidl::WireSharedClient<fdf::NodeController> left_controller_;
   fidl::WireSharedClient<fdf::NodeController> right_controller_;
-  driver::Namespace ns_;
-  driver::Logger logger_;
+
+  fidl::WireClient<fdf::Node> node_client_;
 
   NumberServer left_server_ = NumberServer(1);
   NumberServer right_server_ = NumberServer(2);
-
-  fs::SynchronousVfs vfs_;
-  fbl::RefPtr<fs::PseudoDir> service_dir_;
-
-  component::OutgoingDirectory outgoing_;
-
-  // NOTE: Must be the last member.
-  fpromise::scope scope_;
 };
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V1(RootDriver);
+FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<RootDriver>);
