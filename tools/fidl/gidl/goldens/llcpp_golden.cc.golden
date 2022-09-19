@@ -277,7 +277,7 @@ var2[1] = uint8_t(2ull);
 var2[2] = uint8_t(3ull);
 var2[3] = uint8_t(4ull);
 for (size_t offset = 0; offset < var2.count(); offset += 4) {
-memcpy(var2.mutable_data() + offset, var2.data(), 4);
+memcpy(var2.data() + offset, var2.data(), 4);
 }
 var1.v = std::move(var2);
 
@@ -818,7 +818,7 @@ var2[1] = uint8_t(2ull);
 var2[2] = uint8_t(3ull);
 var2[3] = uint8_t(4ull);
 for (size_t offset = 0; offset < var2.count(); offset += 4) {
-memcpy(var2.mutable_data() + offset, var2.data(), 4);
+memcpy(var2.data() + offset, var2.data(), 4);
 }
 var1.v = std::move(var2);
 

@@ -262,7 +262,7 @@ struct WireCodingTraits<fidl::VectorView<T>, Constraint, IsRecursive> {
   static void Encode(WireEncoder* encoder, fidl::VectorView<T>* value, WirePosition position,
                      RecursionDepth<IsRecursive> recursion_depth) {
     VectorCodingTraitHelper<IsRecursive>::template Encode<T, Constraint>(
-        encoder, value->mutable_data(), value->count(), position, recursion_depth);
+        encoder, value->data(), value->count(), position, recursion_depth);
   }
   static void Decode(WireDecoder* decoder, WirePosition position,
                      RecursionDepth<IsRecursive> recursion_depth) {

@@ -526,7 +526,7 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::wire::Action> actions,
         name[add_device_action.name.size()] = 0;
 
         cpp20::span<zx_device_prop_t> props(
-            reinterpret_cast<zx_device_prop_t*>(add_device_action.properties.mutable_data()),
+            reinterpret_cast<zx_device_prop_t*>(add_device_action.properties.data()),
             add_device_action.properties.count());
 
         status = dev->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));

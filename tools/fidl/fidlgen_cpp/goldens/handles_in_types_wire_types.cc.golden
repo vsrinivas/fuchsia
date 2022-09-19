@@ -6,7 +6,7 @@
 void ::test_handlesintypes::wire::HandlesInTypes::_CloseHandles() {
   normal_handle.reset();
   {
-    ::zx::vmo* handle_in_vec_element = handle_in_vec.mutable_data();
+    ::zx::vmo* handle_in_vec_element = handle_in_vec.data();
     for (uint64_t i = 0; i < handle_in_vec.count(); ++i, ++handle_in_vec_element) {
       handle_in_vec_element->reset();
     }
@@ -18,7 +18,7 @@ void ::test_handlesintypes::wire::HandlesInTypes::_CloseHandles() {
     }
   }
   {
-    ::fidl::Array<::zx::vmo, 5>* handle_in_mixed_vec_array_element = handle_in_mixed_vec_array.mutable_data();
+    ::fidl::Array<::zx::vmo, 5>* handle_in_mixed_vec_array_element = handle_in_mixed_vec_array.data();
     for (uint64_t i = 0; i < handle_in_mixed_vec_array.count(); ++i, ++handle_in_mixed_vec_array_element) {
       {
         ::zx::vmo* handle_in_mixed_vec_array_element_element = (*handle_in_mixed_vec_array_element).data();

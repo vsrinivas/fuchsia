@@ -70,7 +70,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
         netdev::wire::FrameType::kEthernet,
     };
     fidl::VectorView<netdev::wire::FrameType> rx_types_view(alloc_, std::size(rx_types));
-    std::copy(std::begin(rx_types), std::end(rx_types), rx_types_view.mutable_data());
+    std::copy(std::begin(rx_types), std::end(rx_types), rx_types_view.data());
     const netdev::wire::FrameTypeSupport tx_types[] = {
         netdev::wire::FrameTypeSupport{
             .type = netdev::wire::FrameType::kEthernet,
@@ -78,7 +78,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
         },
     };
     fidl::VectorView<netdev::wire::FrameTypeSupport> tx_types_view(alloc_, std::size(tx_types));
-    std::copy(std::begin(tx_types), std::end(tx_types), tx_types_view.mutable_data());
+    std::copy(std::begin(tx_types), std::end(tx_types), tx_types_view.data());
     config.set_rx_types(alloc_, rx_types_view);
     config.set_tx_types(alloc_, tx_types_view);
     return config;

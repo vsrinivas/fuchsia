@@ -95,16 +95,16 @@ zx::status<> TpmLpc::PerformTransfer(uint16_t address, fidl::VectorView<uint8_t>
     for (size_t offset = 0; offset < aligned_size; offset += kAddressAlignment) {
       uint32_t val = mmio_.Read32(address);
       uint8_t* chunk = (uint8_t*)&val;
-      buf.mutable_data()[offset] = chunk[0];
-      buf.mutable_data()[offset + 1] = chunk[1];
-      buf.mutable_data()[offset + 2] = chunk[2];
-      buf.mutable_data()[offset + 3] = chunk[3];
+      buf.data()[offset] = chunk[0];
+      buf.data()[offset + 1] = chunk[1];
+      buf.data()[offset + 2] = chunk[2];
+      buf.data()[offset + 3] = chunk[3];
     }
     size_t remainder = buf.count() % kAddressAlignment;
     if (remainder != 0) {
       size_t offset = buf.count() - remainder;
       for (size_t i = 0; i < remainder; i++) {
-        buf.mutable_data()[offset + i] = mmio_.Read8(address);
+        buf.data()[offset + i] = mmio_.Read8(address);
       }
     }
   }

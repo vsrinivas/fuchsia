@@ -318,7 +318,7 @@ zx::status<> Cr50SpiDevice::DoSpiRead(fidl::VectorView<uint8_t> &buf) {
   }
 
   // Put returned data in the output buffer.
-  memcpy(buf.mutable_data(), ret_vec.value().data.data(), ret_vec.value().data.count());
+  memcpy(buf.data(), ret_vec.value().data.data(), ret_vec.value().data.count());
   return zx::ok();
 }
 

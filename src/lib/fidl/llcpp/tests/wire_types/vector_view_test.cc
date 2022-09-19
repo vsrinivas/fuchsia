@@ -83,11 +83,10 @@ TEST(VectorView, Mutations) {
   std::vector<int32_t> vec{1, 2, 3};
   auto vv = fidl::VectorView<int32_t>::FromExternal(vec);
   vv.set_count(2);
-  *vv.mutable_data() = 4;
+  *vv.data() = 4;
   vv[1] = 5;
   EXPECT_EQ(vv.count(), 2ULL);
   EXPECT_EQ(vv.data(), vec.data());
-  EXPECT_EQ(vv.data(), vv.mutable_data());
   EXPECT_EQ(vv[0], 4);
   EXPECT_EQ(vv[1], 5);
   EXPECT_EQ(vec[0], 4);

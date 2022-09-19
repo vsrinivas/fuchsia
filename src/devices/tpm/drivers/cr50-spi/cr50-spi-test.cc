@@ -70,7 +70,7 @@ class Cr50SpiTest : public zxtest::Test,
     ASSERT_BYTES_EQ(transmit.data(), next.tx.data(), next.tx.size());
     if (receive) {
       ASSERT_EQ(receive->count(), next.rx.size());
-      memcpy(receive->mutable_data(), next.rx.data(), next.rx.size());
+      memcpy(receive->data(), next.rx.data(), next.rx.size());
     } else {
       ASSERT_EQ(next.rx.size(), 0);
     }

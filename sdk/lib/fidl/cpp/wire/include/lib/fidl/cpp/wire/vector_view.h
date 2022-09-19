@@ -26,7 +26,7 @@ namespace fidl {
 // used to construct it.
 //
 // VectorView's layout and data format must match fidl_vector_t as it will be
-// reinterpret_casted into fidl_vector_t during linearization.
+// reinterpret_casted into/from fidl_vector_t during encoding and decoding.
 //
 // Example:
 //
@@ -94,13 +94,13 @@ class VectorView {
     data_ = other.data_;
   }
 
-  // These methods are the only way to reference data which is not managed by a Arena.
-  // Their usage is discouraged. The lifetime of the referenced vector must be longer than the
-  // lifetime of the created VectorView.
+  // |FromExternal| methods are the only way to reference data which is not
+  // managed by an arena. Their usage is discouraged. The lifetime of the
+  // referenced vector must be longer than the lifetime of the created
+  // |VectorView|.
   //
-  // For example:
-  //   std::vector<int32_t> my_vector = { 1, 2, 3 };
-  //   auto my_view = fidl::VectorView<int32_t>::FromExternal>(my_vector);
+  // For example: std::vector<int32_t> my_vector = { 1, 2, 3 }; auto my_view =
+  //   fidl::VectorView<int32_t>::FromExternal(my_vector);
   static VectorView<T> FromExternal(std::vector<T>& from) { return VectorView<T>(from); }
   template <size_t size>
   static VectorView<T> FromExternal(std::array<T, size>& from) {
@@ -121,34 +121,38 @@ class VectorView {
     return *this;
   }
 
+  cpp20::span<T> get() const { return {data(), count()}; }
+
   size_t count() const { return count_; }
   void set_count(size_t count) { count_ = count; }
 
-  const T* data() const { return data_; }
+  T* data() const { return data_; }
 
+  // TODO(yifeit): Remove this after the single non-fuchsia.git usage is migrated.
   T* mutable_data() const { return data_; }
 
+  // Returns if the vector view is empty.
   bool empty() const { return count() == 0; }
 
-  const T& at(size_t offset) const { return data()[offset]; }
-  T& at(size_t offset) { return mutable_data()[offset]; }
+  // TODO(fxbug.dev/109737): |is_null| is used to check if an optional view type
+  // is absent. This can be removed if optional view types switch to
+  // |fidl::Optional|.
+  bool is_null() const { return data() == nullptr; }
 
-  const T& operator[](size_t offset) const { return at(offset); }
-  T& operator[](size_t offset) { return at(offset); }
+  T& at(size_t offset) const { return data()[offset]; }
+  T& operator[](size_t offset) const { return at(offset); }
 
-  T* begin() { return mutable_data(); }
-  const T* begin() const { return data(); }
+  T* begin() const { return data(); }
   const T* cbegin() const { return data(); }
 
-  T* end() { return mutable_data() + count(); }
-  const T* end() const { return data() + count(); }
+  T* end() const { return data() + count(); }
   const T* cend() const { return data() + count(); }
 
-  fidl_vector_t* impl() { return this; }
-
-  void Allocate(AnyArena& allocator, size_t count) {
+  // Allocates |count| items of |T| from the |arena|, forgetting any values
+  // currently held by the vector view. |T| is default constructed.
+  void Allocate(AnyArena& arena, size_t count) {
     count_ = count;
-    data_ = allocator.AllocateVector<T>(count);
+    data_ = arena.AllocateVector<T>(count);
   }
 
  protected:

@@ -63,7 +63,7 @@ func closeHandles(argumentName string, argumentValue string, argumentType cpp.Ty
 		element_type := argumentType.ElementType
 		var buf bytes.Buffer
 		buf.WriteString("{\n")
-		buf.WriteString(fmt.Sprintf("%s* %s = %s.mutable_data();\n", element_type, element_name, value))
+		buf.WriteString(fmt.Sprintf("%s* %s = %s.data();\n", element_type, element_name, value))
 		buf.WriteString(fmt.Sprintf("for (uint64_t i = 0; i < %s.count(); ++i, ++%s) {\n", value, element_name))
 		buf.WriteString(closeHandles(element_name, fmt.Sprintf("(*%s)", element_name), *element_type, true, false, false, false))
 		buf.WriteString("\n}\n}\n")

@@ -373,8 +373,8 @@ void ZirconPlatformConnection::ExecuteImmediateCommands(
   FlowControl();
 
   magma::Status status = delegate_->ExecuteImmediateCommands(
-      request->context_id, request->command_data.count(), request->command_data.mutable_data(),
-      request->semaphores.count(), request->semaphores.mutable_data());
+      request->context_id, request->command_data.count(), request->command_data.data(),
+      request->semaphores.count(), request->semaphores.data());
   if (!status)
     SetError(&completer, status.get());
 }

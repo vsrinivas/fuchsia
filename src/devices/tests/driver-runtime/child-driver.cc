@@ -90,7 +90,7 @@ void Device::SendRequestSync(fdf::Arena arena, void* req, uint32_t req_size,
 
   fidl::Arena fidl_arena;
   fidl::VectorView<uint8_t> out_data(fidl_arena, data_size);
-  auto* out_ptr = out_data.mutable_data();
+  auto* out_ptr = out_data.data();
   memcpy(out_ptr, data_start, data_size);
   out_data.set_count(data_size);
 
@@ -123,7 +123,7 @@ void Device::SendRequestAsync(fdf::Arena arena, void* req, uint32_t req_size,
 
         fidl::Arena fidl_arena;
         fidl::VectorView<uint8_t> out_data(fidl_arena, data_size);
-        auto* out_ptr = out_data.mutable_data();
+        auto* out_ptr = out_data.data();
         memcpy(out_ptr, data_start, data_size);
         out_data.set_count(data_size);
 

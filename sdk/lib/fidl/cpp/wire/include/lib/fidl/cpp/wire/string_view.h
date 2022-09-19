@@ -26,7 +26,7 @@ class StringView final : private VectorView<const char> {
 
   // Allocates a string using an arena.
   StringView(AnyArena& allocator, std::string_view from) : VectorView(allocator, from.size()) {
-    memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
+    memcpy(const_cast<char*>(VectorView::data()), from.data(), from.size());
   }
 
   // Constructs a fidl::StringView referencing a string literal. For example:
@@ -52,7 +52,7 @@ class StringView final : private VectorView<const char> {
 
   void Set(AnyArena& allocator, std::string_view from) {
     Allocate(allocator, from.size());
-    memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
+    memcpy(const_cast<char*>(VectorView::data()), from.data(), from.size());
   }
 
   std::string_view get() const { return {data(), size()}; }
@@ -62,11 +62,15 @@ class StringView final : private VectorView<const char> {
 
   const char* data() const { return VectorView::data(); }
 
-  bool is_null() const { return data() == nullptr; }
+  // Returns if the string view is empty.
   bool empty() const { return size() == 0; }
 
-  const char& at(size_t offset) const { return data()[offset]; }
+  // TODO(fxbug.dev/109737): |is_null| is used to check if an optional view type
+  // is absent. This can be removed if optional view types switch to
+  // |fidl::Optional|.
+  bool is_null() const { return data() == nullptr; }
 
+  const char& at(size_t offset) const { return data()[offset]; }
   const char& operator[](size_t offset) const { return at(offset); }
 
   const char* begin() const { return data(); }

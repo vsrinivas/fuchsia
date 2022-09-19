@@ -237,7 +237,7 @@ zx_status_t DsiDw::SendCommand(const fidl_dsi::wire::MipiDsiCmd& cmd,
       banjo_cmd.dsi_data_type = cmd.dsi_data_type();
       banjo_cmd.pld_data_list = txdata.data();
       banjo_cmd.pld_data_count = txdata.count();
-      banjo_cmd.rsp_data_list = response.mutable_data();
+      banjo_cmd.rsp_data_list = response.data();
       banjo_cmd.rsp_data_count = response.count();
       banjo_cmd.flags = cmd.flags();
       status = GenWriteLong(banjo_cmd);

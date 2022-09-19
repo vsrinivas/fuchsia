@@ -319,7 +319,7 @@ acpi::status<fuchsia_hardware_acpi::wire::Object> EvaluateObjectFidlHelper::Enco
     case ACPI_TYPE_BUFFER: {
       fidl::VectorView<uint8_t> data;
       data.Allocate(alloc, value->Buffer.Length);
-      memcpy(data.mutable_data(), value->Buffer.Pointer, value->Buffer.Length);
+      memcpy(data.data(), value->Buffer.Pointer, value->Buffer.Length);
       result = fuchsia_hardware_acpi::wire::Object::WithBufferVal(alloc, data);
       break;
     }
@@ -415,7 +415,7 @@ acpi::status<> EvaluateObjectFidlHelper::DecodeObject(
       }
       out->Buffer.Type = ACPI_TYPE_BUFFER;
       out->Buffer.Length = static_cast<uint32_t>(buffer.count());
-      out->Buffer.Pointer = buffer.mutable_data();
+      out->Buffer.Pointer = buffer.data();
       break;
     }
     case Tag::kPowerResourceVal: {

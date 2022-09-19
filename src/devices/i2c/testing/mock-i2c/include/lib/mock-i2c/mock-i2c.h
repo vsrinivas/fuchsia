@@ -77,7 +77,7 @@ class MockI2c : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
       CheckI2cOp(*it++, [&](const I2cExpectation& exp) {
         if (exp.is_read) {
           fidl::VectorView<uint8_t> read_data(arena, exp.data.size());
-          memcpy(read_data.mutable_data(), exp.data.data(), exp.data.size());
+          memcpy(read_data.data(), exp.data.data(), exp.data.size());
           read_ops.push_back(read_data);
         }
         status = exp.status;

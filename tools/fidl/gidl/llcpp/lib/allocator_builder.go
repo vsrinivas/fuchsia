@@ -248,7 +248,7 @@ func (a *allocatorBuilder) visitVector(value []gidlir.Value, decl *gidlmixer.Vec
 			}
 			a.write(
 				`for (size_t offset = 0; offset < %[1]s.count(); offset += %[2]d) {
-memcpy(%[1]s.mutable_data() + offset, %[1]s.data(), %[2]d);
+memcpy(%[1]s.data() + offset, %[1]s.data(), %[2]d);
 }
 `, vector, period)
 			return fmt.Sprintf("std::move(%s)", vector)

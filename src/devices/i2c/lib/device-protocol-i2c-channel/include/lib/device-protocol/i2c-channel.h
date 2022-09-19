@@ -84,7 +84,7 @@ class I2cChannel {
 
     fidl::VectorView<uint8_t> write_data(arena, tx_len);
     if (tx_len) {
-      memcpy(write_data.mutable_data(), tx_buf, tx_len);
+      memcpy(write_data.data(), tx_buf, tx_len);
     }
 
     auto write_transfer =

@@ -95,7 +95,7 @@ zx_status_t IntelThermal::Bind() {
   char dest_buf[256];
   char* dst_ptr = dest_buf;
   iconv_t converter = iconv_open("ascii", "utf16le");
-  char* ptr = reinterpret_cast<char*>(buf.mutable_data());
+  char* ptr = reinterpret_cast<char*>(buf.data());
   size_t src_count = buf.count();
   size_t dst_count = sizeof(dest_buf);
   size_t converted = iconv(converter, &ptr, &src_count, &dst_ptr, &dst_count);

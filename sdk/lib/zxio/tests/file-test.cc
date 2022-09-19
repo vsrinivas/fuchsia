@@ -234,7 +234,7 @@ class TestServerChannel final : public CloseCountingFileServer {
       return;
     }
     zx_iovec_t vec = {
-        .buffer = request->data.mutable_data(),
+        .buffer = request->data.data(),
         .capacity = request->data.count(),
     };
     size_t actual = 0u;
@@ -252,7 +252,7 @@ class TestServerChannel final : public CloseCountingFileServer {
       return;
     }
     zx_iovec_t vec = {
-        .buffer = request->data.mutable_data(),
+        .buffer = request->data.data(),
         .capacity = request->data.count(),
     };
     size_t actual = 0u;

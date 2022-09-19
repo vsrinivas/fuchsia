@@ -92,7 +92,7 @@ class I2cDevice : public fidl::WireServer<fuchsia_hardware_i2c::Device> {
           return;
         }
 
-        memcpy(read_data.mutable_data(), &rx_data_[rx_offset], read_data.count());
+        memcpy(read_data.data(), &rx_data_[rx_offset], read_data.count());
         rx_offset += transaction.data_transfer().read_size();
       } else {
         // Serialize and store the write transaction.

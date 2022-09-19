@@ -102,7 +102,7 @@ void PwmDevice::SetConfig(SetConfigRequestView request, SetConfigCompleter::Sync
   new_config.polarity = request->config.polarity;
   new_config.period_ns = request->config.period_ns;
   new_config.duty_cycle = request->config.duty_cycle;
-  new_config.mode_config_buffer = request->config.mode_config.mutable_data();
+  new_config.mode_config_buffer = request->config.mode_config.data();
   new_config.mode_config_size = request->config.mode_config.count();
 
   zx_status_t result = PwmSetConfig(&new_config);

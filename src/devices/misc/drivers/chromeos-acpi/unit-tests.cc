@@ -78,7 +78,7 @@ class ChromeosAcpiTest : public InspectTestHelper, public zxtest::Test {
   facpi::Object MakeObject(cpp20::span<uint8_t> buf) {
     fidl::VectorView<uint8_t> data;
     data.Allocate(arena_, buf.size());
-    memcpy(data.mutable_data(), buf.data(), buf.size());
+    memcpy(data.data(), buf.data(), buf.size());
     return facpi::Object::WithBufferVal(arena_, data);
   }
 

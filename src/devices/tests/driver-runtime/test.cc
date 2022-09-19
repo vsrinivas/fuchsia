@@ -73,7 +73,7 @@ class RuntimeTest : public gtest::TestLoopFixture {
 void RuntimeTest::ParentSetTestData(const void* data_to_send, size_t size) {
   fidl::Arena arena;
   fidl::VectorView<uint8_t> data(arena, size);
-  memcpy(data.mutable_data(), data_to_send, size);
+  memcpy(data.data(), data_to_send, size);
   data.set_count(size);
 
   auto response = fidl::WireCall<TestDevice>(parent_chan)->SetTestData(std::move(data));

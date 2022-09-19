@@ -182,7 +182,7 @@ void SdioFunctionDevice::DoRwTxn(DoRwTxnRequestView request, DoRwTxnCompleter::S
     sdio_txn.virt_size = 0;
   } else {
     sdio_txn.dma_vmo = ZX_HANDLE_INVALID;
-    sdio_txn.virt_buffer = request->txn.virt.mutable_data();
+    sdio_txn.virt_buffer = request->txn.virt.data();
     sdio_txn.virt_size = request->txn.virt.count();
   }
 

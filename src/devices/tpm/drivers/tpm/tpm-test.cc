@@ -144,7 +144,7 @@ class TpmTest : public zxtest::Test, public fidl::WireServer<fuchsia_hardware_tp
     switch (request->address) {
       case RegisterAddress::kTpmSts: {
         ASSERT_EQ(request->data.count(), 4);
-        uint32_t value = *reinterpret_cast<uint32_t*>(request->data.mutable_data());
+        uint32_t value = *reinterpret_cast<uint32_t*>(request->data.data());
         // There should only be 1 bit set on a TPM write.
         // Leading zeros + trailing zeros should equal 31.
         ASSERT_EQ(__builtin_clz(value) + __builtin_ctz(value), 31);
