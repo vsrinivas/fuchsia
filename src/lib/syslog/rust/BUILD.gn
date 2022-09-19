@@ -71,7 +71,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/fonts:*",
   "//src/hwinfo:*",
   "//src/lib/fuchsia-component-test/tests:*",
-  "//src/lib/storage/block_client/rust:*",
   "//src/media/stream_processors/test:*",
   "//src/power/power-manager:*",
   "//src/power/shutdown-shim/tests:*",
