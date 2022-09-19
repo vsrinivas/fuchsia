@@ -149,7 +149,6 @@ if (is_fuchsia) {
         "//src/sys/appmgr:component_id_index_no_restrict_storage",
         "//src/sys/pkg:recovery",
         "//src/sys/stash:pkg",
-        "//src/sys/sysmgr",
         "//src/sys/time:recovery",
         "//src/ui/bin/brightness_manager:auto-brightness",
       ]

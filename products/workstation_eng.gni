@@ -44,13 +44,6 @@ _developer_packages = [
 legacy_base_package_labels -= _developer_packages
 legacy_cache_package_labels += _developer_packages
 
-# Don't include sysmgr.
-legacy_base_package_labels -= [
-  "//src/sys/appmgr",
-  "//src/sys/sysmgr",
-]
-legacy_base_package_labels += [ "//src/sys/appmgr:appmgr_without_sysmgr" ]
-
 # Add examples to universe.
 legacy_universe_package_labels += [
   "//examples/fidl:tests",

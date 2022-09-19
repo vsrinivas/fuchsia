@@ -147,13 +147,14 @@ async fn main() -> Result<(), Error> {
     spawn_options.insert(fdio::SpawnOptions::CLONE_STDIO);
 
     let appmgr_bin_path_c_str = CString::new(APPMGR_BIN_PATH).unwrap();
-    let arg = CString::new("--auto_update_packages=false").unwrap();
+    let arg1 = CString::new("--launch_sysmgr=true").unwrap();
+    let arg2 = CString::new("--auto_update_packages=false").unwrap();
     let _process = scoped_task::spawn_etc(
         scoped_task::job_default(),
         spawn_options,
         &appmgr_bin_path_c_str,
         // Prevent sysmgr from trying to autoupdate packages or make use of pkg-resolver
-        &[&appmgr_bin_path_c_str, &arg],
+        &[&appmgr_bin_path_c_str, &arg1, &arg2],
         None,
         spawn_actions.as_mut_slice(),
     )

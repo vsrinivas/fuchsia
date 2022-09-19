@@ -140,14 +140,14 @@ int main(int argc, char** argv) {
   if (!auto_update_packages.empty()) {
     sysmgr_args.push_back("--auto_update_packages=" + auto_update_packages);
   }
-  std::string sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx";
+  std::string sysmgr_url;
   if (cmdline.HasOption(kLaunchSysmgr)) {
     std::string s;
     cmdline.GetOptionValue(kLaunchSysmgr, &s);
     if (s == "true") {
-      // default
+      sysmgr_url = "fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx";
     } else if (s == "false") {
-      sysmgr_url = "";
+      // default
     } else {
       FX_LOGS(ERROR) << "Invalid value for --launch_sysmgr: " << s;
       return ZX_ERR_INVALID_ARGS;

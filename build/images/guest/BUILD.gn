@@ -42,7 +42,6 @@ assembled_system("guest") {
     "//src/sys/pkg/bin/system-updater",
     "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/pkg/bin/system-update-committer",
-    "//src/sys/sysmgr",
     "//src/sys/process-resolver",
     "//src/virtualization/tests:virtualization_test_utils_pkg",
     "//src/cobalt/bin/app:cobalt",
