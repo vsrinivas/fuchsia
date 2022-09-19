@@ -34,6 +34,18 @@ def main():
         help='If this exists then the driver should be colocated with its parent'
     )
     parser.add_argument(
+        '--device_category',
+        nargs="*",
+        help=
+        'A comma separated list of device categories to enlist and run the tests for certification'
+    )
+    parser.add_argument(
+        '--device_sub_category',
+        nargs="*",
+        help=
+        'A comma separated list of device sub-categories to enlist and run the test for certification'
+    )
+    parser.add_argument(
         '--fallback',
         action='store_true',
         help='Whether or not the driver is a fallback driver')
@@ -108,6 +120,11 @@ def main():
         ]
     else:
         manifest["program"]["binary"] = program
+
+    if args.device_category:
+        manifest["program"]["device_category"] = args.device_category
+    if args.device_sub_category:
+        manifest["program"]["device_sub_category"] = args.device_sub_category
 
     if args.colocate:
         manifest["program"]["colocate"] = "true"

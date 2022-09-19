@@ -421,6 +421,8 @@ mod tests {
             bind_rules: rules,
             bind_bytecode: vec![],
             colocate: false,
+            device_category: vec![],
+            device_sub_category: vec![],
             fallback: false,
             package_type: DriverPackageType::Base,
             package_hash: None,

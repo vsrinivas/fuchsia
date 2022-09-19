@@ -1,0 +1,82 @@
+{
+    "certification_type": {
+        "device_driver": {},
+        "system": {},
+        "hardware_component": {}
+    },
+    "system_types": {
+        "workstation": {},
+        "smart_speaker": {},
+        "tablet": {},
+        "phone": {}
+    },
+    "driver_test_types": {
+        "generic_driver_tests": {},
+        "functional": {},
+        "spec_compliance": {},
+        "performance": {},
+        "power": {},
+        "security": {},
+        "hardware": {}
+    },
+    "device_category_types": {
+        "driver_framework": {},
+        "light": {},
+        "test": {},
+        "bluetooth": {},
+        "usb": {},
+        "graphics": {},
+        "misc": {},
+        "board": {
+            "i2c": {},
+            "uart": {},
+            "spi": {},
+            "pci": {},
+            "hda": {},
+            "gpio": {},
+            "acpi": {}
+        },
+        "system": {
+            "thermal": {},
+            "power": {},
+            "pwm": {},
+            "clock": {}
+        },
+        "imaging": {
+            "camera": {}
+        },
+        "audio": {
+            "dsp": {},
+            "all_in_one_codec": {},
+            "speaker": {},
+            "mic": {},
+            "headset": {},
+            "usb_audio": {}
+        },
+        "connectivity": {
+            "wifi": {},
+            "ethernet": {}
+        },
+        "display": {
+            "hdmi": {},
+            "dp": {},
+            "internal_display": {}
+        },
+        "storage": {
+            "nand": {},
+            "spi": {},
+            "ssd": {}
+        },
+        "input": {
+            "touchpad": {},
+            "touchscreen": {},
+            "keyboard": {},
+            "mouse": {}
+        },
+        "sensor": {
+            "accelerometer": {},
+            "temperature": {},
+            "activity_detection": {}
+        }
+    }
+}

@@ -60,6 +60,25 @@ fuchsia_driver_development::wire::DriverInfo CopyDriverInfo(
   if (driver.has_package_type()) {
     allocated.package_type(driver.package_type());
   }
+
+  if (driver.has_device_category()) {
+    auto categories =
+        fidl::VectorView<fidl::StringView>(allocator, driver.device_category().count());
+    for (size_t i = 0; i < categories.count(); i++) {
+      categories[i] = fidl::StringView(allocator, driver.device_category()[i].get());
+    }
+    allocated.device_category(categories);
+  }
+
+  if (driver.has_device_sub_category()) {
+    auto subcategories =
+        fidl::VectorView<fidl::StringView>(allocator, driver.device_sub_category().count());
+    for (size_t i = 0; i < subcategories.count(); i++) {
+      subcategories[i] = fidl::StringView(allocator, driver.device_sub_category()[i].get());
+    }
+    allocated.device_sub_category(subcategories);
+  }
+
   return allocated.Build();
 }
 
@@ -428,6 +447,20 @@ const std::vector<MatchedDriver> DriverLoader::MatchPropertiesDriverIndex(
     if (!fidl_driver_info->is_fallback() && config.only_return_base_and_fallback_drivers &&
         IsFuchsiaBootScheme(driver_url)) {
       continue;
+    }
+
+    if (fidl_driver_info->has_device_category()) {
+      for (size_t i = 0; i < fidl_driver_info->device_category().count(); i++) {
+        std::string category(fidl_driver_info->device_category()[i].get());
+        matched_driver_info.device_category.push_back(category);
+      }
+    }
+
+    if (fidl_driver_info->has_device_sub_category()) {
+      for (size_t i = 0; i < fidl_driver_info->device_sub_category().count(); i++) {
+        std::string sub_category(fidl_driver_info->device_sub_category()[i].get());
+        matched_driver_info.device_sub_category.push_back(sub_category);
+      }
     }
 
     MatchedDriver matched_driver;

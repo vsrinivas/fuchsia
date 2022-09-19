@@ -82,6 +82,14 @@ pub async fn list(
                 writeln!(writer, "{0: <10}: {1}", "Driver", libname)
                     .context("Failed to write to writer")?;
             }
+            if let Some(device_category) = driver.device_category {
+                writeln!(writer, "{0: <10}: {1:?}", "Device Category:", device_category)
+                    .context("Failed to write to writer")?;
+            }
+            if let Some(device_sub_category) = driver.device_sub_category {
+                writeln!(writer, "{0: <10}: {1:?}", "Device Sub Category:", device_sub_category)
+                    .context("Failed to write to writer")?;
+            }
             if let Some(package_hash) = driver.package_hash {
                 let mut merkle_root = String::with_capacity(package_hash.merkle_root.len() * 2);
                 for byte in package_hash.merkle_root.iter() {
@@ -234,6 +242,8 @@ mod tests {
                                 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
                             ],
                         }),
+                        device_category: Some(vec![]),
+                        device_sub_category: Some(vec![]),
                         ..fdd::DriverInfo::EMPTY
                     }],
                     iterator,
@@ -252,6 +262,8 @@ mod tests {
             r#"Name      : foo
 URL       : fuchsia-pkg://fuchsia.com/foo-package#meta/foo.cm
 Driver    : foo.so
+Device Category:: []
+Device Sub Category:: []
 Merkle Root: 0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20
 Bytecode Version: Unknown
 

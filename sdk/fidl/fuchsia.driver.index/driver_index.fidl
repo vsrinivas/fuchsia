@@ -38,6 +38,10 @@ type MatchedDriverInfo = table {
 
     /// If this is true then the driver is a fallback driver.
     5: is_fallback bool;
+
+    /// Device category and sub-category
+    6: device_category vector<string:MAX>:MAX;
+    7: device_sub_category vector<string:MAX>:MAX;
 };
 
 /// Information for a composite driver matched by the driver index.

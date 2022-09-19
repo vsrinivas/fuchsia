@@ -15,6 +15,8 @@ use {
     fidl_fuchsia_driver_index as fdi, fidl_fuchsia_io as fio, fidl_fuchsia_pkg as fpkg,
     futures::TryFutureExt,
 };
+pub const DEFAULT_DEVICE_CATEGORY: &str = "Misc";
+pub const DEFAULT_DEVICE_SUB_CATEGORY: &str = "None";
 
 // Cached drivers don't exist yet so we allow dead code.
 #[derive(Copy, Clone, Debug)]
@@ -33,6 +35,8 @@ pub struct ResolvedDriver {
     pub bind_rules: DecodedRules,
     pub bind_bytecode: Vec<u8>,
     pub colocate: bool,
+    pub device_category: Vec<String>,
+    pub device_sub_category: Vec<String>,
     pub fallback: bool,
     pub package_type: DriverPackageType,
     pub package_hash: Option<fpkg::BlobId>,
@@ -94,7 +98,6 @@ impl ResolvedDriver {
                 fuchsia_zircon::Status::INTERNAL
             })
             .await?;
-
         return driver.ok_or_else(|| {
             log::warn!("{}: Component was not a driver-component", component_url.as_str());
             fuchsia_zircon::Status::INTERNAL
@@ -159,12 +162,13 @@ impl ResolvedDriver {
             None => None,
         }
     }
-
     pub fn create_matched_driver_info(&self) -> fdi::MatchedDriverInfo {
         fdi::MatchedDriverInfo {
             url: Some(self.component_url.as_str().to_string()),
             driver_url: self.get_driver_url(),
             colocate: Some(self.colocate),
+            device_category: Some(self.device_category.clone()),
+            device_sub_category: Some(self.device_sub_category.clone()),
             package_type: fdi::DriverPackageType::from_primitive(self.package_type as u8),
             is_fallback: Some(self.fallback),
             ..fdi::MatchedDriverInfo::EMPTY
@@ -179,12 +183,15 @@ impl ResolvedDriver {
             // TODO(fxbug.dev/85651): Support composite bytecode in DriverInfo.
             DecodedRules::Composite(_) => None,
         };
+
         fdd::DriverInfo {
             url: Some(self.component_url.clone().to_string()),
             libname: Some(self.get_libname()),
             bind_rules: bind_rules,
             package_type: fdi::DriverPackageType::from_primitive(self.package_type as u8),
             package_hash: self.package_hash,
+            device_category: Some(self.device_category.clone()),
+            device_sub_category: Some(self.device_sub_category.clone()),
             ..fdd::DriverInfo::EMPTY
         }
     }
@@ -281,15 +288,19 @@ pub async fn load_driver(
         None => false,
     };
 
+    let device_category = get_rules_string_vec(&component, "device_category").unwrap();
+    let device_sub_category = get_rules_string_vec(&component, "device_sub_category").unwrap();
     Ok(Some(ResolvedDriver {
         component_url: component_url,
         v1_driver_path: v1_driver_path,
         bind_rules: bind_rules,
         bind_bytecode: bind,
         colocate: colocate,
-        fallback,
-        package_type,
-        package_hash,
+        device_category: device_category,
+        device_sub_category: device_sub_category,
+        fallback: fallback,
+        package_type: package_type,
+        package_hash: package_hash,
     }))
 }
 
@@ -307,6 +318,31 @@ fn get_rules_string_value(component: &cm_rust::ComponentDecl, key: &str) -> Opti
         }
     }
     return None;
+}
+
+fn get_rules_string_vec(
+    component: &cm_rust::ComponentDecl,
+    key: &str,
+) -> Option<Vec<std::string::String>> {
+    let default_val = match key {
+        "device_category" => Some(vec![DEFAULT_DEVICE_CATEGORY.to_string()]),
+        "device_sub_category" => Some(vec![DEFAULT_DEVICE_SUB_CATEGORY.to_string()]),
+        _ => Some(vec![]),
+    };
+    for entry in component.program.as_ref()?.info.entries.as_ref()? {
+        if entry.key == key {
+            match entry.value.as_ref()?.as_ref() {
+                fidl_fuchsia_data::DictionaryValue::StrVec(s) => {
+                    return Some(s.to_vec());
+                }
+                _ => {
+                    return default_val;
+                }
+            }
+        }
+    }
+
+    default_val
 }
 
 fn map_resolve_err_to_zx_status(

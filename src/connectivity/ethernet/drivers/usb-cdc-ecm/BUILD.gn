@@ -50,6 +50,14 @@ fuchsia_driver_component("usb-cdc-ecm") {
   deps = [ ":usb-cdc-ecm-driver" ]
   info = "usb-cdc-ecm-info.json"
   colocate = true
+  device_category = [
+    "usb",
+    "connectivity",
+  ]
+  device_sub_category = [
+    "None",
+    "ethernet",
+  ]
 }
 
 source_set("usb-cdc-ecm-lib") {
