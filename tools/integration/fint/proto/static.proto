@@ -108,42 +108,34 @@ message Static {
   // be used) when building with some experimental toolchain versions.
   bool use_goma = 23;
 
-  // Whether to generate a listing of the commands run during the build.
-  bool generate_compdb = 24;
-
-  // Compile commands should be generated for these targets (and all their
-  // dependencies). If `generate_compdb` is set and `compdb_targets` is empty,
-  // GN will generate compile commands for all targets in the graph.
-  repeated string compdb_targets = 25;
-
   // Whether to use a go cache when building.
-  bool enable_go_cache = 26;
+  bool enable_go_cache = 24;
 
   // Whether to use a rust cache when building.
-  bool enable_rust_cache = 27;
+  bool enable_rust_cache = 25;
 
   // Which IDE files to generate.
-  repeated string ide_files = 28;
+  repeated string ide_files = 26;
 
   // Passed to --json-ide-script GN flag; GN will execute each of these scripts
   // after regenerating the project.json IDE file.
-  repeated string json_ide_scripts = 29;
+  repeated string json_ide_scripts = 27;
 
   // Whether to set --export-rust-project GN flag.
-  bool export_rust_project = 30;
+  bool export_rust_project = 28;
 
   // If true, build Rust targets with RBE/reclient.
-  bool rust_rbe_enable = 31;
+  bool rust_rbe_enable = 29;
 
   // If true, build C++ targets with RBE/reclient.
   // This takes precedence over `use_goma`.
-  bool cxx_rbe_enable = 32;
+  bool cxx_rbe_enable = 30;
 
   // Whether we're performing an incremental build.
-  bool incremental = 33;
+  bool incremental = 31;
 
   // Whether to include the the default ninja target.
-  bool include_default_ninja_target = 34;
+  bool include_default_ninja_target = 32;
 
   // If true, use a temporary directory for the Go cache rather than a
   // deterministic directory within the build directory. This is useful for
@@ -152,7 +144,7 @@ message Static {
   // between builds.
   //
   // Ignored if `enable_go_cache` is set.
-  bool use_temporary_go_cache = 35;
+  bool use_temporary_go_cache = 33;
 
   enum LintTargets {
     // Don't build any lint targets.
@@ -168,8 +160,8 @@ message Static {
   }
 
   // Which language-specific lint targets to include.
-  LintTargets include_lint_targets = 36;
+  LintTargets include_lint_targets = 34;
 
   // Extra args to pass to ninja.
-  repeated string ninja_args = 37;
+  repeated string ninja_args = 35;
 }
