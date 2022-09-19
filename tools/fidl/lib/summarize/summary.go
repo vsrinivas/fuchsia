@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// summarize is a library used to produce a FIDL API summary from the FIDL
-// intermediate representation (IR) abstract syntax tree.  Please refer to the
-// README.md file in this repository for usage hints.
+// Package summarize produces a FIDL API summary from FIDL IR.
 package summarize
 
 import (
-	"bytes"
 	"encoding/json"
 	"io"
 	"sort"
@@ -16,33 +13,28 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-type summary []Element
+type summary []element
 
-// GenerateSummary summarizes root and returns the serialized result in the given format.
-func GenerateSummary(root fidlgen.Root) ([]byte, error) {
-	var b bytes.Buffer
-	if err := WriteSummary(&b, root); err != nil {
-		return nil, err
+// IsEmptyLibrary returns true if the summary contains only an empty library.
+func (s summary) IsEmptyLibrary() bool {
+	if len(s) != 1 {
+		return false
 	}
-	return b.Bytes(), nil
+	_, isLibrary := s[0].(*library)
+	return isLibrary
 }
 
-// WriteSummary summarizes root and writes the serialized result to the given Writer.
-func WriteSummary(w io.Writer, root fidlgen.Root) error {
-	return formatJSONSummary(w, summarize(root))
-}
-
-func formatJSONSummary(w io.Writer, s summary) error {
+// WriteJSON writes out the summary as JSON.
+func (s summary) WriteJSON(w io.Writer) error {
 	e := json.NewEncoder(w)
 	// 4-level indent is chosen to match `fx format-code`.
 	e.SetIndent("", "    ")
 	e.SetEscapeHTML(false)
-	return e.Encode(serialize([]Element(s)))
+	return e.Encode(serialize([]element(s)))
 }
 
-// Element describes a single platform surface element.  Use Summarize to
-// convert a FIDL AST into Elements.
-type Element interface {
+// element describes a single platform surface element.
+type element interface {
 	// Member returns true if the Element is a member of something.
 	Member() bool
 	// Name returns the fully-qualified name of this Element.  For example,
@@ -52,19 +44,21 @@ type Element interface {
 	Serialize() ElementStr
 }
 
+var _ = []element{
+	(*aConst)(nil),
+	(*aggregate)(nil),
+	(*alias)(nil),
+	(*bits)(nil),
+	(*enum)(nil),
+	(*library)(nil),
+	(*member)(nil),
+	(*method)(nil),
+	(*protocol)(nil),
+}
+
 // payloadDict contains a mapping of names to their underlying payload layouts,
 // represented as parameterizer interfaces.
 type payloadDict = map[fidlgen.EncodedCompoundIdentifier]parameterizer
-
-// All implementers of Element.
-var _ = []Element{
-	(*bits)(nil),
-	(*aConst)(nil),
-	(*enum)(nil),
-	(*method)(nil),
-	(*protocol)(nil),
-	(*library)(nil),
-}
 
 type summarizer struct {
 	elements elementSlice
@@ -72,15 +66,8 @@ type summarizer struct {
 }
 
 // addElement adds an element for summarization.
-func (s *summarizer) addElement(e Element) {
+func (s *summarizer) addElement(e element) {
 	s.elements = append(s.elements, e)
-}
-
-// Elements obtains the API elements in this summarizer.
-func (s *summarizer) Elements() []Element {
-	// Ensure predictable ordering of the reported Elements.
-	sort.Sort(s.elements)
-	return s.elements
 }
 
 // addUnions adds the elements corresponding to the FIDL unions.
@@ -138,7 +125,7 @@ func (s *summarizer) registerPayloads(payloads payloadDict) {
 	s.symbols.addPayloads(payloads)
 }
 
-func serialize(e []Element) []ElementStr {
+func serialize(e []element) []ElementStr {
 	var ret []ElementStr
 	for _, l := range e {
 		ret = append(ret, l.Serialize())
@@ -193,9 +180,8 @@ func processUnions(unions []fidlgen.Union, mtum fidlgen.MethodTypeUsageMap, payl
 	return out, payloads
 }
 
-// Elements returns the API elements found in the supplied AST root in a
-// canonical ordering.
-func summarize(root fidlgen.Root) summary {
+// Summarize converts FIDL IR to an API summary.
+func Summarize(root fidlgen.Root) summary {
 	var s summarizer
 
 	// Do a first pass of the protocols, creating a map of all names of types that
@@ -221,7 +207,10 @@ func summarize(root fidlgen.Root) summary {
 	s.addTables(tables)
 	s.addUnions(unions)
 	s.addProtocols(root.Protocols)
-	s.addElement(library{r: root})
+	s.addElement(&library{r: root})
 
-	return summary(s.Elements())
+	// TODO(fxbug.dev/7807): Add aliases.
+
+	sort.Sort(s.elements)
+	return summary(s.elements)
 }

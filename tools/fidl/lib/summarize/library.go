@@ -17,11 +17,11 @@ type library struct {
 }
 
 // Name implements Element.
-func (l library) Name() Name {
+func (l *library) Name() Name {
 	return Name(l.r.Name)
 }
 
-func (l library) Serialize() ElementStr {
+func (l *library) Serialize() ElementStr {
 	var e ElementStr
 	e.Name = l.Name()
 	e.Kind = libraryKind

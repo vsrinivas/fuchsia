@@ -21,7 +21,7 @@ func (s *summarizer) addBits(allBits []fidlgen.Bits) {
 			s.addElement(newIsMember(&s.symbols, b.Name, b.Members[i].Name, fidlgen.BitsDeclType, &b.Members[i].Value))
 		}
 		s.addElement(
-			bits{
+			&bits{
 				wraparoundType: wraparoundType{
 					named:      newNamed(&s.symbols, b.Name),
 					subtype:    b.Type.PrimitiveSubtype,

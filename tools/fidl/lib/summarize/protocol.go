@@ -16,7 +16,7 @@ func (s *summarizer) addProtocols(protocols []fidlgen.Protocol) {
 		for _, m := range p.Methods {
 			s.addElement(newMethod(&s.symbols, p.Name, m))
 		}
-		s.addElement(protocol{named: named{name: Name(p.Name)}})
+		s.addElement(&protocol{named: named{name: Name(p.Name)}})
 	}
 }
 
@@ -34,7 +34,7 @@ type protocol struct {
 	notMember
 }
 
-func (p protocol) Serialize() ElementStr {
+func (p *protocol) Serialize() ElementStr {
 	e := p.named.Serialize()
 	e.Kind = ProtocolKind
 	return e
@@ -49,9 +49,9 @@ type method struct {
 }
 
 // newMethod creates a new protocol method element.
-func newMethod(s *symbolTable, parent fidlgen.EncodedCompoundIdentifier, m fidlgen.Method) method {
-	out := method{
-		membership: newIsMember(s, parent, m.Name, fidlgen.ProtocolDeclType /* default value */, nil),
+func newMethod(s *symbolTable, parent fidlgen.EncodedCompoundIdentifier, m fidlgen.Method) *method {
+	out := &method{
+		membership: *newIsMember(s, parent, m.Name, fidlgen.ProtocolDeclType /* default value */, nil),
 		method:     m,
 	}
 	if m.RequestPayload != nil {
@@ -64,7 +64,7 @@ func newMethod(s *symbolTable, parent fidlgen.EncodedCompoundIdentifier, m fidlg
 }
 
 // Name implements Element.
-func (m method) Name() Name {
+func (m *method) Name() Name {
 	return m.membership.Name()
 }
 
@@ -92,7 +92,7 @@ func (m method) getTypeSignature() Decl {
 	return Decl(strings.Join(parlist, " "))
 }
 
-func (m method) Serialize() ElementStr {
+func (m *method) Serialize() ElementStr {
 	e := m.membership.Serialize()
 	e.Kind = ProtocolMemberKind
 	e.Decl = m.getTypeSignature()

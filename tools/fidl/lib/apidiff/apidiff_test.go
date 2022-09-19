@@ -1885,8 +1885,9 @@ protocol T {
 
 func summarizeOne(t *testing.T, r fidlgen.Root) string {
 	t.Helper()
+	s := summarize.Summarize(r)
 	var buf strings.Builder
-	if err := summarize.WriteSummary(&buf, r); err != nil {
+	if err := s.WriteJSON(&buf); err != nil {
 		t.Fatalf("error while summarizing: %v", err)
 	}
 	return buf.String()

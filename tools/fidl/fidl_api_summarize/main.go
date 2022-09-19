@@ -8,7 +8,6 @@
 package main
 
 import (
-	"bytes"
 	"flag"
 	"fmt"
 	"os"
@@ -38,43 +37,38 @@ func main() {
 	flag.Parse()
 
 	if err := mainImpl(); err != nil {
-		fmt.Fprintln(os.Stderr, err.Error())
+		fmt.Fprintf(os.Stderr, "Error: %s", err)
 		os.Exit(1)
 	}
 }
 
 func mainImpl() error {
 	if *fir == "" {
-		return fmt.Errorf("The flag --fidl-ir-file=... is required")
-	}
-	in, err := os.Open(*fir)
-	if err != nil {
-		return fmt.Errorf("Could not open file: %v: %w", *fir, err)
+		return fmt.Errorf("missing required flag --fidl-ir-file")
 	}
 	if *out == "" {
-		return fmt.Errorf("The flag --output-file=... is required")
+		return fmt.Errorf("missing required flag --output-file=... ")
 	}
 
-	root, err := fidlgen.DecodeJSONIr(in)
+	root, err := fidlgen.ReadJSONIr(*fir)
 	if err != nil {
-		return fmt.Errorf("Could not parse FIDL IR from: %v: %w", *in, err)
+		return err
 	}
 
-	b, err := summarize.GenerateSummary(root)
+	outFile, err := os.Create(*out)
 	if err != nil {
-		return fmt.Errorf("While summarizing %v into %v: %w", *in, *out, err)
+		return fmt.Errorf("creating output file: %w", err)
+	}
+	defer outFile.Close()
+
+	summary := summarize.Summarize(root)
+	if *suppressEmptyLibrary && summary.IsEmptyLibrary() {
+		// Leave the output file empty.
+		return nil
+	}
+	if err := summary.WriteJSON(outFile); err != nil {
+		return fmt.Errorf("writing JSON to %s: %w", *out, err)
 	}
 
-	if *suppressEmptyLibrary {
-		emptyLibRoot := fidlgen.Root{Name: root.Name}
-		emptyLibBytes, err := summarize.GenerateSummary(emptyLibRoot)
-		if err != nil {
-			return err
-		}
-		if bytes.Equal(b, emptyLibBytes) {
-			return os.WriteFile(*out, []byte{}, 0644)
-		}
-	}
-
-	return os.WriteFile(*out, b, 0644)
+	return nil
 }

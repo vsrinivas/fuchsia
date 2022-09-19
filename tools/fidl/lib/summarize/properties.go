@@ -31,13 +31,13 @@ func newNamed(s *symbolTable,
 	return named{symbolTable: s, name: Name(name)}
 }
 
-func (l named) Serialize() ElementStr {
+func (l *named) Serialize() ElementStr {
 	var e ElementStr
 	e.Name = l.Name()
 	return e
 }
 
-func (l named) Name() Name {
+func (l *named) Name() Name {
 	if l.parent != "" {
 		return Name(fmt.Sprintf("%v.%v", l.parent, l.name))
 	}
@@ -57,8 +57,8 @@ func newIsMember(
 	parentName fidlgen.EncodedCompoundIdentifier,
 	name fidlgen.Identifier,
 	parentType fidlgen.DeclType,
-	maybeDefaultValue *fidlgen.Constant) isMember {
-	return isMember{
+	maybeDefaultValue *fidlgen.Constant) *isMember {
+	return &isMember{
 		named: named{
 			symbolTable: st,
 			parent:      parentName,
@@ -69,21 +69,21 @@ func newIsMember(
 	}
 }
 
-func (i isMember) Serialize() ElementStr {
+func (i *isMember) Serialize() ElementStr {
 	e := i.named.Serialize()
 	e.Kind = Kind(fmt.Sprintf("%v/member", i.parentType))
 	e.Value = fidlConstToValue(i.maybeValue)
 	return e
 }
 
-func (m isMember) Member() bool {
+func (*isMember) Member() bool {
 	return true
 }
 
 // notMember is something that is not a member.
 type notMember struct{}
 
-func (m notMember) Member() bool {
+func (m *notMember) Member() bool {
 	return false
 }
 
@@ -103,7 +103,7 @@ func newAggregateWithStrictness(
 	name fidlgen.EncodedCompoundIdentifier,
 	resourceness fidlgen.Resourceness,
 	typeName fidlgen.DeclType,
-	s fidlgen.Strictness) aggregate {
+	s fidlgen.Strictness) *aggregate {
 	a := newAggregate(name, resourceness, typeName)
 	a.Strictness = strictness(s)
 	return a
@@ -112,8 +112,8 @@ func newAggregateWithStrictness(
 func newAggregate(
 	name fidlgen.EncodedCompoundIdentifier,
 	resourceness fidlgen.Resourceness,
-	typeName fidlgen.DeclType) aggregate {
-	return aggregate{
+	typeName fidlgen.DeclType) *aggregate {
+	return &aggregate{
 		named:        named{name: Name(name)},
 		resourceness: resourceness,
 		typeName:     typeName,
@@ -127,7 +127,7 @@ func resourceness(resourceness fidlgen.Resourceness) Resourceness {
 	return isValue
 }
 
-func (s aggregate) Serialize() ElementStr {
+func (s *aggregate) Serialize() ElementStr {
 	e := s.named.Serialize()
 	e.Resourceness = resourceness(s.resourceness)
 	e.Strictness = s.Strictness
@@ -148,24 +148,24 @@ func newMember(
 	name fidlgen.Identifier,
 	memberType fidlgen.Type,
 	declType fidlgen.DeclType,
-	maybeDefaultValue *fidlgen.Constant) member {
-	return member{
-		m:          newIsMember(st, parentName, name, declType, maybeDefaultValue),
+	maybeDefaultValue *fidlgen.Constant) *member {
+	return &member{
+		m:          *newIsMember(st, parentName, name, declType, maybeDefaultValue),
 		memberType: memberType,
 	}
 }
 
 // Member implements Element.
-func (s member) Member() bool {
+func (s *member) Member() bool {
 	return s.m.Member()
 }
 
 // Name implements Element.
-func (s member) Name() Name {
+func (s *member) Name() Name {
 	return s.m.Name()
 }
 
-func (s member) Serialize() ElementStr {
+func (s *member) Serialize() ElementStr {
 	e := s.m.Serialize()
 	e.Decl = s.m.symbolTable.fidlTypeString(s.memberType)
 	return e

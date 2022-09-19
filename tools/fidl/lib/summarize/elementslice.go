@@ -32,7 +32,7 @@ func inftyStr(s fidlgen.Identifier) fidlgen.Identifier {
 // The identifiers are sorted as follows: compare libraries first; if
 // equal, compare declarations; if equal compare members. Exceptions: a
 // library always compares last.
-type elementSlice []Element
+type elementSlice []element
 
 var _ sort.Interface = (*elementSlice)(nil)
 
@@ -92,26 +92,26 @@ func (f fqn) library() string {
 	return strings.Join(ret, ".")
 }
 
-func (this fqn) Less(that fqn) bool {
+func (f fqn) Less(other fqn) bool {
 	// Libraries compare regularly.
-	if this.isLibrary() && that.isLibrary() {
-		return this.Name < that.Name
+	if f.isLibrary() && other.isLibrary() {
+		return f.Name < other.Name
 	}
 	// Special: library is always last if compared to a declaration.
-	if this.isLibrary() {
+	if f.isLibrary() {
 		return false
 	}
-	if that.isLibrary() {
+	if other.isLibrary() {
 		return true
 	}
 	// The rest of the comparison is as expected.
-	thisLib := this.library()
-	thatLib := that.library()
-	if thisLib == thatLib {
-		if this.name() == that.name() {
-			return this.Member < that.Member
+	lib := f.library()
+	otherLib := other.library()
+	if lib == otherLib {
+		if f.name() == other.name() {
+			return f.Member < other.Member
 		}
-		return this.name() < that.name()
+		return f.name() < other.name()
 	}
-	return thisLib < thatLib
+	return lib < otherLib
 }

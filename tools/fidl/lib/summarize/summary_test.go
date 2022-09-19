@@ -1441,12 +1441,12 @@ func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase) {
 				c = c.WithDependency(test.dep)
 			}
 			r := c.Single(test.fidl)
-			b, err := GenerateSummary(r)
-			if err != nil {
-				t.Fatalf("while summarizing file: %v", err)
+			s := Summarize(r)
+			var b strings.Builder
+			if err := s.WriteJSON(&b); err != nil {
+				t.Fatalf("while writing JOSN: %v", err)
 			}
-			summary := string(b)
-			actual := strings.Split(summary, "\n")
+			actual := strings.Split(b.String(), "\n")
 			expected := strings.Split(test.expected, "\n")
 
 			if diff := cmp.Diff(expected, actual); diff != "" {
@@ -1487,6 +1487,70 @@ func TestLoadSummariesJSON(t *testing.T) {
 
 			if diff := cmp.Diff(tt.want, summaries); diff != "" {
 				t.Fatalf("LoadSummariesJSON(%q) got diff (-want,+got):\n%s", tt.json, diff)
+			}
+		})
+	}
+}
+
+func TestIsEmptyLibrary(t *testing.T) {
+	tests := []struct {
+		name     string
+		fidl     string
+		expected bool
+	}{
+		{
+			name: "empty library",
+			fidl: `
+library l;
+`,
+			expected: true,
+		},
+		{
+			name: "empty library with comments",
+			fidl: `
+// Regular comment
+
+/// Doc comment
+library l;
+`,
+			expected: true,
+		},
+		{
+			name: "empty library with attribute",
+			fidl: `
+@some_attribute
+library l;
+`,
+			expected: true,
+		},
+		{
+			name: "nonempty library removed before HEAD",
+			fidl: `
+@available(platform="example", added=1, removed=2)
+library l;
+
+const FOO string = "foo";
+`,
+			expected: true,
+		},
+		{
+			name: "nonempty library",
+			fidl: `
+library l;
+
+const FOO string = "foo";
+`,
+			expected: false,
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			c := fidlgentest.EndToEndTest{T: t}
+			r := c.Single(test.fidl)
+			s := Summarize(r)
+			actual := s.IsEmptyLibrary()
+			if actual != test.expected {
+				t.Errorf("got %v, want %v for IsEmptyLibrary() on FIDL:\n%s\nWith summary:\n%+v", actual, test.expected, test.fidl, s)
 			}
 		})
 	}

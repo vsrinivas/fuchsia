@@ -16,7 +16,7 @@ func (s *summarizer) addConsts(consts []fidlgen.Const) {
 		// Avoid pointer aliasing on c.
 		v := c.Value
 		s.addElement(
-			aConst{
+			&aConst{
 				named: named{
 					symbolTable: &s.symbols,
 					name:        Name(c.Name)},
@@ -34,7 +34,7 @@ type aConst struct {
 	maybeDefaultValue *fidlgen.Constant
 }
 
-func (c aConst) Serialize() ElementStr {
+func (c *aConst) Serialize() ElementStr {
 	e := c.named.Serialize()
 	e.Kind = Kind(aConstType)
 	e.Decl = Decl(c.symbolTable.fidlTypeString(c.aType))

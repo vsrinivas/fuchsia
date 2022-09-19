@@ -16,7 +16,7 @@ type alias struct {
 
 const aliasType Kind = "alias"
 
-func (a alias) Serialize() ElementStr {
+func (a *alias) Serialize() ElementStr {
 	e := a.named.Serialize()
 	e.Kind = aliasType
 	return e
@@ -30,7 +30,7 @@ func (s *summarizer) addAliases(decls fidlgen.DeclMap) {
 		if t != "type_alias" {
 			continue
 		}
-		s.addElement(alias{
+		s.addElement(&alias{
 			named: named{name: Name(d)},
 		})
 	}

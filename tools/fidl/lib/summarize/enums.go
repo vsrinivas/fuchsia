@@ -23,7 +23,7 @@ func (s *summarizer) addEnums(enums []fidlgen.Enum) {
 			s.addElement(newIsMember(&s.symbols, e.Name, m.Name, fidlgen.EnumDeclType, &v))
 		}
 		s.addElement(
-			enum{
+			&enum{
 				wraparoundType: wraparoundType{
 					named:      newNamed(&s.symbols, e.Name),
 					subtype:    e.Type,

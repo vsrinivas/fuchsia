@@ -143,7 +143,7 @@ func (n *symbolTable) getPayload(name fidlgen.EncodedCompoundIdentifier) paramet
 }
 
 // fidlTypeString converts the FIDL type declaration into a string per RFC-0050.
-func (d *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
+func (n *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
 	var ret typeString
 	switch t.Kind {
 	case fidlgen.PrimitiveType:
@@ -152,10 +152,10 @@ func (d *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
 		ret.setLayout("string")
 	case fidlgen.ArrayType:
 		ret.setLayout("array")
-		ret.addParam(string(d.fidlTypeString(*t.ElementType)))
+		ret.addParam(string(n.fidlTypeString(*t.ElementType)))
 	case fidlgen.VectorType:
 		ret.setLayout("vector")
-		ret.addParam(string(d.fidlTypeString(*t.ElementType)))
+		ret.addParam(string(n.fidlTypeString(*t.ElementType)))
 	case fidlgen.HandleType:
 		if t.HandleSubtype != fidlgen.HandleSubtypeNone {
 			ret.setLayout("zx/handle")
@@ -165,7 +165,7 @@ func (d *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
 		}
 		ret.addHandleRights(t.HandleRights)
 	case fidlgen.IdentifierType: // E.g. struct, enum, bits, etc.
-		if d.isProtocol(t.Identifier) {
+		if n.isProtocol(t.Identifier) {
 			ret.setLayout("client_end")
 			ret.addConstraint(string(t.Identifier))
 		} else {
@@ -187,7 +187,7 @@ func (d *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
 	}
 	// :optional
 	if t.Nullable {
-		if d.isStruct(t.Identifier) {
+		if n.isStruct(t.Identifier) {
 			ret.addParam(ret.layout)
 			ret.setLayout("box")
 		} else {
