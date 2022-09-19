@@ -380,4 +380,42 @@ zx_status_t Pci::ConfigureInterruptMode(uint32_t requested_irq_count,
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+pci_device_info_t convert_device_info_to_banjo(const fuchsia_hardware_pci::wire::DeviceInfo& info) {
+  pci_device_info_t out_info{};
+  out_info.vendor_id = info.vendor_id;
+  out_info.device_id = info.device_id;
+  out_info.base_class = info.base_class;
+  out_info.sub_class = info.sub_class;
+  out_info.program_interface = info.program_interface;
+  out_info.revision_id = info.revision_id;
+  out_info.bus_id = info.bus_id;
+  out_info.dev_id = info.dev_id;
+  out_info.func_id = info.func_id;
+  return out_info;
+}
+
+pci_interrupt_modes_t convert_interrupt_modes_to_banjo(
+    const fuchsia_hardware_pci::wire::InterruptModes& modes) {
+  pci_interrupt_modes_t out_modes{};
+  out_modes.has_legacy = modes.has_legacy;
+  out_modes.msi_count = modes.msi_count;
+  out_modes.msix_count = modes.msix_count;
+  return out_modes;
+}
+
+pci_bar_t convert_bar_to_banjo(fuchsia_hardware_pci::wire::Bar bar) {
+  pci_bar_t out_bar{};
+  out_bar.bar_id = bar.bar_id;
+  out_bar.size = bar.size;
+  if (bar.result.is_io()) {
+    out_bar.type = PCI_BAR_TYPE_IO;
+    out_bar.result.io.address = bar.result.io().address;
+    out_bar.result.io.resource = bar.result.io().resource.release();
+  } else {
+    out_bar.type = PCI_BAR_TYPE_MMIO;
+    out_bar.result.vmo = bar.result.vmo().release();
+  }
+  return out_bar;
+}
+
 }  // namespace ddk

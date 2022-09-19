@@ -64,4 +64,75 @@ TEST_F(PciTest, MapMmioWithRawBuffer) {
   EXPECT_OK(zx_object_get_info(mmio.vmo, ZX_INFO_HANDLE_VALID, nullptr, 0, 0u, nullptr));
 }
 
+TEST(PciConversionTest, DeviceInfo) {
+  fuchsia_hardware_pci::wire::DeviceInfo fidl_info = {
+      .vendor_id = 1,
+      .device_id = 2,
+      .base_class = 3,
+      .sub_class = 4,
+      .program_interface = 5,
+      .revision_id = 6,
+      .bus_id = 7,
+      .dev_id = 8,
+      .func_id = 9,
+  };
+
+  pci_device_info_t banjo_info = ddk::convert_device_info_to_banjo(fidl_info);
+  EXPECT_EQ(banjo_info.vendor_id, 1);
+  EXPECT_EQ(banjo_info.device_id, 2);
+  EXPECT_EQ(banjo_info.base_class, 3);
+  EXPECT_EQ(banjo_info.sub_class, 4);
+  EXPECT_EQ(banjo_info.program_interface, 5);
+  EXPECT_EQ(banjo_info.revision_id, 6);
+  EXPECT_EQ(banjo_info.bus_id, 7);
+  EXPECT_EQ(banjo_info.dev_id, 8);
+  EXPECT_EQ(banjo_info.func_id, 9);
+}
+
+TEST(PciConversionTest, InterruptModes) {
+  fuchsia_hardware_pci::wire::InterruptModes fidl_modes = {
+      .has_legacy = true,
+      .msi_count = 0,
+      .msix_count = 1,
+  };
+
+  pci_interrupt_modes_t banjo_modes = ddk::convert_interrupt_modes_to_banjo(fidl_modes);
+  EXPECT_EQ(banjo_modes.has_legacy, true);
+  EXPECT_EQ(banjo_modes.msi_count, 0);
+  EXPECT_EQ(banjo_modes.msix_count, 1);
+}
+
+TEST(PciConversionTest, MmioBar) {
+  zx::vmo vmo;
+  fuchsia_hardware_pci::wire::Bar fidl_bar = {
+      .bar_id = 1,
+      .size = 2,
+      .result = fuchsia_hardware_pci::wire::BarResult::WithVmo(std::move(vmo)),
+  };
+
+  pci_bar_t banjo_bar = ddk::convert_bar_to_banjo(std::move(fidl_bar));
+  EXPECT_EQ(banjo_bar.bar_id, 1);
+  EXPECT_EQ(banjo_bar.size, 2);
+  EXPECT_EQ(banjo_bar.type, PCI_BAR_TYPE_MMIO);
+  EXPECT_EQ(banjo_bar.result.vmo, vmo.get());
+}
+
+TEST(PciConversionTest, IoBar) {
+  fidl::Arena arena;
+  zx::resource resource;
+  fuchsia_hardware_pci::wire::Bar fidl_bar = {
+      .bar_id = 1,
+      .size = 2,
+      .result = fuchsia_hardware_pci::wire::BarResult::WithIo(
+          arena, fuchsia_hardware_pci::wire::IoBar{.address = 3, .resource = std::move(resource)}),
+  };
+
+  pci_bar_t banjo_bar = ddk::convert_bar_to_banjo(std::move(fidl_bar));
+  EXPECT_EQ(banjo_bar.bar_id, 1);
+  EXPECT_EQ(banjo_bar.size, 2);
+  EXPECT_EQ(banjo_bar.type, PCI_BAR_TYPE_IO);
+  EXPECT_EQ(banjo_bar.result.io.address, 3);
+  EXPECT_EQ(banjo_bar.result.io.resource, resource.get());
+}
+
 }  // namespace

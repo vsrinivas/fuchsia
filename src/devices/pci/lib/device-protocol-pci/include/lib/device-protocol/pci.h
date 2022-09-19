@@ -127,6 +127,15 @@ class Pci {
   fidl::WireSyncClient<fuchsia_hardware_pci::Device> client_;
 };
 
+// Some helper functions to convert FIDL types to Banjo, for use mainly by C
+// drivers that can't directly use the C++ types.
+pci_device_info_t convert_device_info_to_banjo(const fuchsia_hardware_pci::wire::DeviceInfo& info);
+pci_interrupt_modes_t convert_interrupt_modes_to_banjo(
+    const fuchsia_hardware_pci::wire::InterruptModes& modes);
+
+// The pci_bar_t object takes ownership of the Bar's handles.
+pci_bar_t convert_bar_to_banjo(fuchsia_hardware_pci::wire::Bar bar);
+
 }  // namespace ddk
 
 #endif
