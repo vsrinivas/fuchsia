@@ -85,11 +85,15 @@ struct iwl_pci_device_id {
   const struct iwl_cfg* config;
 };
 
+// An opaque struct that hides a C++ FIDL client, allowing us to use FIDL
+// without rewriting the whole driver in C++.
+struct iwl_pci_fidl;
+
 // This struct is analogous to the Linux pci_dev struct, and contans Fuchsia-specific PCI bus
 // interface data.
 struct iwl_pci_dev {
   struct device dev;
-  pci_protocol_t proto;
+  struct iwl_pci_fidl* fidl;
   struct iwl_trans* drvdata;
 };
 

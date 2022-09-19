@@ -48,6 +48,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/align.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/irq.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/memory.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/pci-fidl.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/stats.h"
 
 zx_status_t _iwl_pcie_rx_init(struct iwl_trans* trans);
@@ -1481,7 +1482,7 @@ zx_status_t iwl_pcie_isr(struct iwl_trans* trans) {
 
 out:
   if (trans_pcie->irq_mode == PCI_INTERRUPT_MODE_LEGACY) {
-    pci_ack_interrupt(trans_pcie->pci);
+    iwl_pci_ack_interrupt(trans_pcie->pci);
   }
   return ZX_OK;
 }

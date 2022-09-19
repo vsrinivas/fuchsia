@@ -55,6 +55,7 @@
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-scd.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-trans.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie/internal.h"
+#include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/pci-fidl.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform/time.h"
 #ifdef CPTCFG_IWLWIFI_DEVICE_TESTMODE
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-dnt-cfg.h"
@@ -1608,14 +1609,14 @@ enable_msi:
 
   const uint32_t request_irq_count = 1;  // Currently we only request 1 interrupt.
   pci_interrupt_modes_t irq_modes = {};
-  pci_get_interrupt_modes(trans_pcie->pci, &irq_modes);
+  iwl_pci_get_interrupt_modes(trans_pcie->pci, &irq_modes);
   pci_interrupt_mode_t irq_mode = PCI_INTERRUPT_MODE_LEGACY;
   // Favor MSI interrupt mode if it can supply enough interrupts.
   if (irq_modes.msi_count >= request_irq_count) {
     irq_mode = PCI_INTERRUPT_MODE_MSI;
   }
 
-  zx_status_t status = pci_set_interrupt_mode(trans_pcie->pci, irq_mode, request_irq_count);
+  zx_status_t status = iwl_pci_set_interrupt_mode(trans_pcie->pci, irq_mode, request_irq_count);
   if (status != ZX_OK) {
     IWL_ERR(trans, "cannot find an IRQ mode to use: %s.\n", zx_status_get_string(status));
     return status;
@@ -1873,6 +1874,9 @@ void iwl_trans_pcie_free(struct iwl_trans* trans) {
     free_percpu(trans_pcie->tso_hdr_page);
     mutex_destroy(&trans_pcie->mutex);
 #endif  // NEEDS_PORTING
+
+  iwl_pci_free(trans_pcie->pci);
+
   iwl_trans_free(trans);
 }
 
@@ -3224,8 +3228,8 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
   }
   trans->max_skb_frags = IWL_PCIE_MAX_FRAGS(trans_pcie);
 
-  trans_pcie->pci = &pdev->proto;
-  status = pci_set_bus_mastering(trans_pcie->pci, true);
+  trans_pcie->pci = pdev->fidl;
+  status = iwl_pci_set_bus_mastering(trans_pcie->pci, true);
   if (status != ZX_OK) {
     IWL_ERR(trans, "Failed to enable bus mastering: %s\n", zx_status_get_string(status));
     goto out_no_pci;
@@ -3245,7 +3249,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
     }
 #endif  // NEEDS_PORTING
 
-  status = pci_map_bar_buffer(trans_pcie->pci, 0 /* bar_id */, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+  status = iwl_pci_map_bar_buffer(trans_pcie->pci, 0 /* bar_id */, ZX_CACHE_POLICY_UNCACHED_DEVICE,
                               &trans_pcie->mmio);
   if (status != ZX_OK) {
     IWL_ERR(trans, "Failed to map resources for BAR 0: %s\n", zx_status_get_string(status));
@@ -3254,7 +3258,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
 
   /* We disable the RETRY_TIMEOUT register (0x41) to keep
    * PCI Tx retries from interfering with C3 CPU state */
-  pci_write_config8(trans_pcie->pci, PCI_CONFIG_RETRY_TIMEOUT, 0x00);
+  iwl_pci_write_config8(trans_pcie->pci, PCI_CONFIG_RETRY_TIMEOUT, 0x00);
 
   trans_pcie->pci_dev = pdev;
   iwl_disable_interrupts(trans);
@@ -3392,7 +3396,7 @@ struct iwl_trans* iwl_trans_pcie_alloc(struct iwl_pci_dev* pdev,
     IWL_ERR(trans, "Failed to set interrupt capabilities: %s\n", zx_status_get_string(status));
     goto out_no_pci;
   }
-  status = pci_map_interrupt(trans_pcie->pci, 0, &trans_pcie->irq_handle);
+  status = iwl_pci_map_interrupt(trans_pcie->pci, 0, &trans_pcie->irq_handle);
   if (status != ZX_OK) {
     IWL_ERR(trans, "Failed to map interrupt: %s\n", zx_status_get_string(status));
     goto out_no_pci;

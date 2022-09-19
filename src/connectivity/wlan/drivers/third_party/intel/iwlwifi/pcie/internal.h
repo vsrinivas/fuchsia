@@ -545,7 +545,7 @@ struct iwl_trans_pcie {
 
   /* PCI bus related data */
   struct iwl_pci_dev* pci_dev;
-  pci_protocol_t* pci;
+  struct iwl_pci_fidl* pci;
   pci_interrupt_mode_t irq_mode;
   mmio_buffer_t mmio;
 

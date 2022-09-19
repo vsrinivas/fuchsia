@@ -72,7 +72,17 @@ TEST(MockDdkTesterPci, DeviceLifeCycle) {
 
   // Now add the protocol to the parent.
   // PCI is the only protocol of interest here.
-  parent->AddProtocol(ZX_PROTOCOL_PCI, fake_pci.get_protocol().ops, fake_pci.get_protocol().ctx);
+  async::Loop loop{&kAsyncLoopConfigNeverAttachToThread};
+  parent->AddFidlProtocol(
+      fidl::DiscoverableProtocolName<fuchsia_hardware_pci::Device>,
+      [&loop, &fake_pci](zx::channel channel) {
+        fidl::BindServer(loop.dispatcher(),
+                         fidl::ServerEnd<fuchsia_hardware_pci::Device>(std::move(channel)),
+                         &fake_pci);
+        return ZX_OK;
+      },
+      "pci");
+  loop.StartThread("pci-fidl-server-thread");
 
   // Create() allocates and binds the device.
   ASSERT_OK(wlan::iwlwifi::PcieDevice::Create(parent.get()), "Bind failed");
