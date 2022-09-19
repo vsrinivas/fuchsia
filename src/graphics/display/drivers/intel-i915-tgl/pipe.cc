@@ -146,13 +146,13 @@ void Pipe::ResetTrans(tgl_registers::Trans trans, fdf::MmioBuffer* mmio_space) {
 
 void Pipe::Reset() {
   ResetPipe(pipe_, mmio_space_);
-  zxlogf(DEBUG, "Reset pipe %d", pipe());
+  zxlogf(DEBUG, "Reset pipe %d", pipe_id());
 }
 
 void Pipe::ResetActiveTranscoder() {
   if (in_use()) {
-    ResetTrans(transcoder(), mmio_space_);
-    zxlogf(DEBUG, "Reset active transcoder %d for pipe %d", transcoder(), pipe());
+    ResetTrans(connected_transcoder_id(), mmio_space_);
+    zxlogf(DEBUG, "Reset active transcoder %d for pipe %d", connected_transcoder_id(), pipe_id());
   }
 }
 
@@ -167,7 +167,7 @@ void Pipe::AttachToDisplay(uint64_t id, bool is_edp) {
 }
 
 void Pipe::ApplyModeConfig(const display_mode_t& mode) {
-  tgl_registers::TranscoderRegs trans_regs(transcoder());
+  tgl_registers::TranscoderRegs trans_regs(connected_transcoder_id());
 
   // Configure the rest of the transcoder
   uint32_t h_active = mode.h_addressable - 1;
@@ -202,7 +202,7 @@ void Pipe::ApplyModeConfig(const display_mode_t& mode) {
   trans_regs.HBlank().FromValue(h_total_reg.reg_value()).WriteTo(mmio_space_);
   trans_regs.VBlank().FromValue(v_total_reg.reg_value()).WriteTo(mmio_space_);
 
-  tgl_registers::PipeRegs pipe_regs(pipe());
+  tgl_registers::PipeRegs pipe_regs(pipe_id());
   auto pipe_size = pipe_regs.PipeSourceSize().FromValue(0);
   pipe_size.set_horizontal_source_size(mode.h_addressable - 1);
   pipe_size.set_vertical_source_size(mode.v_addressable - 1);
@@ -210,7 +210,7 @@ void Pipe::ApplyModeConfig(const display_mode_t& mode) {
 }
 
 void Pipe::LoadActiveMode(display_mode_t* mode) {
-  tgl_registers::TranscoderRegs trans_regs(transcoder());
+  tgl_registers::TranscoderRegs trans_regs(connected_transcoder_id());
 
   auto h_total_reg = trans_regs.HTotal().ReadFrom(mmio_space_);
   uint32_t h_total = h_total_reg.count_total();
@@ -365,7 +365,7 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
                                  tgl_registers::pipe_arming_regs_t* regs,
                                  uint64_t config_stamp_seqno,
                                  const SetupGttImageFunc& setup_gtt_image) {
-  tgl_registers::PipeRegs pipe_regs(pipe());
+  tgl_registers::PipeRegs pipe_regs(pipe_id());
 
   auto plane_ctrl = pipe_regs.PlaneControl(plane_num).ReadFrom(mmio_space_);
   if (primary == nullptr) {
@@ -409,10 +409,10 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
 
     // If there's a scaler pointed at this plane, immediately disable it
     // in case there's nothing else that will claim it this frame.
-    if (scaled_planes_[pipe()][plane_num]) {
-      uint32_t scaler_idx = scaled_planes_[pipe()][plane_num] - 1;
+    if (scaled_planes_[pipe_id()][plane_num]) {
+      uint32_t scaler_idx = scaled_planes_[pipe_id()][plane_num] - 1;
       pipe_regs.PipeScalerCtrl(scaler_idx).ReadFrom(mmio_space_).set_enable(0).WriteTo(mmio_space_);
-      scaled_planes_[pipe()][plane_num] = 0;
+      scaled_planes_[pipe_id()][plane_num] = 0;
       regs->ps_win_sz[scaler_idx] = 0;
     }
   } else {
@@ -442,7 +442,7 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
     ps_win_size.set_y_size(primary->dest_frame.height);
     regs->ps_win_sz[*scaler_1_claimed] = ps_win_size.reg_value();
 
-    scaled_planes_[pipe()][plane_num] = (*scaler_1_claimed) + 1;
+    scaled_planes_[pipe_id()][plane_num] = (*scaler_1_claimed) + 1;
     *scaler_1_claimed = true;
   }
 
@@ -523,7 +523,7 @@ void Pipe::ConfigurePrimaryPlane(uint32_t plane_num, const primary_layer_t* prim
 void Pipe::ConfigureCursorPlane(const cursor_layer_t* cursor, bool enable_csc,
                                 tgl_registers::pipe_arming_regs_t* regs,
                                 uint64_t config_stamp_seqno) {
-  tgl_registers::PipeRegs pipe_regs(pipe());
+  tgl_registers::PipeRegs pipe_regs(pipe_id());
 
   auto cursor_ctrl = pipe_regs.CursorCtrl().ReadFrom(mmio_space_);
   // The hardware requires that the cursor has at least one pixel on the display,
@@ -615,7 +615,7 @@ std::optional<config_stamp_t> Pipe::GetVsyncConfigStamp(
 }
 
 void Pipe::SetColorConversionOffsets(bool preoffsets, const float vals[3]) {
-  tgl_registers::PipeRegs pipe_regs(pipe());
+  tgl_registers::PipeRegs pipe_regs(pipe_id());
 
   for (uint32_t i = 0; i < 3; i++) {
     float offset = vals[i];

@@ -53,7 +53,7 @@ DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, tgl_registers:
 DisplayDevice::~DisplayDevice() {
   if (pipe_) {
     controller_->pipe_manager()->ReturnPipe(pipe_);
-    controller_->ResetPipePlaneBuffers(pipe_->pipe());
+    controller_->ResetPipePlaneBuffers(pipe_->pipe_id());
   }
   if (inited_) {
     controller_->ResetDdi(ddi());
@@ -136,14 +136,14 @@ bool DisplayDevice::Resume() {
     if (!DdiModeset(info_)) {
       return false;
     }
-    controller_->interrupts()->EnablePipeVsync(pipe_->pipe(), true);
+    controller_->interrupts()->EnablePipeVsync(pipe_->pipe_id(), true);
   }
   return pipe_ != nullptr;
 }
 
 void DisplayDevice::LoadActiveMode() {
   pipe_->LoadActiveMode(&info_);
-  info_.pixel_clock_10khz = LoadClockRateForTranscoder(pipe_->transcoder());
+  info_.pixel_clock_10khz = LoadClockRateForTranscoder(pipe_->connected_transcoder_id());
   zxlogf(INFO, "Active pixel clock: %u0 kHz", info_.pixel_clock_10khz);
 }
 
@@ -193,9 +193,9 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
     if (pipe_) {
       DdiModeset(info_);
 
-      PipeConfigPreamble(info_, pipe_->pipe(), pipe_->transcoder());
+      PipeConfigPreamble(info_, pipe_->pipe_id(), pipe_->connected_transcoder_id());
       pipe_->ApplyModeConfig(info_);
-      PipeConfigEpilogue(info_, pipe_->pipe(), pipe_->transcoder());
+      PipeConfigEpilogue(info_, pipe_->pipe_id(), pipe_->connected_transcoder_id());
     }
   }
 

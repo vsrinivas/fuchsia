@@ -96,7 +96,7 @@ TEST_F(PipeManagerTest, SkylakeAllocatePipe) {
   EXPECT_TRUE(pipe1);
   EXPECT_TRUE(pipe1->in_use());
   EXPECT_EQ(pipe1->attached_display_id(), kDisplay1Id);
-  EXPECT_EQ(static_cast<uint64_t>(pipe1->pipe()), static_cast<uint64_t>(pipe1->transcoder()));
+  EXPECT_EQ(pipe1->tied_transcoder_id(), pipe1->connected_transcoder_id());
 
   // Allocate pipe for eDP display.
   controller()->igd_opregion_for_testing()->SetIsEdpForTesting(tgl_registers::DDI_A, true);
@@ -111,7 +111,7 @@ TEST_F(PipeManagerTest, SkylakeAllocatePipe) {
   EXPECT_NE(pipe2, pipe1);
   EXPECT_TRUE(pipe2->in_use());
   EXPECT_EQ(pipe2->attached_display_id(), kDisplay2Id);
-  EXPECT_EQ(pipe2->transcoder(), tgl_registers::Trans::TRANS_EDP);
+  EXPECT_EQ(pipe2->connected_transcoder_id(), tgl_registers::Trans::TRANS_EDP);
 
   display1.reset();
   EXPECT_FALSE(pipe1->in_use());

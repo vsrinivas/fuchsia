@@ -62,8 +62,33 @@ class Pipe {
 
   void LoadActiveMode(display_mode_t* mode);
 
-  tgl_registers::Pipe pipe() const { return pipe_; }
-  virtual tgl_registers::Trans transcoder() const = 0;
+  tgl_registers::Pipe pipe_id() const { return pipe_; }
+
+  // Identifies the transcoder that is always tied to the pipe.
+  //
+  // Each pipe has a transcoder tied to it, which can output most display
+  // protocols (DisplayPort, HDMI, DVI). This method identifies the pipe's tied
+  // transcoder. The return value never changes, for a given pipe.
+  //
+  // See `connected_transcoder_id()` for identifying the transcoder that the
+  // pipe is currently using.
+  tgl_registers::Trans tied_transcoder_id() const {
+    return static_cast<tgl_registers::Trans>(pipe_);
+  }
+
+  // Identifies the transcoder that is currently receiving the pipe's output.
+  //
+  // Each pipe has a tied transcoder, which can output most display protocols.
+  // The display engine also has some specialized transcoders, which can be
+  // connected to any pipe. The specialized transcoders are tied to DDIs that
+  // use specialized protocols (Embedded DisplayPort, DDI), and used for writing
+  // back to memory ("WD / Wireless Display" in Intel's docs).
+  //
+  // This method returns the transcoder that is currently connected to the pipe
+  // output, which can be the general-purpose transcoder tied to the pipe, or
+  // one of the shared specialized transcoders. The return value depends on how
+  // we configure the display engine.
+  virtual tgl_registers::Trans connected_transcoder_id() const = 0;
 
   uint64_t attached_display_id() const { return attached_display_; }
   bool in_use() const { return attached_display_ != INVALID_DISPLAY_ID; }
@@ -138,8 +163,8 @@ class PipeSkylake : public Pipe {
       : Pipe(mmio_space, pipe, std::move(pipe_power)) {}
   ~PipeSkylake() override = default;
 
-  tgl_registers::Trans transcoder() const override {
-    return attached_edp() ? tgl_registers::TRANS_EDP : static_cast<tgl_registers::Trans>(pipe());
+  tgl_registers::Trans connected_transcoder_id() const override {
+    return attached_edp() ? tgl_registers::TRANS_EDP : tied_transcoder_id();
   }
 };
 

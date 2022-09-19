@@ -75,24 +75,27 @@ PipeManagerSkylake::PipeManagerSkylake(Controller* controller)
 }
 
 void PipeManagerSkylake::ResetInactiveTranscoders() {
-  bool has_edp = false;
+  bool edp_transcoder_in_use = false;
   for (Pipe* pipe : *this) {
     if (pipe->in_use()) {
-      has_edp |= pipe->transcoder() == tgl_registers::TRANS_EDP;
-      if (pipe->transcoder() == tgl_registers::TRANS_EDP) {
-        tgl_registers::Trans unused_trans = static_cast<tgl_registers::Trans>(pipe->pipe());
-        Pipe::ResetTrans(unused_trans, mmio_space_);
-        zxlogf(DEBUG, "Reset unused transcoder %d for pipe %d (trans inactive)", unused_trans,
-               pipe->pipe());
+      if (pipe->connected_transcoder_id() == tgl_registers::TRANS_EDP) {
+        edp_transcoder_in_use = true;
+
+        const tgl_registers::Trans unused_transcoder = pipe->tied_transcoder_id();
+        Pipe::ResetTrans(unused_transcoder, mmio_space_);
+        zxlogf(
+            DEBUG,
+            "Reset unused transcoder %d tied to pipe %d, which is connected to the EDP transcoder",
+            unused_transcoder, pipe->pipe_id());
       }
     } else {
-      Pipe::ResetTrans(pipe->transcoder(), mmio_space_);
-      zxlogf(DEBUG, "Reset unused transcoder %d for pipe %d (pipe inactive)", pipe->transcoder(),
-             pipe->pipe());
+      Pipe::ResetTrans(pipe->tied_transcoder_id(), mmio_space_);
+      zxlogf(DEBUG, "Reset unused transcoder %d tied to inactive pipe %d",
+             pipe->tied_transcoder_id(), pipe->pipe_id());
     }
   }
 
-  if (!has_edp) {
+  if (!edp_transcoder_in_use) {
     Pipe::ResetTrans(tgl_registers::TRANS_EDP, mmio_space_);
     zxlogf(DEBUG, "Reset unused transcoder TRANS_EDP (not used by any pipe)");
   }
@@ -128,10 +131,13 @@ Pipe* PipeManagerSkylake::GetPipeFromHwState(tgl_registers::Ddi ddi, fdf::MmioBu
   }
 
   for (Pipe* pipe : *this) {
-    auto transcoder = static_cast<tgl_registers::Trans>(pipe->pipe());
-    tgl_registers::TranscoderRegs regs(transcoder);
-    if (regs.ClockSelect().ReadFrom(mmio_space).trans_clock_select() == ddi + 1u &&
-        regs.DdiFuncControl().ReadFrom(mmio_space).ddi_select() == ddi) {
+    const tgl_registers::Trans tied_transcoder = pipe->tied_transcoder_id();
+    ZX_DEBUG_ASSERT_MSG(tied_transcoder != tgl_registers::Trans::TRANS_EDP,
+                        "The EDP transcoder is not attached to a pipe");
+
+    tgl_registers::TranscoderRegs transcoder_regs(tied_transcoder);
+    if (transcoder_regs.ClockSelect().ReadFrom(mmio_space).trans_clock_select() == ddi + 1u &&
+        transcoder_regs.DdiFuncControl().ReadFrom(mmio_space).ddi_select() == ddi) {
       return pipe;
     }
   }

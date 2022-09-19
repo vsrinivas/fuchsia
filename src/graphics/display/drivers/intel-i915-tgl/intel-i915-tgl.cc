@@ -374,15 +374,15 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   for (Pipe* pipe : *pipe_manager_) {
     pipe->Reset();
     pipe->ResetActiveTranscoder();
-    ResetPipePlaneBuffers(pipe->pipe());
+    ResetPipePlaneBuffers(pipe->pipe_id());
 
-    tgl_registers::PipeRegs pipe_regs(pipe->pipe());
+    tgl_registers::PipeRegs pipe_regs(pipe->pipe_id());
 
     // Disable the scalers (double buffered on PipeScalerWinSize), since
     // we don't know what state they are in at boot.
     pipe_regs.PipeScalerCtrl(0).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
     pipe_regs.PipeScalerWinSize(0).ReadFrom(mmio_space()).WriteTo(mmio_space());
-    if (pipe->pipe() != tgl_registers::PIPE_C) {
+    if (pipe->pipe_id() != tgl_registers::PIPE_C) {
       pipe_regs.PipeScalerCtrl(1).ReadFrom(mmio_space()).set_enable(0).WriteTo(mmio_space());
       pipe_regs.PipeScalerWinSize(1).ReadFrom(mmio_space()).WriteTo(mmio_space());
     }
@@ -854,7 +854,7 @@ bool Controller::CalculateMinimumAllocations(
   // failed in ::CheckConfiguration, so it doesn't matter if we incorrectly say they pass here.
   bool success = true;
   for (Pipe* pipe : *pipe_manager_) {
-    tgl_registers::Pipe pipe_num = pipe->pipe();
+    tgl_registers::Pipe pipe_num = pipe->pipe_id();
     uint32_t total = 0;
 
     for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
@@ -1029,7 +1029,7 @@ void Controller::ReallocatePlaneBuffers(cpp20::span<const display_config_t*> dis
   uint64_t data_rate[tgl_registers::Pipes<tgl_registers::Platform::kKabyLake>().size()]
                     [tgl_registers::kImagePlaneCount];
   for (Pipe* pipe : *pipe_manager_) {
-    tgl_registers::Pipe pipe_num = pipe->pipe();
+    tgl_registers::Pipe pipe_num = pipe->pipe_id();
     for (unsigned plane_num = 0; plane_num < tgl_registers::kImagePlaneCount; plane_num++) {
       const layer_t* layer;
       if (!GetPlaneLayer(pipe, plane_num, display_configs, &layer)) {
@@ -1071,7 +1071,7 @@ void Controller::ReallocatePlaneBuffers(cpp20::span<const display_config_t*> dis
 
     int current_active_pipe = 0;
     for (Pipe* pipe : *pipe_manager_) {
-      tgl_registers::Pipe pipe_num = pipe->pipe();
+      tgl_registers::Pipe pipe_num = pipe->pipe_id();
       if (pipe->in_use()) {
         pipe_buffers_[pipe_num].start =
             static_cast<uint16_t>(buffers_per_pipe * current_active_pipe);
@@ -1423,7 +1423,7 @@ uint32_t Controller::DisplayControllerImplCheckConfiguration(
     // Find any displays whose allocation fails and set the return code. Overwrite
     // any previous errors, since they get solved by the merge.
     for (Pipe* pipe : *pipe_manager_) {
-      tgl_registers::Pipe pipe_num = pipe->pipe();
+      tgl_registers::Pipe pipe_num = pipe->pipe_id();
       if (arr[pipe_num][0] != UINT16_MAX) {
         continue;
       }
@@ -1457,7 +1457,7 @@ bool Controller::CalculatePipeAllocation(
   for (const display_config_t* config : display_configs) {
     DisplayDevice* display = FindDevice(config->display_id);
     if (display != nullptr && display->pipe() != nullptr) {
-      alloc[display->pipe()->pipe()] = config->display_id;
+      alloc[display->pipe()->pipe_id()] = config->display_id;
     }
   }
   // Give unallocated pipes to displays that need them
@@ -1524,7 +1524,7 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
     } else {
       if (display->pipe()) {
         display->pipe()->Reset();
-        ResetPipePlaneBuffers(display->pipe()->pipe());
+        ResetPipePlaneBuffers(display->pipe()->pipe_id());
       }
     }
 
@@ -1835,7 +1835,7 @@ void Controller::DdkInit(ddk::InitTxn txn) {
     {
       fbl::AutoLock lock(&display_lock_);
       for (Pipe* pipe : *pipe_manager_) {
-        interrupts()->EnablePipeVsync(pipe->pipe(), true);
+        interrupts()->EnablePipeVsync(pipe->pipe_id(), true);
       }
     }
 
@@ -1945,7 +1945,7 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
           continue;
         }
         // TODO(fxbug.dev/31310): Reset/scale the display to ensure the buffer displays properly
-        tgl_registers::PipeRegs pipe_regs(display->pipe()->pipe());
+        tgl_registers::PipeRegs pipe_regs(display->pipe()->pipe_id());
 
         auto plane_stride = pipe_regs.PlaneSurfaceStride(0).ReadFrom(mmio_space());
         plane_stride.set_stride(width_in_tiles(IMAGE_TYPE_SIMPLE, fb_info.width, fb_info.format));
@@ -2158,7 +2158,7 @@ Controller::~Controller() {
   if (mmio_space() && pipe_manager_.get()) {
     for (Pipe* pipe : *pipe_manager_) {
       fbl::AutoLock lock(&display_lock_);
-      interrupts()->EnablePipeVsync(pipe->pipe(), true);
+      interrupts()->EnablePipeVsync(pipe->pipe_id(), true);
     }
   }
   // Release anything leaked by the gpu-core client.
