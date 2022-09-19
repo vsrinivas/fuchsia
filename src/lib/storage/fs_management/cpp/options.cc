@@ -6,6 +6,8 @@
 
 #include <string>
 
+#include "fidl/fuchsia.fs.startup/cpp/wire_types.h"
+
 namespace fs_management {
 
 std::vector<std::string> MountOptions::as_argv(const char *binary) const {
@@ -104,9 +106,6 @@ std::vector<std::string> MkfsOptions::as_argv(const char *binary) const {
 
   argv.push_back("mkfs");
 
-  if (crypt_client)
-    argv.push_back("--encrypted");
-
   return argv;
 }
 
@@ -130,9 +129,6 @@ std::vector<std::string> FsckOptions::as_argv(const char *binary) const {
   // we have "never_modify=true" and "force=true" effectively on by default.
   argv.push_back("fsck");
 
-  if (crypt_client)
-    argv.push_back("--encrypted");
-
   return argv;
 }
 
@@ -154,10 +150,7 @@ std::vector<std::string> FsckOptions::as_argv_fat32(const char *binary,
 }
 
 fuchsia_fs_startup::wire::CheckOptions FsckOptions::as_check_options() const {
-  fuchsia_fs_startup::wire::CheckOptions options;
-  if (crypt_client)
-    options.crypt = fidl::ClientEnd<fuchsia_fxfs::Crypt>(crypt_client());
-  return options;
+  return fuchsia_fs_startup::wire::CheckOptions{};
 }
 
 }  // namespace fs_management

@@ -129,7 +129,7 @@ pub struct StoreInfo {
 
     /// If we have to flush the store whilst we do not have the key, we need to write the encrypted
     /// mutations to an object. This is the object ID of that file if it exists.
-    encrypted_mutations_object_id: u64,
+    pub encrypted_mutations_object_id: u64,
 
     /// Object IDs are encrypted to reduce the amount of information that sequential object IDs
     /// reveal (such as the number of files in the system and the ordering of their creation in
@@ -985,6 +985,14 @@ impl ObjectStore {
             objects.push(store_info.encrypted_mutations_object_id);
         }
         objects
+    }
+
+    /// Returns the object ID of all layer files for this store (which are in the parent store).
+    pub fn layer_file_object_ids(&self) -> Vec<u64> {
+        assert!(self.store_info_handle.get().is_some());
+        let guard = self.store_info.lock().unwrap();
+        let store_info = guard.info().unwrap();
+        store_info.layers.clone()
     }
 
     /// Returns root objects for this store.
@@ -1899,7 +1907,7 @@ mod tests {
         // overwrite both of those extents.
         object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
 
-        fsck(&fs, None).await.expect("fsck failed");
+        fsck(&fs).await.expect("fsck failed");
     }
 
     #[fasync::run(10, test)]
@@ -2003,7 +2011,7 @@ mod tests {
 
             let fs = reopen(fs).await;
 
-            fsck(&fs, Some(crypt.clone())).await.expect("fsck failed");
+            fsck(&fs).await.expect("fsck failed");
 
             let fs = reopen(fs).await;
 

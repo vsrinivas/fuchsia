@@ -113,16 +113,7 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_collection_name = options_.component_collection_name,
         .component_url = options_.component_url,
     };
-    if (format_ == kDiskFormatFxfs) {
-      fsck_options.crypt_client = [] {
-        if (auto service_or = fs_test::GetCryptService(); service_or.is_error()) {
-          ADD_FAILURE() << "Unable to get crypt service";
-          return zx::channel();
-        } else {
-          return *std::move(service_or);
-        }
-      };
-    }
+    // TODO(fxbug.dev/106845): Also check the volume.
     ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, fsck_options, LaunchStdioSync), ZX_OK)
         << zx_status_get_string(status);
 

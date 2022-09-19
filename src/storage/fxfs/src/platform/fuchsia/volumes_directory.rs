@@ -881,7 +881,7 @@ mod tests {
         device.reopen(false);
         {
             let filesystem = FxFilesystem::open(device as DeviceHolder).await.unwrap();
-            fsck(&filesystem, None).await.expect("Fsck");
+            fsck(&filesystem).await.expect("Fsck");
             let volumes_directory =
                 VolumesDirectory::new(root_volume(&filesystem).await.unwrap()).await.unwrap();
             {
@@ -902,7 +902,7 @@ mod tests {
         device.ensure_unique();
         device.reopen(false);
         let filesystem = FxFilesystem::open(device as DeviceHolder).await.unwrap();
-        fsck(&filesystem, None).await.expect("Fsck");
+        fsck(&filesystem).await.expect("Fsck");
         let limits = (filesystem.allocator() as Arc<SimpleAllocator>).owner_byte_limits();
         assert_eq!(limits.len(), 0);
     }

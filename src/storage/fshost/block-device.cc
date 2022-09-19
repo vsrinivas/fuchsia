@@ -917,13 +917,6 @@ zx_status_t BlockDevice::CheckCustomFilesystem(fs_management::DiskFormat format)
     auto startup_client = fidl::WireSyncClient(std::move(*startup_client_end));
     fidl::ClientEnd<fuchsia_hardware_block::Block> block_client_end(device_or->TakeChannel());
     fs_management::FsckOptions options;
-    options.crypt_client = [] {
-      auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-      if (crypt_client_or.is_error()) {
-        return zx::channel();
-      }
-      return crypt_client_or->TakeChannel();
-    };
     auto res = startup_client->Check(std::move(block_client_end), options.as_check_options());
     if (!res.ok()) {
       FX_PLOGS(ERROR, res.status()) << "Failed to fsck (FIDL error)";

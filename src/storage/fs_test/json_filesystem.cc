@@ -104,15 +104,7 @@ class JsonInstance : public FilesystemInstance {
       options.component_child_name = name.c_str();
       options.component_url = "#meta/" + name;
     }
-    if (filesystem_.GetTraits().uses_crypt) {
-      options.crypt_client = [] {
-        if (auto service_or = GetCryptService(); service_or.is_error()) {
-          return zx::channel();
-        } else {
-          return *std::move(service_or);
-        }
-      };
-    }
+    // TODO(fxbug.dev/106845): Also check volumes
     return zx::make_status(fs_management::Fsck(device_path_.c_str(), filesystem_.format(), options,
                                                fs_management::LaunchStdioSync));
   }

@@ -198,6 +198,7 @@ impl FsckWarning {
 pub enum FsckError {
     AllocatedBytesMismatch(Vec<(u64, i64)>, Vec<(u64, i64)>),
     AllocatedSizeMismatch(u64, u64, u64, u64),
+    AllocationForNonexistentOwner(Allocation),
     AllocationMismatch(Allocation, Allocation),
     AttributeOnDirectory(u64, u64),
     ConflictingTypeForLink(u64, u64, Value, Value),
@@ -228,9 +229,6 @@ pub enum FsckError {
 impl FsckError {
     fn to_string(&self) -> String {
         match self {
-            FsckError::AllocationMismatch(expected, actual) => {
-                format!("Expected allocation {:?} but found allocation {:?}", expected, actual)
-            }
             FsckError::AllocatedBytesMismatch(expected, actual) => {
                 format!(
                     "Expected allocated bytes for each owner to be {:?}, but found {:?}",
@@ -242,6 +240,12 @@ impl FsckError {
                     "Expected {} bytes allocated for object {} in store {}, but found {} bytes",
                     expected, oid, store_id, actual
                 )
+            }
+            FsckError::AllocationForNonexistentOwner(alloc) => {
+                format!("Allocation {:?} for non-existent owner", alloc)
+            }
+            FsckError::AllocationMismatch(expected, actual) => {
+                format!("Expected allocation {:?} but found allocation {:?}", expected, actual)
             }
             FsckError::AttributeOnDirectory(store_id, object_id) => {
                 format!("Directory {} in store {} had attributes", object_id, store_id)
@@ -350,14 +354,17 @@ impl FsckError {
 
     fn log(&self) {
         match self {
-            FsckError::AllocationMismatch(expected, actual) => {
-                error!(?expected, ?actual, "Unexpected allocation");
-            }
             FsckError::AllocatedBytesMismatch(expected, actual) => {
                 error!(?expected, ?actual, "Unexpected allocated bytes");
             }
             FsckError::AllocatedSizeMismatch(store_id, oid, expected, actual) => {
                 error!(expected, oid, store_id, actual, "Unexpected allocated size");
+            }
+            FsckError::AllocationForNonexistentOwner(alloc) => {
+                error!(?alloc, "Allocation for non-existent owner")
+            }
+            FsckError::AllocationMismatch(expected, actual) => {
+                error!(?expected, ?actual, "Unexpected allocation");
             }
             FsckError::AttributeOnDirectory(store_id, oid) => {
                 error!(store_id, oid, "Attribute for directory");

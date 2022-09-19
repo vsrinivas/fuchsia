@@ -159,7 +159,7 @@ async fn main() -> Result<(), Error> {
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
                     ops::unlink(&fs, &vol, &Path::new(&rmargs.path)).await?;
                     fs.close().await?;
-                    ops::fsck(&fs, crypt, args.verbose).await
+                    ops::fsck(&fs, args.verbose).await
                 }
                 ImageSubCommand::Get(getargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
@@ -184,7 +184,7 @@ async fn main() -> Result<(), Error> {
                     std::fs::File::open(&putargs.src)?.read_to_end(&mut data)?;
                     ops::put(&fs, &vol, &Path::new(&putargs.dst), data).await?;
                     fs.close().await?;
-                    ops::fsck(&fs, crypt, args.verbose).await
+                    ops::fsck(&fs, args.verbose).await
                 }
                 ImageSubCommand::Format(_) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
@@ -206,7 +206,7 @@ async fn main() -> Result<(), Error> {
                         on_error: |err| eprintln!("{:?}", err.to_string()),
                         verbose: args.verbose,
                     };
-                    fsck::fsck_with_options(&fs, Some(crypt), options).await
+                    fsck::fsck_with_options(&fs, options).await
                 }
                 ImageSubCommand::Ls(lsargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
@@ -227,7 +227,7 @@ async fn main() -> Result<(), Error> {
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
                     ops::mkdir(&fs, &vol, &Path::new(&mkdirargs.path)).await?;
                     fs.close().await?;
-                    ops::fsck(&fs, crypt, args.verbose).await
+                    ops::fsck(&fs, args.verbose).await
                 }
                 ImageSubCommand::Rmdir(rmdirargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(
@@ -237,7 +237,7 @@ async fn main() -> Result<(), Error> {
                     let vol = ops::open_volume(&fs, crypt.clone()).await?;
                     ops::unlink(&fs, &vol, &Path::new(&rmdirargs.path)).await?;
                     fs.close().await?;
-                    ops::fsck(&fs, crypt, args.verbose).await
+                    ops::fsck(&fs, args.verbose).await
                 }
             }
         }

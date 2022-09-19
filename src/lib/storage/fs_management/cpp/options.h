@@ -126,9 +126,6 @@ struct FsckOptions {
   bool always_modify = false;  // Fsck never asks to resolve problems; it will always do it.
   bool force = false;          // Force fsck to check the filesystem integrity, even if "clean".
 
-  // If set, a callable that returns a handle to the crypt client.
-  std::function<zx::channel()> crypt_client;
-
   // If set, and the filesystem type supports it, use the provided child name to connect to an
   // existing filesystem component instance that implements and is serving the
   // fuchsia.fs.startup.Startup protocol. Optionally, also define a component_collection_name if

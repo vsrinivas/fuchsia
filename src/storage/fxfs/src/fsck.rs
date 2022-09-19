@@ -46,6 +46,7 @@ mod store_scanner;
 #[cfg(test)]
 mod tests;
 
+#[derive(Clone)]
 pub struct FsckOptions<F: Fn(&FsckIssue)> {
     /// Whether to fail fsck if any warnings are encountered.
     pub fail_on_warning: bool,
@@ -76,20 +77,12 @@ pub fn default_options() -> FsckOptions<impl Fn(&FsckIssue)> {
 //
 // TODO(fxbug.dev/96075): This currently takes a write lock on the filesystem.  It would be nice if
 // we could take a snapshot.
-//
-// TODO(fxbug.dev/97324): For now this takes a single crypt service to be used for all encrypted
-// filesystems that aren't locked, but this will have to change as and when we support multiple
-// encrypted volumes.
-pub async fn fsck(
-    filesystem: &Arc<FxFilesystem>,
-    crypt: Option<Arc<dyn Crypt>>,
-) -> Result<(), Error> {
-    fsck_with_options(filesystem, crypt, default_options()).await
+pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
+    fsck_with_options(filesystem, default_options()).await
 }
 
 pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     filesystem: &Arc<FxFilesystem>,
-    crypt: Option<Arc<dyn Crypt>>,
     options: FsckOptions<F>,
 ) -> Result<(), Error> {
     info!("Starting fsck");
@@ -130,18 +123,14 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let mut iter = volume_directory.iter(&mut merger).await?;
 
     // TODO(fxbug.dev/96076): We could maybe iterate over stores concurrently.
-    while let Some((name, store_id, _)) = iter.get() {
+    let mut child_store_object_ids: HashSet<u64> = HashSet::new();
+    while let Some((_, store_id, _)) = iter.get() {
         journal_checkpoint_ids.insert(store_id);
-        fsck.verbose(format!("Scanning volume \"{}\" (id {})...", name, store_id));
-        fsck.check_child_store(&filesystem, store_id, &mut root_store_root_objects, crypt.clone())
-            .await
-            .context("Failed to check child store")?;
+        child_store_object_ids.insert(store_id);
+        fsck.check_child_store_metadata(filesystem, store_id, &mut root_store_root_objects).await?;
         iter.advance().await?;
-        fsck.verbose("Scanning volume done");
     }
 
-    // TODO(fxbug.dev/96077): It's a bit crude how details of SimpleAllocator are leaking here. Is
-    // there a better way?
     let allocator = filesystem.allocator();
     root_store_root_objects.append(&mut allocator.parent_objects());
 
@@ -191,6 +180,25 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
         } else if actual_item.key.device_range.start >= actual_item.key.device_range.end {
             fsck.error(FsckError::MalformedAllocation(actual_item.into()))?;
         }
+        let owner_object_id = match actual_item.value {
+            AllocatorValue::None => INVALID_OBJECT_ID,
+            AllocatorValue::Abs { owner_object_id, .. } => *owner_object_id,
+        };
+        let r = &actual_item.key.device_range;
+        *expected_owner_allocated_bytes.entry(owner_object_id).or_insert(0) +=
+            (r.end - r.start) as i64;
+        if owner_object_id != root_store.store_object_id()
+            && owner_object_id != object_manager.root_parent_store().store_object_id()
+        {
+            // We didn't scan any child stores, so `expected` will be missing entries for child
+            // stores.
+            if !child_store_object_ids.contains(&owner_object_id) {
+                fsck.error(FsckError::AllocationForNonexistentOwner(actual_item.into()))?;
+            }
+            actual.advance().await?;
+            continue;
+        }
+        // Cross-reference allocations against the ones we observed in `expected`.
         match expected.get() {
             None => extra_allocations.push(actual_item.into()),
             Some(expected_item) => {
@@ -199,13 +207,6 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
                     actual.advance().await?;
                     continue;
                 }
-                let owner_object_id = match expected_item.value {
-                    AllocatorValue::None => INVALID_OBJECT_ID,
-                    AllocatorValue::Abs { owner_object_id, .. } => *owner_object_id,
-                };
-                let r = &expected_item.key.device_range;
-                *expected_owner_allocated_bytes.entry(owner_object_id).or_insert(0) +=
-                    (r.end - r.start) as i64;
                 if expected_item.key.device_range.end <= actual_item.key.device_range.start {
                     fsck.error(FsckError::MissingAllocation(expected_item.into()))?;
                     expected.advance().await?;
@@ -271,6 +272,44 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     } else {
         if warnings > 0 {
             warn!(count = warnings, "Fsck encountered warnings");
+        } else {
+            info!("No issues detected");
+        }
+        Ok(())
+    }
+}
+
+/// Verifies the integrity of a volume within Fxfs.  See errors.rs for a list of checks performed.
+// TODO(fxbug.dev/96075): This currently takes a write lock on the filesystem.  It would be nice if
+// we could take a snapshot.
+pub async fn fsck_volume(
+    filesystem: &Arc<FxFilesystem>,
+    store_id: u64,
+    crypt: Option<Arc<dyn Crypt>>,
+) -> Result<(), Error> {
+    fsck_volume_with_options(filesystem, default_options(), store_id, crypt).await
+}
+
+pub async fn fsck_volume_with_options<F: Fn(&FsckIssue)>(
+    filesystem: &Arc<FxFilesystem>,
+    options: FsckOptions<F>,
+    store_id: u64,
+    crypt: Option<Arc<dyn Crypt>>,
+) -> Result<(), Error> {
+    info!(?store_id, "Starting volume fsck");
+    let _guard = filesystem.write_lock(&[LockKey::Filesystem]).await;
+
+    let mut fsck = Fsck::new(options);
+    fsck.check_child_store(filesystem, store_id, crypt).await?;
+    // TODO(fxbug.dev/106845): Cross-reference extents in the volume with its reported allocations.
+
+    let errors = fsck.errors();
+    let warnings = fsck.warnings();
+    if errors > 0 || (fsck.options.fail_on_warning && warnings > 0) {
+        Err(anyhow!("Volume fsck encountered {} errors, {} warnings", errors, warnings))
+    } else {
+        if warnings > 0 {
+            warn!(count = warnings, "Volume fsck encountered warnings");
         } else {
             info!("No issues detected");
         }
@@ -351,11 +390,48 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
         Err(anyhow!(format!("{:?}", error)))
     }
 
-    async fn check_child_store(
+    // Does not actually verify the inner contents of the store; for that, use check_child_store.
+    async fn check_child_store_metadata(
         &mut self,
         filesystem: &FxFilesystem,
         store_id: u64,
         root_store_root_objects: &mut Vec<u64>,
+    ) -> Result<(), Error> {
+        let root_store = filesystem.root_store();
+
+        // Manually open the StoreInfo so we can validate it without unlocking the store.
+        let handle = self.assert(
+            ObjectStore::open_object(&root_store, store_id, HandleOptions::default(), None).await,
+            FsckFatal::MissingStoreInfo(store_id),
+        )?;
+        let info = if handle.get_size() > 0 {
+            let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
+            let mut cursor = std::io::Cursor::new(&serialized_info[..]);
+            let (store_info, _version) = self.assert(
+                StoreInfo::deserialize_with_version(&mut cursor)
+                    .context("Failed to deserialize StoreInfo"),
+                FsckFatal::MalformedStore(store_id),
+            )?;
+            store_info
+        } else {
+            // The store_info will be absent for a newly created and empty object store.
+            StoreInfo::default()
+        };
+        // We don't replay the store ReplayInfo here, since it doesn't affect what we
+        // want to check (mainly the existence of the layer files).  If that changes,
+        // we'll need to update this.
+        self.verbose(format!("Store {} has {} object tree layers", store_id, info.layers.len()));
+        root_store_root_objects.append(&mut info.layers.clone());
+        if info.encrypted_mutations_object_id != INVALID_OBJECT_ID {
+            root_store_root_objects.push(info.encrypted_mutations_object_id);
+        }
+        Ok(())
+    }
+
+    async fn check_child_store(
+        &mut self,
+        filesystem: &FxFilesystem,
+        store_id: u64,
         mut crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<(), Error> {
         let root_store = filesystem.root_store();
@@ -366,45 +442,12 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             if let Some(crypt) = &crypt {
                 store.unlock(crypt.clone()).await?;
             } else {
-                // We can't check this store.
-                info!(store_id, "Skipping locked encrypted store");
-                return Ok(());
+                return Err(anyhow!("Invalid key"));
             }
         } else {
             crypt = store.crypt();
         }
-
-        // Manually open the store so we can do our own validation.  Later, we will call open_store
-        // to get a regular ObjectStore wrapper.
-        let handle = self.assert(
-            ObjectStore::open_object(&root_store, store_id, HandleOptions::default(), None).await,
-            FsckFatal::MissingStoreInfo(store_id),
-        )?;
-        let object_layer_file_object_ids = {
-            let info = if handle.get_size() > 0 {
-                let serialized_info = handle.contents(MAX_STORE_INFO_SERIALIZED_SIZE).await?;
-                let mut cursor = std::io::Cursor::new(&serialized_info[..]);
-                let (store_info, _version) = self.assert(
-                    StoreInfo::deserialize_with_version(&mut cursor)
-                        .context("Failed to deserialize StoreInfo"),
-                    FsckFatal::MalformedStore(store_id),
-                )?;
-                store_info
-            } else {
-                // The store_info will be absent for a newly created and empty object store.
-                StoreInfo::default()
-            };
-            // We don't replay the store ReplayInfo here, since it doesn't affect what we
-            // want to check (mainly the existence of the layer files).  If that changes,
-            // we'll need to update this.
-            info.layers.clone()
-        };
-        self.verbose(format!(
-            "Store {} has {} object tree layers",
-            store_id,
-            object_layer_file_object_ids.len(),
-        ));
-        for layer_file_object_id in object_layer_file_object_ids {
+        for layer_file_object_id in store.layer_file_object_ids() {
             self.check_layer_file::<ObjectKey, ObjectValue>(
                 &root_store,
                 store_id,
@@ -413,13 +456,9 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
             )
             .await?;
         }
-
         store_scanner::scan_store(self, store.as_ref(), &store.root_objects())
             .await
-            .context("scan_store failed")?;
-        let mut parent_objects = store.parent_objects();
-        root_store_root_objects.append(&mut parent_objects);
-        Ok(())
+            .context("scan_store failed")
     }
 
     async fn check_layer_file<

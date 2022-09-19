@@ -59,11 +59,7 @@ struct FormatSubCommand {
 #[derive(FromArgs, PartialEq, Debug)]
 /// Fsck
 #[argh(subcommand, name = "fsck")]
-struct FsckSubCommand {
-    /// check encrypted volumes (with supplied crypt service)
-    #[argh(switch)]
-    encrypted: bool,
-}
+struct FsckSubCommand {}
 
 #[derive(FromArgs, PartialEq, Debug)]
 /// Component
@@ -123,7 +119,7 @@ async fn main() -> Result<(), Error> {
             .await?;
             Ok(())
         }
-        TopLevel { nested: SubCommand::Fsck(FsckSubCommand { encrypted }), verbose } => {
+        TopLevel { nested: SubCommand::Fsck(FsckSubCommand {}), verbose } => {
             let fs = FxFilesystem::open_with_options(
                 DeviceHolder::new(BlockDevice::new(Box::new(client), true).await?),
                 OpenOptions { trace: verbose, ..OpenOptions::read_only(true) },
@@ -131,12 +127,7 @@ async fn main() -> Result<(), Error> {
             .await?;
             let mut options = fsck::default_options();
             options.verbose = verbose;
-            fsck::fsck_with_options(
-                &fs,
-                if encrypted { Some(get_crypt_client()?) } else { None },
-                options,
-            )
-            .await
+            fsck::fsck_with_options(&fs, options).await
         }
         TopLevel { nested: SubCommand::Component(_), .. } => unreachable!(),
     }

@@ -642,7 +642,7 @@ mod tests {
         join_all(tasks).await;
         fs.sync(SyncOptions::default()).await.expect("sync failed");
 
-        fsck(&fs, None).await.expect("fsck failed");
+        fsck(&fs).await.expect("fsck failed");
         fs.close().await.expect("Close failed");
     }
 

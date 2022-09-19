@@ -8,11 +8,8 @@ use {
         fsck,
         log::*,
         object_store::volume::root_volume,
-        platform::{
-            fuchsia::{
-                errors::map_to_status, pager::PagerExecutor, volumes_directory::VolumesDirectory,
-            },
-            RemoteCrypt,
+        platform::fuchsia::{
+            errors::map_to_status, pager::PagerExecutor, volumes_directory::VolumesDirectory,
         },
     },
     anyhow::{Context, Error},
@@ -21,7 +18,7 @@ use {
     fidl_fuchsia_fs_startup::{
         CheckOptions, StartOptions, StartupMarker, StartupRequest, StartupRequestStream,
     },
-    fidl_fuchsia_fxfs::{CryptProxy, VolumesMarker, VolumesRequest, VolumesRequestStream},
+    fidl_fuchsia_fxfs::{VolumesMarker, VolumesRequest, VolumesRequestStream},
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
@@ -249,7 +246,7 @@ impl Component {
     async fn handle_check(
         &self,
         device: ClientEnd<BlockMarker>,
-        options: CheckOptions,
+        _options: CheckOptions,
     ) -> Result<(), Error> {
         let state = self.state.lock().await;
         let (fs_container, fs) = match *state {
@@ -268,10 +265,7 @@ impl Component {
             State::Running(ref fs, ..) => (None, fs.deref().clone()),
         };
         let fsck_options = fsck::default_options();
-        let crypt = Arc::new(RemoteCrypt::new(CryptProxy::new(fasync::Channel::from_channel(
-            options.crypt.ok_or(zx::Status::INVALID_ARGS)?.into_channel(),
-        )?)));
-        let res = fsck::fsck_with_options(&fs, Some(crypt), fsck_options).await;
+        let res = fsck::fsck_with_options(&fs, fsck_options).await;
         if let Some(fs_container) = fs_container {
             let _ = fs_container.close().await;
         }

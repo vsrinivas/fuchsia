@@ -55,6 +55,7 @@ if (is_fuchsia) {
       "//src/lib/storage/block_client/cpp",
       "//src/lib/storage/vfs/cpp",
       "//src/storage/fvm",
+      "//src/storage/fxfs:fuchsia.fxfs_cpp_wire",
       "//src/storage/gpt",
       "//third_party/boringssl",
       "//zircon/system/ulib/fbl",

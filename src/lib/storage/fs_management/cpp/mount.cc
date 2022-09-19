@@ -393,7 +393,6 @@ zx::status<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault
     return volume.take_error();
   }
 
-  std::cerr << "Created volume" << std::endl;
   return zx::ok(StartedSingleVolumeMultiVolumeFilesystem(std::move(*outgoing_dir_or),
                                                          MountedVolume(std::move(client))));
 }

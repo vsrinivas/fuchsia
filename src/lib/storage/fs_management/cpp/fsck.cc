@@ -47,8 +47,6 @@ zx_status_t FsckNativeFs(const char* device_path, const FsckOptions& options, La
 
   std::vector<std::pair<uint32_t, zx::handle>> handles;
   handles.push_back({FS_HANDLE_BLOCK_DEVICE_ID, std::move(block_device)});
-  if (options.crypt_client)
-    handles.push_back({PA_HND(PA_USER0, 2), options.crypt_client()});
   return cb(options.as_argv(binary), std::move(handles));
 }
 

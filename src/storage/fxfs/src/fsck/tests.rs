@@ -8,7 +8,7 @@ use {
         filesystem::{Filesystem, FxFilesystem, JournalingObject, OpenFxFilesystem, OpenOptions},
         fsck::{
             errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
-            fsck_with_options, FsckOptions,
+            fsck_volume_with_options, fsck_with_options, FsckOptions,
         },
         lsm_tree::{
             simple_persistent_layer::SimplePersistentLayerWriter,
@@ -45,6 +45,12 @@ struct FsckTest {
     crypt: Option<Arc<dyn Crypt>>,
 }
 
+#[derive(Default)]
+struct TestOptions {
+    halt_on_error: bool,
+    volume_store_id: Option<u64>,
+}
+
 impl FsckTest {
     async fn new() -> Self {
         let filesystem = FxFilesystem::new_empty(DeviceHolder::new(FakeDevice::new(
@@ -68,10 +74,10 @@ impl FsckTest {
         );
         Ok(())
     }
-    async fn run(&self, halt_on_error: bool) -> Result<(), Error> {
+    async fn run(&self, test_options: TestOptions) -> Result<(), Error> {
         let options = FsckOptions {
             fail_on_warning: true,
-            halt_on_error,
+            halt_on_error: test_options.halt_on_error,
             do_slow_passes: true,
             verbose: false,
             on_error: |err| {
@@ -83,7 +89,12 @@ impl FsckTest {
                 self.errors.lock().unwrap().push(err.clone());
             },
         };
-        fsck_with_options(&self.filesystem(), self.crypt.clone(), options).await
+        fsck_with_options(&self.filesystem(), options.clone()).await?;
+        if let Some(store_id) = test_options.volume_store_id {
+            fsck_volume_with_options(&self.filesystem(), options, store_id, self.crypt.clone())
+                .await?;
+        }
+        Ok(())
     }
     fn filesystem(&self) -> Arc<FxFilesystem> {
         self.filesystem.as_ref().unwrap().deref().clone()
@@ -193,7 +204,7 @@ async fn test_missing_graveyard() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [
@@ -228,14 +239,8 @@ async fn test_extra_allocation() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(
-        test.errors()[..],
-        [
-            FsckIssue::Error(FsckError::ExtraAllocations(_)),
-            FsckIssue::Error(FsckError::AllocatedBytesMismatch(..))
-        ]
-    );
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
+    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::ExtraAllocations(_)), ..]);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -262,7 +267,9 @@ async fn test_misaligned_allocation() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(true).await.expect_err("Fsck should fail");
+    test.run(TestOptions { halt_on_error: true, ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedAllocation(..))]);
 }
 
@@ -335,7 +342,9 @@ async fn test_malformed_allocation() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(true).await.expect_err("Fsck should fail");
+    test.run(TestOptions { halt_on_error: true, ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedAllocation(..))]);
 }
 
@@ -363,7 +372,9 @@ async fn test_misaligned_extent_in_root_store() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(true).await.expect_err("Fsck should fail");
+    test.run(TestOptions { halt_on_error: true, ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedExtent(..))]);
 }
 
@@ -391,7 +402,9 @@ async fn test_malformed_extent_in_root_store() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(true).await.expect_err("Fsck should fail");
+    test.run(TestOptions { halt_on_error: true, ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedExtent(..))]);
 }
 
@@ -399,10 +412,10 @@ async fn test_malformed_extent_in_root_store() {
 async fn test_misaligned_extent_in_child_store() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
-        let volume = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
+        let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         let mut transaction = fs
             .clone()
@@ -410,17 +423,24 @@ async fn test_misaligned_extent_in_child_store() {
             .await
             .expect("new_transaction failed");
         transaction.add(
-            volume.store_object_id(),
+            store.store_object_id(),
             Mutation::insert_object(
                 ObjectKey::extent(555, 0, 1..fs.block_size()),
                 ObjectValue::Extent(ExtentValue::new(1)),
             ),
         );
         transaction.commit().await.expect("commit failed");
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(true).await.expect_err("Fsck should fail");
+    test.run(TestOptions {
+        halt_on_error: true,
+        volume_store_id: Some(store_id),
+        ..Default::default()
+    })
+    .await
+    .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MisalignedExtent(..))]);
 }
 
@@ -428,10 +448,10 @@ async fn test_misaligned_extent_in_child_store() {
 async fn test_malformed_extent_in_child_store() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
-        let volume = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
+        let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         let mut transaction = fs
             .clone()
@@ -439,17 +459,24 @@ async fn test_malformed_extent_in_child_store() {
             .await
             .expect("new_transaction failed");
         transaction.add(
-            volume.store_object_id(),
+            store.store_object_id(),
             Mutation::insert_object(
                 ObjectKey::extent(555, 0, fs.block_size()..0),
                 ObjectValue::Extent(ExtentValue::new(1)),
             ),
         );
         transaction.commit().await.expect("commit failed");
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(true).await.expect_err("Fsck should fail");
+    test.run(TestOptions {
+        halt_on_error: true,
+        volume_store_id: Some(store_id),
+        ..Default::default()
+    })
+    .await
+    .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MalformedExtent(..))]);
 }
 
@@ -480,8 +507,15 @@ async fn test_allocation_mismatch() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::AllocationMismatch(..)),]);
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::AllocationForNonexistentOwner(..)),
+            FsckIssue::Error(FsckError::MissingAllocation(..)),
+            FsckIssue::Error(FsckError::AllocatedBytesMismatch(..)),
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -508,8 +542,14 @@ async fn test_missing_allocation() {
     // Structuring this test to actually persist a bad allocation layer file is possible but tricky
     // since flushing or committing transactions might itself perform allocations, and it isn't that
     // important.
-    test.run(false).await.expect_err("Fsck should fail");
-    assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::MissingAllocation(..)),]);
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [
+            FsckIssue::Error(FsckError::MissingAllocation(..)),
+            FsckIssue::Error(FsckError::AllocatedBytesMismatch(..)),
+        ]
+    );
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -547,7 +587,7 @@ async fn test_too_many_object_refs() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [
@@ -579,7 +619,7 @@ async fn test_too_few_object_refs() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Warning(FsckWarning::OrphanedObject(..))]);
 }
 
@@ -639,7 +679,7 @@ async fn test_missing_object_store_handle() {
 async fn test_misordered_layer_file() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -652,10 +692,13 @@ async fn test_misordered_layer_file() {
             ],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MisOrderedLayerFile(..))]);
 }
 
@@ -663,7 +706,7 @@ async fn test_misordered_layer_file() {
 async fn test_overlapping_keys_in_layer_file() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -677,10 +720,13 @@ async fn test_overlapping_keys_in_layer_file() {
             ],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Fatal(FsckFatal::OverlappingKeysInLayerFile(..))]
@@ -691,7 +737,7 @@ async fn test_overlapping_keys_in_layer_file() {
 async fn test_unexpected_record_in_layer_file() {
     let mut test = FsckTest::new().await;
     // This test relies on the value below being something that doesn't deserialize to a valid ObjectValue.
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -701,10 +747,13 @@ async fn test_unexpected_record_in_layer_file() {
             vec![Item::new(ObjectKey::object(0), 0xffffffffu32)],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Fatal(FsckFatal::MalformedLayerFile(..))]);
 }
 
@@ -712,7 +761,7 @@ async fn test_unexpected_record_in_layer_file() {
 async fn test_mismatched_key_and_value() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -722,10 +771,13 @@ async fn test_mismatched_key_and_value() {
             vec![Item::new(ObjectKey::object(10), ObjectValue::Attribute { size: 100 })],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Error(FsckError::MalformedObjectRecord(..)), ..]
@@ -738,8 +790,7 @@ async fn test_link_to_root_directory() {
 
     {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
-        let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
+        let store = fs.root_store();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
 
@@ -761,7 +812,7 @@ async fn test_link_to_root_directory() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::RootObjectHasParent(..)), ..]);
 }
 
@@ -769,7 +820,7 @@ async fn test_link_to_root_directory() {
 async fn test_multiple_links_to_directory() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -790,10 +841,13 @@ async fn test_multiple_links_to_directory() {
             .await
             .expect("insert_child failed");
         transaction.commit().await.expect("commit transaction failed");
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Error(FsckError::MultipleLinksToDirectory(..)), ..]
@@ -806,8 +860,7 @@ async fn test_conflicting_link_types() {
 
     {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
-        let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
+        let store = fs.root_store();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
 
@@ -828,7 +881,7 @@ async fn test_conflicting_link_types() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Error(FsckError::ConflictingTypeForLink(..)), ..]
@@ -839,7 +892,7 @@ async fn test_conflicting_link_types() {
 async fn test_volume_in_child_store() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -856,10 +909,13 @@ async fn test_volume_in_child_store() {
             .await
             .expect("Create child failed");
         transaction.commit().await.expect("commit transaction failed");
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::VolumeInChildStore(..)), ..]);
 }
 
@@ -867,7 +923,7 @@ async fn test_volume_in_child_store() {
 async fn test_children_on_file() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -895,10 +951,13 @@ async fn test_children_on_file() {
             )],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::FileHasChildren(..)), ..]);
 }
 
@@ -906,7 +965,7 @@ async fn test_children_on_file() {
 async fn test_attribute_on_directory() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -920,10 +979,13 @@ async fn test_attribute_on_directory() {
             )],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(test.errors()[..], [FsckIssue::Error(FsckError::AttributeOnDirectory(..)), ..]);
 }
 
@@ -931,7 +993,7 @@ async fn test_attribute_on_directory() {
 async fn test_orphaned_attribute() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -945,10 +1007,13 @@ async fn test_orphaned_attribute() {
             )],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Warning(FsckWarning::OrphanedAttribute(..)), ..]
@@ -959,7 +1024,7 @@ async fn test_orphaned_attribute() {
 async fn test_records_for_tombstoned_object() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -976,10 +1041,13 @@ async fn test_records_for_tombstoned_object() {
             ],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Error(FsckError::TombstonedObjectHasRecords(..)), ..]
@@ -990,7 +1058,7 @@ async fn test_records_for_tombstoned_object() {
 async fn test_invalid_object_in_store() {
     let mut test = FsckTest::new().await;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -1001,10 +1069,13 @@ async fn test_invalid_object_in_store() {
             vec![Item::new(ObjectKey::object(INVALID_OBJECT_ID), ObjectValue::Some)],
         )
         .await;
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Warning(FsckWarning::InvalidObjectIdInStore(..)), ..]
@@ -1017,8 +1088,7 @@ async fn test_invalid_child_in_store() {
 
     {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
-        let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
+        let store = fs.root_store();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
 
@@ -1035,7 +1105,7 @@ async fn test_invalid_child_in_store() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [FsckIssue::Warning(FsckWarning::InvalidObjectIdInStore(..)), ..]
@@ -1048,8 +1118,7 @@ async fn test_link_cycle() {
 
     {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
-        let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
+        let store = fs.root_store();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
 
@@ -1072,7 +1141,7 @@ async fn test_link_cycle() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [
@@ -1092,8 +1161,7 @@ async fn test_file_length_mismatch() {
     {
         let fs = test.filesystem();
         let device = fs.device();
-        let root_volume = root_volume(&fs).await.unwrap();
-        let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
+        let store = fs.root_store();
 
         let mut transaction = fs
             .clone()
@@ -1144,7 +1212,7 @@ async fn test_file_length_mismatch() {
     }
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
     assert_matches!(
         test.errors()[..],
         [
@@ -1160,7 +1228,7 @@ async fn test_spurious_extents() {
     let mut test = FsckTest::new().await;
     const SPURIOUS_OFFSET: u64 = 100 << 20;
 
-    {
+    let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(&fs).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
@@ -1185,10 +1253,13 @@ async fn test_spurious_extents() {
             ),
         );
         transaction.commit().await.expect("commit failed");
-    }
+        store.store_object_id()
+    };
 
     test.remount().await.expect("Remount failed");
-    test.run(false).await.expect_err("Fsck should fail");
+    test.run(TestOptions { volume_store_id: Some(store_id), ..Default::default() })
+        .await
+        .expect_err("Fsck should fail");
     let mut found = 0;
     for e in test.errors() {
         match e {

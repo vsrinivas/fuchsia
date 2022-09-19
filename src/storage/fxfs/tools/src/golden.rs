@@ -115,7 +115,7 @@ async fn check_image(path: &Path) -> Result<(), Error> {
     {
         let device = DeviceHolder::new(load_device(path)?);
         let fs = FxFilesystem::open(device).await?;
-        ops::fsck(&fs, crypt.clone(), true).await.context("fsck failed")?;
+        ops::fsck(&fs, true).await.context("fsck failed")?;
     }
     {
         let device = DeviceHolder::new(load_device(path)?);

@@ -202,7 +202,6 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                 let exposed_dir = self.get_component_exposed_dir().await?;
                 let proxy = connect_to_protocol_at_dir_root::<StartupMarker>(&exposed_dir)?;
                 let mut options = CheckOptions::new_empty();
-                options.crypt = self.config.crypt_client().map(|c| c.into());
                 proxy
                     .check(self.get_block_handle()?.into(), &mut options)
                     .await?

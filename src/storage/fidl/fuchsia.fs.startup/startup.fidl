@@ -4,7 +4,6 @@
 
 library fuchsia.fs.startup;
 
-using fuchsia.fxfs;
 using fuchsia.hardware.block;
 using zx;
 
@@ -70,10 +69,7 @@ type FormatOptions = resource struct {
 };
 
 /// Options for running consistency checks on filesystems.
-type CheckOptions = resource struct {
-    /// An optional connection to a crypt client (for encrypted filesystems).
-    crypt client_end:<fuchsia.fxfs.Crypt, optional>;
-};
+type CheckOptions = resource struct {};
 
 // TODO(fxbug.dev/90702): Figure out a more flexible configuration option strategy.
 @discoverable

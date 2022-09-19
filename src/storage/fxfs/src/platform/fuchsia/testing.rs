@@ -33,7 +33,6 @@ impl From<State> for (OpenFxFilesystem, FxVolumeAndRoot) {
 
 pub struct TestFixture {
     state: Option<State>,
-    encrypted: bool,
 }
 
 impl TestFixture {
@@ -90,7 +89,7 @@ impl TestFixture {
             Path::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
-        Self { state: Some(State { filesystem, volume, root }), encrypted }
+        Self { state: Some(State { filesystem, volume, root }) }
     }
 
     /// Closes the test fixture, shutting down the filesystem. Returns the device, which can be
@@ -132,9 +131,9 @@ impl TestFixture {
         device.ensure_unique();
         device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.expect("open failed");
+        // TODO(fxbug.dev/106845): Check volumes, too.
         fsck_with_options(
             &filesystem,
-            if self.encrypted { Some(Arc::new(InsecureCrypt::new())) } else { None },
             FsckOptions {
                 fail_on_warning: true,
                 halt_on_error: false,
