@@ -8,15 +8,14 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/async/dispatcher.h>
 #include <lib/fitx/result.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
-#include <lib/syslog/cpp/macros.h>
 
 #include <memory>
 
 #include <gtest/gtest.h>
 
+#include "lib/async/dispatcher.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"
@@ -133,16 +132,6 @@ class EnclosedGuest {
 
   virtual std::string ShellPrompt() = 0;
 
-  // If true, the test will be run with UITestManager to provide a hermetic instance of UI and
-  // input services. Otherwise we will launch directly using RealmBuilder. We make this distinction
-  // because UITestManager depends on the availability of vulkan and we can avoid that dependency
-  // for tests that don't need to test any interactions with the UI stack.
-  virtual bool NeedsUiRealm(const GuestLaunchInfo& info) {
-    // Tests must be explicit about GPU support in the tests.
-    FX_CHECK(info.config.has_virtio_gpu()) << "virtio-gpu support must be explicitly declared.";
-    return info.config.virtio_gpu();
-  }
-
   // Invoked after the guest |Realm| has been created but before the guest
   // has been launched.
   //
@@ -247,7 +236,6 @@ class TerminaContainerEnclosedGuest : public TerminaEnclosedGuest {
       : TerminaEnclosedGuest(loop, fuchsia::virtualization::ContainerStatus::READY) {}
 
   zx_status_t BuildLaunchInfo(GuestLaunchInfo* launch_info) override;
-  bool NeedsUiRealm(const GuestLaunchInfo& info) override { return true; }
   void InstallInRealm(component_testing::Realm& realm, GuestLaunchInfo& guest_launch_info) override;
   zx_status_t WaitForSystemReady(zx::time deadline) override;
   zx_status_t Execute(const std::vector<std::string>& argv,

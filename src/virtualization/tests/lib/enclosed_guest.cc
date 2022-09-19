@@ -18,11 +18,11 @@
 #include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/input3/cpp/fidl.h>
 #include <fuchsia/ui/observation/geometry/cpp/fidl.h>
-#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/vulkan/loader/cpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fitx/result.h>
 #include <lib/fpromise/single_threaded_executor.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
 #include <sys/mount.h>
 #include <zircon/errors.h>
@@ -179,7 +179,6 @@ std::unique_ptr<sys::ServiceDirectory> EnclosedGuest::StartWithUITestManager(
       fuchsia::ui::composition::Flatland::Name_,
       fuchsia::ui::composition::Allocator::Name_,
       fuchsia::ui::input3::Keyboard::Name_,
-      fuchsia::ui::scenic::Scenic::Name_,
   };
 
   // These are the parent services (from our cml) that we need the UITestRealm to forward to use so
@@ -213,8 +212,16 @@ zx_status_t EnclosedGuest::Start(zx::time deadline) {
     return status;
   }
 
+  // Tests must be explicit about GPU support in the tests.
+  //
+  // If we need GPU support we will launch with UITestManager to provide a hermetic instance of UI
+  // and input services. Otherwise we will launch directly using RealmBuilder. We make this
+  // distinction because UITestManager depends on the availability of vulkan and we can avoid that
+  // dependency for tests that don't need to test any interactions with the UI stack.
+  FX_CHECK(guest_launch_info.config.has_virtio_gpu())
+      << "virtio-gpu support must be explicitly declared.";
   std::unique_ptr<sys::ServiceDirectory> realm_services;
-  if (NeedsUiRealm(guest_launch_info)) {
+  if (guest_launch_info.config.virtio_gpu()) {
     realm_services = StartWithUITestManager(deadline, guest_launch_info);
   } else {
     realm_services = StartWithRealmBuilder(deadline, guest_launch_info);
@@ -248,7 +255,6 @@ void EnclosedGuest::InstallInRealm(component_testing::Realm& realm,
                               Protocol{fuchsia::ui::composition::Flatland::Name_},
                               Protocol{fuchsia::ui::composition::Allocator::Name_},
                               Protocol{fuchsia::ui::input3::Keyboard::Name_},
-                              Protocol{fuchsia::ui::scenic::Scenic::Name_},
                           },
                       .source = {ParentRef()},
                       .targets = {ChildRef{kGuestManagerName}}})
