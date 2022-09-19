@@ -166,9 +166,7 @@ mod tests {
     async fn load_objects_test() -> Result<(), Error> {
         // Open this test's real /pkg/lib directory to use for this test, and then check to see
         // whether an asan subdirectory is present, and use it instead if so.
-        // TODO(fxbug.dev/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
-        // package layout (like whether sanitizers are in use) once Rust vfs supports
-        // OPEN_RIGHT_EXECUTABLE
+        // TODO(fxbug.dev/109829): Replace conditional logic with a pseudo-directory using Rust VFS.
         let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
         let mut pkg_lib = fuchsia_fs::directory::open_in_namespace("/pkg/lib", rights)?;
         let entries = list_directory(&pkg_lib).await;
@@ -257,8 +255,7 @@ mod tests {
         // since we need a directory that supports OPEN_RIGHT_EXECUTABLE. It contains a file 'foo'
         // which contains 'hippos' and a file 'bar/baz' (that is, baz in a subdirectory bar) which
         // contains 'rule'.
-        // TODO(fxbug.dev/37534): Use a synthetic /pkg/lib in this test so it doesn't depend on the
-        // package layout once Rust vfs supports OPEN_RIGHT_EXECUTABLE
+        // TODO(fxbug.dev/109829): Replace conditional logic with a pseudo-directory using Rust VFS.
         let pkg_lib = fuchsia_fs::directory::open_in_namespace(
             "/pkg/lib/config_test/",
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
