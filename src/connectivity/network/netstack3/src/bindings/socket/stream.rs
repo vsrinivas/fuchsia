@@ -12,6 +12,7 @@ use std::{
 };
 
 use assert_matches::assert_matches;
+use async_utils::stream::OneOrMany;
 use fidl::{
     endpoints::{ClientEnd, ControlHandle as _, RequestStream as _},
     HandleBased as _,
@@ -22,7 +23,7 @@ use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
-use futures::{stream::FuturesUnordered, StreamExt as _};
+use futures::StreamExt as _;
 use net_types::{
     ip::{IpAddress, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
@@ -294,8 +295,7 @@ where
             // Keep a set of futures, one per pollable stream. Each future is a
             // `StreamFuture` and so will resolve into a tuple of the next item
             // in the stream and the rest of the stream.
-            let mut futures: FuturesUnordered<_> =
-                std::iter::once(request_stream.into_future()).collect();
+            let mut futures = OneOrMany::new(request_stream.into_future());
             while let Some((request, request_stream)) = futures.next().await {
                 let request = match request {
                     None => continue,

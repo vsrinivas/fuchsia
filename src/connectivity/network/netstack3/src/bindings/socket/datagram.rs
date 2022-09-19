@@ -20,11 +20,12 @@ use fidl_fuchsia_posix as fposix;
 use fidl_fuchsia_posix_socket as fposix_socket;
 
 use assert_matches::assert_matches;
+use async_utils::stream::OneOrMany;
 use explicit::ResultExt as _;
 use fidl::endpoints::{ControlHandle as _, RequestStream as _, ServerEnd};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased as _, Peered as _};
-use futures::{stream::FuturesUnordered, FutureExt as _, StreamExt as _, TryFutureExt as _};
+use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _};
 use log::{error, trace, warn};
 use net_types::{
     ip::{Ip, IpVersion, Ipv4, Ipv6},
@@ -1500,11 +1501,11 @@ where
         let rights = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
 
         // Define `with_flags` out of line so that when futures are pushed into
-        // the `FuturesUnordered`, they all use the same anonymous closure type.
+        // the `OneOrMany`, they all use the same anonymous closure type.
         let with_flags = |flags: fio::OpenFlags| move |x| (x, flags);
         let events = events.into_future().map(with_flags(rights));
 
-        let mut futures: FuturesUnordered<_> = std::iter::once(events).collect();
+        let mut futures = OneOrMany::new(events);
         while let Some(((request, request_stream), rights)) = futures.next().await {
             let request = match request {
                 None => continue,
