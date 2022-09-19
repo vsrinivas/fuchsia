@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
@@ -88,10 +89,6 @@ func (r *fakeCmdRunner) Run(_ context.Context, command []string, _, _ io.Writer)
 
 func TestSubprocessTester(t *testing.T) {
 	tmpDir := t.TempDir()
-	tester := SubprocessTester{
-		localOutputDir: tmpDir,
-	}
-
 	passingTest := filepath.Join("host_x64", "passing")
 	passingProfile := filepath.Join("llvm-profile", passingTest, "default.profraw")
 	failingTest := filepath.Join("host_x64", "failing")
@@ -105,12 +102,19 @@ func TestSubprocessTester(t *testing.T) {
 		}
 		f.Close()
 	}
+	// Override tempdir creation function to ensure deterministic
+	// command output.
+	newTempDir = func(dir, pattern string) (string, error) {
+		return "/newtmp", nil
+	}
 
 	cases := []struct {
 		name           string
 		test           build.Test
 		runErrs        []error
 		expectedResult runtests.TestResult
+		useSandboxing  bool
+		env            map[string]string
 		wantCmd        []string
 		wantDataSinks  runtests.DataSinkMap
 	}{
@@ -124,6 +128,112 @@ func TestSubprocessTester(t *testing.T) {
 			test:           build.Test{Path: passingTest},
 			expectedResult: runtests.TestSuccess,
 			wantCmd:        []string{passingTest},
+			wantDataSinks: runtests.DataSinkMap{
+				"llvm-profile": []runtests.DataSink{
+					{
+						Name: filepath.Base(passingProfile),
+						File: passingProfile,
+					},
+				},
+			},
+		},
+		{
+			name:          "test passes with profile and host test sandboxing",
+			test:          build.Test{Path: passingTest},
+			useSandboxing: true,
+			env: map[string]string{
+				llvmProfileEnvKey: "fake/llvm/profile/path/p.profraw",
+			},
+			expectedResult: runtests.TestSuccess,
+			wantCmd: []string{
+				"./fake_nsjail",
+				"--disable_clone_newcgroup",
+				"--disable_clone_newnet",
+				"--bindmount_ro",
+				"/bin:/bin",
+				"--bindmount_ro",
+				"/dev/kvm:/dev/kvm",
+				"--bindmount_ro",
+				"/dev/net/tun:/dev/net/tun",
+				"--bindmount",
+				"/dev/null:/dev/null",
+				"--bindmount_ro",
+				"/dev/urandom:/dev/urandom",
+				"--bindmount_ro",
+				"/dev/zero:/dev/zero",
+				"--bindmount_ro",
+				"/etc/alternatives/awk:/etc/alternatives/awk",
+				"--bindmount_ro",
+				"/etc/host.conf:/etc/host.conf",
+				"--bindmount_ro",
+				"/etc/hosts:/etc/hosts",
+				"--bindmount_ro",
+				"/etc/nsswitch.conf:/etc/nsswitch.conf",
+				"--bindmount_ro",
+				"/etc/passwd:/etc/passwd",
+				"--bindmount_ro",
+				"/etc/resolv.conf:/etc/resolv.conf",
+				"--bindmount_ro",
+				"/etc/ssl/certs:/etc/ssl/certs",
+				"--bindmount_ro",
+				"/lib:/lib",
+				"--bindmount_ro",
+				"/lib64:/lib64",
+				"--bindmount",
+				"/newtmp:/tmp",
+				"--bindmount",
+				fmt.Sprintf("%s:%s", tmpDir, tmpDir),
+				"--bindmount",
+				fmt.Sprintf("%s/host_x64/passing:%s/host_x64/passing", tmpDir, tmpDir),
+				"--bindmount_ro",
+				"/usr/bin:/usr/bin",
+				"--bindmount_ro",
+				"/usr/lib:/usr/lib",
+				"--bindmount_ro",
+				"/usr/share/misc/magic.mgc:/usr/share/misc/magic.mgc",
+				"--bindmount_ro",
+				"/usr/share/tcltk:/usr/share/tcltk",
+				"--bindmount_ro",
+				"/usr/share/vulkan:/usr/share/vulkan",
+				"--symlink",
+				"/proc/self/fd:/dev/fd",
+				"--rlimit_as",
+				"soft",
+				"--rlimit_fsize",
+				"soft",
+				"--rlimit_nofile",
+				"soft",
+				"--rlimit_nproc",
+				"soft",
+				"--env",
+				"ANDROID_TMP=/tmp",
+				"--env",
+				fmt.Sprintf("FUCHSIA_TEST_OUTDIR=%s/host_x64/passing", tmpDir),
+				"--env",
+				"HOME=/tmp",
+				"--env",
+				fmt.Sprintf("LLVM_PROFILE_FILE=%s/llvm-profile/host_x64/passing/%%m.profraw", tmpDir),
+				"--env",
+				"TEMP=/tmp",
+				"--env",
+				"TEMPDIR=/tmp",
+				"--env",
+				"TMP=/tmp",
+				"--env",
+				"TMPDIR=/tmp",
+				"--env",
+				"XDG_CACHE_HOME=/tmp",
+				"--env",
+				"XDG_CONFIG_HOME=/tmp",
+				"--env",
+				"XDG_DATA_HOME=/tmp",
+				"--env",
+				"XDG_HOME=/tmp",
+				"--env",
+				"XDG_STATE_HOME=/tmp",
+				"--",
+				passingTest,
+			},
 			wantDataSinks: runtests.DataSinkMap{
 				"llvm-profile": []runtests.DataSink{
 					{
@@ -162,6 +272,35 @@ func TestSubprocessTester(t *testing.T) {
 			runner := &fakeCmdRunner{
 				runErrs: c.runErrs,
 			}
+			tester := SubprocessTester{
+				localOutputDir: tmpDir,
+			}
+			if c.useSandboxing {
+				tester.sProps = &sandboxingProps{
+					nsjailPath: "./fake_nsjail",
+				}
+				// Override the environment to make sure we have a deterministic
+				// command.
+				prevEnv := os.Environ()
+				prev := make(map[string]string)
+				for _, entry := range prevEnv {
+					parts := strings.SplitN(entry, "=", 2)
+					os.Unsetenv(parts[0])
+					prev[parts[0]] = parts[1]
+				}
+				for k, v := range c.env {
+					os.Setenv(k, v)
+				}
+				// Restore the environment after the test case.
+				t.Cleanup(func() {
+					for k := range c.env {
+						os.Unsetenv(k)
+					}
+					for k, v := range prev {
+						os.Setenv(k, v)
+					}
+				})
+			}
 			newRunner = func(dir string, env []string) cmdRunner {
 				return runner
 			}
@@ -176,7 +315,15 @@ func TestSubprocessTester(t *testing.T) {
 			if _, statErr := os.Stat(outDir); statErr != nil {
 				t.Error("tester.Test did not create a readable outDir:", statErr)
 			}
-			if diff := cmp.Diff(c.wantCmd, runner.lastCmd); diff != "" {
+			var opts []cmp.Option
+			// We sort the cmd when using sandboxing because the mounts are
+			// ordered alphabetically.
+			if c.useSandboxing {
+				opts = append(opts, cmpopts.SortSlices(func(s, t string) bool {
+					return s < t
+				}))
+			}
+			if diff := cmp.Diff(c.wantCmd, runner.lastCmd, opts...); diff != "" {
 				t.Errorf("Unexpected command run (-want +got):\n%s", diff)
 			}
 

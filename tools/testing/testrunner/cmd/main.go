@@ -439,7 +439,11 @@ func execute(
 				}
 			}
 			if localTester == nil {
-				localTester = testrunner.NewSubprocessTester(flags.localWD, localEnv, outputs.OutDir, flags.nsjailPath, flags.nsjailRoot)
+				var err error
+				localTester, err = testrunner.NewSubprocessTester(flags.localWD, localEnv, outputs.OutDir, flags.nsjailPath, flags.nsjailRoot)
+				if err != nil {
+					return nil, nil, err
+				}
 			}
 			return localTester, &localSinks, nil
 		default:

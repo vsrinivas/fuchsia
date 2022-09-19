@@ -98,6 +98,11 @@ var newRunner = func(dir string, env []string) cmdRunner {
 	return &subprocess.Runner{Dir: dir, Env: env}
 }
 
+// For testability.
+var newTempDir = func(dir, pattern string) (string, error) {
+	return os.MkdirTemp(dir, pattern)
+}
+
 // For testability
 type sshClient interface {
 	Close()
@@ -137,20 +142,47 @@ type SubprocessTester struct {
 	env            []string
 	dir            string
 	localOutputDir string
-	nsjailPath     string
-	nsjailRoot     string
+	sProps         *sandboxingProps
+}
+
+type sandboxingProps struct {
+	nsjailPath    string
+	nsjailRoot    string
+	mountQEMU     bool
+	mountUserHome bool
+	cwd           string
 }
 
 // NewSubprocessTester returns a SubprocessTester that can execute tests
 // locally with a given working directory and environment.
-func NewSubprocessTester(dir string, env []string, localOutputDir, nsjailPath, nsjailRoot string) Tester {
-	return &SubprocessTester{
+func NewSubprocessTester(dir string, env []string, localOutputDir, nsjailPath, nsjailRoot string) (Tester, error) {
+	s := &SubprocessTester{
 		dir:            dir,
 		env:            env,
 		localOutputDir: localOutputDir,
-		nsjailPath:     nsjailPath,
-		nsjailRoot:     nsjailRoot,
 	}
+	// If the caller provided a path to NsJail, then intialize sandboxing properties.
+	if nsjailPath != "" {
+		s.sProps = &sandboxingProps{
+			nsjailPath: nsjailPath,
+			nsjailRoot: nsjailRoot,
+			// TODO(rudymathu): Remove this once ssh/ssh-keygen usage is removed.
+			mountUserHome: true,
+		}
+
+		if _, err := os.Stat("/sys/class/net/qemu/"); err == nil {
+			s.sProps.mountQEMU = true
+		} else if !errors.Is(err, os.ErrNotExist) {
+			return &SubprocessTester{}, nil
+		}
+
+		cwd, err := os.Getwd()
+		if err != nil {
+			return &SubprocessTester{}, err
+		}
+		s.sProps.cwd = cwd
+	}
+	return s, nil
 }
 
 func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer, outDir string) (*TestResult, error) {
@@ -187,9 +219,9 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		defer cancel()
 	}
 	testCmd := []string{test.Path}
-	if t.nsjailPath != "" {
+	if t.sProps != nil {
 		testCmdBuilder := &NsJailCmdBuilder{
-			Bin: t.nsjailPath,
+			Bin: t.sProps.nsjailPath,
 			// TODO(rudymathu): Eventually, this should be a more fine grained
 			// property that disables network isolation only on tests that explicitly
 			// request it.
@@ -215,7 +247,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 
 		// Mount the QEMU tun_flags if the qemu interface exists. This is used
 		// by VDL to ascertain that the interface exists.
-		if _, err := os.Stat("/sys/class/net/qemu/"); err == nil {
+		if t.sProps.mountQEMU {
 			testCmdBuilder.MountPoints = append(
 				testCmdBuilder.MountPoints,
 				&MountPt{
@@ -231,40 +263,42 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		// ssh-keygen, we need to create the same home directory in
 		// /etc/passwd. This is really quite a big hack, and we should remove
 		// it ASAP.
-		currentUser, err := user.Current()
-		if err != nil {
-			testResult.FailReason = err.Error()
-			return testResult, nil
-		}
-		pwdFile, err := os.Open("/etc/passwd")
-		if err != nil {
-			testResult.FailReason = err.Error()
-			return testResult, nil
-		}
-		defer pwdFile.Close()
-		pwdScanner := bufio.NewScanner(pwdFile)
-		for pwdScanner.Scan() {
-			elems := strings.Split(pwdScanner.Text(), ":")
-			if elems[0] == currentUser.Username {
-				testCmdBuilder.MountPoints = append(
-					testCmdBuilder.MountPoints,
-					&MountPt{
-						Dst:      elems[5],
-						UseTmpfs: true,
-					},
-				)
-				break
+		if t.sProps.mountUserHome {
+			currentUser, err := user.Current()
+			if err != nil {
+				testResult.FailReason = err.Error()
+				return testResult, nil
 			}
-		}
-		if pwdScanner.Err() != nil {
-			testResult.FailReason = pwdScanner.Err().Error()
-			return testResult, nil
+			pwdFile, err := os.Open("/etc/passwd")
+			if err != nil {
+				testResult.FailReason = err.Error()
+				return testResult, nil
+			}
+			defer pwdFile.Close()
+			pwdScanner := bufio.NewScanner(pwdFile)
+			for pwdScanner.Scan() {
+				elems := strings.Split(pwdScanner.Text(), ":")
+				if elems[0] == currentUser.Username {
+					testCmdBuilder.MountPoints = append(
+						testCmdBuilder.MountPoints,
+						&MountPt{
+							Dst:      elems[5],
+							UseTmpfs: true,
+						},
+					)
+					break
+				}
+			}
+			if pwdScanner.Err() != nil {
+				testResult.FailReason = pwdScanner.Err().Error()
+				return testResult, nil
+			}
 		}
 
 		// Mount /tmp. Ideally, we would use a tmpfs mount, but we write quite a
 		// lot of data to it, so we instead create a temp dir and mount it
 		// instead.
-		tmpDir, err := os.MkdirTemp("", "")
+		tmpDir, err := newTempDir("", "")
 		if err != nil {
 			testResult.FailReason = err.Error()
 			return testResult, nil
@@ -286,6 +320,7 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 		envOverrides := map[string]string{
 			"TMPDIR":                   "/tmp",
 			constants.TestOutDirEnvKey: outDir,
+			llvmProfileEnvKey:          filepath.Join(profileAbsDir, "%m"+llvmProfileExtension),
 		}
 		for _, key := range environment.TempDirEnvVars() {
 			envOverrides[key] = "/tmp"
@@ -294,22 +329,18 @@ func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdo
 
 		// Set the root of the NsJail and the working directory.
 		// The working directory is expected to be a subdirectory of the root.
-		absRoot, err := filepath.Abs(t.nsjailRoot)
-		if err != nil {
-			testResult.FailReason = err.Error()
-			return testResult, nil
+		if t.sProps.nsjailRoot != "" {
+			absRoot, err := filepath.Abs(t.sProps.nsjailRoot)
+			if err != nil {
+				testResult.FailReason = err.Error()
+				return testResult, nil
+			}
+			testCmdBuilder.MountPoints = append(
+				testCmdBuilder.MountPoints,
+				&MountPt{Src: absRoot, Writable: true},
+			)
 		}
-		testCmdBuilder.MountPoints = append(
-			testCmdBuilder.MountPoints,
-			&MountPt{Src: absRoot, Writable: true},
-		)
-
-		cwd, err := os.Getwd()
-		if err != nil {
-			testResult.FailReason = err.Error()
-			return testResult, nil
-		}
-		testCmdBuilder.Cwd = cwd
+		testCmdBuilder.Cwd = t.sProps.cwd
 
 		// Mount the testbed config and any serial sockets.
 		testbedConfigPath := os.Getenv(botanistconstants.TestbedConfigEnvKey)

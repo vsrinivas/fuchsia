@@ -102,11 +102,10 @@ func (n *NsJailCmdBuilder) ForwardEnv(overrides map[string]string) {
 		elems := strings.Split(pair, "=")
 		key := elems[0]
 		val := elems[1]
-		if override, exists := overrides[key]; exists {
-			n.Env[key] = override
-		} else {
-			n.Env[key] = val
-		}
+		n.Env[key] = val
+	}
+	for key, val := range overrides {
+		n.Env[key] = val
 	}
 }
 
