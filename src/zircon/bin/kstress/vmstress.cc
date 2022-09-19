@@ -1020,6 +1020,8 @@ class MultiVmoTestInstance : public TestInstance {
     return ZX_OK;
   }
 
+  uint64_t get_max_threads() const { return max_threads_; }
+
  private:
   void spawn_root_vmo(StressTest::Rng& rng) {
     zx::vmo vmo;
@@ -1502,8 +1504,12 @@ int VmStressTest::test_thread() {
   // explicitly as a static instance and randomize the others as variable instances. We give this
   // instance a 'full slice' of free memory as it is incredibly unlikely that it even allocates
   // anywhere near that.
-  test_instances[kVariableInstances] = std::make_unique<MultiVmoTestInstance>(
-      this, total_test_instances++, free_bytes / kMaxInstances);
+  auto multi_vmo = std::make_unique<MultiVmoTestInstance>(this, total_test_instances++,
+                                                          free_bytes / kMaxInstances);
+  PrintfAlways("VM stress test: multi vmo instance max threads %lu\n",
+               multi_vmo->get_max_threads());
+
+  test_instances[kVariableInstances] = std::move(multi_vmo);
   test_instances[kVariableInstances]->Start();
 
   zx::time deadline = zx::clock::get_monotonic();
