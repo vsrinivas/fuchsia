@@ -512,7 +512,8 @@ class base_socket {
       return endpoints.status_value();
     }
     zx_status_t status =
-        client_->Clone(fio::wire::OpenFlags::kCloneSameRights, std::move(endpoints->server))
+        client_
+            ->Clone2(fidl::ServerEnd<fuchsia_unknown::Cloneable>{endpoints->server.TakeChannel()})
             .status();
     if (status != ZX_OK) {
       return status;
