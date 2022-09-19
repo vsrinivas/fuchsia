@@ -4,13 +4,13 @@
 
 use {
     ansi_term::Colour,
-    anyhow::{Context, Result},
+    anyhow::Result,
     component_hub::list::{get_all_instances, Instance, InstanceState},
+    ffx_component::{connect_to_realm_explorer, connect_to_realm_query},
     ffx_component_list_args::ComponentListCommand,
     ffx_core::ffx_plugin,
     ffx_writer::Writer,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_sys2 as fsys,
-    fuchsia_zircon_status::Status,
+    fidl_fuchsia_developer_remotecontrol as rc,
     prettytable::{cell, format::consts::FORMAT_CLEAN, row, Table},
     serde::{Deserialize, Serialize},
 };
@@ -51,21 +51,8 @@ pub async fn list(
     cmd: ComponentListCommand,
 ) -> Result<()> {
     let ComponentListCommand { only, verbose } = cmd;
-    let (query_proxy, query_server) = fidl::endpoints::create_proxy::<fsys::RealmQueryMarker>()
-        .context("creating realm query proxy")?;
-    let (explorer_proxy, explorer_server) =
-        fidl::endpoints::create_proxy::<fsys::RealmExplorerMarker>()
-            .context("creating realm explorer proxy")?;
-    rcs_proxy
-        .root_realm_explorer(explorer_server)
-        .await?
-        .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening explorer")?;
-    rcs_proxy
-        .root_realm_query(query_server)
-        .await?
-        .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening query")?;
+    let query_proxy = connect_to_realm_query(&rcs_proxy).await?;
+    let explorer_proxy = connect_to_realm_explorer(&rcs_proxy).await?;
 
     let instances = get_all_instances(&explorer_proxy, &query_proxy, only).await?;
 

@@ -4,251 +4,124 @@
 
 use {
     crate::io::Directory,
-    anyhow::Result,
+    crate::list::get_all_instances,
+    anyhow::{bail, Result},
+    cm_rust::{ExposeDecl, FidlIntoNative, UseDecl},
+    fidl_fuchsia_sys2 as fsys,
     fuchsia_async::TimeoutExt,
-    futures::future::{join, join_all, BoxFuture},
-    futures::FutureExt,
-    moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMoniker, ChildMonikerBase},
+    moniker::AbsoluteMoniker,
 };
 
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
-/// Components that were found by |find_components|, separated into two vectors (one for components
-/// that expose the capability, the other for components that use the capability).
-pub struct MatchingComponents {
+/// Component instances that use/expose a given capability, separated into two vectors (one for
+/// components that expose the capability, the other for components that use the capability).
+pub struct MatchingInstances {
     pub exposed: Vec<AbsoluteMoniker>,
     pub used: Vec<AbsoluteMoniker>,
 }
 
-struct CapabilityExists {
-    exposed: bool,
-    used: bool,
-}
-
-/// Given a v2 hub directory, collect components that expose or use |capability|.
-/// This function is recursive and will find matching CMX and CML components.
-pub async fn find_components(capability: String, hub_dir: Directory) -> Result<MatchingComponents> {
-    find_components_internal(capability, String::new(), AbsoluteMoniker::root(), hub_dir).await
-}
-
-fn find_components_internal(
+/// Find components that expose or use a given capability. The capability must be a protocol name or
+/// a directory capability name.
+pub async fn find_instances_that_expose_or_use_capability(
     capability: String,
-    name: String,
-    moniker: AbsoluteMoniker,
-    hub_dir: Directory,
-) -> BoxFuture<'static, Result<MatchingComponents>> {
-    async move {
-        let mut futures = vec![];
-        let children_dir = hub_dir.open_dir_readable("children")?;
+    explorer_proxy: &fsys::RealmExplorerProxy,
+    query_proxy: &fsys::RealmQueryProxy,
+) -> Result<MatchingInstances> {
+    let list_instances = get_all_instances(explorer_proxy, query_proxy, None).await?;
+    let mut matching_instances = MatchingInstances { exposed: vec![], used: vec![] };
 
-        for child_dir in children_dir.entries().await? {
-            let child_hub_dir = children_dir.open_dir_readable(&child_dir)?;
-            let child_name = child_hub_dir.read_file("moniker").await?;
-            let child_moniker = ChildMoniker::parse(&child_name)?;
-            let child_moniker = moniker.child(child_moniker);
-            let child_future = find_components_internal(
-                capability.clone(),
-                child_name,
-                child_moniker,
-                child_hub_dir,
-            );
-            futures.push(child_future);
-        }
-
-        if name == "appmgr" {
-            let realm_dir = hub_dir.open_dir_readable("exec/out/hub")?;
-            let appmgr_future = find_cmx_realms(capability.clone(), moniker.clone(), realm_dir);
-            futures.push(appmgr_future);
-        }
-
-        let results = join_all(futures).await;
-        let mut matching_components = MatchingComponents { exposed: vec![], used: vec![] };
-
-        for result in results {
-            let MatchingComponents { mut exposed, mut used } = result?;
-            matching_components.exposed.append(&mut exposed);
-            matching_components.used.append(&mut used);
-        }
-
-        let CapabilityExists { exposed, used } =
-            capability_is_exposed_or_used_v2(hub_dir, capability).await?;
-
-        if exposed {
-            matching_components.exposed.push(moniker.clone());
-        }
-        if used {
-            matching_components.used.push(moniker.clone());
-        }
-
-        Ok(matching_components)
-    }
-    .boxed()
-}
-
-// Given a v1 realm directory, return monikers of components that expose |capability|.
-// |moniker| corresponds to the moniker of the current realm.
-fn find_cmx_realms(
-    capability: String,
-    moniker: AbsoluteMoniker,
-    hub_dir: Directory,
-) -> BoxFuture<'static, Result<MatchingComponents>> {
-    async move {
-        let c_dir = hub_dir.open_dir_readable("c")?;
-        let c_future = find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir);
-
-        let r_dir = hub_dir.open_dir_readable("r")?;
-        let r_future = find_cmx_realms_in_r_dir(capability, moniker, r_dir);
-
-        let (matching_components_c, matching_components_r) = join(c_future, r_future).await;
-
-        let MatchingComponents { mut exposed, mut used } = matching_components_c?;
-        let mut matching_components_r = matching_components_r?;
-
-        exposed.append(&mut matching_components_r.exposed);
-        used.append(&mut matching_components_r.used);
-
-        Ok(MatchingComponents { exposed, used })
-    }
-    .boxed()
-}
-
-// Given a v1 component directory, return monikers of components that expose |capability|.
-// |moniker| corresponds to the moniker of the current component.
-fn find_cmx_components(
-    capability: String,
-    moniker: AbsoluteMoniker,
-    hub_dir: Directory,
-) -> BoxFuture<'static, Result<MatchingComponents>> {
-    async move {
-        let mut matching_components_exposed = vec![];
-        let mut matching_components_used = vec![];
-
-        // Component runners can have a `c` dir with child components
-        if hub_dir.exists("c").await? {
-            let c_dir = hub_dir.open_dir_readable("c")?;
-            let MatchingComponents { mut exposed, mut used } =
-                find_cmx_components_in_c_dir(capability.clone(), moniker.clone(), c_dir).await?;
-            matching_components_exposed.append(&mut exposed);
-            matching_components_used.append(&mut used);
-        }
-
-        let CapabilityExists { exposed, used } =
-            capability_is_exposed_or_used_v1(hub_dir, capability).await?;
-        if exposed {
-            matching_components_exposed.push(moniker.clone());
-        }
-        if used {
-            matching_components_used.push(moniker.clone())
-        }
-
-        Ok(MatchingComponents {
-            exposed: matching_components_exposed,
-            used: matching_components_used,
-        })
-    }
-    .boxed()
-}
-
-async fn find_cmx_components_in_c_dir(
-    capability: String,
-    moniker: AbsoluteMoniker,
-    c_dir: Directory,
-) -> Result<MatchingComponents> {
-    // Get all CMX child components
-    let child_component_names = c_dir.entries().await?;
-    let mut future_children = vec![];
-    for child_component_name in child_component_names {
-        let child_moniker = ChildMoniker::parse(&child_component_name)?;
-        let child_moniker = moniker.child(child_moniker);
-        let job_ids_dir = c_dir.open_dir_readable(&child_component_name)?;
-        let hub_dirs = open_all_job_ids(job_ids_dir).await?;
-        for hub_dir in hub_dirs {
-            let future_child =
-                find_cmx_components(capability.clone(), child_moniker.clone(), hub_dir);
-            future_children.push(future_child);
+    for list_instance in list_instances {
+        if !list_instance.is_cmx {
+            // Get the detailed information for the CML instance.
+            // RealmQuery expects a relative moniker, so we add the `.` to the
+            // absolute moniker, resulting in a moniker that looks like `./foo/bar`.
+            let moniker_str = format!(".{}", list_instance.moniker.to_string());
+            match query_proxy.get_instance_info(&moniker_str).await? {
+                Ok((_, resolved)) => {
+                    if let Some(resolved) = resolved {
+                        let (exposed, used) =
+                            capability_is_exposed_or_used_v2(resolved, &capability);
+                        if exposed {
+                            matching_instances.exposed.push(list_instance.moniker.clone());
+                        }
+                        if used {
+                            matching_instances.used.push(list_instance.moniker.clone());
+                        }
+                    }
+                }
+                Err(fsys::RealmQueryError::InstanceNotFound) => {
+                    bail!(
+                        "Instance {} was destroyed before its information could be obtained",
+                        list_instance.moniker
+                    );
+                }
+                Err(e) => {
+                    bail!(
+                        "Could not get detailed information for {} from Hub: {:?}",
+                        list_instance.moniker,
+                        e
+                    );
+                }
+            }
+        } else if let Some(hub_dir) = list_instance.hub_dir {
+            let (exposed, used) = capability_is_exposed_or_used_v1(hub_dir, &capability).await?;
+            if exposed {
+                matching_instances.exposed.push(list_instance.moniker.clone());
+            }
+            if used {
+                matching_instances.used.push(list_instance.moniker.clone())
+            }
         }
     }
 
-    let results = join_all(future_children).await;
-    let mut flattened_components = MatchingComponents { exposed: vec![], used: vec![] };
-
-    for result in results {
-        let MatchingComponents { mut exposed, mut used } = result?;
-        flattened_components.exposed.append(&mut exposed);
-        flattened_components.used.append(&mut used);
-    }
-    Ok(flattened_components)
-}
-
-async fn find_cmx_realms_in_r_dir(
-    capability: String,
-    moniker: AbsoluteMoniker,
-    r_dir: Directory,
-) -> Result<MatchingComponents> {
-    // Get all CMX child realms
-    let mut future_realms = vec![];
-    for child_realm_name in r_dir.entries().await? {
-        let child_moniker = ChildMoniker::parse(&child_realm_name)?;
-        let child_moniker = moniker.child(child_moniker);
-        let job_ids_dir = r_dir.open_dir_readable(&child_realm_name)?;
-        let hub_dirs = open_all_job_ids(job_ids_dir).await?;
-        for hub_dir in hub_dirs {
-            let future_realm = find_cmx_realms(capability.clone(), child_moniker.clone(), hub_dir);
-            future_realms.push(future_realm);
-        }
-    }
-    let results = join_all(future_realms).await;
-    let mut flattened_components = MatchingComponents { exposed: vec![], used: vec![] };
-
-    for result in results {
-        let MatchingComponents { mut exposed, mut used } = result?;
-        flattened_components.exposed.append(&mut exposed);
-        flattened_components.used.append(&mut used);
-    }
-
-    Ok(flattened_components)
-}
-
-async fn open_all_job_ids(job_ids_dir: Directory) -> Result<Vec<Directory>> {
-    // Recurse on the job_ids
-    let mut dirs = vec![];
-    for job_id in job_ids_dir.entries().await? {
-        let dir = job_ids_dir.open_dir_readable(&job_id)?;
-        dirs.push(dir);
-    }
-    Ok(dirs)
+    Ok(matching_instances)
 }
 
 /// Determine if |capability| is exposed or used by this v2 component.
-async fn capability_is_exposed_or_used_v2(
-    hub_dir: Directory,
-    capability: String,
-) -> Result<CapabilityExists> {
-    if !hub_dir.exists("resolved").await? {
-        // We have no information about an unresolved component
-        return Ok(CapabilityExists { exposed: false, used: false });
-    }
+fn capability_is_exposed_or_used_v2(
+    resolved: Box<fsys::ResolvedState>,
+    capability: &str,
+) -> (bool, bool) {
+    let exposes = resolved.exposes;
+    let uses = resolved.uses;
 
-    let exec_dir = hub_dir.open_dir_readable("resolved/expose")?;
-    let expose_capabilities = get_capabilities(exec_dir).await?;
+    let exposed = exposes.into_iter().any(|decl| {
+        let name = match decl.fidl_into_native() {
+            ExposeDecl::Protocol(p) => p.target_name,
+            ExposeDecl::Directory(d) => d.target_name,
+            ExposeDecl::Service(s) => s.target_name,
+            _ => {
+                return false;
+            }
+        };
+        name.to_string() == capability
+    });
 
-    let use_dir = hub_dir.open_dir_readable("resolved/use")?;
-    let used_capabilities = get_capabilities(use_dir).await?;
+    let used = uses.into_iter().any(|decl| {
+        let name = match decl.fidl_into_native() {
+            UseDecl::Protocol(p) => p.source_name,
+            UseDecl::Directory(d) => d.source_name,
+            UseDecl::Storage(s) => s.source_name,
+            UseDecl::Service(s) => s.source_name,
+            _ => {
+                return false;
+            }
+        };
+        name.to_string() == capability
+    });
 
-    Ok(CapabilityExists {
-        exposed: expose_capabilities.iter().any(|c| c.as_str() == capability),
-        used: used_capabilities.iter().any(|c| c.as_str() == capability),
-    })
+    (exposed, used)
 }
 
 /// Determine if |capability| is exposed or used by this v1 component.
 async fn capability_is_exposed_or_used_v1(
     hub_dir: Directory,
-    capability: String,
-) -> Result<CapabilityExists> {
+    capability: &str,
+) -> Result<(bool, bool)> {
     if !hub_dir.exists("out").await? {
         // No `out` directory implies no exposed capabilities
-        return Ok(CapabilityExists { exposed: false, used: false });
+        return Ok((false, false));
     }
 
     let out_dir = hub_dir.open_dir_readable("out")?;
@@ -258,10 +131,9 @@ async fn capability_is_exposed_or_used_v1(
     let in_capabilities =
         get_capabilities(in_dir).on_timeout(CAPABILITY_TIMEOUT, || Ok(vec![])).await?;
 
-    Ok(CapabilityExists {
-        exposed: out_capabilities.iter().any(|c| c.as_str() == capability),
-        used: in_capabilities.iter().any(|c| c.as_str() == capability),
-    })
+    let exposed = out_capabilities.iter().any(|c| c.as_str() == capability);
+    let used = in_capabilities.iter().any(|c| c.as_str() == capability);
+    Ok((exposed, used))
 }
 
 // Get all entries in a capabilities directory. If there is a "svc" directory, traverse it and
@@ -285,277 +157,292 @@ async fn get_capabilities(capability_dir: Directory) -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        std::fs::{self, File},
-        tempfile::TempDir,
-    };
+    use fidl::endpoints::*;
+    use fidl_fuchsia_component_decl as fdecl;
+    use fidl_fuchsia_io as fio;
+    use fuchsia_async::Task;
+    use futures::StreamExt;
+    use moniker::AbsoluteMonikerBase;
+    use std::collections::HashMap;
+    use std::fs;
+    use tempfile::TempDir;
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn unresolved_cml() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
+    pub fn serve_realm_explorer(instances: Vec<fsys::InstanceInfo>) -> fsys::RealmExplorerProxy {
+        let (client, mut stream) = create_proxy_and_stream::<fsys::RealmExplorerMarker>().unwrap();
+        Task::spawn(async move {
+            loop {
+                let fsys::RealmExplorerRequest::GetAllInstanceInfos { responder } =
+                    stream.next().await.unwrap().unwrap();
+                let iterator = serve_instance_iterator(instances.clone());
+                responder.send(&mut Ok(iterator)).unwrap();
+            }
+        })
+        .detach();
+        client
+    }
 
-        // Create the following structure
-        // .
-        // |- children
-        fs::create_dir(root.join("children")).unwrap();
+    pub fn serve_instance_iterator(
+        instances: Vec<fsys::InstanceInfo>,
+    ) -> ClientEnd<fsys::InstanceInfoIteratorMarker> {
+        let (client, mut stream) =
+            create_request_stream::<fsys::InstanceInfoIteratorMarker>().unwrap();
+        Task::spawn(async move {
+            let fsys::InstanceInfoIteratorRequest::Next { responder } =
+                stream.next().await.unwrap().unwrap();
+            responder.send(&mut instances.clone().iter_mut()).unwrap();
+            let fsys::InstanceInfoIteratorRequest::Next { responder } =
+                stream.next().await.unwrap().unwrap();
+            responder.send(&mut std::iter::empty()).unwrap();
+        })
+        .detach();
+        client
+    }
 
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let MatchingComponents { exposed, used } =
-            find_components("fuchsia.logger.LogSink".to_string(), hub_dir).await.unwrap();
+    pub fn serve_realm_query(
+        mut instances: HashMap<String, Vec<(fsys::InstanceInfo, Option<Box<fsys::ResolvedState>>)>>,
+    ) -> fsys::RealmQueryProxy {
+        let (client, mut stream) = create_proxy_and_stream::<fsys::RealmQueryMarker>().unwrap();
+        Task::spawn(async move {
+            loop {
+                let (moniker, responder) = match stream.next().await.unwrap().unwrap() {
+                    fsys::RealmQueryRequest::GetInstanceInfo { moniker, responder } => {
+                        (moniker, responder)
+                    }
+                    _ => panic!("Unexpected RealmQuery request"),
+                };
+                let responses = instances.get_mut(&moniker).unwrap();
+                let response = responses.remove(0);
+                responder.send(&mut Ok(response)).unwrap();
+            }
+        })
+        .detach();
+        client
+    }
 
+    pub fn create_appmgr_out(
+    ) -> (TempDir, ClientEnd<fio::DirectoryMarker>, ClientEnd<fio::DirectoryMarker>) {
+        let temp_dir = TempDir::new_in("/tmp").unwrap();
+        let root = temp_dir.path();
+
+        fs::create_dir_all(root.join("hub/r")).unwrap();
+
+        {
+            let sshd = root.join("hub/c/sshd.cmx/9898");
+            fs::create_dir_all(&sshd).unwrap();
+            fs::create_dir_all(sshd.join("in/pkg")).unwrap();
+            fs::create_dir_all(sshd.join("in/data")).unwrap();
+            fs::create_dir_all(sshd.join("out/dev")).unwrap();
+
+            fs::write(sshd.join("url"), "fuchsia-pkg://fuchsia.com/sshd#meta/sshd.cmx").unwrap();
+            fs::write(sshd.join("in/pkg/meta"), "1234").unwrap();
+            fs::write(sshd.join("job-id"), "5454").unwrap();
+            fs::write(sshd.join("process-id"), "9898").unwrap();
+        }
+
+        let root = root.display().to_string();
+        let (client1, server1) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        fuchsia_fs::directory::open_channel_in_namespace(
+            &root,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
+            server1,
+        )
+        .unwrap();
+        let (client2, server2) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        fuchsia_fs::directory::open_channel_in_namespace(
+            &root,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DIRECTORY,
+            server2,
+        )
+        .unwrap();
+        (temp_dir, client1, client2)
+    }
+
+    fn create_explorer_and_query() -> (Vec<TempDir>, fsys::RealmExplorerProxy, fsys::RealmQueryProxy)
+    {
+        // Serve RealmExplorer for CML components.
+        let explorer = serve_realm_explorer(vec![
+            fsys::InstanceInfo {
+                moniker: "./my_foo".to_string(),
+                url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm".to_string(),
+                instance_id: Some("1234567890".to_string()),
+                state: fsys::InstanceState::Resolved,
+            },
+            fsys::InstanceInfo {
+                moniker: "./core/appmgr".to_string(),
+                url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                instance_id: None,
+                state: fsys::InstanceState::Started,
+            },
+        ]);
+
+        // Serve RealmQuery for CML components.
+        let (temp_dir_appmgr_out, appmgr_out_dir_1, appmgr_out_dir_2) = create_appmgr_out();
+
+        // The exposed dir is not used by this library.
+        let (exposed_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (appmgr_exposed_dir_1, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (appmgr_exposed_dir_2, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
+        // The namespace dir is not used by this library.
+        let (ns_dir, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (appmgr_ns_dir_1, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let (appmgr_ns_dir_2, _) = create_endpoints::<fio::DirectoryMarker>().unwrap();
+
+        let query = serve_realm_query(HashMap::from([
+            (
+                "./my_foo".to_string(),
+                vec![(
+                    fsys::InstanceInfo {
+                        moniker: "./my_foo".to_string(),
+                        url: "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm".to_string(),
+                        instance_id: None,
+                        state: fsys::InstanceState::Resolved,
+                    },
+                    Some(Box::new(fsys::ResolvedState {
+                        uses: vec![fdecl::Use::Protocol(fdecl::UseProtocol {
+                            dependency_type: Some(fdecl::DependencyType::Strong),
+                            source: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                            source_name: Some("fuchsia.foo.bar".to_string()),
+                            target_path: Some("/svc/fuchsia.foo.bar".to_string()),
+                            ..fdecl::UseProtocol::EMPTY
+                        })],
+                        exposes: vec![fdecl::Expose::Protocol(fdecl::ExposeProtocol {
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef)),
+                            source_name: Some("fuchsia.bar.baz".to_string()),
+                            target_name: Some("fuchsia.bar.baz".to_string()),
+                            target: Some(fdecl::Ref::Parent(fdecl::ParentRef)),
+                            ..fdecl::ExposeProtocol::EMPTY
+                        })],
+                        config: None,
+                        pkg_dir: None,
+                        started: None,
+                        exposed_dir,
+                        ns_dir,
+                    })),
+                )],
+            ),
+            (
+                "./core/appmgr".to_string(),
+                vec![
+                    (
+                        fsys::InstanceInfo {
+                            moniker: "./core/appmgr".to_string(),
+                            url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                            instance_id: None,
+                            state: fsys::InstanceState::Started,
+                        },
+                        Some(Box::new(fsys::ResolvedState {
+                            uses: vec![],
+                            exposes: vec![],
+                            config: None,
+                            pkg_dir: None,
+                            started: Some(Box::new(fsys::StartedState {
+                                out_dir: Some(appmgr_out_dir_1),
+                                runtime_dir: None,
+                                start_reason: "Debugging Workflow".to_string(),
+                            })),
+                            exposed_dir: appmgr_exposed_dir_1,
+                            ns_dir: appmgr_ns_dir_1,
+                        })),
+                    ),
+                    (
+                        fsys::InstanceInfo {
+                            moniker: "./core/appmgr".to_string(),
+                            url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
+                            instance_id: None,
+                            state: fsys::InstanceState::Started,
+                        },
+                        Some(Box::new(fsys::ResolvedState {
+                            uses: vec![],
+                            exposes: vec![],
+                            config: None,
+                            pkg_dir: None,
+                            started: Some(Box::new(fsys::StartedState {
+                                out_dir: Some(appmgr_out_dir_2),
+                                runtime_dir: None,
+                                start_reason: "Debugging Workflow".to_string(),
+                            })),
+                            exposed_dir: appmgr_exposed_dir_2,
+                            ns_dir: appmgr_ns_dir_2,
+                        })),
+                    ),
+                ],
+            ),
+        ]));
+        (vec![temp_dir_appmgr_out], explorer, query)
+    }
+
+    #[fuchsia::test]
+    async fn uses_cml() {
+        let (_temp_dirs, explorer, query) = create_explorer_and_query();
+
+        let instances = find_instances_that_expose_or_use_capability(
+            "fuchsia.foo.bar".to_string(),
+            &explorer,
+            &query,
+        )
+        .await
+        .unwrap();
+        let exposed = instances.exposed;
+        let mut used = instances.used;
+        assert_eq!(used.len(), 1);
         assert!(exposed.is_empty());
-        assert!(used.is_empty());
+
+        let moniker = used.remove(0);
+        assert_eq!(moniker, AbsoluteMoniker::parse_str("/my_foo").unwrap());
     }
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn cml_protocol_found() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
+    #[fuchsia::test]
+    async fn uses_cmx() {
+        let (_temp_dirs, explorer, query) = create_explorer_and_query();
 
-        // Create the following structure
-        // .
-        // |- children
-        // |- resolved
-        //    |- expose
-        //       |- svc
-        //          |- fuchsia.logger.LogSink
-        //    |- use
-        //       |- svc
-        //          |- fuchsia.logger.LogSink
-        fs::create_dir(root.join("children")).unwrap();
-        fs::create_dir_all(root.join("resolved/expose/svc")).unwrap();
-        File::create(root.join("resolved/expose/svc/fuchsia.logger.LogSink")).unwrap();
-        fs::create_dir_all(root.join("resolved/use/svc")).unwrap();
-        File::create(root.join("resolved/use/svc/fuchsia.logger.LogSink")).unwrap();
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let MatchingComponents { mut exposed, mut used } =
-            find_components("fuchsia.logger.LogSink".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(exposed.len(), 1);
+        let instances =
+            find_instances_that_expose_or_use_capability("data".to_string(), &explorer, &query)
+                .await
+                .unwrap();
+        let exposed = instances.exposed;
+        let mut used = instances.used;
         assert_eq!(used.len(), 1);
-        let exposed_component = exposed.remove(0);
-        let used_component = used.remove(0);
-        assert!(exposed_component.is_root());
-        assert!(used_component.is_root());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn cml_dir_found() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        // |- resolved
-        //    |- expose
-        //       |- hub
-        //    |- use
-        //       |- hub
-        fs::create_dir(root.join("children")).unwrap();
-        fs::create_dir_all(root.join("resolved/expose/hub")).unwrap();
-        fs::create_dir_all(root.join("resolved/use/hub")).unwrap();
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let MatchingComponents { mut exposed, mut used } =
-            find_components("hub".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(exposed.len(), 1);
-        assert_eq!(used.len(), 1);
-        let exposed_component = exposed.remove(0);
-        let used_component = used.remove(0);
-        assert!(exposed_component.is_root());
-        assert!(used_component.is_root());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn nested_cml() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //    |- core
-        //       |- children
-        //       |- resolved
-        //          |- expose
-        //          |- use
-        //             |- minfs
-        // |- resolved
-        //    |- expose
-        //       |- minfs
-        //    |- use
-        fs::create_dir(root.join("children")).unwrap();
-        fs::create_dir_all(root.join("resolved/expose/minfs")).unwrap();
-        fs::create_dir_all(root.join("resolved/use")).unwrap();
-
-        {
-            let core = root.join("children/core");
-            fs::create_dir_all(core.join("children")).unwrap();
-            fs::create_dir_all(core.join("resolved/expose")).unwrap();
-            fs::create_dir_all(core.join("resolved/use/minfs")).unwrap();
-            fs::write(core.join("moniker"), "core").unwrap();
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let MatchingComponents { mut exposed, mut used } =
-            find_components("minfs".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(exposed.len(), 1);
-        assert_eq!(used.len(), 1);
-        let exposed_component = exposed.remove(0);
-        let used_component = used.remove(0);
-        assert!(exposed_component.is_root());
-        assert_eq!(used_component, vec!["core"].into());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn cmx() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- appmgr
-        //          |- children
-        //          |- exec
-        //             |- out
-        //                |- hub
-        //                   |- r
-        //                   |- c
-        //                      |- sshd.cmx
-        //                         |- 9898
-        //                            |- in
-        //                               |- dev
-        //                            |- out
-        //                               |- dev
-        fs::create_dir(root.join("children")).unwrap();
-
-        {
-            let appmgr = root.join("children/appmgr");
-            fs::create_dir(&appmgr).unwrap();
-            fs::create_dir(appmgr.join("children")).unwrap();
-            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
-            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
-
-            {
-                let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
-                fs::create_dir_all(&sshd).unwrap();
-                fs::create_dir_all(sshd.join("in/dev")).unwrap();
-                fs::create_dir_all(sshd.join("out/dev")).unwrap();
-            }
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let MatchingComponents { mut exposed, mut used } =
-            find_components("dev".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(exposed.len(), 1);
-        assert_eq!(used.len(), 1);
-        let exposed_component = exposed.remove(0);
-        let used_component = used.remove(0);
-        assert_eq!(exposed_component, vec!["appmgr", "sshd.cmx"].into());
-        assert_eq!(used_component, vec!["appmgr", "sshd.cmx"].into());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn runner_cmx() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- appmgr
-        //          |- children
-        //          |- exec
-        //             |- out
-        //                |- hub
-        //                   |- r
-        //                   |- c
-        //                      |- sshd.cmx
-        //                         |- 9898
-        //                            |- c
-        //                               |- foo.cmx
-        //                                  |- 1919
-        //                                     |- in
-        //                                        |- dev
-        //                                     |- out
-        //                                        |- dev
-        fs::create_dir(root.join("children")).unwrap();
-
-        {
-            let appmgr = root.join("children/appmgr");
-            fs::create_dir(&appmgr).unwrap();
-            fs::create_dir(appmgr.join("children")).unwrap();
-            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
-            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
-
-            {
-                let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
-                fs::create_dir_all(&sshd).unwrap();
-                {
-                    let dev = sshd.join("c/foo.cmx/1919/in/dev");
-                    fs::create_dir_all(&dev).unwrap();
-                    let dev = sshd.join("c/foo.cmx/1919/out/dev");
-                    fs::create_dir_all(&dev).unwrap();
-                }
-            }
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let MatchingComponents { mut exposed, mut used } =
-            find_components("dev".to_string(), hub_dir).await.unwrap();
-
-        assert_eq!(exposed.len(), 1);
-        assert_eq!(used.len(), 1);
-        let exposed_component = exposed.remove(0);
-        let used_component = used.remove(0);
-        assert_eq!(exposed_component, vec!["appmgr", "sshd.cmx", "foo.cmx"].into());
-        assert_eq!(used_component, vec!["appmgr", "sshd.cmx", "foo.cmx"].into());
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn cmx_no_out() {
-        let test_dir = TempDir::new_in("/tmp").unwrap();
-        let root = test_dir.path();
-
-        // Create the following structure
-        // .
-        // |- children
-        //       |- appmgr
-        //          |- children
-        //          |- exec
-        //             |- out
-        //                |- hub
-        //                   |- r
-        //                   |- c
-        //                      |- sshd.cmx
-        //                         |- 9898
-        fs::create_dir(root.join("children")).unwrap();
-
-        {
-            let appmgr = root.join("children/appmgr");
-            fs::create_dir(&appmgr).unwrap();
-            fs::create_dir(appmgr.join("children")).unwrap();
-            fs::create_dir_all(appmgr.join("exec/out/hub/r")).unwrap();
-            fs::write(appmgr.join("moniker"), "appmgr").unwrap();
-
-            {
-                let sshd = appmgr.join("exec/out/hub/c/sshd.cmx/9898");
-                fs::create_dir_all(&sshd).unwrap();
-            }
-        }
-
-        let hub_dir = Directory::from_namespace(root.to_path_buf()).unwrap();
-        let MatchingComponents { exposed, used } =
-            find_components("dev".to_string(), hub_dir).await.unwrap();
-
         assert!(exposed.is_empty());
+
+        let moniker = used.remove(0);
+        assert_eq!(moniker, AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap());
+    }
+
+    #[fuchsia::test]
+    async fn exposes_cml() {
+        let (_temp_dirs, explorer, query) = create_explorer_and_query();
+
+        let instances = find_instances_that_expose_or_use_capability(
+            "fuchsia.bar.baz".to_string(),
+            &explorer,
+            &query,
+        )
+        .await
+        .unwrap();
+        let mut exposed = instances.exposed;
+        let used = instances.used;
+        assert_eq!(exposed.len(), 1);
         assert!(used.is_empty());
+
+        let moniker = exposed.remove(0);
+        assert_eq!(moniker, AbsoluteMoniker::parse_str("/my_foo").unwrap());
+    }
+
+    #[fuchsia::test]
+    async fn exposes_cmx() {
+        let (_temp_dirs, explorer, query) = create_explorer_and_query();
+
+        let instances =
+            find_instances_that_expose_or_use_capability("dev".to_string(), &explorer, &query)
+                .await
+                .unwrap();
+        let mut exposed = instances.exposed;
+        let used = instances.used;
+        assert_eq!(exposed.len(), 1);
+        assert!(used.is_empty());
+
+        let moniker = exposed.remove(0);
+        assert_eq!(moniker, AbsoluteMoniker::parse_str("/core/appmgr/sshd.cmx").unwrap());
     }
 }

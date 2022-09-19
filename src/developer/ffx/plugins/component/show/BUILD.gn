@@ -9,12 +9,10 @@ ffx_plugin("ffx_component_show") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
+    "//src/developer/ffx/plugins/component/common:ffx_component",
     "//src/lib/component_hub",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:ansi_term",
     "//third_party/rust_crates:prettytable-rs",
   ]

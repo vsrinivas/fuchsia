@@ -30,12 +30,6 @@
     ],
     use: [
         {
-            directory: "hub",
-            from: "framework",
-            rights: [ "r*" ],
-            path: "/hub",
-        },
-        {
             protocol: "fuchsia.sys2.RealmExplorer",
             from: "framework",
         },

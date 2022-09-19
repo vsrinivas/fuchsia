@@ -4,13 +4,14 @@
 
 use {
     anyhow::{Context, Result},
-    component_hub::{io::Directory, select},
+    component_hub::select,
     ffx_core::ffx_plugin,
     ffx_driver_args::DriverCommand,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_device_manager as fdm,
     fidl_fuchsia_driver_development as fdd, fidl_fuchsia_driver_playground as fdp,
-    fidl_fuchsia_driver_registrar as fdr, fidl_fuchsia_io as fio, fidl_fuchsia_test_manager as ftm,
+    fidl_fuchsia_driver_registrar as fdr, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fidl_fuchsia_test_manager as ftm,
     fuchsia_zircon_status::Status,
     selectors::{self, VerboseError},
 };
@@ -54,23 +55,36 @@ impl DriverConnector {
         }
 
         async fn find_components_with_capability(
-            remote_proxy: &rc::RemoteControlProxy,
+            rcs_proxy: &rc::RemoteControlProxy,
             capability: &str,
         ) -> Result<Vec<String>> {
-            let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-                .context("creating hub root proxy")?;
-            remote_proxy
-                .open_hub(dir_server)
+            let (query_proxy, query_server) =
+                fidl::endpoints::create_proxy::<fsys::RealmQueryMarker>()
+                    .context("creating realm query proxy")?;
+            let (explorer_proxy, explorer_server) =
+                fidl::endpoints::create_proxy::<fsys::RealmExplorerMarker>()
+                    .context("creating realm explorer proxy")?;
+            rcs_proxy
+                .root_realm_explorer(explorer_server)
                 .await?
                 .map_err(|i| Status::ok(i).unwrap_err())
-                .context("opening hub")?;
-            let hub_dir = Directory::from_proxy(root);
-            Ok(select::find_components(capability.to_string(), hub_dir)
+                .context("opening explorer")?;
+            rcs_proxy
+                .root_realm_query(query_server)
                 .await?
-                .exposed
-                .iter()
-                .map(|c| c.to_string().split_off(1))
-                .collect())
+                .map_err(|i| Status::ok(i).unwrap_err())
+                .context("opening query")?;
+
+            Ok(select::find_instances_that_expose_or_use_capability(
+                capability.to_string(),
+                &explorer_proxy,
+                &query_proxy,
+            )
+            .await?
+            .exposed
+            .iter()
+            .map(|c| c.to_string().split_off(1))
+            .collect())
         }
 
         /// Find the components that expose a given capability, and let the user

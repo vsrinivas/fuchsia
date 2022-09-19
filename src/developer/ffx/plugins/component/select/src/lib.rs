@@ -4,15 +4,16 @@
 
 use {
     anyhow::{Context, Result},
-    component_hub::{io::Directory, select::find_components, select::MatchingComponents},
+    component_hub::{
+        select::find_instances_that_expose_or_use_capability, select::MatchingInstances,
+    },
     errors::ffx_error,
-    ffx_component::SELECTOR_FORMAT_HELP,
+    ffx_component::{connect_to_realm_explorer, connect_to_realm_query, SELECTOR_FORMAT_HELP},
     ffx_component_select_args::{
         CapabilityStruct, ComponentSelectCommand, MonikerStruct, SubCommandEnum,
     },
     ffx_core::ffx_plugin,
-    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
-    fuchsia_zircon_status::Status,
+    fidl_fuchsia_developer_remotecontrol as rc,
     selectors::{self, VerboseError},
     std::io::{stdout, Write},
 };
@@ -33,18 +34,16 @@ pub async fn select_cmd(
     }
 }
 
-// TODO (72749): Allow reverse lookup for incoming/outgoing capabilities.
-async fn select_capability(remote_proxy: rc::RemoteControlProxy, capability: &str) -> Result<()> {
-    let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-        .context("creating hub root proxy")?;
-    remote_proxy
-        .open_hub(dir_server)
-        .await?
-        .map_err(|i| Status::ok(i).unwrap_err())
-        .context("opening hub")?;
-    let hub_dir = Directory::from_proxy(root);
-    let MatchingComponents { exposed, used } =
-        find_components(capability.to_string(), hub_dir).await?;
+async fn select_capability(rcs_proxy: rc::RemoteControlProxy, capability: &str) -> Result<()> {
+    let query_proxy = connect_to_realm_query(&rcs_proxy).await?;
+    let explorer_proxy = connect_to_realm_explorer(&rcs_proxy).await?;
+
+    let MatchingInstances { exposed, used } = find_instances_that_expose_or_use_capability(
+        capability.to_string(),
+        &explorer_proxy,
+        &query_proxy,
+    )
+    .await?;
 
     if !exposed.is_empty() {
         println!("Exposed:");

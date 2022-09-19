@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    component_hub::io::Directory,
     component_hub::{list, select, show},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_protocol,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
-    std::path::PathBuf,
 };
 
 #[fuchsia_async::run_singlethreaded(test)]
@@ -62,8 +60,7 @@ async fn show() {
     // fuchsia.logger.LogSink
     // fuchsia.sys2.RealmExplorer
     // fuchsia.sys2.RealmQuery
-    // hub
-    assert_eq!(resolved.incoming_capabilities.len(), 6);
+    assert_eq!(resolved.incoming_capabilities.len(), 5);
 
     // The expected exposed capabilities are:
     // fuchsia.foo.bar
@@ -99,11 +96,17 @@ async fn show() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn select() {
-    let hub_path = PathBuf::from("/hub");
-    let hub_dir = Directory::from_namespace(hub_path).unwrap();
+    let explorer = connect_to_protocol::<fsys::RealmExplorerMarker>().unwrap();
+    let query = connect_to_protocol::<fsys::RealmQueryMarker>().unwrap();
 
-    let select::MatchingComponents { mut exposed, mut used } =
-        select::find_components("fuchsia.foo.Bar".to_string(), hub_dir).await.unwrap();
+    let select::MatchingInstances { mut exposed, mut used } =
+        select::find_instances_that_expose_or_use_capability(
+            "fuchsia.foo.Bar".to_string(),
+            &explorer,
+            &query,
+        )
+        .await
+        .unwrap();
 
     assert_eq!(exposed.len(), 1);
     assert_eq!(used.len(), 1);
@@ -112,21 +115,13 @@ async fn select() {
     assert!(exposed_component.is_root());
     assert!(used_component.is_root());
 
-    let hub_path = PathBuf::from("/hub");
-    let hub_dir = Directory::from_namespace(hub_path).unwrap();
-
-    let select::MatchingComponents { mut exposed, used } =
-        select::find_components("data".to_string(), hub_dir).await.unwrap();
+    let select::MatchingInstances { mut exposed, used } =
+        select::find_instances_that_expose_or_use_capability("data".to_string(), &explorer, &query)
+            .await
+            .unwrap();
 
     assert_eq!(exposed.len(), 1);
     assert_eq!(used.len(), 0);
     let exposed_component = exposed.remove(0);
     assert!(exposed_component.is_root());
-}
-
-#[fuchsia_async::run_singlethreaded(test)]
-async fn clone() {
-    let hub_path = PathBuf::from("/hub");
-    let hub_dir = Directory::from_namespace(hub_path).unwrap();
-    assert!(hub_dir.clone().is_ok());
 }
