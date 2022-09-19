@@ -213,22 +213,10 @@ to be contained in the same package as the test component.
 
 Realm Builder also supports adding Legacy Components to your realm:
 
-* {Rust}
-
-    ```rust
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/rust/src/lib.rs" region_tag="add_legacy_component_rust" adjust_indentation="auto" %}
-    ```
-
 * {C++}
 
     ```cpp
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="add_legacy_component_cpp" adjust_indentation="auto" %}
-    ```
-
-* {Dart}
-
-    ```dart
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/dart/test/sample.dart" region_tag="add_legacy_component_dart" adjust_indentation="auto" %}
     ```
 
 ### Adding Mock Components {#mock-components}

@@ -94,49 +94,6 @@ async fn routes_from_echo() -> Result<(), Error> {
     Ok(())
 }
 
-// This test demonstrates constructing a realm with a single legacy component
-// implementation of the `fidl.examples.routing.Echo` protocol.
-#[fuchsia::test]
-async fn routes_from_legacy_echo() -> Result<(), Error> {
-    let builder = RealmBuilder::new().await?;
-
-    // [START add_legacy_component_rust]
-    // Add component `c` to the realm, which is fetched using a legacy URL.
-    let echo_server = builder
-        .add_legacy_child(
-            "echo_server",
-            "fuchsia-pkg://fuchsia.com/realm-builder-examples#meta/echo_server.cmx",
-            ChildOptions::new(),
-        )
-        .await?;
-    // [END add_legacy_component_rust]
-
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
-                .from(Ref::parent())
-                .to(&echo_server),
-        )
-        .await?;
-
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol_by_name("fidl.examples.routing.echo.Echo"))
-                .from(&echo_server)
-                .to(Ref::parent()),
-        )
-        .await?;
-
-    let realm = builder.build().await?;
-
-    let echo = realm.root.connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()?;
-    assert_eq!(echo.echo_string(Some("hello")).await?, Some("hello".to_owned()));
-
-    Ok(())
-}
-
 // [START mock_component_impl_rust]
 async fn echo_server_mock(handles: LocalComponentHandles) -> Result<(), Error> {
     // Create a new ServiceFs to host FIDL protocols from

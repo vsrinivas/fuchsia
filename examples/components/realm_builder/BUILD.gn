@@ -63,12 +63,6 @@ fuchsia_component("echo_client_component") {
   deps = [ "//examples/components/routing/rust/echo_client" ]
 }
 
-fuchsia_component("echo_client_legacy_component") {
-  component_name = "echo_client"
-  manifest = "meta/echo_client.cmx"
-  deps = [ "//examples/components/routing/rust/echo_client" ]
-}
-
 fuchsia_component("echo_server_component") {
   component_name = "echo_server"
   manifest = "meta/echo_server.cml"
@@ -92,7 +86,6 @@ fuchsia_test_package("package") {
 
   deps = [
     ":echo_client_component",
-    ":echo_client_legacy_component",
     ":echo_server_component",
     ":echo_server_legacy_component",
   ]

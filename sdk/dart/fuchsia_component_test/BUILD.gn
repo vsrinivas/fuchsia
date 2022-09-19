@@ -92,7 +92,6 @@ fuchsia_test_package("dart_realm_builder_unittests") {
   deps = [
     ":echo_client_with_binder_component",
     "//examples/components/realm_builder:echo_client_component",
-    "//examples/components/realm_builder:echo_client_legacy_component",
     "//examples/components/realm_builder:echo_server_component",
     "//examples/components/realm_builder:echo_server_legacy_component",
     "//src/lib/fuchsia-component-test/tests/echo_client_sc",
