@@ -6,13 +6,13 @@ use anyhow::Error;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_hardware_block::BlockMarker;
 use fidl_fuchsia_mem::Buffer;
-use fuchsia_syslog::fx_log_err;
 use remote_block_device::{Cache, RemoteBlockClientSync};
 use std::{
     convert::TryInto,
     sync::{Arc, Mutex},
 };
 use thiserror::Error;
+use tracing::error;
 
 #[derive(Error, Debug, PartialEq)]
 pub enum ReaderError {
@@ -72,7 +72,7 @@ pub struct BlockDeviceReader {
 impl Reader for BlockDeviceReader {
     fn read(&self, offset: u64, data: &mut [u8]) -> Result<(), ReaderError> {
         self.block_cache.lock().unwrap().read_at(data, offset).map_err(|e| {
-            fx_log_err!("Encountered error while reading block device: {}", e);
+            error!("Encountered error while reading block device: {}", e);
             ReaderError::Read(offset)
         })
     }

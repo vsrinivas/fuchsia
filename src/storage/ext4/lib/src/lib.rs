@@ -11,9 +11,9 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_hardware_block::BlockMarker,
     fidl_fuchsia_mem::Buffer,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
     std::sync::Arc,
+    tracing::error,
     vfs::directory::entry::DirectoryEntry,
 };
 
@@ -32,7 +32,7 @@ pub fn construct_fs(source: FsSourceType) -> Result<Arc<dyn DirectoryEntry>, Con
     let reader: Box<dyn Reader> = match source {
         FsSourceType::BlockDevice(block_device) => {
             Box::new(BlockDeviceReader::from_client_end(block_device).map_err(|e| {
-                fx_log_err!("Error constructing file system: {}", e);
+                error!("Error constructing file system: {}", e);
                 ConstructFsError::VmoReadError(Status::IO_INVALID)
             })?)
         }
@@ -72,7 +72,7 @@ mod tests {
         vfs::directory::test_utils::{run_server_client, DirentsSameInodeBuilder},
     };
 
-    #[test]
+    #[fuchsia::test]
     fn image_too_small() {
         let vmo = Vmo::create(10).expect("VMO is created");
         vmo.write(b"too small", 0).expect("VMO write() succeeds");
@@ -81,7 +81,7 @@ mod tests {
         assert!(construct_fs(buffer).is_err(), "Expected failed parsing of VMO.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn invalid_fs() {
         let vmo = Vmo::create(MIN_EXT4_SIZE as u64).expect("VMO is created");
         vmo.write(b"not ext4", 0).expect("VMO write() succeeds");
@@ -91,7 +91,7 @@ mod tests {
         assert!(construct_fs(buffer).is_err(), "Expected failed parsing of VMO.");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn list_root() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
         let vmo = Vmo::create(data.len() as u64).expect("VMO is created");

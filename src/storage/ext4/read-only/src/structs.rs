@@ -937,7 +937,7 @@ mod test {
     /// Covers these functions:
     /// - ParseToStruct::{read_from_offset, to_struct_arc, to_struct_ref, validate}
     /// - SuperBlock::{block_size, check_magic}
-    #[test]
+    #[fuchsia::test]
     fn parse_superblock() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let reader = Arc::new(VecReader::new(data));
@@ -977,7 +977,7 @@ mod test {
     }
 
     /// Covers ParseToStruct::from_reader_with_offset.
-    #[test]
+    #[fuchsia::test]
     fn parse_to_struct_from_reader_with_offset() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let reader = Arc::new(VecReader::new(data));
@@ -991,7 +991,7 @@ mod test {
     }
 
     /// Covers SuperBlock::feature_check
-    #[test]
+    #[fuchsia::test]
     fn incompatible_feature_flags() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let reader = Arc::new(VecReader::new(data));
@@ -1043,7 +1043,7 @@ mod test {
     }
 
     /// Covers Extent::target_block_num.
-    #[test]
+    #[fuchsia::test]
     fn extent_target_block_num() {
         let e = Extent {
             e_blk: LEU32::new(0),
@@ -1055,7 +1055,7 @@ mod test {
     }
 
     /// Covers ExtentIndex::target_block_num.
-    #[test]
+    #[fuchsia::test]
     fn extent_index_target_block_num() {
         let e = ExtentIndex {
             ei_blk: LEU32::new(0),
@@ -1067,7 +1067,7 @@ mod test {
     }
 
     /// Covers ExtentHeader::check_magic.
-    #[test]
+    #[fuchsia::test]
     fn extent_header_check_magic() {
         let e = ExtentHeader {
             eh_magic: LEU16::new(EH_MAGIC),

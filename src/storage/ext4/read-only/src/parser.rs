@@ -537,7 +537,7 @@ mod tests {
         test_case::test_case,
     };
 
-    #[test]
+    #[fuchsia::test]
     fn list_root_1_file() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let parser = Parser::new(VecReader::new(data));
@@ -573,7 +573,7 @@ mod tests {
         assert_eq!(expected_entries.len(), 0);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn get_from_path() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
         let parser = Parser::new(VecReader::new(data));
@@ -588,7 +588,7 @@ mod tests {
         assert_eq!(entry.name().unwrap(), "file2");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn read_data() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let parser = Parser::new(VecReader::new(data));
@@ -604,14 +604,14 @@ mod tests {
         assert_eq!(str::from_utf8(data.as_slice()).expect("File data"), compare);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn fail_inode_zero() {
         let data = fs::read("/pkg/data/1file.img").expect("Unable to read file");
         let parser = Parser::new(VecReader::new(data));
         assert!(parser.inode(0).is_err());
     }
 
-    #[test]
+    #[fuchsia::test]
     fn index() {
         let data = fs::read("/pkg/data/nest.img").expect("Unable to read file");
         let parser = Parser::new(VecReader::new(data));

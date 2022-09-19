@@ -30,12 +30,12 @@ use {
     },
     fuchsia_component::server::ServiceFs,
     fuchsia_runtime::{take_startup_handle, HandleInfo, HandleType},
-    fuchsia_syslog::fx_log_info,
     fuchsia_zircon::Channel,
     futures::{
         future::TryFutureExt,
         stream::{StreamExt, TryStreamExt},
     },
+    tracing::info,
     vfs::{execution_scope::ExecutionScope, path::Path},
 };
 
@@ -170,16 +170,15 @@ enum IncomingService {
 }
 
 // `run` argument is the number of thread to use for the server.
-#[fuchsia_async::run(10)]
+#[fuchsia::main(threads = 10)]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init().unwrap();
-    fx_log_info!("Starting ext4_readonly");
+    info!("Starting ext4_readonly");
 
     let block_device_handle_info = HandleInfo::new(HandleType::User0, 1);
     let directory_handle_info = HandleType::DirectoryRequest.into();
 
     if let Some(block_device_handle) = take_startup_handle(block_device_handle_info) {
-        fx_log_info!("Opening block device");
+        info!("Opening block device");
         let directory_handle = take_startup_handle(directory_handle_info).unwrap();
 
         let tree = match construct_fs(FsSourceType::BlockDevice(
@@ -200,11 +199,11 @@ async fn main() -> Result<(), Error> {
 
         // Wait until the directory connection is closed by the client before exiting.
         scope.wait().await;
-        fx_log_info!("ext4 directory connection dropped, exiting");
+        info!("ext4 directory connection dropped, exiting");
         return Ok(());
     }
 
-    fx_log_info!("Starting ext4 server");
+    info!("Starting ext4 server");
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(IncomingService::Server)

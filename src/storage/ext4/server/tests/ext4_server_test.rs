@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_io as fio,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_storage_ext4::{MountVmoResult, Server_Marker, ServiceMarker, Success},
-    fuchsia_async as fasync, fuchsia_fs,
+    fuchsia_fs,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, DurationNum},
     maplit::hashmap,
@@ -67,7 +67,7 @@ async fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
         "inner/file2".to_string() => "215ca145cbac95c9e2a6f5ff91ca1887c837b18e5f58fd2a7a16e2e5a3901e10".to_string(),
     };
     "fs with a single directory")]
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn ext4_server_mounts_block_device(
     ext4_path: &str,
     file_hashes: HashMap<String, String>,
@@ -119,7 +119,7 @@ async fn ext4_server_mounts_block_device(
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn ext4_server_mounts_block_device_and_dies_on_close() -> Result<(), Error> {
     let mut file_buf = io::BufReader::new(fs::File::open("/pkg/data/nest.img")?);
     let size = file_buf.seek(io::SeekFrom::End(0))?;
@@ -157,7 +157,7 @@ async fn ext4_server_mounts_block_device_and_dies_on_close() -> Result<(), Error
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
     let ext4 = fuchsia_component::client::connect_to_protocol::<Server_Marker>()
         .expect("Failed to connect to service");
@@ -186,7 +186,7 @@ async fn ext4_server_mounts_vmo_one_file() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
     let ext4 = fuchsia_component::client::connect_to_protocol::<Server_Marker>()
         .expect("Failed to connect to service");
@@ -222,7 +222,7 @@ async fn ext4_server_mounts_vmo_nested_dirs() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn ext4_unified_service_mounts_vmo() -> Result<(), Error> {
     let ext4_service = fuchsia_component::client::connect_to_service::<ServiceMarker>()
         .expect("Failed to connect to service");
