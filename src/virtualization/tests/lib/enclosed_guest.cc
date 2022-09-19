@@ -708,17 +708,11 @@ zx_status_t TerminaEnclosedGuest::WaitForSystemReady(zx::time deadline) {
   auto linux_manager = ConnectToService<fuchsia::virtualization::LinuxManager>();
   std::optional<std::string> failure;
   bool done = false;
-  linux_manager.events().OnGuestInfoChanged = [&done, &failure](auto label, auto info) {
-    switch (info.container_status()) {
-      case fuchsia::virtualization::ContainerStatus::FAILED:
-        failure = std::move(info.failure_reason());
-        break;
-      case fuchsia::virtualization::ContainerStatus::STARTING_VM: {
-        done = true;
-        break;
-      }
-      default:
-        break;
+  linux_manager.events().OnGuestInfoChanged = [this, &done, &failure](auto label, auto info) {
+    if (info.container_status() == fuchsia::virtualization::ContainerStatus::FAILED) {
+      failure = std::move(info.failure_reason());
+    } else if (info.container_status() == target_status_) {
+      done = true;
     }
   };
 
@@ -780,3 +774,78 @@ std::vector<std::string> TerminaEnclosedGuest::GetTestUtilCommand(
 }
 
 zx_status_t TerminaEnclosedGuest::ShutdownAndWait(zx::time deadline) { return ZX_OK; }
+
+zx_status_t TerminaContainerEnclosedGuest::BuildLaunchInfo(GuestLaunchInfo* launch_info) {
+  zx_status_t status = TerminaEnclosedGuest::BuildLaunchInfo(launch_info);
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Limit the amount of guest memory while we're putting /data on memfs. Without limits here we can
+  // see some OOMs on asan bots.
+  //
+  // TODO(108756): Remove this once we no longer put the data partition on memfs.
+  launch_info->config.set_guest_memory(uint64_t{1} * 1024 * 1024 * 1024);
+  return ZX_OK;
+}
+
+void TerminaContainerEnclosedGuest::InstallInRealm(component_testing::Realm& realm,
+                                                   GuestLaunchInfo& guest_launch_info) {
+  EnclosedGuest::InstallInRealm(realm, guest_launch_info);
+
+  using component_testing::ConfigValue;
+  realm.InitMutableConfigFromPackage(kGuestManagerName);
+  realm.SetConfigValue(kGuestManagerName, "stateful_partition_type", "file");
+  realm.SetConfigValue(kGuestManagerName, "stateful_partition_size",
+                       ConfigValue::Uint64(2ull * 1024 * 1024 * 1024));
+
+  // These correspond to the additional block devices supplied in BuildLaunchInfo.
+  realm.SetConfigValue(kGuestManagerName, "additional_read_only_mounts",
+                       ConfigValue{std::vector<std::string>{
+                           "/dev/vde",
+                           "/tmp/vm_extras",
+                           "ext2",
+
+                           "/dev/vdf",
+                           "/tmp/test_utils",
+                           "romfs",
+
+                           "/dev/vdg",
+                           "/tmp/extras",
+                           "romfs",
+                       }});
+
+  // Start the container and bootstrap from a local image file instead of the internet.
+  realm.SetConfigValue(kGuestManagerName, "start_container_runtime", ConfigValue::Bool(true));
+  realm.SetConfigValue(kGuestManagerName, "container_rootfs_path", "/tmp/extras/rootfs.tar.xz");
+  realm.SetConfigValue(kGuestManagerName, "container_metadata_path", "/tmp/extras/lxd.tar.xz");
+}
+
+zx_status_t TerminaContainerEnclosedGuest::Execute(
+    const std::vector<std::string>& argv, const std::unordered_map<std::string, std::string>& env,
+    zx::time deadline, std::string* result, int32_t* return_code) {
+  // Run the command in the container using lxc-exec.
+  //
+  // This is an environment needed for lxc itself. The provided |env| will be passed to the binary
+  // in the container as part of the lxc command but this allows lxc-exec to work properly.
+  std::unordered_map<std::string, std::string> lxc_env;
+  lxc_env["LXD_DIR"] = "/mnt/stateful/lxd";
+  lxc_env["LXD_CONF"] = "/mnt/stateful/lxd_conf";
+  lxc_env["LXD_UNPRIVILEGED_ONLY"] = "true";
+
+  // Build the lxc-exec command:
+  //
+  //   lxc exec <container_name> --env=VAR=VALUE... -- argv...
+  std::vector<std::string> lxc_args = {"lxc", "exec", "penguin"};
+  for (const auto& var : env) {
+    lxc_args.push_back(fxl::StringPrintf("--env=%s=%s", var.first.c_str(), var.second.c_str()));
+  }
+  lxc_args.push_back("--");
+  lxc_args.insert(lxc_args.end(), argv.begin(), argv.end());
+
+  // Now just exec the lxc-exec command over vsh.
+  return TerminaEnclosedGuest::Execute(lxc_args, lxc_env, deadline, result, return_code);
+}
+
+zx_status_t TerminaContainerEnclosedGuest::WaitForSystemReady(zx::time deadline) {
+  return TerminaEnclosedGuest::WaitForSystemReady(deadline);
+}
