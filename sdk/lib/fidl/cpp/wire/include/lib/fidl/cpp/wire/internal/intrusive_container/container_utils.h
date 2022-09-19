@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/wire/internal/intrusive_container/helper_macros.h>
 #include <lib/fidl/cpp/wire/internal/intrusive_container/pointer_traits.h>
 
+#include <tuple>
 #include <type_traits>
 #include <utility>
 

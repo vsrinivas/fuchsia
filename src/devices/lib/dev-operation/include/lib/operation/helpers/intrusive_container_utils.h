@@ -8,6 +8,7 @@
 #include <lib/operation/helpers/intrusive_pointer_traits.h>
 #include <lib/operation/helpers/macros.h>
 
+#include <tuple>
 #include <type_traits>
 #include <utility>
 

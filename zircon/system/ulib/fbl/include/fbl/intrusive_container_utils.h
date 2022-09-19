@@ -5,6 +5,7 @@
 #ifndef FBL_INTRUSIVE_CONTAINER_UTILS_H_
 #define FBL_INTRUSIVE_CONTAINER_UTILS_H_
 
+#include <tuple>
 #include <type_traits>
 #include <utility>
 
