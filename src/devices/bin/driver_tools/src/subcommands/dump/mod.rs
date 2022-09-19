@@ -329,4 +329,99 @@ mod tests {
 
         assert_eq!(output, "[foo] pid=0 foo.so\n   [bar] pid=0 bar.so\n");
     }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_duplicates_are_filtered() {
+        let cmd = DumpCommand::from_args(&["dump"], &[]).unwrap();
+
+        let output = test_dump(cmd, |request: fdd::DriverDevelopmentRequest| async move {
+            match request {
+                fdd::DriverDevelopmentRequest::GetDeviceInfo {
+                    device_filter: _,
+                    iterator,
+                    control_handle: _,
+                } => {
+                    let null_id = 0;
+                    let root_id = 1;
+                    let composite_parent_id = 2;
+                    let composite_child_id = 3;
+                    run_device_info_iterator_server(
+                        vec![
+                            // Root device
+                            fdd::DeviceInfo {
+                                id: Some(root_id),
+                                parent_ids: Some(vec![null_id]),
+                                child_ids: Some(vec![composite_parent_id]),
+                                driver_host_koid: Some(0),
+                                topological_path: Some(String::from("/dev/sys/platform")),
+                                bound_driver_libname: Some(String::from("root.so")),
+                                bound_driver_url: Some(String::from(
+                                    "fuchsia-pkg://fuchsia.com/root-package#meta/root.cm",
+                                )),
+                                ..fdd::DeviceInfo::EMPTY
+                            },
+                            // Composite parent (under root)
+                            fdd::DeviceInfo {
+                                id: Some(composite_parent_id),
+                                parent_ids: Some(vec![root_id]),
+                                child_ids: Some(vec![composite_child_id]),
+                                driver_host_koid: Some(0),
+                                topological_path: Some(String::from("/dev/sys/platform/parent")),
+                                bound_driver_libname: Some(String::from("parent.so")),
+                                bound_driver_url: Some(String::from(
+                                    "fuchsia-pkg://fuchsia.com/parent-package#meta/parent.cm",
+                                )),
+                                ..fdd::DeviceInfo::EMPTY
+                            },
+                            // Composite parent (under root)
+                            fdd::DeviceInfo {
+                                id: Some(composite_child_id),
+                                parent_ids: Some(vec![composite_parent_id]),
+                                child_ids: Some(Vec::new()),
+                                driver_host_koid: Some(0),
+                                topological_path: Some(String::from(
+                                    "/dev/sys/platform/parent/child",
+                                )),
+                                bound_driver_libname: Some(String::from("child.so")),
+                                bound_driver_url: Some(String::from(
+                                    "fuchsia-pkg://fuchsia.com/child-package#meta/child.cm",
+                                )),
+                                ..fdd::DeviceInfo::EMPTY
+                            },
+                            // Composite parent (repeated at top level)
+                            fdd::DeviceInfo {
+                                id: Some(composite_parent_id),
+                                parent_ids: Some(vec![null_id]),
+                                child_ids: Some(vec![composite_child_id]),
+                                driver_host_koid: Some(0),
+                                topological_path: Some(String::from("/dev/parent")),
+                                bound_driver_libname: Some(String::from("parent.so")),
+                                bound_driver_url: Some(String::from(
+                                    "fuchsia-pkg://fuchsia.com/parent-package#meta/parent.cm",
+                                )),
+                                ..fdd::DeviceInfo::EMPTY
+                            },
+                        ],
+                        iterator,
+                    )
+                    .await
+                    .context("Failed to run device info iterator server")?;
+                }
+                _ => {}
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(
+            output,
+            r#"[platform] pid=0 root.so
+   [parent] pid=0 parent.so
+      [child] pid=0 child.so
+[parent] pid=0 parent.so
+   [child] pid=0 child.so
+"#
+        );
+    }
 }
