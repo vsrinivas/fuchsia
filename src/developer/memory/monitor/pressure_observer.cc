@@ -4,9 +4,10 @@
 
 #include "src/developer/memory/monitor/pressure_observer.h"
 
-#include <fuchsia/kernel/c/fidl.h>
+#include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/directory.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
@@ -44,28 +45,18 @@ PressureObserver::~PressureObserver() {
 
 // Called from the constructor to set up waiting on kernel memory pressure events.
 zx_status_t PressureObserver::InitMemPressureEvents() {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "zx::channel::create returned " << zx_status_get_string(status);
-    return status;
-  }
-  const char* root_job_svc = "/svc/fuchsia.kernel.RootJobForInspect";
-  status = fdio_service_connect(root_job_svc, remote.release());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "fdio_service_connect returned " << zx_status_get_string(status);
-    return status;
+  auto client_end = service::Connect<fuchsia_kernel::RootJobForInspect>();
+  if (!client_end.is_ok()) {
+    return client_end.status_value();
   }
 
-  zx::job root_job;
-  status = fuchsia_kernel_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "fuchsia_kernel_RootJobForInspectGet returned "
-                   << zx_status_get_string(status);
-    return status;
+  auto result = fidl::WireCall(*client_end)->Get();
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
 
-  status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY,
+  zx_status_t status;
+  status = zx_system_get_event(result->job.get(), ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY,
                                events_[Level::kImminentOOM].reset_and_get_address());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "zx_system_get_event [IMMINENT-OOM] returned "
@@ -73,21 +64,21 @@ zx_status_t PressureObserver::InitMemPressureEvents() {
     return status;
   }
 
-  status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL,
+  status = zx_system_get_event(result->job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL,
                                events_[Level::kCritical].reset_and_get_address());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "zx_system_get_event [CRITICAL] returned " << zx_status_get_string(status);
     return status;
   }
 
-  status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING,
+  status = zx_system_get_event(result->job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING,
                                events_[Level::kWarning].reset_and_get_address());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "zx_system_get_event [WARNING] returned " << zx_status_get_string(status);
     return status;
   }
 
-  status = zx_system_get_event(root_job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL,
+  status = zx_system_get_event(result->job.get(), ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL,
                                events_[Level::kNormal].reset_and_get_address());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "zx_system_get_event [NORMAL] returned " << zx_status_get_string(status);

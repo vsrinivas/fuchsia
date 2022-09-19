@@ -39,20 +39,17 @@ source_set("lib") {
   ]
   deps = [
     ":memory_metrics_registry",
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//src/devices/lib/amlogic",
     "//src/lib/cobalt/cpp:metric_event_builder",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/trace-vthread",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 metrics_registry("memory_metrics_registry") {

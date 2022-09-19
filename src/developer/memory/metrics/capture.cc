@@ -4,9 +4,9 @@
 
 #include "src/developer/memory/metrics/capture.h"
 
-#include <fuchsia/kernel/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
@@ -22,18 +22,12 @@ namespace memory {
 class OSImpl : public OS, public TaskEnumerator {
  private:
   zx_status_t GetKernelStats(fidl::WireSyncClient<fuchsia_kernel::Stats>* stats) override {
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      return status;
-    }
-    const char* kernel_stats_svc = "/svc/fuchsia.kernel.Stats";
-    status = fdio_service_connect(kernel_stats_svc, remote.release());
-    if (status != ZX_OK) {
-      return status;
+    auto client_end = service::Connect<fuchsia_kernel::Stats>();
+    if (!client_end.is_ok()) {
+      return client_end.status_value();
     }
 
-    *stats = fidl::WireSyncClient<fuchsia_kernel::Stats>(std::move(local));
+    *stats = fidl::WireSyncClient(std::move(*client_end));
     return ZX_OK;
   }
 
@@ -44,25 +38,17 @@ class OSImpl : public OS, public TaskEnumerator {
       fit::function<zx_status_t(int, zx_handle_t, zx_koid_t, zx_koid_t)> cb) override {
     TRACE_DURATION("memory_metrics", "Capture::GetProcesses");
     cb_ = std::move(cb);
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      return status;
+    auto client_end = service::Connect<fuchsia_kernel::RootJobForInspect>();
+    if (!client_end.is_ok()) {
+      return client_end.status_value();
     }
 
-    const char* root_job_svc = "/svc/fuchsia.kernel.RootJobForInspect";
-    status = fdio_service_connect(root_job_svc, remote.release());
-    if (status != ZX_OK) {
-      return status;
+    auto result = fidl::WireCall(*client_end)->Get();
+    if (result.status() != ZX_OK) {
+      return result.status();
     }
 
-    zx::job root_job;
-    status = fuchsia_kernel_RootJobForInspectGet(local.get(), root_job.reset_and_get_address());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    return WalkJobTree(root_job.get());
+    return WalkJobTree(result->job.get());
   }
 
   zx_status_t OnProcess(int depth, zx_handle_t handle, zx_koid_t koid,

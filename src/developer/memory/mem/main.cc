@@ -2,15 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/memory/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
+#include <fidl/fuchsia.memory/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/wire/connect_service.h>
-#include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/service_directory.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/fdio_connect.h>
 #include <lib/trace-provider/provider.h>
@@ -51,21 +47,18 @@ std::vector<BucketMatch> GetBucketMatchesFromConfig() {
   return *matches;
 }
 
-void SignalMemoryPressure(fuchsia::memorypressure::Level level) {
-  fuchsia::memory::DebuggerSyncPtr memdebug;
-  auto context = sys::ComponentContext::Create();
-
-  std::string service_path = std::string("/svc/") + fuchsia::memory::Debugger::Name_;
-
-  zx_status_t status =
-      fdio_service_connect(service_path.c_str(), memdebug.NewRequest().TakeChannel().release());
-
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not connect to " << fuchsia::memory::Debugger::Name_;
+void SignalMemoryPressure(fuchsia_memorypressure::Level level) {
+  auto client_end = service::Connect<fuchsia_memory::Debugger>();
+  if (!client_end.is_ok()) {
+    FX_LOGS(ERROR) << "Could not connect to the memory monitor";
     return;
   }
 
-  memdebug->SignalMemoryPressure(level);
+  auto result = fidl::WireCall(*client_end)->SignalMemoryPressure(level);
+  if (result.status() != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not signal memory pressure";
+    return;
+  }
 }
 
 int Mem(const fxl::CommandLine& command_line) {
@@ -73,13 +66,13 @@ int Mem(const fxl::CommandLine& command_line) {
     std::string level_value;
     FX_CHECK(command_line.GetOptionValue("signal", &level_value));
 
-    fuchsia::memorypressure::Level level;
+    fuchsia_memorypressure::Level level;
     if (level_value == "NORMAL") {
-      level = fuchsia::memorypressure::Level::NORMAL;
+      level = fuchsia_memorypressure::Level::kNormal;
     } else if (level_value == "WARNING") {
-      level = fuchsia::memorypressure::Level::WARNING;
+      level = fuchsia_memorypressure::Level::kWarning;
     } else if (level_value == "CRITICAL") {
-      level = fuchsia::memorypressure::Level::CRITICAL;
+      level = fuchsia_memorypressure::Level::kCritical;
     } else {
       std::cerr << "Invalid value for --signal: " << level_value;
       return EXIT_FAILURE;

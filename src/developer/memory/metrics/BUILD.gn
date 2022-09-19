@@ -24,23 +24,14 @@ source_set("metrics") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/rapidjson",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/task-utils",
     "//zircon/system/ulib/trace",
   ]
 
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }

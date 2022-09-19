@@ -8,12 +8,12 @@ executable("bin") {
   output_name = "mem"
   sources = [ "main.cc" ]
   deps = [
-    "//sdk/fidl/fuchsia.memory",
-    "//sdk/lib/sys/cpp",
+    "//sdk/fidl/fuchsia.memory:fuchsia.memory_cpp_wire",
     "//src/developer/memory/metrics",
     "//src/lib/fxl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider",
   ]
