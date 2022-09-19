@@ -455,28 +455,42 @@ class DatagramSocketErrBase {
     ASSERT_NO_FATAL_FAILURE(PollForPollerr(fd));
   }
 
-  static void TriggerICMPUnreachableNoPoll(const fbl::unique_fd& fd) {
-    fbl::unique_fd unused_fd;
-    ASSERT_NO_FATAL_FAILURE(SetUpSocket(unused_fd, false));
-    ASSERT_NO_FATAL_FAILURE(ConnectTo(fd, unused_fd));
-    // Closing this socket ensures that `fd` ends up connected to an unbound port.
-    EXPECT_EQ(close(unused_fd.release()), 0) << strerror(errno);
-
-    {
-      // Send a UDP packet from `fd` to trigger a port unreachable response.
-      constexpr char bytes[] = "b";
-      ASSERT_EQ(send(fd.get(), bytes, sizeof(bytes), 0), ssize_t(sizeof(bytes))) << strerror(errno);
+  static void SendToUnreachableAddr(const fbl::unique_fd& fd, bool connect) {
+    fbl::unique_fd other_fd;
+    ASSERT_NO_FATAL_FAILURE(SetUpSocket(other_fd, false));
+    if (connect) {
+      ASSERT_NO_FATAL_FAILURE(ConnectTo(fd, other_fd));
     }
+
+    sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+    ASSERT_EQ(getsockname(other_fd.get(), reinterpret_cast<sockaddr*>(&addr), &addrlen), 0)
+        << strerror(errno);
+
+    // Closing this socket ensures that `fd` ends up connected to an unbound port.
+    ASSERT_EQ(close(other_fd.release()), 0) << strerror(errno);
+
+    char bytes[1];
+    EXPECT_EQ(sendto(fd.get(), bytes, sizeof(bytes), 0, reinterpret_cast<const sockaddr*>(&addr),
+                     addrlen),
+              ssize_t(sizeof(bytes)))
+        << strerror(errno);
   }
 
-  static void CheckNoPendingEvents(const fbl::unique_fd& fd) {
+  static void TriggerICMPUnreachableNoPoll(const fbl::unique_fd& fd) {
+    SendToUnreachableAddr(fd, true);
+  }
+
+  static void CheckNoPendingEvents(
+      const fbl::unique_fd& fd,
+      std::chrono::duration<int, std::chrono::milliseconds::period> timeout = {}) {
     {
       pollfd pfd = {
           .fd = fd.get(),
           .events = std::numeric_limits<decltype(pfd.events)>::max() &
                     ~(POLLOUT | POLLWRNORM | POLLWRBAND),
       };
-      const int n = poll(&pfd, 1, 0);
+      const int n = poll(&pfd, 1, timeout.count());
       ASSERT_GE(n, 0) << strerror(errno);
       EXPECT_EQ(n, 0);
     }
@@ -599,6 +613,52 @@ TEST_F(DatagramSocketErrTest, IcmpErrorsPropagatedDuringIOSpamRecv) {
   EXPECT_EQ(total_errors, static_cast<size_t>(1));
   EXPECT_EQ(total_received, static_cast<size_t>(1));
   ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(recvfd()));
+}
+
+// Validate that ICMP errors can only be observed on datagram sockets when:
+//  (1) the socket is connected, AND
+//  (2) the error is triggered by a send to the connected address.
+class IcmpErrorTest : public DatagramSocketErrBase, public testing::Test {
+ protected:
+  void SetUp() override { ASSERT_NO_FATAL_FAILURE(SetUpSocket(fd_, false)); }
+
+  void TearDown() override { EXPECT_EQ(close(fd_.release()), 0) << strerror(errno); }
+
+  const fbl::unique_fd& fd() const { return fd_; }
+
+ private:
+  fbl::unique_fd fd_;
+};
+
+TEST_F(IcmpErrorTest, ErrObservableWhenConnectedSocketSendsToConnectedAddr) {
+  ASSERT_NO_FATAL_FAILURE(TriggerICMPUnreachable(fd()));
+
+  char bytes[1];
+  EXPECT_EQ(send(fd().get(), bytes, sizeof(bytes), 0), -1);
+  EXPECT_EQ(errno, ECONNREFUSED) << strerror(errno);
+
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd()));
+}
+
+TEST_F(IcmpErrorTest, ErrNotObservableOnUnconnectedSocket) {
+  ASSERT_NO_FATAL_FAILURE(SendToUnreachableAddr(fd(), /*connect=*/false));
+
+  // Ensure that there is no error observable on the socket.
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd(), std::chrono::milliseconds(kTimeout)));
+}
+
+TEST_F(IcmpErrorTest, ErrNotObservableWhenConnectedSocketSendsToUnconnectedAddr) {
+  fbl::unique_fd other_fd;
+  ASSERT_TRUE(other_fd = fbl::unique_fd(socket(AF_INET, SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_NO_FATAL_FAILURE(BindLoopback(other_fd));
+  ASSERT_NO_FATAL_FAILURE(ConnectTo(fd(), other_fd));
+
+  // Send to a different address than the one the socket is connected to.
+  ASSERT_NO_FATAL_FAILURE(SendToUnreachableAddr(fd(), /*connect=*/false));
+
+  // Ensure that there is no error observable on the socket.
+  ASSERT_NO_FATAL_FAILURE(CheckNoPendingEvents(fd(), std::chrono::milliseconds(kTimeout)));
+  EXPECT_EQ(close(other_fd.release()), 0) << strerror(errno);
 }
 
 std::string nonBlockingToString(bool nonblocking) {
