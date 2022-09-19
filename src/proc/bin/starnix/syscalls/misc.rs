@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
-use tracing::warn;
 
 use crate::syscalls::decls::SyscallDecl;
 use crate::syscalls::*;
@@ -66,13 +65,20 @@ pub fn sys_reboot(
 }
 
 pub fn sys_sched_yield(_current_task: &CurrentTask) -> Result<(), Errno> {
-    // SAFEFTY: This is unsafe because it is a syscall. zx_thread_legacy_yield is always safe.
+    // SAFETY: This is unsafe because it is a syscall. zx_thread_legacy_yield is always safe.
     let status = unsafe { zx::sys::zx_thread_legacy_yield(0) };
     zx::Status::ok(status).map_err(|status| from_status_like_fdio!(status))
 }
 
-pub fn sys_unknown(ctx: &CurrentTask, syscall_number: u64) -> Result<SyscallResult, Errno> {
-    warn!(target: "unknown_syscall", "UNKNOWN process: {:?}, syscall({}): {}", ctx, syscall_number, SyscallDecl::from_number(syscall_number).name);
+pub fn sys_unknown(
+    current_task: &CurrentTask,
+    syscall_number: u64,
+) -> Result<SyscallResult, Errno> {
+    not_implemented!(
+        current_task,
+        "unknown syscall {:?}",
+        SyscallDecl::from_number(syscall_number)
+    );
     // TODO: We should send SIGSYS once we have signals.
     error!(ENOSYS)
 }
