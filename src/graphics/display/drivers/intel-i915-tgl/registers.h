@@ -204,8 +204,9 @@ class GMBus4 : public hwreg::RegisterBase<GMBus4, uint32_t> {
 
 // PWR_WELL_CTL
 //
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 690-693
 // Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 2 pages 1063-1065
-class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t> {
+class PowerWellControl : public hwreg::RegisterBase<PowerWellControl, uint32_t> {
  public:
   hwreg::BitfieldRef<uint32_t> power_request(size_t index) {
     ZX_DEBUG_ASSERT(index & 1);
@@ -227,10 +228,119 @@ class PowerWellControl2 : public hwreg::RegisterBase<PowerWellControl2, uint32_t
     return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
   }
 
+  // Misc IO Power Request (on Skylake / Kaby Lake only)
+  // This field requests power for Miscellaneous IO to enable (1) or disable (0).
+  // This includes all AUX channels, audio pins, and utility pin.
+  hwreg::BitfieldRef<uint32_t> misc_io_power_request_skylake() {
+    int bit = kMiscIoBitsOffset + 1;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
+  // Misc IO Power State (on Skylake / Kaby Lake only):
+  // Enabled (1) or disabled (0).
+  hwreg::BitfieldRef<uint32_t> misc_io_power_state_skylake() {
+    int bit = kMiscIoBitsOffset;
+    return hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit);
+  }
+
   static auto Get() {
     // The address below is for PWR_WELL_CTL2, which is provided for driver use.
     // By contrast, PWR_WELL_CTL1 is intended for BIOS use.
-    return hwreg::RegisterAddr<PowerWellControl2>(0x45404);
+    return hwreg::RegisterAddr<PowerWellControl>(0x45404);
+  }
+
+ private:
+  constexpr static size_t kMiscIoBitsOffset = 0;
+};
+
+// PWR_WELL_CTL_AUX2 (Power Well Control AUX2)
+// Control display power for AUX IO for each DDI / Transport.
+// This register is only available on Tiger Lake.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 2 pages 1072-1077
+class PowerWellControlAux : public hwreg::RegisterBase<PowerWellControlAux, uint32_t> {
+ public:
+  DEF_BIT(29, power_on_request_thunderbolt_6);
+  DEF_BIT(28, powered_on_thunderbolt_6);
+
+  DEF_BIT(27, power_on_request_thunderbolt_5);
+  DEF_BIT(26, powered_on_thunderbolt_5);
+
+  DEF_BIT(25, power_on_request_thunderbolt_4);
+  DEF_BIT(24, powered_on_thunderbolt_4);
+
+  DEF_BIT(23, power_on_request_thunderbolt_3);
+  DEF_BIT(22, powered_on_thunderbolt_3);
+
+  DEF_BIT(21, power_on_request_thunderbolt_2);
+  DEF_BIT(20, powered_on_thunderbolt_2);
+
+  DEF_BIT(19, power_on_request_thunderbolt_1);
+  DEF_BIT(18, powered_on_thunderbolt_1);
+
+  DEF_BIT(17, power_on_request_usb_c_6);
+  DEF_BIT(16, powered_on_usb_c_6);
+
+  DEF_BIT(15, power_on_request_usb_c_5);
+  DEF_BIT(14, powered_on_usb_c_5);
+
+  DEF_BIT(13, power_on_request_usb_c_4);
+  DEF_BIT(12, powered_on_usb_c_4);
+
+  DEF_BIT(11, power_on_request_usb_c_3);
+  DEF_BIT(10, powered_on_usb_c_3);
+
+  DEF_BIT(9, power_on_request_usb_c_2);
+  DEF_BIT(8, powered_on_usb_c_2);
+
+  DEF_BIT(7, power_on_request_usb_c_1);
+  DEF_BIT(6, powered_on_usb_c_1);
+
+  DEF_BIT(5, power_on_request_c);
+  DEF_BIT(4, powered_on_c);
+
+  DEF_BIT(3, power_on_request_b);
+  DEF_BIT(2, powered_on_b);
+
+  DEF_BIT(1, power_on_request_a);
+  DEF_BIT(0, powered_on_a);
+
+  SelfType& set_power_on_request_combo_or_usb_c(Ddi ddi, bool enabled) {
+    ZX_DEBUG_ASSERT(ddi >= DDI_A);
+    ZX_DEBUG_ASSERT(ddi <= DDI_TC_6);
+    const uint32_t bit = ddi * 2 + 1;
+    hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit).set(enabled);
+    return *this;
+  }
+
+  bool powered_on_combo_or_usb_c(Ddi ddi) const {
+    ZX_DEBUG_ASSERT(ddi >= DDI_A);
+    ZX_DEBUG_ASSERT(ddi <= DDI_TC_6);
+    const uint32_t bit = ddi * 2;
+    return hwreg::BitfieldRef<const uint32_t>(reg_value_ptr(), bit, bit).get();
+  }
+
+  SelfType& set_power_on_request_thunderbolt(Ddi ddi, bool enabled) {
+    ZX_DEBUG_ASSERT(ddi >= DDI_TC_1);
+    ZX_DEBUG_ASSERT(ddi <= DDI_TC_6);
+    // The request_thunderbolt_* bits start from bit 19.
+    const uint32_t bit = (ddi - DDI_TC_1) * 2 + 19;
+    hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit, bit).set(enabled);
+    return *this;
+  }
+
+  bool powered_on_thunderbolt(Ddi ddi) const {
+    ZX_DEBUG_ASSERT(ddi >= DDI_TC_1);
+    ZX_DEBUG_ASSERT(ddi <= DDI_TC_6);
+    // The state_thunderbolt_* bits start from bit 18.
+    const uint32_t bit = (ddi - DDI_TC_1) * 2 + 18;
+    return hwreg::BitfieldRef<const uint32_t>(reg_value_ptr(), bit, bit).get();
+  }
+
+  static auto Get() {
+    // The address below is for PWR_WELL_CTL_AUX2, which is provided for driver
+    // use. By contrast, PWR_WELL_CTL_AUX1 is intended for BIOS use.
+    return hwreg::RegisterAddr<PowerWellControlAux>(0x45444);
   }
 };
 

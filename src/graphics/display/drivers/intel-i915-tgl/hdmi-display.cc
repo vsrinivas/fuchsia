@@ -613,10 +613,18 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
 
   // Enable DDI IO power and wait for it
   ZX_DEBUG_ASSERT(controller()->power());
-  controller()->power()->SetDdiIoPowerState(ddi(), /* enable */ true);
+  controller()->power()->SetDdiIoPowerState(ddi(), /*enable=*/true);
   if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::usec(1),
                  20)) {
     zxlogf(ERROR, "hdmi: failed to enable IO power for ddi");
+    return false;
+  }
+
+  // Enable DDI AUX power and wait for it
+  controller()->power()->SetAuxIoPowerState(ddi(), /*enable=*/true);
+  if (!PollUntil([&] { return controller()->power()->GetAuxIoPowerState(ddi()); }, zx::usec(1),
+                 10)) {
+    zxlogf(ERROR, "hdmi: failed to enable AUX power for ddi");
     return false;
   }
 

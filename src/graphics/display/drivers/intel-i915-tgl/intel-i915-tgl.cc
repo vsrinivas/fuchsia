@@ -294,6 +294,10 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     return false;
   }
 
+  // TODO(fxbug.dev/109785): Currently the driver relies on the assumption that
+  // PG1 and Misc IO are always enabled by firmware. We should manually ensure
+  // them they are enabled here and disable them on driver teardown.
+
   ZX_DEBUG_ASSERT(power_);
   if (resume) {
     power_->Resume();

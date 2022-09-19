@@ -78,8 +78,15 @@ class Power {
   virtual PowerWellRef GetPipePowerWellRef(tgl_registers::Pipe pipe) = 0;
   virtual PowerWellRef GetDdiPowerWellRef(tgl_registers::Ddi ddi) = 0;
 
+  // TODO(fxbug.dev/99980): Support Thunderbolt. Currently the API assumes all
+  // Type-C DDIs use USB-C IO.
   virtual bool GetDdiIoPowerState(tgl_registers::Ddi ddi) = 0;
   virtual void SetDdiIoPowerState(tgl_registers::Ddi ddi, bool enable) = 0;
+
+  // TODO(fxbug.dev/99980): Support Thunderbolt. Currently the API assumes all
+  // Type-C DDIs use USB-C IO.
+  virtual bool GetAuxIoPowerState(tgl_registers::Ddi ddi) = 0;
+  virtual void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool enable) = 0;
 
   virtual void Resume() = 0;
 

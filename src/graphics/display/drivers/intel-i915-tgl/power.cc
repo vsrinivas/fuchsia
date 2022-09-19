@@ -6,12 +6,15 @@
 
 #include <lib/mmio/mmio-buffer.h>
 #include <lib/zx/time.h>
+#include <zircon/assert.h>
 
+#include <unordered_set>
+
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/poll-until.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
-
 namespace i915_tgl {
 
 namespace {
@@ -26,7 +29,7 @@ bool SetPowerWellImpl(const PowerWellInfo& power_well_info, bool enable,
   // Sequences from IHD-OS-TGL-Vol 12-12.21 "Sequences for Power Wells".
   // "Enable sequence" on page 220, "Disable sequence" on page 221.
 
-  auto power_well_reg = tgl_registers::PowerWellControl2::Get().ReadFrom(mmio_space);
+  auto power_well_reg = tgl_registers::PowerWellControl::Get().ReadFrom(mmio_space);
 
   power_well_reg.power_request(power_well_info.request_bit_index).set(enable);
   power_well_reg.WriteTo(mmio_space);
@@ -36,7 +39,7 @@ bool SetPowerWellImpl(const PowerWellInfo& power_well_info, bool enable,
 
     if (!PollUntil(
             [&] {
-              return tgl_registers::PowerWellControl2::Get()
+              return tgl_registers::PowerWellControl::Get()
                   .ReadFrom(mmio_space)
                   .power_state(power_well_info.state_bit_index)
                   .get();
@@ -99,10 +102,22 @@ class TestPowerWell : public Power {
     ddi_state_[ddi] = enable;
   }
 
+  bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
+    if (aux_state_.find(ddi) == aux_state_.end()) {
+      aux_state_[ddi] = false;
+    }
+    return aux_state_[ddi] = true;
+  }
+
+  void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
+    aux_state_[ddi] = enable;
+  }
+
  private:
   void SetPowerWell(PowerWellId power_well, bool enable) override {}
 
   std::unordered_map<tgl_registers::Ddi, bool> ddi_state_;
+  std::unordered_map<tgl_registers::Ddi, bool> aux_state_;
 };
 
 const std::unordered_map<PowerWellId, PowerWellInfo> kPowerWellInfoSkylake = {
@@ -146,14 +161,27 @@ class PowerSkylake : public Power {
   }
 
   bool GetDdiIoPowerState(tgl_registers::Ddi ddi) override {
-    auto power_well = tgl_registers::PowerWellControl2::Get().ReadFrom(mmio_space());
+    auto power_well = tgl_registers::PowerWellControl::Get().ReadFrom(mmio_space());
     return power_well.ddi_io_power_state_skylake(ddi).get();
   }
 
   void SetDdiIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
-    auto power_well = tgl_registers::PowerWellControl2::Get().ReadFrom(mmio_space());
+    auto power_well = tgl_registers::PowerWellControl::Get().ReadFrom(mmio_space());
     power_well.ddi_io_power_request_skylake(ddi).set(1);
     power_well.WriteTo(mmio_space());
+  }
+
+  bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
+    // Per https://patchwork.freedesktop.org/series/453/, toggling hardware
+    // resources that is controlled by DMC (display microcontroller) firmware
+    // is redundant and could interfere with firmware's functionality.
+    // Misc IO is controlled by DMC and it should be kept always on.
+    return true;
+  }
+
+  void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
+    // See comments above at GetAuxIoPowerState(). This method will not enable /
+    // disable Misc IO power on-demand.
   }
 
  private:
@@ -167,6 +195,8 @@ class PowerSkylake : public Power {
 
     ZX_DEBUG_ASSERT(ok);
   }
+
+  std::unordered_set<tgl_registers::Ddi> aux_io_enabled_ddis_;
 };
 
 // Dependencies between power wells from IHD-OS-TGL-Vol 12-12.21
@@ -282,7 +312,18 @@ class PowerTigerLake : public Power {
 
   void SetDdiIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
     auto power_well = tgl_registers::PowerWellControlDdi2::Get().ReadFrom(mmio_space());
-    power_well.ddi_io_power_state_tiger_lake(ddi).set(1);
+    power_well.ddi_io_power_state_tiger_lake(ddi).set(enable);
+    power_well.WriteTo(mmio_space());
+  }
+
+  bool GetAuxIoPowerState(tgl_registers::Ddi ddi) override {
+    auto power_well = tgl_registers::PowerWellControlAux::Get().ReadFrom(mmio_space());
+    return power_well.powered_on_combo_or_usb_c(ddi);
+  }
+
+  void SetAuxIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
+    auto power_well = tgl_registers::PowerWellControlAux::Get().ReadFrom(mmio_space());
+    power_well.set_power_on_request_combo_or_usb_c(ddi, enable);
     power_well.WriteTo(mmio_space());
   }
 

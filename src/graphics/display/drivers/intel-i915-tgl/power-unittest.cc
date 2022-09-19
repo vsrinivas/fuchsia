@@ -14,6 +14,7 @@
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <gtest/gtest.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
 namespace i915_tgl {
@@ -40,7 +41,7 @@ class PowerTest : public ::testing::Test {
 
 // Verify setting Power Well 2 status on Skylake platform.
 TEST_F(PowerTest, Skylake_PowerWell2) {
-  auto kPwrWellCtlIndex = tgl_registers::PowerWellControl2::Get().addr() / sizeof(uint32_t);
+  auto kPwrWellCtlIndex = tgl_registers::PowerWellControl::Get().addr() / sizeof(uint32_t);
   auto kFuseStatusIndex = tgl_registers::FuseStatus::Get().addr() / sizeof(uint32_t);
 
   bool pg2_status = false;
@@ -88,9 +89,28 @@ TEST_F(PowerTest, Skylake_PowerWell2) {
   EXPECT_FALSE(pg2_status);
 }
 
+// Verify setting Misc / AUX IO status on Skylake platform.
+TEST_F(PowerTest, Skylake_AuxIo) {
+  constexpr uint16_t kDeviceIdSkylake = 0x191b;
+  auto power = Power::New(&*mmio_buffer_, kDeviceIdSkylake);
+
+  EXPECT_TRUE(power->GetAuxIoPowerState(tgl_registers::DDI_A));
+  EXPECT_TRUE(power->GetAuxIoPowerState(tgl_registers::DDI_B));
+
+  // Enable AUX IO.
+  power->SetAuxIoPowerState(tgl_registers::DDI_A, true);
+  power->SetAuxIoPowerState(tgl_registers::DDI_B, true);
+
+  // On Skylake, the AUX IO power will be not disabled on-demand.
+  power->SetAuxIoPowerState(tgl_registers::DDI_A, false);
+  power->SetAuxIoPowerState(tgl_registers::DDI_B, false);
+  EXPECT_TRUE(power->GetAuxIoPowerState(tgl_registers::DDI_A));
+  EXPECT_TRUE(power->GetAuxIoPowerState(tgl_registers::DDI_B));
+}
+
 // Verify setting Power Well status on Tiger lake platform.
 TEST_F(PowerTest, TigerLake_PowerWell) {
-  auto kPwrWellCtlIndex = tgl_registers::PowerWellControl2::Get().addr() / sizeof(uint32_t);
+  auto kPwrWellCtlIndex = tgl_registers::PowerWellControl::Get().addr() / sizeof(uint32_t);
   auto kFuseStatusIndex = tgl_registers::FuseStatus::Get().addr() / sizeof(uint32_t);
 
   std::unordered_map<PowerWellId, bool> pg_status = {
