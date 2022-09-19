@@ -12,6 +12,7 @@ go_library("main") {
     "config.go",
     "driver.go",
     "gn.go",
+    "include.go",
     "main.go",
   ]
   deps = [

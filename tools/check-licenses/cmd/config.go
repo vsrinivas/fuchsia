@@ -29,12 +29,6 @@ func init() {
 	ConfigVars = make(map[string]string)
 }
 
-type Include struct {
-	Path     []string `json:"paths"`
-	Notes    []string `json:"notes"`
-	Required bool     `json:"required"`
-}
-
 type CheckLicensesConfig struct {
 	LogLevel int `json:"logLevel"`
 
@@ -122,6 +116,10 @@ func NewCheckLicensesConfigJson(configJson string) (*CheckLicensesConfig, error)
 				c.Merge(c2)
 			}
 		}
+	}
+
+	if err := c.ProcessIncludes(); err != nil {
+		return nil, err
 	}
 
 	return c, nil
