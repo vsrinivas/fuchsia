@@ -823,9 +823,7 @@ impl CurrentTask {
             // are supposed to truncate the file if this task can write
             // to the underlying node, even if we are opening the file
             // as read-only. See OpenTest.CanTruncateReadOnly.
-            let node = &name.entry.node;
-            node.check_access(self, Access::WRITE)?;
-            node.truncate(self, 0)?;
+            name.entry.node.truncate(self, 0)?;
         }
 
         // If the node has been created, the open operation should not verify access right:
