@@ -384,22 +384,22 @@ TEST_F(CoreTest, AddDeviceGroup) {
 
         // Check the first node.
         auto node_result_1 = device_group.nodes.at(0);
-        ASSERT_EQ(2, node_result_1.properties.count());
+        ASSERT_EQ(2, node_result_1.bind_rules.count());
 
-        auto node_1_bind_rule_1_result = node_result_1.properties.at(0);
+        auto node_1_bind_rule_1_result = node_result_1.bind_rules.at(0);
         EXPECT_EQ(2, node_1_bind_rule_1_result.key.int_value());
-        EXPECT_EQ(fdf::wire::Condition::kAccept, node_result_1.properties.at(0).condition);
+        EXPECT_EQ(fdf::wire::Condition::kAccept, node_result_1.bind_rules.at(0).condition);
         ASSERT_EQ(2, node_1_bind_rule_1_result.values.count());
         EXPECT_EQ(1, node_1_bind_rule_1_result.values.at(0).int_value());
         EXPECT_EQ(30, node_1_bind_rule_1_result.values.at(1).int_value());
 
-        auto node_1_bind_rule_2_result = node_result_1.properties.at(1);
+        auto node_1_bind_rule_2_result = node_result_1.bind_rules.at(1);
         EXPECT_EQ(10, node_1_bind_rule_2_result.key.int_value());
-        EXPECT_EQ(fdf::wire::Condition::kReject, node_result_1.properties.at(1).condition);
+        EXPECT_EQ(fdf::wire::Condition::kReject, node_result_1.bind_rules.at(1).condition);
         ASSERT_EQ(1, node_1_bind_rule_2_result.values.count());
         EXPECT_EQ(3, node_1_bind_rule_2_result.values.at(0).int_value());
 
-        auto node_1_bind_props_result = node_result_1.transformation;
+        auto node_1_bind_props_result = node_result_1.bind_properties;
         EXPECT_EQ(2, node_1_bind_props_result.count());
         ASSERT_EQ(100, node_1_bind_props_result.at(0).key().int_value());
         ASSERT_FALSE(node_1_bind_props_result.at(0).value().bool_value());
@@ -408,22 +408,22 @@ TEST_F(CoreTest, AddDeviceGroup) {
 
         // Check the second node.
         auto node_result_2 = device_group.nodes.at(1);
-        ASSERT_EQ(2, node_result_2.properties.count());
+        ASSERT_EQ(2, node_result_2.bind_rules.count());
 
-        auto node_2_bind_rule_1 = node_result_2.properties.at(0);
+        auto node_2_bind_rule_1 = node_result_2.bind_rules.at(0);
         EXPECT_EQ(12, node_2_bind_rule_1.key.int_value());
         EXPECT_EQ(fdf::wire::Condition::kReject, node_2_bind_rule_1.condition);
         ASSERT_EQ(1, node_2_bind_rule_1.values.count());
         EXPECT_EQ(false, node_2_bind_rule_1.values.at(0).bool_value());
 
-        auto node_2_bind_rule_2 = node_result_2.properties.at(1);
+        auto node_2_bind_rule_2 = node_result_2.bind_rules.at(1);
         EXPECT_STREQ("curlew", node_2_bind_rule_2.key.string_value().get());
         EXPECT_EQ(fdf::wire::Condition::kReject, node_2_bind_rule_2.condition);
         ASSERT_EQ(2, node_2_bind_rule_2.values.count());
         EXPECT_STREQ("willet", node_2_bind_rule_2.values.at(0).string_value().get());
         EXPECT_STREQ("sanderling", node_2_bind_rule_2.values.at(1).string_value().get());
 
-        auto node_2_bind_prop_result = node_result_2.transformation;
+        auto node_2_bind_prop_result = node_result_2.bind_properties;
         EXPECT_EQ(1, node_2_bind_prop_result.count());
         ASSERT_EQ(100, node_2_bind_prop_result.at(0).key().int_value());
         ASSERT_TRUE(node_2_bind_prop_result.at(0).value().bool_value());
@@ -497,7 +497,7 @@ TEST_F(CoreTest, AddDeviceGroup) {
       },
   };
 
-  const device_bind_prop_t node_2_transformation[] = {{
+  const device_bind_prop_t node_2_bind_properties[] = {{
       .key = device_bind_prop_int_key(100),
       .value = device_bind_prop_bool_val(true),
   }};
@@ -505,8 +505,8 @@ TEST_F(CoreTest, AddDeviceGroup) {
   const device_group_node_t node_2{
       .bind_rules = node_2_props,
       .bind_rule_count = std::size(node_2_props),
-      .bind_properties = node_2_transformation,
-      .bind_property_count = std::size(node_2_transformation),
+      .bind_properties = node_2_bind_properties,
+      .bind_property_count = std::size(node_2_bind_properties),
   };
 
   const device_group_node_t nodes[] = {

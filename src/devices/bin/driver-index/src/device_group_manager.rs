@@ -16,12 +16,12 @@ use {
 };
 
 #[derive(Debug, Eq, Hash, PartialEq)]
-pub struct DeviceGroupNodePropertyCondition {
+pub struct BindRuleCondition {
     condition: fdf::Condition,
     values: Vec<Symbol>,
 }
 
-type DeviceGroupNodeProperties = BTreeMap<PropertyKey, DeviceGroupNodePropertyCondition>;
+type DeviceGroupNodeBindRules = BTreeMap<PropertyKey, BindRuleCondition>;
 
 struct MatchedComposite {
     pub info: fdi::MatchedCompositeInfo,
@@ -30,24 +30,20 @@ struct MatchedComposite {
 
 struct DeviceGroupInfo {
     pub nodes: Vec<fdf::DeviceGroupNode>,
+
+    // The composite driver matched to the device group.
     pub matched: Option<MatchedComposite>,
 }
 
 // The DeviceGroupManager struct is responsible of managing a list of device groups
 // for matching.
 pub struct DeviceGroupManager {
-    // This maps a list of device groups to the nodes that they belong to.
-    pub device_group_nodes: HashMap<DeviceGroupNodeProperties, Vec<fdi::MatchedDeviceGroupInfo>>,
+    // Maps a list of device groups to the bind rules of their nodes. This is to handle multiple
+    // device groups that share a node with the same bind rules. Used for matching nodes.
+    pub device_group_nodes: HashMap<DeviceGroupNodeBindRules, Vec<fdi::MatchedDeviceGroupInfo>>,
 
-    // Contains all the topological path of all device groups that have been added. This
-    // list is to ensure that we don't add multiple device groups with the same topological
-    // path. The value stores:
-    // The transformation for the device group.
-    // The matched composite info of a composite driver that matched
-    // to the device group at the topological path (or None if it did not match any).
-    // We store this info here rather than the device_group_nodes items since these have a 1:1
-    // mapping to the device group, putting them with the device_group_nodes would lead
-    // to a lot of duplicates leading to wasted space.
+    // Maps device groups to their topological path. This list ensures that we don't add
+    // multiple groups with the same path.
     device_group_list: HashMap<String, DeviceGroupInfo>,
 }
 
@@ -74,12 +70,12 @@ impl DeviceGroupManager {
 
         // Collect device group nodes in a separate vector before adding them to the device group
         // manager. This is to ensure that we add the nodes after they're all verified to be valid.
-        // TODO(fxb/105562): Update tests so that we can verify that transformation exists in
+        // TODO(fxb/105562): Update tests so that we can verify that bind_properties exists in
         // each node.
-        let mut device_group_nodes: Vec<(DeviceGroupNodeProperties, fdi::MatchedDeviceGroupInfo)> =
+        let mut device_group_nodes: Vec<(DeviceGroupNodeBindRules, fdi::MatchedDeviceGroupInfo)> =
             vec![];
         for (node_idx, node) in nodes.iter().enumerate() {
-            let properties = convert_to_device_properties(&node.properties)?;
+            let properties = convert_fidl_to_bind_rules(&node.bind_rules)?;
             let device_group_info = fdi::MatchedDeviceGroupInfo {
                 topological_path: Some(topological_path.clone()),
                 node_index: Some(node_idx as u32),
@@ -99,7 +95,7 @@ impl DeviceGroupManager {
         }
 
         for composite_driver in composite_drivers {
-            let matched_composite = match_composite_transformation(composite_driver, &nodes)?;
+            let matched_composite = match_composite_bind_properties(composite_driver, &nodes)?;
             if let Some(matched_composite) = matched_composite {
                 // Found a match so we can set this in our map.
                 self.device_group_list.insert(
@@ -162,7 +158,7 @@ impl DeviceGroupManager {
                 continue;
             }
             let matched_composite_result =
-                match_composite_transformation(&resolved_driver, &dev_group.nodes);
+                match_composite_bind_properties(&resolved_driver, &dev_group.nodes);
             if let Ok(Some(matched_composite)) = matched_composite_result {
                 dev_group.matched = Some(MatchedComposite {
                     info: matched_composite.info,
@@ -193,27 +189,27 @@ impl DeviceGroupManager {
     }
 }
 
-fn convert_to_device_properties(
-    node_properties: &Vec<fdf::DeviceGroupProperty>,
-) -> Result<DeviceGroupNodeProperties, zx_status_t> {
-    if node_properties.is_empty() {
+fn convert_fidl_to_bind_rules(
+    fidl_bind_rules: &Vec<fdf::BindRule>,
+) -> Result<DeviceGroupNodeBindRules, zx_status_t> {
+    if fidl_bind_rules.is_empty() {
         return Err(Status::INVALID_ARGS.into_raw());
     }
 
-    let mut device_properties = BTreeMap::new();
-    for property in node_properties {
-        let key = match &property.key {
+    let mut bind_rules = BTreeMap::new();
+    for fidl_rule in fidl_bind_rules {
+        let key = match &fidl_rule.key {
             fdf::NodePropertyKey::IntValue(i) => PropertyKey::NumberKey(i.clone().into()),
             fdf::NodePropertyKey::StringValue(s) => PropertyKey::StringKey(s.clone()),
         };
 
         // Check if the properties contain duplicate keys.
-        if device_properties.contains_key(&key) {
+        if bind_rules.contains_key(&key) {
             return Err(Status::INVALID_ARGS.into_raw());
         }
 
-        let first_val = property.values.first().ok_or(Status::INVALID_ARGS.into_raw())?;
-        let values = property
+        let first_val = fidl_rule.values.first().ok_or(Status::INVALID_ARGS.into_raw())?;
+        let values = fidl_rule
             .values
             .iter()
             .map(|val| {
@@ -225,19 +221,14 @@ fn convert_to_device_properties(
             })
             .collect::<Result<Vec<Symbol>, zx_status_t>>()?;
 
-        device_properties.insert(
-            key,
-            DeviceGroupNodePropertyCondition { condition: property.condition, values: values },
-        );
+        bind_rules
+            .insert(key, BindRuleCondition { condition: fidl_rule.condition, values: values });
     }
-    Ok(device_properties)
+    Ok(bind_rules)
 }
 
-fn match_node(
-    node_properties: &DeviceGroupNodeProperties,
-    device_properties: &DeviceProperties,
-) -> bool {
-    for (key, node_prop_values) in node_properties.iter() {
+fn match_node(bind_rules: &DeviceGroupNodeBindRules, device_properties: &DeviceProperties) -> bool {
+    for (key, node_prop_values) in bind_rules.iter() {
         let dev_prop_contains_value = match device_properties.get(key) {
             Some(val) => node_prop_values.values.contains(val),
             None => false,
@@ -273,7 +264,7 @@ fn node_property_to_symbol(value: &fdf::NodePropertyValue) -> Symbol {
     }
 }
 
-fn match_composite_transformation<'a>(
+fn match_composite_bind_properties<'a>(
     composite_driver: &'a ResolvedDriver,
     nodes: &'a Vec<fdf::DeviceGroupNode>,
 ) -> Result<Option<MatchedComposite>, i32> {
@@ -284,7 +275,7 @@ fn match_composite_transformation<'a>(
 
     let composite = get_composite_rules_from_composite_driver(composite_driver)?;
 
-    // Both the composite driver and the transformation need the exact same number of nodes.
+    // Both the composite driver and the bind_properties need the exact same number of nodes.
     if composite.additional_nodes.len() + 1 != nodes.len() {
         return Ok(None);
     }
@@ -300,11 +291,11 @@ fn match_composite_transformation<'a>(
         return Ok(None);
     }
 
-    // The remaining nodes in the transformation can match the
+    // The remaining nodes in the bind_properties can match the
     // additional nodes in the bind rules in any order.
     //
     // This logic has one issue that we are accepting as a tradeoff for simplicity:
-    // If a transformation node can match to multiple bind rule
+    // If a bind_properties node can match to multiple bind rule
     // additional nodes, it is going to take the first one, even if there is a less strict
     // node that it can take. This can lead to false negative matches.
     //
@@ -369,7 +360,7 @@ fn node_matches_composite_driver(
     bind_rules_node: &Vec<u8>,
     symbol_table: &HashMap<u32, String>,
 ) -> bool {
-    match node_to_device_property(&node.transformation) {
+    match node_to_device_property(&node.bind_properties) {
         Err(_) => false,
         Ok(props) => {
             let match_bind_data = MatchBindData { symbol_table, instructions: bind_rules_node };
@@ -431,49 +422,49 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_match_node() {
-        let node_properties_1 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_1 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(1),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(3),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
         ];
 
-        let node_transformation_1 = vec![fdf::NodeProperty {
+        let bind_properties_1 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(2)),
             value: Some(fdf::NodePropertyValue::BoolValue(false)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_2 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_2 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("flycatcher".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::EnumValue("flycatcher.phoebe".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("yellowlegs".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
         ];
 
-        let node_transformation_2 = vec![fdf::NodeProperty {
+        let bind_properties_2 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
@@ -487,12 +478,12 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties_1,
-                            transformation: node_transformation_1,
+                            bind_rules: bind_rules_1,
+                            bind_properties: bind_properties_1,
                         },
                         fdf::DeviceGroupNode {
-                            properties: node_properties_2,
-                            transformation: node_transformation_2,
+                            bind_rules: bind_rules_2,
+                            bind_properties: bind_properties_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -558,20 +549,20 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_match_bool_edgecase() {
-        let node_properties = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(1),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(3),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::BoolValue(false)],
             },
         ];
 
-        let node_transformation = vec![fdf::NodeProperty {
+        let bind_properties = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
@@ -584,8 +575,8 @@ mod tests {
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        properties: node_properties,
-                        transformation: node_transformation,
+                        bind_rules: bind_rules,
+                        bind_properties: bind_properties,
                     }]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -614,79 +605,79 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_multiple_group_match() {
-        let node_properties_1 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_1 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(1),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(3),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
         ];
 
-        let node_transformation_1 = vec![fdf::NodeProperty {
+        let bind_properties_1 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(2)),
             value: Some(fdf::NodePropertyValue::BoolValue(false)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_2 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_2 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("flycatcher".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::EnumValue("flycatcher.phoebe".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("yellowlegs".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
         ];
 
-        let node_properties_2_rearranged = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_2_rearranged = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("flycatcher".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::EnumValue("flycatcher.phoebe".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("yellowlegs".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
         ];
 
-        let node_transformation_2 = vec![fdf::NodeProperty {
+        let bind_properties_2 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_3 = vec![fdf::DeviceGroupProperty {
+        let bind_rules_3 = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::StringValue("cormorant".to_string()),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::BoolValue(true)],
         }];
 
-        let node_transformation_3 = vec![fdf::NodeProperty {
+        let bind_properties_3 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::StringValue("anhinga".to_string())),
             value: Some(fdf::NodePropertyValue::BoolValue(false)),
             ..fdf::NodeProperty::EMPTY
@@ -700,12 +691,12 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties_1,
-                            transformation: node_transformation_1,
+                            bind_rules: bind_rules_1,
+                            bind_properties: bind_properties_1,
                         },
                         fdf::DeviceGroupNode {
-                            properties: node_properties_2,
-                            transformation: node_transformation_2.clone(),
+                            bind_rules: bind_rules_2,
+                            bind_properties: bind_properties_2.clone(),
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -721,12 +712,12 @@ mod tests {
                     topological_path: Some("test/path2".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties_2_rearranged,
-                            transformation: node_transformation_2,
+                            bind_rules: bind_rules_2_rearranged,
+                            bind_properties: bind_properties_2,
                         },
                         fdf::DeviceGroupNode {
-                            properties: node_properties_3,
-                            transformation: node_transformation_3,
+                            bind_rules: bind_rules_3,
+                            bind_properties: bind_properties_3,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -776,75 +767,75 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_multiple_group_nodes_match() {
-        let node_properties_1 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_1 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(1),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
         ];
 
-        let node_transformation_1 = vec![fdf::NodeProperty {
+        let bind_properties_1 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(2)),
             value: Some(fdf::NodePropertyValue::BoolValue(false)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_2 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_2 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("flycatcher".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::EnumValue("flycatcher.phoebe".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("yellowlegs".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
         ];
 
-        let node_transformation_2 = vec![fdf::NodeProperty {
+        let bind_properties_2 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_1_rearranged = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_1_rearranged = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(1),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
         ];
 
-        let node_properties_3 = vec![fdf::DeviceGroupProperty {
+        let bind_rules_3 = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::StringValue("cormorant".to_string()),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::BoolValue(true)],
         }];
 
-        let node_transformation_3 = vec![fdf::NodeProperty {
+        let bind_properties_3 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(false)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_4 = vec![fdf::DeviceGroupProperty {
+        let bind_rules_4 = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::IntValue(1),
             condition: fdf::Condition::Accept,
             values: vec![
@@ -853,7 +844,7 @@ mod tests {
             ],
         }];
 
-        let node_transformation_4 = vec![fdf::NodeProperty {
+        let bind_properties_4 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(2)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
@@ -867,12 +858,12 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties_1,
-                            transformation: node_transformation_1.clone(),
+                            bind_rules: bind_rules_1,
+                            bind_properties: bind_properties_1.clone(),
                         },
                         fdf::DeviceGroupNode {
-                            properties: node_properties_2,
-                            transformation: node_transformation_2,
+                            bind_rules: bind_rules_2,
+                            bind_properties: bind_properties_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -888,12 +879,12 @@ mod tests {
                     topological_path: Some("test/path2".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties_3,
-                            transformation: node_transformation_3,
+                            bind_rules: bind_rules_3,
+                            bind_properties: bind_properties_3,
                         },
                         fdf::DeviceGroupNode {
-                            properties: node_properties_1_rearranged,
-                            transformation: node_transformation_1,
+                            bind_rules: bind_rules_1_rearranged,
+                            bind_properties: bind_properties_1,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -908,8 +899,8 @@ mod tests {
                 fdf::DeviceGroup {
                     topological_path: Some("test/path3".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        properties: node_properties_4,
-                        transformation: node_transformation_4,
+                        bind_rules: bind_rules_4,
+                        bind_properties: bind_properties_4,
                     }]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -960,44 +951,44 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_mismatch() {
-        let node_properties_1 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_1 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(1),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(3),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
         ];
 
-        let node_transformation_1 = vec![fdf::NodeProperty {
+        let bind_properties_1 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(2)),
             value: Some(fdf::NodePropertyValue::BoolValue(false)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_2 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_2 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("killdeer".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::StringValue("plover".to_string())],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("yellowlegs".to_string()),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::BoolValue(false)],
             },
         ];
 
-        let node_transformation_2 = vec![fdf::NodeProperty {
+        let bind_properties_2 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
@@ -1011,12 +1002,12 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties_1,
-                            transformation: node_transformation_1,
+                            bind_rules: bind_rules_1,
+                            bind_properties: bind_properties_1,
                         },
                         fdf::DeviceGroupNode {
-                            properties: node_properties_2,
-                            transformation: node_transformation_2,
+                            bind_rules: bind_rules_2,
+                            bind_properties: bind_properties_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -1043,8 +1034,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_match_list() {
-        let node_properties_1 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_1 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Reject,
                 values: vec![
@@ -1052,7 +1043,7 @@ mod tests {
                     fdf::NodePropertyValue::IntValue(150),
                 ],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("plover".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![
@@ -1062,14 +1053,14 @@ mod tests {
             },
         ];
 
-        let node_transformation_1 = vec![fdf::NodeProperty {
+        let bind_properties_1 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(1)),
             value: Some(fdf::NodePropertyValue::IntValue(100)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_2 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_2 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(11),
                 condition: fdf::Condition::Reject,
                 values: vec![
@@ -1077,14 +1068,14 @@ mod tests {
                     fdf::NodePropertyValue::IntValue(10),
                 ],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("dunlin".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
         ];
 
-        let node_transformation_2 = vec![fdf::NodeProperty {
+        let bind_properties_2 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
@@ -1098,12 +1089,12 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties_1,
-                            transformation: node_transformation_1,
+                            bind_rules: bind_rules_1,
+                            bind_properties: bind_properties_1,
                         },
                         fdf::DeviceGroupNode {
-                            properties: node_properties_2,
-                            transformation: node_transformation_2,
+                            bind_rules: bind_rules_2,
+                            bind_properties: bind_properties_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -1157,8 +1148,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_mismatch_list() {
-        let node_properties_1 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_1 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Reject,
                 values: vec![
@@ -1166,7 +1157,7 @@ mod tests {
                     fdf::NodePropertyValue::IntValue(150),
                 ],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::StringValue("plover".to_string()),
                 condition: fdf::Condition::Accept,
                 values: vec![
@@ -1176,14 +1167,14 @@ mod tests {
             },
         ];
 
-        let node_transformation_1 = vec![fdf::NodeProperty {
+        let bind_properties_1 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(1)),
             value: Some(fdf::NodePropertyValue::IntValue(100)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_properties_2 = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules_2 = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(11),
                 condition: fdf::Condition::Reject,
                 values: vec![
@@ -1191,14 +1182,14 @@ mod tests {
                     fdf::NodePropertyValue::IntValue(10),
                 ],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(2),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::BoolValue(true)],
             },
         ];
 
-        let node_transformation_2 = vec![fdf::NodeProperty {
+        let bind_properties_2 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
@@ -1212,12 +1203,12 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties_1,
-                            transformation: node_transformation_1,
+                            bind_rules: bind_rules_1,
+                            bind_properties: bind_properties_1,
                         },
                         fdf::DeviceGroupNode {
-                            properties: node_properties_2,
-                            transformation: node_transformation_2,
+                            bind_rules: bind_rules_2,
+                            bind_properties: bind_properties_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -1245,7 +1236,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_multiple_value_types() {
-        let node_properties = vec![fdf::DeviceGroupProperty {
+        let bind_rules = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::IntValue(10),
             condition: fdf::Condition::Reject,
             values: vec![
@@ -1254,7 +1245,7 @@ mod tests {
             ],
         }];
 
-        let node_transformation = vec![fdf::NodeProperty {
+        let bind_properties = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(1)),
             value: Some(fdf::NodePropertyValue::IntValue(100)),
             ..fdf::NodeProperty::EMPTY
@@ -1267,8 +1258,8 @@ mod tests {
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        properties: node_properties,
-                        transformation: node_transformation,
+                        bind_rules: bind_rules,
+                        bind_properties: bind_properties,
                     }]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -1282,20 +1273,20 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_property_duplicate_key() {
-        let node_properties = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(10)],
             },
         ];
 
-        let node_transformation = vec![fdf::NodeProperty {
+        let bind_properties = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
@@ -1308,8 +1299,8 @@ mod tests {
                 fdf::DeviceGroup {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![fdf::DeviceGroupNode {
-                        properties: node_properties,
-                        transformation: node_transformation,
+                        bind_rules: bind_rules,
+                        bind_properties: bind_properties,
                     },]),
                     ..fdf::DeviceGroup::EMPTY
                 },
@@ -1322,27 +1313,27 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_missing_node_properties() {
-        let node_properties = vec![
-            fdf::DeviceGroupProperty {
+    async fn test_missing_bind_rules() {
+        let bind_rules = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(10)],
             },
         ];
 
-        let node_transformation_1 = vec![fdf::NodeProperty {
+        let bind_properties_1 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_transformation_2 = vec![fdf::NodeProperty {
+        let bind_properties_2 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(10)),
             value: Some(fdf::NodePropertyValue::BoolValue(false)),
             ..fdf::NodeProperty::EMPTY
@@ -1356,12 +1347,12 @@ mod tests {
                     topological_path: Some("test/path".to_string()),
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties,
-                            transformation: node_transformation_1,
+                            bind_rules: bind_rules,
+                            bind_properties: bind_properties_1,
                         },
                         fdf::DeviceGroupNode {
-                            properties: vec![],
-                            transformation: node_transformation_2
+                            bind_rules: vec![],
+                            bind_properties: bind_properties_2
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -1376,26 +1367,26 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_missing_device_group_fields() {
-        let node_properties = vec![
-            fdf::DeviceGroupProperty {
+        let bind_rules = vec![
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Reject,
                 values: vec![fdf::NodePropertyValue::IntValue(200)],
             },
-            fdf::DeviceGroupProperty {
+            fdf::BindRule {
                 key: fdf::NodePropertyKey::IntValue(10),
                 condition: fdf::Condition::Accept,
                 values: vec![fdf::NodePropertyValue::IntValue(10)],
             },
         ];
 
-        let node_transformation_1 = vec![fdf::NodeProperty {
+        let bind_properties_1 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(3)),
             value: Some(fdf::NodePropertyValue::BoolValue(true)),
             ..fdf::NodeProperty::EMPTY
         }];
 
-        let node_transformation_2 = vec![fdf::NodeProperty {
+        let bind_properties_2 = vec![fdf::NodeProperty {
             key: Some(fdf::NodePropertyKey::IntValue(1)),
             value: Some(fdf::NodePropertyValue::BoolValue(false)),
             ..fdf::NodeProperty::EMPTY
@@ -1409,12 +1400,12 @@ mod tests {
                     topological_path: None,
                     nodes: Some(vec![
                         fdf::DeviceGroupNode {
-                            properties: node_properties,
-                            transformation: node_transformation_1,
+                            bind_rules: bind_rules,
+                            bind_properties: bind_properties_1,
                         },
                         fdf::DeviceGroupNode {
-                            properties: vec![],
-                            transformation: node_transformation_2,
+                            bind_rules: vec![],
+                            bind_properties: bind_properties_2,
                         },
                     ]),
                     ..fdf::DeviceGroup::EMPTY
@@ -1443,19 +1434,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_composite_match() {
-        let primary_node_properties = vec![fdf::DeviceGroupProperty {
+        let primary_bind_rules = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::IntValue(1),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::IntValue(200)],
         }];
 
-        let additional_node_properties_1 = vec![fdf::DeviceGroupProperty {
+        let additional_bind_rules_1 = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::IntValue(1),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::IntValue(10)],
         }];
 
-        let additional_node_properties_2 = vec![fdf::DeviceGroupProperty {
+        let additional_bind_rules_2 = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::IntValue(10),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::BoolValue(true)],
@@ -1476,8 +1467,8 @@ mod tests {
         let additional_b_name = "lapwing";
 
         let primary_device_group_node = fdf::DeviceGroupNode {
-            properties: primary_node_properties,
-            transformation: vec![fdf::NodeProperty {
+            bind_rules: primary_bind_rules,
+            bind_properties: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue(primary_key_1.to_string())),
                 value: Some(fdf::NodePropertyValue::StringValue(primary_val_1.to_string())),
                 ..fdf::NodeProperty::EMPTY
@@ -1493,8 +1484,8 @@ mod tests {
         }];
 
         let additional_device_group_node_a = fdf::DeviceGroupNode {
-            properties: additional_node_properties_1,
-            transformation: vec![fdf::NodeProperty {
+            bind_rules: additional_bind_rules_1,
+            bind_properties: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::IntValue(additional_a_key_1)),
                 value: Some(fdf::NodePropertyValue::IntValue(additional_a_val_1)),
                 ..fdf::NodeProperty::EMPTY
@@ -1519,8 +1510,8 @@ mod tests {
         ];
 
         let additional_device_group_node_b = fdf::DeviceGroupNode {
-            properties: additional_node_properties_2,
-            transformation: vec![fdf::NodeProperty {
+            bind_rules: additional_bind_rules_2,
+            bind_properties: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string())),
                 value: Some(fdf::NodePropertyValue::IntValue(additional_b_val_1)),
                 ..fdf::NodeProperty::EMPTY
@@ -1617,19 +1608,19 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_composite_mismatch() {
-        let primary_node_properties = vec![fdf::DeviceGroupProperty {
+        let primary_bind_rules = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::IntValue(1),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::IntValue(200)],
         }];
 
-        let additional_node_properties_1 = vec![fdf::DeviceGroupProperty {
+        let additional_bind_rules_1 = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::IntValue(1),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::IntValue(10)],
         }];
 
-        let additional_node_properties_2 = vec![fdf::DeviceGroupProperty {
+        let additional_bind_rules_2 = vec![fdf::BindRule {
             key: fdf::NodePropertyKey::IntValue(10),
             condition: fdf::Condition::Accept,
             values: vec![fdf::NodePropertyValue::BoolValue(false)],
@@ -1658,8 +1649,8 @@ mod tests {
         }];
 
         let primary_device_group_node = fdf::DeviceGroupNode {
-            properties: primary_node_properties,
-            transformation: vec![fdf::NodeProperty {
+            bind_rules: primary_bind_rules,
+            bind_properties: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue(primary_key_1.to_string())),
                 value: Some(fdf::NodePropertyValue::StringValue(primary_val_1.to_string())),
                 ..fdf::NodeProperty::EMPTY
@@ -1685,8 +1676,8 @@ mod tests {
         ];
 
         let additional_device_group_node_a = fdf::DeviceGroupNode {
-            properties: additional_node_properties_1,
-            transformation: vec![fdf::NodeProperty {
+            bind_rules: additional_bind_rules_1,
+            bind_properties: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue(additional_b_key_1.to_string())),
                 value: Some(fdf::NodePropertyValue::IntValue(additional_b_val_1)),
                 ..fdf::NodeProperty::EMPTY
@@ -1702,8 +1693,8 @@ mod tests {
         }];
 
         let additional_device_group_node_b = fdf::DeviceGroupNode {
-            properties: additional_node_properties_2,
-            transformation: vec![fdf::NodeProperty {
+            bind_rules: additional_bind_rules_2,
+            bind_properties: vec![fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::IntValue(additional_a_key_1)),
                 value: Some(fdf::NodePropertyValue::IntValue(additional_a_val_1)),
                 ..fdf::NodeProperty::EMPTY

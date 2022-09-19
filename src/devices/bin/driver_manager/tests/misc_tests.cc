@@ -467,24 +467,11 @@ TEST(MiscTestCase, AddDeviceGroup) {
   ASSERT_EQ(1, coordinator.device_manager()->devices().size_slow());
 
   fidl::Arena allocator;
-  fidl::VectorView<fuchsia_device_manager::wire::DeviceStrProperty> str_props(allocator, 2);
-  str_props[0] = fuchsia_device_manager::wire::DeviceStrProperty{
-      fidl::StringView(allocator, "scoter"),
-      fuchsia_device_manager::wire::PropertyValue::WithStrValue(
-          allocator, fidl::StringView(allocator, "bufflehead"))};
-  str_props[1] = fuchsia_device_manager::wire::DeviceStrProperty{
-      fidl::StringView(allocator, "merganser"),
-      fuchsia_device_manager::wire::PropertyValue::WithIntValue(1000)};
-
-  fidl::VectorView<fuchsia_device_manager::wire::DeviceProperty> props(allocator, 2);
-  props[0] = fuchsia_device_manager::wire::DeviceProperty{1, 0, 1};
-  props[1] = fuchsia_device_manager::wire::DeviceProperty{2, 0, 1};
-
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_properties(allocator, 2);
+  fidl::VectorView<fdf::wire::BindRule> bind_rules(allocator, 2);
 
   auto prop_vals_1 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
   prop_vals_1[0] = fdf::wire::NodePropertyValue::WithBoolValue(false);
-  node_properties[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(100),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_1,
@@ -492,22 +479,22 @@ TEST(MiscTestCase, AddDeviceGroup) {
 
   auto prop_vals_2 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
   prop_vals_2[0] = fdf::wire::NodePropertyValue::WithIntValue(20);
-  node_properties[1] = fdf::wire::DeviceGroupProperty{
+  bind_rules[1] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(5),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_2,
   };
 
-  auto transformation = fidl::VectorView<fdf::wire::NodeProperty>(allocator, 1);
-  transformation[0] = fdf::wire::NodeProperty::Builder(allocator)
-                          .key(fdf::wire::NodePropertyKey::WithIntValue(10))
-                          .value(fdf::wire::NodePropertyValue::WithIntValue(500))
-                          .Build();
+  auto bind_properties = fidl::VectorView<fdf::wire::NodeProperty>(allocator, 1);
+  bind_properties[0] = fdf::wire::NodeProperty::Builder(allocator)
+                           .key(fdf::wire::NodePropertyKey::WithIntValue(10))
+                           .value(fdf::wire::NodePropertyValue::WithIntValue(500))
+                           .Build();
 
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes(allocator, 1);
   nodes[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_properties,
-      .transformation = transformation,
+      .bind_rules = bind_rules,
+      .bind_properties = bind_properties,
   };
 
   fidl::VectorView<fuchsia_device_manager::wire::DeviceMetadata> metadata(allocator, 0);

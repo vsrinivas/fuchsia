@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 library fuchsia.driver.framework;
 
-/// Represents the conditions for evaluating the device
-/// group properties.
+/// Represents a bind rule condition.
 type Condition = strict enum {
     ACCEPT = 0;
     REJECT = 1;
 };
 
-/// Represents a device group node property.
-type DeviceGroupProperty = struct {
+/// Represents a bind rule in a device group node.
+type BindRule = struct {
     /// Property key.
     key NodePropertyKey;
 
@@ -25,15 +24,14 @@ type DeviceGroupProperty = struct {
     values vector<NodePropertyValue>:MAX_PROPERTY_COUNT;
 };
 
-/// Struct that represents a node in a device group.
-/// TODO(fxb/107076): Rename properties and transformation.
+/// Represents a device group node.
 type DeviceGroupNode = struct {
-    /// Properties of the node. Keys must be unique.
-    properties vector<DeviceGroupProperty>:MAX_PROPERTY_COUNT;
+    /// Node's bind rules. Property keys must be unique. Must not be empty.
+    bind_rules vector<BindRule>:MAX_PROPERTY_COUNT;
 
-    /// The properties that the node transforms into. Used for matching
-    /// the nodes in a composite driver. Keys must be unique.
-    transformation vector<NodeProperty>:MAX_PROPERTY_COUNT;
+    /// Bind properties for matching against a composite driver's bind rules.
+    /// Keys must be unique.
+    bind_properties vector<NodeProperty>:MAX_PROPERTY_COUNT;
 };
 
 /// Struct that represents a device group.
@@ -41,7 +39,7 @@ type DeviceGroup = table {
     /// The device group's topological path.
     1: topological_path string:MAX;
 
-    /// The nodes in the device group. The driver index matches bind properties
-    /// to these nodes. Must not be empty. The first node is the primary node.
+    /// The nodes in the device group. Must not be empty. The first node is
+    /// the primary node.
     2: nodes vector<DeviceGroupNode>:MAX;
 };

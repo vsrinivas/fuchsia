@@ -78,30 +78,44 @@ class DeviceGroupManagerTest : public zxtest::Test {
 TEST_F(DeviceGroupManagerTest, TestAddMatchDeviceGroup) {
   fidl::Arena allocator;
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_1(allocator, 1);
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_1(allocator, 1);
   auto prop_vals_1 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
   prop_vals_1[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_1[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_1[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_1,
   };
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_2(allocator, 2);
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_1(allocator, 1);
+  bind_props_1[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(1))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(1))
+                        .Build();
+
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_2(allocator, 2);
   auto prop_vals_2 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 2);
   prop_vals_2[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_2[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_2[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_2,
   };
 
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_2(allocator, 1);
+  bind_props_2[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(10))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(1))
+                        .Build();
+
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes(allocator, 2);
   nodes[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_1,
+      .bind_rules = bind_rules_1,
+      .bind_properties = bind_props_1,
   };
   nodes[1] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_2,
+      .bind_rules = bind_rules_2,
+      .bind_properties = bind_props_2,
   };
 
   auto device_group_path = "/test/path";
@@ -164,30 +178,44 @@ TEST_F(DeviceGroupManagerTest, TestAddMatchDeviceGroup) {
 TEST_F(DeviceGroupManagerTest, TestBindSameNodeTwice) {
   fidl::Arena allocator;
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_1(allocator, 1);
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_1(allocator, 1);
   auto prop_vals_1 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
   prop_vals_1[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_1[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_1[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_1,
   };
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_2(allocator, 2);
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_1(allocator, 1);
+  bind_props_1[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(1))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(1))
+                        .Build();
+
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_2(allocator, 2);
   auto prop_vals_2 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 2);
   prop_vals_2[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_2[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_2[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_2,
   };
 
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_2(allocator, 1);
+  bind_props_2[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(20))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(100))
+                        .Build();
+
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes(allocator, 2);
   nodes[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_1,
+      .bind_rules = bind_rules_1,
+      .bind_properties = bind_props_1,
   };
   nodes[1] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_2,
+      .bind_rules = bind_rules_2,
+      .bind_properties = bind_props_2,
   };
 
   auto device_group_path = "/test/path";
@@ -239,30 +267,44 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
   fidl::Arena allocator;
 
   // Add the first device group.
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_1(allocator, 1);
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_1(allocator, 1);
   auto prop_vals_1 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
   prop_vals_1[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_1[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_1[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_1,
   };
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_2(allocator, 2);
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_1(allocator, 1);
+  bind_props_1[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(30))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(1))
+                        .Build();
+
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_2(allocator, 2);
   auto prop_vals_2 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 2);
   prop_vals_2[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_2[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_2[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_2,
   };
 
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_2(allocator, 1);
+  bind_props_2[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(20))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(10))
+                        .Build();
+
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes_1(allocator, 2);
   nodes_1[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_1,
+      .bind_rules = bind_rules_1,
+      .bind_properties = bind_props_1,
   };
   nodes_1[1] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_2,
+      .bind_rules = bind_rules_2,
+      .bind_properties = bind_props_2,
   };
 
   auto device_group_path_1 = "/test/path";
@@ -285,7 +327,8 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
   // Add a second device group with a node that's the same as one in the first device group.
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes_2(allocator, 1);
   nodes_2[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_2,
+      .bind_rules = bind_rules_2,
+      .bind_properties = bind_props_2,
   };
 
   auto device_group_path_2 = "/test/path2";
@@ -343,30 +386,44 @@ TEST_F(DeviceGroupManagerTest, TestMultibind) {
 TEST_F(DeviceGroupManagerTest, TestBindWithNoCompositeMatch) {
   fidl::Arena allocator;
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_1(allocator, 1);
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_1(allocator, 1);
   auto prop_vals_1 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
   prop_vals_1[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_1[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_1[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_1,
   };
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_2(allocator, 2);
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_1(allocator, 1);
+  bind_props_1[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(1))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(1))
+                        .Build();
+
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_2(allocator, 2);
   auto prop_vals_2 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 2);
   prop_vals_2[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_2[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_2[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_2,
   };
 
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_2(allocator, 1);
+  bind_props_2[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(10))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(1))
+                        .Build();
+
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes(allocator, 2);
   nodes[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_1,
+      .bind_rules = bind_rules_1,
+      .bind_properties = bind_props_1,
   };
   nodes[1] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_2,
+      .bind_rules = bind_rules_2,
+      .bind_properties = bind_props_2,
   };
 
   auto device_group_path = "/test/path";
@@ -422,23 +479,31 @@ TEST_F(DeviceGroupManagerTest, TestBindWithNoCompositeMatch) {
 TEST_F(DeviceGroupManagerTest, TestAddDuplicate) {
   fidl::Arena allocator;
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_1(allocator, 1);
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_1(allocator, 1);
   auto prop_vals_1 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
   prop_vals_1[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_1[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_1[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_1,
   };
 
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_1(allocator, 1);
+  bind_props_1[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(1))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(1))
+                        .Build();
+
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes(allocator, 1);
   nodes[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_1,
+      .bind_rules = bind_rules_1,
+      .bind_properties = bind_props_1,
   };
 
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes_2(allocator, 1);
   nodes_2[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_1,
+      .bind_rules = bind_rules_1,
+      .bind_properties = bind_props_1,
   };
 
   auto device_group_path = "/test/path";
@@ -465,30 +530,44 @@ TEST_F(DeviceGroupManagerTest, TestAddDuplicate) {
 TEST_F(DeviceGroupManagerTest, TestRebindCompositeMatch) {
   fidl::Arena allocator;
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_1(allocator, 1);
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_1(allocator, 1);
   auto prop_vals_1 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 1);
   prop_vals_1[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_1[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_1[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_1,
   };
 
-  fidl::VectorView<fdf::wire::DeviceGroupProperty> node_props_2(allocator, 2);
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_1(allocator, 1);
+  bind_props_1[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(1))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(1))
+                        .Build();
+
+  fidl::VectorView<fdf::wire::BindRule> bind_rules_2(allocator, 2);
   auto prop_vals_2 = fidl::VectorView<fdf::wire::NodePropertyValue>(allocator, 2);
   prop_vals_2[0] = fdf::wire::NodePropertyValue::WithIntValue(10);
-  node_props_2[0] = fdf::wire::DeviceGroupProperty{
+  bind_rules_2[0] = fdf::wire::BindRule{
       .key = fdf::wire::NodePropertyKey::WithIntValue(1),
       .condition = fdf::wire::Condition::kAccept,
       .values = prop_vals_2,
   };
 
+  fidl::VectorView<fdf::wire::NodeProperty> bind_props_2(allocator, 1);
+  bind_props_2[0] = fdf::wire::NodeProperty::Builder(allocator)
+                        .key(fdf::wire::NodePropertyKey::WithIntValue(100))
+                        .value(fdf::wire::NodePropertyValue::WithIntValue(10))
+                        .Build();
+
   fidl::VectorView<fdf::wire::DeviceGroupNode> nodes(allocator, 2);
   nodes[0] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_1,
+      .bind_rules = bind_rules_1,
+      .bind_properties = bind_props_1,
   };
   nodes[1] = fdf::wire::DeviceGroupNode{
-      .properties = node_props_2,
+      .bind_rules = bind_rules_2,
+      .bind_properties = bind_props_2,
   };
 
   auto device_group_path = "/test/path";

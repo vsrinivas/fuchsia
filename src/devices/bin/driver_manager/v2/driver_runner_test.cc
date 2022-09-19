@@ -1726,12 +1726,12 @@ TEST_F(DriverRunnerTest, CreateAndBindDeviceGroup) {
       {.topological_path = topological_path,
        .nodes = std::vector<fuchsia_driver_framework::DeviceGroupNode>{
            fuchsia_driver_framework::DeviceGroupNode({
-               .properties = std::vector<fuchsia_driver_framework::DeviceGroupProperty>(),
-               .transformation = std::vector<fuchsia_driver_framework::NodeProperty>(),
+               .bind_rules = std::vector<fuchsia_driver_framework::BindRule>(),
+               .bind_properties = std::vector<fuchsia_driver_framework::NodeProperty>(),
            }),
            fuchsia_driver_framework::DeviceGroupNode({
-               .properties = std::vector<fuchsia_driver_framework::DeviceGroupProperty>(),
-               .transformation = std::vector<fuchsia_driver_framework::NodeProperty>(),
+               .bind_rules = std::vector<fuchsia_driver_framework::BindRule>(),
+               .bind_properties = std::vector<fuchsia_driver_framework::NodeProperty>(),
            })}});
 
   fidl::Arena<> arena;
