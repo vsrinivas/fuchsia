@@ -306,6 +306,11 @@ class FileCache {
   // It returns locked Pages corresponding to [start - end) from |page_tree_|.
   zx::status<std::vector<LockedPage>> GetPages(const pgoff_t start, const pgoff_t end)
       __TA_EXCLUDES(tree_lock_);
+  // It returns locked pages corresponding to |page_offsets| from |page_tree_|.
+  // If kInvalidPageOffset is included in |page_offsets|, the corresponding Page will be a null
+  // page.
+  zx::status<std::vector<LockedPage>> GetPages(const std::vector<pgoff_t> &page_offsets)
+      __TA_EXCLUDES(tree_lock_);
   LockedPage GetNewPage(const pgoff_t index) __TA_REQUIRES(tree_lock_);
   // It returns an unlocked Page corresponding to |index| from |page_tree|.
   // If it fails to find the Page in |page_tree_|, it returns ZX_ERR_NOT_FOUND.
@@ -342,7 +347,16 @@ class FileCache {
   zx::status<LockedPage> GetPageUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(const fbl::RefPtr<Page> &page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
+  // It returns all Pages from |page_tree_| within the range of |start| to |end|.
+  // If there is no corresponding Page in page_tree_, the Page will not be included in the returned
+  // vector. Therefore, returned vector's size could be smaller than |end - start|.
   std::vector<LockedPage> GetLockedPagesUnsafe(pgoff_t start = 0, pgoff_t end = kPgOffMax)
+      __TA_REQUIRES(tree_lock_);
+  // It returns all Pages from |page_tree_| corresponds to |page_offsets|.
+  // If there is no corresponding Page in page_tree_ or if page_offset is kInvalidPageOffset,
+  // the corresponding page will be null LockedPage in the returned vector.
+  // Therefore, returned vector's size is same as |page_offsets.size()|.
+  std::vector<LockedPage> GetLockedPagesUnsafe(const std::vector<pgoff_t> &page_offsets)
       __TA_REQUIRES(tree_lock_);
   // It evicts all Pages within the range of |start| to |end| and returns them locked.
   // When a caller resets returned Pages after doing some necessary work, they will be deleted.

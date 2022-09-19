@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <numeric>
+
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 
@@ -298,6 +300,57 @@ TEST_F(FileCacheTest, Recycle) {
   });
 
   thread_get_page.join();
+
+  vn->Close();
+  vn = nullptr;
+}
+
+TEST_F(FileCacheTest, GetPages) {
+  fbl::RefPtr<fs::Vnode> test_file;
+  root_dir_->Create("test", S_IFREG, &test_file);
+  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
+  constexpr uint32_t kTestNum = 10;
+  char buf[kPageSize * kTestNum];
+
+  FileTester::AppendToFile(vn.get(), buf, kPageSize * kTestNum);
+
+  std::vector<LockedPage> locked_pages;
+  std::vector<pgoff_t> pg_offsets(kTestNum * 2);
+  std::iota(pg_offsets.begin(), pg_offsets.end(), 0);
+  {
+    auto pages_or = vn->GrabCachePages(pg_offsets);
+    ASSERT_TRUE(pages_or.is_ok());
+    for (size_t i = 0; i < kTestNum; ++i) {
+      ASSERT_EQ(pages_or.value()[i]->IsDirty(), true);
+    }
+    for (size_t i = kTestNum; i < kTestNum * 2; ++i) {
+      ASSERT_EQ(pages_or.value()[i]->IsDirty(), false);
+    }
+    locked_pages = std::move(pages_or.value());
+  }
+
+  auto task = [&]() {
+    int i = 1000;
+    while (--i) {
+      auto pages_or = vn->GrabCachePages(pg_offsets);
+      ASSERT_TRUE(pages_or.is_ok());
+      for (size_t i = 0; i < kTestNum; ++i) {
+        ASSERT_EQ(pages_or.value()[i]->IsDirty(), true);
+      }
+      for (size_t i = kTestNum; i < kTestNum * 2; ++i) {
+        ASSERT_EQ(pages_or.value()[i]->IsDirty(), false);
+      }
+    }
+  };
+  // Test FileCache::GetPages() with multiple threads
+  std::thread thread1(task);
+  std::thread thread2(task);
+  // Start threads.
+  for (auto &locked_page : locked_pages) {
+    locked_page.reset();
+  }
+  thread1.join();
+  thread2.join();
 
   vn->Close();
   vn = nullptr;

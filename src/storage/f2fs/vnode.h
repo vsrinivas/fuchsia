@@ -408,6 +408,10 @@ class VnodeF2fs : public fs::Vnode,
     return file_cache_.GetPages(start, end);
   }
 
+  zx::status<std::vector<LockedPage>> GrabCachePages(const std::vector<pgoff_t> &page_offsets) {
+    return file_cache_.GetPages(page_offsets);
+  }
+
   pgoff_t Writeback(WritebackOperation &operation) { return file_cache_.Writeback(operation); }
   std::vector<LockedPage> InvalidatePages(pgoff_t start = 0, pgoff_t end = kPgOffMax) {
     return file_cache_.InvalidatePages(start, end);

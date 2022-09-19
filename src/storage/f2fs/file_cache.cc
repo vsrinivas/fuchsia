@@ -265,6 +265,30 @@ zx::status<std::vector<LockedPage>> FileCache::GetPages(const pgoff_t start, con
   return zx::ok(std::move(locked_pages));
 }
 
+zx::status<std::vector<LockedPage>> FileCache::GetPages(const std::vector<pgoff_t> &page_offsets) {
+  std::lock_guard tree_lock(tree_lock_);
+  if (page_offsets.empty()) {
+    return zx::ok(std::vector<LockedPage>(0));
+  }
+
+  auto locked_pages = GetLockedPagesUnsafe(page_offsets);
+  uint32_t count = 0;
+  for (pgoff_t index : page_offsets) {
+    if (index != kInvalidPageOffset) {
+      if (!locked_pages[count]) {
+        locked_pages[count] = GetNewPage(index);
+      }
+
+      if (zx_status_t ret = locked_pages[count]->GetPage(); ret != ZX_OK) {
+        return zx::error(ret);
+      }
+    }
+    ++count;
+  }
+
+  return zx::ok(std::move(locked_pages));
+}
+
 LockedPage FileCache::GetNewPage(const pgoff_t index) {
   fbl::RefPtr<Page> page;
   if (GetVnode().IsNode()) {
@@ -392,6 +416,46 @@ std::vector<LockedPage> FileCache::GetLockedPagesUnsafe(pgoff_t start, pgoff_t e
       pages.push_back(std::move(*locked_page_or));
     }
     ++current;
+  }
+  return pages;
+}
+
+std::vector<LockedPage> FileCache::GetLockedPagesUnsafe(const std::vector<pgoff_t> &page_offsets) {
+  std::vector<LockedPage> pages(page_offsets.size());
+  if (page_tree_.is_empty()) {
+    return pages;
+  }
+
+  uint32_t index = 0;
+  while (index < page_offsets.size()) {
+    if (page_offsets[index] == kInvalidPageOffset) {
+      ++index;
+      continue;
+    }
+    auto current = page_tree_.find(page_offsets[index]);
+    if (current == page_tree_.end()) {
+      ++index;
+      continue;
+    }
+    if (!current->IsActive()) {
+      // No reference to |current|. It is safe to make a reference.
+      LockedPage locked_page(fbl::ImportFromRawPtr(&(*current)));
+      locked_page->SetActive();
+      pages[index] = std::move(locked_page);
+    } else {
+      auto page = fbl::MakeRefPtrUpgradeFromRaw(&(*current), tree_lock_);
+      // When it is being recycled, wait and try it again.
+      if (page == nullptr) {
+        recycle_cvar_.wait(tree_lock_);
+        continue;
+      }
+      auto locked_page_or = GetLockedPage(std::move(page));
+      if (locked_page_or.is_error()) {
+        continue;
+      }
+      pages[index] = std::move(*locked_page_or);
+    }
+    ++index;
   }
   return pages;
 }

@@ -45,6 +45,9 @@ constexpr int kXattrNodeOffset = -1;
 // distinguish from index node blocks.
 constexpr int kLinkMax = 32000;  // maximum link count per file
 
+// For page offset in File
+constexpr pgoff_t kInvalidPageOffset = std::numeric_limits<pgoff_t>::max();
+
 // CountType for monitoring
 //
 // f2fs monitors the number of several block types such as on-writeback,

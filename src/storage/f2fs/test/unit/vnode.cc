@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <numeric>
+
 #include <gtest/gtest.h>
 #include <safemath/checked_math.h>
 
@@ -344,13 +346,36 @@ TEST_F(VnodeTest, GrabCachePages) {
   constexpr pgoff_t kStartOffset = 0;
   constexpr pgoff_t kEndOffset = 1000;
 
-  auto pages_or = file_vnode->GrabCachePages(kStartOffset, kEndOffset);
-  ASSERT_TRUE(pages_or.is_ok());
-  for (pgoff_t i = kStartOffset; i < kEndOffset; ++i) {
-    LockedPage locked_page = std::move(pages_or.value()[i]);
-    auto unlocked_page = locked_page.release();
-    ASSERT_EQ(file_vnode->GrabCachePage(i, &locked_page), ZX_OK);
-    ASSERT_EQ(locked_page.get(), unlocked_page.get());
+  {
+    auto pages_or = file_vnode->GrabCachePages(kStartOffset, kEndOffset);
+    ASSERT_TRUE(pages_or.is_ok());
+    for (pgoff_t i = kStartOffset; i < kEndOffset; ++i) {
+      LockedPage locked_page = std::move(pages_or.value()[i]);
+      auto unlocked_page = locked_page.release();
+      ASSERT_EQ(file_vnode->GrabCachePage(i, &locked_page), ZX_OK);
+      ASSERT_EQ(locked_page.get(), unlocked_page.get());
+    }
+  }
+
+  // Test with holes
+  {
+    std::vector<pgoff_t> pg_offsets(kEndOffset - kStartOffset);
+    std::iota(pg_offsets.begin(), pg_offsets.end(), kStartOffset);
+    for (size_t i = 0; i < pg_offsets.size(); i += 2) {
+      pg_offsets[i] = kInvalidPageOffset;
+    }
+    auto pages_or = file_vnode->GrabCachePages(pg_offsets);
+    ASSERT_TRUE(pages_or.is_ok());
+    for (size_t i = 0; i < pg_offsets.size(); ++i) {
+      if (pg_offsets[i] == kInvalidPageOffset) {
+        ASSERT_FALSE(pages_or.value()[i]);
+      } else {
+        LockedPage locked_page = std::move(pages_or.value()[i]);
+        auto unlocked_page = locked_page.release();
+        ASSERT_EQ(file_vnode->GrabCachePage(pg_offsets[i], &locked_page), ZX_OK);
+        ASSERT_EQ(locked_page.get(), unlocked_page.get());
+      }
+    }
   }
 
   ASSERT_EQ(file_vnode->Close(), ZX_OK);
