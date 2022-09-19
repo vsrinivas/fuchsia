@@ -63,19 +63,19 @@ func NewInstance() (Instance, error) {
 	return &BaseInstance{build, nil, launcher, "", defaultReconnectInterval}, nil
 }
 
-func loadInstanceFromHandle(handle Handle) (Instance, error) {
+func loadInstanceFromHandle(handle Handle, verify bool) (Instance, error) {
 	// TODO(fxbug.dev/47320): Store build info in the handle too
 	build, err := NewBuild()
 	if err != nil {
 		return nil, fmt.Errorf("Error configuring build: %s", err)
 	}
 
-	connector, err := loadConnectorFromHandle(build, handle)
+	connector, err := loadConnectorFromHandle(build, handle, verify)
 	if err != nil {
 		return nil, err
 	}
 
-	launcher, err := loadLauncherFromHandle(build, handle)
+	launcher, err := loadLauncherFromHandle(build, handle, verify)
 	if err != nil {
 		return nil, err
 	}
@@ -86,7 +86,9 @@ func loadInstanceFromHandle(handle Handle) (Instance, error) {
 // Close releases the Instance, but doesn't Stop it. It also persists any
 // updates to the Handle.
 func (i *BaseInstance) Close() {
-	i.Connector.Close()
+	if i.Connector != nil {
+		i.Connector.Close()
+	}
 	i.Handle()
 }
 
@@ -237,11 +239,15 @@ func (i *BaseInstance) Put(fuzzerName, hostSrc, targetDst string) error {
 
 // Stop shuts down the Instance
 func (i *BaseInstance) Stop() error {
-	if err := i.Launcher.Kill(); err != nil {
-		return err
+	if i.Launcher != nil {
+		if err := i.Launcher.Kill(); err != nil {
+			return err
+		}
 	}
 
-	i.Connector.Cleanup()
+	if i.Connector != nil {
+		i.Connector.Cleanup()
+	}
 
 	if i.handle != "" {
 		i.handle.Release()

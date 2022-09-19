@@ -31,7 +31,7 @@ func TestQemuLauncherHandle(t *testing.T) {
 
 	build, _ := newMockBuild()
 
-	reloadedLauncher, err := loadLauncherFromHandle(build, handle)
+	reloadedLauncher, err := loadLauncherFromHandle(build, handle, true)
 	if err != nil {
 		t.Fatalf("error loading launcher from handle: %s", err)
 	}
@@ -58,7 +58,7 @@ func TestIncompleteQemuLauncherHandle(t *testing.T) {
 
 	build, _ := newMockBuild()
 
-	if _, err := loadConnectorFromHandle(build, handle); err == nil {
+	if _, err := loadConnectorFromHandle(build, handle, true); err == nil {
 		t.Fatalf("expected error, but succeeded")
 	}
 }

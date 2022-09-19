@@ -70,7 +70,10 @@ func (c *APICommand) Execute(out io.Writer) error {
 			return fmt.Errorf("Bad handle: %s", err)
 		}
 
-		if instance, err = loadInstanceFromHandle(handle); err != nil {
+		// stop_instance should make its best effort even with an incomplete
+		// handle, as long as it contains enough information
+		verify := c.name != StopInstance
+		if instance, err = loadInstanceFromHandle(handle, verify); err != nil {
 			return fmt.Errorf("Bad handle: %s", err)
 		}
 		defer instance.Close()

@@ -37,7 +37,7 @@ func TestSSHConnectorHandle(t *testing.T) {
 	build, _ := newMockBuild()
 
 	// Note: we don't serialize here because that is covered by handle tests
-	reloadedConn, err := loadConnectorFromHandle(build, handle)
+	reloadedConn, err := loadConnectorFromHandle(build, handle, true)
 	if err != nil {
 		t.Fatalf("error loading connector from handle: %s", err)
 	}
@@ -63,7 +63,7 @@ func TestIncompleteSSHConnectorHandle(t *testing.T) {
 	defer handle.Release()
 
 	build, _ := newMockBuild()
-	if _, err := loadConnectorFromHandle(build, handle); err == nil {
+	if _, err := loadConnectorFromHandle(build, handle, true); err == nil {
 		t.Fatalf("expected error, but succeeded")
 	}
 }

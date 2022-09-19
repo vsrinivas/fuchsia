@@ -46,7 +46,7 @@ func TestInstanceHandle(t *testing.T) {
 
 	// Note: we don't serialize here because that is covered by handle tests
 
-	reloadedInstance, err := loadInstanceFromHandle(handle)
+	reloadedInstance, err := loadInstanceFromHandle(handle, true)
 	if err != nil {
 		t.Fatalf("error loading instance from handle: %s", err)
 	}
@@ -66,9 +66,40 @@ func TestInstanceHandle(t *testing.T) {
 		t.Fatalf("error stopping instance: %s", err)
 	}
 
-	reloadedInstance, err = loadInstanceFromHandle(handle)
+	reloadedInstance, err = loadInstanceFromHandle(handle, true)
 	if err == nil {
 		t.Fatalf("unexpected success reloading instance from released handle: %q", handle)
+	}
+}
+
+func TestInstanceLoadHandleFromOldVersion(t *testing.T) {
+	// Instance loading automatically loads the build, so we need to stub it out
+	realNewBuild := NewBuild
+	NewBuild = newMockBuild
+	defer func() { NewBuild = realNewBuild }()
+
+	// Create a handle file mimicking an earlier version. We assume for
+	// simplicity's sake that old versions of a given Connector type will
+	// always be a subset of the new type.
+	json := `{"LauncherType": "QemuLauncher", "Launcher": {"Pid": 123}}`
+	handlePath := filepath.Join(t.TempDir(), "some.handle")
+	if err := os.WriteFile(handlePath, []byte(json), 0o600); err != nil {
+		t.Fatalf("error writing handle: %s", err)
+	}
+
+	handle := Handle(handlePath)
+
+	if _, err := loadInstanceFromHandle(handle, true); err == nil {
+		t.Fatalf("unexpectedly succeeded loading incomplete instance")
+	}
+
+	instance, err := loadInstanceFromHandle(handle, false)
+	if err != nil {
+		t.Fatalf("error loading instance from handle: %s", err)
+	}
+
+	if instance.(*BaseInstance).Launcher.(*QemuLauncher).Pid != 123 {
+		t.Fatalf("incorrect launcher pid found: %+v", instance)
 	}
 }
 

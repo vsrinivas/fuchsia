@@ -505,6 +505,45 @@ func TestGetLogsFromCrashedInstance(t *testing.T) {
 	}
 }
 
+func TestStopInstanceWithOldHandleVersion(t *testing.T) {
+	if _, found := os.LookupEnv("UNDERCOAT_E2E_TESTS"); !found {
+		t.Skip("skipping end-to-end test; set UNDERCOAT_E2E_TESTS to enable")
+	}
+
+	out := runCommandOk(t, "start_instance")
+	handle := strings.TrimSpace(out)
+
+	// Keep this around so we can restore it after modifying it, when we want
+	// to cleanup
+	oldJson, err := os.ReadFile(handle)
+	if err != nil {
+		runCommandOk(t, "stop_instance", "-handle", handle)
+		t.Fatalf("error reading handle: %s", err)
+	}
+
+	defer func() {
+		if !fileExists(handle) {
+			return
+		}
+
+		// It wasn't fully stopped, so restore the original file
+		if err := os.WriteFile(handle, oldJson, 0o600); err != nil {
+			t.Fatalf("error re-writing handle: %s", err)
+		}
+		runCommandOk(t, "stop_instance", "-handle", handle)
+	}()
+
+	pid := getQemuPidFromHandle(t, handle)
+
+	// Put the bare minimum into the handle JSON file
+	json := fmt.Sprintf(`{"LauncherType": "QemuLauncher", "Launcher": {"Pid": %d}}`, pid)
+	if err := os.WriteFile(handle, []byte(json), 0o600); err != nil {
+		t.Fatalf("error writing handle: %s", err)
+	}
+
+	runCommandOk(t, "stop_instance", "-handle", handle)
+}
+
 // Helper functions:
 
 // Grab the pid for QEMU right out the handle file.
@@ -607,4 +646,9 @@ func assertSubset(t *testing.T, corpusA []string, corpusB []string) {
 			t.Fatalf("corpus missing expected element %q", el)
 		}
 	}
+}
+
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
+	return !os.IsNotExist(err)
 }

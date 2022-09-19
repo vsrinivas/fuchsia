@@ -30,7 +30,7 @@ func TestHandleSerialize(t *testing.T) {
 		t.Fatalf("error deserializing handle: %s", err)
 	}
 
-	result, err := reloadedHandle.GetData()
+	result, err := reloadedHandle.GetData(true)
 	if err != nil {
 		t.Fatalf("error getting handle data: %s", err)
 	}
@@ -58,7 +58,7 @@ func TestHandleRelease(t *testing.T) {
 		t.Fatalf("LoadHandleFromString unexpectedly succeeded on released handle %q", handle)
 	}
 
-	if _, err := handle.GetData(); err == nil {
+	if _, err := handle.GetData(true); err == nil {
 		t.Fatalf("GetData unexpectedly succeeded on released handle %q", handle)
 	}
 }
@@ -86,7 +86,7 @@ func TestHandleGetEmptyData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error deserializing handle: %s", err)
 	}
-	if _, err := handle.GetData(); err != nil {
+	if _, err := handle.GetData(true); err != nil {
 		t.Fatalf("error loading from empty handle: %s", err)
 	}
 }
@@ -99,7 +99,7 @@ func TestHandleGetInvalidData(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error deserializing handle: %s", err)
 	}
-	if data, err := handle.GetData(); err == nil {
+	if data, err := handle.GetData(true); err == nil {
 		t.Fatalf("expected error loading invalid type, but succeeded: %+v", data)
 	}
 }

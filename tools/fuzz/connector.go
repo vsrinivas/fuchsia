@@ -736,8 +736,8 @@ func (c *SSHConnector) IsDir(path string) (bool, error) {
 	return fileInfo.IsDir(), nil
 }
 
-func loadConnectorFromHandle(build Build, handle Handle) (Connector, error) {
-	handleData, err := handle.GetData()
+func loadConnectorFromHandle(build Build, handle Handle, verify bool) (Connector, error) {
+	handleData, err := handle.GetData(verify)
 	if err != nil {
 		return nil, err
 	}
@@ -745,22 +745,28 @@ func loadConnectorFromHandle(build Build, handle Handle) (Connector, error) {
 	// Check that the Connector is in a valid state
 	switch conn := handleData.connector.(type) {
 	case *SSHConnector:
-		if conn.Host == "" {
-			return nil, fmt.Errorf("host not found in handle")
-		}
-		if conn.Port == 0 {
-			return nil, fmt.Errorf("port not found in handle")
-		}
-		if conn.Key == "" {
-			return nil, fmt.Errorf("key not found in handle")
-		}
-		if conn.TmpDir == "" {
-			return nil, fmt.Errorf("tmpDir not found in handle")
+		if verify {
+			if conn.Host == "" {
+				return nil, fmt.Errorf("host not found in handle")
+			}
+			if conn.Port == 0 {
+				return nil, fmt.Errorf("port not found in handle")
+			}
+			if conn.Key == "" {
+				return nil, fmt.Errorf("key not found in handle")
+			}
+			if conn.TmpDir == "" {
+				return nil, fmt.Errorf("tmpDir not found in handle")
+			}
 		}
 		conn.build = build
 		return conn, nil
 	default:
-		return nil, fmt.Errorf("unknown connector type: %T", handleData.connector)
+		if verify {
+			return nil, fmt.Errorf("unknown connector type: %T", handleData.connector)
+		} else {
+			return nil, nil
+		}
 	}
 }
 

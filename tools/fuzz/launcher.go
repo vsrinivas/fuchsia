@@ -162,11 +162,6 @@ func getQemuInvocation(config qemuConfig) ([]string, error) {
 	return qemuCmd.Build()
 }
 
-func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return !os.IsNotExist(err)
-}
-
 // Prepare files that are needed by QEMU, if they haven't already been prepared.
 //
 // If Prepare succeeds, it is up to the caller to clean up by calling Kill later.
@@ -486,8 +481,8 @@ func (q *QemuLauncher) GetLogs(out io.Writer) error {
 	return nil
 }
 
-func loadLauncherFromHandle(build Build, handle Handle) (Launcher, error) {
-	handleData, err := handle.GetData()
+func loadLauncherFromHandle(build Build, handle Handle, verify bool) (Launcher, error) {
+	handleData, err := handle.GetData(verify)
 	if err != nil {
 		return nil, err
 	}
@@ -495,17 +490,23 @@ func loadLauncherFromHandle(build Build, handle Handle) (Launcher, error) {
 	// Check that the Launcher is in a valid state
 	switch launcher := handleData.launcher.(type) {
 	case *QemuLauncher:
-		if launcher.Pid == 0 {
-			return nil, fmt.Errorf("pid not found in handle")
-		}
+		if verify {
+			if launcher.Pid == 0 {
+				return nil, fmt.Errorf("pid not found in handle")
+			}
 
-		if launcher.TmpDir == "" {
-			return nil, fmt.Errorf("tmpdir not found in handle")
+			if launcher.TmpDir == "" {
+				return nil, fmt.Errorf("tmpdir not found in handle")
+			}
 		}
 
 		launcher.build = build
 		return launcher, nil
 	default:
-		return nil, fmt.Errorf("unknown launcher type: %T", handleData.launcher)
+		if verify {
+			return nil, fmt.Errorf("unknown launcher type: %T", handleData.launcher)
+		} else {
+			return nil, nil
+		}
 	}
 }

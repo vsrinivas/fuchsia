@@ -90,7 +90,8 @@ func (h Handle) Serialize() string {
 }
 
 // GetData will load and return data from the Handle, as previously stored by SetData.
-func (h Handle) GetData() (*HandleData, error) {
+// If verify is true, it checks that the Handle contains objects of a known type.
+func (h Handle) GetData(verify bool) (*HandleData, error) {
 	rawData, err := h.loadFromDisk()
 	if err != nil {
 		return nil, fmt.Errorf("error loading handle: %s", err)
@@ -104,9 +105,11 @@ func (h Handle) GetData() (*HandleData, error) {
 	case "":
 		// connector is empty
 	default:
-		return nil, fmt.Errorf("unknown connector type: %q", rawData.ConnectorType)
+		if verify {
+			return nil, fmt.Errorf("unknown connector type: %q", rawData.ConnectorType)
+		}
 	}
-	if rawData.ConnectorType != "" {
+	if data.connector != nil {
 		if err := json.Unmarshal(rawData.Connector, &data.connector); err != nil {
 			return nil, fmt.Errorf("error unmarshaling connector: %s", err)
 		}
@@ -118,9 +121,11 @@ func (h Handle) GetData() (*HandleData, error) {
 	case "":
 		// launcher is empty
 	default:
-		return nil, fmt.Errorf("unknown launcher type: %q", rawData.LauncherType)
+		if verify {
+			return nil, fmt.Errorf("unknown launcher type: %q", rawData.LauncherType)
+		}
 	}
-	if rawData.LauncherType != "" {
+	if data.launcher != nil {
 		if err := json.Unmarshal(rawData.Launcher, &data.launcher); err != nil {
 			return nil, fmt.Errorf("error unmarshaling launcher: %s", err)
 		}
