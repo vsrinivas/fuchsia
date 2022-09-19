@@ -6,6 +6,8 @@ executable("bt-le-heart-rate-peripheral") {
   sources = [
     "app.cc",
     "app.h",
+    "fidl_helpers.cc",
+    "fidl_helpers.h",
     "heart_model.cc",
     "heart_model.h",
     "main.cc",

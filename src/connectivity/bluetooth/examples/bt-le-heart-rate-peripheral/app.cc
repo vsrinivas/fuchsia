@@ -12,6 +12,7 @@
 
 #include <src/lib/fxl/strings/string_printf.h>
 
+#include "fidl_helpers.h"
 #include "heart_model.h"
 
 namespace ble = fuchsia::bluetooth::le;
@@ -21,21 +22,19 @@ namespace bt_le_heart_rate {
 App::App(std::unique_ptr<HeartModel> heart_model)
     : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
       service_(std::move(heart_model)) {
-  gatt_server_ = context_->svc()->Connect<fuchsia::bluetooth::gatt::Server>();
-  FX_DCHECK(gatt_server_);
+  gatt_server_ = context_->svc()->Connect<fuchsia::bluetooth::gatt2::Server>();
+  ZX_ASSERT(gatt_server_);
 
   service_.PublishService(&gatt_server_);
 
   peripheral_ = context_->svc()->Connect<ble::Peripheral>();
-  FX_DCHECK(peripheral_);
+  ZX_ASSERT(peripheral_);
 }
 
 void App::StartAdvertising() {
-  fuchsia::bluetooth::Uuid uuid{{0xfb, 0x34, 0x9b, 0x5f, 0x80, 0x00, 0x00, 0x80, 0x00, 0x10, 0x00,
-                                 0x00, 0x0d, 0x18, 0x00, 0x00}};
   ble::AdvertisingData ad;
   ad.set_name(kDeviceName);
-  ad.set_service_uuids({{uuid}});
+  ad.set_service_uuids({Service::kServiceUuid});
 
   ble::AdvertisingParameters params;
   params.set_connection_options(ble::ConnectionOptions());
@@ -85,12 +84,11 @@ void App::AdvertisedPeripheral::OnConnected(
     fuchsia::bluetooth::le::Peer peer,
     fidl::InterfaceHandle<fuchsia::bluetooth::le::Connection> connection,
     OnConnectedCallback callback) {
-  std::string peer_id = fxl::StringPrintf("%.16lx", peer.id().value);
-  std::cout << "received connection (peer: " << peer_id << ")" << std::endl;
+  std::cout << "received connection (peer: " << peer.id() << ")" << std::endl;
 
   app_->connection_.Bind(std::move(connection));
 
-  app_->connection_.set_error_handler([peer_id](zx_status_t status) {
+  app_->connection_.set_error_handler([peer_id = peer.id()](zx_status_t status) {
     std::cout << "connection to peer " << peer_id
               << " closed with status: " << zx_status_get_string(status) << std::endl;
   });

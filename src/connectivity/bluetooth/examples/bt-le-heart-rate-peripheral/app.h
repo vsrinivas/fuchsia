@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_APP_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_EXAMPLES_BT_LE_HEART_RATE_PERIPHERAL_APP_H_
 
-#include <fuchsia/bluetooth/gatt/cpp/fidl.h>
+#include <fuchsia/bluetooth/gatt2/cpp/fidl.h>
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/sys/cpp/component_context.h>
@@ -50,7 +50,7 @@ class App final {
   Service service_;
 
   // Proxy to the gatt.Server service.
-  fuchsia::bluetooth::gatt::ServerPtr gatt_server_;
+  fuchsia::bluetooth::gatt2::ServerPtr gatt_server_;
 
   // Proxy to the le.Peripheral service which we use for advertising to solicit connections.
   fuchsia::bluetooth::le::PeripheralPtr peripheral_;

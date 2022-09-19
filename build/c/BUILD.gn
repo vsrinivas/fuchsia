@@ -65,7 +65,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/connectivity/bluetooth/core/bt-host/transport",
     "//src/connectivity/bluetooth/core/bt-host/transport:testing",
     "//src/connectivity/bluetooth/core/bt-host/transport:tests",
-    "//src/connectivity/bluetooth/examples/bt-le-heart-rate-peripheral",
     "//src/connectivity/bluetooth/hci/emulator:_driver.shlib-used.fuchsia_driver",
     "//src/connectivity/bluetooth/hci/emulator:fuchsia_driver",
     "//src/connectivity/bluetooth/hci/passthrough:fuchsia_driver",

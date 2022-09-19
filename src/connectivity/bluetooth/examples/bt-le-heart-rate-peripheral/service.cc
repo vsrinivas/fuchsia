@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
+#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
@@ -17,7 +18,7 @@
 
 using fuchsia::bluetooth::Status;
 
-namespace gatt = fuchsia::bluetooth::gatt;
+namespace gatt = fuchsia::bluetooth::gatt2;
 
 namespace bt_le_heart_rate {
 namespace {
@@ -93,14 +94,6 @@ void PrintBytes(const std::vector<uint8_t>& value) {
 
 }  // namespace
 
-constexpr char Service::kServiceUuid[];
-constexpr uint64_t Service::kHeartRateMeasurementId;
-constexpr char Service::kHeartRateMeasurementUuid[];
-constexpr uint64_t Service::kBodySensorLocationId;
-constexpr char Service::kBodySensorLocationUuid[];
-constexpr uint64_t Service::kHeartRateControlPointId;
-constexpr char Service::kHeartRateControlPointUuid[];
-
 Service::Service(std::unique_ptr<HeartModel> heart_model)
     : heart_model_(std::move(heart_model)),
       binding_(this),
@@ -109,60 +102,69 @@ Service::Service(std::unique_ptr<HeartModel> heart_model)
   FX_DCHECK(heart_model_);
 }
 
-void Service::PublishService(gatt::ServerPtr* gatt_server) {
+void Service::PublishService(fuchsia::bluetooth::gatt2::ServerPtr* server) {
   // Heart Rate Measurement
   // Allow update with default security of "none required."
   gatt::Characteristic hrm;
-  hrm.id = kHeartRateMeasurementId;
-  hrm.type = kHeartRateMeasurementUuid;
-  hrm.properties = gatt::kPropertyNotify;
-  hrm.permissions = std::make_unique<gatt::AttributePermissions>();
-  hrm.permissions->update = std::make_unique<gatt::SecurityRequirements>();
+  hrm.set_handle(gatt::Handle{kHeartRateMeasurementId});
+  hrm.set_type(kHeartRateMeasurementUuid);
+  hrm.set_properties(gatt::CharacteristicPropertyBits::NOTIFY);
+  hrm.mutable_permissions()->mutable_update();
 
   // Body Sensor Location
   gatt::Characteristic bsl;
-  bsl.id = kBodySensorLocationId;
-  bsl.type = kBodySensorLocationUuid;
-  bsl.properties = gatt::kPropertyRead;
-  bsl.permissions = std::make_unique<gatt::AttributePermissions>();
-  bsl.permissions->read = std::make_unique<gatt::SecurityRequirements>();
+  bsl.set_handle(gatt::Handle{kBodySensorLocationId});
+  bsl.set_type(kBodySensorLocationUuid);
+  bsl.set_properties(gatt::CharacteristicPropertyBits::READ);
+  bsl.mutable_permissions()->mutable_read();
 
   // Heart Rate Control Point
   gatt::Characteristic hrcp;
-  hrcp.id = kHeartRateControlPointId;
-  hrcp.type = kHeartRateControlPointUuid;
-  hrcp.properties = gatt::kPropertyWrite;
-  hrcp.permissions = std::make_unique<gatt::AttributePermissions>();
-  hrcp.permissions->write = std::make_unique<gatt::SecurityRequirements>();
+  hrcp.set_handle(gatt::Handle{kHeartRateControlPointId});
+  hrcp.set_type(kHeartRateControlPointUuid);
+  hrcp.set_properties(gatt::CharacteristicPropertyBits::WRITE);
+  hrcp.mutable_permissions()->mutable_write();
 
   std::vector<gatt::Characteristic> characteristics;
   characteristics.push_back(std::move(hrm));
   characteristics.push_back(std::move(bsl));
   characteristics.push_back(std::move(hrcp));
 
-  gatt::ServiceInfo si;
-  si.primary = true;
-  si.type = kServiceUuid;
-  si.characteristics = std::move(characteristics);
+  gatt::ServiceInfo service_info;
+  service_info.set_handle(gatt::ServiceHandle{0});
+  service_info.set_kind(gatt::ServiceKind::PRIMARY);
+  service_info.set_type(kServiceUuid);
+  service_info.set_characteristics(std::move(characteristics));
 
   std::cout << "Publishing service..." << std::endl;
-  auto publish_svc_result_cb = [](Status status) {
-    std::cout << "PublishService status: " << bool(status.error) << std::endl;
-  };
-  (*gatt_server)
-      ->PublishService(std::move(si), binding_.NewBinding(), service_.NewRequest(),
-                       std::move(publish_svc_result_cb));
+
+  fidl::InterfaceHandle<gatt::LocalService> client = binding_.NewBinding();
+  ZX_ASSERT(client.is_valid());
+
+  (*server)->PublishService(std::move(service_info), std::move(client), [](auto result) {
+    if (result.is_err()) {
+      std::cout << "PublishService error: " << static_cast<uint32_t>(result.err()) << std::endl;
+      return;
+    }
+    std::cout << "Heart Rate Service published" << std::endl;
+  });
 }
 
 void Service::NotifyMeasurement() {
+  if (notification_credits_ == 0) {
+    return;
+  }
+  notification_credits_--;
+
   HeartModel::Measurement measurement = heart_model_->ReadMeasurement();
 
   const auto payload = MakeMeasurementPayload(measurement.rate, &measurement.contact,
                                               &measurement.energy_expended, nullptr);
 
-  for (const auto& peer_id : measurement_peers_) {
-    service_->NotifyValue(0, peer_id, std::move(payload), false);
-  }
+  gatt::ValueChangedParameters value;
+  value.set_handle(gatt::Handle{kHeartRateMeasurementId});
+  value.set_value(std::move(payload));
+  binding_.events().OnNotifyValue(std::move(value));
 }
 
 void Service::ScheduleNotification() {
@@ -185,12 +187,14 @@ void Service::ScheduleNotification() {
   notify_scheduled_ = true;
 }
 
-void Service::OnCharacteristicConfiguration(uint64_t characteristic_id, std::string peer_id,
-                                            bool notify, bool indicate) {
+void Service::CharacteristicConfiguration(fuchsia::bluetooth::PeerId peer_id,
+                                          fuchsia::bluetooth::gatt2::Handle handle, bool notify,
+                                          bool indicate,
+                                          CharacteristicConfigurationCallback callback) {
   std::cout << "CharacteristicConfiguration on peer " << peer_id << " (notify: " << notify
             << ", indicate: " << indicate << ")" << std::endl;
 
-  if (characteristic_id != kHeartRateMeasurementId) {
+  if (handle.value != kHeartRateMeasurementId) {
     std::cout << "Ignoring configuration for characteristic other than Heart "
                  "Rate Measurement"
               << std::endl;
@@ -200,74 +204,77 @@ void Service::OnCharacteristicConfiguration(uint64_t characteristic_id, std::str
   if (notify) {
     std::cout << "Enabling heart rate measurements for peer " << peer_id << std::endl;
 
-    auto insert_res = measurement_peers_.insert(peer_id);
+    auto insert_res = measurement_peers_.insert(peer_id.value);
     if (insert_res.second && measurement_peers_.size() == 1) {
       if (!notify_scheduled_)
         ScheduleNotification();
     }
   } else {
     std::cout << "Disabling heart rate measurements for peer " << peer_id << std::endl;
-    measurement_peers_.erase(peer_id);
+    measurement_peers_.erase(peer_id.value);
   }
+
+  callback();
 }
 
-void Service::OnReadValue(uint64_t id, int32_t offset, OnReadValueCallback callback) {
-  std::cout << "ReadValue on characteristic " << id << " at offset " << offset << std::endl;
+void Service::ReadValue(fuchsia::bluetooth::PeerId peer_id,
+                        fuchsia::bluetooth::gatt2::Handle handle, int32_t offset,
+                        ReadValueCallback callback) {
+  std::cout << "ReadValue on characteristic " << handle << " at offset " << offset << std::endl;
 
-  if (id != kBodySensorLocationId) {
-    callback(nullptr, gatt::ErrorCode::NOT_PERMITTED);
+  if (handle.value != kBodySensorLocationId) {
+    callback(fpromise::error(gatt::Error::READ_NOT_PERMITTED));
     return;
   }
 
   // Body Sensor Location payload
   std::vector<uint8_t> value;
   value.push_back(static_cast<uint8_t>(BodySensorLocation::kOther));
-  callback(std::move(value), gatt::ErrorCode::NO_ERROR);
+  callback(fpromise::ok(std::move(value)));
 }
 
-void Service::OnWriteValue(uint64_t id, uint16_t offset, std::vector<uint8_t> value,
-                           OnWriteValueCallback callback) {
-  std::cout << "WriteValue on characteristic " << id << " at offset " << offset << " (";
-  PrintBytes(value);
+void Service::WriteValue(fuchsia::bluetooth::gatt2::LocalServiceWriteValueRequest request,
+                         WriteValueCallback callback) {
+  std::cout << "WriteValue on characteristic " << request.handle() << " at offset "
+            << request.offset() << " (";
+  PrintBytes(request.value());
   std::cout << ")" << std::endl;
 
-  if (id != kHeartRateControlPointId) {
+  if (request.handle().value != kHeartRateControlPointId) {
     std::cout << "Ignoring writes to characteristic other than Heart Rate "
                  "Control Point"
               << std::endl;
-    callback(gatt::ErrorCode::NOT_PERMITTED);
+    callback(fpromise::error(gatt::Error::WRITE_NOT_PERMITTED));
     return;
   }
 
-  if (offset != 0) {
+  if (request.offset() != 0) {
     std::cout << "Write to control point at invalid offset" << std::endl;
-    callback(gatt::ErrorCode::INVALID_OFFSET);
+    callback(fpromise::error(gatt::Error::INVALID_OFFSET));
     return;
   }
 
-  if (value.size() != 1) {
+  if (request.value().size() != 1) {
     std::cout << "Write to control point of invalid length" << std::endl;
-    callback(gatt::ErrorCode::INVALID_VALUE_LENGTH);
+    callback(fpromise::error(gatt::Error::INVALID_ATTRIBUTE_VALUE_LENGTH));
     return;
   }
 
-  if (value[0] != kResetEnergyExpendedValue) {
+  if (request.value()[0] != kResetEnergyExpendedValue) {
     std::cout << "Write value other than \"Reset Energy Expended\" to "
                  "Heart Rate Control Point characteristic"
               << std::endl;
-    callback(CONTROL_POINT_NOT_SUPPORTED);
+    callback(fpromise::error(CONTROL_POINT_NOT_SUPPORTED_ERROR));
     return;
   }
 
   std::cout << "Resetting Energy Expended" << std::endl;
   heart_model_->ResetEnergyExpended();
-  callback(gatt::ErrorCode::NO_ERROR);
+  callback(fpromise::ok());
 }
 
-void Service::OnWriteWithoutResponse(uint64_t id, uint16_t offset, std::vector<uint8_t> value) {
-  std::cout << "WriteWithoutResponse on characteristic " << id << " at offset " << offset << " (";
-  PrintBytes(value);
-  std::cout << ")" << std::endl;
+void Service::ValueChangedCredit(uint8_t additional_credit) {
+  notification_credits_ += additional_credit;
 }
 
 }  // namespace bt_le_heart_rate
