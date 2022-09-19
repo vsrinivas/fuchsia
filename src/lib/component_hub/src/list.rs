@@ -275,8 +275,8 @@ async fn get_all_cmx_instances_internal(query: &fsys::RealmQueryProxy) -> Result
 
     if let Ok((_, resolved)) = query.get_instance_info("./core/appmgr").await? {
         if let Some(resolved) = resolved {
-            if let Some(execution) = resolved.execution {
-                let out_dir = execution.out_dir.ok_or_else(|| {
+            if let Some(started) = resolved.started {
+                let out_dir = started.out_dir.ok_or_else(|| {
                     format_err!("Outgoing directory is not available from appmgr")
                 })?;
 
@@ -551,7 +551,7 @@ mod tests {
                     exposes: vec![],
                     config: None,
                     pkg_dir: None,
-                    execution: Some(Box::new(fsys::ExecutionState {
+                    started: Some(Box::new(fsys::StartedState {
                         out_dir: Some(out_dir),
                         runtime_dir: None,
                         start_reason: "Debugging Workflow".to_string(),
@@ -618,7 +618,7 @@ mod tests {
                     exposes: vec![],
                     config: None,
                     pkg_dir: None,
-                    execution: Some(Box::new(fsys::ExecutionState {
+                    started: Some(Box::new(fsys::StartedState {
                         out_dir: Some(out_dir),
                         runtime_dir: None,
                         start_reason: "Debugging Workflow".to_string(),

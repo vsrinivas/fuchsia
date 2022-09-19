@@ -37,10 +37,10 @@ async fn verify_out(moniker: &str) -> Result<(), Error> {
     let realm_query =
         fuchsia_component::client::connect_to_protocol::<fsys::RealmQueryMarker>().unwrap();
     let out_dir = loop {
-        if let Ok(resolved) = realm_query.get_instance_directories(moniker).await.unwrap() {
+        if let Ok((_, resolved)) = realm_query.get_instance_info(moniker).await.unwrap() {
             if let Some(resolved) = resolved {
-                if let Some(execution) = resolved.execution_dirs {
-                    let out_dir = execution.out_dir.unwrap().into_proxy().unwrap();
+                if let Some(started) = resolved.started {
+                    let out_dir = started.out_dir.unwrap().into_proxy().unwrap();
                     if let Ok(mut result) = read_entries(&out_dir).await {
                         let mut expected = vec!["diagnostics".to_string(), "svc".to_string()];
                         result.sort();

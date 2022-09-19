@@ -98,8 +98,8 @@ async fn run_component_controller(
         .await?
         .unwrap()
         .expect("nested runner was not resolved");
-    let execution_dirs = resolved_dirs.execution_dirs.expect("nested runner was not started");
-    let out_dir = execution_dirs.out_dir.expect("nested runner does not have out dir");
+    let started_dirs = resolved_dirs.started_dirs.expect("nested runner was not started");
+    let out_dir = started_dirs.out_dir.expect("nested runner does not have out dir");
     let out_dir = out_dir.into_proxy().unwrap();
 
     let component_runner =

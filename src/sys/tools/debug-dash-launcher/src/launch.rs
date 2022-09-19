@@ -67,9 +67,9 @@ pub async fn launch_with_handles(
 
     let launcher_pkg_dir = get_pkg_from_launcher_namespace()?;
 
-    let (out_dir, runtime_dir) = if let Some(execution_dirs) = resolved_dirs.execution_dirs {
-        let out_dir = execution_dirs.out_dir.map(|d| d.into_proxy().unwrap());
-        let runtime_dir = execution_dirs.runtime_dir.map(|d| d.into_proxy().unwrap());
+    let (out_dir, runtime_dir) = if let Some(started_dirs) = resolved_dirs.started_dirs {
+        let out_dir = started_dirs.out_dir.map(|d| d.into_proxy().unwrap());
+        let runtime_dir = started_dirs.runtime_dir.map(|d| d.into_proxy().unwrap());
         (out_dir, runtime_dir)
     } else {
         (None, None)

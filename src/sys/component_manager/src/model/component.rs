@@ -513,12 +513,12 @@ impl ComponentInstance {
                 let pkg_dir = r.package().map(|p| &p.package_dir);
                 let pkg_dir = try_clone_dir_endpoint(pkg_dir);
 
-                let execution = if let Some(runtime) = &execution.runtime {
+                let started = if let Some(runtime) = &execution.runtime {
                     let out_dir = try_clone_dir_endpoint(runtime.outgoing_dir.as_ref());
                     let runtime_dir = try_clone_dir_endpoint(runtime.runtime_dir.as_ref());
                     let start_reason = runtime.start_reason.to_string();
 
-                    Some(Box::new(fsys::ExecutionState { out_dir, runtime_dir, start_reason }))
+                    Some(Box::new(fsys::StartedState { out_dir, runtime_dir, start_reason }))
                 } else {
                     None
                 };
@@ -551,7 +551,7 @@ impl ComponentInstance {
                     exposes,
                     config,
                     pkg_dir,
-                    execution,
+                    started,
                     exposed_dir,
                     ns_dir,
                 }))
@@ -573,11 +573,11 @@ impl ComponentInstance {
                 let pkg_dir = r.package().map(|p| &p.package_dir);
                 let pkg_dir = try_clone_dir_endpoint(pkg_dir);
 
-                let execution_dirs = if let Some(runtime) = &execution.runtime {
+                let started_dirs = if let Some(runtime) = &execution.runtime {
                     let out_dir = try_clone_dir_endpoint(runtime.outgoing_dir.as_ref());
                     let runtime_dir = try_clone_dir_endpoint(runtime.runtime_dir.as_ref());
 
-                    Some(Box::new(fsys::ExecutionDirectories { out_dir, runtime_dir }))
+                    Some(Box::new(fsys::StartedDirectories { out_dir, runtime_dir }))
                 } else {
                     None
                 };
@@ -600,7 +600,7 @@ impl ComponentInstance {
                     ns_entries,
                     pkg_dir,
                     exposed_dir,
-                    execution_dirs,
+                    started_dirs,
                 }))
             }
             _ => None,
