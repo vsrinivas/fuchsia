@@ -201,7 +201,10 @@ class JobDispatcher final
   JobDispatcher(uint32_t flags, fbl::RefPtr<JobDispatcher> parent, JobPolicy policy);
 
   bool AddChildJob(const fbl::RefPtr<JobDispatcher>& job);
-  void RemoveChildJob(JobDispatcher* job);
+
+  // Removes the given child job from |this|. Returns |IsReadyForDeadTransitionLocked| and the
+  // caller is responsible for calling |FinishDeadTransitionUnlocked| if true.
+  __attribute__((warn_unused_result)) bool RemoveChildJob(JobDispatcher* job);
 
   State GetState() const;
 
@@ -209,9 +212,13 @@ class JobDispatcher final
   // either when the job was killed or its last reference was dropped.
   // It's safe to call this multiple times.
   //
+  // Returns true if we both had parent, and our removal caused that parent to return true for
+  // |IsReadyForDeadTransitionLocked|, at which point the caller is responsible for calling
+  // |FinishDeadTransitionUnlocked| on |parent_|. Returns false otherwise.
+  //
   // We cannot be holding our lock when we call this because it requires
   // locking our parent, and we only nest locks down the tree.
-  void RemoveFromJobTreesUnlocked() TA_EXCL(get_lock());
+  __attribute__((warn_unused_result)) bool RemoveFromJobTreesUnlocked() TA_EXCL(get_lock());
 
   // Helpers to transition into the DEAD state.
   //

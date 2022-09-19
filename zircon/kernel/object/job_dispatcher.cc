@@ -185,7 +185,10 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/, fbl::RefPtr<JobDispatcher> pare
 
 JobDispatcher::~JobDispatcher() {
   kcounter_add(dispatcher_job_destroy_count, 1);
-  RemoveFromJobTreesUnlocked();
+  bool parent_should_die = RemoveFromJobTreesUnlocked();
+  if (parent_should_die) {
+    parent_->FinishDeadTransitionUnlocked();
+  }
 }
 
 zx_koid_t JobDispatcher::get_related_koid() const { return parent_ ? parent_->get_koid() : 0u; }
@@ -248,24 +251,18 @@ void JobDispatcher::RemoveChildProcess(ProcessDispatcher* process) {
     FinishDeadTransitionUnlocked();
 }
 
-void JobDispatcher::RemoveChildJob(JobDispatcher* job) {
+bool JobDispatcher::RemoveChildJob(JobDispatcher* job) {
   canary_.Assert();
 
-  bool should_die = false;
-  {
-    Guard<CriticalMutex> guard{get_lock()};
-    if (!fbl::InContainer<JobDispatcher::RawListTag>(*job)) {
-      return;
-    }
-
-    jobs_.erase(*job);
-    jobs_.size();
-    UpdateSignalsLocked();
-    should_die = IsReadyForDeadTransitionLocked();
+  Guard<CriticalMutex> guard{get_lock()};
+  if (!fbl::InContainer<JobDispatcher::RawListTag>(*job)) {
+    return false;
   }
 
-  if (should_die)
-    FinishDeadTransitionUnlocked();
+  jobs_.erase(*job);
+  jobs_.size();
+  UpdateSignalsLocked();
+  return IsReadyForDeadTransitionLocked();
 }
 
 JobDispatcher::State JobDispatcher::GetState() const {
@@ -273,11 +270,13 @@ JobDispatcher::State JobDispatcher::GetState() const {
   return state_;
 }
 
-void JobDispatcher::RemoveFromJobTreesUnlocked() {
+bool JobDispatcher::RemoveFromJobTreesUnlocked() {
   canary_.Assert();
 
-  if (parent_)
-    parent_->RemoveChildJob(this);
+  if (parent_) {
+    return parent_->RemoveChildJob(this);
+  }
+  return false;
 }
 
 bool JobDispatcher::IsReadyForDeadTransitionLocked() {
@@ -288,24 +287,29 @@ bool JobDispatcher::IsReadyForDeadTransitionLocked() {
 void JobDispatcher::FinishDeadTransitionUnlocked() {
   canary_.Assert();
 
-  // Make sure we're killing from the bottom of the tree up or else parent
-  // jobs could die before their children.
-  //
-  // In particular, this means we have to finish dying before leaving the job
-  // trees, since the last child leaving the tree can trigger its parent to
-  // finish dying.
-  DEBUG_ASSERT(!parent_ || (parent_->GetState() != State::DEAD));
-  {
-    Guard<CriticalMutex> guard{get_lock()};
-    state_ = State::DEAD;
-    exceptionate_.Shutdown();
-    for (DebugExceptionate& debug_exceptionate : debug_exceptionates_) {
-      debug_exceptionate.Shutdown();
+  // Dead transition happens in a loop, since at every step we could be causing a parent to need to
+  // finish its dead transition, and this loop allows us to avoid an unbounded recursion.
+  JobDispatcher* current = this;
+  do {
+    // Make sure we're killing from the bottom of the tree up or else parent
+    // jobs could die before their children.
+    //
+    // In particular, this means we have to finish dying before leaving the job
+    // trees, since the last child leaving the tree can trigger its parent to
+    // finish dying.
+    DEBUG_ASSERT(!current->parent_ || (current->parent_->GetState() != State::DEAD));
+    {
+      Guard<CriticalMutex> guard{current->get_lock()};
+      current->state_ = State::DEAD;
+      current->exceptionate_.Shutdown();
+      for (DebugExceptionate& debug_exceptionate : current->debug_exceptionates_) {
+        debug_exceptionate.Shutdown();
+      }
+      current->UpdateStateLocked(0u, ZX_JOB_TERMINATED);
     }
-    UpdateStateLocked(0u, ZX_JOB_TERMINATED);
-  }
 
-  RemoveFromJobTreesUnlocked();
+    current = current->RemoveFromJobTreesUnlocked() ? &*current->parent_ : nullptr;
+  } while (current);
 }
 
 void JobDispatcher::UpdateSignalsLocked() {
