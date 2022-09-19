@@ -132,7 +132,7 @@ impl<'a> Environment for FshostEnvironment<'a> {
                 let _ = match vol {
                     Ok(vol) => vol,
                     Err(e) => {
-                        log::info!("Failed to mount data partition, reformatting: {}", e);
+                        tracing::info!("Failed to mount data partition, reformatting: {}", e);
                         // TODO(fxbug.dev/102666): We need to ensure the hardware key source is
                         // also wiped.
                         let _ = serving_fs.take();
@@ -158,7 +158,7 @@ impl<'a> Environment for FshostEnvironment<'a> {
                 Filesystem::Serving(match fs.serve().await {
                     Ok(fs) => fs,
                     Err(e) => {
-                        log::info!("Failed to mount data partition, reformatting: {}", e);
+                        tracing::info!("Failed to mount data partition, reformatting: {}", e);
                         fs.format().await?;
                         fs.serve().await?
                     }

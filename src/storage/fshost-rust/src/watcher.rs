@@ -194,7 +194,7 @@ impl Watcher {
 mod tests {
     use {
         super::{PathSource, Watcher},
-        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio,
         futures::StreamExt,
         vfs::{
             directory::{entry::DirectoryEntry, helper::DirectlyMutable},
@@ -203,7 +203,7 @@ mod tests {
         },
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn watcher_populates_device_stream() {
         // Start with a couple of devices
         let block = vfs::mut_pseudo_directory! {

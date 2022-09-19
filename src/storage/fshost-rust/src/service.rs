@@ -37,33 +37,39 @@ pub fn fshost_admin() -> Arc<service::Service> {
                 Ok(fshost::AdminRequest::Mount { responder, .. }) => {
                     responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw())).unwrap_or_else(
                         |e| {
-                            log::error!("failed to send Mount response. error: {:?}", e);
+                            tracing::error!("failed to send Mount response. error: {:?}", e);
                         },
                     );
                 }
                 Ok(fshost::AdminRequest::Unmount { responder, .. }) => {
                     responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw())).unwrap_or_else(
                         |e| {
-                            log::error!("failed to send Unmount response. error: {:?}", e);
+                            tracing::error!("failed to send Unmount response. error: {:?}", e);
                         },
                     );
                 }
                 Ok(fshost::AdminRequest::GetDevicePath { responder, .. }) => {
                     responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw())).unwrap_or_else(
                         |e| {
-                            log::error!("failed to send GetDevicePath response. error: {:?}", e);
+                            tracing::error!(
+                                "failed to send GetDevicePath response. error: {:?}",
+                                e
+                            );
                         },
                     );
                 }
                 Ok(fshost::AdminRequest::WriteDataFile { responder, .. }) => {
                     responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw())).unwrap_or_else(
                         |e| {
-                            log::error!("failed to send WriteDataFile response. error: {:?}", e);
+                            tracing::error!(
+                                "failed to send WriteDataFile response. error: {:?}",
+                                e
+                            );
                         },
                     );
                 }
                 Err(e) => {
-                    log::error!("admin server failed: {:?}", e);
+                    tracing::error!("admin server failed: {:?}", e);
                     return;
                 }
             }
@@ -82,28 +88,28 @@ pub fn fshost_block_watcher(pauser: watcher::Watcher) -> Arc<service::Service> {
                         let res = match pauser.pause().await {
                             Ok(()) => zx::Status::OK.into_raw(),
                             Err(e) => {
-                                log::error!("block watcher service: failed to pause: {:?}", e);
+                                tracing::error!("block watcher service: failed to pause: {:?}", e);
                                 zx::Status::UNAVAILABLE.into_raw()
                             }
                         };
                         responder.send(res).unwrap_or_else(|e| {
-                            log::error!("failed to send Pause response. error: {:?}", e);
+                            tracing::error!("failed to send Pause response. error: {:?}", e);
                         });
                     }
                     Ok(fshost::BlockWatcherRequest::Resume { responder }) => {
                         let res = match pauser.resume().await {
                             Ok(()) => zx::Status::OK.into_raw(),
                             Err(e) => {
-                                log::error!("block watcher service: failed to resume: {:?}", e);
+                                tracing::error!("block watcher service: failed to resume: {:?}", e);
                                 zx::Status::BAD_STATE.into_raw()
                             }
                         };
                         responder.send(res).unwrap_or_else(|e| {
-                            log::error!("failed to send Resume response. error: {:?}", e);
+                            tracing::error!("failed to send Resume response. error: {:?}", e);
                         });
                     }
                     Err(e) => {
-                        log::error!("block watcher server failed: {:?}", e);
+                        tracing::error!("block watcher server failed: {:?}", e);
                         return;
                     }
                 }
@@ -121,7 +127,7 @@ pub fn handle_lifecycle_requests(
         fasync::Task::spawn(async move {
             if let Ok(Some(LifecycleRequest::Stop { .. })) = stream.try_next().await {
                 shutdown.start_send(FshostShutdownResponder::Lifecycle(stream)).unwrap_or_else(
-                    |e| log::error!("failed to send shutdown message. error: {:?}", e),
+                    |e| tracing::error!("failed to send shutdown message. error: {:?}", e),
                 );
             }
         })

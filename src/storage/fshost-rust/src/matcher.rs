@@ -346,7 +346,6 @@ mod tests {
         async_trait::async_trait,
         fidl::encoding::Decodable,
         fidl_fuchsia_hardware_block::{BlockInfo, BlockProxy},
-        fuchsia_async as fasync,
         std::sync::Mutex,
     };
 
@@ -504,7 +503,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_bootpart_matcher() {
         let mut mock_device = MockDevice::new().set_block_flags(BLOCK_FLAG_BOOTPART);
 
@@ -523,7 +522,7 @@ mod tests {
             .expect("match_device failed"));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_nand_matcher() {
         let mut device = MockDevice::new().set_nand(true);
         let mut env = MockEnv::new().expect_attach_driver(NAND_BROKER_DRIVER_PATH);
@@ -540,7 +539,7 @@ mod tests {
             .expect("match_device failed"));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_partition_map_matcher() {
         let mut env = MockEnv::new().expect_attach_driver(GPT_DRIVER_PATH);
 
@@ -571,7 +570,7 @@ mod tests {
         assert!(matchers.match_device(&mut device, &mut env).await.expect("match_device failed"));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_blobfs_matcher() {
         fn fake_blobfs_device() -> MockDevice {
             MockDevice::new()
@@ -620,7 +619,7 @@ mod tests {
             .expect("match_device failed"));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_data_matcher() {
         let mut matchers = Matchers::new(&default_config());
 

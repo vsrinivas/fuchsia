@@ -195,7 +195,7 @@ mod tests {
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_hardware_block::BlockInfo,
         fidl_fuchsia_hardware_block_volume::{VolumeAndNodeMarker, VolumeAndNodeRequest},
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_zircon as zx,
         futures::{pin_mut, select, FutureExt, TryStreamExt},
     };
 
@@ -249,21 +249,21 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn content_format_gpt() {
         let mut data = vec![0; 1024];
         data[512..512 + GPT_MAGIC.len()].copy_from_slice(&GPT_MAGIC);
         assert_eq!(get_content_format(&data).await, ContentFormat::Gpt);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn content_format_fvm() {
         let mut data = vec![0; 1024];
         data[0..0 + FVM_MAGIC.len()].copy_from_slice(&FVM_MAGIC);
         assert_eq!(get_content_format(&data).await, ContentFormat::Fvm);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn content_format_unknown() {
         assert_eq!(get_content_format(&vec![0; 1024]).await, ContentFormat::Unknown);
     }

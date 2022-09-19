@@ -53,7 +53,7 @@ impl<E: Environment> Manager<E> {
 
             let mut device = match BlockDevice::new(device_path).await {
                 Err(e) => {
-                    log::error!("Unable to create device: {}", e);
+                    tracing::error!("Unable to create device: {}", e);
                     continue;
                 }
                 Ok(device) => device,
@@ -62,10 +62,10 @@ impl<E: Environment> Manager<E> {
             match self.matcher.match_device(&mut device, &mut self.environment).await {
                 Ok(true) => {}
                 Ok(false) => {
-                    log::info!("Ignored device: `{}`", device.topological_path());
+                    tracing::info!(path = %device.topological_path(), "Ignored device");
                 }
                 Err(e) => {
-                    log::error!("Failed to match device `{}`: {}", device.topological_path(), e)
+                    tracing::error!(path = %device.topological_path(), "Failed to match device: {}", e);
                 }
             }
         }

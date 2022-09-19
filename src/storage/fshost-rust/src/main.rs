@@ -31,7 +31,7 @@ async fn main() -> Result<()> {
     let config = fshost_config::Config::take_from_startup_handle();
 
     // NB There are tests that look for "fshost started".
-    log::info!("fshost started, {:?}", config);
+    tracing::info!(?config, "fshost started");
 
     let directory_request =
         take_startup_handle(HandleType::DirectoryRequest.into()).ok_or_else(|| {
@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
     let mut fs_manager = manager::Manager::new(shutdown_rx, &config, env);
     let shutdown_responder = fs_manager.device_handler(device_stream).await?;
 
-    log::info!("shutdown signal received");
+    tracing::info!("shutdown signal received");
 
     // Shutting down fshost involves sending asynchronous shutdown signals to several different
     // systems in order. If at any point we hit an error, we log loudly, but continue with the
