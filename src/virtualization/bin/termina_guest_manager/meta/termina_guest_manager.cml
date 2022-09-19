@@ -107,17 +107,5 @@
                 max_size: 50,
             },
         },
-
-        // If the bootstrap container images are available on a local file, the paths can be
-        // provided here. Setting these to an empty string will pull the container from the
-        // internet instead.
-        container_rootfs_path: {
-            type: "string",
-            max_size: 120,
-        },
-        container_metadata_path: {
-            type: "string",
-            max_size: 120,
-        },
     },
 }

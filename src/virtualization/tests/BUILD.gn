@@ -61,7 +61,6 @@ resource("termina_extras_img") {
 group("tests") {
   testonly = true
   deps = [
-    ":termina_container_tests_pkg",
     ":virtualization_block_tests_pkg",
     ":virtualization_core_tests_pkg",
     ":virtualization_gpu_tests_pkg",
@@ -417,8 +416,6 @@ romfs_image("extras") {
     "${linux_exe_path}/virtmagma_vulkan_unit_tests",
     "${linux_exe_path}/virtmagma_conformance_tests",
     "//src/virtualization/tests/testdata/stereo_ramp_48khz_16bit.wav",
-    "//prebuilt/virtualization/packages/termina_guest/container/${target_cpu}/lxd.tar.xz",
-    "//prebuilt/virtualization/packages/termina_guest/container/${target_cpu}/rootfs.tar.xz",
   ]
 
   output = "$target_out_dir/linux/extras.img"
@@ -458,41 +455,6 @@ fuchsia_test_component("virtualization_magma_tests_cmp") {
 fuchsia_test_package("virtualization_magma_tests_pkg") {
   package_name = "virtualization_magama_tests"
   test_components = [ ":virtualization_magma_tests_cmp" ]
-  test_specs = {
-    environments = [ nuc_env ]
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
-executable("termina_container_tests") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  sources = [ "termina_container_tests.cc" ]
-
-  deps = [
-    "lib",
-    "lib:test_main",
-    "//sdk/lib/sys/component/cpp/testing:cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-fuchsia_test_component("termina_container_tests_cmp") {
-  component_name = "termina_container_tests"
-  deps = [
-    ":termina_container_tests",
-    ":test_images",
-  ]
-  manifest = "meta/termina_container_tests.cml"
-}
-
-fuchsia_test_package("termina_container_tests_pkg") {
-  package_name = "termina_container_tests"
-  test_components = [ ":termina_container_tests_cmp" ]
   test_specs = {
     environments = [ nuc_env ]
     log_settings = {

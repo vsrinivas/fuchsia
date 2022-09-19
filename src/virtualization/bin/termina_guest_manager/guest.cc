@@ -357,15 +357,8 @@ void Guest::CreateContainer() {
   vm_tools::tremplin::CreateContainerResponse response;
 
   request.mutable_container_name()->assign(kContainerName);
-
-  if (!structured_config_.container_rootfs_path().empty() &&
-      !structured_config_.container_metadata_path().empty()) {
-    request.mutable_rootfs_path()->assign(structured_config_.container_rootfs_path());
-    request.mutable_metadata_path()->assign(structured_config_.container_metadata_path());
-  } else {
-    request.mutable_image_alias()->assign(kContainerImageAlias);
-    request.mutable_image_server()->assign(kContainerImageServer);
-  }
+  request.mutable_image_alias()->assign(kContainerImageAlias);
+  request.mutable_image_server()->assign(kContainerImageServer);
 
   {
     TRACE_DURATION("termina_guest_manager", "CreateContainerRPC");

@@ -41,12 +41,8 @@ fuchsia_structured_config_values("default_config") {
 
     # 40 GiB.
     stateful_partition_size = 42949672960
-    additional_read_only_mounts = []
     start_container_runtime = true
-
-    # Empty strings here will pull the container from the internet.
-    container_rootfs_path = ""
-    container_metadata_path = ""
+    additional_read_only_mounts = []
   }
 }
 
