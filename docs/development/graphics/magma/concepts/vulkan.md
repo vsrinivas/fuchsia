@@ -53,20 +53,25 @@ above shards, include the following:
 
 A component that uses Vulkan must have these FIDL services routed to it:
 
-* `fuchsia.sysmem.Allocator`
-* `fuchsia.vulkan.loader.Loader`
-* `fuchsia.tracing.provider.Registry`
-* `fuchsia.logger.LogSink`
+- `fuchsia.sysmem.Allocator`
+- `fuchsia.vulkan.loader.Loader`
+- `fuchsia.tracing.provider.Registry`
+- `fuchsia.logger.LogSink`
+- `fuchsia.media.ProfileProvider` - optional, but strongly recommended; this should only be left out
+if there are security concerns about the use of deadline threads in the Vulkan ICD. If not
+specified, the Vulkan ICD will use default thread priorities for internal threads, which may cause
+suboptimal performance.  Not included in `vulkan/client.shard.cml`, so it must be `use`d manually.
 
 Test components can receive these capabilities by being placed into a
 [non-hermetic realm](/docs/development/testing/components/test_component.md#legacy_non-hermetic_tests):
 
-* For `vulkan-test` include the `//src/lib/vulkan/vulkan-test.shard.cml` shard
-* For `system-test` include the `//src/sys/test_manager/system-test.shard.cml` shard
+- For `vulkan-test` include the `//src/lib/vulkan/vulkan-test.shard.cml` shard
+- For `system-test` include the `//src/sys/test_manager/system-test.shard.cml` shard
 
 Test components can use the [vulkan_envs][vulkan_envs]
 [environment][environment] to ensure they're run on all buildbots with Vulkan
 support.
+
 ## Buildtime dependencies
 
 In order for your project to access the Vulkan headers, and to link against the Vulkan loader libvulkan.so, add the following GN dependency:
