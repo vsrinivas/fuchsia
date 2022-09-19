@@ -26,6 +26,10 @@ type WriteSettings struct {
 	// Browsable URL of the source code repo. File paths get appended to this to generate source
 	// links.
 	RepoBaseUrl string
+
+	// The absolute doc path where the docs will be installed on devsite. This is used to
+	// generate the paths in _toc.yaml which must be absolute. It will end in a slash.
+	TocPath string
 }
 
 // Identifies the heading level in Markdown. Level 0 is not a real heading level but is used to
@@ -111,10 +115,18 @@ func extractCommentHeading1(c []clangdoc.CommentInfo) (heading string, rest []cl
 		// Need to recurse into the next level.
 		innerHeading, innerRest := extractCommentHeading1(c[0].Children)
 		heading = innerHeading
-		rest = c
+
+		// Need to make a deep copy because the Children is being modified.
+		rest = make([]clangdoc.CommentInfo, len(c))
+		copy(rest, c)
 		rest[0].Children = innerRest
 	}
 	return
+}
+
+// Trims any leading markdown heading markers ("#") from the string.
+func trimMarkdownHeadings(s string) string {
+	return strings.TrimLeft(strings.TrimLeft(s, "#"), " ")
 }
 
 // writeComment formats the given comments to the output. The heading depth is the number of "#" to

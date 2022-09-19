@@ -18,6 +18,7 @@ cpp_docgen("docgen_e2e_docs") {
   include_dir = ".."
   library_name = "e2e"
   out_dir = generated_doc_dir
+  toc_path = "/docs/e2e_test"
 
   # There is no actual library for these headers so we have nothing here, but the cpp_docgen
   # template asserts that there are deps to catch the common case of the caller forgetting to depend
@@ -31,6 +32,10 @@ golden_files("e2e_test") {
   # Each of the "headers" in the docgen step above generates one .md file, plus the index file. The
   # golden file is in this directory, the generated one is in generated_doc_dir.
   comparisons = [
+    {
+      golden = "_toc.yaml"
+      candidate = "$generated_doc_dir/_toc.yaml"
+    },
     {
       golden = "basics.h.md"
       candidate = "$generated_doc_dir/basics.h.md"

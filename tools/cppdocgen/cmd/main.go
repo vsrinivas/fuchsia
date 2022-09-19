@@ -26,6 +26,7 @@ var flags struct {
 	buildDir    string
 	includeDir  string
 	repoBaseUrl string
+	tocPath     string
 }
 
 func init() {
@@ -41,6 +42,8 @@ func init() {
 		"The directory where #includes are relative to (used for generating titles and #include examples).")
 	flag.StringVar(&flags.repoBaseUrl, "source-url", "",
 		"URL of code repo for paths will be appended to for generating source links.")
+	flag.StringVar(&flags.tocPath, "toc-path", "",
+		"Absolute path on devsite where this code will be hosted, for paths in _toc.yaml.")
 }
 
 func main() {
@@ -66,6 +69,14 @@ func main() {
 		log.Fatal("No include directory (--include-dir) specified")
 	}
 
+	tocPath := flags.tocPath
+	if len(tocPath) == 0 {
+		log.Fatal("No --toc-path specified")
+	}
+	if !strings.HasSuffix(tocPath, "/") {
+		tocPath += "/"
+	}
+
 	buildRelSourceRoot, err := filepath.Rel(flags.buildDir, flags.sourceRoot)
 	if err != nil {
 		log.Fatal("Can't rebase source root: %s", err)
@@ -79,6 +90,7 @@ func main() {
 		BuildRelSourceRoot: buildRelSourceRoot,
 		BuildRelIncludeDir: buildRelIncludeDir,
 		RepoBaseUrl:        flags.repoBaseUrl,
+		TocPath:            tocPath,
 	}
 
 	// All other args are the list of headers we want to index.
@@ -149,6 +161,8 @@ func main() {
 	index := docgen.MakeIndex(indexSettings, root)
 	indexFile := addFile("index.md")
 	docgen.WriteIndex(writeSettings, &index, indexFile)
+	tocFile := addFile("_toc.yaml")
+	docgen.WriteToc(writeSettings, &index, tocFile)
 
 	// Header references.
 	for _, h := range index.Headers {

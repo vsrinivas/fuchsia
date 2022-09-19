@@ -50,11 +50,18 @@ func (h *Header) ReferenceFileName() string {
 	return HeaderReferenceFile(h.Name)
 }
 
+// Returns the custom title, if any, that is set on the header. Will return null if there is no
+// custom title. It will not have any leading markdown markers ("#").
+func (h *Header) CustomTitle() string {
+	title, _ := extractCommentHeading1(h.Description)
+	return trimMarkdownHeadings(title)
+}
+
 func WriteHeaderReference(settings WriteSettings, index *Index, h *Header, f io.Writer) {
 	// When the header docstring starts with a markdown "heading 1", use that as the title,
 	// otherwise generate our own.
 	headerTitle, headerComment := extractCommentHeading1(h.Description)
-	if len(headerTitle) == 0 {
+	if headerTitle == "" {
 		// Default heading.
 		fmt.Fprintf(f, "# \\<%s\\> in %s\n\n", settings.GetUserIncludePath(h.Name), settings.LibName)
 	} else {

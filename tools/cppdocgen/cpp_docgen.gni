@@ -22,6 +22,11 @@ import("//tools/cppdocgen/clang_doc.gni")
 #       library-specific location like an "include" subdirectory. This location is interpreted as
 #       relative to the current directory (like the built-in include_dirs variable).
 #
+#   toc_path [string] (required)
+#       The absolute path to where the output will be hosted on devsite. This is used for generating
+#       the paths in _toc.yaml which must be absolute. This will be something like
+#       "/docs/reference/libs/mylib"
+#
 #   deps, visibility
 #       Normal meaning.
 #
@@ -40,6 +45,7 @@ import("//tools/cppdocgen/clang_doc.gni")
 
 template("cpp_docgen") {
   assert(defined(invoker.headers), "'headers' must be defined for cpp_docgen")
+  assert(defined(invoker.toc_path), "'toc_path' must be defined for cpp_docgen")
   assert(defined(invoker.library_name),
          "'library_name' must be defined for cpp_docgen")
   clang_doc_zip = "$target_gen_dir/${target_name}_clang_doc.zip"
@@ -83,6 +89,8 @@ template("cpp_docgen") {
       rebase_path(include_base, root_build_dir),
       "--source-url",
       "https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/",
+      "--toc-path",
+      invoker.toc_path,
     ]
 
     if (defined(invoker.out_zip)) {
@@ -94,11 +102,14 @@ template("cpp_docgen") {
       ]
     } else if (defined(invoker.out_dir)) {
       # Expect .md files in the output directory with the names of each header ("header.h.md"),
-      # plus the "index.md" file.
+      # plus the "index.md" and "_toc.yaml" files.
       outputs = process_file_template(
               invoker.headers,
               [ "${invoker.out_dir}/{{source_file_part}}.md" ])
-      outputs += [ "${invoker.out_dir}/index.md" ]
+      outputs += [
+        "${invoker.out_dir}/index.md",
+        "${invoker.out_dir}/_toc.yaml",
+      ]
       args += [
         "--out-dir",
         rebase_path(invoker.out_dir, root_build_dir),

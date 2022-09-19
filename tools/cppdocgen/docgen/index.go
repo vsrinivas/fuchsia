@@ -10,7 +10,6 @@ import (
 	"log"
 	"path"
 	"sort"
-	"strings"
 )
 
 type IndexSettings struct {
@@ -242,9 +241,7 @@ func (h *Header) groupFunctions(f []*clangdoc.FunctionInfo) []*FunctionGroup {
 		g.Funcs = make([]*clangdoc.FunctionInfo, 1)
 		g.Funcs[0] = firstFunc
 		headingLine, _ := extractCommentHeading1(firstFunc.Description)
-
-		// Trim the heading marker.
-		g.ExplicitTitle = strings.TrimLeft(strings.TrimLeft(headingLine, "#"), " ")
+		g.ExplicitTitle = trimMarkdownHeadings(headingLine)
 
 		groups = append(groups, g)
 		return g
@@ -288,9 +285,7 @@ func (h *Header) groupDefines(allDefines []*Define) []*DefineGroup {
 		g.Defines = make([]*Define, 1)
 		g.Defines[0] = firstDefine
 		headingLine, _ := extractCommentHeading1(firstDefine.Description)
-
-		// Trim the heading marker.
-		g.ExplicitTitle = strings.TrimLeft(strings.TrimLeft(headingLine, "#"), " ")
+		g.ExplicitTitle = trimMarkdownHeadings(headingLine)
 
 		groups = append(groups, g)
 		return g

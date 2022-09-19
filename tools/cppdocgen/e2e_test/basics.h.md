@@ -52,6 +52,7 @@ Here is a regular enum with everything implicit.
 };
 </pre>
 
+### A very complex enum.
 
 This is a C++ enum class with an explicit type and explicit values. It also has an explicit
 title for the docstring.
