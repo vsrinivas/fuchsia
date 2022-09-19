@@ -40,6 +40,7 @@ guest_packages = [
   "//src/virtualization/packages",
   "//src/storage/memfs:memfs_component_only",
   ":large_file_memfs_config",
+  "//src/ui/wayland/bin/bridge",
 ]
 
 linux_tests_label = "//src/virtualization/packages/debian_guest:tests"
