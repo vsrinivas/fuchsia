@@ -19,9 +19,8 @@ Over two thirds of components have been migrated (`.cmx` to `.cml`).
 
 Presently there are two revisions of the component framework, the legacy
 architecture (also called *appmgr* after its main program, or sometimes
-[Components v1][glossary.components-v1]) and the modern architecture (also
-called *Component Framework*, or sometimes
-[Components v2][glossary.components-v2]).
+Components v1 and the modern architecture (also called *Component Framework*,
+or sometimes [Components v2][glossary.components-v2]).
 
 The legacy framework is largely comprised of:
 
@@ -29,8 +28,7 @@ The legacy framework is largely comprised of:
     legacy components. `appmgr` is the root of the legacy components tree, and
     provides some foundational services such as the legacy component ELF runner
     and Loader service.
-*   [`sysmgr`][glossary.sysmgr], a component that manages the `sys` realm.
-    `sysmgr` is launched by `appmgr`.
+*   `sysmgr`, a component that manages the `sys` realm. `sysmgr` is launched by `appmgr`.
 *   The `.cmx` file format for legacy component manifests.
 *   The [`fuchsia.sys.*`][fuchsia-sys] FIDL library.
 *   The [TestWithEnvironment][sdk-test-with-environment] testing library.
@@ -186,7 +184,6 @@ Reach out for questions or for status updates:
 *   <component-framework-dev@fuchsia.dev>
 
 [appmgr]: /src/sys/appmgr
-[glossary.components-v1]: /docs/glossary/README.md#components-v1
 [glossary.components-v2]: /docs/glossary/README.md#components-v2
 [cmc]: /tools/cmc/
 [cml]: /docs/concepts/components/v2/component_manifests.md
@@ -207,5 +204,4 @@ Reach out for questions or for status updates:
 [sdk-test-with-environment]: /sdk/lib/sys/cpp/testing/test_with_environment.h
 [sfw]: /docs/concepts/session/introduction.md
 [glossary.session]: /docs/glossary/README.md#session
-[glossary.sysmgr]: /docs/glossary/README.md#sysmgr
 [unit-tests-generated]: /docs/development/components/build.md#unit-tests

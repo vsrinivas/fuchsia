@@ -125,7 +125,7 @@ find the appropriate block devices and start the [minfs][minfs] and
 
 #### appmgr
 
-[Appmgr][glossary.appmgr] runs the legacy component framework. Appmgr is [stored
+Appmgr runs the legacy component framework. Appmgr is [stored
 in a package][appmgr-pkg], unlike fshost and driver manager, which are stored in
 bootfs, so component manager uses the `/pkgfs` handle from fshost to load
 appmgr.
@@ -171,7 +171,6 @@ appmgr.
 [glossary.driver manager]: /docs/glossary#README.md#driver-manager
 [glossary.driver host]: /docs/glossary#README.md#driver-host
 [glossary.fvm]: /docs/glossary#README.md#fuchsia-volume-manager
-[glossary.appmgr]: /docs/glossary#README.md#appmgr
 [glossary.realm]: /docs/glossary#README.md#realm
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [appmgr-exposes]: https://fuchsia.googlesource.com/fuchsia/+/7cf46e0c7a8e5e4c78dba846f867ab96bcce5c5b/src/sys/appmgr/meta/appmgr.cml#168

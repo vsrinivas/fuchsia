@@ -25,27 +25,14 @@ See [Go: Overview][go-dev] for more information about building Go within Fuchsia
 Ensure that your component has the required capabilities to log by including the
 following in your component manifest:
 
-   * {.cmx}
-
-   ```json
-   {
-     "include": [
-       "syslog/client.shard.cmx"
-     ],
-     ...
-   }
-   ```
-
-   * {.cml}
-
-   ```json5
-   {
-     include: [
-       "syslog/client.shard.cml"
-     ],
-     ...
-   }
-   ```
+```json5
+{
+  include: [
+    "syslog/client.shard.cml"
+  ],
+  ...
+}
+```
 
 The syslog library will fallback to `stderr` if the `LogSink` connection fails.
 

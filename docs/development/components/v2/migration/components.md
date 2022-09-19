@@ -137,7 +137,7 @@ corresponding service `protocol`.
 
 ### Exposing available services {#available-services}
 
-In [Components v1][glossary.components-v1], you typically declare information
+In Components v1, you typically declare information
 about services exposed by a component in a
 [sysmgr configuration file][sysmgr-config]. These files are referenced by
 `config_data` targets in the build, and specify mappings of services to
@@ -717,7 +717,6 @@ correctly, try following the advice in
 [ffx-plugins]: /docs/development/tools/ffx/development/plugins.md
 [fx-scrutiny]: https://fuchsia.dev/reference/tools/fx/cmd/scrutiny
 [glossary.component-manifest]: /docs/glossary/README.md#component-manifest
-[glossary.components-v1]: /docs/glossary/README.md#components-v1
 [glossary.environment]: /docs/glossary/README.md#environment
 [glossary.runner]: /docs/glossary/README.md#runner
 [example-fonts]: https://fuchsia.googlesource.com/fuchsia/+/cd29e692c5bfdb0979161e52572f847069e10e2f/src/fonts/meta/fonts.cmx

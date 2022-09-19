@@ -117,7 +117,7 @@ Provide a full [Fuchsia component URL][component-uri] to specify a test
 component. For example:
 
 ```none
-fx test fuchsia-pkg://fuchsia.com/my_example_test_pkg#meta/my_example_test.cmx
+fx test fuchsia-pkg://fuchsia.com/my_example_test_pkg#meta/my_example_test.cm
 ```
 
 Provide a partial package URL to match and run all test components in the

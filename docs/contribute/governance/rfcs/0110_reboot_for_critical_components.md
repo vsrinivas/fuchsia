@@ -16,7 +16,7 @@ manifest's child declaration, which provides parity to sysmgr's
 
 ## Motivation
 
-In [Components v1][glossary-components-v1], sysmgr supports a
+In Components v1, sysmgr supports a
 feature called `critical_components` which lets
 system service components mark themselves as "critical". This means that, if the
 component terminates for any reason (including normal exit), sysmgr will trigger
@@ -496,5 +496,4 @@ revisions for the events API.
 [gerrit-rfc-starter]: https://fuchsia-review.googlesource.com/c/fuchsia/+/533701
 [gerrit-system-critical-prototype]: https://fuchsia-review.googlesource.com/c/fuchsia/+/539915
 [git-unstable-features]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cmc/build/unstable_features/
-[glossary-components-v1]: /docs/glossary/README.md#components-v1
 [rfc-41]: /docs/contribute/governance/rfcs/0041_unifying_services_devices.md

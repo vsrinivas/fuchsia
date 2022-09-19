@@ -175,7 +175,7 @@ You can use the `component select` command to
 * search for components that expose a service.
 
 For example, the following command will display all services offered by
-[legacy components](/docs/glossary/README.md#components-v1):
+legacy components:
 
 ```none
 $ fx ffx component select moniker 'core/appmgr:out:*'

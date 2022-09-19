@@ -41,16 +41,6 @@
   related_guides: [""]
   area: ["Session", "Component Framework"]
 
-- term: "Appmgr"
-  short_description: "Launches v1 components and manages the namespaces in which those components run."
-  full_description: "The Application Manager (AppMgr) is responsible for launching
-  <a href=\"/docs/glossary#components-v1\">v1 components</a> and managing the namespaces in
-  which those components run. It is run by <a href=\"/docs/glossary#component-manager\">component manager</a>
-  as a <a href=\"/docs/glossary#components-v2\">v2 component</a>."
-  see_also: [""]
-  related_guides: [""]
-  area: ["Component Framework"]
-
 - term: "Banjo"
   short_description: "Language for definition protocols that communicate between drivers."
   full_description: "Banjo is a language for defining protocols that are used to communicate between
@@ -287,14 +277,12 @@
 
 - term: "Component manifest source"
   short_description: "A JSON5 file ending with a <code>.cml</code> extension
-  that describes a component and its capabilities. For legacy components,
-  this is a <code>.cmx</code> file."
+  that describes a component and its capabilities."
   full_description: "In <a href=\"/docs/glossary#components-v2\">components v2</a>,
   a component manifest is a file with a <code>.cml</code> extension, that encodes
   a <a href=\"/docs/glossary#component-declaration\">component declaration</a>.
 
-  <p>For <a href=\"/docs/glossary#components-v1\">legacy components</a>, this is
-  a JSON file with a <code>.cmx</code> extension that contains information about
+  <p>It is a JSON file that contains information about
   a <a href=\"/docs/glossary#component\">component</a>’s runtime configuration,
   services and directories it receives in its <a href=\"/docs/glossary#namespace\">namespace</a>,
   and <a href=\"/docs/glossary#component-manifest-facet\">facets</a>.</p>"
@@ -342,19 +330,6 @@
   related_guides: [""]
   area: ["Component Framework"]
 
-- term: "Components v1"
-  short_description: "The legacy component architecture of Fuchsia."
-  full_description: "A shorthand for the legacy
-  <a href=\"/docs/glossary#component\">component</a> architecture.
-  Includes a runtime as implemented by <a href=\"/docs/glossary#appmgr\">appmgr</a>
-  and <a href=\"/docs/glossary#sysmgr\">sysmgr</a>, protocols and types as defined in
-  <a href=\"/sdk/fidl/fuchsia.sys/\">fuchsia-sys</a>, build-time tools such as
-  <a href=\"/tools/cmc\">cmc</a>, and IDK libraries such as
-  <a href=\"/sdk/lib/sys\">libsys</a> and <a href=\"/sdk/lib/svc\">libsvc</a>."
-  see_also: ["<a href=\"/docs/glossary#components-v2\">Components v2</a>"]
-  related_guides: [""]
-  area: ["Component Framework"]
-
 - term: "Components v2"
   short_description: "The modern component architecture of Fuchsia."
   full_description: "A shorthand for the
@@ -363,7 +338,7 @@
   <a href=\"/docs/glossary#component-manager\">component_manager</a>, protocols
   and types as defined in <a href=\"/sdk/fidl/fuchsia.sys2/\">fuchsia.sys2</a>,
   and build-time tools such as <a href=\"/docs/reference/tools/sdk/cmc\">cmc</a>."
-  see_also: ["<a href=\"/docs/glossary#components-v1\">Components v1</a>"]
+  see_also: [""]
   related_guides: [""]
   area: ["Component Framework"]
 
@@ -716,9 +691,9 @@
   short_description: "A scheme that refers to a repository, a package, or a package resource."
   full_description: "A scheme that refers to a repository, a package, or a package resource. The
   syntax is <code>fuchsia-pkg://<repo-hostname>[/<pkg-name>][#<path>]</code>]`. For example, for
-  the component <code>echo_client_dart.cmx</code> published under the package <code>echo_dart</code>'s
+  the component <code>echo_client_dart.cm</code> published under the package <code>echo_dart</code>'s
   <code>meta</code> directory, from the <code>fuchsia.com</code> repository, its URL is
-  <code>fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cmx</code>."
+  <code>fuchsia-pkg://fuchsia.com/echo_dart#meta/echo_client_dart.cm</code>."
   see_also: ["<a href=\"/docs/concepts/packages/package_url.md\">Fuchsia package URLs</a>"]
   related_guides: [""]
   area: ["Component Framework", "System"]
@@ -1190,12 +1165,9 @@ href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
 - term: "Protocol"
   short_description: "In <a href=\"/docs/glossary#fidl\">FIDL</a>, a protocol groups methods
   and events to describe how one process interacts with another."
-  full_description: "<p>In <a href=\"/docs/glossary#components-v1\">components v1</a>, a component may access a protocol (called a
-  service in v1) from its <a href=\"/docs/glossary#environment\">environment</a> through its
-  <a href=\"/docs/glossary#namespace\">namespace</a>by naming the protocol in its services
-  allowlist.</p>
-  <p>In <a href=\"/docs/glossary#components-v2\">components v2</a>, a protocol is used and routed to other
-  components as a <a href=\"/docs/glossary#protocol-capability\">protocol capability</a>.</p>"
+  full_description: "In <a href=\"/docs/glossary#components-v2\">components v2</a>, a protocol
+  is used and routed to other components as a
+  <a href=\"/docs/glossary#protocol-capability\">protocol capability</a>."
   see_also: ["<a href=\"/docs/glossary#protocol-capability\">Protocol capability</a>"]
   related_guides: ["<a href=\"/docs/concepts/fidl/protocols.md\">FIDL protocols</a>"]
   area: ["Component Framework", "FIDL"]
@@ -1216,10 +1188,9 @@ href=\"docs/contribute/governance/rfcs/0100_product_metadata\">RFC-0100</a>."
   area: ["Component Framework"]
 
 - term: "Realm"
-  short_description: "In <a href=\"/docs/glossary#components-v1\">Components v1</a>, realm
-  is synonymous to <a href=\"/docs/glossary#environment\">environment</a>. In
-  <a href=\"/docs/glossary#components-v2\">Components v2</a>, a realm is a subtree of
-  component instances in the <a href=\"/docs/glossary#component-instance-tree\">component instance tree</a>.
+  short_description: "In <a href=\"/docs/glossary#components-v2\">Components v2</a>, a realm is a
+  subtree of component instances in the
+  <a href=\"/docs/glossary#component-instance-tree\">component instance tree</a>.
   It acts as a container for component instances and capabilities in the subtree."
   full_description: ""
   see_also: ["<a href=\"/docs/concepts/components/v2/realms.md\">Realms</a>"]

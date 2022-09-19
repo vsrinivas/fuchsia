@@ -44,22 +44,22 @@ driver and `driver_manager` logs.
 The timestamp is from the monotonic clock by default, and it is formatted with microsecond
 granularity.
 
-If the message "something happened" is written at WARN level by my-component.cmx from process=1902
+If the message "something happened" is written at WARN level by my-component from process=1902
 and thread=1904 at time=278.14, the default output would be:
 
 ```
-[278.14][1902][1904][my-component.cmx] WARN: something happened
+[278.14][1902][1904][my-component] WARN: something happened
 ```
 
 [`log_listener`] has `--hide_metadata` and `--pretty` flags that reduces the printed metadata,
 and color codes log lines by severity, respectively. With these flags, some metadata is hidden
 (PID, TID, etc.) while others are trimmed down (timestamp, severity).
 
-For example, if the message "something happened" is printed at WARN level by my-component.cmx at
+For example, if the message "something happened" is printed at WARN level by my-component at
 time=278.14, the pretty output will look like:
 
 ```
-[278.14][my-component.cmx][W] something happened
+[278.14][my-component][W] something happened
 ```
 
 With a running device available, run `ffx log --help` to see the options for modifying the output format.
@@ -114,10 +114,10 @@ ffx emu start --console | fx symbolize
 ```
 
 For example, if the message "something happened" is printed to klog at WARN level by
-my-component.cmx at time=278.14, the pretty output will look like:
+my-component at time=278.14, the pretty output will look like:
 
 ```
-[278.14][my-component.cmx][W] something happened
+[278.14][my-component][W] something happened
 ```
 
 For example, if the message "something happened" is printed to klog by an unknown component with

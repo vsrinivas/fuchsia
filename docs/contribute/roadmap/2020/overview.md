@@ -40,7 +40,7 @@ improve network performance.
 ## Components v2
 
 [Components v2](/docs/glossary/README.md#components-v2) is Fuchsia's component
-architecture that replaces [Components v1](/docs/glossary/README.md#components-v1).
+architecture that replaces Components v1.
 
 The following projects are currently underway:
 
@@ -57,8 +57,7 @@ following areas:
     the package cache and package resolver.
 -   The Netstack2 components, including migration of Netemul and associated
     tests to Test Runner Framework.
--   A subset of components under `[sysmgr](/docs/glossary/README.md#sysmgr)` that are
-    straightforward to migrate.
+-   A subset of components under `sysmgr` that are straightforward to migrate.
 
 For more information, see
 [Components v2 migration](/docs/contribute/open_projects/components/migration.md).
