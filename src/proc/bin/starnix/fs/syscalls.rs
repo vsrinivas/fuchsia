@@ -1609,12 +1609,14 @@ pub fn sys_flock(current_task: &CurrentTask, fd: FdNumber, operation: u32) -> Re
     file.name.entry.node.flock(current_task, &file, operation)
 }
 
-pub fn sys_fsync(current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Errno> {
+pub fn sys_fsync(current_task: &CurrentTask, fd: FdNumber) -> Result<(), Errno> {
+    let _file = current_task.files.get(fd)?;
     not_implemented!(current_task, "fsync");
     Ok(())
 }
 
-pub fn sys_fdatasync(current_task: &CurrentTask, _fd: FdNumber) -> Result<(), Errno> {
+pub fn sys_fdatasync(current_task: &CurrentTask, fd: FdNumber) -> Result<(), Errno> {
+    let _file = current_task.files.get(fd)?;
     not_implemented!(current_task, "fdatasync");
     Ok(())
 }
@@ -1626,6 +1628,7 @@ pub fn sys_fallocate(
     offset: off_t,
     len: off_t,
 ) -> Result<(), Errno> {
+    let _file = current_task.files.get(fd)?;
     not_implemented!(current_task, "fallocate({}, {}, {}, {})", fd, mode, offset, len);
     Ok(())
 }
