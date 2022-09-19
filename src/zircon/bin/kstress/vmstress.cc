@@ -1508,9 +1508,28 @@ int VmStressTest::test_thread() {
 
   zx::time deadline = zx::clock::get_monotonic();
   auto rng = RngGen();
+  size_t iter = 0;
+  size_t max_threads = 0;
   while (!shutdown_.load()) {
+    iter++;
+    // Log the number of threads every so often. Serves as a hint for whether we are leaking
+    // threads. Does not need to be precise.
+    if (iter % 1000 == 0) {
+      size_t num_threads;
+      if (zx::process::self()->get_info(ZX_INFO_PROCESS_THREADS, nullptr, 0, nullptr,
+                                        &num_threads) == ZX_OK) {
+        max_threads = std::max(max_threads, num_threads);
+        PrintfAlways("Number of threads: %lu (peak %lu)\n", num_threads, max_threads);
+      }
+    }
+
     uint64_t r = uniform_rand(kVariableInstances, rng);
     if (test_instances[r]) {
+      size_t num_threads;
+      if (zx::process::self()->get_info(ZX_INFO_PROCESS_THREADS, nullptr, 0, nullptr,
+                                        &num_threads) == ZX_OK) {
+        max_threads = std::max(max_threads, num_threads);
+      }
       test_instances[r]->Stop();
       test_instances[r].reset();
     } else {
