@@ -45,7 +45,6 @@ rustc_test("factory_reset_handler_test") {
 
   sources = [
     "src/lib.rs",
-    "src/main.rs",
     "src/mocks/factory_reset_mock.rs",
     "src/mocks/mod.rs",
     "src/mocks/pointer_injector_mock.rs",
