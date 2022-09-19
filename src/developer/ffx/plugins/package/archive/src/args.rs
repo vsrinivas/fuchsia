@@ -4,27 +4,12 @@
 
 use argh::FromArgs;
 use ffx_core::ffx_command;
-use std::path::PathBuf;
+use ffx_package_archive_sub_command::SubCommand;
 
 #[ffx_command()]
 #[derive(FromArgs, PartialEq, Debug)]
-#[argh(
-    subcommand,
-    name = "archive",
-    description = "archive a package_manifest.json into package archive"
-)]
+#[argh(subcommand, name = "archive", description = "Archive Fuchsia packages")]
 pub struct ArchiveCommand {
-    #[argh(positional, description = "package_manifest.json to archive")]
-    pub package_manifest: PathBuf,
-
-    #[argh(option, description = "output package archive", short = 'o')]
-    pub output: PathBuf,
-
-    #[argh(
-        option,
-        description = "root directory for paths in package_manifest.json",
-        default = "PathBuf::from(\".\")",
-        short = 'r'
-    )]
-    pub root_dir: PathBuf,
+    #[argh(subcommand)]
+    pub subcommand: SubCommand,
 }

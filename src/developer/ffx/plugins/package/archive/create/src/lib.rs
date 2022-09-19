@@ -4,12 +4,12 @@
 
 use anyhow::{Context, Result};
 use ffx_core::ffx_plugin;
-pub use ffx_package_archive_args::ArchiveCommand;
+pub use ffx_package_archive_create_args::CreateCommand;
 use fuchsia_pkg::PackageManifest;
 use std::fs::{create_dir_all, File};
 
 #[ffx_plugin("ffx_package")]
-pub async fn cmd_archive(cmd: ArchiveCommand) -> Result<()> {
+pub async fn cmd_create(cmd: CreateCommand) -> Result<()> {
     let package_manifest = PackageManifest::try_load_from(&cmd.package_manifest)?;
     let output_dir = cmd.output.parent().expect("output path needs to have a parent").to_path_buf();
     create_dir_all(&output_dir)
@@ -70,12 +70,12 @@ mod test {
         fs::create_dir_all(&result_dir).unwrap();
         let result_far = result_dir.join("test_package.far");
 
-        let cmd = ArchiveCommand {
+        let cmd = CreateCommand {
             package_manifest: package_manifest_path,
             output: result_far.clone(),
             root_dir: result_dir.clone(),
         };
-        cmd_archive(cmd).await.unwrap();
+        cmd_create(cmd).await.unwrap();
         assert!(result_far.exists());
         let archive = File::open(&result_far).unwrap();
         let mut package_archive = fuchsia_archive::Utf8Reader::new(&archive).unwrap();
