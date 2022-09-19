@@ -103,6 +103,7 @@ rustc_library("input_pipeline") {
     "src/gestures/tests/motion.rs",
     "src/gestures/tests/primary_tap.rs",
     "src/gestures/tests/scroll.rs",
+    "src/gestures/tests/secondary_tap.rs",
     "src/gestures/tests/utils.rs",
     "src/ime_handler.rs",
     "src/immersive_mode_shortcut_handler.rs",

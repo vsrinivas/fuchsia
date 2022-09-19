@@ -6,4 +6,5 @@ mod click;
 mod motion;
 mod primary_tap;
 mod scroll;
+mod secondary_tap;
 mod utils;
