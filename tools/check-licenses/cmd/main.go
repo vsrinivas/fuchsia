@@ -8,12 +8,9 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"runtime/pprof"
-	"runtime/trace"
 	"strings"
 	"time"
 )
@@ -39,10 +36,6 @@ var (
 	outDir     = flag.String("out_dir", "/tmp/check-licenses", "Directory to write outputs to.")
 
 	gnPath = flag.String("gn_path", "{FUCHSIA_DIR}/prebuilt/third_party/gn/linux-x64/gn", "Path to GN executable. Required when target is specified.")
-
-	logLevel  = flag.Int("log_level", 2, "Log level. Set to 0 for no logs, 1 to log to a file, 2 to log to stdout.")
-	pproffile = flag.String("pprof", "", "generate file that can be parsed by go tool pprof")
-	tracefile = flag.String("trace", "", "generate file that can be parsed by go tool trace")
 
 	outputLicenseFile = flag.Bool("output_license_file", true, "Flag for enabling template expansions.")
 )
@@ -175,30 +168,6 @@ func mainImpl() error {
 	Config.Result.OutputLicenseFile = *outputLicenseFile
 	Config.World.Filters = strings.Split(*filter, ",")
 
-	// Tracing
-	if *tracefile != "" {
-		f, err := os.Create(*tracefile)
-		if err != nil {
-			return fmt.Errorf("failed to create trace output file: %s", err)
-		}
-		defer f.Close()
-		if err := trace.Start(f); err != nil {
-			return fmt.Errorf("failed to start trace: %s", err)
-		}
-		defer trace.Stop()
-	}
-	if *pproffile != "" {
-		f, err := os.Create(*pproffile)
-		if err != nil {
-			return fmt.Errorf("failed to create pprof output file: %s", err)
-		}
-		defer f.Close()
-		if err := pprof.StartCPUProfile(f); err != nil {
-			return fmt.Errorf("failed to start pprof: %s", err)
-		}
-		defer pprof.StopCPUProfile()
-	}
-
 	if err := os.Chdir(*fuchsiaDir); err != nil {
 		return err
 	}
@@ -220,44 +189,6 @@ func isPath(target string) bool {
 		return false
 	}
 	return true
-}
-
-// Log == 0: discard all output
-// Log == 1: save logs to the outDir folder
-// Log == 2: save logs to the outDir folder AND print to stdout
-func getLogWriters(logLevel int, outDir string) (io.Writer, error) {
-	logTargets := []io.Writer{}
-	if logLevel == 0 {
-		// Default: logLevel == 0
-		// Discard all non-error logs.
-		logTargets = append(logTargets, io.Discard)
-	} else {
-		if logLevel == 1 && outDir != "" {
-			// logLevel == 1
-			// Write all logs to a log file.
-			if _, err := os.Stat(outDir); os.IsNotExist(err) {
-				err := os.Mkdir(outDir, 0755)
-				if err != nil {
-					return nil, fmt.Errorf("Failed to create out directory [%v]: %v\n", outDir, err)
-				}
-			}
-			logfilePath := filepath.Join(outDir, "logs")
-			f, err := os.OpenFile(logfilePath, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-			if err != nil {
-				return nil, fmt.Errorf("Failed to create log file [%v]: %v\n", logfilePath, err)
-			}
-			defer f.Close()
-			logTargets = append(logTargets, f)
-		}
-		if logLevel == 2 {
-			// logLevel == 2
-			// Write all logs to a log file and stdout.
-			logTargets = append(logTargets, os.Stdout)
-		}
-	}
-	w := io.MultiWriter(logTargets...)
-
-	return w, nil
 }
 
 func main() {
