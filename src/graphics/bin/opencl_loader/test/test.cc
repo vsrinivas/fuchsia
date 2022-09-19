@@ -156,12 +156,13 @@ TEST(OpenclLoader, DebugFilesystems) {
   EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.sys2.RealmQuery",
                                         query.NewRequest().TakeChannel().release()));
 
-  fuchsia::sys2::RealmQuery_GetInstanceInfo_Result result;
-  EXPECT_EQ(ZX_OK, query->GetInstanceInfo("./opencl_loader", &result));
+  fuchsia::sys2::RealmQuery_GetInstanceDirectories_Result result;
+  EXPECT_EQ(ZX_OK, query->GetInstanceDirectories("./opencl_loader", &result));
 
   fdio_ns_t* ns;
   fdio_ns_get_installed(&ns);
-  fdio_ns_bind(ns, "/loader_out", result.response().resolved->started->out_dir.channel().get());
+  fdio_ns_bind(ns, "/loader_out",
+               result.response().resolved_dirs->execution_dirs->out_dir.channel().get());
   auto cleanup_binding = fit::defer([&]() { fdio_ns_unbind(ns, "/loader_out"); });
 
   const std::string debug_path("/loader_out/debug/");

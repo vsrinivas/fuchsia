@@ -11,8 +11,8 @@ use {
 async fn get_job_koid(moniker: &str, realm_query: &fsys::RealmQueryProxy) -> u64 {
     let (_, resolved) = realm_query.get_instance_info(moniker).await.unwrap().unwrap();
     let resolved = resolved.unwrap();
-    let started = resolved.started.unwrap();
-    let runtime_dir = started.runtime_dir.unwrap();
+    let execution = resolved.execution.unwrap();
+    let runtime_dir = execution.runtime_dir.unwrap();
     let runtime_dir = runtime_dir.into_proxy().unwrap();
     let file_proxy = fuchsia_fs::open_file(
         &runtime_dir,

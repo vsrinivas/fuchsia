@@ -23,7 +23,7 @@ async fn static_child() {
     let (info, state) = realm_query.get_instance_info("./echo_server").await.unwrap().unwrap();
     assert_eq!(info.state, fsys::InstanceState::Resolved);
     let state = state.unwrap();
-    assert!(state.started.is_none());
+    assert!(state.execution.is_none());
 
     lifecycle_controller.start("./echo_server").await.unwrap().unwrap();
 
@@ -31,7 +31,7 @@ async fn static_child() {
     let (info, state) = realm_query.get_instance_info("./echo_server").await.unwrap().unwrap();
     assert_eq!(info.state, fsys::InstanceState::Started);
     let state = state.unwrap();
-    state.started.unwrap();
+    state.execution.unwrap();
 
     lifecycle_controller.stop("./echo_server", false).await.unwrap().unwrap();
 
@@ -39,7 +39,7 @@ async fn static_child() {
     let (info, state) = realm_query.get_instance_info("./echo_server").await.unwrap().unwrap();
     assert_eq!(info.state, fsys::InstanceState::Resolved);
     let state = state.unwrap();
-    assert!(state.started.is_none());
+    assert!(state.execution.is_none());
 }
 
 #[fuchsia::test]
@@ -81,7 +81,7 @@ async fn dynamic_child() {
         realm_query.get_instance_info("./servers:dynamic_echo_server").await.unwrap().unwrap();
     assert_eq!(info.state, fsys::InstanceState::Resolved);
     let state = state.unwrap();
-    assert!(state.started.is_none());
+    assert!(state.execution.is_none());
 
     lifecycle_controller.start("./servers:dynamic_echo_server").await.unwrap().unwrap();
 
@@ -90,7 +90,7 @@ async fn dynamic_child() {
         realm_query.get_instance_info("./servers:dynamic_echo_server").await.unwrap().unwrap();
     assert_eq!(info.state, fsys::InstanceState::Started);
     let state = state.unwrap();
-    state.started.unwrap();
+    state.execution.unwrap();
 
     lifecycle_controller.stop("./servers:dynamic_echo_server", false).await.unwrap().unwrap();
 
@@ -99,7 +99,7 @@ async fn dynamic_child() {
         realm_query.get_instance_info("./servers:dynamic_echo_server").await.unwrap().unwrap();
     assert_eq!(info.state, fsys::InstanceState::Resolved);
     let state = state.unwrap();
-    assert!(state.started.is_none());
+    assert!(state.execution.is_none());
 
     lifecycle_controller
         .destroy_child(
