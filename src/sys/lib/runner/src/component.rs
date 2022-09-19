@@ -21,11 +21,11 @@ use {
     },
     lazy_static::lazy_static,
     library_loader,
-    log::*,
     std::convert::{TryFrom, TryInto},
     std::path::Path,
     std::path::PathBuf,
     thiserror::Error,
+    tracing::*,
 };
 
 lazy_static! {
