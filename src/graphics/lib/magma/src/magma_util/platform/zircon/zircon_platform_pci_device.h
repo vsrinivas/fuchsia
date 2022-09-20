@@ -5,7 +5,6 @@
 #ifndef ZIRCON_PLATFORM_PCI_DEVICE_H
 #define ZIRCON_PLATFORM_PCI_DEVICE_H
 
-#include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/device-protocol/pci.h>
 
@@ -15,8 +14,8 @@ namespace magma {
 
 class ZirconPlatformPciDevice : public PlatformPciDevice {
  public:
-  ZirconPlatformPciDevice(zx_device_t* zx_device, pci_protocol_t& pci)
-      : zx_device_(zx_device), pci_(pci) {}
+  ZirconPlatformPciDevice(zx_device_t* zx_device, ddk::Pci pci)
+      : zx_device_(zx_device), pci_(std::move(pci)) {}
 
   ~ZirconPlatformPciDevice() override;
 
@@ -33,10 +32,10 @@ class ZirconPlatformPciDevice : public PlatformPciDevice {
 
  private:
   zx_device_t* zx_device() const { return zx_device_; }
-  pci_protocol_t& pci() { return pci_; }
+  ddk::Pci& pci() { return pci_; }
 
   zx_device_t* zx_device_;
-  pci_protocol_t pci_;
+  ddk::Pci pci_;
 };
 
 }  // namespace magma

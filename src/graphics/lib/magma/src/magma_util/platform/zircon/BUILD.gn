@@ -142,7 +142,6 @@ source_set("device") {
   public_deps = [
     ":interrupt",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
-    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
     "//src/lib/ddk",
   ]
 
