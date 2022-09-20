@@ -7,15 +7,17 @@ toc:
 - heading: Driver development
 - title: "Get started with driver development"
   path: /docs/get-started/sdk/get-started-with-driver.md
-- title: Driver codelab
+- title: "Codelab: Build a driver"
   section:
   - include: /docs/get-started/sdk/learn/driver/_toc.yaml
-- title: "Write bind rules for a driver"
-  path: /docs/development/sdk/write-bind-rules-for-driver.md
-- title: "Bind library code generation tutorial for Bazel"
-  path: /docs/development/sdk/bind-libraries-codegen-bazel.md
-- title: "FIDL-based bind libraries tutorial for Bazel"
-  path: /docs/development/sdk/fidl-bind-libraries-bazel.md
-- title: "Debug a new driver when it fails to load"
-  path: /docs/development/sdk/debug-a-new-driver-when-it-fails-to-load.md
+- title: "Driver binding"
+  section:
+  - title: "Write bind rules for a driver"
+    path: /docs/development/sdk/write-bind-rules-for-driver.md
+  - title: "Create a new bind library for a driver"
+    path: /docs/development/sdk/create-new-bind-library-for-driver.md
+  - title: "FIDL-based bind libraries tutorial"
+    path: /docs/development/sdk/fidl-bind-libraries-bazel.md
+  - title: "Debug a driver when it fails to load"
+    path: /docs/development/sdk/debug-driver-when-it-fails-to-load.md
 - include: /docs/development/sdk/ffx/_toc.yaml

@@ -1,4 +1,4 @@
-# Debug a new driver when it fails to load
+# Debug a driver when it fails to load
 
 This guide provides best practices for debugging a new driver when it fails to load in your
 Fuchsia system.

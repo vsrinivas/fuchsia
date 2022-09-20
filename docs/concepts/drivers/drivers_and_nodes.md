@@ -14,7 +14,7 @@ Drivers, when bound to nodes, can create child nodes. As a result, nodes form a
 directed acyclic graph representing all known hardware and virtual devices in a
 Fuchsia system.
 
-![alt_text](images/diagram_node_topology_01.svg "Basic node topology")
+![alt_text](images/diagram_node_topology_01.svg "Basic node topology"){: width="550"}
 
 **Diagram 1**. A node topology where the green circles are nodes representing
 devices and the blue boxes are drivers.
@@ -64,7 +64,7 @@ result, these nodes form a single node topology, expressed
 in a directed acyclic graph, which describes all the hardware
 and virtual devices discovered in a Fuchsia system.
 
-![alt_text](images/diagram_node_topology_02.svg "USB bug node topology")
+![alt_text](images/diagram_node_topology_02.svg "USB bug node topology"){: width="550"}
 
 **Diagram 2**. Example of a USB bus topology.
 
@@ -96,7 +96,7 @@ universe package collection. In the component topology, all driver components
 appear to be siblings of each other under their parent component, which is the
 driver manager.
 
-![alt_text](images/diagram_driver_component_topology_01.svg "Component topology example")
+![alt_text](images/diagram_driver_component_topology_01.svg "Component topology example"){: width="600"}
 
 **Diagram 3**: The component topology showing driver components in three collections
 
@@ -188,7 +188,7 @@ knows the driver that will be bound to the node.
 
 A camera may be created with a composite node as shown below:
 
-![alt_text](images/diagram_composite_node_01.svg "Composite node example")
+![alt_text](images/diagram_composite_node_01.svg "Composite node example"){: width="375"}
 
 **Diagram 4**. Representation of a composite node.
 
@@ -203,7 +203,7 @@ composite node named `camera` and adds the node as a child to both the
 their capabilities to the composite node. Lastly, the driver manager binds the
 `camera-driver` driver to the composite node.
 
-![alt_text](images/diagram_composite_drivers_01.svg "Composite drivers example")
+![alt_text](images/diagram_composite_drivers_01.svg "Composite drivers example"){: width="550"}
 
 **Diagram 5**. A real-world example showing a complex binding topology for a
 camera controller driver

@@ -151,7 +151,7 @@ binary target:
 ```
 
 Note: For more information on the generated bind library, see
-[Bind library code generation tutorial for Bazel][bind-library-tutorial].
+[Create a new bind library for a driver][bind-library-tutorial].
 
 ## Appendices
 
@@ -200,4 +200,4 @@ type NodeAddArgs = table {
 [binding-prev-h]: /src/lib/ddk/include/lib/ddk/binding_priv.h
 [protodefs-h]: /src/lib/ddk/include/lib/ddk/protodefs.h
 [fuchsia-i2c-bind-library]: /src/devices/bind/fuchsia.i2c/fuchsia.i2c.bind
-[bind-library-tutorial]: /docs/development/sdk/bind-libraries-codegen-bazel.md
+[bind-library-tutorial]: /docs/development/sdk/create-new-bind-library-for-driver.md

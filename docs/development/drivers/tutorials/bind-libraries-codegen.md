@@ -200,8 +200,8 @@ all separated by `.`s.
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/drivers/bindlib_codegen/parent-driver.rs" region_tag="code" %}
   ```
 
-## Using Out-Of-Tree with the SDK
+## Auto-generated libraries in the SDK
 
-To see how to use this feature Out-Of-Tree with the SDK see this page:
-
- * [Bind library code generation tutorial for Bazel](/docs/development/sdk/bind-libraries-codegen-bazel.md)
+To learn how to auto-generate bind library artifacts in the Fuchsia SDK
+development environment, see
+[Create a new bind library for a driver](/docs/development/sdk/create-new-bind-library-for-driver.md).

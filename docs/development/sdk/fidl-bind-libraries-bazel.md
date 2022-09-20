@@ -4,7 +4,7 @@ This tutorial is for driver authors developing out-of-tree using the SDK who wan
 auto-generated bind libraries. The tutorial assumes familiarity with the following:
 
  * [FIDL Tutorial - Generated Bind Libraries](/docs/development/drivers/tutorials/fidl-tutorial.md#generated-bind-libraries)
- * [Bind library code generation tutorial for Bazel](/docs/development/sdk/bind-libraries-codegen-bazel.md)
+ * [Create a new bind library for a driver](/docs/development/sdk/create-new-bind-library-for-driver.md)
 
 ## What is the same and what is different?
 
@@ -49,11 +49,17 @@ access constants for these bind library values from the parent driver.
 ```cpp {:.devsite-disable-click-to-copy}
 {% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/parent-driver.cc" region_tag="bind_imports" highlight="1,3"%}
 
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/parent-driver.cc" region_tag="add_properties" adjust_indentation="auto" highlight="5,6,9,10" %}
+...
+
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/parent/parent-driver.cc" region_tag="add_fidl_bind_properties" adjust_indentation="auto" %}
 ```
 
 ### child-driver.bind
 
 ```none {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child/child-driver.bind" region_tag="bind_rules" highlight="2,4,8,10" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child/child-driver.bind" region_tag="fidl_imports" %}
+
+...
+
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/bind_library/child/child-driver.bind" region_tag="fidl_properties" %}
 ```
