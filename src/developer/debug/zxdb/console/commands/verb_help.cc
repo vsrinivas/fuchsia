@@ -408,13 +408,11 @@ OutputBuffer GetReference() {
   return help;
 }
 
-Err RunVerbHelp(ConsoleContext* context, const Command& cmd) {
-  OutputBuffer out;
-
+void RunVerbHelp(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (cmd.args().empty()) {
     // Generic help, list topics and quick reference.
-    Console::get()->Output(GetReference());
-    return Err();
+    cmd_context->Output(GetReference());
+    return;
   }
   const std::string& on_what = cmd.args()[0];
 
@@ -443,18 +441,16 @@ Err RunVerbHelp(ConsoleContext* context, const Command& cmd) {
         help = kJitdHelp;
       } else {
         // Not a valid command.
-        out.Append(Err("\"" + on_what +
-                       "\" is not a valid command.\n"
-                       "Try just \"help\" to get a list."));
-        Console::get()->Output(out);
-        return Err();
+        return cmd_context->ReportError(Err("\"" + on_what +
+                                            "\" is not a valid command.\n"
+                                            "Try just \"help\" to get a list."));
       }
     }
   }
 
+  OutputBuffer out;
   out.FormatHelp(help);
-  Console::get()->Output(out);
-  return Err();
+  cmd_context->Output(out);
 }
 
 }  // namespace

@@ -79,13 +79,10 @@ Examples
 )";
 
 // Completion callback after reading process memory.
-void CompleteDisassemble(const Err& err, MemoryDump dump, fxl::WeakPtr<Process> weak_process,
-                         const FormatAsmOpts& options) {
-  Console* console = Console::get();
-  if (err.has_error()) {
-    console->Output(err);
-    return;
-  }
+void CompleteDisassemble(fxl::RefPtr<CommandContext> cmd_context, const Err& err, MemoryDump dump,
+                         fxl::WeakPtr<Process> weak_process, const FormatAsmOpts& options) {
+  if (err.has_error())
+    return cmd_context->ReportError(err);
 
   if (!weak_process)
     return;  // Give up if the process went away.
@@ -94,22 +91,21 @@ void CompleteDisassemble(const Err& err, MemoryDump dump, fxl::WeakPtr<Process> 
   Err format_err =
       FormatAsmContext(weak_process->session()->arch_info(), dump, options, weak_process.get(),
                        SourceFileProviderImpl(weak_process->GetTarget()->settings()), &out);
-  if (format_err.has_error()) {
-    console->Output(err);
-    return;
-  }
+  if (format_err.has_error())
+    return cmd_context->ReportError(err);
 
-  console->Output(out);
+  cmd_context->Output(out);
 }
 
-Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
+void RunDisassembleVerb(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // Can take process overrides (to specify which process to read) and thread and frame ones (to
   // specify which thread to read the instruction pointer from).
   if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame}); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
-  if (Err err = AssertRunningTarget(context, "disassemble", cmd.target()); err.has_error())
-    return err;
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+  if (Err err = AssertRunningTarget(console_context, "disassemble", cmd.target()); err.has_error())
+    return cmd_context->ReportError(err);
 
   FormatAsmOpts options;
   options.emit_addresses = true;
@@ -130,13 +126,13 @@ Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
     // Num lines explicitly given.
     uint64_t num_instr = 0;
     if (Err err = StringToUint64(cmd.GetSwitchValue(kNumSwitch), &num_instr); err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
     options.max_instructions = num_instr;
-    size = options.max_instructions * context->session()->arch_info().max_instr_len();
+    size = options.max_instructions * console_context->session()->arch_info().max_instr_len();
   } else {
     // Default instruction count when no symbol and no explicit size is given.
     options.max_instructions = 16;
-    size = options.max_instructions * context->session()->arch_info().max_instr_len();
+    size = options.max_instructions * console_context->session()->arch_info().max_instr_len();
     size_is_default = true;
   }
 
@@ -147,7 +143,8 @@ Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
   auto weak_process = process->GetWeakPtr();
 
   if (cmd.args().size() > 1) {
-    return Err("\"disassemble\" requires exactly one argument specifying a location.");
+    return cmd_context->ReportError(
+        Err("\"disassemble\" requires exactly one argument specifying a location."));
   } else if (cmd.args().empty()) {
     // No args: implicitly read the frame's instruction pointer.
     //
@@ -156,39 +153,35 @@ Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
     // guess-and-check about a good starting boundary for the dump.
     Frame* frame = cmd.frame();
     if (!frame) {
-      return Err(
-          "There is no frame to read the instruction pointer from. The thread\n"
-          "must be stopped to use the implicit current address. Otherwise,\n"
-          "you must supply an explicit address to disassemble.");
+      return cmd_context->ReportError(
+          Err("There is no frame to read the instruction pointer from. The thread\n"
+              "must be stopped to use the implicit current address. Otherwise,\n"
+              "you must supply an explicit address to disassemble."));
     }
     Location location = frame->GetLocation();
 
     // Schedule memory request.
-    process->ReadMemory(
-        location.address(), size, [options, weak_process](const Err& err, MemoryDump dump) {
-          CompleteDisassemble(err, std::move(dump), std::move(weak_process), options);
-        });
+    process->ReadMemory(location.address(), size,
+                        [cmd_context, options, weak_process](const Err& err, MemoryDump dump) {
+                          CompleteDisassemble(cmd_context, err, std::move(dump),
+                                              std::move(weak_process), options);
+                        });
   } else {
     // One arg: parse as an input location.
     EvalLocalInputLocation(
         GetEvalContextForCommand(cmd), cmd.frame(), cmd.args()[0],
-        [options, size, size_is_default, weak_process](ErrOr<std::vector<InputLocation>> locs,
-                                                       std::optional<uint32_t> expr_size) mutable {
-          Console* console = Console::get();
-          if (locs.has_error()) {
-            console->Output(locs.err());
-            return;
-          }
-          if (!weak_process) {
-            console->Output(Err("Process terminated."));
-            return;
-          }
+        [cmd_context, options, size, size_is_default, weak_process](
+            ErrOr<std::vector<InputLocation>> locs, std::optional<uint32_t> expr_size) mutable {
+          if (locs.has_error())
+            return cmd_context->ReportError(locs.err());
+          if (!weak_process)
+            return cmd_context->ReportError(Err("Process terminated."));
 
           Location location;
           if (Err err = ResolveUniqueInputLocation(weak_process->GetSymbols(), locs.value(), true,
                                                    &location);
               err.has_error()) {
-            console->Output(err);
+            cmd_context->ReportError(err);
             return;
           }
 
@@ -205,12 +198,13 @@ Err RunDisassembleVerb(ConsoleContext* context, const Command& cmd) {
 
           // Schedule memory request.
           weak_process->ReadMemory(
-              location.address(), size, [options, weak_process](const Err& err, MemoryDump dump) {
-                CompleteDisassemble(err, std::move(dump), std::move(weak_process), options);
+              location.address(), size,
+              [cmd_context, options, weak_process](const Err& err, MemoryDump dump) {
+                CompleteDisassemble(cmd_context, err, std::move(dump), std::move(weak_process),
+                                    options);
               });
         });
   }
-  return Err();
 }
 
 }  // namespace

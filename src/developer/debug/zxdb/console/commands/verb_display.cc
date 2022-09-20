@@ -79,29 +79,34 @@ const char kCommandHelp[] =
     " • Remove one:        set display -= your_var\n"
     " • Clear list:        set display =\n";
 
-Err RunVerbDisplay(ConsoleContext* context, const Command& cmd) {
+void RunVerbDisplay(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (cmd.args().size() != 1) {
     // We could print the current list fo stuff to display here like GDB, but would prefer that
     // people learn to interact with the settings system since they'll need that to remove values
     // anyway.
-    return Err(
-        "The \"display\" verb is syntactic sugar for the settings system's \"display\"\n"
-        "setting. It's a shortcut to add expressions to display, but otherwise use the\n"
-        "settings commands:\n" +
-        std::string(kCommandHelp));
+    return cmd_context->ReportError(
+        Err("The \"display\" verb is syntactic sugar for the settings system's \"display\"\n"
+            "setting. It's a shortcut to add expressions to display, but otherwise use the\n"
+            "settings commands:\n" +
+            std::string(kCommandHelp)));
   }
 
   // The thing to watch. Note that we can't actually validate this here because the expression might
   // only be valid in a different context.
   const std::string& new_expression = cmd.args()[0];
 
-  SettingStore* store = &context->session()->system().settings();
+  // Should always be present because we were called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+
+  SettingStore* store = &console_context->session()->system().settings();
 
   // Be nice and avoid duplicating an expression.
   std::vector<std::string> list = store->GetList(ClientSettings::Thread::kDisplay);
   for (const auto& existing : list) {
-    if (new_expression == existing)
-      return Err("Already watching expression \"" + new_expression + "\".");
+    if (new_expression == existing) {
+      return cmd_context->ReportError(
+          Err("Already watching expression \"" + new_expression + "\"."));
+    }
   }
 
   list.push_back(new_expression);
@@ -112,17 +117,15 @@ Err RunVerbDisplay(ConsoleContext* context, const Command& cmd) {
   out.Append("\n");
   out.Append(Syntax::kComment, kCommandHelp);
 
-  Console::get()->Output(out);
+  cmd_context->Output(out);
 
   // Output the new expression right away.
   ConsoleFormatOptions options;
   options.verbosity = ConsoleFormatOptions::Verbosity::kMinimal;
   options.wrapping = ConsoleFormatOptions::Wrapping::kSmart;
   options.pointer_expand_depth = 2;
-  Console::get()->Output(
+  cmd_context->Output(
       FormatExpressionsForConsole({new_expression}, options, GetEvalContextForCommand(cmd)));
-
-  return Err();
 }
 
 }  // namespace

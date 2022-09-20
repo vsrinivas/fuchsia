@@ -25,17 +25,14 @@ const char kDisconnectHelp[] =
   There are no arguments.
 )";
 
-Err RunVerbDisconnect(ConsoleContext* context, const Command& cmd) {
+void RunVerbDisconnect(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (!cmd.args().empty())
-    return Err(ErrType::kInput, "\"disconnect\" takes no arguments.");
+    return cmd_context->ReportError(Err(ErrType::kInput, "\"disconnect\" takes no arguments."));
 
-  Err e = context->session()->Disconnect();
-  if (e.has_error())
-    Console::get()->Output(e);
-  else
-    Console::get()->Output("Disconnected successfully.");
+  if (Err err = cmd_context->GetConsoleContext()->session()->Disconnect(); err.has_error())
+    return cmd_context->ReportError(err);
 
-  return Err();
+  cmd_context->Output("Disconnected successfully.");
 }
 
 }  // namespace

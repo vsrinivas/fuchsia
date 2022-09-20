@@ -314,10 +314,9 @@ void ConsoleContext::SetSourceAffinityForThread(const Thread* thread,
   record->source_affinity = source_affinity;
 }
 
-void ConsoleContext::OutputThreadContext(const Thread* thread, const StopInfo& info) const {
+OutputBuffer ConsoleContext::GetThreadContext(const Thread* thread, const StopInfo& info) const {
   Target* target = thread->GetProcess()->GetTarget();
 
-  Console* console = Console::get();
   OutputBuffer out;
 
   if (ShouldDisplayFullExceptionInfo(info)) {
@@ -353,7 +352,6 @@ void ConsoleContext::OutputThreadContext(const Thread* thread, const StopInfo& i
   const Stack& stack = thread->GetStack();
   if (stack.empty()) {
     out.Append(" (no location information)\n");
-    console->Output(out);
   } else {
     const Location& location = stack[0]->GetLocation();
 
@@ -366,15 +364,19 @@ void ConsoleContext::OutputThreadContext(const Thread* thread, const StopInfo& i
     } else {
       out.Append(" (no symbol info)\n");
     }
-    console->Output(out);
 
     Err err = OutputSourceContext(
         thread->GetProcess(),
         std::make_unique<SourceFileProviderImpl>(thread->GetProcess()->GetTarget()->settings()),
         location, GetSourceAffinityForThread(thread));
     if (err.has_error())
-      console->Output(err);
+      out.Append(err);
   }
+  return out;
+}
+
+void ConsoleContext::OutputThreadContext(const Thread* thread, const StopInfo& info) const {
+  Console::get()->Output(GetThreadContext(thread, info));
 }
 
 void ConsoleContext::ScheduleDisplayExpressions(Thread* thread) const {

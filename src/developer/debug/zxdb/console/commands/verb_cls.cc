@@ -22,15 +22,10 @@ const char kClsHelp[] =
   There are no arguments.
 )";
 
-Err RunVerbCls(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
+void RunVerbCls(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (!cmd.args().empty())
-    return Err(ErrType::kInput, "\"cls\" takes no arguments.");
-
+    return cmd_context->ReportError(Err(ErrType::kInput, "\"cls\" takes no arguments."));
   Console::get()->Clear();
-
-  if (callback)
-    callback(Err());
-  return Err();
 }
 
 }  // namespace

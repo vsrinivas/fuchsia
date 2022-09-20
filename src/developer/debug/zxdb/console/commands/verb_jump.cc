@@ -32,33 +32,39 @@ Location arguments
 
 )" LOCATION_ARG_HELP("jump");
 
-Err RunVerbJump(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "jump"); err.has_error())
-    return err;
+void RunVerbJump(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err = AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "jump");
+      err.has_error())
+    return cmd_context->ReportError(err);
 
-  if (cmd.args().size() != 1)
-    return Err("The 'jump' command requires one argument for the location.");
+  if (cmd.args().size() != 1) {
+    return cmd_context->ReportError(
+        Err("The 'jump' command requires one argument for the location."));
+  }
 
   Location location;
   if (Err err = ResolveUniqueInputLocation(cmd.frame(), cmd.args()[0], true, &location);
       err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
-  cmd.thread()->JumpTo(location.address(), [thread = cmd.thread()->GetWeakPtr()](const Err& err) {
-    Console* console = Console::get();
-    if (err.has_error()) {
-      console->Output(err);
-    } else if (thread) {
-      // Reset the current stack frame to the top to reflect the location the user has just jumped
-      // to.
-      console->context().SetActiveFrameIdForThread(thread.get(), 0);
+  cmd.thread()->JumpTo(
+      location.address(), [cmd_context, thread = cmd.thread()->GetWeakPtr()](const Err& err) {
+        ConsoleContext* console_context = cmd_context->GetConsoleContext();
+        if (!console_context)
+          return;  // Console gone, nothing to do.
 
-      // Tell the user where they are.
-      console->context().OutputThreadContext(thread.get(), StopInfo());
-    }
-  });
+        if (err.has_error())
+          return cmd_context->ReportError(err);
 
-  return Err();
+        if (thread) {
+          // Reset the current stack frame to the top to reflect the location the user has just
+          // jumped to.
+          console_context->SetActiveFrameIdForThread(thread.get(), 0);
+
+          // Tell the user where they are.
+          cmd_context->Output(console_context->GetThreadContext(thread.get(), StopInfo()));
+        }
+      });
 }
 
 }  // namespace

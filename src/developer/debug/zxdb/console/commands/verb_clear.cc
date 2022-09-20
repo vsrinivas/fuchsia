@@ -47,22 +47,23 @@ Examples
   cl
 )";
 
-Err RunVerbClear(ConsoleContext* context, const Command& cmd) {
+void RunVerbClear(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   std::vector<Breakpoint*> breakpoints;
 
   if (Err err = ResolveBreakpointsForModification(cmd, "clear", &breakpoints); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
+
+  // This is a synchronous context so the console should always be around.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
 
   for (Breakpoint* breakpoint : breakpoints) {
     OutputBuffer desc("Deleted ");
-    desc.Append(FormatBreakpoint(context, breakpoint, false));
+    desc.Append(FormatBreakpoint(console_context, breakpoint, false));
 
-    context->session()->system().DeleteBreakpoint(breakpoint);
+    console_context->session()->system().DeleteBreakpoint(breakpoint);
 
-    Console::get()->Output(desc);
+    cmd_context->Output(desc);
   }
-
-  return Err();
 }
 
 }  // namespace

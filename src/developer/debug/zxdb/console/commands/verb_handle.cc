@@ -64,58 +64,59 @@ Examples
       Prints the informat for the object with koid 7256.
 )";
 
-void OnEvalComplete(fxl::RefPtr<EvalContext> eval_context, fxl::WeakPtr<Process> weak_process,
-                    LookupType lookup, ErrOrValue value, bool hex) {
-  Console* console = Console::get();
+void OnEvalComplete(fxl::RefPtr<CommandContext> cmd_context, fxl::RefPtr<EvalContext> eval_context,
+                    fxl::WeakPtr<Process> weak_process, LookupType lookup, ErrOrValue value,
+                    bool hex) {
   if (!weak_process)
-    return console->Output(Err("Process exited while requesting handles."));
+    return cmd_context->ReportError(Err("Process exited while requesting handles."));
   if (value.has_error())
-    return console->Output(value.err());
+    return cmd_context->ReportError(value.err());
 
   uint64_t lookup_value = 0;
   if (Err err = value.value().PromoteTo64(&lookup_value); err.has_error())
-    return console->Output(err);
+    return cmd_context->ReportError(err);
 
-  weak_process->LoadInfoHandleTable([lookup, lookup_value,
-                                     hex](ErrOr<std::vector<debug_ipc::InfoHandle>> handles) {
-    Console* console = Console::get();
-    if (handles.has_error())
-      return console->Output(handles.err());
+  weak_process->LoadInfoHandleTable(
+      [cmd_context, lookup, lookup_value, hex](ErrOr<std::vector<debug_ipc::InfoHandle>> handles) {
+        Console* console = Console::get();
+        if (handles.has_error())
+          return cmd_context->ReportError(handles.err());
 
-    switch (lookup) {
-      case LookupType::kHandle:
-        for (const auto& handle : handles.value()) {
-          if (handle.handle_value == lookup_value)
-            return console->Output(FormatHandle(handle, hex));
+        switch (lookup) {
+          case LookupType::kHandle:
+            for (const auto& handle : handles.value()) {
+              if (handle.handle_value == lookup_value)
+                return cmd_context->Output(FormatHandle(handle, hex));
+            }
+            cmd_context->Output("No handle with value " + std::to_string(lookup_value) +
+                                " in the process.");
+            break;
+
+          case LookupType::kKoid:
+            for (const auto& handle : handles.value()) {
+              if (handle.koid == lookup_value)
+                return console->Output(FormatHandle(handle, hex));
+            }
+            cmd_context->Output("No object with koid " + std::to_string(lookup_value) +
+                                " in the process.");
+            break;
         }
-        console->Output("No handle with value " + std::to_string(lookup_value) +
-                        " in the process.");
-        break;
-
-      case LookupType::kKoid:
-        for (const auto& handle : handles.value()) {
-          if (handle.koid == lookup_value)
-            return console->Output(FormatHandle(handle, hex));
-        }
-        console->Output("No object with koid " + std::to_string(lookup_value) + " in the process.");
-        break;
-    }
-  });
+      });
 }
 
-Err RunVerbHandle(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertRunningTarget(context, "handle", cmd.target()); err.has_error())
-    return err;
+void RunVerbHandle(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err = AssertRunningTarget(cmd_context->GetConsoleContext(), "handle", cmd.target());
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   LookupType lookup = cmd.HasSwitch(kKoidSwitch) ? LookupType::kKoid : LookupType::kHandle;
   bool hex = cmd.HasSwitch(kHexSwitch);
 
   if (cmd.args().empty()) {
     cmd.target()->GetProcess()->LoadInfoHandleTable(
-        [hex](ErrOr<std::vector<debug_ipc::InfoHandle>> handles) {
-          Console* console = Console::get();
+        [cmd_context, hex](ErrOr<std::vector<debug_ipc::InfoHandle>> handles) {
           if (handles.has_error())
-            return console->Output(handles.err());
+            return cmd_context->ReportError(handles.err());
 
           // Sory by handle value, then koid (mapped VMOs can have no handle value).
           auto handles_sorted = handles.take_value();
@@ -123,19 +124,20 @@ Err RunVerbHandle(ConsoleContext* context, const Command& cmd) {
                     [](const debug_ipc::InfoHandle& a, const debug_ipc::InfoHandle& b) {
                       return std::tie(a.handle_value, a.koid) < std::tie(b.handle_value, b.koid);
                     });
-          console->Output(FormatHandles(handles_sorted, hex));
+          cmd_context->Output(FormatHandles(handles_sorted, hex));
         });
   } else {
     // Evaluate the expression, then print just that handle.
     fxl::RefPtr<EvalContext> eval_context = GetEvalContextForCommand(cmd);
-    return EvalCommandExpression(
+    Err err = EvalCommandExpression(
         cmd, "handle", eval_context, false, false,
-        [eval_context, weak_process = cmd.target()->GetProcess()->GetWeakPtr(), lookup,
+        [cmd_context, eval_context, weak_process = cmd.target()->GetProcess()->GetWeakPtr(), lookup,
          hex](ErrOrValue value) {
-          OnEvalComplete(eval_context, weak_process, lookup, std::move(value), hex);
+          OnEvalComplete(cmd_context, eval_context, weak_process, lookup, std::move(value), hex);
         });
+    if (err.has_error())
+      cmd_context->ReportError(err);
   }
-  return Err();
 }
 
 }  // namespace

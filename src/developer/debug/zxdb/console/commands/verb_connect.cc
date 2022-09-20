@@ -57,7 +57,7 @@ Examples
 // Displays the failed connection error message. Connections are normally initiated on startup
 // and it can be difficult to see the message with all the other normal startup messages. This
 // can confuse users who wonder why nothing is working. As a result, make the message really big.
-void DisplayConnectionFailed(const Err& err) {
+void DisplayConnectionFailed(CommandContext* cmd_context, const Err& err) {
   OutputBuffer out;
   if (Console::get()->context().session()->IsConnected()) {
     // There could be a race connection (like the user hit enter twice rapidly when issuing the
@@ -72,25 +72,29 @@ void DisplayConnectionFailed(const Err& err) {
     out.Append(err);
     out.Append(Syntax::kError, "\n\nThe debugger will not be usable without connecting.\n\n");
   }
-  Console::get()->Output(out);
+  cmd_context->Output(out);
 }
 
-Err RunVerbConnect(ConsoleContext* context, const Command& cmd,
-                   CommandCallback callback = nullptr) {
+void RunVerbConnect(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   SessionConnectionInfo connection_info;
+
+  // Should always be present because we were called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
 
   // Catch the "already connected" case early to display a simple low-key error message. This
   // avoids the more complex error messages issues by the Session object which might seem
   // out-of-context.
-  if (context->session()->IsConnected())
-    return Err("connect: Already connected to the debugged system. Type \"status\" for more.");
+  if (console_context->session()->IsConnected()) {
+    return cmd_context->ReportError(
+        Err("connect: Already connected to the debugged system. Type \"status\" for more."));
+  }
 
   if (cmd.HasSwitch(kUnixSwitch)) {
     connection_info.type = SessionConnectionType::kUnix;
     if (cmd.args().size() == 1) {
       connection_info.host = cmd.args()[0];
     } else {
-      return Err(ErrType::kInput, "Too many arguments.");
+      return cmd_context->ReportError(Err(ErrType::kInput, "Too many arguments."));
     }
   } else {
     // 0 args means pass empty string and 0 port to try to reconnect.
@@ -98,52 +102,35 @@ Err RunVerbConnect(ConsoleContext* context, const Command& cmd,
       const std::string& host_port = cmd.args()[0];
       // Provide an additional assist to users if they forget to wrap an IPv6 address in [].
       if (Ipv6HostPortIsMissingBrackets(host_port)) {
-        return Err(ErrType::kInput,
-                   "For IPv6 addresses use either: \"[::1]:1234\"\n"
-                   "or the two-parameter form: \"::1 1234.");
+        return cmd_context->ReportError(Err(ErrType::kInput,
+                                            "For IPv6 addresses use either: \"[::1]:1234\"\n"
+                                            "or the two-parameter form: \"::1 1234."));
       }
       Err err = ParseHostPort(host_port, &connection_info.host, &connection_info.port);
       if (err.has_error())
-        return err;
+        return cmd_context->ReportError(err);
       connection_info.type = SessionConnectionType::kNetwork;
     } else if (cmd.args().size() == 2) {
       Err err =
           ParseHostPort(cmd.args()[0], cmd.args()[1], &connection_info.host, &connection_info.port);
       if (err.has_error())
-        return err;
+        return cmd_context->ReportError(err);
       connection_info.type = SessionConnectionType::kNetwork;
     } else if (cmd.args().size() > 2) {
-      return Err(ErrType::kInput, "Too many arguments.");
+      return cmd_context->ReportError(Err(ErrType::kInput, "Too many arguments."));
     }
   }
 
-  context->session()->Connect(
-      connection_info, [callback = std::move(callback), cmd](const Err& err) mutable {
-        if (err.has_error()) {
-          // Don't display error message if they canceled the connection.
-          if (err.type() != ErrType::kCanceled)
-            DisplayConnectionFailed(err);
-        } else {
-          OutputBuffer msg;
-          msg.Append("Connected successfully.\n");
-
-          // Assume if there's a callback this is not being run interactively. Otherwise, show the
-          // usage tip.
-          if (!callback) {
-            msg.Append(Syntax::kWarning, "👉 ");
-            msg.Append(Syntax::kComment,
-                       "Normally you will \"run <program path>\" or \"attach "
-                       "<process koid>\".");
-          }
-          Console::get()->Output(msg);
-        }
-
-        if (callback)
-          callback(err);
-      });
-  Console::get()->Output("Connecting (use \"disconnect\" to cancel)...\n");
-
-  return Err();
+  console_context->session()->Connect(connection_info, [cmd_context](const Err& err) mutable {
+    if (err.has_error()) {
+      // Don't display error message if they canceled the connection.
+      if (err.type() != ErrType::kCanceled)
+        DisplayConnectionFailed(cmd_context.get(), err);
+    } else {
+      cmd_context->Output("Connected successfully.\n");
+    }
+  });
+  cmd_context->Output("Connecting (use \"disconnect\" to cancel)...\n");
 }
 
 }  // namespace

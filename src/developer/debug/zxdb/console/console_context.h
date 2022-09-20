@@ -98,8 +98,9 @@ class ConsoleContext : public ProcessObserver,
   SourceAffinity GetSourceAffinityForThread(const Thread* thread) const;
   void SetSourceAffinityForThread(const Thread* thread, SourceAffinity source_affinity);
 
-  // Outputs to the console information on the given stopped thread with the
-  // given reasons for stopping.
+  // Returns/output to the console information on the given stopped thread with the given reasons
+  // for stopping.
+  OutputBuffer GetThreadContext(const Thread* thread, const StopInfo& info) const;
   void OutputThreadContext(const Thread* thread, const StopInfo& info) const;
 
   // Schedules evaluation and subsequent display of the "display" expressions. These are the things

@@ -34,25 +34,27 @@ Examples
       Move down the stack on thread 1
 )";
 
-Err RunVerbDown(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "down"); err.has_error())
-    return err;
+void RunVerbDown(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  // Should always be present because we were called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
 
-  auto id = context->GetActiveFrameIdForThread(cmd.thread());
+  if (Err err = AssertStoppedThreadWithFrameCommand(console_context, cmd, "down"); err.has_error())
+    return cmd_context->ReportError(err);
+
+  auto id = console_context->GetActiveFrameIdForThread(cmd.thread());
   if (id < 0)
-    return Err("Cannot find current frame.");
+    return cmd_context->ReportError(Err("Cannot find current frame."));
 
   if (id == 0)
-    return Err("At bottom of stack.");
+    return cmd_context->ReportError(Err("At bottom of stack."));
 
   if (cmd.thread()->GetStack().size() == 0)
-    return Err("No stack frames.");
+    return cmd_context->ReportError(Err("No stack frames."));
 
   id -= 1;
 
-  context->SetActiveFrameIdForThread(cmd.thread(), id);
-  OutputFrameInfoForChange(cmd.thread()->GetStack()[id], id);
-  return Err();
+  console_context->SetActiveFrameIdForThread(cmd.thread(), id);
+  OutputFrameInfoForChange(cmd_context.get(), cmd.thread()->GetStack()[id], id);
 }
 
 }  // namespace
@@ -62,7 +64,7 @@ VerbRecord GetDownVerbRecord() {
 }
 
 // Shows the given frame for when it changes. This encapsulates the formatting options.
-void OutputFrameInfoForChange(const Frame* frame, int id) {
+void OutputFrameInfoForChange(CommandContext* cmd_context, const Frame* frame, int id) {
   FormatFrameOptions opts;
   opts.loc.func.name.elide_templates = true;
   opts.loc.func.name.bold_last = true;
@@ -75,7 +77,7 @@ void OutputFrameInfoForChange(const Frame* frame, int id) {
   opts.variable.pointer_expand_depth = 1;
   opts.variable.max_depth = 4;
 
-  Console::get()->Output(FormatFrame(frame, opts, id));
+  cmd_context->Output(FormatFrame(frame, opts, id));
 }
 
 }  // namespace zxdb

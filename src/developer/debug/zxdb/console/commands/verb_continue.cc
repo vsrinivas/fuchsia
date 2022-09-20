@@ -81,26 +81,29 @@ Examples
       if no index is specified).
 )";
 
-Err RunVerbContinue(ConsoleContext* context, const Command& cmd) {
+void RunVerbContinue(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (Err err = cmd.ValidateNouns({Noun::kGlobal, Noun::kProcess, Noun::kThread}); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   bool forward = cmd.HasSwitch(kForwardSwitchID);
+
+  // Should always be present because we were called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
 
   if (cmd.HasNoun(Noun::kThread)) {
     cmd.thread()->Continue(forward);
   } else if (cmd.HasNoun(Noun::kProcess)) {
     Process* process = cmd.target()->GetProcess();
     if (!process)
-      return Err("Process not running, can't continue.");
+      return cmd_context->ReportError(Err("Process not running, can't continue."));
     process->Continue(forward);
   } else {
-    if (Err err = VerifySystemHasRunningProcess(&context->session()->system()); err.has_error())
-      return err;
-    context->session()->system().Continue(forward);
+    if (Err err = VerifySystemHasRunningProcess(&console_context->session()->system());
+        err.has_error()) {
+      return cmd_context->ReportError(err);
+    }
+    console_context->session()->system().Continue(forward);
   }
-
-  return Err();
 }
 
 }  // namespace

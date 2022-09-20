@@ -31,36 +31,39 @@ Examples
       Move up the stack on thread 1
 )";
 
-Err RunVerbUp(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "up"); err.has_error())
-    return err;
+void RunVerbUp(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  // Should always be present because we were called synchronously.
+  ConsoleContext* console_context = cmd_context->GetConsoleContext();
+
+  if (Err err = AssertStoppedThreadWithFrameCommand(console_context, cmd, "up"); err.has_error())
+    return cmd_context->ReportError(err);
 
   // This computes the frame index from the callback in case the user does "up" faster than an
   // async stack request can complete. Doing the new index computation from the callback ensures
   // that all commands are executed.
-  auto on_has_frames = [weak_thread = cmd.thread()->GetWeakPtr()](const Err& err) {
-    if (!weak_thread) {
-      Console::get()->Output(Err("Thread destroyed."));
-      return;
-    }
+  auto on_has_frames = [cmd_context, weak_thread = cmd.thread()->GetWeakPtr()](const Err& err) {
+    ConsoleContext* console_context = cmd_context->GetConsoleContext();
+    if (!console_context)
+      return;  // Console gone, nothing to do.
+
+    if (!weak_thread)
+      return cmd_context->ReportError(Err("Thread destroyed."));
+
     const Thread* thread = weak_thread.get();
 
-    ConsoleContext* context = &Console::get()->context();
-    auto id = context->GetActiveFrameIdForThread(thread);
-    if (id < 0 || thread->GetStack().size() == 0) {
-      Console::get()->Output(Err("No current frame."));
-      return;
-    }
+    auto id = console_context->GetActiveFrameIdForThread(thread);
+    if (id < 0 || thread->GetStack().size() == 0)
+      return cmd_context->ReportError(Err("No current frame."));
 
     id += 1;
 
     if (static_cast<size_t>(id) >= thread->GetStack().size()) {
-      Console::get()->Output(Err("At top of stack."));
+      cmd_context->ReportError(Err("At top of stack."));
       return;
     }
 
-    context->SetActiveFrameIdForThread(thread, id);
-    OutputFrameInfoForChange(thread->GetStack()[id], id);
+    console_context->SetActiveFrameIdForThread(thread, id);
+    OutputFrameInfoForChange(cmd_context.get(), thread->GetStack()[id], id);
   };
 
   if (cmd.thread()->GetStack().has_all_frames()) {
@@ -68,8 +71,6 @@ Err RunVerbUp(ConsoleContext* context, const Command& cmd) {
   } else {
     cmd.thread()->GetStack().SyncFrames(std::move(on_has_frames));
   }
-
-  return Err();
 }
 
 }  // namespace

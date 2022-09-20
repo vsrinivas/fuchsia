@@ -45,24 +45,26 @@ Examples
       recursive.
 )";
 
-Err RunVerbFinish(ConsoleContext* context, const Command& cmd) {
-  if (Err err = AssertStoppedThreadWithFrameCommand(context, cmd, "finish"); err.has_error())
-    return err;
+void RunVerbFinish(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
+  if (Err err =
+          AssertStoppedThreadWithFrameCommand(cmd_context->GetConsoleContext(), cmd, "finish");
+      err.has_error())
+    return cmd_context->ReportError(err);
 
   Stack& stack = cmd.thread()->GetStack();
   size_t frame_index;
-  if (auto found_frame_index = stack.IndexForFrame(cmd.frame()))
+  if (auto found_frame_index = stack.IndexForFrame(cmd.frame())) {
     frame_index = *found_frame_index;
-  else
-    return Err("Internal error, frame not found in current thread.");
+  } else {
+    return cmd_context->ReportError(Err("Internal error, frame not found in current thread."));
+  }
 
   auto controller =
       std::make_unique<FinishThreadController>(stack, frame_index, &ScheduleAsyncPrintReturnValue);
-  cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
+  cmd.thread()->ContinueWith(std::move(controller), [cmd_context](const Err& err) {
     if (err.has_error())
-      Console::get()->Output(err);
+      cmd_context->ReportError(err);
   });
-  return Err();
 }
 
 }  // namespace

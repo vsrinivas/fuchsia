@@ -54,11 +54,11 @@ Examples
       Disable the current breakpoint.
 )";
 
-Err RunVerbDisable(ConsoleContext* context, const Command& cmd) {
+void RunVerbDisable(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   std::vector<Breakpoint*> breakpoints;
 
   if (Err err = ResolveBreakpointsForModification(cmd, "disable", &breakpoints); err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   for (Breakpoint* breakpoint : breakpoints) {
     BreakpointSettings settings = breakpoint->GetSettings();
@@ -67,11 +67,9 @@ Err RunVerbDisable(ConsoleContext* context, const Command& cmd) {
     breakpoint->SetSettings(settings);
 
     OutputBuffer out("Disabled ");
-    out.Append(FormatBreakpoint(context, breakpoint, true));
-    Console::get()->Output(out);
+    out.Append(FormatBreakpoint(cmd_context->GetConsoleContext(), breakpoint, true));
+    cmd_context->Output(out);
   }
-
-  return Err();
 }
 
 }  // namespace

@@ -7,13 +7,14 @@
 
 namespace zxdb {
 
+class CommandContext;
 class Frame;
 struct VerbRecord;
 
 VerbRecord GetDownVerbRecord();
 
 // Prints the message for up/down commands.
-void OutputFrameInfoForChange(const Frame* frame, int id);
+void OutputFrameInfoForChange(CommandContext* cmd_context, const Frame* frame, int id);
 
 }  // namespace zxdb
 
