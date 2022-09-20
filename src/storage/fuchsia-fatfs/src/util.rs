@@ -97,7 +97,7 @@ mod tests {
         ts * NS_PER_MS
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_dos_to_unix_time() {
         let earliest_time = dos_datetime(1980, 1, 1, 0, 0, 0, 0);
         assert_eq!(dos_to_unix_time(earliest_time), ms_to_ns(315532800000));
@@ -109,7 +109,7 @@ mod tests {
         assert_eq!(dos_to_unix_time(time), ms_to_ns(2147483647000));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_unix_to_dos_time() {
         let earliest_time = dos_datetime(1980, 1, 1, 0, 0, 0, 0);
         assert_eq!(earliest_time, unix_to_dos_time(ms_to_ns(315532800000)));

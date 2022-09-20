@@ -5,16 +5,16 @@
 use {
     anyhow::{format_err, Context, Error},
     fidl_fuchsia_fs::AdminRequestStream,
-    fidl_fuchsia_io as fio, fuchsia_async as fasync,
+    fidl_fuchsia_io as fio,
     fuchsia_component::server::ServiceFs,
     fuchsia_fatfs::FatFs,
     fuchsia_runtime::HandleType,
-    fuchsia_syslog::{self, fx_log_err},
     fuchsia_zircon::{self as zx, Status},
     futures::future::TryFutureExt,
     futures::stream::{StreamExt, TryStreamExt},
     remote_block_device::RemoteBlockClientSync,
     std::sync::Arc,
+    tracing::error,
     vfs::{execution_scope::ExecutionScope, path::Path},
 };
 
@@ -34,10 +34,8 @@ async fn handle(stream: Services, fs: Arc<FatFs>, scope: &ExecutionScope) -> Res
     Ok(())
 }
 
-#[fasync::run(10)]
+#[fuchsia::main(threads = 10)]
 async fn main() -> Result<(), Error> {
-    fuchsia_syslog::init().unwrap();
-
     // Open the remote block device.
     let device =
         Box::new(remote_block_device::Cache::new(RemoteBlockClientSync::new(zx::Channel::from(
@@ -74,7 +72,7 @@ async fn main() -> Result<(), Error> {
     // Handle all ServiceFs connections. VFS connections will be spawned as separate tasks.
     const MAX_CONCURRENT: usize = 10_000;
     fs.for_each_concurrent(MAX_CONCURRENT, |request| {
-        handle(request, Arc::clone(&fatfs), &scope).unwrap_or_else(|e| fx_log_err!("{:?}", e))
+        handle(request, Arc::clone(&fatfs), &scope).unwrap_or_else(|err| error!(?err))
     })
     .await;
 
@@ -82,10 +80,10 @@ async fn main() -> Result<(), Error> {
     // resurrected), but before we finish, we must wait for all VFS connections to be closed.
     scope.wait().await;
 
-    root.close().unwrap_or_else(|e| fx_log_err!("Failed to close root: {:?}", e));
+    root.close().unwrap_or_else(|e| error!("Failed to close root: {:?}", e));
 
     // Make sure that fatfs has been cleanly shut down.
-    fatfs.shut_down().unwrap_or_else(|e| fx_log_err!("Failed to shutdown fatfs: {:?}", e));
+    fatfs.shut_down().unwrap_or_else(|e| error!("Failed to shutdown fatfs: {:?}", e));
 
     Ok(())
 }

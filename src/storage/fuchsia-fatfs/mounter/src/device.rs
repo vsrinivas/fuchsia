@@ -8,10 +8,10 @@ use {
     fidl_fuchsia_hardware_block_partition::{Guid, PartitionProxy},
     fidl_fuchsia_io as fio,
     fuchsia_fatfs::FatFs,
-    fuchsia_syslog::fx_log_info,
     fuchsia_zircon as zx,
     remote_block_device::RemoteBlockClientSync,
     std::ops::Deref,
+    tracing::info,
     vfs::execution_scope::ExecutionScope,
 };
 
@@ -79,7 +79,7 @@ impl FatDevice {
                 }
             };
 
-            fx_log_info!("Found block device {:?} with guid {:?}", entry.name, guid);
+            info!(name = ?entry.name, ?guid, "Found block device");
             if guid.value == MICROSOFT_BASIC_DATA_GUID {
                 return Ok(Some(entry.name.clone()));
             }
@@ -214,7 +214,7 @@ pub mod test {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_guid_succeeds() {
         let mut fs = ServiceFs::new();
         fs.dir("dev").add_service_at("000", |chan| Some(MockPartition::fat(chan)));
@@ -235,7 +235,7 @@ pub mod test {
         assert_eq!(result.unwrap().value, MICROSOFT_BASIC_DATA_GUID);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_find_fat_partition_succeeds() {
         let mut fs = ServiceFs::new();
         fs.dir("dev")
@@ -260,7 +260,7 @@ pub mod test {
         assert_eq!(result.expect("Find partition succeeds"), Some("002".to_owned()));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_find_no_fat_partition_succeeds() {
         let mut fs = ServiceFs::new();
         fs.dir("dev")
@@ -337,7 +337,7 @@ pub mod test {
         root.close().unwrap();
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_mount_device_succeeds() {
         let ramdisk = create_ramdisk();
         let channel = ramdisk.open().expect("Opening ramdisk succeeds");
@@ -361,7 +361,7 @@ pub mod test {
         assert_eq!(children, vec!["mount_device", "test"]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_mount_invalid_device_fails() {
         // This ramdisk will have the right GUID, but no FAT partition.
         let _ramdisk = create_ramdisk();
@@ -372,7 +372,7 @@ pub mod test {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_multiple_devices_opens_first() {
         let ramdisk1 = create_ramdisk();
         let channel = ramdisk1.open().expect("Opening ramdisk succeeds");
@@ -402,7 +402,7 @@ pub mod test {
         assert_eq!(children, vec!["ramdisk1", "test"]);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_multiple_devices_opens_first_when_invalid() {
         let _ramdisk1 = create_ramdisk();
 

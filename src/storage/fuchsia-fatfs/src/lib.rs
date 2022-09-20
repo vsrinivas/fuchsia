@@ -6,10 +6,10 @@ use {
     anyhow::Error,
     fatfs::FsOptions,
     fidl_fuchsia_fs::AdminRequest,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::Status,
     std::pin::Pin,
     std::sync::Arc,
+    tracing::error,
     vfs::{
         directory::{entry::DirectoryEntry, entry_container::Directory},
         execution_scope::ExecutionScope,
@@ -99,7 +99,7 @@ impl FatFs {
         match req {
             AdminRequest::Shutdown { responder } => {
                 scope.shutdown();
-                self.shut_down().unwrap_or_else(|e| fx_log_err!("Shutdown failed {:?}", e));
+                self.shut_down().unwrap_or_else(|e| error!("Shutdown failed {:?}", e));
                 responder.send()?;
             }
         };
@@ -122,7 +122,7 @@ mod tests {
         anyhow::{anyhow, Context, Error},
         fatfs::{format_volume, FormatVolumeOptions, FsOptions},
         fidl::endpoints::Proxy,
-        fidl_fuchsia_io as fio, fuchsia_async as fasync,
+        fidl_fuchsia_io as fio,
         fuchsia_zircon::Status,
         futures::{future::BoxFuture, prelude::*},
         std::{collections::HashMap, io::Write, ops::Deref},
@@ -285,7 +285,7 @@ mod tests {
 
     const TEST_DISK_SIZE: u64 = 2048 << 10;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     #[ignore] // TODO(fxbug.dev/56138): Clean up tasks to prevent panic on drop in FatfsFileRef
     async fn test_create_disk() {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
@@ -306,7 +306,7 @@ mod tests {
         structure.verify(proxy).await.expect("Verify succeeds");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_unset_date() {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
         // FAT doesn't give the root directory a created/modified/access time,

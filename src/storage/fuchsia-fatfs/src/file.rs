@@ -14,7 +14,6 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
-    fuchsia_syslog::fx_log_err,
     fuchsia_zircon::{self as zx, Status},
     libc::{S_IRUSR, S_IWUSR},
     std::{
@@ -24,6 +23,7 @@ use {
         pin::Pin,
         sync::{Arc, RwLock},
     },
+    tracing::error,
     vfs::{
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
@@ -356,7 +356,7 @@ impl DirectoryEntry for FatFile {
             Err(e) => {
                 server_end
                     .close_with_epitaph(e)
-                    .unwrap_or_else(|e| fx_log_err!("Failing failed: {:?}", e));
+                    .unwrap_or_else(|e| error!("Failing failed: {:?}", e));
                 return;
             }
         }
@@ -387,7 +387,6 @@ mod tests {
             node::{Closer, FatNode},
             tests::{TestDiskContents, TestFatDisk},
         },
-        fuchsia_async as fasync,
     };
 
     const TEST_DISK_SIZE: u64 = 2048 << 10; // 2048K
@@ -433,7 +432,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read_at() {
         let file = TestFile::new();
         // Note: fatfs incorrectly casts u64 to i64, which causes this value to wrap
@@ -446,7 +445,7 @@ mod tests {
         assert_eq!(err, Status::INVALID_ARGS);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_get_attrs() {
         let file = TestFile::new();
         let attrs = file.get_attrs().await.expect("get_attrs succeeds");

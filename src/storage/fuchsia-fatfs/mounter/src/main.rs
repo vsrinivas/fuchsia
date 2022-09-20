@@ -6,12 +6,11 @@ use {
     anyhow::Error,
     fidl::prelude::*,
     fidl_fuchsia_fs::AdminRequestStream,
-    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     fuchsia_zircon::Status,
     futures::{lock::Mutex, prelude::*},
     std::sync::Arc,
+    tracing::{error, info, warn},
 };
 
 mod device;
@@ -40,17 +39,14 @@ impl FatServer {
         if let Some(device) = device.take() {
             // Clean up the old device.
             device.shut_down().unwrap_or_else(|e| {
-                fx_log_info!(
-                    "Failed to shut down removed disk (this is probably expected): {:?}",
-                    e
-                )
+                info!("Failed to shut down removed disk (this is probably expected): {:?}", e)
             })
         }
 
         let fat_device = FatDevice::new()
             .await
             .map_err(|e| {
-                fx_log_warn!("Failed to create fat device: {:?}. Is it correctly formatted?", e);
+                warn!("Failed to create fat device: {:?}. Is it correctly formatted?", e);
                 Status::IO
             })?
             .ok_or(Status::UNAVAILABLE)?;
@@ -85,7 +81,7 @@ impl FatServer {
         match service {
             Services::Admin(stream) => self.handle_admin(stream).await,
         }
-        .unwrap_or_else(|e| fx_log_err!("{:?}", e));
+        .unwrap_or_else(|e| error!(?e));
     }
 }
 
@@ -103,9 +99,7 @@ async fn run() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run(10)]
+#[fuchsia::main(threads = 10)]
 async fn main() {
-    fuchsia_syslog::init().unwrap();
-
-    run().await.unwrap_or_else(|e| fx_log_err!("Error while running fatfs mounter: {:?}", e));
+    run().await.unwrap_or_else(|e| error!("Error while running fatfs mounter: {:?}", e));
 }

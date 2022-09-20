@@ -995,7 +995,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Test with a sink that can't handle the entire directory in one go.
     fn test_read_dirents_small_sink() {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
@@ -1039,7 +1039,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     /// Test with a sink that can hold everything.
     fn test_read_dirents_big_sink() {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
@@ -1075,7 +1075,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_read_dirents_with_entry_that_sorts_before_dot() {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
         let structure = TestDiskContents::dir().add_child("!", "!".into());
