@@ -52,7 +52,7 @@ VmPageListNode::~VmPageListNode() {
   LTRACEF("%p offset %#" PRIx64 "\n", this, obj_offset_);
   canary_.Assert();
 
-  DEBUG_ASSERT(HasNoPages());
+  DEBUG_ASSERT(HasNoPageOrRef());
 }
 
 VmPageList::VmPageList() { LTRACEF("%p\n", this); }
@@ -64,7 +64,7 @@ VmPageList::VmPageList(VmPageList&& other) : list_(ktl::move(other.list_)) {
 
 VmPageList::~VmPageList() {
   LTRACEF("%p\n", this);
-  DEBUG_ASSERT(HasNoPages());
+  DEBUG_ASSERT(HasNoPageOrRef());
 }
 
 VmPageList& VmPageList::operator=(VmPageList&& other) {
@@ -121,7 +121,23 @@ const VmPageOrMarker* VmPageList::Lookup(uint64_t offset) const {
   return &pln->Lookup(index);
 }
 
-VmPageOrMarker VmPageList::RemovePage(uint64_t offset) {
+VmPageOrMarkerRef VmPageList::LookupMutable(uint64_t offset) {
+  uint64_t node_offset = offset_to_node_offset(offset, list_skew_);
+  size_t index = offset_to_node_index(offset, list_skew_);
+
+  LTRACEF_LEVEL(2, "%p offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n", this, offset,
+                node_offset, index);
+
+  // lookup the tree node that holds this page
+  auto pln = list_.find(node_offset);
+  if (!pln.IsValid()) {
+    return VmPageOrMarkerRef(nullptr);
+  }
+
+  return VmPageOrMarkerRef(&pln->Lookup(index));
+}
+
+VmPageOrMarker VmPageList::RemoveContent(uint64_t offset) {
   uint64_t node_offset = offset_to_node_offset(offset, list_skew_);
   size_t index = offset_to_node_index(offset, list_skew_);
 
@@ -146,10 +162,10 @@ VmPageOrMarker VmPageList::RemovePage(uint64_t offset) {
 
 bool VmPageList::IsEmpty() const { return list_.is_empty(); }
 
-bool VmPageList::HasNoPages() const {
+bool VmPageList::HasNoPageOrRef() const {
   bool no_pages = true;
   ForEveryPage([&no_pages](auto* p, uint64_t) {
-    if (p->IsPage()) {
+    if (p->IsPageOrRef()) {
       no_pages = false;
       return ZX_ERR_STOP;
     } else {
@@ -204,7 +220,7 @@ void VmPageList::MergeFrom(
         VmPageOrMarker page = ktl::move(other_node->Lookup(i));
         VmPageOrMarker& target_page = target->Lookup(i);
         if (target_page.IsEmpty()) {
-          if (page.IsPage()) {
+          if (page.IsPageOrRef()) {
             migrate_fn(&page, src_offset);
           }
           target_page = ktl::move(page);
@@ -213,7 +229,7 @@ void VmPageList::MergeFrom(
         }
 
         // In all cases if we still have a page add it to the free list.
-        DEBUG_ASSERT(!page.IsPage());
+        DEBUG_ASSERT(!page.IsPageOrRef());
       }
     } else {
       // If there's no node at the desired location, then directly insert the node.
@@ -221,9 +237,9 @@ void VmPageList::MergeFrom(
       bool has_page = false;
       for (unsigned i = 0; i < VmPageListNode::kPageFanOut; i++) {
         VmPageOrMarker& page = target->Lookup(i);
-        if (page.IsPage()) {
+        if (page.IsPageOrRef()) {
           migrate_fn(&page, other_offset - other.list_skew_ + i * PAGE_SIZE);
-          if (page.IsPage()) {
+          if (page.IsPageOrRef()) {
             has_page = true;
           }
         } else if (page.IsMarker()) {
@@ -275,7 +291,7 @@ VmPageSpliceList VmPageList::TakePages(uint64_t offset, uint64_t length) {
   // If we can't take the whole node at the start of the range,
   // the shove the pages into the splice list head_ node.
   while (offset_to_node_index(offset, 0) != 0 && offset < end) {
-    res.head_.Lookup(offset_to_node_index(offset, 0)) = RemovePage(offset);
+    res.head_.Lookup(offset_to_node_index(offset, 0)) = RemoveContent(offset);
     offset += PAGE_SIZE;
   }
 
@@ -291,7 +307,7 @@ VmPageSpliceList VmPageList::TakePages(uint64_t offset, uint64_t length) {
 
   // Move any remaining pages into the splice list tail_ node.
   while (offset < end) {
-    res.tail_.Lookup(offset_to_node_index(offset, 0)) = RemovePage(offset);
+    res.tail_.Lookup(offset_to_node_index(offset, 0)) = RemoveContent(offset);
     offset += PAGE_SIZE;
   }
 
@@ -349,6 +365,10 @@ void VmPageSpliceList::FreeAllPages() {
     VmPageOrMarker page = Pop();
     if (page.IsPage()) {
       pmm_free_page(page.ReleasePage());
+    } else if (page.IsReference()) {
+      // TODO(fxbug.dev/60238): Implement this once compressed pages are supported and Reference
+      // types can be generated.
+      panic("Reference should never be generated.");
     }
   }
 }

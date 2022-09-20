@@ -750,6 +750,21 @@ class VmCowPages final
     return result;
   }
 
+  // Changes a Reference in the provided VmPageOrMarker into a real vm_page_t. The allocated page
+  // is assumed to be for this VmCowPages, and so uses the pmm_alloc_flags_, but it is not assumed
+  // that the page_or_mark is actually yet in this page_list_, and so the allocated page is not
+  // added to the page queues. It is the responsibility of the caller to add to the page queues if
+  // the page_or_mark is not stack owned.
+  // The |page_request| must be non-null if the |pmm_alloc_flags_| allow for delayed allocation, in
+  // which case this may return ZX_ERR_SHOULD_WAIT if the page_request is filled out.
+  zx_status_t MakePageFromReference(VmPageOrMarkerRef page_or_mark, LazyPageRequest* page_request);
+
+  // Replaces the Reference in VmPageOrMarker owned by this page_list_ for a real vm_page_t.
+  // Unlike MakePageFromReference this updates the page queues to track the newly added page. Use
+  // of |page_request| and implications on return value are the same as |MakePageFromReference|.
+  zx_status_t ReplaceReferenceWithPageLocked(VmPageOrMarkerRef page_or_mark, uint64_t offset,
+                                             LazyPageRequest* page_request) TA_REQ(lock_);
+
   static zx_status_t AllocateCopyPage(uint32_t pmm_alloc_flags, paddr_t parent_paddr,
                                       list_node_t* alloc_list, LazyPageRequest* request,
                                       vm_page_t** clone);
@@ -815,9 +830,9 @@ class VmCowPages final
   // If the passed |owner_length| is not null, then the visible range of the owner is calculated and
   // stored back into |owner_length| on the walk up. The |owner_length| represents the size of the
   // range in the owner for which no other VMO in the chain had forked a page.
-  const VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset, VmCowPages** owner_out,
-                                                     uint64_t* owner_offset_out,
-                                                     uint64_t* owner_length) TA_REQ(lock_);
+  VmPageOrMarkerRef FindInitialPageContentLocked(uint64_t offset, VmCowPages** owner_out,
+                                                 uint64_t* owner_offset_out, uint64_t* owner_length)
+      TA_REQ(lock_);
 
   // LookupPagesLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns ZX_OK

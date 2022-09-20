@@ -22,53 +22,123 @@
 #include <vm/pmm.h>
 #include <vm/vm.h>
 
-// RAII helper for representing owned pages in a page list node. This supports being in one of
-// three states
-//  * Empty - Contains nothing
-//  * Page p - Contains a vm_page 'p'. This 'p' is considered owned by this wrapper and
-//             `ReleasePage` must be called to give up ownership.
-//  * Marker - Indicates that whilst not a page, it is also not empty. Markers can be used to
-//             separate the distinction between "there's no page because we've deduped to the zero
-//             page" and "there's no page because our parent contains the content".
+// RAII helper for representing content in a page list node. This supports being in one of three
+// states
+//  * Empty       - Contains nothing
+//  * Page p      - Contains a vm_page 'p'. This 'p' is considered owned by this wrapper and
+//                  `ReleasePage` must be called to give up ownership.
+//  * Reference r - Contains a reference 'r' to some content. This 'r' is considered owned by this
+//                  wrapper and `ReleaseReference` must be called to give up ownership.
+//  * Marker      - Indicates that whilst not a page, it is also not empty. Markers can be used to
+//                  separate the distinction between "there's no page because we've deduped to the
+//                  zero page" and "there's no page because our parent contains the content".
 class VmPageOrMarker {
  public:
   // A PageType that otherwise holds a null pointer is considered to be Empty.
-  VmPageOrMarker() : raw_(kContentPageType) {}
-  ~VmPageOrMarker() { DEBUG_ASSERT(!IsPage()); }
+  VmPageOrMarker() : raw_(kPageType) {}
+  ~VmPageOrMarker() { DEBUG_ASSERT(!IsPageOrRef()); }
   VmPageOrMarker(VmPageOrMarker&& other) noexcept : raw_(other.Release()) {}
   VmPageOrMarker(const VmPageOrMarker&) = delete;
   VmPageOrMarker& operator=(const VmPageOrMarker&) = delete;
 
+  // Minimal wrapper around a uint64_t to provide stronger typing in code to prevent accidental
+  // mixing of references and other uint64_t values.
+  // Provides a way to query the required alignment of the references and does debug enforcement of
+  // this.
+  class ReferenceValue {
+   public:
+    // kAlignBits represents the number of low bits in a reference that must be zero so they can be
+    // used for internal metadata. This is declared here for convenience, and is asserted to be in
+    // sync with the private kReferenceBits.
+    static constexpr uint64_t kAlignBits = 4;
+    explicit ReferenceValue(uint64_t raw) : value_(raw) {
+      DEBUG_ASSERT((value_ & BIT_MASK(kAlignBits)) == 0);
+    }
+    uint64_t value() const { return value_; }
+
+   private:
+    uint64_t value_;
+  };
+
   // Returns a reference to the underlying vm_page*. Is only valid to call if `IsPage` is true.
   vm_page* Page() const {
     DEBUG_ASSERT(IsPage());
-    // Do not need to mask any bits out of raw_, since ContentPage has 0's for the type anyway.
-    static_assert(kContentPageType == 0);
+    // Do not need to mask any bits out of raw_, since Page has 0's for the type anyway.
+    static_assert(kPageType == 0);
     return reinterpret_cast<vm_page*>(raw_);
+  }
+  ReferenceValue Reference() const {
+    DEBUG_ASSERT(IsReference());
+    return ReferenceValue(raw_ & ~BIT_MASK(kReferenceBits));
   }
 
   // If this is a page, moves the underlying vm_page* out and returns it. After this IsPage will
   // be false and IsEmpty will be true.
   [[nodiscard]] vm_page* ReleasePage() {
     DEBUG_ASSERT(IsPage());
-    // Do not need to mask any bits out of the Release since ContentPage has 0's for the type
+    // Do not need to mask any bits out of the Release since Page has 0's for the type
     // anyway.
-    static_assert(kContentPageType == 0);
+    static_assert(kPageType == 0);
     return reinterpret_cast<vm_page*>(Release());
   }
 
-  bool IsPage() const { return !IsEmpty() && (GetType() == kContentPageType); }
+  [[nodiscard]] ReferenceValue ReleaseReference() {
+    DEBUG_ASSERT(IsReference());
+    return ReferenceValue(Release() & ~BIT_MASK(kReferenceBits));
+  }
 
+  // Convenience wrappers for getting and setting split bits on both pages and references.
+  bool PageOrRefLeftSplit() const {
+    DEBUG_ASSERT(IsPageOrRef());
+    if (IsPage()) {
+      return Page()->object.cow_left_split;
+    }
+    return raw_ & kReferenceLeftSplit;
+  }
+  bool PageOrRefRightSplit() const {
+    DEBUG_ASSERT(IsPageOrRef());
+    if (IsPage()) {
+      return Page()->object.cow_right_split;
+    }
+    return raw_ & kReferenceRightSplit;
+  }
+  void SetPageOrRefLeftSplit(bool value) {
+    DEBUG_ASSERT(IsPageOrRef());
+    if (IsPage()) {
+      Page()->object.cow_left_split = value;
+    } else {
+      if (value) {
+        raw_ |= kReferenceLeftSplit;
+      } else {
+        raw_ &= ~kReferenceLeftSplit;
+      }
+    }
+  }
+  void SetPageOrRefRightSplit(bool value) {
+    DEBUG_ASSERT(IsPageOrRef());
+    if (IsPage()) {
+      Page()->object.cow_right_split = value;
+    } else {
+      if (value) {
+        raw_ |= kReferenceRightSplit;
+      } else {
+        raw_ &= ~kReferenceRightSplit;
+      }
+    }
+  }
+
+  bool IsPage() const { return !IsEmpty() && (GetType() == kPageType); }
   bool IsMarker() const { return GetType() == kZeroMarkerType; }
-
   bool IsEmpty() const {
     // A PageType that otherwise holds a null pointer is considered to be Empty.
-    return raw_ == kContentPageType;
+    return raw_ == kPageType;
   }
+  bool IsReference() const { return GetType() == kReferenceType; }
+  bool IsPageOrRef() const { return IsPage() || IsReference(); }
 
   VmPageOrMarker& operator=(VmPageOrMarker&& other) noexcept {
     // Forbid overriding content, as that would leak it.
-    DEBUG_ASSERT(!IsPage());
+    DEBUG_ASSERT(!IsPageOrRef());
     raw_ = other.Release();
     return *this;
   }
@@ -78,8 +148,7 @@ class VmPageOrMarker {
   bool operator!=(const VmPageOrMarker& other) const { return raw_ != other.raw_; }
 
   // A PageType that otherwise holds a null pointer is considered to be Empty.
-  static VmPageOrMarker Empty() { return VmPageOrMarker{kContentPageType}; }
-
+  static VmPageOrMarker Empty() { return VmPageOrMarker{kPageType}; }
   static VmPageOrMarker Marker() { return VmPageOrMarker{kZeroMarkerType}; }
 
   [[nodiscard]] static VmPageOrMarker Page(vm_page* p) {
@@ -91,7 +160,7 @@ class VmPageOrMarker {
     // A pointer should be aligned by definition, and hence the low bits should always be zero, but
     // assert this anyway just in case kTypeBits is increased or someone passed an invalid pointer.
     DEBUG_ASSERT((raw & BIT_MASK(kTypeBits)) == 0);
-    return VmPageOrMarker{raw | kContentPageType};
+    return VmPageOrMarker{raw | kPageType};
   }
 
  private:
@@ -101,10 +170,33 @@ class VmPageOrMarker {
   // remaining high bits. Note that there is no explicit Empty type, rather a PageType with a zero
   // pointer is used to represent Empty.
   static constexpr uint64_t kTypeBits = 2;
-  static constexpr uint64_t kContentPageType = 0b00;
+  static constexpr uint64_t kPageType = 0b00;
   static constexpr uint64_t kZeroMarkerType = 0b01;
+  static constexpr uint64_t kReferenceType = 0b10;
+
+  // In addition to storing the type, a reference needs to track two additional pieces of data,
+  // these being the left and right split bits. The split bits are normally stored in the vm_page_t
+  // and are used for copy-on-write tracking in hidden VMOs. Having the ability to store the split
+  // bits here allows these pages to be candidates for compression. The remaining bits are then
+  // available for the actual reference value being stored. Unlike the page type, which does not
+  // allow the 0 value to be stored, a reference has no restrictions and a ref value of 0 is valid
+  // and may be stored.
+  static constexpr uint64_t kReferenceBits = kTypeBits + 2;
+  // Due to ordering and public/private visibility ReferenceValue::kAlignBits is declared
+  // separately, but it should match kReferenceBits.
+  static_assert(ReferenceValue::kAlignBits == kReferenceBits);
+  static constexpr uint64_t kReferenceLeftSplit = 0b10 << kTypeBits;
+  static constexpr uint64_t kReferenceRightSplit = 0b01 << kTypeBits;
 
   uint64_t GetType() const { return raw_ & BIT_MASK(kTypeBits); }
+
+  // TODO(fxb/60238): Make this public once tests are added and all TODO code paths for handling
+  // reference types are resolved.
+  [[nodiscard]] static VmPageOrMarker Reference(ReferenceValue ref, bool left_split,
+                                                bool right_split) {
+    return VmPageOrMarker(ref.value() | (left_split ? kReferenceLeftSplit : 0) |
+                          (right_split ? kReferenceRightSplit : 0) | kReferenceType);
+  }
 
   uint64_t Release() {
     const uint64_t p = raw_;
@@ -113,6 +205,61 @@ class VmPageOrMarker {
   }
 
   uint64_t raw_;
+};
+
+// Limited reference to a VmPageOrMarker. This reference provides unrestricted const access to the
+// underlying VmPageOrMarker, but as it holds a non-const VmPageOrMarker* it has the ability to
+// modify the underlying entry. However, the interface for modification is very limited.
+//
+// This allows for the majority of VmPageList iterations that are not intended to allow for clearing
+// entries to the Empty state to allow limited mutation (such as between different content states),
+// without being completely mutable.
+class VmPageOrMarkerRef {
+ public:
+  VmPageOrMarkerRef() = default;
+  explicit VmPageOrMarkerRef(VmPageOrMarker* page_or_marker) : page_or_marker_(page_or_marker) {}
+  ~VmPageOrMarkerRef() = default;
+
+  const VmPageOrMarker& operator*() const {
+    DEBUG_ASSERT(page_or_marker_);
+    return *page_or_marker_;
+  }
+
+  const VmPageOrMarker* operator->() const {
+    DEBUG_ASSERT(page_or_marker_);
+    return page_or_marker_;
+  }
+
+  explicit operator bool() const { return !!page_or_marker_; }
+
+  // Forward split bit modifications as an allowed mutation.
+  void SetPageOrRefLeftSplit(bool value) {
+    DEBUG_ASSERT(page_or_marker_);
+    page_or_marker_->SetPageOrRefLeftSplit(value);
+  }
+  void SetPageOrRefRightSplit(bool value) {
+    DEBUG_ASSERT(page_or_marker_);
+    page_or_marker_->SetPageOrRefRightSplit(value);
+  }
+
+  // TODO(fxb/60238): Add an equivalent SwapPageForReference method once tests are added and all
+  // code paths for handling reference types are resolved.
+  // Changing the kind of content is an allowed mutation and this takes ownership of the provided
+  // page and returns ownership of the previous reference.
+  [[nodiscard]] VmPageOrMarker::ReferenceValue SwapReferenceForPage(vm_page_t* p) {
+    DEBUG_ASSERT(page_or_marker_);
+    DEBUG_ASSERT(p);
+    // Ensure the caller has correctly set the split bits in the page as this swap is not supposed
+    // to change any other information.
+    DEBUG_ASSERT(p->object.cow_left_split == page_or_marker_->PageOrRefLeftSplit());
+    DEBUG_ASSERT(p->object.cow_right_split == page_or_marker_->PageOrRefRightSplit());
+    VmPageOrMarker::ReferenceValue ref = page_or_marker_->ReleaseReference();
+    *page_or_marker_ = VmPageOrMarker::Page(p);
+    return ref;
+  }
+
+ private:
+  VmPageOrMarker* page_or_marker_ = nullptr;
 };
 
 class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmPageListNode>> {
@@ -175,7 +322,7 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
     return pages_[index];
   }
 
-  // A node is empty if it contains no pages or markers.
+  // A node is empty if it contains no pages, references or markers.
   bool IsEmpty() const {
     for (const auto& p : pages_) {
       if (!p.IsEmpty()) {
@@ -185,10 +332,10 @@ class VmPageListNode final : public fbl::WAVLTreeContainable<ktl::unique_ptr<VmP
     return true;
   }
 
-  // Returns true if there are still allocated vm_page_t's owned by this node.
-  bool HasNoPages() const {
+  // Returns true if there are still any pages or references owned by this node.
+  bool HasNoPageOrRef() const {
     for (const auto& p : pages_) {
-      if (p.IsPage()) {
+      if (p.IsPageOrRef()) {
         return false;
       }
     }
@@ -338,21 +485,29 @@ class VmPageList final {
   // is returned it may still be the case that IsEmpty() on the returned PageOrMarker is true.
   const VmPageOrMarker* Lookup(uint64_t offset) const;
 
+  // Similar to `Lookup` but returns a VmPageOrMarkerRef that allows for limited mutation of the
+  // slot. General mutation requires calling `LookupOrAllocate`.
+  VmPageOrMarkerRef LookupMutable(uint64_t offset);
+
   // Similar to `Lookup` but only returns `nullptr` if a slot cannot be allocated either due to out
   // of memory or due to offset being invalid.
+  //
+  // The returned slot, if not a `nullptr`, may generally be freely manipulated with the exception
+  // that if it started !Empty, then it is an error to set it to Empty. In this case the
+  // `RemovePage` method must be used.
   VmPageOrMarker* LookupOrAllocate(uint64_t offset);
 
-  // Removes any page at |offset| from the list and returns it, or VmPageOrMarker::Empty() if none.
-  VmPageOrMarker RemovePage(uint64_t offset);
+  // Removes any item at |offset| from the list and returns it, or VmPageOrMarker::Empty() if none.
+  VmPageOrMarker RemoveContent(uint64_t offset);
 
-  // Release every page in the in the page list and calls free_page_fn on each one, giving it
+  // Release every item in the page list and calls free_content_fn on any content, giving it
   // ownership. Any markers are cleared.
   template <typename T>
-  void RemoveAllPages(T free_page_fn) {
+  void RemoveAllContent(T free_content_fn) {
     // per page get a reference to the page pointer inside the page list node
-    auto per_page_func = [&free_page_fn](VmPageOrMarker* p, uint64_t offset) {
-      if (p->IsPage()) {
-        free_page_fn(ktl::move(*p));
+    auto per_page_func = [&free_content_fn](VmPageOrMarker* p, uint64_t offset) {
+      if (p->IsPageOrRef()) {
+        free_content_fn(ktl::move(*p));
       }
       *p = VmPageOrMarker::Empty();
       return ZX_ERR_NEXT;
@@ -386,11 +541,11 @@ class VmPageList final {
                                                               start_offset, end_offset);
   }
 
-  // Returns true if there are no pages or markers in the page list.
+  // Returns true if there are no pages, references or markers in the page list.
   bool IsEmpty() const;
 
-  // Returns true if the page list does not own any vm_page.
-  bool HasNoPages() const;
+  // Returns true if the page list does not own any pages or references.
+  bool HasNoPageOrRef() const;
 
   // Merges the pages in |other| in the range [|offset|, |end_offset|) into |this|
   // page list, starting at offset 0 in this list.
@@ -419,7 +574,7 @@ class VmPageList final {
   // **NOTE** unlike MergeFrom, |this| will be empty at the end of this method.
   void MergeOnto(VmPageList& other, fit::inline_function<void(VmPageOrMarker&&)> release_fn);
 
-  // Takes the pages and markers in the range [offset, length) out of this page list.
+  // Takes the pages, references and markers in the range [offset, length) out of this page list.
   VmPageSpliceList TakePages(uint64_t offset, uint64_t length);
 
   uint64_t HeapAllocationBytes() const { return list_.size() * sizeof(VmPageListNode); }
