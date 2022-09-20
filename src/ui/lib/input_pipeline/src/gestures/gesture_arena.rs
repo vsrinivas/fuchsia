@@ -279,6 +279,7 @@ enum MutableState {
     Matching {
         contenders: Vec<Box<dyn Contender>>,
         matched_contenders: Vec<Box<dyn MatchedContender>>,
+        first_event_timestamp: zx::Time,
         buffered_events: Vec<TouchpadEvent>,
     },
 
@@ -376,6 +377,21 @@ impl TouchpadEvent {
             // Pass ownership of the touchpad event node to the log.
             log_entry_node.record(touchpad_event_node);
         })
+    }
+}
+
+impl RecognizedGesture {
+    fn to_str(&self) -> &'static str {
+        match self {
+            RecognizedGesture::_Unrecognized => "_unrecognized",
+            RecognizedGesture::Click => "click",
+            RecognizedGesture::Palm => "palm",
+            RecognizedGesture::PrimaryTap => "primary_tap",
+            RecognizedGesture::SecondaryTap => "secondary_tap",
+            RecognizedGesture::Motion => "motion",
+            RecognizedGesture::Scroll => "scroll",
+            RecognizedGesture::OneFingerDrag => "one_finger_drag",
+        }
     }
 }
 
@@ -487,13 +503,18 @@ impl GestureArena {
         {
             MutableState::Idle => self.handle_event_while_idle(touchpad_event),
             MutableState::Chain => self.handle_event_while_chain(touchpad_event),
-            MutableState::Matching { contenders, matched_contenders, buffered_events } => self
-                .handle_event_while_matching(
-                    contenders,
-                    matched_contenders,
-                    buffered_events,
-                    touchpad_event,
-                ),
+            MutableState::Matching {
+                contenders,
+                matched_contenders,
+                first_event_timestamp,
+                buffered_events,
+            } => self.handle_event_while_matching(
+                contenders,
+                matched_contenders,
+                first_event_timestamp,
+                buffered_events,
+                touchpad_event,
+            ),
             MutableState::Forwarding { winner } => {
                 self.handle_event_while_forwarding(winner, touchpad_event)
             }
@@ -553,6 +574,7 @@ impl GestureArena {
                 MutableState::Matching {
                     contenders,
                     matched_contenders,
+                    first_event_timestamp: new_event.timestamp,
                     buffered_events: vec![new_event],
                 },
                 vec![],
@@ -609,6 +631,7 @@ impl GestureArena {
                 MutableState::Matching {
                     contenders,
                     matched_contenders,
+                    first_event_timestamp: new_event.timestamp,
                     buffered_events: vec![new_event],
                 },
                 vec![],
@@ -620,6 +643,7 @@ impl GestureArena {
         &self,
         contenders: Vec<Box<dyn Contender>>,
         matched_contenders: Vec<Box<dyn MatchedContender>>,
+        first_event_timestamp: zx::Time,
         buffered_events: Vec<TouchpadEvent>,
         new_event: TouchpadEvent,
     ) -> (MutableState, Vec<MouseEvent>) {
@@ -695,14 +719,19 @@ impl GestureArena {
             // No `Contender`s, and exactly one `MatchedContender`. The contest has ended
             // with a recognized gesture.
             (0, 1) => {
+                let num_previous_events = buffered_events.len();
                 let mut buffered_events = buffered_events;
                 buffered_events.push(new_event);
 
                 let mut matched_contenders = matched_contenders;
                 let ProcessBufferedEventsResult { generated_events, winner, recognized_gesture } =
                     matched_contenders.remove(0).process_buffered_events(buffered_events);
-                // TODO(https://fxbug.dev/105092): Remove log message.
-                fx_log_info!("touchpad: recognized {:?}", recognized_gesture);
+                log_gesture_start(
+                    self.inspect_log.borrow_mut().create_entry(),
+                    recognized_gesture,
+                    num_previous_events,
+                    fuchsia_async::Time::now().into_zx() - first_event_timestamp,
+                );
 
                 match winner {
                     Some(winner) => (MutableState::Forwarding { winner }, generated_events),
@@ -719,7 +748,15 @@ impl GestureArena {
             (1.., _) | (_, 2..) => {
                 let mut buffered_events = buffered_events;
                 buffered_events.push(new_event);
-                (MutableState::Matching { contenders, matched_contenders, buffered_events }, vec![])
+                (
+                    MutableState::Matching {
+                        contenders,
+                        matched_contenders,
+                        first_event_timestamp,
+                        buffered_events,
+                    },
+                    vec![],
+                )
             }
         }
     }
@@ -777,11 +814,17 @@ impl GestureArena {
         match &*self.mutable_state.borrow() {
             MutableState::Idle => format!("touchpad: Idle"),
             MutableState::Chain => format!("touchpad: Chain"),
-            MutableState::Matching { contenders, matched_contenders, buffered_events } => {
+            MutableState::Matching {
+                contenders,
+                matched_contenders,
+                first_event_timestamp,
+                buffered_events,
+            } => {
                 format!(
                     "touchpad: Matching {{ \
                                 contenders: [ {} ], \
                                 matched_contenders: [ {} ], \
+                                first_event_timestamp_nanos: {}, \
                                 n_buffered_events: {} \
                               }}",
                     contenders.iter().fold(String::new(), |accum, item| {
@@ -790,6 +833,7 @@ impl GestureArena {
                     matched_contenders.iter().fold(String::new(), |accum, item| {
                         accum + &format!("{}, ", item.get_type_name())
                     }),
+                    first_event_timestamp.into_nanos(),
                     buffered_events.len()
                 )
             }
@@ -996,6 +1040,30 @@ fn log_mismatch(
                     log_detailed_mismatch(mismatch_event_node, mismatch_details)
                 }
             }
+        })
+    })
+}
+
+fn log_gesture_start(
+    log_entry_node: &InspectNode,
+    recognized_gesture: RecognizedGesture,
+    num_previous_events: usize,
+    elapsed_from_first_event: zx::Duration,
+) {
+    use inspect_keys::*;
+    fx_log_debug!("touchpad: recognized {:?}", recognized_gesture);
+    log_entry_node.atomic_update(|log_entry_node| {
+        log_entry_node.record_child(&*GESTURE_START_NODE, |gesture_start_node| {
+            gesture_start_node.record_string(&*NAME_PROP, recognized_gesture.to_str());
+            gesture_start_node.record_int(
+                &*TIME_LATENCY_PROP,
+                // Reduce precision, to minimize space.
+                elapsed_from_first_event.into_micros(),
+            );
+            gesture_start_node.record_uint(
+                &*EVENT_LATENCY_PROP,
+                u64::try_from(num_previous_events).unwrap_or(u64::MAX),
+            );
         })
     })
 }
@@ -1698,7 +1766,8 @@ mod tests {
                 MutableState::Matching {
                     contenders: _,
                     matched_contenders: _,
-                    buffered_events
+                    buffered_events,
+                    first_event_timestamp: _,
                 } => pretty_assertions::assert_eq!(
                     buffered_events.as_slice(),
                     [TouchpadEvent {
@@ -1877,6 +1946,7 @@ mod tests {
                             .map(std::convert::From::<StubMatchedContender>::from)
                             .collect()
                     },
+                    first_event_timestamp: zx::Time::ZERO,
                     buffered_events,
                 }),
                 inspect_log: RefCell::new(fuchsia_inspect_contrib::nodes::BoundedListNode::new(
@@ -3026,11 +3096,11 @@ mod tests {
             super::{
                 super::{
                     ContenderFactory, ExamineEventResult, GestureArena, InputHandler, MismatchData,
-                    MismatchDetails,
+                    MismatchDetails, ProcessBufferedEventsResult, RecognizedGesture,
                 },
                 utils::{
-                    make_unhandled_touchpad_event, ContenderFactoryOnceOrPanic, ContenderForever,
-                    StubContender,
+                    make_unhandled_touchpad_event, ContenderFactoryOnceOrPanic, StubContender,
+                    StubMatchedContender,
                 },
             },
             crate::{input_device, keyboard_binding, touch_binding, Position, Size},
@@ -3055,6 +3125,7 @@ mod tests {
                 fasync::TestExecutor::new_with_fake_time().expect("failed to create executor");
             let basic_mismatch_contender = Box::new(StubContender::new());
             let detailed_mismatch_contender = Box::new(StubContender::new());
+            let gesture_matching_contender = Box::new(StubContender::new());
             basic_mismatch_contender
                 .set_next_result(ExamineEventResult::Mismatch(MismatchData::Basic("some reason")));
             detailed_mismatch_contender.set_next_result(ExamineEventResult::Mismatch(
@@ -3070,9 +3141,7 @@ mod tests {
             let contender_factory = Box::new(ContenderFactoryOnceOrPanic::new(vec![
                 basic_mismatch_contender,
                 detailed_mismatch_contender,
-                // Prevent the gesture arena from going back to the `Idle` state, since
-                // tht would re-invoke this factory, which would in turn cause a `panic!()`.
-                Box::new(ContenderForever {})
+                gesture_matching_contender.clone(),
             ]));
             let arena = Rc::new(GestureArena::new_for_test(contender_factory, &inspector, 100));
             let touchpad_descriptor = input_device::InputDeviceDescriptor::Touchpad(
@@ -3136,6 +3205,8 @@ mod tests {
                 handled: input_device::Handled::No,
             });
             executor.set_fake_time(fasync::Time::from_nanos(10_000_000));
+            gesture_matching_contender
+                .set_next_result(ExamineEventResult::Contender(gesture_matching_contender.clone()));
             assert_matches!(
                 executor.run_until_stalled(&mut handle_event_fut),
                 std::task::Poll::Ready(_)
@@ -3179,7 +3250,7 @@ mod tests {
                 std::task::Poll::Ready(_)
             );
 
-            // Process a touchpad event with width/height.
+            // Process a touchpad event with width/height, and end the contest with a match.
             let mut handle_event_fut = arena.clone().handle_input_event(input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::Touchpad(
                     touch_binding::TouchpadEvent {
@@ -3192,11 +3263,21 @@ mod tests {
                         pressed_buttons: hashset! {},
                     },
                 ),
-                device_descriptor: touchpad_descriptor,
+                device_descriptor: touchpad_descriptor.clone(),
                 event_time: zx::Time::from_nanos(18_000_000),
                 trace_id: None,
                 handled: input_device::Handled::No,
             });
+            let matched_contender = Box::new(StubMatchedContender::new());
+            matched_contender.set_next_process_buffered_events_result(
+                ProcessBufferedEventsResult {
+                    generated_events: vec![],
+                    winner: None,
+                    recognized_gesture: RecognizedGesture::Motion,
+                },
+            );
+            gesture_matching_contender
+                .set_next_result(ExamineEventResult::MatchedContender(matched_contender));
             executor.set_fake_time(fasync::Time::from_nanos(19_000_000));
             assert_matches!(
                 executor.run_until_stalled(&mut handle_event_fut),
@@ -3273,8 +3354,76 @@ mod tests {
                             }
                         }
                     },
+                    "6": {
+                        gesture_start: {
+                          latency_event_count: 1u64,
+                          latency_micros: 18_987i64,  // 19_000_000 - 12_300 = 18_987_700
+                          name: "motion"
+                        }
+                    }
                 }
             });
+        }
+
+        #[fuchsia::test]
+        fn negative_matching_latency_is_logged_correctly() {
+            let mut executor =
+                fasync::TestExecutor::new_with_fake_time().expect("failed to create executor");
+            let inspector = fuchsia_inspect::Inspector::new();
+            let gesture_matching_contender = Box::new(StubContender::new());
+            let contender_factory =
+                Box::new(ContenderFactoryOnceOrPanic::new(
+                    vec![gesture_matching_contender.clone()],
+                ));
+            let arena = Rc::new(GestureArena::new_for_test(contender_factory, &inspector, 100));
+
+            gesture_matching_contender
+                .set_next_result(ExamineEventResult::Contender(gesture_matching_contender.clone()));
+            executor.set_fake_time(fuchsia_async::Time::from(zx::Time::ZERO));
+            assert_matches!(
+                executor.run_until_stalled(&mut arena.clone().handle_input_event(
+                    input_device::InputEvent {
+                        event_time: zx::Time::from_nanos(5_000),
+                        ..make_unhandled_touchpad_event()
+                    },
+                )),
+                std::task::Poll::Ready(_)
+            );
+
+            let matched_contender = Box::new(StubMatchedContender::new());
+            matched_contender.set_next_process_buffered_events_result(
+                ProcessBufferedEventsResult {
+                    generated_events: vec![],
+                    winner: None,
+                    recognized_gesture: RecognizedGesture::Motion,
+                },
+            );
+            gesture_matching_contender
+                .set_next_result(ExamineEventResult::MatchedContender(matched_contender));
+            executor.set_fake_time(fuchsia_async::Time::from(zx::Time::from_nanos(2000)));
+            assert_matches!(
+                executor.run_until_stalled(&mut arena.clone().handle_input_event(
+                    input_device::InputEvent {
+                        event_time: zx::Time::from_nanos(6_000),
+                        ..make_unhandled_touchpad_event()
+                    },
+                )),
+                std::task::Poll::Ready(_)
+            );
+
+            fuchsia_inspect::assert_data_tree!(inspector, root: {
+                gestures_event_log: {
+                    "0": contains {},
+                    "1": contains {},
+                    "2": {
+                        gesture_start: {
+                          latency_event_count: 1u64,
+                          latency_micros: -3i64,
+                          name: fuchsia_inspect::AnyProperty,
+                        }
+                    }
+                }
+            })
         }
 
         #[fuchsia::test(allow_stalls = false)]
