@@ -70,6 +70,21 @@ struct UnixSocketInner {
     /// See SO_PASSCRED.
     pub passcred: bool,
 
+    /// See SO_BROADCAST.
+    pub broadcast: bool,
+
+    /// See SO_NO_CHECK.
+    pub no_check: bool,
+
+    /// See SO_REUSEPORT.
+    pub reuseport: bool,
+
+    /// See SO_REUSEADDR.
+    pub reuseaddr: bool,
+
+    /// See SO_KEEPALIVE.
+    pub keepalive: bool,
+
     /// Unix credentials of the owner of this socket, for SO_PEERCRED.
     credentials: Option<ucred>,
 
@@ -89,6 +104,11 @@ impl UnixSocket {
                 peer_closed_with_unread_data: false,
                 linger: uapi::linger::default(),
                 passcred: false,
+                broadcast: false,
+                no_check: false,
+                reuseaddr: false,
+                reuseport: false,
+                keepalive: false,
                 credentials: None,
                 state: UnixSocketState::Disconnected,
             }),
@@ -260,9 +280,64 @@ impl UnixSocket {
         inner.linger = linger;
     }
 
+    fn get_passcred(&self) -> bool {
+        let inner = self.lock();
+        inner.passcred
+    }
+
     fn set_passcred(&self, passcred: bool) {
         let mut inner = self.lock();
         inner.passcred = passcred;
+    }
+
+    fn get_broadcast(&self) -> bool {
+        let inner = self.lock();
+        inner.broadcast
+    }
+
+    fn set_broadcast(&self, broadcast: bool) {
+        let mut inner = self.lock();
+        inner.broadcast = broadcast;
+    }
+
+    fn get_no_check(&self) -> bool {
+        let inner = self.lock();
+        inner.no_check
+    }
+
+    fn set_no_check(&self, no_check: bool) {
+        let mut inner = self.lock();
+        inner.no_check = no_check;
+    }
+
+    fn get_reuseaddr(&self) -> bool {
+        let inner = self.lock();
+        inner.reuseaddr
+    }
+
+    fn set_reuseaddr(&self, reuseaddr: bool) {
+        let mut inner = self.lock();
+        inner.reuseaddr = reuseaddr;
+    }
+
+    fn get_reuseport(&self) -> bool {
+        let inner = self.lock();
+        inner.reuseport
+    }
+
+    fn set_reuseport(&self, reuseport: bool) {
+        let mut inner = self.lock();
+        inner.reuseport = reuseport;
+    }
+
+    fn get_keepalive(&self) -> bool {
+        let inner = self.lock();
+        inner.keepalive
+    }
+
+    fn set_keepalive(&self, keepalive: bool) {
+        let mut inner = self.lock();
+        inner.keepalive = keepalive;
     }
 
     fn peer_cred(&self) -> Option<ucred> {
@@ -597,6 +672,26 @@ impl SocketOps for UnixSocket {
                     let passcred = read::<u32>(task, user_opt)?;
                     self.set_passcred(passcred != 0);
                 }
+                SO_BROADCAST => {
+                    let broadcast = read::<u32>(task, user_opt)?;
+                    self.set_broadcast(broadcast != 0);
+                }
+                SO_NO_CHECK => {
+                    let no_check = read::<u32>(task, user_opt)?;
+                    self.set_no_check(no_check != 0);
+                }
+                SO_REUSEADDR => {
+                    let reuseaddr = read::<u32>(task, user_opt)?;
+                    self.set_reuseaddr(reuseaddr != 0);
+                }
+                SO_REUSEPORT => {
+                    let reuseport = read::<u32>(task, user_opt)?;
+                    self.set_reuseport(reuseport != 0);
+                }
+                SO_KEEPALIVE => {
+                    let keepalive = read::<u32>(task, user_opt)?;
+                    self.set_keepalive(keepalive != 0);
+                }
                 _ => return error!(ENOPROTOOPT),
             },
             _ => return error!(ENOPROTOOPT),
@@ -619,6 +714,12 @@ impl SocketOps for UnixSocket {
                 SO_SNDBUF => (self.get_send_capacity() as socklen_t).to_ne_bytes().to_vec(),
                 SO_RCVBUF => (self.get_receive_capacity() as socklen_t).to_ne_bytes().to_vec(),
                 SO_LINGER => self.get_linger().as_bytes().to_vec(),
+                SO_PASSCRED => (self.get_passcred() as u32).as_bytes().to_vec(),
+                SO_BROADCAST => (self.get_broadcast() as u32).as_bytes().to_vec(),
+                SO_NO_CHECK => (self.get_no_check() as u32).as_bytes().to_vec(),
+                SO_REUSEADDR => (self.get_reuseaddr() as u32).as_bytes().to_vec(),
+                SO_REUSEPORT => (self.get_reuseport() as u32).as_bytes().to_vec(),
+                SO_KEEPALIVE => (self.get_keepalive() as u32).as_bytes().to_vec(),
                 _ => return error!(ENOPROTOOPT),
             },
             _ => return error!(ENOPROTOOPT),
@@ -691,7 +792,7 @@ impl UnixSocketInner {
         if self.peer_closed_with_unread_data {
             return error!(ECONNRESET);
         }
-        let info = if socket_type == SocketType::Stream {
+        let mut info = if socket_type == SocketType::Stream {
             if flags.contains(SocketMessageFlags::PEEK) {
                 self.messages.peek_stream(current_task, user_buffers)?
             } else {
@@ -705,6 +806,25 @@ impl UnixSocketInner {
         if info.message_length == 0 && !self.is_shutdown {
             return error!(EAGAIN);
         }
+
+        // Remove any credentials message, so that it can be moved to the front if passcred is
+        // enabled, or simply be removed if passcred is not enabled.
+        let creds_message;
+        if let Some(index) = info
+            .ancillary_data
+            .iter()
+            .position(|m| matches!(m, AncillaryData::Unix(UnixControlData::Credentials { .. })))
+        {
+            creds_message = info.ancillary_data.remove(index)
+        } else {
+            // If passcred is enabled credentials are returned even if they were not sent.
+            creds_message = AncillaryData::Unix(UnixControlData::unknown_creds());
+        }
+        if self.passcred {
+            // Allow credentials to take priority if they are enabled, so insert at 0.
+            info.ancillary_data.insert(0, creds_message);
+        }
+
         Ok(info)
     }
 

@@ -402,27 +402,39 @@ fn recvmsg_internal(
     let cmsg_buffer_size = message_header.msg_controllen as usize;
     let mut cmsg_bytes_written = 0;
     let header_size = std::mem::size_of::<cmsghdr>();
+
     for ancilliary_data in info.ancillary_data {
         let expected_size = header_size + ancilliary_data.total_size();
-        let message_bytes =
-            ancilliary_data.into_bytes(current_task, cmsg_buffer_size - cmsg_bytes_written)?;
-        // If the message is smaller than expected, set
-        // the MSG_CTRUNC flag, so the caller can tell
+        let message_bytes = ancilliary_data.into_bytes(
+            current_task,
+            flags,
+            cmsg_buffer_size - cmsg_bytes_written,
+        )?;
+
+        // If the message is smaller than expected, set the MSG_CTRUNC flag, so the caller can tell
         // some of the message is missing.
-        if message_bytes.len() < expected_size {
+        let truncated = message_bytes.len() < expected_size;
+        if truncated {
             message_header.msg_flags |= MSG_CTRUNC as u64;
         }
+
+        if message_bytes.len() < header_size {
+            // Can't fit the header, so stop trying to write.
+            break;
+        }
+
         if !message_bytes.is_empty() {
             current_task
                 .mm
                 .write_memory(message_header.msg_control + cmsg_bytes_written, &message_bytes)?;
-            cmsg_bytes_written +=
-                round_up_to_increment(message_bytes.len(), std::mem::size_of::<usize>())?;
+            cmsg_bytes_written += message_bytes.len();
+            if !truncated {
+                cmsg_bytes_written =
+                    round_up_to_increment(cmsg_bytes_written, std::mem::size_of::<usize>())?;
+            }
         }
     }
 
-    // TODO(fxb/79405): This length is not correct according to gVisor's socket_test. The
-    // expected length is calculated by a CMSG_SPACE macro, which seems to do some alignment.
     message_header.msg_controllen = cmsg_bytes_written;
 
     // TODO: Handle info.address.
@@ -580,18 +592,15 @@ fn sendmsg_internal(
         if cmsg.cmsg_len < header_size {
             return error!(EINVAL);
         }
-        // If the message length is greater than the number of bytes that are left in the array,
-        // return EINVAL.
-        if cmsg.cmsg_len > space {
-            return error!(EINVAL);
-        }
-        let data_size = cmsg.cmsg_len - header_size;
+
+        let data_size = std::cmp::min(cmsg.cmsg_len - header_size, space);
         let mut data = vec![0u8; data_size];
         current_task.mm.read_memory(
             message_header.msg_control + control_bytes_read + header_size,
             &mut data,
         )?;
-        control_bytes_read += header_size + data.len();
+        control_bytes_read +=
+            round_up_to_increment(header_size + data.len(), std::mem::size_of::<usize>())?;
         ancillary_data.push(AncillaryData::from_cmsg(
             current_task,
             ControlMsg::new(cmsg.cmsg_level, cmsg.cmsg_type, data),

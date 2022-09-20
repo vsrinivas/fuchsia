@@ -5,7 +5,7 @@
 use zerocopy::byteorder::{ByteOrder, NativeEndian};
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::fs::socket::SocketAddress;
+use crate::fs::socket::{SocketAddress, SocketMessageFlags};
 use crate::fs::*;
 use crate::task::{CurrentTask, Task};
 use crate::types::*;
@@ -89,7 +89,10 @@ impl AncillaryData {
     /// - `message`: The message header to parse.
     pub fn from_cmsg(current_task: &CurrentTask, message: ControlMsg) -> Result<Self, Errno> {
         if message.header.cmsg_level != SOL_SOCKET {
-            return error!(EINVAL);
+            return error!(
+                EINVAL,
+                format!("invalid cmsg_level {:?}", { message.header.cmsg_level })
+            );
         }
 
         if message.header.cmsg_type != SCM_RIGHTS && message.header.cmsg_type != SCM_CREDENTIALS {
@@ -101,9 +104,13 @@ impl AncillaryData {
 
     /// Returns a `ControlMsg` representation of this `AncillaryData`. This includes
     /// creating any objects (e.g., file descriptors) in `task`.
-    pub fn into_controlmsg(self, current_task: &CurrentTask) -> Result<ControlMsg, Errno> {
+    pub fn into_controlmsg(
+        self,
+        current_task: &CurrentTask,
+        flags: SocketMessageFlags,
+    ) -> Result<ControlMsg, Errno> {
         match self {
-            AncillaryData::Unix(control) => control.into_controlmsg(current_task),
+            AncillaryData::Unix(control) => control.into_controlmsg(current_task, flags),
         }
     }
 
@@ -121,30 +128,29 @@ impl AncillaryData {
         }
     }
 
-    /// Convert the message into bytes, truncating it, if
-    /// it exceeds the space available.
+    /// Convert the message into bytes, truncating it if it exceeds the available space.
     pub fn into_bytes(
         self,
         current_task: &CurrentTask,
+        flags: SocketMessageFlags,
         space_available: usize,
     ) -> Result<Vec<u8>, Errno> {
-        let minimum_size = self.minimum_size();
-        let mut cmsg = self.into_controlmsg(current_task)?;
         let header_size = std::mem::size_of::<cmsghdr>();
-        let mut to_write = header_size + cmsg.data.len();
-        if space_available < to_write {
-            // MSG_CTRUNC will be set
-            // If we cannot write the minimum, we cannot write anything
-            if space_available < header_size + minimum_size {
-                return Ok(vec![]);
-            }
-            to_write = space_available;
+        let minimum_data_size = self.minimum_size();
+
+        if space_available < header_size + minimum_data_size {
+            // If there is not enough space available to fit the header, return an empty vector
+            // instead of a partial header.
+            return Ok(vec![]);
         }
-        cmsg.header.cmsg_len = to_write;
-        let mut vec = Vec::<u8>::with_capacity(to_write);
-        vec.extend_from_slice(cmsg.header.as_bytes());
-        vec.extend_from_slice(&cmsg.data[..to_write - header_size]);
-        Ok(vec)
+
+        let mut cmsg = self.into_controlmsg(current_task, flags)?;
+        let cmsg_len = std::cmp::min(header_size + cmsg.data.len(), space_available);
+        cmsg.header.cmsg_len = cmsg_len;
+
+        let mut bytes = cmsg.header.as_bytes().to_owned();
+        bytes.extend_from_slice(&cmsg.data[..cmsg_len - header_size]);
+        Ok(bytes)
     }
 }
 
@@ -227,15 +233,32 @@ impl UnixControlData {
         }
     }
 
+    /// Returns a `UnixControlData` message that can be used when passcred is enabled but no
+    /// credentials were sent.
+    pub fn unknown_creds() -> Self {
+        const NOBODY: u32 = 65534;
+        let credentials = ucred { pid: 0, uid: NOBODY, gid: NOBODY };
+        UnixControlData::Credentials(credentials)
+    }
+
     /// Constructs a ControlMsg for this control data, with a destination of `task`.
     ///
     /// The provided `task` is used to create any required file descriptors, etc.
-    pub fn into_controlmsg(self, current_task: &CurrentTask) -> Result<ControlMsg, Errno> {
+    pub fn into_controlmsg(
+        self,
+        current_task: &CurrentTask,
+        flags: SocketMessageFlags,
+    ) -> Result<ControlMsg, Errno> {
         let (msg_type, data) = match self {
             UnixControlData::Rights(files) => {
+                let flags = if flags.contains(SocketMessageFlags::CMSG_CLOEXEC) {
+                    FdFlags::CLOEXEC
+                } else {
+                    FdFlags::empty()
+                };
                 let fds: Vec<FdNumber> = files
                     .iter()
-                    .map(|file| current_task.files.add_with_flags(file.clone(), FdFlags::empty()))
+                    .map(|file| current_task.files.add_with_flags(file.clone(), flags))
                     .collect::<Result<Vec<FdNumber>, Errno>>()?;
                 (SCM_RIGHTS, fds.as_bytes().to_owned())
             }
@@ -264,7 +287,7 @@ impl UnixControlData {
     pub fn minimum_size(&self) -> usize {
         match self {
             UnixControlData::Rights(_files) => std::mem::size_of::<FdNumber>(),
-            UnixControlData::Credentials(_credentials) => std::mem::size_of::<ucred>(),
+            UnixControlData::Credentials(_credentials) => 0,
             UnixControlData::Security(string) => string.len(),
         }
     }

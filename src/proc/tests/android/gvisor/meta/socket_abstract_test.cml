@@ -5,6 +5,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/socket_abstract_test",
-        args: [ "--gunit_filter=*Cmsg*:-*/2:*/3:*/6:*/7:*/8:*/9:*/10:*/11:*FDPassPeek*:*Cred*:*CloexecRecvFDPass*" ],
+        args: [ "--gunit_filter=-AbstractUnixSockets/AllSocketPairTest.RecvTimeoutReadSucceeds*:AbstractUnixSockets/AllSocketPairTest.RecvTimeoutNegSecRead*:AbstractUnixSockets/AllSocketPairTest.SendTimeoutUsecNeg*:AbstractUnixSockets/UnixSocketPairCmsgTest.WriteBeforeSoPassCredRecvEndAfterSendEnd/*:AbstractUnixSockets/UnixSocketPairCmsgTest.SendNullCredsBeforeSoPassCredRecvEndAfterSendEnd/*:AbstractUnixSockets/UnixSocketPairTest.NetdeviceIoctlsSucceed/*:AbstractUnixSockets/AllSocketPairTest.GetSetSocketRcvlowatOption/*:AbstractUnixSockets/AllSocketPairTest.GetSocketOutOfBandInlineOption/*:AbstractUnixSockets/AllSocketPairTest.GetSockoptProtocol/*:AbstractUnixSockets/AllSocketPairTest.RecvTimeoutUsecNeg/*:AbstractUnixSockets/AllSocketPairTest.SendTimeoutUsecTooLarge/*:AbstractUnixSockets/AllSocketPairTest.RecvTimeoutUsecTooLarge/*:AbstractUnixSockets/AllSocketPairTest.SetGetRecvTimeoutLargerArg/*:AbstractUnixSockets/AllSocketPairTest.SetSocketRecvBufForceAboveMax/*:AbstractUnixSockets/AllSocketPairTest.SendmmsgIsLimitedByMAXIOV/*:AbstractUnixSockets/AllSocketPairTest.SetGetSendTimeoutLargerArg/*" ],
     },
 }
