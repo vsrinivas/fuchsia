@@ -22,6 +22,10 @@ type GuestStatus = strict enum {
     /// The guest is no longer running. A stop reason may be present if the guest stopped due to
     /// an error.
     STOPPED = 5;
+
+    /// The VMM component terminated unexpectedly. Attempting to launch the guest again will
+    /// restart the component.
+    VMM_UNEXPECTED_TERMINATION = 6;
 };
 
 /// An informational only subset of the GuestConfig. If adding new non-handle entries to the
@@ -65,12 +69,14 @@ protocol GuestManager {
     ///
     /// Returns ZX_ERR_ALREADY_EXISTS if the guest already launched
     /// Returns ZX_ERR_INVALID_ARGS if failed to parse config from the guest package
+    /// TODO(fxbug.dev/104989): Return a GuestManagerError.
     LaunchGuest(resource struct {
         guest_config GuestConfig;
         controller server_end:Guest;
     }) -> (struct {}) error zx.status;
 
     /// Connect to a currently running guest
+    /// TODO(fxbug.dev/104989): Return a GuestManagerError.
     ConnectToGuest(resource struct {
         controller server_end:Guest;
     }) -> (struct {}) error zx.status;

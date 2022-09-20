@@ -34,6 +34,7 @@ fn guest_status_to_string(status: GuestStatus) -> &'static str {
         GuestStatus::Running => "Running",
         GuestStatus::Stopping => "Stopping",
         GuestStatus::Stopped => "Stopped",
+        GuestStatus::VmmUnexpectedTermination => "VMM Unexpectedly Terminated",
     }
 }
 

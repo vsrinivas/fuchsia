@@ -14,10 +14,7 @@
     ],
     capabilities: [
         {
-            protocol: [
-                "fuchsia.virtualization.GuestConfigProvider",
-                "fuchsia.virtualization.GuestManager",
-            ],
+            protocol: [ "fuchsia.virtualization.GuestManager" ],
         },
     ],
     use: [
@@ -28,7 +25,10 @@
             path: "/guest_pkg",
         },
         {
-            protocol: [ "fuchsia.virtualization.Guest" ],
+            protocol: [
+                "fuchsia.virtualization.Guest",
+                "fuchsia.virtualization.GuestLifecycle",
+            ],
             from: "#vmm",
         },
     ],
@@ -71,13 +71,6 @@
             directory: "dev-gpu",
             from: "parent",
             to: "#vmm",
-        },
-        {
-            // TODO(fxbug.dev/72386): Refactor vmm to have Start function which takes config directly and remove this circular dependency
-            protocol: "fuchsia.virtualization.GuestConfigProvider",
-            from: "self",
-            to: "#vmm",
-            dependency: "weak_for_migration",
         },
     ],
 }

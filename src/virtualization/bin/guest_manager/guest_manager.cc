@@ -36,7 +36,10 @@ uint8_t GetDefaultNumCpus() {
 
 }  // namespace
 
+using ::fuchsia::virtualization::GuestConfig;
 using ::fuchsia::virtualization::GuestDescriptor;
+using ::fuchsia::virtualization::GuestLifecycle_Create_Result;
+using ::fuchsia::virtualization::GuestLifecycle_Run_Result;
 using ::fuchsia::virtualization::GuestStatus;
 
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
@@ -45,7 +48,6 @@ GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext
       config_pkg_dir_path_(std::move(config_pkg_dir_path)),
       config_path_(std::move(config_path)) {
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
-  context_->outgoing()->AddPublicService(guest_config_bindings_.GetHandler(this));
 }
 
 zx::status<fuchsia::virtualization::GuestConfig> GuestManager::GetDefaultGuestConfig() {
@@ -73,13 +75,26 @@ zx::status<fuchsia::virtualization::GuestConfig> GuestManager::GetDefaultGuestCo
 }
 
 // |fuchsia::virtualization::GuestManager|
-void GuestManager::LaunchGuest(
-    fuchsia::virtualization::GuestConfig user_config,
-    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-    fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) {
+void GuestManager::LaunchGuest(GuestConfig user_config,
+                               fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+                               LaunchGuestCallback callback) {
   if (is_guest_started()) {
     callback(fpromise::error(ZX_ERR_ALREADY_EXISTS));
     return;
+  }
+
+  if (!lifecycle_.is_bound()) {
+    // Opening the lifecycle channel will start the VMM component, and closing the channel will
+    // destroy the VMM component. The VMM component will never intentionally close the channel so
+    // if it is closed, it means that the component has terminated unexpectedly.
+    //
+    // This error handler is only invoked if the server side of the channel is closed, not if the
+    // guest manager closes the channel to destroy the VMM component like we're doing now in Run's
+    // callback (see fxbug.dev/104989 -- devices aren't being destroyed without destroying the
+    // VMM component).
+    context_->svc()->Connect(lifecycle_.NewRequest());
+    lifecycle_.set_error_handler(
+        [this](zx_status_t) { state_ = GuestStatus::VMM_UNEXPECTED_TERMINATION; });
   }
 
   auto default_config = GetDefaultGuestConfig();
@@ -89,16 +104,17 @@ void GuestManager::LaunchGuest(
   }
 
   // Use the static config as a base, but apply the user config as an override.
-  guest_config_ = guest_config::MergeConfigs(std::move(*default_config), std::move(user_config));
-  if (!guest_config_.has_guest_memory()) {
-    guest_config_.set_guest_memory(GetDefaultGuestMemory());
+  GuestConfig merged_cfg;
+  merged_cfg = guest_config::MergeConfigs(std::move(*default_config), std::move(user_config));
+  if (!merged_cfg.has_guest_memory()) {
+    merged_cfg.set_guest_memory(GetDefaultGuestMemory());
   }
-  if (!guest_config_.has_cpus()) {
-    guest_config_.set_cpus(GetDefaultNumCpus());
+  if (!merged_cfg.has_cpus()) {
+    merged_cfg.set_cpus(GetDefaultNumCpus());
   }
 
-  if (guest_config_.has_default_net() && guest_config_.default_net()) {
-    guest_config_.mutable_net_devices()->push_back({
+  if (merged_cfg.has_default_net() && merged_cfg.default_net()) {
+    merged_cfg.mutable_net_devices()->push_back({
         .mac_address = kGuestMacAddress,
         // TODO(https://fxbug.dev/67566): Enable once bridging is fixed.
         .enable_bridge = false,
@@ -106,15 +122,15 @@ void GuestManager::LaunchGuest(
   }
 
   // Merge the command-line additions into the main kernel command-line field.
-  for (auto& cmdline : *guest_config_.mutable_cmdline_add()) {
-    guest_config_.mutable_cmdline()->append(" " + cmdline);
+  for (auto& cmdline : *merged_cfg.mutable_cmdline_add()) {
+    merged_cfg.mutable_cmdline()->append(" " + cmdline);
   }
-  guest_config_.clear_cmdline_add();
+  merged_cfg.clear_cmdline_add();
 
   // If there are any initial vsock listeners, they must be bound to unique host ports.
-  if (guest_config_.has_vsock_listeners() && guest_config_.vsock_listeners().size() > 1) {
+  if (merged_cfg.has_vsock_listeners() && merged_cfg.vsock_listeners().size() > 1) {
     std::unordered_set<uint32_t> ports;
-    for (auto& listener : guest_config_.vsock_listeners()) {
+    for (auto& listener : merged_cfg.vsock_listeners()) {
       if (!ports.insert(listener.port).second) {
         callback(fpromise::error(ZX_ERR_INVALID_ARGS));
         return;
@@ -122,21 +138,51 @@ void GuestManager::LaunchGuest(
     }
   }
 
-  // Connect call will cause componont framework to start VMM and execute VMM's main which will
-  // bring up all virtio devices and query guest_config via the
-  // fuchsia::virtualization::GuestConfigProvider::Get. Note that this must happen after the
-  // config is finalized.
-
-  // Once this VMM starts running there's no way to stop it, so for now the only state is RUNNING.
-  // TODO(fxbug.dev/104989): Implement granular states once Stop/Start works.
-  state_ = GuestStatus::RUNNING;
-
   start_time_ = zx::clock::get_monotonic();
-  SnapshotConfig(guest_config_);
-  context_->svc()->Connect(std::move(controller));
+  state_ = GuestStatus::STARTING;
+  last_error_ = std::nullopt;
+  SnapshotConfig(merged_cfg);
 
-  OnGuestLaunched();
-  callback(fpromise::ok());
+  lifecycle_->Create(std::move(merged_cfg), [this, controller = std::move(controller),
+                                             callback = std::move(callback)](
+                                                GuestLifecycle_Create_Result result) mutable {
+    this->HandleCreateResult(std::move(result), std::move(controller), std::move(callback));
+  });
+}
+
+void GuestManager::HandleCreateResult(
+    GuestLifecycle_Create_Result result,
+    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+    LaunchGuestCallback callback) {
+  if (result.is_err()) {
+    stop_time_ = zx::clock::get_monotonic();
+    state_ = GuestStatus::STOPPED;
+    last_error_ = result.err();
+
+    // TODO(fxbug.dev/104989): Change to returning a GuestManagerError.
+    callback(fpromise::error(ZX_ERR_INTERNAL));
+
+    // TODO(fxbug.dev/104989): Destroy dynamic children so that we don't need to restart the VMM.
+    lifecycle_.Unbind();
+  } else {
+    state_ = GuestStatus::RUNNING;
+    lifecycle_->Run(
+        [this](GuestLifecycle_Run_Result result) { this->HandleRunResult(std::move(result)); });
+    context_->svc()->Connect(std::move(controller));
+    OnGuestLaunched();
+    callback(fpromise::ok());
+  }
+}
+
+void GuestManager::HandleRunResult(GuestLifecycle_Run_Result result) {
+  if (result.is_err()) {
+    last_error_ = result.err();
+  }
+  stop_time_ = zx::clock::get_monotonic();
+  state_ = GuestStatus::STOPPED;
+
+  // TODO(fxbug.dev/104989): Destroy dynamic children so that we don't need to restart the VMM.
+  lifecycle_.Unbind();
 }
 
 void GuestManager::ConnectToGuest(
@@ -172,6 +218,7 @@ void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {
       }
       break;
     }
+    case GuestStatus::VMM_UNEXPECTED_TERMINATION:
     case GuestStatus::NOT_STARTED: {
       // Do nothing.
       break;
@@ -197,13 +244,13 @@ void GuestManager::SnapshotConfig(const fuchsia::virtualization::GuestConfig& co
   guest_descriptor_.set_sound(config.has_virtio_sound() && config.virtio_sound());
 }
 
-// |fuchsia::virtualization::GuestConfigProvider|
-void GuestManager::Get(GetCallback callback) {
-  // This function is called by VMM as part of its main() to configure itself
-  //
-  // GuestConfigProvider::Get is expected to be called only once per LaunchGuest
-  // TODO(fxbug.dev/103621) Restructure VMM's Guest to have an explicit Start and Stop function.
-  // This will remove the need for the fuchsia::virtualization::GuestConfigProvider.
-  //  GuestManager::LaunchGuest could simply connect to VMM's Guest protocol and call Start
-  callback(std::move(guest_config_));
+bool GuestManager::is_guest_started() const {
+  switch (state_) {
+    case GuestStatus::STARTING:
+    case GuestStatus::RUNNING:
+    case GuestStatus::STOPPING:
+      return true;
+    default:
+      return false;
+  }
 }

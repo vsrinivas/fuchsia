@@ -13,8 +13,7 @@
 
 #include "src/virtualization/lib/guest_config/guest_config.h"
 
-class GuestManager : public fuchsia::virtualization::GuestManager,
-                     public fuchsia::virtualization::GuestConfigProvider {
+class GuestManager : public fuchsia::virtualization::GuestManager {
  public:
   GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                std::string config_pkg_dir_path, std::string config_path);
@@ -23,33 +22,37 @@ class GuestManager : public fuchsia::virtualization::GuestManager,
       : GuestManager(dispatcher, context, "/guest_pkg/", "data/guest.cfg") {}
 
   // |fuchsia::virtualization::GuestManager|
-  void LaunchGuest(fuchsia::virtualization::GuestConfig guest_config,
+  void LaunchGuest(fuchsia::virtualization::GuestConfig user_config,
                    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                    fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) override;
   void ConnectToGuest(fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                       fuchsia::virtualization::GuestManager::ConnectToGuestCallback) override;
   void GetGuestInfo(GetGuestInfoCallback callback) override;
 
-  // |fuchsia::virtualization::GuestConfigProvider|
-  void Get(GetCallback callback) override;
-
+  // Store a subset of the configuration. This can be queried while the guest is running using
+  // the GuestManager::GetGuestInfo FIDL message.
   void SnapshotConfig(const fuchsia::virtualization::GuestConfig& config);
 
-  bool is_guest_started() const {
-    return state_ != fuchsia::virtualization::GuestStatus::NOT_STARTED;
-  }
+  // Returns true if the guest was started, but hasn't stopped.
+  bool is_guest_started() const;
 
  protected:
   virtual zx::status<fuchsia::virtualization::GuestConfig> GetDefaultGuestConfig();
   virtual void OnGuestLaunched() {}
 
  private:
+  void HandleCreateResult(::fuchsia::virtualization::GuestLifecycle_Create_Result result,
+                          fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
+                          LaunchGuestCallback callback);
+  void HandleRunResult(::fuchsia::virtualization::GuestLifecycle_Run_Result result);
+
   sys::ComponentContext* context_;
   fidl::BindingSet<fuchsia::virtualization::GuestManager> manager_bindings_;
-  fidl::BindingSet<fuchsia::virtualization::GuestConfigProvider> guest_config_bindings_;
-  fuchsia::virtualization::GuestConfig guest_config_;
   std::string config_pkg_dir_path_;
   std::string config_path_;
+
+  // The VMM lifecycle control channel. If closed, this will terminate the VMM component.
+  ::fuchsia::virtualization::GuestLifecyclePtr lifecycle_;
 
   // Cached error reported by the VMM upon stopping if not stopped due to a clean shutdown.
   std::optional<fuchsia::virtualization::GuestError> last_error_;

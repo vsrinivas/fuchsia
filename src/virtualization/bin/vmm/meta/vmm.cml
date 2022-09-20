@@ -55,7 +55,10 @@
     ],
     capabilities: [
         {
-            protocol: [ "fuchsia.virtualization.Guest" ],
+            protocol: [
+                "fuchsia.virtualization.Guest",
+                "fuchsia.virtualization.GuestLifecycle",
+            ],
         },
     ],
     use: [
@@ -68,7 +71,6 @@
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.virtualization.GuestConfigProvider",
             ],
         },
         {
@@ -160,7 +162,10 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.virtualization.Guest" ],
+            protocol: [
+                "fuchsia.virtualization.Guest",
+                "fuchsia.virtualization.GuestLifecycle",
+            ],
             from: "self",
         },
     ],
