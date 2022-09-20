@@ -60,6 +60,7 @@ custom_signing_script_tools = [
   "//zircon/tools/zbi",
 ]
 
+data_filesystem_format = "minfs"
 zircon_a_partition = "boot"
 pre_erase_flash = true
 build_uefi_disk = false
