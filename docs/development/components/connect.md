@@ -218,6 +218,25 @@ offer: [
 Like with use declarations, the `availability` field may be omitted, in which
 case it defaults to `required`.
 
+#### Transitionally dependencies {#transitional-offer}
+
+The component framework allows components to soft-transition into using and offering
+both optional and required capabilities. With the transitional availability marker, a
+component using a capability, will not cause Scrutiny validation errors whether or
+not the parent is required, optional, or same as target. Note, though this field exists
+to enable soft-transitions, components should ultimately settle on either optional or required.
+
+To use this feature, the child component will mark its availability as "transitional":
+
+```
+use: [
+    {
+        // It is ok if this protocol is offered as "required" or "optional"
+        protocol: "fuchsia.examples.Echo",
+        availability: "transitional",
+    },
+```
+
 ## Managing child components {#children}
 
 Note: For a complete example using child components, see
