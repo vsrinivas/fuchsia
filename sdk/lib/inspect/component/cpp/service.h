@@ -7,7 +7,6 @@
 
 #include <fidl/fuchsia.inspect/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/async/default.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/sys/inspect/tree_handler_settings.h>

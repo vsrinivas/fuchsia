@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.inspect/cpp/markers.h>
-#include <lib/async/default.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/fidl/cpp/wire/status.h>
 #include <lib/fidl/cpp/wire/string_view.h>
@@ -22,10 +21,7 @@ class TreeNameIterator final : public fidl::WireServer<fuchsia_inspect::TreeName
   static void StartSelfManagedServer(async_dispatcher_t* dispatcher,
                                      fidl::ServerEnd<fuchsia_inspect::TreeNameIterator>&& request,
                                      std::vector<std::string> names) {
-    if (dispatcher == nullptr) {
-      dispatcher = async_get_default_dispatcher();
-      ZX_ASSERT(dispatcher);
-    }
+    ZX_ASSERT(dispatcher);
 
     auto impl = std::unique_ptr<TreeNameIterator>(new TreeNameIterator(std::move(names)));
     auto* ptr = impl.get();
@@ -64,10 +60,7 @@ class TreeNameIterator final : public fidl::WireServer<fuchsia_inspect::TreeName
 void TreeServer::StartSelfManagedServer(Inspector inspector, TreeHandlerSettings settings,
                                         async_dispatcher_t* dispatcher,
                                         fidl::ServerEnd<fuchsia_inspect::Tree>&& request) {
-  if (dispatcher == nullptr) {
-    dispatcher = async_get_default_dispatcher();
-    ZX_ASSERT(dispatcher);
-  }
+  ZX_ASSERT(dispatcher);
 
   auto impl =
       std::unique_ptr<TreeServer>(new TreeServer(inspector, std::move(settings), dispatcher));
