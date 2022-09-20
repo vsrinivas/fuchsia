@@ -37,18 +37,15 @@ type Three = strict strict strict union { 1: b bool; }; // line 6
 }
 
 TEST(StrictnessTests, BadConflictingModifiers) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library;
+  library.AddFile("bad/conflicting_modifiers.test.fidl");
 
-type SF = strict flexible union { 1: b bool; }; // line 4
-type FS = flexible strict union { 1: b bool; }; // line 5
-)FIDL");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConflictingModifier,
                                       fidl::ErrConflictingModifier);
-  EXPECT_EQ(library.errors()[0]->span.position().line, 4);
+  EXPECT_EQ(library.errors()[0]->span.position().line, 6);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "strict");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "flexible");
-  EXPECT_EQ(library.errors()[1]->span.position().line, 5);
+  EXPECT_EQ(library.errors()[1]->span.position().line, 10);
   ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "strict");
   ASSERT_SUBSTR(library.errors()[1]->msg.c_str(), "flexible");
 }
@@ -138,24 +135,12 @@ type StrictFoo = strict table {};
 }
 
 TEST(StrictnessTests, GoodUnionStrictness) {
-  TestLibrary library(R"FIDL(library example;
+  TestLibrary library;
+  library.AddFile("good/simple_strictness.test.fidl");
 
-type Foo = strict union {
-    1: i int32;
-};
-
-type FlexibleFoo = flexible union {
-    1: i int32;
-};
-
-type StrictFoo = strict union {
-    1: i int32;
-};
-)FIDL");
   ASSERT_COMPILED(library);
-  EXPECT_EQ(library.LookupUnion("Foo")->strictness, fidl::types::Strictness::kStrict);
   EXPECT_EQ(library.LookupUnion("FlexibleFoo")->strictness, fidl::types::Strictness::kFlexible);
-  EXPECT_EQ(library.LookupUnion("StrictFoo")->strictness, fidl::types::Strictness::kStrict);
+  EXPECT_EQ(library.LookupUnion("StrictBar")->strictness, fidl::types::Strictness::kStrict);
 }
 
 TEST(StrictnessTests, GoodStrictUnionRedundant) {
