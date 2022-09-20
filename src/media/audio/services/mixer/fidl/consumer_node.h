@@ -37,6 +37,9 @@ class ConsumerNode : public Node {
 
   static std::shared_ptr<ConsumerNode> Create(Args args);
 
+  // Returns the same object as `pipeline_stage()`, but with a more specialized type.
+  ConsumerStagePtr consumer_stage() const { return consumer_stage_; }
+
   // Starts this consumer.
   void Start(ConsumerStage::StartCommand cmd) const;
 
@@ -50,12 +53,13 @@ class ConsumerNode : public Node {
   using CommandQueue = ConsumerStage::CommandQueue;
 
   ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,
-               PipelineStagePtr pipeline_stage, const Format& format,
+               ConsumerStagePtr pipeline_stage, const Format& format,
                std::shared_ptr<CommandQueue> command_queue)
-      : Node(name, /*is_meta=*/false, pipeline_direction, std::move(pipeline_stage),
+      : Node(name, /*is_meta=*/false, pipeline_direction, pipeline_stage,
              /*parent=*/nullptr),
         format_(format),
-        command_queue_(std::move(command_queue)) {}
+        command_queue_(std::move(command_queue)),
+        consumer_stage_(std::move(pipeline_stage)) {}
 
   // Implementation of Node.
   NodePtr CreateNewChildSource() final {
@@ -70,6 +74,7 @@ class ConsumerNode : public Node {
 
   const Format format_;
   const std::shared_ptr<CommandQueue> command_queue_;
+  const ConsumerStagePtr consumer_stage_;
 };
 
 }  // namespace media_audio

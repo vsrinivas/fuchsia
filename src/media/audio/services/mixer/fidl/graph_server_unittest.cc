@@ -775,5 +775,82 @@ TEST_F(GraphServerTest, CreateThreadSuccess) {
   EXPECT_EQ(result->value()->id(), 1u);
 }
 
+//
+// DeleteThread
+//
+
+TEST_F(GraphServerTest, DeleteThreadFailsMissingId) {
+  auto result = client()->DeleteThread(
+      fuchsia_audio_mixer::wire::GraphDeleteThreadRequest::Builder(arena_).Build());
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::DeleteThreadError::kInvalidId);
+}
+
+TEST_F(GraphServerTest, DeleteThreadFailsIdNotFound) {
+  auto result = client()->DeleteThread(
+      fuchsia_audio_mixer::wire::GraphDeleteThreadRequest::Builder(arena_).id(1).Build());
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::DeleteThreadError::kInvalidId);
+}
+
+TEST_F(GraphServerTest, DeleteThreadFailsStillInUse) {
+  // Create a thread.
+  {
+    auto result = client()->CreateThread(MakeDefaultCreateThreadRequest(arena_).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    EXPECT_EQ(result->value()->id(), 1u);
+  }
+
+  // Attach a consumer.
+  {
+    auto result = client()->CreateConsumer(
+        fuchsia_audio_mixer::wire::GraphCreateConsumerRequest::Builder(arena_)
+            .name(fidl::StringView::FromExternal("consumer"))
+            .direction(PipelineDirection::kOutput)
+            .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
+                arena_, MakeDefaultRingBuffer(arena_).Build()))
+            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+
+  // Delete should fail.
+  {
+    auto result = client()->DeleteThread(
+        fuchsia_audio_mixer::wire::GraphDeleteThreadRequest::Builder(arena_).id(1).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_TRUE(result->is_error());
+    ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::DeleteThreadError::kStillInUse);
+  }
+}
+
+TEST_F(GraphServerTest, DeleteThreadSuccess) {
+  // Create a thread.
+  {
+    auto result = client()->CreateThread(MakeDefaultCreateThreadRequest(arena_).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    EXPECT_EQ(result->value()->id(), 1u);
+  }
+
+  // Delete it.
+  {
+    auto result = client()->DeleteThread(
+        fuchsia_audio_mixer::wire::GraphDeleteThreadRequest::Builder(arena_).id(1).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+  }
+}
+
+// TODO(fxbug.dev/87651): after implementing DeleteNode, add a case where a consumer is created on a
+// thread then deleted
+
 }  // namespace
 }  // namespace media_audio

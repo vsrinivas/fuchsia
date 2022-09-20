@@ -91,7 +91,11 @@ class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Grap
   std::unordered_map<NodeId, NodePtr> nodes_;
   NodeId next_node_id_ = 1;
 
-  std::unordered_map<ThreadId, MixThreadPtr> threads_;
+  struct MixThreadInfo {
+    MixThreadPtr thread;
+    int64_t num_consumers{0};
+  };
+  std::unordered_map<ThreadId, MixThreadInfo> threads_;
   ThreadId next_thread_id_ = 1;
 
   std::shared_ptr<ClockRegistry> clock_registry_;

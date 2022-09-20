@@ -296,15 +296,14 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     return;
   }
 
-  MixThreadPtr thread;
-  if (auto it = threads_.find(request->options().thread()); it != threads_.end()) {
-    thread = it->second;
-  } else {
+  auto thread_it = threads_.find(request->options().thread());
+  if (thread_it == threads_.end()) {
     FX_LOGS(WARNING) << "CreateConsumer: invalid thread ID";
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
     return;
   }
 
+  auto& thread = thread_it->second.thread;
   const auto name = NameOrEmpty(*request);
   std::shared_ptr<ConsumerStage::Writer> writer;
   std::optional<Format> format;
@@ -374,14 +373,24 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   }
 
   const auto id = NextNodeId();
-  nodes_[id] = ConsumerNode::Create({
+  const auto consumer = ConsumerNode::Create({
       .name = name,
       .pipeline_direction = request->direction(),
       .format = *format,
       .reference_clock_koid = *reference_clock_koid,
       .writer = std::move(writer),
-      .thread = std::move(thread),
+      .thread = thread,
   });
+  nodes_[id] = consumer;
+
+  // Add this consumer to its thread. Since the consumer was just created, it cannot have been
+  // started yet, hence we don't call NotifyConsumerStarting.
+  global_task_queue_->Push(thread->id(), [thread, consumer_stage = consumer->consumer_stage()]() {
+    ScopedThreadChecker checker(thread->checker());
+    thread->AddConsumer(consumer_stage);
+    // TODO(fxbug.dev/87651): thread->AddClock?
+  });
+  thread_it->second.num_consumers++;
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -447,17 +456,21 @@ void GraphServer::CreateThread(CreateThreadRequestView request,
   }
 
   const auto id = NextThreadId();
-  threads_[id] = MixThread::Create({
-      .id = id,
-      .name = NameOrEmpty(*request),
-      .deadline_profile =
-          request->has_deadline_profile() ? std::move(request->deadline_profile()) : zx::profile(),
-      .mix_period = zx::nsec(request->period()),
-      .cpu_per_period = zx::nsec(request->cpu_per_period()),
-      .global_task_queue = global_task_queue_,
-      .timer = clock_registry_->CreateTimer(),
-      .mono_clock = clock_registry_->SystemMonotonicClock(),
-  });
+  threads_[id] = {
+      .thread = MixThread::Create({
+          .id = id,
+          .name = NameOrEmpty(*request),
+          .deadline_profile = request->has_deadline_profile()
+                                  ? std::move(request->deadline_profile())
+                                  : zx::profile(),
+          .mix_period = zx::nsec(request->period()),
+          .cpu_per_period = zx::nsec(request->cpu_per_period()),
+          .global_task_queue = global_task_queue_,
+          .timer = clock_registry_->CreateTimer(),
+          .mono_clock = clock_registry_->SystemMonotonicClock(),
+      }),
+      .num_consumers = 0,
+  };
 
   fidl::Arena arena;
   completer.ReplySuccess(
@@ -468,7 +481,38 @@ void GraphServer::DeleteThread(DeleteThreadRequestView request,
                                DeleteThreadCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::DeleteThread");
   ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  if (!request->has_id()) {
+    FX_LOGS(WARNING) << "DeleteThread: missing `id` field";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteThreadError::kInvalidId);
+    return;
+  }
+
+  auto it = threads_.find(request->id());
+  if (it == threads_.end()) {
+    FX_LOGS(WARNING) << "DeleteThread: thread " << request->id() << " not found";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteThreadError::kInvalidId);
+    return;
+  }
+
+  if (it->second.num_consumers > 0) {
+    FX_LOGS(WARNING) << "DeleteThread: thread " << request->id() << " still in use by "
+                     << it->second.num_consumers << " consumers";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteThreadError::kStillInUse);
+    return;
+  }
+
+  // Shutdown this thread and delete it.
+  const auto thread = it->second.thread;
+  global_task_queue_->Push(thread->id(), [thread]() {
+    ScopedThreadChecker checker(thread->checker());
+    thread->Shutdown();
+  });
+  threads_.erase(it);
+
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphDeleteThreadResponse::Builder(arena).Build());
 }
 
 void GraphServer::CreateGainControl(CreateGainControlRequestView request,

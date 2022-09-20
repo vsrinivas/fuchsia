@@ -15,7 +15,7 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
   struct WithPublicCtor : public ConsumerNode {
    public:
     explicit WithPublicCtor(std::string_view name, PipelineDirection pipeline_direction,
-                            PipelineStagePtr pipeline_stage, const Format& format,
+                            ConsumerStagePtr pipeline_stage, const Format& format,
                             std::shared_ptr<CommandQueue> command_queue)
         : ConsumerNode(name, pipeline_direction, std::move(pipeline_stage), format,
                        std::move(command_queue)) {}
