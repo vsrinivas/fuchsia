@@ -12,7 +12,6 @@ fuchsia_sdk_test_targets("all_sdk") {
 group("default") {
   deps = [
     ":all_sdk",
-    "chromium_compat:all",
     "tests/fidl:static_fidl_test_package",
     "tests/package",
   ]
@@ -21,7 +20,6 @@ group("default") {
 group("tests") {
   testonly = true
   deps = [
-    "chromium_compat:tests",
     "tests/fidl:tests",
     "tests/package:tests",
   ]
