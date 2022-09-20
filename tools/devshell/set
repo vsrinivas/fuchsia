@@ -56,6 +56,9 @@
 ##                         attempts to make builds faster using remote build
 ##                         servers. Defaults to detecting whether goma has been
 ##                         set up via `fx goma`.
+##   --cxx-rbe             If set, use reclient (RBE) to build C++ targets.
+##                         This takes precedence over --goma.
+##                         Default: disabled
 ##   --rust-rbe            If set, use the remote backend (RBE) service for building
 ##                         Rust targets.  RBE offloads work onto remote servers and
 ##                         offers caching benefits to accelerate builds.

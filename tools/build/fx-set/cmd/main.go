@@ -168,7 +168,7 @@ type setArgs struct {
 	ccacheDir     string
 	enableRbe     bool // deprecated
 	enableRustRbe bool
-	// TODO(fangism): enableCxxRbe
+	enableCxxRbe  bool
 
 	isRelease        bool
 	netboot          bool
@@ -222,6 +222,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 
 	flagSet.BoolVar(&cmd.enableRbe, "rbe", false, "")
 	flagSet.BoolVar(&cmd.enableRustRbe, "rust-rbe", false, "")
+	flagSet.BoolVar(&cmd.enableCxxRbe, "cxx-rbe", false, "")
 
 	flagSet.BoolVar(&cmd.isRelease, "release", false, "")
 	flagSet.BoolVar(&cmd.netboot, "netboot", false, "")
@@ -377,7 +378,9 @@ func constructStaticSpec(ctx context.Context, fx fxRunner, checkoutDir string, a
 	if args.enableRbe || args.enableRustRbe {
 		gnArgs = append(gnArgs, "rust_rbe_enable=true")
 	}
-	// TODO(fangism): replicate for C++
+	if args.enableCxxRbe {
+		gnArgs = append(gnArgs, "cxx_rbe_enable=true")
+	}
 
 	if args.netboot {
 		gnArgs = append(gnArgs, "enable_netboot=true")
@@ -399,6 +402,8 @@ func constructStaticSpec(ctx context.Context, fx fxRunner, checkoutDir string, a
 		Variants:          variants,
 		GnArgs:            gnArgs,
 		UseGoma:           useGomaFinal,
+		RustRbeEnable:     args.enableRustRbe,
+		CxxRbeEnable:      args.enableCxxRbe,
 		IdeFiles:          args.ideFiles,
 		JsonIdeScripts:    args.jsonIDEScripts,
 		ExportRustProject: true,
