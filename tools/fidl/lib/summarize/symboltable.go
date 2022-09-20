@@ -11,7 +11,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-type typePrinter = func(t fidlgen.Type) Decl
+type typePrinter = func(t fidlgen.Type) Type
 
 // structPayload is a thin wrapper around the Struct type imported from fidlgen.
 // It exists solely to implement the parameterizer interface over that type.
@@ -143,7 +143,7 @@ func (n *symbolTable) getPayload(name fidlgen.EncodedCompoundIdentifier) paramet
 }
 
 // fidlTypeString converts the FIDL type declaration into a string per RFC-0050.
-func (n *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
+func (n *symbolTable) fidlTypeString(t fidlgen.Type) Type {
 	var ret typeString
 	switch t.Kind {
 	case fidlgen.PrimitiveType:
@@ -194,7 +194,7 @@ func (n *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
 			ret.addConstraint("optional")
 		}
 	}
-	return Decl(ret.String())
+	return Type(ret.String())
 }
 
 // typeString contains a declaration of a FIDL type, and knows how to print it

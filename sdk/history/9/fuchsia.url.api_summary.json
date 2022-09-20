@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.url/MAX_URL_LENGTH",
+        "type": "uint32",
         "value": "4096"
     },
     {

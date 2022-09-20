@@ -75,7 +75,7 @@ func (m method) Member() bool {
 
 // getTypeSignature returns a string representation of the type signature of
 // this method.  E.g. "(int32 a) -> (Foo b)"
-func (m method) getTypeSignature() Decl {
+func (m method) getTypeSignature() Type {
 	var parlist []string
 	request := m.getParamList(m.method.HasRequest, m.requestPayload)
 	if request != "" {
@@ -89,13 +89,13 @@ func (m method) getTypeSignature() Decl {
 		}
 		parlist = append(parlist, "->", response)
 	}
-	return Decl(strings.Join(parlist, " "))
+	return Type(strings.Join(parlist, " "))
 }
 
 func (m *method) Serialize() ElementStr {
 	e := m.membership.Serialize()
 	e.Kind = ProtocolMemberKind
-	e.Decl = m.getTypeSignature()
+	e.Type = m.getTypeSignature()
 	return e
 }
 

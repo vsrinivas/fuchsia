@@ -20,59 +20,59 @@
         "value": "8"
     },
     {
-        "declaration": "uint64",
         "kind": "bits",
         "name": "fuchsia.media.target/CapabilityFlags",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.media.target/CapabilityFlags",
         "kind": "table/member",
-        "name": "fuchsia.media.target/Description.capability_flags"
+        "name": "fuchsia.media.target/Description.capability_flags",
+        "type": "fuchsia.media.target/CapabilityFlags"
     },
     {
-        "declaration": "string:200",
         "kind": "table/member",
-        "name": "fuchsia.media.target/Description.display_name"
+        "name": "fuchsia.media.target/Description.display_name",
+        "type": "string:200"
     },
     {
-        "declaration": "fuchsia.media/Metadata",
         "kind": "table/member",
-        "name": "fuchsia.media.target/Description.metadata"
+        "name": "fuchsia.media.target/Description.metadata",
+        "type": "fuchsia.media/Metadata"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media.target/Description.target_id"
+        "name": "fuchsia.media.target/Description.target_id",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.media.target/Description"
     },
     {
-        "declaration": "(uint64 session_id,vector<uint64>:100 target_ids) -> (fuchsia.media.target/Selector_BindGroupTarget_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Discovery.BindGroupTarget"
+        "name": "fuchsia.media.target/Discovery.BindGroupTarget",
+        "type": "(uint64 session_id,vector<uint64>:100 target_ids) -> (fuchsia.media.target/Selector_BindGroupTarget_Result result)"
     },
     {
-        "declaration": "(uint64 session_id,uint64 target_id) -> (fuchsia.media.target/Selector_BindTarget_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Discovery.BindTarget"
+        "name": "fuchsia.media.target/Discovery.BindTarget",
+        "type": "(uint64 session_id,uint64 target_id) -> (fuchsia.media.target/Selector_BindTarget_Result result)"
     },
     {
-        "declaration": "(uint64 target_id,server_end:fuchsia.media.target/Target target_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Discovery.ConnectToTarget"
+        "name": "fuchsia.media.target/Discovery.ConnectToTarget",
+        "type": "(uint64 target_id,server_end:fuchsia.media.target/Target target_request)"
     },
     {
-        "declaration": "() -> (fuchsia.media.target/SessionBindingsWatchEvent event)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Discovery.WatchSessionBindings"
+        "name": "fuchsia.media.target/Discovery.WatchSessionBindings",
+        "type": "() -> (fuchsia.media.target/SessionBindingsWatchEvent event)"
     },
     {
-        "declaration": "() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Discovery.WatchTargets"
+        "name": "fuchsia.media.target/Discovery.WatchTargets",
+        "type": "() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)"
     },
     {
         "kind": "protocol",
@@ -114,52 +114,52 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.target/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Group.WatchTargets"
+        "name": "fuchsia.media.target/Group.WatchTargets",
+        "type": "() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.target/Group"
     },
     {
-        "declaration": "(uint64 target_id) -> (fuchsia.media.target/GroupEditor_AddTarget_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/GroupEditor.AddTarget"
+        "name": "fuchsia.media.target/GroupEditor.AddTarget",
+        "type": "(uint64 target_id) -> (fuchsia.media.target/GroupEditor_AddTarget_Result result)"
     },
     {
-        "declaration": "(uint64 target_id) -> (fuchsia.media.target/GroupEditor_RemoveTarget_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/GroupEditor.RemoveTarget"
+        "name": "fuchsia.media.target/GroupEditor.RemoveTarget",
+        "type": "(uint64 target_id) -> (fuchsia.media.target/GroupEditor_RemoveTarget_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.target/GroupEditor"
     },
     {
-        "declaration": "box<fuchsia.media.target/TargetChange>",
         "kind": "struct/member",
-        "name": "fuchsia.media.target/GroupEditor_AddTarget_Response.target_change"
+        "name": "fuchsia.media.target/GroupEditor_AddTarget_Response.target_change",
+        "type": "box<fuchsia.media.target/TargetChange>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.target/GroupEditor_AddTarget_Response"
     },
     {
-        "declaration": "fuchsia.media.target/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.target/GroupEditor_AddTarget_Result.err"
+        "name": "fuchsia.media.target/GroupEditor_AddTarget_Result.err",
+        "type": "fuchsia.media.target/Error"
     },
     {
-        "declaration": "fuchsia.media.target/GroupEditor_AddTarget_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.target/GroupEditor_AddTarget_Result.response"
+        "name": "fuchsia.media.target/GroupEditor_AddTarget_Result.response",
+        "type": "fuchsia.media.target/GroupEditor_AddTarget_Response"
     },
     {
         "kind": "union",
@@ -167,23 +167,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "box<fuchsia.media.target/TargetChange>",
         "kind": "struct/member",
-        "name": "fuchsia.media.target/GroupEditor_RemoveTarget_Response.target_change"
+        "name": "fuchsia.media.target/GroupEditor_RemoveTarget_Response.target_change",
+        "type": "box<fuchsia.media.target/TargetChange>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.target/GroupEditor_RemoveTarget_Response"
     },
     {
-        "declaration": "fuchsia.media.target/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.target/GroupEditor_RemoveTarget_Result.err"
+        "name": "fuchsia.media.target/GroupEditor_RemoveTarget_Result.err",
+        "type": "fuchsia.media.target/Error"
     },
     {
-        "declaration": "fuchsia.media.target/GroupEditor_RemoveTarget_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.target/GroupEditor_RemoveTarget_Result.response"
+        "name": "fuchsia.media.target/GroupEditor_RemoveTarget_Result.response",
+        "type": "fuchsia.media.target/GroupEditor_RemoveTarget_Response"
     },
     {
         "kind": "union",
@@ -191,37 +191,37 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(uint64 session_id,vector<uint64>:100 target_ids) -> (fuchsia.media.target/Selector_BindGroupTarget_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Selector.BindGroupTarget"
+        "name": "fuchsia.media.target/Selector.BindGroupTarget",
+        "type": "(uint64 session_id,vector<uint64>:100 target_ids) -> (fuchsia.media.target/Selector_BindGroupTarget_Result result)"
     },
     {
-        "declaration": "(uint64 session_id,uint64 target_id) -> (fuchsia.media.target/Selector_BindTarget_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Selector.BindTarget"
+        "name": "fuchsia.media.target/Selector.BindTarget",
+        "type": "(uint64 session_id,uint64 target_id) -> (fuchsia.media.target/Selector_BindTarget_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.target/Selector"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.media.target/Selector_BindGroupTarget_Response.target_id"
+        "name": "fuchsia.media.target/Selector_BindGroupTarget_Response.target_id",
+        "type": "uint64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.target/Selector_BindGroupTarget_Response"
     },
     {
-        "declaration": "fuchsia.media.target/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.target/Selector_BindGroupTarget_Result.err"
+        "name": "fuchsia.media.target/Selector_BindGroupTarget_Result.err",
+        "type": "fuchsia.media.target/Error"
     },
     {
-        "declaration": "fuchsia.media.target/Selector_BindGroupTarget_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.target/Selector_BindGroupTarget_Result.response"
+        "name": "fuchsia.media.target/Selector_BindGroupTarget_Result.response",
+        "type": "fuchsia.media.target/Selector_BindGroupTarget_Response"
     },
     {
         "kind": "union",
@@ -233,14 +233,14 @@
         "name": "fuchsia.media.target/Selector_BindTarget_Response"
     },
     {
-        "declaration": "fuchsia.media.target/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.target/Selector_BindTarget_Result.err"
+        "name": "fuchsia.media.target/Selector_BindTarget_Result.err",
+        "type": "fuchsia.media.target/Error"
     },
     {
-        "declaration": "fuchsia.media.target/Selector_BindTarget_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.target/Selector_BindTarget_Result.response"
+        "name": "fuchsia.media.target/Selector_BindTarget_Result.response",
+        "type": "fuchsia.media.target/Selector_BindTarget_Response"
     },
     {
         "kind": "union",
@@ -248,94 +248,94 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.media.target/SessionBinding.session_id"
+        "name": "fuchsia.media.target/SessionBinding.session_id",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.media.target/SessionBinding.target_id"
+        "name": "fuchsia.media.target/SessionBinding.target_id",
+        "type": "uint64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.target/SessionBinding"
     },
     {
-        "declaration": "vector<fuchsia.media.target/SessionBinding>",
         "kind": "table/member",
-        "name": "fuchsia.media.target/SessionBindingsWatchEvent.removed"
+        "name": "fuchsia.media.target/SessionBindingsWatchEvent.removed",
+        "type": "vector<fuchsia.media.target/SessionBinding>"
     },
     {
-        "declaration": "vector<fuchsia.media.target/SessionBinding>",
         "kind": "table/member",
-        "name": "fuchsia.media.target/SessionBindingsWatchEvent.updated"
+        "name": "fuchsia.media.target/SessionBindingsWatchEvent.updated",
+        "type": "vector<fuchsia.media.target/SessionBinding>"
     },
     {
         "kind": "table",
         "name": "fuchsia.media.target/SessionBindingsWatchEvent"
     },
     {
-        "declaration": "(uint64 target_id) -> (fuchsia.media.target/GroupEditor_AddTarget_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Target.AddTarget"
+        "name": "fuchsia.media.target/Target.AddTarget",
+        "type": "(uint64 target_id) -> (fuchsia.media.target/GroupEditor_AddTarget_Result result)"
     },
     {
-        "declaration": "(uint64 group,server_end:fuchsia.media.audio/VolumeControl volume_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Target.BindMemberVolumeControl"
+        "name": "fuchsia.media.target/Target.BindMemberVolumeControl",
+        "type": "(uint64 group,server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Target.BindVolumeControl"
+        "name": "fuchsia.media.target/Target.BindVolumeControl",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
     },
     {
-        "declaration": "(uint64 target_id) -> (fuchsia.media.target/GroupEditor_RemoveTarget_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Target.RemoveTarget"
+        "name": "fuchsia.media.target/Target.RemoveTarget",
+        "type": "(uint64 target_id) -> (fuchsia.media.target/GroupEditor_RemoveTarget_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/Target.WatchTargets"
+        "name": "fuchsia.media.target/Target.WatchTargets",
+        "type": "() -> (fuchsia.media.target/TargetsWatchEvent targets_watch_event)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.target/Target"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.media.target/TargetChange.new_target_id"
+        "name": "fuchsia.media.target/TargetChange.new_target_id",
+        "type": "uint64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.target/TargetChange"
     },
     {
-        "declaration": "vector<uint64>",
         "kind": "table/member",
-        "name": "fuchsia.media.target/TargetsWatchEvent.removed"
+        "name": "fuchsia.media.target/TargetsWatchEvent.removed",
+        "type": "vector<uint64>"
     },
     {
-        "declaration": "vector<fuchsia.media.target/Description>",
         "kind": "table/member",
-        "name": "fuchsia.media.target/TargetsWatchEvent.updated"
+        "name": "fuchsia.media.target/TargetsWatchEvent.updated",
+        "type": "vector<fuchsia.media.target/Description>"
     },
     {
         "kind": "table",
         "name": "fuchsia.media.target/TargetsWatchEvent"
     },
     {
-        "declaration": "(uint64 group,server_end:fuchsia.media.audio/VolumeControl volume_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/VolumeControl.BindMemberVolumeControl"
+        "name": "fuchsia.media.target/VolumeControl.BindMemberVolumeControl",
+        "type": "(uint64 group,server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.target/VolumeControl.BindVolumeControl"
+        "name": "fuchsia.media.target/VolumeControl.BindVolumeControl",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
     },
     {
         "kind": "protocol",

@@ -1,17 +1,17 @@
 [
     {
-        "declaration": "fuchsia.update/Initiator",
         "kind": "table/member",
-        "name": "fuchsia.update/AttemptOptions.initiator"
+        "name": "fuchsia.update/AttemptOptions.initiator",
+        "type": "fuchsia.update/Initiator"
     },
     {
         "kind": "table",
         "name": "fuchsia.update/AttemptOptions"
     },
     {
-        "declaration": "(fuchsia.update/AttemptOptions options,server_end:fuchsia.update/Monitor monitor) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.update/AttemptsMonitor.OnStart"
+        "name": "fuchsia.update/AttemptsMonitor.OnStart",
+        "type": "(fuchsia.update/AttemptOptions options,server_end:fuchsia.update/Monitor monitor) -> ()"
     },
     {
         "kind": "protocol",
@@ -38,20 +38,20 @@
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.update/CheckNotStartedReason",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.update/CheckOptions.allow_attaching_to_existing_update_check"
+        "name": "fuchsia.update/CheckOptions.allow_attaching_to_existing_update_check",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.update/Initiator",
         "kind": "table/member",
-        "name": "fuchsia.update/CheckOptions.initiator"
+        "name": "fuchsia.update/CheckOptions.initiator",
+        "type": "fuchsia.update/Initiator"
     },
     {
         "kind": "table",
@@ -62,9 +62,9 @@
         "name": "fuchsia.update/CheckingForUpdatesData"
     },
     {
-        "declaration": "() -> (zx/handle:EVENTPAIR event)",
         "kind": "protocol/member",
-        "name": "fuchsia.update/CommitStatusProvider.IsCurrentSystemCommitted"
+        "name": "fuchsia.update/CommitStatusProvider.IsCurrentSystemCommitted",
+        "type": "() -> (zx/handle:EVENTPAIR event)"
     },
     {
         "kind": "protocol",
@@ -85,10 +85,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.update/Initiator",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -96,82 +96,82 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.update/InstallationDeferralReason",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.update/InstallationDeferralReason",
         "kind": "table/member",
-        "name": "fuchsia.update/InstallationDeferredData.deferral_reason"
+        "name": "fuchsia.update/InstallationDeferredData.deferral_reason",
+        "type": "fuchsia.update/InstallationDeferralReason"
     },
     {
-        "declaration": "fuchsia.update/UpdateInfo",
         "kind": "table/member",
-        "name": "fuchsia.update/InstallationDeferredData.update"
+        "name": "fuchsia.update/InstallationDeferredData.update",
+        "type": "fuchsia.update/UpdateInfo"
     },
     {
         "kind": "table",
         "name": "fuchsia.update/InstallationDeferredData"
     },
     {
-        "declaration": "fuchsia.update/InstallationProgress",
         "kind": "table/member",
-        "name": "fuchsia.update/InstallationErrorData.installation_progress"
+        "name": "fuchsia.update/InstallationErrorData.installation_progress",
+        "type": "fuchsia.update/InstallationProgress"
     },
     {
-        "declaration": "fuchsia.update/UpdateInfo",
         "kind": "table/member",
-        "name": "fuchsia.update/InstallationErrorData.update"
+        "name": "fuchsia.update/InstallationErrorData.update",
+        "type": "fuchsia.update/UpdateInfo"
     },
     {
         "kind": "table",
         "name": "fuchsia.update/InstallationErrorData"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.update/InstallationProgress.fraction_completed"
+        "name": "fuchsia.update/InstallationProgress.fraction_completed",
+        "type": "float32"
     },
     {
         "kind": "table",
         "name": "fuchsia.update/InstallationProgress"
     },
     {
-        "declaration": "fuchsia.update/InstallationProgress",
         "kind": "table/member",
-        "name": "fuchsia.update/InstallingData.installation_progress"
+        "name": "fuchsia.update/InstallingData.installation_progress",
+        "type": "fuchsia.update/InstallationProgress"
     },
     {
-        "declaration": "fuchsia.update/UpdateInfo",
         "kind": "table/member",
-        "name": "fuchsia.update/InstallingData.update"
+        "name": "fuchsia.update/InstallingData.update",
+        "type": "fuchsia.update/UpdateInfo"
     },
     {
         "kind": "table",
         "name": "fuchsia.update/InstallingData"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.update/MAX_VERSION_STRING_SIZE",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "(fuchsia.update/CheckOptions options,client_end:<fuchsia.update/Monitor,optional> monitor) -> (fuchsia.update/Manager_CheckNow_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.update/Manager.CheckNow"
+        "name": "fuchsia.update/Manager.CheckNow",
+        "type": "(fuchsia.update/CheckOptions options,client_end:<fuchsia.update/Monitor,optional> monitor) -> (fuchsia.update/Manager_CheckNow_Result result)"
     },
     {
-        "declaration": "(client_end:fuchsia.update/AttemptsMonitor attempts_monitor)",
         "kind": "protocol/member",
-        "name": "fuchsia.update/Manager.MonitorAllUpdateChecks"
+        "name": "fuchsia.update/Manager.MonitorAllUpdateChecks",
+        "type": "(client_end:fuchsia.update/AttemptsMonitor attempts_monitor)"
     },
     {
-        "declaration": "() -> (bool rebooting)",
         "kind": "protocol/member",
-        "name": "fuchsia.update/Manager.PerformPendingReboot"
+        "name": "fuchsia.update/Manager.PerformPendingReboot",
+        "type": "() -> (bool rebooting)"
     },
     {
         "kind": "protocol",
@@ -182,14 +182,14 @@
         "name": "fuchsia.update/Manager_CheckNow_Response"
     },
     {
-        "declaration": "fuchsia.update/CheckNotStartedReason",
         "kind": "union/member",
-        "name": "fuchsia.update/Manager_CheckNow_Result.err"
+        "name": "fuchsia.update/Manager_CheckNow_Result.err",
+        "type": "fuchsia.update/CheckNotStartedReason"
     },
     {
-        "declaration": "fuchsia.update/Manager_CheckNow_Response",
         "kind": "union/member",
-        "name": "fuchsia.update/Manager_CheckNow_Result.response"
+        "name": "fuchsia.update/Manager_CheckNow_Result.response",
+        "type": "fuchsia.update/Manager_CheckNow_Response"
     },
     {
         "kind": "union",
@@ -197,9 +197,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.update/State state) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.update/Monitor.OnState"
+        "name": "fuchsia.update/Monitor.OnState",
+        "type": "(fuchsia.update/State state) -> ()"
     },
     {
         "kind": "protocol",
@@ -210,39 +210,39 @@
         "name": "fuchsia.update/NoUpdateAvailableData"
     },
     {
-        "declaration": "fuchsia.update/CheckingForUpdatesData",
         "kind": "union/member",
-        "name": "fuchsia.update/State.checking_for_updates"
+        "name": "fuchsia.update/State.checking_for_updates",
+        "type": "fuchsia.update/CheckingForUpdatesData"
     },
     {
-        "declaration": "fuchsia.update/ErrorCheckingForUpdateData",
         "kind": "union/member",
-        "name": "fuchsia.update/State.error_checking_for_update"
+        "name": "fuchsia.update/State.error_checking_for_update",
+        "type": "fuchsia.update/ErrorCheckingForUpdateData"
     },
     {
-        "declaration": "fuchsia.update/InstallationDeferredData",
         "kind": "union/member",
-        "name": "fuchsia.update/State.installation_deferred_by_policy"
+        "name": "fuchsia.update/State.installation_deferred_by_policy",
+        "type": "fuchsia.update/InstallationDeferredData"
     },
     {
-        "declaration": "fuchsia.update/InstallationErrorData",
         "kind": "union/member",
-        "name": "fuchsia.update/State.installation_error"
+        "name": "fuchsia.update/State.installation_error",
+        "type": "fuchsia.update/InstallationErrorData"
     },
     {
-        "declaration": "fuchsia.update/InstallingData",
         "kind": "union/member",
-        "name": "fuchsia.update/State.installing_update"
+        "name": "fuchsia.update/State.installing_update",
+        "type": "fuchsia.update/InstallingData"
     },
     {
-        "declaration": "fuchsia.update/NoUpdateAvailableData",
         "kind": "union/member",
-        "name": "fuchsia.update/State.no_update_available"
+        "name": "fuchsia.update/State.no_update_available",
+        "type": "fuchsia.update/NoUpdateAvailableData"
     },
     {
-        "declaration": "fuchsia.update/InstallingData",
         "kind": "union/member",
-        "name": "fuchsia.update/State.waiting_for_reboot"
+        "name": "fuchsia.update/State.waiting_for_reboot",
+        "type": "fuchsia.update/InstallingData"
     },
     {
         "kind": "union",
@@ -250,19 +250,19 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.update/UpdateInfo.download_size"
+        "name": "fuchsia.update/UpdateInfo.download_size",
+        "type": "uint64"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.update/UpdateInfo.urgent"
+        "name": "fuchsia.update/UpdateInfo.urgent",
+        "type": "bool"
     },
     {
-        "declaration": "string:128",
         "kind": "table/member",
-        "name": "fuchsia.update/UpdateInfo.version_available"
+        "name": "fuchsia.update/UpdateInfo.version_available",
+        "type": "string:128"
     },
     {
         "kind": "table",

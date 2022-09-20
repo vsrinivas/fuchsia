@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(fuchsia.mem/Buffer thread_settings_json) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.lowpan.bootstrap/Thread.ImportSettings"
+        "name": "fuchsia.lowpan.bootstrap/Thread.ImportSettings",
+        "type": "(fuchsia.mem/Buffer thread_settings_json) -> ()"
     },
     {
         "kind": "protocol",

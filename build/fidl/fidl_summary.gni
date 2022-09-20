@@ -100,5 +100,11 @@ template("fidl_summary_json") {
       rebase_path(_summary_file_json, root_build_dir),
       "--suppress-empty-library",
     ]
+
+    # TODO(fxbug.dev/109721): Remove.
+    if (filter_include([ get_path_info(".", "abspath") ], [ "//vendor/*" ]) ==
+        []) {
+      args += [ "--rename-declaration-to-type" ]
+    }
   }
 }

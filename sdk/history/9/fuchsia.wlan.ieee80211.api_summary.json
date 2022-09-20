@@ -1,37 +1,37 @@
 [
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/CCMP_128_MIC_LEN",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/CCMP_256_MIC_LEN",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/CCMP_HDR_LEN",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/CCMP_PN_LEN",
+        "type": "uint32",
         "value": "6"
     },
     {
-        "declaration": "array<uint8,32>",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/CSsid.data"
+        "name": "fuchsia.wlan.ieee80211/CSsid.data",
+        "type": "array<uint8,32>"
     },
     {
-        "declaration": "uint8",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/CSsid.len"
+        "name": "fuchsia.wlan.ieee80211/CSsid.len",
+        "type": "uint8"
     },
     {
         "kind": "struct",
@@ -113,93 +113,93 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.ieee80211/CipherSuiteType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/HT_CAP_LEN",
+        "type": "uint8",
         "value": "26"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/HT_OP_LEN",
+        "type": "uint8",
         "value": "22"
     },
     {
-        "declaration": "array<uint8,26>",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/HtCapabilities.bytes"
+        "name": "fuchsia.wlan.ieee80211/HtCapabilities.bytes",
+        "type": "array<uint8,26>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.wlan.ieee80211/HtCapabilities"
     },
     {
-        "declaration": "array<uint8,22>",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/HtOperation.bytes"
+        "name": "fuchsia.wlan.ieee80211/HtOperation.bytes",
+        "type": "array<uint8,22>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.wlan.ieee80211/HtOperation"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAC_ADDR_LEN",
+        "type": "uint8",
         "value": "6"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAX_MESH_ID_BYTE_LEN",
+        "type": "uint8",
         "value": "32"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAX_MGMT_FRAME_MAC_HEADER_BYTE_LEN",
+        "type": "uint8",
         "value": "28"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAX_MMPDU_BYTE_LEN",
+        "type": "uint16",
         "value": "2304"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAX_SSID_BYTE_LEN",
+        "type": "uint8",
         "value": "32"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAX_UNIQUE_CHANNEL_NUMBERS",
+        "type": "uint16",
         "value": "256"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_0",
+        "type": "uint16",
         "value": "3895"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_1",
+        "type": "uint16",
         "value": "7991"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/MAX_VHT_MPDU_BYTE_LEN_2",
+        "type": "uint16",
         "value": "11454"
     },
     {
@@ -533,15 +533,15 @@
         "value": "21"
     },
     {
-        "declaration": "uint16",
         "kind": "enum",
         "name": "fuchsia.wlan.ieee80211/ReasonCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint16"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/SSID_LIST_MAX",
+        "type": "uint8",
         "value": "84"
     },
     {
@@ -1040,63 +1040,63 @@
         "value": "74"
     },
     {
-        "declaration": "uint16",
         "kind": "enum",
         "name": "fuchsia.wlan.ieee80211/StatusCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/TIDS_MAX",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/VHT_CAP_LEN",
+        "type": "uint8",
         "value": "12"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/VHT_OP_LEN",
+        "type": "uint8",
         "value": "5"
     },
     {
-        "declaration": "array<uint8,12>",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/VhtCapabilities.bytes"
+        "name": "fuchsia.wlan.ieee80211/VhtCapabilities.bytes",
+        "type": "array<uint8,12>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.wlan.ieee80211/VhtCapabilities"
     },
     {
-        "declaration": "array<uint8,5>",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.ieee80211/VhtOperation.bytes"
+        "name": "fuchsia.wlan.ieee80211/VhtOperation.bytes",
+        "type": "array<uint8,5>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.wlan.ieee80211/VhtOperation"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/WLAN_IE_BODY_MAX_LEN",
+        "type": "uint32",
         "value": "255"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/WLAN_IE_MAX_LEN",
+        "type": "uint32",
         "value": "257"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.wlan.ieee80211/WLAN_MSDU_MAX_LEN",
+        "type": "uint32",
         "value": "2304"
     },
     {

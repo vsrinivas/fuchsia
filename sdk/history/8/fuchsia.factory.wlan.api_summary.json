@@ -1,36 +1,36 @@
 [
     {
-        "declaration": "(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Get_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory.wlan/Iovar.Get"
+        "name": "fuchsia.factory.wlan/Iovar.Get",
+        "type": "(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Get_Result result)"
     },
     {
-        "declaration": "(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory.wlan/Iovar.Set"
+        "name": "fuchsia.factory.wlan/Iovar.Set",
+        "type": "(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Set_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.factory.wlan/Iovar"
     },
     {
-        "declaration": "vector<uint8>:16384",
         "kind": "struct/member",
-        "name": "fuchsia.factory.wlan/Iovar_Get_Response.result"
+        "name": "fuchsia.factory.wlan/Iovar_Get_Response.result",
+        "type": "vector<uint8>:16384"
     },
     {
         "kind": "struct",
         "name": "fuchsia.factory.wlan/Iovar_Get_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.factory.wlan/Iovar_Get_Result.err"
+        "name": "fuchsia.factory.wlan/Iovar_Get_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.factory.wlan/Iovar_Get_Response",
         "kind": "union/member",
-        "name": "fuchsia.factory.wlan/Iovar_Get_Result.response"
+        "name": "fuchsia.factory.wlan/Iovar_Get_Result.response",
+        "type": "fuchsia.factory.wlan/Iovar_Get_Response"
     },
     {
         "kind": "union",
@@ -42,14 +42,14 @@
         "name": "fuchsia.factory.wlan/Iovar_Set_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.factory.wlan/Iovar_Set_Result.err"
+        "name": "fuchsia.factory.wlan/Iovar_Set_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.factory.wlan/Iovar_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.factory.wlan/Iovar_Set_Result.response"
+        "name": "fuchsia.factory.wlan/Iovar_Set_Result.response",
+        "type": "fuchsia.factory.wlan/Iovar_Set_Response"
     },
     {
         "kind": "union",
@@ -57,9 +57,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.factory.wlan/MAX_BUFFER_SIZE",
+        "type": "uint64",
         "value": "16384"
     },
     {

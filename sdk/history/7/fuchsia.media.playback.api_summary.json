@@ -1,345 +1,345 @@
 [
     {
-        "declaration": "(server_end:fuchsia.media.playback/ElementarySource source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/ElementarySource.AddBinding"
+        "name": "fuchsia.media.playback/ElementarySource.AddBinding",
+        "type": "(server_end:fuchsia.media.playback/ElementarySource source_request)"
     },
     {
-        "declaration": "(fuchsia.media/StreamType type,uint32 ticks_per_second_numerator,uint32 ticks_per_second_denominator,server_end:fuchsia.media/SimpleStreamSink sink_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/ElementarySource.AddStream"
+        "name": "fuchsia.media.playback/ElementarySource.AddStream",
+        "type": "(fuchsia.media/StreamType type,uint32 ticks_per_second_numerator,uint32 ticks_per_second_denominator,server_end:fuchsia.media/SimpleStreamSink sink_request)"
     },
     {
-        "declaration": " -> (fuchsia.media.playback/SourceStatus source_status)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/ElementarySource.OnStatusChanged"
+        "name": "fuchsia.media.playback/ElementarySource.OnStatusChanged",
+        "type": " -> (fuchsia.media.playback/SourceStatus source_status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.playback/ElementarySource"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media.playback/PROBLEM_ASSET_NOT_FOUND",
+        "type": "string",
         "value": "fuchsia.media.playback.AssetNotFound"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media.playback/PROBLEM_AUDIO_ENCODING_NOT_SUPPORTED",
+        "type": "string",
         "value": "fuchsia.media.playback.AudioEncodingNotSupported"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media.playback/PROBLEM_CONNECTION_FAILED",
+        "type": "string",
         "value": "fuchsia.media.playback.ConnectionFailed"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media.playback/PROBLEM_CONTAINER_NOT_SUPPORTED",
+        "type": "string",
         "value": "fuchsia.media.playback.ContainerNotSupported"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media.playback/PROBLEM_INTERNAL",
+        "type": "string",
         "value": "fuchsia.media.playback.Internal"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media.playback/PROBLEM_VIDEO_ENCODING_NOT_SUPPORTED",
+        "type": "string",
         "value": "fuchsia.media.playback.VideoEncodingNotSupported"
     },
     {
-        "declaration": "(server_end:fuchsia.media.playback/Player player_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.AddBinding"
+        "name": "fuchsia.media.playback/Player.AddBinding",
+        "type": "(server_end:fuchsia.media.playback/Player player_request)"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/GainControl gain_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.BindGainControl"
+        "name": "fuchsia.media.playback/Player.BindGainControl",
+        "type": "(server_end:fuchsia.media.audio/GainControl gain_control_request)"
     },
     {
-        "declaration": "(server_end:fuchsia.media.playback/Source returned_source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.CancelSourceTransition"
+        "name": "fuchsia.media.playback/Player.CancelSourceTransition",
+        "type": "(server_end:fuchsia.media.playback/Source returned_source_request)"
     },
     {
-        "declaration": "(int64 duration_ns,bool can_pause,bool can_seek,fuchsia.media/Metadata:optional metadata,server_end:fuchsia.media.playback/ElementarySource source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.CreateElementarySource"
+        "name": "fuchsia.media.playback/Player.CreateElementarySource",
+        "type": "(int64 duration_ns,bool can_pause,bool can_seek,fuchsia.media/Metadata:optional metadata,server_end:fuchsia.media.playback/ElementarySource source_request)"
     },
     {
-        "declaration": "(zx/handle:CHANNEL file_channel,server_end:fuchsia.media.playback/Source source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.CreateFileSource"
+        "name": "fuchsia.media.playback/Player.CreateFileSource",
+        "type": "(zx/handle:CHANNEL file_channel,server_end:fuchsia.media.playback/Source source_request)"
     },
     {
-        "declaration": "(client_end:fuchsia.media.playback/SeekingReader seeking_reader,server_end:fuchsia.media.playback/Source source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.CreateReaderSource"
+        "name": "fuchsia.media.playback/Player.CreateReaderSource",
+        "type": "(client_end:fuchsia.media.playback/SeekingReader seeking_reader,server_end:fuchsia.media.playback/Source source_request)"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewToken view_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.CreateView"
+        "name": "fuchsia.media.playback/Player.CreateView",
+        "type": "(fuchsia.ui.views/ViewToken view_token)"
     },
     {
-        "declaration": " -> (fuchsia.media.playback/PlayerStatus player_status)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.OnStatusChanged"
+        "name": "fuchsia.media.playback/Player.OnStatusChanged",
+        "type": " -> (fuchsia.media.playback/PlayerStatus player_status)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.Pause"
+        "name": "fuchsia.media.playback/Player.Pause",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.Play"
+        "name": "fuchsia.media.playback/Player.Play",
+        "type": "()"
     },
     {
-        "declaration": "(int64 position)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.Seek"
+        "name": "fuchsia.media.playback/Player.Seek",
+        "type": "(int64 position)"
     },
     {
-        "declaration": "(zx/handle:CHANNEL file_channel)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.SetFileSource"
+        "name": "fuchsia.media.playback/Player.SetFileSource",
+        "type": "(zx/handle:CHANNEL file_channel)"
     },
     {
-        "declaration": "(zx/handle:CHANNEL file_channel,fuchsia.media.playback/PlayerOptions options)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.SetFileSourceWithOptions"
+        "name": "fuchsia.media.playback/Player.SetFileSourceWithOptions",
+        "type": "(zx/handle:CHANNEL file_channel,fuchsia.media.playback/PlayerOptions options)"
     },
     {
-        "declaration": "(float32 playback_rate)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.SetPlaybackRate"
+        "name": "fuchsia.media.playback/Player.SetPlaybackRate",
+        "type": "(float32 playback_rate)"
     },
     {
-        "declaration": "(client_end:<fuchsia.media.playback/Source,optional> source)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.SetSource"
+        "name": "fuchsia.media.playback/Player.SetSource",
+        "type": "(client_end:<fuchsia.media.playback/Source,optional> source)"
     },
     {
-        "declaration": "(client_end:fuchsia.media.playback/Source source,int64 transition_pts,int64 start_pts)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Player.TransitionToSource"
+        "name": "fuchsia.media.playback/Player.TransitionToSource",
+        "type": "(client_end:fuchsia.media.playback/Source source,int64 transition_pts,int64 start_pts)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.playback/Player"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media.playback/PlayerOptions.silent"
+        "name": "fuchsia.media.playback/PlayerOptions.silent",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.media.playback/PlayerOptions"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.audio_connected"
+        "name": "fuchsia.media.playback/PlayerStatus.audio_connected",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.can_pause"
+        "name": "fuchsia.media.playback/PlayerStatus.can_pause",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.can_seek"
+        "name": "fuchsia.media.playback/PlayerStatus.can_seek",
+        "type": "bool"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.duration"
+        "name": "fuchsia.media.playback/PlayerStatus.duration",
+        "type": "int64"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.end_of_stream"
+        "name": "fuchsia.media.playback/PlayerStatus.end_of_stream",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.has_audio"
+        "name": "fuchsia.media.playback/PlayerStatus.has_audio",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.has_video"
+        "name": "fuchsia.media.playback/PlayerStatus.has_video",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.media/Metadata:optional",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.metadata"
+        "name": "fuchsia.media.playback/PlayerStatus.metadata",
+        "type": "fuchsia.media/Metadata:optional"
     },
     {
-        "declaration": "fuchsia.math/Size:optional",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.pixel_aspect_ratio"
+        "name": "fuchsia.media.playback/PlayerStatus.pixel_aspect_ratio",
+        "type": "fuchsia.math/Size:optional"
     },
     {
-        "declaration": "box<fuchsia.media.playback/Problem>",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.problem"
+        "name": "fuchsia.media.playback/PlayerStatus.problem",
+        "type": "box<fuchsia.media.playback/Problem>"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.ready"
+        "name": "fuchsia.media.playback/PlayerStatus.ready",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.media/TimelineFunction:optional",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.timeline_function"
+        "name": "fuchsia.media.playback/PlayerStatus.timeline_function",
+        "type": "fuchsia.media/TimelineFunction:optional"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.video_connected"
+        "name": "fuchsia.media.playback/PlayerStatus.video_connected",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.math/Size:optional",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/PlayerStatus.video_size"
+        "name": "fuchsia.media.playback/PlayerStatus.video_size",
+        "type": "fuchsia.math/Size:optional"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.playback/PlayerStatus"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/Problem.details"
+        "name": "fuchsia.media.playback/Problem.details",
+        "type": "string:optional"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/Problem.type"
+        "name": "fuchsia.media.playback/Problem.type",
+        "type": "string"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.playback/Problem"
     },
     {
-        "declaration": "() -> (int32 status,uint64 size,bool can_seek)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/SeekingReader.Describe"
+        "name": "fuchsia.media.playback/SeekingReader.Describe",
+        "type": "() -> (int32 status,uint64 size,bool can_seek)"
     },
     {
-        "declaration": "(uint64 position) -> (int32 status,zx/handle:<SOCKET,optional> socket)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/SeekingReader.ReadAt"
+        "name": "fuchsia.media.playback/SeekingReader.ReadAt",
+        "type": "(uint64 position) -> (int32 status,zx/handle:<SOCKET,optional> socket)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.playback/SeekingReader"
     },
     {
-        "declaration": " -> (fuchsia.media.playback/SourceStatus source_status)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/Source.OnStatusChanged"
+        "name": "fuchsia.media.playback/Source.OnStatusChanged",
+        "type": " -> (fuchsia.media.playback/SourceStatus source_status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.playback/Source"
     },
     {
-        "declaration": "(server_end:fuchsia.media.playback/Source returned_source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/SourceManager.CancelSourceTransition"
+        "name": "fuchsia.media.playback/SourceManager.CancelSourceTransition",
+        "type": "(server_end:fuchsia.media.playback/Source returned_source_request)"
     },
     {
-        "declaration": "(int64 duration_ns,bool can_pause,bool can_seek,fuchsia.media/Metadata:optional metadata,server_end:fuchsia.media.playback/ElementarySource source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/SourceManager.CreateElementarySource"
+        "name": "fuchsia.media.playback/SourceManager.CreateElementarySource",
+        "type": "(int64 duration_ns,bool can_pause,bool can_seek,fuchsia.media/Metadata:optional metadata,server_end:fuchsia.media.playback/ElementarySource source_request)"
     },
     {
-        "declaration": "(zx/handle:CHANNEL file_channel,server_end:fuchsia.media.playback/Source source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/SourceManager.CreateFileSource"
+        "name": "fuchsia.media.playback/SourceManager.CreateFileSource",
+        "type": "(zx/handle:CHANNEL file_channel,server_end:fuchsia.media.playback/Source source_request)"
     },
     {
-        "declaration": "(client_end:fuchsia.media.playback/SeekingReader seeking_reader,server_end:fuchsia.media.playback/Source source_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/SourceManager.CreateReaderSource"
+        "name": "fuchsia.media.playback/SourceManager.CreateReaderSource",
+        "type": "(client_end:fuchsia.media.playback/SeekingReader seeking_reader,server_end:fuchsia.media.playback/Source source_request)"
     },
     {
-        "declaration": "(client_end:<fuchsia.media.playback/Source,optional> source)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/SourceManager.SetSource"
+        "name": "fuchsia.media.playback/SourceManager.SetSource",
+        "type": "(client_end:<fuchsia.media.playback/Source,optional> source)"
     },
     {
-        "declaration": "(client_end:fuchsia.media.playback/Source source,int64 transition_pts,int64 start_pts)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.playback/SourceManager.TransitionToSource"
+        "name": "fuchsia.media.playback/SourceManager.TransitionToSource",
+        "type": "(client_end:fuchsia.media.playback/Source source,int64 transition_pts,int64 start_pts)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.playback/SourceManager"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/SourceStatus.can_pause"
+        "name": "fuchsia.media.playback/SourceStatus.can_pause",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/SourceStatus.can_seek"
+        "name": "fuchsia.media.playback/SourceStatus.can_seek",
+        "type": "bool"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/SourceStatus.duration"
+        "name": "fuchsia.media.playback/SourceStatus.duration",
+        "type": "int64"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/SourceStatus.has_audio"
+        "name": "fuchsia.media.playback/SourceStatus.has_audio",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/SourceStatus.has_video"
+        "name": "fuchsia.media.playback/SourceStatus.has_video",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.media/Metadata:optional",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/SourceStatus.metadata"
+        "name": "fuchsia.media.playback/SourceStatus.metadata",
+        "type": "fuchsia.media/Metadata:optional"
     },
     {
-        "declaration": "box<fuchsia.media.playback/Problem>",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/SourceStatus.problem"
+        "name": "fuchsia.media.playback/SourceStatus.problem",
+        "type": "box<fuchsia.media.playback/Problem>"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media.playback/SourceStatus.ready"
+        "name": "fuchsia.media.playback/SourceStatus.ready",
+        "type": "bool"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.playback/SourceStatus"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.media.playback/UNKNOWN_SIZE",
+        "type": "uint64",
         "value": "18446744073709551615"
     },
     {

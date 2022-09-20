@@ -15,27 +15,27 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.fonts/CacheMissPolicy",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.fonts/Slant",
         "kind": "const",
         "name": "fuchsia.fonts/DEFAULT_SLANT",
+        "type": "fuchsia.fonts/Slant",
         "value": "1"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/DEFAULT_WEIGHT",
+        "type": "uint16",
         "value": "400"
     },
     {
-        "declaration": "fuchsia.fonts/Width",
         "kind": "const",
         "name": "fuchsia.fonts/DEFAULT_WIDTH",
+        "type": "fuchsia.fonts/Width",
         "value": "5"
     },
     {
@@ -69,52 +69,52 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.fonts/FallbackGroup",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "string:128",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/FamilyInfo.name"
+        "name": "fuchsia.fonts/FamilyInfo.name",
+        "type": "string:128"
     },
     {
-        "declaration": "vector<fuchsia.fonts/Style>:300",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/FamilyInfo.styles"
+        "name": "fuchsia.fonts/FamilyInfo.styles",
+        "type": "vector<fuchsia.fonts/Style>:300"
     },
     {
         "kind": "struct",
         "name": "fuchsia.fonts/FamilyInfo"
     },
     {
-        "declaration": "string:128",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/FamilyName.name"
+        "name": "fuchsia.fonts/FamilyName.name",
+        "type": "string:128"
     },
     {
         "kind": "struct",
         "name": "fuchsia.fonts/FamilyName"
     },
     {
-        "declaration": "fuchsia.fonts/FamilyName",
         "kind": "table/member",
-        "name": "fuchsia.fonts/FontFamilyInfo.name"
+        "name": "fuchsia.fonts/FontFamilyInfo.name",
+        "type": "fuchsia.fonts/FamilyName"
     },
     {
-        "declaration": "vector<fuchsia.fonts/Style2>:300",
         "kind": "table/member",
-        "name": "fuchsia.fonts/FontFamilyInfo.styles"
+        "name": "fuchsia.fonts/FontFamilyInfo.styles",
+        "type": "vector<fuchsia.fonts/Style2>:300"
     },
     {
         "kind": "table",
         "name": "fuchsia.fonts/FontFamilyInfo"
     },
     {
-        "declaration": "(fuchsia.fonts/FontSetUpdatedEvent event) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.fonts/FontSetEventListener.OnFontSetUpdated"
+        "name": "fuchsia.fonts/FontSetEventListener.OnFontSetUpdated",
+        "type": "(fuchsia.fonts/FontSetUpdatedEvent event) -> ()"
     },
     {
         "kind": "protocol",
@@ -170,132 +170,132 @@
         "value": "6"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.fonts/GenericFontFamily",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.fonts/MAX_FACE_QUERY_CODE_POINTS",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.fonts/MAX_FACE_QUERY_LANGUAGES",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.fonts/MAX_FAMILY_NAME_LENGTH",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.fonts/MAX_FAMILY_STYLES",
+        "type": "uint32",
         "value": "300"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.fonts/MAX_POSTSCRIPT_TYPEFACE_NAME_LENGTH",
+        "type": "uint32",
         "value": "63"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.fonts/MAX_TYPEFACE_NAME_LENGTH",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "(string:128 family) -> (box<fuchsia.fonts/FamilyInfo> family_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.fonts/Provider.GetFamilyInfo"
+        "name": "fuchsia.fonts/Provider.GetFamilyInfo",
+        "type": "(string:128 family) -> (box<fuchsia.fonts/FamilyInfo> family_info)"
     },
     {
-        "declaration": "(fuchsia.fonts/Request request) -> (box<fuchsia.fonts/Response> response)",
         "kind": "protocol/member",
-        "name": "fuchsia.fonts/Provider.GetFont"
+        "name": "fuchsia.fonts/Provider.GetFont",
+        "type": "(fuchsia.fonts/Request request) -> (box<fuchsia.fonts/Response> response)"
     },
     {
-        "declaration": "(fuchsia.fonts/FamilyName family) -> (fuchsia.fonts/FontFamilyInfo family_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.fonts/Provider.GetFontFamilyInfo"
+        "name": "fuchsia.fonts/Provider.GetFontFamilyInfo",
+        "type": "(fuchsia.fonts/FamilyName family) -> (fuchsia.fonts/FontFamilyInfo family_info)"
     },
     {
-        "declaration": "(fuchsia.fonts/TypefaceRequest request) -> (fuchsia.fonts/TypefaceResponse response)",
         "kind": "protocol/member",
-        "name": "fuchsia.fonts/Provider.GetTypeface"
+        "name": "fuchsia.fonts/Provider.GetTypeface",
+        "type": "(fuchsia.fonts/TypefaceRequest request) -> (fuchsia.fonts/TypefaceResponse response)"
     },
     {
-        "declaration": "(client_end:fuchsia.fonts/FontSetEventListener listener) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.fonts/Provider.RegisterFontSetEventListener"
+        "name": "fuchsia.fonts/Provider.RegisterFontSetEventListener",
+        "type": "(client_end:fuchsia.fonts/FontSetEventListener listener) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.fonts/Provider"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.fonts/REQUEST_FLAG_EXACT_MATCH",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.fonts/REQUEST_FLAG_NO_FALLBACK",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.character",
+        "type": "uint32",
         "value": "0"
     },
     {
-        "declaration": "fuchsia.fonts/FallbackGroup",
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.fallback_group",
+        "type": "fuchsia.fonts/FallbackGroup",
         "value": "0"
     },
     {
-        "declaration": "string:<128,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/Request.family"
+        "name": "fuchsia.fonts/Request.family",
+        "type": "string:<128,optional>"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.flags",
+        "type": "uint32",
         "value": "0"
     },
     {
-        "declaration": "vector<string:35>:<8,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/Request.language"
+        "name": "fuchsia.fonts/Request.language",
+        "type": "vector<string:35>:<8,optional>"
     },
     {
-        "declaration": "fuchsia.fonts/Slant",
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.slant",
+        "type": "fuchsia.fonts/Slant",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.weight",
+        "type": "uint32",
         "value": "400"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.width",
+        "type": "uint32",
         "value": "5"
     },
     {
@@ -303,19 +303,19 @@
         "name": "fuchsia.fonts/Request"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/Response.buffer"
+        "name": "fuchsia.fonts/Response.buffer",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/Response.buffer_id"
+        "name": "fuchsia.fonts/Response.buffer_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/Response.font_index"
+        "name": "fuchsia.fonts/Response.font_index",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -338,102 +338,102 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.fonts/Slant",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.fonts/Slant",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/Style.slant"
+        "name": "fuchsia.fonts/Style.slant",
+        "type": "fuchsia.fonts/Slant"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/Style.weight"
+        "name": "fuchsia.fonts/Style.weight",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.fonts/Style.width"
+        "name": "fuchsia.fonts/Style.width",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.fonts/Style"
     },
     {
-        "declaration": "fuchsia.fonts/Slant",
         "kind": "table/member",
-        "name": "fuchsia.fonts/Style2.slant"
+        "name": "fuchsia.fonts/Style2.slant",
+        "type": "fuchsia.fonts/Slant"
     },
     {
-        "declaration": "uint16",
         "kind": "table/member",
-        "name": "fuchsia.fonts/Style2.weight"
+        "name": "fuchsia.fonts/Style2.weight",
+        "type": "uint16"
     },
     {
-        "declaration": "fuchsia.fonts/Width",
         "kind": "table/member",
-        "name": "fuchsia.fonts/Style2.width"
+        "name": "fuchsia.fonts/Style2.width",
+        "type": "fuchsia.fonts/Width"
     },
     {
         "kind": "table",
         "name": "fuchsia.fonts/Style2"
     },
     {
-        "declaration": "vector<uint32>:128",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceQuery.code_points"
+        "name": "fuchsia.fonts/TypefaceQuery.code_points",
+        "type": "vector<uint32>:128"
     },
     {
-        "declaration": "fuchsia.fonts/GenericFontFamily",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceQuery.fallback_family"
+        "name": "fuchsia.fonts/TypefaceQuery.fallback_family",
+        "type": "fuchsia.fonts/GenericFontFamily"
     },
     {
-        "declaration": "fuchsia.fonts/FamilyName",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceQuery.family"
+        "name": "fuchsia.fonts/TypefaceQuery.family",
+        "type": "fuchsia.fonts/FamilyName"
     },
     {
-        "declaration": "string:128",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceQuery.full_name"
+        "name": "fuchsia.fonts/TypefaceQuery.full_name",
+        "type": "string:128"
     },
     {
-        "declaration": "vector<fuchsia.intl/LocaleId>:8",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceQuery.languages"
+        "name": "fuchsia.fonts/TypefaceQuery.languages",
+        "type": "vector<fuchsia.intl/LocaleId>:8"
     },
     {
-        "declaration": "string:63",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceQuery.postscript_name"
+        "name": "fuchsia.fonts/TypefaceQuery.postscript_name",
+        "type": "string:63"
     },
     {
-        "declaration": "fuchsia.fonts/Style2",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceQuery.style"
+        "name": "fuchsia.fonts/TypefaceQuery.style",
+        "type": "fuchsia.fonts/Style2"
     },
     {
         "kind": "table",
         "name": "fuchsia.fonts/TypefaceQuery"
     },
     {
-        "declaration": "fuchsia.fonts/CacheMissPolicy",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceRequest.cache_miss_policy"
+        "name": "fuchsia.fonts/TypefaceRequest.cache_miss_policy",
+        "type": "fuchsia.fonts/CacheMissPolicy"
     },
     {
-        "declaration": "fuchsia.fonts/TypefaceRequestFlags",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceRequest.flags"
+        "name": "fuchsia.fonts/TypefaceRequest.flags",
+        "type": "fuchsia.fonts/TypefaceRequestFlags"
     },
     {
-        "declaration": "fuchsia.fonts/TypefaceQuery",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceRequest.query"
+        "name": "fuchsia.fonts/TypefaceRequest.query",
+        "type": "fuchsia.fonts/TypefaceQuery"
     },
     {
         "kind": "table",
@@ -450,25 +450,25 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.fonts/TypefaceRequestFlags",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceResponse.buffer"
+        "name": "fuchsia.fonts/TypefaceResponse.buffer",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceResponse.buffer_id"
+        "name": "fuchsia.fonts/TypefaceResponse.buffer_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.fonts/TypefaceResponse.font_index"
+        "name": "fuchsia.fonts/TypefaceResponse.font_index",
+        "type": "uint32"
     },
     {
         "kind": "table",
@@ -476,57 +476,57 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_BLACK",
+        "type": "uint16",
         "value": "900"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_BOLD",
+        "type": "uint16",
         "value": "700"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_EXTRA_BOLD",
+        "type": "uint16",
         "value": "800"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_EXTRA_LIGHT",
+        "type": "uint16",
         "value": "200"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_LIGHT",
+        "type": "uint16",
         "value": "300"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_MEDIUM",
+        "type": "uint16",
         "value": "500"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_NORMAL",
+        "type": "uint16",
         "value": "400"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_SEMI_BOLD",
+        "type": "uint16",
         "value": "600"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.fonts/WEIGHT_THIN",
+        "type": "uint16",
         "value": "100"
     },
     {
@@ -575,10 +575,10 @@
         "value": "9"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.fonts/Width",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",

@@ -1,66 +1,66 @@
 [
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.mediacodec/CODEC_FACTORY_CODEC_LIST_SIZE_MAX",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.mediacodec/CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.mediacodec/CODEC_FACTORY_MAX_MIME_TYPE_LENGTH",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.can_find_start",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.can_re_sync",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.can_stream_bytes_input",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "fuchsia.mediacodec/CodecType",
         "kind": "struct/member",
-        "name": "fuchsia.mediacodec/CodecDescription.codec_type"
+        "name": "fuchsia.mediacodec/CodecDescription.codec_type",
+        "type": "fuchsia.mediacodec/CodecType"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.is_hw",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "string:256",
         "kind": "struct/member",
-        "name": "fuchsia.mediacodec/CodecDescription.mime_type"
+        "name": "fuchsia.mediacodec/CodecDescription.mime_type",
+        "type": "string:256"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.split_header_handling",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.will_report_all_detected_errors",
+        "type": "bool",
         "value": "true"
     },
     {
@@ -68,24 +68,24 @@
         "name": "fuchsia.mediacodec/CodecDescription"
     },
     {
-        "declaration": "(zx/handle:EVENTPAIR codec_end)",
         "kind": "protocol/member",
-        "name": "fuchsia.mediacodec/CodecFactory.AttachLifetimeTracking"
+        "name": "fuchsia.mediacodec/CodecFactory.AttachLifetimeTracking",
+        "type": "(zx/handle:EVENTPAIR codec_end)"
     },
     {
-        "declaration": "(fuchsia.mediacodec/CreateDecoder_Params decoder_params,server_end:fuchsia.media/StreamProcessor decoder)",
         "kind": "protocol/member",
-        "name": "fuchsia.mediacodec/CodecFactory.CreateDecoder"
+        "name": "fuchsia.mediacodec/CodecFactory.CreateDecoder",
+        "type": "(fuchsia.mediacodec/CreateDecoder_Params decoder_params,server_end:fuchsia.media/StreamProcessor decoder)"
     },
     {
-        "declaration": "(fuchsia.mediacodec/CreateEncoder_Params encoder_params,server_end:fuchsia.media/StreamProcessor encoder)",
         "kind": "protocol/member",
-        "name": "fuchsia.mediacodec/CodecFactory.CreateEncoder"
+        "name": "fuchsia.mediacodec/CodecFactory.CreateEncoder",
+        "type": "(fuchsia.mediacodec/CreateEncoder_Params encoder_params,server_end:fuchsia.media/StreamProcessor encoder)"
     },
     {
-        "declaration": " -> (vector<fuchsia.mediacodec/CodecDescription>:256 codecs)",
         "kind": "protocol/member",
-        "name": "fuchsia.mediacodec/CodecFactory.OnCodecList"
+        "name": "fuchsia.mediacodec/CodecFactory.OnCodecList",
+        "type": " -> (vector<fuchsia.mediacodec/CodecDescription>:256 codecs)"
     },
     {
         "kind": "protocol",
@@ -102,79 +102,79 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.mediacodec/CodecType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/FormatDetails",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.input_details"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.input_details",
+        "type": "fuchsia.media/FormatDetails"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.permit_lack_of_split_header_handling"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.permit_lack_of_split_header_handling",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.promise_separate_access_units_on_input"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.promise_separate_access_units_on_input",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_find_start"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_find_start",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_re_sync"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_re_sync",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_stream_bytes_input"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_stream_bytes_input",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_hw"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_hw",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_report_all_detected_errors"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_report_all_detected_errors",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_sw"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.require_sw",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.mediacodec/SecureMemoryMode",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.secure_input_mode"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.secure_input_mode",
+        "type": "fuchsia.mediacodec/SecureMemoryMode"
     },
     {
-        "declaration": "fuchsia.mediacodec/SecureMemoryMode",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateDecoder_Params.secure_output_mode"
+        "name": "fuchsia.mediacodec/CreateDecoder_Params.secure_output_mode",
+        "type": "fuchsia.mediacodec/SecureMemoryMode"
     },
     {
         "kind": "table",
         "name": "fuchsia.mediacodec/CreateDecoder_Params"
     },
     {
-        "declaration": "fuchsia.media/FormatDetails",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateEncoder_Params.input_details"
+        "name": "fuchsia.mediacodec/CreateEncoder_Params.input_details",
+        "type": "fuchsia.media/FormatDetails"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.mediacodec/CreateEncoder_Params.require_hw"
+        "name": "fuchsia.mediacodec/CreateEncoder_Params.require_hw",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -191,10 +191,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.mediacodec/SecureMemoryMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",

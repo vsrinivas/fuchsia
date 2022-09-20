@@ -1,81 +1,81 @@
 [
     {
-        "declaration": "fuchsia.component.decl/ConfigChecksum",
         "kind": "struct/member",
-        "name": "fuchsia.component.config/ResolvedConfig.checksum"
+        "name": "fuchsia.component.config/ResolvedConfig.checksum",
+        "type": "fuchsia.component.decl/ConfigChecksum"
     },
     {
-        "declaration": "vector<fuchsia.component.config/ResolvedConfigField>",
         "kind": "struct/member",
-        "name": "fuchsia.component.config/ResolvedConfig.fields"
+        "name": "fuchsia.component.config/ResolvedConfig.fields",
+        "type": "vector<fuchsia.component.config/ResolvedConfigField>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.component.config/ResolvedConfig"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.component.config/ResolvedConfigField.key"
+        "name": "fuchsia.component.config/ResolvedConfigField.key",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.component.config/Value",
         "kind": "struct/member",
-        "name": "fuchsia.component.config/ResolvedConfigField.value"
+        "name": "fuchsia.component.config/ResolvedConfigField.value",
+        "type": "fuchsia.component.config/Value"
     },
     {
         "kind": "struct",
         "name": "fuchsia.component.config/ResolvedConfigField"
     },
     {
-        "declaration": "bool",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.bool"
+        "name": "fuchsia.component.config/SingleValue.bool",
+        "type": "bool"
     },
     {
-        "declaration": "int16",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.int16"
+        "name": "fuchsia.component.config/SingleValue.int16",
+        "type": "int16"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.int32"
+        "name": "fuchsia.component.config/SingleValue.int32",
+        "type": "int32"
     },
     {
-        "declaration": "int64",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.int64"
+        "name": "fuchsia.component.config/SingleValue.int64",
+        "type": "int64"
     },
     {
-        "declaration": "int8",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.int8"
+        "name": "fuchsia.component.config/SingleValue.int8",
+        "type": "int8"
     },
     {
-        "declaration": "string",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.string"
+        "name": "fuchsia.component.config/SingleValue.string",
+        "type": "string"
     },
     {
-        "declaration": "uint16",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.uint16"
+        "name": "fuchsia.component.config/SingleValue.uint16",
+        "type": "uint16"
     },
     {
-        "declaration": "uint32",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.uint32"
+        "name": "fuchsia.component.config/SingleValue.uint32",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.uint64"
+        "name": "fuchsia.component.config/SingleValue.uint64",
+        "type": "uint64"
     },
     {
-        "declaration": "uint8",
         "kind": "union/member",
-        "name": "fuchsia.component.config/SingleValue.uint8"
+        "name": "fuchsia.component.config/SingleValue.uint8",
+        "type": "uint8"
     },
     {
         "kind": "union",
@@ -83,14 +83,14 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "fuchsia.component.config/SingleValue",
         "kind": "union/member",
-        "name": "fuchsia.component.config/Value.single"
+        "name": "fuchsia.component.config/Value.single",
+        "type": "fuchsia.component.config/SingleValue"
     },
     {
-        "declaration": "fuchsia.component.config/VectorValue",
         "kind": "union/member",
-        "name": "fuchsia.component.config/Value.vector"
+        "name": "fuchsia.component.config/Value.vector",
+        "type": "fuchsia.component.config/VectorValue"
     },
     {
         "kind": "union",
@@ -98,77 +98,77 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "fuchsia.component.config/Value",
         "kind": "table/member",
-        "name": "fuchsia.component.config/ValueSpec.value"
+        "name": "fuchsia.component.config/ValueSpec.value",
+        "type": "fuchsia.component.config/Value"
     },
     {
         "kind": "table",
         "name": "fuchsia.component.config/ValueSpec"
     },
     {
-        "declaration": "fuchsia.component.decl/ConfigChecksum",
         "kind": "table/member",
-        "name": "fuchsia.component.config/ValuesData.checksum"
+        "name": "fuchsia.component.config/ValuesData.checksum",
+        "type": "fuchsia.component.decl/ConfigChecksum"
     },
     {
-        "declaration": "vector<fuchsia.component.config/ValueSpec>",
         "kind": "table/member",
-        "name": "fuchsia.component.config/ValuesData.values"
+        "name": "fuchsia.component.config/ValuesData.values",
+        "type": "vector<fuchsia.component.config/ValueSpec>"
     },
     {
         "kind": "table",
         "name": "fuchsia.component.config/ValuesData"
     },
     {
-        "declaration": "vector<bool>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.bool_vector"
+        "name": "fuchsia.component.config/VectorValue.bool_vector",
+        "type": "vector<bool>"
     },
     {
-        "declaration": "vector<int16>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.int16_vector"
+        "name": "fuchsia.component.config/VectorValue.int16_vector",
+        "type": "vector<int16>"
     },
     {
-        "declaration": "vector<int32>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.int32_vector"
+        "name": "fuchsia.component.config/VectorValue.int32_vector",
+        "type": "vector<int32>"
     },
     {
-        "declaration": "vector<int64>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.int64_vector"
+        "name": "fuchsia.component.config/VectorValue.int64_vector",
+        "type": "vector<int64>"
     },
     {
-        "declaration": "vector<int8>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.int8_vector"
+        "name": "fuchsia.component.config/VectorValue.int8_vector",
+        "type": "vector<int8>"
     },
     {
-        "declaration": "vector<string>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.string_vector"
+        "name": "fuchsia.component.config/VectorValue.string_vector",
+        "type": "vector<string>"
     },
     {
-        "declaration": "vector<uint16>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.uint16_vector"
+        "name": "fuchsia.component.config/VectorValue.uint16_vector",
+        "type": "vector<uint16>"
     },
     {
-        "declaration": "vector<uint32>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.uint32_vector"
+        "name": "fuchsia.component.config/VectorValue.uint32_vector",
+        "type": "vector<uint32>"
     },
     {
-        "declaration": "vector<uint64>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.uint64_vector"
+        "name": "fuchsia.component.config/VectorValue.uint64_vector",
+        "type": "vector<uint64>"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "union/member",
-        "name": "fuchsia.component.config/VectorValue.uint8_vector"
+        "name": "fuchsia.component.config/VectorValue.uint8_vector",
+        "type": "vector<uint8>"
     },
     {
         "kind": "union",

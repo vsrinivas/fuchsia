@@ -1,86 +1,86 @@
 [
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_AAC",
+        "type": "string",
         "value": "fuchsia.streams.aac"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_AACLATM",
+        "type": "string",
         "value": "fuchsia.streams.aaclatm"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_AMRNB",
+        "type": "string",
         "value": "fuchsia.streams.amrnb"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_AMRWB",
+        "type": "string",
         "value": "fuchsia.streams.amrwb"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_APTX",
+        "type": "string",
         "value": "fuchsia.streams.aptx"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_FLAC",
+        "type": "string",
         "value": "fuchsia.streams.flac"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_GSMMS",
+        "type": "string",
         "value": "fuchsia.streams.gsmms"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_MP3",
+        "type": "string",
         "value": "fuchsia.streams.mp3"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_OPUS",
+        "type": "string",
         "value": "fuchsia.streams.opus"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_PCMALAW",
+        "type": "string",
         "value": "fuchsia.streams.pcmalaw"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_PCMMULAW",
+        "type": "string",
         "value": "fuchsia.streams.pcmmulaw"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_SBC",
+        "type": "string",
         "value": "fuchsia.streams.sbc"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/AUDIO_COMPRESSION_VORBIS",
+        "type": "string",
         "value": "fuchsia.streams.vorbis"
     },
     {
-        "declaration": "uint8",
         "kind": "union/member",
-        "name": "fuchsia.mediastreams/AudioChannelLayout.placeholder"
+        "name": "fuchsia.mediastreams/AudioChannelLayout.placeholder",
+        "type": "uint8"
     },
     {
         "kind": "union",
@@ -88,24 +88,24 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/AudioFormat.channel_count"
+        "name": "fuchsia.mediastreams/AudioFormat.channel_count",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.mediastreams/AudioChannelLayout",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/AudioFormat.channel_layout"
+        "name": "fuchsia.mediastreams/AudioFormat.channel_layout",
+        "type": "fuchsia.mediastreams/AudioChannelLayout"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/AudioFormat.frames_per_second"
+        "name": "fuchsia.mediastreams/AudioFormat.frames_per_second",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.mediastreams/AudioSampleFormat",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/AudioFormat.sample_format"
+        "name": "fuchsia.mediastreams/AudioFormat.sample_format",
+        "type": "fuchsia.mediastreams/AudioSampleFormat"
     },
     {
         "kind": "struct",
@@ -137,10 +137,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.mediastreams/AudioSampleFormat",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -188,128 +188,128 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.mediastreams/ColorSpace",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<uint8>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/Compression.parameters"
+        "name": "fuchsia.mediastreams/Compression.parameters",
+        "type": "vector<uint8>:optional"
     },
     {
-        "declaration": "string:256",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/Compression.type"
+        "name": "fuchsia.mediastreams/Compression.type",
+        "type": "string:256"
     },
     {
         "kind": "struct",
         "name": "fuchsia.mediastreams/Compression"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/ENCRYPTION_SCHEME_CBC1",
+        "type": "string",
         "value": "cbc1"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/ENCRYPTION_SCHEME_CBCS",
+        "type": "string",
         "value": "cbcs"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/ENCRYPTION_SCHEME_CENC",
+        "type": "string",
         "value": "cenc"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/ENCRYPTION_SCHEME_CENS",
+        "type": "string",
         "value": "cens"
     },
     {
-        "declaration": "vector<uint8>:<16,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/Encryption.default_init_vector"
+        "name": "fuchsia.mediastreams/Encryption.default_init_vector",
+        "type": "vector<uint8>:<16,optional>"
     },
     {
-        "declaration": "vector<uint8>:<16,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/Encryption.default_key_id"
+        "name": "fuchsia.mediastreams/Encryption.default_key_id",
+        "type": "vector<uint8>:<16,optional>"
     },
     {
-        "declaration": "box<fuchsia.mediastreams/EncryptionPattern>",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/Encryption.default_pattern"
+        "name": "fuchsia.mediastreams/Encryption.default_pattern",
+        "type": "box<fuchsia.mediastreams/EncryptionPattern>"
     },
     {
-        "declaration": "string:4",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/Encryption.scheme"
+        "name": "fuchsia.mediastreams/Encryption.scheme",
+        "type": "string:4"
     },
     {
         "kind": "struct",
         "name": "fuchsia.mediastreams/Encryption"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/EncryptionPattern.clear_blocks"
+        "name": "fuchsia.mediastreams/EncryptionPattern.clear_blocks",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/EncryptionPattern.encrypted_blocks"
+        "name": "fuchsia.mediastreams/EncryptionPattern.encrypted_blocks",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.mediastreams/EncryptionPattern"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/EncryptionSubsampleEntry.clear_bytes"
+        "name": "fuchsia.mediastreams/EncryptionSubsampleEntry.clear_bytes",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/EncryptionSubsampleEntry.encrypted_bytes"
+        "name": "fuchsia.mediastreams/EncryptionSubsampleEntry.encrypted_bytes",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.mediastreams/EncryptionSubsampleEntry"
     },
     {
-        "declaration": "int64",
         "kind": "const",
         "name": "fuchsia.mediastreams/MAX_ENCRYPTION_SCHEME_SIZE",
+        "type": "int64",
         "value": "4"
     },
     {
-        "declaration": "int64",
         "kind": "const",
         "name": "fuchsia.mediastreams/MAX_INIT_VECTOR_SIZE",
+        "type": "int64",
         "value": "16"
     },
     {
-        "declaration": "int64",
         "kind": "const",
         "name": "fuchsia.mediastreams/MAX_KEY_ID_SIZE",
+        "type": "int64",
         "value": "16"
     },
     {
-        "declaration": "fuchsia.mediastreams/AudioFormat",
         "kind": "union/member",
-        "name": "fuchsia.mediastreams/MediaFormat.audio"
+        "name": "fuchsia.mediastreams/MediaFormat.audio",
+        "type": "fuchsia.mediastreams/AudioFormat"
     },
     {
-        "declaration": "fuchsia.mediastreams/VideoFormat",
         "kind": "union/member",
-        "name": "fuchsia.mediastreams/MediaFormat.video"
+        "name": "fuchsia.mediastreams/MediaFormat.video",
+        "type": "fuchsia.mediastreams/VideoFormat"
     },
     {
         "kind": "union",
@@ -397,82 +397,82 @@
         "value": "107"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.mediastreams/PixelFormat",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/VIDEO_COMPRESSION_H263",
+        "type": "string",
         "value": "fuchsia.streams.h263"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/VIDEO_COMPRESSION_H264",
+        "type": "string",
         "value": "fuchsia.streams.h264"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/VIDEO_COMPRESSION_MPEG4",
+        "type": "string",
         "value": "fuchsia.streams.mpeg4"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/VIDEO_COMPRESSION_THEORA",
+        "type": "string",
         "value": "fuchsia.streams.theora"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/VIDEO_COMPRESSION_VP3",
+        "type": "string",
         "value": "fuchsia.streams.vp3"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/VIDEO_COMPRESSION_VP8",
+        "type": "string",
         "value": "fuchsia.streams.vp8"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.mediastreams/VIDEO_COMPRESSION_VP9",
+        "type": "string",
         "value": "fuchsia.streams.vp9"
     },
     {
-        "declaration": "fuchsia.math/Size:optional",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/VideoFormat.aspect_ratio"
+        "name": "fuchsia.mediastreams/VideoFormat.aspect_ratio",
+        "type": "fuchsia.math/Size:optional"
     },
     {
-        "declaration": "fuchsia.math/Size",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/VideoFormat.coded_size"
+        "name": "fuchsia.mediastreams/VideoFormat.coded_size",
+        "type": "fuchsia.math/Size"
     },
     {
-        "declaration": "fuchsia.mediastreams/ColorSpace",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/VideoFormat.color_space"
+        "name": "fuchsia.mediastreams/VideoFormat.color_space",
+        "type": "fuchsia.mediastreams/ColorSpace"
     },
     {
-        "declaration": "fuchsia.math/Size",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/VideoFormat.display_size"
+        "name": "fuchsia.mediastreams/VideoFormat.display_size",
+        "type": "fuchsia.math/Size"
     },
     {
-        "declaration": "fuchsia.mediastreams/PixelFormat",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/VideoFormat.pixel_format"
+        "name": "fuchsia.mediastreams/VideoFormat.pixel_format",
+        "type": "fuchsia.mediastreams/PixelFormat"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.mediastreams/VideoFormat.pixel_format_modifier"
+        "name": "fuchsia.mediastreams/VideoFormat.pixel_format_modifier",
+        "type": "uint64"
     },
     {
         "kind": "struct",

@@ -1,65 +1,65 @@
 [
     {
-        "declaration": "(vector<uint8>:254 dataset) -> (int64 delay_ms)",
         "kind": "protocol/member",
-        "name": "fuchsia.lowpan.thread/Dataset.AttachAllNodesTo"
+        "name": "fuchsia.lowpan.thread/Dataset.AttachAllNodesTo",
+        "type": "(vector<uint8>:254 dataset) -> (int64 delay_ms)"
     },
     {
-        "declaration": "() -> (vector<uint8>:<254,optional> dataset)",
         "kind": "protocol/member",
-        "name": "fuchsia.lowpan.thread/Dataset.GetActiveTlvs"
+        "name": "fuchsia.lowpan.thread/Dataset.GetActiveTlvs",
+        "type": "() -> (vector<uint8>:<254,optional> dataset)"
     },
     {
-        "declaration": "(vector<uint8>:254 dataset) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.lowpan.thread/Dataset.SetActiveTlvs"
+        "name": "fuchsia.lowpan.thread/Dataset.SetActiveTlvs",
+        "type": "(vector<uint8>:254 dataset) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.lowpan.thread/Dataset"
     },
     {
-        "declaration": "(string:32 name,server_end:fuchsia.lowpan.thread/Dataset server_end)",
         "kind": "protocol/member",
-        "name": "fuchsia.lowpan.thread/DatasetConnector.Connect"
+        "name": "fuchsia.lowpan.thread/DatasetConnector.Connect",
+        "type": "(string:32 name,server_end:fuchsia.lowpan.thread/Dataset server_end)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.lowpan.thread/DatasetConnector"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.lowpan.thread/MAX_DATASET_TLV_LEN",
+        "type": "uint8",
         "value": "254"
     },
     {
-        "declaration": "(vector<fuchsia.lowpan.thread/TxtEntries>:32 txt_entries) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.lowpan.thread/Meshcop.UpdateTxtEntries"
+        "name": "fuchsia.lowpan.thread/Meshcop.UpdateTxtEntries",
+        "type": "(vector<fuchsia.lowpan.thread/TxtEntries>:32 txt_entries) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.lowpan.thread/Meshcop"
     },
     {
-        "declaration": "(string:32 name,server_end:fuchsia.lowpan.thread/Meshcop server_end)",
         "kind": "protocol/member",
-        "name": "fuchsia.lowpan.thread/MeshcopConnector.Connect"
+        "name": "fuchsia.lowpan.thread/MeshcopConnector.Connect",
+        "type": "(string:32 name,server_end:fuchsia.lowpan.thread/Meshcop server_end)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.lowpan.thread/MeshcopConnector"
     },
     {
-        "declaration": "string:254",
         "kind": "struct/member",
-        "name": "fuchsia.lowpan.thread/TxtEntries.key"
+        "name": "fuchsia.lowpan.thread/TxtEntries.key",
+        "type": "string:254"
     },
     {
-        "declaration": "vector<uint8>:253",
         "kind": "struct/member",
-        "name": "fuchsia.lowpan.thread/TxtEntries.value"
+        "name": "fuchsia.lowpan.thread/TxtEntries.value",
+        "type": "vector<uint8>:253"
     },
     {
         "kind": "struct",

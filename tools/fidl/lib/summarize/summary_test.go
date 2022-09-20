@@ -68,15 +68,15 @@ const ENABLED_FLAG bool = true;
 `,
 			expected: `[
     {
-        "declaration": "bool",
         "kind": "const",
         "name": "l/ENABLED_FLAG",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "int8",
         "kind": "const",
         "name": "l/OFFSET",
+        "type": "int8",
         "value": "-33"
     },
     {
@@ -96,15 +96,15 @@ const OFFSET int8 = -33;
 `,
 			expected: `[
     {
-        "declaration": "bool",
         "kind": "const",
         "name": "l/ENABLED_FLAG",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "int8",
         "kind": "const",
         "name": "l/OFFSET",
+        "type": "int8",
         "value": "-33"
     },
     {
@@ -123,15 +123,15 @@ const ANSWER_IN_BINARY uint16 = 0b101010;
 `,
 			expected: `[
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "l/ANSWER",
+        "type": "uint16",
         "value": "42"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "l/ANSWER_IN_BINARY",
+        "type": "uint16",
         "value": "42"
     },
     {
@@ -158,63 +158,63 @@ const CONVERSION_FACTOR float64 = 1.41421358;
 `,
 			expected: `[
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "l/ANSWER",
+        "type": "uint16",
         "value": "42"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "l/ANSWER_IN_BINARY",
+        "type": "uint16",
         "value": "42"
     },
     {
-        "declaration": "float64",
         "kind": "const",
         "name": "l/CONVERSION_FACTOR",
+        "type": "float64",
         "value": "1.41421"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "l/DIAMOND",
+        "type": "uint64",
         "value": "1746410393481133080"
     },
     {
-        "declaration": "bool",
         "kind": "const",
         "name": "l/ENABLED_FLAG",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "l/FUCHSIA",
+        "type": "uint64",
         "value": "4054509061583223046"
     },
     {
-        "declaration": "float32",
         "kind": "const",
         "name": "l/MIN_TEMP",
+        "type": "float32",
         "value": "-273.15"
     },
     {
-        "declaration": "int8",
         "kind": "const",
         "name": "l/OFFSET",
+        "type": "int8",
         "value": "-33"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "l/POPULATION_USA_2018",
+        "type": "uint32",
         "value": "330000000"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "l/USERNAME",
+        "type": "string",
         "value": "squeenze"
     },
     {
@@ -234,21 +234,21 @@ const BAZ uint8 = FOO | BAR;
 `,
 			expected: `[
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "l/BAR",
+        "type": "uint8",
         "value": "2"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "l/BAZ",
+        "type": "uint8",
         "value": "3"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "l/FOO",
+        "type": "uint8",
         "value": "1"
     },
     {
@@ -279,10 +279,10 @@ type Bits1 = strict bits {
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "l/Bits1",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",
@@ -316,10 +316,10 @@ type Bits2 = strict bits {
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "l/Bits1",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "bits/member",
@@ -332,10 +332,10 @@ type Bits2 = strict bits {
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "l/Bits2",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",
@@ -365,10 +365,10 @@ type Bits = flexible bits : uint8 {
         "value": "2"
     },
     {
-        "declaration": "uint8",
         "kind": "bits",
         "name": "l/Bits",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint8"
     },
     {
         "kind": "library",
@@ -418,10 +418,10 @@ type Vessel = strict enum {
         "value": "3"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "l/Beverage",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint8"
     },
     {
         "kind": "enum/member",
@@ -444,10 +444,10 @@ type Vessel = strict enum {
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "l/Vessel",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",
@@ -466,9 +466,9 @@ type S = struct {
 `,
 			expected: `[
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "l/S.x"
+        "name": "l/S.x",
+        "type": "float32"
     },
     {
         "kind": "struct",
@@ -499,27 +499,27 @@ type S = struct {
 `,
 			expected: `[
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "l/S.bar",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
         "name": "l/S.baz",
+        "type": "string",
         "value": "booyah!"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
         "name": "l/S.foo",
+        "type": "string",
         "value": "huzzah"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
         "name": "l/S.x",
+        "type": "float32",
         "value": "0.314159"
     },
     {
@@ -527,9 +527,9 @@ type S = struct {
         "name": "l/S"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "l/VALUE",
+        "type": "string",
         "value": "booyah!"
     },
     {
@@ -550,14 +550,14 @@ type Arrays = struct {
 `,
 			expected: `[
     {
-        "declaration": "array<float32,16>",
         "kind": "struct/member",
-        "name": "l/Arrays.form"
+        "name": "l/Arrays.form",
+        "type": "array<float32,16>"
     },
     {
-        "declaration": "array<array<string,4>,10>",
         "kind": "struct/member",
-        "name": "l/Arrays.matrix"
+        "name": "l/Arrays.matrix",
+        "type": "array<array<string,4>,10>"
     },
     {
         "kind": "struct",
@@ -581,14 +581,14 @@ type Document = struct {
 `,
 			expected: `[
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "l/Document.description"
+        "name": "l/Document.description",
+        "type": "string:optional"
     },
     {
-        "declaration": "string:40",
         "kind": "struct/member",
-        "name": "l/Document.title"
+        "name": "l/Document.title",
+        "type": "string:40"
     },
     {
         "kind": "struct",
@@ -615,29 +615,29 @@ type Vectors = struct {
 `,
 			expected: `[
     {
-        "declaration": "vector<uint8>",
         "kind": "struct/member",
-        "name": "l/Vectors.blob"
+        "name": "l/Vectors.blob",
+        "type": "vector<uint8>"
     },
     {
-        "declaration": "vector<vector<array<float32,16>>>",
         "kind": "struct/member",
-        "name": "l/Vectors.complex"
+        "name": "l/Vectors.complex",
+        "type": "vector<vector<array<float32,16>>>"
     },
     {
-        "declaration": "vector<string>:<24,optional>",
         "kind": "struct/member",
-        "name": "l/Vectors.nullable_vector_of_strings"
+        "name": "l/Vectors.nullable_vector_of_strings",
+        "type": "vector<string>:<24,optional>"
     },
     {
-        "declaration": "vector<int32>:10",
         "kind": "struct/member",
-        "name": "l/Vectors.params"
+        "name": "l/Vectors.params",
+        "type": "vector<int32>:10"
     },
     {
-        "declaration": "vector<string:optional>",
         "kind": "struct/member",
-        "name": "l/Vectors.vector_of_nullable_strings"
+        "name": "l/Vectors.vector_of_nullable_strings",
+        "type": "vector<string:optional>"
     },
     {
         "kind": "struct",
@@ -663,14 +663,14 @@ type Handles = resource struct {
 `,
 			expected: `[
     {
-        "declaration": "zx/handle:<CHANNEL,optional>",
         "kind": "struct/member",
-        "name": "l/Handles.c"
+        "name": "l/Handles.c",
+        "type": "zx/handle:<CHANNEL,optional>"
     },
     {
-        "declaration": "zx/handle",
         "kind": "struct/member",
-        "name": "l/Handles.h"
+        "name": "l/Handles.h",
+        "type": "zx/handle"
     },
     {
         "kind": "struct",
@@ -699,9 +699,9 @@ type B = struct {
         "name": "l/A"
     },
     {
-        "declaration": "l/A",
         "kind": "struct/member",
-        "name": "l/B.a"
+        "name": "l/B.a",
+        "type": "l/A"
     },
     {
         "kind": "struct",
@@ -737,62 +737,62 @@ type Circle = struct {
 `,
 			expected: `[
     {
-        "declaration": "l/CirclePoint",
         "kind": "struct/member",
-        "name": "l/Circle.center"
+        "name": "l/Circle.center",
+        "type": "l/CirclePoint"
     },
     {
-        "declaration": "box<l/Color>",
         "kind": "struct/member",
-        "name": "l/Circle.color"
+        "name": "l/Circle.color",
+        "type": "box<l/Color>"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "l/Circle.dashed"
+        "name": "l/Circle.dashed",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "l/Circle.filled"
+        "name": "l/Circle.filled",
+        "type": "bool"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "l/Circle.radius"
+        "name": "l/Circle.radius",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "l/Circle"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "l/CirclePoint.x"
+        "name": "l/CirclePoint.x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "l/CirclePoint.y"
+        "name": "l/CirclePoint.y",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "l/CirclePoint"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "l/Color.b"
+        "name": "l/Color.b",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "l/Color.g"
+        "name": "l/Color.g",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "l/Color.r"
+        "name": "l/Color.r",
+        "type": "float32"
     },
     {
         "kind": "struct",
@@ -817,19 +817,19 @@ type Profile = table {
 `,
 			expected: `[
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "l/Profile.calendars"
+        "name": "l/Profile.calendars",
+        "type": "vector<string>"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "l/Profile.locales"
+        "name": "l/Profile.locales",
+        "type": "vector<string>"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "l/Profile.time_zones"
+        "name": "l/Profile.time_zones",
+        "type": "vector<string>"
     },
     {
         "kind": "table",
@@ -855,14 +855,14 @@ type Either = strict union {
 `,
 			expected: `[
     {
-        "declaration": "l/Left",
         "kind": "union/member",
-        "name": "l/Either.left"
+        "name": "l/Either.left",
+        "type": "l/Left"
     },
     {
-        "declaration": "l/Right",
         "kind": "union/member",
-        "name": "l/Either.right"
+        "name": "l/Either.right",
+        "type": "l/Right"
     },
     {
         "kind": "union",
@@ -894,9 +894,9 @@ protocol Calculator {
 `,
 			expected: `[
     {
-        "declaration": "(int32 a,int32 b) -> (int32 sum)",
         "kind": "protocol/member",
-        "name": "l/Calculator.Add"
+        "name": "l/Calculator.Add",
+        "type": "(int32 a,int32 b) -> (int32 sum)"
     },
     {
         "kind": "protocol",
@@ -929,9 +929,9 @@ protocol P {
         "name": "l/Foo"
     },
     {
-        "declaration": "(box<l/Bar> b) -> (l/Foo c)",
         "kind": "protocol/member",
-        "name": "l/P.M"
+        "name": "l/P.M",
+        "type": "(box<l/Bar> b) -> (l/Foo c)"
     },
     {
         "kind": "protocol",
@@ -967,24 +967,24 @@ protocol P2 {
         "name": "l/P"
     },
     {
-        "declaration": "(client_end:l/P a)",
         "kind": "protocol/member",
-        "name": "l/P2.M1"
+        "name": "l/P2.M1",
+        "type": "(client_end:l/P a)"
     },
     {
-        "declaration": "(client_end:<l/P,optional> a)",
         "kind": "protocol/member",
-        "name": "l/P2.M2"
+        "name": "l/P2.M2",
+        "type": "(client_end:<l/P,optional> a)"
     },
     {
-        "declaration": "(server_end:l/P a)",
         "kind": "protocol/member",
-        "name": "l/P2.M3"
+        "name": "l/P2.M3",
+        "type": "(server_end:l/P a)"
     },
     {
-        "declaration": "(server_end:<l/P,optional> a)",
         "kind": "protocol/member",
-        "name": "l/P2.M4"
+        "name": "l/P2.M4",
+        "type": "(server_end:<l/P,optional> a)"
     },
     {
         "kind": "protocol",
@@ -1010,24 +1010,24 @@ protocol P {
 `,
 			expected: `[
     {
-        "declaration": " -> (int32 a)",
         "kind": "protocol/member",
-        "name": "l/P.F1"
+        "name": "l/P.F1",
+        "type": " -> (int32 a)"
     },
     {
-        "declaration": "() -> (int32 a)",
         "kind": "protocol/member",
-        "name": "l/P.F2"
+        "name": "l/P.F2",
+        "type": "() -> (int32 a)"
     },
     {
-        "declaration": "() -> (l/P_F3_Result result)",
         "kind": "protocol/member",
-        "name": "l/P.F3"
+        "name": "l/P.F3",
+        "type": "() -> (l/P_F3_Result result)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "l/P.F4"
+        "name": "l/P.F4",
+        "type": "()"
     },
     {
         "kind": "protocol",
@@ -1038,14 +1038,14 @@ protocol P {
         "name": "l/P_F3_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "l/P_F3_Result.err"
+        "name": "l/P_F3_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "l/P_F3_Response",
         "kind": "union/member",
-        "name": "l/P_F3_Result.response"
+        "name": "l/P_F3_Result.response",
+        "type": "l/P_F3_Response"
     },
     {
         "kind": "union",
@@ -1073,28 +1073,28 @@ protocol P {
 `,
 			expected: `[
     {
-        "declaration": " -> (bool a)",
         "kind": "protocol/member",
-        "name": "l/P.M1"
+        "name": "l/P.M1",
+        "type": " -> (bool a)"
     },
     {
-        "declaration": "() -> (l/P_M2_Result result)",
         "kind": "protocol/member",
-        "name": "l/P.M2"
+        "name": "l/P.M2",
+        "type": "() -> (l/P_M2_Result result)"
     },
     {
         "kind": "protocol",
         "name": "l/P"
     },
     {
-        "declaration": "uint32",
         "kind": "union/member",
-        "name": "l/P_M2_Result.err"
+        "name": "l/P_M2_Result.err",
+        "type": "uint32"
     },
     {
-        "declaration": "l/Payload",
         "kind": "union/member",
-        "name": "l/P_M2_Result.response"
+        "name": "l/P_M2_Result.response",
+        "type": "l/Payload"
     },
     {
         "kind": "union",
@@ -1102,9 +1102,9 @@ protocol P {
         "strictness": "strict"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "l/Payload.a"
+        "name": "l/Payload.a",
+        "type": "bool"
     },
     {
         "kind": "struct",
@@ -1134,32 +1134,32 @@ protocol P {
 `,
 			expected: `[
     {
-        "declaration": "(l/U payload) -> (l/T payload)",
         "kind": "protocol/member",
-        "name": "l/P.M1"
+        "name": "l/P.M1",
+        "type": "(l/U payload) -> (l/T payload)"
     },
     {
-        "declaration": "(l/PM2Request payload) -> (l/PM2Response payload)",
         "kind": "protocol/member",
-        "name": "l/P.M2"
+        "name": "l/P.M2",
+        "type": "(l/PM2Request payload) -> (l/PM2Response payload)"
     },
     {
         "kind": "protocol",
         "name": "l/P"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "l/PM2Request.c"
+        "name": "l/PM2Request.c",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "l/PM2Request"
     },
     {
-        "declaration": "uint32",
         "kind": "union/member",
-        "name": "l/PM2Response.d"
+        "name": "l/PM2Response.d",
+        "type": "uint32"
     },
     {
         "kind": "union",
@@ -1167,18 +1167,18 @@ protocol P {
         "strictness": "strict"
     },
     {
-        "declaration": "int32",
         "kind": "table/member",
-        "name": "l/T.b"
+        "name": "l/T.b",
+        "type": "int32"
     },
     {
         "kind": "table",
         "name": "l/T"
     },
     {
-        "declaration": "uint64",
         "kind": "union/member",
-        "name": "l/U.a"
+        "name": "l/U.a",
+        "type": "uint64"
     },
     {
         "kind": "union",
@@ -1206,23 +1206,23 @@ protocol P {
 `,
 			expected: `[
     {
-        "declaration": "() -> (l/P_M1_Result result)",
         "kind": "protocol/member",
-        "name": "l/P.M1"
+        "name": "l/P.M1",
+        "type": "() -> (l/P_M1_Result result)"
     },
     {
-        "declaration": "() -> (l/P_M2_Result result)",
         "kind": "protocol/member",
-        "name": "l/P.M2"
+        "name": "l/P.M2",
+        "type": "() -> (l/P_M2_Result result)"
     },
     {
         "kind": "protocol",
         "name": "l/P"
     },
     {
-        "declaration": "bool",
         "kind": "union/member",
-        "name": "l/P_M1_Response.a"
+        "name": "l/P_M1_Response.a",
+        "type": "bool"
     },
     {
         "kind": "union",
@@ -1230,14 +1230,14 @@ protocol P {
         "strictness": "flexible"
     },
     {
-        "declaration": "uint32",
         "kind": "union/member",
-        "name": "l/P_M1_Result.err"
+        "name": "l/P_M1_Result.err",
+        "type": "uint32"
     },
     {
-        "declaration": "l/P_M1_Response",
         "kind": "union/member",
-        "name": "l/P_M1_Result.response"
+        "name": "l/P_M1_Result.response",
+        "type": "l/P_M1_Response"
     },
     {
         "kind": "union",
@@ -1245,14 +1245,14 @@ protocol P {
         "strictness": "strict"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "l/P_M2_Result.err"
+        "name": "l/P_M2_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "l/T",
         "kind": "union/member",
-        "name": "l/P_M2_Result.response"
+        "name": "l/P_M2_Result.response",
+        "type": "l/T"
     },
     {
         "kind": "union",
@@ -1260,9 +1260,9 @@ protocol P {
         "strictness": "strict"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "l/T.b"
+        "name": "l/T.b",
+        "type": "string"
     },
     {
         "kind": "table",
@@ -1287,19 +1287,19 @@ type S = struct {
 `,
 			expected: `[
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "l/S.f1"
+        "name": "l/S.f1",
+        "type": "string"
     },
     {
-        "declaration": "string:4",
         "kind": "struct/member",
-        "name": "l/S.f2"
+        "name": "l/S.f2",
+        "type": "string:4"
     },
     {
-        "declaration": "string:<4,optional>",
         "kind": "struct/member",
-        "name": "l/S.f3"
+        "name": "l/S.f3",
+        "type": "string:<4,optional>"
     },
     {
         "kind": "struct",
@@ -1324,9 +1324,9 @@ type A = struct {
 `,
 			expected: `[
     {
-        "declaration": "l2/T",
         "kind": "struct/member",
-        "name": "l/A.a"
+        "name": "l/A.a",
+        "type": "l2/T"
     },
     {
         "kind": "struct",
@@ -1359,19 +1359,19 @@ protocol Calculator {
         "name": "l/Bar"
     },
     {
-        "declaration": "(l2/T a,l/Bar b) -> (l/Foo c)",
         "kind": "protocol/member",
-        "name": "l/Calculator.Add"
+        "name": "l/Calculator.Add",
+        "type": "(l2/T a,l/Bar b) -> (l/Foo c)"
     },
     {
-        "declaration": "(int32 num) -> (int32 num)",
         "kind": "protocol/member",
-        "name": "l/Calculator.Halve"
+        "name": "l/Calculator.Halve",
+        "type": "(int32 num) -> (int32 num)"
     },
     {
-        "declaration": "(int32 num) -> (int32 num)",
         "kind": "protocol/member",
-        "name": "l/Calculator.Invert"
+        "name": "l/Calculator.Invert",
+        "type": "(int32 num) -> (int32 num)"
     },
     {
         "kind": "protocol",
@@ -1403,9 +1403,9 @@ type T = table {
 `,
 			expected: `[
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "l/E.e"
+        "name": "l/E.e",
+        "type": "int32"
     },
     {
         "kind": "union",
@@ -1413,9 +1413,9 @@ type T = table {
         "strictness": "strict"
     },
     {
-        "declaration": "int32",
         "kind": "table/member",
-        "name": "l/T.e"
+        "name": "l/T.e",
+        "type": "int32"
     },
     {
         "kind": "table",
@@ -1443,7 +1443,11 @@ func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase) {
 			r := c.Single(test.fidl)
 			s := Summarize(r)
 			var b strings.Builder
-			if err := s.WriteJSON(&b); err != nil {
+
+			// TODO(fxbug.dev/109721): Remove.
+			renameDeclarationToType := true
+
+			if err := s.WriteJSON(&b, renameDeclarationToType); err != nil {
 				t.Fatalf("while writing JOSN: %v", err)
 			}
 			actual := strings.Split(b.String(), "\n")

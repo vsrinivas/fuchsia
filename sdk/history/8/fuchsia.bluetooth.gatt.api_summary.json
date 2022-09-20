@@ -1,80 +1,80 @@
 [
     {
-        "declaration": "box<fuchsia.bluetooth.gatt/SecurityRequirements>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/AttributePermissions.read"
+        "name": "fuchsia.bluetooth.gatt/AttributePermissions.read",
+        "type": "box<fuchsia.bluetooth.gatt/SecurityRequirements>"
     },
     {
-        "declaration": "box<fuchsia.bluetooth.gatt/SecurityRequirements>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/AttributePermissions.update"
+        "name": "fuchsia.bluetooth.gatt/AttributePermissions.update",
+        "type": "box<fuchsia.bluetooth.gatt/SecurityRequirements>"
     },
     {
-        "declaration": "box<fuchsia.bluetooth.gatt/SecurityRequirements>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/AttributePermissions.write"
+        "name": "fuchsia.bluetooth.gatt/AttributePermissions.write",
+        "type": "box<fuchsia.bluetooth.gatt/SecurityRequirements>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth.gatt/AttributePermissions"
     },
     {
-        "declaration": "vector<fuchsia.bluetooth.gatt/Descriptor>:<65532,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/Characteristic.descriptors"
+        "name": "fuchsia.bluetooth.gatt/Characteristic.descriptors",
+        "type": "vector<fuchsia.bluetooth.gatt/Descriptor>:<65532,optional>"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/Characteristic.id"
+        "name": "fuchsia.bluetooth.gatt/Characteristic.id",
+        "type": "uint64"
     },
     {
-        "declaration": "box<fuchsia.bluetooth.gatt/AttributePermissions>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/Characteristic.permissions"
+        "name": "fuchsia.bluetooth.gatt/Characteristic.permissions",
+        "type": "box<fuchsia.bluetooth.gatt/AttributePermissions>"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/Characteristic.properties"
+        "name": "fuchsia.bluetooth.gatt/Characteristic.properties",
+        "type": "uint32"
     },
     {
-        "declaration": "string:36",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/Characteristic.type"
+        "name": "fuchsia.bluetooth.gatt/Characteristic.type",
+        "type": "string:36"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth.gatt/Characteristic"
     },
     {
-        "declaration": "(uint64 id,server_end:fuchsia.bluetooth.gatt/RemoteService service)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/Client.ConnectToService"
+        "name": "fuchsia.bluetooth.gatt/Client.ConnectToService",
+        "type": "(uint64 id,server_end:fuchsia.bluetooth.gatt/RemoteService service)"
     },
     {
-        "declaration": "(vector<string:36>:optional uuids) -> (fuchsia.bluetooth/Status status,vector<fuchsia.bluetooth.gatt/ServiceInfo>:65535 services)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/Client.ListServices"
+        "name": "fuchsia.bluetooth.gatt/Client.ListServices",
+        "type": "(vector<string:36>:optional uuids) -> (fuchsia.bluetooth/Status status,vector<fuchsia.bluetooth.gatt/ServiceInfo>:65535 services)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.gatt/Client"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/Descriptor.id"
+        "name": "fuchsia.bluetooth.gatt/Descriptor.id",
+        "type": "uint64"
     },
     {
-        "declaration": "box<fuchsia.bluetooth.gatt/AttributePermissions>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/Descriptor.permissions"
+        "name": "fuchsia.bluetooth.gatt/Descriptor.permissions",
+        "type": "box<fuchsia.bluetooth.gatt/AttributePermissions>"
     },
     {
-        "declaration": "string:36",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/Descriptor.type"
+        "name": "fuchsia.bluetooth.gatt/Descriptor.type",
+        "type": "string:36"
     },
     {
         "kind": "struct",
@@ -121,10 +121,10 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.bluetooth.gatt/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -147,105 +147,105 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.bluetooth.gatt/ErrorCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(uint64 characteristic_id,string:16 peer_id,vector<uint8> value,bool confirm)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/LocalService.NotifyValue"
+        "name": "fuchsia.bluetooth.gatt/LocalService.NotifyValue",
+        "type": "(uint64 characteristic_id,string:16 peer_id,vector<uint8> value,bool confirm)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/LocalService.RemoveService"
+        "name": "fuchsia.bluetooth.gatt/LocalService.RemoveService",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.gatt/LocalService"
     },
     {
-        "declaration": "(uint64 characteristic_id,string:16 peer_id,bool notify,bool indicate)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate.OnCharacteristicConfiguration"
+        "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate.OnCharacteristicConfiguration",
+        "type": "(uint64 characteristic_id,string:16 peer_id,bool notify,bool indicate)"
     },
     {
-        "declaration": "(uint64 id,int32 offset) -> (vector<uint8>:optional value,fuchsia.bluetooth.gatt/ErrorCode status)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate.OnReadValue"
+        "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate.OnReadValue",
+        "type": "(uint64 id,int32 offset) -> (vector<uint8>:optional value,fuchsia.bluetooth.gatt/ErrorCode status)"
     },
     {
-        "declaration": "(uint64 id,uint16 offset,vector<uint8> value) -> (fuchsia.bluetooth.gatt/ErrorCode status)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate.OnWriteValue"
+        "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate.OnWriteValue",
+        "type": "(uint64 id,uint16 offset,vector<uint8> value) -> (fuchsia.bluetooth.gatt/ErrorCode status)"
     },
     {
-        "declaration": "(uint64 id,uint16 offset,vector<uint8> value)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate.OnWriteWithoutResponse"
+        "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate.OnWriteWithoutResponse",
+        "type": "(uint64 id,uint16 offset,vector<uint8> value)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.gatt/LocalServiceDelegate"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/MAX_ATTRIBUTE_COUNT",
+        "type": "uint16",
         "value": "65535"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/MAX_CHARACTERISTIC_COUNT",
+        "type": "uint16",
         "value": "32767"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/MAX_DESCRIPTOR_COUNT",
+        "type": "uint16",
         "value": "65532"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/MAX_READ_BY_TYPE_RESULTS",
+        "type": "uint16",
         "value": "189"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/MAX_READ_BY_TYPE_VALUE_LENGTH",
+        "type": "uint16",
         "value": "253"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/MAX_SERVICE_COUNT",
+        "type": "uint16",
         "value": "65535"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/MAX_VALUE_LENGTH",
+        "type": "uint16",
         "value": "512"
     },
     {
-        "declaration": "fuchsia.bluetooth.gatt/Error",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt/ReadByTypeResult.error"
+        "name": "fuchsia.bluetooth.gatt/ReadByTypeResult.error",
+        "type": "fuchsia.bluetooth.gatt/Error"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt/ReadByTypeResult.id"
+        "name": "fuchsia.bluetooth.gatt/ReadByTypeResult.id",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<uint8>:253",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt/ReadByTypeResult.value"
+        "name": "fuchsia.bluetooth.gatt/ReadByTypeResult.value",
+        "type": "vector<uint8>:253"
     },
     {
         "kind": "table",
@@ -262,98 +262,98 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.bluetooth.gatt/ReliableMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (fuchsia.bluetooth/Status status,vector<fuchsia.bluetooth.gatt/Characteristic>:32767 characteristics)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.DiscoverCharacteristics"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.DiscoverCharacteristics",
+        "type": "() -> (fuchsia.bluetooth/Status status,vector<fuchsia.bluetooth.gatt/Characteristic>:32767 characteristics)"
     },
     {
-        "declaration": "(uint64 id,bool enable) -> (fuchsia.bluetooth/Status status)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.NotifyCharacteristic"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.NotifyCharacteristic",
+        "type": "(uint64 id,bool enable) -> (fuchsia.bluetooth/Status status)"
     },
     {
-        "declaration": " -> (uint64 id,vector<uint8> value)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.OnCharacteristicValueUpdated"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.OnCharacteristicValueUpdated",
+        "type": " -> (uint64 id,vector<uint8> value)"
     },
     {
-        "declaration": "(fuchsia.bluetooth/Uuid uuid) -> (fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadByType"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadByType",
+        "type": "(fuchsia.bluetooth/Uuid uuid) -> (fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result result)"
     },
     {
-        "declaration": "(uint64 id) -> (fuchsia.bluetooth/Status status,vector<uint8> value)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadCharacteristic"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadCharacteristic",
+        "type": "(uint64 id) -> (fuchsia.bluetooth/Status status,vector<uint8> value)"
     },
     {
-        "declaration": "(uint64 id) -> (fuchsia.bluetooth/Status status,vector<uint8> value)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadDescriptor"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadDescriptor",
+        "type": "(uint64 id) -> (fuchsia.bluetooth/Status status,vector<uint8> value)"
     },
     {
-        "declaration": "(uint64 id,uint16 offset,uint16 max_bytes) -> (fuchsia.bluetooth/Status status,vector<uint8>:512 value)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadLongCharacteristic"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadLongCharacteristic",
+        "type": "(uint64 id,uint16 offset,uint16 max_bytes) -> (fuchsia.bluetooth/Status status,vector<uint8>:512 value)"
     },
     {
-        "declaration": "(uint64 id,uint16 offset,uint16 max_bytes) -> (fuchsia.bluetooth/Status status,vector<uint8> value)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadLongDescriptor"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.ReadLongDescriptor",
+        "type": "(uint64 id,uint16 offset,uint16 max_bytes) -> (fuchsia.bluetooth/Status status,vector<uint8> value)"
     },
     {
-        "declaration": "(uint64 id,vector<uint8> value) -> (fuchsia.bluetooth/Status status)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteCharacteristic"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteCharacteristic",
+        "type": "(uint64 id,vector<uint8> value) -> (fuchsia.bluetooth/Status status)"
     },
     {
-        "declaration": "(uint64 id,vector<uint8> value)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteCharacteristicWithoutResponse"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteCharacteristicWithoutResponse",
+        "type": "(uint64 id,vector<uint8> value)"
     },
     {
-        "declaration": "(uint64 id,vector<uint8> value) -> (fuchsia.bluetooth/Status status)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteDescriptor"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteDescriptor",
+        "type": "(uint64 id,vector<uint8> value) -> (fuchsia.bluetooth/Status status)"
     },
     {
-        "declaration": "(uint64 id,uint16 offset,vector<uint8>:512 value,fuchsia.bluetooth.gatt/WriteOptions write_options) -> (fuchsia.bluetooth/Status status)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteLongCharacteristic"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteLongCharacteristic",
+        "type": "(uint64 id,uint16 offset,vector<uint8>:512 value,fuchsia.bluetooth.gatt/WriteOptions write_options) -> (fuchsia.bluetooth/Status status)"
     },
     {
-        "declaration": "(uint64 id,uint16 offset,vector<uint8>:512 value) -> (fuchsia.bluetooth/Status status)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteLongDescriptor"
+        "name": "fuchsia.bluetooth.gatt/RemoteService.WriteLongDescriptor",
+        "type": "(uint64 id,uint16 offset,vector<uint8>:512 value) -> (fuchsia.bluetooth/Status status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.gatt/RemoteService"
     },
     {
-        "declaration": "vector<fuchsia.bluetooth.gatt/ReadByTypeResult>:189",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Response.results"
+        "name": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Response.results",
+        "type": "vector<fuchsia.bluetooth.gatt/ReadByTypeResult>:189"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Response"
     },
     {
-        "declaration": "fuchsia.bluetooth.gatt/Error",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result.err"
+        "name": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result.err",
+        "type": "fuchsia.bluetooth.gatt/Error"
     },
     {
-        "declaration": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Response",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result.response"
+        "name": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Result.response",
+        "type": "fuchsia.bluetooth.gatt/RemoteService_ReadByType_Response"
     },
     {
         "kind": "union",
@@ -361,123 +361,123 @@
         "strictness": "strict"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/SecurityRequirements.authentication_required"
+        "name": "fuchsia.bluetooth.gatt/SecurityRequirements.authentication_required",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/SecurityRequirements.authorization_required"
+        "name": "fuchsia.bluetooth.gatt/SecurityRequirements.authorization_required",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/SecurityRequirements.encryption_required"
+        "name": "fuchsia.bluetooth.gatt/SecurityRequirements.encryption_required",
+        "type": "bool"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth.gatt/SecurityRequirements"
     },
     {
-        "declaration": "(fuchsia.bluetooth.gatt/ServiceInfo info,client_end:fuchsia.bluetooth.gatt/LocalServiceDelegate delegate,server_end:fuchsia.bluetooth.gatt/LocalService service) -> (fuchsia.bluetooth/Status status)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.gatt/Server.PublishService"
+        "name": "fuchsia.bluetooth.gatt/Server.PublishService",
+        "type": "(fuchsia.bluetooth.gatt/ServiceInfo info,client_end:fuchsia.bluetooth.gatt/LocalServiceDelegate delegate,server_end:fuchsia.bluetooth.gatt/LocalService service) -> (fuchsia.bluetooth/Status status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.gatt/Server"
     },
     {
-        "declaration": "vector<fuchsia.bluetooth.gatt/Characteristic>:<32767,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/ServiceInfo.characteristics"
+        "name": "fuchsia.bluetooth.gatt/ServiceInfo.characteristics",
+        "type": "vector<fuchsia.bluetooth.gatt/Characteristic>:<32767,optional>"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/ServiceInfo.id"
+        "name": "fuchsia.bluetooth.gatt/ServiceInfo.id",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<uint64>:<65535,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/ServiceInfo.includes"
+        "name": "fuchsia.bluetooth.gatt/ServiceInfo.includes",
+        "type": "vector<uint64>:<65535,optional>"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/ServiceInfo.primary"
+        "name": "fuchsia.bluetooth.gatt/ServiceInfo.primary",
+        "type": "bool"
     },
     {
-        "declaration": "string:36",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth.gatt/ServiceInfo.type"
+        "name": "fuchsia.bluetooth.gatt/ServiceInfo.type",
+        "type": "string:36"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth.gatt/ServiceInfo"
     },
     {
-        "declaration": "fuchsia.bluetooth.gatt/ReliableMode",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.gatt/WriteOptions.reliable_mode"
+        "name": "fuchsia.bluetooth.gatt/WriteOptions.reliable_mode",
+        "type": "fuchsia.bluetooth.gatt/ReliableMode"
     },
     {
         "kind": "table",
         "name": "fuchsia.bluetooth.gatt/WriteOptions"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyAuthenticatedSignedWrites",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyBroadcast",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyIndicate",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyNotify",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyRead",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyReliableWrite",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyWritableAuxiliaries",
+        "type": "uint32",
         "value": "512"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyWrite",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth.gatt/kPropertyWriteWithoutResponse",
+        "type": "uint32",
         "value": "4"
     },
     {

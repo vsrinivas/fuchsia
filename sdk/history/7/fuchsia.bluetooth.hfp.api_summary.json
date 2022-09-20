@@ -1,57 +1,57 @@
 [
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/Call.RequestActive"
+        "name": "fuchsia.bluetooth.hfp/Call.RequestActive",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/Call.RequestHold"
+        "name": "fuchsia.bluetooth.hfp/Call.RequestHold",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/Call.RequestTerminate"
+        "name": "fuchsia.bluetooth.hfp/Call.RequestTerminate",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/Call.RequestTransferAudio"
+        "name": "fuchsia.bluetooth.hfp/Call.RequestTransferAudio",
+        "type": "()"
     },
     {
-        "declaration": "(fuchsia.bluetooth.hfp/DtmfCode code) -> (fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/Call.SendDtmfCode"
+        "name": "fuchsia.bluetooth.hfp/Call.SendDtmfCode",
+        "type": "(fuchsia.bluetooth.hfp/DtmfCode code) -> (fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.bluetooth.hfp/CallState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/Call.WatchState"
+        "name": "fuchsia.bluetooth.hfp/Call.WatchState",
+        "type": "() -> (fuchsia.bluetooth.hfp/CallState state)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.hfp/Call"
     },
     {
-        "declaration": "string:256",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/CallAction.dial_from_location"
+        "name": "fuchsia.bluetooth.hfp/CallAction.dial_from_location",
+        "type": "string:256"
     },
     {
-        "declaration": "string:256",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/CallAction.dial_from_number"
+        "name": "fuchsia.bluetooth.hfp/CallAction.dial_from_number",
+        "type": "string:256"
     },
     {
-        "declaration": "fuchsia.bluetooth.hfp/RedialLast",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/CallAction.redial_last"
+        "name": "fuchsia.bluetooth.hfp/CallAction.redial_last",
+        "type": "fuchsia.bluetooth.hfp/RedialLast"
     },
     {
-        "declaration": "fuchsia.bluetooth.hfp/TransferActive",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/CallAction.transfer_active"
+        "name": "fuchsia.bluetooth.hfp/CallAction.transfer_active",
+        "type": "fuchsia.bluetooth.hfp/TransferActive"
     },
     {
         "kind": "union",
@@ -69,15 +69,15 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.bluetooth.hfp/CallDirection",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.bluetooth/PeerId id,server_end:fuchsia.bluetooth.hfp/PeerHandler handle) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/CallManager.PeerConnected"
+        "name": "fuchsia.bluetooth.hfp/CallManager.PeerConnected",
+        "type": "(fuchsia.bluetooth/PeerId id,server_end:fuchsia.bluetooth.hfp/PeerHandler handle) -> ()"
     },
     {
         "kind": "protocol",
@@ -124,24 +124,24 @@
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.bluetooth.hfp/CallState",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result.err"
+        "name": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Response",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result.response"
+        "name": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result.response",
+        "type": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Response"
     },
     {
         "kind": "union",
@@ -229,88 +229,88 @@
         "value": "48"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.bluetooth.hfp/DtmfCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
-        "declaration": "(uint8 requested)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/HeadsetGain.SetMicrophoneGain"
+        "name": "fuchsia.bluetooth.hfp/HeadsetGain.SetMicrophoneGain",
+        "type": "(uint8 requested)"
     },
     {
-        "declaration": "(uint8 requested)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/HeadsetGain.SetSpeakerGain"
+        "name": "fuchsia.bluetooth.hfp/HeadsetGain.SetSpeakerGain",
+        "type": "(uint8 requested)"
     },
     {
-        "declaration": "() -> (uint8 gain)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/HeadsetGain.WatchMicrophoneGain"
+        "name": "fuchsia.bluetooth.hfp/HeadsetGain.WatchMicrophoneGain",
+        "type": "() -> (uint8 gain)"
     },
     {
-        "declaration": "() -> (uint8 gain)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/HeadsetGain.WatchSpeakerGain"
+        "name": "fuchsia.bluetooth.hfp/HeadsetGain.WatchSpeakerGain",
+        "type": "() -> (uint8 gain)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.hfp/HeadsetGain"
     },
     {
-        "declaration": "(client_end:fuchsia.bluetooth.hfp/CallManager manager)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/Hfp.Register"
+        "name": "fuchsia.bluetooth.hfp/Hfp.Register",
+        "type": "(client_end:fuchsia.bluetooth.hfp/CallManager manager)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.bluetooth.hfp/Hfp"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.bluetooth.hfp/MAX_PICONET_SIZE",
+        "type": "uint64",
         "value": "8"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.hfp/NetworkInformation.roaming"
+        "name": "fuchsia.bluetooth.hfp/NetworkInformation.roaming",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.hfp/NetworkInformation.service_available"
+        "name": "fuchsia.bluetooth.hfp/NetworkInformation.service_available",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.bluetooth.hfp/SignalStrength",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.hfp/NetworkInformation.signal_strength"
+        "name": "fuchsia.bluetooth.hfp/NetworkInformation.signal_strength",
+        "type": "fuchsia.bluetooth.hfp/SignalStrength"
     },
     {
         "kind": "table",
         "name": "fuchsia.bluetooth.hfp/NetworkInformation"
     },
     {
-        "declaration": "client_end:fuchsia.bluetooth.hfp/Call",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.hfp/NextCall.call"
+        "name": "fuchsia.bluetooth.hfp/NextCall.call",
+        "type": "client_end:fuchsia.bluetooth.hfp/Call"
     },
     {
-        "declaration": "fuchsia.bluetooth.hfp/CallDirection",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.hfp/NextCall.direction"
+        "name": "fuchsia.bluetooth.hfp/NextCall.direction",
+        "type": "fuchsia.bluetooth.hfp/CallDirection"
     },
     {
-        "declaration": "string:256",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.hfp/NextCall.remote"
+        "name": "fuchsia.bluetooth.hfp/NextCall.remote",
+        "type": "string:256"
     },
     {
-        "declaration": "fuchsia.bluetooth.hfp/CallState",
         "kind": "table/member",
-        "name": "fuchsia.bluetooth.hfp/NextCall.state"
+        "name": "fuchsia.bluetooth.hfp/NextCall.state",
+        "type": "fuchsia.bluetooth.hfp/CallState"
     },
     {
         "kind": "table",
@@ -318,44 +318,44 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(client_end:fuchsia.bluetooth.hfp/HeadsetGain control)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler.GainControl"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler.GainControl",
+        "type": "(client_end:fuchsia.bluetooth.hfp/HeadsetGain control)"
     },
     {
-        "declaration": "() -> (string:<16,optional> operator)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler.QueryOperator"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler.QueryOperator",
+        "type": "() -> (string:<16,optional> operator)"
     },
     {
-        "declaration": "(uint8 level)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler.ReportHeadsetBatteryLevel"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler.ReportHeadsetBatteryLevel",
+        "type": "(uint8 level)"
     },
     {
-        "declaration": "(fuchsia.bluetooth.hfp/CallAction action) -> (fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler.RequestOutgoingCall"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler.RequestOutgoingCall",
+        "type": "(fuchsia.bluetooth.hfp/CallAction action) -> (fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result result)"
     },
     {
-        "declaration": "(bool enabled) -> (fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler.SetNrecMode"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler.SetNrecMode",
+        "type": "(bool enabled) -> (fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result result)"
     },
     {
-        "declaration": "() -> (vector<string:256>:128 numbers)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler.SubscriberNumberInformation"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler.SubscriberNumberInformation",
+        "type": "() -> (vector<string:256>:128 numbers)"
     },
     {
-        "declaration": "() -> (fuchsia.bluetooth.hfp/NetworkInformation update)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler.WatchNetworkInformation"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler.WatchNetworkInformation",
+        "type": "() -> (fuchsia.bluetooth.hfp/NetworkInformation update)"
     },
     {
-        "declaration": "() -> (fuchsia.bluetooth.hfp/NextCall call)",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler.WatchNextCall"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler.WatchNextCall",
+        "type": "() -> (fuchsia.bluetooth.hfp/NextCall call)"
     },
     {
         "kind": "protocol",
@@ -366,14 +366,14 @@
         "name": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result.err"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Response",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result.response"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result.response",
+        "type": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Response"
     },
     {
         "kind": "union",
@@ -385,14 +385,14 @@
         "name": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result.err"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Response",
         "kind": "union/member",
-        "name": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result.response"
+        "name": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result.response",
+        "type": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Response"
     },
     {
         "kind": "union",
@@ -434,10 +434,10 @@
         "value": "2"
     },
     {
-        "declaration": "int8",
         "kind": "enum",
         "name": "fuchsia.bluetooth.hfp/SignalStrength",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "int8"
     },
     {
         "kind": "struct",

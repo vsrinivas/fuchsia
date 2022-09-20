@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(fuchsia.buildinfo/BuildInfo build_info) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.buildinfo.test/BuildInfoTestController.SetBuildInfo"
+        "name": "fuchsia.buildinfo.test/BuildInfoTestController.SetBuildInfo",
+        "type": "(fuchsia.buildinfo/BuildInfo build_info) -> ()"
     },
     {
         "kind": "protocol",

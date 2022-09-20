@@ -1,47 +1,47 @@
 [
     {
-        "declaration": "(fuchsia.settings/AccessibilitySettings settings) -> (fuchsia.settings/Accessibility_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Accessibility.Set"
+        "name": "fuchsia.settings/Accessibility.Set",
+        "type": "(fuchsia.settings/AccessibilitySettings settings) -> (fuchsia.settings/Accessibility_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/AccessibilitySettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Accessibility.Watch"
+        "name": "fuchsia.settings/Accessibility.Watch",
+        "type": "() -> (fuchsia.settings/AccessibilitySettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/Accessibility"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/AccessibilitySettings.audio_description"
+        "name": "fuchsia.settings/AccessibilitySettings.audio_description",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.settings/CaptionsSettings",
         "kind": "table/member",
-        "name": "fuchsia.settings/AccessibilitySettings.captions_settings"
+        "name": "fuchsia.settings/AccessibilitySettings.captions_settings",
+        "type": "fuchsia.settings/CaptionsSettings"
     },
     {
-        "declaration": "fuchsia.settings/ColorBlindnessType",
         "kind": "table/member",
-        "name": "fuchsia.settings/AccessibilitySettings.color_correction"
+        "name": "fuchsia.settings/AccessibilitySettings.color_correction",
+        "type": "fuchsia.settings/ColorBlindnessType"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/AccessibilitySettings.color_inversion"
+        "name": "fuchsia.settings/AccessibilitySettings.color_inversion",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/AccessibilitySettings.enable_magnification"
+        "name": "fuchsia.settings/AccessibilitySettings.enable_magnification",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/AccessibilitySettings.screen_reader"
+        "name": "fuchsia.settings/AccessibilitySettings.screen_reader",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -52,14 +52,14 @@
         "name": "fuchsia.settings/Accessibility_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/Accessibility_Set_Result.err"
+        "name": "fuchsia.settings/Accessibility_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/Accessibility_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/Accessibility_Set_Result.response"
+        "name": "fuchsia.settings/Accessibility_Set_Result.response",
+        "type": "fuchsia.settings/Accessibility_Set_Response"
     },
     {
         "kind": "union",
@@ -67,23 +67,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.settings/AudioSettings settings) -> (fuchsia.settings/Audio_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Audio.Set"
+        "name": "fuchsia.settings/Audio.Set",
+        "type": "(fuchsia.settings/AudioSettings settings) -> (fuchsia.settings/Audio_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/AudioSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Audio.Watch"
+        "name": "fuchsia.settings/Audio.Watch",
+        "type": "() -> (fuchsia.settings/AudioSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/Audio"
     },
     {
-        "declaration": "vector<fuchsia.settings/AudioStreamSettings>:5",
         "kind": "table/member",
-        "name": "fuchsia.settings/AudioSettings.streams"
+        "name": "fuchsia.settings/AudioSettings.streams",
+        "type": "vector<fuchsia.settings/AudioStreamSettings>:5"
     },
     {
         "kind": "table",
@@ -105,25 +105,25 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/AudioStreamSettingSource",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.settings/AudioStreamSettingSource",
         "kind": "table/member",
-        "name": "fuchsia.settings/AudioStreamSettings.source"
+        "name": "fuchsia.settings/AudioStreamSettings.source",
+        "type": "fuchsia.settings/AudioStreamSettingSource"
     },
     {
-        "declaration": "fuchsia.media/AudioRenderUsage",
         "kind": "table/member",
-        "name": "fuchsia.settings/AudioStreamSettings.stream"
+        "name": "fuchsia.settings/AudioStreamSettings.stream",
+        "type": "fuchsia.media/AudioRenderUsage"
     },
     {
-        "declaration": "fuchsia.settings/Volume",
         "kind": "table/member",
-        "name": "fuchsia.settings/AudioStreamSettings.user_volume"
+        "name": "fuchsia.settings/AudioStreamSettings.user_volume",
+        "type": "fuchsia.settings/Volume"
     },
     {
         "kind": "table",
@@ -134,14 +134,14 @@
         "name": "fuchsia.settings/Audio_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/Audio_Set_Result.err"
+        "name": "fuchsia.settings/Audio_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/Audio_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/Audio_Set_Result.response"
+        "name": "fuchsia.settings/Audio_Set_Result.response",
+        "type": "fuchsia.settings/Audio_Set_Response"
     },
     {
         "kind": "union",
@@ -149,14 +149,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.settings/Autorepeat.delay"
+        "name": "fuchsia.settings/Autorepeat.delay",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.settings/Autorepeat.period"
+        "name": "fuchsia.settings/Autorepeat.period",
+        "type": "int64"
     },
     {
         "kind": "struct",
@@ -203,59 +203,59 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/CaptionFontFamily",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.settings/EdgeStyle",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionFontStyle.char_edge_style"
+        "name": "fuchsia.settings/CaptionFontStyle.char_edge_style",
+        "type": "fuchsia.settings/EdgeStyle"
     },
     {
-        "declaration": "fuchsia.ui.types/ColorRgba",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionFontStyle.color"
+        "name": "fuchsia.settings/CaptionFontStyle.color",
+        "type": "fuchsia.ui.types/ColorRgba"
     },
     {
-        "declaration": "fuchsia.settings/CaptionFontFamily",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionFontStyle.family"
+        "name": "fuchsia.settings/CaptionFontStyle.family",
+        "type": "fuchsia.settings/CaptionFontFamily"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionFontStyle.relative_size"
+        "name": "fuchsia.settings/CaptionFontStyle.relative_size",
+        "type": "float32"
     },
     {
         "kind": "table",
         "name": "fuchsia.settings/CaptionFontStyle"
     },
     {
-        "declaration": "fuchsia.ui.types/ColorRgba",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionsSettings.background_color"
+        "name": "fuchsia.settings/CaptionsSettings.background_color",
+        "type": "fuchsia.ui.types/ColorRgba"
     },
     {
-        "declaration": "fuchsia.settings/CaptionFontStyle",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionsSettings.font_style"
+        "name": "fuchsia.settings/CaptionsSettings.font_style",
+        "type": "fuchsia.settings/CaptionFontStyle"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionsSettings.for_media"
+        "name": "fuchsia.settings/CaptionsSettings.for_media",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionsSettings.for_tts"
+        "name": "fuchsia.settings/CaptionsSettings.for_tts",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.ui.types/ColorRgba",
         "kind": "table/member",
-        "name": "fuchsia.settings/CaptionsSettings.window_color"
+        "name": "fuchsia.settings/CaptionsSettings.window_color",
+        "type": "fuchsia.ui.types/ColorRgba"
     },
     {
         "kind": "table",
@@ -282,10 +282,10 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/ColorBlindnessType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "bits/member",
@@ -298,15 +298,15 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.settings/ConfigurationInterfaces",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.settings/ToggleStateFlags",
         "kind": "table/member",
-        "name": "fuchsia.settings/DeviceState.toggle_flags"
+        "name": "fuchsia.settings/DeviceState.toggle_flags",
+        "type": "fuchsia.settings/ToggleStateFlags"
     },
     {
         "kind": "table",
@@ -323,10 +323,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/DeviceStateSource",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -339,59 +339,59 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/DeviceType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.settings/DisplaySettings settings) -> (fuchsia.settings/Display_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Display.Set"
+        "name": "fuchsia.settings/Display.Set",
+        "type": "(fuchsia.settings/DisplaySettings settings) -> (fuchsia.settings/Display_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/DisplaySettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Display.Watch"
+        "name": "fuchsia.settings/Display.Watch",
+        "type": "() -> (fuchsia.settings/DisplaySettings settings)"
     },
     {
-        "declaration": "(float32 delta) -> (fuchsia.settings/LightSensorData light_sensor_data)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Display.WatchLightSensor"
+        "name": "fuchsia.settings/Display.WatchLightSensor",
+        "type": "(float32 delta) -> (fuchsia.settings/LightSensorData light_sensor_data)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/Display"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.settings/DisplaySettings.adjusted_auto_brightness"
+        "name": "fuchsia.settings/DisplaySettings.adjusted_auto_brightness",
+        "type": "float32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/DisplaySettings.auto_brightness"
+        "name": "fuchsia.settings/DisplaySettings.auto_brightness",
+        "type": "bool"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.settings/DisplaySettings.brightness_value"
+        "name": "fuchsia.settings/DisplaySettings.brightness_value",
+        "type": "float32"
     },
     {
-        "declaration": "fuchsia.settings/LowLightMode",
         "kind": "table/member",
-        "name": "fuchsia.settings/DisplaySettings.low_light_mode"
+        "name": "fuchsia.settings/DisplaySettings.low_light_mode",
+        "type": "fuchsia.settings/LowLightMode"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/DisplaySettings.screen_enabled"
+        "name": "fuchsia.settings/DisplaySettings.screen_enabled",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.settings/Theme",
         "kind": "table/member",
-        "name": "fuchsia.settings/DisplaySettings.theme"
+        "name": "fuchsia.settings/DisplaySettings.theme",
+        "type": "fuchsia.settings/Theme"
     },
     {
         "kind": "table",
@@ -402,14 +402,14 @@
         "name": "fuchsia.settings/Display_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/Display_Set_Result.err"
+        "name": "fuchsia.settings/Display_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/Display_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/Display_Set_Result.response"
+        "name": "fuchsia.settings/Display_Set_Result.response",
+        "type": "fuchsia.settings/Display_Set_Response"
     },
     {
         "kind": "union",
@@ -417,28 +417,28 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.settings/DoNotDisturbSettings settings) -> (fuchsia.settings/DoNotDisturb_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/DoNotDisturb.Set"
+        "name": "fuchsia.settings/DoNotDisturb.Set",
+        "type": "(fuchsia.settings/DoNotDisturbSettings settings) -> (fuchsia.settings/DoNotDisturb_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/DoNotDisturbSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/DoNotDisturb.Watch"
+        "name": "fuchsia.settings/DoNotDisturb.Watch",
+        "type": "() -> (fuchsia.settings/DoNotDisturbSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/DoNotDisturb"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/DoNotDisturbSettings.night_mode_initiated_do_not_disturb"
+        "name": "fuchsia.settings/DoNotDisturbSettings.night_mode_initiated_do_not_disturb",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/DoNotDisturbSettings.user_initiated_do_not_disturb"
+        "name": "fuchsia.settings/DoNotDisturbSettings.user_initiated_do_not_disturb",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -449,14 +449,14 @@
         "name": "fuchsia.settings/DoNotDisturb_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/DoNotDisturb_Set_Result.err"
+        "name": "fuchsia.settings/DoNotDisturb_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/DoNotDisturb_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/DoNotDisturb_Set_Result.response"
+        "name": "fuchsia.settings/DoNotDisturb_Set_Result.response",
+        "type": "fuchsia.settings/DoNotDisturb_Set_Response"
     },
     {
         "kind": "union",
@@ -489,10 +489,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/EdgeStyle",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -505,29 +505,29 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.settings/FactoryResetSettings settings) -> (fuchsia.settings/FactoryReset_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/FactoryReset.Set"
+        "name": "fuchsia.settings/FactoryReset.Set",
+        "type": "(fuchsia.settings/FactoryResetSettings settings) -> (fuchsia.settings/FactoryReset_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/FactoryResetSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/FactoryReset.Watch"
+        "name": "fuchsia.settings/FactoryReset.Watch",
+        "type": "() -> (fuchsia.settings/FactoryResetSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/FactoryReset"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/FactoryResetSettings.is_local_reset_allowed"
+        "name": "fuchsia.settings/FactoryResetSettings.is_local_reset_allowed",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -538,14 +538,14 @@
         "name": "fuchsia.settings/FactoryReset_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/FactoryReset_Set_Result.err"
+        "name": "fuchsia.settings/FactoryReset_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/FactoryReset_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/FactoryReset_Set_Result.response"
+        "name": "fuchsia.settings/FactoryReset_Set_Result.response",
+        "type": "fuchsia.settings/FactoryReset_Set_Response"
     },
     {
         "kind": "union",
@@ -578,77 +578,77 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/HourCycle",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(vector<fuchsia.settings/InputState> input_states) -> (fuchsia.settings/Input_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Input.Set"
+        "name": "fuchsia.settings/Input.Set",
+        "type": "(vector<fuchsia.settings/InputState> input_states) -> (fuchsia.settings/Input_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/InputSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Input.Watch"
+        "name": "fuchsia.settings/Input.Watch",
+        "type": "() -> (fuchsia.settings/InputSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/Input"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputDevice.device_name"
+        "name": "fuchsia.settings/InputDevice.device_name",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.settings/DeviceType",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputDevice.device_type"
+        "name": "fuchsia.settings/InputDevice.device_type",
+        "type": "fuchsia.settings/DeviceType"
     },
     {
-        "declaration": "fuchsia.settings/ToggleStateFlags",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputDevice.mutable_toggle_state"
+        "name": "fuchsia.settings/InputDevice.mutable_toggle_state",
+        "type": "fuchsia.settings/ToggleStateFlags"
     },
     {
-        "declaration": "vector<fuchsia.settings/SourceState>",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputDevice.source_states"
+        "name": "fuchsia.settings/InputDevice.source_states",
+        "type": "vector<fuchsia.settings/SourceState>"
     },
     {
-        "declaration": "fuchsia.settings/DeviceState",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputDevice.state"
+        "name": "fuchsia.settings/InputDevice.state",
+        "type": "fuchsia.settings/DeviceState"
     },
     {
         "kind": "table",
         "name": "fuchsia.settings/InputDevice"
     },
     {
-        "declaration": "vector<fuchsia.settings/InputDevice>",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputSettings.devices"
+        "name": "fuchsia.settings/InputSettings.devices",
+        "type": "vector<fuchsia.settings/InputDevice>"
     },
     {
         "kind": "table",
         "name": "fuchsia.settings/InputSettings"
     },
     {
-        "declaration": "fuchsia.settings/DeviceType",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputState.device_type"
+        "name": "fuchsia.settings/InputState.device_type",
+        "type": "fuchsia.settings/DeviceType"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputState.name"
+        "name": "fuchsia.settings/InputState.name",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.settings/DeviceState",
         "kind": "table/member",
-        "name": "fuchsia.settings/InputState.state"
+        "name": "fuchsia.settings/InputState.state",
+        "type": "fuchsia.settings/DeviceState"
     },
     {
         "kind": "table",
@@ -659,14 +659,14 @@
         "name": "fuchsia.settings/Input_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/Input_Set_Result.err"
+        "name": "fuchsia.settings/Input_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/Input_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/Input_Set_Result.response"
+        "name": "fuchsia.settings/Input_Set_Result.response",
+        "type": "fuchsia.settings/Input_Set_Response"
     },
     {
         "kind": "union",
@@ -674,38 +674,38 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.settings/IntlSettings settings) -> (fuchsia.settings/Intl_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Intl.Set"
+        "name": "fuchsia.settings/Intl.Set",
+        "type": "(fuchsia.settings/IntlSettings settings) -> (fuchsia.settings/Intl_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/IntlSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Intl.Watch"
+        "name": "fuchsia.settings/Intl.Watch",
+        "type": "() -> (fuchsia.settings/IntlSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/Intl"
     },
     {
-        "declaration": "fuchsia.settings/HourCycle",
         "kind": "table/member",
-        "name": "fuchsia.settings/IntlSettings.hour_cycle"
+        "name": "fuchsia.settings/IntlSettings.hour_cycle",
+        "type": "fuchsia.settings/HourCycle"
     },
     {
-        "declaration": "vector<fuchsia.intl/LocaleId>:10",
         "kind": "table/member",
-        "name": "fuchsia.settings/IntlSettings.locales"
+        "name": "fuchsia.settings/IntlSettings.locales",
+        "type": "vector<fuchsia.intl/LocaleId>:10"
     },
     {
-        "declaration": "fuchsia.intl/TemperatureUnit",
         "kind": "table/member",
-        "name": "fuchsia.settings/IntlSettings.temperature_unit"
+        "name": "fuchsia.settings/IntlSettings.temperature_unit",
+        "type": "fuchsia.intl/TemperatureUnit"
     },
     {
-        "declaration": "fuchsia.intl/TimeZoneId",
         "kind": "table/member",
-        "name": "fuchsia.settings/IntlSettings.time_zone_id"
+        "name": "fuchsia.settings/IntlSettings.time_zone_id",
+        "type": "fuchsia.intl/TimeZoneId"
     },
     {
         "kind": "table",
@@ -716,14 +716,14 @@
         "name": "fuchsia.settings/Intl_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/Intl_Set_Result.err"
+        "name": "fuchsia.settings/Intl_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/Intl_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/Intl_Set_Result.response"
+        "name": "fuchsia.settings/Intl_Set_Result.response",
+        "type": "fuchsia.settings/Intl_Set_Response"
     },
     {
         "kind": "union",
@@ -731,23 +731,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.settings/KeyboardSettings settings) -> (fuchsia.settings/KeyboardSet_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Keyboard.Set"
+        "name": "fuchsia.settings/Keyboard.Set",
+        "type": "(fuchsia.settings/KeyboardSettings settings) -> (fuchsia.settings/KeyboardSet_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/KeyboardSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Keyboard.Watch"
+        "name": "fuchsia.settings/Keyboard.Watch",
+        "type": "() -> (fuchsia.settings/KeyboardSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/Keyboard"
     },
     {
-        "declaration": "(fuchsia.settings/KeyboardSettings settings) -> (fuchsia.settings/KeyboardSet_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/KeyboardSet.Set"
+        "name": "fuchsia.settings/KeyboardSet.Set",
+        "type": "(fuchsia.settings/KeyboardSettings settings) -> (fuchsia.settings/KeyboardSet_Set_Result result)"
     },
     {
         "kind": "protocol",
@@ -758,14 +758,14 @@
         "name": "fuchsia.settings/KeyboardSet_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/KeyboardSet_Set_Result.err"
+        "name": "fuchsia.settings/KeyboardSet_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/KeyboardSet_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/KeyboardSet_Set_Result.response"
+        "name": "fuchsia.settings/KeyboardSet_Set_Result.response",
+        "type": "fuchsia.settings/KeyboardSet_Set_Response"
     },
     {
         "kind": "union",
@@ -773,42 +773,42 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.settings/Autorepeat",
         "kind": "table/member",
-        "name": "fuchsia.settings/KeyboardSettings.autorepeat"
+        "name": "fuchsia.settings/KeyboardSettings.autorepeat",
+        "type": "fuchsia.settings/Autorepeat"
     },
     {
-        "declaration": "fuchsia.input/KeymapId",
         "kind": "table/member",
-        "name": "fuchsia.settings/KeyboardSettings.keymap"
+        "name": "fuchsia.settings/KeyboardSettings.keymap",
+        "type": "fuchsia.input/KeymapId"
     },
     {
         "kind": "table",
         "name": "fuchsia.settings/KeyboardSettings"
     },
     {
-        "declaration": "() -> (fuchsia.settings/KeyboardSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/KeyboardWatch.Watch"
+        "name": "fuchsia.settings/KeyboardWatch.Watch",
+        "type": "() -> (fuchsia.settings/KeyboardSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/KeyboardWatch"
     },
     {
-        "declaration": "(string:32 name,vector<fuchsia.settings/LightState> state) -> (fuchsia.settings/Light_SetLightGroupValues_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Light.SetLightGroupValues"
+        "name": "fuchsia.settings/Light.SetLightGroupValues",
+        "type": "(string:32 name,vector<fuchsia.settings/LightState> state) -> (fuchsia.settings/Light_SetLightGroupValues_Result result)"
     },
     {
-        "declaration": "(string:32 name) -> (fuchsia.settings/LightGroup group)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Light.WatchLightGroup"
+        "name": "fuchsia.settings/Light.WatchLightGroup",
+        "type": "(string:32 name) -> (fuchsia.settings/LightGroup group)"
     },
     {
-        "declaration": "() -> (vector<fuchsia.settings/LightGroup> groups)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Light.WatchLightGroups"
+        "name": "fuchsia.settings/Light.WatchLightGroups",
+        "type": "() -> (vector<fuchsia.settings/LightGroup> groups)"
     },
     {
         "kind": "protocol",
@@ -835,53 +835,53 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/LightError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/LightGroup.enabled"
+        "name": "fuchsia.settings/LightGroup.enabled",
+        "type": "bool"
     },
     {
-        "declaration": "vector<fuchsia.settings/LightState>",
         "kind": "table/member",
-        "name": "fuchsia.settings/LightGroup.lights"
+        "name": "fuchsia.settings/LightGroup.lights",
+        "type": "vector<fuchsia.settings/LightState>"
     },
     {
-        "declaration": "string:32",
         "kind": "table/member",
-        "name": "fuchsia.settings/LightGroup.name"
+        "name": "fuchsia.settings/LightGroup.name",
+        "type": "string:32"
     },
     {
-        "declaration": "fuchsia.settings/LightType",
         "kind": "table/member",
-        "name": "fuchsia.settings/LightGroup.type"
+        "name": "fuchsia.settings/LightGroup.type",
+        "type": "fuchsia.settings/LightType"
     },
     {
         "kind": "table",
         "name": "fuchsia.settings/LightGroup"
     },
     {
-        "declaration": "fuchsia.ui.types/ColorRgb",
         "kind": "table/member",
-        "name": "fuchsia.settings/LightSensorData.color"
+        "name": "fuchsia.settings/LightSensorData.color",
+        "type": "fuchsia.ui.types/ColorRgb"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.settings/LightSensorData.illuminance_lux"
+        "name": "fuchsia.settings/LightSensorData.illuminance_lux",
+        "type": "float32"
     },
     {
         "kind": "table",
         "name": "fuchsia.settings/LightSensorData"
     },
     {
-        "declaration": "fuchsia.settings/LightValue",
         "kind": "table/member",
-        "name": "fuchsia.settings/LightState.value"
+        "name": "fuchsia.settings/LightState.value",
+        "type": "fuchsia.settings/LightValue"
     },
     {
         "kind": "table",
@@ -903,25 +903,25 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/LightType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "float64",
         "kind": "union/member",
-        "name": "fuchsia.settings/LightValue.brightness"
+        "name": "fuchsia.settings/LightValue.brightness",
+        "type": "float64"
     },
     {
-        "declaration": "fuchsia.ui.types/ColorRgb",
         "kind": "union/member",
-        "name": "fuchsia.settings/LightValue.color"
+        "name": "fuchsia.settings/LightValue.color",
+        "type": "fuchsia.ui.types/ColorRgb"
     },
     {
-        "declaration": "bool",
         "kind": "union/member",
-        "name": "fuchsia.settings/LightValue.on"
+        "name": "fuchsia.settings/LightValue.on",
+        "type": "bool"
     },
     {
         "kind": "union",
@@ -933,14 +933,14 @@
         "name": "fuchsia.settings/Light_SetLightGroupValues_Response"
     },
     {
-        "declaration": "fuchsia.settings/LightError",
         "kind": "union/member",
-        "name": "fuchsia.settings/Light_SetLightGroupValues_Result.err"
+        "name": "fuchsia.settings/Light_SetLightGroupValues_Result.err",
+        "type": "fuchsia.settings/LightError"
     },
     {
-        "declaration": "fuchsia.settings/Light_SetLightGroupValues_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/Light_SetLightGroupValues_Result.response"
+        "name": "fuchsia.settings/Light_SetLightGroupValues_Result.response",
+        "type": "fuchsia.settings/Light_SetLightGroupValues_Response"
     },
     {
         "kind": "union",
@@ -963,35 +963,35 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/LowLightMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.settings/MAX_LIGHT_NAME_LENGTH",
+        "type": "uint8",
         "value": "32"
     },
     {
-        "declaration": "(fuchsia.settings/NightModeSettings settings) -> (fuchsia.settings/NightMode_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/NightMode.Set"
+        "name": "fuchsia.settings/NightMode.Set",
+        "type": "(fuchsia.settings/NightModeSettings settings) -> (fuchsia.settings/NightMode_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/NightModeSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/NightMode.Watch"
+        "name": "fuchsia.settings/NightMode.Watch",
+        "type": "() -> (fuchsia.settings/NightModeSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/NightMode"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/NightModeSettings.night_mode_enabled"
+        "name": "fuchsia.settings/NightModeSettings.night_mode_enabled",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -1002,14 +1002,14 @@
         "name": "fuchsia.settings/NightMode_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/NightMode_Set_Result.err"
+        "name": "fuchsia.settings/NightMode_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/NightMode_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/NightMode_Set_Result.response"
+        "name": "fuchsia.settings/NightMode_Set_Result.response",
+        "type": "fuchsia.settings/NightMode_Set_Response"
     },
     {
         "kind": "union",
@@ -1017,23 +1017,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.settings/PrivacySettings settings) -> (fuchsia.settings/Privacy_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Privacy.Set"
+        "name": "fuchsia.settings/Privacy.Set",
+        "type": "(fuchsia.settings/PrivacySettings settings) -> (fuchsia.settings/Privacy_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/PrivacySettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Privacy.Watch"
+        "name": "fuchsia.settings/Privacy.Watch",
+        "type": "() -> (fuchsia.settings/PrivacySettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/Privacy"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/PrivacySettings.user_data_sharing_consent"
+        "name": "fuchsia.settings/PrivacySettings.user_data_sharing_consent",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -1044,14 +1044,14 @@
         "name": "fuchsia.settings/Privacy_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/Privacy_Set_Result.err"
+        "name": "fuchsia.settings/Privacy_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/Privacy_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/Privacy_Set_Result.response"
+        "name": "fuchsia.settings/Privacy_Set_Result.response",
+        "type": "fuchsia.settings/Privacy_Set_Response"
     },
     {
         "kind": "union",
@@ -1079,29 +1079,29 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/SettingsEpitaph",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.settings/SetupSettings settings,bool reboot_device) -> (fuchsia.settings/Setup_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Setup.Set"
+        "name": "fuchsia.settings/Setup.Set",
+        "type": "(fuchsia.settings/SetupSettings settings,bool reboot_device) -> (fuchsia.settings/Setup_Set_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.settings/SetupSettings settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.settings/Setup.Watch"
+        "name": "fuchsia.settings/Setup.Watch",
+        "type": "() -> (fuchsia.settings/SetupSettings settings)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.settings/Setup"
     },
     {
-        "declaration": "fuchsia.settings/ConfigurationInterfaces",
         "kind": "table/member",
-        "name": "fuchsia.settings/SetupSettings.enabled_configuration_interfaces"
+        "name": "fuchsia.settings/SetupSettings.enabled_configuration_interfaces",
+        "type": "fuchsia.settings/ConfigurationInterfaces"
     },
     {
         "kind": "table",
@@ -1112,14 +1112,14 @@
         "name": "fuchsia.settings/Setup_Set_Response"
     },
     {
-        "declaration": "fuchsia.settings/Error",
         "kind": "union/member",
-        "name": "fuchsia.settings/Setup_Set_Result.err"
+        "name": "fuchsia.settings/Setup_Set_Result.err",
+        "type": "fuchsia.settings/Error"
     },
     {
-        "declaration": "fuchsia.settings/Setup_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.settings/Setup_Set_Result.response"
+        "name": "fuchsia.settings/Setup_Set_Result.response",
+        "type": "fuchsia.settings/Setup_Set_Response"
     },
     {
         "kind": "union",
@@ -1127,28 +1127,28 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.settings/DeviceStateSource",
         "kind": "table/member",
-        "name": "fuchsia.settings/SourceState.source"
+        "name": "fuchsia.settings/SourceState.source",
+        "type": "fuchsia.settings/DeviceStateSource"
     },
     {
-        "declaration": "fuchsia.settings/DeviceState",
         "kind": "table/member",
-        "name": "fuchsia.settings/SourceState.state"
+        "name": "fuchsia.settings/SourceState.state",
+        "type": "fuchsia.settings/DeviceState"
     },
     {
         "kind": "table",
         "name": "fuchsia.settings/SourceState"
     },
     {
-        "declaration": "fuchsia.settings/ThemeMode",
         "kind": "table/member",
-        "name": "fuchsia.settings/Theme.theme_mode"
+        "name": "fuchsia.settings/Theme.theme_mode",
+        "type": "fuchsia.settings/ThemeMode"
     },
     {
-        "declaration": "fuchsia.settings/ThemeType",
         "kind": "table/member",
-        "name": "fuchsia.settings/Theme.theme_type"
+        "name": "fuchsia.settings/Theme.theme_type",
+        "type": "fuchsia.settings/ThemeType"
     },
     {
         "kind": "table",
@@ -1160,10 +1160,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.settings/ThemeMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -1181,10 +1181,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.settings/ThemeType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "bits/member",
@@ -1212,20 +1212,20 @@
         "value": "4"
     },
     {
-        "declaration": "uint64",
         "kind": "bits",
         "name": "fuchsia.settings/ToggleStateFlags",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint64"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.settings/Volume.level"
+        "name": "fuchsia.settings/Volume.level",
+        "type": "float32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.settings/Volume.muted"
+        "name": "fuchsia.settings/Volume.muted",
+        "type": "bool"
     },
     {
         "kind": "table",

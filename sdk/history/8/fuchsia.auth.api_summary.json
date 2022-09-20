@@ -1,32 +1,32 @@
 [
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.auth/AppConfig.auth_provider_type"
+        "name": "fuchsia.auth/AppConfig.auth_provider_type",
+        "type": "string"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.auth/AppConfig.client_id"
+        "name": "fuchsia.auth/AppConfig.client_id",
+        "type": "string:optional"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.auth/AppConfig.client_secret"
+        "name": "fuchsia.auth/AppConfig.client_secret",
+        "type": "string:optional"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.auth/AppConfig.redirect_uri"
+        "name": "fuchsia.auth/AppConfig.redirect_uri",
+        "type": "string:optional"
     },
     {
         "kind": "struct",
         "name": "fuchsia.auth/AppConfig"
     },
     {
-        "declaration": "(vector<uint8> plaintext) -> (fuchsia.auth/AttestationSignerStatus status,vector<uint8>:optional signature)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/AttestationSigner.SignData"
+        "name": "fuchsia.auth/AttestationSigner.SignData",
+        "type": "(vector<uint8> plaintext) -> (fuchsia.auth/AttestationSignerStatus status,vector<uint8>:optional signature)"
     },
     {
         "kind": "protocol",
@@ -48,62 +48,62 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.auth/AttestationSignerStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.auth/AuthProviderConfig.auth_provider_type"
+        "name": "fuchsia.auth/AuthProviderConfig.auth_provider_type",
+        "type": "string"
     },
     {
-        "declaration": "vector<string>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.auth/AuthProviderConfig.params"
+        "name": "fuchsia.auth/AuthProviderConfig.params",
+        "type": "vector<string>:optional"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.auth/AuthProviderConfig.url"
+        "name": "fuchsia.auth/AuthProviderConfig.url",
+        "type": "string"
     },
     {
         "kind": "struct",
         "name": "fuchsia.auth/AuthProviderConfig"
     },
     {
-        "declaration": "(server_end:fuchsia.auth/AuthenticationUIContext request)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/AuthenticationContextProvider.GetAuthenticationUIContext"
+        "name": "fuchsia.auth/AuthenticationContextProvider.GetAuthenticationUIContext",
+        "type": "(server_end:fuchsia.auth/AuthenticationUIContext request)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.auth/AuthenticationContextProvider"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewHolderToken view_holder_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/AuthenticationUIContext.StartOverlay"
+        "name": "fuchsia.auth/AuthenticationUIContext.StartOverlay",
+        "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/AuthenticationUIContext.StopOverlay"
+        "name": "fuchsia.auth/AuthenticationUIContext.StopOverlay",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.auth/AuthenticationUIContext"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.auth/ServiceProviderAccount.identity_provider_domain"
+        "name": "fuchsia.auth/ServiceProviderAccount.identity_provider_domain",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.auth/ServiceProviderAccount.user_profile_id"
+        "name": "fuchsia.auth/ServiceProviderAccount.user_profile_id",
+        "type": "string"
     },
     {
         "kind": "struct",
@@ -170,68 +170,68 @@
         "value": "6"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.auth/Status",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.auth/AppConfig app_config,client_end:<fuchsia.auth/AuthenticationUIContext,optional> auth_ui_context,vector<string> app_scopes,string:optional user_profile_id,string:optional auth_code) -> (fuchsia.auth/Status status,box<fuchsia.auth/UserProfileInfo> user_profile_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/TokenManager.Authorize"
+        "name": "fuchsia.auth/TokenManager.Authorize",
+        "type": "(fuchsia.auth/AppConfig app_config,client_end:<fuchsia.auth/AuthenticationUIContext,optional> auth_ui_context,vector<string> app_scopes,string:optional user_profile_id,string:optional auth_code) -> (fuchsia.auth/Status status,box<fuchsia.auth/UserProfileInfo> user_profile_info)"
     },
     {
-        "declaration": "(fuchsia.auth/AppConfig app_config,string user_profile_id,bool force) -> (fuchsia.auth/Status status)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/TokenManager.DeleteAllTokens"
+        "name": "fuchsia.auth/TokenManager.DeleteAllTokens",
+        "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,bool force) -> (fuchsia.auth/Status status)"
     },
     {
-        "declaration": "(fuchsia.auth/AppConfig app_config,string user_profile_id,vector<string> app_scopes) -> (fuchsia.auth/Status status,string:optional access_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/TokenManager.GetAccessToken"
+        "name": "fuchsia.auth/TokenManager.GetAccessToken",
+        "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,vector<string> app_scopes) -> (fuchsia.auth/Status status,string:optional access_token)"
     },
     {
-        "declaration": "(fuchsia.auth/AppConfig app_config,string user_profile_id,string:optional audience) -> (fuchsia.auth/Status status,string:optional id_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/TokenManager.GetIdToken"
+        "name": "fuchsia.auth/TokenManager.GetIdToken",
+        "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,string:optional audience) -> (fuchsia.auth/Status status,string:optional id_token)"
     },
     {
-        "declaration": "(fuchsia.auth/AppConfig app_config) -> (fuchsia.auth/Status status,vector<string> user_profile_ids)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/TokenManager.ListProfileIds"
+        "name": "fuchsia.auth/TokenManager.ListProfileIds",
+        "type": "(fuchsia.auth/AppConfig app_config) -> (fuchsia.auth/Status status,vector<string> user_profile_ids)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.auth/TokenManager"
     },
     {
-        "declaration": "(string user_id,string application_url,vector<fuchsia.auth/AuthProviderConfig> auth_provider_configs,client_end:fuchsia.auth/AuthenticationContextProvider auth_context_provider,server_end:fuchsia.auth/TokenManager token_manager)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth/TokenManagerFactory.GetTokenManager"
+        "name": "fuchsia.auth/TokenManagerFactory.GetTokenManager",
+        "type": "(string user_id,string application_url,vector<fuchsia.auth/AuthProviderConfig> auth_provider_configs,client_end:fuchsia.auth/AuthenticationContextProvider auth_context_provider,server_end:fuchsia.auth/TokenManager token_manager)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.auth/TokenManagerFactory"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.auth/UserProfileInfo.display_name"
+        "name": "fuchsia.auth/UserProfileInfo.display_name",
+        "type": "string:optional"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.auth/UserProfileInfo.id"
+        "name": "fuchsia.auth/UserProfileInfo.id",
+        "type": "string"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.auth/UserProfileInfo.image_url"
+        "name": "fuchsia.auth/UserProfileInfo.image_url",
+        "type": "string:optional"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.auth/UserProfileInfo.url"
+        "name": "fuchsia.auth/UserProfileInfo.url",
+        "type": "string:optional"
     },
     {
         "kind": "struct",

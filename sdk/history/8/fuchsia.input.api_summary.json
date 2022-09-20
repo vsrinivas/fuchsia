@@ -555,10 +555,10 @@
         "value": "458781"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input/Key",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -576,10 +576,10 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input/KeymapId",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "library",

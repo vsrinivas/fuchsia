@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.mem/Buffer.size"
+        "name": "fuchsia.mem/Buffer.size",
+        "type": "uint64"
     },
     {
-        "declaration": "zx/handle:VMO",
         "kind": "struct/member",
-        "name": "fuchsia.mem/Buffer.vmo"
+        "name": "fuchsia.mem/Buffer.vmo",
+        "type": "zx/handle:VMO"
     },
     {
         "kind": "struct",
@@ -15,14 +15,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "union/member",
-        "name": "fuchsia.mem/Data.buffer"
+        "name": "fuchsia.mem/Data.buffer",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "union/member",
-        "name": "fuchsia.mem/Data.bytes"
+        "name": "fuchsia.mem/Data.bytes",
+        "type": "vector<uint8>"
     },
     {
         "kind": "union",
@@ -31,19 +31,19 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.mem/Range.offset"
+        "name": "fuchsia.mem/Range.offset",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.mem/Range.size"
+        "name": "fuchsia.mem/Range.size",
+        "type": "uint64"
     },
     {
-        "declaration": "zx/handle:VMO",
         "kind": "struct/member",
-        "name": "fuchsia.mem/Range.vmo"
+        "name": "fuchsia.mem/Range.vmo",
+        "type": "zx/handle:VMO"
     },
     {
         "kind": "struct",

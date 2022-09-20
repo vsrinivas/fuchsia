@@ -1,36 +1,36 @@
 [
     {
-        "declaration": "string:128",
         "kind": "struct/member",
-        "name": "fuchsia.feedback/Annotation.key"
+        "name": "fuchsia.feedback/Annotation.key",
+        "type": "string:128"
     },
     {
-        "declaration": "string:1024",
         "kind": "struct/member",
-        "name": "fuchsia.feedback/Annotation.value"
+        "name": "fuchsia.feedback/Annotation.value",
+        "type": "string:1024"
     },
     {
         "kind": "struct",
         "name": "fuchsia.feedback/Annotation"
     },
     {
-        "declaration": "vector<fuchsia.feedback/Annotation>:64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/Annotations.annotations"
+        "name": "fuchsia.feedback/Annotations.annotations",
+        "type": "vector<fuchsia.feedback/Annotation>:64"
     },
     {
         "kind": "table",
         "name": "fuchsia.feedback/Annotations"
     },
     {
-        "declaration": "string:128",
         "kind": "struct/member",
-        "name": "fuchsia.feedback/Attachment.key"
+        "name": "fuchsia.feedback/Attachment.key",
+        "type": "string:128"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.feedback/Attachment.value"
+        "name": "fuchsia.feedback/Attachment.value",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "struct",
@@ -38,67 +38,67 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "vector<fuchsia.feedback/Annotation>:16",
         "kind": "table/member",
-        "name": "fuchsia.feedback/ComponentData.annotations"
+        "name": "fuchsia.feedback/ComponentData.annotations",
+        "type": "vector<fuchsia.feedback/Annotation>:16"
     },
     {
-        "declaration": "string:32",
         "kind": "table/member",
-        "name": "fuchsia.feedback/ComponentData.namespace"
+        "name": "fuchsia.feedback/ComponentData.namespace",
+        "type": "string:32"
     },
     {
         "kind": "table",
         "name": "fuchsia.feedback/ComponentData"
     },
     {
-        "declaration": "(fuchsia.feedback/ComponentData data) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/ComponentDataRegister.Upsert"
+        "name": "fuchsia.feedback/ComponentDataRegister.Upsert",
+        "type": "(fuchsia.feedback/ComponentData data) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.feedback/ComponentDataRegister"
     },
     {
-        "declaration": "vector<fuchsia.feedback/Annotation>:32",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReport.annotations"
+        "name": "fuchsia.feedback/CrashReport.annotations",
+        "type": "vector<fuchsia.feedback/Annotation>:32"
     },
     {
-        "declaration": "vector<fuchsia.feedback/Attachment>:16",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReport.attachments"
+        "name": "fuchsia.feedback/CrashReport.attachments",
+        "type": "vector<fuchsia.feedback/Attachment>:16"
     },
     {
-        "declaration": "string:128",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReport.crash_signature"
+        "name": "fuchsia.feedback/CrashReport.crash_signature",
+        "type": "string:128"
     },
     {
-        "declaration": "string:128",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReport.event_id"
+        "name": "fuchsia.feedback/CrashReport.event_id",
+        "type": "string:128"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReport.is_fatal"
+        "name": "fuchsia.feedback/CrashReport.is_fatal",
+        "type": "bool"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReport.program_name"
+        "name": "fuchsia.feedback/CrashReport.program_name",
+        "type": "string:1024"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReport.program_uptime"
+        "name": "fuchsia.feedback/CrashReport.program_uptime",
+        "type": "int64"
     },
     {
-        "declaration": "fuchsia.feedback/SpecificCrashReport",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReport.specific_report"
+        "name": "fuchsia.feedback/CrashReport.specific_report",
+        "type": "fuchsia.feedback/SpecificCrashReport"
     },
     {
         "kind": "table",
@@ -106,9 +106,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(fuchsia.feedback/CrashReport report) -> (fuchsia.feedback/CrashReporter_File_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/CrashReporter.File"
+        "name": "fuchsia.feedback/CrashReporter.File",
+        "type": "(fuchsia.feedback/CrashReport report) -> (fuchsia.feedback/CrashReporter_File_Result result)"
     },
     {
         "kind": "protocol",
@@ -119,14 +119,14 @@
         "name": "fuchsia.feedback/CrashReporter_File_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.feedback/CrashReporter_File_Result.err"
+        "name": "fuchsia.feedback/CrashReporter_File_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.feedback/CrashReporter_File_Response",
         "kind": "union/member",
-        "name": "fuchsia.feedback/CrashReporter_File_Result.response"
+        "name": "fuchsia.feedback/CrashReporter_File_Result.response",
+        "type": "fuchsia.feedback/CrashReporter_File_Response"
     },
     {
         "kind": "union",
@@ -134,93 +134,93 @@
         "strictness": "strict"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReportingProduct.channel"
+        "name": "fuchsia.feedback/CrashReportingProduct.channel",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReportingProduct.name"
+        "name": "fuchsia.feedback/CrashReportingProduct.name",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.feedback/CrashReportingProduct.version"
+        "name": "fuchsia.feedback/CrashReportingProduct.version",
+        "type": "string"
     },
     {
         "kind": "table",
         "name": "fuchsia.feedback/CrashReportingProduct"
     },
     {
-        "declaration": "(string:2083 component_url,fuchsia.feedback/CrashReportingProduct product)",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/CrashReportingProductRegister.Upsert"
+        "name": "fuchsia.feedback/CrashReportingProductRegister.Upsert",
+        "type": "(string:2083 component_url,fuchsia.feedback/CrashReportingProduct product)"
     },
     {
-        "declaration": "(string:2083 component_url,fuchsia.feedback/CrashReportingProduct product) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/CrashReportingProductRegister.UpsertWithAck"
+        "name": "fuchsia.feedback/CrashReportingProductRegister.UpsertWithAck",
+        "type": "(string:2083 component_url,fuchsia.feedback/CrashReportingProduct product) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.feedback/CrashReportingProductRegister"
     },
     {
-        "declaration": "(fuchsia.feedback/GetAnnotationsParameters params) -> (fuchsia.feedback/Annotations annotations)",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/DataProvider.GetAnnotations"
+        "name": "fuchsia.feedback/DataProvider.GetAnnotations",
+        "type": "(fuchsia.feedback/GetAnnotationsParameters params) -> (fuchsia.feedback/Annotations annotations)"
     },
     {
-        "declaration": "(fuchsia.feedback/ImageEncoding encoding) -> (box<fuchsia.feedback/Screenshot> screenshot)",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/DataProvider.GetScreenshot"
+        "name": "fuchsia.feedback/DataProvider.GetScreenshot",
+        "type": "(fuchsia.feedback/ImageEncoding encoding) -> (box<fuchsia.feedback/Screenshot> screenshot)"
     },
     {
-        "declaration": "(fuchsia.feedback/GetSnapshotParameters params) -> (fuchsia.feedback/Snapshot snapshot)",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/DataProvider.GetSnapshot"
+        "name": "fuchsia.feedback/DataProvider.GetSnapshot",
+        "type": "(fuchsia.feedback/GetSnapshotParameters params) -> (fuchsia.feedback/Snapshot snapshot)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.feedback/DataProvider"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/DataProviderController.DisableAndDropPersistentLogs"
+        "name": "fuchsia.feedback/DataProviderController.DisableAndDropPersistentLogs",
+        "type": "() -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.feedback/DataProviderController"
     },
     {
-        "declaration": "() -> (string:64 feedback_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/DeviceIdProvider.GetId"
+        "name": "fuchsia.feedback/DeviceIdProvider.GetId",
+        "type": "() -> (string:64 feedback_id)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.feedback/DeviceIdProvider"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/GetAnnotationsParameters.collection_timeout_per_annotation"
+        "name": "fuchsia.feedback/GetAnnotationsParameters.collection_timeout_per_annotation",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.feedback/GetAnnotationsParameters"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/GetSnapshotParameters.collection_timeout_per_data"
+        "name": "fuchsia.feedback/GetSnapshotParameters.collection_timeout_per_data",
+        "type": "int64"
     },
     {
-        "declaration": "zx/handle:CHANNEL",
         "kind": "table/member",
-        "name": "fuchsia.feedback/GetSnapshotParameters.response_channel"
+        "name": "fuchsia.feedback/GetSnapshotParameters.response_channel",
+        "type": "zx/handle:CHANNEL"
     },
     {
         "kind": "table",
@@ -233,135 +233,135 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.feedback/ImageEncoding",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.feedback/LastReboot.graceful"
+        "name": "fuchsia.feedback/LastReboot.graceful",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.feedback/RebootReason",
         "kind": "table/member",
-        "name": "fuchsia.feedback/LastReboot.reason"
+        "name": "fuchsia.feedback/LastReboot.reason",
+        "type": "fuchsia.feedback/RebootReason"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/LastReboot.uptime"
+        "name": "fuchsia.feedback/LastReboot.uptime",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.feedback/LastReboot"
     },
     {
-        "declaration": "() -> (fuchsia.feedback/LastReboot last_reboot)",
         "kind": "protocol/member",
-        "name": "fuchsia.feedback/LastRebootInfoProvider.Get"
+        "name": "fuchsia.feedback/LastRebootInfoProvider.Get",
+        "type": "() -> (fuchsia.feedback/LastReboot last_reboot)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.feedback/LastRebootInfoProvider"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_CRASH_SIGNATURE_LENGTH",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_EVENT_ID_LENGTH",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_EXCEPTION_MESSAGE_LENGTH",
+        "type": "uint32",
         "value": "2048"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_EXCEPTION_TYPE_LENGTH",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_NAMESPACE_LENGTH",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_NUM_ANNOTATIONS_PER_CRASH_REPORT",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_NUM_ANNOTATIONS_PER_NAMESPACE",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_NUM_ANNOTATIONS_PROVIDED",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_NUM_ATTACHMENTS_PER_CRASH_REPORT",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_PROCESS_NAME_LENGTH",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_PROGRAM_NAME_LENGTH",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.feedback/MAX_THREAD_NAME_LENGTH",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "table/member",
-        "name": "fuchsia.feedback/NativeCrashReport.minidump"
+        "name": "fuchsia.feedback/NativeCrashReport.minidump",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/NativeCrashReport.process_koid"
+        "name": "fuchsia.feedback/NativeCrashReport.process_koid",
+        "type": "uint64"
     },
     {
-        "declaration": "string:64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/NativeCrashReport.process_name"
+        "name": "fuchsia.feedback/NativeCrashReport.process_name",
+        "type": "string:64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/NativeCrashReport.thread_koid"
+        "name": "fuchsia.feedback/NativeCrashReport.thread_koid",
+        "type": "uint64"
     },
     {
-        "declaration": "string:64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/NativeCrashReport.thread_name"
+        "name": "fuchsia.feedback/NativeCrashReport.thread_name",
+        "type": "string:64"
     },
     {
         "kind": "table",
@@ -459,25 +459,25 @@
         "value": "18"
     },
     {
-        "declaration": "uint16",
         "kind": "enum",
         "name": "fuchsia.feedback/RebootReason",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint16"
     },
     {
-        "declaration": "string:2048",
         "kind": "table/member",
-        "name": "fuchsia.feedback/RuntimeCrashReport.exception_message"
+        "name": "fuchsia.feedback/RuntimeCrashReport.exception_message",
+        "type": "string:2048"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "table/member",
-        "name": "fuchsia.feedback/RuntimeCrashReport.exception_stack_trace"
+        "name": "fuchsia.feedback/RuntimeCrashReport.exception_stack_trace",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "string:128",
         "kind": "table/member",
-        "name": "fuchsia.feedback/RuntimeCrashReport.exception_type"
+        "name": "fuchsia.feedback/RuntimeCrashReport.exception_type",
+        "type": "string:128"
     },
     {
         "kind": "table",
@@ -485,14 +485,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.math/Size",
         "kind": "struct/member",
-        "name": "fuchsia.feedback/Screenshot.dimensions_in_px"
+        "name": "fuchsia.feedback/Screenshot.dimensions_in_px",
+        "type": "fuchsia.math/Size"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.feedback/Screenshot.image"
+        "name": "fuchsia.feedback/Screenshot.image",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "struct",
@@ -500,14 +500,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "vector<fuchsia.feedback/Annotation>:64",
         "kind": "table/member",
-        "name": "fuchsia.feedback/Snapshot.annotations"
+        "name": "fuchsia.feedback/Snapshot.annotations",
+        "type": "vector<fuchsia.feedback/Annotation>:64"
     },
     {
-        "declaration": "fuchsia.feedback/Attachment",
         "kind": "table/member",
-        "name": "fuchsia.feedback/Snapshot.archive"
+        "name": "fuchsia.feedback/Snapshot.archive",
+        "type": "fuchsia.feedback/Attachment"
     },
     {
         "kind": "table",
@@ -515,14 +515,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.feedback/RuntimeCrashReport",
         "kind": "union/member",
-        "name": "fuchsia.feedback/SpecificCrashReport.dart"
+        "name": "fuchsia.feedback/SpecificCrashReport.dart",
+        "type": "fuchsia.feedback/RuntimeCrashReport"
     },
     {
-        "declaration": "fuchsia.feedback/NativeCrashReport",
         "kind": "union/member",
-        "name": "fuchsia.feedback/SpecificCrashReport.native"
+        "name": "fuchsia.feedback/SpecificCrashReport.native",
+        "type": "fuchsia.feedback/NativeCrashReport"
     },
     {
         "kind": "union",

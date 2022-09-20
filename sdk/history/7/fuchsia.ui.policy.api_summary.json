@@ -1,22 +1,22 @@
 [
     {
-        "declaration": "(client_end:fuchsia.ui.policy/MediaButtonsListener listener) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/DeviceListenerRegistry.RegisterListener"
+        "name": "fuchsia.ui.policy/DeviceListenerRegistry.RegisterListener",
+        "type": "(client_end:fuchsia.ui.policy/MediaButtonsListener listener) -> ()"
     },
     {
-        "declaration": "(client_end:fuchsia.ui.policy/MediaButtonsListener listener)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/DeviceListenerRegistry.RegisterMediaButtonsListener"
+        "name": "fuchsia.ui.policy/DeviceListenerRegistry.RegisterMediaButtonsListener",
+        "type": "(client_end:fuchsia.ui.policy/MediaButtonsListener listener)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.policy/DeviceListenerRegistry"
     },
     {
-        "declaration": "(uint8 minimum_rgb) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/DisplayBacklight.SetMinimumRgb"
+        "name": "fuchsia.ui.policy/DisplayBacklight.SetMinimumRgb",
+        "type": "(uint8 minimum_rgb) -> ()"
     },
     {
         "kind": "protocol",
@@ -53,57 +53,57 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.policy/DisplayUsage",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.ui.input/MediaButtonsEvent event) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/MediaButtonsListener.OnEvent"
+        "name": "fuchsia.ui.policy/MediaButtonsListener.OnEvent",
+        "type": "(fuchsia.ui.input/MediaButtonsEvent event) -> ()"
     },
     {
-        "declaration": "(fuchsia.ui.input/MediaButtonsEvent event)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/MediaButtonsListener.OnMediaButtonsEvent"
+        "name": "fuchsia.ui.policy/MediaButtonsListener.OnMediaButtonsEvent",
+        "type": "(fuchsia.ui.input/MediaButtonsEvent event)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.policy/MediaButtonsListener"
     },
     {
-        "declaration": "(fuchsia.ui.input/PointerEvent event)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/PointerCaptureListenerHACK.OnPointerEvent"
+        "name": "fuchsia.ui.policy/PointerCaptureListenerHACK.OnPointerEvent",
+        "type": "(fuchsia.ui.input/PointerEvent event)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.policy/PointerCaptureListenerHACK"
     },
     {
-        "declaration": "(client_end:fuchsia.ui.policy/PointerCaptureListenerHACK listener)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/Presentation.CapturePointerEventsHACK"
+        "name": "fuchsia.ui.policy/Presentation.CapturePointerEventsHACK",
+        "type": "(client_end:fuchsia.ui.policy/PointerCaptureListenerHACK listener)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.policy/Presentation"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewHolderToken view_holder_token,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/Presenter.PresentOrReplaceView"
+        "name": "fuchsia.ui.policy/Presenter.PresentOrReplaceView",
+        "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewHolderToken view_holder_token,fuchsia.ui.views/ViewRef view_ref,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/Presenter.PresentOrReplaceView2"
+        "name": "fuchsia.ui.policy/Presenter.PresentOrReplaceView2",
+        "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token,fuchsia.ui.views/ViewRef view_ref,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewHolderToken view_holder_token,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.policy/Presenter.PresentView"
+        "name": "fuchsia.ui.policy/Presenter.PresentView",
+        "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token,server_end:<fuchsia.ui.policy/Presentation,optional> presentation_request)"
     },
     {
         "kind": "protocol",

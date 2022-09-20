@@ -30,6 +30,6 @@ func (b *wraparoundType) Serialize() ElementStr {
 	e := b.named.Serialize()
 	e.Kind = Kind(b.parentType)
 	e.Strictness = strictness(b.strictness)
-	e.Decl = Decl(fmt.Sprintf("%v", b.subtype))
+	e.Type = Type(fmt.Sprintf("%v", b.subtype))
 	return e
 }

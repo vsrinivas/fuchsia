@@ -20,147 +20,147 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.pointer/EventPhase",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.ui.pointer/MOUSE_MAX_EVENT",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "vector<uint8>:32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseDeviceInfo.buttons"
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.buttons",
+        "type": "vector<uint8>:32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseDeviceInfo.id"
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.id",
+        "type": "uint32"
     },
     {
-        "declaration": "array<fuchsia.input.report/Axis,2>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseDeviceInfo.relative_motion_range"
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.relative_motion_range",
+        "type": "array<fuchsia.input.report/Axis,2>"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseDeviceInfo.scroll_h_range"
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.scroll_h_range",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseDeviceInfo.scroll_v_range"
+        "name": "fuchsia.ui.pointer/MouseDeviceInfo.scroll_v_range",
+        "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.pointer/MouseDeviceInfo"
     },
     {
-        "declaration": "fuchsia.ui.pointer/MouseDeviceInfo",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseEvent.device_info"
+        "name": "fuchsia.ui.pointer/MouseEvent.device_info",
+        "type": "fuchsia.ui.pointer/MouseDeviceInfo"
     },
     {
-        "declaration": "fuchsia.ui.pointer/MousePointerSample",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseEvent.pointer_sample"
+        "name": "fuchsia.ui.pointer/MouseEvent.pointer_sample",
+        "type": "fuchsia.ui.pointer/MousePointerSample"
     },
     {
-        "declaration": "fuchsia.ui.pointer/MouseEventStreamInfo",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseEvent.stream_info"
+        "name": "fuchsia.ui.pointer/MouseEvent.stream_info",
+        "type": "fuchsia.ui.pointer/MouseEventStreamInfo"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseEvent.timestamp"
+        "name": "fuchsia.ui.pointer/MouseEvent.timestamp",
+        "type": "int64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseEvent.trace_flow_id"
+        "name": "fuchsia.ui.pointer/MouseEvent.trace_flow_id",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.ui.pointer/ViewParameters",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MouseEvent.view_parameters"
+        "name": "fuchsia.ui.pointer/MouseEvent.view_parameters",
+        "type": "fuchsia.ui.pointer/ViewParameters"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.pointer/MouseEvent"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/MouseEventStreamInfo.device_id"
+        "name": "fuchsia.ui.pointer/MouseEventStreamInfo.device_id",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.ui.pointer/MouseViewStatus",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/MouseEventStreamInfo.status"
+        "name": "fuchsia.ui.pointer/MouseEventStreamInfo.status",
+        "type": "fuchsia.ui.pointer/MouseViewStatus"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.pointer/MouseEventStreamInfo"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.device_id"
+        "name": "fuchsia.ui.pointer/MousePointerSample.device_id",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.is_precision_scroll"
+        "name": "fuchsia.ui.pointer/MousePointerSample.is_precision_scroll",
+        "type": "bool"
     },
     {
-        "declaration": "array<float32,2>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.position_in_viewport"
+        "name": "fuchsia.ui.pointer/MousePointerSample.position_in_viewport",
+        "type": "array<float32,2>"
     },
     {
-        "declaration": "vector<uint8>:32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.pressed_buttons"
+        "name": "fuchsia.ui.pointer/MousePointerSample.pressed_buttons",
+        "type": "vector<uint8>:32"
     },
     {
-        "declaration": "array<float32,2>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.relative_motion"
+        "name": "fuchsia.ui.pointer/MousePointerSample.relative_motion",
+        "type": "array<float32,2>"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_h"
+        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_h",
+        "type": "int64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_h_physical_pixel"
+        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_h_physical_pixel",
+        "type": "float64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_v"
+        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_v",
+        "type": "int64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_v_physical_pixel"
+        "name": "fuchsia.ui.pointer/MousePointerSample.scroll_v_physical_pixel",
+        "type": "float64"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.pointer/MousePointerSample"
     },
     {
-        "declaration": "() -> (vector<fuchsia.ui.pointer/MouseEvent>:128 events)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.pointer/MouseSource.Watch"
+        "name": "fuchsia.ui.pointer/MouseSource.Watch",
+        "type": "() -> (vector<fuchsia.ui.pointer/MouseEvent>:128 events)"
     },
     {
         "kind": "protocol",
@@ -177,102 +177,102 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.pointer/MouseViewStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "array<float32,2>",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/Rectangle.max"
+        "name": "fuchsia.ui.pointer/Rectangle.max",
+        "type": "array<float32,2>"
     },
     {
-        "declaration": "array<float32,2>",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/Rectangle.min"
+        "name": "fuchsia.ui.pointer/Rectangle.min",
+        "type": "array<float32,2>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.pointer/Rectangle"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.ui.pointer/TOUCH_MAX_EVENT",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchDeviceInfo.id"
+        "name": "fuchsia.ui.pointer/TouchDeviceInfo.id",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.pointer/TouchDeviceInfo"
     },
     {
-        "declaration": "fuchsia.ui.pointer/TouchDeviceInfo",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchEvent.device_info"
+        "name": "fuchsia.ui.pointer/TouchEvent.device_info",
+        "type": "fuchsia.ui.pointer/TouchDeviceInfo"
     },
     {
-        "declaration": "fuchsia.ui.pointer/TouchInteractionResult",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchEvent.interaction_result"
+        "name": "fuchsia.ui.pointer/TouchEvent.interaction_result",
+        "type": "fuchsia.ui.pointer/TouchInteractionResult"
     },
     {
-        "declaration": "fuchsia.ui.pointer/TouchPointerSample",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchEvent.pointer_sample"
+        "name": "fuchsia.ui.pointer/TouchEvent.pointer_sample",
+        "type": "fuchsia.ui.pointer/TouchPointerSample"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchEvent.timestamp"
+        "name": "fuchsia.ui.pointer/TouchEvent.timestamp",
+        "type": "int64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchEvent.trace_flow_id"
+        "name": "fuchsia.ui.pointer/TouchEvent.trace_flow_id",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.ui.pointer/ViewParameters",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchEvent.view_parameters"
+        "name": "fuchsia.ui.pointer/TouchEvent.view_parameters",
+        "type": "fuchsia.ui.pointer/ViewParameters"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.pointer/TouchEvent"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/TouchInteractionId.device_id"
+        "name": "fuchsia.ui.pointer/TouchInteractionId.device_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/TouchInteractionId.interaction_id"
+        "name": "fuchsia.ui.pointer/TouchInteractionId.interaction_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/TouchInteractionId.pointer_id"
+        "name": "fuchsia.ui.pointer/TouchInteractionId.pointer_id",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.pointer/TouchInteractionId"
     },
     {
-        "declaration": "fuchsia.ui.pointer/TouchInteractionId",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/TouchInteractionResult.interaction"
+        "name": "fuchsia.ui.pointer/TouchInteractionResult.interaction",
+        "type": "fuchsia.ui.pointer/TouchInteractionId"
     },
     {
-        "declaration": "fuchsia.ui.pointer/TouchInteractionStatus",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/TouchInteractionResult.status"
+        "name": "fuchsia.ui.pointer/TouchInteractionResult.status",
+        "type": "fuchsia.ui.pointer/TouchInteractionStatus"
     },
     {
         "kind": "struct",
@@ -289,39 +289,39 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.pointer/TouchInteractionStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.ui.pointer/TouchInteractionId",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchPointerSample.interaction"
+        "name": "fuchsia.ui.pointer/TouchPointerSample.interaction",
+        "type": "fuchsia.ui.pointer/TouchInteractionId"
     },
     {
-        "declaration": "fuchsia.ui.pointer/EventPhase",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchPointerSample.phase"
+        "name": "fuchsia.ui.pointer/TouchPointerSample.phase",
+        "type": "fuchsia.ui.pointer/EventPhase"
     },
     {
-        "declaration": "array<float32,2>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchPointerSample.position_in_viewport"
+        "name": "fuchsia.ui.pointer/TouchPointerSample.position_in_viewport",
+        "type": "array<float32,2>"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.pointer/TouchPointerSample"
     },
     {
-        "declaration": "fuchsia.ui.pointer/TouchResponseType",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchResponse.response_type"
+        "name": "fuchsia.ui.pointer/TouchResponse.response_type",
+        "type": "fuchsia.ui.pointer/TouchResponseType"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointer/TouchResponse.trace_flow_id"
+        "name": "fuchsia.ui.pointer/TouchResponse.trace_flow_id",
+        "type": "uint64"
     },
     {
         "kind": "table",
@@ -373,39 +373,39 @@
         "value": "9"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.pointer/TouchResponseType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.ui.pointer/TouchInteractionId interaction,fuchsia.ui.pointer/TouchResponse response) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.pointer/TouchSource.UpdateResponse"
+        "name": "fuchsia.ui.pointer/TouchSource.UpdateResponse",
+        "type": "(fuchsia.ui.pointer/TouchInteractionId interaction,fuchsia.ui.pointer/TouchResponse response) -> ()"
     },
     {
-        "declaration": "(vector<fuchsia.ui.pointer/TouchResponse>:128 responses) -> (vector<fuchsia.ui.pointer/TouchEvent>:128 events)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.pointer/TouchSource.Watch"
+        "name": "fuchsia.ui.pointer/TouchSource.Watch",
+        "type": "(vector<fuchsia.ui.pointer/TouchResponse>:128 responses) -> (vector<fuchsia.ui.pointer/TouchEvent>:128 events)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.pointer/TouchSource"
     },
     {
-        "declaration": "fuchsia.ui.pointer/Rectangle",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/ViewParameters.view"
+        "name": "fuchsia.ui.pointer/ViewParameters.view",
+        "type": "fuchsia.ui.pointer/Rectangle"
     },
     {
-        "declaration": "fuchsia.ui.pointer/Rectangle",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/ViewParameters.viewport"
+        "name": "fuchsia.ui.pointer/ViewParameters.viewport",
+        "type": "fuchsia.ui.pointer/Rectangle"
     },
     {
-        "declaration": "array<float32,9>",
         "kind": "struct/member",
-        "name": "fuchsia.ui.pointer/ViewParameters.viewport_to_view_transform"
+        "name": "fuchsia.ui.pointer/ViewParameters.viewport_to_view_transform",
+        "type": "array<float32,9>"
     },
     {
         "kind": "struct",

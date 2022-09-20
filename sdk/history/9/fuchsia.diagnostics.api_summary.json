@@ -1,26 +1,26 @@
 [
     {
-        "declaration": "(fuchsia.diagnostics/StreamParameters stream_parameters,server_end:fuchsia.diagnostics/BatchIterator result_stream)",
         "kind": "protocol/member",
-        "name": "fuchsia.diagnostics/ArchiveAccessor.StreamDiagnostics"
+        "name": "fuchsia.diagnostics/ArchiveAccessor.StreamDiagnostics",
+        "type": "(fuchsia.diagnostics/StreamParameters stream_parameters,server_end:fuchsia.diagnostics/BatchIterator result_stream)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.diagnostics/ArchiveAccessor"
     },
     {
-        "declaration": "() -> (fuchsia.diagnostics/BatchIterator_GetNext_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.diagnostics/BatchIterator.GetNext"
+        "name": "fuchsia.diagnostics/BatchIterator.GetNext",
+        "type": "() -> (fuchsia.diagnostics/BatchIterator_GetNext_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.diagnostics/BatchIterator"
     },
     {
-        "declaration": "vector<fuchsia.diagnostics/FormattedContent>:64",
         "kind": "struct/member",
-        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Response.batch"
+        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Response.batch",
+        "type": "vector<fuchsia.diagnostics/FormattedContent>:64"
     },
     {
         "kind": "struct",
@@ -28,14 +28,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.diagnostics/ReaderError",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Result.err"
+        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Result.err",
+        "type": "fuchsia.diagnostics/ReaderError"
     },
     {
-        "declaration": "fuchsia.diagnostics/BatchIterator_GetNext_Response",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Result.response"
+        "name": "fuchsia.diagnostics/BatchIterator_GetNext_Result.response",
+        "type": "fuchsia.diagnostics/BatchIterator_GetNext_Response"
     },
     {
         "kind": "union",
@@ -44,14 +44,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "bool",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/ClientSelectorConfiguration.select_all"
+        "name": "fuchsia.diagnostics/ClientSelectorConfiguration.select_all",
+        "type": "bool"
     },
     {
-        "declaration": "vector<fuchsia.diagnostics/SelectorArgument>",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/ClientSelectorConfiguration.selectors"
+        "name": "fuchsia.diagnostics/ClientSelectorConfiguration.selectors",
+        "type": "vector<fuchsia.diagnostics/SelectorArgument>"
     },
     {
         "kind": "union",
@@ -59,9 +59,9 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "vector<fuchsia.diagnostics/StringSelector>:25",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/ComponentSelector.moniker_segments"
+        "name": "fuchsia.diagnostics/ComponentSelector.moniker_segments",
+        "type": "vector<fuchsia.diagnostics/StringSelector>:25"
     },
     {
         "kind": "table",
@@ -83,10 +83,10 @@
         "value": "3"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.diagnostics/DataType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
         "kind": "enum/member",
@@ -99,20 +99,20 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.diagnostics/Format",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/FormattedContent.json"
+        "name": "fuchsia.diagnostics/FormattedContent.json",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/FormattedContent.text"
+        "name": "fuchsia.diagnostics/FormattedContent.text",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "union",
@@ -121,96 +121,96 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "fuchsia.diagnostics/Severity",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/Interest.min_severity"
+        "name": "fuchsia.diagnostics/Interest.min_severity",
+        "type": "fuchsia.diagnostics/Severity"
     },
     {
         "kind": "table",
         "name": "fuchsia.diagnostics/Interest"
     },
     {
-        "declaration": "fuchsia.diagnostics/Interest",
         "kind": "struct/member",
-        "name": "fuchsia.diagnostics/LogInterestSelector.interest"
+        "name": "fuchsia.diagnostics/LogInterestSelector.interest",
+        "type": "fuchsia.diagnostics/Interest"
     },
     {
-        "declaration": "fuchsia.diagnostics/ComponentSelector",
         "kind": "struct/member",
-        "name": "fuchsia.diagnostics/LogInterestSelector.selector"
+        "name": "fuchsia.diagnostics/LogInterestSelector.selector",
+        "type": "fuchsia.diagnostics/ComponentSelector"
     },
     {
         "kind": "struct",
         "name": "fuchsia.diagnostics/LogInterestSelector"
     },
     {
-        "declaration": "(vector<fuchsia.diagnostics/LogInterestSelector>:64 selectors)",
         "kind": "protocol/member",
-        "name": "fuchsia.diagnostics/LogSettings.RegisterInterest"
+        "name": "fuchsia.diagnostics/LogSettings.RegisterInterest",
+        "type": "(vector<fuchsia.diagnostics/LogInterestSelector>:64 selectors)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.diagnostics/LogSettings"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.diagnostics/MAXIMUM_ENTRIES_PER_BATCH",
+        "type": "uint16",
         "value": "64"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.diagnostics/MAXIMUM_RAW_SELECTOR_LENGTH",
+        "type": "uint16",
         "value": "1024"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.diagnostics/MAX_DATA_HIERARCHY_DEPTH",
+        "type": "uint16",
         "value": "100"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.diagnostics/MAX_LOG_SELECTORS",
+        "type": "uint8",
         "value": "64"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.diagnostics/MAX_MONIKER_SEGMENTS",
+        "type": "uint16",
         "value": "25"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.diagnostics/MAX_STRING_SELECTOR_LENGTH",
+        "type": "uint16",
         "value": "100"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/PerformanceConfiguration.batch_retrieval_timeout_seconds"
+        "name": "fuchsia.diagnostics/PerformanceConfiguration.batch_retrieval_timeout_seconds",
+        "type": "int64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/PerformanceConfiguration.max_aggregate_content_size_bytes"
+        "name": "fuchsia.diagnostics/PerformanceConfiguration.max_aggregate_content_size_bytes",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.diagnostics/PerformanceConfiguration"
     },
     {
-        "declaration": "vector<fuchsia.diagnostics/StringSelector>:100",
         "kind": "struct/member",
-        "name": "fuchsia.diagnostics/PropertySelector.node_path"
+        "name": "fuchsia.diagnostics/PropertySelector.node_path",
+        "type": "vector<fuchsia.diagnostics/StringSelector>:100"
     },
     {
-        "declaration": "fuchsia.diagnostics/StringSelector",
         "kind": "struct/member",
-        "name": "fuchsia.diagnostics/PropertySelector.target_properties"
+        "name": "fuchsia.diagnostics/PropertySelector.target_properties",
+        "type": "fuchsia.diagnostics/StringSelector"
     },
     {
         "kind": "struct",
@@ -222,34 +222,34 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.diagnostics/ReaderError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.diagnostics/ComponentSelector",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/Selector.component_selector"
+        "name": "fuchsia.diagnostics/Selector.component_selector",
+        "type": "fuchsia.diagnostics/ComponentSelector"
     },
     {
-        "declaration": "fuchsia.diagnostics/TreeSelector",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/Selector.tree_selector"
+        "name": "fuchsia.diagnostics/Selector.tree_selector",
+        "type": "fuchsia.diagnostics/TreeSelector"
     },
     {
         "kind": "table",
         "name": "fuchsia.diagnostics/Selector"
     },
     {
-        "declaration": "string:1024",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/SelectorArgument.raw_selector"
+        "name": "fuchsia.diagnostics/SelectorArgument.raw_selector",
+        "type": "string:1024"
     },
     {
-        "declaration": "fuchsia.diagnostics/Selector",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/SelectorArgument.structured_selector"
+        "name": "fuchsia.diagnostics/SelectorArgument.structured_selector",
+        "type": "fuchsia.diagnostics/Selector"
     },
     {
         "kind": "union",
@@ -287,10 +287,10 @@
         "value": "64"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.diagnostics/Severity",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
         "kind": "enum/member",
@@ -308,54 +308,54 @@
         "value": "3"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.diagnostics/StreamMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/StreamParameters.batch_retrieval_timeout_seconds"
+        "name": "fuchsia.diagnostics/StreamParameters.batch_retrieval_timeout_seconds",
+        "type": "int64"
     },
     {
-        "declaration": "fuchsia.diagnostics/ClientSelectorConfiguration",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/StreamParameters.client_selector_configuration"
+        "name": "fuchsia.diagnostics/StreamParameters.client_selector_configuration",
+        "type": "fuchsia.diagnostics/ClientSelectorConfiguration"
     },
     {
-        "declaration": "fuchsia.diagnostics/DataType",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/StreamParameters.data_type"
+        "name": "fuchsia.diagnostics/StreamParameters.data_type",
+        "type": "fuchsia.diagnostics/DataType"
     },
     {
-        "declaration": "fuchsia.diagnostics/Format",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/StreamParameters.format"
+        "name": "fuchsia.diagnostics/StreamParameters.format",
+        "type": "fuchsia.diagnostics/Format"
     },
     {
-        "declaration": "fuchsia.diagnostics/PerformanceConfiguration",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/StreamParameters.performance_configuration"
+        "name": "fuchsia.diagnostics/StreamParameters.performance_configuration",
+        "type": "fuchsia.diagnostics/PerformanceConfiguration"
     },
     {
-        "declaration": "fuchsia.diagnostics/StreamMode",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics/StreamParameters.stream_mode"
+        "name": "fuchsia.diagnostics/StreamParameters.stream_mode",
+        "type": "fuchsia.diagnostics/StreamMode"
     },
     {
         "kind": "table",
         "name": "fuchsia.diagnostics/StreamParameters"
     },
     {
-        "declaration": "string:100",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/StringSelector.exact_match"
+        "name": "fuchsia.diagnostics/StringSelector.exact_match",
+        "type": "string:100"
     },
     {
-        "declaration": "string:100",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/StringSelector.string_pattern"
+        "name": "fuchsia.diagnostics/StringSelector.string_pattern",
+        "type": "string:100"
     },
     {
         "kind": "union",
@@ -363,23 +363,23 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "vector<fuchsia.diagnostics/StringSelector>:100",
         "kind": "struct/member",
-        "name": "fuchsia.diagnostics/SubtreeSelector.node_path"
+        "name": "fuchsia.diagnostics/SubtreeSelector.node_path",
+        "type": "vector<fuchsia.diagnostics/StringSelector>:100"
     },
     {
         "kind": "struct",
         "name": "fuchsia.diagnostics/SubtreeSelector"
     },
     {
-        "declaration": "fuchsia.diagnostics/PropertySelector",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/TreeSelector.property_selector"
+        "name": "fuchsia.diagnostics/TreeSelector.property_selector",
+        "type": "fuchsia.diagnostics/PropertySelector"
     },
     {
-        "declaration": "fuchsia.diagnostics/SubtreeSelector",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics/TreeSelector.subtree_selector"
+        "name": "fuchsia.diagnostics/TreeSelector.subtree_selector",
+        "type": "fuchsia.diagnostics/SubtreeSelector"
     },
     {
         "kind": "union",

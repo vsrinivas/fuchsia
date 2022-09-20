@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(fuchsia.mem/Buffer config_json) -> (fuchsia.weave/Bootstrap_ImportWeaveConfig_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/Bootstrap.ImportWeaveConfig"
+        "name": "fuchsia.weave/Bootstrap.ImportWeaveConfig",
+        "type": "(fuchsia.mem/Buffer config_json) -> (fuchsia.weave/Bootstrap_ImportWeaveConfig_Result result)"
     },
     {
         "kind": "protocol",
@@ -13,14 +13,14 @@
         "name": "fuchsia.weave/Bootstrap_ImportWeaveConfig_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.weave/Bootstrap_ImportWeaveConfig_Result.err"
+        "name": "fuchsia.weave/Bootstrap_ImportWeaveConfig_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.weave/Bootstrap_ImportWeaveConfig_Response",
         "kind": "union/member",
-        "name": "fuchsia.weave/Bootstrap_ImportWeaveConfig_Result.response"
+        "name": "fuchsia.weave/Bootstrap_ImportWeaveConfig_Result.response",
+        "type": "fuchsia.weave/Bootstrap_ImportWeaveConfig_Response"
     },
     {
         "kind": "union",
@@ -53,43 +53,43 @@
         "value": "2147483647"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.weave/ErrorCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (fuchsia.weave/FactoryDataManager_GetPairingCode_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/FactoryDataManager.GetPairingCode"
+        "name": "fuchsia.weave/FactoryDataManager.GetPairingCode",
+        "type": "() -> (fuchsia.weave/FactoryDataManager_GetPairingCode_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/FactoryDataManager.GetWeaveCertificate"
+        "name": "fuchsia.weave/FactoryDataManager.GetWeaveCertificate",
+        "type": "() -> (fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.weave/FactoryDataManager"
     },
     {
-        "declaration": "vector<uint8>:16",
         "kind": "struct/member",
-        "name": "fuchsia.weave/FactoryDataManager_GetPairingCode_Response.pairing_code"
+        "name": "fuchsia.weave/FactoryDataManager_GetPairingCode_Response.pairing_code",
+        "type": "vector<uint8>:16"
     },
     {
         "kind": "struct",
         "name": "fuchsia.weave/FactoryDataManager_GetPairingCode_Response"
     },
     {
-        "declaration": "fuchsia.weave/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.weave/FactoryDataManager_GetPairingCode_Result.err"
+        "name": "fuchsia.weave/FactoryDataManager_GetPairingCode_Result.err",
+        "type": "fuchsia.weave/ErrorCode"
     },
     {
-        "declaration": "fuchsia.weave/FactoryDataManager_GetPairingCode_Response",
         "kind": "union/member",
-        "name": "fuchsia.weave/FactoryDataManager_GetPairingCode_Result.response"
+        "name": "fuchsia.weave/FactoryDataManager_GetPairingCode_Result.response",
+        "type": "fuchsia.weave/FactoryDataManager_GetPairingCode_Response"
     },
     {
         "kind": "union",
@@ -97,9 +97,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Response.certificate"
+        "name": "fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Response.certificate",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "struct",
@@ -107,14 +107,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.weave/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result.err"
+        "name": "fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result.err",
+        "type": "fuchsia.weave/ErrorCode"
     },
     {
-        "declaration": "fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Response",
         "kind": "union/member",
-        "name": "fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result.response"
+        "name": "fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Result.response",
+        "type": "fuchsia.weave/FactoryDataManager_GetWeaveCertificate_Response"
     },
     {
         "kind": "union",
@@ -123,14 +123,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "string:255",
         "kind": "union/member",
-        "name": "fuchsia.weave/Host.hostname"
+        "name": "fuchsia.weave/Host.hostname",
+        "type": "string:255"
     },
     {
-        "declaration": "fuchsia.net/IpAddress",
         "kind": "union/member",
-        "name": "fuchsia.weave/Host.ip_address"
+        "name": "fuchsia.weave/Host.ip_address",
+        "type": "fuchsia.net/IpAddress"
     },
     {
         "kind": "union",
@@ -138,113 +138,113 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.weave/Host",
         "kind": "struct/member",
-        "name": "fuchsia.weave/HostPort.host"
+        "name": "fuchsia.weave/HostPort.host",
+        "type": "fuchsia.weave/Host"
     },
     {
-        "declaration": "uint16",
         "kind": "struct/member",
-        "name": "fuchsia.weave/HostPort.port"
+        "name": "fuchsia.weave/HostPort.port",
+        "type": "uint16"
     },
     {
         "kind": "struct",
         "name": "fuchsia.weave/HostPort"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.weave/MAX_HOST_PORTS",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.weave/MAX_PUBLIC_KEY_SIZE",
+        "type": "uint32",
         "value": "65"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.weave/MAX_QR_CODE_SIZE",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.weave/MAX_SIGNATURE_SIZE",
+        "type": "uint32",
         "value": "139"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.weave/PairingState.is_fabric_provisioned"
+        "name": "fuchsia.weave/PairingState.is_fabric_provisioned",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.weave/PairingState.is_service_provisioned"
+        "name": "fuchsia.weave/PairingState.is_service_provisioned",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.weave/PairingState.is_thread_provisioned"
+        "name": "fuchsia.weave/PairingState.is_thread_provisioned",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.weave/PairingState.is_weave_fully_provisioned"
+        "name": "fuchsia.weave/PairingState.is_weave_fully_provisioned",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.weave/PairingState.is_wlan_provisioned"
+        "name": "fuchsia.weave/PairingState.is_wlan_provisioned",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.weave/PairingState"
     },
     {
-        "declaration": "() -> (fuchsia.weave/PairingState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/PairingStateWatcher.WatchPairingState"
+        "name": "fuchsia.weave/PairingStateWatcher.WatchPairingState",
+        "type": "() -> (fuchsia.weave/PairingState state)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.weave/PairingStateWatcher"
     },
     {
-        "declaration": "() -> (fuchsia.weave/Provisioner_GenerateKeyPair_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/Provisioner.GenerateKeyPair"
+        "name": "fuchsia.weave/Provisioner.GenerateKeyPair",
+        "type": "() -> (fuchsia.weave/Provisioner_GenerateKeyPair_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.weave/Provisioner"
     },
     {
-        "declaration": "vector<uint8>:65",
         "kind": "struct/member",
-        "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Response.public_key"
+        "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Response.public_key",
+        "type": "vector<uint8>:65"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "struct/member",
-        "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Response.wrapped_private_key"
+        "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Response.wrapped_private_key",
+        "type": "vector<uint8>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Response"
     },
     {
-        "declaration": "fuchsia.weave/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Result.err"
+        "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Result.err",
+        "type": "fuchsia.weave/ErrorCode"
     },
     {
-        "declaration": "fuchsia.weave/Provisioner_GenerateKeyPair_Response",
         "kind": "union/member",
-        "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Result.response"
+        "name": "fuchsia.weave/Provisioner_GenerateKeyPair_Result.response",
+        "type": "fuchsia.weave/Provisioner_GenerateKeyPair_Response"
     },
     {
         "kind": "union",
@@ -252,18 +252,18 @@
         "strictness": "strict"
     },
     {
-        "declaration": "string:256",
         "kind": "struct/member",
-        "name": "fuchsia.weave/QrCode.data"
+        "name": "fuchsia.weave/QrCode.data",
+        "type": "string:256"
     },
     {
         "kind": "struct",
         "name": "fuchsia.weave/QrCode"
     },
     {
-        "declaration": "uint16",
         "kind": "const",
         "name": "fuchsia.weave/RESET_CONFIG_ALL",
+        "type": "uint16",
         "value": "255"
     },
     {
@@ -287,43 +287,43 @@
         "value": "4"
     },
     {
-        "declaration": "uint16",
         "kind": "bits",
         "name": "fuchsia.weave/ResetConfigFlags",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint16"
     },
     {
-        "declaration": "(vector<uint8>:32 hash) -> (fuchsia.weave/Signer_SignHash_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/Signer.SignHash"
+        "name": "fuchsia.weave/Signer.SignHash",
+        "type": "(vector<uint8>:32 hash) -> (fuchsia.weave/Signer_SignHash_Result result)"
     },
     {
-        "declaration": "(vector<uint8>:32 hash,vector<uint8> wrapped_private_key) -> (fuchsia.weave/Signer_SignHashWithPrivateKey_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/Signer.SignHashWithPrivateKey"
+        "name": "fuchsia.weave/Signer.SignHashWithPrivateKey",
+        "type": "(vector<uint8>:32 hash,vector<uint8> wrapped_private_key) -> (fuchsia.weave/Signer_SignHashWithPrivateKey_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.weave/Signer"
     },
     {
-        "declaration": "vector<uint8>:139",
         "kind": "struct/member",
-        "name": "fuchsia.weave/Signer_SignHashWithPrivateKey_Response.signature"
+        "name": "fuchsia.weave/Signer_SignHashWithPrivateKey_Response.signature",
+        "type": "vector<uint8>:139"
     },
     {
         "kind": "struct",
         "name": "fuchsia.weave/Signer_SignHashWithPrivateKey_Response"
     },
     {
-        "declaration": "fuchsia.weave/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.weave/Signer_SignHashWithPrivateKey_Result.err"
+        "name": "fuchsia.weave/Signer_SignHashWithPrivateKey_Result.err",
+        "type": "fuchsia.weave/ErrorCode"
     },
     {
-        "declaration": "fuchsia.weave/Signer_SignHashWithPrivateKey_Response",
         "kind": "union/member",
-        "name": "fuchsia.weave/Signer_SignHashWithPrivateKey_Result.response"
+        "name": "fuchsia.weave/Signer_SignHashWithPrivateKey_Result.response",
+        "type": "fuchsia.weave/Signer_SignHashWithPrivateKey_Response"
     },
     {
         "kind": "union",
@@ -331,23 +331,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<uint8>:139",
         "kind": "struct/member",
-        "name": "fuchsia.weave/Signer_SignHash_Response.signature"
+        "name": "fuchsia.weave/Signer_SignHash_Response.signature",
+        "type": "vector<uint8>:139"
     },
     {
         "kind": "struct",
         "name": "fuchsia.weave/Signer_SignHash_Response"
     },
     {
-        "declaration": "fuchsia.weave/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.weave/Signer_SignHash_Result.err"
+        "name": "fuchsia.weave/Signer_SignHash_Result.err",
+        "type": "fuchsia.weave/ErrorCode"
     },
     {
-        "declaration": "fuchsia.weave/Signer_SignHash_Response",
         "kind": "union/member",
-        "name": "fuchsia.weave/Signer_SignHash_Result.response"
+        "name": "fuchsia.weave/Signer_SignHash_Result.response",
+        "type": "fuchsia.weave/Signer_SignHash_Response"
     },
     {
         "kind": "union",
@@ -355,56 +355,56 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(server_end:fuchsia.weave/PairingStateWatcher watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/Stack.GetPairingStateWatcher"
+        "name": "fuchsia.weave/Stack.GetPairingStateWatcher",
+        "type": "(server_end:fuchsia.weave/PairingStateWatcher watcher)"
     },
     {
-        "declaration": "() -> (fuchsia.weave/Stack_GetQrCode_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/Stack.GetQrCode"
+        "name": "fuchsia.weave/Stack.GetQrCode",
+        "type": "() -> (fuchsia.weave/Stack_GetQrCode_Result result)"
     },
     {
-        "declaration": "(uint64 endpoint_id,server_end:fuchsia.weave/SvcDirectoryWatcher watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/Stack.GetSvcDirectoryWatcher"
+        "name": "fuchsia.weave/Stack.GetSvcDirectoryWatcher",
+        "type": "(uint64 endpoint_id,server_end:fuchsia.weave/SvcDirectoryWatcher watcher)"
     },
     {
-        "declaration": "(fuchsia.weave/ResetConfigFlags flags) -> (fuchsia.weave/Stack_ResetConfig_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/Stack.ResetConfig"
+        "name": "fuchsia.weave/Stack.ResetConfig",
+        "type": "(fuchsia.weave/ResetConfigFlags flags) -> (fuchsia.weave/Stack_ResetConfig_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.weave/Stack"
     },
     {
-        "declaration": "(client_end:fuchsia.weave/WlanNetworkConfigProvider provider)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/StackProvider.SetWlanNetworkConfigProvider"
+        "name": "fuchsia.weave/StackProvider.SetWlanNetworkConfigProvider",
+        "type": "(client_end:fuchsia.weave/WlanNetworkConfigProvider provider)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.weave/StackProvider"
     },
     {
-        "declaration": "fuchsia.weave/QrCode",
         "kind": "struct/member",
-        "name": "fuchsia.weave/Stack_GetQrCode_Response.qr_code"
+        "name": "fuchsia.weave/Stack_GetQrCode_Response.qr_code",
+        "type": "fuchsia.weave/QrCode"
     },
     {
         "kind": "struct",
         "name": "fuchsia.weave/Stack_GetQrCode_Response"
     },
     {
-        "declaration": "fuchsia.weave/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.weave/Stack_GetQrCode_Result.err"
+        "name": "fuchsia.weave/Stack_GetQrCode_Result.err",
+        "type": "fuchsia.weave/ErrorCode"
     },
     {
-        "declaration": "fuchsia.weave/Stack_GetQrCode_Response",
         "kind": "union/member",
-        "name": "fuchsia.weave/Stack_GetQrCode_Result.response"
+        "name": "fuchsia.weave/Stack_GetQrCode_Result.response",
+        "type": "fuchsia.weave/Stack_GetQrCode_Response"
     },
     {
         "kind": "union",
@@ -416,14 +416,14 @@
         "name": "fuchsia.weave/Stack_ResetConfig_Response"
     },
     {
-        "declaration": "fuchsia.weave/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.weave/Stack_ResetConfig_Result.err"
+        "name": "fuchsia.weave/Stack_ResetConfig_Result.err",
+        "type": "fuchsia.weave/ErrorCode"
     },
     {
-        "declaration": "fuchsia.weave/Stack_ResetConfig_Response",
         "kind": "union/member",
-        "name": "fuchsia.weave/Stack_ResetConfig_Result.response"
+        "name": "fuchsia.weave/Stack_ResetConfig_Result.response",
+        "type": "fuchsia.weave/Stack_ResetConfig_Response"
     },
     {
         "kind": "union",
@@ -431,18 +431,18 @@
         "strictness": "strict"
     },
     {
-        "declaration": "() -> (vector<fuchsia.weave/HostPort>:256 host_port_list)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/SvcDirectoryWatcher.WatchServiceDirectory"
+        "name": "fuchsia.weave/SvcDirectoryWatcher.WatchServiceDirectory",
+        "type": "() -> (vector<fuchsia.weave/HostPort>:256 host_port_list)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.weave/SvcDirectoryWatcher"
     },
     {
-        "declaration": "() -> (fuchsia.wlan.policy/NetworkConfig network_config)",
         "kind": "protocol/member",
-        "name": "fuchsia.weave/WlanNetworkConfigProvider.WatchConnectedNetwork"
+        "name": "fuchsia.weave/WlanNetworkConfigProvider.WatchConnectedNetwork",
+        "type": "() -> (fuchsia.wlan.policy/NetworkConfig network_config)"
     },
     {
         "kind": "protocol",

@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "string:4096",
         "kind": "table/member",
-        "name": "fuchsia.session/LaunchConfiguration.session_url"
+        "name": "fuchsia.session/LaunchConfiguration.session_url",
+        "type": "string:4096"
     },
     {
         "kind": "table",
@@ -29,15 +29,15 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.session/LaunchError",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.session/LaunchConfiguration configuration) -> (fuchsia.session/Launcher_Launch_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.session/Launcher.Launch"
+        "name": "fuchsia.session/Launcher.Launch",
+        "type": "(fuchsia.session/LaunchConfiguration configuration) -> (fuchsia.session/Launcher_Launch_Result result)"
     },
     {
         "kind": "protocol",
@@ -48,14 +48,14 @@
         "name": "fuchsia.session/Launcher_Launch_Response"
     },
     {
-        "declaration": "fuchsia.session/LaunchError",
         "kind": "union/member",
-        "name": "fuchsia.session/Launcher_Launch_Result.err"
+        "name": "fuchsia.session/Launcher_Launch_Result.err",
+        "type": "fuchsia.session/LaunchError"
     },
     {
-        "declaration": "fuchsia.session/Launcher_Launch_Response",
         "kind": "union/member",
-        "name": "fuchsia.session/Launcher_Launch_Result.response"
+        "name": "fuchsia.session/Launcher_Launch_Result.response",
+        "type": "fuchsia.session/Launcher_Launch_Response"
     },
     {
         "kind": "union",
@@ -83,15 +83,15 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.session/RestartError",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (fuchsia.session/Restarter_Restart_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.session/Restarter.Restart"
+        "name": "fuchsia.session/Restarter.Restart",
+        "type": "() -> (fuchsia.session/Restarter_Restart_Result result)"
     },
     {
         "kind": "protocol",
@@ -102,14 +102,14 @@
         "name": "fuchsia.session/Restarter_Restart_Response"
     },
     {
-        "declaration": "fuchsia.session/RestartError",
         "kind": "union/member",
-        "name": "fuchsia.session/Restarter_Restart_Result.err"
+        "name": "fuchsia.session/Restarter_Restart_Result.err",
+        "type": "fuchsia.session/RestartError"
     },
     {
-        "declaration": "fuchsia.session/Restarter_Restart_Response",
         "kind": "union/member",
-        "name": "fuchsia.session/Restarter_Restart_Result.response"
+        "name": "fuchsia.session/Restarter_Restart_Result.response",
+        "type": "fuchsia.session/Restarter_Restart_Response"
     },
     {
         "kind": "union",

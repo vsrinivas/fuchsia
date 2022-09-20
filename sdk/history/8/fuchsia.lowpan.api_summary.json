@@ -1,17 +1,17 @@
 [
     {
-        "declaration": "() -> (vector<string:32>:8 added,vector<string:32>:8 removed)",
         "kind": "protocol/member",
-        "name": "fuchsia.lowpan/DeviceWatcher.WatchDevices"
+        "name": "fuchsia.lowpan/DeviceWatcher.WatchDevices",
+        "type": "() -> (vector<string:32>:8 added,vector<string:32>:8 removed)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.lowpan/DeviceWatcher"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.lowpan/MAX_LOWPAN_DEVICES",
+        "type": "uint32",
         "value": "8"
     },
     {

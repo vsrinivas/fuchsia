@@ -1,28 +1,28 @@
 [
     {
-        "declaration": "(string url,bool allow_focus,vector<string>:optional args) -> (uint32 key)",
         "kind": "protocol/member",
-        "name": "fuchsia.developer.tiles/Controller.AddTileFromURL"
+        "name": "fuchsia.developer.tiles/Controller.AddTileFromURL",
+        "type": "(string url,bool allow_focus,vector<string>:optional args) -> (uint32 key)"
     },
     {
-        "declaration": "(string url,fuchsia.ui.app/ViewProvider provider) -> (uint32 key)",
         "kind": "protocol/member",
-        "name": "fuchsia.developer.tiles/Controller.AddTileFromViewProvider"
+        "name": "fuchsia.developer.tiles/Controller.AddTileFromViewProvider",
+        "type": "(string url,fuchsia.ui.app/ViewProvider provider) -> (uint32 key)"
     },
     {
-        "declaration": "() -> (vector<uint32> keys,vector<string> urls,vector<fuchsia.ui.gfx/vec3> sizes,vector<bool> focusabilities)",
         "kind": "protocol/member",
-        "name": "fuchsia.developer.tiles/Controller.ListTiles"
+        "name": "fuchsia.developer.tiles/Controller.ListTiles",
+        "type": "() -> (vector<uint32> keys,vector<string> urls,vector<fuchsia.ui.gfx/vec3> sizes,vector<bool> focusabilities)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.developer.tiles/Controller.Quit"
+        "name": "fuchsia.developer.tiles/Controller.Quit",
+        "type": "()"
     },
     {
-        "declaration": "(uint32 key)",
         "kind": "protocol/member",
-        "name": "fuchsia.developer.tiles/Controller.RemoveTile"
+        "name": "fuchsia.developer.tiles/Controller.RemoveTile",
+        "type": "(uint32 key)"
     },
     {
         "kind": "protocol",

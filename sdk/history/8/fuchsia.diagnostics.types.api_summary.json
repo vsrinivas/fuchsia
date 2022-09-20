@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "fuchsia.diagnostics.types/ComponentTasks",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics.types/ComponentDiagnostics.tasks"
+        "name": "fuchsia.diagnostics.types/ComponentDiagnostics.tasks",
+        "type": "fuchsia.diagnostics.types/ComponentTasks"
     },
     {
         "kind": "table",
@@ -10,14 +10,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.diagnostics.types/Task",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics.types/ComponentTasks.component_task"
+        "name": "fuchsia.diagnostics.types/ComponentTasks.component_task",
+        "type": "fuchsia.diagnostics.types/Task"
     },
     {
-        "declaration": "fuchsia.diagnostics.types/Task",
         "kind": "table/member",
-        "name": "fuchsia.diagnostics.types/ComponentTasks.parent_task"
+        "name": "fuchsia.diagnostics.types/ComponentTasks.parent_task",
+        "type": "fuchsia.diagnostics.types/Task"
     },
     {
         "kind": "table",
@@ -25,19 +25,19 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:JOB",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics.types/Task.job"
+        "name": "fuchsia.diagnostics.types/Task.job",
+        "type": "zx/handle:JOB"
     },
     {
-        "declaration": "zx/handle:PROCESS",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics.types/Task.process"
+        "name": "fuchsia.diagnostics.types/Task.process",
+        "type": "zx/handle:PROCESS"
     },
     {
-        "declaration": "zx/handle:THREAD",
         "kind": "union/member",
-        "name": "fuchsia.diagnostics.types/Task.thread"
+        "name": "fuchsia.diagnostics.types/Task.thread",
+        "type": "zx/handle:THREAD"
     },
     {
         "kind": "union",

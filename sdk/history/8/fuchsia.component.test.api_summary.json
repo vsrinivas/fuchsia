@@ -1,31 +1,31 @@
 [
     {
-        "declaration": "(fuchsia.component.runner/ComponentRunner runner) -> (fuchsia.component.test/Builder_Build_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Builder.Build"
+        "name": "fuchsia.component.test/Builder.Build",
+        "type": "(fuchsia.component.runner/ComponentRunner runner) -> (fuchsia.component.test/Builder_Build_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.component.test/Builder"
     },
     {
-        "declaration": "string:4096",
         "kind": "struct/member",
-        "name": "fuchsia.component.test/Builder_Build_Response.root_component_url"
+        "name": "fuchsia.component.test/Builder_Build_Response.root_component_url",
+        "type": "string:4096"
     },
     {
         "kind": "struct",
         "name": "fuchsia.component.test/Builder_Build_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Builder_Build_Result.err"
+        "name": "fuchsia.component.test/Builder_Build_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Builder_Build_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Builder_Build_Result.response"
+        "name": "fuchsia.component.test/Builder_Build_Result.response",
+        "type": "fuchsia.component.test/Builder_Build_Response"
     },
     {
         "kind": "union",
@@ -33,29 +33,29 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.component.test/Directory",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability.directory"
+        "name": "fuchsia.component.test/Capability.directory",
+        "type": "fuchsia.component.test/Directory"
     },
     {
-        "declaration": "fuchsia.component.test/Event",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability.event"
+        "name": "fuchsia.component.test/Capability.event",
+        "type": "fuchsia.component.test/Event"
     },
     {
-        "declaration": "fuchsia.component.test/Protocol",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability.protocol"
+        "name": "fuchsia.component.test/Capability.protocol",
+        "type": "fuchsia.component.test/Protocol"
     },
     {
-        "declaration": "fuchsia.component.test/Service",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability.service"
+        "name": "fuchsia.component.test/Capability.service",
+        "type": "fuchsia.component.test/Service"
     },
     {
-        "declaration": "fuchsia.component.test/Storage",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Capability.storage"
+        "name": "fuchsia.component.test/Capability.storage",
+        "type": "fuchsia.component.test/Storage"
     },
     {
         "kind": "union",
@@ -63,62 +63,62 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/ChildOptions.environment"
+        "name": "fuchsia.component.test/ChildOptions.environment",
+        "type": "string:100"
     },
     {
-        "declaration": "fuchsia.component.decl/OnTerminate",
         "kind": "table/member",
-        "name": "fuchsia.component.test/ChildOptions.on_terminate"
+        "name": "fuchsia.component.test/ChildOptions.on_terminate",
+        "type": "fuchsia.component.decl/OnTerminate"
     },
     {
-        "declaration": "fuchsia.component.decl/StartupMode",
         "kind": "table/member",
-        "name": "fuchsia.component.test/ChildOptions.startup"
+        "name": "fuchsia.component.test/ChildOptions.startup",
+        "type": "fuchsia.component.decl/StartupMode"
     },
     {
         "kind": "table",
         "name": "fuchsia.component.test/ChildOptions"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Directory.as"
+        "name": "fuchsia.component.test/Directory.as",
+        "type": "string:100"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Directory.name"
+        "name": "fuchsia.component.test/Directory.name",
+        "type": "string:100"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Directory.path"
+        "name": "fuchsia.component.test/Directory.path",
+        "type": "string:1024"
     },
     {
-        "declaration": "fuchsia.io/Operations",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Directory.rights"
+        "name": "fuchsia.component.test/Directory.rights",
+        "type": "fuchsia.io/Operations"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Directory.subdir"
+        "name": "fuchsia.component.test/Directory.subdir",
+        "type": "string:1024"
     },
     {
-        "declaration": "fuchsia.component.decl/DependencyType",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Directory.type"
+        "name": "fuchsia.component.test/Directory.type",
+        "type": "fuchsia.component.decl/DependencyType"
     },
     {
         "kind": "table",
         "name": "fuchsia.component.test/Directory"
     },
     {
-        "declaration": "vector<fuchsia.component.test/DirectoryEntry>:1024",
         "kind": "struct/member",
-        "name": "fuchsia.component.test/DirectoryContents.entries"
+        "name": "fuchsia.component.test/DirectoryContents.entries",
+        "type": "vector<fuchsia.component.test/DirectoryEntry>:1024"
     },
     {
         "kind": "struct",
@@ -126,14 +126,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.component.test/DirectoryEntry.file_contents"
+        "name": "fuchsia.component.test/DirectoryEntry.file_contents",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "string:100",
         "kind": "struct/member",
-        "name": "fuchsia.component.test/DirectoryEntry.file_path"
+        "name": "fuchsia.component.test/DirectoryEntry.file_path",
+        "type": "string:100"
     },
     {
         "kind": "struct",
@@ -141,119 +141,119 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Event.as"
+        "name": "fuchsia.component.test/Event.as",
+        "type": "string:100"
     },
     {
-        "declaration": "fuchsia.data/Dictionary",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Event.filter"
+        "name": "fuchsia.component.test/Event.filter",
+        "type": "fuchsia.data/Dictionary"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Event.name"
+        "name": "fuchsia.component.test/Event.name",
+        "type": "string:100"
     },
     {
         "kind": "table",
         "name": "fuchsia.component.test/Event"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.component.test/LOCAL_COMPONENT_NAME_KEY",
+        "type": "string",
         "value": "LOCAL_COMPONENT_NAME"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component.test/MAX_DIRECTORY_ENTRIES",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Protocol.as"
+        "name": "fuchsia.component.test/Protocol.as",
+        "type": "string:100"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Protocol.name"
+        "name": "fuchsia.component.test/Protocol.name",
+        "type": "string:100"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Protocol.path"
+        "name": "fuchsia.component.test/Protocol.path",
+        "type": "string:1024"
     },
     {
-        "declaration": "fuchsia.component.decl/DependencyType",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Protocol.type"
+        "name": "fuchsia.component.test/Protocol.type",
+        "type": "fuchsia.component.decl/DependencyType"
     },
     {
         "kind": "table",
         "name": "fuchsia.component.test/Protocol"
     },
     {
-        "declaration": "(string:1024 name,string:4096 url,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddChild_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.AddChild"
+        "name": "fuchsia.component.test/Realm.AddChild",
+        "type": "(string:1024 name,string:4096 url,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddChild_Result result)"
     },
     {
-        "declaration": "(string:1024 name,fuchsia.component.decl/Component decl,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddChildFromDecl_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.AddChildFromDecl"
+        "name": "fuchsia.component.test/Realm.AddChildFromDecl",
+        "type": "(string:1024 name,fuchsia.component.decl/Component decl,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddChildFromDecl_Result result)"
     },
     {
-        "declaration": "(string:100 name,fuchsia.component.test/ChildOptions options,server_end:fuchsia.component.test/Realm child_realm) -> (fuchsia.component.test/Realm_AddChildRealm_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.AddChildRealm"
+        "name": "fuchsia.component.test/Realm.AddChildRealm",
+        "type": "(string:100 name,fuchsia.component.test/ChildOptions options,server_end:fuchsia.component.test/Realm child_realm) -> (fuchsia.component.test/Realm_AddChildRealm_Result result)"
     },
     {
-        "declaration": "(string:1024 name,string:4096 legacy_url,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddLegacyChild_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.AddLegacyChild"
+        "name": "fuchsia.component.test/Realm.AddLegacyChild",
+        "type": "(string:1024 name,string:4096 legacy_url,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddLegacyChild_Result result)"
     },
     {
-        "declaration": "(string:1024 name,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddLocalChild_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.AddLocalChild"
+        "name": "fuchsia.component.test/Realm.AddLocalChild",
+        "type": "(string:1024 name,fuchsia.component.test/ChildOptions options) -> (fuchsia.component.test/Realm_AddLocalChild_Result result)"
     },
     {
-        "declaration": "(vector<fuchsia.component.test/Capability> capabilities,fuchsia.component.decl/Ref from,vector<fuchsia.component.decl/Ref> to) -> (fuchsia.component.test/Realm_AddRoute_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.AddRoute"
+        "name": "fuchsia.component.test/Realm.AddRoute",
+        "type": "(vector<fuchsia.component.test/Capability> capabilities,fuchsia.component.decl/Ref from,vector<fuchsia.component.decl/Ref> to) -> (fuchsia.component.test/Realm_AddRoute_Result result)"
     },
     {
-        "declaration": "(string:1024 name) -> (fuchsia.component.test/Realm_GetComponentDecl_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.GetComponentDecl"
+        "name": "fuchsia.component.test/Realm.GetComponentDecl",
+        "type": "(string:1024 name) -> (fuchsia.component.test/Realm_GetComponentDecl_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.component.test/Realm_GetRealmDecl_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.GetRealmDecl"
+        "name": "fuchsia.component.test/Realm.GetRealmDecl",
+        "type": "() -> (fuchsia.component.test/Realm_GetRealmDecl_Result result)"
     },
     {
-        "declaration": "(string:100 name,vector<fuchsia.component.decl/Ref> to,fuchsia.component.test/DirectoryContents directory_contents) -> (fuchsia.component.test/Realm_ReadOnlyDirectory_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.ReadOnlyDirectory"
+        "name": "fuchsia.component.test/Realm.ReadOnlyDirectory",
+        "type": "(string:100 name,vector<fuchsia.component.decl/Ref> to,fuchsia.component.test/DirectoryContents directory_contents) -> (fuchsia.component.test/Realm_ReadOnlyDirectory_Result result)"
     },
     {
-        "declaration": "(string:1024 name,fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceComponentDecl_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.ReplaceComponentDecl"
+        "name": "fuchsia.component.test/Realm.ReplaceComponentDecl",
+        "type": "(string:1024 name,fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceComponentDecl_Result result)"
     },
     {
-        "declaration": "(string:100 name,string:64 key,fuchsia.component.config/ValueSpec value) -> (fuchsia.component.test/Realm_ReplaceConfigValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.ReplaceConfigValue"
+        "name": "fuchsia.component.test/Realm.ReplaceConfigValue",
+        "type": "(string:100 name,string:64 key,fuchsia.component.config/ValueSpec value) -> (fuchsia.component.test/Realm_ReplaceConfigValue_Result result)"
     },
     {
-        "declaration": "(fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceRealmDecl_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/Realm.ReplaceRealmDecl"
+        "name": "fuchsia.component.test/Realm.ReplaceRealmDecl",
+        "type": "(fuchsia.component.decl/Component component_decl) -> (fuchsia.component.test/Realm_ReplaceRealmDecl_Result result)"
     },
     {
         "kind": "protocol",
@@ -365,20 +365,20 @@
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.component.test/RealmBuilderError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.io/Directory pkg_dir_handle,server_end:fuchsia.component.test/Realm realm_server_end,server_end:fuchsia.component.test/Builder builder_server_end) -> (fuchsia.component.test/RealmBuilderFactory_Create_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory.Create"
+        "name": "fuchsia.component.test/RealmBuilderFactory.Create",
+        "type": "(fuchsia.io/Directory pkg_dir_handle,server_end:fuchsia.component.test/Realm realm_server_end,server_end:fuchsia.component.test/Builder builder_server_end) -> (fuchsia.component.test/RealmBuilderFactory_Create_Result result)"
     },
     {
-        "declaration": "(fuchsia.io/Directory pkg_dir_handle,string:4096 relative_url,server_end:fuchsia.component.test/Realm realm_server_end,server_end:fuchsia.component.test/Builder builder_server_end) -> (fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory.CreateFromRelativeUrl"
+        "name": "fuchsia.component.test/RealmBuilderFactory.CreateFromRelativeUrl",
+        "type": "(fuchsia.io/Directory pkg_dir_handle,string:4096 relative_url,server_end:fuchsia.component.test/Realm realm_server_end,server_end:fuchsia.component.test/Builder builder_server_end) -> (fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result result)"
     },
     {
         "kind": "protocol",
@@ -389,14 +389,14 @@
         "name": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result.err"
+        "name": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result.response"
+        "name": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Result.response",
+        "type": "fuchsia.component.test/RealmBuilderFactory_CreateFromRelativeUrl_Response"
     },
     {
         "kind": "union",
@@ -408,14 +408,14 @@
         "name": "fuchsia.component.test/RealmBuilderFactory_Create_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory_Create_Result.err"
+        "name": "fuchsia.component.test/RealmBuilderFactory_Create_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderFactory_Create_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/RealmBuilderFactory_Create_Result.response"
+        "name": "fuchsia.component.test/RealmBuilderFactory_Create_Result.response",
+        "type": "fuchsia.component.test/RealmBuilderFactory_Create_Response"
     },
     {
         "kind": "union",
@@ -427,14 +427,14 @@
         "name": "fuchsia.component.test/Realm_AddChildFromDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddChildFromDecl_Result.err"
+        "name": "fuchsia.component.test/Realm_AddChildFromDecl_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_AddChildFromDecl_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddChildFromDecl_Result.response"
+        "name": "fuchsia.component.test/Realm_AddChildFromDecl_Result.response",
+        "type": "fuchsia.component.test/Realm_AddChildFromDecl_Response"
     },
     {
         "kind": "union",
@@ -446,14 +446,14 @@
         "name": "fuchsia.component.test/Realm_AddChildRealm_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddChildRealm_Result.err"
+        "name": "fuchsia.component.test/Realm_AddChildRealm_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_AddChildRealm_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddChildRealm_Result.response"
+        "name": "fuchsia.component.test/Realm_AddChildRealm_Result.response",
+        "type": "fuchsia.component.test/Realm_AddChildRealm_Response"
     },
     {
         "kind": "union",
@@ -465,14 +465,14 @@
         "name": "fuchsia.component.test/Realm_AddChild_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddChild_Result.err"
+        "name": "fuchsia.component.test/Realm_AddChild_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_AddChild_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddChild_Result.response"
+        "name": "fuchsia.component.test/Realm_AddChild_Result.response",
+        "type": "fuchsia.component.test/Realm_AddChild_Response"
     },
     {
         "kind": "union",
@@ -484,14 +484,14 @@
         "name": "fuchsia.component.test/Realm_AddLegacyChild_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddLegacyChild_Result.err"
+        "name": "fuchsia.component.test/Realm_AddLegacyChild_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_AddLegacyChild_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddLegacyChild_Result.response"
+        "name": "fuchsia.component.test/Realm_AddLegacyChild_Result.response",
+        "type": "fuchsia.component.test/Realm_AddLegacyChild_Response"
     },
     {
         "kind": "union",
@@ -503,14 +503,14 @@
         "name": "fuchsia.component.test/Realm_AddLocalChild_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddLocalChild_Result.err"
+        "name": "fuchsia.component.test/Realm_AddLocalChild_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_AddLocalChild_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddLocalChild_Result.response"
+        "name": "fuchsia.component.test/Realm_AddLocalChild_Result.response",
+        "type": "fuchsia.component.test/Realm_AddLocalChild_Response"
     },
     {
         "kind": "union",
@@ -522,14 +522,14 @@
         "name": "fuchsia.component.test/Realm_AddRoute_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddRoute_Result.err"
+        "name": "fuchsia.component.test/Realm_AddRoute_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_AddRoute_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_AddRoute_Result.response"
+        "name": "fuchsia.component.test/Realm_AddRoute_Result.response",
+        "type": "fuchsia.component.test/Realm_AddRoute_Response"
     },
     {
         "kind": "union",
@@ -537,23 +537,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.component.decl/Component",
         "kind": "struct/member",
-        "name": "fuchsia.component.test/Realm_GetComponentDecl_Response.component_decl"
+        "name": "fuchsia.component.test/Realm_GetComponentDecl_Response.component_decl",
+        "type": "fuchsia.component.decl/Component"
     },
     {
         "kind": "struct",
         "name": "fuchsia.component.test/Realm_GetComponentDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_GetComponentDecl_Result.err"
+        "name": "fuchsia.component.test/Realm_GetComponentDecl_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_GetComponentDecl_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_GetComponentDecl_Result.response"
+        "name": "fuchsia.component.test/Realm_GetComponentDecl_Result.response",
+        "type": "fuchsia.component.test/Realm_GetComponentDecl_Response"
     },
     {
         "kind": "union",
@@ -561,23 +561,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.component.decl/Component",
         "kind": "struct/member",
-        "name": "fuchsia.component.test/Realm_GetRealmDecl_Response.component_decl"
+        "name": "fuchsia.component.test/Realm_GetRealmDecl_Response.component_decl",
+        "type": "fuchsia.component.decl/Component"
     },
     {
         "kind": "struct",
         "name": "fuchsia.component.test/Realm_GetRealmDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_GetRealmDecl_Result.err"
+        "name": "fuchsia.component.test/Realm_GetRealmDecl_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_GetRealmDecl_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_GetRealmDecl_Result.response"
+        "name": "fuchsia.component.test/Realm_GetRealmDecl_Result.response",
+        "type": "fuchsia.component.test/Realm_GetRealmDecl_Response"
     },
     {
         "kind": "union",
@@ -589,14 +589,14 @@
         "name": "fuchsia.component.test/Realm_ReadOnlyDirectory_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReadOnlyDirectory_Result.err"
+        "name": "fuchsia.component.test/Realm_ReadOnlyDirectory_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_ReadOnlyDirectory_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReadOnlyDirectory_Result.response"
+        "name": "fuchsia.component.test/Realm_ReadOnlyDirectory_Result.response",
+        "type": "fuchsia.component.test/Realm_ReadOnlyDirectory_Response"
     },
     {
         "kind": "union",
@@ -608,14 +608,14 @@
         "name": "fuchsia.component.test/Realm_ReplaceComponentDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReplaceComponentDecl_Result.err"
+        "name": "fuchsia.component.test/Realm_ReplaceComponentDecl_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_ReplaceComponentDecl_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReplaceComponentDecl_Result.response"
+        "name": "fuchsia.component.test/Realm_ReplaceComponentDecl_Result.response",
+        "type": "fuchsia.component.test/Realm_ReplaceComponentDecl_Response"
     },
     {
         "kind": "union",
@@ -627,14 +627,14 @@
         "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Result.err"
+        "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_ReplaceConfigValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Result.response"
+        "name": "fuchsia.component.test/Realm_ReplaceConfigValue_Result.response",
+        "type": "fuchsia.component.test/Realm_ReplaceConfigValue_Response"
     },
     {
         "kind": "union",
@@ -646,14 +646,14 @@
         "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Response"
     },
     {
-        "declaration": "fuchsia.component.test/RealmBuilderError",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Result.err"
+        "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Result.err",
+        "type": "fuchsia.component.test/RealmBuilderError"
     },
     {
-        "declaration": "fuchsia.component.test/Realm_ReplaceRealmDecl_Response",
         "kind": "union/member",
-        "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Result.response"
+        "name": "fuchsia.component.test/Realm_ReplaceRealmDecl_Result.response",
+        "type": "fuchsia.component.test/Realm_ReplaceRealmDecl_Response"
     },
     {
         "kind": "union",
@@ -661,38 +661,38 @@
         "strictness": "strict"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Service.as"
+        "name": "fuchsia.component.test/Service.as",
+        "type": "string:100"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Service.name"
+        "name": "fuchsia.component.test/Service.name",
+        "type": "string:100"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Service.path"
+        "name": "fuchsia.component.test/Service.path",
+        "type": "string:1024"
     },
     {
         "kind": "table",
         "name": "fuchsia.component.test/Service"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Storage.as"
+        "name": "fuchsia.component.test/Storage.as",
+        "type": "string:100"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Storage.name"
+        "name": "fuchsia.component.test/Storage.name",
+        "type": "string:100"
     },
     {
-        "declaration": "string:100",
         "kind": "table/member",
-        "name": "fuchsia.component.test/Storage.path"
+        "name": "fuchsia.component.test/Storage.path",
+        "type": "string:100"
     },
     {
         "kind": "table",

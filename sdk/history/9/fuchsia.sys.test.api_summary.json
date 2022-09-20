@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.sys.test/CacheControl.Clear"
+        "name": "fuchsia.sys.test/CacheControl.Clear",
+        "type": "() -> ()"
     },
     {
         "kind": "protocol",

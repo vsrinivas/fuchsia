@@ -1,22 +1,22 @@
 [
     {
-        "declaration": "(fuchsia.ui.test.scene/ControllerAttachClientViewRequest payload) -> (uint64 view_ref_koid)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.scene/Controller.AttachClientView"
+        "name": "fuchsia.ui.test.scene/Controller.AttachClientView",
+        "type": "(fuchsia.ui.test.scene/ControllerAttachClientViewRequest payload) -> (uint64 view_ref_koid)"
     },
     {
-        "declaration": "(server_end:fuchsia.ui.observation.geometry/ViewTreeWatcher watcher) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.scene/Controller.RegisterViewTreeWatcher"
+        "name": "fuchsia.ui.test.scene/Controller.RegisterViewTreeWatcher",
+        "type": "(server_end:fuchsia.ui.observation.geometry/ViewTreeWatcher watcher) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.scene/Controller"
     },
     {
-        "declaration": "fuchsia.ui.app/ViewProvider",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.scene/ControllerAttachClientViewRequest.view_provider"
+        "name": "fuchsia.ui.test.scene/ControllerAttachClientViewRequest.view_provider",
+        "type": "fuchsia.ui.app/ViewProvider"
     },
     {
         "kind": "table",

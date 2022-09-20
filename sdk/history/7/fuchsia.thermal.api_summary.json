@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(uint32 state) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.thermal/Actor.SetThermalState"
+        "name": "fuchsia.thermal/Actor.SetThermalState",
+        "type": "(uint32 state) -> ()"
     },
     {
         "kind": "protocol",
@@ -19,33 +19,33 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.thermal/ActorType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(string:8 client_type,server_end:fuchsia.thermal/ClientStateWatcher watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.thermal/ClientStateConnector.Connect"
+        "name": "fuchsia.thermal/ClientStateConnector.Connect",
+        "type": "(string:8 client_type,server_end:fuchsia.thermal/ClientStateWatcher watcher)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.thermal/ClientStateConnector"
     },
     {
-        "declaration": "() -> (uint64 state)",
         "kind": "protocol/member",
-        "name": "fuchsia.thermal/ClientStateWatcher.Watch"
+        "name": "fuchsia.thermal/ClientStateWatcher.Watch",
+        "type": "() -> (uint64 state)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.thermal/ClientStateWatcher"
     },
     {
-        "declaration": "(client_end:fuchsia.thermal/Actor actor,fuchsia.thermal/ActorType actor_type,vector<fuchsia.thermal/TripPoint>:100 trip_points) -> (fuchsia.thermal/Controller_Subscribe_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.thermal/Controller.Subscribe"
+        "name": "fuchsia.thermal/Controller.Subscribe",
+        "type": "(client_end:fuchsia.thermal/Actor actor,fuchsia.thermal/ActorType actor_type,vector<fuchsia.thermal/TripPoint>:100 trip_points) -> (fuchsia.thermal/Controller_Subscribe_Result result)"
     },
     {
         "kind": "protocol",
@@ -56,14 +56,14 @@
         "name": "fuchsia.thermal/Controller_Subscribe_Response"
     },
     {
-        "declaration": "fuchsia.thermal/Error",
         "kind": "union/member",
-        "name": "fuchsia.thermal/Controller_Subscribe_Result.err"
+        "name": "fuchsia.thermal/Controller_Subscribe_Result.err",
+        "type": "fuchsia.thermal/Error"
     },
     {
-        "declaration": "fuchsia.thermal/Controller_Subscribe_Response",
         "kind": "union/member",
-        "name": "fuchsia.thermal/Controller_Subscribe_Result.response"
+        "name": "fuchsia.thermal/Controller_Subscribe_Result.response",
+        "type": "fuchsia.thermal/Controller_Subscribe_Response"
     },
     {
         "kind": "union",
@@ -81,32 +81,32 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.thermal/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.thermal/MAX_THERMAL_LOAD",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.thermal/MAX_TRIP_POINT_COUNT",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.thermal/TripPoint.activate_at"
+        "name": "fuchsia.thermal/TripPoint.activate_at",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.thermal/TripPoint.deactivate_below"
+        "name": "fuchsia.thermal/TripPoint.deactivate_below",
+        "type": "uint32"
     },
     {
         "kind": "struct",

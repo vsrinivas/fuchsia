@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.metrics/CustomEventValue.dimension_name"
+        "name": "fuchsia.metrics/CustomEventValue.dimension_name",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.metrics/Value",
         "kind": "struct/member",
-        "name": "fuchsia.metrics/CustomEventValue.value"
+        "name": "fuchsia.metrics/CustomEventValue.value",
+        "type": "fuchsia.metrics/Value"
     },
     {
         "kind": "struct",
@@ -39,123 +39,123 @@
         "value": "4"
     },
     {
-        "declaration": "int32",
         "kind": "enum",
         "name": "fuchsia.metrics/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "int32"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.metrics/HistogramBucket.count"
+        "name": "fuchsia.metrics/HistogramBucket.count",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.metrics/HistogramBucket.index"
+        "name": "fuchsia.metrics/HistogramBucket.index",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.metrics/HistogramBucket"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.metrics/MAX_BATCHED_EVENTS",
+        "type": "uint32",
         "value": "500"
     },
     {
-        "declaration": "int64",
         "kind": "const",
         "name": "fuchsia.metrics/MAX_BYTES_PER_EVENT",
+        "type": "int64",
         "value": "102400"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.metrics/MAX_EXPERIMENT_IDS",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.metrics/MAX_HISTOGRAM_BUCKETS",
+        "type": "uint32",
         "value": "500"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.metrics/MAX_METRIC_DIMENSIONS",
+        "type": "uint32",
         "value": "10"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.metrics/MAX_STRING_EVENT_SIZE",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "vector<uint32>:10",
         "kind": "struct/member",
-        "name": "fuchsia.metrics/MetricEvent.event_codes"
+        "name": "fuchsia.metrics/MetricEvent.event_codes",
+        "type": "vector<uint32>:10"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.metrics/MetricEvent.metric_id"
+        "name": "fuchsia.metrics/MetricEvent.metric_id",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventPayload",
         "kind": "struct/member",
-        "name": "fuchsia.metrics/MetricEvent.payload"
+        "name": "fuchsia.metrics/MetricEvent.payload",
+        "type": "fuchsia.metrics/MetricEventPayload"
     },
     {
         "kind": "struct",
         "name": "fuchsia.metrics/MetricEvent"
     },
     {
-        "declaration": "(uint32 metric_id,vector<fuchsia.metrics/CustomEventValue> event_values) -> (fuchsia.metrics/MetricEventLogger_LogCustomEvent_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.metrics/MetricEventLogger.LogCustomEvent"
+        "name": "fuchsia.metrics/MetricEventLogger.LogCustomEvent",
+        "type": "(uint32 metric_id,vector<fuchsia.metrics/CustomEventValue> event_values) -> (fuchsia.metrics/MetricEventLogger_LogCustomEvent_Result result)"
     },
     {
-        "declaration": "(uint32 metric_id,int64 value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogInteger_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.metrics/MetricEventLogger.LogInteger"
+        "name": "fuchsia.metrics/MetricEventLogger.LogInteger",
+        "type": "(uint32 metric_id,int64 value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogInteger_Result result)"
     },
     {
-        "declaration": "(uint32 metric_id,vector<fuchsia.metrics/HistogramBucket>:500 histogram,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.metrics/MetricEventLogger.LogIntegerHistogram"
+        "name": "fuchsia.metrics/MetricEventLogger.LogIntegerHistogram",
+        "type": "(uint32 metric_id,vector<fuchsia.metrics/HistogramBucket>:500 histogram,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result result)"
     },
     {
-        "declaration": "(vector<fuchsia.metrics/MetricEvent>:500 events) -> (fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.metrics/MetricEventLogger.LogMetricEvents"
+        "name": "fuchsia.metrics/MetricEventLogger.LogMetricEvents",
+        "type": "(vector<fuchsia.metrics/MetricEvent>:500 events) -> (fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result result)"
     },
     {
-        "declaration": "(uint32 metric_id,uint64 count,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogOccurrence_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.metrics/MetricEventLogger.LogOccurrence"
+        "name": "fuchsia.metrics/MetricEventLogger.LogOccurrence",
+        "type": "(uint32 metric_id,uint64 count,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogOccurrence_Result result)"
     },
     {
-        "declaration": "(uint32 metric_id,string:256 string_value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogString_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.metrics/MetricEventLogger.LogString"
+        "name": "fuchsia.metrics/MetricEventLogger.LogString",
+        "type": "(uint32 metric_id,string:256 string_value,vector<uint32>:10 event_codes) -> (fuchsia.metrics/MetricEventLogger_LogString_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.metrics/MetricEventLogger"
     },
     {
-        "declaration": "(fuchsia.metrics/ProjectSpec project_spec,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLogger"
+        "name": "fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLogger",
+        "type": "(fuchsia.metrics/ProjectSpec project_spec,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result result)"
     },
     {
-        "declaration": "(fuchsia.metrics/ProjectSpec project_spec,vector<uint32>:100 experiment_ids,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLoggerWithExperiments"
+        "name": "fuchsia.metrics/MetricEventLoggerFactory.CreateMetricEventLoggerWithExperiments",
+        "type": "(fuchsia.metrics/ProjectSpec project_spec,vector<uint32>:100 experiment_ids,server_end:fuchsia.metrics/MetricEventLogger logger) -> (fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result result)"
     },
     {
         "kind": "protocol",
@@ -166,14 +166,14 @@
         "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Response"
     },
     {
-        "declaration": "fuchsia.metrics/Error",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result.err"
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result.err",
+        "type": "fuchsia.metrics/Error"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Response",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result.response"
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Result.response",
+        "type": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLoggerWithExperiments_Response"
     },
     {
         "kind": "union",
@@ -185,14 +185,14 @@
         "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Response"
     },
     {
-        "declaration": "fuchsia.metrics/Error",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result.err"
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result.err",
+        "type": "fuchsia.metrics/Error"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Response",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result.response"
+        "name": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Result.response",
+        "type": "fuchsia.metrics/MetricEventLoggerFactory_CreateMetricEventLogger_Response"
     },
     {
         "kind": "union",
@@ -204,14 +204,14 @@
         "name": "fuchsia.metrics/MetricEventLogger_LogCustomEvent_Response"
     },
     {
-        "declaration": "fuchsia.metrics/Error",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogCustomEvent_Result.err"
+        "name": "fuchsia.metrics/MetricEventLogger_LogCustomEvent_Result.err",
+        "type": "fuchsia.metrics/Error"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventLogger_LogCustomEvent_Response",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogCustomEvent_Result.response"
+        "name": "fuchsia.metrics/MetricEventLogger_LogCustomEvent_Result.response",
+        "type": "fuchsia.metrics/MetricEventLogger_LogCustomEvent_Response"
     },
     {
         "kind": "union",
@@ -223,14 +223,14 @@
         "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Response"
     },
     {
-        "declaration": "fuchsia.metrics/Error",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result.err"
+        "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result.err",
+        "type": "fuchsia.metrics/Error"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Response",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result.response"
+        "name": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Result.response",
+        "type": "fuchsia.metrics/MetricEventLogger_LogIntegerHistogram_Response"
     },
     {
         "kind": "union",
@@ -242,14 +242,14 @@
         "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Response"
     },
     {
-        "declaration": "fuchsia.metrics/Error",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Result.err"
+        "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Result.err",
+        "type": "fuchsia.metrics/Error"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventLogger_LogInteger_Response",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Result.response"
+        "name": "fuchsia.metrics/MetricEventLogger_LogInteger_Result.response",
+        "type": "fuchsia.metrics/MetricEventLogger_LogInteger_Response"
     },
     {
         "kind": "union",
@@ -261,14 +261,14 @@
         "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Response"
     },
     {
-        "declaration": "fuchsia.metrics/Error",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result.err"
+        "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result.err",
+        "type": "fuchsia.metrics/Error"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Response",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result.response"
+        "name": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Result.response",
+        "type": "fuchsia.metrics/MetricEventLogger_LogMetricEvents_Response"
     },
     {
         "kind": "union",
@@ -280,14 +280,14 @@
         "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Response"
     },
     {
-        "declaration": "fuchsia.metrics/Error",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Result.err"
+        "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Result.err",
+        "type": "fuchsia.metrics/Error"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Response",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Result.response"
+        "name": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Result.response",
+        "type": "fuchsia.metrics/MetricEventLogger_LogOccurrence_Response"
     },
     {
         "kind": "union",
@@ -299,14 +299,14 @@
         "name": "fuchsia.metrics/MetricEventLogger_LogString_Response"
     },
     {
-        "declaration": "fuchsia.metrics/Error",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogString_Result.err"
+        "name": "fuchsia.metrics/MetricEventLogger_LogString_Result.err",
+        "type": "fuchsia.metrics/Error"
     },
     {
-        "declaration": "fuchsia.metrics/MetricEventLogger_LogString_Response",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventLogger_LogString_Result.response"
+        "name": "fuchsia.metrics/MetricEventLogger_LogString_Result.response",
+        "type": "fuchsia.metrics/MetricEventLogger_LogString_Response"
     },
     {
         "kind": "union",
@@ -314,24 +314,24 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint64",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventPayload.count"
+        "name": "fuchsia.metrics/MetricEventPayload.count",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<fuchsia.metrics/HistogramBucket>:500",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventPayload.histogram"
+        "name": "fuchsia.metrics/MetricEventPayload.histogram",
+        "type": "vector<fuchsia.metrics/HistogramBucket>:500"
     },
     {
-        "declaration": "int64",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventPayload.integer_value"
+        "name": "fuchsia.metrics/MetricEventPayload.integer_value",
+        "type": "int64"
     },
     {
-        "declaration": "string:256",
         "kind": "union/member",
-        "name": "fuchsia.metrics/MetricEventPayload.string_value"
+        "name": "fuchsia.metrics/MetricEventPayload.string_value",
+        "type": "string:256"
     },
     {
         "kind": "union",
@@ -339,38 +339,38 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.metrics/ProjectSpec.customer_id"
+        "name": "fuchsia.metrics/ProjectSpec.customer_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.metrics/ProjectSpec.project_id"
+        "name": "fuchsia.metrics/ProjectSpec.project_id",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.metrics/ProjectSpec"
     },
     {
-        "declaration": "float64",
         "kind": "union/member",
-        "name": "fuchsia.metrics/Value.double_value"
+        "name": "fuchsia.metrics/Value.double_value",
+        "type": "float64"
     },
     {
-        "declaration": "uint32",
         "kind": "union/member",
-        "name": "fuchsia.metrics/Value.index_value"
+        "name": "fuchsia.metrics/Value.index_value",
+        "type": "uint32"
     },
     {
-        "declaration": "int64",
         "kind": "union/member",
-        "name": "fuchsia.metrics/Value.int_value"
+        "name": "fuchsia.metrics/Value.int_value",
+        "type": "int64"
     },
     {
-        "declaration": "string",
         "kind": "union/member",
-        "name": "fuchsia.metrics/Value.string_value"
+        "name": "fuchsia.metrics/Value.string_value",
+        "type": "string"
     },
     {
         "kind": "union",

@@ -1,46 +1,46 @@
 [
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.input.virtualkeyboard/Controller.RequestHide"
+        "name": "fuchsia.input.virtualkeyboard/Controller.RequestHide",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.input.virtualkeyboard/Controller.RequestShow"
+        "name": "fuchsia.input.virtualkeyboard/Controller.RequestShow",
+        "type": "()"
     },
     {
-        "declaration": "(fuchsia.input.virtualkeyboard/TextType text_type)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.virtualkeyboard/Controller.SetTextType"
+        "name": "fuchsia.input.virtualkeyboard/Controller.SetTextType",
+        "type": "(fuchsia.input.virtualkeyboard/TextType text_type)"
     },
     {
-        "declaration": "() -> (bool is_visible)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.virtualkeyboard/Controller.WatchVisibility"
+        "name": "fuchsia.input.virtualkeyboard/Controller.WatchVisibility",
+        "type": "() -> (bool is_visible)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.input.virtualkeyboard/Controller"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewRef view_ref,fuchsia.input.virtualkeyboard/TextType text_type,server_end:fuchsia.input.virtualkeyboard/Controller controller_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.virtualkeyboard/ControllerCreator.Create"
+        "name": "fuchsia.input.virtualkeyboard/ControllerCreator.Create",
+        "type": "(fuchsia.ui.views/ViewRef view_ref,fuchsia.input.virtualkeyboard/TextType text_type,server_end:fuchsia.input.virtualkeyboard/Controller controller_request)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.input.virtualkeyboard/ControllerCreator"
     },
     {
-        "declaration": "(bool is_visible,fuchsia.input.virtualkeyboard/VisibilityChangeReason reason) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.input.virtualkeyboard/Manager.Notify"
+        "name": "fuchsia.input.virtualkeyboard/Manager.Notify",
+        "type": "(bool is_visible,fuchsia.input.virtualkeyboard/VisibilityChangeReason reason) -> ()"
     },
     {
-        "declaration": "() -> (fuchsia.input.virtualkeyboard/TextType text_type,bool is_visible)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.virtualkeyboard/Manager.WatchTypeAndVisibility"
+        "name": "fuchsia.input.virtualkeyboard/Manager.WatchTypeAndVisibility",
+        "type": "() -> (fuchsia.input.virtualkeyboard/TextType text_type,bool is_visible)"
     },
     {
         "kind": "protocol",
@@ -62,10 +62,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.virtualkeyboard/TextType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -78,10 +78,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.virtualkeyboard/VisibilityChangeReason",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "library",

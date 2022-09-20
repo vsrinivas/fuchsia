@@ -1,67 +1,67 @@
 [
     {
-        "declaration": "(uint64 size) -> (int32 res,uint64 paddr,zx/handle:<VMO,optional> vmo)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.AllocateBlock"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.AllocateBlock",
+        "type": "(uint64 size) -> (int32 res,uint64 paddr,zx/handle:<VMO,optional> vmo)"
     },
     {
-        "declaration": "(uint64 offset,uint64 size) -> (int32 res,zx/handle:<VMO,optional> vmo)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.ClaimSharedBlock"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.ClaimSharedBlock",
+        "type": "(uint64 offset,uint64 size) -> (int32 res,zx/handle:<VMO,optional> vmo)"
     },
     {
-        "declaration": "(uint64 paddr) -> (int32 res)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.DeallocateBlock"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.DeallocateBlock",
+        "type": "(uint64 paddr) -> (int32 res)"
     },
     {
-        "declaration": "(fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage ping) -> (int32 res,fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage ping)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.Ping"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.Ping",
+        "type": "(fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage ping) -> (int32 res,fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage ping)"
     },
     {
-        "declaration": "(uint64 offset) -> (int32 res)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.UnclaimSharedBlock"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver.UnclaimSharedBlock",
+        "type": "(uint64 offset) -> (int32 res)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriver"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data0"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data0",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data1"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data1",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data2"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data2",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data3"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.data3",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.metadata"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.metadata",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.offset"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.offset",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.size"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverPingMessage.size",
+        "type": "uint64"
     },
     {
         "kind": "struct",
@@ -73,34 +73,34 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.hardware.goldfish/AddressSpaceChildDriverType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.hardware.goldfish/AddressSpaceChildDriverType type,server_end:fuchsia.hardware.goldfish/AddressSpaceChildDriver req)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/AddressSpaceDevice.OpenChildDriver"
+        "name": "fuchsia.hardware.goldfish/AddressSpaceDevice.OpenChildDriver",
+        "type": "(fuchsia.hardware.goldfish/AddressSpaceChildDriverType type,server_end:fuchsia.hardware.goldfish/AddressSpaceChildDriver req)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.goldfish/AddressSpaceDevice"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.id"
+        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.memory_property"
+        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.memory_property",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.hardware.goldfish/BufferHandleType",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.type"
+        "name": "fuchsia.hardware.goldfish/BufferHandleInfo.type",
+        "type": "fuchsia.hardware.goldfish/BufferHandleType"
     },
     {
         "kind": "table",
@@ -122,10 +122,10 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.hardware.goldfish/BufferHandleType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -148,58 +148,58 @@
         "value": "6408"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.hardware.goldfish/ColorBufferFormatType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(zx/handle:VMO vmo,fuchsia.hardware.goldfish/CreateBuffer2Params create_params) -> (fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateBuffer2"
+        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateBuffer2",
+        "type": "(zx/handle:VMO vmo,fuchsia.hardware.goldfish/CreateBuffer2Params create_params) -> (fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result result)"
     },
     {
-        "declaration": "(zx/handle:VMO vmo,fuchsia.hardware.goldfish/CreateColorBuffer2Params create_params) -> (int32 res,int32 hw_address_page_offset)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateColorBuffer2"
+        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateColorBuffer2",
+        "type": "(zx/handle:VMO vmo,fuchsia.hardware.goldfish/CreateColorBuffer2Params create_params) -> (int32 res,int32 hw_address_page_offset)"
     },
     {
-        "declaration": "(zx/handle:EVENTPAIR event) -> (fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateSyncFence"
+        "name": "fuchsia.hardware.goldfish/ControlDevice.CreateSyncFence",
+        "type": "(zx/handle:EVENTPAIR event) -> (fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result result)"
     },
     {
-        "declaration": "(zx/handle:VMO vmo) -> (int32 res,uint32 id,fuchsia.hardware.goldfish/BufferHandleType type)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice.GetBufferHandle"
+        "name": "fuchsia.hardware.goldfish/ControlDevice.GetBufferHandle",
+        "type": "(zx/handle:VMO vmo) -> (int32 res,uint32 id,fuchsia.hardware.goldfish/BufferHandleType type)"
     },
     {
-        "declaration": "(zx/handle:VMO vmo) -> (fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice.GetBufferHandleInfo"
+        "name": "fuchsia.hardware.goldfish/ControlDevice.GetBufferHandleInfo",
+        "type": "(zx/handle:VMO vmo) -> (fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.goldfish/ControlDevice"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response.hw_address_page_offset"
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response.hw_address_page_offset",
+        "type": "int32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result.err"
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result.response"
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Result.response",
+        "type": "fuchsia.hardware.goldfish/ControlDevice_CreateBuffer2_Response"
     },
     {
         "kind": "union",
@@ -211,14 +211,14 @@
         "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result.err"
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result.response"
+        "name": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Result.response",
+        "type": "fuchsia.hardware.goldfish/ControlDevice_CreateSyncFence_Response"
     },
     {
         "kind": "union",
@@ -226,23 +226,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.hardware.goldfish/BufferHandleInfo",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response.info"
+        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response.info",
+        "type": "fuchsia.hardware.goldfish/BufferHandleInfo"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result.err"
+        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result.response"
+        "name": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Result.response",
+        "type": "fuchsia.hardware.goldfish/ControlDevice_GetBufferHandleInfo_Response"
     },
     {
         "kind": "union",
@@ -250,139 +250,139 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.memory_property"
+        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.memory_property",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.physical_address"
+        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.physical_address",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.size"
+        "name": "fuchsia.hardware.goldfish/CreateBuffer2Params.size",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.goldfish/CreateBuffer2Params"
     },
     {
-        "declaration": "fuchsia.hardware.goldfish/ColorBufferFormatType",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.format"
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.format",
+        "type": "fuchsia.hardware.goldfish/ColorBufferFormatType"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.height"
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.memory_property"
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.memory_property",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.physical_address"
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.physical_address",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.width"
+        "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params.width",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.goldfish/CreateColorBuffer2Params"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.goldfish/MEMORY_PROPERTY_DEVICE_LOCAL",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.goldfish/MEMORY_PROPERTY_HOST_VISIBLE",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "(uint64 count,uint64 offset,uint64 read_count,uint64 read_offset) -> (int32 res,uint64 actual)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/Pipe.DoCall"
+        "name": "fuchsia.hardware.goldfish/Pipe.DoCall",
+        "type": "(uint64 count,uint64 offset,uint64 read_count,uint64 read_offset) -> (int32 res,uint64 actual)"
     },
     {
-        "declaration": "() -> (int32 res,zx/handle:<VMO,optional> vmo)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/Pipe.GetBuffer"
+        "name": "fuchsia.hardware.goldfish/Pipe.GetBuffer",
+        "type": "() -> (int32 res,zx/handle:<VMO,optional> vmo)"
     },
     {
-        "declaration": "(uint64 count,uint64 offset) -> (int32 res,uint64 actual)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/Pipe.Read"
+        "name": "fuchsia.hardware.goldfish/Pipe.Read",
+        "type": "(uint64 count,uint64 offset) -> (int32 res,uint64 actual)"
     },
     {
-        "declaration": "(uint64 size) -> (int32 res)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/Pipe.SetBufferSize"
+        "name": "fuchsia.hardware.goldfish/Pipe.SetBufferSize",
+        "type": "(uint64 size) -> (int32 res)"
     },
     {
-        "declaration": "(zx/handle:EVENT event)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/Pipe.SetEvent"
+        "name": "fuchsia.hardware.goldfish/Pipe.SetEvent",
+        "type": "(zx/handle:EVENT event)"
     },
     {
-        "declaration": "(uint64 count,uint64 offset) -> (int32 res,uint64 actual)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/Pipe.Write"
+        "name": "fuchsia.hardware.goldfish/Pipe.Write",
+        "type": "(uint64 count,uint64 offset) -> (int32 res,uint64 actual)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.goldfish/Pipe"
     },
     {
-        "declaration": "(server_end:fuchsia.hardware.goldfish/Pipe pipe_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/PipeDevice.OpenPipe"
+        "name": "fuchsia.hardware.goldfish/PipeDevice.OpenPipe",
+        "type": "(server_end:fuchsia.hardware.goldfish/Pipe pipe_request)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.goldfish/PipeDevice"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.goldfish/SIGNAL_HANGUP",
+        "type": "uint32",
         "value": "67108864"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.goldfish/SIGNAL_READABLE",
+        "type": "uint32",
         "value": "16777216"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.goldfish/SIGNAL_WRITABLE",
+        "type": "uint32",
         "value": "33554432"
     },
     {
-        "declaration": "(server_end:fuchsia.hardware.goldfish/SyncTimeline timeline_req) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/SyncDevice.CreateTimeline"
+        "name": "fuchsia.hardware.goldfish/SyncDevice.CreateTimeline",
+        "type": "(server_end:fuchsia.hardware.goldfish/SyncTimeline timeline_req) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.goldfish/SyncDevice"
     },
     {
-        "declaration": "(uint64 host_glsync_handle,uint64 host_syncthread_handle,zx/handle:EVENTPAIR event)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.goldfish/SyncTimeline.TriggerHostWait"
+        "name": "fuchsia.hardware.goldfish/SyncTimeline.TriggerHostWait",
+        "type": "(uint64 host_glsync_handle,uint64 host_syncthread_handle,zx/handle:EVENTPAIR event)"
     },
     {
         "kind": "protocol",

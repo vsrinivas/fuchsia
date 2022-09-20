@@ -1,114 +1,114 @@
 [
     {
-        "declaration": "(server_end:fuchsia.hardware.audio.signalprocessing/SignalProcessing protocol)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Connector.SignalProcessingConnect"
+        "name": "fuchsia.hardware.audio.signalprocessing/Connector.SignalProcessingConnect",
+        "type": "(server_end:fuchsia.hardware.audio.signalprocessing/SignalProcessing protocol)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.audio.signalprocessing/Connector"
     },
     {
-        "declaration": "vector<fuchsia.hardware.audio.signalprocessing/DynamicsBand>:64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Dynamics.bands"
+        "name": "fuchsia.hardware.audio.signalprocessing/Dynamics.bands",
+        "type": "vector<fuchsia.hardware.audio.signalprocessing/DynamicsBand>:64"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Dynamics.supported_controls"
+        "name": "fuchsia.hardware.audio.signalprocessing/Dynamics.supported_controls",
+        "type": "fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.audio.signalprocessing/Dynamics"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBand.id"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBand.id",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBand"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.attack"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.attack",
+        "type": "int64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.id"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.id",
+        "type": "uint64"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.input_gain_db"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.input_gain_db",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.knee_width_db"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.knee_width_db",
+        "type": "float32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/LevelType",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.level_type"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.level_type",
+        "type": "fuchsia.hardware.audio.signalprocessing/LevelType"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.linked_channels"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.linked_channels",
+        "type": "bool"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.lookahead"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.lookahead",
+        "type": "int64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.max_frequency"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.max_frequency",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.min_frequency"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.min_frequency",
+        "type": "uint32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.output_gain_db"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.output_gain_db",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.ratio"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.ratio",
+        "type": "float32"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.release"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.release",
+        "type": "int64"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.threshold_db"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.threshold_db",
+        "type": "float32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/ThresholdType",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.threshold_type"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState.threshold_type",
+        "type": "fuchsia.hardware.audio.signalprocessing/ThresholdType"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.audio.signalprocessing/DynamicsBandState"
     },
     {
-        "declaration": "vector<fuchsia.hardware.audio.signalprocessing/DynamicsBandState>:64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsElementState.band_states"
+        "name": "fuchsia.hardware.audio.signalprocessing/DynamicsElementState.band_states",
+        "type": "vector<fuchsia.hardware.audio.signalprocessing/DynamicsBandState>:64"
     },
     {
         "kind": "table",
@@ -160,68 +160,68 @@
         "value": "256"
     },
     {
-        "declaration": "uint64",
         "kind": "bits",
         "name": "fuchsia.hardware.audio.signalprocessing/DynamicsSupportedControls",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EdgePair.processing_element_id_from"
+        "name": "fuchsia.hardware.audio.signalprocessing/EdgePair.processing_element_id_from",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EdgePair.processing_element_id_to"
+        "name": "fuchsia.hardware.audio.signalprocessing/EdgePair.processing_element_id_to",
+        "type": "uint64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.audio.signalprocessing/EdgePair"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Element.can_disable"
+        "name": "fuchsia.hardware.audio.signalprocessing/Element.can_disable",
+        "type": "bool"
     },
     {
-        "declaration": "string:256",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Element.description"
+        "name": "fuchsia.hardware.audio.signalprocessing/Element.description",
+        "type": "string:256"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Element.id"
+        "name": "fuchsia.hardware.audio.signalprocessing/Element.id",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/ElementType",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Element.type"
+        "name": "fuchsia.hardware.audio.signalprocessing/Element.type",
+        "type": "fuchsia.hardware.audio.signalprocessing/ElementType"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Element.type_specific"
+        "name": "fuchsia.hardware.audio.signalprocessing/Element.type_specific",
+        "type": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.audio.signalprocessing/Element"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/ElementState.enabled"
+        "name": "fuchsia.hardware.audio.signalprocessing/ElementState.enabled",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/Latency",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/ElementState.latency"
+        "name": "fuchsia.hardware.audio.signalprocessing/ElementState.latency",
+        "type": "fuchsia.hardware.audio.signalprocessing/Latency"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/ElementState.type_specific"
+        "name": "fuchsia.hardware.audio.signalprocessing/ElementState.type_specific",
+        "type": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState"
     },
     {
         "kind": "table",
@@ -283,93 +283,93 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.hardware.audio.signalprocessing/ElementType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<fuchsia.hardware.audio.signalprocessing/EqualizerBand>:64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.bands"
+        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.bands",
+        "type": "vector<fuchsia.hardware.audio.signalprocessing/EqualizerBand>:64"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.can_disable_bands"
+        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.can_disable_bands",
+        "type": "bool"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.max_frequency"
+        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.max_frequency",
+        "type": "uint32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.max_gain_db"
+        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.max_gain_db",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.max_q"
+        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.max_q",
+        "type": "float32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.min_frequency"
+        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.min_frequency",
+        "type": "uint32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.min_gain_db"
+        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.min_gain_db",
+        "type": "float32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.supported_controls"
+        "name": "fuchsia.hardware.audio.signalprocessing/Equalizer.supported_controls",
+        "type": "fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.audio.signalprocessing/Equalizer"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBand.id"
+        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBand.id",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBand"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.enabled"
+        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.enabled",
+        "type": "bool"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.frequency"
+        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.frequency",
+        "type": "uint32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.gain_db"
+        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.gain_db",
+        "type": "float32"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.id"
+        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.id",
+        "type": "uint64"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.q"
+        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.q",
+        "type": "float32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/EqualizerBandType",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.type"
+        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandState.type",
+        "type": "fuchsia.hardware.audio.signalprocessing/EqualizerBandType"
     },
     {
         "kind": "table",
@@ -406,15 +406,15 @@
         "value": "1"
     },
     {
-        "declaration": "uint64",
         "kind": "enum",
         "name": "fuchsia.hardware.audio.signalprocessing/EqualizerBandType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<fuchsia.hardware.audio.signalprocessing/EqualizerBandState>:64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerElementState.bands_state"
+        "name": "fuchsia.hardware.audio.signalprocessing/EqualizerElementState.bands_state",
+        "type": "vector<fuchsia.hardware.audio.signalprocessing/EqualizerBandState>:64"
     },
     {
         "kind": "table",
@@ -461,35 +461,35 @@
         "value": "4"
     },
     {
-        "declaration": "uint64",
         "kind": "bits",
         "name": "fuchsia.hardware.audio.signalprocessing/EqualizerSupportedControls",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/GainDomain",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Gain.domain"
+        "name": "fuchsia.hardware.audio.signalprocessing/Gain.domain",
+        "type": "fuchsia.hardware.audio.signalprocessing/GainDomain"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Gain.max_gain"
+        "name": "fuchsia.hardware.audio.signalprocessing/Gain.max_gain",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Gain.min_gain"
+        "name": "fuchsia.hardware.audio.signalprocessing/Gain.min_gain",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Gain.min_gain_step"
+        "name": "fuchsia.hardware.audio.signalprocessing/Gain.min_gain_step",
+        "type": "float32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/GainType",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Gain.type"
+        "name": "fuchsia.hardware.audio.signalprocessing/Gain.type",
+        "type": "fuchsia.hardware.audio.signalprocessing/GainType"
     },
     {
         "kind": "table",
@@ -511,15 +511,15 @@
         "value": "3"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.hardware.audio.signalprocessing/GainDomain",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint8"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/GainElementState.gain"
+        "name": "fuchsia.hardware.audio.signalprocessing/GainElementState.gain",
+        "type": "float32"
     },
     {
         "kind": "table",
@@ -536,20 +536,20 @@
         "value": "2"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.hardware.audio.signalprocessing/GainType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
-        "declaration": "uint32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Latency.latency_frames"
+        "name": "fuchsia.hardware.audio.signalprocessing/Latency.latency_frames",
+        "type": "uint32"
     },
     {
-        "declaration": "int64",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Latency.latency_time"
+        "name": "fuchsia.hardware.audio.signalprocessing/Latency.latency_time",
+        "type": "int64"
     },
     {
         "kind": "union",
@@ -567,84 +567,84 @@
         "value": "2"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.hardware.audio.signalprocessing/LevelType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.audio.signalprocessing/MAX_COUNT_DYNAMICS_BANDS",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.audio.signalprocessing/MAX_COUNT_EQUALIZER_BANDS",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.audio.signalprocessing/MAX_COUNT_PROCESSING_ELEMENTS",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.audio.signalprocessing/MAX_COUNT_PROCESSING_ELEMENTS_EDGE_PAIRS",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.audio.signalprocessing/MAX_COUNT_TOPOLOGIES",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.audio.signalprocessing/MAX_STRING_SIZE",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader.GetElements"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader.GetElements",
+        "type": "() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader.GetTopologies"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader.GetTopologies",
+        "type": "() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result result)"
     },
     {
-        "declaration": "(uint64 processing_element_id) -> (fuchsia.hardware.audio.signalprocessing/ElementState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader.WatchElementState"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader.WatchElementState",
+        "type": "(uint64 processing_element_id) -> (fuchsia.hardware.audio.signalprocessing/ElementState state)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.audio.signalprocessing/Reader"
     },
     {
-        "declaration": "vector<fuchsia.hardware.audio.signalprocessing/Element>:64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Response.processing_elements"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Response.processing_elements",
+        "type": "vector<fuchsia.hardware.audio.signalprocessing/Element>:64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result.err"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result.response"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result.response",
+        "type": "fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Response"
     },
     {
         "kind": "union",
@@ -652,23 +652,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<fuchsia.hardware.audio.signalprocessing/Topology>:64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Response.topologies"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Response.topologies",
+        "type": "vector<fuchsia.hardware.audio.signalprocessing/Topology>:64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result.err"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result.response"
+        "name": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result.response",
+        "type": "fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Response"
     },
     {
         "kind": "union",
@@ -676,29 +676,29 @@
         "strictness": "strict"
     },
     {
-        "declaration": "() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetElements"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetElements",
+        "type": "() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetElements_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetTopologies"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.GetTopologies",
+        "type": "() -> (fuchsia.hardware.audio.signalprocessing/Reader_GetTopologies_Result result)"
     },
     {
-        "declaration": "(uint64 processing_element_id,fuchsia.hardware.audio.signalprocessing/ElementState state) -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.SetElementState"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.SetElementState",
+        "type": "(uint64 processing_element_id,fuchsia.hardware.audio.signalprocessing/ElementState state) -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result result)"
     },
     {
-        "declaration": "(uint64 topology_id) -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.SetTopology"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.SetTopology",
+        "type": "(uint64 topology_id) -> (fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result result)"
     },
     {
-        "declaration": "(uint64 processing_element_id) -> (fuchsia.hardware.audio.signalprocessing/ElementState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.WatchElementState"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing.WatchElementState",
+        "type": "(uint64 processing_element_id) -> (fuchsia.hardware.audio.signalprocessing/ElementState state)"
     },
     {
         "kind": "protocol",
@@ -709,14 +709,14 @@
         "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result.err"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result.response"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Result.response",
+        "type": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetElementState_Response"
     },
     {
         "kind": "union",
@@ -728,14 +728,14 @@
         "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result.err"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result.response"
+        "name": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Result.response",
+        "type": "fuchsia.hardware.audio.signalprocessing/SignalProcessing_SetTopology_Response"
     },
     {
         "kind": "union",
@@ -753,44 +753,44 @@
         "value": "2"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.hardware.audio.signalprocessing/ThresholdType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Topology.id"
+        "name": "fuchsia.hardware.audio.signalprocessing/Topology.id",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<fuchsia.hardware.audio.signalprocessing/EdgePair>:64",
         "kind": "table/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/Topology.processing_elements_edge_pairs"
+        "name": "fuchsia.hardware.audio.signalprocessing/Topology.processing_elements_edge_pairs",
+        "type": "vector<fuchsia.hardware.audio.signalprocessing/EdgePair>:64"
     },
     {
         "kind": "table",
         "name": "fuchsia.hardware.audio.signalprocessing/Topology"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/Dynamics",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.dynamics"
+        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.dynamics",
+        "type": "fuchsia.hardware.audio.signalprocessing/Dynamics"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/Equalizer",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.equalizer"
+        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.equalizer",
+        "type": "fuchsia.hardware.audio.signalprocessing/Equalizer"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/Gain",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.gain"
+        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.gain",
+        "type": "fuchsia.hardware.audio.signalprocessing/Gain"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/VendorSpecific",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.vendor_specific"
+        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElement.vendor_specific",
+        "type": "fuchsia.hardware.audio.signalprocessing/VendorSpecific"
     },
     {
         "kind": "union",
@@ -798,24 +798,24 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/DynamicsElementState",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.dynamics"
+        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.dynamics",
+        "type": "fuchsia.hardware.audio.signalprocessing/DynamicsElementState"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/EqualizerElementState",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.equalizer"
+        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.equalizer",
+        "type": "fuchsia.hardware.audio.signalprocessing/EqualizerElementState"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/GainElementState",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.gain"
+        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.gain",
+        "type": "fuchsia.hardware.audio.signalprocessing/GainElementState"
     },
     {
-        "declaration": "fuchsia.hardware.audio.signalprocessing/VendorSpecificState",
         "kind": "union/member",
-        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.vendor_specific"
+        "name": "fuchsia.hardware.audio.signalprocessing/TypeSpecificElementState.vendor_specific",
+        "type": "fuchsia.hardware.audio.signalprocessing/VendorSpecificState"
     },
     {
         "kind": "union",

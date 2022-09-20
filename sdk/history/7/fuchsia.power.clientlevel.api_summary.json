@@ -5,24 +5,24 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.power.clientlevel/ClientType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.power.clientlevel/ClientType client_type,server_end:fuchsia.power.clientlevel/Watcher watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.power.clientlevel/Connector.Connect"
+        "name": "fuchsia.power.clientlevel/Connector.Connect",
+        "type": "(fuchsia.power.clientlevel/ClientType client_type,server_end:fuchsia.power.clientlevel/Watcher watcher)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.power.clientlevel/Connector"
     },
     {
-        "declaration": "() -> (uint64 level)",
         "kind": "protocol/member",
-        "name": "fuchsia.power.clientlevel/Watcher.Watch"
+        "name": "fuchsia.power.clientlevel/Watcher.Watch",
+        "type": "() -> (uint64 level)"
     },
     {
         "kind": "protocol",

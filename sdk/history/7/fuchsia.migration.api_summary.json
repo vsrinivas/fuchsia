@@ -1,55 +1,55 @@
 [
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/CastProvider.Get"
+        "name": "fuchsia.migration/CastProvider.Get",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/CastProvider.Processed"
+        "name": "fuchsia.migration/CastProvider.Processed",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.migration/CastProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/DisplayProvider.Get"
+        "name": "fuchsia.migration/DisplayProvider.Get",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/DisplayProvider.Processed"
+        "name": "fuchsia.migration/DisplayProvider.Processed",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.migration/DisplayProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/KronkProvider.Get"
+        "name": "fuchsia.migration/KronkProvider.Get",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/KronkProvider.Processed"
+        "name": "fuchsia.migration/KronkProvider.Processed",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.migration/KronkProvider"
     },
     {
-        "declaration": "uint8",
         "kind": "table/member",
-        "name": "fuchsia.migration/MigrationState.progress_percentage"
+        "name": "fuchsia.migration/MigrationState.progress_percentage",
+        "type": "uint8"
     },
     {
-        "declaration": "fuchsia.migration/MigrationStatus",
         "kind": "table/member",
-        "name": "fuchsia.migration/MigrationState.status"
+        "name": "fuchsia.migration/MigrationState.status",
+        "type": "fuchsia.migration/MigrationStatus"
     },
     {
         "kind": "table",
@@ -76,57 +76,57 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.migration/MigrationStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/ProductPolicyProvider.Get"
+        "name": "fuchsia.migration/ProductPolicyProvider.Get",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/ProductPolicyProvider.Processed"
+        "name": "fuchsia.migration/ProductPolicyProvider.Processed",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.migration/ProductPolicyProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/Provider.Get"
+        "name": "fuchsia.migration/Provider.Get",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/Provider.Processed"
+        "name": "fuchsia.migration/Provider.Processed",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.migration/Provider"
     },
     {
-        "declaration": "() -> (fuchsia.migration/MigrationState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/State.Watch"
+        "name": "fuchsia.migration/State.Watch",
+        "type": "() -> (fuchsia.migration/MigrationState state)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.migration/State"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/UltrasoundProvider.Get"
+        "name": "fuchsia.migration/UltrasoundProvider.Get",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.migration/UltrasoundProvider.Processed"
+        "name": "fuchsia.migration/UltrasoundProvider.Processed",
+        "type": "()"
     },
     {
         "kind": "protocol",

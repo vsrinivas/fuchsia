@@ -37,7 +37,7 @@ type aConst struct {
 func (c *aConst) Serialize() ElementStr {
 	e := c.named.Serialize()
 	e.Kind = Kind(aConstType)
-	e.Decl = Decl(c.symbolTable.fidlTypeString(c.aType))
+	e.Type = Type(c.symbolTable.fidlTypeString(c.aType))
 	e.Value = fidlConstToValue(c.maybeDefaultValue)
 	return e
 }

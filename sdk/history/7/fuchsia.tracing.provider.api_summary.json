@@ -15,10 +15,10 @@
         "value": "3"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.tracing.provider/BufferDisposition",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
         "kind": "enum/member",
@@ -36,72 +36,72 @@
         "value": "3"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.tracing.provider/BufferingMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.tracing.provider/MAX_CATEGORY_NAME_LENGTH",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.tracing.provider/MAX_NUM_CATEGORIES",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.tracing.provider/MAX_PROVIDER_NAME_LENGTH",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "(fuchsia.tracing.provider/ProviderConfig config)",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.provider/Provider.Initialize"
+        "name": "fuchsia.tracing.provider/Provider.Initialize",
+        "type": "(fuchsia.tracing.provider/ProviderConfig config)"
     },
     {
-        "declaration": "(fuchsia.tracing.provider/StartOptions options)",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.provider/Provider.Start"
+        "name": "fuchsia.tracing.provider/Provider.Start",
+        "type": "(fuchsia.tracing.provider/StartOptions options)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.provider/Provider.Stop"
+        "name": "fuchsia.tracing.provider/Provider.Stop",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.provider/Provider.Terminate"
+        "name": "fuchsia.tracing.provider/Provider.Terminate",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.tracing.provider/Provider"
     },
     {
-        "declaration": "zx/handle:VMO",
         "kind": "struct/member",
-        "name": "fuchsia.tracing.provider/ProviderConfig.buffer"
+        "name": "fuchsia.tracing.provider/ProviderConfig.buffer",
+        "type": "zx/handle:VMO"
     },
     {
-        "declaration": "fuchsia.tracing.provider/BufferingMode",
         "kind": "struct/member",
-        "name": "fuchsia.tracing.provider/ProviderConfig.buffering_mode"
+        "name": "fuchsia.tracing.provider/ProviderConfig.buffering_mode",
+        "type": "fuchsia.tracing.provider/BufferingMode"
     },
     {
-        "declaration": "vector<string:100>:100",
         "kind": "struct/member",
-        "name": "fuchsia.tracing.provider/ProviderConfig.categories"
+        "name": "fuchsia.tracing.provider/ProviderConfig.categories",
+        "type": "vector<string:100>:100"
     },
     {
-        "declaration": "zx/handle:FIFO",
         "kind": "struct/member",
-        "name": "fuchsia.tracing.provider/ProviderConfig.fifo"
+        "name": "fuchsia.tracing.provider/ProviderConfig.fifo",
+        "type": "zx/handle:FIFO"
     },
     {
         "kind": "struct",
@@ -109,28 +109,28 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(client_end:fuchsia.tracing.provider/Provider provider,uint64 pid,string:100 name)",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.provider/Registry.RegisterProvider"
+        "name": "fuchsia.tracing.provider/Registry.RegisterProvider",
+        "type": "(client_end:fuchsia.tracing.provider/Provider provider,uint64 pid,string:100 name)"
     },
     {
-        "declaration": "(client_end:fuchsia.tracing.provider/Provider provider,uint64 pid,string:100 name) -> (int32 s,bool started)",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.provider/Registry.RegisterProviderSynchronously"
+        "name": "fuchsia.tracing.provider/Registry.RegisterProviderSynchronously",
+        "type": "(client_end:fuchsia.tracing.provider/Provider provider,uint64 pid,string:100 name) -> (int32 s,bool started)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.tracing.provider/Registry"
     },
     {
-        "declaration": "vector<string:100>:100",
         "kind": "struct/member",
-        "name": "fuchsia.tracing.provider/StartOptions.additional_categories"
+        "name": "fuchsia.tracing.provider/StartOptions.additional_categories",
+        "type": "vector<string:100>:100"
     },
     {
-        "declaration": "fuchsia.tracing.provider/BufferDisposition",
         "kind": "struct/member",
-        "name": "fuchsia.tracing.provider/StartOptions.buffer_disposition"
+        "name": "fuchsia.tracing.provider/StartOptions.buffer_disposition",
+        "type": "fuchsia.tracing.provider/BufferDisposition"
     },
     {
         "kind": "struct",

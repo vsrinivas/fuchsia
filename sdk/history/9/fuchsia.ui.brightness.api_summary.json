@@ -1,112 +1,112 @@
 [
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.brightness/BrightnessPoint.ambient_lux"
+        "name": "fuchsia.ui.brightness/BrightnessPoint.ambient_lux",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.brightness/BrightnessPoint.display_nits"
+        "name": "fuchsia.ui.brightness/BrightnessPoint.display_nits",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.brightness/BrightnessPoint"
     },
     {
-        "declaration": "vector<fuchsia.ui.brightness/BrightnessPoint>:50",
         "kind": "struct/member",
-        "name": "fuchsia.ui.brightness/BrightnessTable.points"
+        "name": "fuchsia.ui.brightness/BrightnessTable.points",
+        "type": "vector<fuchsia.ui.brightness/BrightnessPoint>:50"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.brightness/BrightnessTable"
     },
     {
-        "declaration": "(fuchsia.ui.brightness/ColorAdjustmentTable color_adjustment)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/ColorAdjustmentHandler.SetColorAdjustment"
+        "name": "fuchsia.ui.brightness/ColorAdjustmentHandler.SetColorAdjustment",
+        "type": "(fuchsia.ui.brightness/ColorAdjustmentTable color_adjustment)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.brightness/ColorAdjustmentHandler"
     },
     {
-        "declaration": "array<float32,9>",
         "kind": "table/member",
-        "name": "fuchsia.ui.brightness/ColorAdjustmentTable.matrix"
+        "name": "fuchsia.ui.brightness/ColorAdjustmentTable.matrix",
+        "type": "array<float32,9>"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.brightness/ColorAdjustmentTable"
     },
     {
-        "declaration": "() -> (fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.GetMaxAbsoluteBrightness"
+        "name": "fuchsia.ui.brightness/Control.GetMaxAbsoluteBrightness",
+        "type": "() -> (fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result result)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.SetAutoBrightness"
+        "name": "fuchsia.ui.brightness/Control.SetAutoBrightness",
+        "type": "()"
     },
     {
-        "declaration": "(float32 adjustment)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.SetAutoBrightnessAdjustment"
+        "name": "fuchsia.ui.brightness/Control.SetAutoBrightnessAdjustment",
+        "type": "(float32 adjustment)"
     },
     {
-        "declaration": "(fuchsia.ui.brightness/BrightnessTable table)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.SetBrightnessTable"
+        "name": "fuchsia.ui.brightness/Control.SetBrightnessTable",
+        "type": "(fuchsia.ui.brightness/BrightnessTable table)"
     },
     {
-        "declaration": "(float32 value)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.SetManualBrightness"
+        "name": "fuchsia.ui.brightness/Control.SetManualBrightness",
+        "type": "(float32 value)"
     },
     {
-        "declaration": "(float32 value,int64 duration)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.SetManualBrightnessSmooth"
+        "name": "fuchsia.ui.brightness/Control.SetManualBrightnessSmooth",
+        "type": "(float32 value,int64 duration)"
     },
     {
-        "declaration": "() -> (bool enabled)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.WatchAutoBrightness"
+        "name": "fuchsia.ui.brightness/Control.WatchAutoBrightness",
+        "type": "() -> (bool enabled)"
     },
     {
-        "declaration": "() -> (float32 adjustment)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.WatchAutoBrightnessAdjustment"
+        "name": "fuchsia.ui.brightness/Control.WatchAutoBrightnessAdjustment",
+        "type": "() -> (float32 adjustment)"
     },
     {
-        "declaration": "() -> (float32 value)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.brightness/Control.WatchCurrentBrightness"
+        "name": "fuchsia.ui.brightness/Control.WatchCurrentBrightness",
+        "type": "() -> (float32 value)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.brightness/Control"
     },
     {
-        "declaration": "float64",
         "kind": "struct/member",
-        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response.max_brightness"
+        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response.max_brightness",
+        "type": "float64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result.err"
+        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response",
         "kind": "union/member",
-        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result.response"
+        "name": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Result.response",
+        "type": "fuchsia.ui.brightness/Control_GetMaxAbsoluteBrightness_Response"
     },
     {
         "kind": "union",

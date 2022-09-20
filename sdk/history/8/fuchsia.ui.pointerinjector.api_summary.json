@@ -1,53 +1,53 @@
 [
     {
-        "declaration": "vector<uint8>:32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.buttons"
+        "name": "fuchsia.ui.pointerinjector/Config.buttons",
+        "type": "vector<uint8>:32"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/Context",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.context"
+        "name": "fuchsia.ui.pointerinjector/Config.context",
+        "type": "fuchsia.ui.pointerinjector/Context"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.device_id"
+        "name": "fuchsia.ui.pointerinjector/Config.device_id",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/DeviceType",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.device_type"
+        "name": "fuchsia.ui.pointerinjector/Config.device_type",
+        "type": "fuchsia.ui.pointerinjector/DeviceType"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/DispatchPolicy",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.dispatch_policy"
+        "name": "fuchsia.ui.pointerinjector/Config.dispatch_policy",
+        "type": "fuchsia.ui.pointerinjector/DispatchPolicy"
     },
     {
-        "declaration": "array<fuchsia.input.report/Axis,2>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.relative_motion_range"
+        "name": "fuchsia.ui.pointerinjector/Config.relative_motion_range",
+        "type": "array<fuchsia.input.report/Axis,2>"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.scroll_h_range"
+        "name": "fuchsia.ui.pointerinjector/Config.scroll_h_range",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.scroll_v_range"
+        "name": "fuchsia.ui.pointerinjector/Config.scroll_v_range",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/Target",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.target"
+        "name": "fuchsia.ui.pointerinjector/Config.target",
+        "type": "fuchsia.ui.pointerinjector/Target"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/Viewport",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Config.viewport"
+        "name": "fuchsia.ui.pointerinjector/Config.viewport",
+        "type": "fuchsia.ui.pointerinjector/Viewport"
     },
     {
         "kind": "table",
@@ -55,9 +55,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewRef",
         "kind": "union/member",
-        "name": "fuchsia.ui.pointerinjector/Context.view"
+        "name": "fuchsia.ui.pointerinjector/Context.view",
+        "type": "fuchsia.ui.views/ViewRef"
     },
     {
         "kind": "union",
@@ -66,14 +66,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/PointerSample",
         "kind": "union/member",
-        "name": "fuchsia.ui.pointerinjector/Data.pointer_sample"
+        "name": "fuchsia.ui.pointerinjector/Data.pointer_sample",
+        "type": "fuchsia.ui.pointerinjector/PointerSample"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/Viewport",
         "kind": "union/member",
-        "name": "fuchsia.ui.pointerinjector/Data.viewport"
+        "name": "fuchsia.ui.pointerinjector/Data.viewport",
+        "type": "fuchsia.ui.pointerinjector/Viewport"
     },
     {
         "kind": "union",
@@ -81,9 +81,9 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "(vector<fuchsia.ui.pointerinjector/Event>:128 events) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.pointerinjector/Device.Inject"
+        "name": "fuchsia.ui.pointerinjector/Device.Inject",
+        "type": "(vector<fuchsia.ui.pointerinjector/Event>:128 events) -> ()"
     },
     {
         "kind": "protocol",
@@ -100,10 +100,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.pointerinjector/DeviceType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -121,25 +121,25 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.pointerinjector/DispatchPolicy",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/Data",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Event.data"
+        "name": "fuchsia.ui.pointerinjector/Event.data",
+        "type": "fuchsia.ui.pointerinjector/Data"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Event.timestamp"
+        "name": "fuchsia.ui.pointerinjector/Event.timestamp",
+        "type": "int64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Event.trace_flow_id"
+        "name": "fuchsia.ui.pointerinjector/Event.trace_flow_id",
+        "type": "uint64"
     },
     {
         "kind": "table",
@@ -166,84 +166,84 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.pointerinjector/EventPhase",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.ui.pointerinjector/MAX_INJECT",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.is_precision_scroll"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.is_precision_scroll",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.ui.pointerinjector/EventPhase",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.phase"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.phase",
+        "type": "fuchsia.ui.pointerinjector/EventPhase"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.pointer_id"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.pointer_id",
+        "type": "uint32"
     },
     {
-        "declaration": "array<float32,2>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.position_in_viewport"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.position_in_viewport",
+        "type": "array<float32,2>"
     },
     {
-        "declaration": "vector<uint8>:32",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.pressed_buttons"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.pressed_buttons",
+        "type": "vector<uint8>:32"
     },
     {
-        "declaration": "array<float32,2>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.relative_motion"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.relative_motion",
+        "type": "array<float32,2>"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_h"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_h",
+        "type": "int64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_h_physical_pixel"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_h_physical_pixel",
+        "type": "float64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_v"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_v",
+        "type": "int64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_v_physical_pixel"
+        "name": "fuchsia.ui.pointerinjector/PointerSample.scroll_v_physical_pixel",
+        "type": "float64"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.pointerinjector/PointerSample"
     },
     {
-        "declaration": "(fuchsia.ui.pointerinjector/Config config,server_end:fuchsia.ui.pointerinjector/Device injector) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.pointerinjector/Registry.Register"
+        "name": "fuchsia.ui.pointerinjector/Registry.Register",
+        "type": "(fuchsia.ui.pointerinjector/Config config,server_end:fuchsia.ui.pointerinjector/Device injector) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.pointerinjector/Registry"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewRef",
         "kind": "union/member",
-        "name": "fuchsia.ui.pointerinjector/Target.view"
+        "name": "fuchsia.ui.pointerinjector/Target.view",
+        "type": "fuchsia.ui.views/ViewRef"
     },
     {
         "kind": "union",
@@ -252,14 +252,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "array<array<float32,2>,2>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Viewport.extents"
+        "name": "fuchsia.ui.pointerinjector/Viewport.extents",
+        "type": "array<array<float32,2>,2>"
     },
     {
-        "declaration": "array<float32,9>",
         "kind": "table/member",
-        "name": "fuchsia.ui.pointerinjector/Viewport.viewport_to_context_transform"
+        "name": "fuchsia.ui.pointerinjector/Viewport.viewport_to_context_transform",
+        "type": "array<float32,9>"
     },
     {
         "kind": "table",

@@ -1,200 +1,200 @@
 [
     {
-        "declaration": "(server_end:fuchsia.sysmem/BufferCollection collection_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/Allocator.AllocateNonSharedCollection"
+        "name": "fuchsia.sysmem/Allocator.AllocateNonSharedCollection",
+        "type": "(server_end:fuchsia.sysmem/BufferCollection collection_request)"
     },
     {
-        "declaration": "(server_end:fuchsia.sysmem/BufferCollectionToken token_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/Allocator.AllocateSharedCollection"
+        "name": "fuchsia.sysmem/Allocator.AllocateSharedCollection",
+        "type": "(server_end:fuchsia.sysmem/BufferCollectionToken token_request)"
     },
     {
-        "declaration": "(client_end:fuchsia.sysmem/BufferCollectionToken token,server_end:fuchsia.sysmem/BufferCollection buffer_collection_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/Allocator.BindSharedCollection"
+        "name": "fuchsia.sysmem/Allocator.BindSharedCollection",
+        "type": "(client_end:fuchsia.sysmem/BufferCollectionToken token,server_end:fuchsia.sysmem/BufferCollection buffer_collection_request)"
     },
     {
-        "declaration": "(string:64 name,uint64 id)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/Allocator.SetDebugClientInfo"
+        "name": "fuchsia.sysmem/Allocator.SetDebugClientInfo",
+        "type": "(string:64 name,uint64 id)"
     },
     {
-        "declaration": "(uint64 token_server_koid) -> (bool is_known)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/Allocator.ValidateBufferCollectionToken"
+        "name": "fuchsia.sysmem/Allocator.ValidateBufferCollectionToken",
+        "type": "(uint64 token_server_koid) -> (bool is_known)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.sysmem/Allocator"
     },
     {
-        "declaration": "(uint64 buffer_index)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.AllocateSingleBuffer"
+        "name": "fuchsia.sysmem/BufferCollection.AllocateSingleBuffer",
+        "type": "(uint64 buffer_index)"
     },
     {
-        "declaration": "(zx/handle:EVENTPAIR server_end,uint32 buffers_remaining)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.AttachLifetimeTracking"
+        "name": "fuchsia.sysmem/BufferCollection.AttachLifetimeTracking",
+        "type": "(zx/handle:EVENTPAIR server_end,uint32 buffers_remaining)"
     },
     {
-        "declaration": "(uint32 rights_attenuation_mask,server_end:fuchsia.sysmem/BufferCollectionToken token_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.AttachToken"
+        "name": "fuchsia.sysmem/BufferCollection.AttachToken",
+        "type": "(uint32 rights_attenuation_mask,server_end:fuchsia.sysmem/BufferCollectionToken token_request)"
     },
     {
-        "declaration": "() -> (int32 status)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.CheckBuffersAllocated"
+        "name": "fuchsia.sysmem/BufferCollection.CheckBuffersAllocated",
+        "type": "() -> (int32 status)"
     },
     {
-        "declaration": "(uint64 buffer_index)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.CheckSingleBufferAllocated"
+        "name": "fuchsia.sysmem/BufferCollection.CheckSingleBufferAllocated",
+        "type": "(uint64 buffer_index)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.Close"
+        "name": "fuchsia.sysmem/BufferCollection.Close",
+        "type": "()"
     },
     {
-        "declaration": "(uint64 buffer_index)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.CloseSingleBuffer"
+        "name": "fuchsia.sysmem/BufferCollection.CloseSingleBuffer",
+        "type": "(uint64 buffer_index)"
     },
     {
-        "declaration": "() -> (int32 status,fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection_info_aux_buffers)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.GetAuxBuffers"
+        "name": "fuchsia.sysmem/BufferCollection.GetAuxBuffers",
+        "type": "() -> (int32 status,fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection_info_aux_buffers)"
     },
     {
-        "declaration": "(bool has_constraints,fuchsia.sysmem/BufferCollectionConstraints constraints)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.SetConstraints"
+        "name": "fuchsia.sysmem/BufferCollection.SetConstraints",
+        "type": "(bool has_constraints,fuchsia.sysmem/BufferCollectionConstraints constraints)"
     },
     {
-        "declaration": "(fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers constraints)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.SetConstraintsAuxBuffers"
+        "name": "fuchsia.sysmem/BufferCollection.SetConstraintsAuxBuffers",
+        "type": "(fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers constraints)"
     },
     {
-        "declaration": "(string:64 name,uint64 id)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.SetDebugClientInfo"
+        "name": "fuchsia.sysmem/BufferCollection.SetDebugClientInfo",
+        "type": "(string:64 name,uint64 id)"
     },
     {
-        "declaration": "(uint32 priority,string:64 name)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.SetName"
+        "name": "fuchsia.sysmem/BufferCollection.SetName",
+        "type": "(uint32 priority,string:64 name)"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.Sync"
+        "name": "fuchsia.sysmem/BufferCollection.Sync",
+        "type": "() -> ()"
     },
     {
-        "declaration": "() -> (int32 status,fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.WaitForBuffersAllocated"
+        "name": "fuchsia.sysmem/BufferCollection.WaitForBuffersAllocated",
+        "type": "() -> (int32 status,fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection_info)"
     },
     {
-        "declaration": "(uint64 buffer_index) -> (int32 status,fuchsia.sysmem/SingleBufferInfo buffer_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollection.WaitForSingleBufferAllocated"
+        "name": "fuchsia.sysmem/BufferCollection.WaitForSingleBufferAllocated",
+        "type": "(uint64 buffer_index) -> (int32 status,fuchsia.sysmem/SingleBufferInfo buffer_info)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.sysmem/BufferCollection"
     },
     {
-        "declaration": "fuchsia.sysmem/BufferMemoryConstraints",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.buffer_memory_constraints"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.buffer_memory_constraints",
+        "type": "fuchsia.sysmem/BufferMemoryConstraints"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.has_buffer_memory_constraints"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.has_buffer_memory_constraints",
+        "type": "bool"
     },
     {
-        "declaration": "array<fuchsia.sysmem/ImageFormatConstraints,32>",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.image_format_constraints"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.image_format_constraints",
+        "type": "array<fuchsia.sysmem/ImageFormatConstraints,32>"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.image_format_constraints_count"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.image_format_constraints_count",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.max_buffer_count"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.max_buffer_count",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_camping"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_camping",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_dedicated_slack"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_dedicated_slack",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_shared_slack"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_shared_slack",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.sysmem/BufferUsage",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraints.usage"
+        "name": "fuchsia.sysmem/BufferCollectionConstraints.usage",
+        "type": "fuchsia.sysmem/BufferUsage"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/BufferCollectionConstraints"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers.allow_clear_aux_buffers_for_secure"
+        "name": "fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers.allow_clear_aux_buffers_for_secure",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers.need_clear_aux_buffers_for_secure"
+        "name": "fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers.need_clear_aux_buffers_for_secure",
+        "type": "bool"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionInfo.buffer_count"
+        "name": "fuchsia.sysmem/BufferCollectionInfo.buffer_count",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.sysmem/BufferFormat",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionInfo.format"
+        "name": "fuchsia.sysmem/BufferCollectionInfo.format",
+        "type": "fuchsia.sysmem/BufferFormat"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionInfo.vmo_size",
+        "type": "uint64",
         "value": "0"
     },
     {
-        "declaration": "array<zx/handle:<VMO,optional>,64>",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionInfo.vmos"
+        "name": "fuchsia.sysmem/BufferCollectionInfo.vmos",
+        "type": "array<zx/handle:<VMO,optional>,64>"
     },
     {
         "kind": "struct",
@@ -202,19 +202,19 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionInfo_2.buffer_count"
+        "name": "fuchsia.sysmem/BufferCollectionInfo_2.buffer_count",
+        "type": "uint32"
     },
     {
-        "declaration": "array<fuchsia.sysmem/VmoBuffer,64>",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionInfo_2.buffers"
+        "name": "fuchsia.sysmem/BufferCollectionInfo_2.buffers",
+        "type": "array<fuchsia.sysmem/VmoBuffer,64>"
     },
     {
-        "declaration": "fuchsia.sysmem/SingleBufferSettings",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferCollectionInfo_2.settings"
+        "name": "fuchsia.sysmem/BufferCollectionInfo_2.settings",
+        "type": "fuchsia.sysmem/SingleBufferSettings"
     },
     {
         "kind": "struct",
@@ -222,58 +222,58 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollectionToken.Close"
+        "name": "fuchsia.sysmem/BufferCollectionToken.Close",
+        "type": "()"
     },
     {
-        "declaration": "(uint32 rights_attenuation_mask,server_end:fuchsia.sysmem/BufferCollectionToken token_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollectionToken.Duplicate"
+        "name": "fuchsia.sysmem/BufferCollectionToken.Duplicate",
+        "type": "(uint32 rights_attenuation_mask,server_end:fuchsia.sysmem/BufferCollectionToken token_request)"
     },
     {
-        "declaration": "(vector<zx/rights>:64 rights_attenuation_masks) -> (vector<client_end:fuchsia.sysmem/BufferCollectionToken>:64 tokens)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollectionToken.DuplicateSync"
+        "name": "fuchsia.sysmem/BufferCollectionToken.DuplicateSync",
+        "type": "(vector<zx/rights>:64 rights_attenuation_masks) -> (vector<client_end:fuchsia.sysmem/BufferCollectionToken>:64 tokens)"
     },
     {
-        "declaration": "(string:64 name,uint64 id)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollectionToken.SetDebugClientInfo"
+        "name": "fuchsia.sysmem/BufferCollectionToken.SetDebugClientInfo",
+        "type": "(string:64 name,uint64 id)"
     },
     {
-        "declaration": "(int64 deadline)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollectionToken.SetDebugTimeoutLogDeadline"
+        "name": "fuchsia.sysmem/BufferCollectionToken.SetDebugTimeoutLogDeadline",
+        "type": "(int64 deadline)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollectionToken.SetDispensable"
+        "name": "fuchsia.sysmem/BufferCollectionToken.SetDispensable",
+        "type": "()"
     },
     {
-        "declaration": "(uint32 priority,string:64 name)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollectionToken.SetName"
+        "name": "fuchsia.sysmem/BufferCollectionToken.SetName",
+        "type": "(uint32 priority,string:64 name)"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/BufferCollectionToken.Sync"
+        "name": "fuchsia.sysmem/BufferCollectionToken.Sync",
+        "type": "() -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.sysmem/BufferCollectionToken"
     },
     {
-        "declaration": "fuchsia.sysmem/ImageFormat",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferFormat.image"
+        "name": "fuchsia.sysmem/BufferFormat.image",
+        "type": "fuchsia.sysmem/ImageFormat"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferFormat.tag",
+        "type": "uint32",
         "value": "0"
     },
     {
@@ -281,55 +281,55 @@
         "name": "fuchsia.sysmem/BufferFormat"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.cpu_domain_supported",
+        "type": "bool",
         "value": "true"
     },
     {
-        "declaration": "array<fuchsia.sysmem/HeapType,32>",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferMemoryConstraints.heap_permitted"
+        "name": "fuchsia.sysmem/BufferMemoryConstraints.heap_permitted",
+        "type": "array<fuchsia.sysmem/HeapType,32>"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferMemoryConstraints.heap_permitted_count"
+        "name": "fuchsia.sysmem/BufferMemoryConstraints.heap_permitted_count",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.inaccessible_domain_supported",
+        "type": "bool",
         "value": "false"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.max_size_bytes",
+        "type": "uint32",
         "value": "4294967295"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.min_size_bytes",
+        "type": "uint32",
         "value": "0"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.physically_contiguous_required",
+        "type": "bool",
         "value": "false"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.ram_domain_supported",
+        "type": "bool",
         "value": "false"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.secure_required",
+        "type": "bool",
         "value": "false"
     },
     {
@@ -337,58 +337,58 @@
         "name": "fuchsia.sysmem/BufferMemoryConstraints"
     },
     {
-        "declaration": "fuchsia.sysmem/CoherencyDomain",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferMemorySettings.coherency_domain"
+        "name": "fuchsia.sysmem/BufferMemorySettings.coherency_domain",
+        "type": "fuchsia.sysmem/CoherencyDomain"
     },
     {
-        "declaration": "fuchsia.sysmem/HeapType",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferMemorySettings.heap"
+        "name": "fuchsia.sysmem/BufferMemorySettings.heap",
+        "type": "fuchsia.sysmem/HeapType"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferMemorySettings.is_physically_contiguous"
+        "name": "fuchsia.sysmem/BufferMemorySettings.is_physically_contiguous",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferMemorySettings.is_secure"
+        "name": "fuchsia.sysmem/BufferMemorySettings.is_secure",
+        "type": "bool"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferMemorySettings.size_bytes"
+        "name": "fuchsia.sysmem/BufferMemorySettings.size_bytes",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/BufferMemorySettings"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferUsage.cpu"
+        "name": "fuchsia.sysmem/BufferUsage.cpu",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferUsage.display"
+        "name": "fuchsia.sysmem/BufferUsage.display",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferUsage.none"
+        "name": "fuchsia.sysmem/BufferUsage.none",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferUsage.video"
+        "name": "fuchsia.sysmem/BufferUsage.video",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/BufferUsage.vulkan"
+        "name": "fuchsia.sysmem/BufferUsage.vulkan",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -410,15 +410,15 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.sysmem/CoherencyDomain",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.sysmem/ColorSpaceType",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ColorSpace.type"
+        "name": "fuchsia.sysmem/ColorSpace.type",
+        "type": "fuchsia.sysmem/ColorSpaceType"
     },
     {
         "kind": "struct",
@@ -475,251 +475,251 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.sysmem/ColorSpaceType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(server_end:fuchsia.sysmem/Allocator allocator_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/DriverConnector.Connect"
+        "name": "fuchsia.sysmem/DriverConnector.Connect",
+        "type": "(server_end:fuchsia.sysmem/Allocator allocator_request)"
     },
     {
-        "declaration": "(fuchsia.io/Directory service_directory)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/DriverConnector.SetAuxServiceDirectory"
+        "name": "fuchsia.sysmem/DriverConnector.SetAuxServiceDirectory",
+        "type": "(fuchsia.io/Directory service_directory)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.sysmem/DriverConnector"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16",
+        "type": "uint64",
         "value": "576460752303423489"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV",
+        "type": "uint64",
         "value": "576460752303423601"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE",
+        "type": "uint64",
         "value": "576460752303427697"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TE_TILED_HEADER",
+        "type": "uint64",
         "value": "576460752303435889"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16_SPLIT_BLOCK_SPARSE_YUV_TILED_HEADER",
+        "type": "uint64",
         "value": "576460752303431793"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16_TE",
+        "type": "uint64",
         "value": "576460752303427585"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_16X16_YUV_TILED_HEADER",
+        "type": "uint64",
         "value": "576460752303431697"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_32X8",
+        "type": "uint64",
         "value": "576460752303423490"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_AFBC_32X8_TE",
+        "type": "uint64",
         "value": "576460752303427586"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_BCH_BIT",
+        "type": "uint64",
         "value": "2048"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_LINEAR_TE",
+        "type": "uint64",
         "value": "576460752303427584"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_SPARSE_BIT",
+        "type": "uint64",
         "value": "64"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_SPLIT_BLOCK_BIT",
+        "type": "uint64",
         "value": "32"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_TE_BIT",
+        "type": "uint64",
         "value": "4096"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_TILED_HEADER_BIT",
+        "type": "uint64",
         "value": "8192"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_ARM_YUV_BIT",
+        "type": "uint64",
         "value": "16"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL",
+        "type": "uint64",
         "value": "648518346341351425"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_INTEL_CCS_BIT",
+        "type": "uint64",
         "value": "16777216"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_INTEL_I915_X_TILED",
+        "type": "uint64",
         "value": "72057594037927937"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_INTEL_I915_YF_TILED",
+        "type": "uint64",
         "value": "72057594037927939"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_INTEL_I915_YF_TILED_CCS",
+        "type": "uint64",
         "value": "72057594054705155"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_INTEL_I915_Y_TILED",
+        "type": "uint64",
         "value": "72057594037927938"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_INTEL_I915_Y_TILED_CCS",
+        "type": "uint64",
         "value": "72057594054705154"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_INVALID",
+        "type": "uint64",
         "value": "72057594037927935"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_LINEAR",
+        "type": "uint64",
         "value": "0"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_NONE",
+        "type": "uint64",
         "value": "0"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VALUE_RESERVED",
+        "type": "uint64",
         "value": "72057594037927935"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_AMD",
+        "type": "uint64",
         "value": "144115188075855872"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_ARM",
+        "type": "uint64",
         "value": "576460752303423488"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_BROADCOM",
+        "type": "uint64",
         "value": "504403158265495552"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_GOOGLE",
+        "type": "uint64",
         "value": "648518346341351424"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_INTEL",
+        "type": "uint64",
         "value": "72057594037927936"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_NONE",
+        "type": "uint64",
         "value": "0"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_NVIDIA",
+        "type": "uint64",
         "value": "216172782113783808"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_QCOM",
+        "type": "uint64",
         "value": "360287970189639680"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_SAMSUNG",
+        "type": "uint64",
         "value": "288230376151711744"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.sysmem/FORMAT_MODIFIER_VENDOR_VIVANTE",
+        "type": "uint64",
         "value": "432345564227567616"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/FormatModifier.value"
+        "name": "fuchsia.sysmem/FormatModifier.value",
+        "type": "uint64"
     },
     {
         "kind": "struct",
@@ -756,167 +756,167 @@
         "value": "0"
     },
     {
-        "declaration": "uint64",
         "kind": "enum",
         "name": "fuchsia.sysmem/HeapType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.sysmem/ColorSpace",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat.color_space"
+        "name": "fuchsia.sysmem/ImageFormat.color_space",
+        "type": "fuchsia.sysmem/ColorSpace"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat.height"
+        "name": "fuchsia.sysmem/ImageFormat.height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat.layers",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "fuchsia.sysmem/PixelFormat",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat.pixel_format"
+        "name": "fuchsia.sysmem/ImageFormat.pixel_format",
+        "type": "fuchsia.sysmem/PixelFormat"
     },
     {
-        "declaration": "array<fuchsia.sysmem/ImagePlane,4>",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat.planes"
+        "name": "fuchsia.sysmem/ImageFormat.planes",
+        "type": "array<fuchsia.sysmem/ImagePlane,4>"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat.width"
+        "name": "fuchsia.sysmem/ImageFormat.width",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/ImageFormat"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.bytes_per_row_divisor",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.coded_height_divisor",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.coded_width_divisor",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "array<fuchsia.sysmem/ColorSpace,32>",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.color_space"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.color_space",
+        "type": "array<fuchsia.sysmem/ColorSpace,32>"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.color_spaces_count"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.color_spaces_count",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.display_height_divisor",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.display_width_divisor",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.layers",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.max_bytes_per_row"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.max_bytes_per_row",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.max_coded_height"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.max_coded_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.max_coded_width"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.max_coded_width",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.max_coded_width_times_coded_height",
+        "type": "uint32",
         "value": "4294967295"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.min_bytes_per_row"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.min_bytes_per_row",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.min_coded_height"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.min_coded_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.min_coded_width"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.min_coded_width",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.sysmem/PixelFormat",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.pixel_format"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.pixel_format",
+        "type": "fuchsia.sysmem/PixelFormat"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_bytes_per_row"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_bytes_per_row",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_coded_height"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_coded_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_coded_width"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_coded_width",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_bytes_per_row"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_bytes_per_row",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_coded_height"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_coded_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_coded_width"
+        "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_coded_width",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.start_offset_divisor",
+        "type": "uint32",
         "value": "1"
     },
     {
@@ -924,168 +924,168 @@
         "name": "fuchsia.sysmem/ImageFormatConstraints"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat_2.bytes_per_row"
+        "name": "fuchsia.sysmem/ImageFormat_2.bytes_per_row",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat_2.coded_height"
+        "name": "fuchsia.sysmem/ImageFormat_2.coded_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat_2.coded_width"
+        "name": "fuchsia.sysmem/ImageFormat_2.coded_width",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.sysmem/ColorSpace",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat_2.color_space"
+        "name": "fuchsia.sysmem/ImageFormat_2.color_space",
+        "type": "fuchsia.sysmem/ColorSpace"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat_2.display_height"
+        "name": "fuchsia.sysmem/ImageFormat_2.display_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat_2.display_width"
+        "name": "fuchsia.sysmem/ImageFormat_2.display_width",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.has_pixel_aspect_ratio",
+        "type": "bool",
         "value": "false"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.layers",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.pixel_aspect_ratio_height",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.pixel_aspect_ratio_width",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "fuchsia.sysmem/PixelFormat",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageFormat_2.pixel_format"
+        "name": "fuchsia.sysmem/ImageFormat_2.pixel_format",
+        "type": "fuchsia.sysmem/PixelFormat"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/ImageFormat_2"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImagePlane.byte_offset"
+        "name": "fuchsia.sysmem/ImagePlane.byte_offset",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImagePlane.bytes_per_row"
+        "name": "fuchsia.sysmem/ImagePlane.bytes_per_row",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/ImagePlane"
     },
     {
-        "declaration": "fuchsia.sysmem/ColorSpace",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageSpec.color_space"
+        "name": "fuchsia.sysmem/ImageSpec.color_space",
+        "type": "fuchsia.sysmem/ColorSpace"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageSpec.layers",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageSpec.min_height"
+        "name": "fuchsia.sysmem/ImageSpec.min_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageSpec.min_width"
+        "name": "fuchsia.sysmem/ImageSpec.min_width",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.sysmem/PixelFormat",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/ImageSpec.pixel_format"
+        "name": "fuchsia.sysmem/ImageSpec.pixel_format",
+        "type": "fuchsia.sysmem/PixelFormat"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/ImageSpec"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_COUNT_BUFFER_COLLECTION_CONSTRAINTS_IMAGE_FORMAT_CONSTRAINTS",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_COUNT_BUFFER_COLLECTION_INFO_BUFFERS",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_COUNT_BUFFER_MEMORY_CONSTRAINTS_HEAP_PERMITTED",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_COUNT_DUPLICATES",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_COUNT_IMAGE_FORMAT_CONSTRAINTS_COLOR_SPACES",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_HEAPS_COUNT",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/MAX_RANGES_COUNT",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "fuchsia.sysmem/FormatModifier",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/PixelFormat.format_modifier"
+        "name": "fuchsia.sysmem/PixelFormat.format_modifier",
+        "type": "fuchsia.sysmem/FormatModifier"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/PixelFormat.has_format_modifier"
+        "name": "fuchsia.sysmem/PixelFormat.has_format_modifier",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.sysmem/PixelFormatType",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/PixelFormat.type"
+        "name": "fuchsia.sysmem/PixelFormat.type",
+        "type": "fuchsia.sysmem/PixelFormatType"
     },
     {
         "kind": "struct",
@@ -1182,139 +1182,139 @@
         "value": "107"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.sysmem/PixelFormatType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.sysmem/HeapType",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapAndRange.heap"
+        "name": "fuchsia.sysmem/SecureHeapAndRange.heap",
+        "type": "fuchsia.sysmem/HeapType"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureHeapRange",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapAndRange.range"
+        "name": "fuchsia.sysmem/SecureHeapAndRange.range",
+        "type": "fuchsia.sysmem/SecureHeapRange"
     },
     {
         "kind": "table",
         "name": "fuchsia.sysmem/SecureHeapAndRange"
     },
     {
-        "declaration": "fuchsia.sysmem/HeapType",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapAndRangeModification.heap"
+        "name": "fuchsia.sysmem/SecureHeapAndRangeModification.heap",
+        "type": "fuchsia.sysmem/HeapType"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureHeapRange",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapAndRangeModification.new_range"
+        "name": "fuchsia.sysmem/SecureHeapAndRangeModification.new_range",
+        "type": "fuchsia.sysmem/SecureHeapRange"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureHeapRange",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapAndRangeModification.old_range"
+        "name": "fuchsia.sysmem/SecureHeapAndRangeModification.old_range",
+        "type": "fuchsia.sysmem/SecureHeapRange"
     },
     {
         "kind": "table",
         "name": "fuchsia.sysmem/SecureHeapAndRangeModification"
     },
     {
-        "declaration": "fuchsia.sysmem/HeapType",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapAndRanges.heap"
+        "name": "fuchsia.sysmem/SecureHeapAndRanges.heap",
+        "type": "fuchsia.sysmem/HeapType"
     },
     {
-        "declaration": "vector<fuchsia.sysmem/SecureHeapRange>:128",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapAndRanges.ranges"
+        "name": "fuchsia.sysmem/SecureHeapAndRanges.ranges",
+        "type": "vector<fuchsia.sysmem/SecureHeapRange>:128"
     },
     {
         "kind": "table",
         "name": "fuchsia.sysmem/SecureHeapAndRanges"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapProperties.dynamic_protection_ranges"
+        "name": "fuchsia.sysmem/SecureHeapProperties.dynamic_protection_ranges",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.sysmem/HeapType",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapProperties.heap"
+        "name": "fuchsia.sysmem/SecureHeapProperties.heap",
+        "type": "fuchsia.sysmem/HeapType"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapProperties.is_mod_protected_range_available"
+        "name": "fuchsia.sysmem/SecureHeapProperties.is_mod_protected_range_available",
+        "type": "bool"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapProperties.max_protected_range_count"
+        "name": "fuchsia.sysmem/SecureHeapProperties.max_protected_range_count",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapProperties.protected_range_granularity"
+        "name": "fuchsia.sysmem/SecureHeapProperties.protected_range_granularity",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.sysmem/SecureHeapProperties"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapRange.physical_address"
+        "name": "fuchsia.sysmem/SecureHeapRange.physical_address",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapRange.size_bytes"
+        "name": "fuchsia.sysmem/SecureHeapRange.size_bytes",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.sysmem/SecureHeapRange"
     },
     {
-        "declaration": "vector<fuchsia.sysmem/SecureHeapAndRanges>:32",
         "kind": "table/member",
-        "name": "fuchsia.sysmem/SecureHeapsAndRanges.heaps"
+        "name": "fuchsia.sysmem/SecureHeapsAndRanges.heaps",
+        "type": "vector<fuchsia.sysmem/SecureHeapAndRanges>:32"
     },
     {
         "kind": "table",
         "name": "fuchsia.sysmem/SecureHeapsAndRanges"
     },
     {
-        "declaration": "(fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/SecureMem.AddSecureHeapPhysicalRange"
+        "name": "fuchsia.sysmem/SecureMem.AddSecureHeapPhysicalRange",
+        "type": "(fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result result)"
     },
     {
-        "declaration": "(fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/SecureMem.DeleteSecureHeapPhysicalRange"
+        "name": "fuchsia.sysmem/SecureMem.DeleteSecureHeapPhysicalRange",
+        "type": "(fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result result)"
     },
     {
-        "declaration": "(fuchsia.sysmem/HeapType heap) -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/SecureMem.GetPhysicalSecureHeapProperties"
+        "name": "fuchsia.sysmem/SecureMem.GetPhysicalSecureHeapProperties",
+        "type": "(fuchsia.sysmem/HeapType heap) -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/SecureMem.GetPhysicalSecureHeaps"
+        "name": "fuchsia.sysmem/SecureMem.GetPhysicalSecureHeaps",
+        "type": "() -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result result)"
     },
     {
-        "declaration": "(fuchsia.sysmem/SecureHeapAndRangeModification range_modification) -> (fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/SecureMem.ModifySecureHeapPhysicalRange"
+        "name": "fuchsia.sysmem/SecureMem.ModifySecureHeapPhysicalRange",
+        "type": "(fuchsia.sysmem/SecureHeapAndRangeModification range_modification) -> (fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result result)"
     },
     {
-        "declaration": "(bool is_covering_range_explicit,fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_ZeroSubRange_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysmem/SecureMem.ZeroSubRange"
+        "name": "fuchsia.sysmem/SecureMem.ZeroSubRange",
+        "type": "(bool is_covering_range_explicit,fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_ZeroSubRange_Result result)"
     },
     {
         "kind": "protocol",
@@ -1325,14 +1325,14 @@
         "name": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result.err"
+        "name": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Response",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result.response"
+        "name": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result.response",
+        "type": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Response"
     },
     {
         "kind": "union",
@@ -1344,14 +1344,14 @@
         "name": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result.err"
+        "name": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Response",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result.response"
+        "name": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result.response",
+        "type": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Response"
     },
     {
         "kind": "union",
@@ -1359,23 +1359,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureHeapProperties",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response.properties"
+        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response.properties",
+        "type": "fuchsia.sysmem/SecureHeapProperties"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result.err"
+        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result.response"
+        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result.response",
+        "type": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response"
     },
     {
         "kind": "union",
@@ -1383,23 +1383,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureHeapsAndRanges",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response.heaps"
+        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response.heaps",
+        "type": "fuchsia.sysmem/SecureHeapsAndRanges"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result.err"
+        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result.response"
+        "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result.response",
+        "type": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response"
     },
     {
         "kind": "union",
@@ -1411,14 +1411,14 @@
         "name": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result.err"
+        "name": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Response",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result.response"
+        "name": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result.response",
+        "type": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Response"
     },
     {
         "kind": "union",
@@ -1430,14 +1430,14 @@
         "name": "fuchsia.sysmem/SecureMem_ZeroSubRange_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_ZeroSubRange_Result.err"
+        "name": "fuchsia.sysmem/SecureMem_ZeroSubRange_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.sysmem/SecureMem_ZeroSubRange_Response",
         "kind": "union/member",
-        "name": "fuchsia.sysmem/SecureMem_ZeroSubRange_Result.response"
+        "name": "fuchsia.sysmem/SecureMem_ZeroSubRange_Result.response",
+        "type": "fuchsia.sysmem/SecureMem_ZeroSubRange_Response"
     },
     {
         "kind": "union",
@@ -1445,14 +1445,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.sysmem/VmoBuffer",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/SingleBufferInfo.buffer"
+        "name": "fuchsia.sysmem/SingleBufferInfo.buffer",
+        "type": "fuchsia.sysmem/VmoBuffer"
     },
     {
-        "declaration": "fuchsia.sysmem/SingleBufferSettings",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/SingleBufferInfo.settings"
+        "name": "fuchsia.sysmem/SingleBufferInfo.settings",
+        "type": "fuchsia.sysmem/SingleBufferSettings"
     },
     {
         "kind": "struct",
@@ -1460,135 +1460,135 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.sysmem/BufferMemorySettings",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/SingleBufferSettings.buffer_settings"
+        "name": "fuchsia.sysmem/SingleBufferSettings.buffer_settings",
+        "type": "fuchsia.sysmem/BufferMemorySettings"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/SingleBufferSettings.has_image_format_constraints"
+        "name": "fuchsia.sysmem/SingleBufferSettings.has_image_format_constraints",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.sysmem/ImageFormatConstraints",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/SingleBufferSettings.image_format_constraints"
+        "name": "fuchsia.sysmem/SingleBufferSettings.image_format_constraints",
+        "type": "fuchsia.sysmem/ImageFormatConstraints"
     },
     {
         "kind": "struct",
         "name": "fuchsia.sysmem/SingleBufferSettings"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_INDEX_BUFFER",
+        "type": "uint32",
         "value": "4194304"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_INDIRECT_BUFFER",
+        "type": "uint32",
         "value": "16777216"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_STORAGE_BUFFER",
+        "type": "uint32",
         "value": "2097152"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_STORAGE_TEXEL_BUFFER",
+        "type": "uint32",
         "value": "524288"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_TRANSFER_DST",
+        "type": "uint32",
         "value": "131072"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_TRANSFER_SRC",
+        "type": "uint32",
         "value": "65536"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_UNIFORM_BUFFER",
+        "type": "uint32",
         "value": "1048576"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER",
+        "type": "uint32",
         "value": "262144"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_BUFFER_USAGE_VERTEX_BUFFER",
+        "type": "uint32",
         "value": "8388608"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_IMAGE_USAGE_COLOR_ATTACHMENT",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_IMAGE_USAGE_INPUT_ATTACHMENT",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_IMAGE_USAGE_SAMPLED",
+        "type": "uint32",
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_IMAGE_USAGE_STENCIL_ATTACHMENT",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_IMAGE_USAGE_STORAGE",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_IMAGE_USAGE_TRANSFER_DST",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_IMAGE_USAGE_TRANSFER_SRC",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/VULKAN_IMAGE_USAGE_TRANSIENT_ATTACHMENT",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "zx/handle:<VMO,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/VmoBuffer.vmo"
+        "name": "fuchsia.sysmem/VmoBuffer.vmo",
+        "type": "zx/handle:<VMO,optional>"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.sysmem/VmoBuffer.vmo_usable_start"
+        "name": "fuchsia.sysmem/VmoBuffer.vmo_usable_start",
+        "type": "uint64"
     },
     {
         "kind": "struct",
@@ -1596,129 +1596,129 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/cpuUsageRead",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/cpuUsageReadOften",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/cpuUsageWrite",
+        "type": "uint32",
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/cpuUsageWriteOften",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/displayUsageCursor",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/displayUsageLayer",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/noneUsage",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/videoUsageCapture",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/videoUsageDecryptorOutput",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/videoUsageHwDecoder",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/videoUsageHwDecoderInternal",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/videoUsageHwEncoder",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/videoUsageHwProtected",
+        "type": "uint32",
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/vulkanUsageColorAttachment",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/vulkanUsageInputAttachment",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/vulkanUsageSampled",
+        "type": "uint32",
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/vulkanUsageStencilAttachment",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/vulkanUsageStorage",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/vulkanUsageTransferDst",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/vulkanUsageTransferSrc",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.sysmem/vulkanUsageTransientAttachment",
+        "type": "uint32",
         "value": "64"
     },
     {

@@ -1,87 +1,87 @@
 [
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.test/Case.enabled"
+        "name": "fuchsia.test/Case.enabled",
+        "type": "bool"
     },
     {
-        "declaration": "string:512",
         "kind": "table/member",
-        "name": "fuchsia.test/Case.name"
+        "name": "fuchsia.test/Case.name",
+        "type": "string:512"
     },
     {
         "kind": "table",
         "name": "fuchsia.test/Case"
     },
     {
-        "declaration": "() -> (vector<fuchsia.test/Case> cases)",
         "kind": "protocol/member",
-        "name": "fuchsia.test/CaseIterator.GetNext"
+        "name": "fuchsia.test/CaseIterator.GetNext",
+        "type": "() -> (vector<fuchsia.test/Case> cases)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.test/CaseIterator"
     },
     {
-        "declaration": "(fuchsia.test/Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.test/CaseListener.Finished"
+        "name": "fuchsia.test/CaseListener.Finished",
+        "type": "(fuchsia.test/Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.test/CaseListener"
     },
     {
-        "declaration": "string:512",
         "kind": "table/member",
-        "name": "fuchsia.test/Invocation.name"
+        "name": "fuchsia.test/Invocation.name",
+        "type": "string:512"
     },
     {
-        "declaration": "string:512",
         "kind": "table/member",
-        "name": "fuchsia.test/Invocation.tag"
+        "name": "fuchsia.test/Invocation.tag",
+        "type": "string:512"
     },
     {
         "kind": "table",
         "name": "fuchsia.test/Invocation"
     },
     {
-        "declaration": "fuchsia.test/Status",
         "kind": "table/member",
-        "name": "fuchsia.test/Result.status"
+        "name": "fuchsia.test/Result.status",
+        "type": "fuchsia.test/Status"
     },
     {
         "kind": "table",
         "name": "fuchsia.test/Result"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.test/RunListener.OnFinished"
+        "name": "fuchsia.test/RunListener.OnFinished",
+        "type": "()"
     },
     {
-        "declaration": "(fuchsia.test/Invocation invocation,fuchsia.test/StdHandles std_handles,server_end:fuchsia.test/CaseListener listener)",
         "kind": "protocol/member",
-        "name": "fuchsia.test/RunListener.OnTestCaseStarted"
+        "name": "fuchsia.test/RunListener.OnTestCaseStarted",
+        "type": "(fuchsia.test/Invocation invocation,fuchsia.test/StdHandles std_handles,server_end:fuchsia.test/CaseListener listener)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.test/RunListener"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "fuchsia.test/RunOptions.arguments"
+        "name": "fuchsia.test/RunOptions.arguments",
+        "type": "vector<string>"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.test/RunOptions.include_disabled_tests"
+        "name": "fuchsia.test/RunOptions.include_disabled_tests",
+        "type": "bool"
     },
     {
-        "declaration": "uint16",
         "kind": "table/member",
-        "name": "fuchsia.test/RunOptions.parallel"
+        "name": "fuchsia.test/RunOptions.parallel",
+        "type": "uint16"
     },
     {
         "kind": "table",
@@ -103,20 +103,20 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.test/Status",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "zx/handle:SOCKET",
         "kind": "table/member",
-        "name": "fuchsia.test/StdHandles.err"
+        "name": "fuchsia.test/StdHandles.err",
+        "type": "zx/handle:SOCKET"
     },
     {
-        "declaration": "zx/handle:SOCKET",
         "kind": "table/member",
-        "name": "fuchsia.test/StdHandles.out"
+        "name": "fuchsia.test/StdHandles.out",
+        "type": "zx/handle:SOCKET"
     },
     {
         "kind": "table",
@@ -124,14 +124,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(server_end:fuchsia.test/CaseIterator iterator)",
         "kind": "protocol/member",
-        "name": "fuchsia.test/Suite.GetTests"
+        "name": "fuchsia.test/Suite.GetTests",
+        "type": "(server_end:fuchsia.test/CaseIterator iterator)"
     },
     {
-        "declaration": "(vector<fuchsia.test/Invocation> tests,fuchsia.test/RunOptions options,client_end:fuchsia.test/RunListener listener)",
         "kind": "protocol/member",
-        "name": "fuchsia.test/Suite.Run"
+        "name": "fuchsia.test/Suite.Run",
+        "type": "(vector<fuchsia.test/Invocation> tests,fuchsia.test/RunOptions options,client_end:fuchsia.test/RunListener listener)"
     },
     {
         "kind": "protocol",

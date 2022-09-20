@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "(fuchsia.net.reachability/MonitorOptions payload)",
         "kind": "protocol/member",
-        "name": "fuchsia.net.reachability/Monitor.SetOptions"
+        "name": "fuchsia.net.reachability/Monitor.SetOptions",
+        "type": "(fuchsia.net.reachability/MonitorOptions payload)"
     },
     {
-        "declaration": "() -> (fuchsia.net.reachability/Snapshot payload)",
         "kind": "protocol/member",
-        "name": "fuchsia.net.reachability/Monitor.Watch"
+        "name": "fuchsia.net.reachability/Monitor.Watch",
+        "type": "() -> (fuchsia.net.reachability/Snapshot payload)"
     },
     {
         "kind": "protocol",
@@ -18,9 +18,9 @@
         "name": "fuchsia.net.reachability/MonitorOptions"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.net.reachability/Snapshot.internet_available"
+        "name": "fuchsia.net.reachability/Snapshot.internet_available",
+        "type": "bool"
     },
     {
         "kind": "table",

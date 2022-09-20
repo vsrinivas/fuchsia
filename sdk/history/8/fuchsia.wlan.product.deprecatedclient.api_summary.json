@@ -1,22 +1,22 @@
 [
     {
-        "declaration": "int8",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.product.deprecatedclient/Ap.rssi_dbm"
+        "name": "fuchsia.wlan.product.deprecatedclient/Ap.rssi_dbm",
+        "type": "int8"
     },
     {
-        "declaration": "string:32",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.product.deprecatedclient/Ap.ssid"
+        "name": "fuchsia.wlan.product.deprecatedclient/Ap.ssid",
+        "type": "string:32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.wlan.product.deprecatedclient/Ap"
     },
     {
-        "declaration": "() -> (fuchsia.wlan.product.deprecatedclient/WlanStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.product.deprecatedclient/DeprecatedClient.Status"
+        "name": "fuchsia.wlan.product.deprecatedclient/DeprecatedClient.Status",
+        "type": "() -> (fuchsia.wlan.product.deprecatedclient/WlanStatus status)"
     },
     {
         "kind": "protocol",
@@ -43,20 +43,20 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.product.deprecatedclient/State",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "box<fuchsia.wlan.product.deprecatedclient/Ap>",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus.current_ap"
+        "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus.current_ap",
+        "type": "box<fuchsia.wlan.product.deprecatedclient/Ap>"
     },
     {
-        "declaration": "fuchsia.wlan.product.deprecatedclient/State",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus.state"
+        "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus.state",
+        "type": "fuchsia.wlan.product.deprecatedclient/State"
     },
     {
         "kind": "struct",

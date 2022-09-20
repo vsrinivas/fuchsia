@@ -15,129 +15,129 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.hardware.light/Capability",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.hardware.light/Capability",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/GroupInfo.capability"
+        "name": "fuchsia.hardware.light/GroupInfo.capability",
+        "type": "fuchsia.hardware.light/Capability"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/GroupInfo.count"
+        "name": "fuchsia.hardware.light/GroupInfo.count",
+        "type": "uint32"
     },
     {
-        "declaration": "string:32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/GroupInfo.name"
+        "name": "fuchsia.hardware.light/GroupInfo.name",
+        "type": "string:32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/GroupInfo"
     },
     {
-        "declaration": "fuchsia.hardware.light/Capability",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Info.capability"
+        "name": "fuchsia.hardware.light/Info.capability",
+        "type": "fuchsia.hardware.light/Capability"
     },
     {
-        "declaration": "string:32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Info.name"
+        "name": "fuchsia.hardware.light/Info.name",
+        "type": "string:32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Info"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.hardware.light/LIGHT_NAME_LEN",
+        "type": "uint8",
         "value": "32"
     },
     {
-        "declaration": "(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetCurrentBrightnessValue"
+        "name": "fuchsia.hardware.light/Light.GetCurrentBrightnessValue",
+        "type": "(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result result)"
     },
     {
-        "declaration": "(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentRgbValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetCurrentRgbValue"
+        "name": "fuchsia.hardware.light/Light.GetCurrentRgbValue",
+        "type": "(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentRgbValue_Result result)"
     },
     {
-        "declaration": "(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetCurrentSimpleValue"
+        "name": "fuchsia.hardware.light/Light.GetCurrentSimpleValue",
+        "type": "(uint32 index) -> (fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result result)"
     },
     {
-        "declaration": "(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetGroupCurrentBrightnessValue"
+        "name": "fuchsia.hardware.light/Light.GetGroupCurrentBrightnessValue",
+        "type": "(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result result)"
     },
     {
-        "declaration": "(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetGroupCurrentRgbValue"
+        "name": "fuchsia.hardware.light/Light.GetGroupCurrentRgbValue",
+        "type": "(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result result)"
     },
     {
-        "declaration": "(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetGroupCurrentSimpleValue"
+        "name": "fuchsia.hardware.light/Light.GetGroupCurrentSimpleValue",
+        "type": "(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result result)"
     },
     {
-        "declaration": "(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupInfo_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetGroupInfo"
+        "name": "fuchsia.hardware.light/Light.GetGroupInfo",
+        "type": "(uint32 group_id) -> (fuchsia.hardware.light/Light_GetGroupInfo_Result result)"
     },
     {
-        "declaration": "(uint32 index) -> (fuchsia.hardware.light/Light_GetInfo_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetInfo"
+        "name": "fuchsia.hardware.light/Light.GetInfo",
+        "type": "(uint32 index) -> (fuchsia.hardware.light/Light_GetInfo_Result result)"
     },
     {
-        "declaration": "() -> (uint32 count)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetNumLightGroups"
+        "name": "fuchsia.hardware.light/Light.GetNumLightGroups",
+        "type": "() -> (uint32 count)"
     },
     {
-        "declaration": "() -> (uint32 count)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.GetNumLights"
+        "name": "fuchsia.hardware.light/Light.GetNumLights",
+        "type": "() -> (uint32 count)"
     },
     {
-        "declaration": "(uint32 index,float64 value) -> (fuchsia.hardware.light/Light_SetBrightnessValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.SetBrightnessValue"
+        "name": "fuchsia.hardware.light/Light.SetBrightnessValue",
+        "type": "(uint32 index,float64 value) -> (fuchsia.hardware.light/Light_SetBrightnessValue_Result result)"
     },
     {
-        "declaration": "(uint32 group_id,vector<float64> values) -> (fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.SetGroupBrightnessValue"
+        "name": "fuchsia.hardware.light/Light.SetGroupBrightnessValue",
+        "type": "(uint32 group_id,vector<float64> values) -> (fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result result)"
     },
     {
-        "declaration": "(uint32 group_id,vector<fuchsia.hardware.light/Rgb> values) -> (fuchsia.hardware.light/Light_SetGroupRgbValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.SetGroupRgbValue"
+        "name": "fuchsia.hardware.light/Light.SetGroupRgbValue",
+        "type": "(uint32 group_id,vector<fuchsia.hardware.light/Rgb> values) -> (fuchsia.hardware.light/Light_SetGroupRgbValue_Result result)"
     },
     {
-        "declaration": "(uint32 group_id,vector<bool> values) -> (fuchsia.hardware.light/Light_SetGroupSimpleValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.SetGroupSimpleValue"
+        "name": "fuchsia.hardware.light/Light.SetGroupSimpleValue",
+        "type": "(uint32 group_id,vector<bool> values) -> (fuchsia.hardware.light/Light_SetGroupSimpleValue_Result result)"
     },
     {
-        "declaration": "(uint32 index,fuchsia.hardware.light/Rgb value) -> (fuchsia.hardware.light/Light_SetRgbValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.SetRgbValue"
+        "name": "fuchsia.hardware.light/Light.SetRgbValue",
+        "type": "(uint32 index,fuchsia.hardware.light/Rgb value) -> (fuchsia.hardware.light/Light_SetRgbValue_Result result)"
     },
     {
-        "declaration": "(uint32 index,bool value) -> (fuchsia.hardware.light/Light_SetSimpleValue_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.light/Light.SetSimpleValue"
+        "name": "fuchsia.hardware.light/Light.SetSimpleValue",
+        "type": "(uint32 index,bool value) -> (fuchsia.hardware.light/Light_SetSimpleValue_Result result)"
     },
     {
         "kind": "protocol",
@@ -164,29 +164,29 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.hardware.light/LightError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "float64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Response.value"
+        "name": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Response.value",
+        "type": "float64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_GetCurrentBrightnessValue_Response"
     },
     {
         "kind": "union",
@@ -194,23 +194,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.hardware.light/Rgb",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Response.value"
+        "name": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Response.value",
+        "type": "fuchsia.hardware.light/Rgb"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_GetCurrentRgbValue_Response"
     },
     {
         "kind": "union",
@@ -218,23 +218,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Response.value"
+        "name": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Response.value",
+        "type": "bool"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_GetCurrentSimpleValue_Response"
     },
     {
         "kind": "union",
@@ -242,23 +242,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<float64>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Response.values"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Response.values",
+        "type": "vector<float64>:optional"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_GetGroupCurrentBrightnessValue_Response"
     },
     {
         "kind": "union",
@@ -266,23 +266,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<fuchsia.hardware.light/Rgb>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Response.values"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Response.values",
+        "type": "vector<fuchsia.hardware.light/Rgb>:optional"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_GetGroupCurrentRgbValue_Response"
     },
     {
         "kind": "union",
@@ -290,23 +290,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<bool>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Response.values"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Response.values",
+        "type": "vector<bool>:optional"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_GetGroupCurrentSimpleValue_Response"
     },
     {
         "kind": "union",
@@ -314,23 +314,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.hardware.light/GroupInfo",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupInfo_Response.info"
+        "name": "fuchsia.hardware.light/Light_GetGroupInfo_Response.info",
+        "type": "fuchsia.hardware.light/GroupInfo"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Light_GetGroupInfo_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupInfo_Result.err"
+        "name": "fuchsia.hardware.light/Light_GetGroupInfo_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_GetGroupInfo_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetGroupInfo_Result.response"
+        "name": "fuchsia.hardware.light/Light_GetGroupInfo_Result.response",
+        "type": "fuchsia.hardware.light/Light_GetGroupInfo_Response"
     },
     {
         "kind": "union",
@@ -338,23 +338,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.hardware.light/Info",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Light_GetInfo_Response.info"
+        "name": "fuchsia.hardware.light/Light_GetInfo_Response.info",
+        "type": "fuchsia.hardware.light/Info"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.light/Light_GetInfo_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetInfo_Result.err"
+        "name": "fuchsia.hardware.light/Light_GetInfo_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_GetInfo_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_GetInfo_Result.response"
+        "name": "fuchsia.hardware.light/Light_GetInfo_Result.response",
+        "type": "fuchsia.hardware.light/Light_GetInfo_Response"
     },
     {
         "kind": "union",
@@ -366,14 +366,14 @@
         "name": "fuchsia.hardware.light/Light_SetBrightnessValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetBrightnessValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_SetBrightnessValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_SetBrightnessValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetBrightnessValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_SetBrightnessValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_SetBrightnessValue_Response"
     },
     {
         "kind": "union",
@@ -385,14 +385,14 @@
         "name": "fuchsia.hardware.light/Light_SetGroupBrightnessValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_SetGroupBrightnessValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_SetGroupBrightnessValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_SetGroupBrightnessValue_Response"
     },
     {
         "kind": "union",
@@ -404,14 +404,14 @@
         "name": "fuchsia.hardware.light/Light_SetGroupRgbValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetGroupRgbValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_SetGroupRgbValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_SetGroupRgbValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetGroupRgbValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_SetGroupRgbValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_SetGroupRgbValue_Response"
     },
     {
         "kind": "union",
@@ -423,14 +423,14 @@
         "name": "fuchsia.hardware.light/Light_SetGroupSimpleValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetGroupSimpleValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_SetGroupSimpleValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_SetGroupSimpleValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetGroupSimpleValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_SetGroupSimpleValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_SetGroupSimpleValue_Response"
     },
     {
         "kind": "union",
@@ -442,14 +442,14 @@
         "name": "fuchsia.hardware.light/Light_SetRgbValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetRgbValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_SetRgbValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_SetRgbValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetRgbValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_SetRgbValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_SetRgbValue_Response"
     },
     {
         "kind": "union",
@@ -461,14 +461,14 @@
         "name": "fuchsia.hardware.light/Light_SetSimpleValue_Response"
     },
     {
-        "declaration": "fuchsia.hardware.light/LightError",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetSimpleValue_Result.err"
+        "name": "fuchsia.hardware.light/Light_SetSimpleValue_Result.err",
+        "type": "fuchsia.hardware.light/LightError"
     },
     {
-        "declaration": "fuchsia.hardware.light/Light_SetSimpleValue_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.light/Light_SetSimpleValue_Result.response"
+        "name": "fuchsia.hardware.light/Light_SetSimpleValue_Result.response",
+        "type": "fuchsia.hardware.light/Light_SetSimpleValue_Response"
     },
     {
         "kind": "union",
@@ -476,19 +476,19 @@
         "strictness": "strict"
     },
     {
-        "declaration": "float64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Rgb.blue"
+        "name": "fuchsia.hardware.light/Rgb.blue",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Rgb.green"
+        "name": "fuchsia.hardware.light/Rgb.green",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.light/Rgb.red"
+        "name": "fuchsia.hardware.light/Rgb.red",
+        "type": "float64"
     },
     {
         "kind": "struct",

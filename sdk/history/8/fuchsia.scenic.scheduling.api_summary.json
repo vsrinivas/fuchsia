@@ -1,60 +1,60 @@
 [
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.scenic.scheduling/FramePresentedInfo.actual_presentation_time"
+        "name": "fuchsia.scenic.scheduling/FramePresentedInfo.actual_presentation_time",
+        "type": "int64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.scenic.scheduling/FramePresentedInfo.num_presents_allowed"
+        "name": "fuchsia.scenic.scheduling/FramePresentedInfo.num_presents_allowed",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<fuchsia.scenic.scheduling/PresentReceivedInfo>:32",
         "kind": "struct/member",
-        "name": "fuchsia.scenic.scheduling/FramePresentedInfo.presentation_infos"
+        "name": "fuchsia.scenic.scheduling/FramePresentedInfo.presentation_infos",
+        "type": "vector<fuchsia.scenic.scheduling/PresentReceivedInfo>:32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.scenic.scheduling/FramePresentedInfo"
     },
     {
-        "declaration": "vector<fuchsia.scenic.scheduling/PresentationInfo>:8",
         "kind": "struct/member",
-        "name": "fuchsia.scenic.scheduling/FuturePresentationTimes.future_presentations"
+        "name": "fuchsia.scenic.scheduling/FuturePresentationTimes.future_presentations",
+        "type": "vector<fuchsia.scenic.scheduling/PresentationInfo>:8"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.scenic.scheduling/FuturePresentationTimes.remaining_presents_in_flight_allowed"
+        "name": "fuchsia.scenic.scheduling/FuturePresentationTimes.remaining_presents_in_flight_allowed",
+        "type": "int64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.scenic.scheduling/FuturePresentationTimes"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.scenic.scheduling/PresentReceivedInfo.latched_time"
+        "name": "fuchsia.scenic.scheduling/PresentReceivedInfo.latched_time",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.scenic.scheduling/PresentReceivedInfo.present_received_time"
+        "name": "fuchsia.scenic.scheduling/PresentReceivedInfo.present_received_time",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.scenic.scheduling/PresentReceivedInfo"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.scenic.scheduling/PresentationInfo.latch_point"
+        "name": "fuchsia.scenic.scheduling/PresentationInfo.latch_point",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.scenic.scheduling/PresentationInfo.presentation_time"
+        "name": "fuchsia.scenic.scheduling/PresentationInfo.presentation_time",
+        "type": "int64"
     },
     {
         "kind": "table",

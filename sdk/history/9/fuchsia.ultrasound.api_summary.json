@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "(server_end:fuchsia.media/AudioCapturer request) -> (zx/handle:CLOCK reference_clock,fuchsia.media/AudioStreamType stream_type)",
         "kind": "protocol/member",
-        "name": "fuchsia.ultrasound/Factory.CreateCapturer"
+        "name": "fuchsia.ultrasound/Factory.CreateCapturer",
+        "type": "(server_end:fuchsia.media/AudioCapturer request) -> (zx/handle:CLOCK reference_clock,fuchsia.media/AudioStreamType stream_type)"
     },
     {
-        "declaration": "(server_end:fuchsia.media/AudioRenderer renderer) -> (zx/handle:CLOCK reference_clock,fuchsia.media/AudioStreamType stream_type)",
         "kind": "protocol/member",
-        "name": "fuchsia.ultrasound/Factory.CreateRenderer"
+        "name": "fuchsia.ultrasound/Factory.CreateRenderer",
+        "type": "(server_end:fuchsia.media/AudioRenderer renderer) -> (zx/handle:CLOCK reference_clock,fuchsia.media/AudioStreamType stream_type)"
     },
     {
         "kind": "protocol",

@@ -10,161 +10,161 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.hwinfo/Architecture",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (fuchsia.hwinfo/BoardInfo info)",
         "kind": "protocol/member",
-        "name": "fuchsia.hwinfo/Board.GetInfo"
+        "name": "fuchsia.hwinfo/Board.GetInfo",
+        "type": "() -> (fuchsia.hwinfo/BoardInfo info)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hwinfo/Board"
     },
     {
-        "declaration": "fuchsia.hwinfo/Architecture",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/BoardInfo.cpu_architecture"
+        "name": "fuchsia.hwinfo/BoardInfo.cpu_architecture",
+        "type": "fuchsia.hwinfo/Architecture"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/BoardInfo.name"
+        "name": "fuchsia.hwinfo/BoardInfo.name",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/BoardInfo.revision"
+        "name": "fuchsia.hwinfo/BoardInfo.revision",
+        "type": "string"
     },
     {
         "kind": "table",
         "name": "fuchsia.hwinfo/BoardInfo"
     },
     {
-        "declaration": "() -> (fuchsia.hwinfo/DeviceInfo info)",
         "kind": "protocol/member",
-        "name": "fuchsia.hwinfo/Device.GetInfo"
+        "name": "fuchsia.hwinfo/Device.GetInfo",
+        "type": "() -> (fuchsia.hwinfo/DeviceInfo info)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hwinfo/Device"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/DeviceInfo.is_retail_demo"
+        "name": "fuchsia.hwinfo/DeviceInfo.is_retail_demo",
+        "type": "bool"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/DeviceInfo.retail_sku"
+        "name": "fuchsia.hwinfo/DeviceInfo.retail_sku",
+        "type": "string:255"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/DeviceInfo.serial_number"
+        "name": "fuchsia.hwinfo/DeviceInfo.serial_number",
+        "type": "string:255"
     },
     {
         "kind": "table",
         "name": "fuchsia.hwinfo/DeviceInfo"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.hwinfo/MAX_VALUE_SIZE",
+        "type": "uint8",
         "value": "255"
     },
     {
-        "declaration": "() -> (fuchsia.hwinfo/ProductInfo info)",
         "kind": "protocol/member",
-        "name": "fuchsia.hwinfo/Product.GetInfo"
+        "name": "fuchsia.hwinfo/Product.GetInfo",
+        "type": "() -> (fuchsia.hwinfo/ProductInfo info)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hwinfo/Product"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.audio_amplifier"
+        "name": "fuchsia.hwinfo/ProductInfo.audio_amplifier",
+        "type": "string:255"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.build_date"
+        "name": "fuchsia.hwinfo/ProductInfo.build_date",
+        "type": "string"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.build_name"
+        "name": "fuchsia.hwinfo/ProductInfo.build_name",
+        "type": "string:255"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.colorway"
+        "name": "fuchsia.hwinfo/ProductInfo.colorway",
+        "type": "string:255"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.display"
+        "name": "fuchsia.hwinfo/ProductInfo.display",
+        "type": "string:255"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.emmc_storage"
+        "name": "fuchsia.hwinfo/ProductInfo.emmc_storage",
+        "type": "string:255"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.language"
+        "name": "fuchsia.hwinfo/ProductInfo.language",
+        "type": "string"
     },
     {
-        "declaration": "vector<fuchsia.intl/LocaleId>",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.locale_list"
+        "name": "fuchsia.hwinfo/ProductInfo.locale_list",
+        "type": "vector<fuchsia.intl/LocaleId>"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.manufacturer"
+        "name": "fuchsia.hwinfo/ProductInfo.manufacturer",
+        "type": "string"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.memory"
+        "name": "fuchsia.hwinfo/ProductInfo.memory",
+        "type": "string:255"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.microphone"
+        "name": "fuchsia.hwinfo/ProductInfo.microphone",
+        "type": "string:255"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.model"
+        "name": "fuchsia.hwinfo/ProductInfo.model",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.name"
+        "name": "fuchsia.hwinfo/ProductInfo.name",
+        "type": "string"
     },
     {
-        "declaration": "string:255",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.nand_storage"
+        "name": "fuchsia.hwinfo/ProductInfo.nand_storage",
+        "type": "string:255"
     },
     {
-        "declaration": "fuchsia.intl/RegulatoryDomain",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.regulatory_domain"
+        "name": "fuchsia.hwinfo/ProductInfo.regulatory_domain",
+        "type": "fuchsia.intl/RegulatoryDomain"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.hwinfo/ProductInfo.sku"
+        "name": "fuchsia.hwinfo/ProductInfo.sku",
+        "type": "string"
     },
     {
         "kind": "table",

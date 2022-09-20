@@ -57,9 +57,9 @@ const (
 	UnionMemberKind    Kind = "union/member"
 )
 
-// Decl is the underlying type declaration.  For `enum Foo : int32`,
-// this will be `int32`.
-type Decl string
+// Type is the FIDL type of an element. For enums and bits, this is the
+// underlying primitive type. For methods, this is the entire method signature.
+type Type string
 
 // Name is the fully qualified name of the element:
 // https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0043_documentation_comment_format?hl=en#fully-qualified-names
@@ -86,11 +86,14 @@ func fidlConstToValue(fc *fidlgen.Constant) Value {
 // Keep the fields sorted by name, otherwise JSON marshaling will not match the
 // fx format-code style.
 type ElementStr struct {
-	Decl         `json:"declaration,omitempty"`
+	// TODO(fxbug.dev/109721): Remove.
+	Decl Type `json:"declaration,omitempty"`
+
 	Kind         `json:"kind"`
 	Name         `json:"name"`
 	Resourceness `json:"resourceness,omitempty"`
 	Strictness   `json:"strictness,omitempty"`
+	Type         `json:"type,omitempty"`
 	Value        `json:"value,omitempty"`
 }
 

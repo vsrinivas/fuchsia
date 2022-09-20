@@ -1,22 +1,22 @@
 [
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.auth.oldtokens/Credential.access_token"
+        "name": "fuchsia.auth.oldtokens/Credential.access_token",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.auth.oldtokens/Credential.user_id"
+        "name": "fuchsia.auth.oldtokens/Credential.user_id",
+        "type": "string"
     },
     {
         "kind": "table",
         "name": "fuchsia.auth.oldtokens/Credential"
     },
     {
-        "declaration": "() -> (vector<fuchsia.auth.oldtokens/Credential> credentials)",
         "kind": "protocol/member",
-        "name": "fuchsia.auth.oldtokens/CredentialsProducer.GetUpdatedCredentials"
+        "name": "fuchsia.auth.oldtokens/CredentialsProducer.GetUpdatedCredentials",
+        "type": "() -> (vector<fuchsia.auth.oldtokens/Credential> credentials)"
     },
     {
         "kind": "protocol",

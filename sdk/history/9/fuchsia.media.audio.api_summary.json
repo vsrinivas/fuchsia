@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(string:128 effect_name,string config) -> (fuchsia.media.audio/EffectsController_UpdateEffect_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.audio/EffectsController.UpdateEffect"
+        "name": "fuchsia.media.audio/EffectsController.UpdateEffect",
+        "type": "(string:128 effect_name,string config) -> (fuchsia.media.audio/EffectsController_UpdateEffect_Result result)"
     },
     {
         "kind": "protocol",
@@ -13,14 +13,14 @@
         "name": "fuchsia.media.audio/EffectsController_UpdateEffect_Response"
     },
     {
-        "declaration": "fuchsia.media.audio/UpdateEffectError",
         "kind": "union/member",
-        "name": "fuchsia.media.audio/EffectsController_UpdateEffect_Result.err"
+        "name": "fuchsia.media.audio/EffectsController_UpdateEffect_Result.err",
+        "type": "fuchsia.media.audio/UpdateEffectError"
     },
     {
-        "declaration": "fuchsia.media.audio/EffectsController_UpdateEffect_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.audio/EffectsController_UpdateEffect_Result.response"
+        "name": "fuchsia.media.audio/EffectsController_UpdateEffect_Result.response",
+        "type": "fuchsia.media.audio/EffectsController_UpdateEffect_Response"
     },
     {
         "kind": "union",
@@ -28,57 +28,57 @@
         "strictness": "strict"
     },
     {
-        "declaration": " -> (float32 gain_db,bool muted)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.audio/GainControl.OnGainMuteChanged"
+        "name": "fuchsia.media.audio/GainControl.OnGainMuteChanged",
+        "type": " -> (float32 gain_db,bool muted)"
     },
     {
-        "declaration": "(float32 gain_db)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.audio/GainControl.SetGain"
+        "name": "fuchsia.media.audio/GainControl.SetGain",
+        "type": "(float32 gain_db)"
     },
     {
-        "declaration": "(float32 gain_db,int64 duration,fuchsia.media.audio/RampType rampType)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.audio/GainControl.SetGainWithRamp"
+        "name": "fuchsia.media.audio/GainControl.SetGainWithRamp",
+        "type": "(float32 gain_db,int64 duration,fuchsia.media.audio/RampType rampType)"
     },
     {
-        "declaration": "(bool muted)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.audio/GainControl.SetMute"
+        "name": "fuchsia.media.audio/GainControl.SetMute",
+        "type": "(bool muted)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.audio/GainControl"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media.audio/MAX_EFFECT_NAME_LENGTH",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "float32",
         "kind": "const",
         "name": "fuchsia.media.audio/MAX_GAIN_DB",
+        "type": "float32",
         "value": "24"
     },
     {
-        "declaration": "float32",
         "kind": "const",
         "name": "fuchsia.media.audio/MAX_VOLUME",
+        "type": "float32",
         "value": "1"
     },
     {
-        "declaration": "float32",
         "kind": "const",
         "name": "fuchsia.media.audio/MIN_VOLUME",
+        "type": "float32",
         "value": "0"
     },
     {
-        "declaration": "float32",
         "kind": "const",
         "name": "fuchsia.media.audio/MUTED_GAIN_DB",
+        "type": "float32",
         "value": "-160"
     },
     {
@@ -87,10 +87,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint16",
         "kind": "enum",
         "name": "fuchsia.media.audio/RampType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint16"
     },
     {
         "kind": "enum/member",
@@ -103,25 +103,25 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.audio/UpdateEffectError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": " -> (float32 new_volume,bool new_muted)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.audio/VolumeControl.OnVolumeMuteChanged"
+        "name": "fuchsia.media.audio/VolumeControl.OnVolumeMuteChanged",
+        "type": " -> (float32 new_volume,bool new_muted)"
     },
     {
-        "declaration": "(bool mute)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.audio/VolumeControl.SetMute"
+        "name": "fuchsia.media.audio/VolumeControl.SetMute",
+        "type": "(bool mute)"
     },
     {
-        "declaration": "(float32 volume)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.audio/VolumeControl.SetVolume"
+        "name": "fuchsia.media.audio/VolumeControl.SetVolume",
+        "type": "(float32 volume)"
     },
     {
         "kind": "protocol",

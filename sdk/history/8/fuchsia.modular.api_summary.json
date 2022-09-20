@@ -1,42 +1,42 @@
 [
     {
-        "declaration": "fuchsia.modular/DisplayInfo",
         "kind": "table/member",
-        "name": "fuchsia.modular/ActionDisplay.display_info"
+        "name": "fuchsia.modular/ActionDisplay.display_info",
+        "type": "fuchsia.modular/DisplayInfo"
     },
     {
-        "declaration": "vector<fuchsia.modular/ParameterMapping>",
         "kind": "table/member",
-        "name": "fuchsia.modular/ActionDisplay.parameter_mapping"
+        "name": "fuchsia.modular/ActionDisplay.parameter_mapping",
+        "type": "vector<fuchsia.modular/ParameterMapping>"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular/ActionDisplay"
     },
     {
-        "declaration": "fuchsia.modular/Intent",
         "kind": "struct/member",
-        "name": "fuchsia.modular/AddMod.intent"
+        "name": "fuchsia.modular/AddMod.intent",
+        "type": "fuchsia.modular/Intent"
     },
     {
-        "declaration": "vector<string>",
         "kind": "struct/member",
-        "name": "fuchsia.modular/AddMod.mod_name"
+        "name": "fuchsia.modular/AddMod.mod_name",
+        "type": "vector<string>"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/AddMod.mod_name_transitional"
+        "name": "fuchsia.modular/AddMod.mod_name_transitional",
+        "type": "string:optional"
     },
     {
-        "declaration": "vector<string>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/AddMod.surface_parent_mod_name"
+        "name": "fuchsia.modular/AddMod.surface_parent_mod_name",
+        "type": "vector<string>:optional"
     },
     {
-        "declaration": "fuchsia.modular/SurfaceRelation",
         "kind": "struct/member",
-        "name": "fuchsia.modular/AddMod.surface_relation"
+        "name": "fuchsia.modular/AddMod.surface_relation",
+        "type": "fuchsia.modular/SurfaceRelation"
     },
     {
         "kind": "struct",
@@ -44,9 +44,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(string requestor_url,server_end:fuchsia.sys/ServiceProvider services)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/Agent.Connect"
+        "name": "fuchsia.modular/Agent.Connect",
+        "type": "(string requestor_url,server_end:fuchsia.sys/ServiceProvider services)"
     },
     {
         "kind": "protocol",
@@ -57,24 +57,24 @@
         "name": "fuchsia.modular/AgentController"
     },
     {
-        "declaration": "server_end:fuchsia.modular/AgentController",
         "kind": "table/member",
-        "name": "fuchsia.modular/AgentServiceRequest.agent_controller"
+        "name": "fuchsia.modular/AgentServiceRequest.agent_controller",
+        "type": "server_end:fuchsia.modular/AgentController"
     },
     {
-        "declaration": "zx/handle:CHANNEL",
         "kind": "table/member",
-        "name": "fuchsia.modular/AgentServiceRequest.channel"
+        "name": "fuchsia.modular/AgentServiceRequest.channel",
+        "type": "zx/handle:CHANNEL"
     },
     {
-        "declaration": "string:2083",
         "kind": "table/member",
-        "name": "fuchsia.modular/AgentServiceRequest.handler"
+        "name": "fuchsia.modular/AgentServiceRequest.handler",
+        "type": "string:2083"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/AgentServiceRequest.service_name"
+        "name": "fuchsia.modular/AgentServiceRequest.service_name",
+        "type": "string"
     },
     {
         "kind": "table",
@@ -82,14 +82,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string:256",
         "kind": "struct/member",
-        "name": "fuchsia.modular/Annotation.key"
+        "name": "fuchsia.modular/Annotation.key",
+        "type": "string:256"
     },
     {
-        "declaration": "fuchsia.modular/AnnotationValue:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/Annotation.value"
+        "name": "fuchsia.modular/Annotation.value",
+        "type": "fuchsia.modular/AnnotationValue:optional"
     },
     {
         "kind": "struct",
@@ -112,25 +112,25 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/AnnotationError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "union/member",
-        "name": "fuchsia.modular/AnnotationValue.buffer"
+        "name": "fuchsia.modular/AnnotationValue.buffer",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "vector<uint8>:1024",
         "kind": "union/member",
-        "name": "fuchsia.modular/AnnotationValue.bytes"
+        "name": "fuchsia.modular/AnnotationValue.bytes",
+        "type": "vector<uint8>:1024"
     },
     {
-        "declaration": "string:1024",
         "kind": "union/member",
-        "name": "fuchsia.modular/AnnotationValue.text"
+        "name": "fuchsia.modular/AnnotationValue.text",
+        "type": "string:1024"
     },
     {
         "kind": "union",
@@ -139,14 +139,14 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "(string url,server_end:fuchsia.sys/ServiceProvider incoming_services,server_end:fuchsia.modular/AgentController controller)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/ComponentContext.DeprecatedConnectToAgent"
+        "name": "fuchsia.modular/ComponentContext.DeprecatedConnectToAgent",
+        "type": "(string url,server_end:fuchsia.sys/ServiceProvider incoming_services,server_end:fuchsia.modular/AgentController controller)"
     },
     {
-        "declaration": "(fuchsia.modular/AgentServiceRequest request)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/ComponentContext.DeprecatedConnectToAgentService"
+        "name": "fuchsia.modular/ComponentContext.DeprecatedConnectToAgentService",
+        "type": "(fuchsia.modular/AgentServiceRequest request)"
     },
     {
         "kind": "protocol",
@@ -158,44 +158,44 @@
         "value": "1"
     },
     {
-        "declaration": "int32",
         "kind": "enum",
         "name": "fuchsia.modular/ConfigureStoryError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "int32"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/DisplayInfo.icon"
+        "name": "fuchsia.modular/DisplayInfo.icon",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/DisplayInfo.subtitle"
+        "name": "fuchsia.modular/DisplayInfo.subtitle",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/DisplayInfo.title"
+        "name": "fuchsia.modular/DisplayInfo.title",
+        "type": "string"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular/DisplayInfo"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ExecuteResult.error_message"
+        "name": "fuchsia.modular/ExecuteResult.error_message",
+        "type": "string:optional"
     },
     {
-        "declaration": "fuchsia.modular/ExecuteStatus",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ExecuteResult.status"
+        "name": "fuchsia.modular/ExecuteResult.status",
+        "type": "fuchsia.modular/ExecuteStatus"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ExecuteResult.story_id"
+        "name": "fuchsia.modular/ExecuteResult.story_id",
+        "type": "string:optional"
     },
     {
         "kind": "struct",
@@ -237,25 +237,25 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/ExecuteStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/Intent.action"
+        "name": "fuchsia.modular/Intent.action",
+        "type": "string:optional"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/Intent.handler"
+        "name": "fuchsia.modular/Intent.handler",
+        "type": "string:optional"
     },
     {
-        "declaration": "vector<fuchsia.modular/IntentParameter>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/Intent.parameters"
+        "name": "fuchsia.modular/Intent.parameters",
+        "type": "vector<fuchsia.modular/IntentParameter>:optional"
     },
     {
         "kind": "struct",
@@ -263,33 +263,33 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/IntentFilter.action"
+        "name": "fuchsia.modular/IntentFilter.action",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.modular/ActionDisplay",
         "kind": "struct/member",
-        "name": "fuchsia.modular/IntentFilter.action_display"
+        "name": "fuchsia.modular/IntentFilter.action_display",
+        "type": "fuchsia.modular/ActionDisplay"
     },
     {
-        "declaration": "vector<fuchsia.modular/ParameterConstraint>",
         "kind": "struct/member",
-        "name": "fuchsia.modular/IntentFilter.parameter_constraints"
+        "name": "fuchsia.modular/IntentFilter.parameter_constraints",
+        "type": "vector<fuchsia.modular/ParameterConstraint>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.modular/IntentFilter"
     },
     {
-        "declaration": "fuchsia.modular/IntentParameterData",
         "kind": "struct/member",
-        "name": "fuchsia.modular/IntentParameter.data"
+        "name": "fuchsia.modular/IntentParameter.data",
+        "type": "fuchsia.modular/IntentParameterData"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/IntentParameter.name"
+        "name": "fuchsia.modular/IntentParameter.name",
+        "type": "string:optional"
     },
     {
         "kind": "struct",
@@ -297,19 +297,19 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string",
         "kind": "union/member",
-        "name": "fuchsia.modular/IntentParameterData.entity_reference"
+        "name": "fuchsia.modular/IntentParameterData.entity_reference",
+        "type": "string"
     },
     {
-        "declaration": "vector<string>",
         "kind": "union/member",
-        "name": "fuchsia.modular/IntentParameterData.entity_type"
+        "name": "fuchsia.modular/IntentParameterData.entity_type",
+        "type": "vector<string>"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "union/member",
-        "name": "fuchsia.modular/IntentParameterData.json"
+        "name": "fuchsia.modular/IntentParameterData.json",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "union",
@@ -318,103 +318,103 @@
         "strictness": "strict"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/Lifecycle.Terminate"
+        "name": "fuchsia.modular/Lifecycle.Terminate",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular/Lifecycle"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.modular/MAX_ANNOTATIONS_PER_MODULE",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.modular/MAX_ANNOTATIONS_PER_STORY",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.modular/MAX_ANNOTATIONS_PER_UPDATE",
+        "type": "uint32",
         "value": "50"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.modular/MAX_ANNOTATION_KEY_LENGTH",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.modular/MAX_ANNOTATION_VALUE_BUFFER_LENGTH_BYTES",
+        "type": "uint32",
         "value": "102400"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.modular/MAX_ANNOTATION_VALUE_LENGTH",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/ModuleContext.RemoveSelfFromStory"
+        "name": "fuchsia.modular/ModuleContext.RemoveSelfFromStory",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular/ModuleContext"
     },
     {
-        "declaration": "fuchsia.sys/ServiceList",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.additional_services"
+        "name": "fuchsia.modular/ModuleData.additional_services",
+        "type": "fuchsia.sys/ServiceList"
     },
     {
-        "declaration": "vector<fuchsia.modular/Annotation>:100",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.annotations"
+        "name": "fuchsia.modular/ModuleData.annotations",
+        "type": "vector<fuchsia.modular/Annotation>:100"
     },
     {
-        "declaration": "fuchsia.modular/Intent",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.intent"
+        "name": "fuchsia.modular/ModuleData.intent",
+        "type": "fuchsia.modular/Intent"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.is_embedded"
+        "name": "fuchsia.modular/ModuleData.is_embedded",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.module_deleted"
+        "name": "fuchsia.modular/ModuleData.module_deleted",
+        "type": "bool"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.module_path"
+        "name": "fuchsia.modular/ModuleData.module_path",
+        "type": "vector<string>"
     },
     {
-        "declaration": "fuchsia.modular/ModuleSource",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.module_source"
+        "name": "fuchsia.modular/ModuleData.module_source",
+        "type": "fuchsia.modular/ModuleSource"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.module_url"
+        "name": "fuchsia.modular/ModuleData.module_url",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.modular/SurfaceRelation",
         "kind": "table/member",
-        "name": "fuchsia.modular/ModuleData.surface_relation"
+        "name": "fuchsia.modular/ModuleData.surface_relation",
+        "type": "fuchsia.modular/SurfaceRelation"
     },
     {
         "kind": "table",
@@ -422,29 +422,29 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ModuleManifest.binary"
+        "name": "fuchsia.modular/ModuleManifest.binary",
+        "type": "string"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ModuleManifest.composition_pattern"
+        "name": "fuchsia.modular/ModuleManifest.composition_pattern",
+        "type": "string:optional"
     },
     {
-        "declaration": "vector<fuchsia.modular/IntentFilter>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ModuleManifest.intent_filters"
+        "name": "fuchsia.modular/ModuleManifest.intent_filters",
+        "type": "vector<fuchsia.modular/IntentFilter>:optional"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ModuleManifest.placeholder_color"
+        "name": "fuchsia.modular/ModuleManifest.placeholder_color",
+        "type": "string:optional"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ModuleManifest.suggestion_headline"
+        "name": "fuchsia.modular/ModuleManifest.suggestion_headline",
+        "type": "string:optional"
     },
     {
         "kind": "struct",
@@ -461,10 +461,10 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/ModuleSource",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -482,10 +482,10 @@
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/ModuleState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "protocol",
@@ -507,138 +507,138 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/OngoingActivityType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ParameterConstraint.name"
+        "name": "fuchsia.modular/ParameterConstraint.name",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ParameterConstraint.type"
+        "name": "fuchsia.modular/ParameterConstraint.type",
+        "type": "string"
     },
     {
         "kind": "struct",
         "name": "fuchsia.modular/ParameterConstraint"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/ParameterMapping.name"
+        "name": "fuchsia.modular/ParameterMapping.name",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/ParameterMapping.parameter_property"
+        "name": "fuchsia.modular/ParameterMapping.parameter_property",
+        "type": "string"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular/ParameterMapping"
     },
     {
-        "declaration": "(string story_name,server_end:fuchsia.modular/StoryPuppetMaster request)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/PuppetMaster.ControlStory"
+        "name": "fuchsia.modular/PuppetMaster.ControlStory",
+        "type": "(string story_name,server_end:fuchsia.modular/StoryPuppetMaster request)"
     },
     {
-        "declaration": "(string story_name) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/PuppetMaster.DeleteStory"
+        "name": "fuchsia.modular/PuppetMaster.DeleteStory",
+        "type": "(string story_name) -> ()"
     },
     {
-        "declaration": "() -> (vector<string> story_names)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/PuppetMaster.GetStories"
+        "name": "fuchsia.modular/PuppetMaster.GetStories",
+        "type": "() -> (vector<string> story_names)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular/PuppetMaster"
     },
     {
-        "declaration": "vector<string>",
         "kind": "struct/member",
-        "name": "fuchsia.modular/RemoveMod.mod_name"
+        "name": "fuchsia.modular/RemoveMod.mod_name",
+        "type": "vector<string>"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/RemoveMod.mod_name_transitional"
+        "name": "fuchsia.modular/RemoveMod.mod_name_transitional",
+        "type": "string:optional"
     },
     {
         "kind": "struct",
         "name": "fuchsia.modular/RemoveMod"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionRestartController.Restart"
+        "name": "fuchsia.modular/SessionRestartController.Restart",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular/SessionRestartController"
     },
     {
-        "declaration": "(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewHolderToken view_holder_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionShell.AttachView"
+        "name": "fuchsia.modular/SessionShell.AttachView",
+        "type": "(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewHolderToken view_holder_token)"
     },
     {
-        "declaration": "(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewHolderToken view_holder_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionShell.AttachView2"
+        "name": "fuchsia.modular/SessionShell.AttachView2",
+        "type": "(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewHolderToken view_holder_token)"
     },
     {
-        "declaration": "(fuchsia.modular/ViewIdentifier view_id) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionShell.DetachView"
+        "name": "fuchsia.modular/SessionShell.DetachView",
+        "type": "(fuchsia.modular/ViewIdentifier view_id) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular/SessionShell"
     },
     {
-        "declaration": "(server_end:fuchsia.modular/ComponentContext request)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionShellContext.GetComponentContext"
+        "name": "fuchsia.modular/SessionShellContext.GetComponentContext",
+        "type": "(server_end:fuchsia.modular/ComponentContext request)"
     },
     {
-        "declaration": "(server_end:fuchsia.ui.policy/Presentation request)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionShellContext.GetPresentation"
+        "name": "fuchsia.modular/SessionShellContext.GetPresentation",
+        "type": "(server_end:fuchsia.ui.policy/Presentation request)"
     },
     {
-        "declaration": "(server_end:fuchsia.modular/StoryProvider request)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionShellContext.GetStoryProvider"
+        "name": "fuchsia.modular/SessionShellContext.GetStoryProvider",
+        "type": "(server_end:fuchsia.modular/StoryProvider request)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionShellContext.Logout"
+        "name": "fuchsia.modular/SessionShellContext.Logout",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/SessionShellContext.Restart"
+        "name": "fuchsia.modular/SessionShellContext.Restart",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular/SessionShellContext"
     },
     {
-        "declaration": "fuchsia.modular/AddMod",
         "kind": "union/member",
-        "name": "fuchsia.modular/StoryCommand.add_mod"
+        "name": "fuchsia.modular/StoryCommand.add_mod",
+        "type": "fuchsia.modular/AddMod"
     },
     {
-        "declaration": "fuchsia.modular/RemoveMod",
         "kind": "union/member",
-        "name": "fuchsia.modular/StoryCommand.remove_mod"
+        "name": "fuchsia.modular/StoryCommand.remove_mod",
+        "type": "fuchsia.modular/RemoveMod"
     },
     {
         "kind": "union",
@@ -647,34 +647,34 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(vector<fuchsia.modular/Annotation>:50 annotations) -> (fuchsia.modular/StoryController_Annotate_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryController.Annotate"
+        "name": "fuchsia.modular/StoryController.Annotate",
+        "type": "(vector<fuchsia.modular/Annotation>:50 annotations) -> (fuchsia.modular/StoryController_Annotate_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.modular/StoryInfo info,fuchsia.modular/StoryState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryController.GetInfo"
+        "name": "fuchsia.modular/StoryController.GetInfo",
+        "type": "() -> (fuchsia.modular/StoryInfo info,fuchsia.modular/StoryState state)"
     },
     {
-        "declaration": "() -> (fuchsia.modular/StoryInfo2 info,fuchsia.modular/StoryState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryController.GetInfo2"
+        "name": "fuchsia.modular/StoryController.GetInfo2",
+        "type": "() -> (fuchsia.modular/StoryInfo2 info,fuchsia.modular/StoryState state)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryController.RequestStart"
+        "name": "fuchsia.modular/StoryController.RequestStart",
+        "type": "()"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryController.Stop"
+        "name": "fuchsia.modular/StoryController.Stop",
+        "type": "() -> ()"
     },
     {
-        "declaration": "(client_end:fuchsia.modular/StoryWatcher watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryController.Watch"
+        "name": "fuchsia.modular/StoryController.Watch",
+        "type": "(client_end:fuchsia.modular/StoryWatcher watcher)"
     },
     {
         "kind": "protocol",
@@ -685,14 +685,14 @@
         "name": "fuchsia.modular/StoryController_Annotate_Response"
     },
     {
-        "declaration": "fuchsia.modular/AnnotationError",
         "kind": "union/member",
-        "name": "fuchsia.modular/StoryController_Annotate_Result.err"
+        "name": "fuchsia.modular/StoryController_Annotate_Result.err",
+        "type": "fuchsia.modular/AnnotationError"
     },
     {
-        "declaration": "fuchsia.modular/StoryController_Annotate_Response",
         "kind": "union/member",
-        "name": "fuchsia.modular/StoryController_Annotate_Result.response"
+        "name": "fuchsia.modular/StoryController_Annotate_Result.response",
+        "type": "fuchsia.modular/StoryController_Annotate_Response"
     },
     {
         "kind": "union",
@@ -700,43 +700,43 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<fuchsia.modular/StoryInfoExtraEntry>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/StoryInfo.extra"
+        "name": "fuchsia.modular/StoryInfo.extra",
+        "type": "vector<fuchsia.modular/StoryInfoExtraEntry>:optional"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/StoryInfo.id"
+        "name": "fuchsia.modular/StoryInfo.id",
+        "type": "string"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.modular/StoryInfo.last_focus_time"
+        "name": "fuchsia.modular/StoryInfo.last_focus_time",
+        "type": "int64"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.modular/StoryInfo.url"
+        "name": "fuchsia.modular/StoryInfo.url",
+        "type": "string:optional"
     },
     {
         "kind": "struct",
         "name": "fuchsia.modular/StoryInfo"
     },
     {
-        "declaration": "vector<fuchsia.modular/Annotation>:100",
         "kind": "table/member",
-        "name": "fuchsia.modular/StoryInfo2.annotations"
+        "name": "fuchsia.modular/StoryInfo2.annotations",
+        "type": "vector<fuchsia.modular/Annotation>:100"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/StoryInfo2.id"
+        "name": "fuchsia.modular/StoryInfo2.id",
+        "type": "string"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.modular/StoryInfo2.last_focus_time"
+        "name": "fuchsia.modular/StoryInfo2.last_focus_time",
+        "type": "int64"
     },
     {
         "kind": "table",
@@ -744,100 +744,100 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/StoryInfoExtraEntry.key"
+        "name": "fuchsia.modular/StoryInfoExtraEntry.key",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/StoryInfoExtraEntry.value"
+        "name": "fuchsia.modular/StoryInfoExtraEntry.value",
+        "type": "string"
     },
     {
         "kind": "struct",
         "name": "fuchsia.modular/StoryInfoExtraEntry"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.modular/StoryOptions.kind_of_proto_story"
+        "name": "fuchsia.modular/StoryOptions.kind_of_proto_story",
+        "type": "bool"
     },
     {
         "kind": "struct",
         "name": "fuchsia.modular/StoryOptions"
     },
     {
-        "declaration": "(string story_id,server_end:fuchsia.modular/StoryController request)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProvider.GetController"
+        "name": "fuchsia.modular/StoryProvider.GetController",
+        "type": "(string story_id,server_end:fuchsia.modular/StoryController request)"
     },
     {
-        "declaration": "(client_end:<fuchsia.modular/StoryProviderWatcher,optional> watcher) -> (vector<fuchsia.modular/StoryInfo> story_infos)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProvider.GetStories"
+        "name": "fuchsia.modular/StoryProvider.GetStories",
+        "type": "(client_end:<fuchsia.modular/StoryProviderWatcher,optional> watcher) -> (vector<fuchsia.modular/StoryInfo> story_infos)"
     },
     {
-        "declaration": "(client_end:<fuchsia.modular/StoryProviderWatcher,optional> watcher) -> (vector<fuchsia.modular/StoryInfo2> story_infos)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProvider.GetStories2"
+        "name": "fuchsia.modular/StoryProvider.GetStories2",
+        "type": "(client_end:<fuchsia.modular/StoryProviderWatcher,optional> watcher) -> (vector<fuchsia.modular/StoryInfo2> story_infos)"
     },
     {
-        "declaration": "(string story_id) -> (box<fuchsia.modular/StoryInfo> story_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProvider.GetStoryInfo"
+        "name": "fuchsia.modular/StoryProvider.GetStoryInfo",
+        "type": "(string story_id) -> (box<fuchsia.modular/StoryInfo> story_info)"
     },
     {
-        "declaration": "(string story_id) -> (fuchsia.modular/StoryInfo2 story_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProvider.GetStoryInfo2"
+        "name": "fuchsia.modular/StoryProvider.GetStoryInfo2",
+        "type": "(string story_id) -> (fuchsia.modular/StoryInfo2 story_info)"
     },
     {
-        "declaration": "(client_end:fuchsia.modular/StoryProviderWatcher watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProvider.Watch"
+        "name": "fuchsia.modular/StoryProvider.Watch",
+        "type": "(client_end:fuchsia.modular/StoryProviderWatcher watcher)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular/StoryProvider"
     },
     {
-        "declaration": "(fuchsia.modular/StoryInfo story_info,fuchsia.modular/StoryState story_state,fuchsia.modular/StoryVisibilityState story_visibility_state)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProviderWatcher.OnChange"
+        "name": "fuchsia.modular/StoryProviderWatcher.OnChange",
+        "type": "(fuchsia.modular/StoryInfo story_info,fuchsia.modular/StoryState story_state,fuchsia.modular/StoryVisibilityState story_visibility_state)"
     },
     {
-        "declaration": "(fuchsia.modular/StoryInfo2 story_info,fuchsia.modular/StoryState story_state,fuchsia.modular/StoryVisibilityState story_visibility_state)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProviderWatcher.OnChange2"
+        "name": "fuchsia.modular/StoryProviderWatcher.OnChange2",
+        "type": "(fuchsia.modular/StoryInfo2 story_info,fuchsia.modular/StoryState story_state,fuchsia.modular/StoryVisibilityState story_visibility_state)"
     },
     {
-        "declaration": "(string story_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryProviderWatcher.OnDelete"
+        "name": "fuchsia.modular/StoryProviderWatcher.OnDelete",
+        "type": "(string story_id)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular/StoryProviderWatcher"
     },
     {
-        "declaration": "(vector<fuchsia.modular/Annotation>:50 annotations) -> (fuchsia.modular/StoryPuppetMaster_Annotate_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryPuppetMaster.Annotate"
+        "name": "fuchsia.modular/StoryPuppetMaster.Annotate",
+        "type": "(vector<fuchsia.modular/Annotation>:50 annotations) -> (fuchsia.modular/StoryPuppetMaster_Annotate_Result result)"
     },
     {
-        "declaration": "(vector<fuchsia.modular/StoryCommand> commands)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryPuppetMaster.Enqueue"
+        "name": "fuchsia.modular/StoryPuppetMaster.Enqueue",
+        "type": "(vector<fuchsia.modular/StoryCommand> commands)"
     },
     {
-        "declaration": "() -> (fuchsia.modular/ExecuteResult result)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryPuppetMaster.Execute"
+        "name": "fuchsia.modular/StoryPuppetMaster.Execute",
+        "type": "() -> (fuchsia.modular/ExecuteResult result)"
     },
     {
-        "declaration": "() -> (fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryPuppetMaster.WatchAnnotations"
+        "name": "fuchsia.modular/StoryPuppetMaster.WatchAnnotations",
+        "type": "() -> (fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result result)"
     },
     {
         "kind": "protocol",
@@ -848,14 +848,14 @@
         "name": "fuchsia.modular/StoryPuppetMaster_Annotate_Response"
     },
     {
-        "declaration": "fuchsia.modular/AnnotationError",
         "kind": "union/member",
-        "name": "fuchsia.modular/StoryPuppetMaster_Annotate_Result.err"
+        "name": "fuchsia.modular/StoryPuppetMaster_Annotate_Result.err",
+        "type": "fuchsia.modular/AnnotationError"
     },
     {
-        "declaration": "fuchsia.modular/StoryPuppetMaster_Annotate_Response",
         "kind": "union/member",
-        "name": "fuchsia.modular/StoryPuppetMaster_Annotate_Result.response"
+        "name": "fuchsia.modular/StoryPuppetMaster_Annotate_Result.response",
+        "type": "fuchsia.modular/StoryPuppetMaster_Annotate_Response"
     },
     {
         "kind": "union",
@@ -863,9 +863,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<fuchsia.modular/Annotation>:100",
         "kind": "struct/member",
-        "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response.annotations"
+        "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response.annotations",
+        "type": "vector<fuchsia.modular/Annotation>:100"
     },
     {
         "kind": "struct",
@@ -873,14 +873,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.modular/AnnotationError",
         "kind": "union/member",
-        "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result.err"
+        "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result.err",
+        "type": "fuchsia.modular/AnnotationError"
     },
     {
-        "declaration": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response",
         "kind": "union/member",
-        "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result.response"
+        "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result.response",
+        "type": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response"
     },
     {
         "kind": "union",
@@ -889,59 +889,59 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo surface_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.AddSurface"
+        "name": "fuchsia.modular/StoryShell.AddSurface",
+        "type": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo surface_info)"
     },
     {
-        "declaration": "(fuchsia.modular/ViewConnection2 view_connection,fuchsia.modular/SurfaceInfo surface_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.AddSurface2"
+        "name": "fuchsia.modular/StoryShell.AddSurface2",
+        "type": "(fuchsia.modular/ViewConnection2 view_connection,fuchsia.modular/SurfaceInfo surface_info)"
     },
     {
-        "declaration": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo2 surface_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.AddSurface3"
+        "name": "fuchsia.modular/StoryShell.AddSurface3",
+        "type": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo2 surface_info)"
     },
     {
-        "declaration": "(string surface_id) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.DefocusSurface"
+        "name": "fuchsia.modular/StoryShell.DefocusSurface",
+        "type": "(string surface_id) -> ()"
     },
     {
-        "declaration": "(string surface_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.FocusSurface"
+        "name": "fuchsia.modular/StoryShell.FocusSurface",
+        "type": "(string surface_id)"
     },
     {
-        "declaration": "(client_end:fuchsia.modular/StoryShellContext story_shell_context)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.Initialize"
+        "name": "fuchsia.modular/StoryShell.Initialize",
+        "type": "(client_end:fuchsia.modular/StoryShellContext story_shell_context)"
     },
     {
-        "declaration": " -> (string surface_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.OnSurfaceFocused"
+        "name": "fuchsia.modular/StoryShell.OnSurfaceFocused",
+        "type": " -> (string surface_id)"
     },
     {
-        "declaration": "(string surface_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.RemoveSurface"
+        "name": "fuchsia.modular/StoryShell.RemoveSurface",
+        "type": "(string surface_id)"
     },
     {
-        "declaration": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo surface_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.UpdateSurface"
+        "name": "fuchsia.modular/StoryShell.UpdateSurface",
+        "type": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo surface_info)"
     },
     {
-        "declaration": "(fuchsia.modular/ViewConnection2 view_connection,fuchsia.modular/SurfaceInfo surface_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.UpdateSurface2"
+        "name": "fuchsia.modular/StoryShell.UpdateSurface2",
+        "type": "(fuchsia.modular/ViewConnection2 view_connection,fuchsia.modular/SurfaceInfo surface_info)"
     },
     {
-        "declaration": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo2 surface_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShell.UpdateSurface3"
+        "name": "fuchsia.modular/StoryShell.UpdateSurface3",
+        "type": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo2 surface_info)"
     },
     {
         "kind": "protocol",
@@ -952,14 +952,14 @@
         "name": "fuchsia.modular/StoryShellContext"
     },
     {
-        "declaration": "(string story_id,server_end:fuchsia.modular/StoryShell story_shell)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShellFactory.AttachStory"
+        "name": "fuchsia.modular/StoryShellFactory.AttachStory",
+        "type": "(string story_id,server_end:fuchsia.modular/StoryShell story_shell)"
     },
     {
-        "declaration": "(string story_id) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryShellFactory.DetachStory"
+        "name": "fuchsia.modular/StoryShellFactory.DetachStory",
+        "type": "(string story_id) -> ()"
     },
     {
         "kind": "protocol",
@@ -981,10 +981,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/StoryState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -997,10 +997,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/StoryVisibilityState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -1018,25 +1018,25 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/StoryVisualState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.modular/ModuleData module_data)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryWatcher.OnModuleAdded"
+        "name": "fuchsia.modular/StoryWatcher.OnModuleAdded",
+        "type": "(fuchsia.modular/ModuleData module_data)"
     },
     {
-        "declaration": "(vector<string> module_path)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryWatcher.OnModuleFocused"
+        "name": "fuchsia.modular/StoryWatcher.OnModuleFocused",
+        "type": "(vector<string> module_path)"
     },
     {
-        "declaration": "(fuchsia.modular/StoryState new_state)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular/StoryWatcher.OnStateChange"
+        "name": "fuchsia.modular/StoryWatcher.OnStateChange",
+        "type": "(fuchsia.modular/StoryState new_state)"
     },
     {
         "kind": "protocol",
@@ -1063,10 +1063,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/SurfaceArrangement",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -1079,64 +1079,64 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.modular/SurfaceDependency",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "box<fuchsia.modular/ModuleManifest>",
         "kind": "struct/member",
-        "name": "fuchsia.modular/SurfaceInfo.module_manifest"
+        "name": "fuchsia.modular/SurfaceInfo.module_manifest",
+        "type": "box<fuchsia.modular/ModuleManifest>"
     },
     {
-        "declaration": "fuchsia.modular/ModuleSource",
         "kind": "struct/member",
-        "name": "fuchsia.modular/SurfaceInfo.module_source"
+        "name": "fuchsia.modular/SurfaceInfo.module_source",
+        "type": "fuchsia.modular/ModuleSource"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/SurfaceInfo.parent_id"
+        "name": "fuchsia.modular/SurfaceInfo.parent_id",
+        "type": "string"
     },
     {
-        "declaration": "box<fuchsia.modular/SurfaceRelation>",
         "kind": "struct/member",
-        "name": "fuchsia.modular/SurfaceInfo.surface_relation"
+        "name": "fuchsia.modular/SurfaceInfo.surface_relation",
+        "type": "box<fuchsia.modular/SurfaceRelation>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.modular/SurfaceInfo"
     },
     {
-        "declaration": "vector<fuchsia.modular/Annotation>:100",
         "kind": "table/member",
-        "name": "fuchsia.modular/SurfaceInfo2.annotations"
+        "name": "fuchsia.modular/SurfaceInfo2.annotations",
+        "type": "vector<fuchsia.modular/Annotation>:100"
     },
     {
-        "declaration": "fuchsia.modular/ModuleManifest",
         "kind": "table/member",
-        "name": "fuchsia.modular/SurfaceInfo2.module_manifest"
+        "name": "fuchsia.modular/SurfaceInfo2.module_manifest",
+        "type": "fuchsia.modular/ModuleManifest"
     },
     {
-        "declaration": "fuchsia.modular/ModuleSource",
         "kind": "table/member",
-        "name": "fuchsia.modular/SurfaceInfo2.module_source"
+        "name": "fuchsia.modular/SurfaceInfo2.module_source",
+        "type": "fuchsia.modular/ModuleSource"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular/SurfaceInfo2.parent_id"
+        "name": "fuchsia.modular/SurfaceInfo2.parent_id",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.modular/SurfaceRelation",
         "kind": "table/member",
-        "name": "fuchsia.modular/SurfaceInfo2.surface_relation"
+        "name": "fuchsia.modular/SurfaceInfo2.surface_relation",
+        "type": "fuchsia.modular/SurfaceRelation"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewRef",
         "kind": "table/member",
-        "name": "fuchsia.modular/SurfaceInfo2.view_ref"
+        "name": "fuchsia.modular/SurfaceInfo2.view_ref",
+        "type": "fuchsia.ui.views/ViewRef"
     },
     {
         "kind": "table",
@@ -1144,21 +1144,21 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.modular/SurfaceArrangement",
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceRelation.arrangement",
+        "type": "fuchsia.modular/SurfaceArrangement",
         "value": "0"
     },
     {
-        "declaration": "fuchsia.modular/SurfaceDependency",
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceRelation.dependency",
+        "type": "fuchsia.modular/SurfaceDependency",
         "value": "0"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceRelation.emphasis",
+        "type": "float32",
         "value": "1"
     },
     {
@@ -1166,14 +1166,14 @@
         "name": "fuchsia.modular/SurfaceRelation"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ViewConnection.surface_id"
+        "name": "fuchsia.modular/ViewConnection.surface_id",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewHolderToken",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ViewConnection.view_holder_token"
+        "name": "fuchsia.modular/ViewConnection.view_holder_token",
+        "type": "fuchsia.ui.views/ViewHolderToken"
     },
     {
         "kind": "struct",
@@ -1181,14 +1181,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ViewConnection2.surface_id"
+        "name": "fuchsia.modular/ViewConnection2.surface_id",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewHolderToken",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ViewConnection2.view_holder_token"
+        "name": "fuchsia.modular/ViewConnection2.view_holder_token",
+        "type": "fuchsia.ui.views/ViewHolderToken"
     },
     {
         "kind": "struct",
@@ -1196,9 +1196,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular/ViewIdentifier.story_id"
+        "name": "fuchsia.modular/ViewIdentifier.story_id",
+        "type": "string"
     },
     {
         "kind": "struct",

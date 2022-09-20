@@ -10,38 +10,38 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.castsysteminfo/ErrorCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (fuchsia.castsysteminfo/Provider_GetSystemInfo_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.castsysteminfo/Provider.GetSystemInfo"
+        "name": "fuchsia.castsysteminfo/Provider.GetSystemInfo",
+        "type": "() -> (fuchsia.castsysteminfo/Provider_GetSystemInfo_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.castsysteminfo/Provider"
     },
     {
-        "declaration": "fuchsia.castsysteminfo/SystemInfo",
         "kind": "struct/member",
-        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Response.systemInfo"
+        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Response.systemInfo",
+        "type": "fuchsia.castsysteminfo/SystemInfo"
     },
     {
         "kind": "struct",
         "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Response"
     },
     {
-        "declaration": "fuchsia.castsysteminfo/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Result.err"
+        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Result.err",
+        "type": "fuchsia.castsysteminfo/ErrorCode"
     },
     {
-        "declaration": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Response",
         "kind": "union/member",
-        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Result.response"
+        "name": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Result.response",
+        "type": "fuchsia.castsysteminfo/Provider_GetSystemInfo_Response"
     },
     {
         "kind": "union",
@@ -49,14 +49,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.castsysteminfo/SystemInfo.cloud_device_id"
+        "name": "fuchsia.castsysteminfo/SystemInfo.cloud_device_id",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.castsysteminfo/SystemInfo.local_device_id"
+        "name": "fuchsia.castsysteminfo/SystemInfo.local_device_id",
+        "type": "string"
     },
     {
         "kind": "table",

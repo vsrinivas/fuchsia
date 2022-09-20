@@ -166,7 +166,7 @@ func (r *Report) compare(before, after *summarize.ElementStr) {
 	case before.Name != after.Name:
 		panic(fmt.Sprintf("before name %q != after name %q", before.Name, after.Name))
 	case before.Kind != after.Kind,
-		before.Decl != after.Decl,
+		before.Type != after.Type,
 		before.Value != after.Value,
 		before.Resourceness != after.Resourceness,
 		before.Strictness != after.Strictness:

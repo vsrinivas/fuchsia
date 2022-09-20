@@ -10,29 +10,29 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.castconfig/ErrorCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(bool processed) -> (bool retry)",
         "kind": "protocol/member",
-        "name": "fuchsia.castconfig/Provider.Notify"
+        "name": "fuchsia.castconfig/Provider.Notify",
+        "type": "(bool processed) -> (bool retry)"
     },
     {
-        "declaration": "() -> (fuchsia.castconfig/Provider_Watch_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.castconfig/Provider.Watch"
+        "name": "fuchsia.castconfig/Provider.Watch",
+        "type": "() -> (fuchsia.castconfig/Provider_Watch_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.castconfig/Provider"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.castconfig/Provider_Watch_Response.config"
+        "name": "fuchsia.castconfig/Provider_Watch_Response.config",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "struct",
@@ -40,14 +40,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.castconfig/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.castconfig/Provider_Watch_Result.err"
+        "name": "fuchsia.castconfig/Provider_Watch_Result.err",
+        "type": "fuchsia.castconfig/ErrorCode"
     },
     {
-        "declaration": "fuchsia.castconfig/Provider_Watch_Response",
         "kind": "union/member",
-        "name": "fuchsia.castconfig/Provider_Watch_Result.response"
+        "name": "fuchsia.castconfig/Provider_Watch_Result.response",
+        "type": "fuchsia.castconfig/Provider_Watch_Response"
     },
     {
         "kind": "union",

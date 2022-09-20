@@ -1,132 +1,132 @@
 [
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.camera/CAMERA_OUTPUT_BURST",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.camera/CAMERA_OUTPUT_DEPTH",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.camera/CAMERA_OUTPUT_HDR",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.camera/CAMERA_OUTPUT_STEREO",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.camera/CAMERA_OUTPUT_STILL_IMAGE",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.camera/CAMERA_OUTPUT_STREAM",
+        "type": "uint32",
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.camera/CAMERA_OUTPUT_UNKNOWN",
+        "type": "uint32",
         "value": "0"
     },
     {
-        "declaration": "(fuchsia.sysmem/BufferCollectionInfo buffer_collection,fuchsia.camera/FrameRate rate,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR stream_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Control.CreateStream"
+        "name": "fuchsia.camera/Control.CreateStream",
+        "type": "(fuchsia.sysmem/BufferCollectionInfo buffer_collection,fuchsia.camera/FrameRate rate,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR stream_token)"
     },
     {
-        "declaration": "() -> (fuchsia.camera/DeviceInfo device_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Control.GetDeviceInfo"
+        "name": "fuchsia.camera/Control.GetDeviceInfo",
+        "type": "() -> (fuchsia.camera/DeviceInfo device_info)"
     },
     {
-        "declaration": "(uint32 index) -> (vector<fuchsia.camera/VideoFormat> formats,uint32 total_format_count,int32 status)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Control.GetFormats"
+        "name": "fuchsia.camera/Control.GetFormats",
+        "type": "(uint32 index) -> (vector<fuchsia.camera/VideoFormat> formats,uint32 total_format_count,int32 status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.camera/Control"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.camera/DeviceInfo.camera_id"
+        "name": "fuchsia.camera/DeviceInfo.camera_id",
+        "type": "uint64"
     },
     {
-        "declaration": "uint16",
         "kind": "struct/member",
-        "name": "fuchsia.camera/DeviceInfo.max_stream_count"
+        "name": "fuchsia.camera/DeviceInfo.max_stream_count",
+        "type": "uint16"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.camera/DeviceInfo.output_capabilities"
+        "name": "fuchsia.camera/DeviceInfo.output_capabilities",
+        "type": "uint32"
     },
     {
-        "declaration": "uint16",
         "kind": "struct/member",
-        "name": "fuchsia.camera/DeviceInfo.product_id"
+        "name": "fuchsia.camera/DeviceInfo.product_id",
+        "type": "uint16"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.camera/DeviceInfo.product_name"
+        "name": "fuchsia.camera/DeviceInfo.product_name",
+        "type": "string"
     },
     {
-        "declaration": "uint16",
         "kind": "struct/member",
-        "name": "fuchsia.camera/DeviceInfo.vendor_id"
+        "name": "fuchsia.camera/DeviceInfo.vendor_id",
+        "type": "uint16"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.camera/DeviceInfo.vendor_name"
+        "name": "fuchsia.camera/DeviceInfo.vendor_name",
+        "type": "string"
     },
     {
         "kind": "struct",
         "name": "fuchsia.camera/DeviceInfo"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.camera/FrameAvailableEvent.buffer_id"
+        "name": "fuchsia.camera/FrameAvailableEvent.buffer_id",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.camera/FrameStatus",
         "kind": "struct/member",
-        "name": "fuchsia.camera/FrameAvailableEvent.frame_status"
+        "name": "fuchsia.camera/FrameAvailableEvent.frame_status",
+        "type": "fuchsia.camera/FrameStatus"
     },
     {
-        "declaration": "fuchsia.camera/Metadata",
         "kind": "struct/member",
-        "name": "fuchsia.camera/FrameAvailableEvent.metadata"
+        "name": "fuchsia.camera/FrameAvailableEvent.metadata",
+        "type": "fuchsia.camera/Metadata"
     },
     {
         "kind": "struct",
         "name": "fuchsia.camera/FrameAvailableEvent"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.camera/FrameRate.frames_per_sec_denominator"
+        "name": "fuchsia.camera/FrameRate.frames_per_sec_denominator",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.camera/FrameRate.frames_per_sec_numerator"
+        "name": "fuchsia.camera/FrameRate.frames_per_sec_numerator",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -148,111 +148,111 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.camera/FrameStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.camera/MAX_FORMATS_PER_RESPONSE",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "(fuchsia.camera/VideoStream request,fuchsia.sysmem/BufferCollectionInfo buffer_info,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR client_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Manager.CreateStream"
+        "name": "fuchsia.camera/Manager.CreateStream",
+        "type": "(fuchsia.camera/VideoStream request,fuchsia.sysmem/BufferCollectionInfo buffer_info,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR client_token)"
     },
     {
-        "declaration": "(fuchsia.camera/VideoStreamV2 request,fuchsia.sysmem/BufferCollectionInfo buffer_info,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR client_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Manager.CreateStreamV2"
+        "name": "fuchsia.camera/Manager.CreateStreamV2",
+        "type": "(fuchsia.camera/VideoStreamV2 request,fuchsia.sysmem/BufferCollectionInfo buffer_info,server_end:fuchsia.camera/Stream stream,zx/handle:EVENTPAIR client_token)"
     },
     {
-        "declaration": "() -> (vector<fuchsia.camera/DeviceInfo> descriptions)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Manager.GetDevices"
+        "name": "fuchsia.camera/Manager.GetDevices",
+        "type": "() -> (vector<fuchsia.camera/DeviceInfo> descriptions)"
     },
     {
-        "declaration": "(uint64 camera_id,uint32 index) -> (vector<fuchsia.camera/VideoFormat> formats,uint32 total_format_count)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Manager.GetFormats"
+        "name": "fuchsia.camera/Manager.GetFormats",
+        "type": "(uint64 camera_id,uint32 index) -> (vector<fuchsia.camera/VideoFormat> formats,uint32 total_format_count)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.camera/Manager"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.camera/Metadata.timestamp"
+        "name": "fuchsia.camera/Metadata.timestamp",
+        "type": "int64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.camera/Metadata"
     },
     {
-        "declaration": " -> (fuchsia.camera/FrameAvailableEvent frame)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Stream.OnFrameAvailable"
+        "name": "fuchsia.camera/Stream.OnFrameAvailable",
+        "type": " -> (fuchsia.camera/FrameAvailableEvent frame)"
     },
     {
-        "declaration": "(uint32 buffer_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Stream.ReleaseFrame"
+        "name": "fuchsia.camera/Stream.ReleaseFrame",
+        "type": "(uint32 buffer_id)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Stream.Start"
+        "name": "fuchsia.camera/Stream.Start",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.camera/Stream.Stop"
+        "name": "fuchsia.camera/Stream.Stop",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.camera/Stream"
     },
     {
-        "declaration": "fuchsia.sysmem/ImageFormat",
         "kind": "struct/member",
-        "name": "fuchsia.camera/VideoFormat.format"
+        "name": "fuchsia.camera/VideoFormat.format",
+        "type": "fuchsia.sysmem/ImageFormat"
     },
     {
-        "declaration": "fuchsia.camera/FrameRate",
         "kind": "struct/member",
-        "name": "fuchsia.camera/VideoFormat.rate"
+        "name": "fuchsia.camera/VideoFormat.rate",
+        "type": "fuchsia.camera/FrameRate"
     },
     {
         "kind": "struct",
         "name": "fuchsia.camera/VideoFormat"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.camera/VideoStream.camera_id"
+        "name": "fuchsia.camera/VideoStream.camera_id",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.camera/VideoFormat",
         "kind": "struct/member",
-        "name": "fuchsia.camera/VideoStream.format"
+        "name": "fuchsia.camera/VideoStream.format",
+        "type": "fuchsia.camera/VideoFormat"
     },
     {
         "kind": "struct",
         "name": "fuchsia.camera/VideoStream"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.camera/VideoStreamV2.camera_id"
+        "name": "fuchsia.camera/VideoStreamV2.camera_id",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.camera/VideoFormat",
         "kind": "struct/member",
-        "name": "fuchsia.camera/VideoStreamV2.format"
+        "name": "fuchsia.camera/VideoStreamV2.format",
+        "type": "fuchsia.camera/VideoFormat"
     },
     {
         "kind": "struct",

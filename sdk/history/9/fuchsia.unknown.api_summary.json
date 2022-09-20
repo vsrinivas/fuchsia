@@ -1,17 +1,17 @@
 [
     {
-        "declaration": "(server_end:fuchsia.unknown/Cloneable request)",
         "kind": "protocol/member",
-        "name": "fuchsia.unknown/Cloneable.Clone2"
+        "name": "fuchsia.unknown/Cloneable.Clone2",
+        "type": "(server_end:fuchsia.unknown/Cloneable request)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.unknown/Cloneable"
     },
     {
-        "declaration": "() -> (fuchsia.unknown/Closeable_Close_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.unknown/Closeable.Close"
+        "name": "fuchsia.unknown/Closeable.Close",
+        "type": "() -> (fuchsia.unknown/Closeable_Close_Result result)"
     },
     {
         "kind": "protocol",
@@ -22,14 +22,14 @@
         "name": "fuchsia.unknown/Closeable_Close_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.unknown/Closeable_Close_Result.err"
+        "name": "fuchsia.unknown/Closeable_Close_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.unknown/Closeable_Close_Response",
         "kind": "union/member",
-        "name": "fuchsia.unknown/Closeable_Close_Result.response"
+        "name": "fuchsia.unknown/Closeable_Close_Result.response",
+        "type": "fuchsia.unknown/Closeable_Close_Response"
     },
     {
         "kind": "union",
@@ -37,9 +37,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "() -> (vector<uint8> protocol)",
         "kind": "protocol/member",
-        "name": "fuchsia.unknown/Queryable.Query"
+        "name": "fuchsia.unknown/Queryable.Query",
+        "type": "() -> (vector<uint8> protocol)"
     },
     {
         "kind": "protocol",

@@ -1,42 +1,42 @@
 [
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.types/ColorRgb.blue"
+        "name": "fuchsia.ui.types/ColorRgb.blue",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.types/ColorRgb.green"
+        "name": "fuchsia.ui.types/ColorRgb.green",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.types/ColorRgb.red"
+        "name": "fuchsia.ui.types/ColorRgb.red",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.types/ColorRgb"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.types/ColorRgba.alpha"
+        "name": "fuchsia.ui.types/ColorRgba.alpha",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.types/ColorRgba.blue"
+        "name": "fuchsia.ui.types/ColorRgba.blue",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.types/ColorRgba.green"
+        "name": "fuchsia.ui.types/ColorRgba.green",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.types/ColorRgba.red"
+        "name": "fuchsia.ui.types/ColorRgba.red",
+        "type": "float32"
     },
     {
         "kind": "struct",

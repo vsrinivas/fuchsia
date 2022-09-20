@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(fuchsia.bluetooth.a2dp/Role role) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.bluetooth.a2dp/AudioMode.SetRole"
+        "name": "fuchsia.bluetooth.a2dp/AudioMode.SetRole",
+        "type": "(fuchsia.bluetooth.a2dp/Role role) -> ()"
     },
     {
         "kind": "protocol",
@@ -19,10 +19,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.bluetooth.a2dp/Role",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",

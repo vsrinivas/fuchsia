@@ -10,24 +10,24 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.castsetup/ApiMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(string:1024 path,fuchsia.castsetup/ApiMode api_mode,fuchsia.castsetup/SecurityState security_state,client_end:fuchsia.castsetup/ApiRequestHandler api_handler)",
         "kind": "protocol/member",
-        "name": "fuchsia.castsetup/ApiRegistry.RegisterApi"
+        "name": "fuchsia.castsetup/ApiRegistry.RegisterApi",
+        "type": "(string:1024 path,fuchsia.castsetup/ApiMode api_mode,fuchsia.castsetup/SecurityState security_state,client_end:fuchsia.castsetup/ApiRequestHandler api_handler)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.castsetup/ApiRegistry"
     },
     {
-        "declaration": "(string:optional data) -> (uint32 response_code,string:optional data)",
         "kind": "protocol/member",
-        "name": "fuchsia.castsetup/ApiRequestHandler.HandleRequest"
+        "name": "fuchsia.castsetup/ApiRequestHandler.HandleRequest",
+        "type": "(string:optional data) -> (uint32 response_code,string:optional data)"
     },
     {
         "kind": "protocol",
@@ -49,10 +49,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.castsetup/SecurityState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -75,15 +75,15 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.castsetup/State",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (fuchsia.castsetup/State state)",
         "kind": "protocol/member",
-        "name": "fuchsia.castsetup/StateWatcher.Watch"
+        "name": "fuchsia.castsetup/StateWatcher.Watch",
+        "type": "() -> (fuchsia.castsetup/State state)"
     },
     {
         "kind": "protocol",

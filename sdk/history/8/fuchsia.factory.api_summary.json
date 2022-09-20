@@ -1,62 +1,62 @@
 [
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory/AlphaFactoryStoreProvider.GetFactoryStore"
+        "name": "fuchsia.factory/AlphaFactoryStoreProvider.GetFactoryStore",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.factory/AlphaFactoryStoreProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory/CastCredentialsFactoryStoreProvider.GetFactoryStore"
+        "name": "fuchsia.factory/CastCredentialsFactoryStoreProvider.GetFactoryStore",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.factory/CastCredentialsFactoryStoreProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory/FactoryStoreProvider.GetFactoryStore"
+        "name": "fuchsia.factory/FactoryStoreProvider.GetFactoryStore",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.factory/FactoryStoreProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory/MiscFactoryStoreProvider.GetFactoryStore"
+        "name": "fuchsia.factory/MiscFactoryStoreProvider.GetFactoryStore",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.factory/MiscFactoryStoreProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory/PlayReadyFactoryStoreProvider.GetFactoryStore"
+        "name": "fuchsia.factory/PlayReadyFactoryStoreProvider.GetFactoryStore",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.factory/PlayReadyFactoryStoreProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory/WeaveFactoryStoreProvider.GetFactoryStore"
+        "name": "fuchsia.factory/WeaveFactoryStoreProvider.GetFactoryStore",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.factory/WeaveFactoryStoreProvider"
     },
     {
-        "declaration": "(server_end:fuchsia.io/Directory dir)",
         "kind": "protocol/member",
-        "name": "fuchsia.factory/WidevineFactoryStoreProvider.GetFactoryStore"
+        "name": "fuchsia.factory/WidevineFactoryStoreProvider.GetFactoryStore",
+        "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol",

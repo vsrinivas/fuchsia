@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "array<uint8,35>",
         "kind": "union/member",
-        "name": "fuchsia.castauth/Asn1EncodedHash.sha1"
+        "name": "fuchsia.castauth/Asn1EncodedHash.sha1",
+        "type": "array<uint8,35>"
     },
     {
-        "declaration": "array<uint8,51>",
         "kind": "union/member",
-        "name": "fuchsia.castauth/Asn1EncodedHash.sha256"
+        "name": "fuchsia.castauth/Asn1EncodedHash.sha256",
+        "type": "array<uint8,51>"
     },
     {
         "kind": "union",
@@ -15,37 +15,37 @@
         "strictness": "strict"
     },
     {
-        "declaration": "() -> (fuchsia.castauth/CastKeySigner_GetCertificateChain_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.castauth/CastKeySigner.GetCertificateChain"
+        "name": "fuchsia.castauth/CastKeySigner.GetCertificateChain",
+        "type": "() -> (fuchsia.castauth/CastKeySigner_GetCertificateChain_Result result)"
     },
     {
-        "declaration": "(fuchsia.castauth/Asn1EncodedHash hash) -> (fuchsia.castauth/CastKeySigner_SignHash_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.castauth/CastKeySigner.SignHash"
+        "name": "fuchsia.castauth/CastKeySigner.SignHash",
+        "type": "(fuchsia.castauth/Asn1EncodedHash hash) -> (fuchsia.castauth/CastKeySigner_SignHash_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.castauth/CastKeySigner"
     },
     {
-        "declaration": "vector<vector<uint8>:2048>:16",
         "kind": "struct/member",
-        "name": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Response.cert_chain"
+        "name": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Response.cert_chain",
+        "type": "vector<vector<uint8>:2048>:16"
     },
     {
         "kind": "struct",
         "name": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Response"
     },
     {
-        "declaration": "fuchsia.castauth/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Result.err"
+        "name": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Result.err",
+        "type": "fuchsia.castauth/ErrorCode"
     },
     {
-        "declaration": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Response",
         "kind": "union/member",
-        "name": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Result.response"
+        "name": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Result.response",
+        "type": "fuchsia.castauth/CastKeySigner_GetCertificateChain_Response"
     },
     {
         "kind": "union",
@@ -53,23 +53,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "array<uint8,256>",
         "kind": "struct/member",
-        "name": "fuchsia.castauth/CastKeySigner_SignHash_Response.signature"
+        "name": "fuchsia.castauth/CastKeySigner_SignHash_Response.signature",
+        "type": "array<uint8,256>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.castauth/CastKeySigner_SignHash_Response"
     },
     {
-        "declaration": "fuchsia.castauth/ErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.castauth/CastKeySigner_SignHash_Result.err"
+        "name": "fuchsia.castauth/CastKeySigner_SignHash_Result.err",
+        "type": "fuchsia.castauth/ErrorCode"
     },
     {
-        "declaration": "fuchsia.castauth/CastKeySigner_SignHash_Response",
         "kind": "union/member",
-        "name": "fuchsia.castauth/CastKeySigner_SignHash_Result.response"
+        "name": "fuchsia.castauth/CastKeySigner_SignHash_Result.response",
+        "type": "fuchsia.castauth/CastKeySigner_SignHash_Response"
     },
     {
         "kind": "union",
@@ -87,10 +87,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.castauth/ErrorCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",

@@ -1,23 +1,23 @@
 [
     {
-        "declaration": "(server_end:fuchsia.ldsvc/Loader loader) -> (int32 rv)",
         "kind": "protocol/member",
-        "name": "fuchsia.ldsvc/Loader.Clone"
+        "name": "fuchsia.ldsvc/Loader.Clone",
+        "type": "(server_end:fuchsia.ldsvc/Loader loader) -> (int32 rv)"
     },
     {
-        "declaration": "(string:1024 config) -> (int32 rv)",
         "kind": "protocol/member",
-        "name": "fuchsia.ldsvc/Loader.Config"
+        "name": "fuchsia.ldsvc/Loader.Config",
+        "type": "(string:1024 config) -> (int32 rv)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.ldsvc/Loader.Done"
+        "name": "fuchsia.ldsvc/Loader.Done",
+        "type": "()"
     },
     {
-        "declaration": "(string:1024 object_name) -> (int32 rv,zx/handle:<VMO,optional> object)",
         "kind": "protocol/member",
-        "name": "fuchsia.ldsvc/Loader.LoadObject"
+        "name": "fuchsia.ldsvc/Loader.LoadObject",
+        "type": "(string:1024 object_name) -> (int32 rv,zx/handle:<VMO,optional> object)"
     },
     {
         "kind": "protocol",

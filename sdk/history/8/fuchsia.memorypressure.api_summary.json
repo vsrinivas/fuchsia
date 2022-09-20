@@ -15,24 +15,24 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.memorypressure/Level",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(client_end:fuchsia.memorypressure/Watcher watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.memorypressure/Provider.RegisterWatcher"
+        "name": "fuchsia.memorypressure/Provider.RegisterWatcher",
+        "type": "(client_end:fuchsia.memorypressure/Watcher watcher)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.memorypressure/Provider"
     },
     {
-        "declaration": "(fuchsia.memorypressure/Level level) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.memorypressure/Watcher.OnLevelChanged"
+        "name": "fuchsia.memorypressure/Watcher.OnLevelChanged",
+        "type": "(fuchsia.memorypressure/Level level) -> ()"
     },
     {
         "kind": "protocol",

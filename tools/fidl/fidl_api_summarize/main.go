@@ -20,6 +20,9 @@ var (
 	fir                  = flag.String("fidl-ir-file", "", "The FIDL IR input file to produce an API summary for.")
 	out                  = flag.String("output-file", "", "The output file to write the summary into.")
 	suppressEmptyLibrary = flag.Bool("suppress-empty-library", false, "Generate empty output for libraries with no declarations")
+
+	// TODO(fxbug.dev/109721): Remove.
+	renameDeclarationToType = flag.Bool("rename-declaration-to-type", false, "Soft transition flag for fxbug.dev/109721")
 )
 
 // usage prints a user-friendly usage message when the flag --help is provided.
@@ -66,7 +69,7 @@ func mainImpl() error {
 		// Leave the output file empty.
 		return nil
 	}
-	if err := summary.WriteJSON(outFile); err != nil {
+	if err := summary.WriteJSON(outFile, *renameDeclarationToType); err != nil {
 		return fmt.Errorf("writing JSON to %s: %w", *out, err)
 	}
 

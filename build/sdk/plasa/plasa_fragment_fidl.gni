@@ -5,11 +5,6 @@
 import("//build/compiled_action.gni")
 import("//build/fidl/fidl_summary.gni")
 
-# Generates the FIDL API summary files based on the FIDL IR generated
-# by fidlc.
-
-_fidl_api_summarize_tool = "//tools/fidl/fidl_api_summarize"
-
 # Generates a FIDL plasa fragment and metadata.
 #
 # The plasa fragment file is a JSON FIDL summary.

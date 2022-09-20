@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.process.lifecycle/Lifecycle.Stop"
+        "name": "fuchsia.process.lifecycle/Lifecycle.Stop",
+        "type": "()"
     },
     {
         "kind": "protocol",

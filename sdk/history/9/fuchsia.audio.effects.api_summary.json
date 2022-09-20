@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "fuchsia.mem/Range",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/InputConfiguration.buffer"
+        "name": "fuchsia.audio.effects/InputConfiguration.buffer",
+        "type": "fuchsia.mem/Range"
     },
     {
-        "declaration": "fuchsia.mediastreams/AudioFormat",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/InputConfiguration.format"
+        "name": "fuchsia.audio.effects/InputConfiguration.format",
+        "type": "fuchsia.mediastreams/AudioFormat"
     },
     {
         "kind": "table",
@@ -15,48 +15,48 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.audio.effects/MAX_INPUT_STREAMS",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.audio.effects/MAX_OUTPUT_STREAMS",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.audio.effects/MAX_PROCESS_STAGES",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.audio.effects/MAX_PROCESS_STAGE_NAME_LENGTH",
+        "type": "uint32",
         "value": "64"
     },
     {
-        "declaration": "fuchsia.mem/Range",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/OutputConfiguration.buffer"
+        "name": "fuchsia.audio.effects/OutputConfiguration.buffer",
+        "type": "fuchsia.mem/Range"
     },
     {
-        "declaration": "fuchsia.mediastreams/AudioFormat",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/OutputConfiguration.format"
+        "name": "fuchsia.audio.effects/OutputConfiguration.format",
+        "type": "fuchsia.mediastreams/AudioFormat"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/OutputConfiguration.latency_frames"
+        "name": "fuchsia.audio.effects/OutputConfiguration.latency_frames",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/OutputConfiguration.ring_out_frames"
+        "name": "fuchsia.audio.effects/OutputConfiguration.ring_out_frames",
+        "type": "uint64"
     },
     {
         "kind": "table",
@@ -64,86 +64,86 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessMetrics.cpu_time"
+        "name": "fuchsia.audio.effects/ProcessMetrics.cpu_time",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessMetrics.kernel_lock_contention_time"
+        "name": "fuchsia.audio.effects/ProcessMetrics.kernel_lock_contention_time",
+        "type": "int64"
     },
     {
-        "declaration": "string:64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessMetrics.name"
+        "name": "fuchsia.audio.effects/ProcessMetrics.name",
+        "type": "string:64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessMetrics.page_fault_time"
+        "name": "fuchsia.audio.effects/ProcessMetrics.page_fault_time",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessMetrics.queue_time"
+        "name": "fuchsia.audio.effects/ProcessMetrics.queue_time",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessMetrics.wall_time"
+        "name": "fuchsia.audio.effects/ProcessMetrics.wall_time",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.audio.effects/ProcessMetrics"
     },
     {
-        "declaration": "vector<float32>:8",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessOptions.total_applied_gain_db_per_input"
+        "name": "fuchsia.audio.effects/ProcessOptions.total_applied_gain_db_per_input",
+        "type": "vector<float32>:8"
     },
     {
-        "declaration": "vector<uint32>:8",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessOptions.usage_mask_per_input"
+        "name": "fuchsia.audio.effects/ProcessOptions.usage_mask_per_input",
+        "type": "vector<uint32>:8"
     },
     {
         "kind": "table",
         "name": "fuchsia.audio.effects/ProcessOptions"
     },
     {
-        "declaration": "(uint64 num_frames,fuchsia.audio.effects/ProcessOptions options) -> (fuchsia.audio.effects/Processor_Process_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.audio.effects/Processor.Process"
+        "name": "fuchsia.audio.effects/Processor.Process",
+        "type": "(uint64 num_frames,fuchsia.audio.effects/ProcessOptions options) -> (fuchsia.audio.effects/Processor_Process_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.audio.effects/Processor"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessorConfiguration.block_size_frames"
+        "name": "fuchsia.audio.effects/ProcessorConfiguration.block_size_frames",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<fuchsia.audio.effects/InputConfiguration>:8",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessorConfiguration.inputs"
+        "name": "fuchsia.audio.effects/ProcessorConfiguration.inputs",
+        "type": "vector<fuchsia.audio.effects/InputConfiguration>:8"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessorConfiguration.max_frames_per_call"
+        "name": "fuchsia.audio.effects/ProcessorConfiguration.max_frames_per_call",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<fuchsia.audio.effects/OutputConfiguration>:8",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessorConfiguration.outputs"
+        "name": "fuchsia.audio.effects/ProcessorConfiguration.outputs",
+        "type": "vector<fuchsia.audio.effects/OutputConfiguration>:8"
     },
     {
-        "declaration": "client_end:fuchsia.audio.effects/Processor",
         "kind": "table/member",
-        "name": "fuchsia.audio.effects/ProcessorConfiguration.processor"
+        "name": "fuchsia.audio.effects/ProcessorConfiguration.processor",
+        "type": "client_end:fuchsia.audio.effects/Processor"
     },
     {
         "kind": "table",
@@ -151,18 +151,18 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(string:1024 name) -> (fuchsia.audio.effects/ProcessorCreator_Create_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.audio.effects/ProcessorCreator.Create"
+        "name": "fuchsia.audio.effects/ProcessorCreator.Create",
+        "type": "(string:1024 name) -> (fuchsia.audio.effects/ProcessorCreator_Create_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.audio.effects/ProcessorCreator"
     },
     {
-        "declaration": "fuchsia.audio.effects/ProcessorConfiguration",
         "kind": "struct/member",
-        "name": "fuchsia.audio.effects/ProcessorCreator_Create_Response.processor_configuration"
+        "name": "fuchsia.audio.effects/ProcessorCreator_Create_Response.processor_configuration",
+        "type": "fuchsia.audio.effects/ProcessorConfiguration"
     },
     {
         "kind": "struct",
@@ -170,14 +170,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.audio.effects/ProcessorCreator_Create_Result.err"
+        "name": "fuchsia.audio.effects/ProcessorCreator_Create_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.audio.effects/ProcessorCreator_Create_Response",
         "kind": "union/member",
-        "name": "fuchsia.audio.effects/ProcessorCreator_Create_Result.response"
+        "name": "fuchsia.audio.effects/ProcessorCreator_Create_Result.response",
+        "type": "fuchsia.audio.effects/ProcessorCreator_Create_Response"
     },
     {
         "kind": "union",
@@ -186,23 +186,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<fuchsia.audio.effects/ProcessMetrics>:8",
         "kind": "struct/member",
-        "name": "fuchsia.audio.effects/Processor_Process_Response.per_stage_metrics"
+        "name": "fuchsia.audio.effects/Processor_Process_Response.per_stage_metrics",
+        "type": "vector<fuchsia.audio.effects/ProcessMetrics>:8"
     },
     {
         "kind": "struct",
         "name": "fuchsia.audio.effects/Processor_Process_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.audio.effects/Processor_Process_Result.err"
+        "name": "fuchsia.audio.effects/Processor_Process_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.audio.effects/Processor_Process_Response",
         "kind": "union/member",
-        "name": "fuchsia.audio.effects/Processor_Process_Result.response"
+        "name": "fuchsia.audio.effects/Processor_Process_Result.response",
+        "type": "fuchsia.audio.effects/Processor_Process_Response"
     },
     {
         "kind": "union",

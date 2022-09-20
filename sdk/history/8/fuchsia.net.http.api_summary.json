@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "union/member",
-        "name": "fuchsia.net.http/Body.buffer"
+        "name": "fuchsia.net.http/Body.buffer",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "zx/handle:SOCKET",
         "kind": "union/member",
-        "name": "fuchsia.net.http/Body.stream"
+        "name": "fuchsia.net.http/Body.stream",
+        "type": "zx/handle:SOCKET"
     },
     {
         "kind": "union",
@@ -41,91 +41,91 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.net.http/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "struct/member",
-        "name": "fuchsia.net.http/Header.name"
+        "name": "fuchsia.net.http/Header.name",
+        "type": "vector<uint8>"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "struct/member",
-        "name": "fuchsia.net.http/Header.value"
+        "name": "fuchsia.net.http/Header.value",
+        "type": "vector<uint8>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.net.http/Header"
     },
     {
-        "declaration": "(fuchsia.net.http/Request request) -> (fuchsia.net.http/Response response)",
         "kind": "protocol/member",
-        "name": "fuchsia.net.http/Loader.Fetch"
+        "name": "fuchsia.net.http/Loader.Fetch",
+        "type": "(fuchsia.net.http/Request request) -> (fuchsia.net.http/Response response)"
     },
     {
-        "declaration": "(fuchsia.net.http/Request request,client_end:fuchsia.net.http/LoaderClient client)",
         "kind": "protocol/member",
-        "name": "fuchsia.net.http/Loader.Start"
+        "name": "fuchsia.net.http/Loader.Start",
+        "type": "(fuchsia.net.http/Request request,client_end:fuchsia.net.http/LoaderClient client)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.net.http/Loader"
     },
     {
-        "declaration": "(fuchsia.net.http/Response response) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.net.http/LoaderClient.OnResponse"
+        "name": "fuchsia.net.http/LoaderClient.OnResponse",
+        "type": "(fuchsia.net.http/Response response) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.net.http/LoaderClient"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.net.http/RedirectTarget.method"
+        "name": "fuchsia.net.http/RedirectTarget.method",
+        "type": "string:1024"
     },
     {
-        "declaration": "string:4096",
         "kind": "table/member",
-        "name": "fuchsia.net.http/RedirectTarget.referrer"
+        "name": "fuchsia.net.http/RedirectTarget.referrer",
+        "type": "string:4096"
     },
     {
-        "declaration": "string:4096",
         "kind": "table/member",
-        "name": "fuchsia.net.http/RedirectTarget.url"
+        "name": "fuchsia.net.http/RedirectTarget.url",
+        "type": "string:4096"
     },
     {
         "kind": "table",
         "name": "fuchsia.net.http/RedirectTarget"
     },
     {
-        "declaration": "fuchsia.net.http/Body",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Request.body"
+        "name": "fuchsia.net.http/Request.body",
+        "type": "fuchsia.net.http/Body"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Request.deadline"
+        "name": "fuchsia.net.http/Request.deadline",
+        "type": "int64"
     },
     {
-        "declaration": "vector<fuchsia.net.http/Header>",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Request.headers"
+        "name": "fuchsia.net.http/Request.headers",
+        "type": "vector<fuchsia.net.http/Header>"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Request.method"
+        "name": "fuchsia.net.http/Request.method",
+        "type": "string:1024"
     },
     {
-        "declaration": "string:4096",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Request.url"
+        "name": "fuchsia.net.http/Request.url",
+        "type": "string:4096"
     },
     {
         "kind": "table",
@@ -133,39 +133,39 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:SOCKET",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Response.body"
+        "name": "fuchsia.net.http/Response.body",
+        "type": "zx/handle:SOCKET"
     },
     {
-        "declaration": "fuchsia.net.http/Error",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Response.error"
+        "name": "fuchsia.net.http/Response.error",
+        "type": "fuchsia.net.http/Error"
     },
     {
-        "declaration": "string:4096",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Response.final_url"
+        "name": "fuchsia.net.http/Response.final_url",
+        "type": "string:4096"
     },
     {
-        "declaration": "vector<fuchsia.net.http/Header>",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Response.headers"
+        "name": "fuchsia.net.http/Response.headers",
+        "type": "vector<fuchsia.net.http/Header>"
     },
     {
-        "declaration": "fuchsia.net.http/RedirectTarget",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Response.redirect"
+        "name": "fuchsia.net.http/Response.redirect",
+        "type": "fuchsia.net.http/RedirectTarget"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Response.status_code"
+        "name": "fuchsia.net.http/Response.status_code",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "table/member",
-        "name": "fuchsia.net.http/Response.status_line"
+        "name": "fuchsia.net.http/Response.status_line",
+        "type": "vector<uint8>"
     },
     {
         "kind": "table",

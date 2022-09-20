@@ -5,15 +5,15 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.castwindow/Interaction",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(string session_id,fuchsia.castwindow/Interaction interaction)",
         "kind": "protocol/member",
-        "name": "fuchsia.castwindow/InteractionHandler.SendInteraction"
+        "name": "fuchsia.castwindow/InteractionHandler.SendInteraction",
+        "type": "(string session_id,fuchsia.castwindow/Interaction interaction)"
     },
     {
         "kind": "protocol",

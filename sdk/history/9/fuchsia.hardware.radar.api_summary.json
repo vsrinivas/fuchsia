@@ -1,61 +1,61 @@
 [
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.radar/Burst.timestamp"
+        "name": "fuchsia.hardware.radar/Burst.timestamp",
+        "type": "int64"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.radar/Burst.vmo_id"
+        "name": "fuchsia.hardware.radar/Burst.vmo_id",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.radar/Burst"
     },
     {
-        "declaration": "() -> (uint32 burst_size)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader.GetBurstSize"
+        "name": "fuchsia.hardware.radar/RadarBurstReader.GetBurstSize",
+        "type": "() -> (uint32 burst_size)"
     },
     {
-        "declaration": " -> (fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader.OnBurst"
+        "name": "fuchsia.hardware.radar/RadarBurstReader.OnBurst",
+        "type": " -> (fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result result)"
     },
     {
-        "declaration": "(vector<uint32>:300 vmo_ids,vector<zx/handle:VMO>:300 vmos) -> (fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader.RegisterVmos"
+        "name": "fuchsia.hardware.radar/RadarBurstReader.RegisterVmos",
+        "type": "(vector<uint32>:300 vmo_ids,vector<zx/handle:VMO>:300 vmos) -> (fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result result)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader.StartBursts"
+        "name": "fuchsia.hardware.radar/RadarBurstReader.StartBursts",
+        "type": "()"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader.StopBursts"
+        "name": "fuchsia.hardware.radar/RadarBurstReader.StopBursts",
+        "type": "() -> ()"
     },
     {
-        "declaration": "(uint32 vmo_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader.UnlockVmo"
+        "name": "fuchsia.hardware.radar/RadarBurstReader.UnlockVmo",
+        "type": "(uint32 vmo_id)"
     },
     {
-        "declaration": "(vector<uint32>:300 vmo_ids) -> (fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader.UnregisterVmos"
+        "name": "fuchsia.hardware.radar/RadarBurstReader.UnregisterVmos",
+        "type": "(vector<uint32>:300 vmo_ids) -> (fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.radar/RadarBurstReader"
     },
     {
-        "declaration": "(server_end:fuchsia.hardware.radar/RadarBurstReader server) -> (fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider.Connect"
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider.Connect",
+        "type": "(server_end:fuchsia.hardware.radar/RadarBurstReader server) -> (fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result result)"
     },
     {
         "kind": "protocol",
@@ -66,14 +66,14 @@
         "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Response"
     },
     {
-        "declaration": "fuchsia.hardware.radar/StatusCode",
         "kind": "union/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result.err"
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result.err",
+        "type": "fuchsia.hardware.radar/StatusCode"
     },
     {
-        "declaration": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result.response"
+        "name": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Result.response",
+        "type": "fuchsia.hardware.radar/RadarBurstReaderProvider_Connect_Response"
     },
     {
         "kind": "union",
@@ -81,23 +81,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.hardware.radar/Burst",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response.burst"
+        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response.burst",
+        "type": "fuchsia.hardware.radar/Burst"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response"
     },
     {
-        "declaration": "fuchsia.hardware.radar/StatusCode",
         "kind": "union/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result.err"
+        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result.err",
+        "type": "fuchsia.hardware.radar/StatusCode"
     },
     {
-        "declaration": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result.response"
+        "name": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Result.response",
+        "type": "fuchsia.hardware.radar/RadarBurstReader_OnBurst_Response"
     },
     {
         "kind": "union",
@@ -109,14 +109,14 @@
         "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Response"
     },
     {
-        "declaration": "fuchsia.hardware.radar/StatusCode",
         "kind": "union/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result.err"
+        "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result.err",
+        "type": "fuchsia.hardware.radar/StatusCode"
     },
     {
-        "declaration": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result.response"
+        "name": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Result.response",
+        "type": "fuchsia.hardware.radar/RadarBurstReader_RegisterVmos_Response"
     },
     {
         "kind": "union",
@@ -124,9 +124,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<zx/handle:VMO>:300",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response.vmos"
+        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response.vmos",
+        "type": "vector<zx/handle:VMO>:300"
     },
     {
         "kind": "struct",
@@ -134,14 +134,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.hardware.radar/StatusCode",
         "kind": "union/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result.err"
+        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result.err",
+        "type": "fuchsia.hardware.radar/StatusCode"
     },
     {
-        "declaration": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result.response"
+        "name": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Result.response",
+        "type": "fuchsia.hardware.radar/RadarBurstReader_UnregisterVmos_Response"
     },
     {
         "kind": "union",
@@ -215,15 +215,15 @@
         "value": "9"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.hardware.radar/StatusCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.hardware.radar/VMO_VECTOR_MAX_COUNT",
+        "type": "uint32",
         "value": "300"
     },
     {

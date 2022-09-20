@@ -10,15 +10,15 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.castremotecontrol/LaunchError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(string device_id) -> (fuchsia.castremotecontrol/Launcher_Launch_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.castremotecontrol/Launcher.Launch"
+        "name": "fuchsia.castremotecontrol/Launcher.Launch",
+        "type": "(string device_id) -> (fuchsia.castremotecontrol/Launcher_Launch_Result result)"
     },
     {
         "kind": "protocol",
@@ -29,14 +29,14 @@
         "name": "fuchsia.castremotecontrol/Launcher_Launch_Response"
     },
     {
-        "declaration": "fuchsia.castremotecontrol/LaunchError",
         "kind": "union/member",
-        "name": "fuchsia.castremotecontrol/Launcher_Launch_Result.err"
+        "name": "fuchsia.castremotecontrol/Launcher_Launch_Result.err",
+        "type": "fuchsia.castremotecontrol/LaunchError"
     },
     {
-        "declaration": "fuchsia.castremotecontrol/Launcher_Launch_Response",
         "kind": "union/member",
-        "name": "fuchsia.castremotecontrol/Launcher_Launch_Result.response"
+        "name": "fuchsia.castremotecontrol/Launcher_Launch_Result.response",
+        "type": "fuchsia.castremotecontrol/Launcher_Launch_Response"
     },
     {
         "kind": "union",

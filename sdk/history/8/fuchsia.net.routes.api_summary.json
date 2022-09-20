@@ -1,37 +1,37 @@
 [
     {
-        "declaration": "fuchsia.net/IpAddress",
         "kind": "table/member",
-        "name": "fuchsia.net.routes/Destination.address"
+        "name": "fuchsia.net.routes/Destination.address",
+        "type": "fuchsia.net/IpAddress"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.net.routes/Destination.interface_id"
+        "name": "fuchsia.net.routes/Destination.interface_id",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.net/MacAddress",
         "kind": "table/member",
-        "name": "fuchsia.net.routes/Destination.mac"
+        "name": "fuchsia.net.routes/Destination.mac",
+        "type": "fuchsia.net/MacAddress"
     },
     {
-        "declaration": "fuchsia.net/IpAddress",
         "kind": "table/member",
-        "name": "fuchsia.net.routes/Destination.source_address"
+        "name": "fuchsia.net.routes/Destination.source_address",
+        "type": "fuchsia.net/IpAddress"
     },
     {
         "kind": "table",
         "name": "fuchsia.net.routes/Destination"
     },
     {
-        "declaration": "fuchsia.net.routes/Destination",
         "kind": "union/member",
-        "name": "fuchsia.net.routes/Resolved.direct"
+        "name": "fuchsia.net.routes/Resolved.direct",
+        "type": "fuchsia.net.routes/Destination"
     },
     {
-        "declaration": "fuchsia.net.routes/Destination",
         "kind": "union/member",
-        "name": "fuchsia.net.routes/Resolved.gateway"
+        "name": "fuchsia.net.routes/Resolved.gateway",
+        "type": "fuchsia.net.routes/Destination"
     },
     {
         "kind": "union",
@@ -39,32 +39,32 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.net/IpAddress destination) -> (fuchsia.net.routes/State_Resolve_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.net.routes/State.Resolve"
+        "name": "fuchsia.net.routes/State.Resolve",
+        "type": "(fuchsia.net/IpAddress destination) -> (fuchsia.net.routes/State_Resolve_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.net.routes/State"
     },
     {
-        "declaration": "fuchsia.net.routes/Resolved",
         "kind": "struct/member",
-        "name": "fuchsia.net.routes/State_Resolve_Response.result"
+        "name": "fuchsia.net.routes/State_Resolve_Response.result",
+        "type": "fuchsia.net.routes/Resolved"
     },
     {
         "kind": "struct",
         "name": "fuchsia.net.routes/State_Resolve_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.net.routes/State_Resolve_Result.err"
+        "name": "fuchsia.net.routes/State_Resolve_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.net.routes/State_Resolve_Response",
         "kind": "union/member",
-        "name": "fuchsia.net.routes/State_Resolve_Result.response"
+        "name": "fuchsia.net.routes/State_Resolve_Result.response",
+        "type": "fuchsia.net.routes/State_Resolve_Response"
     },
     {
         "kind": "union",

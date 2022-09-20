@@ -1,27 +1,27 @@
 [
     {
-        "declaration": "(uint64 id) -> (fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry.GetVulkanSocket"
+        "name": "fuchsia.gpu.agis/ComponentRegistry.GetVulkanSocket",
+        "type": "(uint64 id) -> (fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result result)"
     },
     {
-        "declaration": "(uint64 id,uint64 process_koid,string:32 process_name) -> (fuchsia.gpu.agis/ComponentRegistry_Register_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry.Register"
+        "name": "fuchsia.gpu.agis/ComponentRegistry.Register",
+        "type": "(uint64 id,uint64 process_koid,string:32 process_name) -> (fuchsia.gpu.agis/ComponentRegistry_Register_Result result)"
     },
     {
-        "declaration": "(uint64 id) -> (fuchsia.gpu.agis/ComponentRegistry_Unregister_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry.Unregister"
+        "name": "fuchsia.gpu.agis/ComponentRegistry.Unregister",
+        "type": "(uint64 id) -> (fuchsia.gpu.agis/ComponentRegistry_Unregister_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.gpu.agis/ComponentRegistry"
     },
     {
-        "declaration": "zx/handle:<SOCKET,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Response.socket"
+        "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Response.socket",
+        "type": "zx/handle:<SOCKET,optional>"
     },
     {
         "kind": "struct",
@@ -29,14 +29,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.gpu.agis/Error",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result.err"
+        "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result.err",
+        "type": "fuchsia.gpu.agis/Error"
     },
     {
-        "declaration": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Response",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result.response"
+        "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result.response",
+        "type": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Response"
     },
     {
         "kind": "union",
@@ -49,14 +49,14 @@
         "name": "fuchsia.gpu.agis/ComponentRegistry_Register_Response"
     },
     {
-        "declaration": "fuchsia.gpu.agis/Error",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry_Register_Result.err"
+        "name": "fuchsia.gpu.agis/ComponentRegistry_Register_Result.err",
+        "type": "fuchsia.gpu.agis/Error"
     },
     {
-        "declaration": "fuchsia.gpu.agis/ComponentRegistry_Register_Response",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry_Register_Result.response"
+        "name": "fuchsia.gpu.agis/ComponentRegistry_Register_Result.response",
+        "type": "fuchsia.gpu.agis/ComponentRegistry_Register_Response"
     },
     {
         "kind": "union",
@@ -68,14 +68,14 @@
         "name": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Response"
     },
     {
-        "declaration": "fuchsia.gpu.agis/Error",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Result.err"
+        "name": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Result.err",
+        "type": "fuchsia.gpu.agis/Error"
     },
     {
-        "declaration": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Response",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Result.response"
+        "name": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Result.response",
+        "type": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Response"
     },
     {
         "kind": "union",
@@ -83,18 +83,18 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(uint32 global_id) -> (fuchsia.gpu.agis/Connector_GetSocket_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.gpu.agis/Connector.GetSocket"
+        "name": "fuchsia.gpu.agis/Connector.GetSocket",
+        "type": "(uint32 global_id) -> (fuchsia.gpu.agis/Connector_GetSocket_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.gpu.agis/Connector"
     },
     {
-        "declaration": "zx/handle:SOCKET",
         "kind": "struct/member",
-        "name": "fuchsia.gpu.agis/Connector_GetSocket_Response.socket"
+        "name": "fuchsia.gpu.agis/Connector_GetSocket_Response.socket",
+        "type": "zx/handle:SOCKET"
     },
     {
         "kind": "struct",
@@ -102,14 +102,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.gpu.agis/Error",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/Connector_GetSocket_Result.err"
+        "name": "fuchsia.gpu.agis/Connector_GetSocket_Result.err",
+        "type": "fuchsia.gpu.agis/Error"
     },
     {
-        "declaration": "fuchsia.gpu.agis/Connector_GetSocket_Response",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/Connector_GetSocket_Result.response"
+        "name": "fuchsia.gpu.agis/Connector_GetSocket_Result.response",
+        "type": "fuchsia.gpu.agis/Connector_GetSocket_Response"
     },
     {
         "kind": "union",
@@ -138,30 +138,30 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.gpu.agis/Error",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.gpu.agis/MAX_VTCS",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "() -> (fuchsia.gpu.agis/Observer_Vtcs_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.gpu.agis/Observer.Vtcs"
+        "name": "fuchsia.gpu.agis/Observer.Vtcs",
+        "type": "() -> (fuchsia.gpu.agis/Observer_Vtcs_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.gpu.agis/Observer"
     },
     {
-        "declaration": "vector<fuchsia.gpu.agis/Vtc>:128",
         "kind": "struct/member",
-        "name": "fuchsia.gpu.agis/Observer_Vtcs_Response.vtcs"
+        "name": "fuchsia.gpu.agis/Observer_Vtcs_Response.vtcs",
+        "type": "vector<fuchsia.gpu.agis/Vtc>:128"
     },
     {
         "kind": "struct",
@@ -169,14 +169,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.gpu.agis/Error",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/Observer_Vtcs_Result.err"
+        "name": "fuchsia.gpu.agis/Observer_Vtcs_Result.err",
+        "type": "fuchsia.gpu.agis/Error"
     },
     {
-        "declaration": "fuchsia.gpu.agis/Observer_Vtcs_Response",
         "kind": "union/member",
-        "name": "fuchsia.gpu.agis/Observer_Vtcs_Result.response"
+        "name": "fuchsia.gpu.agis/Observer_Vtcs_Result.response",
+        "type": "fuchsia.gpu.agis/Observer_Vtcs_Response"
     },
     {
         "kind": "union",
@@ -185,19 +185,19 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.gpu.agis/Vtc.global_id"
+        "name": "fuchsia.gpu.agis/Vtc.global_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.gpu.agis/Vtc.process_koid"
+        "name": "fuchsia.gpu.agis/Vtc.process_koid",
+        "type": "uint64"
     },
     {
-        "declaration": "string:32",
         "kind": "table/member",
-        "name": "fuchsia.gpu.agis/Vtc.process_name"
+        "name": "fuchsia.gpu.agis/Vtc.process_name",
+        "type": "string:32"
     },
     {
         "kind": "table",

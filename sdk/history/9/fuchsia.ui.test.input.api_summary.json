@@ -1,68 +1,68 @@
 [
     {
-        "declaration": "(fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/Keyboard.SimulateUsAsciiTextEntry"
+        "name": "fuchsia.ui.test.input/Keyboard.SimulateUsAsciiTextEntry",
+        "type": "(fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest payload) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/Keyboard"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest payload)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/KeyboardInputListener.ReportTextInput"
+        "name": "fuchsia.ui.test.input/KeyboardInputListener.ReportTextInput",
+        "type": "(fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest payload)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/KeyboardInputListener"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest.text"
+        "name": "fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest.text",
+        "type": "string:1024"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.test.input/KeyboardInputListenerReportTextInputRequest"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest.text"
+        "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest.text",
+        "type": "string:1024"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.test.input/KeyboardSimulateUsAsciiTextEntryRequest"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.ui.test.input/MOUSE_MAX_NUM_BUTTONS",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/MediaButtonsDevice.SimulateButtonPress"
+        "name": "fuchsia.ui.test.input/MediaButtonsDevice.SimulateButtonPress",
+        "type": "(fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest payload) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/MediaButtonsDevice"
     },
     {
-        "declaration": "fuchsia.input.report/ConsumerControlButton",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest.button"
+        "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest.button",
+        "type": "fuchsia.input.report/ConsumerControlButton"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.test.input/MediaButtonsDeviceSimulateButtonPressRequest"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/MouseSimulateMouseEventRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/Mouse.SimulateMouseEvent"
+        "name": "fuchsia.ui.test.input/Mouse.SimulateMouseEvent",
+        "type": "(fuchsia.ui.test.input/MouseSimulateMouseEventRequest payload) -> ()"
     },
     {
         "kind": "protocol",
@@ -84,10 +84,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.test.input/MouseButton",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -120,136 +120,136 @@
         "value": "5"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.test.input/MouseEventPhase",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest payload)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/MouseInputListener.ReportMouseInput"
+        "name": "fuchsia.ui.test.input/MouseInputListener.ReportMouseInput",
+        "type": "(fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest payload)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/MouseInputListener"
     },
     {
-        "declaration": "vector<fuchsia.ui.test.input/MouseButton>:32",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.buttons"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.buttons",
+        "type": "vector<fuchsia.ui.test.input/MouseButton>:32"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.component_name"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.component_name",
+        "type": "string:1024"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.device_pixel_ratio"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.device_pixel_ratio",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.local_x"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.local_x",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.local_y"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.local_y",
+        "type": "float64"
     },
     {
-        "declaration": "fuchsia.ui.test.input/MouseEventPhase",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.phase"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.phase",
+        "type": "fuchsia.ui.test.input/MouseEventPhase"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.time_received"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.time_received",
+        "type": "int64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.wheel_x_physical_pixel"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.wheel_x_physical_pixel",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.wheel_y_physical_pixel"
+        "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest.wheel_y_physical_pixel",
+        "type": "float64"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.test.input/MouseInputListenerReportMouseInputRequest"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_x"
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_x",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_y"
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.movement_y",
+        "type": "int64"
     },
     {
-        "declaration": "vector<fuchsia.ui.test.input/MouseButton>:32",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.pressed_buttons"
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.pressed_buttons",
+        "type": "vector<fuchsia.ui.test.input/MouseButton>:32"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_h_detent"
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_h_detent",
+        "type": "int64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_h_physical_pixel"
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_h_physical_pixel",
+        "type": "float64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_v_detent"
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_v_detent",
+        "type": "int64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_v_physical_pixel"
+        "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest.scroll_v_physical_pixel",
+        "type": "float64"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.test.input/MouseSimulateMouseEventRequest"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/RegistryRegisterKeyboardRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/Registry.RegisterKeyboard"
+        "name": "fuchsia.ui.test.input/Registry.RegisterKeyboard",
+        "type": "(fuchsia.ui.test.input/RegistryRegisterKeyboardRequest payload) -> ()"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/Registry.RegisterMediaButtonsDevice"
+        "name": "fuchsia.ui.test.input/Registry.RegisterMediaButtonsDevice",
+        "type": "(fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest payload) -> ()"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/RegistryRegisterMouseRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/Registry.RegisterMouse"
+        "name": "fuchsia.ui.test.input/Registry.RegisterMouse",
+        "type": "(fuchsia.ui.test.input/RegistryRegisterMouseRequest payload) -> ()"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/Registry.RegisterTouchScreen"
+        "name": "fuchsia.ui.test.input/Registry.RegisterTouchScreen",
+        "type": "(fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest payload) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/Registry"
     },
     {
-        "declaration": "server_end:fuchsia.ui.test.input/Keyboard",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/RegistryRegisterKeyboardRequest.device"
+        "name": "fuchsia.ui.test.input/RegistryRegisterKeyboardRequest.device",
+        "type": "server_end:fuchsia.ui.test.input/Keyboard"
     },
     {
         "kind": "table",
@@ -257,9 +257,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "server_end:fuchsia.ui.test.input/MediaButtonsDevice",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest.device"
+        "name": "fuchsia.ui.test.input/RegistryRegisterMediaButtonsDeviceRequest.device",
+        "type": "server_end:fuchsia.ui.test.input/MediaButtonsDevice"
     },
     {
         "kind": "table",
@@ -267,9 +267,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "server_end:fuchsia.ui.test.input/Mouse",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/RegistryRegisterMouseRequest.device"
+        "name": "fuchsia.ui.test.input/RegistryRegisterMouseRequest.device",
+        "type": "server_end:fuchsia.ui.test.input/Mouse"
     },
     {
         "kind": "table",
@@ -277,9 +277,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "server_end:fuchsia.ui.test.input/TouchScreen",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest.device"
+        "name": "fuchsia.ui.test.input/RegistryRegisterTouchScreenRequest.device",
+        "type": "server_end:fuchsia.ui.test.input/TouchScreen"
     },
     {
         "kind": "table",
@@ -287,80 +287,80 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest payload)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/TouchInputListener.ReportTouchInput"
+        "name": "fuchsia.ui.test.input/TouchInputListener.ReportTouchInput",
+        "type": "(fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest payload)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/TouchInputListener"
     },
     {
-        "declaration": "string:1024",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.component_name"
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.component_name",
+        "type": "string:1024"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.device_pixel_ratio"
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.device_pixel_ratio",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.local_x"
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.local_x",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.local_y"
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.local_y",
+        "type": "float64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.time_received"
+        "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest.time_received",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.test.input/TouchInputListenerReportTouchInputRequest"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/TouchScreen.SimulateSwipe"
+        "name": "fuchsia.ui.test.input/TouchScreen.SimulateSwipe",
+        "type": "(fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest payload) -> ()"
     },
     {
-        "declaration": "(fuchsia.ui.test.input/TouchScreenSimulateTapRequest payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.test.input/TouchScreen.SimulateTap"
+        "name": "fuchsia.ui.test.input/TouchScreen.SimulateTap",
+        "type": "(fuchsia.ui.test.input/TouchScreenSimulateTapRequest payload) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.test.input/TouchScreen"
     },
     {
-        "declaration": "fuchsia.math/Vec",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.end_location"
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.end_location",
+        "type": "fuchsia.math/Vec"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.move_event_count"
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.move_event_count",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.math/Vec",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.start_location"
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest.start_location",
+        "type": "fuchsia.math/Vec"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.test.input/TouchScreenSimulateSwipeRequest"
     },
     {
-        "declaration": "fuchsia.math/Vec",
         "kind": "table/member",
-        "name": "fuchsia.ui.test.input/TouchScreenSimulateTapRequest.tap_location"
+        "name": "fuchsia.ui.test.input/TouchScreenSimulateTapRequest.tap_location",
+        "type": "fuchsia.math/Vec"
     },
     {
         "kind": "table",

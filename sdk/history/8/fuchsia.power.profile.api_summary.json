@@ -15,15 +15,15 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.power.profile/Profile",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (fuchsia.power.profile/Profile profile)",
         "kind": "protocol/member",
-        "name": "fuchsia.power.profile/Watcher.Watch"
+        "name": "fuchsia.power.profile/Watcher.Watch",
+        "type": "() -> (fuchsia.power.profile/Profile profile)"
     },
     {
         "kind": "protocol",

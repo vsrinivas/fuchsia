@@ -1,47 +1,47 @@
 [
     {
-        "declaration": "fuchsia.input/Key",
         "kind": "table/member",
-        "name": "fuchsia.ui.input3/KeyEvent.key"
+        "name": "fuchsia.ui.input3/KeyEvent.key",
+        "type": "fuchsia.input/Key"
     },
     {
-        "declaration": "fuchsia.ui.input3/KeyMeaning",
         "kind": "table/member",
-        "name": "fuchsia.ui.input3/KeyEvent.key_meaning"
+        "name": "fuchsia.ui.input3/KeyEvent.key_meaning",
+        "type": "fuchsia.ui.input3/KeyMeaning"
     },
     {
-        "declaration": "fuchsia.ui.input3/LockState",
         "kind": "table/member",
-        "name": "fuchsia.ui.input3/KeyEvent.lock_state"
+        "name": "fuchsia.ui.input3/KeyEvent.lock_state",
+        "type": "fuchsia.ui.input3/LockState"
     },
     {
-        "declaration": "fuchsia.ui.input3/Modifiers",
         "kind": "table/member",
-        "name": "fuchsia.ui.input3/KeyEvent.modifiers"
+        "name": "fuchsia.ui.input3/KeyEvent.modifiers",
+        "type": "fuchsia.ui.input3/Modifiers"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.ui.input3/KeyEvent.repeat_sequence"
+        "name": "fuchsia.ui.input3/KeyEvent.repeat_sequence",
+        "type": "uint32"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.input3/KeyEvent.timestamp"
+        "name": "fuchsia.ui.input3/KeyEvent.timestamp",
+        "type": "int64"
     },
     {
-        "declaration": "fuchsia.ui.input3/KeyEventType",
         "kind": "table/member",
-        "name": "fuchsia.ui.input3/KeyEvent.type"
+        "name": "fuchsia.ui.input3/KeyEvent.type",
+        "type": "fuchsia.ui.input3/KeyEventType"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.input3/KeyEvent"
     },
     {
-        "declaration": "(fuchsia.ui.input3/KeyEvent key_event) -> (fuchsia.ui.input3/KeyEventStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.input3/KeyEventInjector.Inject"
+        "name": "fuchsia.ui.input3/KeyEventInjector.Inject",
+        "type": "(fuchsia.ui.input3/KeyEvent key_event) -> (fuchsia.ui.input3/KeyEventStatus status)"
     },
     {
         "kind": "protocol",
@@ -58,10 +58,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input3/KeyEventStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -84,20 +84,20 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input3/KeyEventType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "union/member",
-        "name": "fuchsia.ui.input3/KeyMeaning.codepoint"
+        "name": "fuchsia.ui.input3/KeyMeaning.codepoint",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.ui.input3/NonPrintableKey",
         "kind": "union/member",
-        "name": "fuchsia.ui.input3/KeyMeaning.non_printable_key"
+        "name": "fuchsia.ui.input3/KeyMeaning.non_printable_key",
+        "type": "fuchsia.ui.input3/NonPrintableKey"
     },
     {
         "kind": "union",
@@ -105,18 +105,18 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewRef view_ref,client_end:fuchsia.ui.input3/KeyboardListener listener) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.input3/Keyboard.AddListener"
+        "name": "fuchsia.ui.input3/Keyboard.AddListener",
+        "type": "(fuchsia.ui.views/ViewRef view_ref,client_end:fuchsia.ui.input3/KeyboardListener listener) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.input3/Keyboard"
     },
     {
-        "declaration": "(fuchsia.ui.input3/KeyEvent event) -> (fuchsia.ui.input3/KeyEventStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.input3/KeyboardListener.OnKeyEvent"
+        "name": "fuchsia.ui.input3/KeyboardListener.OnKeyEvent",
+        "type": "(fuchsia.ui.input3/KeyEvent event) -> (fuchsia.ui.input3/KeyEventStatus status)"
     },
     {
         "kind": "protocol",
@@ -148,10 +148,10 @@
         "value": "16"
     },
     {
-        "declaration": "uint64",
         "kind": "bits",
         "name": "fuchsia.ui.input3/LockState",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint64"
     },
     {
         "kind": "bits/member",
@@ -244,10 +244,10 @@
         "value": "16"
     },
     {
-        "declaration": "uint64",
         "kind": "bits",
         "name": "fuchsia.ui.input3/Modifiers",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint64"
     },
     {
         "kind": "enum/member",
@@ -305,10 +305,10 @@
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.input3/NonPrintableKey",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "library",

@@ -1,73 +1,73 @@
 [
     {
-        "declaration": "vector<fuchsia.camera2.hal/StreamConfig>:64",
         "kind": "struct/member",
-        "name": "fuchsia.camera2.hal/Config.stream_configs"
+        "name": "fuchsia.camera2.hal/Config.stream_configs",
+        "type": "vector<fuchsia.camera2.hal/StreamConfig>:64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.camera2.hal/Config"
     },
     {
-        "declaration": "(uint32 config_index,uint32 stream_index,uint32 image_format_index,server_end:fuchsia.camera2/Stream stream)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera2.hal/Controller.CreateStream"
+        "name": "fuchsia.camera2.hal/Controller.CreateStream",
+        "type": "(uint32 config_index,uint32 stream_index,uint32 image_format_index,server_end:fuchsia.camera2/Stream stream)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.camera2.hal/Controller.DisableStreaming"
+        "name": "fuchsia.camera2.hal/Controller.DisableStreaming",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.camera2.hal/Controller.EnableStreaming"
+        "name": "fuchsia.camera2.hal/Controller.EnableStreaming",
+        "type": "()"
     },
     {
-        "declaration": "() -> (fuchsia.camera2/DeviceInfo info)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera2.hal/Controller.GetDeviceInfo"
+        "name": "fuchsia.camera2.hal/Controller.GetDeviceInfo",
+        "type": "() -> (fuchsia.camera2/DeviceInfo info)"
     },
     {
-        "declaration": "() -> (box<fuchsia.camera2.hal/Config> config,int32 status)",
         "kind": "protocol/member",
-        "name": "fuchsia.camera2.hal/Controller.GetNextConfig"
+        "name": "fuchsia.camera2.hal/Controller.GetNextConfig",
+        "type": "() -> (box<fuchsia.camera2.hal/Config> config,int32 status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.camera2.hal/Controller"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.camera2.hal/MAX_CONFIGURATIONS",
+        "type": "uint64",
         "value": "256"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.camera2.hal/MAX_STREAMS",
+        "type": "uint64",
         "value": "64"
     },
     {
-        "declaration": "fuchsia.sysmem/BufferCollectionConstraints",
         "kind": "struct/member",
-        "name": "fuchsia.camera2.hal/StreamConfig.constraints"
+        "name": "fuchsia.camera2.hal/StreamConfig.constraints",
+        "type": "fuchsia.sysmem/BufferCollectionConstraints"
     },
     {
-        "declaration": "fuchsia.camera2/FrameRate",
         "kind": "struct/member",
-        "name": "fuchsia.camera2.hal/StreamConfig.frame_rate"
+        "name": "fuchsia.camera2.hal/StreamConfig.frame_rate",
+        "type": "fuchsia.camera2/FrameRate"
     },
     {
-        "declaration": "vector<fuchsia.sysmem/ImageFormat_2>:256",
         "kind": "struct/member",
-        "name": "fuchsia.camera2.hal/StreamConfig.image_formats"
+        "name": "fuchsia.camera2.hal/StreamConfig.image_formats",
+        "type": "vector<fuchsia.sysmem/ImageFormat_2>:256"
     },
     {
-        "declaration": "fuchsia.camera2/StreamProperties",
         "kind": "struct/member",
-        "name": "fuchsia.camera2.hal/StreamConfig.properties"
+        "name": "fuchsia.camera2.hal/StreamConfig.properties",
+        "type": "fuchsia.camera2/StreamProperties"
     },
     {
         "kind": "struct",

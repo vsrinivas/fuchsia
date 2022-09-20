@@ -28,7 +28,7 @@ func TestWraparoundTypeSerialization(t *testing.T) {
 				parentType: "parentType",
 			},
 			expected: ElementStr{
-				Decl:       "baz",
+				Type:       "baz",
 				Kind:       "parentType",
 				Name:       "bar.foo",
 				Strictness: isStrict,
@@ -46,7 +46,7 @@ func TestWraparoundTypeSerialization(t *testing.T) {
 				parentType: "parentType",
 			},
 			expected: ElementStr{
-				Decl:       "baz",
+				Type:       "baz",
 				Kind:       "parentType",
 				Name:       "bar.foo",
 				Strictness: isFlexible,

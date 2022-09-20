@@ -106,13 +106,13 @@ const FOO string = "fuzzy";
             "before": {
                 "kind": "const",
                 "name": "l/FOO",
-                "declaration": "int32",
+                "type": "int32",
                 "value": "32"
             },
             "after": {
                 "kind": "const",
                 "name": "l/FOO",
-                "declaration": "string",
+                "type": "string",
                 "value": "fuzzy"
             },
             "conclusion": "APIBreaking"
@@ -138,7 +138,7 @@ library l;
             "before": {
                 "kind": "const",
                 "name": "l/FOO",
-                "declaration": "int32",
+                "type": "int32",
                 "value": "32"
             },
             "conclusion": "APIBreaking"
@@ -164,7 +164,7 @@ const FOO string = "fuzzy";
             "after": {
                 "kind": "const",
                 "name": "l/FOO",
-                "declaration": "string",
+                "type": "string",
                 "value": "fuzzy"
             },
             "conclusion": "SourceCompatible"
@@ -191,13 +191,13 @@ const FOO int32 = 42;
             "before": {
                 "kind": "const",
                 "name": "l/FOO",
-                "declaration": "int32",
+                "type": "int32",
                 "value": "32"
             },
             "after": {
                 "kind": "const",
                 "name": "l/FOO",
-                "declaration": "int32",
+                "type": "int32",
                 "value": "42"
             },
             "conclusion": "APIBreaking"
@@ -327,10 +327,10 @@ type Bits = strict bits {
         {
             "name": "l/Bits",
             "after": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "conclusion": "SourceCompatible"
         }
@@ -364,10 +364,10 @@ library l;
         {
             "name": "l/Bits",
             "before": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "conclusion": "APIBreaking"
         }
@@ -395,16 +395,16 @@ type Bits = flexible bits {
         {
             "name": "l/Bits",
             "before": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "after": {
-                "strictness": "flexible",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "flexible",
+                "type": "uint32"
             },
             "conclusion": "APIBreaking"
         }
@@ -432,16 +432,16 @@ type Bits = strict bits {
         {
             "name": "l/Bits",
             "before": {
-                "strictness": "flexible",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "flexible",
+                "type": "uint32"
             },
             "after": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "conclusion": "APIBreaking"
         }
@@ -469,16 +469,16 @@ type Bits = strict bits : uint8 {
         {
             "name": "l/Bits",
             "before": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "after": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint8"
+                "strictness": "strict",
+                "type": "uint8"
             },
             "conclusion": "APIBreaking"
         }
@@ -506,16 +506,16 @@ type Bits = strict bits : uint8 {
         {
             "name": "l/Bits",
             "before": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "after": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint8"
+                "strictness": "strict",
+                "type": "uint8"
             },
             "conclusion": "APIBreaking"
         }
@@ -543,16 +543,16 @@ type Bits = flexible bits : uint8 {
         {
             "name": "l/Bits",
             "before": {
-                "strictness": "strict",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "after": {
-                "strictness": "flexible",
                 "kind": "bits",
                 "name": "l/Bits",
-                "declaration": "uint8"
+                "strictness": "flexible",
+                "type": "uint8"
             },
             "conclusion": "APIBreaking"
         }
@@ -623,10 +623,10 @@ type Enum = strict enum {
         {
             "name": "l/Enum",
             "after": {
-                "strictness": "strict",
                 "kind": "enum",
                 "name": "l/Enum",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "conclusion": "SourceCompatible"
         }
@@ -747,16 +747,16 @@ type Enum = flexible enum {
         {
             "name": "l/Enum",
             "before": {
-                "strictness": "strict",
                 "kind": "enum",
                 "name": "l/Enum",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "after": {
-                "strictness": "flexible",
                 "kind": "enum",
                 "name": "l/Enum",
-                "declaration": "uint32"
+                "strictness": "flexible",
+                "type": "uint32"
             },
             "conclusion": "APIBreaking"
         }
@@ -784,16 +784,16 @@ type Enum = strict enum {
         {
             "name": "l/Enum",
             "before": {
-                "strictness": "flexible",
                 "kind": "enum",
                 "name": "l/Enum",
-                "declaration": "uint32"
+                "strictness": "flexible",
+                "type": "uint32"
             },
             "after": {
-                "strictness": "strict",
                 "kind": "enum",
                 "name": "l/Enum",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "conclusion": "APIBreaking"
         }
@@ -821,16 +821,16 @@ type Enum = strict enum : uint8 {
         {
             "name": "l/Enum",
             "before": {
-                "strictness": "strict",
                 "kind": "enum",
                 "name": "l/Enum",
-                "declaration": "uint32"
+                "strictness": "strict",
+                "type": "uint32"
             },
             "after": {
-                "strictness": "strict",
                 "kind": "enum",
                 "name": "l/Enum",
-                "declaration": "uint8"
+                "strictness": "strict",
+                "type": "uint8"
             },
             "conclusion": "APIBreaking"
         }
@@ -943,9 +943,9 @@ type Struct = resource struct {};
                 "name": "l/Struct"
             },
             "after": {
-                "resourceness": "resource",
                 "kind": "struct",
-                "name": "l/Struct"
+                "name": "l/Struct",
+                "resourceness": "resource"
             },
             "conclusion": "APIBreaking"
         }
@@ -969,9 +969,9 @@ type Struct = struct {};
         {
             "name": "l/Struct",
             "before": {
-                "resourceness": "resource",
                 "kind": "struct",
-                "name": "l/Struct"
+                "name": "l/Struct",
+                "resourceness": "resource"
             },
             "after": {
                 "kind": "struct",
@@ -1003,7 +1003,7 @@ type Struct = struct {
             "after": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         }
@@ -1032,7 +1032,7 @@ type Struct = struct {
             "before": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         }
@@ -1062,12 +1062,12 @@ type Struct = struct {
             "before": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "after": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
-                "declaration": "string"
+                "type": "string"
             },
             "conclusion": "APIBreaking"
         }
@@ -1099,13 +1099,13 @@ type Struct = struct {
             "before": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
-                "declaration": "int32",
+                "type": "int32",
                 "value": "1"
             },
             "after": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
-                "declaration": "int32",
+                "type": "int32",
                 "value": "2"
             },
             "conclusion": "APIBreaking"
@@ -1184,9 +1184,9 @@ type T = resource table {};
                 "name": "l/T"
             },
             "after": {
-                "resourceness": "resource",
                 "kind": "table",
-                "name": "l/T"
+                "name": "l/T",
+                "resourceness": "resource"
             },
             "conclusion": "APIBreaking"
         }
@@ -1210,9 +1210,9 @@ type T = table {};
         {
             "name": "l/T",
             "before": {
-                "resourceness": "resource",
                 "kind": "table",
-                "name": "l/T"
+                "name": "l/T",
+                "resourceness": "resource"
             },
             "after": {
                 "kind": "table",
@@ -1244,7 +1244,7 @@ type T = table {
             "after": {
                 "kind": "table/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "SourceCompatible"
         }
@@ -1273,7 +1273,7 @@ type T = table {
             "before": {
                 "kind": "table/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         }
@@ -1305,7 +1305,7 @@ type T = table {
             "before": {
                 "kind": "table/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         }
@@ -1335,12 +1335,12 @@ type T = table {
             "before": {
                 "kind": "table/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "after": {
                 "kind": "table/member",
                 "name": "l/T.foo",
-                "declaration": "string"
+                "type": "string"
             },
             "conclusion": "APIBreaking"
         }
@@ -1369,16 +1369,16 @@ type T = strict union {
             "after": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "SourceCompatible"
         },
         {
             "name": "l/T",
             "after": {
-                "strictness": "strict",
                 "kind": "union",
-                "name": "l/T"
+                "name": "l/T",
+                "strictness": "strict"
             },
             "conclusion": "SourceCompatible"
         }
@@ -1405,16 +1405,16 @@ library l;
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         },
         {
             "name": "l/T",
             "before": {
-                "strictness": "strict",
                 "kind": "union",
-                "name": "l/T"
+                "name": "l/T",
+                "strictness": "strict"
             },
             "conclusion": "APIBreaking"
         }
@@ -1446,7 +1446,7 @@ type T = union {
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         }
@@ -1495,16 +1495,16 @@ library l;
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         },
         {
             "name": "l/T",
             "before": {
-                "strictness": "strict",
                 "kind": "union",
-                "name": "l/T"
+                "name": "l/T",
+                "strictness": "strict"
             },
             "conclusion": "APIBreaking"
         }
@@ -1532,15 +1532,15 @@ type T = strict resource union {
         {
             "name": "l/T",
             "before": {
-                "strictness": "strict",
                 "kind": "union",
-                "name": "l/T"
+                "name": "l/T",
+                "strictness": "strict"
             },
             "after": {
-                "resourceness": "resource",
-                "strictness": "strict",
                 "kind": "union",
-                "name": "l/T"
+                "name": "l/T",
+                "resourceness": "resource",
+                "strictness": "strict"
             },
             "conclusion": "APIBreaking"
         }
@@ -1568,15 +1568,15 @@ type T = strict union {
         {
             "name": "l/T",
             "before": {
-                "resourceness": "resource",
-                "strictness": "strict",
                 "kind": "union",
-                "name": "l/T"
+                "name": "l/T",
+                "resourceness": "resource",
+                "strictness": "strict"
             },
             "after": {
-                "strictness": "strict",
                 "kind": "union",
-                "name": "l/T"
+                "name": "l/T",
+                "strictness": "strict"
             },
             "conclusion": "APIBreaking"
         }
@@ -1607,7 +1607,7 @@ type T = flexible union {
             "after": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "SourceCompatible"
         }
@@ -1638,7 +1638,7 @@ type T = strict union {
             "after": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         }
@@ -1669,7 +1669,7 @@ type T = strict union {
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "conclusion": "APIBreaking"
         }
@@ -1699,12 +1699,12 @@ type T = union {
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "int32"
+                "type": "int32"
             },
             "after": {
                 "kind": "union/member",
                 "name": "l/T.foo",
-                "declaration": "string"
+                "type": "string"
             },
             "conclusion": "APIBreaking"
         }
@@ -1783,7 +1783,7 @@ protocol T {
             "after": {
                 "kind": "protocol/member",
                 "name": "l/T.Test",
-                "declaration": "(int32 t) -> ()"
+                "type": "(int32 t) -> ()"
             },
             "conclusion": "SourceCompatible"
         }
@@ -1812,7 +1812,7 @@ protocol T {
             "before": {
                 "kind": "protocol/member",
                 "name": "l/T.Test",
-                "declaration": "(int32 t) -> ()"
+                "type": "(int32 t) -> ()"
             },
             "conclusion": "APIBreaking"
         }
@@ -1842,12 +1842,12 @@ protocol T {
             "before": {
                 "kind": "protocol/member",
                 "name": "l/T.Test",
-                "declaration": "(int32 t) -> ()"
+                "type": "(int32 t) -> ()"
             },
             "after": {
                 "kind": "protocol/member",
                 "name": "l/T.Test",
-                "declaration": "(int32 t,int32 u) -> ()"
+                "type": "(int32 t,int32 u) -> ()"
             },
             "conclusion": "APIBreaking"
         }
@@ -1887,7 +1887,11 @@ func summarizeOne(t *testing.T, r fidlgen.Root) string {
 	t.Helper()
 	s := summarize.Summarize(r)
 	var buf strings.Builder
-	if err := s.WriteJSON(&buf); err != nil {
+
+	// TODO(fxbug.dev/109721): Remove.
+	renameDeclarationToType := true
+
+	if err := s.WriteJSON(&buf, renameDeclarationToType); err != nil {
 		t.Fatalf("error while summarizing: %v", err)
 	}
 	return buf.String()

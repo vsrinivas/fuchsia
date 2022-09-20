@@ -5,88 +5,88 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.logger/InterestChangeError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.logger/LogLevelFilter",
         "kind": "const",
         "name": "fuchsia.logger/LOG_LEVEL_DEFAULT",
+        "type": "fuchsia.logger/LogLevelFilter",
         "value": "48"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.logger/LOG_SEVERITY_MAX_STEP",
+        "type": "uint8",
         "value": "6"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.logger/LOG_SEVERITY_STEP_SIZE",
+        "type": "uint8",
         "value": "16"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.logger/LOG_VERBOSITY_STEP_SIZE",
+        "type": "uint8",
         "value": "1"
     },
     {
-        "declaration": "(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options)",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/Log.DumpLogsSafe"
+        "name": "fuchsia.logger/Log.DumpLogsSafe",
+        "type": "(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options)"
     },
     {
-        "declaration": "(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options)",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/Log.ListenSafe"
+        "name": "fuchsia.logger/Log.ListenSafe",
+        "type": "(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options)"
     },
     {
-        "declaration": "(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options,vector<fuchsia.diagnostics/LogInterestSelector>:64 selectors)",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/Log.ListenSafeWithSelectors"
+        "name": "fuchsia.logger/Log.ListenSafeWithSelectors",
+        "type": "(client_end:fuchsia.logger/LogListenerSafe log_listener,box<fuchsia.logger/LogFilterOptions> options,vector<fuchsia.diagnostics/LogInterestSelector>:64 selectors)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.logger/Log"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogFilterOptions.filter_by_pid"
+        "name": "fuchsia.logger/LogFilterOptions.filter_by_pid",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogFilterOptions.filter_by_tid"
+        "name": "fuchsia.logger/LogFilterOptions.filter_by_tid",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.logger/LogLevelFilter",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogFilterOptions.min_severity"
+        "name": "fuchsia.logger/LogFilterOptions.min_severity",
+        "type": "fuchsia.logger/LogLevelFilter"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogFilterOptions.pid"
+        "name": "fuchsia.logger/LogFilterOptions.pid",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<string:63>:16",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogFilterOptions.tags"
+        "name": "fuchsia.logger/LogFilterOptions.tags",
+        "type": "vector<string:63>:16"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogFilterOptions.tid"
+        "name": "fuchsia.logger/LogFilterOptions.tid",
+        "type": "uint64"
     },
     {
-        "declaration": "uint8",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogFilterOptions.verbosity"
+        "name": "fuchsia.logger/LogFilterOptions.verbosity",
+        "type": "uint8"
     },
     {
         "kind": "struct",
@@ -133,106 +133,106 @@
         "value": "64"
     },
     {
-        "declaration": "int8",
         "kind": "enum",
         "name": "fuchsia.logger/LogLevelFilter",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "int8"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/LogListenerSafe.Done"
+        "name": "fuchsia.logger/LogListenerSafe.Done",
+        "type": "()"
     },
     {
-        "declaration": "(fuchsia.logger/LogMessage log) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/LogListenerSafe.Log"
+        "name": "fuchsia.logger/LogListenerSafe.Log",
+        "type": "(fuchsia.logger/LogMessage log) -> ()"
     },
     {
-        "declaration": "(vector<fuchsia.logger/LogMessage> log) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/LogListenerSafe.LogMany"
+        "name": "fuchsia.logger/LogListenerSafe.LogMany",
+        "type": "(vector<fuchsia.logger/LogMessage> log) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.logger/LogListenerSafe"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogMessage.dropped_logs"
+        "name": "fuchsia.logger/LogMessage.dropped_logs",
+        "type": "uint32"
     },
     {
-        "declaration": "string:32768",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogMessage.msg"
+        "name": "fuchsia.logger/LogMessage.msg",
+        "type": "string:32768"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogMessage.pid"
+        "name": "fuchsia.logger/LogMessage.pid",
+        "type": "uint64"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogMessage.severity"
+        "name": "fuchsia.logger/LogMessage.severity",
+        "type": "int32"
     },
     {
-        "declaration": "vector<string:63>:5",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogMessage.tags"
+        "name": "fuchsia.logger/LogMessage.tags",
+        "type": "vector<string:63>:5"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogMessage.tid"
+        "name": "fuchsia.logger/LogMessage.tid",
+        "type": "uint64"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogMessage.time"
+        "name": "fuchsia.logger/LogMessage.time",
+        "type": "int64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.logger/LogMessage"
     },
     {
-        "declaration": "(zx/handle:SOCKET socket)",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/LogSink.Connect"
+        "name": "fuchsia.logger/LogSink.Connect",
+        "type": "(zx/handle:SOCKET socket)"
     },
     {
-        "declaration": "(zx/handle:SOCKET socket)",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/LogSink.ConnectStructured"
+        "name": "fuchsia.logger/LogSink.ConnectStructured",
+        "type": "(zx/handle:SOCKET socket)"
     },
     {
-        "declaration": "() -> (fuchsia.logger/LogSink_WaitForInterestChange_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.logger/LogSink.WaitForInterestChange"
+        "name": "fuchsia.logger/LogSink.WaitForInterestChange",
+        "type": "() -> (fuchsia.logger/LogSink_WaitForInterestChange_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.logger/LogSink"
     },
     {
-        "declaration": "fuchsia.diagnostics/Interest",
         "kind": "struct/member",
-        "name": "fuchsia.logger/LogSink_WaitForInterestChange_Response.data"
+        "name": "fuchsia.logger/LogSink_WaitForInterestChange_Response.data",
+        "type": "fuchsia.diagnostics/Interest"
     },
     {
         "kind": "struct",
         "name": "fuchsia.logger/LogSink_WaitForInterestChange_Response"
     },
     {
-        "declaration": "fuchsia.logger/InterestChangeError",
         "kind": "union/member",
-        "name": "fuchsia.logger/LogSink_WaitForInterestChange_Result.err"
+        "name": "fuchsia.logger/LogSink_WaitForInterestChange_Result.err",
+        "type": "fuchsia.logger/InterestChangeError"
     },
     {
-        "declaration": "fuchsia.logger/LogSink_WaitForInterestChange_Response",
         "kind": "union/member",
-        "name": "fuchsia.logger/LogSink_WaitForInterestChange_Result.response"
+        "name": "fuchsia.logger/LogSink_WaitForInterestChange_Result.response",
+        "type": "fuchsia.logger/LogSink_WaitForInterestChange_Response"
     },
     {
         "kind": "union",
@@ -240,33 +240,33 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.logger/MAX_DATAGRAM_LEN_BYTES",
+        "type": "uint32",
         "value": "32768"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.logger/MAX_LOG_MANY_SIZE_BYTES",
+        "type": "uint64",
         "value": "16384"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.logger/MAX_TAGS",
+        "type": "uint8",
         "value": "16"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.logger/MAX_TAGS_PER_LOG_MESSAGE",
+        "type": "uint8",
         "value": "5"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.logger/MAX_TAG_LEN_BYTES",
+        "type": "uint8",
         "value": "63"
     },
     {

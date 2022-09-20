@@ -1,20 +1,20 @@
 [
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.sysinfo/BOARD_NAME_LEN",
+        "type": "uint8",
         "value": "32"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.sysinfo/BOOTLOADER_VENDOR_LEN",
+        "type": "uint8",
         "value": "32"
     },
     {
-        "declaration": "fuchsia.sysinfo/InterruptControllerType",
         "kind": "struct/member",
-        "name": "fuchsia.sysinfo/InterruptControllerInfo.type"
+        "name": "fuchsia.sysinfo/InterruptControllerInfo.type",
+        "type": "fuchsia.sysinfo/InterruptControllerType"
     },
     {
         "kind": "struct",
@@ -41,30 +41,30 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.sysinfo/InterruptControllerType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (int32 status,string:<32,optional> name)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysinfo/SysInfo.GetBoardName"
+        "name": "fuchsia.sysinfo/SysInfo.GetBoardName",
+        "type": "() -> (int32 status,string:<32,optional> name)"
     },
     {
-        "declaration": "() -> (int32 status,uint32 revision)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysinfo/SysInfo.GetBoardRevision"
+        "name": "fuchsia.sysinfo/SysInfo.GetBoardRevision",
+        "type": "() -> (int32 status,uint32 revision)"
     },
     {
-        "declaration": "() -> (int32 status,string:<32,optional> vendor)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysinfo/SysInfo.GetBootloaderVendor"
+        "name": "fuchsia.sysinfo/SysInfo.GetBootloaderVendor",
+        "type": "() -> (int32 status,string:<32,optional> vendor)"
     },
     {
-        "declaration": "() -> (int32 status,box<fuchsia.sysinfo/InterruptControllerInfo> info)",
         "kind": "protocol/member",
-        "name": "fuchsia.sysinfo/SysInfo.GetInterruptControllerInfo"
+        "name": "fuchsia.sysinfo/SysInfo.GetInterruptControllerInfo",
+        "type": "() -> (int32 status,box<fuchsia.sysinfo/InterruptControllerInfo> info)"
     },
     {
         "kind": "protocol",

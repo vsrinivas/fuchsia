@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "zx/handle",
         "kind": "struct/member",
-        "name": "fuchsia.process/HandleInfo.handle"
+        "name": "fuchsia.process/HandleInfo.handle",
+        "type": "zx/handle"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.process/HandleInfo.id"
+        "name": "fuchsia.process/HandleInfo.id",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -15,19 +15,19 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:VMO",
         "kind": "struct/member",
-        "name": "fuchsia.process/LaunchInfo.executable"
+        "name": "fuchsia.process/LaunchInfo.executable",
+        "type": "zx/handle:VMO"
     },
     {
-        "declaration": "zx/handle:JOB",
         "kind": "struct/member",
-        "name": "fuchsia.process/LaunchInfo.job"
+        "name": "fuchsia.process/LaunchInfo.job",
+        "type": "zx/handle:JOB"
     },
     {
-        "declaration": "string:32",
         "kind": "struct/member",
-        "name": "fuchsia.process/LaunchInfo.name"
+        "name": "fuchsia.process/LaunchInfo.name",
+        "type": "string:32"
     },
     {
         "kind": "struct",
@@ -35,59 +35,59 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(vector<vector<uint8>> args)",
         "kind": "protocol/member",
-        "name": "fuchsia.process/Launcher.AddArgs"
+        "name": "fuchsia.process/Launcher.AddArgs",
+        "type": "(vector<vector<uint8>> args)"
     },
     {
-        "declaration": "(vector<vector<uint8>> environ)",
         "kind": "protocol/member",
-        "name": "fuchsia.process/Launcher.AddEnvirons"
+        "name": "fuchsia.process/Launcher.AddEnvirons",
+        "type": "(vector<vector<uint8>> environ)"
     },
     {
-        "declaration": "(vector<fuchsia.process/HandleInfo> handles)",
         "kind": "protocol/member",
-        "name": "fuchsia.process/Launcher.AddHandles"
+        "name": "fuchsia.process/Launcher.AddHandles",
+        "type": "(vector<fuchsia.process/HandleInfo> handles)"
     },
     {
-        "declaration": "(vector<fuchsia.process/NameInfo> names)",
         "kind": "protocol/member",
-        "name": "fuchsia.process/Launcher.AddNames"
+        "name": "fuchsia.process/Launcher.AddNames",
+        "type": "(vector<fuchsia.process/NameInfo> names)"
     },
     {
-        "declaration": "(fuchsia.process/LaunchInfo info) -> (int32 status,box<fuchsia.process/ProcessStartData> data)",
         "kind": "protocol/member",
-        "name": "fuchsia.process/Launcher.CreateWithoutStarting"
+        "name": "fuchsia.process/Launcher.CreateWithoutStarting",
+        "type": "(fuchsia.process/LaunchInfo info) -> (int32 status,box<fuchsia.process/ProcessStartData> data)"
     },
     {
-        "declaration": "(fuchsia.process/LaunchInfo info) -> (int32 status,zx/handle:<PROCESS,optional> process)",
         "kind": "protocol/member",
-        "name": "fuchsia.process/Launcher.Launch"
+        "name": "fuchsia.process/Launcher.Launch",
+        "type": "(fuchsia.process/LaunchInfo info) -> (int32 status,zx/handle:<PROCESS,optional> process)"
     },
     {
-        "declaration": "(uint32 options)",
         "kind": "protocol/member",
-        "name": "fuchsia.process/Launcher.SetOptions"
+        "name": "fuchsia.process/Launcher.SetOptions",
+        "type": "(uint32 options)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.process/Launcher"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.process/MAX_RESOLVE_NAME_SIZE",
+        "type": "uint32",
         "value": "2048"
     },
     {
-        "declaration": "fuchsia.io/Directory",
         "kind": "struct/member",
-        "name": "fuchsia.process/NameInfo.directory"
+        "name": "fuchsia.process/NameInfo.directory",
+        "type": "fuchsia.io/Directory"
     },
     {
-        "declaration": "string:4096",
         "kind": "struct/member",
-        "name": "fuchsia.process/NameInfo.path"
+        "name": "fuchsia.process/NameInfo.path",
+        "type": "string:4096"
     },
     {
         "kind": "struct",
@@ -95,44 +95,44 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.process/ProcessStartData.base"
+        "name": "fuchsia.process/ProcessStartData.base",
+        "type": "uint64"
     },
     {
-        "declaration": "zx/handle:CHANNEL",
         "kind": "struct/member",
-        "name": "fuchsia.process/ProcessStartData.bootstrap"
+        "name": "fuchsia.process/ProcessStartData.bootstrap",
+        "type": "zx/handle:CHANNEL"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.process/ProcessStartData.entry"
+        "name": "fuchsia.process/ProcessStartData.entry",
+        "type": "uint64"
     },
     {
-        "declaration": "zx/handle:PROCESS",
         "kind": "struct/member",
-        "name": "fuchsia.process/ProcessStartData.process"
+        "name": "fuchsia.process/ProcessStartData.process",
+        "type": "zx/handle:PROCESS"
     },
     {
-        "declaration": "zx/handle:VMAR",
         "kind": "struct/member",
-        "name": "fuchsia.process/ProcessStartData.root_vmar"
+        "name": "fuchsia.process/ProcessStartData.root_vmar",
+        "type": "zx/handle:VMAR"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.process/ProcessStartData.stack"
+        "name": "fuchsia.process/ProcessStartData.stack",
+        "type": "uint64"
     },
     {
-        "declaration": "zx/handle:THREAD",
         "kind": "struct/member",
-        "name": "fuchsia.process/ProcessStartData.thread"
+        "name": "fuchsia.process/ProcessStartData.thread",
+        "type": "zx/handle:THREAD"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.process/ProcessStartData.vdso_base"
+        "name": "fuchsia.process/ProcessStartData.vdso_base",
+        "type": "uint64"
     },
     {
         "kind": "struct",
@@ -140,9 +140,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(string:2048 name) -> (int32 status,zx/handle:<VMO,optional> executable,fuchsia.ldsvc/Loader:optional ldsvc)",
         "kind": "protocol/member",
-        "name": "fuchsia.process/Resolver.Resolve"
+        "name": "fuchsia.process/Resolver.Resolve",
+        "type": "(string:2048 name) -> (int32 status,zx/handle:<VMO,optional> executable,fuchsia.ldsvc/Loader:optional ldsvc)"
     },
     {
         "kind": "protocol",

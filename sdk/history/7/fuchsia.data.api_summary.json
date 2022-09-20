@@ -1,41 +1,41 @@
 [
     {
-        "declaration": "vector<fuchsia.data/DictionaryEntry>:1024",
         "kind": "table/member",
-        "name": "fuchsia.data/Dictionary.entries"
+        "name": "fuchsia.data/Dictionary.entries",
+        "type": "vector<fuchsia.data/DictionaryEntry>:1024"
     },
     {
         "kind": "table",
         "name": "fuchsia.data/Dictionary"
     },
     {
-        "declaration": "string:1024",
         "kind": "struct/member",
-        "name": "fuchsia.data/DictionaryEntry.key"
+        "name": "fuchsia.data/DictionaryEntry.key",
+        "type": "string:1024"
     },
     {
-        "declaration": "fuchsia.data/DictionaryValue:optional",
         "kind": "struct/member",
-        "name": "fuchsia.data/DictionaryEntry.value"
+        "name": "fuchsia.data/DictionaryEntry.value",
+        "type": "fuchsia.data/DictionaryValue:optional"
     },
     {
         "kind": "struct",
         "name": "fuchsia.data/DictionaryEntry"
     },
     {
-        "declaration": "vector<fuchsia.data/Dictionary>:1024",
         "kind": "union/member",
-        "name": "fuchsia.data/DictionaryValue.obj_vec"
+        "name": "fuchsia.data/DictionaryValue.obj_vec",
+        "type": "vector<fuchsia.data/Dictionary>:1024"
     },
     {
-        "declaration": "string:1024",
         "kind": "union/member",
-        "name": "fuchsia.data/DictionaryValue.str"
+        "name": "fuchsia.data/DictionaryValue.str",
+        "type": "string:1024"
     },
     {
-        "declaration": "vector<string:1024>:1024",
         "kind": "union/member",
-        "name": "fuchsia.data/DictionaryValue.str_vec"
+        "name": "fuchsia.data/DictionaryValue.str_vec",
+        "type": "vector<string:1024>:1024"
     },
     {
         "kind": "union",
@@ -43,27 +43,27 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.data/MAX_KEY_LENGTH",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.data/MAX_NUM_ENTRIES",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.data/MAX_NUM_VALUE_ITEMS",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.data/MAX_VALUE_LENGTH",
+        "type": "uint32",
         "value": "1024"
     },
     {

@@ -1,14 +1,14 @@
 [
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.views/AutoFocusError",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.ui.views/Command.empty"
+        "name": "fuchsia.ui.views/Command.empty",
+        "type": "int32"
     },
     {
         "kind": "union",
@@ -21,38 +21,38 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.views/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.ui.views/FocusState.focused"
+        "name": "fuchsia.ui.views/FocusState.focused",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.views/FocusState"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewRef view_ref) -> (fuchsia.ui.views/Focuser_RequestFocus_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.views/Focuser.RequestFocus"
+        "name": "fuchsia.ui.views/Focuser.RequestFocus",
+        "type": "(fuchsia.ui.views/ViewRef view_ref) -> (fuchsia.ui.views/Focuser_RequestFocus_Result result)"
     },
     {
-        "declaration": "(fuchsia.ui.views/FocuserSetAutoFocusRequest payload) -> (fuchsia.ui.views/Focuser_SetAutoFocus_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.views/Focuser.SetAutoFocus"
+        "name": "fuchsia.ui.views/Focuser.SetAutoFocus",
+        "type": "(fuchsia.ui.views/FocuserSetAutoFocusRequest payload) -> (fuchsia.ui.views/Focuser_SetAutoFocus_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.views/Focuser"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewRef",
         "kind": "table/member",
-        "name": "fuchsia.ui.views/FocuserSetAutoFocusRequest.view_ref"
+        "name": "fuchsia.ui.views/FocuserSetAutoFocusRequest.view_ref",
+        "type": "fuchsia.ui.views/ViewRef"
     },
     {
         "kind": "table",
@@ -64,14 +64,14 @@
         "name": "fuchsia.ui.views/Focuser_RequestFocus_Response"
     },
     {
-        "declaration": "fuchsia.ui.views/Error",
         "kind": "union/member",
-        "name": "fuchsia.ui.views/Focuser_RequestFocus_Result.err"
+        "name": "fuchsia.ui.views/Focuser_RequestFocus_Result.err",
+        "type": "fuchsia.ui.views/Error"
     },
     {
-        "declaration": "fuchsia.ui.views/Focuser_RequestFocus_Response",
         "kind": "union/member",
-        "name": "fuchsia.ui.views/Focuser_RequestFocus_Result.response"
+        "name": "fuchsia.ui.views/Focuser_RequestFocus_Result.response",
+        "type": "fuchsia.ui.views/Focuser_RequestFocus_Response"
     },
     {
         "kind": "union",
@@ -83,14 +83,14 @@
         "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Response"
     },
     {
-        "declaration": "fuchsia.ui.views/AutoFocusError",
         "kind": "union/member",
-        "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Result.err"
+        "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Result.err",
+        "type": "fuchsia.ui.views/AutoFocusError"
     },
     {
-        "declaration": "fuchsia.ui.views/Focuser_SetAutoFocus_Response",
         "kind": "union/member",
-        "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Result.response"
+        "name": "fuchsia.ui.views/Focuser_SetAutoFocus_Result.response",
+        "type": "fuchsia.ui.views/Focuser_SetAutoFocus_Response"
     },
     {
         "kind": "union",
@@ -98,18 +98,18 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewToken view_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.views/View.Present"
+        "name": "fuchsia.ui.views/View.Present",
+        "type": "(fuchsia.ui.views/ViewToken view_token)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.views/View"
     },
     {
-        "declaration": "zx/handle:CHANNEL",
         "kind": "struct/member",
-        "name": "fuchsia.ui.views/ViewCreationToken.value"
+        "name": "fuchsia.ui.views/ViewCreationToken.value",
+        "type": "zx/handle:CHANNEL"
     },
     {
         "kind": "struct",
@@ -117,9 +117,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:EVENTPAIR",
         "kind": "struct/member",
-        "name": "fuchsia.ui.views/ViewHolderToken.value"
+        "name": "fuchsia.ui.views/ViewHolderToken.value",
+        "type": "zx/handle:EVENTPAIR"
     },
     {
         "kind": "struct",
@@ -127,14 +127,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewRef",
         "kind": "struct/member",
-        "name": "fuchsia.ui.views/ViewIdentityOnCreation.view_ref"
+        "name": "fuchsia.ui.views/ViewIdentityOnCreation.view_ref",
+        "type": "fuchsia.ui.views/ViewRef"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewRefControl",
         "kind": "struct/member",
-        "name": "fuchsia.ui.views/ViewIdentityOnCreation.view_ref_control"
+        "name": "fuchsia.ui.views/ViewIdentityOnCreation.view_ref_control",
+        "type": "fuchsia.ui.views/ViewRefControl"
     },
     {
         "kind": "struct",
@@ -142,9 +142,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:EVENTPAIR",
         "kind": "struct/member",
-        "name": "fuchsia.ui.views/ViewRef.reference"
+        "name": "fuchsia.ui.views/ViewRef.reference",
+        "type": "zx/handle:EVENTPAIR"
     },
     {
         "kind": "struct",
@@ -152,9 +152,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:EVENTPAIR",
         "kind": "struct/member",
-        "name": "fuchsia.ui.views/ViewRefControl.reference"
+        "name": "fuchsia.ui.views/ViewRefControl.reference",
+        "type": "zx/handle:EVENTPAIR"
     },
     {
         "kind": "struct",
@@ -162,18 +162,18 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "() -> (fuchsia.ui.views/FocusState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.views/ViewRefFocused.Watch"
+        "name": "fuchsia.ui.views/ViewRefFocused.Watch",
+        "type": "() -> (fuchsia.ui.views/FocusState state)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.views/ViewRefFocused"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewRef view_ref) -> (fuchsia.ui.views/ViewRefInstalled_Watch_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.views/ViewRefInstalled.Watch"
+        "name": "fuchsia.ui.views/ViewRefInstalled.Watch",
+        "type": "(fuchsia.ui.views/ViewRef view_ref) -> (fuchsia.ui.views/ViewRefInstalled_Watch_Result result)"
     },
     {
         "kind": "protocol",
@@ -185,24 +185,24 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.ui.views/ViewRefInstalledError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.views/ViewRefInstalled_Watch_Response"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewRefInstalledError",
         "kind": "union/member",
-        "name": "fuchsia.ui.views/ViewRefInstalled_Watch_Result.err"
+        "name": "fuchsia.ui.views/ViewRefInstalled_Watch_Result.err",
+        "type": "fuchsia.ui.views/ViewRefInstalledError"
     },
     {
-        "declaration": "fuchsia.ui.views/ViewRefInstalled_Watch_Response",
         "kind": "union/member",
-        "name": "fuchsia.ui.views/ViewRefInstalled_Watch_Result.response"
+        "name": "fuchsia.ui.views/ViewRefInstalled_Watch_Result.response",
+        "type": "fuchsia.ui.views/ViewRefInstalled_Watch_Response"
     },
     {
         "kind": "union",
@@ -210,9 +210,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "zx/handle:EVENTPAIR",
         "kind": "struct/member",
-        "name": "fuchsia.ui.views/ViewToken.value"
+        "name": "fuchsia.ui.views/ViewToken.value",
+        "type": "zx/handle:EVENTPAIR"
     },
     {
         "kind": "struct",
@@ -220,9 +220,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "zx/handle:CHANNEL",
         "kind": "struct/member",
-        "name": "fuchsia.ui.views/ViewportCreationToken.value"
+        "name": "fuchsia.ui.views/ViewportCreationToken.value",
+        "type": "zx/handle:CHANNEL"
     },
     {
         "kind": "struct",

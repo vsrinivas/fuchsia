@@ -1,41 +1,41 @@
 [
     {
-        "declaration": "() -> (fuchsia.hardware.adc/Device_GetNormalizedSample_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.adc/Device.GetNormalizedSample"
+        "name": "fuchsia.hardware.adc/Device.GetNormalizedSample",
+        "type": "() -> (fuchsia.hardware.adc/Device_GetNormalizedSample_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.hardware.adc/Device_GetResolution_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.adc/Device.GetResolution"
+        "name": "fuchsia.hardware.adc/Device.GetResolution",
+        "type": "() -> (fuchsia.hardware.adc/Device_GetResolution_Result result)"
     },
     {
-        "declaration": "() -> (fuchsia.hardware.adc/Device_GetSample_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.hardware.adc/Device.GetSample"
+        "name": "fuchsia.hardware.adc/Device.GetSample",
+        "type": "() -> (fuchsia.hardware.adc/Device_GetSample_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.hardware.adc/Device"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Response.value"
+        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Response.value",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Result.err"
+        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.adc/Device_GetNormalizedSample_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Result.response"
+        "name": "fuchsia.hardware.adc/Device_GetNormalizedSample_Result.response",
+        "type": "fuchsia.hardware.adc/Device_GetNormalizedSample_Response"
     },
     {
         "kind": "union",
@@ -43,23 +43,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint8",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.adc/Device_GetResolution_Response.resolution"
+        "name": "fuchsia.hardware.adc/Device_GetResolution_Response.resolution",
+        "type": "uint8"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.adc/Device_GetResolution_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.adc/Device_GetResolution_Result.err"
+        "name": "fuchsia.hardware.adc/Device_GetResolution_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.adc/Device_GetResolution_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.adc/Device_GetResolution_Result.response"
+        "name": "fuchsia.hardware.adc/Device_GetResolution_Result.response",
+        "type": "fuchsia.hardware.adc/Device_GetResolution_Response"
     },
     {
         "kind": "union",
@@ -67,23 +67,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.hardware.adc/Device_GetSample_Response.value"
+        "name": "fuchsia.hardware.adc/Device_GetSample_Response.value",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.hardware.adc/Device_GetSample_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.hardware.adc/Device_GetSample_Result.err"
+        "name": "fuchsia.hardware.adc/Device_GetSample_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.hardware.adc/Device_GetSample_Response",
         "kind": "union/member",
-        "name": "fuchsia.hardware.adc/Device_GetSample_Result.response"
+        "name": "fuchsia.hardware.adc/Device_GetSample_Result.response",
+        "type": "fuchsia.hardware.adc/Device_GetSample_Response"
     },
     {
         "kind": "union",

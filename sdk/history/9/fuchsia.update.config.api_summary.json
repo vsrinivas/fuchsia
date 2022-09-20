@@ -1,17 +1,17 @@
 [
     {
-        "declaration": "() -> (fuchsia.update.config/OptOutPreference value)",
         "kind": "protocol/member",
-        "name": "fuchsia.update.config/OptOut.Get"
+        "name": "fuchsia.update.config/OptOut.Get",
+        "type": "() -> (fuchsia.update.config/OptOutPreference value)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.update.config/OptOut"
     },
     {
-        "declaration": "(fuchsia.update.config/OptOutPreference value) -> (fuchsia.update.config/OptOutAdmin_Set_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.update.config/OptOutAdmin.Set"
+        "name": "fuchsia.update.config/OptOutAdmin.Set",
+        "type": "(fuchsia.update.config/OptOutPreference value) -> (fuchsia.update.config/OptOutAdmin_Set_Result result)"
     },
     {
         "kind": "protocol",
@@ -23,24 +23,24 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.update.config/OptOutAdminError",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.update.config/OptOutAdmin_Set_Response"
     },
     {
-        "declaration": "fuchsia.update.config/OptOutAdminError",
         "kind": "union/member",
-        "name": "fuchsia.update.config/OptOutAdmin_Set_Result.err"
+        "name": "fuchsia.update.config/OptOutAdmin_Set_Result.err",
+        "type": "fuchsia.update.config/OptOutAdminError"
     },
     {
-        "declaration": "fuchsia.update.config/OptOutAdmin_Set_Response",
         "kind": "union/member",
-        "name": "fuchsia.update.config/OptOutAdmin_Set_Result.response"
+        "name": "fuchsia.update.config/OptOutAdmin_Set_Result.response",
+        "type": "fuchsia.update.config/OptOutAdmin_Set_Response"
     },
     {
         "kind": "union",
@@ -58,10 +58,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.update.config/OptOutPreference",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",

@@ -1,381 +1,381 @@
 [
     {
-        "declaration": "() -> (int32 status,fuchsia.mem/Buffer buffer)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/Counter.GetInspectVmo"
+        "name": "fuchsia.kernel/Counter.GetInspectVmo",
+        "type": "() -> (int32 status,fuchsia.mem/Buffer buffer)"
     },
     {
-        "declaration": "() -> (int32 status)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/Counter.UpdateInspectVmo"
+        "name": "fuchsia.kernel/Counter.UpdateInspectVmo",
+        "type": "() -> (int32 status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/Counter"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/CpuResource.Get"
+        "name": "fuchsia.kernel/CpuResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/CpuResource"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.kernel/CpuStats.actual_num_cpus"
+        "name": "fuchsia.kernel/CpuStats.actual_num_cpus",
+        "type": "uint64"
     },
     {
-        "declaration": "vector<fuchsia.kernel/PerCpuStats>:<512,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.kernel/CpuStats.per_cpu_stats"
+        "name": "fuchsia.kernel/CpuStats.per_cpu_stats",
+        "type": "vector<fuchsia.kernel/PerCpuStats>:<512,optional>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.kernel/CpuStats"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.kernel/DEBUG_COMMAND_MAX",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "(string:1024 command) -> (int32 status)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/DebugBroker.SendDebugCommand"
+        "name": "fuchsia.kernel/DebugBroker.SendDebugCommand",
+        "type": "(string:1024 command) -> (int32 status)"
     },
     {
-        "declaration": "(bool enabled) -> (int32 status)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/DebugBroker.SetTracingEnabled"
+        "name": "fuchsia.kernel/DebugBroker.SetTracingEnabled",
+        "type": "(bool enabled) -> (int32 status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/DebugBroker"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/DebugResource.Get"
+        "name": "fuchsia.kernel/DebugResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/DebugResource"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/HypervisorResource.Get"
+        "name": "fuchsia.kernel/HypervisorResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/HypervisorResource"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/InfoResource.Get"
+        "name": "fuchsia.kernel/InfoResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/InfoResource"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/IoportResource.Get"
+        "name": "fuchsia.kernel/IoportResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/IoportResource"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/IrqResource.Get"
+        "name": "fuchsia.kernel/IrqResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/IrqResource"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.free_bytes"
+        "name": "fuchsia.kernel/MemoryStats.free_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.free_heap_bytes"
+        "name": "fuchsia.kernel/MemoryStats.free_heap_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.ipc_bytes"
+        "name": "fuchsia.kernel/MemoryStats.ipc_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.mmu_overhead_bytes"
+        "name": "fuchsia.kernel/MemoryStats.mmu_overhead_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.other_bytes"
+        "name": "fuchsia.kernel/MemoryStats.other_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.total_bytes"
+        "name": "fuchsia.kernel/MemoryStats.total_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.total_heap_bytes"
+        "name": "fuchsia.kernel/MemoryStats.total_heap_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.vmo_bytes"
+        "name": "fuchsia.kernel/MemoryStats.vmo_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStats.wired_bytes"
+        "name": "fuchsia.kernel/MemoryStats.wired_bytes",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.kernel/MemoryStats"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.free_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.free_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.free_heap_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.free_heap_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.ipc_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.ipc_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.mmu_overhead_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.mmu_overhead_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.other_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.other_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.total_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.total_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.total_heap_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.total_heap_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_discardable_locked_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_discardable_locked_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_discardable_unlocked_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_discardable_unlocked_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_newest_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_newest_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_oldest_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_oldest_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_total_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.vmo_pager_total_bytes",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/MemoryStatsExtended.wired_bytes"
+        "name": "fuchsia.kernel/MemoryStatsExtended.wired_bytes",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.kernel/MemoryStatsExtended"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/MmioResource.Get"
+        "name": "fuchsia.kernel/MmioResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/MmioResource"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.context_switches"
+        "name": "fuchsia.kernel/PerCpuStats.context_switches",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.cpu_number"
+        "name": "fuchsia.kernel/PerCpuStats.cpu_number",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.exceptions"
+        "name": "fuchsia.kernel/PerCpuStats.exceptions",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.flags"
+        "name": "fuchsia.kernel/PerCpuStats.flags",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.generic_ipis"
+        "name": "fuchsia.kernel/PerCpuStats.generic_ipis",
+        "type": "uint64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.idle_time"
+        "name": "fuchsia.kernel/PerCpuStats.idle_time",
+        "type": "int64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.ints"
+        "name": "fuchsia.kernel/PerCpuStats.ints",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.irq_preempts"
+        "name": "fuchsia.kernel/PerCpuStats.irq_preempts",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.page_faults"
+        "name": "fuchsia.kernel/PerCpuStats.page_faults",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.reschedule_ipis"
+        "name": "fuchsia.kernel/PerCpuStats.reschedule_ipis",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.reschedules"
+        "name": "fuchsia.kernel/PerCpuStats.reschedules",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.syscalls"
+        "name": "fuchsia.kernel/PerCpuStats.syscalls",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.timer_ints"
+        "name": "fuchsia.kernel/PerCpuStats.timer_ints",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.timers"
+        "name": "fuchsia.kernel/PerCpuStats.timers",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.kernel/PerCpuStats.yields"
+        "name": "fuchsia.kernel/PerCpuStats.yields",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.kernel/PerCpuStats"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/PowerResource.Get"
+        "name": "fuchsia.kernel/PowerResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/PowerResource"
     },
     {
-        "declaration": "() -> (zx/handle:JOB job)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/RootJob.Get"
+        "name": "fuchsia.kernel/RootJob.Get",
+        "type": "() -> (zx/handle:JOB job)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/RootJob"
     },
     {
-        "declaration": "() -> (zx/handle:JOB job)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/RootJobForInspect.Get"
+        "name": "fuchsia.kernel/RootJobForInspect.Get",
+        "type": "() -> (zx/handle:JOB job)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/RootJobForInspect"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/SmcResource.Get"
+        "name": "fuchsia.kernel/SmcResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/SmcResource"
     },
     {
-        "declaration": "(int64 duration) -> (vector<float32>:512 per_cpu_load)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/Stats.GetCpuLoad"
+        "name": "fuchsia.kernel/Stats.GetCpuLoad",
+        "type": "(int64 duration) -> (vector<float32>:512 per_cpu_load)"
     },
     {
-        "declaration": "() -> (fuchsia.kernel/CpuStats stats)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/Stats.GetCpuStats"
+        "name": "fuchsia.kernel/Stats.GetCpuStats",
+        "type": "() -> (fuchsia.kernel/CpuStats stats)"
     },
     {
-        "declaration": "() -> (fuchsia.kernel/MemoryStats stats)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/Stats.GetMemoryStats"
+        "name": "fuchsia.kernel/Stats.GetMemoryStats",
+        "type": "() -> (fuchsia.kernel/MemoryStats stats)"
     },
     {
-        "declaration": "() -> (fuchsia.kernel/MemoryStatsExtended stats)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/Stats.GetMemoryStatsExtended"
+        "name": "fuchsia.kernel/Stats.GetMemoryStatsExtended",
+        "type": "() -> (fuchsia.kernel/MemoryStatsExtended stats)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.kernel/Stats"
     },
     {
-        "declaration": "() -> (zx/handle:RESOURCE resource)",
         "kind": "protocol/member",
-        "name": "fuchsia.kernel/VmexResource.Get"
+        "name": "fuchsia.kernel/VmexResource.Get",
+        "type": "() -> (zx/handle:RESOURCE resource)"
     },
     {
         "kind": "protocol",

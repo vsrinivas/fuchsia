@@ -1,22 +1,22 @@
 [
     {
-        "declaration": "fuchsia.input.report/Range",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/Axis.range"
+        "name": "fuchsia.input.report/Axis.range",
+        "type": "fuchsia.input.report/Range"
     },
     {
-        "declaration": "fuchsia.input.report/Unit",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/Axis.unit"
+        "name": "fuchsia.input.report/Axis.unit",
+        "type": "fuchsia.input.report/Unit"
     },
     {
         "kind": "struct",
         "name": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/CONSUMER_CONTROL_MAX_NUM_BUTTONS",
+        "type": "uint32",
         "value": "255"
     },
     {
@@ -55,149 +55,149 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/ConsumerControlButton",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.input.report/ConsumerControlInputDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ConsumerControlDescriptor.input"
+        "name": "fuchsia.input.report/ConsumerControlDescriptor.input",
+        "type": "fuchsia.input.report/ConsumerControlInputDescriptor"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/ConsumerControlDescriptor"
     },
     {
-        "declaration": "vector<fuchsia.input.report/ConsumerControlButton>:255",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ConsumerControlInputDescriptor.buttons"
+        "name": "fuchsia.input.report/ConsumerControlInputDescriptor.buttons",
+        "type": "vector<fuchsia.input.report/ConsumerControlButton>:255"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/ConsumerControlInputDescriptor"
     },
     {
-        "declaration": "vector<fuchsia.input.report/ConsumerControlButton>:255",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ConsumerControlInputReport.pressed_buttons"
+        "name": "fuchsia.input.report/ConsumerControlInputReport.pressed_buttons",
+        "type": "vector<fuchsia.input.report/ConsumerControlButton>:255"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/ConsumerControlInputReport"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputDescriptor.contact_height"
+        "name": "fuchsia.input.report/ContactInputDescriptor.contact_height",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputDescriptor.contact_width"
+        "name": "fuchsia.input.report/ContactInputDescriptor.contact_width",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputDescriptor.position_x"
+        "name": "fuchsia.input.report/ContactInputDescriptor.position_x",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputDescriptor.position_y"
+        "name": "fuchsia.input.report/ContactInputDescriptor.position_y",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputDescriptor.pressure"
+        "name": "fuchsia.input.report/ContactInputDescriptor.pressure",
+        "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/ContactInputDescriptor"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputReport.contact_height"
+        "name": "fuchsia.input.report/ContactInputReport.contact_height",
+        "type": "int64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputReport.contact_id"
+        "name": "fuchsia.input.report/ContactInputReport.contact_id",
+        "type": "uint32"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputReport.contact_width"
+        "name": "fuchsia.input.report/ContactInputReport.contact_width",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputReport.position_x"
+        "name": "fuchsia.input.report/ContactInputReport.position_x",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputReport.position_y"
+        "name": "fuchsia.input.report/ContactInputReport.position_y",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/ContactInputReport.pressure"
+        "name": "fuchsia.input.report/ContactInputReport.pressure",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/ContactInputReport"
     },
     {
-        "declaration": "fuchsia.input.report/ConsumerControlDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/DeviceDescriptor.consumer_control"
+        "name": "fuchsia.input.report/DeviceDescriptor.consumer_control",
+        "type": "fuchsia.input.report/ConsumerControlDescriptor"
     },
     {
-        "declaration": "fuchsia.input.report/DeviceInfo",
         "kind": "table/member",
-        "name": "fuchsia.input.report/DeviceDescriptor.device_info"
+        "name": "fuchsia.input.report/DeviceDescriptor.device_info",
+        "type": "fuchsia.input.report/DeviceInfo"
     },
     {
-        "declaration": "fuchsia.input.report/KeyboardDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/DeviceDescriptor.keyboard"
+        "name": "fuchsia.input.report/DeviceDescriptor.keyboard",
+        "type": "fuchsia.input.report/KeyboardDescriptor"
     },
     {
-        "declaration": "fuchsia.input.report/MouseDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/DeviceDescriptor.mouse"
+        "name": "fuchsia.input.report/DeviceDescriptor.mouse",
+        "type": "fuchsia.input.report/MouseDescriptor"
     },
     {
-        "declaration": "fuchsia.input.report/SensorDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/DeviceDescriptor.sensor"
+        "name": "fuchsia.input.report/DeviceDescriptor.sensor",
+        "type": "fuchsia.input.report/SensorDescriptor"
     },
     {
-        "declaration": "fuchsia.input.report/TouchDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/DeviceDescriptor.touch"
+        "name": "fuchsia.input.report/DeviceDescriptor.touch",
+        "type": "fuchsia.input.report/TouchDescriptor"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/DeviceDescriptor"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/DeviceInfo.product_id"
+        "name": "fuchsia.input.report/DeviceInfo.product_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/DeviceInfo.vendor_id"
+        "name": "fuchsia.input.report/DeviceInfo.vendor_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/DeviceInfo.version"
+        "name": "fuchsia.input.report/DeviceInfo.version",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -229,77 +229,77 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/DeviceType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.input.report/SensorFeatureReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/FeatureReport.sensor"
+        "name": "fuchsia.input.report/FeatureReport.sensor",
+        "type": "fuchsia.input.report/SensorFeatureReport"
     },
     {
-        "declaration": "fuchsia.input.report/TouchFeatureReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/FeatureReport.touch"
+        "name": "fuchsia.input.report/FeatureReport.touch",
+        "type": "fuchsia.input.report/TouchFeatureReport"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/FeatureReport"
     },
     {
-        "declaration": "() -> (fuchsia.input.report/DeviceDescriptor descriptor)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.report/InputDevice.GetDescriptor"
+        "name": "fuchsia.input.report/InputDevice.GetDescriptor",
+        "type": "() -> (fuchsia.input.report/DeviceDescriptor descriptor)"
     },
     {
-        "declaration": "() -> (fuchsia.input.report/InputDevice_GetFeatureReport_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.report/InputDevice.GetFeatureReport"
+        "name": "fuchsia.input.report/InputDevice.GetFeatureReport",
+        "type": "() -> (fuchsia.input.report/InputDevice_GetFeatureReport_Result result)"
     },
     {
-        "declaration": "(fuchsia.input.report/DeviceType device_type) -> (fuchsia.input.report/InputDevice_GetInputReport_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.report/InputDevice.GetInputReport"
+        "name": "fuchsia.input.report/InputDevice.GetInputReport",
+        "type": "(fuchsia.input.report/DeviceType device_type) -> (fuchsia.input.report/InputDevice_GetInputReport_Result result)"
     },
     {
-        "declaration": "(server_end:fuchsia.input.report/InputReportsReader reader)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.report/InputDevice.GetInputReportsReader"
+        "name": "fuchsia.input.report/InputDevice.GetInputReportsReader",
+        "type": "(server_end:fuchsia.input.report/InputReportsReader reader)"
     },
     {
-        "declaration": "(fuchsia.input.report/OutputReport report) -> (fuchsia.input.report/InputDevice_SendOutputReport_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.report/InputDevice.SendOutputReport"
+        "name": "fuchsia.input.report/InputDevice.SendOutputReport",
+        "type": "(fuchsia.input.report/OutputReport report) -> (fuchsia.input.report/InputDevice_SendOutputReport_Result result)"
     },
     {
-        "declaration": "(fuchsia.input.report/FeatureReport report) -> (fuchsia.input.report/InputDevice_SetFeatureReport_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.report/InputDevice.SetFeatureReport"
+        "name": "fuchsia.input.report/InputDevice.SetFeatureReport",
+        "type": "(fuchsia.input.report/FeatureReport report) -> (fuchsia.input.report/InputDevice_SetFeatureReport_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.input.report/InputDevice"
     },
     {
-        "declaration": "fuchsia.input.report/FeatureReport",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Response.report"
+        "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Response.report",
+        "type": "fuchsia.input.report/FeatureReport"
     },
     {
         "kind": "struct",
         "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Result.err"
+        "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.input.report/InputDevice_GetFeatureReport_Response",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Result.response"
+        "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Result.response",
+        "type": "fuchsia.input.report/InputDevice_GetFeatureReport_Response"
     },
     {
         "kind": "union",
@@ -307,23 +307,23 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.input.report/InputReport",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/InputDevice_GetInputReport_Response.report"
+        "name": "fuchsia.input.report/InputDevice_GetInputReport_Response.report",
+        "type": "fuchsia.input.report/InputReport"
     },
     {
         "kind": "struct",
         "name": "fuchsia.input.report/InputDevice_GetInputReport_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputDevice_GetInputReport_Result.err"
+        "name": "fuchsia.input.report/InputDevice_GetInputReport_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.input.report/InputDevice_GetInputReport_Response",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputDevice_GetInputReport_Result.response"
+        "name": "fuchsia.input.report/InputDevice_GetInputReport_Result.response",
+        "type": "fuchsia.input.report/InputDevice_GetInputReport_Response"
     },
     {
         "kind": "union",
@@ -335,14 +335,14 @@
         "name": "fuchsia.input.report/InputDevice_SendOutputReport_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputDevice_SendOutputReport_Result.err"
+        "name": "fuchsia.input.report/InputDevice_SendOutputReport_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.input.report/InputDevice_SendOutputReport_Response",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputDevice_SendOutputReport_Result.response"
+        "name": "fuchsia.input.report/InputDevice_SendOutputReport_Result.response",
+        "type": "fuchsia.input.report/InputDevice_SendOutputReport_Response"
     },
     {
         "kind": "union",
@@ -354,14 +354,14 @@
         "name": "fuchsia.input.report/InputDevice_SetFeatureReport_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputDevice_SetFeatureReport_Result.err"
+        "name": "fuchsia.input.report/InputDevice_SetFeatureReport_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.input.report/InputDevice_SetFeatureReport_Response",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputDevice_SetFeatureReport_Result.response"
+        "name": "fuchsia.input.report/InputDevice_SetFeatureReport_Result.response",
+        "type": "fuchsia.input.report/InputDevice_SetFeatureReport_Response"
     },
     {
         "kind": "union",
@@ -369,76 +369,76 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.input.report/ConsumerControlInputReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/InputReport.consumer_control"
+        "name": "fuchsia.input.report/InputReport.consumer_control",
+        "type": "fuchsia.input.report/ConsumerControlInputReport"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/InputReport.event_time"
+        "name": "fuchsia.input.report/InputReport.event_time",
+        "type": "int64"
     },
     {
-        "declaration": "fuchsia.input.report/KeyboardInputReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/InputReport.keyboard"
+        "name": "fuchsia.input.report/InputReport.keyboard",
+        "type": "fuchsia.input.report/KeyboardInputReport"
     },
     {
-        "declaration": "fuchsia.input.report/MouseInputReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/InputReport.mouse"
+        "name": "fuchsia.input.report/InputReport.mouse",
+        "type": "fuchsia.input.report/MouseInputReport"
     },
     {
-        "declaration": "uint8",
         "kind": "table/member",
-        "name": "fuchsia.input.report/InputReport.report_id"
+        "name": "fuchsia.input.report/InputReport.report_id",
+        "type": "uint8"
     },
     {
-        "declaration": "fuchsia.input.report/SensorInputReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/InputReport.sensor"
+        "name": "fuchsia.input.report/InputReport.sensor",
+        "type": "fuchsia.input.report/SensorInputReport"
     },
     {
-        "declaration": "fuchsia.input.report/TouchInputReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/InputReport.touch"
+        "name": "fuchsia.input.report/InputReport.touch",
+        "type": "fuchsia.input.report/TouchInputReport"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/InputReport.trace_id"
+        "name": "fuchsia.input.report/InputReport.trace_id",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/InputReport"
     },
     {
-        "declaration": "() -> (fuchsia.input.report/InputReportsReader_ReadInputReports_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.input.report/InputReportsReader.ReadInputReports"
+        "name": "fuchsia.input.report/InputReportsReader.ReadInputReports",
+        "type": "() -> (fuchsia.input.report/InputReportsReader_ReadInputReports_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.input.report/InputReportsReader"
     },
     {
-        "declaration": "vector<fuchsia.input.report/InputReport>:50",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Response.reports"
+        "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Response.reports",
+        "type": "vector<fuchsia.input.report/InputReport>:50"
     },
     {
         "kind": "struct",
         "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Result.err"
+        "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.input.report/InputReportsReader_ReadInputReports_Response",
         "kind": "union/member",
-        "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Result.response"
+        "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Result.response",
+        "type": "fuchsia.input.report/InputReportsReader_ReadInputReports_Response"
     },
     {
         "kind": "union",
@@ -446,68 +446,68 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/KEYBOARD_MAX_NUM_KEYS",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/KEYBOARD_MAX_NUM_LEDS",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/KEYBOARD_MAX_PRESSED_KEYS",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "fuchsia.input.report/KeyboardInputDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/KeyboardDescriptor.input"
+        "name": "fuchsia.input.report/KeyboardDescriptor.input",
+        "type": "fuchsia.input.report/KeyboardInputDescriptor"
     },
     {
-        "declaration": "fuchsia.input.report/KeyboardOutputDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/KeyboardDescriptor.output"
+        "name": "fuchsia.input.report/KeyboardDescriptor.output",
+        "type": "fuchsia.input.report/KeyboardOutputDescriptor"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/KeyboardDescriptor"
     },
     {
-        "declaration": "vector<fuchsia.input/Key>:256",
         "kind": "table/member",
-        "name": "fuchsia.input.report/KeyboardInputDescriptor.keys3"
+        "name": "fuchsia.input.report/KeyboardInputDescriptor.keys3",
+        "type": "vector<fuchsia.input/Key>:256"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/KeyboardInputDescriptor"
     },
     {
-        "declaration": "vector<fuchsia.input/Key>:256",
         "kind": "table/member",
-        "name": "fuchsia.input.report/KeyboardInputReport.pressed_keys3"
+        "name": "fuchsia.input.report/KeyboardInputReport.pressed_keys3",
+        "type": "vector<fuchsia.input/Key>:256"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/KeyboardInputReport"
     },
     {
-        "declaration": "vector<fuchsia.input.report/LedType>:256",
         "kind": "table/member",
-        "name": "fuchsia.input.report/KeyboardOutputDescriptor.leds"
+        "name": "fuchsia.input.report/KeyboardOutputDescriptor.leds",
+        "type": "vector<fuchsia.input.report/LedType>:256"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/KeyboardOutputDescriptor"
     },
     {
-        "declaration": "vector<fuchsia.input.report/LedType>:256",
         "kind": "table/member",
-        "name": "fuchsia.input.report/KeyboardOutputReport.enabled_leds"
+        "name": "fuchsia.input.report/KeyboardOutputReport.enabled_leds",
+        "type": "vector<fuchsia.input.report/LedType>:256"
     },
     {
         "kind": "table",
@@ -539,287 +539,287 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/LedType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/MAX_DEVICE_REPORT_COUNT",
+        "type": "uint32",
         "value": "50"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/MAX_REPORT_COUNT",
+        "type": "uint32",
         "value": "255"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/MOUSE_MAX_NUM_BUTTONS",
+        "type": "uint32",
         "value": "32"
     },
     {
-        "declaration": "fuchsia.input.report/MouseInputDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseDescriptor.input"
+        "name": "fuchsia.input.report/MouseDescriptor.input",
+        "type": "fuchsia.input.report/MouseInputDescriptor"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/MouseDescriptor"
     },
     {
-        "declaration": "vector<uint8>:32",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputDescriptor.buttons"
+        "name": "fuchsia.input.report/MouseInputDescriptor.buttons",
+        "type": "vector<uint8>:32"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputDescriptor.movement_x"
+        "name": "fuchsia.input.report/MouseInputDescriptor.movement_x",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputDescriptor.movement_y"
+        "name": "fuchsia.input.report/MouseInputDescriptor.movement_y",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputDescriptor.position_x"
+        "name": "fuchsia.input.report/MouseInputDescriptor.position_x",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputDescriptor.position_y"
+        "name": "fuchsia.input.report/MouseInputDescriptor.position_y",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputDescriptor.scroll_h"
+        "name": "fuchsia.input.report/MouseInputDescriptor.scroll_h",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputDescriptor.scroll_v"
+        "name": "fuchsia.input.report/MouseInputDescriptor.scroll_v",
+        "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/MouseInputDescriptor"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputReport.movement_x"
+        "name": "fuchsia.input.report/MouseInputReport.movement_x",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputReport.movement_y"
+        "name": "fuchsia.input.report/MouseInputReport.movement_y",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputReport.position_x"
+        "name": "fuchsia.input.report/MouseInputReport.position_x",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputReport.position_y"
+        "name": "fuchsia.input.report/MouseInputReport.position_y",
+        "type": "int64"
     },
     {
-        "declaration": "vector<uint8>:32",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputReport.pressed_buttons"
+        "name": "fuchsia.input.report/MouseInputReport.pressed_buttons",
+        "type": "vector<uint8>:32"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputReport.scroll_h"
+        "name": "fuchsia.input.report/MouseInputReport.scroll_h",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/MouseInputReport.scroll_v"
+        "name": "fuchsia.input.report/MouseInputReport.scroll_v",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/MouseInputReport"
     },
     {
-        "declaration": "fuchsia.input.report/KeyboardOutputDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/OutputDescriptor.keyboard"
+        "name": "fuchsia.input.report/OutputDescriptor.keyboard",
+        "type": "fuchsia.input.report/KeyboardOutputDescriptor"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/OutputDescriptor"
     },
     {
-        "declaration": "fuchsia.input.report/KeyboardOutputReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/OutputReport.keyboard"
+        "name": "fuchsia.input.report/OutputReport.keyboard",
+        "type": "fuchsia.input.report/KeyboardOutputReport"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/OutputReport"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/Range.max"
+        "name": "fuchsia.input.report/Range.max",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/Range.min"
+        "name": "fuchsia.input.report/Range.min",
+        "type": "int64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.input.report/Range"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/SENSOR_MAX_VALUES",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SelectiveReportingFeatureReport.button_switch"
+        "name": "fuchsia.input.report/SelectiveReportingFeatureReport.button_switch",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SelectiveReportingFeatureReport.surface_switch"
+        "name": "fuchsia.input.report/SelectiveReportingFeatureReport.surface_switch",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/SelectiveReportingFeatureReport"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/SensorAxis.axis"
+        "name": "fuchsia.input.report/SensorAxis.axis",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/SensorType",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/SensorAxis.type"
+        "name": "fuchsia.input.report/SensorAxis.type",
+        "type": "fuchsia.input.report/SensorType"
     },
     {
         "kind": "struct",
         "name": "fuchsia.input.report/SensorAxis"
     },
     {
-        "declaration": "vector<fuchsia.input.report/SensorFeatureDescriptor>:255",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorDescriptor.feature"
+        "name": "fuchsia.input.report/SensorDescriptor.feature",
+        "type": "vector<fuchsia.input.report/SensorFeatureDescriptor>:255"
     },
     {
-        "declaration": "vector<fuchsia.input.report/SensorInputDescriptor>:255",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorDescriptor.input"
+        "name": "fuchsia.input.report/SensorDescriptor.input",
+        "type": "vector<fuchsia.input.report/SensorInputDescriptor>:255"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/SensorDescriptor"
     },
     {
-        "declaration": "uint8",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureDescriptor.report_id"
+        "name": "fuchsia.input.report/SensorFeatureDescriptor.report_id",
+        "type": "uint8"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureDescriptor.report_interval"
+        "name": "fuchsia.input.report/SensorFeatureDescriptor.report_interval",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "fuchsia.input.report/Axis",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureDescriptor.sampling_rate"
+        "name": "fuchsia.input.report/SensorFeatureDescriptor.sampling_rate",
+        "type": "fuchsia.input.report/Axis"
     },
     {
-        "declaration": "vector<fuchsia.input.report/SensorAxis>:100",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureDescriptor.sensitivity"
+        "name": "fuchsia.input.report/SensorFeatureDescriptor.sensitivity",
+        "type": "vector<fuchsia.input.report/SensorAxis>:100"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureDescriptor.supports_reporting_state"
+        "name": "fuchsia.input.report/SensorFeatureDescriptor.supports_reporting_state",
+        "type": "bool"
     },
     {
-        "declaration": "vector<fuchsia.input.report/SensorAxis>:100",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureDescriptor.threshold_high"
+        "name": "fuchsia.input.report/SensorFeatureDescriptor.threshold_high",
+        "type": "vector<fuchsia.input.report/SensorAxis>:100"
     },
     {
-        "declaration": "vector<fuchsia.input.report/SensorAxis>:100",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureDescriptor.threshold_low"
+        "name": "fuchsia.input.report/SensorFeatureDescriptor.threshold_low",
+        "type": "vector<fuchsia.input.report/SensorAxis>:100"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/SensorFeatureDescriptor"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureReport.report_interval"
+        "name": "fuchsia.input.report/SensorFeatureReport.report_interval",
+        "type": "int64"
     },
     {
-        "declaration": "fuchsia.input.report/SensorReportingState",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureReport.reporting_state"
+        "name": "fuchsia.input.report/SensorFeatureReport.reporting_state",
+        "type": "fuchsia.input.report/SensorReportingState"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureReport.sampling_rate"
+        "name": "fuchsia.input.report/SensorFeatureReport.sampling_rate",
+        "type": "int64"
     },
     {
-        "declaration": "vector<int64>:100",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureReport.sensitivity"
+        "name": "fuchsia.input.report/SensorFeatureReport.sensitivity",
+        "type": "vector<int64>:100"
     },
     {
-        "declaration": "vector<int64>:100",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureReport.threshold_high"
+        "name": "fuchsia.input.report/SensorFeatureReport.threshold_high",
+        "type": "vector<int64>:100"
     },
     {
-        "declaration": "vector<int64>:100",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorFeatureReport.threshold_low"
+        "name": "fuchsia.input.report/SensorFeatureReport.threshold_low",
+        "type": "vector<int64>:100"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/SensorFeatureReport"
     },
     {
-        "declaration": "uint8",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorInputDescriptor.report_id"
+        "name": "fuchsia.input.report/SensorInputDescriptor.report_id",
+        "type": "uint8"
     },
     {
-        "declaration": "vector<fuchsia.input.report/SensorAxis>:100",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorInputDescriptor.values"
+        "name": "fuchsia.input.report/SensorInputDescriptor.values",
+        "type": "vector<fuchsia.input.report/SensorAxis>:100"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/SensorInputDescriptor"
     },
     {
-        "declaration": "vector<int64>:100",
         "kind": "table/member",
-        "name": "fuchsia.input.report/SensorInputReport.values"
+        "name": "fuchsia.input.report/SensorInputReport.values",
+        "type": "vector<int64>:100"
     },
     {
         "kind": "table",
@@ -841,10 +841,10 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/SensorReportingState",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -912,21 +912,21 @@
         "value": "6"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/SensorType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/TOUCH_MAX_CONTACTS",
+        "type": "uint32",
         "value": "10"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.input.report/TOUCH_MAX_NUM_BUTTONS",
+        "type": "uint32",
         "value": "10"
     },
     {
@@ -940,86 +940,86 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/TouchConfigurationInputMode",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.input.report/TouchFeatureDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchDescriptor.feature"
+        "name": "fuchsia.input.report/TouchDescriptor.feature",
+        "type": "fuchsia.input.report/TouchFeatureDescriptor"
     },
     {
-        "declaration": "fuchsia.input.report/TouchInputDescriptor",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchDescriptor.input"
+        "name": "fuchsia.input.report/TouchDescriptor.input",
+        "type": "fuchsia.input.report/TouchInputDescriptor"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/TouchDescriptor"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchFeatureDescriptor.supports_input_mode"
+        "name": "fuchsia.input.report/TouchFeatureDescriptor.supports_input_mode",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchFeatureDescriptor.supports_selective_reporting"
+        "name": "fuchsia.input.report/TouchFeatureDescriptor.supports_selective_reporting",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/TouchFeatureDescriptor"
     },
     {
-        "declaration": "fuchsia.input.report/TouchConfigurationInputMode",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchFeatureReport.input_mode"
+        "name": "fuchsia.input.report/TouchFeatureReport.input_mode",
+        "type": "fuchsia.input.report/TouchConfigurationInputMode"
     },
     {
-        "declaration": "fuchsia.input.report/SelectiveReportingFeatureReport",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchFeatureReport.selective_reporting"
+        "name": "fuchsia.input.report/TouchFeatureReport.selective_reporting",
+        "type": "fuchsia.input.report/SelectiveReportingFeatureReport"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/TouchFeatureReport"
     },
     {
-        "declaration": "vector<uint8>:10",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchInputDescriptor.buttons"
+        "name": "fuchsia.input.report/TouchInputDescriptor.buttons",
+        "type": "vector<uint8>:10"
     },
     {
-        "declaration": "vector<fuchsia.input.report/ContactInputDescriptor>:10",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchInputDescriptor.contacts"
+        "name": "fuchsia.input.report/TouchInputDescriptor.contacts",
+        "type": "vector<fuchsia.input.report/ContactInputDescriptor>:10"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchInputDescriptor.max_contacts"
+        "name": "fuchsia.input.report/TouchInputDescriptor.max_contacts",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.input.report/TouchType",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchInputDescriptor.touch_type"
+        "name": "fuchsia.input.report/TouchInputDescriptor.touch_type",
+        "type": "fuchsia.input.report/TouchType"
     },
     {
         "kind": "table",
         "name": "fuchsia.input.report/TouchInputDescriptor"
     },
     {
-        "declaration": "vector<fuchsia.input.report/ContactInputReport>:10",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchInputReport.contacts"
+        "name": "fuchsia.input.report/TouchInputReport.contacts",
+        "type": "vector<fuchsia.input.report/ContactInputReport>:10"
     },
     {
-        "declaration": "vector<uint8>:10",
         "kind": "table/member",
-        "name": "fuchsia.input.report/TouchInputReport.pressed_buttons"
+        "name": "fuchsia.input.report/TouchInputReport.pressed_buttons",
+        "type": "vector<uint8>:10"
     },
     {
         "kind": "table",
@@ -1036,20 +1036,20 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/TouchType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/Unit.exponent"
+        "name": "fuchsia.input.report/Unit.exponent",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.input.report/UnitType",
         "kind": "struct/member",
-        "name": "fuchsia.input.report/Unit.type"
+        "name": "fuchsia.input.report/Unit.type",
+        "type": "fuchsia.input.report/UnitType"
     },
     {
         "kind": "struct",
@@ -1121,10 +1121,10 @@
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/UnitType",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -1162,10 +1162,10 @@
         "value": "65540"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/VendorGoogleProductId",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -1173,10 +1173,10 @@
         "value": "6353"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.input.report/VendorId",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
         "kind": "library",

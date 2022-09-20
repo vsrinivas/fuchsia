@@ -1,76 +1,76 @@
 [
     {
-        "declaration": "fuchsia.diagnostics/Severity",
         "kind": "struct/member",
-        "name": "fuchsia.driver.test/DriverLog.log_level"
+        "name": "fuchsia.driver.test/DriverLog.log_level",
+        "type": "fuchsia.diagnostics/Severity"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.driver.test/DriverLog.name"
+        "name": "fuchsia.driver.test/DriverLog.name",
+        "type": "string"
     },
     {
         "kind": "struct",
         "name": "fuchsia.driver.test/DriverLog"
     },
     {
-        "declaration": "(fuchsia.driver.test/RealmArgs args) -> (fuchsia.driver.test/Realm_Start_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.driver.test/Realm.Start"
+        "name": "fuchsia.driver.test/Realm.Start",
+        "type": "(fuchsia.driver.test/RealmArgs args) -> (fuchsia.driver.test/Realm_Start_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.driver.test/Realm"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.board_name"
+        "name": "fuchsia.driver.test/RealmArgs.board_name",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.io/Directory",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.boot"
+        "name": "fuchsia.driver.test/RealmArgs.boot",
+        "type": "fuchsia.io/Directory"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.driver_bind_eager"
+        "name": "fuchsia.driver.test/RealmArgs.driver_bind_eager",
+        "type": "vector<string>"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.driver_disable"
+        "name": "fuchsia.driver.test/RealmArgs.driver_disable",
+        "type": "vector<string>"
     },
     {
-        "declaration": "vector<fuchsia.driver.test/DriverLog>",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.driver_log_level"
+        "name": "fuchsia.driver.test/RealmArgs.driver_log_level",
+        "type": "vector<fuchsia.driver.test/DriverLog>"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.driver_tests_disable"
+        "name": "fuchsia.driver.test/RealmArgs.driver_tests_disable",
+        "type": "vector<string>"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.driver_tests_enable"
+        "name": "fuchsia.driver.test/RealmArgs.driver_tests_enable",
+        "type": "vector<string>"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.driver_tests_enable_all"
+        "name": "fuchsia.driver.test/RealmArgs.driver_tests_enable_all",
+        "type": "bool"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.root_driver"
+        "name": "fuchsia.driver.test/RealmArgs.root_driver",
+        "type": "string"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.driver.test/RealmArgs.use_driver_framework_v2"
+        "name": "fuchsia.driver.test/RealmArgs.use_driver_framework_v2",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -82,14 +82,14 @@
         "name": "fuchsia.driver.test/Realm_Start_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.driver.test/Realm_Start_Result.err"
+        "name": "fuchsia.driver.test/Realm_Start_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.driver.test/Realm_Start_Response",
         "kind": "union/member",
-        "name": "fuchsia.driver.test/Realm_Start_Result.response"
+        "name": "fuchsia.driver.test/Realm_Start_Result.response",
+        "type": "fuchsia.driver.test/Realm_Start_Response"
     },
     {
         "kind": "union",

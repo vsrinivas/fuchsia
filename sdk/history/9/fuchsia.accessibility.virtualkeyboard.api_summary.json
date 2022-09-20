@@ -1,17 +1,17 @@
 [
     {
-        "declaration": "(bool updated_visibility) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.virtualkeyboard/Listener.OnVisibilityChanged"
+        "name": "fuchsia.accessibility.virtualkeyboard/Listener.OnVisibilityChanged",
+        "type": "(bool updated_visibility) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.accessibility.virtualkeyboard/Listener"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewRef view_ref,bool is_visible,server_end:fuchsia.accessibility.virtualkeyboard/Listener listener)",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.virtualkeyboard/Registry.Register"
+        "name": "fuchsia.accessibility.virtualkeyboard/Registry.Register",
+        "type": "(fuchsia.ui.views/ViewRef view_ref,bool is_visible,server_end:fuchsia.accessibility.virtualkeyboard/Listener listener)"
     },
     {
         "kind": "protocol",

@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "fuchsia.ui.views/ViewCreationToken",
         "kind": "table/member",
-        "name": "fuchsia.ui.app/CreateView2Args.view_creation_token"
+        "name": "fuchsia.ui.app/CreateView2Args.view_creation_token",
+        "type": "fuchsia.ui.views/ViewCreationToken"
     },
     {
         "kind": "table",
@@ -10,42 +10,42 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(zx/handle:EVENTPAIR view_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.app/View.Attach"
+        "name": "fuchsia.ui.app/View.Attach",
+        "type": "(zx/handle:EVENTPAIR view_token)"
     },
     {
-        "declaration": "(fuchsia.ui.app/ViewConfig config)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.app/View.SetConfig"
+        "name": "fuchsia.ui.app/View.SetConfig",
+        "type": "(fuchsia.ui.app/ViewConfig config)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.app/View"
     },
     {
-        "declaration": "fuchsia.intl/Profile",
         "kind": "struct/member",
-        "name": "fuchsia.ui.app/ViewConfig.intl_profile"
+        "name": "fuchsia.ui.app/ViewConfig.intl_profile",
+        "type": "fuchsia.intl/Profile"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.app/ViewConfig"
     },
     {
-        "declaration": "(zx/handle:EVENTPAIR token,server_end:<fuchsia.sys/ServiceProvider,optional> incoming_services,fuchsia.sys/ServiceProvider:optional outgoing_services)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.app/ViewProvider.CreateView"
+        "name": "fuchsia.ui.app/ViewProvider.CreateView",
+        "type": "(zx/handle:EVENTPAIR token,server_end:<fuchsia.sys/ServiceProvider,optional> incoming_services,fuchsia.sys/ServiceProvider:optional outgoing_services)"
     },
     {
-        "declaration": "(fuchsia.ui.app/CreateView2Args args)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.app/ViewProvider.CreateView2"
+        "name": "fuchsia.ui.app/ViewProvider.CreateView2",
+        "type": "(fuchsia.ui.app/CreateView2Args args)"
     },
     {
-        "declaration": "(zx/handle:EVENTPAIR token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.app/ViewProvider.CreateViewWithViewRef"
+        "name": "fuchsia.ui.app/ViewProvider.CreateViewWithViewRef",
+        "type": "(zx/handle:EVENTPAIR token,fuchsia.ui.views/ViewRefControl view_ref_control,fuchsia.ui.views/ViewRef view_ref)"
     },
     {
         "kind": "protocol",

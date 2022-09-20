@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(fuchsia.io/File buffer) -> (fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.perfetto/BufferReceiver.ProvideBuffer"
+        "name": "fuchsia.tracing.perfetto/BufferReceiver.ProvideBuffer",
+        "type": "(fuchsia.io/File buffer) -> (fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result result)"
     },
     {
         "kind": "protocol",
@@ -13,14 +13,14 @@
         "name": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result.err"
+        "name": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Response",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result.response"
+        "name": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result.response",
+        "type": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Response"
     },
     {
         "kind": "union",
@@ -28,9 +28,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(zx/handle:SOCKET consumer_socket) -> (fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.perfetto/ConsumerConnector.ConnectConsumer"
+        "name": "fuchsia.tracing.perfetto/ConsumerConnector.ConnectConsumer",
+        "type": "(zx/handle:SOCKET consumer_socket) -> (fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result result)"
     },
     {
         "kind": "protocol",
@@ -41,14 +41,14 @@
         "name": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result.err"
+        "name": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Response",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result.response"
+        "name": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result.response",
+        "type": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Response"
     },
     {
         "kind": "union",
@@ -56,9 +56,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(zx/handle:SOCKET producer_socket,fuchsia.tracing.perfetto/TraceBuffer buffer) -> (fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.tracing.perfetto/ProducerConnector.ConnectProducer"
+        "name": "fuchsia.tracing.perfetto/ProducerConnector.ConnectProducer",
+        "type": "(zx/handle:SOCKET producer_socket,fuchsia.tracing.perfetto/TraceBuffer buffer) -> (fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result result)"
     },
     {
         "kind": "protocol",
@@ -69,14 +69,14 @@
         "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Response"
     },
     {
-        "declaration": "int32",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result.err"
+        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result.err",
+        "type": "int32"
     },
     {
-        "declaration": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Response",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result.response"
+        "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result.response",
+        "type": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Response"
     },
     {
         "kind": "union",
@@ -84,9 +84,9 @@
         "strictness": "strict"
     },
     {
-        "declaration": "client_end:fuchsia.tracing.perfetto/BufferReceiver",
         "kind": "union/member",
-        "name": "fuchsia.tracing.perfetto/TraceBuffer.from_server"
+        "name": "fuchsia.tracing.perfetto/TraceBuffer.from_server",
+        "type": "client_end:fuchsia.tracing.perfetto/BufferReceiver"
     },
     {
         "kind": "union",

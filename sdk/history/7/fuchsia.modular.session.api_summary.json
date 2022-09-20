@@ -1,160 +1,160 @@
 [
     {
-        "declaration": "string:2083",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/AgentServiceIndexEntry.agent_url"
+        "name": "fuchsia.modular.session/AgentServiceIndexEntry.agent_url",
+        "type": "string:2083"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/AgentServiceIndexEntry.service_name"
+        "name": "fuchsia.modular.session/AgentServiceIndexEntry.service_name",
+        "type": "string"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular.session/AgentServiceIndexEntry"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/AppConfig.args"
+        "name": "fuchsia.modular.session/AppConfig.args",
+        "type": "vector<string>"
     },
     {
-        "declaration": "string:4096",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/AppConfig.url"
+        "name": "fuchsia.modular.session/AppConfig.url",
+        "type": "string:4096"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular.session/AppConfig"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/BasemgrConfig.enable_cobalt"
+        "name": "fuchsia.modular.session/BasemgrConfig.enable_cobalt",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.modular.session/AppConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/BasemgrConfig.session_launcher"
+        "name": "fuchsia.modular.session/BasemgrConfig.session_launcher",
+        "type": "fuchsia.modular.session/AppConfig"
     },
     {
-        "declaration": "vector<fuchsia.modular.session/SessionShellMapEntry>",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/BasemgrConfig.session_shell_map"
+        "name": "fuchsia.modular.session/BasemgrConfig.session_shell_map",
+        "type": "vector<fuchsia.modular.session/SessionShellMapEntry>"
     },
     {
-        "declaration": "fuchsia.modular.session/StoryShellConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/BasemgrConfig.story_shell"
+        "name": "fuchsia.modular.session/BasemgrConfig.story_shell",
+        "type": "fuchsia.modular.session/StoryShellConfig"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/BasemgrConfig.use_session_shell_for_story_shell_factory"
+        "name": "fuchsia.modular.session/BasemgrConfig.use_session_shell_for_story_shell_factory",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular.session/BasemgrConfig"
     },
     {
-        "declaration": "(fuchsia.mem/Buffer config)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular.session/Launcher.LaunchSessionmgr"
+        "name": "fuchsia.modular.session/Launcher.LaunchSessionmgr",
+        "type": "(fuchsia.mem/Buffer config)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular.session/Launcher"
     },
     {
-        "declaration": "fuchsia.modular.session/BasemgrConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/ModularConfig.basemgr_config"
+        "name": "fuchsia.modular.session/ModularConfig.basemgr_config",
+        "type": "fuchsia.modular.session/BasemgrConfig"
     },
     {
-        "declaration": "fuchsia.modular.session/SessionmgrConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/ModularConfig.sessionmgr_config"
+        "name": "fuchsia.modular.session/ModularConfig.sessionmgr_config",
+        "type": "fuchsia.modular.session/SessionmgrConfig"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular.session/ModularConfig"
     },
     {
-        "declaration": "fuchsia.modular.session/AppConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionShellConfig.app_config"
+        "name": "fuchsia.modular.session/SessionShellConfig.app_config",
+        "type": "fuchsia.modular.session/AppConfig"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular.session/SessionShellConfig"
     },
     {
-        "declaration": "fuchsia.modular.session/SessionShellConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionShellMapEntry.config"
+        "name": "fuchsia.modular.session/SessionShellMapEntry.config",
+        "type": "fuchsia.modular.session/SessionShellConfig"
     },
     {
-        "declaration": "string:4096",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionShellMapEntry.name"
+        "name": "fuchsia.modular.session/SessionShellMapEntry.name",
+        "type": "string:4096"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular.session/SessionShellMapEntry"
     },
     {
-        "declaration": "vector<fuchsia.modular.session/AgentServiceIndexEntry>",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.agent_service_index"
+        "name": "fuchsia.modular.session/SessionmgrConfig.agent_service_index",
+        "type": "vector<fuchsia.modular.session/AgentServiceIndexEntry>"
     },
     {
-        "declaration": "vector<fuchsia.modular.session/AppConfig>",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.component_args"
+        "name": "fuchsia.modular.session/SessionmgrConfig.component_args",
+        "type": "vector<fuchsia.modular.session/AppConfig>"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.disable_agent_restart_on_crash"
+        "name": "fuchsia.modular.session/SessionmgrConfig.disable_agent_restart_on_crash",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.enable_cobalt"
+        "name": "fuchsia.modular.session/SessionmgrConfig.enable_cobalt",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.reserved"
+        "name": "fuchsia.modular.session/SessionmgrConfig.reserved",
+        "type": "bool"
     },
     {
-        "declaration": "vector<string:4096>",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.restart_session_on_agent_crash"
+        "name": "fuchsia.modular.session/SessionmgrConfig.restart_session_on_agent_crash",
+        "type": "vector<string:4096>"
     },
     {
-        "declaration": "vector<string:4096>",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.session_agents"
+        "name": "fuchsia.modular.session/SessionmgrConfig.session_agents",
+        "type": "vector<string:4096>"
     },
     {
-        "declaration": "vector<string:4096>",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.startup_agents"
+        "name": "fuchsia.modular.session/SessionmgrConfig.startup_agents",
+        "type": "vector<string:4096>"
     },
     {
-        "declaration": "string:4096",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/SessionmgrConfig.story_shell_url"
+        "name": "fuchsia.modular.session/SessionmgrConfig.story_shell_url",
+        "type": "string:4096"
     },
     {
         "kind": "table",
         "name": "fuchsia.modular.session/SessionmgrConfig"
     },
     {
-        "declaration": "fuchsia.modular.session/AppConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.session/StoryShellConfig.app_config"
+        "name": "fuchsia.modular.session/StoryShellConfig.app_config",
+        "type": "fuchsia.modular.session/AppConfig"
     },
     {
         "kind": "table",

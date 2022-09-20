@@ -4,23 +4,23 @@
         "name": "fuchsia.component/Binder"
     },
     {
-        "declaration": "() -> (vector<fuchsia.component.decl/ChildRef>:128 children)",
         "kind": "protocol/member",
-        "name": "fuchsia.component/ChildIterator.Next"
+        "name": "fuchsia.component/ChildIterator.Next",
+        "type": "() -> (vector<fuchsia.component.decl/ChildRef>:128 children)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.component/ChildIterator"
     },
     {
-        "declaration": "vector<fuchsia.component.decl/Offer>:128",
         "kind": "table/member",
-        "name": "fuchsia.component/CreateChildArgs.dynamic_offers"
+        "name": "fuchsia.component/CreateChildArgs.dynamic_offers",
+        "type": "vector<fuchsia.component.decl/Offer>:128"
     },
     {
-        "declaration": "vector<fuchsia.process/HandleInfo>:128",
         "kind": "table/member",
-        "name": "fuchsia.component/CreateChildArgs.numbered_handles"
+        "name": "fuchsia.component/CreateChildArgs.numbered_handles",
+        "type": "vector<fuchsia.process/HandleInfo>:128"
     },
     {
         "kind": "table",
@@ -93,90 +93,90 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.component/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_CHILD_COUNT",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_CHILD_NAME_LENGTH",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_DYNAMIC_OFFER_COUNT",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_HANDLE_COUNT",
+        "type": "uint32",
         "value": "128"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_MONIKER_LENGTH",
+        "type": "uint32",
         "value": "4096"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_NAME_LENGTH",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.component/MAX_NUM_EVENTS_RECEIVED",
+        "type": "uint64",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_PATH_LENGTH",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_SUBSCRIPTION_REQUESTS",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.component/MAX_URL_SCHEME_LENGTH",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "(fuchsia.component.decl/CollectionRef collection,fuchsia.component.decl/Child decl,fuchsia.component/CreateChildArgs args) -> (fuchsia.component/Realm_CreateChild_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component/Realm.CreateChild"
+        "name": "fuchsia.component/Realm.CreateChild",
+        "type": "(fuchsia.component.decl/CollectionRef collection,fuchsia.component.decl/Child decl,fuchsia.component/CreateChildArgs args) -> (fuchsia.component/Realm_CreateChild_Result result)"
     },
     {
-        "declaration": "(fuchsia.component.decl/ChildRef child) -> (fuchsia.component/Realm_DestroyChild_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component/Realm.DestroyChild"
+        "name": "fuchsia.component/Realm.DestroyChild",
+        "type": "(fuchsia.component.decl/ChildRef child) -> (fuchsia.component/Realm_DestroyChild_Result result)"
     },
     {
-        "declaration": "(fuchsia.component.decl/CollectionRef collection,server_end:fuchsia.component/ChildIterator iter) -> (fuchsia.component/Realm_ListChildren_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component/Realm.ListChildren"
+        "name": "fuchsia.component/Realm.ListChildren",
+        "type": "(fuchsia.component.decl/CollectionRef collection,server_end:fuchsia.component/ChildIterator iter) -> (fuchsia.component/Realm_ListChildren_Result result)"
     },
     {
-        "declaration": "(fuchsia.component.decl/ChildRef child,server_end:fuchsia.io/Directory exposed_dir) -> (fuchsia.component/Realm_OpenExposedDir_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.component/Realm.OpenExposedDir"
+        "name": "fuchsia.component/Realm.OpenExposedDir",
+        "type": "(fuchsia.component.decl/ChildRef child,server_end:fuchsia.io/Directory exposed_dir) -> (fuchsia.component/Realm_OpenExposedDir_Result result)"
     },
     {
         "kind": "protocol",
@@ -187,14 +187,14 @@
         "name": "fuchsia.component/Realm_CreateChild_Response"
     },
     {
-        "declaration": "fuchsia.component/Error",
         "kind": "union/member",
-        "name": "fuchsia.component/Realm_CreateChild_Result.err"
+        "name": "fuchsia.component/Realm_CreateChild_Result.err",
+        "type": "fuchsia.component/Error"
     },
     {
-        "declaration": "fuchsia.component/Realm_CreateChild_Response",
         "kind": "union/member",
-        "name": "fuchsia.component/Realm_CreateChild_Result.response"
+        "name": "fuchsia.component/Realm_CreateChild_Result.response",
+        "type": "fuchsia.component/Realm_CreateChild_Response"
     },
     {
         "kind": "union",
@@ -206,14 +206,14 @@
         "name": "fuchsia.component/Realm_DestroyChild_Response"
     },
     {
-        "declaration": "fuchsia.component/Error",
         "kind": "union/member",
-        "name": "fuchsia.component/Realm_DestroyChild_Result.err"
+        "name": "fuchsia.component/Realm_DestroyChild_Result.err",
+        "type": "fuchsia.component/Error"
     },
     {
-        "declaration": "fuchsia.component/Realm_DestroyChild_Response",
         "kind": "union/member",
-        "name": "fuchsia.component/Realm_DestroyChild_Result.response"
+        "name": "fuchsia.component/Realm_DestroyChild_Result.response",
+        "type": "fuchsia.component/Realm_DestroyChild_Response"
     },
     {
         "kind": "union",
@@ -225,14 +225,14 @@
         "name": "fuchsia.component/Realm_ListChildren_Response"
     },
     {
-        "declaration": "fuchsia.component/Error",
         "kind": "union/member",
-        "name": "fuchsia.component/Realm_ListChildren_Result.err"
+        "name": "fuchsia.component/Realm_ListChildren_Result.err",
+        "type": "fuchsia.component/Error"
     },
     {
-        "declaration": "fuchsia.component/Realm_ListChildren_Response",
         "kind": "union/member",
-        "name": "fuchsia.component/Realm_ListChildren_Result.response"
+        "name": "fuchsia.component/Realm_ListChildren_Result.response",
+        "type": "fuchsia.component/Realm_ListChildren_Response"
     },
     {
         "kind": "union",
@@ -244,14 +244,14 @@
         "name": "fuchsia.component/Realm_OpenExposedDir_Response"
     },
     {
-        "declaration": "fuchsia.component/Error",
         "kind": "union/member",
-        "name": "fuchsia.component/Realm_OpenExposedDir_Result.err"
+        "name": "fuchsia.component/Realm_OpenExposedDir_Result.err",
+        "type": "fuchsia.component/Error"
     },
     {
-        "declaration": "fuchsia.component/Realm_OpenExposedDir_Response",
         "kind": "union/member",
-        "name": "fuchsia.component/Realm_OpenExposedDir_Result.response"
+        "name": "fuchsia.component/Realm_OpenExposedDir_Result.response",
+        "type": "fuchsia.component/Realm_OpenExposedDir_Response"
     },
     {
         "kind": "union",

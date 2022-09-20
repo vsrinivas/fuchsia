@@ -1,27 +1,27 @@
 [
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.modular.testing/ComponentService.name"
+        "name": "fuchsia.modular.testing/ComponentService.name",
+        "type": "string"
     },
     {
-        "declaration": "string:2083",
         "kind": "struct/member",
-        "name": "fuchsia.modular.testing/ComponentService.url"
+        "name": "fuchsia.modular.testing/ComponentService.url",
+        "type": "string:2083"
     },
     {
         "kind": "struct",
         "name": "fuchsia.modular.testing/ComponentService"
     },
     {
-        "declaration": "zx/handle:CHANNEL",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/EnvironmentServicesSpec.service_dir"
+        "name": "fuchsia.modular.testing/EnvironmentServicesSpec.service_dir",
+        "type": "zx/handle:CHANNEL"
     },
     {
-        "declaration": "vector<fuchsia.modular.testing/ComponentService>",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/EnvironmentServicesSpec.services_from_components"
+        "name": "fuchsia.modular.testing/EnvironmentServicesSpec.services_from_components",
+        "type": "vector<fuchsia.modular.testing/ComponentService>"
     },
     {
         "kind": "table",
@@ -29,14 +29,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "string:2083",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/InterceptSpec.component_url"
+        "name": "fuchsia.modular.testing/InterceptSpec.component_url",
+        "type": "string:2083"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/InterceptSpec.extra_cmx_contents"
+        "name": "fuchsia.modular.testing/InterceptSpec.extra_cmx_contents",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "table",
@@ -44,33 +44,33 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(int64 exit_code,fuchsia.sys/TerminationReason reason)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular.testing/InterceptedComponent.Exit"
+        "name": "fuchsia.modular.testing/InterceptedComponent.Exit",
+        "type": "(int64 exit_code,fuchsia.sys/TerminationReason reason)"
     },
     {
-        "declaration": " -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.modular.testing/InterceptedComponent.OnKill"
+        "name": "fuchsia.modular.testing/InterceptedComponent.OnKill",
+        "type": " -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular.testing/InterceptedComponent"
     },
     {
-        "declaration": "server_end:fuchsia.modular/ComponentContext",
         "kind": "union/member",
-        "name": "fuchsia.modular.testing/ModularService.component_context"
+        "name": "fuchsia.modular.testing/ModularService.component_context",
+        "type": "server_end:fuchsia.modular/ComponentContext"
     },
     {
-        "declaration": "server_end:fuchsia.element/Manager",
         "kind": "union/member",
-        "name": "fuchsia.modular.testing/ModularService.element_manager"
+        "name": "fuchsia.modular.testing/ModularService.element_manager",
+        "type": "server_end:fuchsia.element/Manager"
     },
     {
-        "declaration": "server_end:fuchsia.modular/PuppetMaster",
         "kind": "union/member",
-        "name": "fuchsia.modular.testing/ModularService.puppet_master"
+        "name": "fuchsia.modular.testing/ModularService.puppet_master",
+        "type": "server_end:fuchsia.modular/PuppetMaster"
     },
     {
         "kind": "union",
@@ -79,63 +79,63 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(string service_name,zx/handle:CHANNEL request)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular.testing/TestHarness.ConnectToEnvironmentService"
+        "name": "fuchsia.modular.testing/TestHarness.ConnectToEnvironmentService",
+        "type": "(string service_name,zx/handle:CHANNEL request)"
     },
     {
-        "declaration": "(fuchsia.modular.testing/ModularService service)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular.testing/TestHarness.ConnectToModularService"
+        "name": "fuchsia.modular.testing/TestHarness.ConnectToModularService",
+        "type": "(fuchsia.modular.testing/ModularService service)"
     },
     {
-        "declaration": " -> (fuchsia.sys/StartupInfo startup_info,client_end:fuchsia.modular.testing/InterceptedComponent intercepted_component)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular.testing/TestHarness.OnNewComponent"
+        "name": "fuchsia.modular.testing/TestHarness.OnNewComponent",
+        "type": " -> (fuchsia.sys/StartupInfo startup_info,client_end:fuchsia.modular.testing/InterceptedComponent intercepted_component)"
     },
     {
-        "declaration": "(string config) -> (fuchsia.modular.session/BasemgrConfig basemgr_config,fuchsia.modular.session/SessionmgrConfig sessionmgr_config)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular.testing/TestHarness.ParseConfig"
+        "name": "fuchsia.modular.testing/TestHarness.ParseConfig",
+        "type": "(string config) -> (fuchsia.modular.session/BasemgrConfig basemgr_config,fuchsia.modular.session/SessionmgrConfig sessionmgr_config)"
     },
     {
-        "declaration": "(fuchsia.modular.testing/TestHarnessSpec spec)",
         "kind": "protocol/member",
-        "name": "fuchsia.modular.testing/TestHarness.Run"
+        "name": "fuchsia.modular.testing/TestHarness.Run",
+        "type": "(fuchsia.modular.testing/TestHarnessSpec spec)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.modular.testing/TestHarness"
     },
     {
-        "declaration": "fuchsia.modular.session/BasemgrConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/TestHarnessSpec.basemgr_config"
+        "name": "fuchsia.modular.testing/TestHarnessSpec.basemgr_config",
+        "type": "fuchsia.modular.session/BasemgrConfig"
     },
     {
-        "declaration": "vector<fuchsia.modular.testing/InterceptSpec>",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/TestHarnessSpec.components_to_intercept"
+        "name": "fuchsia.modular.testing/TestHarnessSpec.components_to_intercept",
+        "type": "vector<fuchsia.modular.testing/InterceptSpec>"
     },
     {
-        "declaration": "fuchsia.modular.testing/EnvironmentServicesSpec",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/TestHarnessSpec.env_services"
+        "name": "fuchsia.modular.testing/TestHarnessSpec.env_services",
+        "type": "fuchsia.modular.testing/EnvironmentServicesSpec"
     },
     {
-        "declaration": "vector<string>",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/TestHarnessSpec.env_services_to_inherit"
+        "name": "fuchsia.modular.testing/TestHarnessSpec.env_services_to_inherit",
+        "type": "vector<string>"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/TestHarnessSpec.environment_suffix"
+        "name": "fuchsia.modular.testing/TestHarnessSpec.environment_suffix",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.modular.session/SessionmgrConfig",
         "kind": "table/member",
-        "name": "fuchsia.modular.testing/TestHarnessSpec.sessionmgr_config"
+        "name": "fuchsia.modular.testing/TestHarnessSpec.sessionmgr_config",
+        "type": "fuchsia.modular.session/SessionmgrConfig"
     },
     {
         "kind": "table",

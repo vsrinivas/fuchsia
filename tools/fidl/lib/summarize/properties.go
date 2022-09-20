@@ -167,6 +167,6 @@ func (s *member) Name() Name {
 
 func (s *member) Serialize() ElementStr {
 	e := s.m.Serialize()
-	e.Decl = s.m.symbolTable.fidlTypeString(s.memberType)
+	e.Type = s.m.symbolTable.fidlTypeString(s.memberType)
 	return e
 }

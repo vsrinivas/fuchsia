@@ -1,18 +1,18 @@
 [
     {
-        "declaration": "fuchsia.legacymetrics/Histogram",
         "kind": "union/member",
-        "name": "fuchsia.legacymetrics/Event.histogram"
+        "name": "fuchsia.legacymetrics/Event.histogram",
+        "type": "fuchsia.legacymetrics/Histogram"
     },
     {
-        "declaration": "fuchsia.legacymetrics/ImplementationDefinedEvent",
         "kind": "union/member",
-        "name": "fuchsia.legacymetrics/Event.impl_defined_event"
+        "name": "fuchsia.legacymetrics/Event.impl_defined_event",
+        "type": "fuchsia.legacymetrics/ImplementationDefinedEvent"
     },
     {
-        "declaration": "fuchsia.legacymetrics/UserActionEvent",
         "kind": "union/member",
-        "name": "fuchsia.legacymetrics/Event.user_action_event"
+        "name": "fuchsia.legacymetrics/Event.user_action_event",
+        "type": "fuchsia.legacymetrics/UserActionEvent"
     },
     {
         "kind": "union",
@@ -20,80 +20,80 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<fuchsia.legacymetrics/HistogramBucket>",
         "kind": "table/member",
-        "name": "fuchsia.legacymetrics/Histogram.buckets"
+        "name": "fuchsia.legacymetrics/Histogram.buckets",
+        "type": "vector<fuchsia.legacymetrics/HistogramBucket>"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.legacymetrics/Histogram.name"
+        "name": "fuchsia.legacymetrics/Histogram.name",
+        "type": "string"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.legacymetrics/Histogram.sum"
+        "name": "fuchsia.legacymetrics/Histogram.sum",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.legacymetrics/Histogram"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.legacymetrics/HistogramBucket.count"
+        "name": "fuchsia.legacymetrics/HistogramBucket.count",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.legacymetrics/HistogramBucket.max"
+        "name": "fuchsia.legacymetrics/HistogramBucket.max",
+        "type": "int64"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
-        "name": "fuchsia.legacymetrics/HistogramBucket.min"
+        "name": "fuchsia.legacymetrics/HistogramBucket.min",
+        "type": "int64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.legacymetrics/HistogramBucket"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "table/member",
-        "name": "fuchsia.legacymetrics/ImplementationDefinedEvent.data"
+        "name": "fuchsia.legacymetrics/ImplementationDefinedEvent.data",
+        "type": "vector<uint8>"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.legacymetrics/ImplementationDefinedEvent.name"
+        "name": "fuchsia.legacymetrics/ImplementationDefinedEvent.name",
+        "type": "string"
     },
     {
         "kind": "table",
         "name": "fuchsia.legacymetrics/ImplementationDefinedEvent"
     },
     {
-        "declaration": " -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.legacymetrics/MetricsRecorder.OnCloseSoon"
+        "name": "fuchsia.legacymetrics/MetricsRecorder.OnCloseSoon",
+        "type": " -> ()"
     },
     {
-        "declaration": "(vector<fuchsia.legacymetrics/Event> events) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.legacymetrics/MetricsRecorder.Record"
+        "name": "fuchsia.legacymetrics/MetricsRecorder.Record",
+        "type": "(vector<fuchsia.legacymetrics/Event> events) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.legacymetrics/MetricsRecorder"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.legacymetrics/UserActionEvent.name"
+        "name": "fuchsia.legacymetrics/UserActionEvent.name",
+        "type": "string"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.legacymetrics/UserActionEvent.time"
+        "name": "fuchsia.legacymetrics/UserActionEvent.time",
+        "type": "int64"
     },
     {
         "kind": "table",

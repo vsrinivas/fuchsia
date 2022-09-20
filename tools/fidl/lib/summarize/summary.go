@@ -25,12 +25,23 @@ func (s summary) IsEmptyLibrary() bool {
 }
 
 // WriteJSON writes out the summary as JSON.
-func (s summary) WriteJSON(w io.Writer) error {
+func (s summary) WriteJSON(w io.Writer, renameDeclarationToType bool) error {
 	e := json.NewEncoder(w)
 	// 4-level indent is chosen to match `fx format-code`.
 	e.SetIndent("", "    ")
 	e.SetEscapeHTML(false)
-	return e.Encode(serialize([]element(s)))
+	serialized := serialize([]element(s))
+
+	// TODO(fxbug.dev/109721): Remove.
+	if !renameDeclarationToType {
+		// The code is already changed to use Type, so undo it here.
+		for i := range serialized {
+			serialized[i].Decl = serialized[i].Type
+			serialized[i].Type = ""
+		}
+	}
+
+	return e.Encode(serialized)
 }
 
 // element describes a single platform surface element.

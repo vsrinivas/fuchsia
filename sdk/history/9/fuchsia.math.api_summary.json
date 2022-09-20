@@ -1,285 +1,285 @@
 [
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Inset.bottom"
+        "name": "fuchsia.math/Inset.bottom",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Inset.left"
+        "name": "fuchsia.math/Inset.left",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Inset.right"
+        "name": "fuchsia.math/Inset.right",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Inset.top"
+        "name": "fuchsia.math/Inset.top",
+        "type": "int32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/Inset"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/InsetF.bottom"
+        "name": "fuchsia.math/InsetF.bottom",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/InsetF.left"
+        "name": "fuchsia.math/InsetF.left",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/InsetF.right"
+        "name": "fuchsia.math/InsetF.right",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/InsetF.top"
+        "name": "fuchsia.math/InsetF.top",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/InsetF"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Point.x"
+        "name": "fuchsia.math/Point.x",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Point.y"
+        "name": "fuchsia.math/Point.y",
+        "type": "int32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/Point"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Point3F.x"
+        "name": "fuchsia.math/Point3F.x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Point3F.y"
+        "name": "fuchsia.math/Point3F.y",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Point3F.z"
+        "name": "fuchsia.math/Point3F.z",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/Point3F"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/PointF.x"
+        "name": "fuchsia.math/PointF.x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/PointF.y"
+        "name": "fuchsia.math/PointF.y",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/PointF"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.bottom_left_radius_x"
+        "name": "fuchsia.math/RRectF.bottom_left_radius_x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.bottom_left_radius_y"
+        "name": "fuchsia.math/RRectF.bottom_left_radius_y",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.bottom_right_radius_x"
+        "name": "fuchsia.math/RRectF.bottom_right_radius_x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.bottom_right_radius_y"
+        "name": "fuchsia.math/RRectF.bottom_right_radius_y",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.height"
+        "name": "fuchsia.math/RRectF.height",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.top_left_radius_x"
+        "name": "fuchsia.math/RRectF.top_left_radius_x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.top_left_radius_y"
+        "name": "fuchsia.math/RRectF.top_left_radius_y",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.top_right_radius_x"
+        "name": "fuchsia.math/RRectF.top_right_radius_x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.top_right_radius_y"
+        "name": "fuchsia.math/RRectF.top_right_radius_y",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.width"
+        "name": "fuchsia.math/RRectF.width",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.x"
+        "name": "fuchsia.math/RRectF.x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RRectF.y"
+        "name": "fuchsia.math/RRectF.y",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/RRectF"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Rect.height"
+        "name": "fuchsia.math/Rect.height",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Rect.width"
+        "name": "fuchsia.math/Rect.width",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Rect.x"
+        "name": "fuchsia.math/Rect.x",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Rect.y"
+        "name": "fuchsia.math/Rect.y",
+        "type": "int32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/Rect"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RectF.height"
+        "name": "fuchsia.math/RectF.height",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RectF.width"
+        "name": "fuchsia.math/RectF.width",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RectF.x"
+        "name": "fuchsia.math/RectF.x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/RectF.y"
+        "name": "fuchsia.math/RectF.y",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/RectF"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Size.height"
+        "name": "fuchsia.math/Size.height",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Size.width"
+        "name": "fuchsia.math/Size.width",
+        "type": "int32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/Size"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/SizeF.height"
+        "name": "fuchsia.math/SizeF.height",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/SizeF.width"
+        "name": "fuchsia.math/SizeF.width",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/SizeF"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.math/SizeU.height"
+        "name": "fuchsia.math/SizeU.height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.math/SizeU.width"
+        "name": "fuchsia.math/SizeU.width",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/SizeU"
     },
     {
-        "declaration": "array<float32,16>",
         "kind": "struct/member",
-        "name": "fuchsia.math/Transform.matrix"
+        "name": "fuchsia.math/Transform.matrix",
+        "type": "array<float32,16>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/Transform"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Vec.x"
+        "name": "fuchsia.math/Vec.x",
+        "type": "int32"
     },
     {
-        "declaration": "int32",
         "kind": "struct/member",
-        "name": "fuchsia.math/Vec.y"
+        "name": "fuchsia.math/Vec.y",
+        "type": "int32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.math/Vec"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/VecF.x"
+        "name": "fuchsia.math/VecF.x",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.math/VecF.y"
+        "name": "fuchsia.math/VecF.y",
+        "type": "float32"
     },
     {
         "kind": "struct",

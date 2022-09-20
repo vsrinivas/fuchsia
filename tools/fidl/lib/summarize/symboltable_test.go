@@ -18,7 +18,7 @@ func TestSymboltable(t *testing.T) {
 	tests := []struct {
 		name     string
 		type_    fidlgen.Type
-		expected Decl
+		expected Type
 	}{
 		{
 			name: "optional string",

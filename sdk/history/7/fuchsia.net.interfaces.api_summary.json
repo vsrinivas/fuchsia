@@ -1,27 +1,27 @@
 [
     {
-        "declaration": "fuchsia.net/Subnet",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Address.addr"
+        "name": "fuchsia.net.interfaces/Address.addr",
+        "type": "fuchsia.net/Subnet"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Address.valid_until"
+        "name": "fuchsia.net.interfaces/Address.valid_until",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.net.interfaces/Address"
     },
     {
-        "declaration": "fuchsia.hardware.network/DeviceClass",
         "kind": "union/member",
-        "name": "fuchsia.net.interfaces/DeviceClass.device"
+        "name": "fuchsia.net.interfaces/DeviceClass.device",
+        "type": "fuchsia.hardware.network/DeviceClass"
     },
     {
-        "declaration": "fuchsia.net.interfaces/Empty",
         "kind": "union/member",
-        "name": "fuchsia.net.interfaces/DeviceClass.loopback"
+        "name": "fuchsia.net.interfaces/DeviceClass.loopback",
+        "type": "fuchsia.net.interfaces/Empty"
     },
     {
         "kind": "union",
@@ -33,29 +33,29 @@
         "name": "fuchsia.net.interfaces/Empty"
     },
     {
-        "declaration": "fuchsia.net.interfaces/Properties",
         "kind": "union/member",
-        "name": "fuchsia.net.interfaces/Event.added"
+        "name": "fuchsia.net.interfaces/Event.added",
+        "type": "fuchsia.net.interfaces/Properties"
     },
     {
-        "declaration": "fuchsia.net.interfaces/Properties",
         "kind": "union/member",
-        "name": "fuchsia.net.interfaces/Event.changed"
+        "name": "fuchsia.net.interfaces/Event.changed",
+        "type": "fuchsia.net.interfaces/Properties"
     },
     {
-        "declaration": "fuchsia.net.interfaces/Properties",
         "kind": "union/member",
-        "name": "fuchsia.net.interfaces/Event.existing"
+        "name": "fuchsia.net.interfaces/Event.existing",
+        "type": "fuchsia.net.interfaces/Properties"
     },
     {
-        "declaration": "fuchsia.net.interfaces/Empty",
         "kind": "union/member",
-        "name": "fuchsia.net.interfaces/Event.idle"
+        "name": "fuchsia.net.interfaces/Event.idle",
+        "type": "fuchsia.net.interfaces/Empty"
     },
     {
-        "declaration": "uint64",
         "kind": "union/member",
-        "name": "fuchsia.net.interfaces/Event.removed"
+        "name": "fuchsia.net.interfaces/Event.removed",
+        "type": "uint64"
     },
     {
         "kind": "union",
@@ -63,63 +63,63 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.net.interfaces/INTERFACE_NAME_LENGTH",
+        "type": "uint8",
         "value": "15"
     },
     {
-        "declaration": "vector<fuchsia.net.interfaces/Address>",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Properties.addresses"
+        "name": "fuchsia.net.interfaces/Properties.addresses",
+        "type": "vector<fuchsia.net.interfaces/Address>"
     },
     {
-        "declaration": "fuchsia.net.interfaces/DeviceClass",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Properties.device_class"
+        "name": "fuchsia.net.interfaces/Properties.device_class",
+        "type": "fuchsia.net.interfaces/DeviceClass"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Properties.has_default_ipv4_route"
+        "name": "fuchsia.net.interfaces/Properties.has_default_ipv4_route",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Properties.has_default_ipv6_route"
+        "name": "fuchsia.net.interfaces/Properties.has_default_ipv6_route",
+        "type": "bool"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Properties.id"
+        "name": "fuchsia.net.interfaces/Properties.id",
+        "type": "uint64"
     },
     {
-        "declaration": "string:15",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Properties.name"
+        "name": "fuchsia.net.interfaces/Properties.name",
+        "type": "string:15"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.net.interfaces/Properties.online"
+        "name": "fuchsia.net.interfaces/Properties.online",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.net.interfaces/Properties"
     },
     {
-        "declaration": "(fuchsia.net.interfaces/WatcherOptions options,server_end:fuchsia.net.interfaces/Watcher watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.net.interfaces/State.GetWatcher"
+        "name": "fuchsia.net.interfaces/State.GetWatcher",
+        "type": "(fuchsia.net.interfaces/WatcherOptions options,server_end:fuchsia.net.interfaces/Watcher watcher)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.net.interfaces/State"
     },
     {
-        "declaration": "() -> (fuchsia.net.interfaces/Event event)",
         "kind": "protocol/member",
-        "name": "fuchsia.net.interfaces/Watcher.Watch"
+        "name": "fuchsia.net.interfaces/Watcher.Watch",
+        "type": "() -> (fuchsia.net.interfaces/Event event)"
     },
     {
         "kind": "protocol",

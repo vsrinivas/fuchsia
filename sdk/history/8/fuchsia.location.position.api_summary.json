@@ -1,31 +1,31 @@
 [
     {
-        "declaration": "() -> (fuchsia.location.position/EmergencyProvider_GetCurrent_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.location.position/EmergencyProvider.GetCurrent"
+        "name": "fuchsia.location.position/EmergencyProvider.GetCurrent",
+        "type": "() -> (fuchsia.location.position/EmergencyProvider_GetCurrent_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.location.position/EmergencyProvider"
     },
     {
-        "declaration": "fuchsia.location.position/Position",
         "kind": "struct/member",
-        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Response.position"
+        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Response.position",
+        "type": "fuchsia.location.position/Position"
     },
     {
         "kind": "struct",
         "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Response"
     },
     {
-        "declaration": "fuchsia.location/Error",
         "kind": "union/member",
-        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Result.err"
+        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Result.err",
+        "type": "fuchsia.location/Error"
     },
     {
-        "declaration": "fuchsia.location.position/EmergencyProvider_GetCurrent_Response",
         "kind": "union/member",
-        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Result.response"
+        "name": "fuchsia.location.position/EmergencyProvider_GetCurrent_Result.response",
+        "type": "fuchsia.location.position/EmergencyProvider_GetCurrent_Response"
     },
     {
         "kind": "union",
@@ -33,33 +33,33 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.location.position/PositionExtras",
         "kind": "struct/member",
-        "name": "fuchsia.location.position/Position.extras"
+        "name": "fuchsia.location.position/Position.extras",
+        "type": "fuchsia.location.position/PositionExtras"
     },
     {
-        "declaration": "float64",
         "kind": "struct/member",
-        "name": "fuchsia.location.position/Position.latitude"
+        "name": "fuchsia.location.position/Position.latitude",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "struct/member",
-        "name": "fuchsia.location.position/Position.longitude"
+        "name": "fuchsia.location.position/Position.longitude",
+        "type": "float64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.location.position/Position"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.location.position/PositionExtras.accuracy_meters"
+        "name": "fuchsia.location.position/PositionExtras.accuracy_meters",
+        "type": "float64"
     },
     {
-        "declaration": "float64",
         "kind": "table/member",
-        "name": "fuchsia.location.position/PositionExtras.altitude_meters"
+        "name": "fuchsia.location.position/PositionExtras.altitude_meters",
+        "type": "float64"
     },
     {
         "kind": "table",

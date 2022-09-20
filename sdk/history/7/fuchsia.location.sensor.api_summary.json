@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(fuchsia.wlan.policy/ScanResultIterator stations)",
         "kind": "protocol/member",
-        "name": "fuchsia.location.sensor/WlanBaseStationWatcher.ReportCurrentStations"
+        "name": "fuchsia.location.sensor/WlanBaseStationWatcher.ReportCurrentStations",
+        "type": "(fuchsia.wlan.policy/ScanResultIterator stations)"
     },
     {
         "kind": "protocol",

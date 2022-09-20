@@ -1,22 +1,22 @@
 [
     {
-        "declaration": "fuchsia.math/PointF",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/AlignedExtent.max"
+        "name": "fuchsia.ui.observation.geometry/AlignedExtent.max",
+        "type": "fuchsia.math/PointF"
     },
     {
-        "declaration": "fuchsia.math/PointF",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/AlignedExtent.min"
+        "name": "fuchsia.ui.observation.geometry/AlignedExtent.min",
+        "type": "fuchsia.math/PointF"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.observation.geometry/AlignedExtent"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.ui.observation.geometry/BUFFER_SIZE",
+        "type": "uint32",
         "value": "200"
     },
     {
@@ -35,126 +35,126 @@
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.ui.observation.geometry/Error",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.ui.observation.geometry/AlignedExtent",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/Layout.extent"
+        "name": "fuchsia.ui.observation.geometry/Layout.extent",
+        "type": "fuchsia.ui.observation.geometry/AlignedExtent"
     },
     {
-        "declaration": "fuchsia.math/InsetF",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/Layout.inset"
+        "name": "fuchsia.ui.observation.geometry/Layout.inset",
+        "type": "fuchsia.math/InsetF"
     },
     {
-        "declaration": "array<float32,2>",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/Layout.pixel_scale"
+        "name": "fuchsia.ui.observation.geometry/Layout.pixel_scale",
+        "type": "array<float32,2>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.observation.geometry/Layout"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.ui.observation.geometry/MAX_VIEW_COUNT",
+        "type": "uint32",
         "value": "300"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/RotatableExtent.angle_degrees"
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent.angle_degrees",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/RotatableExtent.height"
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent.height",
+        "type": "float32"
     },
     {
-        "declaration": "fuchsia.math/PointF",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/RotatableExtent.origin"
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent.origin",
+        "type": "fuchsia.math/PointF"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.ui.observation.geometry/RotatableExtent.width"
+        "name": "fuchsia.ui.observation.geometry/RotatableExtent.width",
+        "type": "float32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.ui.observation.geometry/RotatableExtent"
     },
     {
-        "declaration": "vector<uint32>:300",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.children"
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.children",
+        "type": "vector<uint32>:300"
     },
     {
-        "declaration": "fuchsia.ui.observation.geometry/RotatableExtent",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.extent_in_context"
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.extent_in_context",
+        "type": "fuchsia.ui.observation.geometry/RotatableExtent"
     },
     {
-        "declaration": "fuchsia.ui.observation.geometry/RotatableExtent",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.extent_in_parent"
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.extent_in_parent",
+        "type": "fuchsia.ui.observation.geometry/RotatableExtent"
     },
     {
-        "declaration": "fuchsia.ui.observation.geometry/Layout",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.layout"
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.layout",
+        "type": "fuchsia.ui.observation.geometry/Layout"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.view_ref_koid"
+        "name": "fuchsia.ui.observation.geometry/ViewDescriptor.view_ref_koid",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.observation.geometry/ViewDescriptor"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/ViewTreeSnapshot.time"
+        "name": "fuchsia.ui.observation.geometry/ViewTreeSnapshot.time",
+        "type": "int64"
     },
     {
-        "declaration": "vector<fuchsia.ui.observation.geometry/ViewDescriptor>:300",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/ViewTreeSnapshot.views"
+        "name": "fuchsia.ui.observation.geometry/ViewTreeSnapshot.views",
+        "type": "vector<fuchsia.ui.observation.geometry/ViewDescriptor>:300"
     },
     {
         "kind": "table",
         "name": "fuchsia.ui.observation.geometry/ViewTreeSnapshot"
     },
     {
-        "declaration": "() -> (fuchsia.ui.observation.geometry/WatchResponse payload)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.observation.geometry/ViewTreeWatcher.Watch"
+        "name": "fuchsia.ui.observation.geometry/ViewTreeWatcher.Watch",
+        "type": "() -> (fuchsia.ui.observation.geometry/WatchResponse payload)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.ui.observation.geometry/ViewTreeWatcher"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/WatchResponse.epoch_end"
+        "name": "fuchsia.ui.observation.geometry/WatchResponse.epoch_end",
+        "type": "int64"
     },
     {
-        "declaration": "fuchsia.ui.observation.geometry/Error",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/WatchResponse.error"
+        "name": "fuchsia.ui.observation.geometry/WatchResponse.error",
+        "type": "fuchsia.ui.observation.geometry/Error"
     },
     {
-        "declaration": "vector<fuchsia.ui.observation.geometry/ViewTreeSnapshot>:200",
         "kind": "table/member",
-        "name": "fuchsia.ui.observation.geometry/WatchResponse.updates"
+        "name": "fuchsia.ui.observation.geometry/WatchResponse.updates",
+        "type": "vector<fuchsia.ui.observation.geometry/ViewTreeSnapshot>:200"
     },
     {
         "kind": "table",

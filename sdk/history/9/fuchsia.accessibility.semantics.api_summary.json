@@ -35,84 +35,84 @@
         "value": "5"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.accessibility.semantics/Action",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "string:16384",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/AnnounceEvent.message"
+        "name": "fuchsia.accessibility.semantics/AnnounceEvent.message",
+        "type": "string:16384"
     },
     {
         "kind": "table",
         "name": "fuchsia.accessibility.semantics/AnnounceEvent"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.hierarchical_level"
+        "name": "fuchsia.accessibility.semantics/Attributes.hierarchical_level",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.is_keyboard_key"
+        "name": "fuchsia.accessibility.semantics/Attributes.is_keyboard_key",
+        "type": "bool"
     },
     {
-        "declaration": "string:16384",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.label"
+        "name": "fuchsia.accessibility.semantics/Attributes.label",
+        "type": "string:16384"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/LabelOrigin",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.label_origin"
+        "name": "fuchsia.accessibility.semantics/Attributes.label_origin",
+        "type": "fuchsia.accessibility.semantics/LabelOrigin"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/SetAttributes",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.list_attributes"
+        "name": "fuchsia.accessibility.semantics/Attributes.list_attributes",
+        "type": "fuchsia.accessibility.semantics/SetAttributes"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/SetAttributes",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.list_element_attributes"
+        "name": "fuchsia.accessibility.semantics/Attributes.list_element_attributes",
+        "type": "fuchsia.accessibility.semantics/SetAttributes"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/RangeAttributes",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.range"
+        "name": "fuchsia.accessibility.semantics/Attributes.range",
+        "type": "fuchsia.accessibility.semantics/RangeAttributes"
     },
     {
-        "declaration": "string:16384",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.secondary_action_description"
+        "name": "fuchsia.accessibility.semantics/Attributes.secondary_action_description",
+        "type": "string:16384"
     },
     {
-        "declaration": "string:16384",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.secondary_label"
+        "name": "fuchsia.accessibility.semantics/Attributes.secondary_label",
+        "type": "string:16384"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/SetAttributes",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.set"
+        "name": "fuchsia.accessibility.semantics/Attributes.set",
+        "type": "fuchsia.accessibility.semantics/SetAttributes"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/TableAttributes",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.table_attributes"
+        "name": "fuchsia.accessibility.semantics/Attributes.table_attributes",
+        "type": "fuchsia.accessibility.semantics/TableAttributes"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/TableCellAttributes",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.table_cell_attributes"
+        "name": "fuchsia.accessibility.semantics/Attributes.table_cell_attributes",
+        "type": "fuchsia.accessibility.semantics/TableCellAttributes"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/TableRowAttributes",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Attributes.table_row_attributes"
+        "name": "fuchsia.accessibility.semantics/Attributes.table_row_attributes",
+        "type": "fuchsia.accessibility.semantics/TableRowAttributes"
     },
     {
         "kind": "table",
@@ -139,20 +139,20 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.accessibility.semantics/CheckedState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Hit.node_id"
+        "name": "fuchsia.accessibility.semantics/Hit.node_id",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<uint32>:256",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Hit.path_from_root"
+        "name": "fuchsia.accessibility.semantics/Hit.path_from_root",
+        "type": "vector<uint32>:256"
     },
     {
         "kind": "table",
@@ -204,121 +204,121 @@
         "value": "9"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.accessibility.semantics/LabelOrigin",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.accessibility.semantics/MAX_FAN_OUT",
+        "type": "uint64",
         "value": "20000"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.accessibility.semantics/MAX_LABEL_SIZE",
+        "type": "uint64",
         "value": "16384"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.accessibility.semantics/MAX_MESSAGE_SIZE",
+        "type": "uint64",
         "value": "16384"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.accessibility.semantics/MAX_NODES_PER_UPDATE",
+        "type": "uint64",
         "value": "2048"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.accessibility.semantics/MAX_SET_ELEMENTS",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.accessibility.semantics/MAX_TREE_DEPTH",
+        "type": "uint64",
         "value": "256"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.accessibility.semantics/MAX_VALUE_SIZE",
+        "type": "uint64",
         "value": "16384"
     },
     {
-        "declaration": "vector<fuchsia.accessibility.semantics/Action>:100",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.actions"
+        "name": "fuchsia.accessibility.semantics/Node.actions",
+        "type": "vector<fuchsia.accessibility.semantics/Action>:100"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/Attributes",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.attributes"
+        "name": "fuchsia.accessibility.semantics/Node.attributes",
+        "type": "fuchsia.accessibility.semantics/Attributes"
     },
     {
-        "declaration": "vector<uint32>:20000",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.child_ids"
+        "name": "fuchsia.accessibility.semantics/Node.child_ids",
+        "type": "vector<uint32>:20000"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.container_id"
+        "name": "fuchsia.accessibility.semantics/Node.container_id",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.ui.gfx/BoundingBox",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.location"
+        "name": "fuchsia.accessibility.semantics/Node.location",
+        "type": "fuchsia.ui.gfx/BoundingBox"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.node_id"
+        "name": "fuchsia.accessibility.semantics/Node.node_id",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.ui.gfx/mat4",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.node_to_container_transform"
+        "name": "fuchsia.accessibility.semantics/Node.node_to_container_transform",
+        "type": "fuchsia.ui.gfx/mat4"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/Role",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.role"
+        "name": "fuchsia.accessibility.semantics/Node.role",
+        "type": "fuchsia.accessibility.semantics/Role"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/States",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.states"
+        "name": "fuchsia.accessibility.semantics/Node.states",
+        "type": "fuchsia.accessibility.semantics/States"
     },
     {
-        "declaration": "fuchsia.ui.gfx/mat4",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/Node.transform"
+        "name": "fuchsia.accessibility.semantics/Node.transform",
+        "type": "fuchsia.ui.gfx/mat4"
     },
     {
         "kind": "table",
         "name": "fuchsia.accessibility.semantics/Node"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/RangeAttributes.max_value"
+        "name": "fuchsia.accessibility.semantics/RangeAttributes.max_value",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/RangeAttributes.min_value"
+        "name": "fuchsia.accessibility.semantics/RangeAttributes.min_value",
+        "type": "float32"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/RangeAttributes.step_delta"
+        "name": "fuchsia.accessibility.semantics/RangeAttributes.step_delta",
+        "type": "float32"
     },
     {
         "kind": "table",
@@ -445,15 +445,15 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.accessibility.semantics/Role",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/AnnounceEvent",
         "kind": "union/member",
-        "name": "fuchsia.accessibility.semantics/SemanticEvent.announce"
+        "name": "fuchsia.accessibility.semantics/SemanticEvent.announce",
+        "type": "fuchsia.accessibility.semantics/AnnounceEvent"
     },
     {
         "kind": "union",
@@ -461,192 +461,192 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.math/PointF local_point) -> (fuchsia.accessibility.semantics/Hit result)",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.semantics/SemanticListener.HitTest"
+        "name": "fuchsia.accessibility.semantics/SemanticListener.HitTest",
+        "type": "(fuchsia.math/PointF local_point) -> (fuchsia.accessibility.semantics/Hit result)"
     },
     {
-        "declaration": "(uint32 node_id,fuchsia.accessibility.semantics/Action action) -> (bool handled)",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.semantics/SemanticListener.OnAccessibilityActionRequested"
+        "name": "fuchsia.accessibility.semantics/SemanticListener.OnAccessibilityActionRequested",
+        "type": "(uint32 node_id,fuchsia.accessibility.semantics/Action action) -> (bool handled)"
     },
     {
-        "declaration": "(bool updates_enabled) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.semantics/SemanticListener.OnSemanticsModeChanged"
+        "name": "fuchsia.accessibility.semantics/SemanticListener.OnSemanticsModeChanged",
+        "type": "(bool updates_enabled) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.accessibility.semantics/SemanticListener"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.semantics/SemanticTree.CommitUpdates"
+        "name": "fuchsia.accessibility.semantics/SemanticTree.CommitUpdates",
+        "type": "() -> ()"
     },
     {
-        "declaration": "(vector<uint32>:2048 node_ids)",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.semantics/SemanticTree.DeleteSemanticNodes"
+        "name": "fuchsia.accessibility.semantics/SemanticTree.DeleteSemanticNodes",
+        "type": "(vector<uint32>:2048 node_ids)"
     },
     {
-        "declaration": "(fuchsia.accessibility.semantics/SemanticEvent semantic_event) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.semantics/SemanticTree.SendSemanticEvent"
+        "name": "fuchsia.accessibility.semantics/SemanticTree.SendSemanticEvent",
+        "type": "(fuchsia.accessibility.semantics/SemanticEvent semantic_event) -> ()"
     },
     {
-        "declaration": "(vector<fuchsia.accessibility.semantics/Node>:2048 nodes)",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.semantics/SemanticTree.UpdateSemanticNodes"
+        "name": "fuchsia.accessibility.semantics/SemanticTree.UpdateSemanticNodes",
+        "type": "(vector<fuchsia.accessibility.semantics/Node>:2048 nodes)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.accessibility.semantics/SemanticTree"
     },
     {
-        "declaration": "(fuchsia.ui.views/ViewRef view_ref,client_end:fuchsia.accessibility.semantics/SemanticListener listener,server_end:fuchsia.accessibility.semantics/SemanticTree semantic_tree_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.accessibility.semantics/SemanticsManager.RegisterViewForSemantics"
+        "name": "fuchsia.accessibility.semantics/SemanticsManager.RegisterViewForSemantics",
+        "type": "(fuchsia.ui.views/ViewRef view_ref,client_end:fuchsia.accessibility.semantics/SemanticListener listener,server_end:fuchsia.accessibility.semantics/SemanticTree semantic_tree_request)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.accessibility.semantics/SemanticsManager"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/SetAttributes.index"
+        "name": "fuchsia.accessibility.semantics/SetAttributes.index",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<uint32>:100",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/SetAttributes.set_element_ids"
+        "name": "fuchsia.accessibility.semantics/SetAttributes.set_element_ids",
+        "type": "vector<uint32>:100"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/SetAttributes.size"
+        "name": "fuchsia.accessibility.semantics/SetAttributes.size",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.accessibility.semantics/SetAttributes"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.checked"
+        "name": "fuchsia.accessibility.semantics/States.checked",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/CheckedState",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.checked_state"
+        "name": "fuchsia.accessibility.semantics/States.checked_state",
+        "type": "fuchsia.accessibility.semantics/CheckedState"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.focusable"
+        "name": "fuchsia.accessibility.semantics/States.focusable",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.has_input_focus"
+        "name": "fuchsia.accessibility.semantics/States.has_input_focus",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.hidden"
+        "name": "fuchsia.accessibility.semantics/States.hidden",
+        "type": "bool"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.range_value"
+        "name": "fuchsia.accessibility.semantics/States.range_value",
+        "type": "float32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.selected"
+        "name": "fuchsia.accessibility.semantics/States.selected",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.accessibility.semantics/ToggledState",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.toggled_state"
+        "name": "fuchsia.accessibility.semantics/States.toggled_state",
+        "type": "fuchsia.accessibility.semantics/ToggledState"
     },
     {
-        "declaration": "string:16384",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.value"
+        "name": "fuchsia.accessibility.semantics/States.value",
+        "type": "string:16384"
     },
     {
-        "declaration": "fuchsia.ui.gfx/vec2",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/States.viewport_offset"
+        "name": "fuchsia.accessibility.semantics/States.viewport_offset",
+        "type": "fuchsia.ui.gfx/vec2"
     },
     {
         "kind": "table",
         "name": "fuchsia.accessibility.semantics/States"
     },
     {
-        "declaration": "vector<uint32>:100",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableAttributes.column_header_ids"
+        "name": "fuchsia.accessibility.semantics/TableAttributes.column_header_ids",
+        "type": "vector<uint32>:100"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableAttributes.column_span"
+        "name": "fuchsia.accessibility.semantics/TableAttributes.column_span",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableAttributes.number_of_columns"
+        "name": "fuchsia.accessibility.semantics/TableAttributes.number_of_columns",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableAttributes.number_of_rows"
+        "name": "fuchsia.accessibility.semantics/TableAttributes.number_of_rows",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<uint32>:100",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableAttributes.row_header_ids"
+        "name": "fuchsia.accessibility.semantics/TableAttributes.row_header_ids",
+        "type": "vector<uint32>:100"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableAttributes.row_span"
+        "name": "fuchsia.accessibility.semantics/TableAttributes.row_span",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.accessibility.semantics/TableAttributes"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableCellAttributes.column_index"
+        "name": "fuchsia.accessibility.semantics/TableCellAttributes.column_index",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableCellAttributes.column_span"
+        "name": "fuchsia.accessibility.semantics/TableCellAttributes.column_span",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableCellAttributes.row_index"
+        "name": "fuchsia.accessibility.semantics/TableCellAttributes.row_index",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableCellAttributes.row_span"
+        "name": "fuchsia.accessibility.semantics/TableCellAttributes.row_span",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.accessibility.semantics/TableCellAttributes"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.accessibility.semantics/TableRowAttributes.row_index"
+        "name": "fuchsia.accessibility.semantics/TableRowAttributes.row_index",
+        "type": "uint32"
     },
     {
         "kind": "table",
@@ -668,10 +668,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.accessibility.semantics/ToggledState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",

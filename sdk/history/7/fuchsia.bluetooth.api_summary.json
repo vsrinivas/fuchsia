@@ -1,13 +1,13 @@
 [
     {
-        "declaration": "array<uint8,6>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Address.bytes"
+        "name": "fuchsia.bluetooth/Address.bytes",
+        "type": "array<uint8,6>"
     },
     {
-        "declaration": "fuchsia.bluetooth/AddressType",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Address.type"
+        "name": "fuchsia.bluetooth/Address.type",
+        "type": "fuchsia.bluetooth/AddressType"
     },
     {
         "kind": "struct",
@@ -24,10 +24,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint8",
         "kind": "enum",
         "name": "fuchsia.bluetooth/AddressType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint8"
     },
     {
         "kind": "enum/member",
@@ -295,15 +295,15 @@
         "value": "3200"
     },
     {
-        "declaration": "uint16",
         "kind": "enum",
         "name": "fuchsia.bluetooth/Appearance",
-        "strictness": "flexible"
+        "strictness": "flexible",
+        "type": "uint16"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Bool.value"
+        "name": "fuchsia.bluetooth/Bool.value",
+        "type": "bool"
     },
     {
         "kind": "struct",
@@ -320,34 +320,34 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.bluetooth/ConnectionRole",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/DeviceClass.value"
+        "name": "fuchsia.bluetooth/DeviceClass.value",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth/DeviceClass"
     },
     {
-        "declaration": "string:optional",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Error.description"
+        "name": "fuchsia.bluetooth/Error.description",
+        "type": "string:optional"
     },
     {
-        "declaration": "fuchsia.bluetooth/ErrorCode",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Error.error_code"
+        "name": "fuchsia.bluetooth/Error.error_code",
+        "type": "fuchsia.bluetooth/ErrorCode"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Error.protocol_error_code"
+        "name": "fuchsia.bluetooth/Error.protocol_error_code",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -414,144 +414,144 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.bluetooth/ErrorCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/HostId.value"
+        "name": "fuchsia.bluetooth/HostId.value",
+        "type": "uint64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth/HostId"
     },
     {
-        "declaration": "int8",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Int8.value"
+        "name": "fuchsia.bluetooth/Int8.value",
+        "type": "int8"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth/Int8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_AUDIO_VIDEO",
+        "type": "uint32",
         "value": "1024"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_COMPUTER",
+        "type": "uint32",
         "value": "256"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_HEALTH",
+        "type": "uint32",
         "value": "2304"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_IMAGING",
+        "type": "uint32",
         "value": "1536"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_LAN",
+        "type": "uint32",
         "value": "768"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_MASK",
+        "type": "uint32",
         "value": "7936"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_MISCELLANEOUS",
+        "type": "uint32",
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_PERIPHERAL",
+        "type": "uint32",
         "value": "1280"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_PHONE",
+        "type": "uint32",
         "value": "512"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_TOY",
+        "type": "uint32",
         "value": "2048"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_UNCATEGORIZED",
+        "type": "uint32",
         "value": "7936"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAJOR_DEVICE_CLASS_WEARABLE",
+        "type": "uint32",
         "value": "1792"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.bluetooth/MAX_DEVICE_NAME_LENGTH",
+        "type": "uint8",
         "value": "248"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/PeerId.value"
+        "name": "fuchsia.bluetooth/PeerId.value",
+        "type": "uint64"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth/PeerId"
     },
     {
-        "declaration": "box<fuchsia.bluetooth/Error>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Status.error"
+        "name": "fuchsia.bluetooth/Status.error",
+        "type": "box<fuchsia.bluetooth/Error>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth/Status"
     },
     {
-        "declaration": "uint16",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/UInt16.value"
+        "name": "fuchsia.bluetooth/UInt16.value",
+        "type": "uint16"
     },
     {
         "kind": "struct",
         "name": "fuchsia.bluetooth/UInt16"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.bluetooth/UUID_STRING_REPRESENTATION_LENGTH",
+        "type": "uint8",
         "value": "36"
     },
     {
-        "declaration": "array<uint8,16>",
         "kind": "struct/member",
-        "name": "fuchsia.bluetooth/Uuid.value"
+        "name": "fuchsia.bluetooth/Uuid.value",
+        "type": "array<uint8,16>"
     },
     {
         "kind": "struct",

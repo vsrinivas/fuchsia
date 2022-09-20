@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "(fuchsia.ui.activity/State state)",
         "kind": "protocol/member",
-        "name": "fuchsia.ui.activity.control/Control.SetState"
+        "name": "fuchsia.ui.activity.control/Control.SetState",
+        "type": "(fuchsia.ui.activity/State state)"
     },
     {
         "kind": "protocol",

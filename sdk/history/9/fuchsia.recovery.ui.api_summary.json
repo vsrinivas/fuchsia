@@ -1,50 +1,50 @@
 [
     {
-        "declaration": "() -> (fuchsia.recovery.ui/FactoryResetCountdownState state)",
         "kind": "protocol/member",
-        "name": "fuchsia.recovery.ui/FactoryResetCountdown.Watch"
+        "name": "fuchsia.recovery.ui/FactoryResetCountdown.Watch",
+        "type": "() -> (fuchsia.recovery.ui/FactoryResetCountdownState state)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.recovery.ui/FactoryResetCountdown"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.recovery.ui/FactoryResetCountdownState.scheduled_reset_time"
+        "name": "fuchsia.recovery.ui/FactoryResetCountdownState.scheduled_reset_time",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.recovery.ui/FactoryResetCountdownState"
     },
     {
-        "declaration": "(fuchsia.recovery.ui/Status status,float32 percent_complete) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.recovery.ui/ProgressRenderer.Render"
+        "name": "fuchsia.recovery.ui/ProgressRenderer.Render",
+        "type": "(fuchsia.recovery.ui/Status status,float32 percent_complete) -> ()"
     },
     {
-        "declaration": "(fuchsia.recovery.ui/ProgressRendererRender2Request payload) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.recovery.ui/ProgressRenderer.Render2"
+        "name": "fuchsia.recovery.ui/ProgressRenderer.Render2",
+        "type": "(fuchsia.recovery.ui/ProgressRendererRender2Request payload) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.recovery.ui/ProgressRenderer"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.elapsed_time"
+        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.elapsed_time",
+        "type": "int64"
     },
     {
-        "declaration": "float32",
         "kind": "table/member",
-        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.percent_complete"
+        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.percent_complete",
+        "type": "float32"
     },
     {
-        "declaration": "fuchsia.recovery.ui/Status",
         "kind": "table/member",
-        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.status"
+        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.status",
+        "type": "fuchsia.recovery.ui/Status"
     },
     {
         "kind": "table",
@@ -76,10 +76,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.recovery.ui/Status",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",

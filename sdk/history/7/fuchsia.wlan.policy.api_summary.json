@@ -1,142 +1,142 @@
 [
     {
-        "declaration": "(fuchsia.wlan.policy/NetworkConfig config,fuchsia.wlan.policy/ConnectivityMode mode,fuchsia.wlan.policy/OperatingBand band) -> (fuchsia.wlan.common/RequestStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/AccessPointController.StartAccessPoint"
+        "name": "fuchsia.wlan.policy/AccessPointController.StartAccessPoint",
+        "type": "(fuchsia.wlan.policy/NetworkConfig config,fuchsia.wlan.policy/ConnectivityMode mode,fuchsia.wlan.policy/OperatingBand band) -> (fuchsia.wlan.common/RequestStatus status)"
     },
     {
-        "declaration": "(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.common/RequestStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/AccessPointController.StopAccessPoint"
+        "name": "fuchsia.wlan.policy/AccessPointController.StopAccessPoint",
+        "type": "(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.common/RequestStatus status)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/AccessPointController.StopAllAccessPoints"
+        "name": "fuchsia.wlan.policy/AccessPointController.StopAllAccessPoints",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.wlan.policy/AccessPointController"
     },
     {
-        "declaration": "(client_end:fuchsia.wlan.policy/AccessPointStateUpdates updates)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/AccessPointListener.GetListener"
+        "name": "fuchsia.wlan.policy/AccessPointListener.GetListener",
+        "type": "(client_end:fuchsia.wlan.policy/AccessPointStateUpdates updates)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.wlan.policy/AccessPointListener"
     },
     {
-        "declaration": "(server_end:fuchsia.wlan.policy/AccessPointController requests,client_end:fuchsia.wlan.policy/AccessPointStateUpdates updates)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/AccessPointProvider.GetController"
+        "name": "fuchsia.wlan.policy/AccessPointProvider.GetController",
+        "type": "(server_end:fuchsia.wlan.policy/AccessPointController requests,client_end:fuchsia.wlan.policy/AccessPointStateUpdates updates)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.wlan.policy/AccessPointProvider"
     },
     {
-        "declaration": "fuchsia.wlan.policy/OperatingBand",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/AccessPointState.band"
+        "name": "fuchsia.wlan.policy/AccessPointState.band",
+        "type": "fuchsia.wlan.policy/OperatingBand"
     },
     {
-        "declaration": "fuchsia.wlan.policy/ConnectedClientInformation",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/AccessPointState.clients"
+        "name": "fuchsia.wlan.policy/AccessPointState.clients",
+        "type": "fuchsia.wlan.policy/ConnectedClientInformation"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/AccessPointState.frequency"
+        "name": "fuchsia.wlan.policy/AccessPointState.frequency",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.wlan.policy/NetworkIdentifier",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/AccessPointState.id"
+        "name": "fuchsia.wlan.policy/AccessPointState.id",
+        "type": "fuchsia.wlan.policy/NetworkIdentifier"
     },
     {
-        "declaration": "fuchsia.wlan.policy/ConnectivityMode",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/AccessPointState.mode"
+        "name": "fuchsia.wlan.policy/AccessPointState.mode",
+        "type": "fuchsia.wlan.policy/ConnectivityMode"
     },
     {
-        "declaration": "fuchsia.wlan.policy/OperatingState",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/AccessPointState.state"
+        "name": "fuchsia.wlan.policy/AccessPointState.state",
+        "type": "fuchsia.wlan.policy/OperatingState"
     },
     {
         "kind": "table",
         "name": "fuchsia.wlan.policy/AccessPointState"
     },
     {
-        "declaration": "(vector<fuchsia.wlan.policy/AccessPointState> access_points) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/AccessPointStateUpdates.OnAccessPointStateUpdate"
+        "name": "fuchsia.wlan.policy/AccessPointStateUpdates.OnAccessPointStateUpdate",
+        "type": "(vector<fuchsia.wlan.policy/AccessPointState> access_points) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.wlan.policy/AccessPointStateUpdates"
     },
     {
-        "declaration": "array<uint8,6>",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/Bss.bssid"
+        "name": "fuchsia.wlan.policy/Bss.bssid",
+        "type": "array<uint8,6>"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/Bss.frequency"
+        "name": "fuchsia.wlan.policy/Bss.frequency",
+        "type": "uint32"
     },
     {
-        "declaration": "int8",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/Bss.rssi"
+        "name": "fuchsia.wlan.policy/Bss.rssi",
+        "type": "int8"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/Bss.timestamp_nanos"
+        "name": "fuchsia.wlan.policy/Bss.timestamp_nanos",
+        "type": "int64"
     },
     {
         "kind": "table",
         "name": "fuchsia.wlan.policy/Bss"
     },
     {
-        "declaration": "(fuchsia.wlan.policy/NetworkIdentifier id) -> (fuchsia.wlan.common/RequestStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientController.Connect"
+        "name": "fuchsia.wlan.policy/ClientController.Connect",
+        "type": "(fuchsia.wlan.policy/NetworkIdentifier id) -> (fuchsia.wlan.common/RequestStatus status)"
     },
     {
-        "declaration": "(server_end:fuchsia.wlan.policy/NetworkConfigIterator iterator)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientController.GetSavedNetworks"
+        "name": "fuchsia.wlan.policy/ClientController.GetSavedNetworks",
+        "type": "(server_end:fuchsia.wlan.policy/NetworkConfigIterator iterator)"
     },
     {
-        "declaration": "(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.policy/ClientController_RemoveNetwork_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientController.RemoveNetwork"
+        "name": "fuchsia.wlan.policy/ClientController.RemoveNetwork",
+        "type": "(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.policy/ClientController_RemoveNetwork_Result result)"
     },
     {
-        "declaration": "(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.policy/ClientController_SaveNetwork_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientController.SaveNetwork"
+        "name": "fuchsia.wlan.policy/ClientController.SaveNetwork",
+        "type": "(fuchsia.wlan.policy/NetworkConfig config) -> (fuchsia.wlan.policy/ClientController_SaveNetwork_Result result)"
     },
     {
-        "declaration": "(server_end:fuchsia.wlan.policy/ScanResultIterator iterator)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientController.ScanForNetworks"
+        "name": "fuchsia.wlan.policy/ClientController.ScanForNetworks",
+        "type": "(server_end:fuchsia.wlan.policy/ScanResultIterator iterator)"
     },
     {
-        "declaration": "() -> (fuchsia.wlan.common/RequestStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientController.StartClientConnections"
+        "name": "fuchsia.wlan.policy/ClientController.StartClientConnections",
+        "type": "() -> (fuchsia.wlan.common/RequestStatus status)"
     },
     {
-        "declaration": "() -> (fuchsia.wlan.common/RequestStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientController.StopClientConnections"
+        "name": "fuchsia.wlan.policy/ClientController.StopClientConnections",
+        "type": "() -> (fuchsia.wlan.common/RequestStatus status)"
     },
     {
         "kind": "protocol",
@@ -147,14 +147,14 @@
         "name": "fuchsia.wlan.policy/ClientController_RemoveNetwork_Response"
     },
     {
-        "declaration": "fuchsia.wlan.policy/NetworkConfigChangeError",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/ClientController_RemoveNetwork_Result.err"
+        "name": "fuchsia.wlan.policy/ClientController_RemoveNetwork_Result.err",
+        "type": "fuchsia.wlan.policy/NetworkConfigChangeError"
     },
     {
-        "declaration": "fuchsia.wlan.policy/ClientController_RemoveNetwork_Response",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/ClientController_RemoveNetwork_Result.response"
+        "name": "fuchsia.wlan.policy/ClientController_RemoveNetwork_Result.response",
+        "type": "fuchsia.wlan.policy/ClientController_RemoveNetwork_Response"
     },
     {
         "kind": "union",
@@ -166,14 +166,14 @@
         "name": "fuchsia.wlan.policy/ClientController_SaveNetwork_Response"
     },
     {
-        "declaration": "fuchsia.wlan.policy/NetworkConfigChangeError",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/ClientController_SaveNetwork_Result.err"
+        "name": "fuchsia.wlan.policy/ClientController_SaveNetwork_Result.err",
+        "type": "fuchsia.wlan.policy/NetworkConfigChangeError"
     },
     {
-        "declaration": "fuchsia.wlan.policy/ClientController_SaveNetwork_Response",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/ClientController_SaveNetwork_Result.response"
+        "name": "fuchsia.wlan.policy/ClientController_SaveNetwork_Result.response",
+        "type": "fuchsia.wlan.policy/ClientController_SaveNetwork_Response"
     },
     {
         "kind": "union",
@@ -181,41 +181,41 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(client_end:fuchsia.wlan.policy/ClientStateUpdates updates)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientListener.GetListener"
+        "name": "fuchsia.wlan.policy/ClientListener.GetListener",
+        "type": "(client_end:fuchsia.wlan.policy/ClientStateUpdates updates)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.wlan.policy/ClientListener"
     },
     {
-        "declaration": "(server_end:fuchsia.wlan.policy/ClientController requests,client_end:fuchsia.wlan.policy/ClientStateUpdates updates)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientProvider.GetController"
+        "name": "fuchsia.wlan.policy/ClientProvider.GetController",
+        "type": "(server_end:fuchsia.wlan.policy/ClientController requests,client_end:fuchsia.wlan.policy/ClientStateUpdates updates)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.wlan.policy/ClientProvider"
     },
     {
-        "declaration": "vector<fuchsia.wlan.policy/NetworkState>",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/ClientStateSummary.networks"
+        "name": "fuchsia.wlan.policy/ClientStateSummary.networks",
+        "type": "vector<fuchsia.wlan.policy/NetworkState>"
     },
     {
-        "declaration": "fuchsia.wlan.policy/WlanClientState",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/ClientStateSummary.state"
+        "name": "fuchsia.wlan.policy/ClientStateSummary.state",
+        "type": "fuchsia.wlan.policy/WlanClientState"
     },
     {
         "kind": "table",
         "name": "fuchsia.wlan.policy/ClientStateSummary"
     },
     {
-        "declaration": "(fuchsia.wlan.policy/ClientStateSummary summary) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ClientStateUpdates.OnClientStateUpdate"
+        "name": "fuchsia.wlan.policy/ClientStateUpdates.OnClientStateUpdate",
+        "type": "(fuchsia.wlan.policy/ClientStateSummary summary) -> ()"
     },
     {
         "kind": "protocol",
@@ -237,15 +237,15 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/Compatibility",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint8",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/ConnectedClientInformation.count"
+        "name": "fuchsia.wlan.policy/ConnectedClientInformation.count",
+        "type": "uint8"
     },
     {
         "kind": "table",
@@ -272,10 +272,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/ConnectionState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -288,25 +288,25 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/ConnectivityMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.wlan.policy/Empty",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/Credential.none"
+        "name": "fuchsia.wlan.policy/Credential.none",
+        "type": "fuchsia.wlan.policy/Empty"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/Credential.password"
+        "name": "fuchsia.wlan.policy/Credential.password",
+        "type": "vector<uint8>"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/Credential.psk"
+        "name": "fuchsia.wlan.policy/Credential.psk",
+        "type": "vector<uint8>"
     },
     {
         "kind": "union",
@@ -334,24 +334,24 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/DisconnectStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.wlan.policy/Empty"
     },
     {
-        "declaration": "fuchsia.wlan.policy/Credential",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/NetworkConfig.credential"
+        "name": "fuchsia.wlan.policy/NetworkConfig.credential",
+        "type": "fuchsia.wlan.policy/Credential"
     },
     {
-        "declaration": "fuchsia.wlan.policy/NetworkIdentifier",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/NetworkConfig.id"
+        "name": "fuchsia.wlan.policy/NetworkConfig.id",
+        "type": "fuchsia.wlan.policy/NetworkIdentifier"
     },
     {
         "kind": "table",
@@ -393,48 +393,48 @@
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/NetworkConfigChangeError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (vector<fuchsia.wlan.policy/NetworkConfig> configs)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/NetworkConfigIterator.GetNext"
+        "name": "fuchsia.wlan.policy/NetworkConfigIterator.GetNext",
+        "type": "() -> (vector<fuchsia.wlan.policy/NetworkConfig> configs)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.wlan.policy/NetworkConfigIterator"
     },
     {
-        "declaration": "vector<uint8>:32",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.policy/NetworkIdentifier.ssid"
+        "name": "fuchsia.wlan.policy/NetworkIdentifier.ssid",
+        "type": "vector<uint8>:32"
     },
     {
-        "declaration": "fuchsia.wlan.policy/SecurityType",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.policy/NetworkIdentifier.type"
+        "name": "fuchsia.wlan.policy/NetworkIdentifier.type",
+        "type": "fuchsia.wlan.policy/SecurityType"
     },
     {
         "kind": "struct",
         "name": "fuchsia.wlan.policy/NetworkIdentifier"
     },
     {
-        "declaration": "fuchsia.wlan.policy/NetworkIdentifier",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/NetworkState.id"
+        "name": "fuchsia.wlan.policy/NetworkState.id",
+        "type": "fuchsia.wlan.policy/NetworkIdentifier"
     },
     {
-        "declaration": "fuchsia.wlan.policy/ConnectionState",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/NetworkState.state"
+        "name": "fuchsia.wlan.policy/NetworkState.state",
+        "type": "fuchsia.wlan.policy/ConnectionState"
     },
     {
-        "declaration": "fuchsia.wlan.policy/DisconnectStatus",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/NetworkState.status"
+        "name": "fuchsia.wlan.policy/NetworkState.status",
+        "type": "fuchsia.wlan.policy/DisconnectStatus"
     },
     {
         "kind": "table",
@@ -456,10 +456,10 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/OperatingBand",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -477,10 +477,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/OperatingState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -493,57 +493,57 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/ScanErrorCode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.wlan.policy/Compatibility",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/ScanResult.compatibility"
+        "name": "fuchsia.wlan.policy/ScanResult.compatibility",
+        "type": "fuchsia.wlan.policy/Compatibility"
     },
     {
-        "declaration": "vector<fuchsia.wlan.policy/Bss>",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/ScanResult.entries"
+        "name": "fuchsia.wlan.policy/ScanResult.entries",
+        "type": "vector<fuchsia.wlan.policy/Bss>"
     },
     {
-        "declaration": "fuchsia.wlan.policy/NetworkIdentifier",
         "kind": "table/member",
-        "name": "fuchsia.wlan.policy/ScanResult.id"
+        "name": "fuchsia.wlan.policy/ScanResult.id",
+        "type": "fuchsia.wlan.policy/NetworkIdentifier"
     },
     {
         "kind": "table",
         "name": "fuchsia.wlan.policy/ScanResult"
     },
     {
-        "declaration": "() -> (fuchsia.wlan.policy/ScanResultIterator_GetNext_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.wlan.policy/ScanResultIterator.GetNext"
+        "name": "fuchsia.wlan.policy/ScanResultIterator.GetNext",
+        "type": "() -> (fuchsia.wlan.policy/ScanResultIterator_GetNext_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.wlan.policy/ScanResultIterator"
     },
     {
-        "declaration": "vector<fuchsia.wlan.policy/ScanResult>",
         "kind": "struct/member",
-        "name": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Response.scan_results"
+        "name": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Response.scan_results",
+        "type": "vector<fuchsia.wlan.policy/ScanResult>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Response"
     },
     {
-        "declaration": "fuchsia.wlan.policy/ScanErrorCode",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Result.err"
+        "name": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Result.err",
+        "type": "fuchsia.wlan.policy/ScanErrorCode"
     },
     {
-        "declaration": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Response",
         "kind": "union/member",
-        "name": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Result.response"
+        "name": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Result.response",
+        "type": "fuchsia.wlan.policy/ScanResultIterator_GetNext_Response"
     },
     {
         "kind": "union",
@@ -576,10 +576,10 @@
         "value": "5"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/SecurityType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -592,10 +592,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.wlan.policy/WlanClientState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "library",

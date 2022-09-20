@@ -1,62 +1,62 @@
 [
     {
-        "declaration": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ClearKey.AddDataStore"
+        "name": "fuchsia.media.drm/ClearKey.AddDataStore",
+        "type": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)"
     },
     {
-        "declaration": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ClearKey.CreateContentDecryptionModule2"
+        "name": "fuchsia.media.drm/ClearKey.CreateContentDecryptionModule2",
+        "type": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)"
     },
     {
-        "declaration": "(uint32 data_store_id) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ClearKey.DestroyDataStoreAndConfirm"
+        "name": "fuchsia.media.drm/ClearKey.DestroyDataStoreAndConfirm",
+        "type": "(uint32 data_store_id) -> ()"
     },
     {
-        "declaration": "() -> (fuchsia.media.drm/KeySystemProperties properties)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ClearKey.GetProperties"
+        "name": "fuchsia.media.drm/ClearKey.GetProperties",
+        "type": "() -> (fuchsia.media.drm/KeySystemProperties properties)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.drm/ClearKey"
     },
     {
-        "declaration": "(fuchsia.media.drm/DecryptorParams params,server_end:fuchsia.media/StreamProcessor decryptor)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule.CreateDecryptor"
+        "name": "fuchsia.media.drm/ContentDecryptionModule.CreateDecryptor",
+        "type": "(fuchsia.media.drm/DecryptorParams params,server_end:fuchsia.media/StreamProcessor decryptor)"
     },
     {
-        "declaration": "(fuchsia.media.drm/LicenseSessionType session_type,server_end:fuchsia.media.drm/LicenseSession license_session) -> (string:512 session_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule.CreateLicenseSession"
+        "name": "fuchsia.media.drm/ContentDecryptionModule.CreateLicenseSession",
+        "type": "(fuchsia.media.drm/LicenseSessionType session_type,server_end:fuchsia.media.drm/LicenseSession license_session) -> (string:512 session_id)"
     },
     {
-        "declaration": "(string:16 hdcp_version) -> (fuchsia.media.drm/KeyStatus key_status)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule.GetKeyStatusForHdcpVersion"
+        "name": "fuchsia.media.drm/ContentDecryptionModule.GetKeyStatusForHdcpVersion",
+        "type": "(string:16 hdcp_version) -> (fuchsia.media.drm/KeyStatus key_status)"
     },
     {
-        "declaration": "() -> (vector<string:100> encryption_schemes)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule.GetSupportedEncryptionSchemes"
+        "name": "fuchsia.media.drm/ContentDecryptionModule.GetSupportedEncryptionSchemes",
+        "type": "() -> (vector<string:100> encryption_schemes)"
     },
     {
-        "declaration": "(string:512 session_id,server_end:fuchsia.media.drm/LicenseSession license_session)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule.LoadLicenseSession"
+        "name": "fuchsia.media.drm/ContentDecryptionModule.LoadLicenseSession",
+        "type": "(string:512 session_id,server_end:fuchsia.media.drm/LicenseSession license_session)"
     },
     {
-        "declaration": " -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule.OnProvisioned"
+        "name": "fuchsia.media.drm/ContentDecryptionModule.OnProvisioned",
+        "type": " -> ()"
     },
     {
-        "declaration": "(vector<uint8> certificate) -> (fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule.SetServerCertificate"
+        "name": "fuchsia.media.drm/ContentDecryptionModule.SetServerCertificate",
+        "type": "(vector<uint8> certificate) -> (fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result result)"
     },
     {
         "kind": "protocol",
@@ -67,14 +67,14 @@
         "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Response"
     },
     {
-        "declaration": "fuchsia.media.drm/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result.err"
+        "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result.err",
+        "type": "fuchsia.media.drm/Error"
     },
     {
-        "declaration": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result.response"
+        "name": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Result.response",
+        "type": "fuchsia.media.drm/ContentDecryptionModule_SetServerCertificate_Response"
     },
     {
         "kind": "union",
@@ -82,19 +82,19 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.io/Directory",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/DataStoreParams.data_directory"
+        "name": "fuchsia.media.drm/DataStoreParams.data_directory",
+        "type": "fuchsia.io/Directory"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/DataStoreParams.provision_server_certificate"
+        "name": "fuchsia.media.drm/DataStoreParams.provision_server_certificate",
+        "type": "vector<uint8>"
     },
     {
-        "declaration": "client_end:fuchsia.media.drm/ProvisioningFetcher",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/DataStoreParams.provisioning_fetcher"
+        "name": "fuchsia.media.drm/DataStoreParams.provisioning_fetcher",
+        "type": "client_end:fuchsia.media.drm/ProvisioningFetcher"
     },
     {
         "kind": "table",
@@ -102,14 +102,14 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.media/FormatDetails",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/DecryptorParams.input_details"
+        "name": "fuchsia.media.drm/DecryptorParams.input_details",
+        "type": "fuchsia.media/FormatDetails"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/DecryptorParams.require_secure_mode"
+        "name": "fuchsia.media.drm/DecryptorParams.require_secure_mode",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -146,10 +146,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.drm/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "bits/member",
@@ -162,20 +162,20 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.media.drm/Features",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<uint8>:16",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/KeyState.key_id"
+        "name": "fuchsia.media.drm/KeyState.key_id",
+        "type": "vector<uint8>:16"
     },
     {
-        "declaration": "fuchsia.media.drm/KeyStatus",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/KeyState.status"
+        "name": "fuchsia.media.drm/KeyState.status",
+        "type": "fuchsia.media.drm/KeyStatus"
     },
     {
         "kind": "table",
@@ -217,59 +217,59 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.drm/KeyStatus",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/KeySystem.AddDataStore"
+        "name": "fuchsia.media.drm/KeySystem.AddDataStore",
+        "type": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)"
     },
     {
-        "declaration": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/KeySystem.CreateContentDecryptionModule2"
+        "name": "fuchsia.media.drm/KeySystem.CreateContentDecryptionModule2",
+        "type": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)"
     },
     {
-        "declaration": "(uint32 data_store_id) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/KeySystem.DestroyDataStoreAndConfirm"
+        "name": "fuchsia.media.drm/KeySystem.DestroyDataStoreAndConfirm",
+        "type": "(uint32 data_store_id) -> ()"
     },
     {
-        "declaration": "() -> (fuchsia.media.drm/KeySystemProperties properties)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/KeySystem.GetProperties"
+        "name": "fuchsia.media.drm/KeySystem.GetProperties",
+        "type": "() -> (fuchsia.media.drm/KeySystemProperties properties)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.drm/KeySystem"
     },
     {
-        "declaration": "fuchsia.media.drm/Requirement",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/KeySystemProperties.data_store_requirement"
+        "name": "fuchsia.media.drm/KeySystemProperties.data_store_requirement",
+        "type": "fuchsia.media.drm/Requirement"
     },
     {
-        "declaration": "vector<string:100>",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/KeySystemProperties.encryption_schemes"
+        "name": "fuchsia.media.drm/KeySystemProperties.encryption_schemes",
+        "type": "vector<string:100>"
     },
     {
-        "declaration": "fuchsia.media.drm/Features",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/KeySystemProperties.features"
+        "name": "fuchsia.media.drm/KeySystemProperties.features",
+        "type": "fuchsia.media.drm/Features"
     },
     {
-        "declaration": "vector<string:100>",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/KeySystemProperties.init_data_types"
+        "name": "fuchsia.media.drm/KeySystemProperties.init_data_types",
+        "type": "vector<string:100>"
     },
     {
-        "declaration": "vector<fuchsia.media.drm/LicenseSessionType>",
         "kind": "table/member",
-        "name": "fuchsia.media.drm/KeySystemProperties.license_session_types"
+        "name": "fuchsia.media.drm/KeySystemProperties.license_session_types",
+        "type": "vector<fuchsia.media.drm/LicenseSessionType>"
     },
     {
         "kind": "table",
@@ -280,14 +280,14 @@
         "name": "fuchsia.media.drm/KeySystem_AddDataStore_Response"
     },
     {
-        "declaration": "fuchsia.media.drm/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/KeySystem_AddDataStore_Result.err"
+        "name": "fuchsia.media.drm/KeySystem_AddDataStore_Result.err",
+        "type": "fuchsia.media.drm/Error"
     },
     {
-        "declaration": "fuchsia.media.drm/KeySystem_AddDataStore_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/KeySystem_AddDataStore_Result.response"
+        "name": "fuchsia.media.drm/KeySystem_AddDataStore_Result.response",
+        "type": "fuchsia.media.drm/KeySystem_AddDataStore_Response"
     },
     {
         "kind": "union",
@@ -295,52 +295,52 @@
         "strictness": "strict"
     },
     {
-        "declaration": "string:100",
         "kind": "const",
         "name": "fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_CENC",
+        "type": "string:100",
         "value": "cenc"
     },
     {
-        "declaration": "string:100",
         "kind": "const",
         "name": "fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_HLS",
+        "type": "string:100",
         "value": "hls"
     },
     {
-        "declaration": "string:100",
         "kind": "const",
         "name": "fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_KEYIDS",
+        "type": "string:100",
         "value": "keyids"
     },
     {
-        "declaration": "string:100",
         "kind": "const",
         "name": "fuchsia.media.drm/LICENSE_INIT_DATA_TYPE_WEBM",
+        "type": "string:100",
         "value": "webm"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "struct/member",
-        "name": "fuchsia.media.drm/LicenseInitData.data"
+        "name": "fuchsia.media.drm/LicenseInitData.data",
+        "type": "vector<uint8>"
     },
     {
-        "declaration": "string:100",
         "kind": "struct/member",
-        "name": "fuchsia.media.drm/LicenseInitData.type"
+        "name": "fuchsia.media.drm/LicenseInitData.type",
+        "type": "string:100"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.drm/LicenseInitData"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.media.drm/LicenseMessage.message"
+        "name": "fuchsia.media.drm/LicenseMessage.message",
+        "type": "fuchsia.mem/Buffer"
     },
     {
-        "declaration": "fuchsia.media.drm/LicenseMessageType",
         "kind": "struct/member",
-        "name": "fuchsia.media.drm/LicenseMessage.type"
+        "name": "fuchsia.media.drm/LicenseMessage.type",
+        "type": "fuchsia.media.drm/LicenseMessageType"
     },
     {
         "kind": "struct",
@@ -363,15 +363,15 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.drm/LicenseMessageType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.media.drm/LicenseServerMessage.message"
+        "name": "fuchsia.media.drm/LicenseServerMessage.message",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "struct",
@@ -379,39 +379,39 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(fuchsia.media.drm/DecryptorParams params,server_end:fuchsia.media/StreamProcessor decryptor)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/LicenseSession.CreateDecryptor"
+        "name": "fuchsia.media.drm/LicenseSession.CreateDecryptor",
+        "type": "(fuchsia.media.drm/DecryptorParams params,server_end:fuchsia.media/StreamProcessor decryptor)"
     },
     {
-        "declaration": "() -> (fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/LicenseSession.GenerateLicenseRelease"
+        "name": "fuchsia.media.drm/LicenseSession.GenerateLicenseRelease",
+        "type": "() -> (fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result result)"
     },
     {
-        "declaration": "(fuchsia.media.drm/LicenseInitData init_data) -> (fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/LicenseSession.GenerateLicenseRequest"
+        "name": "fuchsia.media.drm/LicenseSession.GenerateLicenseRequest",
+        "type": "(fuchsia.media.drm/LicenseInitData init_data) -> (fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result result)"
     },
     {
-        "declaration": " -> (vector<fuchsia.media.drm/KeyState> key_states)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/LicenseSession.OnKeyStatesChanged"
+        "name": "fuchsia.media.drm/LicenseSession.OnKeyStatesChanged",
+        "type": " -> (vector<fuchsia.media.drm/KeyState> key_states)"
     },
     {
-        "declaration": " -> (fuchsia.media.drm/LicenseMessage request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/LicenseSession.OnLicenseMessageGenerated"
+        "name": "fuchsia.media.drm/LicenseSession.OnLicenseMessageGenerated",
+        "type": " -> (fuchsia.media.drm/LicenseMessage request)"
     },
     {
-        "declaration": " -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/LicenseSession.OnReady"
+        "name": "fuchsia.media.drm/LicenseSession.OnReady",
+        "type": " -> ()"
     },
     {
-        "declaration": "(fuchsia.media.drm/LicenseServerMessage response) -> (fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/LicenseSession.ProcessLicenseResponse"
+        "name": "fuchsia.media.drm/LicenseSession.ProcessLicenseResponse",
+        "type": "(fuchsia.media.drm/LicenseServerMessage response) -> (fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result result)"
     },
     {
         "kind": "protocol",
@@ -428,24 +428,24 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.drm/LicenseSessionType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Response"
     },
     {
-        "declaration": "fuchsia.media.drm/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result.err"
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result.err",
+        "type": "fuchsia.media.drm/Error"
     },
     {
-        "declaration": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result.response"
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Result.response",
+        "type": "fuchsia.media.drm/LicenseSession_GenerateLicenseRelease_Response"
     },
     {
         "kind": "union",
@@ -457,14 +457,14 @@
         "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Response"
     },
     {
-        "declaration": "fuchsia.media.drm/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result.err"
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result.err",
+        "type": "fuchsia.media.drm/Error"
     },
     {
-        "declaration": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result.response"
+        "name": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Result.response",
+        "type": "fuchsia.media.drm/LicenseSession_GenerateLicenseRequest_Response"
     },
     {
         "kind": "union",
@@ -476,14 +476,14 @@
         "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Response"
     },
     {
-        "declaration": "fuchsia.media.drm/Error",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result.err"
+        "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result.err",
+        "type": "fuchsia.media.drm/Error"
     },
     {
-        "declaration": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Response",
         "kind": "union/member",
-        "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result.response"
+        "name": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Result.response",
+        "type": "fuchsia.media.drm/LicenseSession_ProcessLicenseResponse_Response"
     },
     {
         "kind": "union",
@@ -491,71 +491,71 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media.drm/MAX_HDCP_VERSION_SIZE",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media.drm/MAX_LICENSE_INIT_DATA_TYPE_SIZE",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media.drm/MAX_SESSION_ID_SIZE",
+        "type": "uint32",
         "value": "512"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media.drm/NO_DATA_STORE",
+        "type": "uint32",
         "value": "0"
     },
     {
-        "declaration": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/PlayReady.AddDataStore"
+        "name": "fuchsia.media.drm/PlayReady.AddDataStore",
+        "type": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)"
     },
     {
-        "declaration": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/PlayReady.CreateContentDecryptionModule2"
+        "name": "fuchsia.media.drm/PlayReady.CreateContentDecryptionModule2",
+        "type": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)"
     },
     {
-        "declaration": "(uint32 data_store_id) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/PlayReady.DestroyDataStoreAndConfirm"
+        "name": "fuchsia.media.drm/PlayReady.DestroyDataStoreAndConfirm",
+        "type": "(uint32 data_store_id) -> ()"
     },
     {
-        "declaration": "() -> (fuchsia.media.drm/KeySystemProperties properties)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/PlayReady.GetProperties"
+        "name": "fuchsia.media.drm/PlayReady.GetProperties",
+        "type": "() -> (fuchsia.media.drm/KeySystemProperties properties)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.drm/PlayReady"
     },
     {
-        "declaration": "(fuchsia.media.drm/ProvisioningRequest request) -> (fuchsia.media.drm/ProvisioningResponse response)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/ProvisioningFetcher.Fetch"
+        "name": "fuchsia.media.drm/ProvisioningFetcher.Fetch",
+        "type": "(fuchsia.media.drm/ProvisioningRequest request) -> (fuchsia.media.drm/ProvisioningResponse response)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.drm/ProvisioningFetcher"
     },
     {
-        "declaration": "string:<4096,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.media.drm/ProvisioningRequest.default_provisioning_server_url"
+        "name": "fuchsia.media.drm/ProvisioningRequest.default_provisioning_server_url",
+        "type": "string:<4096,optional>"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.media.drm/ProvisioningRequest.message"
+        "name": "fuchsia.media.drm/ProvisioningRequest.message",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "struct",
@@ -563,9 +563,9 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "fuchsia.mem/Buffer",
         "kind": "struct/member",
-        "name": "fuchsia.media.drm/ProvisioningResponse.message"
+        "name": "fuchsia.media.drm/ProvisioningResponse.message",
+        "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "struct",
@@ -588,30 +588,30 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.drm/Requirement",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/Widevine.AddDataStore"
+        "name": "fuchsia.media.drm/Widevine.AddDataStore",
+        "type": "(uint32 data_store_id,fuchsia.media.drm/DataStoreParams data_store_params) -> (fuchsia.media.drm/KeySystem_AddDataStore_Result result)"
     },
     {
-        "declaration": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/Widevine.CreateContentDecryptionModule2"
+        "name": "fuchsia.media.drm/Widevine.CreateContentDecryptionModule2",
+        "type": "(uint32 data_store_id,server_end:fuchsia.media.drm/ContentDecryptionModule cdm)"
     },
     {
-        "declaration": "(uint32 data_store_id) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/Widevine.DestroyDataStoreAndConfirm"
+        "name": "fuchsia.media.drm/Widevine.DestroyDataStoreAndConfirm",
+        "type": "(uint32 data_store_id) -> ()"
     },
     {
-        "declaration": "() -> (fuchsia.media.drm/KeySystemProperties properties)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.drm/Widevine.GetProperties"
+        "name": "fuchsia.media.drm/Widevine.GetProperties",
+        "type": "() -> (fuchsia.media.drm/KeySystemProperties properties)"
     },
     {
         "kind": "protocol",

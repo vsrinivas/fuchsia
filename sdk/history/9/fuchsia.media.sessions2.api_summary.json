@@ -1,8 +1,8 @@
 [
     {
-        "declaration": "() -> (client_end:<fuchsia.media.sessions2/SessionControl,optional> session)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/ActiveSession.WatchActiveSession"
+        "name": "fuchsia.media.sessions2/ActiveSession.WatchActiveSession",
+        "type": "() -> (client_end:<fuchsia.media.sessions2/SessionControl,optional> session)"
     },
     {
         "kind": "protocol",
@@ -39,20 +39,20 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.sessions2/ContentType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(uint64 session_id,server_end:fuchsia.media.sessions2/SessionControl session_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Discovery.ConnectToSession"
+        "name": "fuchsia.media.sessions2/Discovery.ConnectToSession",
+        "type": "(uint64 session_id,server_end:fuchsia.media.sessions2/SessionControl session_control_request)"
     },
     {
-        "declaration": "(fuchsia.media.sessions2/WatchOptions watch_options,client_end:fuchsia.media.sessions2/SessionsWatcher session_watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Discovery.WatchSessions"
+        "name": "fuchsia.media.sessions2/Discovery.WatchSessions",
+        "type": "(fuchsia.media.sessions2/WatchOptions watch_options,client_end:fuchsia.media.sessions2/SessionsWatcher session_watcher)"
     },
     {
         "kind": "protocol",
@@ -64,25 +64,25 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.sessions2/Error",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media.sessions2/ImageSizeVariant.height"
+        "name": "fuchsia.media.sessions2/ImageSizeVariant.height",
+        "type": "uint32"
     },
     {
-        "declaration": "string:4096",
         "kind": "struct/member",
-        "name": "fuchsia.media.sessions2/ImageSizeVariant.url"
+        "name": "fuchsia.media.sessions2/ImageSizeVariant.url",
+        "type": "string:4096"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media.sessions2/ImageSizeVariant.width"
+        "name": "fuchsia.media.sessions2/ImageSizeVariant.width",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -99,20 +99,20 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.sessions2/InterruptionBehavior",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media.sessions2/MediaImageType",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/MediaImage.image_type"
+        "name": "fuchsia.media.sessions2/MediaImage.image_type",
+        "type": "fuchsia.media.sessions2/MediaImageType"
     },
     {
-        "declaration": "vector<fuchsia.media.sessions2/ImageSizeVariant>:16",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/MediaImage.sizes"
+        "name": "fuchsia.media.sessions2/MediaImage.sizes",
+        "type": "vector<fuchsia.media.sessions2/ImageSizeVariant>:16"
     },
     {
         "kind": "table",
@@ -129,98 +129,98 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.sessions2/MediaImageType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(uint64 session_id,server_end:fuchsia.media.sessions2/SessionObserver session_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/ObserverDiscovery.ConnectToSession"
+        "name": "fuchsia.media.sessions2/ObserverDiscovery.ConnectToSession",
+        "type": "(uint64 session_id,server_end:fuchsia.media.sessions2/SessionObserver session_request)"
     },
     {
-        "declaration": "(fuchsia.media.sessions2/WatchOptions watch_options,client_end:fuchsia.media.sessions2/SessionsWatcher sessions_watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/ObserverDiscovery.WatchSessions"
+        "name": "fuchsia.media.sessions2/ObserverDiscovery.WatchSessions",
+        "type": "(fuchsia.media.sessions2/WatchOptions watch_options,client_end:fuchsia.media.sessions2/SessionsWatcher sessions_watcher)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.sessions2/ObserverDiscovery"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.BindVolumeControl"
+        "name": "fuchsia.media.sessions2/Player.BindVolumeControl",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.NextItem"
+        "name": "fuchsia.media.sessions2/Player.NextItem",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.Pause"
+        "name": "fuchsia.media.sessions2/Player.Pause",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.Play"
+        "name": "fuchsia.media.sessions2/Player.Play",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.PrevItem"
+        "name": "fuchsia.media.sessions2/Player.PrevItem",
+        "type": "()"
     },
     {
-        "declaration": "(int64 position)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.Seek"
+        "name": "fuchsia.media.sessions2/Player.Seek",
+        "type": "(int64 position)"
     },
     {
-        "declaration": "(float32 playback_rate)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.SetPlaybackRate"
+        "name": "fuchsia.media.sessions2/Player.SetPlaybackRate",
+        "type": "(float32 playback_rate)"
     },
     {
-        "declaration": "(fuchsia.media.sessions2/RepeatMode repeat_mode)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.SetRepeatMode"
+        "name": "fuchsia.media.sessions2/Player.SetRepeatMode",
+        "type": "(fuchsia.media.sessions2/RepeatMode repeat_mode)"
     },
     {
-        "declaration": "(bool shuffle_on)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.SetShuffleMode"
+        "name": "fuchsia.media.sessions2/Player.SetShuffleMode",
+        "type": "(bool shuffle_on)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.SkipForward"
+        "name": "fuchsia.media.sessions2/Player.SkipForward",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.SkipReverse"
+        "name": "fuchsia.media.sessions2/Player.SkipReverse",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.Stop"
+        "name": "fuchsia.media.sessions2/Player.Stop",
+        "type": "()"
     },
     {
-        "declaration": "() -> (fuchsia.media.sessions2/PlayerInfoDelta player_info_delta)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Player.WatchInfoChange"
+        "name": "fuchsia.media.sessions2/Player.WatchInfoChange",
+        "type": "() -> (fuchsia.media.sessions2/PlayerInfoDelta player_info_delta)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.sessions2/Player"
     },
     {
-        "declaration": "fuchsia.media.sessions2/PlayerCapabilityFlags",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerCapabilities.flags"
+        "name": "fuchsia.media.sessions2/PlayerCapabilities.flags",
+        "type": "fuchsia.media.sessions2/PlayerCapabilityFlags"
     },
     {
         "kind": "table",
@@ -287,118 +287,118 @@
         "value": "32"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.media.sessions2/PlayerCapabilityFlags",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.BindVolumeControl"
+        "name": "fuchsia.media.sessions2/PlayerControl.BindVolumeControl",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.NextItem"
+        "name": "fuchsia.media.sessions2/PlayerControl.NextItem",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.Pause"
+        "name": "fuchsia.media.sessions2/PlayerControl.Pause",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.Play"
+        "name": "fuchsia.media.sessions2/PlayerControl.Play",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.PrevItem"
+        "name": "fuchsia.media.sessions2/PlayerControl.PrevItem",
+        "type": "()"
     },
     {
-        "declaration": "(int64 position)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.Seek"
+        "name": "fuchsia.media.sessions2/PlayerControl.Seek",
+        "type": "(int64 position)"
     },
     {
-        "declaration": "(float32 playback_rate)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.SetPlaybackRate"
+        "name": "fuchsia.media.sessions2/PlayerControl.SetPlaybackRate",
+        "type": "(float32 playback_rate)"
     },
     {
-        "declaration": "(fuchsia.media.sessions2/RepeatMode repeat_mode)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.SetRepeatMode"
+        "name": "fuchsia.media.sessions2/PlayerControl.SetRepeatMode",
+        "type": "(fuchsia.media.sessions2/RepeatMode repeat_mode)"
     },
     {
-        "declaration": "(bool shuffle_on)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.SetShuffleMode"
+        "name": "fuchsia.media.sessions2/PlayerControl.SetShuffleMode",
+        "type": "(bool shuffle_on)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.SkipForward"
+        "name": "fuchsia.media.sessions2/PlayerControl.SkipForward",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.SkipReverse"
+        "name": "fuchsia.media.sessions2/PlayerControl.SkipReverse",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/PlayerControl.Stop"
+        "name": "fuchsia.media.sessions2/PlayerControl.Stop",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.sessions2/PlayerControl"
     },
     {
-        "declaration": "fuchsia.media.sessions2/InterruptionBehavior",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerInfoDelta.interruption_behavior"
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.interruption_behavior",
+        "type": "fuchsia.media.sessions2/InterruptionBehavior"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerInfoDelta.local"
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.local",
+        "type": "bool"
     },
     {
-        "declaration": "vector<fuchsia.media.sessions2/MediaImage>:16",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerInfoDelta.media_images"
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.media_images",
+        "type": "vector<fuchsia.media.sessions2/MediaImage>:16"
     },
     {
-        "declaration": "fuchsia.media/Metadata",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerInfoDelta.metadata"
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.metadata",
+        "type": "fuchsia.media/Metadata"
     },
     {
-        "declaration": "fuchsia.media.sessions2/PlayerCapabilities",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerInfoDelta.player_capabilities"
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.player_capabilities",
+        "type": "fuchsia.media.sessions2/PlayerCapabilities"
     },
     {
-        "declaration": "fuchsia.media.sessions2/PlayerStatus",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerInfoDelta.player_status"
+        "name": "fuchsia.media.sessions2/PlayerInfoDelta.player_status",
+        "type": "fuchsia.media.sessions2/PlayerStatus"
     },
     {
         "kind": "table",
         "name": "fuchsia.media.sessions2/PlayerInfoDelta"
     },
     {
-        "declaration": "string:1000",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerRegistration.domain"
+        "name": "fuchsia.media.sessions2/PlayerRegistration.domain",
+        "type": "string:1000"
     },
     {
-        "declaration": "fuchsia.media/AudioRenderUsage",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerRegistration.usage"
+        "name": "fuchsia.media.sessions2/PlayerRegistration.usage",
+        "type": "fuchsia.media/AudioRenderUsage"
     },
     {
         "kind": "table",
@@ -430,59 +430,59 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.sessions2/PlayerState",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media.sessions2/ContentType",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerStatus.content_type"
+        "name": "fuchsia.media.sessions2/PlayerStatus.content_type",
+        "type": "fuchsia.media.sessions2/ContentType"
     },
     {
-        "declaration": "int64",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerStatus.duration"
+        "name": "fuchsia.media.sessions2/PlayerStatus.duration",
+        "type": "int64"
     },
     {
-        "declaration": "fuchsia.media.sessions2/Error",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerStatus.error"
+        "name": "fuchsia.media.sessions2/PlayerStatus.error",
+        "type": "fuchsia.media.sessions2/Error"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerStatus.is_live"
+        "name": "fuchsia.media.sessions2/PlayerStatus.is_live",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.media.sessions2/PlayerState",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerStatus.player_state"
+        "name": "fuchsia.media.sessions2/PlayerStatus.player_state",
+        "type": "fuchsia.media.sessions2/PlayerState"
     },
     {
-        "declaration": "fuchsia.media.sessions2/RepeatMode",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerStatus.repeat_mode"
+        "name": "fuchsia.media.sessions2/PlayerStatus.repeat_mode",
+        "type": "fuchsia.media.sessions2/RepeatMode"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerStatus.shuffle_on"
+        "name": "fuchsia.media.sessions2/PlayerStatus.shuffle_on",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.media/TimelineFunction",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/PlayerStatus.timeline_function"
+        "name": "fuchsia.media.sessions2/PlayerStatus.timeline_function",
+        "type": "fuchsia.media/TimelineFunction"
     },
     {
         "kind": "table",
         "name": "fuchsia.media.sessions2/PlayerStatus"
     },
     {
-        "declaration": "(client_end:fuchsia.media.sessions2/Player player,fuchsia.media.sessions2/PlayerRegistration registration) -> (uint64 session_id)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/Publisher.Publish"
+        "name": "fuchsia.media.sessions2/Publisher.Publish",
+        "type": "(client_end:fuchsia.media.sessions2/Player player,fuchsia.media.sessions2/PlayerRegistration registration) -> (uint64 session_id)"
     },
     {
         "kind": "protocol",
@@ -504,151 +504,151 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media.sessions2/RepeatMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.BindVolumeControl"
+        "name": "fuchsia.media.sessions2/SessionControl.BindVolumeControl",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.NextItem"
+        "name": "fuchsia.media.sessions2/SessionControl.NextItem",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.Pause"
+        "name": "fuchsia.media.sessions2/SessionControl.Pause",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.Play"
+        "name": "fuchsia.media.sessions2/SessionControl.Play",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.PrevItem"
+        "name": "fuchsia.media.sessions2/SessionControl.PrevItem",
+        "type": "()"
     },
     {
-        "declaration": "(int64 position)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.Seek"
+        "name": "fuchsia.media.sessions2/SessionControl.Seek",
+        "type": "(int64 position)"
     },
     {
-        "declaration": "(float32 playback_rate)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.SetPlaybackRate"
+        "name": "fuchsia.media.sessions2/SessionControl.SetPlaybackRate",
+        "type": "(float32 playback_rate)"
     },
     {
-        "declaration": "(fuchsia.media.sessions2/RepeatMode repeat_mode)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.SetRepeatMode"
+        "name": "fuchsia.media.sessions2/SessionControl.SetRepeatMode",
+        "type": "(fuchsia.media.sessions2/RepeatMode repeat_mode)"
     },
     {
-        "declaration": "(bool shuffle_on)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.SetShuffleMode"
+        "name": "fuchsia.media.sessions2/SessionControl.SetShuffleMode",
+        "type": "(bool shuffle_on)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.SkipForward"
+        "name": "fuchsia.media.sessions2/SessionControl.SkipForward",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.SkipReverse"
+        "name": "fuchsia.media.sessions2/SessionControl.SkipReverse",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.Stop"
+        "name": "fuchsia.media.sessions2/SessionControl.Stop",
+        "type": "()"
     },
     {
-        "declaration": "() -> (fuchsia.media.sessions2/SessionInfoDelta session_info_delta)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionControl.WatchStatus"
+        "name": "fuchsia.media.sessions2/SessionControl.WatchStatus",
+        "type": "() -> (fuchsia.media.sessions2/SessionInfoDelta session_info_delta)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.sessions2/SessionControl"
     },
     {
-        "declaration": "string:1000",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/SessionInfoDelta.domain"
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.domain",
+        "type": "string:1000"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/SessionInfoDelta.is_local"
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.is_local",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/SessionInfoDelta.is_locally_active"
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.is_locally_active",
+        "type": "bool"
     },
     {
-        "declaration": "vector<fuchsia.media.sessions2/MediaImage>",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/SessionInfoDelta.media_images"
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.media_images",
+        "type": "vector<fuchsia.media.sessions2/MediaImage>"
     },
     {
-        "declaration": "fuchsia.media/Metadata",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/SessionInfoDelta.metadata"
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.metadata",
+        "type": "fuchsia.media/Metadata"
     },
     {
-        "declaration": "fuchsia.media.sessions2/PlayerCapabilities",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/SessionInfoDelta.player_capabilities"
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.player_capabilities",
+        "type": "fuchsia.media.sessions2/PlayerCapabilities"
     },
     {
-        "declaration": "fuchsia.media.sessions2/PlayerStatus",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/SessionInfoDelta.player_status"
+        "name": "fuchsia.media.sessions2/SessionInfoDelta.player_status",
+        "type": "fuchsia.media.sessions2/PlayerStatus"
     },
     {
         "kind": "table",
         "name": "fuchsia.media.sessions2/SessionInfoDelta"
     },
     {
-        "declaration": "() -> (fuchsia.media.sessions2/SessionInfoDelta session_info_delta)",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionObserver.WatchStatus"
+        "name": "fuchsia.media.sessions2/SessionObserver.WatchStatus",
+        "type": "() -> (fuchsia.media.sessions2/SessionInfoDelta session_info_delta)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.sessions2/SessionObserver"
     },
     {
-        "declaration": "(uint64 session_id) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionsWatcher.SessionRemoved"
+        "name": "fuchsia.media.sessions2/SessionsWatcher.SessionRemoved",
+        "type": "(uint64 session_id) -> ()"
     },
     {
-        "declaration": "(uint64 session_id,fuchsia.media.sessions2/SessionInfoDelta session_info_delta) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media.sessions2/SessionsWatcher.SessionUpdated"
+        "name": "fuchsia.media.sessions2/SessionsWatcher.SessionUpdated",
+        "type": "(uint64 session_id,fuchsia.media.sessions2/SessionInfoDelta session_info_delta) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media.sessions2/SessionsWatcher"
     },
     {
-        "declaration": "vector<uint64>:1000",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/WatchOptions.allowed_sessions"
+        "name": "fuchsia.media.sessions2/WatchOptions.allowed_sessions",
+        "type": "vector<uint64>:1000"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media.sessions2/WatchOptions.only_active"
+        "name": "fuchsia.media.sessions2/WatchOptions.only_active",
+        "type": "bool"
     },
     {
         "kind": "table",

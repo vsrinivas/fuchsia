@@ -1,86 +1,86 @@
 [
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_AAC",
+        "type": "string",
         "value": "fuchsia.media.aac"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_AACLATM",
+        "type": "string",
         "value": "fuchsia.media.aaclatm"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_AMRNB",
+        "type": "string",
         "value": "fuchsia.media.amrnb"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_AMRWB",
+        "type": "string",
         "value": "fuchsia.media.amrwb"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_APTX",
+        "type": "string",
         "value": "fuchsia.media.aptx"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_FLAC",
+        "type": "string",
         "value": "fuchsia.media.flac"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_GSMMS",
+        "type": "string",
         "value": "fuchsia.media.gsmms"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_LPCM",
+        "type": "string",
         "value": "fuchsia.media.lpcm"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_MP3",
+        "type": "string",
         "value": "fuchsia.media.mp3"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_OPUS",
+        "type": "string",
         "value": "fuchsia.media.opus"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_PCMALAW",
+        "type": "string",
         "value": "fuchsia.media.pcmalaw"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_PCMMULAW",
+        "type": "string",
         "value": "fuchsia.media.pcmmulaw"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_SBC",
+        "type": "string",
         "value": "fuchsia.media.sbc"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/AUDIO_ENCODING_VORBIS",
+        "type": "string",
         "value": "fuchsia.media.vorbis"
     },
     {
@@ -94,20 +94,20 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AacAudioObjectType",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/AacConstantBitRate",
         "kind": "union/member",
-        "name": "fuchsia.media/AacBitRate.constant"
+        "name": "fuchsia.media/AacBitRate.constant",
+        "type": "fuchsia.media/AacConstantBitRate"
     },
     {
-        "declaration": "fuchsia.media/AacVariableBitRate",
         "kind": "union/member",
-        "name": "fuchsia.media/AacBitRate.variable"
+        "name": "fuchsia.media/AacBitRate.variable",
+        "type": "fuchsia.media/AacVariableBitRate"
     },
     {
         "kind": "union",
@@ -125,58 +125,58 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AacChannelMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/AacConstantBitRate.bit_rate"
+        "name": "fuchsia.media/AacConstantBitRate.bit_rate",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/AacConstantBitRate"
     },
     {
-        "declaration": "fuchsia.media/AacAudioObjectType",
         "kind": "struct/member",
-        "name": "fuchsia.media/AacEncoderSettings.aot"
+        "name": "fuchsia.media/AacEncoderSettings.aot",
+        "type": "fuchsia.media/AacAudioObjectType"
     },
     {
-        "declaration": "fuchsia.media/AacBitRate",
         "kind": "struct/member",
-        "name": "fuchsia.media/AacEncoderSettings.bit_rate"
+        "name": "fuchsia.media/AacEncoderSettings.bit_rate",
+        "type": "fuchsia.media/AacBitRate"
     },
     {
-        "declaration": "fuchsia.media/AacChannelMode",
         "kind": "struct/member",
-        "name": "fuchsia.media/AacEncoderSettings.channel_mode"
+        "name": "fuchsia.media/AacEncoderSettings.channel_mode",
+        "type": "fuchsia.media/AacChannelMode"
     },
     {
-        "declaration": "fuchsia.media/AacTransport",
         "kind": "struct/member",
-        "name": "fuchsia.media/AacEncoderSettings.transport"
+        "name": "fuchsia.media/AacEncoderSettings.transport",
+        "type": "fuchsia.media/AacTransport"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/AacEncoderSettings"
     },
     {
-        "declaration": "fuchsia.media/AacTransportAdts",
         "kind": "union/member",
-        "name": "fuchsia.media/AacTransport.adts"
+        "name": "fuchsia.media/AacTransport.adts",
+        "type": "fuchsia.media/AacTransportAdts"
     },
     {
-        "declaration": "fuchsia.media/AacTransportLatm",
         "kind": "union/member",
-        "name": "fuchsia.media/AacTransport.latm"
+        "name": "fuchsia.media/AacTransport.latm",
+        "type": "fuchsia.media/AacTransportLatm"
     },
     {
-        "declaration": "fuchsia.media/AacTransportRaw",
         "kind": "union/member",
-        "name": "fuchsia.media/AacTransport.raw"
+        "name": "fuchsia.media/AacTransport.raw",
+        "type": "fuchsia.media/AacTransportRaw"
     },
     {
         "kind": "union",
@@ -188,9 +188,9 @@
         "name": "fuchsia.media/AacTransportAdts"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media/AacTransportLatm.mux_config_present"
+        "name": "fuchsia.media/AacTransportLatm.mux_config_present",
+        "type": "bool"
     },
     {
         "kind": "struct",
@@ -226,49 +226,49 @@
         "value": "5"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AacVariableBitRate",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "() -> (vector<fuchsia.media/AudioCaptureUsage>:4 active_usages)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/ActivityReporter.WatchCaptureActivity"
+        "name": "fuchsia.media/ActivityReporter.WatchCaptureActivity",
+        "type": "() -> (vector<fuchsia.media/AudioCaptureUsage>:4 active_usages)"
     },
     {
-        "declaration": "() -> (vector<fuchsia.media/AudioRenderUsage>:5 active_usages)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/ActivityReporter.WatchRenderActivity"
+        "name": "fuchsia.media/ActivityReporter.WatchRenderActivity",
+        "type": "() -> (vector<fuchsia.media/AudioRenderUsage>:5 active_usages)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/ActivityReporter"
     },
     {
-        "declaration": "(server_end:fuchsia.media/AudioCapturer audio_capturer_request,bool loopback)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/Audio.CreateAudioCapturer"
+        "name": "fuchsia.media/Audio.CreateAudioCapturer",
+        "type": "(server_end:fuchsia.media/AudioCapturer audio_capturer_request,bool loopback)"
     },
     {
-        "declaration": "(server_end:fuchsia.media/AudioRenderer audio_renderer_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/Audio.CreateAudioRenderer"
+        "name": "fuchsia.media/Audio.CreateAudioRenderer",
+        "type": "(server_end:fuchsia.media/AudioRenderer audio_renderer_request)"
     },
     {
-        "declaration": "(float32 gain_db)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/Audio.SetSystemGain"
+        "name": "fuchsia.media/Audio.SetSystemGain",
+        "type": "(float32 gain_db)"
     },
     {
-        "declaration": "(bool muted)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/Audio.SetSystemMute"
+        "name": "fuchsia.media/Audio.SetSystemMute",
+        "type": "(bool muted)"
     },
     {
-        "declaration": " -> (float32 gain_db,bool muted)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/Audio.SystemGainMuteChanged"
+        "name": "fuchsia.media/Audio.SystemGainMuteChanged",
+        "type": " -> (float32 gain_db,bool muted)"
     },
     {
         "kind": "protocol",
@@ -290,10 +290,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AudioBitrateMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -316,109 +316,109 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AudioCaptureUsage",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(uint32 id,zx/handle:VMO payload_buffer)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.AddPayloadBuffer"
+        "name": "fuchsia.media/AudioCapturer.AddPayloadBuffer",
+        "type": "(uint32 id,zx/handle:VMO payload_buffer)"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/GainControl gain_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.BindGainControl"
+        "name": "fuchsia.media/AudioCapturer.BindGainControl",
+        "type": "(server_end:fuchsia.media.audio/GainControl gain_control_request)"
     },
     {
-        "declaration": "(uint32 payload_buffer_id,uint32 payload_offset,uint32 frames) -> (fuchsia.media/StreamPacket captured_packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.CaptureAt"
+        "name": "fuchsia.media/AudioCapturer.CaptureAt",
+        "type": "(uint32 payload_buffer_id,uint32 payload_offset,uint32 frames) -> (fuchsia.media/StreamPacket captured_packet)"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.DiscardAllPackets"
+        "name": "fuchsia.media/AudioCapturer.DiscardAllPackets",
+        "type": "() -> ()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.DiscardAllPacketsNoReply"
+        "name": "fuchsia.media/AudioCapturer.DiscardAllPacketsNoReply",
+        "type": "()"
     },
     {
-        "declaration": "() -> (zx/handle:CLOCK reference_clock)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.GetReferenceClock"
+        "name": "fuchsia.media/AudioCapturer.GetReferenceClock",
+        "type": "() -> (zx/handle:CLOCK reference_clock)"
     },
     {
-        "declaration": "() -> (fuchsia.media/StreamType stream_type)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.GetStreamType"
+        "name": "fuchsia.media/AudioCapturer.GetStreamType",
+        "type": "() -> (fuchsia.media/StreamType stream_type)"
     },
     {
-        "declaration": " -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.OnEndOfStream"
+        "name": "fuchsia.media/AudioCapturer.OnEndOfStream",
+        "type": " -> ()"
     },
     {
-        "declaration": " -> (fuchsia.media/StreamPacket packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.OnPacketProduced"
+        "name": "fuchsia.media/AudioCapturer.OnPacketProduced",
+        "type": " -> (fuchsia.media/StreamPacket packet)"
     },
     {
-        "declaration": "(fuchsia.media/StreamPacket packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.ReleasePacket"
+        "name": "fuchsia.media/AudioCapturer.ReleasePacket",
+        "type": "(fuchsia.media/StreamPacket packet)"
     },
     {
-        "declaration": "(uint32 id)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.RemovePayloadBuffer"
+        "name": "fuchsia.media/AudioCapturer.RemovePayloadBuffer",
+        "type": "(uint32 id)"
     },
     {
-        "declaration": "(fuchsia.media/AudioStreamType stream_type)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.SetPcmStreamType"
+        "name": "fuchsia.media/AudioCapturer.SetPcmStreamType",
+        "type": "(fuchsia.media/AudioStreamType stream_type)"
     },
     {
-        "declaration": "(zx/handle:<CLOCK,optional> reference_clock)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.SetReferenceClock"
+        "name": "fuchsia.media/AudioCapturer.SetReferenceClock",
+        "type": "(zx/handle:<CLOCK,optional> reference_clock)"
     },
     {
-        "declaration": "(fuchsia.media/AudioCaptureUsage usage)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.SetUsage"
+        "name": "fuchsia.media/AudioCapturer.SetUsage",
+        "type": "(fuchsia.media/AudioCaptureUsage usage)"
     },
     {
-        "declaration": "(uint32 frames_per_packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.StartAsyncCapture"
+        "name": "fuchsia.media/AudioCapturer.StartAsyncCapture",
+        "type": "(uint32 frames_per_packet)"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.StopAsyncCapture"
+        "name": "fuchsia.media/AudioCapturer.StopAsyncCapture",
+        "type": "() -> ()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCapturer.StopAsyncCaptureNoReply"
+        "name": "fuchsia.media/AudioCapturer.StopAsyncCaptureNoReply",
+        "type": "()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/AudioCapturer"
     },
     {
-        "declaration": "fuchsia.media/InputAudioCapturerConfiguration",
         "kind": "union/member",
-        "name": "fuchsia.media/AudioCapturerConfiguration.input"
+        "name": "fuchsia.media/AudioCapturerConfiguration.input",
+        "type": "fuchsia.media/InputAudioCapturerConfiguration"
     },
     {
-        "declaration": "fuchsia.media/LoopbackAudioCapturerConfiguration",
         "kind": "union/member",
-        "name": "fuchsia.media/AudioCapturerConfiguration.loopback"
+        "name": "fuchsia.media/AudioCapturerConfiguration.loopback",
+        "type": "fuchsia.media/LoopbackAudioCapturerConfiguration"
     },
     {
         "kind": "union",
@@ -491,20 +491,20 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AudioChannelId",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/AudioCompressedFormatAac",
         "kind": "union/member",
-        "name": "fuchsia.media/AudioCompressedFormat.aac"
+        "name": "fuchsia.media/AudioCompressedFormat.aac",
+        "type": "fuchsia.media/AudioCompressedFormatAac"
     },
     {
-        "declaration": "fuchsia.media/AudioCompressedFormatSbc",
         "kind": "union/member",
-        "name": "fuchsia.media/AudioCompressedFormat.sbc"
+        "name": "fuchsia.media/AudioCompressedFormat.sbc",
+        "type": "fuchsia.media/AudioCompressedFormatSbc"
     },
     {
         "kind": "union",
@@ -520,48 +520,48 @@
         "name": "fuchsia.media/AudioCompressedFormatSbc"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioConsumer.BindVolumeControl"
+        "name": "fuchsia.media/AudioConsumer.BindVolumeControl",
+        "type": "(server_end:fuchsia.media.audio/VolumeControl volume_control_request)"
     },
     {
-        "declaration": "(vector<zx/handle:VMO>:16 buffers,fuchsia.media/AudioStreamType stream_type,box<fuchsia.media/Compression> compression,server_end:fuchsia.media/StreamSink stream_sink_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioConsumer.CreateStreamSink"
+        "name": "fuchsia.media/AudioConsumer.CreateStreamSink",
+        "type": "(vector<zx/handle:VMO>:16 buffers,fuchsia.media/AudioStreamType stream_type,box<fuchsia.media/Compression> compression,server_end:fuchsia.media/StreamSink stream_sink_request)"
     },
     {
-        "declaration": " -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioConsumer.OnEndOfStream"
+        "name": "fuchsia.media/AudioConsumer.OnEndOfStream",
+        "type": " -> ()"
     },
     {
-        "declaration": "(float32 rate)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioConsumer.SetRate"
+        "name": "fuchsia.media/AudioConsumer.SetRate",
+        "type": "(float32 rate)"
     },
     {
-        "declaration": "(fuchsia.media/AudioConsumerStartFlags flags,int64 reference_time,int64 media_time)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioConsumer.Start"
+        "name": "fuchsia.media/AudioConsumer.Start",
+        "type": "(fuchsia.media/AudioConsumerStartFlags flags,int64 reference_time,int64 media_time)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioConsumer.Stop"
+        "name": "fuchsia.media/AudioConsumer.Stop",
+        "type": "()"
     },
     {
-        "declaration": "() -> (fuchsia.media/AudioConsumerStatus status)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioConsumer.WatchStatus"
+        "name": "fuchsia.media/AudioConsumer.WatchStatus",
+        "type": "() -> (fuchsia.media/AudioConsumerStatus status)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/AudioConsumer"
     },
     {
-        "declaration": "fuchsia.media/Void",
         "kind": "union/member",
-        "name": "fuchsia.media/AudioConsumerError.place_holder"
+        "name": "fuchsia.media/AudioConsumerError.place_holder",
+        "type": "fuchsia.media/Void"
     },
     {
         "kind": "union",
@@ -579,211 +579,211 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.media/AudioConsumerStartFlags",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/AudioConsumerError",
         "kind": "table/member",
-        "name": "fuchsia.media/AudioConsumerStatus.error"
+        "name": "fuchsia.media/AudioConsumerStatus.error",
+        "type": "fuchsia.media/AudioConsumerError"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/AudioConsumerStatus.max_lead_time"
+        "name": "fuchsia.media/AudioConsumerStatus.max_lead_time",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/AudioConsumerStatus.min_lead_time"
+        "name": "fuchsia.media/AudioConsumerStatus.min_lead_time",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.media/TimelineFunction",
         "kind": "table/member",
-        "name": "fuchsia.media/AudioConsumerStatus.presentation_timeline"
+        "name": "fuchsia.media/AudioConsumerStatus.presentation_timeline",
+        "type": "fuchsia.media/TimelineFunction"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/AudioConsumerStatus"
     },
     {
-        "declaration": "(fuchsia.media/Usage usage,server_end:fuchsia.media.audio/VolumeControl volume_control)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.BindUsageVolumeControl"
+        "name": "fuchsia.media/AudioCore.BindUsageVolumeControl",
+        "type": "(fuchsia.media/Usage usage,server_end:fuchsia.media.audio/VolumeControl volume_control)"
     },
     {
-        "declaration": "(bool loopback,server_end:fuchsia.media/AudioCapturer audio_in_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.CreateAudioCapturer"
+        "name": "fuchsia.media/AudioCore.CreateAudioCapturer",
+        "type": "(bool loopback,server_end:fuchsia.media/AudioCapturer audio_in_request)"
     },
     {
-        "declaration": "(fuchsia.media/AudioStreamType stream_type,fuchsia.media/AudioCapturerConfiguration configuration,server_end:fuchsia.media/AudioCapturer audio_capturer_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.CreateAudioCapturerWithConfiguration"
+        "name": "fuchsia.media/AudioCore.CreateAudioCapturerWithConfiguration",
+        "type": "(fuchsia.media/AudioStreamType stream_type,fuchsia.media/AudioCapturerConfiguration configuration,server_end:fuchsia.media/AudioCapturer audio_capturer_request)"
     },
     {
-        "declaration": "(server_end:fuchsia.media/AudioRenderer audio_out_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.CreateAudioRenderer"
+        "name": "fuchsia.media/AudioCore.CreateAudioRenderer",
+        "type": "(server_end:fuchsia.media/AudioRenderer audio_out_request)"
     },
     {
-        "declaration": "(bool enabled)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.EnableDeviceSettings"
+        "name": "fuchsia.media/AudioCore.EnableDeviceSettings",
+        "type": "(bool enabled)"
     },
     {
-        "declaration": "(fuchsia.media/Usage usage,float32 volume) -> (float32 gain_db)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.GetDbFromVolume"
+        "name": "fuchsia.media/AudioCore.GetDbFromVolume",
+        "type": "(fuchsia.media/Usage usage,float32 volume) -> (float32 gain_db)"
     },
     {
-        "declaration": "(fuchsia.media/Usage usage,float32 gain_db) -> (float32 volume)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.GetVolumeFromDb"
+        "name": "fuchsia.media/AudioCore.GetVolumeFromDb",
+        "type": "(fuchsia.media/Usage usage,float32 gain_db) -> (float32 volume)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.LoadDefaults"
+        "name": "fuchsia.media/AudioCore.LoadDefaults",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.ResetInteractions"
+        "name": "fuchsia.media/AudioCore.ResetInteractions",
+        "type": "()"
     },
     {
-        "declaration": "(fuchsia.media/AudioCaptureUsage usage,float32 gain_db)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.SetCaptureUsageGain"
+        "name": "fuchsia.media/AudioCore.SetCaptureUsageGain",
+        "type": "(fuchsia.media/AudioCaptureUsage usage,float32 gain_db)"
     },
     {
-        "declaration": "(fuchsia.media/Usage active,fuchsia.media/Usage affected,fuchsia.media/Behavior behavior)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.SetInteraction"
+        "name": "fuchsia.media/AudioCore.SetInteraction",
+        "type": "(fuchsia.media/Usage active,fuchsia.media/Usage affected,fuchsia.media/Behavior behavior)"
     },
     {
-        "declaration": "(fuchsia.media/AudioRenderUsage usage,float32 gain_db)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.SetRenderUsageGain"
+        "name": "fuchsia.media/AudioCore.SetRenderUsageGain",
+        "type": "(fuchsia.media/AudioRenderUsage usage,float32 gain_db)"
     },
     {
-        "declaration": "(float32 gain_db)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.SetSystemGain"
+        "name": "fuchsia.media/AudioCore.SetSystemGain",
+        "type": "(float32 gain_db)"
     },
     {
-        "declaration": "(bool muted)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.SetSystemMute"
+        "name": "fuchsia.media/AudioCore.SetSystemMute",
+        "type": "(bool muted)"
     },
     {
-        "declaration": " -> (float32 gain_db,bool muted)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioCore.SystemGainMuteChanged"
+        "name": "fuchsia.media/AudioCore.SystemGainMuteChanged",
+        "type": " -> (float32 gain_db,bool muted)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/AudioCore"
     },
     {
-        "declaration": "(string:256 device_name,bool is_input,fuchsia.hardware.audio/StreamConfig channel)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.AddDeviceByChannel"
+        "name": "fuchsia.media/AudioDeviceEnumerator.AddDeviceByChannel",
+        "type": "(string:256 device_name,bool is_input,fuchsia.hardware.audio/StreamConfig channel)"
     },
     {
-        "declaration": "() -> (uint64 device_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.GetDefaultInputDevice"
+        "name": "fuchsia.media/AudioDeviceEnumerator.GetDefaultInputDevice",
+        "type": "() -> (uint64 device_token)"
     },
     {
-        "declaration": "() -> (uint64 device_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.GetDefaultOutputDevice"
+        "name": "fuchsia.media/AudioDeviceEnumerator.GetDefaultOutputDevice",
+        "type": "() -> (uint64 device_token)"
     },
     {
-        "declaration": "(uint64 device_token) -> (uint64 device_token,fuchsia.media/AudioGainInfo gain_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.GetDeviceGain"
+        "name": "fuchsia.media/AudioDeviceEnumerator.GetDeviceGain",
+        "type": "(uint64 device_token) -> (uint64 device_token,fuchsia.media/AudioGainInfo gain_info)"
     },
     {
-        "declaration": "() -> (vector<fuchsia.media/AudioDeviceInfo> devices)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.GetDevices"
+        "name": "fuchsia.media/AudioDeviceEnumerator.GetDevices",
+        "type": "() -> (vector<fuchsia.media/AudioDeviceInfo> devices)"
     },
     {
-        "declaration": " -> (uint64 old_default_token,uint64 new_default_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.OnDefaultDeviceChanged"
+        "name": "fuchsia.media/AudioDeviceEnumerator.OnDefaultDeviceChanged",
+        "type": " -> (uint64 old_default_token,uint64 new_default_token)"
     },
     {
-        "declaration": " -> (fuchsia.media/AudioDeviceInfo device)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.OnDeviceAdded"
+        "name": "fuchsia.media/AudioDeviceEnumerator.OnDeviceAdded",
+        "type": " -> (fuchsia.media/AudioDeviceInfo device)"
     },
     {
-        "declaration": " -> (uint64 device_token,fuchsia.media/AudioGainInfo gain_info)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.OnDeviceGainChanged"
+        "name": "fuchsia.media/AudioDeviceEnumerator.OnDeviceGainChanged",
+        "type": " -> (uint64 device_token,fuchsia.media/AudioGainInfo gain_info)"
     },
     {
-        "declaration": " -> (uint64 device_token)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.OnDeviceRemoved"
+        "name": "fuchsia.media/AudioDeviceEnumerator.OnDeviceRemoved",
+        "type": " -> (uint64 device_token)"
     },
     {
-        "declaration": "(uint64 device_token,fuchsia.media/AudioGainInfo gain_info,fuchsia.media/AudioGainValidFlags valid_flags)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioDeviceEnumerator.SetDeviceGain"
+        "name": "fuchsia.media/AudioDeviceEnumerator.SetDeviceGain",
+        "type": "(uint64 device_token,fuchsia.media/AudioGainInfo gain_info,fuchsia.media/AudioGainValidFlags valid_flags)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/AudioDeviceEnumerator"
     },
     {
-        "declaration": "fuchsia.media/AudioGainInfo",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioDeviceInfo.gain_info"
+        "name": "fuchsia.media/AudioDeviceInfo.gain_info",
+        "type": "fuchsia.media/AudioGainInfo"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioDeviceInfo.is_default"
+        "name": "fuchsia.media/AudioDeviceInfo.is_default",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioDeviceInfo.is_input"
+        "name": "fuchsia.media/AudioDeviceInfo.is_input",
+        "type": "bool"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioDeviceInfo.name"
+        "name": "fuchsia.media/AudioDeviceInfo.name",
+        "type": "string"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioDeviceInfo.token_id"
+        "name": "fuchsia.media/AudioDeviceInfo.token_id",
+        "type": "uint64"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioDeviceInfo.unique_id"
+        "name": "fuchsia.media/AudioDeviceInfo.unique_id",
+        "type": "string"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/AudioDeviceInfo"
     },
     {
-        "declaration": "fuchsia.media/AudioCompressedFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/AudioFormat.compressed"
+        "name": "fuchsia.media/AudioFormat.compressed",
+        "type": "fuchsia.media/AudioCompressedFormat"
     },
     {
-        "declaration": "fuchsia.media/AudioUncompressedFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/AudioFormat.uncompressed"
+        "name": "fuchsia.media/AudioFormat.uncompressed",
+        "type": "fuchsia.media/AudioUncompressedFormat"
     },
     {
         "kind": "union",
@@ -791,14 +791,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.media/AudioGainInfoFlags",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioGainInfo.flags"
+        "name": "fuchsia.media/AudioGainInfo.flags",
+        "type": "fuchsia.media/AudioGainInfoFlags"
     },
     {
-        "declaration": "float32",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioGainInfo.gain_db"
+        "name": "fuchsia.media/AudioGainInfo.gain_db",
+        "type": "float32"
     },
     {
         "kind": "struct",
@@ -820,10 +820,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.media/AudioGainInfoFlags",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "bits/member",
@@ -841,10 +841,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "bits",
         "name": "fuchsia.media/AudioGainValidFlags",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -857,10 +857,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AudioOutputRoutingPolicy",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -878,10 +878,10 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AudioPcmMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -909,115 +909,115 @@
         "value": "3"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AudioRenderUsage",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(uint32 id,zx/handle:VMO payload_buffer)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.AddPayloadBuffer"
+        "name": "fuchsia.media/AudioRenderer.AddPayloadBuffer",
+        "type": "(uint32 id,zx/handle:VMO payload_buffer)"
     },
     {
-        "declaration": "(server_end:fuchsia.media.audio/GainControl gain_control_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.BindGainControl"
+        "name": "fuchsia.media/AudioRenderer.BindGainControl",
+        "type": "(server_end:fuchsia.media.audio/GainControl gain_control_request)"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.DiscardAllPackets"
+        "name": "fuchsia.media/AudioRenderer.DiscardAllPackets",
+        "type": "() -> ()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.DiscardAllPacketsNoReply"
+        "name": "fuchsia.media/AudioRenderer.DiscardAllPacketsNoReply",
+        "type": "()"
     },
     {
-        "declaration": "(bool enabled)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.EnableMinLeadTimeEvents"
+        "name": "fuchsia.media/AudioRenderer.EnableMinLeadTimeEvents",
+        "type": "(bool enabled)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.EndOfStream"
+        "name": "fuchsia.media/AudioRenderer.EndOfStream",
+        "type": "()"
     },
     {
-        "declaration": "() -> (int64 min_lead_time_nsec)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.GetMinLeadTime"
+        "name": "fuchsia.media/AudioRenderer.GetMinLeadTime",
+        "type": "() -> (int64 min_lead_time_nsec)"
     },
     {
-        "declaration": "() -> (zx/handle:CLOCK reference_clock)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.GetReferenceClock"
+        "name": "fuchsia.media/AudioRenderer.GetReferenceClock",
+        "type": "() -> (zx/handle:CLOCK reference_clock)"
     },
     {
-        "declaration": " -> (int64 min_lead_time_nsec)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.OnMinLeadTimeChanged"
+        "name": "fuchsia.media/AudioRenderer.OnMinLeadTimeChanged",
+        "type": " -> (int64 min_lead_time_nsec)"
     },
     {
-        "declaration": "() -> (int64 reference_time,int64 media_time)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.Pause"
+        "name": "fuchsia.media/AudioRenderer.Pause",
+        "type": "() -> (int64 reference_time,int64 media_time)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.PauseNoReply"
+        "name": "fuchsia.media/AudioRenderer.PauseNoReply",
+        "type": "()"
     },
     {
-        "declaration": "(int64 reference_time,int64 media_time) -> (int64 reference_time,int64 media_time)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.Play"
+        "name": "fuchsia.media/AudioRenderer.Play",
+        "type": "(int64 reference_time,int64 media_time) -> (int64 reference_time,int64 media_time)"
     },
     {
-        "declaration": "(int64 reference_time,int64 media_time)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.PlayNoReply"
+        "name": "fuchsia.media/AudioRenderer.PlayNoReply",
+        "type": "(int64 reference_time,int64 media_time)"
     },
     {
-        "declaration": "(uint32 id)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.RemovePayloadBuffer"
+        "name": "fuchsia.media/AudioRenderer.RemovePayloadBuffer",
+        "type": "(uint32 id)"
     },
     {
-        "declaration": "(fuchsia.media/StreamPacket packet) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.SendPacket"
+        "name": "fuchsia.media/AudioRenderer.SendPacket",
+        "type": "(fuchsia.media/StreamPacket packet) -> ()"
     },
     {
-        "declaration": "(fuchsia.media/StreamPacket packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.SendPacketNoReply"
+        "name": "fuchsia.media/AudioRenderer.SendPacketNoReply",
+        "type": "(fuchsia.media/StreamPacket packet)"
     },
     {
-        "declaration": "(fuchsia.media/AudioStreamType type)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.SetPcmStreamType"
+        "name": "fuchsia.media/AudioRenderer.SetPcmStreamType",
+        "type": "(fuchsia.media/AudioStreamType type)"
     },
     {
-        "declaration": "(float32 threshold_seconds)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.SetPtsContinuityThreshold"
+        "name": "fuchsia.media/AudioRenderer.SetPtsContinuityThreshold",
+        "type": "(float32 threshold_seconds)"
     },
     {
-        "declaration": "(uint32 tick_per_second_numerator,uint32 tick_per_second_denominator)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.SetPtsUnits"
+        "name": "fuchsia.media/AudioRenderer.SetPtsUnits",
+        "type": "(uint32 tick_per_second_numerator,uint32 tick_per_second_denominator)"
     },
     {
-        "declaration": "(zx/handle:<CLOCK,optional> reference_clock)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.SetReferenceClock"
+        "name": "fuchsia.media/AudioRenderer.SetReferenceClock",
+        "type": "(zx/handle:<CLOCK,optional> reference_clock)"
     },
     {
-        "declaration": "(fuchsia.media/AudioRenderUsage usage)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/AudioRenderer.SetUsage"
+        "name": "fuchsia.media/AudioRenderer.SetUsage",
+        "type": "(fuchsia.media/AudioRenderUsage usage)"
     },
     {
         "kind": "protocol",
@@ -1044,34 +1044,34 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/AudioSampleFormat",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioStreamType.channels"
+        "name": "fuchsia.media/AudioStreamType.channels",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioStreamType.frames_per_second"
+        "name": "fuchsia.media/AudioStreamType.frames_per_second",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/AudioSampleFormat",
         "kind": "struct/member",
-        "name": "fuchsia.media/AudioStreamType.sample_format"
+        "name": "fuchsia.media/AudioStreamType.sample_format",
+        "type": "fuchsia.media/AudioSampleFormat"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/AudioStreamType"
     },
     {
-        "declaration": "fuchsia.media/PcmFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/AudioUncompressedFormat.pcm"
+        "name": "fuchsia.media/AudioUncompressedFormat.pcm",
+        "type": "fuchsia.media/PcmFormat"
     },
     {
         "kind": "union",
@@ -1094,15 +1094,15 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/Behavior",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.media/CAPTURE_USAGE_COUNT",
+        "type": "uint8",
         "value": "4"
     },
     {
@@ -1131,34 +1131,34 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/ColorSpace",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<uint8>:<8192,optional>",
         "kind": "struct/member",
-        "name": "fuchsia.media/Compression.parameters"
+        "name": "fuchsia.media/Compression.parameters",
+        "type": "vector<uint8>:<8192,optional>"
     },
     {
-        "declaration": "string:256",
         "kind": "struct/member",
-        "name": "fuchsia.media/Compression.type"
+        "name": "fuchsia.media/Compression.type",
+        "type": "string:256"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/Compression"
     },
     {
-        "declaration": "fuchsia.media/DecryptedFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/CryptoFormat.decrypted"
+        "name": "fuchsia.media/CryptoFormat.decrypted",
+        "type": "fuchsia.media/DecryptedFormat"
     },
     {
-        "declaration": "fuchsia.media/EncryptedFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/CryptoFormat.encrypted"
+        "name": "fuchsia.media/CryptoFormat.encrypted",
+        "type": "fuchsia.media/EncryptedFormat"
     },
     {
         "kind": "union",
@@ -1166,28 +1166,28 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/DecryptedFormat.ignore_this_field"
+        "name": "fuchsia.media/DecryptedFormat.ignore_this_field",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/DecryptedFormat"
     },
     {
-        "declaration": "fuchsia.media/AudioFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/DomainFormat.audio"
+        "name": "fuchsia.media/DomainFormat.audio",
+        "type": "fuchsia.media/AudioFormat"
     },
     {
-        "declaration": "fuchsia.media/CryptoFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/DomainFormat.crypto"
+        "name": "fuchsia.media/DomainFormat.crypto",
+        "type": "fuchsia.media/CryptoFormat"
     },
     {
-        "declaration": "fuchsia.media/VideoFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/DomainFormat.video"
+        "name": "fuchsia.media/DomainFormat.video",
+        "type": "fuchsia.media/VideoFormat"
     },
     {
         "kind": "union",
@@ -1195,54 +1195,54 @@
         "strictness": "strict"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/ENCRYPTION_SCHEME_CBC1",
+        "type": "string",
         "value": "cbc1"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/ENCRYPTION_SCHEME_CBCS",
+        "type": "string",
         "value": "cbcs"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/ENCRYPTION_SCHEME_CENC",
+        "type": "string",
         "value": "cenc"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/ENCRYPTION_SCHEME_CENS",
+        "type": "string",
         "value": "cens"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/ENCRYPTION_SCHEME_UNENCRYPTED",
+        "type": "string",
         "value": "unencrypted"
     },
     {
-        "declaration": "fuchsia.media/AacEncoderSettings",
         "kind": "union/member",
-        "name": "fuchsia.media/EncoderSettings.aac"
+        "name": "fuchsia.media/EncoderSettings.aac",
+        "type": "fuchsia.media/AacEncoderSettings"
     },
     {
-        "declaration": "fuchsia.media/H264EncoderSettings",
         "kind": "union/member",
-        "name": "fuchsia.media/EncoderSettings.h264"
+        "name": "fuchsia.media/EncoderSettings.h264",
+        "type": "fuchsia.media/H264EncoderSettings"
     },
     {
-        "declaration": "fuchsia.media/HevcEncoderSettings",
         "kind": "union/member",
-        "name": "fuchsia.media/EncoderSettings.hevc"
+        "name": "fuchsia.media/EncoderSettings.hevc",
+        "type": "fuchsia.media/HevcEncoderSettings"
     },
     {
-        "declaration": "fuchsia.media/SbcEncoderSettings",
         "kind": "union/member",
-        "name": "fuchsia.media/EncoderSettings.sbc"
+        "name": "fuchsia.media/EncoderSettings.sbc",
+        "type": "fuchsia.media/SbcEncoderSettings"
     },
     {
         "kind": "union",
@@ -1250,183 +1250,183 @@
         "strictness": "flexible"
     },
     {
-        "declaration": "vector<uint8>:16",
         "kind": "table/member",
-        "name": "fuchsia.media/EncryptedFormat.init_vector"
+        "name": "fuchsia.media/EncryptedFormat.init_vector",
+        "type": "vector<uint8>:16"
     },
     {
-        "declaration": "vector<uint8>:16",
         "kind": "table/member",
-        "name": "fuchsia.media/EncryptedFormat.key_id"
+        "name": "fuchsia.media/EncryptedFormat.key_id",
+        "type": "vector<uint8>:16"
     },
     {
-        "declaration": "fuchsia.media/EncryptionPattern",
         "kind": "table/member",
-        "name": "fuchsia.media/EncryptedFormat.pattern"
+        "name": "fuchsia.media/EncryptedFormat.pattern",
+        "type": "fuchsia.media/EncryptionPattern"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.media/EncryptedFormat.scheme"
+        "name": "fuchsia.media/EncryptedFormat.scheme",
+        "type": "string"
     },
     {
-        "declaration": "vector<fuchsia.media/SubsampleEntry>",
         "kind": "table/member",
-        "name": "fuchsia.media/EncryptedFormat.subsamples"
+        "name": "fuchsia.media/EncryptedFormat.subsamples",
+        "type": "vector<fuchsia.media/SubsampleEntry>"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/EncryptedFormat"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/EncryptionPattern.clear_blocks"
+        "name": "fuchsia.media/EncryptionPattern.clear_blocks",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/EncryptionPattern.encrypted_blocks"
+        "name": "fuchsia.media/EncryptionPattern.encrypted_blocks",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/EncryptionPattern"
     },
     {
-        "declaration": "fuchsia.media/DomainFormat",
         "kind": "table/member",
-        "name": "fuchsia.media/FormatDetails.domain"
+        "name": "fuchsia.media/FormatDetails.domain",
+        "type": "fuchsia.media/DomainFormat"
     },
     {
-        "declaration": "fuchsia.media/EncoderSettings",
         "kind": "table/member",
-        "name": "fuchsia.media/FormatDetails.encoder_settings"
+        "name": "fuchsia.media/FormatDetails.encoder_settings",
+        "type": "fuchsia.media/EncoderSettings"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/FormatDetails.format_details_version_ordinal"
+        "name": "fuchsia.media/FormatDetails.format_details_version_ordinal",
+        "type": "uint64"
     },
     {
-        "declaration": "string",
         "kind": "table/member",
-        "name": "fuchsia.media/FormatDetails.mime_type"
+        "name": "fuchsia.media/FormatDetails.mime_type",
+        "type": "string"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "table/member",
-        "name": "fuchsia.media/FormatDetails.oob_bytes"
+        "name": "fuchsia.media/FormatDetails.oob_bytes",
+        "type": "vector<uint8>"
     },
     {
-        "declaration": "vector<fuchsia.media/Parameter>",
         "kind": "table/member",
-        "name": "fuchsia.media/FormatDetails.pass_through_parameters"
+        "name": "fuchsia.media/FormatDetails.pass_through_parameters",
+        "type": "vector<fuchsia.media/Parameter>"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/FormatDetails.timebase"
+        "name": "fuchsia.media/FormatDetails.timebase",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/FormatDetails"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264EncoderSettings.bit_rate"
+        "name": "fuchsia.media/H264EncoderSettings.bit_rate",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/H264EncoderSettings.force_key_frame"
+        "name": "fuchsia.media/H264EncoderSettings.force_key_frame",
+        "type": "bool"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264EncoderSettings.frame_rate"
+        "name": "fuchsia.media/H264EncoderSettings.frame_rate",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264EncoderSettings.gop_size"
+        "name": "fuchsia.media/H264EncoderSettings.gop_size",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264EncoderSettings.min_frame_rate"
+        "name": "fuchsia.media/H264EncoderSettings.min_frame_rate",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/H264QuantizationParameters",
         "kind": "table/member",
-        "name": "fuchsia.media/H264EncoderSettings.quantization_params"
+        "name": "fuchsia.media/H264EncoderSettings.quantization_params",
+        "type": "fuchsia.media/H264QuantizationParameters"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/H264EncoderSettings.variable_frame_rate"
+        "name": "fuchsia.media/H264EncoderSettings.variable_frame_rate",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/H264EncoderSettings"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264QuantizationParameters.i_base"
+        "name": "fuchsia.media/H264QuantizationParameters.i_base",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264QuantizationParameters.i_max"
+        "name": "fuchsia.media/H264QuantizationParameters.i_max",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264QuantizationParameters.i_min"
+        "name": "fuchsia.media/H264QuantizationParameters.i_min",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264QuantizationParameters.p_base"
+        "name": "fuchsia.media/H264QuantizationParameters.p_base",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264QuantizationParameters.p_max"
+        "name": "fuchsia.media/H264QuantizationParameters.p_max",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/H264QuantizationParameters.p_min"
+        "name": "fuchsia.media/H264QuantizationParameters.p_min",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/H264QuantizationParameters"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/HevcEncoderSettings.bit_rate"
+        "name": "fuchsia.media/HevcEncoderSettings.bit_rate",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/HevcEncoderSettings.frame_rate"
+        "name": "fuchsia.media/HevcEncoderSettings.frame_rate",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/HevcEncoderSettings.gop_size"
+        "name": "fuchsia.media/HevcEncoderSettings.gop_size",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/HevcEncoderSettings"
     },
     {
-        "declaration": "fuchsia.media/AudioCaptureUsage",
         "kind": "table/member",
-        "name": "fuchsia.media/InputAudioCapturerConfiguration.usage"
+        "name": "fuchsia.media/InputAudioCapturerConfiguration.usage",
+        "type": "fuchsia.media/AudioCaptureUsage"
     },
     {
         "kind": "table",
@@ -1437,150 +1437,150 @@
         "name": "fuchsia.media/LoopbackAudioCapturerConfiguration"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/MAX_ENCRYPTION_SCHEME_SIZE",
+        "type": "uint32",
         "value": "100"
     },
     {
-        "declaration": "int64",
         "kind": "const",
         "name": "fuchsia.media/MAX_FRAMES_PER_RENDERER_PACKET",
+        "type": "int64",
         "value": "262143"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/MAX_INIT_VECTOR_SIZE",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/MAX_KEY_ID_SIZE",
+        "type": "uint32",
         "value": "16"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/MAX_PCM_CHANNEL_COUNT",
+        "type": "uint32",
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/MAX_PCM_FRAMES_PER_SECOND",
+        "type": "uint32",
         "value": "192000"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_ALBUM",
+        "type": "string",
         "value": "fuchsia.media.album"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_ARTIST",
+        "type": "string",
         "value": "fuchsia.media.artist"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_COMPOSER",
+        "type": "string",
         "value": "fuchsia.media.composer"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_EPISODE",
+        "type": "string",
         "value": "fuchsia.media.episode"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_GENRE",
+        "type": "string",
         "value": "fuchsia.media.genre"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_PUBLISHER",
+        "type": "string",
         "value": "fuchsia.media.publisher"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_RELEASE_DATE",
+        "type": "string",
         "value": "fuchsia.media.release_date"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_SEASON",
+        "type": "string",
         "value": "fuchsia.media.season"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_STUDIO",
+        "type": "string",
         "value": "fuchsia.media.studio"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_SUBTITLE",
+        "type": "string",
         "value": "fuchsia.media.subtitle"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_TITLE",
+        "type": "string",
         "value": "fuchsia.media.title"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_LABEL_TRACK_NUMBER",
+        "type": "string",
         "value": "fuchsia.media.track_number"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/METADATA_SOURCE_TITLE",
+        "type": "string",
         "value": "fuchsia.media.source_title"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/MIN_PCM_CHANNEL_COUNT",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/MIN_PCM_FRAMES_PER_SECOND",
+        "type": "uint32",
         "value": "1000"
     },
     {
-        "declaration": "fuchsia.media/AudioStreamType",
         "kind": "union/member",
-        "name": "fuchsia.media/MediumSpecificStreamType.audio"
+        "name": "fuchsia.media/MediumSpecificStreamType.audio",
+        "type": "fuchsia.media/AudioStreamType"
     },
     {
-        "declaration": "fuchsia.media/SubpictureStreamType",
         "kind": "union/member",
-        "name": "fuchsia.media/MediumSpecificStreamType.subpicture"
+        "name": "fuchsia.media/MediumSpecificStreamType.subpicture",
+        "type": "fuchsia.media/SubpictureStreamType"
     },
     {
-        "declaration": "fuchsia.media/TextStreamType",
         "kind": "union/member",
-        "name": "fuchsia.media/MediumSpecificStreamType.text"
+        "name": "fuchsia.media/MediumSpecificStreamType.text",
+        "type": "fuchsia.media/TextStreamType"
     },
     {
-        "declaration": "fuchsia.media/VideoStreamType",
         "kind": "union/member",
-        "name": "fuchsia.media/MediumSpecificStreamType.video"
+        "name": "fuchsia.media/MediumSpecificStreamType.video",
+        "type": "fuchsia.media/VideoStreamType"
     },
     {
         "kind": "union",
@@ -1588,176 +1588,176 @@
         "strictness": "strict"
     },
     {
-        "declaration": "vector<fuchsia.media/Property>",
         "kind": "struct/member",
-        "name": "fuchsia.media/Metadata.properties"
+        "name": "fuchsia.media/Metadata.properties",
+        "type": "vector<fuchsia.media/Property>"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/Metadata"
     },
     {
-        "declaration": "int64",
         "kind": "const",
         "name": "fuchsia.media/NO_TIMESTAMP",
+        "type": "int64",
         "value": "9223372036854775807"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.buffer_index"
+        "name": "fuchsia.media/Packet.buffer_index",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/PacketHeader",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.header"
+        "name": "fuchsia.media/Packet.header",
+        "type": "fuchsia.media/PacketHeader"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.key_frame"
+        "name": "fuchsia.media/Packet.key_frame",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.known_end_access_unit"
+        "name": "fuchsia.media/Packet.known_end_access_unit",
+        "type": "bool"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.start_access_unit"
+        "name": "fuchsia.media/Packet.start_access_unit",
+        "type": "bool"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.start_offset"
+        "name": "fuchsia.media/Packet.start_offset",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.stream_lifetime_ordinal"
+        "name": "fuchsia.media/Packet.stream_lifetime_ordinal",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.timestamp_ish"
+        "name": "fuchsia.media/Packet.timestamp_ish",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/Packet.valid_length_bytes"
+        "name": "fuchsia.media/Packet.valid_length_bytes",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/Packet"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/PacketHeader.buffer_lifetime_ordinal"
+        "name": "fuchsia.media/PacketHeader.buffer_lifetime_ordinal",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/PacketHeader.packet_index"
+        "name": "fuchsia.media/PacketHeader.packet_index",
+        "type": "uint32"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/PacketHeader"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.media/Parameter.name"
+        "name": "fuchsia.media/Parameter.name",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.media/Parameter.scope"
+        "name": "fuchsia.media/Parameter.scope",
+        "type": "string"
     },
     {
-        "declaration": "fuchsia.media/Value",
         "kind": "struct/member",
-        "name": "fuchsia.media/Parameter.value"
+        "name": "fuchsia.media/Parameter.value",
+        "type": "fuchsia.media/Value"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/Parameter"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/PcmFormat.bits_per_sample"
+        "name": "fuchsia.media/PcmFormat.bits_per_sample",
+        "type": "uint32"
     },
     {
-        "declaration": "vector<fuchsia.media/AudioChannelId>:16",
         "kind": "struct/member",
-        "name": "fuchsia.media/PcmFormat.channel_map"
+        "name": "fuchsia.media/PcmFormat.channel_map",
+        "type": "vector<fuchsia.media/AudioChannelId>:16"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/PcmFormat.frames_per_second"
+        "name": "fuchsia.media/PcmFormat.frames_per_second",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/AudioPcmMode",
         "kind": "struct/member",
-        "name": "fuchsia.media/PcmFormat.pcm_mode"
+        "name": "fuchsia.media/PcmFormat.pcm_mode",
+        "type": "fuchsia.media/AudioPcmMode"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/PcmFormat"
     },
     {
-        "declaration": "(zx/handle:THREAD thread_handle,string:64 name,int64 period,float32 capacity) -> (int64 period,int64 capacity)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/ProfileProvider.RegisterHandlerWithCapacity"
+        "name": "fuchsia.media/ProfileProvider.RegisterHandlerWithCapacity",
+        "type": "(zx/handle:THREAD thread_handle,string:64 name,int64 period,float32 capacity) -> (int64 period,int64 capacity)"
     },
     {
-        "declaration": "(zx/handle:THREAD thread_handle,string:64 name) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/ProfileProvider.UnregisterHandler"
+        "name": "fuchsia.media/ProfileProvider.UnregisterHandler",
+        "type": "(zx/handle:THREAD thread_handle,string:64 name) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/ProfileProvider"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.media/Property.label"
+        "name": "fuchsia.media/Property.label",
+        "type": "string"
     },
     {
-        "declaration": "string",
         "kind": "struct/member",
-        "name": "fuchsia.media/Property.value"
+        "name": "fuchsia.media/Property.value",
+        "type": "string"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/Property"
     },
     {
-        "declaration": "uint8",
         "kind": "const",
         "name": "fuchsia.media/RENDER_USAGE_COUNT",
+        "type": "uint8",
         "value": "5"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/STREAM_PACKET_FLAG_DISCONTINUITY",
+        "type": "uint32",
         "value": "4"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/STREAM_PACKET_FLAG_DROPPABLE",
+        "type": "uint32",
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "const",
         "name": "fuchsia.media/STREAM_PACKET_FLAG_KEY_FRAME",
+        "type": "uint32",
         "value": "1"
     },
     {
@@ -1771,10 +1771,10 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/SbcAllocation",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -1797,10 +1797,10 @@
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/SbcBlockCount",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "enum/member",
@@ -1823,37 +1823,37 @@
         "value": "2"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/SbcChannelMode",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/SbcAllocation",
         "kind": "struct/member",
         "name": "fuchsia.media/SbcEncoderSettings.allocation",
+        "type": "fuchsia.media/SbcAllocation",
         "value": "0"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.media/SbcEncoderSettings.bit_pool"
+        "name": "fuchsia.media/SbcEncoderSettings.bit_pool",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.media/SbcBlockCount",
         "kind": "struct/member",
         "name": "fuchsia.media/SbcEncoderSettings.block_count",
+        "type": "fuchsia.media/SbcBlockCount",
         "value": "4"
     },
     {
-        "declaration": "fuchsia.media/SbcChannelMode",
         "kind": "struct/member",
-        "name": "fuchsia.media/SbcEncoderSettings.channel_mode"
+        "name": "fuchsia.media/SbcEncoderSettings.channel_mode",
+        "type": "fuchsia.media/SbcChannelMode"
     },
     {
-        "declaration": "fuchsia.media/SbcSubBands",
         "kind": "struct/member",
         "name": "fuchsia.media/SbcEncoderSettings.sub_bands",
+        "type": "fuchsia.media/SbcSubBands",
         "value": "8"
     },
     {
@@ -1871,157 +1871,157 @@
         "value": "8"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/SbcSubBands",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "(uint64 session_id,server_end:fuchsia.media/AudioConsumer audio_consumer_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/SessionAudioConsumerFactory.CreateAudioConsumer"
+        "name": "fuchsia.media/SessionAudioConsumerFactory.CreateAudioConsumer",
+        "type": "(uint64 session_id,server_end:fuchsia.media/AudioConsumer audio_consumer_request)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/SessionAudioConsumerFactory"
     },
     {
-        "declaration": "(uint32 id,zx/handle:VMO payload_buffer)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/SimpleStreamSink.AddPayloadBuffer"
+        "name": "fuchsia.media/SimpleStreamSink.AddPayloadBuffer",
+        "type": "(uint32 id,zx/handle:VMO payload_buffer)"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/SimpleStreamSink.DiscardAllPackets"
+        "name": "fuchsia.media/SimpleStreamSink.DiscardAllPackets",
+        "type": "() -> ()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/SimpleStreamSink.DiscardAllPacketsNoReply"
+        "name": "fuchsia.media/SimpleStreamSink.DiscardAllPacketsNoReply",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/SimpleStreamSink.EndOfStream"
+        "name": "fuchsia.media/SimpleStreamSink.EndOfStream",
+        "type": "()"
     },
     {
-        "declaration": "(uint32 id)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/SimpleStreamSink.RemovePayloadBuffer"
+        "name": "fuchsia.media/SimpleStreamSink.RemovePayloadBuffer",
+        "type": "(uint32 id)"
     },
     {
-        "declaration": "(fuchsia.media/StreamPacket packet) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/SimpleStreamSink.SendPacket"
+        "name": "fuchsia.media/SimpleStreamSink.SendPacket",
+        "type": "(fuchsia.media/StreamPacket packet) -> ()"
     },
     {
-        "declaration": "(fuchsia.media/StreamPacket packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/SimpleStreamSink.SendPacketNoReply"
+        "name": "fuchsia.media/SimpleStreamSink.SendPacketNoReply",
+        "type": "(fuchsia.media/StreamPacket packet)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/SimpleStreamSink"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.buffer_constraints_version_ordinal"
+        "name": "fuchsia.media/StreamBufferConstraints.buffer_constraints_version_ordinal",
+        "type": "uint64"
     },
     {
-        "declaration": "fuchsia.media/StreamBufferSettings",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.default_settings"
+        "name": "fuchsia.media/StreamBufferConstraints.default_settings",
+        "type": "fuchsia.media/StreamBufferSettings"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.is_physically_contiguous_required"
+        "name": "fuchsia.media/StreamBufferConstraints.is_physically_contiguous_required",
+        "type": "bool"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_client_max"
+        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_client_max",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_client_min"
+        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_client_min",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_server_max"
+        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_server_max",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_server_min"
+        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_server_min",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_server_recommended"
+        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_server_recommended",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_server_recommended_max"
+        "name": "fuchsia.media/StreamBufferConstraints.packet_count_for_server_recommended_max",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_max"
+        "name": "fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_max",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_min"
+        "name": "fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_min",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_recommended"
+        "name": "fuchsia.media/StreamBufferConstraints.per_packet_buffer_bytes_recommended",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferConstraints.single_buffer_mode_allowed"
+        "name": "fuchsia.media/StreamBufferConstraints.single_buffer_mode_allowed",
+        "type": "bool"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/StreamBufferConstraints"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferPartialSettings.buffer_constraints_version_ordinal"
+        "name": "fuchsia.media/StreamBufferPartialSettings.buffer_constraints_version_ordinal",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferPartialSettings.buffer_lifetime_ordinal"
+        "name": "fuchsia.media/StreamBufferPartialSettings.buffer_lifetime_ordinal",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferPartialSettings.packet_count_for_client"
+        "name": "fuchsia.media/StreamBufferPartialSettings.packet_count_for_client",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferPartialSettings.packet_count_for_server"
+        "name": "fuchsia.media/StreamBufferPartialSettings.packet_count_for_server",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferPartialSettings.single_buffer_mode"
+        "name": "fuchsia.media/StreamBufferPartialSettings.single_buffer_mode",
+        "type": "bool"
     },
     {
-        "declaration": "fuchsia.sysmem/BufferCollectionToken",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferPartialSettings.sysmem_token"
+        "name": "fuchsia.media/StreamBufferPartialSettings.sysmem_token",
+        "type": "fuchsia.sysmem/BufferCollectionToken"
     },
     {
         "kind": "table",
@@ -2029,48 +2029,48 @@
         "resourceness": "resource"
     },
     {
-        "declaration": "(uint32 id,zx/handle:VMO payload_buffer)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamBufferSet.AddPayloadBuffer"
+        "name": "fuchsia.media/StreamBufferSet.AddPayloadBuffer",
+        "type": "(uint32 id,zx/handle:VMO payload_buffer)"
     },
     {
-        "declaration": "(uint32 id)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamBufferSet.RemovePayloadBuffer"
+        "name": "fuchsia.media/StreamBufferSet.RemovePayloadBuffer",
+        "type": "(uint32 id)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/StreamBufferSet"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferSettings.buffer_constraints_version_ordinal"
+        "name": "fuchsia.media/StreamBufferSettings.buffer_constraints_version_ordinal",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferSettings.buffer_lifetime_ordinal"
+        "name": "fuchsia.media/StreamBufferSettings.buffer_lifetime_ordinal",
+        "type": "uint64"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferSettings.packet_count_for_client"
+        "name": "fuchsia.media/StreamBufferSettings.packet_count_for_client",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferSettings.packet_count_for_server"
+        "name": "fuchsia.media/StreamBufferSettings.packet_count_for_server",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferSettings.per_packet_buffer_bytes"
+        "name": "fuchsia.media/StreamBufferSettings.per_packet_buffer_bytes",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamBufferSettings.single_buffer_mode"
+        "name": "fuchsia.media/StreamBufferSettings.single_buffer_mode",
+        "type": "bool"
     },
     {
         "kind": "table",
@@ -2122,81 +2122,81 @@
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/StreamError",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/StreamBufferConstraints",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamOutputConstraints.buffer_constraints"
+        "name": "fuchsia.media/StreamOutputConstraints.buffer_constraints",
+        "type": "fuchsia.media/StreamBufferConstraints"
     },
     {
-        "declaration": "bool",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamOutputConstraints.buffer_constraints_action_required"
+        "name": "fuchsia.media/StreamOutputConstraints.buffer_constraints_action_required",
+        "type": "bool"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamOutputConstraints.stream_lifetime_ordinal"
+        "name": "fuchsia.media/StreamOutputConstraints.stream_lifetime_ordinal",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/StreamOutputConstraints"
     },
     {
-        "declaration": "fuchsia.media/FormatDetails",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamOutputFormat.format_details"
+        "name": "fuchsia.media/StreamOutputFormat.format_details",
+        "type": "fuchsia.media/FormatDetails"
     },
     {
-        "declaration": "uint64",
         "kind": "table/member",
-        "name": "fuchsia.media/StreamOutputFormat.stream_lifetime_ordinal"
+        "name": "fuchsia.media/StreamOutputFormat.stream_lifetime_ordinal",
+        "type": "uint64"
     },
     {
         "kind": "table",
         "name": "fuchsia.media/StreamOutputFormat"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
         "name": "fuchsia.media/StreamPacket.buffer_config",
+        "type": "uint64",
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.media/StreamPacket.flags",
+        "type": "uint32",
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/StreamPacket.payload_buffer_id"
+        "name": "fuchsia.media/StreamPacket.payload_buffer_id",
+        "type": "uint32"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.media/StreamPacket.payload_offset"
+        "name": "fuchsia.media/StreamPacket.payload_offset",
+        "type": "uint64"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.media/StreamPacket.payload_size"
+        "name": "fuchsia.media/StreamPacket.payload_size",
+        "type": "uint64"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
         "name": "fuchsia.media/StreamPacket.pts",
+        "type": "int64",
         "value": "9223372036854775807"
     },
     {
-        "declaration": "uint64",
         "kind": "struct/member",
         "name": "fuchsia.media/StreamPacket.stream_segment_id",
+        "type": "uint64",
         "value": "0"
     },
     {
@@ -2204,171 +2204,171 @@
         "name": "fuchsia.media/StreamPacket"
     },
     {
-        "declaration": "(uint64 stream_lifetime_ordinal,bool release_input_buffers,bool release_output_buffers)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.CloseCurrentStream"
+        "name": "fuchsia.media/StreamProcessor.CloseCurrentStream",
+        "type": "(uint64 stream_lifetime_ordinal,bool release_input_buffers,bool release_output_buffers)"
     },
     {
-        "declaration": "(uint64 buffer_lifetime_ordinal)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.CompleteOutputBufferPartialSettings"
+        "name": "fuchsia.media/StreamProcessor.CompleteOutputBufferPartialSettings",
+        "type": "(uint64 buffer_lifetime_ordinal)"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.EnableOnStreamFailed"
+        "name": "fuchsia.media/StreamProcessor.EnableOnStreamFailed",
+        "type": "()"
     },
     {
-        "declaration": "(uint64 stream_lifetime_ordinal)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.FlushEndOfStreamAndCloseStream"
+        "name": "fuchsia.media/StreamProcessor.FlushEndOfStreamAndCloseStream",
+        "type": "(uint64 stream_lifetime_ordinal)"
     },
     {
-        "declaration": " -> (fuchsia.media/PacketHeader free_input_packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.OnFreeInputPacket"
+        "name": "fuchsia.media/StreamProcessor.OnFreeInputPacket",
+        "type": " -> (fuchsia.media/PacketHeader free_input_packet)"
     },
     {
-        "declaration": " -> (fuchsia.media/StreamBufferConstraints input_constraints)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.OnInputConstraints"
+        "name": "fuchsia.media/StreamProcessor.OnInputConstraints",
+        "type": " -> (fuchsia.media/StreamBufferConstraints input_constraints)"
     },
     {
-        "declaration": " -> (fuchsia.media/StreamOutputConstraints output_config)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.OnOutputConstraints"
+        "name": "fuchsia.media/StreamProcessor.OnOutputConstraints",
+        "type": " -> (fuchsia.media/StreamOutputConstraints output_config)"
     },
     {
-        "declaration": " -> (uint64 stream_lifetime_ordinal,bool error_detected_before)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.OnOutputEndOfStream"
+        "name": "fuchsia.media/StreamProcessor.OnOutputEndOfStream",
+        "type": " -> (uint64 stream_lifetime_ordinal,bool error_detected_before)"
     },
     {
-        "declaration": " -> (fuchsia.media/StreamOutputFormat output_format)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.OnOutputFormat"
+        "name": "fuchsia.media/StreamProcessor.OnOutputFormat",
+        "type": " -> (fuchsia.media/StreamOutputFormat output_format)"
     },
     {
-        "declaration": " -> (fuchsia.media/Packet output_packet,bool error_detected_before,bool error_detected_during)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.OnOutputPacket"
+        "name": "fuchsia.media/StreamProcessor.OnOutputPacket",
+        "type": " -> (fuchsia.media/Packet output_packet,bool error_detected_before,bool error_detected_during)"
     },
     {
-        "declaration": " -> (uint64 stream_lifetime_ordinal,fuchsia.media/StreamError error)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.OnStreamFailed"
+        "name": "fuchsia.media/StreamProcessor.OnStreamFailed",
+        "type": " -> (uint64 stream_lifetime_ordinal,fuchsia.media/StreamError error)"
     },
     {
-        "declaration": "(uint64 stream_lifetime_ordinal)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.QueueInputEndOfStream"
+        "name": "fuchsia.media/StreamProcessor.QueueInputEndOfStream",
+        "type": "(uint64 stream_lifetime_ordinal)"
     },
     {
-        "declaration": "(uint64 stream_lifetime_ordinal,fuchsia.media/FormatDetails format_details)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.QueueInputFormatDetails"
+        "name": "fuchsia.media/StreamProcessor.QueueInputFormatDetails",
+        "type": "(uint64 stream_lifetime_ordinal,fuchsia.media/FormatDetails format_details)"
     },
     {
-        "declaration": "(fuchsia.media/Packet packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.QueueInputPacket"
+        "name": "fuchsia.media/StreamProcessor.QueueInputPacket",
+        "type": "(fuchsia.media/Packet packet)"
     },
     {
-        "declaration": "(fuchsia.media/PacketHeader available_output_packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.RecycleOutputPacket"
+        "name": "fuchsia.media/StreamProcessor.RecycleOutputPacket",
+        "type": "(fuchsia.media/PacketHeader available_output_packet)"
     },
     {
-        "declaration": "(fuchsia.media/StreamBufferPartialSettings input_settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.SetInputBufferPartialSettings"
+        "name": "fuchsia.media/StreamProcessor.SetInputBufferPartialSettings",
+        "type": "(fuchsia.media/StreamBufferPartialSettings input_settings)"
     },
     {
-        "declaration": "(fuchsia.media/StreamBufferPartialSettings output_settings)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.SetOutputBufferPartialSettings"
+        "name": "fuchsia.media/StreamProcessor.SetOutputBufferPartialSettings",
+        "type": "(fuchsia.media/StreamBufferPartialSettings output_settings)"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamProcessor.Sync"
+        "name": "fuchsia.media/StreamProcessor.Sync",
+        "type": "() -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/StreamProcessor"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSink.DiscardAllPackets"
+        "name": "fuchsia.media/StreamSink.DiscardAllPackets",
+        "type": "() -> ()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSink.DiscardAllPacketsNoReply"
+        "name": "fuchsia.media/StreamSink.DiscardAllPacketsNoReply",
+        "type": "()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSink.EndOfStream"
+        "name": "fuchsia.media/StreamSink.EndOfStream",
+        "type": "()"
     },
     {
-        "declaration": "(fuchsia.media/StreamPacket packet) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSink.SendPacket"
+        "name": "fuchsia.media/StreamSink.SendPacket",
+        "type": "(fuchsia.media/StreamPacket packet) -> ()"
     },
     {
-        "declaration": "(fuchsia.media/StreamPacket packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSink.SendPacketNoReply"
+        "name": "fuchsia.media/StreamSink.SendPacketNoReply",
+        "type": "(fuchsia.media/StreamPacket packet)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/StreamSink"
     },
     {
-        "declaration": "() -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSource.DiscardAllPackets"
+        "name": "fuchsia.media/StreamSource.DiscardAllPackets",
+        "type": "() -> ()"
     },
     {
-        "declaration": "()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSource.DiscardAllPacketsNoReply"
+        "name": "fuchsia.media/StreamSource.DiscardAllPacketsNoReply",
+        "type": "()"
     },
     {
-        "declaration": " -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSource.OnEndOfStream"
+        "name": "fuchsia.media/StreamSource.OnEndOfStream",
+        "type": " -> ()"
     },
     {
-        "declaration": " -> (fuchsia.media/StreamPacket packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSource.OnPacketProduced"
+        "name": "fuchsia.media/StreamSource.OnPacketProduced",
+        "type": " -> (fuchsia.media/StreamPacket packet)"
     },
     {
-        "declaration": "(fuchsia.media/StreamPacket packet)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/StreamSource.ReleasePacket"
+        "name": "fuchsia.media/StreamSource.ReleasePacket",
+        "type": "(fuchsia.media/StreamPacket packet)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/StreamSource"
     },
     {
-        "declaration": "string:255",
         "kind": "struct/member",
-        "name": "fuchsia.media/StreamType.encoding"
+        "name": "fuchsia.media/StreamType.encoding",
+        "type": "string:255"
     },
     {
-        "declaration": "vector<uint8>:optional",
         "kind": "struct/member",
-        "name": "fuchsia.media/StreamType.encoding_parameters"
+        "name": "fuchsia.media/StreamType.encoding_parameters",
+        "type": "vector<uint8>:optional"
     },
     {
-        "declaration": "fuchsia.media/MediumSpecificStreamType",
         "kind": "struct/member",
-        "name": "fuchsia.media/StreamType.medium_specific"
+        "name": "fuchsia.media/StreamType.medium_specific",
+        "type": "fuchsia.media/MediumSpecificStreamType"
     },
     {
         "kind": "struct",
@@ -2379,14 +2379,14 @@
         "name": "fuchsia.media/SubpictureStreamType"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/SubsampleEntry.clear_bytes"
+        "name": "fuchsia.media/SubsampleEntry.clear_bytes",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/SubsampleEntry.encrypted_bytes"
+        "name": "fuchsia.media/SubsampleEntry.encrypted_bytes",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -2397,27 +2397,27 @@
         "name": "fuchsia.media/TextStreamType"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.media/TimelineFunction.reference_delta",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
         "name": "fuchsia.media/TimelineFunction.reference_time",
+        "type": "int64",
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.media/TimelineFunction.subject_delta",
+        "type": "uint32",
         "value": "0"
     },
     {
-        "declaration": "int64",
         "kind": "struct/member",
         "name": "fuchsia.media/TimelineFunction.subject_time",
+        "type": "int64",
         "value": "0"
     },
     {
@@ -2425,14 +2425,14 @@
         "name": "fuchsia.media/TimelineFunction"
     },
     {
-        "declaration": "fuchsia.media/AudioCaptureUsage",
         "kind": "union/member",
-        "name": "fuchsia.media/Usage.capture_usage"
+        "name": "fuchsia.media/Usage.capture_usage",
+        "type": "fuchsia.media/AudioCaptureUsage"
     },
     {
-        "declaration": "fuchsia.media/AudioRenderUsage",
         "kind": "union/member",
-        "name": "fuchsia.media/Usage.render_usage"
+        "name": "fuchsia.media/Usage.render_usage",
+        "type": "fuchsia.media/AudioRenderUsage"
     },
     {
         "kind": "union",
@@ -2440,55 +2440,55 @@
         "strictness": "strict"
     },
     {
-        "declaration": "(fuchsia.media/AudioRenderUsage usage,server_end:fuchsia.media/AudioConsumer audio_consumer_request)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/UsageAudioConsumerFactory.CreateAudioConsumer"
+        "name": "fuchsia.media/UsageAudioConsumerFactory.CreateAudioConsumer",
+        "type": "(fuchsia.media/AudioRenderUsage usage,server_end:fuchsia.media/AudioConsumer audio_consumer_request)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/UsageAudioConsumerFactory"
     },
     {
-        "declaration": "(bool muted,float32 gain_dbfs) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/UsageGainListener.OnGainMuteChanged"
+        "name": "fuchsia.media/UsageGainListener.OnGainMuteChanged",
+        "type": "(bool muted,float32 gain_dbfs) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/UsageGainListener"
     },
     {
-        "declaration": "(string:36 device_unique_id,fuchsia.media/Usage usage,client_end:fuchsia.media/UsageGainListener usage_gain_listener)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/UsageGainReporter.RegisterListener"
+        "name": "fuchsia.media/UsageGainReporter.RegisterListener",
+        "type": "(string:36 device_unique_id,fuchsia.media/Usage usage,client_end:fuchsia.media/UsageGainListener usage_gain_listener)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/UsageGainReporter"
     },
     {
-        "declaration": "(fuchsia.media/Usage usage,client_end:fuchsia.media/UsageWatcher usage_watcher)",
         "kind": "protocol/member",
-        "name": "fuchsia.media/UsageReporter.Watch"
+        "name": "fuchsia.media/UsageReporter.Watch",
+        "type": "(fuchsia.media/Usage usage,client_end:fuchsia.media/UsageWatcher usage_watcher)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/UsageReporter"
     },
     {
-        "declaration": "fuchsia.media/UsageStateDucked",
         "kind": "union/member",
-        "name": "fuchsia.media/UsageState.ducked"
+        "name": "fuchsia.media/UsageState.ducked",
+        "type": "fuchsia.media/UsageStateDucked"
     },
     {
-        "declaration": "fuchsia.media/UsageStateMuted",
         "kind": "union/member",
-        "name": "fuchsia.media/UsageState.muted"
+        "name": "fuchsia.media/UsageState.muted",
+        "type": "fuchsia.media/UsageStateMuted"
     },
     {
-        "declaration": "fuchsia.media/UsageStateUnadjusted",
         "kind": "union/member",
-        "name": "fuchsia.media/UsageState.unadjusted"
+        "name": "fuchsia.media/UsageState.unadjusted",
+        "type": "fuchsia.media/UsageStateUnadjusted"
     },
     {
         "kind": "union",
@@ -2508,86 +2508,86 @@
         "name": "fuchsia.media/UsageStateUnadjusted"
     },
     {
-        "declaration": "(fuchsia.media/Usage usage,fuchsia.media/UsageState state) -> ()",
         "kind": "protocol/member",
-        "name": "fuchsia.media/UsageWatcher.OnStateChanged"
+        "name": "fuchsia.media/UsageWatcher.OnStateChanged",
+        "type": "(fuchsia.media/Usage usage,fuchsia.media/UsageState state) -> ()"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.media/UsageWatcher"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/VIDEO_ENCODING_H263",
+        "type": "string",
         "value": "fuchsia.media.h263"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/VIDEO_ENCODING_H264",
+        "type": "string",
         "value": "fuchsia.media.h264"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/VIDEO_ENCODING_MPEG4",
+        "type": "string",
         "value": "fuchsia.media.mpeg4"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/VIDEO_ENCODING_THEORA",
+        "type": "string",
         "value": "fuchsia.media.theora"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/VIDEO_ENCODING_UNCOMPRESSED",
+        "type": "string",
         "value": "fuchsia.media.uncompressed_video"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/VIDEO_ENCODING_VP3",
+        "type": "string",
         "value": "fuchsia.media.vp3"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/VIDEO_ENCODING_VP8",
+        "type": "string",
         "value": "fuchsia.media.vp8"
     },
     {
-        "declaration": "string",
         "kind": "const",
         "name": "fuchsia.media/VIDEO_ENCODING_VP9",
+        "type": "string",
         "value": "fuchsia.media.vp9"
     },
     {
-        "declaration": "bool",
         "kind": "union/member",
-        "name": "fuchsia.media/Value.bool_value"
+        "name": "fuchsia.media/Value.bool_value",
+        "type": "bool"
     },
     {
-        "declaration": "vector<uint8>",
         "kind": "union/member",
-        "name": "fuchsia.media/Value.bytes_value"
+        "name": "fuchsia.media/Value.bytes_value",
+        "type": "vector<uint8>"
     },
     {
-        "declaration": "int64",
         "kind": "union/member",
-        "name": "fuchsia.media/Value.int64_value"
+        "name": "fuchsia.media/Value.int64_value",
+        "type": "int64"
     },
     {
-        "declaration": "string",
         "kind": "union/member",
-        "name": "fuchsia.media/Value.string_value"
+        "name": "fuchsia.media/Value.string_value",
+        "type": "string"
     },
     {
-        "declaration": "uint64",
         "kind": "union/member",
-        "name": "fuchsia.media/Value.uint64_value"
+        "name": "fuchsia.media/Value.uint64_value",
+        "type": "uint64"
     },
     {
         "kind": "union",
@@ -2600,15 +2600,15 @@
         "value": "0"
     },
     {
-        "declaration": "uint32",
         "kind": "enum",
         "name": "fuchsia.media/VideoColorSpace",
-        "strictness": "strict"
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "union/member",
-        "name": "fuchsia.media/VideoCompressedFormat.temp_field_todo_remove"
+        "name": "fuchsia.media/VideoCompressedFormat.temp_field_todo_remove",
+        "type": "uint32"
     },
     {
         "kind": "union",
@@ -2616,14 +2616,14 @@
         "strictness": "strict"
     },
     {
-        "declaration": "fuchsia.media/VideoCompressedFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/VideoFormat.compressed"
+        "name": "fuchsia.media/VideoFormat.compressed",
+        "type": "fuchsia.media/VideoCompressedFormat"
     },
     {
-        "declaration": "fuchsia.media/VideoUncompressedFormat",
         "kind": "union/member",
-        "name": "fuchsia.media/VideoFormat.uncompressed"
+        "name": "fuchsia.media/VideoFormat.uncompressed",
+        "type": "fuchsia.media/VideoUncompressedFormat"
     },
     {
         "kind": "union",
@@ -2631,156 +2631,156 @@
         "strictness": "strict"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.coded_height"
+        "name": "fuchsia.media/VideoStreamType.coded_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.coded_width"
+        "name": "fuchsia.media/VideoStreamType.coded_width",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.media/ColorSpace",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.color_space"
+        "name": "fuchsia.media/VideoStreamType.color_space",
+        "type": "fuchsia.media/ColorSpace"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.height"
+        "name": "fuchsia.media/VideoStreamType.height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.pixel_aspect_ratio_height"
+        "name": "fuchsia.media/VideoStreamType.pixel_aspect_ratio_height",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.pixel_aspect_ratio_width"
+        "name": "fuchsia.media/VideoStreamType.pixel_aspect_ratio_width",
+        "type": "uint32"
     },
     {
-        "declaration": "fuchsia.images/PixelFormat",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.pixel_format"
+        "name": "fuchsia.media/VideoStreamType.pixel_format",
+        "type": "fuchsia.images/PixelFormat"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.stride"
+        "name": "fuchsia.media/VideoStreamType.stride",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoStreamType.width"
+        "name": "fuchsia.media/VideoStreamType.width",
+        "type": "uint32"
     },
     {
         "kind": "struct",
         "name": "fuchsia.media/VideoStreamType"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.fourcc"
+        "name": "fuchsia.media/VideoUncompressedFormat.fourcc",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
         "name": "fuchsia.media/VideoUncompressedFormat.has_pixel_aspect_ratio",
+        "type": "bool",
         "value": "false"
     },
     {
-        "declaration": "fuchsia.sysmem/ImageFormat_2",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.image_format"
+        "name": "fuchsia.media/VideoUncompressedFormat.image_format",
+        "type": "fuchsia.sysmem/ImageFormat_2"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.media/VideoUncompressedFormat.pixel_aspect_ratio_height",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
         "name": "fuchsia.media/VideoUncompressedFormat.pixel_aspect_ratio_width",
+        "type": "uint32",
         "value": "1"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.planar"
+        "name": "fuchsia.media/VideoUncompressedFormat.planar",
+        "type": "bool"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.primary_display_height_pixels"
+        "name": "fuchsia.media/VideoUncompressedFormat.primary_display_height_pixels",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.primary_display_width_pixels"
+        "name": "fuchsia.media/VideoUncompressedFormat.primary_display_width_pixels",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.primary_height_pixels"
+        "name": "fuchsia.media/VideoUncompressedFormat.primary_height_pixels",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.primary_line_stride_bytes"
+        "name": "fuchsia.media/VideoUncompressedFormat.primary_line_stride_bytes",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.primary_pixel_stride"
+        "name": "fuchsia.media/VideoUncompressedFormat.primary_pixel_stride",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.primary_start_offset"
+        "name": "fuchsia.media/VideoUncompressedFormat.primary_start_offset",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.primary_width_pixels"
+        "name": "fuchsia.media/VideoUncompressedFormat.primary_width_pixels",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.secondary_height_pixels"
+        "name": "fuchsia.media/VideoUncompressedFormat.secondary_height_pixels",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.secondary_line_stride_bytes"
+        "name": "fuchsia.media/VideoUncompressedFormat.secondary_line_stride_bytes",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.secondary_pixel_stride"
+        "name": "fuchsia.media/VideoUncompressedFormat.secondary_pixel_stride",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.secondary_start_offset"
+        "name": "fuchsia.media/VideoUncompressedFormat.secondary_start_offset",
+        "type": "uint32"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.secondary_width_pixels"
+        "name": "fuchsia.media/VideoUncompressedFormat.secondary_width_pixels",
+        "type": "uint32"
     },
     {
-        "declaration": "bool",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.swizzled"
+        "name": "fuchsia.media/VideoUncompressedFormat.swizzled",
+        "type": "bool"
     },
     {
-        "declaration": "uint32",
         "kind": "struct/member",
-        "name": "fuchsia.media/VideoUncompressedFormat.tertiary_start_offset"
+        "name": "fuchsia.media/VideoUncompressedFormat.tertiary_start_offset",
+        "type": "uint32"
     },
     {
         "kind": "struct",
@@ -2791,9 +2791,9 @@
         "name": "fuchsia.media/Void"
     },
     {
-        "declaration": "uint64",
         "kind": "const",
         "name": "fuchsia.media/kMaxOobBytesSize",
+        "type": "uint64",
         "value": "8192"
     },
     {
