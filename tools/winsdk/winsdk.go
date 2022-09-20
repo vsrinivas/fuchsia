@@ -468,6 +468,7 @@ func addEnvSetup(files *[]packedFile, vcToolsPath string) (string, error) {
 		{"Windows Kits", WinKitVersion, "Include", sdkVersion, "winrt"},
 		{"Windows Kits", WinKitVersion, "Include", sdkVersion, "ucrt"},
 		append(vcToolsParts, "include"),
+		append(vcToolsParts, "atlmfc", "include"),
 	}
 
 	libPathDirs := [][]string{
@@ -493,6 +494,7 @@ func addEnvSetup(files *[]packedFile, vcToolsPath string) (string, error) {
 		},
 		"LIB": {
 			append(vcToolsParts, "lib", "x86"),
+			append(vcToolsParts, "atlmfc", "lib", "x86"),
 			{"Windows Kits", WinKitVersion, "Lib", sdkVersion, "um", "x86"},
 			{"Windows Kits", WinKitVersion, "Lib", sdkVersion, "ucrt", "x86"},
 		},
@@ -504,6 +506,7 @@ func addEnvSetup(files *[]packedFile, vcToolsPath string) (string, error) {
 		},
 		"LIB": {
 			append(vcToolsParts, "lib", "x64"),
+			append(vcToolsParts, "atlmfc", "lib", "x64"),
 			{"Windows Kits", WinKitVersion, "Lib", sdkVersion, "um", "x64"},
 			{"Windows Kits", WinKitVersion, "Lib", sdkVersion, "ucrt", "x64"},
 		},
