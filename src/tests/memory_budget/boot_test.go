@@ -20,6 +20,7 @@ import (
 var cmdlineCommon = []string{"kernel.oom.behavior=reboot", "kernel.oom.reboot-timeout-ms=0x000a"}
 
 const hostTestDataDir = "test_data"
+const sessionStartedBreadCrumb = "Session started."
 
 // Determines if the VM boots successfully.
 func TestBoot(t *testing.T) {
@@ -58,7 +59,7 @@ func TestBoot(t *testing.T) {
 	i.Start()
 
 	// Watch for happy signal, asserting failure if the device reboots due to OOM.
-	i.WaitForLogMessageAssertNotSeen("Received an empty startup session URL, waiting for a request.", "ZIRCON REBOOT REASON (OOM)")
+	i.WaitForLogMessageAssertNotSeen(sessionStartedBreadCrumb, "ZIRCON REBOOT REASON (OOM)")
 }
 
 func execDir(t *testing.T) string {

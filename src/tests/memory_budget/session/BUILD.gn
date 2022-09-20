@@ -1,0 +1,23 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "memory-budget-session-log-start"
+  sources = [ "main.cc" ]
+}
+
+fuchsia_component("log-start-component") {
+  component_name = "log-start"
+  manifest = "meta/log-start.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("memory-budget-session") {
+  deps = [
+    # component-url: fuchsia-pkg://fuchsia.com/memory-budget-session#meta/log-start.cm
+    ":log-start-component",
+  ]
+}

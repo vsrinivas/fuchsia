@@ -9,11 +9,8 @@
 
 import("//products/minimal.gni")
 
-# Use the product assembly config file to specify the product configuration.
-#
-# This should be overridden by products which inherit from minimal.
-fuchsia_product_assembly_config_file =
-    "//products/tests/boot_test/product_config.json"
+fuchsia_product_assembly_config_label = "//products/tests:minimal_boot_user"
+fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/tests/minimal_boot_user/product_assembly_config.json"
 
 legacy_universe_package_labels += [
   # E2E Product Tests. They don't produce fuchsia packages, but host

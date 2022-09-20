@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    // Enable system logging capabilities
+    include: [ "syslog/client.shard.cml" ],
+
+    // Information about the program to run
+    program: {
+        // Use the built-in ELF runner for the executable
+        runner: "elf",
+        binary: "bin/memory-budget-session-log-start",
+
+        // Enable stdout logging
+        forward_stderr_to: "log",
+        forward_stdout_to: "log",
+    },
+    expose: [
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+}
