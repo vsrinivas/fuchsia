@@ -15,6 +15,7 @@ pub enum ShutdownRequest {
     Reboot(RebootReason),
     RebootBootloader,
     RebootRecovery,
+    SuspendToRam,
 }
 
 /// Converts a ShutdownRequest into a fuchsia.hardare.power.statecontrol.SystemPowerState value.
@@ -28,6 +29,7 @@ impl Into<fpower::SystemPowerState> for ShutdownRequest {
             ShutdownRequest::Reboot(_) => fpower::SystemPowerState::Reboot,
             ShutdownRequest::RebootBootloader => fpower::SystemPowerState::RebootBootloader,
             ShutdownRequest::RebootRecovery => fpower::SystemPowerState::RebootRecovery,
+            ShutdownRequest::SuspendToRam => fpower::SystemPowerState::SuspendRam,
         }
     }
 }

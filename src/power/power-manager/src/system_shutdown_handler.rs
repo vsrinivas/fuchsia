@@ -266,7 +266,8 @@ impl SystemShutdownHandler {
                             let _ = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
                         }
                         fpowercontrol::AdminRequest::SuspendToRam { responder } => {
-                            let _ = responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()));
+                            let result = self.handle_suspend().await;
+                            let _ = responder.send(&mut result.map_err(|e| e.into_raw()));
                         }
                     }
                 }
@@ -321,6 +322,49 @@ impl SystemShutdownHandler {
         if result.is_err() {
             self.inspect.force_shutdown_attempted.set(true);
             (self.force_shutdown_func)();
+        }
+
+        Ok(())
+    }
+
+    /// Called each time a client calls the fuchsia.hardware.power.statecontrol.Admin API to
+    /// initiate a transition to a suspend state. If the function is called while a system state
+    /// transition is already in progress, then the ALREADY_EXISTS error is returned. If the
+    /// system fails to reach the suspend state INTERNAL error is returned. Ok is returned when the
+    /// system resumes after suspending.
+    async fn handle_suspend(&self) -> Result<(), zx_status> {
+        let request = ShutdownRequest::SuspendToRam;
+
+        fuchsia_trace::instant!(
+            "power_manager",
+            "SystemShutdownHandler::handle_suspend",
+            fuchsia_trace::Scope::Thread,
+            "request" => format!("{:?}", request).as_str()
+        );
+
+        // Return if a shutdown is pending
+        if self.shutdown_pending.replace(true) == true {
+            return Err(zx_status::ALREADY_EXISTS);
+        }
+
+        info!("System suspend to RAM");
+        self.inspect.log_shutdown_request(&request);
+
+        // Suspend is handled using the same mechanism as shutdown, with a timeout if one is
+        // present in the config.
+        let result = if let Some(timeout) = self.shutdown_timeout {
+            self.shutdown_with_timeout(request, timeout).await
+        } else {
+            self.shutdown(request).await
+        };
+
+        // Reset the shutdown_pending and resume normal operation regardless of whether we
+        // succeeeded or failed to suspend.
+        self.shutdown_pending.set(false);
+
+        if let Err(e) = result {
+            error!("System failed to suspend: {:?}", e);
+            return Err(zx_status::INTERNAL);
         }
 
         Ok(())
@@ -539,6 +583,7 @@ pub mod tests {
             ShutdownRequest::RebootBootloader,
             ShutdownRequest::RebootRecovery,
             ShutdownRequest::PowerOff,
+            ShutdownRequest::SuspendToRam,
         ];
 
         // At the end of the test, verify the Component Manager's received shutdown count (expected
@@ -750,9 +795,55 @@ pub mod tests {
             proxy.power_fully_on().await.unwrap(),
             Err(zx::Status::NOT_SUPPORTED.into_raw())
         );
-        assert_eq!(
-            proxy.suspend_to_ram().await.unwrap(),
-            Err(zx::Status::NOT_SUPPORTED.into_raw())
+    }
+
+    /// Tests that the `shutdown` function correctly sets the shutdown_pending flag.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_suspend() {
+        let mut mock_maker = MockNodeMaker::new();
+
+        // The test will call `shutdown` with each of these shutdown requests
+        let requests = vec![
+            ShutdownRequest::SuspendToRam,
+            ShutdownRequest::SuspendToRam,
+            ShutdownRequest::PowerOff,
+        ];
+
+        // At the end of the test, verify the Component Manager's received shutdown count (expected
+        // to be equal to the number of entries in the system_power_states vector)
+        let shutdown_count = Rc::new(Cell::new(0));
+        let shutdown_count_clone = shutdown_count.clone();
+
+        // Create the mock Driver Manager node that expects to receive the SetTerminationSystemState
+        // message for each state in `system_power_states`
+        let driver_mgr_node = mock_maker.make(
+            "DriverMgrNode",
+            requests
+                .iter()
+                .map(|request| {
+                    (
+                        msg_eq!(SetTerminationSystemState((*request).into())),
+                        msg_ok_return!(SetTerminationSystemState),
+                    )
+                })
+                .collect(),
         );
+
+        // Create the node with a special Component Manager proxy
+        let node = SystemShutdownHandlerBuilder::new(driver_mgr_node)
+            .with_component_mgr_proxy(setup_fake_component_mgr_service(move || {
+                shutdown_count_clone.set(shutdown_count_clone.get() + 1);
+            }))
+            .build()
+            .unwrap();
+
+        // First suspend should be okay
+        assert!(node.handle_suspend().await.is_ok());
+        // Second suspend should be okay
+        assert!(node.handle_suspend().await.is_ok());
+        // Call shutdown. This should set shutdown_pending to true
+        let _ = node.handle_shutdown(ShutdownRequest::PowerOff).await;
+        // We expect handle_suspend to return ALREADY_EXISTS error
+        assert_eq!(node.handle_suspend().await, Err(zx_status::ALREADY_EXISTS));
     }
 }
