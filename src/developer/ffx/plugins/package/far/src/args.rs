@@ -21,23 +21,7 @@ pub struct FarCommand {
 #[derive(Eq, FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum FarSubCommand {
-    Cat(CatSubCommand),
     Extract(ExtractSubCommand),
-}
-
-#[derive(Eq, FromArgs, PartialEq, Debug)]
-#[argh(
-    subcommand,
-    name = "cat",
-    description = "write the contents of <far_path> inside the Fuchia package archive file to stdout"
-)]
-pub struct CatSubCommand {
-    #[argh(positional, description = "package archive")]
-    pub archive: PathBuf,
-    #[argh(positional, description = "path of the file within the archive to write")]
-    pub far_path: PathBuf,
-    #[argh(switch, description = "treat filename as a blob hash", long = "as-hash")]
-    pub as_hash: bool,
 }
 
 #[derive(Eq, FromArgs, PartialEq, Debug)]

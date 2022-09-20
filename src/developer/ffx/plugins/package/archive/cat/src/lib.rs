@@ -4,17 +4,23 @@
 
 use anyhow::Result;
 use errors::ffx_bail;
+use ffx_core::ffx_plugin;
+use ffx_package_archive_cat_args::CatCommand;
 use ffx_package_archive_utils::{read_file_entries, FarArchiveReader, FarListReader};
-use ffx_package_far_args::CatSubCommand;
+use ffx_writer::Writer;
 
-pub fn cat_impl<W: std::io::Write>(cmd: CatSubCommand, writer: &mut W) -> Result<()> {
+#[ffx_plugin("ffx_package")]
+pub async fn cmd_cat(
+    cmd: CatCommand,
+    #[ffx(machine = Vec<T:Serialize>)] mut writer: Writer,
+) -> Result<()> {
     let mut archive_reader: Box<dyn FarListReader> = Box::new(FarArchiveReader::new(&cmd.archive)?);
 
-    cat_implementation(cmd, writer, &mut archive_reader)
+    cat_implementation(cmd, &mut writer, &mut archive_reader)
 }
 
 fn cat_implementation<W: std::io::Write>(
-    cmd: CatSubCommand,
+    cmd: CatCommand,
     writer: &mut W,
     reader: &mut Box<dyn FarListReader>,
 ) -> Result<()> {
@@ -44,7 +50,7 @@ mod test {
 
     #[test]
     fn test_cat_blob() -> Result<()> {
-        let cmd = CatSubCommand {
+        let cmd = CatCommand {
             archive: PathBuf::from("some.far"),
             far_path: PathBuf::from(BLOB1),
             as_hash: true,
@@ -66,7 +72,7 @@ mod test {
 
     #[test]
     fn test_cat_filename() -> Result<()> {
-        let cmd = CatSubCommand {
+        let cmd = CatCommand {
             archive: PathBuf::from("some.far"),
             far_path: PathBuf::from(LIB_RUN_SO_PATH),
             as_hash: false,

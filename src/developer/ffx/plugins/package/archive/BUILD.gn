@@ -10,6 +10,7 @@ ffx_plugin("ffx_package_archive") {
   edition = "2021"
   with_unit_tests = true
   plugin_deps = [
+    "cat:ffx_package_archive_cat",
     "create:ffx_package_archive_create",
     "list:ffx_package_archive_list",
   ]
