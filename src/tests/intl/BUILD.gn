@@ -15,5 +15,6 @@ group("tests") {
   public_deps = [
     "timestamp-server-dart",
     "timezone:tests",
+    "tzdata:tests",
   ]
 }

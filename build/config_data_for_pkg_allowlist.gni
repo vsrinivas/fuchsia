@@ -87,6 +87,7 @@ config_data_for_pkg_allowlist = [
   "text-input-test",
   "triage-detect",
   "tz_version_parrot",
+  "tzdata-test",
   "virtual-keyboard-test",
   "virtual-keyboard-test-ip",
   "volume_change_earcons_integration_test_pkg",

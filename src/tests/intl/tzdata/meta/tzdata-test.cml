@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+
+        // Depends on config_data which is a system capability.
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/tzdata-test",
+    },
+    use: [
+        // For zoneinfo data, which hasn't yet been migrated to regular directory capabilities
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+            subdir: "tzdata-test",
+        },
+
+        // For ICU tzdata
+        {
+            directory: "tzdata-icu-44-le",
+            rights: [ "r*" ],
+            path: "/tzdata-icu-44-le",
+        },
+    ],
+}
