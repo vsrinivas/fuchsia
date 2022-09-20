@@ -360,44 +360,29 @@ mod tests {
                                 )),
                                 ..fdd::DeviceInfo::EMPTY
                             },
-                            // Composite parent (under root)
+                            // Composite parent
                             fdd::DeviceInfo {
                                 id: Some(composite_parent_id),
-                                parent_ids: Some(vec![root_id]),
-                                child_ids: Some(vec![composite_child_id]),
-                                driver_host_koid: Some(0),
-                                topological_path: Some(String::from("/dev/sys/platform/parent")),
-                                bound_driver_libname: Some(String::from("parent.so")),
-                                bound_driver_url: Some(String::from(
-                                    "fuchsia-pkg://fuchsia.com/parent-package#meta/parent.cm",
-                                )),
-                                ..fdd::DeviceInfo::EMPTY
-                            },
-                            // Composite parent (under root)
-                            fdd::DeviceInfo {
-                                id: Some(composite_child_id),
-                                parent_ids: Some(vec![composite_parent_id]),
-                                child_ids: Some(Vec::new()),
-                                driver_host_koid: Some(0),
-                                topological_path: Some(String::from(
-                                    "/dev/sys/platform/parent/child",
-                                )),
-                                bound_driver_libname: Some(String::from("child.so")),
-                                bound_driver_url: Some(String::from(
-                                    "fuchsia-pkg://fuchsia.com/child-package#meta/child.cm",
-                                )),
-                                ..fdd::DeviceInfo::EMPTY
-                            },
-                            // Composite parent (repeated at top level)
-                            fdd::DeviceInfo {
-                                id: Some(composite_parent_id),
-                                parent_ids: Some(vec![null_id]),
+                                parent_ids: None,
                                 child_ids: Some(vec![composite_child_id]),
                                 driver_host_koid: Some(0),
                                 topological_path: Some(String::from("/dev/parent")),
                                 bound_driver_libname: Some(String::from("parent.so")),
                                 bound_driver_url: Some(String::from(
                                     "fuchsia-pkg://fuchsia.com/parent-package#meta/parent.cm",
+                                )),
+                                ..fdd::DeviceInfo::EMPTY
+                            },
+                            // Composite child
+                            fdd::DeviceInfo {
+                                id: Some(composite_child_id),
+                                parent_ids: Some(vec![composite_parent_id]),
+                                child_ids: Some(Vec::new()),
+                                driver_host_koid: Some(0),
+                                topological_path: Some(String::from("/dev/parent/child")),
+                                bound_driver_libname: Some(String::from("child.so")),
+                                bound_driver_url: Some(String::from(
+                                    "fuchsia-pkg://fuchsia.com/child-package#meta/child.cm",
                                 )),
                                 ..fdd::DeviceInfo::EMPTY
                             },
