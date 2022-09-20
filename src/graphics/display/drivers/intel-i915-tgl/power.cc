@@ -312,7 +312,7 @@ class PowerTigerLake : public Power {
 
   void SetDdiIoPowerState(tgl_registers::Ddi ddi, bool enable) override {
     auto power_well = tgl_registers::PowerWellControlDdi2::Get().ReadFrom(mmio_space());
-    power_well.ddi_io_power_state_tiger_lake(ddi).set(enable);
+    power_well.ddi_io_power_request_tiger_lake(ddi).set(enable);
     power_well.WriteTo(mmio_space());
   }
 
