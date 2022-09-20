@@ -10,6 +10,13 @@
 
 namespace {
 
+TEST(StructsTests, GoodSimpleStruct) {
+  TestLibrary library;
+  library.AddFile("good/simple_struct.test.fidl");
+
+  ASSERT_COMPILED(library);
+}
+
 TEST(StructsTests, GoodPrimitiveDefaultValueLiteral) {
   TestLibrary library(R"FIDL(library example;
 

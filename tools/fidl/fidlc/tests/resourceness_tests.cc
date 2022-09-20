@@ -89,6 +89,22 @@ type Three = resource resource resource struct {}; // line 6
   ASSERT_SUBSTR(errors[2]->msg.c_str(), "resource");
 }
 
+TEST(ResourcenessTests, GoodResourceSimple) {
+  TestLibrary library;
+  library.UseLibraryZx();
+  library.AddFile("good/simple_resourceness.test.fidl");
+
+  ASSERT_COMPILED(library);
+}
+
+TEST(ResourcenessTests, BadResourceModifierMissing) {
+  TestLibrary library;
+  library.UseLibraryZx();
+  library.AddFile("bad/missing_resourceness.test.fidl");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTypeMustBeResource);
+}
+
 TEST(ResourcenessTests, GoodResourceStruct) {
   for (const std::string& definition : {
            "type Foo =  resource struct {};",
