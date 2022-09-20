@@ -29,7 +29,6 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
     fuchsia_zircon::{AsHandleRef, Channel, Handle, Process, Signals, Status, Task},
-    log::warn,
     std::{
         collections::HashMap,
         sync::{
@@ -37,6 +36,7 @@ use {
             Arc,
         },
     },
+    tracing::warn,
 };
 
 /// Asynchronously manages a block device for filesystem operations.
@@ -481,7 +481,10 @@ impl ServingSingleVolumeFilesystem {
 
             let info = process.info().map_err(ShutdownError::GetProcessReturnCode)?;
             if info.return_code != 0 {
-                warn!("process returned non-zero exit code ({}) after shutdown", info.return_code);
+                warn!(
+                    code = info.return_code,
+                    "process returned non-zero exit code after shutdown"
+                );
             }
         }
         Ok(())
