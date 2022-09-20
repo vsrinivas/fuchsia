@@ -8,7 +8,7 @@
 #include <zircon/status.h>
 
 #include "src/ui/a11y/lib/magnifier/gfx_magnifier_delegate.h"
-#include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
+#include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager_impl.h"
 #include "src/ui/a11y/lib/screen_reader/screen_reader_context.h"
 #include "src/ui/a11y/lib/util/util.h"
 #include "src/ui/a11y/lib/view/view_coordinate_converter.h"
@@ -297,7 +297,7 @@ A11yManagerState A11yManagerState::withSettings(
 }
 
 std::unique_ptr<a11y::ScreenReader> App::InitializeScreenReader() {
-  auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManager>(
+  auto a11y_focus_manager = std::make_unique<a11y::A11yFocusManagerImpl>(
       focus_chain_manager_.get(), focus_chain_manager_.get(), view_manager_,
       inspect_node_.CreateChild("focus_manager"));
   std::string locale_id = "en-US";

@@ -11,7 +11,6 @@
 namespace accessibility_test {
 class MockA11yFocusManager : public a11y::A11yFocusManager {
  public:
-  MockA11yFocusManager();
   ~MockA11yFocusManager() override = default;
 
   // Returns the current a11y focus.
@@ -22,7 +21,16 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
                     a11y::A11yFocusManager::SetA11yFocusCallback callback) override;
 
   // |A11yFocusManager|
+  void ClearA11yFocus() override;
+
+  // |A11yFocusManager|
   void UpdateHighlights(zx_koid_t koid, uint32_t node_id) override;
+
+  // |A11yFocusManager|
+  void set_on_a11y_focus_updated_callback(
+      OnA11yFocusUpdatedCallback on_a11y_focus_updated_callback) override {
+    on_a11y_focus_updated_callback_ = std::move(on_a11y_focus_updated_callback);
+  }
 
   // Returns true if GetA11yFocusCalled was called.
   bool IsGetA11yFocusCalled() const;
@@ -43,8 +51,6 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
   void set_should_get_a11y_focus_fail(bool value);
   void set_should_set_a11y_focus_fail(bool value);
 
-  void ClearA11yFocus() override { a11y_focus_info_.view_ref_koid = ZX_KOID_INVALID; }
-
  private:
   // Tracks if GetA11yFocus() is called.
   bool get_a11y_focus_called_ = false;
@@ -61,7 +67,9 @@ class MockA11yFocusManager : public a11y::A11yFocusManager {
   // Whether SetA11yFocus() call should fail.
   bool should_set_a11y_focus_fail_ = false;
 
-  a11y::A11yFocusManager::A11yFocusInfo a11y_focus_info_;
+  OnA11yFocusUpdatedCallback on_a11y_focus_updated_callback_;
+
+  std::optional<a11y::A11yFocusManager::A11yFocusInfo> a11y_focus_info_;
 };
 }  // namespace accessibility_test
 

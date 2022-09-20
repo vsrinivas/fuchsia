@@ -4,8 +4,9 @@
 
 source_set("focus") {
   sources = [
-    "a11y_focus_manager.cc",
     "a11y_focus_manager.h",
+    "a11y_focus_manager_impl.cc",
+    "a11y_focus_manager_impl.h",
   ]
 
   public_deps = [

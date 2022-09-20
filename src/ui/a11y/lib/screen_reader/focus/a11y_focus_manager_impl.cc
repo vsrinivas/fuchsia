@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
+#include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager_impl.h"
 
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/async/default.h>
@@ -15,9 +15,9 @@
 
 namespace a11y {
 
-A11yFocusManager::A11yFocusManager(AccessibilityFocusChainRequester* focus_chain_requester,
-                                   AccessibilityFocusChainRegistry* registry,
-                                   ViewSource* view_source, inspect::Node inspect_node)
+A11yFocusManagerImpl::A11yFocusManagerImpl(AccessibilityFocusChainRequester* focus_chain_requester,
+                                           AccessibilityFocusChainRegistry* registry,
+                                           ViewSource* view_source, inspect::Node inspect_node)
     : focus_chain_requester_(focus_chain_requester),
       view_source_(view_source),
       weak_ptr_factory_(this),
@@ -30,11 +30,9 @@ A11yFocusManager::A11yFocusManager(AccessibilityFocusChainRequester* focus_chain
   registry->Register(weak_ptr_factory_.GetWeakPtr());
 }
 
-A11yFocusManager::A11yFocusManager() : weak_ptr_factory_(this) {}
+A11yFocusManagerImpl::~A11yFocusManagerImpl() { ClearHighlights(); }
 
-A11yFocusManager::~A11yFocusManager() { ClearHighlights(); }
-
-std::optional<A11yFocusManager::A11yFocusInfo> A11yFocusManager::GetA11yFocus() {
+std::optional<A11yFocusManager::A11yFocusInfo> A11yFocusManagerImpl::GetA11yFocus() {
   const auto iterator = focused_node_in_view_map_.find(currently_focused_view_);
   if (iterator == focused_node_in_view_map_.end()) {
     FX_LOGS(INFO) << "No view is currently in a11y-focus.";
@@ -46,8 +44,8 @@ std::optional<A11yFocusManager::A11yFocusInfo> A11yFocusManager::GetA11yFocus() 
   return focus_info;
 }
 
-void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
-                                    SetA11yFocusCallback set_focus_callback) {
+void A11yFocusManagerImpl::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
+                                        SetA11yFocusCallback set_focus_callback) {
   // Same view a11y focus change.
   if (koid == currently_focused_view_) {
     UpdateFocus(koid, node_id);
@@ -67,7 +65,7 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
       });
 }
 
-void A11yFocusManager::UpdateFocus(zx_koid_t koid, uint32_t node_id) {
+void A11yFocusManagerImpl::UpdateFocus(zx_koid_t koid, uint32_t node_id) {
   // Update highlights BEFORE updating the focus state, because clearing the
   // old highlight requires the old focus state.
   UpdateHighlights(koid, node_id);
@@ -81,7 +79,7 @@ void A11yFocusManager::UpdateFocus(zx_koid_t koid, uint32_t node_id) {
   UpdateInspectProperties();
 }
 
-void A11yFocusManager::OnViewFocus(zx_koid_t view_ref_koid) {
+void A11yFocusManagerImpl::OnViewFocus(zx_koid_t view_ref_koid) {
   uint32_t newly_focused_node_id = kRootNodeId;
   if (focused_node_in_view_map_.find(view_ref_koid) != focused_node_in_view_map_.end()) {
     newly_focused_node_id = focused_node_in_view_map_[view_ref_koid];
@@ -90,7 +88,7 @@ void A11yFocusManager::OnViewFocus(zx_koid_t view_ref_koid) {
   UpdateFocus(view_ref_koid, newly_focused_node_id);
 }
 
-void A11yFocusManager::UpdateInspectProperties() {
+void A11yFocusManagerImpl::UpdateInspectProperties() {
   // It's possible that the inspector could attempt to read these properties
   // while we are updating them. By setting inspect_property_current_focus_koid_
   // to a nonsense value of UINT64_MAX prior to updating, we ensure that we can
@@ -101,7 +99,8 @@ void A11yFocusManager::UpdateInspectProperties() {
   inspect_property_current_focus_koid_.Set(currently_focused_view_);
 }
 
-void A11yFocusManager::UpdateHighlights(zx_koid_t newly_focused_view, uint32_t newly_focused_node) {
+void A11yFocusManagerImpl::UpdateHighlights(zx_koid_t newly_focused_view,
+                                            uint32_t newly_focused_node) {
   ClearHighlights();
 
   // If there's no view in focus, then there's no work to do.
@@ -141,7 +140,7 @@ void A11yFocusManager::UpdateHighlights(zx_koid_t newly_focused_view, uint32_t n
                                          transform->translation_vector());
 }
 
-void A11yFocusManager::ClearA11yFocus() {
+void A11yFocusManagerImpl::ClearA11yFocus() {
   ClearHighlights();
 
   currently_focused_view_ = ZX_KOID_INVALID;
@@ -150,7 +149,7 @@ void A11yFocusManager::ClearA11yFocus() {
   }
 }
 
-void A11yFocusManager::ClearHighlights() {
+void A11yFocusManagerImpl::ClearHighlights() {
   // If there's no view in focus, then there's no work to do.
   if (currently_focused_view_ == ZX_KOID_INVALID) {
     return;

@@ -13,17 +13,13 @@
 
 namespace accessibility_test {
 
-MockA11yFocusManager::MockA11yFocusManager() {
-  a11y_focus_info_.view_ref_koid = ZX_KOID_INVALID;
-  a11y_focus_info_.node_id = UINT_MAX;
-}
-
 std::optional<a11y::A11yFocusManager::A11yFocusInfo> MockA11yFocusManager::GetA11yFocus() {
   get_a11y_focus_called_ = true;
-  if (should_get_a11y_focus_fail_ || a11y_focus_info_.view_ref_koid == ZX_KOID_INVALID) {
-    return std::nullopt;
+  if (!should_get_a11y_focus_fail_) {
+    return a11y_focus_info_;
   }
-  return a11y_focus_info_;
+
+  return std::nullopt;
 }
 
 void MockA11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
@@ -33,10 +29,14 @@ void MockA11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
     callback(false);
     return;
   }
-  a11y_focus_info_.view_ref_koid = koid;
-  a11y_focus_info_.node_id = node_id;
+  UpdateA11yFocus(koid, node_id);
+  if (on_a11y_focus_updated_callback_) {
+    on_a11y_focus_updated_callback_(GetA11yFocus());
+  }
   callback(true);
 }
+
+void MockA11yFocusManager::ClearA11yFocus() { a11y_focus_info_.reset(); }
 
 void MockA11yFocusManager::UpdateHighlights(zx_koid_t koid, uint32_t node_id) {
   update_highlights_called_ = true;
@@ -57,8 +57,7 @@ void MockA11yFocusManager::set_should_set_a11y_focus_fail(bool value) {
 }
 
 void MockA11yFocusManager::UpdateA11yFocus(zx_koid_t koid, uint32_t node_id) {
-  a11y_focus_info_.view_ref_koid = koid;
-  a11y_focus_info_.node_id = node_id;
+  a11y_focus_info_.emplace(A11yFocusInfo{.view_ref_koid = koid, .node_id = node_id});
 }
 
 void MockA11yFocusManager::ResetExpectations() {

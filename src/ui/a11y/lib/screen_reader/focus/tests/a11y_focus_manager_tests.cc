@@ -15,7 +15,7 @@
 #include "src/ui/a11y/lib/annotation/tests/mocks/mock_annotation_view.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_registry.h"
 #include "src/ui/a11y/lib/focus_chain/tests/mocks/mock_focus_chain_requester.h"
-#include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager.h"
+#include "src/ui/a11y/lib/screen_reader/focus/a11y_focus_manager_impl.h"
 #include "src/ui/a11y/lib/semantics/tests/mocks/mock_semantic_tree.h"
 #include "src/ui/a11y/lib/testing/view_ref_helper.h"
 #include "src/ui/a11y/lib/util/util.h"
@@ -34,7 +34,7 @@ class A11yFocusManagerTest : public gtest::RealLoopFixture {
 
   void SetUp() override {
     inspector_ = std::make_unique<inspect::Inspector>();
-    a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManager>(
+    a11y_focus_manager_ = std::make_unique<a11y::A11yFocusManagerImpl>(
         &mock_focus_chain_requester_, &mock_focus_chain_registry_, &mock_view_source_,
         inspector_->GetRoot().CreateChild(kInspectNodeName));
     a11y_focus_manager_->set_on_a11y_focus_updated_callback(
@@ -196,9 +196,10 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFocusChainUpdate) {
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAnInspectUpdate) {
   mock_focus_chain_requester_.set_will_change_focus(true);
   bool success = false;
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), a11y::A11yFocusManager::kRootNodeId,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(),
+                                    a11y::A11yFocusManagerImpl::kRootNodeId,
                                     [&success](bool result) { success = result; });
-  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManager::kRootNodeId);
+  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManagerImpl::kRootNodeId);
   EXPECT_TRUE(success);
   // Now that one view is in Focus, changes the focus to another view, which causes again a Focus
   // Chain update.
@@ -216,17 +217,18 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAnInspectUpdate) {
   auto* test_inspect_hierarchy = hierarchy.value().GetByPath({kInspectNodeName});
   ASSERT_TRUE(test_inspect_hierarchy);
   auto* focused_koid = test_inspect_hierarchy->node().get_property<inspect::UintPropertyValue>(
-      a11y::A11yFocusManager::kCurrentlyFocusedKoidInspectNodeName);
+      a11y::A11yFocusManagerImpl::kCurrentlyFocusedKoidInspectNodeName);
   ASSERT_EQ(focused_koid->value(), view_ref_helper_2.koid());
   auto* focused_node_id = test_inspect_hierarchy->node().get_property<inspect::UintPropertyValue>(
-      a11y::A11yFocusManager::kCurrentlyFocusedNodeIdInspectNodeName);
+      a11y::A11yFocusManagerImpl::kCurrentlyFocusedNodeIdInspectNodeName);
   ASSERT_EQ(focused_node_id->value(), 1u);
 }
 
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFailedFocusChainUpdate) {
   mock_focus_chain_requester_.set_will_change_focus(false);
   bool success = true;  // expects false later.
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), a11y::A11yFocusManager::kRootNodeId,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(),
+                                    a11y::A11yFocusManagerImpl::kRootNodeId,
                                     [&success](bool result) { success = result; });
   EXPECT_FALSE(success);
   auto a11y_focus = a11y_focus_manager_->GetA11yFocus();
@@ -236,13 +238,15 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusCausesAFailedFocusChainUpdate) {
 TEST_F(A11yFocusManagerTest, ChangingA11yFocusToTheSameView) {
   mock_focus_chain_requester_.set_will_change_focus(true);
   bool success = false;
-  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), a11y::A11yFocusManager::kRootNodeId,
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(),
+                                    a11y::A11yFocusManagerImpl::kRootNodeId,
                                     [&success](bool result) { success = result; });
-  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManager::kRootNodeId);
+  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManagerImpl::kRootNodeId);
   EXPECT_TRUE(success);
   EXPECT_TRUE(a11y_focus_received_in_update_callback_);
   EXPECT_EQ(a11y_focus_received_in_update_callback_->view_ref_koid, view_ref_helper_.koid());
-  EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id, a11y::A11yFocusManager::kRootNodeId);
+  EXPECT_EQ(a11y_focus_received_in_update_callback_->node_id,
+            a11y::A11yFocusManagerImpl::kRootNodeId);
 
   // Changes the focus to the same view.
   mock_focus_chain_requester_.set_will_change_focus(true);
@@ -259,7 +263,7 @@ TEST_F(A11yFocusManagerTest, ChangingA11yFocusToTheSameView) {
 TEST_F(A11yFocusManagerTest, ListensToFocusChainUpdates) {
   // The Focus Chain is updated and the Focus Chain Manager listens to the update.
   mock_focus_chain_registry_.SendViewRefKoid(view_ref_helper_.koid());
-  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManager::kRootNodeId);
+  CheckViewInFocus(view_ref_helper_, a11y::A11yFocusManagerImpl::kRootNodeId);
 }
 
 TEST_F(A11yFocusManagerTest, ClearsTheA11YFocus) {
