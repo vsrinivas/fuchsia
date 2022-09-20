@@ -314,7 +314,7 @@ and provide more functionality (run commands in the guest, mount filesystems,
 launch applications).
 
 For more information on how to launch and use virtualization on Fuchsia, see
-Getting Started with Fuchsia Virtualization.
+[Getting Started with Fuchsia Virtualization][refer.virtualization_get_started].
 
 [define.type-2-hypervisor]:
     https://en.wikipedia.org/wiki/Hypervisor#Classification
@@ -341,6 +341,7 @@ Getting Started with Fuchsia Virtualization.
     https://cs.opensource.google/fuchsia/fuchsia/+/main:src/virtualization/bin/vmm/arch/x64/decode.cc;l=185;drc=f09260d405305bd46e76b6717ecd13b073e67fc6
 [refer.virtio]:
     https://docs.oasis-open.org/virtio/virtio/v1.1/csprd01/virtio-v1.1-csprd01.html
+[refer.virtualization_get_started]: get_started.md
 
 [code.guest_config]:
     https://cs.opensource.google/fuchsia/fuchsia/+/main:sdk/fidl/fuchsia.virtualization/guest_config.fidl

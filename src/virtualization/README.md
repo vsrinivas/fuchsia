@@ -1,163 +1,18 @@
-# Guest
+# Fuchsia Virtualization
 
-The `vmm` app enables booting a guest operating system using the Zircon
-hypervisor. The hypervisor and VMM are collectively referred to as "Machina".
+This directory contains the userspace portions of the Fuchsia Virtualization
+stack. For a high level overview of Fuchsia Virtualization, see [Virtualization
+Overview][ref.virtualization_overview].
 
-These instructions will guide you through creating minimal Zircon and Linux
-guests. For instructions on building a more comprehensive Linux guest system
-see the [debian_guest](./packages/debian_guest/README.md) package.
-
-These instructions assume familiarity with how to build Fuchsia images and
-boot them on your target device.
-
-## Build host system with the guest components
-
-To configure the system to run the guest components, you'll need to add the
-guest package and a core shard for each guest component you wish to run. For
-example, if you want to run the Debian guest:
-
-```sh
-fx set core.x64 \
-    --with-base //src/virtualization/bundles:debian \
-    --args='core_realm_shards += [ "//src/virtualization/bundles:debian_core_shards" ]'
-```
-
-Or Zircon:
-```sh
-fx set core.x64 \
-    --with-base //src/virtualization/bundles:zircon \
-    --args='core_realm_shards += [ "//src/virtualization/bundles:zircon_core_shards" ]'
-```
-
-Or Termina:
-```sh
-fx set core.x64 \
-    --with-base //src/virtualization/bundles:termina \
-    --args='core_realm_shards += [ "//src/virtualization/bundles:termina_core_shards" ]'
-```
-
-To include support for all the guest packages, you can use the `all_guests` and `all_core_shards`
-labels:
-```sh
-fx set core.x64 \
-    --with-base //src/virtualization/bundles:all_guests \
-    --args='core_realm_shards += [ "//src/virtualization/bundles:all_core_shards" ]'
-```
-
-Next, build the guest package:
-
-```
-fx build
-```
-
-For ARM64 targets, replace `x64` with `arm64` or the appropriate board name.
-
-### Note for external developers
-
-***_Googlers: You don't need to do this, the Linux images are downloaded from
-CIPD by Jiri.***
-
-The `debian_guest` package expects the Linux kernel binaries and userspace
-image to be in `prebuilt/virtualization/packages/debian_guest`. You should
-create them before running `fx build` by following the instructions in
-`debian_guest/README.md`.
-
-## Running guests
-
-After booting the target device, to run Zircon:
-```sh
-guest launch zircon
-```
-
-Likewise, to launch a Debian guest:
-```sh
-guest launch debian
-```
-
-## Running on QEMU
-
-Running a guest on QEMU on x64 requires KVM (i.e. pass `-k` to `fx qemu`):
-```sh
-fx qemu -k
-```
-
-You may also need to enable nested KVM on your host machine. The following
-instructions assume a Linux host machine with an Intel processor.
-
-To check whether nested virtualization is enabled, run the following command:
-```sh
-cat /sys/module/kvm_intel/parameters/nested
-```
-
-An output of `Y` indicates nested virtualization is enabled, `0` or `N`
-indicates not enabled.
-
-To enable nested virtualization until the next reboot:
-
-```sh
-modprobe -r kvm_intel
-modprobe kvm_intel nested=1
-```
-
-To make the change permanent add the following line to
-`/etc/modprobe.d/kvm.conf`:
-```
-options kvm_intel nested=1
-```
-
-## Running from Workstation
-
-To run from Workstation, configure the guest package as follows:
-```sh
-fx set workstation_eng.x64 --with-base //src/virtualization
-```
-
-After booting the guest packages can be launched from the system launcher as
-`debian_guest` and `zircon_guest`.
-
-## Integration tests
-
-Machina has a set of integration tests that launch Zircon and Debian guests to test the VMM,
-hypervisor, and each of the virtio devices. To run the tests:
-```sh
-fx set core.x64 --with-base //src/virtualization:tests
-fx build
-fx test //src/virtualization/tests
-```
-
-For ARM64 targets, replace `x64` with `arm64` or the appropriate board name.
-
-# Guest Configuration
-
-Guest systems can be configured by including a config file inside the guest
-package:
-
-```json
-{
-    "type": "object",
-    "properties": {
-        "kernel": {
-            "type": "string"
-        },
-        "ramdisk": {
-            "type": "string"
-        },
-        "block": {
-            "type": "string"
-        },
-        "cmdline": {
-            "type": "string"
-        }
-    }
-}
-```
+If you just want to start using Virtualization, see [Getting
+Started][ref.virtualization_get_started].
 
 # Monitor Guest exit statistics
 
-`kstats -v`  can print the number of Guest exits per second and the reason.
-For example, the output on ARM64 appears as follows:
+`kstats -v`  can print the number of Guest exits per second and the reason. For
+example, the output on ARM64 appears as follows:
 
-```
+```none
 cpu   vm_entry vm_exit inst_abt data_abt wfx_inst sys_inst smc_inst ints
   0      43        43        0      6      27        1        0      9
   1     226       225        0    111       3       17        0     94
@@ -173,9 +28,9 @@ The fields in the output are as follows:
 - `smc_inst`: The amount of instruction smc exit.
 - `ints`    : The amount of interrupt exit.
 
-For x86_64, the output is as follows:
+For `x64`, the output is as follows:
 
-```
+```none
  cpu    vm_entry vm_exit ints ints_win ept ctrl_reg msr(rd wr) inst(io hlt cpuid ple vmcall xsetbv)
   0       40       40     10      0     0      0        10 10        5  5    0    0    0      0
 ```
@@ -187,3 +42,8 @@ With the following fields:
 - `ctrl_reg` : The amount of control register(CRx) access exit.
 - `msr`      : The amount of MSR register access exit (`rd/wr` is read/write).
 - `inst`     : the amount of some kinds of instruction exit.
+
+[ref.virtualization_overview]:
+    https://fuchsia.dev/fuchsia-src/development/virtualization/overview
+[ref.virtualization_get_started]:
+    https://fuchsia.dev/fuchsia-src/development/virtualization/get_started
