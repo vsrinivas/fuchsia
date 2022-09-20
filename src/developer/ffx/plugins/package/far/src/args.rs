@@ -21,18 +21,8 @@ pub struct FarCommand {
 #[derive(Eq, FromArgs, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum FarSubCommand {
-    List(ListSubCommand),
     Cat(CatSubCommand),
     Extract(ExtractSubCommand),
-}
-
-#[derive(Eq, FromArgs, PartialEq, Debug)]
-#[argh(subcommand, name = "list", description = "List the contents of Fuchia package archive file")]
-pub struct ListSubCommand {
-    #[argh(positional, description = "package archive")]
-    pub archive: PathBuf,
-    #[argh(switch, short = 'l', description = "show long information for each entry")]
-    pub long_format: bool,
 }
 
 #[derive(Eq, FromArgs, PartialEq, Debug)]

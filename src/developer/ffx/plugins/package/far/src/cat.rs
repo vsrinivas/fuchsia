@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{FarArchiveReader, FarListReader};
 use anyhow::Result;
 use errors::ffx_bail;
+use ffx_package_archive_utils::{read_file_entries, FarArchiveReader, FarListReader};
 use ffx_package_far_args::CatSubCommand;
 
 pub fn cat_impl<W: std::io::Write>(cmd: CatSubCommand, writer: &mut W) -> Result<()> {
@@ -20,7 +20,7 @@ fn cat_implementation<W: std::io::Write>(
 ) -> Result<()> {
     let file_name = cmd.far_path.to_string_lossy();
 
-    let entries = crate::list::read_file_entries(reader)?;
+    let entries = read_file_entries(reader)?;
     if let Some(entry) =
         entries.iter().find(|x| if cmd.as_hash { x.path == file_name } else { x.name == file_name })
     {
@@ -36,8 +36,8 @@ fn cat_implementation<W: std::io::Write>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        test::{create_mockreader, test_contents, BLOB1, LIB_RUN_SO_BLOB, LIB_RUN_SO_PATH},
+    use ffx_package_archive_utils::{
+        test_utils::{create_mockreader, test_contents, BLOB1, LIB_RUN_SO_BLOB, LIB_RUN_SO_PATH},
         MockFarListReader,
     };
     use std::path::PathBuf;

@@ -4,20 +4,20 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_package_far") {
+ffx_plugin("ffx_package_archive_list") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/package/archive:lib",
+    "//third_party/rust_crates:humansize",
+    "//third_party/rust_crates:prettytable-rs",
   ]
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+
+  test_deps = [ "//src/developer/ffx/lib/writer:lib" ]
+
   args_sources = [ "src/args.rs" ]
-  sources = [
-    "src/cat.rs",
-    "src/extract.rs",
-    "src/lib.rs",
-  ]
+
+  sources = [ "src/lib.rs" ]
 }

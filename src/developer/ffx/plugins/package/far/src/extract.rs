@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{ArchiveEntry, FarArchiveReader, FarListReader};
 use anyhow::Result;
 use errors::ffx_bail;
+use ffx_package_archive_utils::{read_file_entries, ArchiveEntry, FarArchiveReader, FarListReader};
 use ffx_package_far_args::ExtractSubCommand;
 use std::fs;
 
@@ -19,7 +19,7 @@ fn extract_implementation<W: std::io::Write>(
     writer: &mut W,
     reader: &mut Box<dyn FarListReader>,
 ) -> Result<()> {
-    let entries = crate::list::read_file_entries(reader)?;
+    let entries = read_file_entries(reader)?;
     let dest_dir = cmd.output_dir;
 
     let mut extract_list: Vec<ArchiveEntry> = vec![];
@@ -67,8 +67,8 @@ fn extract_implementation<W: std::io::Write>(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{
-        test::{
+    use ffx_package_archive_utils::{
+        test_utils::{
             create_mockreader, test_contents, BLOB1, BLOB2, DATA_SOME_FILE_BLOB,
             DATA_SOME_FILE_PATH, LIB_RUN_SO_BLOB, LIB_RUN_SO_PATH, RUN_ME_BLOB, RUN_ME_PATH,
         },
