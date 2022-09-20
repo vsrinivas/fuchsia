@@ -6,6 +6,7 @@
         {
             name: "soundplayer",
             url: "fuchsia-pkg://fuchsia.com/soundplayer#meta/soundplayer.cm",
+            environment: "#core-env",
         },
     ],
     use: [
