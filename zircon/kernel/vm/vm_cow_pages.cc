@@ -568,7 +568,7 @@ zx_status_t VmCowPages::CreateExternal(fbl::RefPtr<PageSource> src, VmCowPagesOp
     // content for a newly created VMO is provided by the page source, i.e. there is no content that
     // the kernel implicitly supplies with zero.
     Guard<CriticalMutex> guard{&cow->lock_};
-    if (cow->is_source_preserving_page_content_locked()) {
+    if (cow->is_source_preserving_page_content()) {
       DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
       cow->UpdateSupplyZeroOffsetLocked(size);
     }
@@ -948,7 +948,7 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   // There's no technical reason why this merging code cannot be run if there is a page source,
   // however a bi-directional clone will never have a page source and so in case there are any
   // consequence that have no been considered, ensure we are not in this case.
-  DEBUG_ASSERT(!is_source_preserving_page_content_locked());
+  DEBUG_ASSERT(!is_source_preserving_page_content());
 
   page_list_.RemovePages(page_remover.RemovePagesCallback(), 0, visibility_start_offset);
   page_list_.RemovePages(page_remover.RemovePagesCallback(), merge_end_offset,
@@ -1155,7 +1155,7 @@ void VmCowPages::DumpLocked(uint depth, bool verbose) const {
       printf("  ");
     }
     printf("page_source preserves content %d supply_zero_offset %#" PRIx64 "\n",
-           is_source_preserving_page_content_locked(), supply_zero_offset_);
+           is_source_preserving_page_content(), supply_zero_offset_);
     page_source_->Dump(depth + 1);
   }
 
@@ -1448,7 +1448,7 @@ zx_status_t VmCowPages::AddPageLocked(VmPageOrMarker* p, uint64_t offset,
     // list itself, so that all content resides in the page list. This might require supporting
     // custom sized ranges in the page list; we don't want to pay the cost of individual zero page
     // markers per page or multiple fixed sized zero ranges.
-    if (is_source_preserving_page_content_locked() && offset >= supply_zero_offset_) {
+    if (is_source_preserving_page_content() && offset >= supply_zero_offset_) {
       return ZX_ERR_ALREADY_EXISTS;
     }
   }
@@ -1526,7 +1526,7 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page,
   // Pages being added to pager backed VMOs should have a valid dirty_state before being added to
   // the page list, so that they can be inserted in the correct page queue. New pages start off
   // clean.
-  if (is_source_preserving_page_content_locked()) {
+  if (is_source_preserving_page_content()) {
     // Only zero pages can be added as new pages to pager backed VMOs.
     DEBUG_ASSERT(zero || IsZeroPage(page));
     UpdateDirtyStateLocked(page, offset, DirtyState::Clean, /*is_pending_add=*/true);
@@ -1858,7 +1858,7 @@ VmPageOrMarkerRef VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCo
 void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyState dirty_state,
                                         bool is_pending_add) {
   ASSERT(page);
-  ASSERT(is_source_preserving_page_content_locked());
+  ASSERT(is_source_preserving_page_content());
 
   // If the page is not pending being added to the page list, it should have valid object info.
   DEBUG_ASSERT(is_pending_add || page->object.get_object() == this);
@@ -1945,7 +1945,7 @@ zx_status_t VmCowPages::PrepareForWriteLocked(uint64_t offset, uint64_t len,
   }
 
   DEBUG_ASSERT(page_source_);
-  DEBUG_ASSERT(is_source_preserving_page_content_locked());
+  DEBUG_ASSERT(is_source_preserving_page_content());
 
   uint64_t dirty_len = 0;
   const uint64_t start_offset = offset;
@@ -2175,7 +2175,7 @@ zx_status_t VmCowPages::PrepareForWriteLocked(uint64_t offset, uint64_t len,
 void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint pf_flags) {
   // We only care about updating on access if we can reclaim pages, which if reclamation is limited
   // to pager backed can be skipped if eviction isn't possible.
-  if (PageQueues::ReclaimIsOnlyPagerBacked() && !can_evict_locked()) {
+  if (PageQueues::ReclaimIsOnlyPagerBacked() && !can_evict()) {
     return;
   }
 
@@ -2305,7 +2305,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // would have already blocked on a read request the first time, and ended up here when
     // unblocked, at which point the page would be present.
     uint64_t dirty_len = 0;
-    if ((pf_flags & VMM_PF_FLAG_WRITE) && is_source_preserving_page_content_locked() &&
+    if ((pf_flags & VMM_PF_FLAG_WRITE) && is_source_preserving_page_content() &&
         mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite) {
       // If this page was loaned, it should be replaced with a non-loaned page, so that we can make
       // progress with marking pages dirty. PrepareForWriteLocked terminates its page walk when it
@@ -2352,7 +2352,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // the write permission on mappings since we don't need to generate a permission fault. We only
     // need to dirty track pages owned by a root user-pager-backed VMO, i.e. a VMO with a page
     // source that preserves page contents.
-    out->writable = pf_flags & VMM_PF_FLAG_WRITE || !is_source_preserving_page_content_locked();
+    out->writable = pf_flags & VMM_PF_FLAG_WRITE || !is_source_preserving_page_content();
 
     UpdateOnAccessLocked(p, pf_flags);
     out->add_page(p->paddr());
@@ -2438,7 +2438,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // won't be true for a contiguous VMO.
     AssertHeld(page_owner->lock_);
     if ((page_or_mark && page_or_mark->IsMarker()) || !page_owner->page_source_ ||
-        (!writing && !page_owner->is_source_preserving_page_content_locked())) {
+        (!writing && !page_owner->is_source_preserving_page_content())) {
       // We case use the zero page, since we have a marker, or no page source, or we're not adding
       // a page to the VmCowPages (due to !writing) and the page source always provides zeroes so
       // reading zeroes is consistent with what the page source would provide.
@@ -2453,7 +2453,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
         // The supply_zero_offset_ is only relevant for page sources preserving page content. For
         // other types of VMOs, the supply_zero_offset_ will be set to UINT64_MAX, so we can never
         // end up here.
-        DEBUG_ASSERT(page_owner->is_source_preserving_page_content_locked());
+        DEBUG_ASSERT(page_owner->is_source_preserving_page_content());
         DEBUG_ASSERT(IS_PAGE_ALIGNED(page_owner->supply_zero_offset_));
         DEBUG_ASSERT(page_owner->supply_zero_offset_ <= page_owner->size_);
 
@@ -2524,7 +2524,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // *cannot* be Clean. A gap beyond supply_zero_offset_ is conceptually already dirty (and zero),
     // so we're transitioning to a dirty actual page here, i.e. we cannot lose dirtiness when we
     // fork the zero page here.
-    if (is_source_preserving_page_content_locked() && page_source_->ShouldTrapDirtyTransitions() &&
+    if (is_source_preserving_page_content() && page_source_->ShouldTrapDirtyTransitions() &&
         (mark_dirty == DirtyTrackingAction::DirtyAllPagesOnWrite ||
          offset >= supply_zero_offset_)) {
       // The only page we can be forking here is the zero page. A non-slice child VMO does not
@@ -2569,7 +2569,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     // We could be allocating a page to replace a zero page marker in a pager-backed VMO. If we were
     // asked to dirty the page, mark it Dirty, otherwise mark it Clean. AddPageLocked below will
     // then insert the page into the appropriate page queue.
-    if (is_source_preserving_page_content_locked()) {
+    if (is_source_preserving_page_content()) {
       // The only page we can be forking here is the zero page. A non-slice child VMO does not
       // support dirty page tracking.
       DEBUG_ASSERT(p == vm_get_zero_page());
@@ -2608,7 +2608,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     //
     // We don't need to scan for zeroes if on finding zeroes we wouldn't be able to remove the page
     // anyway.
-    if (p == vm_get_zero_page() && !is_source_preserving_page_content_locked() &&
+    if (p == vm_get_zero_page() && !is_source_preserving_page_content() &&
         can_decommit_zero_pages_locked() && !(pf_flags & VMM_PF_FLAG_SW_FAULT)) {
       pmm_page_queues()->MoveToAnonymousZeroFork(res_page);
     }
@@ -2894,12 +2894,12 @@ zx_status_t VmCowPages::DecommitRangeLocked(uint64_t offset, uint64_t len) {
   }
 
   // Currently, we can't decommit if the absence of a page doesn't imply zeroes.
-  if (parent_ || is_source_preserving_page_content_locked()) {
+  if (parent_ || is_source_preserving_page_content()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
   // VmObjectPaged::DecommitRange() rejects is_contiguous() VMOs (for now).
-  DEBUG_ASSERT(can_decommit_locked());
+  DEBUG_ASSERT(can_decommit());
 
   // Demand offset and length be correctly aligned to not give surprising user semantics.
   if (!IS_PAGE_ALIGNED(offset) || !IS_PAGE_ALIGNED(len)) {
@@ -2965,7 +2965,7 @@ bool VmCowPages::PageWouldReadZeroLocked(uint64_t page_offset) {
     // This is already considered zero as there's a marker.
     return true;
   }
-  if (is_source_preserving_page_content_locked() && page_offset >= supply_zero_offset_) {
+  if (is_source_preserving_page_content() && page_offset >= supply_zero_offset_) {
     // Uncommitted pages beyond supply_zero_offset_ are supplied as zeros by the kernel.
     if (!slot || slot->IsEmpty()) {
       return true;
@@ -3104,7 +3104,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
   // page traversal loop. The only exception here is if there are any pinned pages which we will not
   // be able to remove, so simply skip this optimization in that case and fall back to the general
   // case.
-  if (is_source_preserving_page_content_locked() &&
+  if (is_source_preserving_page_content() &&
       (start < supply_zero_offset_ && supply_zero_offset_ <= end) &&
       !AnyPagesPinnedLocked(start, supply_zero_offset_ - start)) {
     // Resolve any read requests that might exist in the range [start, supply_zero_offset_), since
@@ -3117,7 +3117,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 
   // If the VMO is directly backed by a page source that preserves content, it should be the root
   // VMO of the hierarchy.
-  DEBUG_ASSERT(!is_source_preserving_page_content_locked() || !parent_);
+  DEBUG_ASSERT(!is_source_preserving_page_content() || !parent_);
 
   // Helper lambda to determine if this VMO can see parent contents at offset, or if a length is
   // specified as well in the range [offset, offset + length).
@@ -3188,7 +3188,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       return false;
     }
     // Offsets less than supply_zero_offset_ cannot be decommitted.
-    return !is_source_preserving_page_content_locked() || offset >= supply_zero_offset_;
+    return !is_source_preserving_page_content() || offset >= supply_zero_offset_;
   };
 
   // Like can_decommit_slot but for a range.
@@ -3197,7 +3197,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       return false;
     }
     // Offsets less than supply_zero_offset_ cannot be decommitted.
-    return !is_source_preserving_page_content_locked() || offset >= supply_zero_offset_;
+    return !is_source_preserving_page_content() || offset >= supply_zero_offset_;
   };
 
   // Helper lambda to zero the slot at offset either by inserting a marker or by zeroing the actual
@@ -3325,7 +3325,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
         AssertHeld(lock_);
 
         // Contiguous VMOs cannot have markers.
-        DEBUG_ASSERT(!direct_source_supplies_zero_pages_locked() || !slot->IsMarker());
+        DEBUG_ASSERT(!direct_source_supplies_zero_pages() || !slot->IsMarker());
 
         // First see if we can simply get done with an empty slot in the page list. This VMO should
         // allow decommitting a page at this offset when zeroing. Additionally, one of the following
@@ -3374,7 +3374,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       },
       [&](uint64_t gap_start, uint64_t gap_end) {
         AssertHeld(lock_);
-        if (direct_source_supplies_zero_pages_locked()) {
+        if (direct_source_supplies_zero_pages()) {
           // Already logically zero - don't commit pages to back the zeroes if they're not already
           // committed.  This is important for contiguous VMOs, as we don't use markers for
           // contiguous VMOs, and allocating a page below to hold zeroes would not be asking the
@@ -3435,7 +3435,7 @@ void VmCowPages::MoveToWiredLocked(vm_page_t* page, uint64_t offset) {
 }
 
 void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
-  if (is_source_preserving_page_content_locked()) {
+  if (is_source_preserving_page_content()) {
     DEBUG_ASSERT(is_page_dirty_tracked(page));
     // We can only move Clean pages to the pager backed queues as they track age information for
     // eviction; only Clean pages can be evicted. Pages in AwaitingClean and Dirty are protected
@@ -3452,7 +3452,7 @@ void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
 }
 
 void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
-  if (is_source_preserving_page_content_locked()) {
+  if (is_source_preserving_page_content()) {
     DEBUG_ASSERT(is_page_dirty_tracked(page));
     // We can only move Clean pages to the pager backed queues as they track age information for
     // eviction; only Clean pages can be evicted. Pages in AwaitingClean and Dirty are protected
@@ -3978,7 +3978,7 @@ void VmCowPages::InvalidateDirtyRequestsLocked(uint64_t offset, uint64_t len) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
   DEBUG_ASSERT(InRange(offset, len, size_));
 
-  DEBUG_ASSERT(is_source_preserving_page_content_locked());
+  DEBUG_ASSERT(is_source_preserving_page_content());
   DEBUG_ASSERT(page_source_->ShouldTrapDirtyTransitions());
 
   const uint64_t start = offset;
@@ -4081,15 +4081,14 @@ zx_status_t VmCowPages::ResizeLocked(uint64_t s) {
       // If DIRTY requests are supported, also tell the page source that any non-Dirty pages that
       // are now out-of-bounds were dirtied (without actually dirtying them), to ensure that any
       // threads blocked on DIRTY requests for those pages get woken up.
-      if (is_source_preserving_page_content_locked() &&
-          page_source_->ShouldTrapDirtyTransitions()) {
+      if (is_source_preserving_page_content() && page_source_->ShouldTrapDirtyTransitions()) {
         InvalidateDirtyRequestsLocked(start, len);
       }
     }
 
     // If the page source is preserving content, supply_zero_offset_ and/or
     // awaiting_clean_zero_range_end_ might need updating.
-    if (is_source_preserving_page_content_locked()) {
+    if (is_source_preserving_page_content()) {
       if (s < supply_zero_offset_) {
         // If the new size is smaller than supply_zero_offset_, supply_zero_offset_ can be clipped
         // to the new size. The supply_zero_offset_ is used to supply zero pages at the tail end of
@@ -4412,7 +4411,7 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
     DEBUG_ASSERT(!src_page.IsReference());
 
     // A newly supplied page starts off as Clean.
-    if (src_page.IsPage() && is_source_preserving_page_content_locked()) {
+    if (src_page.IsPage() && is_source_preserving_page_content()) {
       UpdateDirtyStateLocked(src_page.Page(), offset, DirtyState::Clean,
                              /*is_pending_add=*/true);
     }
@@ -4421,7 +4420,7 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
         pmm_physical_page_borrowing_config()->is_borrowing_in_supplypages_enabled()) {
       // Assert some things we implicitly know are true (currently).  We can avoid explicitly
       // checking these in the if condition for now.
-      DEBUG_ASSERT(!is_source_supplying_specific_physical_pages_locked());
+      DEBUG_ASSERT(!is_source_supplying_specific_physical_pages());
       DEBUG_ASSERT(!src_page.Page()->is_loaned());
       DEBUG_ASSERT(!new_zeroed_pages);
       // Try to replace src_page with a loaned page.  We allocate the loaned page one page at a time
@@ -4562,7 +4561,7 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len, list_nod
   if (!page_source_->ShouldTrapDirtyTransitions()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  DEBUG_ASSERT(is_source_preserving_page_content_locked());
+  DEBUG_ASSERT(is_source_preserving_page_content());
 
   const uint64_t start_offset = offset;
   const uint64_t end_offset = offset + len;
@@ -4880,7 +4879,7 @@ zx_status_t VmCowPages::EnumerateDirtyRangesLocked(uint64_t offset, uint64_t len
   canary_.Assert();
 
   // Dirty pages are only tracked if the page source preserves content.
-  if (!is_source_preserving_page_content_locked()) {
+  if (!is_source_preserving_page_content()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -5018,7 +5017,7 @@ zx_status_t VmCowPages::WritebackBeginLocked(uint64_t offset, uint64_t len, bool
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (!is_source_preserving_page_content_locked()) {
+  if (!is_source_preserving_page_content()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -5125,7 +5124,7 @@ zx_status_t VmCowPages::WritebackEndLocked(uint64_t offset, uint64_t len) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  if (!is_source_preserving_page_content_locked()) {
+  if (!is_source_preserving_page_content()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -5394,7 +5393,7 @@ bool VmCowPages::RemovePageForEviction(vm_page_t* page, uint64_t offset) {
 bool VmCowPages::RemovePageForEvictionLocked(vm_page_t* page, uint64_t offset,
                                              EvictionHintAction hint_action) {
   // Without a page source to bring the page back in we cannot even think about eviction.
-  if (!can_evict_locked()) {
+  if (!can_evict()) {
     return false;
   }
 
@@ -5466,7 +5465,7 @@ bool VmCowPages::ReclaimPage(vm_page_t* page, uint64_t offset, EvictionHintActio
   }
 
   // See if we can reclaim by eviction.
-  if (can_evict_locked()) {
+  if (can_evict()) {
     return RemovePageForEvictionLocked(page, offset, hint_action);
   }
   // No other reclamation strategies, so to avoid this page remaining in a reclamation list we
@@ -5951,7 +5950,7 @@ bool VmCowPages::DebugValidateVmoPageBorrowingLocked() const {
     if (!p->IsPage()) {
       // If we don't have a page, this is either a marker or reference, both of which are not
       // allowed with contiguous VMOs.
-      DEBUG_ASSERT(!direct_source_supplies_zero_pages_locked());
+      DEBUG_ASSERT(!direct_source_supplies_zero_pages());
       return ZX_ERR_NEXT;
     }
     vm_page_t* page = p->Page();
@@ -5990,7 +5989,7 @@ bool VmCowPages::DebugValidateSupplyZeroOffsetLocked() const {
   if (supply_zero_offset_ == UINT64_MAX) {
     return true;
   }
-  if (!is_source_preserving_page_content_locked()) {
+  if (!is_source_preserving_page_content()) {
     dprintf(INFO, "supply_zero_offset_=%zu for non pager backed vmo\n", supply_zero_offset_);
     return false;
   }

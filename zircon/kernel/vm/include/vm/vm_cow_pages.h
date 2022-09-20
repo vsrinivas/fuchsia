@@ -109,11 +109,11 @@ class VmCowPages final
     return root->page_source_ && root->page_source_->properties().is_user_pager;
   }
 
-  bool debug_is_user_pager_backed_locked() const TA_REQ(lock_) {
+  bool debug_is_user_pager_backed() const {
     return page_source_ && page_source_->properties().is_user_pager;
   }
 
-  bool debug_is_contiguous() const TA_REQ(lock_) {
+  bool debug_is_contiguous() const {
     return page_source_ && page_source_->properties().is_providing_specific_physical_pages;
   }
 
@@ -135,7 +135,7 @@ class VmCowPages final
     }
 
     // We also don't support COW clones for contiguous VMOs.
-    if (is_source_supplying_specific_physical_pages_locked()) {
+    if (is_source_supplying_specific_physical_pages()) {
       return false;
     }
 
@@ -150,9 +150,9 @@ class VmCowPages final
     return true;
   }
 
-  bool can_evict_locked() const TA_REQ(lock_) {
+  bool can_evict() const {
     bool result = page_source_ && page_source_->properties().is_preserving_page_content;
-    DEBUG_ASSERT(result == debug_is_user_pager_backed_locked());
+    DEBUG_ASSERT(result == debug_is_user_pager_backed());
     return result;
   }
 
@@ -162,7 +162,7 @@ class VmCowPages final
     // parent.
     DEBUG_ASSERT(root);
     AssertHeld(root->lock_);
-    bool result = root->can_evict_locked();
+    bool result = root->can_evict();
     DEBUG_ASSERT(result == is_root_source_user_pager_backed_locked());
     return result;
   }
@@ -177,7 +177,7 @@ class VmCowPages final
     auto* cow = is_slice_locked() ? parent_.get() : this;
     bool result = cow->page_source_ && cow->page_source_->properties().is_preserving_page_content;
     AssertHeld(cow->lock_);
-    DEBUG_ASSERT(result == cow->debug_is_user_pager_backed_locked());
+    DEBUG_ASSERT(result == cow->debug_is_user_pager_backed());
     return result;
   }
 
@@ -192,17 +192,17 @@ class VmCowPages final
     auto* cow = is_slice_locked() ? parent_.get() : this;
     AssertHeld(cow->lock_);
     DEBUG_ASSERT(!cow->is_slice_locked());
-    DEBUG_ASSERT(cow->is_source_preserving_page_content_locked());
+    DEBUG_ASSERT(cow->is_source_preserving_page_content());
     cow->pager_stats_modified_ = true;
   }
 
-  bool is_source_preserving_page_content_locked() const TA_REQ(lock_) {
+  bool is_source_preserving_page_content() const {
     bool result = page_source_ && page_source_->properties().is_preserving_page_content;
-    DEBUG_ASSERT(result == debug_is_user_pager_backed_locked());
+    DEBUG_ASSERT(result == debug_is_user_pager_backed());
     return result;
   }
 
-  bool is_source_supplying_specific_physical_pages_locked() const TA_REQ(lock_) {
+  bool is_source_supplying_specific_physical_pages() const {
     bool result = page_source_ && page_source_->properties().is_providing_specific_physical_pages;
     DEBUG_ASSERT(result == debug_is_contiguous());
     return result;
@@ -339,9 +339,9 @@ class VmCowPages final
   zx_status_t QueryPagerVmoStatsLocked(bool reset, zx_pager_vmo_stats_t* stats) TA_REQ(lock_) {
     DEBUG_ASSERT(stats);
     // The modified state should only be set for VMOs directly backed by a pager.
-    DEBUG_ASSERT(!pager_stats_modified_ || is_source_preserving_page_content_locked());
+    DEBUG_ASSERT(!pager_stats_modified_ || is_source_preserving_page_content());
 
-    if (!is_source_preserving_page_content_locked()) {
+    if (!is_source_preserving_page_content()) {
       return ZX_ERR_NOT_SUPPORTED;
     }
     stats->modified = pager_stats_modified_ ? ZX_PAGER_VMO_STATS_MODIFIED : 0;
@@ -730,7 +730,7 @@ class VmCowPages final
     bool result = source_is_suitable && borrowing_is_generally_acceptable &&
                   !excluded_from_borrowing_for_latency_reasons && !overlapping_with_other_features;
 
-    DEBUG_ASSERT(result == (debug_is_user_pager_backed_locked() &&
+    DEBUG_ASSERT(result == (debug_is_user_pager_backed() &&
                             pmm_physical_page_borrowing_config()->is_any_borrowing_enabled() &&
                             !is_latency_sensitive_ && !ever_pinned_ &&
                             !page_source_->ShouldTrapDirtyTransitions()));
@@ -738,15 +738,15 @@ class VmCowPages final
     return result;
   }
 
-  bool direct_source_supplies_zero_pages_locked() const TA_REQ(lock_) {
+  bool direct_source_supplies_zero_pages() const {
     bool result = page_source_ && !page_source_->properties().is_preserving_page_content;
     DEBUG_ASSERT(result == debug_is_contiguous());
     return result;
   }
 
-  bool can_decommit_locked() const TA_REQ(lock_) {
+  bool can_decommit() const {
     bool result = !page_source_ || !page_source_->properties().is_preserving_page_content;
-    DEBUG_ASSERT(result == !debug_is_user_pager_backed_locked());
+    DEBUG_ASSERT(result == !debug_is_user_pager_backed());
     return result;
   }
 
