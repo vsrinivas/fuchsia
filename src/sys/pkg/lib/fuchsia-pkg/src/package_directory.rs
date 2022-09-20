@@ -13,6 +13,7 @@ use fidl_fuchsia_io as fio;
 use fuchsia_hash::{Hash, ParseHashError};
 use fuchsia_zircon_status as zx_status;
 use thiserror::Error;
+use version_history::AbiRevision;
 
 // re-export wrapped fuchsia_fs errors.
 pub use fuchsia_fs::{
@@ -63,6 +64,20 @@ pub enum LoadMetaContentsError {
 
     #[error("while parsing 'meta/contents'")]
     Parse(#[source] MetaContentsError),
+}
+
+/// An error encountered while reading/parsing the package's `AbiRevision`.
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum LoadAbiRevisionError {
+    #[error("while opening '{}'", AbiRevision::PATH)]
+    Open(#[from] OpenError),
+
+    #[error("while reading '{}'", AbiRevision::PATH)]
+    Read(#[from] ReadError),
+
+    #[error("while parsing '{}'", AbiRevision::PATH)]
+    Parse(#[from] std::array::TryFromSliceError),
 }
 
 /// An open package directory
@@ -159,6 +174,14 @@ impl PackageDirectory {
         }
     }
 
+    /// Reads and parses the package's meta/fuchsia.abi/abi-revision file.
+    pub async fn abi_revision(&self) -> Result<AbiRevision, LoadAbiRevisionError> {
+        let abi_revision_bytes =
+            fuchsia_fs::file::read(&self.open_file(AbiRevision::PATH, OpenRights::Read).await?)
+                .await?;
+        Ok(AbiRevision::try_from(abi_revision_bytes.as_slice())?)
+    }
+
     /// Returns an iterator of blobs needed by this package, does not include meta.far blob itself.
     /// Hashes may appear more than once.
     pub async fn blobs(&self) -> Result<impl Iterator<Item = Hash>, LoadMetaContentsError> {
@@ -247,5 +270,12 @@ mod tests {
         let pkg = PackageDirectory::open_from_namespace().unwrap();
 
         assert_eq!(pkg.meta_subpackages().await.unwrap(), MetaSubpackages::default(),);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn abi_revision_succeeds() {
+        let pkg = PackageDirectory::open_from_namespace().unwrap();
+
+        let _: AbiRevision = pkg.abi_revision().await.unwrap();
     }
 }

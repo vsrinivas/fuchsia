@@ -15,10 +15,14 @@ pub const VERSION_HISTORY: &[Version] = &version_history_macro::declare_version_
 /// LATEST_VERSION is the latest known SDK version.
 pub const LATEST_VERSION: &Version = &version_history_macro::latest_sdk_version!();
 
+/// An `AbiRevision` represents the ABI revision of a Fuchsia Package.
+/// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0135_package_abi_revision?#design
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Copy, Clone)]
 pub struct AbiRevision(pub u64);
 
 impl AbiRevision {
+    pub const PATH: &'static str = "meta/fuchsia.abi/abi-revision";
+
     pub fn new(u: u64) -> AbiRevision {
         AbiRevision(u)
     }

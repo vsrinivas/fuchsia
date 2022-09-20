@@ -11,19 +11,20 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
     fuchsia_merkle::{Hash, MerkleTree},
-    fuchsia_pkg::{MetaContents, MetaPackage},
+    fuchsia_pkg::{MetaContents, MetaPackage, MetaSubpackages},
     fuchsia_url::PackageName,
     fuchsia_zircon::{self as zx, prelude::*, Status},
     futures::{join, prelude::*},
     maplit::btreeset,
     std::{
-        collections::{BTreeMap, BTreeSet, HashSet},
+        collections::{BTreeMap, BTreeSet, HashMap, HashSet},
         convert::TryInto as _,
         fs::{self, File},
         io::{self, Read, Write},
         path::{Path, PathBuf},
     },
     tempfile::TempDir,
+    version_history::AbiRevision,
     walkdir::WalkDir,
 };
 
@@ -33,6 +34,9 @@ pub struct Package {
     name: PackageName,
     meta_far_merkle: Hash,
     artifacts: TempDir,
+    // If None then the package has subpackages but this `Package` does not have all the blobs
+    // needed by those subpackages.
+    subpackage_blobs: Option<HashMap<Hash, Vec<u8>>>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -92,11 +96,14 @@ impl Package {
     /// Builds and returns the package located at the given path in the current namespace.
     pub async fn from_dir(root: impl AsRef<Path>) -> Result<Self, Error> {
         let root = root.as_ref();
-        let file = File::open(root.join("meta/package"))?;
-        let meta_package = MetaPackage::deserialize(io::BufReader::new(file))?;
+        let package_directory =
+            fuchsia_pkg::PackageDirectory::from_proxy(fuchsia_fs::directory::open_in_namespace(
+                root.to_str().unwrap(),
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            )?);
 
-        let abi_revision_bytes = std::fs::read(root.join("meta/fuchsia.abi/abi-revision"))?;
-        let abi_revision = u64::from_le_bytes(abi_revision_bytes.as_slice().try_into()?);
+        let meta_package = package_directory.meta_package().await?;
+        let abi_revision = package_directory.abi_revision().await?;
 
         let mut pkg = PackageBuilder::new(meta_package.name().as_ref()).abi_revision(abi_revision);
 
@@ -104,6 +111,8 @@ impl Package {
             match path.to_str() {
                 Some("meta/contents") => true,
                 Some("meta/package") => true,
+                Some(AbiRevision::PATH) => true,
+                Some(MetaSubpackages::PATH) => true,
                 _ => false,
             }
         }
@@ -121,6 +130,13 @@ impl Package {
             pkg = pkg.add_resource_at(relative_path.to_str().unwrap(), f);
         }
 
+        let subpackages = package_directory.meta_subpackages().await?.into_subpackages();
+        if !subpackages.is_empty() {
+            for (name, hash) in subpackages.into_iter() {
+                pkg = pkg.add_subpackage_by_hash(name, hash);
+            }
+        }
+
         Ok(pkg.build().await?)
     }
 
@@ -133,7 +149,19 @@ impl Package {
         Ok(MetaContents::deserialize(raw_meta_contents.as_slice())?)
     }
 
+    /// Returns the parsed contents of the subpackages manifest.
+    pub fn meta_subpackages(&self) -> Result<MetaSubpackages, Error> {
+        let mut raw_meta_far = self.meta_far()?;
+        let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut raw_meta_far)?;
+        Ok(match meta_far.read_file(MetaSubpackages::PATH) {
+            Ok(bytes) => MetaSubpackages::deserialize(std::io::BufReader::new(bytes.as_slice()))?,
+            Err(fuchsia_archive::Error::PathNotPresent(_)) => MetaSubpackages::default(),
+            Err(e) => Err(e)?,
+        })
+    }
+
     /// Returns a set of all unique blobs contained in this package.
+    /// Does not include subpackage blobs.
     pub fn list_blobs(&self) -> Result<BTreeSet<Hash>, Error> {
         let meta_contents = self.meta_contents()?;
 
@@ -195,7 +223,7 @@ impl Package {
         )
     }
 
-    /// Puts all the blobs for the package in blobfs.
+    /// Writes the meta.far and all content blobs to blobfs.
     pub fn write_to_blobfs_dir(&self, dir: &openat::Dir) {
         fn write_blob(
             dir: &openat::Dir,
@@ -261,6 +289,13 @@ impl Package {
         }
 
         Ok(())
+    }
+
+    /// The blobs used by all of the subpackages of this package (recursively).
+    /// If None, this `Package` has subpackages but does not have the blobs needed by those
+    /// subpackages.
+    pub fn subpackage_blobs(&self) -> Option<&HashMap<Hash, Vec<u8>>> {
+        self.subpackage_blobs.as_ref()
     }
 }
 
@@ -431,7 +466,11 @@ impl<T: Into<Error>> From<T> for VerificationError {
 pub struct PackageBuilder {
     name: PackageName,
     contents: BTreeMap<PathBuf, PackageEntry>,
-    abi_revision: Option<u64>,
+    abi_revision: Option<AbiRevision>,
+    subpackages: HashMap<fuchsia_url::RelativePackageUrl, Hash>,
+    // If None the package has subpackages but this `PackageBuilder` does not have the blobs
+    // needed by those subpackages.
+    subpackage_blobs: Option<HashMap<Hash, Vec<u8>>>,
 }
 
 impl PackageBuilder {
@@ -445,6 +484,8 @@ impl PackageBuilder {
             name: name.into().try_into().unwrap(),
             contents: BTreeMap::new(),
             abi_revision: None,
+            subpackages: HashMap::new(),
+            subpackage_blobs: Some(HashMap::new()),
         }
     }
 
@@ -453,7 +494,7 @@ impl PackageBuilder {
     pub fn api_level(self, api_level: u64) -> Result<Self, Error> {
         for v in version_history::VERSION_HISTORY {
             if v.api_level == api_level {
-                return Ok(self.abi_revision(v.abi_revision.0));
+                return Ok(self.abi_revision(v.abi_revision));
             }
         }
 
@@ -461,7 +502,7 @@ impl PackageBuilder {
     }
 
     /// Set the ABI Revision that should be included in the package.
-    pub fn abi_revision(mut self, abi_revision: u64) -> Self {
+    pub fn abi_revision(mut self, abi_revision: AbiRevision) -> Self {
         self.abi_revision = Some(abi_revision);
         self
     }
@@ -544,6 +585,59 @@ impl PackageBuilder {
         }
     }
 
+    /// Adds the provided `subpackage` to the package with name `name`.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either:
+    /// * `name` is not a valid RelativePackageUrl
+    /// * There is already a subpackage called `name`
+    pub fn add_subpackage(
+        mut self,
+        name: impl TryInto<fuchsia_url::RelativePackageUrl>,
+        subpackage: &Package,
+    ) -> Self {
+        let name = name.try_into().map_err(|_| ()).expect("valid RelativePackageUrl");
+        if let Some(_) = self.subpackages.insert(name.clone(), *subpackage.meta_far_merkle_root()) {
+            panic!("PackageBuilder already has subpackage with name {name}");
+        }
+
+        match (&mut self.subpackage_blobs, &subpackage.subpackage_blobs) {
+            (Some(current_blobs), Some(new_blobs)) => {
+                let (meta_far, content_blobs) = subpackage.contents();
+                current_blobs.insert(meta_far.merkle, meta_far.contents);
+                current_blobs.extend(content_blobs.into_iter().map(|bc| (bc.merkle, bc.contents)));
+                current_blobs.extend(new_blobs.iter().map(|(k, v)| (*k, v.clone())));
+            }
+            (Some(_), None) => self.subpackage_blobs = None,
+            (None, Some(_)) | (None, None) => {}
+        }
+
+        self
+    }
+
+    /// Adds a subpackage with name `name` and hash `hash` to the package.
+    /// Because the blobs of the subpackage are not provided, the `Package` built from this
+    /// `PackageBuilder` will not have the subpackage blobs.
+    ///
+    /// # Panics
+    ///
+    /// Panics if either:
+    /// * `name` is not a valid RelativePackageUrl
+    /// * There is already a subpackage called `name`
+    pub fn add_subpackage_by_hash(
+        mut self,
+        name: impl TryInto<fuchsia_url::RelativePackageUrl>,
+        hash: Hash,
+    ) -> Self {
+        let name = name.try_into().map_err(|_| ()).expect("valid RelativePackageUrl");
+        if let Some(_) = self.subpackages.insert(name.clone(), hash) {
+            panic!("PackageBuilder already has subpackage with name {name}");
+        }
+        self.subpackage_blobs = None;
+        self
+    }
+
     /// Builds the package.
     pub async fn build(self) -> Result<Package, Error> {
         // TODO Consider switching indir/packagedir to be a VFS instead
@@ -558,7 +652,6 @@ impl PackageBuilder {
                 .find(|v| v.api_level == 7)
                 .expect("API Level 7 to exist")
                 .abi_revision
-                .0
         };
 
         // indir contains temporary inputs to package creation
@@ -586,6 +679,29 @@ impl PackageBuilder {
                 .serialize(File::create(indir.path().join("meta_package"))?)?;
             writeln!(manifest, "meta/package=/in/meta_package")?;
 
+            if !self.subpackages.is_empty() {
+                let () = fs::create_dir(indir.path().join("subpackages"))
+                    .context("create /in/subpackages")?;
+                let mut entries = vec![];
+                let mut hash_files = HashSet::new();
+                for (name, hash) in &self.subpackages {
+                    if hash_files.insert(*hash) {
+                        let mut f =
+                            File::create(indir.path().join("subpackages").join(hash.to_string()))?;
+                        let () = f.write_all(hash.to_string().as_bytes())?;
+                    }
+                    entries.push(fuchsia_pkg::SubpackagesManifestEntry::new(
+                        fuchsia_pkg::SubpackagesManifestEntryKind::Url(name.clone()),
+                        format!("/in/subpackages/{hash}").into(),
+                    ))
+                }
+                let manifest = fuchsia_pkg::SubpackagesManifest::from(entries);
+                let f = std::io::BufWriter::new(File::create(
+                    indir.path().join("subpackages/manifest"),
+                )?);
+                let () = manifest.serialize(f)?;
+            }
+
             for (i, (name, contents)) in self.contents.iter().enumerate() {
                 let contents = match contents {
                     PackageEntry::File(data) => data,
@@ -603,15 +719,21 @@ impl PackageBuilder {
             }
         }
 
-        let pm = SpawnBuilder::new()
+        let mut pm = SpawnBuilder::new()
             .options(fdio::SpawnOptions::CLONE_ALL - fdio::SpawnOptions::CLONE_NAMESPACE)
             .arg("pm")?
             .arg("-abi-revision")?
-            .arg(abi_revision.to_string())?
+            .arg(abi_revision.0.to_string())?
             .arg(format!("-n={}", self.name))?
             .arg("-m=/in/package.manifest")?
             .arg("-r=fuchsia.com")?
-            .arg(format!("-o={}", package_mount_path))?
+            .arg(format!("-o={}", package_mount_path))?;
+
+        if !self.subpackages.is_empty() {
+            pm = pm.arg("-subpackages=/in/subpackages/manifest")?
+        }
+
+        let pm = pm
             .arg("build")?
             .arg("-depfile=false")?
             .arg(format!("-output-package-manifest={}/manifest.json", &package_mount_path))?
@@ -631,11 +753,20 @@ impl PackageBuilder {
         // clean up after pm
         fs::remove_file(packagedir.path().join("meta/fuchsia.abi/abi-revision"))?;
         fs::remove_dir(packagedir.path().join("meta/fuchsia.abi"))?;
+        if !self.subpackages.is_empty() {
+            fs::remove_file(packagedir.path().join("meta/fuchsia.pkg/subpackages"))?;
+            fs::remove_dir(packagedir.path().join("meta/fuchsia.pkg"))?;
+        }
         fs::remove_file(packagedir.path().join("meta/contents"))?;
         fs::remove_dir(packagedir.path().join("meta"))?;
         fs::remove_file(packagedir.path().join("meta.far.merkle"))?;
 
-        Ok(Package { name: self.name, meta_far_merkle, artifacts: packagedir })
+        Ok(Package {
+            name: self.name,
+            meta_far_merkle,
+            artifacts: packagedir,
+            subpackage_blobs: self.subpackage_blobs,
+        })
     }
 }
 
@@ -840,7 +971,7 @@ mod tests {
         let from_dir = Package::from_dir(root.path()).await.unwrap();
 
         let pkg = PackageBuilder::new("asdf")
-            .abi_revision(abi_revision.0)
+            .abi_revision(abi_revision)
             .add_resource_at("data/hello", "world".as_bytes())
             .build()
             .await
@@ -950,5 +1081,82 @@ mod tests {
             Err(VerificationError::DifferentFileData{ref path}) if path == "bin/fuchsia_pkg_testing_lib_test");
 
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_meta_subpackages_with_no_subpackages() {
+        let pkg = PackageBuilder::new("pkg").build().await.unwrap();
+
+        assert!(pkg.meta_subpackages().unwrap().subpackages().is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_subpackage() {
+        // Package with subpackage.
+        let sub_sub_pkg = PackageBuilder::new("sub-sub-pkg")
+            .add_resource_at("c-blob", "c-blob-contents".as_bytes())
+            .build()
+            .await
+            .unwrap();
+
+        let sub_pkg = PackageBuilder::new("sub-pkg")
+            .add_resource_at("b-blob", "b-blob-contents".as_bytes())
+            .add_subpackage("subpackage-1", &sub_sub_pkg)
+            .build()
+            .await
+            .unwrap();
+
+        let mut expected_subpackage_blobs = HashMap::new();
+        let (sub_sub_pkg_meta_far, content_blobs) = sub_sub_pkg.contents();
+        expected_subpackage_blobs
+            .insert(sub_sub_pkg_meta_far.merkle, sub_sub_pkg_meta_far.contents);
+        expected_subpackage_blobs.insert(content_blobs[0].merkle, b"c-blob-contents".to_vec());
+
+        assert_eq!(*sub_pkg.subpackage_blobs().unwrap(), expected_subpackage_blobs);
+        assert_eq!(
+            sub_pkg.meta_subpackages().unwrap(),
+            MetaSubpackages::from_iter([(
+                fuchsia_url::RelativePackageUrl::parse("subpackage-1").unwrap(),
+                sub_sub_pkg_meta_far.merkle
+            )])
+        );
+
+        // Package with subpackage that is a superpackage.
+        let pkg = PackageBuilder::new("pkg")
+            .add_subpackage("subpackage-0", &sub_pkg)
+            .build()
+            .await
+            .unwrap();
+
+        let (sub_pkg_meta_far, content_blobs) = sub_pkg.contents();
+        expected_subpackage_blobs.insert(sub_pkg_meta_far.merkle, sub_pkg_meta_far.contents);
+        expected_subpackage_blobs.insert(content_blobs[0].merkle, b"b-blob-contents".to_vec());
+
+        assert_eq!(*pkg.subpackage_blobs().unwrap(), expected_subpackage_blobs);
+        assert_eq!(
+            pkg.meta_subpackages().unwrap(),
+            MetaSubpackages::from_iter([(
+                fuchsia_url::RelativePackageUrl::parse("subpackage-0").unwrap(),
+                sub_pkg_meta_far.merkle
+            )])
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_subpackage_by_hash() {
+        let pkg = PackageBuilder::new("pkg")
+            .add_subpackage_by_hash("subpackage-name", Hash::from([0; 32]))
+            .build()
+            .await
+            .unwrap();
+
+        assert_eq!(pkg.subpackage_blobs(), None);
+        assert_eq!(
+            pkg.meta_subpackages().unwrap(),
+            MetaSubpackages::from_iter([(
+                fuchsia_url::RelativePackageUrl::parse("subpackage-name").unwrap(),
+                Hash::from([0; 32])
+            )])
+        );
     }
 }

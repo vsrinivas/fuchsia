@@ -33,7 +33,10 @@ pub use {
         meta_subpackages::MetaSubpackages,
         package::{BlobEntry, Package},
         package_builder::PackageBuilder,
-        package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
+        package_directory::{
+            LoadAbiRevisionError, LoadMetaContentsError, OpenRights, PackageDirectory,
+            ReadHashError,
+        },
         package_manifest::{BlobInfo, PackageManifest, PackageManifestBuilder, RelativeTo},
         package_manifest_list::PackageManifestList,
         path::{PackageName, PackagePath, PackageVariant},
