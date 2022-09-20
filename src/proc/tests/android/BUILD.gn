@@ -64,14 +64,6 @@ resource("starnix_testcases_image") {
   outputs = [ "data/testcases.img" ]
 }
 
-fuchsia_test_component("java_hello_world") {
-  manifest = "meta/java_hello_world.cml"
-  deps = [
-    ":starnix_testcases_image",
-    "//src/proc/tests:starnix_test",
-  ]
-}
-
 fuchsia_test_component("init_test") {
   manifest = "meta/init_test.cml"
   deps = [ "//src/proc/tests:starnix_test" ]
@@ -101,10 +93,7 @@ starbionic_test_package("android") {
 }
 
 starnix_test_package("android_with_init") {
-  test_components = [
-    ":init_test",
-    ":java_hello_world",
-  ]
+  test_components = [ ":init_test" ]
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
