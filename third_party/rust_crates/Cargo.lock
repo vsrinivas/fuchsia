@@ -4168,8 +4168,6 @@ dependencies = [
 [[package]]
 name = "tracing-core"
 version = "0.1.26"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f54c8ca710e81886d498c2fd3331b56c93aa248d49de2222ad2742247c60072f"
 dependencies = [
  "lazy_static",
  "valuable",
@@ -4776,10 +4774,6 @@ version = "1.5.0+zstd.1.4.9"
 dependencies = [
  "libc",
 ]
-
-[[patch.unused]]
-name = "tracing-core"
-version = "0.1.21"
 
 [[patch.unused]]
 name = "windows_aarch64_msvc"

@@ -8523,7 +8523,7 @@ rust_library("ring-v0_16_12") {
   visibility += [ ":ring" ]
   visibility += [ ":rustls-v0_19_1" ]
   visibility += [ ":sct-v0_6_0" ]
-  visibility += [ ":trust-dns-proto-v0_22_0" ]
+  visibility += [ ":trust-dns-proto-v0_21_2" ]
   visibility += [ ":tuf-v0_3_0-beta10" ]
   visibility += [ ":webpki-v0_21_0" ]
 }
@@ -10749,6 +10749,9 @@ rust_library("tracing-core-v0_1_26") {
 
   deps = []
   deps += [ ":lazy_static-v1_4_0" ]
+  if (false) {
+    deps += [ ":valuable-v0_1_0" ]
+  }
 
   rustenv = []
 
