@@ -6,6 +6,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.component/ChildIterator.Next",
+        "ordinal": "4676077302722137352",
         "type": "() -> (vector<fuchsia.component.decl/ChildRef>:128 children)"
     },
     {
@@ -15,11 +16,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.component/CreateChildArgs.dynamic_offers",
+        "ordinal": "2",
         "type": "vector<fuchsia.component.decl/Offer>:128"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.component/CreateChildArgs.numbered_handles",
+        "ordinal": "1",
         "type": "vector<fuchsia.process/HandleInfo>:128"
     },
     {
@@ -161,21 +164,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.component/Realm.CreateChild",
+        "ordinal": "4892190024503489888",
         "type": "(fuchsia.component.decl/CollectionRef collection,fuchsia.component.decl/Child decl,fuchsia.component/CreateChildArgs args) -> (fuchsia.component/Realm_CreateChild_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.component/Realm.DestroyChild",
+        "ordinal": "8203529889988252194",
         "type": "(fuchsia.component.decl/ChildRef child) -> (fuchsia.component/Realm_DestroyChild_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.component/Realm.ListChildren",
+        "ordinal": "7532454435519185057",
         "type": "(fuchsia.component.decl/CollectionRef collection,server_end:fuchsia.component/ChildIterator iter) -> (fuchsia.component/Realm_ListChildren_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.component/Realm.OpenExposedDir",
+        "ordinal": "9194435320863127852",
         "type": "(fuchsia.component.decl/ChildRef child,server_end:fuchsia.io/Directory exposed_dir) -> (fuchsia.component/Realm_OpenExposedDir_Result result)"
     },
     {
@@ -189,11 +196,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.component/Realm_CreateChild_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.component/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.component/Realm_CreateChild_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.component/Realm_CreateChild_Response"
     },
     {
@@ -208,11 +217,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.component/Realm_DestroyChild_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.component/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.component/Realm_DestroyChild_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.component/Realm_DestroyChild_Response"
     },
     {
@@ -227,11 +238,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.component/Realm_ListChildren_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.component/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.component/Realm_ListChildren_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.component/Realm_ListChildren_Response"
     },
     {
@@ -246,11 +259,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.component/Realm_OpenExposedDir_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.component/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.component/Realm_OpenExposedDir_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.component/Realm_OpenExposedDir_Response"
     },
     {

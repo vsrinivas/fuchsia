@@ -66,7 +66,7 @@ library l2;
                 "kind": "library",
                 "name": "l2"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -167,7 +167,7 @@ const FOO string = "fuzzy";
                 "type": "string",
                 "value": "fuzzy"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -233,7 +233,7 @@ type Bits = flexible bits {
                 "name": "l/Bits.BIT2",
                 "value": "2"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -264,7 +264,7 @@ type Bits = strict bits {
                 "name": "l/Bits.BIT2",
                 "value": "2"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -322,7 +322,7 @@ type Bits = strict bits {
                 "name": "l/Bits.BIT1",
                 "value": "1"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         },
         {
             "name": "l/Bits",
@@ -332,7 +332,7 @@ type Bits = strict bits {
                 "strictness": "strict",
                 "type": "uint32"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -618,7 +618,7 @@ type Enum = strict enum {
                 "name": "l/Enum.WATER",
                 "value": "1"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         },
         {
             "name": "l/Enum",
@@ -628,7 +628,7 @@ type Enum = strict enum {
                 "strictness": "strict",
                 "type": "uint32"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -659,7 +659,7 @@ type Enum = flexible enum {
                 "name": "l/Enum.FIRE",
                 "value": "2"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -893,7 +893,7 @@ type Struct = struct {};
                 "kind": "struct",
                 "name": "l/Struct"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -1003,6 +1003,7 @@ type Struct = struct {
             "after": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1032,6 +1033,7 @@ type Struct = struct {
             "before": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1062,11 +1064,13 @@ type Struct = struct {
             "before": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "after": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
+                "ordinal": "1",
                 "type": "string"
             },
             "conclusion": "APIBreaking"
@@ -1099,14 +1103,75 @@ type Struct = struct {
             "before": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
+                "ordinal": "1",
                 "type": "int32",
                 "value": "1"
             },
             "after": {
                 "kind": "struct/member",
                 "name": "l/Struct.foo",
+                "ordinal": "1",
                 "type": "int32",
                 "value": "2"
+            },
+            "conclusion": "APIBreaking"
+        }
+    ]
+}
+`,
+		},
+		{
+			name: "struct reorder member",
+			before: `
+library l;
+type Struct = struct {
+	foo int32;
+    bar string;
+};
+`,
+			after: `
+library l;
+type Struct = struct {
+    bar string;
+	foo int32;
+};
+`,
+			expected: `
+{
+    "api_diff": [
+        {
+            "name": "l/Struct.bar",
+            "before": {
+                "kind": "struct/member",
+                "name": "l/Struct.bar",
+                "ordinal": "2",
+                "type": "string",
+                "value": ""
+            },
+            "after": {
+                "kind": "struct/member",
+                "name": "l/Struct.bar",
+                "ordinal": "1",
+                "type": "string",
+                "value": ""
+            },
+            "conclusion": "APIBreaking"
+        },
+        {
+            "name": "l/Struct.foo",
+            "before": {
+                "kind": "struct/member",
+                "name": "l/Struct.foo",
+                "ordinal": "1",
+                "type": "int32",
+                "value": ""
+            },
+            "after": {
+                "kind": "struct/member",
+                "name": "l/Struct.foo",
+                "ordinal": "2",
+                "type": "int32",
+                "value": ""
             },
             "conclusion": "APIBreaking"
         }
@@ -1134,7 +1199,7 @@ type T = table {};
                 "kind": "table",
                 "name": "l/T"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -1244,9 +1309,10 @@ type T = table {
             "after": {
                 "kind": "table/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -1273,6 +1339,7 @@ type T = table {
             "before": {
                 "kind": "table/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1305,6 +1372,7 @@ type T = table {
             "before": {
                 "kind": "table/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1335,14 +1403,54 @@ type T = table {
             "before": {
                 "kind": "table/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "after": {
                 "kind": "table/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "string"
             },
             "conclusion": "APIBreaking"
+        }
+    ]
+}
+`,
+		},
+		{
+			name: "table change ordinal",
+			before: `
+library l;
+type T = table {
+    1: foo int32;
+};
+`,
+			after: `
+library l;
+type T = table {
+    1: reserved;
+    2: foo int32;
+};
+`,
+			expected: `
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "table/member",
+                "name": "l/T.foo",
+                "ordinal": "1",
+                "type": "int32"
+            },
+            "after": {
+                "kind": "table/member",
+                "name": "l/T.foo",
+                "ordinal": "2",
+                "type": "int32"
+            },
+            "conclusion": "APICompatibleButABIBreaking"
         }
     ]
 }
@@ -1369,9 +1477,10 @@ type T = strict union {
             "after": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         },
         {
             "name": "l/T",
@@ -1380,7 +1489,7 @@ type T = strict union {
                 "name": "l/T",
                 "strictness": "strict"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -1405,6 +1514,7 @@ library l;
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1446,6 +1556,7 @@ type T = union {
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1495,6 +1606,7 @@ library l;
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "2",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1607,9 +1719,10 @@ type T = flexible union {
             "after": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "2",
                 "type": "int32"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -1638,6 +1751,7 @@ type T = strict union {
             "after": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "2",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1669,6 +1783,7 @@ type T = strict union {
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "2",
                 "type": "int32"
             },
             "conclusion": "APIBreaking"
@@ -1699,14 +1814,54 @@ type T = union {
             "before": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "int32"
             },
             "after": {
                 "kind": "union/member",
                 "name": "l/T.foo",
+                "ordinal": "1",
                 "type": "string"
             },
             "conclusion": "APIBreaking"
+        }
+    ]
+}
+`,
+		},
+		{
+			name: "union change ordinal",
+			before: `
+library l;
+type T = union {
+    1: foo int32;
+};
+`,
+			after: `
+library l;
+type T = union {
+    1: reserved;
+    2: foo int32;
+};
+`,
+			expected: `
+{
+    "api_diff": [
+        {
+            "name": "l/T.foo",
+            "before": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "ordinal": "1",
+                "type": "int32"
+            },
+            "after": {
+                "kind": "union/member",
+                "name": "l/T.foo",
+                "ordinal": "2",
+                "type": "int32"
+            },
+            "conclusion": "APICompatibleButABIBreaking"
         }
     ]
 }
@@ -1732,7 +1887,7 @@ protocol T {};
                 "kind": "protocol",
                 "name": "l/T"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -1783,9 +1938,10 @@ protocol T {
             "after": {
                 "kind": "protocol/member",
                 "name": "l/T.Test",
+                "ordinal": "7985249320572540149",
                 "type": "(int32 t) -> ()"
             },
-            "conclusion": "SourceCompatible"
+            "conclusion": "Compatible"
         }
     ]
 }
@@ -1812,6 +1968,7 @@ protocol T {
             "before": {
                 "kind": "protocol/member",
                 "name": "l/T.Test",
+                "ordinal": "7985249320572540149",
                 "type": "(int32 t) -> ()"
             },
             "conclusion": "APIBreaking"
@@ -1842,11 +1999,13 @@ protocol T {
             "before": {
                 "kind": "protocol/member",
                 "name": "l/T.Test",
+                "ordinal": "7985249320572540149",
                 "type": "(int32 t) -> ()"
             },
             "after": {
                 "kind": "protocol/member",
                 "name": "l/T.Test",
+                "ordinal": "7985249320572540149",
                 "type": "(int32 t,int32 u) -> ()"
             },
             "conclusion": "APIBreaking"
@@ -1855,7 +2014,46 @@ protocol T {
 }
 `,
 		},
-		// aliases don't appear in summaries, apparently.
+		{
+			name: "protocol member ordinal change",
+			before: `
+library l;
+protocol T {
+    Test(struct { t int32; }) -> ();
+};
+`,
+			after: `
+library l;
+protocol T {
+    @selector("notl/NotT.NotTest")
+    Test(struct { t int32; }) -> ();
+};
+`,
+			expected: `
+{
+    "api_diff": [
+        {
+            "name": "l/T.Test",
+            "before": {
+                "kind": "protocol/member",
+                "name": "l/T.Test",
+                "ordinal": "7985249320572540149",
+                "type": "(int32 t) -> ()"
+            },
+            "after": {
+                "kind": "protocol/member",
+                "name": "l/T.Test",
+                "ordinal": "8693951483982195746",
+                "type": "(int32 t) -> ()"
+            },
+            "conclusion": "APICompatibleButABIBreaking"
+        }
+    ]
+}
+`,
+		},
+		// TODO(fxbug.dev/7807): Add aliases and newtypes to summaries and diffs
+		// once they are fully implemented.
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -1891,7 +2089,10 @@ func summarizeOne(t *testing.T, r fidlgen.Root) string {
 	// TODO(fxbug.dev/109721): Remove.
 	renameDeclarationToType := true
 
-	if err := s.WriteJSON(&buf, renameDeclarationToType); err != nil {
+	// TODO(fxbug.dev/102427): Remove.
+	includeOrdinals := true
+
+	if err := s.WriteJSON(&buf, renameDeclarationToType, includeOrdinals); err != nil {
 		t.Fatalf("error while summarizing: %v", err)
 	}
 	return buf.String()

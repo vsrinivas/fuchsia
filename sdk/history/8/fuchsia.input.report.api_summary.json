@@ -2,11 +2,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/Axis.range",
+        "ordinal": "1",
         "type": "fuchsia.input.report/Range"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/Axis.unit",
+        "ordinal": "2",
         "type": "fuchsia.input.report/Unit"
     },
     {
@@ -63,6 +65,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ConsumerControlDescriptor.input",
+        "ordinal": "1",
         "type": "fuchsia.input.report/ConsumerControlInputDescriptor"
     },
     {
@@ -72,6 +75,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ConsumerControlInputDescriptor.buttons",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/ConsumerControlButton>:255"
     },
     {
@@ -81,6 +85,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ConsumerControlInputReport.pressed_buttons",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/ConsumerControlButton>:255"
     },
     {
@@ -90,26 +95,31 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputDescriptor.contact_height",
+        "ordinal": "5",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputDescriptor.contact_width",
+        "ordinal": "4",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputDescriptor.position_x",
+        "ordinal": "1",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputDescriptor.position_y",
+        "ordinal": "2",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputDescriptor.pressure",
+        "ordinal": "3",
         "type": "fuchsia.input.report/Axis"
     },
     {
@@ -119,31 +129,37 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputReport.contact_height",
+        "ordinal": "6",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputReport.contact_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputReport.contact_width",
+        "ordinal": "5",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputReport.position_x",
+        "ordinal": "2",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputReport.position_y",
+        "ordinal": "3",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/ContactInputReport.pressure",
+        "ordinal": "4",
         "type": "int64"
     },
     {
@@ -153,31 +169,37 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/DeviceDescriptor.consumer_control",
+        "ordinal": "6",
         "type": "fuchsia.input.report/ConsumerControlDescriptor"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/DeviceDescriptor.device_info",
+        "ordinal": "1",
         "type": "fuchsia.input.report/DeviceInfo"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/DeviceDescriptor.keyboard",
+        "ordinal": "5",
         "type": "fuchsia.input.report/KeyboardDescriptor"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/DeviceDescriptor.mouse",
+        "ordinal": "2",
         "type": "fuchsia.input.report/MouseDescriptor"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/DeviceDescriptor.sensor",
+        "ordinal": "3",
         "type": "fuchsia.input.report/SensorDescriptor"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/DeviceDescriptor.touch",
+        "ordinal": "4",
         "type": "fuchsia.input.report/TouchDescriptor"
     },
     {
@@ -187,16 +209,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/DeviceInfo.product_id",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/DeviceInfo.vendor_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/DeviceInfo.version",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
@@ -237,11 +262,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/FeatureReport.sensor",
+        "ordinal": "1",
         "type": "fuchsia.input.report/SensorFeatureReport"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/FeatureReport.touch",
+        "ordinal": "2",
         "type": "fuchsia.input.report/TouchFeatureReport"
     },
     {
@@ -251,31 +278,37 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.report/InputDevice.GetDescriptor",
+        "ordinal": "4428799916562230578",
         "type": "() -> (fuchsia.input.report/DeviceDescriptor descriptor)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.report/InputDevice.GetFeatureReport",
+        "ordinal": "5294682407360339734",
         "type": "() -> (fuchsia.input.report/InputDevice_GetFeatureReport_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.report/InputDevice.GetInputReport",
+        "ordinal": "5139395162123862600",
         "type": "(fuchsia.input.report/DeviceType device_type) -> (fuchsia.input.report/InputDevice_GetInputReport_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.report/InputDevice.GetInputReportsReader",
+        "ordinal": "7555298015256750913",
         "type": "(server_end:fuchsia.input.report/InputReportsReader reader)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.report/InputDevice.SendOutputReport",
+        "ordinal": "466765262340648762",
         "type": "(fuchsia.input.report/OutputReport report) -> (fuchsia.input.report/InputDevice_SendOutputReport_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.report/InputDevice.SetFeatureReport",
+        "ordinal": "8537033744562275055",
         "type": "(fuchsia.input.report/FeatureReport report) -> (fuchsia.input.report/InputDevice_SetFeatureReport_Result result)"
     },
     {
@@ -285,6 +318,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Response.report",
+        "ordinal": "1",
         "type": "fuchsia.input.report/FeatureReport"
     },
     {
@@ -294,11 +328,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputDevice_GetFeatureReport_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.input.report/InputDevice_GetFeatureReport_Response"
     },
     {
@@ -309,6 +345,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/InputDevice_GetInputReport_Response.report",
+        "ordinal": "1",
         "type": "fuchsia.input.report/InputReport"
     },
     {
@@ -318,11 +355,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputDevice_GetInputReport_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputDevice_GetInputReport_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.input.report/InputDevice_GetInputReport_Response"
     },
     {
@@ -337,11 +376,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputDevice_SendOutputReport_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputDevice_SendOutputReport_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.input.report/InputDevice_SendOutputReport_Response"
     },
     {
@@ -356,11 +397,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputDevice_SetFeatureReport_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputDevice_SetFeatureReport_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.input.report/InputDevice_SetFeatureReport_Response"
     },
     {
@@ -371,41 +414,49 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/InputReport.consumer_control",
+        "ordinal": "7",
         "type": "fuchsia.input.report/ConsumerControlInputReport"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/InputReport.event_time",
+        "ordinal": "1",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/InputReport.keyboard",
+        "ordinal": "6",
         "type": "fuchsia.input.report/KeyboardInputReport"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/InputReport.mouse",
+        "ordinal": "2",
         "type": "fuchsia.input.report/MouseInputReport"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/InputReport.report_id",
+        "ordinal": "8",
         "type": "uint8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/InputReport.sensor",
+        "ordinal": "4",
         "type": "fuchsia.input.report/SensorInputReport"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/InputReport.touch",
+        "ordinal": "5",
         "type": "fuchsia.input.report/TouchInputReport"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/InputReport.trace_id",
+        "ordinal": "3",
         "type": "uint64"
     },
     {
@@ -415,6 +466,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.report/InputReportsReader.ReadInputReports",
+        "ordinal": "3861255986002273625",
         "type": "() -> (fuchsia.input.report/InputReportsReader_ReadInputReports_Result result)"
     },
     {
@@ -424,6 +476,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Response.reports",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/InputReport>:50"
     },
     {
@@ -433,11 +486,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.input.report/InputReportsReader_ReadInputReports_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.input.report/InputReportsReader_ReadInputReports_Response"
     },
     {
@@ -466,11 +521,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/KeyboardDescriptor.input",
+        "ordinal": "1",
         "type": "fuchsia.input.report/KeyboardInputDescriptor"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/KeyboardDescriptor.output",
+        "ordinal": "2",
         "type": "fuchsia.input.report/KeyboardOutputDescriptor"
     },
     {
@@ -480,6 +537,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/KeyboardInputDescriptor.keys3",
+        "ordinal": "2",
         "type": "vector<fuchsia.input/Key>:256"
     },
     {
@@ -489,6 +547,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/KeyboardInputReport.pressed_keys3",
+        "ordinal": "2",
         "type": "vector<fuchsia.input/Key>:256"
     },
     {
@@ -498,6 +557,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/KeyboardOutputDescriptor.leds",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/LedType>:256"
     },
     {
@@ -507,6 +567,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/KeyboardOutputReport.enabled_leds",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/LedType>:256"
     },
     {
@@ -565,6 +626,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseDescriptor.input",
+        "ordinal": "1",
         "type": "fuchsia.input.report/MouseInputDescriptor"
     },
     {
@@ -574,36 +636,43 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputDescriptor.buttons",
+        "ordinal": "5",
         "type": "vector<uint8>:32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputDescriptor.movement_x",
+        "ordinal": "1",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputDescriptor.movement_y",
+        "ordinal": "2",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputDescriptor.position_x",
+        "ordinal": "6",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputDescriptor.position_y",
+        "ordinal": "7",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputDescriptor.scroll_h",
+        "ordinal": "4",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputDescriptor.scroll_v",
+        "ordinal": "3",
         "type": "fuchsia.input.report/Axis"
     },
     {
@@ -613,36 +682,43 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputReport.movement_x",
+        "ordinal": "1",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputReport.movement_y",
+        "ordinal": "2",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputReport.position_x",
+        "ordinal": "6",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputReport.position_y",
+        "ordinal": "7",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputReport.pressed_buttons",
+        "ordinal": "5",
         "type": "vector<uint8>:32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputReport.scroll_h",
+        "ordinal": "4",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/MouseInputReport.scroll_v",
+        "ordinal": "3",
         "type": "int64"
     },
     {
@@ -652,6 +728,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/OutputDescriptor.keyboard",
+        "ordinal": "1",
         "type": "fuchsia.input.report/KeyboardOutputDescriptor"
     },
     {
@@ -661,6 +738,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/OutputReport.keyboard",
+        "ordinal": "1",
         "type": "fuchsia.input.report/KeyboardOutputReport"
     },
     {
@@ -670,11 +748,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/Range.max",
+        "ordinal": "2",
         "type": "int64"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/Range.min",
+        "ordinal": "1",
         "type": "int64"
     },
     {
@@ -690,11 +770,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SelectiveReportingFeatureReport.button_switch",
+        "ordinal": "2",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SelectiveReportingFeatureReport.surface_switch",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -704,11 +786,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/SensorAxis.axis",
+        "ordinal": "1",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/SensorAxis.type",
+        "ordinal": "2",
         "type": "fuchsia.input.report/SensorType"
     },
     {
@@ -718,11 +802,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorDescriptor.feature",
+        "ordinal": "2",
         "type": "vector<fuchsia.input.report/SensorFeatureDescriptor>:255"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorDescriptor.input",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/SensorInputDescriptor>:255"
     },
     {
@@ -732,36 +818,43 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureDescriptor.report_id",
+        "ordinal": "7",
         "type": "uint8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureDescriptor.report_interval",
+        "ordinal": "1",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureDescriptor.sampling_rate",
+        "ordinal": "6",
         "type": "fuchsia.input.report/Axis"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureDescriptor.sensitivity",
+        "ordinal": "2",
         "type": "vector<fuchsia.input.report/SensorAxis>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureDescriptor.supports_reporting_state",
+        "ordinal": "3",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureDescriptor.threshold_high",
+        "ordinal": "4",
         "type": "vector<fuchsia.input.report/SensorAxis>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureDescriptor.threshold_low",
+        "ordinal": "5",
         "type": "vector<fuchsia.input.report/SensorAxis>:100"
     },
     {
@@ -771,31 +864,37 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureReport.report_interval",
+        "ordinal": "1",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureReport.reporting_state",
+        "ordinal": "3",
         "type": "fuchsia.input.report/SensorReportingState"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureReport.sampling_rate",
+        "ordinal": "6",
         "type": "int64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureReport.sensitivity",
+        "ordinal": "2",
         "type": "vector<int64>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureReport.threshold_high",
+        "ordinal": "4",
         "type": "vector<int64>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorFeatureReport.threshold_low",
+        "ordinal": "5",
         "type": "vector<int64>:100"
     },
     {
@@ -805,11 +904,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorInputDescriptor.report_id",
+        "ordinal": "2",
         "type": "uint8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorInputDescriptor.values",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/SensorAxis>:100"
     },
     {
@@ -819,6 +920,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/SensorInputReport.values",
+        "ordinal": "1",
         "type": "vector<int64>:100"
     },
     {
@@ -948,11 +1050,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchDescriptor.feature",
+        "ordinal": "2",
         "type": "fuchsia.input.report/TouchFeatureDescriptor"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchDescriptor.input",
+        "ordinal": "1",
         "type": "fuchsia.input.report/TouchInputDescriptor"
     },
     {
@@ -962,11 +1066,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchFeatureDescriptor.supports_input_mode",
+        "ordinal": "1",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchFeatureDescriptor.supports_selective_reporting",
+        "ordinal": "2",
         "type": "bool"
     },
     {
@@ -976,11 +1082,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchFeatureReport.input_mode",
+        "ordinal": "1",
         "type": "fuchsia.input.report/TouchConfigurationInputMode"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchFeatureReport.selective_reporting",
+        "ordinal": "2",
         "type": "fuchsia.input.report/SelectiveReportingFeatureReport"
     },
     {
@@ -990,21 +1098,25 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchInputDescriptor.buttons",
+        "ordinal": "4",
         "type": "vector<uint8>:10"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchInputDescriptor.contacts",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/ContactInputDescriptor>:10"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchInputDescriptor.max_contacts",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchInputDescriptor.touch_type",
+        "ordinal": "3",
         "type": "fuchsia.input.report/TouchType"
     },
     {
@@ -1014,11 +1126,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchInputReport.contacts",
+        "ordinal": "1",
         "type": "vector<fuchsia.input.report/ContactInputReport>:10"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.input.report/TouchInputReport.pressed_buttons",
+        "ordinal": "2",
         "type": "vector<uint8>:10"
     },
     {
@@ -1044,11 +1158,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/Unit.exponent",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.input.report/Unit.type",
+        "ordinal": "1",
         "type": "fuchsia.input.report/UnitType"
     },
     {

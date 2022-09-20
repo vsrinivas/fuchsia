@@ -2,21 +2,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/CobaltEvent.component",
+        "ordinal": "3",
         "type": "string:<64,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/CobaltEvent.event_codes",
+        "ordinal": "2",
         "type": "vector<uint32>:5"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/CobaltEvent.metric_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/CobaltEvent.payload",
+        "ordinal": "4",
         "type": "fuchsia.cobalt/EventPayload"
     },
     {
@@ -26,41 +30,49 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Controller.BlockUntilEmpty",
+        "ordinal": "8267755545206836570",
         "type": "(uint32 max_wait_seconds) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Controller.GenerateAggregatedObservations",
+        "ordinal": "8782116894917204657",
         "type": "(uint32 day_index,vector<fuchsia.cobalt/ReportSpec> report_specs) -> (vector<uint64> num_obs)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Controller.GetFailedSendAttempts",
+        "ordinal": "415931445759594599",
         "type": "() -> (uint32 num)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Controller.GetNumEventAggregatorRuns",
+        "ordinal": "3873188368394493749",
         "type": "() -> (uint64 num_runs)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Controller.GetNumObservationsAdded",
+        "ordinal": "3411069497502535365",
         "type": "() -> (uint64 num_obs)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Controller.GetNumSendAttempts",
+        "ordinal": "9134778461107701654",
         "type": "() -> (uint32 num)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Controller.ListenForInitialized",
+        "ordinal": "3770915797834076399",
         "type": "() -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Controller.RequestSendSoon",
+        "ordinal": "6146963493560462909",
         "type": "() -> (bool success)"
     },
     {
@@ -70,11 +82,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/CountEvent.count",
+        "ordinal": "2",
         "type": "int64"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/CountEvent.period_duration_micros",
+        "ordinal": "1",
         "type": "int64"
     },
     {
@@ -84,11 +98,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/CustomEventValue.dimension_name",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/CustomEventValue.value",
+        "ordinal": "2",
         "type": "fuchsia.cobalt/Value"
     },
     {
@@ -102,31 +118,37 @@
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/EventPayload.elapsed_micros",
+        "ordinal": "3",
         "type": "int64"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/EventPayload.event",
+        "ordinal": "1",
         "type": "fuchsia.cobalt/Event"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/EventPayload.event_count",
+        "ordinal": "2",
         "type": "fuchsia.cobalt/CountEvent"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/EventPayload.fps",
+        "ordinal": "4",
         "type": "float32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/EventPayload.int_histogram",
+        "ordinal": "7",
         "type": "vector<fuchsia.cobalt/HistogramBucket>:500"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/EventPayload.memory_bytes_used",
+        "ordinal": "5",
         "type": "int64"
     },
     {
@@ -137,11 +159,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/HistogramBucket.count",
+        "ordinal": "2",
         "type": "uint64"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.cobalt/HistogramBucket.index",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -151,56 +175,67 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.EndTimer",
+        "ordinal": "1080938387429700961",
         "type": "(string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogCobaltEvent",
+        "ordinal": "205579765234832178",
         "type": "(fuchsia.cobalt/CobaltEvent event) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogCobaltEvents",
+        "ordinal": "5643475991674658687",
         "type": "(vector<fuchsia.cobalt/CobaltEvent>:500 events) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogCustomEvent",
+        "ordinal": "7338942293266568376",
         "type": "(uint32 metric_id,vector<fuchsia.cobalt/CustomEventValue> event_values) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogElapsedTime",
+        "ordinal": "301275613998008197",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 elapsed_micros) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogEvent",
+        "ordinal": "2969055088423588894",
         "type": "(uint32 metric_id,uint32 event_code) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogEventCount",
+        "ordinal": "6878114529391459249",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 period_duration_micros,int64 count) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogFrameRate",
+        "ordinal": "344245806242685079",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,float32 fps) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogIntHistogram",
+        "ordinal": "3711745107612666638",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,vector<fuchsia.cobalt/HistogramBucket>:500 histogram) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.LogMemoryUsage",
+        "ordinal": "1448078880452236865",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 bytes) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/Logger.StartTimer",
+        "ordinal": "7552185337125947704",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)"
     },
     {
@@ -210,36 +245,43 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerBase.EndTimer",
+        "ordinal": "1080938387429700961",
         "type": "(string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerBase.LogElapsedTime",
+        "ordinal": "301275613998008197",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 elapsed_micros) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerBase.LogEvent",
+        "ordinal": "2969055088423588894",
         "type": "(uint32 metric_id,uint32 event_code) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerBase.LogEventCount",
+        "ordinal": "6878114529391459249",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 period_duration_micros,int64 count) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerBase.LogFrameRate",
+        "ordinal": "344245806242685079",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,float32 fps) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerBase.LogMemoryUsage",
+        "ordinal": "1448078880452236865",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 bytes) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerBase.StartTimer",
+        "ordinal": "7552185337125947704",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)"
     },
     {
@@ -249,16 +291,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerFactory.CreateLoggerFromProjectId",
+        "ordinal": "4966979475572640206",
         "type": "(uint32 project_id,server_end:fuchsia.cobalt/Logger logger) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerFactory.CreateLoggerFromProjectSpec",
+        "ordinal": "7951444610337707874",
         "type": "(uint32 customer_id,uint32 project_id,server_end:fuchsia.cobalt/Logger logger) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerFactory.CreateLoggerSimpleFromProjectId",
+        "ordinal": "2267267962623648799",
         "type": "(uint32 project_id,server_end:fuchsia.cobalt/LoggerSimple logger) -> (fuchsia.cobalt/Status status)"
     },
     {
@@ -268,41 +313,49 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerSimple.EndTimer",
+        "ordinal": "1080938387429700961",
         "type": "(string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerSimple.LogElapsedTime",
+        "ordinal": "301275613998008197",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 elapsed_micros) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerSimple.LogEvent",
+        "ordinal": "2969055088423588894",
         "type": "(uint32 metric_id,uint32 event_code) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerSimple.LogEventCount",
+        "ordinal": "6878114529391459249",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 period_duration_micros,int64 count) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerSimple.LogFrameRate",
+        "ordinal": "344245806242685079",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,float32 fps) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerSimple.LogIntHistogram",
+        "ordinal": "9142036725996647425",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,vector<uint32>:500 bucket_indices,vector<uint64>:500 bucket_counts) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerSimple.LogMemoryUsage",
+        "ordinal": "1448078880452236865",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,int64 bytes) -> (fuchsia.cobalt/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/LoggerSimple.StartTimer",
+        "ordinal": "7552185337125947704",
         "type": "(uint32 metric_id,uint32 event_code,string:64 component,string:64 timer_id,uint64 timestamp,uint32 timeout_s) -> (fuchsia.cobalt/Status status)"
     },
     {
@@ -360,21 +413,25 @@
     {
         "kind": "table/member",
         "name": "fuchsia.cobalt/ReportSpec.customer_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.cobalt/ReportSpec.metric_id",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.cobalt/ReportSpec.project_id",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.cobalt/ReportSpec.report_id",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
@@ -384,11 +441,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.cobalt/SoftwareDistributionInfo.current_channel",
+        "ordinal": "1",
         "type": "string:256"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.cobalt/SoftwareDistributionInfo.current_realm",
+        "ordinal": "2",
         "type": "string:256"
     },
     {
@@ -434,6 +493,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.cobalt/SystemDataUpdater.SetSoftwareDistributionInfo",
+        "ordinal": "7108055568261771827",
         "type": "(fuchsia.cobalt/SoftwareDistributionInfo info) -> (fuchsia.cobalt/Status status)"
     },
     {
@@ -443,21 +503,25 @@
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/Value.double_value",
+        "ordinal": "3",
         "type": "float64"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/Value.index_value",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/Value.int_value",
+        "ordinal": "2",
         "type": "int64"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.cobalt/Value.string_value",
+        "ordinal": "1",
         "type": "string"
     },
     {

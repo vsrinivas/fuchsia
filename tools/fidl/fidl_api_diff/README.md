@@ -1,7 +1,8 @@
 # fidl_api_diff
 
 The program `fidl_api_diff` computes the difference between two FIDL API
-summaries produced by `fidl_api_summarize`. It wraps the
+summaries produced by `fidl_api_summarize`. Its focus is API, but it also has
+limited support for detecting breaking ABI changes. It wraps the
 `//tools/fidl/lib/apidiff` library.
 
 ## Build

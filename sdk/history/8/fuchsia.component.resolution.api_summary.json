@@ -2,26 +2,31 @@
     {
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Component.config_values",
+        "ordinal": "4",
         "type": "fuchsia.mem/Data"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Component.decl",
+        "ordinal": "2",
         "type": "fuchsia.mem/Data"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Component.package",
+        "ordinal": "3",
         "type": "fuchsia.component.resolution/Package"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Component.resolution_context",
+        "ordinal": "5",
         "type": "vector<uint8>:8192"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Component.url",
+        "ordinal": "1",
         "type": "string:2083"
     },
     {
@@ -44,11 +49,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Package.directory",
+        "ordinal": "2",
         "type": "fuchsia.io/Directory"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.component.resolution/Package.url",
+        "ordinal": "1",
         "type": "string:2083"
     },
     {
@@ -59,11 +66,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.component.resolution/Resolver.Resolve",
+        "ordinal": "6339326548187935461",
         "type": "(string:2083 component_url) -> (fuchsia.component.resolution/Resolver_Resolve_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.component.resolution/Resolver.ResolveWithContext",
+        "ordinal": "5576776708309151933",
         "type": "(string:2083 component_url,vector<uint8>:8192 context) -> (fuchsia.component.resolution/Resolver_ResolveWithContext_Result result)"
     },
     {
@@ -129,6 +138,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Response.component",
+        "ordinal": "1",
         "type": "fuchsia.component.resolution/Component"
     },
     {
@@ -139,11 +149,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.component.resolution/ResolverError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.component.resolution/Resolver_ResolveWithContext_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.component.resolution/Resolver_ResolveWithContext_Response"
     },
     {
@@ -155,6 +167,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.component.resolution/Resolver_Resolve_Response.component",
+        "ordinal": "1",
         "type": "fuchsia.component.resolution/Component"
     },
     {
@@ -165,11 +178,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.component.resolution/Resolver_Resolve_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.component.resolution/ResolverError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.component.resolution/Resolver_Resolve_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.component.resolution/Resolver_Resolve_Response"
     },
     {

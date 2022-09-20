@@ -2,31 +2,37 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/Call.RequestActive",
+        "ordinal": "2631537016737758830",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/Call.RequestHold",
+        "ordinal": "3867998356542136555",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/Call.RequestTerminate",
+        "ordinal": "5278378542905575702",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/Call.RequestTransferAudio",
+        "ordinal": "796194185235271756",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/Call.SendDtmfCode",
+        "ordinal": "5797972425814834390",
         "type": "(fuchsia.bluetooth.hfp/DtmfCode code) -> (fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/Call.WatchState",
+        "ordinal": "5936514830465609397",
         "type": "() -> (fuchsia.bluetooth.hfp/CallState state)"
     },
     {
@@ -36,21 +42,25 @@
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/CallAction.dial_from_location",
+        "ordinal": "2",
         "type": "string:256"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/CallAction.dial_from_number",
+        "ordinal": "1",
         "type": "string:256"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/CallAction.redial_last",
+        "ordinal": "3",
         "type": "fuchsia.bluetooth.hfp/RedialLast"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/CallAction.transfer_active",
+        "ordinal": "4",
         "type": "fuchsia.bluetooth.hfp/TransferActive"
     },
     {
@@ -77,6 +87,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/CallManager.PeerConnected",
+        "ordinal": "1455168612604575878",
         "type": "(fuchsia.bluetooth/PeerId id,server_end:fuchsia.bluetooth.hfp/PeerHandler handle) -> ()"
     },
     {
@@ -136,11 +147,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.bluetooth.hfp/Call_SendDtmfCode_Response"
     },
     {
@@ -237,21 +250,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/HeadsetGain.SetMicrophoneGain",
+        "ordinal": "9069041175594200974",
         "type": "(uint8 requested)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/HeadsetGain.SetSpeakerGain",
+        "ordinal": "3774607042156357070",
         "type": "(uint8 requested)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/HeadsetGain.WatchMicrophoneGain",
+        "ordinal": "2096179010374096301",
         "type": "() -> (uint8 gain)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/HeadsetGain.WatchSpeakerGain",
+        "ordinal": "2308002308964075335",
         "type": "() -> (uint8 gain)"
     },
     {
@@ -261,6 +278,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/Hfp.Register",
+        "ordinal": "1958684264531853741",
         "type": "(client_end:fuchsia.bluetooth.hfp/CallManager manager)"
     },
     {
@@ -276,16 +294,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.bluetooth.hfp/NetworkInformation.roaming",
+        "ordinal": "3",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.bluetooth.hfp/NetworkInformation.service_available",
+        "ordinal": "1",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.bluetooth.hfp/NetworkInformation.signal_strength",
+        "ordinal": "2",
         "type": "fuchsia.bluetooth.hfp/SignalStrength"
     },
     {
@@ -295,21 +316,25 @@
     {
         "kind": "table/member",
         "name": "fuchsia.bluetooth.hfp/NextCall.call",
+        "ordinal": "1",
         "type": "client_end:fuchsia.bluetooth.hfp/Call"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.bluetooth.hfp/NextCall.direction",
+        "ordinal": "4",
         "type": "fuchsia.bluetooth.hfp/CallDirection"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.bluetooth.hfp/NextCall.remote",
+        "ordinal": "2",
         "type": "string:256"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.bluetooth.hfp/NextCall.state",
+        "ordinal": "3",
         "type": "fuchsia.bluetooth.hfp/CallState"
     },
     {
@@ -320,41 +345,49 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler.GainControl",
+        "ordinal": "7927526584189171991",
         "type": "(client_end:fuchsia.bluetooth.hfp/HeadsetGain control)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler.QueryOperator",
+        "ordinal": "1303768958814139136",
         "type": "() -> (string:<16,optional> operator)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler.ReportHeadsetBatteryLevel",
+        "ordinal": "352381099789310043",
         "type": "(uint8 level)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler.RequestOutgoingCall",
+        "ordinal": "117765926442273197",
         "type": "(fuchsia.bluetooth.hfp/CallAction action) -> (fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler.SetNrecMode",
+        "ordinal": "3425146743810320175",
         "type": "(bool enabled) -> (fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler.SubscriberNumberInformation",
+        "ordinal": "1582209706392300090",
         "type": "() -> (vector<string:256>:128 numbers)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler.WatchNetworkInformation",
+        "ordinal": "2062290572683950027",
         "type": "() -> (fuchsia.bluetooth.hfp/NetworkInformation update)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler.WatchNextCall",
+        "ordinal": "424384777513325401",
         "type": "() -> (fuchsia.bluetooth.hfp/NextCall call)"
     },
     {
@@ -368,11 +401,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.bluetooth.hfp/PeerHandler_RequestOutgoingCall_Response"
     },
     {
@@ -387,11 +422,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.bluetooth.hfp/PeerHandler_SetNrecMode_Response"
     },
     {

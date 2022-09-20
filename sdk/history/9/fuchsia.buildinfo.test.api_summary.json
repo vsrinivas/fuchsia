@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.buildinfo.test/BuildInfoTestController.SetBuildInfo",
+        "ordinal": "4413387124839775616",
         "type": "(fuchsia.buildinfo/BuildInfo build_info) -> ()"
     },
     {

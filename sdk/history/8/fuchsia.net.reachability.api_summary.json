@@ -2,11 +2,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.net.reachability/Monitor.SetOptions",
+        "ordinal": "3336717261845512787",
         "type": "(fuchsia.net.reachability/MonitorOptions payload)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.net.reachability/Monitor.Watch",
+        "ordinal": "4043849367163201151",
         "type": "() -> (fuchsia.net.reachability/Snapshot payload)"
     },
     {
@@ -20,6 +22,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.net.reachability/Snapshot.internet_available",
+        "ordinal": "1",
         "type": "bool"
     },
     {

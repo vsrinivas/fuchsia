@@ -2,21 +2,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.virtualkeyboard/Controller.RequestHide",
+        "ordinal": "6583535332892626324",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.virtualkeyboard/Controller.RequestShow",
+        "ordinal": "5409972389041395238",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.virtualkeyboard/Controller.SetTextType",
+        "ordinal": "8126860777373356798",
         "type": "(fuchsia.input.virtualkeyboard/TextType text_type)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.virtualkeyboard/Controller.WatchVisibility",
+        "ordinal": "6156405552936989",
         "type": "() -> (bool is_visible)"
     },
     {
@@ -26,6 +30,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.virtualkeyboard/ControllerCreator.Create",
+        "ordinal": "1905144223146979046",
         "type": "(fuchsia.ui.views/ViewRef view_ref,fuchsia.input.virtualkeyboard/TextType text_type,server_end:fuchsia.input.virtualkeyboard/Controller controller_request)"
     },
     {
@@ -35,11 +40,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.virtualkeyboard/Manager.Notify",
+        "ordinal": "5480400482136618548",
         "type": "(bool is_visible,fuchsia.input.virtualkeyboard/VisibilityChangeReason reason) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.input.virtualkeyboard/Manager.WatchTypeAndVisibility",
+        "ordinal": "6549569351966335745",
         "type": "() -> (fuchsia.input.virtualkeyboard/TextType text_type,bool is_visible)"
     },
     {

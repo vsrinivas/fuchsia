@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.wlan.product.deprecatedconfiguration/DeprecatedConfigurator.SuggestAccessPointMacAddress",
+        "ordinal": "5615410737490055052",
         "type": "(fuchsia.net/MacAddress mac) -> (fuchsia.wlan.product.deprecatedconfiguration/DeprecatedConfigurator_SuggestAccessPointMacAddress_Result result)"
     },
     {
@@ -15,11 +16,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.wlan.product.deprecatedconfiguration/DeprecatedConfigurator_SuggestAccessPointMacAddress_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.wlan.product.deprecatedconfiguration/SuggestMacAddressError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.wlan.product.deprecatedconfiguration/DeprecatedConfigurator_SuggestAccessPointMacAddress_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.wlan.product.deprecatedconfiguration/DeprecatedConfigurator_SuggestAccessPointMacAddress_Response"
     },
     {

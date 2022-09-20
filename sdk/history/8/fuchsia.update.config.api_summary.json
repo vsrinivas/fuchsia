@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.update.config/OptOut.Get",
+        "ordinal": "9047833021330898136",
         "type": "() -> (fuchsia.update.config/OptOutPreference value)"
     },
     {
@@ -11,6 +12,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.update.config/OptOutAdmin.Set",
+        "ordinal": "8978221073431527207",
         "type": "(fuchsia.update.config/OptOutPreference value) -> (fuchsia.update.config/OptOutAdmin_Set_Result result)"
     },
     {
@@ -35,11 +37,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.update.config/OptOutAdmin_Set_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.update.config/OptOutAdminError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.update.config/OptOutAdmin_Set_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.update.config/OptOutAdmin_Set_Response"
     },
     {

@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.thermal/Actor.SetThermalState",
+        "ordinal": "8772046669113819781",
         "type": "(uint32 state) -> ()"
     },
     {
@@ -27,6 +28,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.thermal/ClientStateConnector.Connect",
+        "ordinal": "7326182016139766301",
         "type": "(string:8 client_type,server_end:fuchsia.thermal/ClientStateWatcher watcher)"
     },
     {
@@ -36,6 +38,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.thermal/ClientStateWatcher.Watch",
+        "ordinal": "4936810604583464830",
         "type": "() -> (uint64 state)"
     },
     {
@@ -45,6 +48,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.thermal/Controller.Subscribe",
+        "ordinal": "6448423710310396590",
         "type": "(client_end:fuchsia.thermal/Actor actor,fuchsia.thermal/ActorType actor_type,vector<fuchsia.thermal/TripPoint>:100 trip_points) -> (fuchsia.thermal/Controller_Subscribe_Result result)"
     },
     {
@@ -58,11 +62,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.thermal/Controller_Subscribe_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.thermal/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.thermal/Controller_Subscribe_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.thermal/Controller_Subscribe_Response"
     },
     {
@@ -101,11 +107,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.thermal/TripPoint.activate_at",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.thermal/TripPoint.deactivate_below",
+        "ordinal": "1",
         "type": "uint32"
     },
     {

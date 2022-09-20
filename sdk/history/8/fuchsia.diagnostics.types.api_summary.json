@@ -2,6 +2,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.diagnostics.types/ComponentDiagnostics.tasks",
+        "ordinal": "1",
         "type": "fuchsia.diagnostics.types/ComponentTasks"
     },
     {
@@ -12,11 +13,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.diagnostics.types/ComponentTasks.component_task",
+        "ordinal": "1",
         "type": "fuchsia.diagnostics.types/Task"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.diagnostics.types/ComponentTasks.parent_task",
+        "ordinal": "2",
         "type": "fuchsia.diagnostics.types/Task"
     },
     {
@@ -27,16 +30,19 @@
     {
         "kind": "union/member",
         "name": "fuchsia.diagnostics.types/Task.job",
+        "ordinal": "1",
         "type": "zx/handle:JOB"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.diagnostics.types/Task.process",
+        "ordinal": "2",
         "type": "zx/handle:PROCESS"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.diagnostics.types/Task.thread",
+        "ordinal": "3",
         "type": "zx/handle:THREAD"
     },
     {

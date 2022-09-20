@@ -26,11 +26,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/CSsid.data",
+        "ordinal": "2",
         "type": "array<uint8,32>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/CSsid.len",
+        "ordinal": "1",
         "type": "uint8"
     },
     {
@@ -133,6 +135,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilities.bytes",
+        "ordinal": "1",
         "type": "array<uint8,26>"
     },
     {
@@ -142,6 +145,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtOperation.bytes",
+        "ordinal": "1",
         "type": "array<uint8,22>"
     },
     {
@@ -1066,6 +1070,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/VhtCapabilities.bytes",
+        "ordinal": "1",
         "type": "array<uint8,12>"
     },
     {
@@ -1075,6 +1080,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/VhtOperation.bytes",
+        "ordinal": "1",
         "type": "array<uint8,5>"
     },
     {

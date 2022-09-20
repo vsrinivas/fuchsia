@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.unknown/Cloneable.Clone2",
+        "ordinal": "2366825959783828089",
         "type": "(server_end:fuchsia.unknown/Cloneable request)"
     },
     {
@@ -11,6 +12,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.unknown/Closeable.Close",
+        "ordinal": "6540867515453498750",
         "type": "() -> (fuchsia.unknown/Closeable_Close_Result result)"
     },
     {
@@ -24,11 +26,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.unknown/Closeable_Close_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.unknown/Closeable_Close_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.unknown/Closeable_Close_Response"
     },
     {
@@ -39,6 +43,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.unknown/Queryable.Query",
+        "ordinal": "2763219980499352582",
         "type": "() -> (vector<uint8> protocol)"
     },
     {

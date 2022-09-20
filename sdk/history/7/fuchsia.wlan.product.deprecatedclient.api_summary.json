@@ -2,11 +2,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.product.deprecatedclient/Ap.rssi_dbm",
+        "ordinal": "2",
         "type": "int8"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.product.deprecatedclient/Ap.ssid",
+        "ordinal": "1",
         "type": "string:32"
     },
     {
@@ -16,6 +18,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.wlan.product.deprecatedclient/DeprecatedClient.Status",
+        "ordinal": "8971550464597086191",
         "type": "() -> (fuchsia.wlan.product.deprecatedclient/WlanStatus status)"
     },
     {
@@ -51,11 +54,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus.current_ap",
+        "ordinal": "2",
         "type": "box<fuchsia.wlan.product.deprecatedclient/Ap>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.product.deprecatedclient/WlanStatus.state",
+        "ordinal": "1",
         "type": "fuchsia.wlan.product.deprecatedclient/State"
     },
     {

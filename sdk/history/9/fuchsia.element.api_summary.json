@@ -2,11 +2,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.element/Annotation.key",
+        "ordinal": "1",
         "type": "fuchsia.element/AnnotationKey"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.element/Annotation.value",
+        "ordinal": "2",
         "type": "fuchsia.element/AnnotationValue"
     },
     {
@@ -17,16 +19,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/AnnotationController.GetAnnotations",
+        "ordinal": "785749591841055994",
         "type": "() -> (fuchsia.element/AnnotationController_GetAnnotations_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/AnnotationController.UpdateAnnotations",
+        "ordinal": "6276017981234660998",
         "type": "(vector<fuchsia.element/Annotation>:1024 annotations_to_set,vector<fuchsia.element/AnnotationKey>:1024 annotations_to_delete) -> (fuchsia.element/AnnotationController_UpdateAnnotations_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/AnnotationController.WatchAnnotations",
+        "ordinal": "2682765957598885231",
         "type": "() -> (fuchsia.element/AnnotationController_WatchAnnotations_Result result)"
     },
     {
@@ -36,6 +41,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.element/AnnotationController_GetAnnotations_Response.annotations",
+        "ordinal": "1",
         "type": "vector<fuchsia.element/Annotation>:1024"
     },
     {
@@ -46,11 +52,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.element/AnnotationController_GetAnnotations_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.element/GetAnnotationsError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.element/AnnotationController_GetAnnotations_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.element/AnnotationController_GetAnnotations_Response"
     },
     {
@@ -66,11 +74,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.element/AnnotationController_UpdateAnnotations_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.element/UpdateAnnotationsError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.element/AnnotationController_UpdateAnnotations_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.element/AnnotationController_UpdateAnnotations_Response"
     },
     {
@@ -81,6 +91,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.element/AnnotationController_WatchAnnotations_Response.annotations",
+        "ordinal": "1",
         "type": "vector<fuchsia.element/Annotation>:1024"
     },
     {
@@ -91,11 +102,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.element/AnnotationController_WatchAnnotations_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.element/WatchAnnotationsError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.element/AnnotationController_WatchAnnotations_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.element/AnnotationController_WatchAnnotations_Response"
     },
     {
@@ -107,11 +120,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.element/AnnotationKey.namespace",
+        "ordinal": "1",
         "type": "string:128"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.element/AnnotationKey.value",
+        "ordinal": "2",
         "type": "string:128"
     },
     {
@@ -121,11 +136,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.element/AnnotationValue.buffer",
+        "ordinal": "2",
         "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.element/AnnotationValue.text",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -137,16 +154,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/Controller.GetAnnotations",
+        "ordinal": "785749591841055994",
         "type": "() -> (fuchsia.element/AnnotationController_GetAnnotations_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/Controller.UpdateAnnotations",
+        "ordinal": "6276017981234660998",
         "type": "(vector<fuchsia.element/Annotation>:1024 annotations_to_set,vector<fuchsia.element/AnnotationKey>:1024 annotations_to_delete) -> (fuchsia.element/AnnotationController_UpdateAnnotations_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/Controller.WatchAnnotations",
+        "ordinal": "2682765957598885231",
         "type": "() -> (fuchsia.element/AnnotationController_WatchAnnotations_Result result)"
     },
     {
@@ -167,6 +187,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/GraphicalPresenter.PresentView",
+        "ordinal": "4134377975219137658",
         "type": "(fuchsia.element/ViewSpec view_spec,client_end:<fuchsia.element/AnnotationController,optional> annotation_controller,server_end:<fuchsia.element/ViewController,optional> view_controller_request) -> (fuchsia.element/GraphicalPresenter_PresentView_Result result)"
     },
     {
@@ -180,11 +201,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.element/GraphicalPresenter_PresentView_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.element/PresentViewError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.element/GraphicalPresenter_PresentView_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.element/GraphicalPresenter_PresentView_Response"
     },
     {
@@ -213,6 +236,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/Manager.ProposeElement",
+        "ordinal": "3096055942164494594",
         "type": "(fuchsia.element/Spec spec,server_end:<fuchsia.element/Controller,optional> controller) -> (fuchsia.element/Manager_ProposeElement_Result result)"
     },
     {
@@ -226,11 +250,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.element/Manager_ProposeElement_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.element/ProposeElementError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.element/Manager_ProposeElement_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.element/Manager_ProposeElement_Response"
     },
     {
@@ -268,21 +294,25 @@
     {
         "kind": "table/member",
         "name": "fuchsia.element/Spec.additional_services",
+        "ordinal": "3",
         "type": "fuchsia.sys/ServiceList"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.element/Spec.annotations",
+        "ordinal": "2",
         "type": "vector<fuchsia.element/Annotation>:1024"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.element/Spec.arguments",
+        "ordinal": "4",
         "type": "vector<string>"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.element/Spec.component_url",
+        "ordinal": "1",
         "type": "string:4096"
     },
     {
@@ -309,11 +339,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/ViewController.Dismiss",
+        "ordinal": "8737091014927688668",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.element/ViewController.OnPresented",
+        "ordinal": "2780830280981885109",
         "type": " -> ()"
     },
     {
@@ -323,21 +355,25 @@
     {
         "kind": "table/member",
         "name": "fuchsia.element/ViewSpec.annotations",
+        "ordinal": "3",
         "type": "vector<fuchsia.element/Annotation>:1024"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.element/ViewSpec.view_holder_token",
+        "ordinal": "1",
         "type": "fuchsia.ui.views/ViewHolderToken"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.element/ViewSpec.view_ref",
+        "ordinal": "2",
         "type": "fuchsia.ui.views/ViewRef"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.element/ViewSpec.viewport_creation_token",
+        "ordinal": "4",
         "type": "fuchsia.ui.views/ViewportCreationToken"
     },
     {

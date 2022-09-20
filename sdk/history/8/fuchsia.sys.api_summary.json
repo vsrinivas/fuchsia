@@ -2,21 +2,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/ComponentController.Detach",
+        "ordinal": "7105849846090621182",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/ComponentController.Kill",
+        "ordinal": "6102146914305738423",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/ComponentController.OnDirectoryReady",
+        "ordinal": "7209580991141909880",
         "type": " -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/ComponentController.OnTerminated",
+        "ordinal": "3884470948497109576",
         "type": " -> (int64 return_code,fuchsia.sys/TerminationReason termination_reason)"
     },
     {
@@ -26,21 +30,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/Environment.CreateNestedEnvironment",
+        "ordinal": "7361762294273467973",
         "type": "(server_end:fuchsia.sys/Environment environment,server_end:fuchsia.sys/EnvironmentController controller,string label,box<fuchsia.sys/ServiceList> additional_services,fuchsia.sys/EnvironmentOptions options)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/Environment.GetDirectory",
+        "ordinal": "7391698092370646933",
         "type": "(zx/handle:CHANNEL directory_request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/Environment.GetLauncher",
+        "ordinal": "4759109014304865643",
         "type": "(server_end:fuchsia.sys/Launcher launcher)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/Environment.GetServices",
+        "ordinal": "7762611775962469047",
         "type": "(server_end:fuchsia.sys/ServiceProvider services)"
     },
     {
@@ -50,16 +58,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/EnvironmentController.Detach",
+        "ordinal": "8962577917842647182",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/EnvironmentController.Kill",
+        "ordinal": "6995401303319080678",
         "type": "() -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/EnvironmentController.OnCreated",
+        "ordinal": "2026590462346570969",
         "type": " -> ()"
     },
     {
@@ -69,21 +80,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/EnvironmentOptions.delete_storage_on_death",
+        "ordinal": "4",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/EnvironmentOptions.inherit_parent_services",
+        "ordinal": "1",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/EnvironmentOptions.kill_on_oom",
+        "ordinal": "3",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/EnvironmentOptions.use_parent_runners",
+        "ordinal": "2",
         "type": "bool"
     },
     {
@@ -93,31 +108,37 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/FileDescriptor.handle0",
+        "ordinal": "4",
         "type": "zx/handle:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/FileDescriptor.handle1",
+        "ordinal": "5",
         "type": "zx/handle:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/FileDescriptor.handle2",
+        "ordinal": "6",
         "type": "zx/handle:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/FileDescriptor.type0",
+        "ordinal": "1",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/FileDescriptor.type1",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/FileDescriptor.type2",
+        "ordinal": "3",
         "type": "int32"
     },
     {
@@ -128,11 +149,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/FlatNamespace.directories",
+        "ordinal": "2",
         "type": "vector<zx/handle:CHANNEL>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/FlatNamespace.paths",
+        "ordinal": "1",
         "type": "vector<string>"
     },
     {
@@ -143,6 +166,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/JobProvider.GetJob",
+        "ordinal": "1071969128043400938",
         "type": "() -> (zx/handle:JOB job)"
     },
     {
@@ -152,36 +176,43 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/LaunchInfo.additional_services",
+        "ordinal": "7",
         "type": "box<fuchsia.sys/ServiceList>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/LaunchInfo.arguments",
+        "ordinal": "2",
         "type": "vector<string>:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/LaunchInfo.directory_request",
+        "ordinal": "5",
         "type": "zx/handle:<CHANNEL,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/LaunchInfo.err",
+        "ordinal": "4",
         "type": "box<fuchsia.sys/FileDescriptor>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/LaunchInfo.flat_namespace",
+        "ordinal": "6",
         "type": "box<fuchsia.sys/FlatNamespace>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/LaunchInfo.out",
+        "ordinal": "3",
         "type": "box<fuchsia.sys/FileDescriptor>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/LaunchInfo.url",
+        "ordinal": "1",
         "type": "string:2083"
     },
     {
@@ -192,6 +223,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/Launcher.CreateComponent",
+        "ordinal": "6118071822532238271",
         "type": "(fuchsia.sys/LaunchInfo launch_info,server_end:<fuchsia.sys/ComponentController,optional> controller)"
     },
     {
@@ -201,6 +233,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/Loader.LoadUrl",
+        "ordinal": "2351313287988357240",
         "type": "(string:2083 url) -> (box<fuchsia.sys/Package> package)"
     },
     {
@@ -216,16 +249,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/Package.data",
+        "ordinal": "1",
         "type": "fuchsia.mem/Buffer:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/Package.directory",
+        "ordinal": "2",
         "type": "zx/handle:<CHANNEL,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/Package.resolved_url",
+        "ordinal": "3",
         "type": "string:2083"
     },
     {
@@ -236,11 +272,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/ProgramMetadata.key",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/ProgramMetadata.value",
+        "ordinal": "2",
         "type": "string"
     },
     {
@@ -250,6 +288,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/Runner.StartComponent",
+        "ordinal": "5699196872919341322",
         "type": "(fuchsia.sys/Package package,fuchsia.sys/StartupInfo startup_info,server_end:<fuchsia.sys/ComponentController,optional> controller)"
     },
     {
@@ -259,16 +298,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/ServiceList.host_directory",
+        "ordinal": "3",
         "type": "zx/handle:<CHANNEL,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/ServiceList.names",
+        "ordinal": "1",
         "type": "vector<string>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/ServiceList.provider",
+        "ordinal": "2",
         "type": "client_end:<fuchsia.sys/ServiceProvider,optional>"
     },
     {
@@ -279,6 +321,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sys/ServiceProvider.ConnectToService",
+        "ordinal": "8281255024273997880",
         "type": "(string service_name,zx/handle:CHANNEL channel)"
     },
     {
@@ -288,16 +331,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/StartupInfo.flat_namespace",
+        "ordinal": "2",
         "type": "fuchsia.sys/FlatNamespace"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/StartupInfo.launch_info",
+        "ordinal": "1",
         "type": "fuchsia.sys/LaunchInfo"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sys/StartupInfo.program_metadata",
+        "ordinal": "3",
         "type": "vector<fuchsia.sys/ProgramMetadata>:optional"
     },
     {

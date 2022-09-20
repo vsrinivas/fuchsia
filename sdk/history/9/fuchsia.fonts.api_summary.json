@@ -77,11 +77,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/FamilyInfo.name",
+        "ordinal": "1",
         "type": "string:128"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/FamilyInfo.styles",
+        "ordinal": "2",
         "type": "vector<fuchsia.fonts/Style>:300"
     },
     {
@@ -91,6 +93,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/FamilyName.name",
+        "ordinal": "1",
         "type": "string:128"
     },
     {
@@ -100,11 +103,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/FontFamilyInfo.name",
+        "ordinal": "1",
         "type": "fuchsia.fonts/FamilyName"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/FontFamilyInfo.styles",
+        "ordinal": "2",
         "type": "vector<fuchsia.fonts/Style2>:300"
     },
     {
@@ -114,6 +119,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.fonts/FontSetEventListener.OnFontSetUpdated",
+        "ordinal": "1084473405949379065",
         "type": "(fuchsia.fonts/FontSetUpdatedEvent event) -> ()"
     },
     {
@@ -214,26 +220,31 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.fonts/Provider.GetFamilyInfo",
+        "ordinal": "2858555626765225395",
         "type": "(string:128 family) -> (box<fuchsia.fonts/FamilyInfo> family_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.fonts/Provider.GetFont",
+        "ordinal": "7903442241602193259",
         "type": "(fuchsia.fonts/Request request) -> (box<fuchsia.fonts/Response> response)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.fonts/Provider.GetFontFamilyInfo",
+        "ordinal": "8440007951307360714",
         "type": "(fuchsia.fonts/FamilyName family) -> (fuchsia.fonts/FontFamilyInfo family_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.fonts/Provider.GetTypeface",
+        "ordinal": "6089379408366995057",
         "type": "(fuchsia.fonts/TypefaceRequest request) -> (fuchsia.fonts/TypefaceResponse response)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.fonts/Provider.RegisterFontSetEventListener",
+        "ordinal": "1830881461319461196",
         "type": "(client_end:fuchsia.fonts/FontSetEventListener listener) -> ()"
     },
     {
@@ -255,46 +266,54 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.character",
+        "ordinal": "6",
         "type": "uint32",
         "value": "0"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.fallback_group",
+        "ordinal": "7",
         "type": "fuchsia.fonts/FallbackGroup",
         "value": "0"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.family",
+        "ordinal": "1",
         "type": "string:<128,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.flags",
+        "ordinal": "8",
         "type": "uint32",
         "value": "0"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.language",
+        "ordinal": "5",
         "type": "vector<string:35>:<8,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.slant",
+        "ordinal": "4",
         "type": "fuchsia.fonts/Slant",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.weight",
+        "ordinal": "2",
         "type": "uint32",
         "value": "400"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Request.width",
+        "ordinal": "3",
         "type": "uint32",
         "value": "5"
     },
@@ -305,16 +324,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Response.buffer",
+        "ordinal": "1",
         "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Response.buffer_id",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Response.font_index",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
@@ -346,16 +368,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Style.slant",
+        "ordinal": "3",
         "type": "fuchsia.fonts/Slant"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Style.weight",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.fonts/Style.width",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
@@ -365,16 +390,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/Style2.slant",
+        "ordinal": "1",
         "type": "fuchsia.fonts/Slant"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/Style2.weight",
+        "ordinal": "2",
         "type": "uint16"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/Style2.width",
+        "ordinal": "3",
         "type": "fuchsia.fonts/Width"
     },
     {
@@ -384,36 +412,43 @@
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceQuery.code_points",
+        "ordinal": "4",
         "type": "vector<uint32>:128"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceQuery.fallback_family",
+        "ordinal": "5",
         "type": "fuchsia.fonts/GenericFontFamily"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceQuery.family",
+        "ordinal": "1",
         "type": "fuchsia.fonts/FamilyName"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceQuery.full_name",
+        "ordinal": "7",
         "type": "string:128"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceQuery.languages",
+        "ordinal": "3",
         "type": "vector<fuchsia.intl/LocaleId>:8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceQuery.postscript_name",
+        "ordinal": "6",
         "type": "string:63"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceQuery.style",
+        "ordinal": "2",
         "type": "fuchsia.fonts/Style2"
     },
     {
@@ -423,16 +458,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceRequest.cache_miss_policy",
+        "ordinal": "3",
         "type": "fuchsia.fonts/CacheMissPolicy"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceRequest.flags",
+        "ordinal": "2",
         "type": "fuchsia.fonts/TypefaceRequestFlags"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceRequest.query",
+        "ordinal": "1",
         "type": "fuchsia.fonts/TypefaceQuery"
     },
     {
@@ -458,16 +496,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceResponse.buffer",
+        "ordinal": "1",
         "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceResponse.buffer_id",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.fonts/TypefaceResponse.font_index",
+        "ordinal": "3",
         "type": "uint32"
     },
     {

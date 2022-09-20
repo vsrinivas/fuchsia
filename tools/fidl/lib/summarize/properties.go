@@ -139,6 +139,9 @@ func (s *aggregate) Serialize() ElementStr {
 type member struct {
 	m          isMember
 	memberType fidlgen.Type
+	// This is the explicit ordinal (table/union members) or the 1-based index
+	// of the member (struct members).
+	ordinal int
 }
 
 // newMember creates a new aggregate member element.
@@ -148,10 +151,12 @@ func newMember(
 	name fidlgen.Identifier,
 	memberType fidlgen.Type,
 	declType fidlgen.DeclType,
+	ordinal int,
 	maybeDefaultValue *fidlgen.Constant) *member {
 	return &member{
 		m:          *newIsMember(st, parentName, name, declType, maybeDefaultValue),
 		memberType: memberType,
+		ordinal:    ordinal,
 	}
 }
 
@@ -168,5 +173,6 @@ func (s *member) Name() Name {
 func (s *member) Serialize() ElementStr {
 	e := s.m.Serialize()
 	e.Type = s.m.symbolTable.fidlTypeString(s.memberType)
+	e.Ordinal = Ordinal(fmt.Sprint(s.ordinal))
 	return e
 }

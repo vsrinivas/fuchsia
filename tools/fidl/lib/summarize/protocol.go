@@ -5,6 +5,7 @@
 package summarize
 
 import (
+	"fmt"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
@@ -96,6 +97,7 @@ func (m *method) Serialize() ElementStr {
 	e := m.membership.Serialize()
 	e.Kind = ProtocolMemberKind
 	e.Type = m.getTypeSignature()
+	e.Ordinal = Ordinal(fmt.Sprint(m.method.Ordinal))
 	return e
 }
 

@@ -2,11 +2,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ActionDisplay.display_info",
+        "ordinal": "1",
         "type": "fuchsia.modular/DisplayInfo"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ActionDisplay.parameter_mapping",
+        "ordinal": "2",
         "type": "vector<fuchsia.modular/ParameterMapping>"
     },
     {
@@ -16,26 +18,31 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/AddMod.intent",
+        "ordinal": "3",
         "type": "fuchsia.modular/Intent"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/AddMod.mod_name",
+        "ordinal": "1",
         "type": "vector<string>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/AddMod.mod_name_transitional",
+        "ordinal": "2",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/AddMod.surface_parent_mod_name",
+        "ordinal": "5",
         "type": "vector<string>:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/AddMod.surface_relation",
+        "ordinal": "4",
         "type": "fuchsia.modular/SurfaceRelation"
     },
     {
@@ -46,6 +53,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/Agent.Connect",
+        "ordinal": "9068878158990857491",
         "type": "(string requestor_url,server_end:fuchsia.sys/ServiceProvider services)"
     },
     {
@@ -59,21 +67,25 @@
     {
         "kind": "table/member",
         "name": "fuchsia.modular/AgentServiceRequest.agent_controller",
+        "ordinal": "4",
         "type": "server_end:fuchsia.modular/AgentController"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/AgentServiceRequest.channel",
+        "ordinal": "2",
         "type": "zx/handle:CHANNEL"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/AgentServiceRequest.handler",
+        "ordinal": "3",
         "type": "string:2083"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/AgentServiceRequest.service_name",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -84,11 +96,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/Annotation.key",
+        "ordinal": "1",
         "type": "string:256"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/Annotation.value",
+        "ordinal": "2",
         "type": "fuchsia.modular/AnnotationValue:optional"
     },
     {
@@ -120,16 +134,19 @@
     {
         "kind": "union/member",
         "name": "fuchsia.modular/AnnotationValue.buffer",
+        "ordinal": "3",
         "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.modular/AnnotationValue.bytes",
+        "ordinal": "2",
         "type": "vector<uint8>:1024"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.modular/AnnotationValue.text",
+        "ordinal": "1",
         "type": "string:1024"
     },
     {
@@ -141,11 +158,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/ComponentContext.DeprecatedConnectToAgent",
+        "ordinal": "2057483373113611740",
         "type": "(string url,server_end:fuchsia.sys/ServiceProvider incoming_services,server_end:fuchsia.modular/AgentController controller)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/ComponentContext.DeprecatedConnectToAgentService",
+        "ordinal": "56463683571839901",
         "type": "(fuchsia.modular/AgentServiceRequest request)"
     },
     {
@@ -166,16 +185,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.modular/DisplayInfo.icon",
+        "ordinal": "3",
         "type": "string"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/DisplayInfo.subtitle",
+        "ordinal": "2",
         "type": "string"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/DisplayInfo.title",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -185,16 +207,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ExecuteResult.error_message",
+        "ordinal": "3",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ExecuteResult.status",
+        "ordinal": "1",
         "type": "fuchsia.modular/ExecuteStatus"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ExecuteResult.story_id",
+        "ordinal": "2",
         "type": "string:optional"
     },
     {
@@ -245,16 +270,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/Intent.action",
+        "ordinal": "1",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/Intent.handler",
+        "ordinal": "2",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/Intent.parameters",
+        "ordinal": "3",
         "type": "vector<fuchsia.modular/IntentParameter>:optional"
     },
     {
@@ -265,16 +293,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/IntentFilter.action",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/IntentFilter.action_display",
+        "ordinal": "3",
         "type": "fuchsia.modular/ActionDisplay"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/IntentFilter.parameter_constraints",
+        "ordinal": "2",
         "type": "vector<fuchsia.modular/ParameterConstraint>"
     },
     {
@@ -284,11 +315,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/IntentParameter.data",
+        "ordinal": "2",
         "type": "fuchsia.modular/IntentParameterData"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/IntentParameter.name",
+        "ordinal": "1",
         "type": "string:optional"
     },
     {
@@ -299,16 +332,19 @@
     {
         "kind": "union/member",
         "name": "fuchsia.modular/IntentParameterData.entity_reference",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.modular/IntentParameterData.entity_type",
+        "ordinal": "3",
         "type": "vector<string>"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.modular/IntentParameterData.json",
+        "ordinal": "2",
         "type": "fuchsia.mem/Buffer"
     },
     {
@@ -320,6 +356,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/Lifecycle.Terminate",
+        "ordinal": "6917815678890336284",
         "type": "()"
     },
     {
@@ -365,6 +402,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/ModuleContext.RemoveSelfFromStory",
+        "ordinal": "859166699058075806",
         "type": "()"
     },
     {
@@ -374,46 +412,55 @@
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.additional_services",
+        "ordinal": "10",
         "type": "fuchsia.sys/ServiceList"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.annotations",
+        "ordinal": "9",
         "type": "vector<fuchsia.modular/Annotation>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.intent",
+        "ordinal": "7",
         "type": "fuchsia.modular/Intent"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.is_embedded",
+        "ordinal": "8",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.module_deleted",
+        "ordinal": "6",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.module_path",
+        "ordinal": "2",
         "type": "vector<string>"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.module_source",
+        "ordinal": "4",
         "type": "fuchsia.modular/ModuleSource"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.module_url",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ModuleData.surface_relation",
+        "ordinal": "5",
         "type": "fuchsia.modular/SurfaceRelation"
     },
     {
@@ -424,26 +471,31 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ModuleManifest.binary",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ModuleManifest.composition_pattern",
+        "ordinal": "4",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ModuleManifest.intent_filters",
+        "ordinal": "3",
         "type": "vector<fuchsia.modular/IntentFilter>:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ModuleManifest.placeholder_color",
+        "ordinal": "5",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ModuleManifest.suggestion_headline",
+        "ordinal": "2",
         "type": "string:optional"
     },
     {
@@ -515,11 +567,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ParameterConstraint.name",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ParameterConstraint.type",
+        "ordinal": "2",
         "type": "string"
     },
     {
@@ -529,11 +583,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ParameterMapping.name",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/ParameterMapping.parameter_property",
+        "ordinal": "2",
         "type": "string"
     },
     {
@@ -543,16 +599,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/PuppetMaster.ControlStory",
+        "ordinal": "2874899332949133459",
         "type": "(string story_name,server_end:fuchsia.modular/StoryPuppetMaster request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/PuppetMaster.DeleteStory",
+        "ordinal": "4652017130704898921",
         "type": "(string story_name) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/PuppetMaster.GetStories",
+        "ordinal": "1423753287601450212",
         "type": "() -> (vector<string> story_names)"
     },
     {
@@ -562,11 +621,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/RemoveMod.mod_name",
+        "ordinal": "1",
         "type": "vector<string>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/RemoveMod.mod_name_transitional",
+        "ordinal": "2",
         "type": "string:optional"
     },
     {
@@ -576,6 +637,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionRestartController.Restart",
+        "ordinal": "7554808083678731547",
         "type": "()"
     },
     {
@@ -585,16 +647,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShell.AttachView",
+        "ordinal": "7321638873547523708",
         "type": "(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewHolderToken view_holder_token)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShell.AttachView2",
+        "ordinal": "7980743577797293744",
         "type": "(fuchsia.modular/ViewIdentifier view_id,fuchsia.ui.views/ViewHolderToken view_holder_token)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShell.DetachView",
+        "ordinal": "4351418387231325551",
         "type": "(fuchsia.modular/ViewIdentifier view_id) -> ()"
     },
     {
@@ -604,26 +669,31 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShellContext.GetComponentContext",
+        "ordinal": "4859345220575259607",
         "type": "(server_end:fuchsia.modular/ComponentContext request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShellContext.GetPresentation",
+        "ordinal": "17467228501669550",
         "type": "(server_end:fuchsia.ui.policy/Presentation request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShellContext.GetStoryProvider",
+        "ordinal": "5423613823235988243",
         "type": "(server_end:fuchsia.modular/StoryProvider request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShellContext.Logout",
+        "ordinal": "6693693576581674204",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/SessionShellContext.Restart",
+        "ordinal": "5365951913339444500",
         "type": "()"
     },
     {
@@ -633,11 +703,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.modular/StoryCommand.add_mod",
+        "ordinal": "2",
         "type": "fuchsia.modular/AddMod"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.modular/StoryCommand.remove_mod",
+        "ordinal": "3",
         "type": "fuchsia.modular/RemoveMod"
     },
     {
@@ -649,31 +721,37 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryController.Annotate",
+        "ordinal": "9181605781933340691",
         "type": "(vector<fuchsia.modular/Annotation>:50 annotations) -> (fuchsia.modular/StoryController_Annotate_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryController.GetInfo",
+        "ordinal": "3073161054233647697",
         "type": "() -> (fuchsia.modular/StoryInfo info,fuchsia.modular/StoryState state)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryController.GetInfo2",
+        "ordinal": "378927554808707337",
         "type": "() -> (fuchsia.modular/StoryInfo2 info,fuchsia.modular/StoryState state)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryController.RequestStart",
+        "ordinal": "2372672604667717024",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryController.Stop",
+        "ordinal": "7016072664326239853",
         "type": "() -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryController.Watch",
+        "ordinal": "8907658437494136574",
         "type": "(client_end:fuchsia.modular/StoryWatcher watcher)"
     },
     {
@@ -687,11 +765,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.modular/StoryController_Annotate_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.modular/AnnotationError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.modular/StoryController_Annotate_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.modular/StoryController_Annotate_Response"
     },
     {
@@ -702,21 +782,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/StoryInfo.extra",
+        "ordinal": "4",
         "type": "vector<fuchsia.modular/StoryInfoExtraEntry>:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/StoryInfo.id",
+        "ordinal": "2",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/StoryInfo.last_focus_time",
+        "ordinal": "3",
         "type": "int64"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/StoryInfo.url",
+        "ordinal": "1",
         "type": "string:optional"
     },
     {
@@ -726,16 +810,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.modular/StoryInfo2.annotations",
+        "ordinal": "3",
         "type": "vector<fuchsia.modular/Annotation>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/StoryInfo2.id",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/StoryInfo2.last_focus_time",
+        "ordinal": "2",
         "type": "int64"
     },
     {
@@ -746,11 +833,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/StoryInfoExtraEntry.key",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/StoryInfoExtraEntry.value",
+        "ordinal": "2",
         "type": "string"
     },
     {
@@ -760,6 +849,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/StoryOptions.kind_of_proto_story",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -769,31 +859,37 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProvider.GetController",
+        "ordinal": "6853773854031530646",
         "type": "(string story_id,server_end:fuchsia.modular/StoryController request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProvider.GetStories",
+        "ordinal": "3533253372760617317",
         "type": "(client_end:<fuchsia.modular/StoryProviderWatcher,optional> watcher) -> (vector<fuchsia.modular/StoryInfo> story_infos)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProvider.GetStories2",
+        "ordinal": "716634599193856749",
         "type": "(client_end:<fuchsia.modular/StoryProviderWatcher,optional> watcher) -> (vector<fuchsia.modular/StoryInfo2> story_infos)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProvider.GetStoryInfo",
+        "ordinal": "5725031191167525833",
         "type": "(string story_id) -> (box<fuchsia.modular/StoryInfo> story_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProvider.GetStoryInfo2",
+        "ordinal": "1108258595202397687",
         "type": "(string story_id) -> (fuchsia.modular/StoryInfo2 story_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProvider.Watch",
+        "ordinal": "253684785008664187",
         "type": "(client_end:fuchsia.modular/StoryProviderWatcher watcher)"
     },
     {
@@ -803,16 +899,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProviderWatcher.OnChange",
+        "ordinal": "6799809956629530163",
         "type": "(fuchsia.modular/StoryInfo story_info,fuchsia.modular/StoryState story_state,fuchsia.modular/StoryVisibilityState story_visibility_state)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProviderWatcher.OnChange2",
+        "ordinal": "1161797024224294656",
         "type": "(fuchsia.modular/StoryInfo2 story_info,fuchsia.modular/StoryState story_state,fuchsia.modular/StoryVisibilityState story_visibility_state)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryProviderWatcher.OnDelete",
+        "ordinal": "5319901324166790085",
         "type": "(string story_id)"
     },
     {
@@ -822,21 +921,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryPuppetMaster.Annotate",
+        "ordinal": "6133170890171807696",
         "type": "(vector<fuchsia.modular/Annotation>:50 annotations) -> (fuchsia.modular/StoryPuppetMaster_Annotate_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryPuppetMaster.Enqueue",
+        "ordinal": "3912568255594966626",
         "type": "(vector<fuchsia.modular/StoryCommand> commands)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryPuppetMaster.Execute",
+        "ordinal": "223989374585289348",
         "type": "() -> (fuchsia.modular/ExecuteResult result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryPuppetMaster.WatchAnnotations",
+        "ordinal": "4294411855730118038",
         "type": "() -> (fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result result)"
     },
     {
@@ -850,11 +953,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.modular/StoryPuppetMaster_Annotate_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.modular/AnnotationError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.modular/StoryPuppetMaster_Annotate_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.modular/StoryPuppetMaster_Annotate_Response"
     },
     {
@@ -865,6 +970,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response.annotations",
+        "ordinal": "1",
         "type": "vector<fuchsia.modular/Annotation>:100"
     },
     {
@@ -875,11 +981,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.modular/AnnotationError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.modular/StoryPuppetMaster_WatchAnnotations_Response"
     },
     {
@@ -891,56 +999,67 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.AddSurface",
+        "ordinal": "1937910650151948660",
         "type": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo surface_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.AddSurface2",
+        "ordinal": "8857612687958983480",
         "type": "(fuchsia.modular/ViewConnection2 view_connection,fuchsia.modular/SurfaceInfo surface_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.AddSurface3",
+        "ordinal": "3449476352220771441",
         "type": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo2 surface_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.DefocusSurface",
+        "ordinal": "5536418411893692037",
         "type": "(string surface_id) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.FocusSurface",
+        "ordinal": "8145453680929707729",
         "type": "(string surface_id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.Initialize",
+        "ordinal": "1260415759420131973",
         "type": "(client_end:fuchsia.modular/StoryShellContext story_shell_context)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.OnSurfaceFocused",
+        "ordinal": "3202102774363292388",
         "type": " -> (string surface_id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.RemoveSurface",
+        "ordinal": "7941940714079353112",
         "type": "(string surface_id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.UpdateSurface",
+        "ordinal": "624171435735395739",
         "type": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo surface_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.UpdateSurface2",
+        "ordinal": "6838466316902851475",
         "type": "(fuchsia.modular/ViewConnection2 view_connection,fuchsia.modular/SurfaceInfo surface_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShell.UpdateSurface3",
+        "ordinal": "8650789748724293652",
         "type": "(fuchsia.modular/ViewConnection view_connection,fuchsia.modular/SurfaceInfo2 surface_info)"
     },
     {
@@ -954,11 +1073,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShellFactory.AttachStory",
+        "ordinal": "2134250634085483067",
         "type": "(string story_id,server_end:fuchsia.modular/StoryShell story_shell)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryShellFactory.DetachStory",
+        "ordinal": "5024885730370226814",
         "type": "(string story_id) -> ()"
     },
     {
@@ -1026,16 +1147,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryWatcher.OnModuleAdded",
+        "ordinal": "8093410481023880347",
         "type": "(fuchsia.modular/ModuleData module_data)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryWatcher.OnModuleFocused",
+        "ordinal": "6509798747836107957",
         "type": "(vector<string> module_path)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.modular/StoryWatcher.OnStateChange",
+        "ordinal": "8303540038778308123",
         "type": "(fuchsia.modular/StoryState new_state)"
     },
     {
@@ -1087,21 +1211,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceInfo.module_manifest",
+        "ordinal": "3",
         "type": "box<fuchsia.modular/ModuleManifest>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceInfo.module_source",
+        "ordinal": "4",
         "type": "fuchsia.modular/ModuleSource"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceInfo.parent_id",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceInfo.surface_relation",
+        "ordinal": "2",
         "type": "box<fuchsia.modular/SurfaceRelation>"
     },
     {
@@ -1111,31 +1239,37 @@
     {
         "kind": "table/member",
         "name": "fuchsia.modular/SurfaceInfo2.annotations",
+        "ordinal": "5",
         "type": "vector<fuchsia.modular/Annotation>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/SurfaceInfo2.module_manifest",
+        "ordinal": "3",
         "type": "fuchsia.modular/ModuleManifest"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/SurfaceInfo2.module_source",
+        "ordinal": "4",
         "type": "fuchsia.modular/ModuleSource"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/SurfaceInfo2.parent_id",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/SurfaceInfo2.surface_relation",
+        "ordinal": "2",
         "type": "fuchsia.modular/SurfaceRelation"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.modular/SurfaceInfo2.view_ref",
+        "ordinal": "6",
         "type": "fuchsia.ui.views/ViewRef"
     },
     {
@@ -1146,18 +1280,21 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceRelation.arrangement",
+        "ordinal": "1",
         "type": "fuchsia.modular/SurfaceArrangement",
         "value": "0"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceRelation.dependency",
+        "ordinal": "2",
         "type": "fuchsia.modular/SurfaceDependency",
         "value": "0"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/SurfaceRelation.emphasis",
+        "ordinal": "3",
         "type": "float32",
         "value": "1"
     },
@@ -1168,11 +1305,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ViewConnection.surface_id",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ViewConnection.view_holder_token",
+        "ordinal": "2",
         "type": "fuchsia.ui.views/ViewHolderToken"
     },
     {
@@ -1183,11 +1322,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ViewConnection2.surface_id",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ViewConnection2.view_holder_token",
+        "ordinal": "2",
         "type": "fuchsia.ui.views/ViewHolderToken"
     },
     {
@@ -1198,6 +1339,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.modular/ViewIdentifier.story_id",
+        "ordinal": "1",
         "type": "string"
     },
     {

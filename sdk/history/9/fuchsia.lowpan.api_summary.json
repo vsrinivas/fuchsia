@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan/DeviceWatcher.WatchDevices",
+        "ordinal": "7054186464268995000",
         "type": "() -> (vector<string:32>:8 added,vector<string:32>:8 removed)"
     },
     {
@@ -17,6 +18,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.lowpan/MacAddress.octets",
+        "ordinal": "1",
         "type": "array<uint8,8>"
     },
     {

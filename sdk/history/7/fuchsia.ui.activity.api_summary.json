@@ -2,6 +2,7 @@
     {
         "kind": "union/member",
         "name": "fuchsia.ui.activity/DiscreteActivity.generic",
+        "ordinal": "1",
         "type": "fuchsia.ui.activity/GenericActivity"
     },
     {
@@ -12,6 +13,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.ui.activity/GenericActivity.label",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -21,6 +23,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.ui.activity/Listener.OnStateChanged",
+        "ordinal": "1113756069036532757",
         "type": "(fuchsia.ui.activity/State state,int64 transition_time) -> ()"
     },
     {
@@ -30,6 +33,7 @@
     {
         "kind": "union/member",
         "name": "fuchsia.ui.activity/OngoingActivity.generic",
+        "ordinal": "1",
         "type": "fuchsia.ui.activity/GenericActivity"
     },
     {
@@ -40,6 +44,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.ui.activity/Provider.WatchState",
+        "ordinal": "6426115108030118020",
         "type": "(client_end:fuchsia.ui.activity/Listener listener)"
     },
     {
@@ -70,16 +75,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.ui.activity/Tracker.EndOngoingActivity",
+        "ordinal": "6434844693073918247",
         "type": "(uint32 activity_id,int64 end_time) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.ui.activity/Tracker.ReportDiscreteActivity",
+        "ordinal": "1575894152719165634",
         "type": "(fuchsia.ui.activity/DiscreteActivity activity,int64 event_time) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.ui.activity/Tracker.StartOngoingActivity",
+        "ordinal": "5150041126849864978",
         "type": "(uint32 activity_id,fuchsia.ui.activity/OngoingActivity activity,int64 start_time) -> ()"
     },
     {

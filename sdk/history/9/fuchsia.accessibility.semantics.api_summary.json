@@ -43,6 +43,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/AnnounceEvent.message",
+        "ordinal": "1",
         "type": "string:16384"
     },
     {
@@ -52,66 +53,79 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.hierarchical_level",
+        "ordinal": "8",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.is_keyboard_key",
+        "ordinal": "11",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.label",
+        "ordinal": "1",
         "type": "string:16384"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.label_origin",
+        "ordinal": "10",
         "type": "fuchsia.accessibility.semantics/LabelOrigin"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.list_attributes",
+        "ordinal": "6",
         "type": "fuchsia.accessibility.semantics/SetAttributes"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.list_element_attributes",
+        "ordinal": "7",
         "type": "fuchsia.accessibility.semantics/SetAttributes"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.range",
+        "ordinal": "4",
         "type": "fuchsia.accessibility.semantics/RangeAttributes"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.secondary_action_description",
+        "ordinal": "3",
         "type": "string:16384"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.secondary_label",
+        "ordinal": "2",
         "type": "string:16384"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.set",
+        "ordinal": "5",
         "type": "fuchsia.accessibility.semantics/SetAttributes"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.table_attributes",
+        "ordinal": "9",
         "type": "fuchsia.accessibility.semantics/TableAttributes"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.table_cell_attributes",
+        "ordinal": "13",
         "type": "fuchsia.accessibility.semantics/TableCellAttributes"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Attributes.table_row_attributes",
+        "ordinal": "12",
         "type": "fuchsia.accessibility.semantics/TableRowAttributes"
     },
     {
@@ -147,11 +161,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Hit.node_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Hit.path_from_root",
+        "ordinal": "2",
         "type": "vector<uint32>:256"
     },
     {
@@ -254,51 +270,61 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.actions",
+        "ordinal": "5",
         "type": "vector<fuchsia.accessibility.semantics/Action>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.attributes",
+        "ordinal": "4",
         "type": "fuchsia.accessibility.semantics/Attributes"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.child_ids",
+        "ordinal": "6",
         "type": "vector<uint32>:20000"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.container_id",
+        "ordinal": "9",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.location",
+        "ordinal": "7",
         "type": "fuchsia.ui.gfx/BoundingBox"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.node_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.node_to_container_transform",
+        "ordinal": "10",
         "type": "fuchsia.ui.gfx/mat4"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.role",
+        "ordinal": "2",
         "type": "fuchsia.accessibility.semantics/Role"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.states",
+        "ordinal": "3",
         "type": "fuchsia.accessibility.semantics/States"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/Node.transform",
+        "ordinal": "8",
         "type": "fuchsia.ui.gfx/mat4"
     },
     {
@@ -308,16 +334,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/RangeAttributes.max_value",
+        "ordinal": "2",
         "type": "float32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/RangeAttributes.min_value",
+        "ordinal": "1",
         "type": "float32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/RangeAttributes.step_delta",
+        "ordinal": "3",
         "type": "float32"
     },
     {
@@ -453,6 +482,7 @@
     {
         "kind": "union/member",
         "name": "fuchsia.accessibility.semantics/SemanticEvent.announce",
+        "ordinal": "1",
         "type": "fuchsia.accessibility.semantics/AnnounceEvent"
     },
     {
@@ -463,16 +493,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.semantics/SemanticListener.HitTest",
+        "ordinal": "7674204493811420961",
         "type": "(fuchsia.math/PointF local_point) -> (fuchsia.accessibility.semantics/Hit result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.semantics/SemanticListener.OnAccessibilityActionRequested",
+        "ordinal": "7692571035718497079",
         "type": "(uint32 node_id,fuchsia.accessibility.semantics/Action action) -> (bool handled)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.semantics/SemanticListener.OnSemanticsModeChanged",
+        "ordinal": "4364437205430282903",
         "type": "(bool updates_enabled) -> ()"
     },
     {
@@ -482,21 +515,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.semantics/SemanticTree.CommitUpdates",
+        "ordinal": "6443581006430455597",
         "type": "() -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.semantics/SemanticTree.DeleteSemanticNodes",
+        "ordinal": "6436973710380747200",
         "type": "(vector<uint32>:2048 node_ids)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.semantics/SemanticTree.SendSemanticEvent",
+        "ordinal": "4952750715286042061",
         "type": "(fuchsia.accessibility.semantics/SemanticEvent semantic_event) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.semantics/SemanticTree.UpdateSemanticNodes",
+        "ordinal": "2518128364492660845",
         "type": "(vector<fuchsia.accessibility.semantics/Node>:2048 nodes)"
     },
     {
@@ -506,6 +543,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.semantics/SemanticsManager.RegisterViewForSemantics",
+        "ordinal": "6091141528841792308",
         "type": "(fuchsia.ui.views/ViewRef view_ref,client_end:fuchsia.accessibility.semantics/SemanticListener listener,server_end:fuchsia.accessibility.semantics/SemanticTree semantic_tree_request)"
     },
     {
@@ -515,16 +553,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/SetAttributes.index",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/SetAttributes.set_element_ids",
+        "ordinal": "3",
         "type": "vector<uint32>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/SetAttributes.size",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -534,51 +575,61 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.checked",
+        "ordinal": "1",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.checked_state",
+        "ordinal": "2",
         "type": "fuchsia.accessibility.semantics/CheckedState"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.focusable",
+        "ordinal": "9",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.has_input_focus",
+        "ordinal": "10",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.hidden",
+        "ordinal": "4",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.range_value",
+        "ordinal": "6",
         "type": "float32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.selected",
+        "ordinal": "3",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.toggled_state",
+        "ordinal": "8",
         "type": "fuchsia.accessibility.semantics/ToggledState"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.value",
+        "ordinal": "5",
         "type": "string:16384"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/States.viewport_offset",
+        "ordinal": "7",
         "type": "fuchsia.ui.gfx/vec2"
     },
     {
@@ -588,31 +639,37 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableAttributes.column_header_ids",
+        "ordinal": "5",
         "type": "vector<uint32>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableAttributes.column_span",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableAttributes.number_of_columns",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableAttributes.number_of_rows",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableAttributes.row_header_ids",
+        "ordinal": "6",
         "type": "vector<uint32>:100"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableAttributes.row_span",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
@@ -622,21 +679,25 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableCellAttributes.column_index",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableCellAttributes.column_span",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableCellAttributes.row_index",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableCellAttributes.row_span",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
@@ -646,6 +707,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.accessibility.semantics/TableRowAttributes.row_index",
+        "ordinal": "1",
         "type": "uint32"
     },
     {

@@ -69,6 +69,11 @@ type Name string
 // enum/bits members, and struct members (default values).
 type Value string
 
+// Ordinal is the ordinal of a method, or of a struct, table, or union member.
+// It is a string to allow the full uint64 range in JSON. For struct members,
+// which have no explicit ordinals in FIDL source, it is a one-based index.
+type Ordinal string
+
 // fidlConstToValue converts the fidlgen view of a constant value to
 // summary's Value.
 func fidlConstToValue(fc *fidlgen.Constant) Value {
@@ -93,6 +98,7 @@ type ElementStr struct {
 	Name         `json:"name"`
 	Resourceness `json:"resourceness,omitempty"`
 	Strictness   `json:"strictness,omitempty"`
+	Ordinal      `json:"ordinal,omitempty"`
 	Type         `json:"type,omitempty"`
 	Value        `json:"value,omitempty"`
 }

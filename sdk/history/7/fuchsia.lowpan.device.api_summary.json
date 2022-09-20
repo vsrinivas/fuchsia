@@ -2,26 +2,31 @@
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/AllCounters.coex_rx",
+        "ordinal": "4",
         "type": "fuchsia.lowpan.device/CoexCounters"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/AllCounters.coex_saturated",
+        "ordinal": "5",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/AllCounters.coex_tx",
+        "ordinal": "3",
         "type": "fuchsia.lowpan.device/CoexCounters"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/AllCounters.mac_rx",
+        "ordinal": "2",
         "type": "fuchsia.lowpan.device/MacCounters"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/AllCounters.mac_tx",
+        "ordinal": "1",
         "type": "fuchsia.lowpan.device/MacCounters"
     },
     {
@@ -31,46 +36,55 @@
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.avg_delay_request_to_grant_usec",
+        "ordinal": "8",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.delayed_grant",
+        "ordinal": "7",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.grant_deactivated_during_request",
+        "ordinal": "6",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.grant_immediate",
+        "ordinal": "2",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.grant_none",
+        "ordinal": "9",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.grant_wait",
+        "ordinal": "3",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.grant_wait_activated",
+        "ordinal": "4",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.grant_wait_timeout",
+        "ordinal": "5",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/CoexCounters.requests",
+        "ordinal": "1",
         "type": "uint64"
     },
     {
@@ -121,11 +135,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/Counters.Get",
+        "ordinal": "766330213047163428",
         "type": "() -> (fuchsia.lowpan.device/AllCounters counters)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/Counters.Reset",
+        "ordinal": "5546641446070450093",
         "type": "() -> (fuchsia.lowpan.device/AllCounters counters)"
     },
     {
@@ -135,6 +151,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/CountersConnector.Connect",
+        "ordinal": "7056160397832933768",
         "type": "(string:32 name,server_end:fuchsia.lowpan.device/Counters server_end)"
     },
     {
@@ -144,6 +161,7 @@
     {
         "kind": "union/member",
         "name": "fuchsia.lowpan.device/Credential.network_key",
+        "ordinal": "1",
         "type": "vector<uint8>:32"
     },
     {
@@ -154,26 +172,31 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/Device.GetSupportedNetworkTypes",
+        "ordinal": "7894653628486606527",
         "type": "() -> (vector<string:64>:16 network_types)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/Device.LeaveNetwork",
+        "ordinal": "7390862528170083646",
         "type": "() -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/Device.ProvisionNetwork",
+        "ordinal": "3819338810301444214",
         "type": "(fuchsia.lowpan.device/ProvisioningParams params) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/Device.SetActive",
+        "ordinal": "6171764923186230347",
         "type": "(bool active) -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/Device.WatchDeviceState",
+        "ordinal": "6429985472486888009",
         "type": "() -> (fuchsia.lowpan.device/DeviceState device_combined_state)"
     },
     {
@@ -183,6 +206,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/DeviceConnector.Connect",
+        "ordinal": "7153700053869029258",
         "type": "(string:32 name,server_end:fuchsia.lowpan.device/Device server_end)"
     },
     {
@@ -192,11 +216,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/DeviceExtra.GetCredential",
+        "ordinal": "8644482637790727403",
         "type": "() -> (fuchsia.lowpan.device/Credential:optional credential)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/DeviceExtra.WatchIdentity",
+        "ordinal": "837490900382444486",
         "type": "() -> (fuchsia.lowpan.device/Identity identity)"
     },
     {
@@ -206,6 +232,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/DeviceExtraConnector.Connect",
+        "ordinal": "2979622116500015843",
         "type": "(string:32 name,server_end:fuchsia.lowpan.device/DeviceExtra server_end)"
     },
     {
@@ -215,11 +242,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/DeviceState.connectivity_state",
+        "ordinal": "1",
         "type": "fuchsia.lowpan.device/ConnectivityState"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/DeviceState.role",
+        "ordinal": "2",
         "type": "fuchsia.lowpan.device/Role"
     },
     {
@@ -229,6 +258,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/EnergyScan.StartEnergyScan",
+        "ordinal": "5415904696099511046",
         "type": "(fuchsia.lowpan.device/EnergyScanParameters params,server_end:fuchsia.lowpan.device/EnergyScanResultStream stream)"
     },
     {
@@ -238,6 +268,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/EnergyScanConnector.Connect",
+        "ordinal": "1186319672397181584",
         "type": "(string:32 name,server_end:fuchsia.lowpan.device/EnergyScan server_end)"
     },
     {
@@ -247,11 +278,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/EnergyScanParameters.channels",
+        "ordinal": "1",
         "type": "vector<uint16>:200"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/EnergyScanParameters.dwell_time_ms",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
@@ -261,16 +294,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/EnergyScanResult.channel_index",
+        "ordinal": "1",
         "type": "uint16"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/EnergyScanResult.max_rssi",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/EnergyScanResult.min_rssi",
+        "ordinal": "3",
         "type": "int32"
     },
     {
@@ -280,6 +316,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/EnergyScanResultStream.Next",
+        "ordinal": "9151659672405371550",
         "type": "() -> (vector<fuchsia.lowpan.device/EnergyScanResult>:32 results)"
     },
     {
@@ -289,31 +326,37 @@
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/Identity.channel",
+        "ordinal": "4",
         "type": "uint16"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/Identity.mesh_local_prefix",
+        "ordinal": "6",
         "type": "fuchsia.net/Ipv6AddressWithPrefix"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/Identity.net_type",
+        "ordinal": "3",
         "type": "string:64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/Identity.panid",
+        "ordinal": "5",
         "type": "uint16"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/Identity.raw_name",
+        "ordinal": "1",
         "type": "vector<uint8>:63"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/Identity.xpanid",
+        "ordinal": "2",
         "type": "vector<uint8>:8"
     },
     {
@@ -347,131 +390,157 @@
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.ack_requested",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.acked",
+        "ordinal": "5",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.address_filtered",
+        "ordinal": "12",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.beacon",
+        "ordinal": "9",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.beacon_request",
+        "ordinal": "10",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.broadcast",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.data",
+        "ordinal": "7",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.data_poll",
+        "ordinal": "8",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.dest_addr_filtered",
+        "ordinal": "16",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.direct_max_retry_expiry",
+        "ordinal": "14",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.duplicated",
+        "ordinal": "17",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_abort",
+        "ordinal": "24",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_busy_channel",
+        "ordinal": "25",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_cca",
+        "ordinal": "23",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_fcs",
+        "ordinal": "22",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_invalid_src_addr",
+        "ordinal": "20",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_no_frame",
+        "ordinal": "18",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_other",
+        "ordinal": "26",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_sec",
+        "ordinal": "21",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.err_unknown_neighbor",
+        "ordinal": "19",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.indirect_max_retry_expiry",
+        "ordinal": "15",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.no_ack_requested",
+        "ordinal": "6",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.other",
+        "ordinal": "11",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.retries",
+        "ordinal": "13",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.total",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.lowpan.device/MacCounters.unicast",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
@@ -505,11 +574,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.lowpan.device/ProvisioningParams.credential",
+        "ordinal": "2",
         "type": "fuchsia.lowpan.device/Credential:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.lowpan.device/ProvisioningParams.identity",
+        "ordinal": "1",
         "type": "fuchsia.lowpan.device/Identity"
     },
     {

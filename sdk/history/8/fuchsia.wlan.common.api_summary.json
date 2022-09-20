@@ -38,6 +38,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/DataPlaneExtension.data_plane_type",
+        "ordinal": "1",
         "type": "fuchsia.wlan.common/DataPlaneType"
     },
     {
@@ -63,16 +64,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/DeviceExtension.is_synthetic",
+        "ordinal": "1",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/DeviceExtension.mac_implementation_type",
+        "ordinal": "2",
         "type": "fuchsia.wlan.common/MacImplementationType"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/DeviceExtension.tx_status_report_supported",
+        "ordinal": "3",
         "type": "bool"
     },
     {
@@ -82,6 +86,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/DfsFeature.supported",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -91,11 +96,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/DiscoverySupport.probe_response_offload",
+        "ordinal": "2",
         "type": "fuchsia.wlan.common/ProbeResponseOffloadExtension"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/DiscoverySupport.scan_offload",
+        "ordinal": "1",
         "type": "fuchsia.wlan.common/ScanOffloadExtension"
     },
     {
@@ -155,16 +162,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/MacSublayerSupport.data_plane",
+        "ordinal": "2",
         "type": "fuchsia.wlan.common/DataPlaneExtension"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/MacSublayerSupport.device",
+        "ordinal": "3",
         "type": "fuchsia.wlan.common/DeviceExtension"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/MacSublayerSupport.rate_selection_offload",
+        "ordinal": "1",
         "type": "fuchsia.wlan.common/RateSelectionOffloadExtension"
     },
     {
@@ -174,6 +184,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/MfpFeature.supported",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -209,6 +220,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/ProbeResponseOffloadExtension.supported",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -218,6 +230,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/RateSelectionOffloadExtension.supported",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -258,11 +271,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/SaeFeature.driver_handler_supported",
+        "ordinal": "1",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/SaeFeature.sme_handler_supported",
+        "ordinal": "2",
         "type": "bool"
     },
     {
@@ -272,6 +287,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/ScanOffloadExtension.supported",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -297,11 +313,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/SecuritySupport.mfp",
+        "ordinal": "2",
         "type": "fuchsia.wlan.common/MfpFeature"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/SecuritySupport.sae",
+        "ordinal": "1",
         "type": "fuchsia.wlan.common/SaeFeature"
     },
     {
@@ -311,6 +329,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/SpectrumManagementSupport.dfs",
+        "ordinal": "1",
         "type": "fuchsia.wlan.common/DfsFeature"
     },
     {
@@ -348,16 +367,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/WlanChannel.cbw",
+        "ordinal": "2",
         "type": "fuchsia.wlan.common/ChannelBandwidth"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/WlanChannel.primary",
+        "ordinal": "1",
         "type": "uint8"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/WlanChannel.secondary80",
+        "ordinal": "3",
         "type": "uint8"
     },
     {
@@ -506,16 +528,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/WlanTxStatus.peer_addr",
+        "ordinal": "2",
         "type": "array<uint8,6>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/WlanTxStatus.result",
+        "ordinal": "3",
         "type": "fuchsia.wlan.common/WlanTxResult"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/WlanTxStatus.tx_status_entry",
+        "ordinal": "1",
         "type": "array<fuchsia.wlan.common/WlanTxStatusEntry,8>"
     },
     {
@@ -525,11 +550,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/WlanTxStatusEntry.attempts",
+        "ordinal": "2",
         "type": "uint8"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.common/WlanTxStatusEntry.tx_vector_idx",
+        "ordinal": "1",
         "type": "uint16"
     },
     {

@@ -40,7 +40,7 @@ class PlasaDiffer:
         return [
             self._explain_report_item(item)
             for item in diff
-            if item["conclusion"] == 'APIBreaking'
+            if item["conclusion"] != "Compatible"
         ]
 
     def _explain_report_item(self, report_item):

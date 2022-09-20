@@ -2,21 +2,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Inset.bottom",
+        "ordinal": "3",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Inset.left",
+        "ordinal": "4",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Inset.right",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Inset.top",
+        "ordinal": "1",
         "type": "int32"
     },
     {
@@ -26,21 +30,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/InsetF.bottom",
+        "ordinal": "3",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/InsetF.left",
+        "ordinal": "4",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/InsetF.right",
+        "ordinal": "2",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/InsetF.top",
+        "ordinal": "1",
         "type": "float32"
     },
     {
@@ -50,11 +58,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Point.x",
+        "ordinal": "1",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Point.y",
+        "ordinal": "2",
         "type": "int32"
     },
     {
@@ -64,16 +74,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Point3F.x",
+        "ordinal": "1",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Point3F.y",
+        "ordinal": "2",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Point3F.z",
+        "ordinal": "3",
         "type": "float32"
     },
     {
@@ -83,11 +96,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/PointF.x",
+        "ordinal": "1",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/PointF.y",
+        "ordinal": "2",
         "type": "float32"
     },
     {
@@ -97,61 +112,73 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.bottom_left_radius_x",
+        "ordinal": "9",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.bottom_left_radius_y",
+        "ordinal": "10",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.bottom_right_radius_x",
+        "ordinal": "11",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.bottom_right_radius_y",
+        "ordinal": "12",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.height",
+        "ordinal": "4",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.top_left_radius_x",
+        "ordinal": "5",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.top_left_radius_y",
+        "ordinal": "6",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.top_right_radius_x",
+        "ordinal": "7",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.top_right_radius_y",
+        "ordinal": "8",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.width",
+        "ordinal": "3",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.x",
+        "ordinal": "1",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RRectF.y",
+        "ordinal": "2",
         "type": "float32"
     },
     {
@@ -161,21 +188,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Rect.height",
+        "ordinal": "4",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Rect.width",
+        "ordinal": "3",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Rect.x",
+        "ordinal": "1",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Rect.y",
+        "ordinal": "2",
         "type": "int32"
     },
     {
@@ -185,21 +216,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RectF.height",
+        "ordinal": "4",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RectF.width",
+        "ordinal": "3",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RectF.x",
+        "ordinal": "1",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/RectF.y",
+        "ordinal": "2",
         "type": "float32"
     },
     {
@@ -209,11 +244,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Size.height",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Size.width",
+        "ordinal": "1",
         "type": "int32"
     },
     {
@@ -223,11 +260,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/SizeF.height",
+        "ordinal": "2",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/SizeF.width",
+        "ordinal": "1",
         "type": "float32"
     },
     {
@@ -237,11 +276,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/SizeU.height",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/SizeU.width",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -251,6 +292,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Transform.matrix",
+        "ordinal": "1",
         "type": "array<float32,16>"
     },
     {
@@ -260,11 +302,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Vec.x",
+        "ordinal": "1",
         "type": "int32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/Vec.y",
+        "ordinal": "2",
         "type": "int32"
     },
     {
@@ -274,11 +318,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.math/VecF.x",
+        "ordinal": "1",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.math/VecF.y",
+        "ordinal": "2",
         "type": "float32"
     },
     {

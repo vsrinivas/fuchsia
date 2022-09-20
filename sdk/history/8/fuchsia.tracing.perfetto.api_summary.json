@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.tracing.perfetto/BufferReceiver.ProvideBuffer",
+        "ordinal": "1937160844128563700",
         "type": "(zx/handle:VMO buffer) -> (fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result result)"
     },
     {
@@ -15,11 +16,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.tracing.perfetto/BufferReceiver_ProvideBuffer_Response"
     },
     {
@@ -30,6 +33,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.tracing.perfetto/ConsumerConnector.ConnectConsumer",
+        "ordinal": "5005526192643839293",
         "type": "(zx/handle:SOCKET consumer_socket) -> (fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result result)"
     },
     {
@@ -43,11 +47,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.tracing.perfetto/ConsumerConnector_ConnectConsumer_Response"
     },
     {
@@ -58,6 +64,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.tracing.perfetto/ProducerConnector.ConnectProducer",
+        "ordinal": "8989116752979882863",
         "type": "(zx/handle:SOCKET producer_socket,fuchsia.tracing.perfetto/TraceBuffer buffer) -> (fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result result)"
     },
     {
@@ -71,11 +78,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.tracing.perfetto/ProducerConnector_ConnectProducer_Response"
     },
     {
@@ -86,6 +95,7 @@
     {
         "kind": "union/member",
         "name": "fuchsia.tracing.perfetto/TraceBuffer.from_server",
+        "ordinal": "1",
         "type": "client_end:fuchsia.tracing.perfetto/BufferReceiver"
     },
     {

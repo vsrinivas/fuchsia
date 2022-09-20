@@ -14,16 +14,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.inspect/Tree.GetContent",
+        "ordinal": "7845483736674089799",
         "type": "() -> (fuchsia.inspect/TreeContent content)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.inspect/Tree.ListChildNames",
+        "ordinal": "6304081299083068579",
         "type": "(server_end:fuchsia.inspect/TreeNameIterator tree_iterator)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.inspect/Tree.OpenChild",
+        "ordinal": "5939743449266823603",
         "type": "(string:2040 child_name,server_end:fuchsia.inspect/Tree tree)"
     },
     {
@@ -33,6 +36,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.inspect/TreeContent.buffer",
+        "ordinal": "1",
         "type": "fuchsia.mem/Buffer"
     },
     {
@@ -43,6 +47,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.inspect/TreeNameIterator.GetNext",
+        "ordinal": "7673424535531931820",
         "type": "() -> (vector<string:2040>:64 name)"
     },
     {

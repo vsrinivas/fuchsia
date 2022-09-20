@@ -80,6 +80,7 @@
     {
         "kind": "union/member",
         "name": "fuchsia.mediastreams/AudioChannelLayout.placeholder",
+        "ordinal": "1",
         "type": "uint8"
     },
     {
@@ -90,21 +91,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/AudioFormat.channel_count",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/AudioFormat.channel_layout",
+        "ordinal": "4",
         "type": "fuchsia.mediastreams/AudioChannelLayout"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/AudioFormat.frames_per_second",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/AudioFormat.sample_format",
+        "ordinal": "1",
         "type": "fuchsia.mediastreams/AudioSampleFormat"
     },
     {
@@ -196,11 +201,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/Compression.parameters",
+        "ordinal": "2",
         "type": "vector<uint8>:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/Compression.type",
+        "ordinal": "1",
         "type": "string:256"
     },
     {
@@ -234,21 +241,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/Encryption.default_init_vector",
+        "ordinal": "3",
         "type": "vector<uint8>:<16,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/Encryption.default_key_id",
+        "ordinal": "2",
         "type": "vector<uint8>:<16,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/Encryption.default_pattern",
+        "ordinal": "4",
         "type": "box<fuchsia.mediastreams/EncryptionPattern>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/Encryption.scheme",
+        "ordinal": "1",
         "type": "string:4"
     },
     {
@@ -258,11 +269,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/EncryptionPattern.clear_blocks",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/EncryptionPattern.encrypted_blocks",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
@@ -272,11 +285,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/EncryptionSubsampleEntry.clear_bytes",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/EncryptionSubsampleEntry.encrypted_bytes",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
@@ -304,11 +319,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.mediastreams/MediaFormat.audio",
+        "ordinal": "1",
         "type": "fuchsia.mediastreams/AudioFormat"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.mediastreams/MediaFormat.video",
+        "ordinal": "2",
         "type": "fuchsia.mediastreams/VideoFormat"
     },
     {
@@ -447,31 +464,37 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/VideoFormat.aspect_ratio",
+        "ordinal": "6",
         "type": "fuchsia.math/Size:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/VideoFormat.coded_size",
+        "ordinal": "4",
         "type": "fuchsia.math/Size"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/VideoFormat.color_space",
+        "ordinal": "3",
         "type": "fuchsia.mediastreams/ColorSpace"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/VideoFormat.display_size",
+        "ordinal": "5",
         "type": "fuchsia.math/Size"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/VideoFormat.pixel_format",
+        "ordinal": "1",
         "type": "fuchsia.mediastreams/PixelFormat"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediastreams/VideoFormat.pixel_format_modifier",
+        "ordinal": "2",
         "type": "uint64"
     },
     {

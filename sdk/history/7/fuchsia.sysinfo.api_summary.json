@@ -14,6 +14,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysinfo/InterruptControllerInfo.type",
+        "ordinal": "1",
         "type": "fuchsia.sysinfo/InterruptControllerType"
     },
     {
@@ -49,21 +50,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysinfo/SysInfo.GetBoardName",
+        "ordinal": "7866048739066619412",
         "type": "() -> (int32 status,string:<32,optional> name)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysinfo/SysInfo.GetBoardRevision",
+        "ordinal": "4454148926824704460",
         "type": "() -> (int32 status,uint32 revision)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysinfo/SysInfo.GetBootloaderVendor",
+        "ordinal": "2671181873722302487",
         "type": "() -> (int32 status,string:<32,optional> vendor)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysinfo/SysInfo.GetInterruptControllerInfo",
+        "ordinal": "3577046343573180828",
         "type": "() -> (int32 status,box<fuchsia.sysinfo/InterruptControllerInfo> info)"
     },
     {

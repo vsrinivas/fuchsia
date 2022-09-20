@@ -23,6 +23,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.power.profile/Watcher.Watch",
+        "ordinal": "6857221174245763399",
         "type": "() -> (fuchsia.power.profile/Profile profile)"
     },
     {

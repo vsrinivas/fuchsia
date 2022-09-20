@@ -2,16 +2,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry.GetVulkanSocket",
+        "ordinal": "6152408214920274970",
         "type": "(uint64 id) -> (fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry.Register",
+        "ordinal": "2178603159905399129",
         "type": "(uint64 id,uint64 process_koid,string:32 process_name) -> (fuchsia.gpu.agis/ComponentRegistry_Register_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry.Unregister",
+        "ordinal": "6627103362417813943",
         "type": "(uint64 id) -> (fuchsia.gpu.agis/ComponentRegistry_Unregister_Result result)"
     },
     {
@@ -21,6 +24,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Response.socket",
+        "ordinal": "1",
         "type": "zx/handle:<SOCKET,optional>"
     },
     {
@@ -31,11 +35,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.gpu.agis/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.gpu.agis/ComponentRegistry_GetVulkanSocket_Response"
     },
     {
@@ -51,11 +57,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry_Register_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.gpu.agis/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry_Register_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.gpu.agis/ComponentRegistry_Register_Response"
     },
     {
@@ -70,11 +78,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.gpu.agis/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.gpu.agis/ComponentRegistry_Unregister_Response"
     },
     {
@@ -85,6 +95,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.gpu.agis/Connector.GetSocket",
+        "ordinal": "5037425465305667206",
         "type": "(uint32 global_id) -> (fuchsia.gpu.agis/Connector_GetSocket_Result result)"
     },
     {
@@ -94,6 +105,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.gpu.agis/Connector_GetSocket_Response.socket",
+        "ordinal": "1",
         "type": "zx/handle:SOCKET"
     },
     {
@@ -104,11 +116,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/Connector_GetSocket_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.gpu.agis/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/Connector_GetSocket_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.gpu.agis/Connector_GetSocket_Response"
     },
     {
@@ -152,6 +166,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.gpu.agis/Observer.Vtcs",
+        "ordinal": "1428337380439632529",
         "type": "() -> (fuchsia.gpu.agis/Observer_Vtcs_Result result)"
     },
     {
@@ -161,6 +176,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.gpu.agis/Observer_Vtcs_Response.vtcs",
+        "ordinal": "1",
         "type": "vector<fuchsia.gpu.agis/Vtc>:128"
     },
     {
@@ -171,11 +187,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/Observer_Vtcs_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.gpu.agis/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.gpu.agis/Observer_Vtcs_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.gpu.agis/Observer_Vtcs_Response"
     },
     {
@@ -187,16 +205,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.gpu.agis/Vtc.global_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.gpu.agis/Vtc.process_koid",
+        "ordinal": "2",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.gpu.agis/Vtc.process_name",
+        "ordinal": "3",
         "type": "string:32"
     },
     {

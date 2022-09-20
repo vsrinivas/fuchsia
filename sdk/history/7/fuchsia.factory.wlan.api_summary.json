@@ -2,11 +2,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.factory.wlan/Iovar.Get",
+        "ordinal": "6404874362106450474",
         "type": "(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Get_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.factory.wlan/Iovar.Set",
+        "ordinal": "6673168730434629670",
         "type": "(int32 iface_idx,int32 cmd,vector<uint8>:16384 request) -> (fuchsia.factory.wlan/Iovar_Set_Result result)"
     },
     {
@@ -16,6 +18,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.factory.wlan/Iovar_Get_Response.result",
+        "ordinal": "1",
         "type": "vector<uint8>:16384"
     },
     {
@@ -25,11 +28,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.factory.wlan/Iovar_Get_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.factory.wlan/Iovar_Get_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.factory.wlan/Iovar_Get_Response"
     },
     {
@@ -44,11 +49,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.factory.wlan/Iovar_Set_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.factory.wlan/Iovar_Set_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.factory.wlan/Iovar_Set_Response"
     },
     {

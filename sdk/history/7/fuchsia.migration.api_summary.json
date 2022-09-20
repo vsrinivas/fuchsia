@@ -2,11 +2,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/CastProvider.Get",
+        "ordinal": "7812404948986269583",
         "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/CastProvider.Processed",
+        "ordinal": "6340469884714305713",
         "type": "()"
     },
     {
@@ -16,11 +18,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/DisplayProvider.Get",
+        "ordinal": "7812404948986269583",
         "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/DisplayProvider.Processed",
+        "ordinal": "6340469884714305713",
         "type": "()"
     },
     {
@@ -30,11 +34,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/KronkProvider.Get",
+        "ordinal": "7812404948986269583",
         "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/KronkProvider.Processed",
+        "ordinal": "6340469884714305713",
         "type": "()"
     },
     {
@@ -44,11 +50,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.migration/MigrationState.progress_percentage",
+        "ordinal": "2",
         "type": "uint8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.migration/MigrationState.status",
+        "ordinal": "1",
         "type": "fuchsia.migration/MigrationStatus"
     },
     {
@@ -84,11 +92,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/ProductPolicyProvider.Get",
+        "ordinal": "7812404948986269583",
         "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/ProductPolicyProvider.Processed",
+        "ordinal": "6340469884714305713",
         "type": "()"
     },
     {
@@ -98,11 +108,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/Provider.Get",
+        "ordinal": "7812404948986269583",
         "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/Provider.Processed",
+        "ordinal": "6340469884714305713",
         "type": "()"
     },
     {
@@ -112,6 +124,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/State.Watch",
+        "ordinal": "5201430326821994695",
         "type": "() -> (fuchsia.migration/MigrationState state)"
     },
     {
@@ -121,11 +134,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/UltrasoundProvider.Get",
+        "ordinal": "7812404948986269583",
         "type": "(server_end:fuchsia.io/Directory dir)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.migration/UltrasoundProvider.Processed",
+        "ordinal": "6340469884714305713",
         "type": "()"
     },
     {

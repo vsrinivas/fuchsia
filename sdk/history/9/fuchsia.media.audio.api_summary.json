@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.media.audio/EffectsController.UpdateEffect",
+        "ordinal": "5636787878532452645",
         "type": "(string:128 effect_name,string config) -> (fuchsia.media.audio/EffectsController_UpdateEffect_Result result)"
     },
     {
@@ -15,11 +16,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.media.audio/EffectsController_UpdateEffect_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.media.audio/UpdateEffectError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.media.audio/EffectsController_UpdateEffect_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.media.audio/EffectsController_UpdateEffect_Response"
     },
     {
@@ -30,21 +33,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.media.audio/GainControl.OnGainMuteChanged",
+        "ordinal": "7409873613528029011",
         "type": " -> (float32 gain_db,bool muted)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.media.audio/GainControl.SetGain",
+        "ordinal": "3440873840920706916",
         "type": "(float32 gain_db)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.media.audio/GainControl.SetGainWithRamp",
+        "ordinal": "4185914629265418474",
         "type": "(float32 gain_db,int64 duration,fuchsia.media.audio/RampType rampType)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.media.audio/GainControl.SetMute",
+        "ordinal": "378679654764188744",
         "type": "(bool muted)"
     },
     {
@@ -111,16 +118,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.media.audio/VolumeControl.OnVolumeMuteChanged",
+        "ordinal": "706681767306117489",
         "type": " -> (float32 new_volume,bool new_muted)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.media.audio/VolumeControl.SetMute",
+        "ordinal": "5818945562625729573",
         "type": "(bool mute)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.media.audio/VolumeControl.SetVolume",
+        "ordinal": "8067111418675501018",
         "type": "(float32 volume)"
     },
     {

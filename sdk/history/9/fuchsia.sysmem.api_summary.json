@@ -2,26 +2,31 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Allocator.AllocateNonSharedCollection",
+        "ordinal": "2375528517438067398",
         "type": "(server_end:fuchsia.sysmem/BufferCollection collection_request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Allocator.AllocateSharedCollection",
+        "ordinal": "8824093562201837425",
         "type": "(server_end:fuchsia.sysmem/BufferCollectionToken token_request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Allocator.BindSharedCollection",
+        "ordinal": "1472336774007092462",
         "type": "(client_end:fuchsia.sysmem/BufferCollectionToken token,server_end:fuchsia.sysmem/BufferCollection buffer_collection_request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Allocator.SetDebugClientInfo",
+        "ordinal": "4728512819068308262",
         "type": "(string:64 name,uint64 id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Allocator.ValidateBufferCollectionToken",
+        "ordinal": "6294668450890971882",
         "type": "(uint64 token_server_koid) -> (bool is_known)"
     },
     {
@@ -31,86 +36,103 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.AttachLifetimeTracking",
+        "ordinal": "1661000457110489481",
         "type": "(zx/handle:EVENTPAIR server_end,uint32 buffers_remaining)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.AttachToken",
+        "ordinal": "8023968447510037566",
         "type": "(uint32 rights_attenuation_mask,server_end:fuchsia.sysmem/BufferCollectionToken token_request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.CheckBuffersAllocated",
+        "ordinal": "163743128347576809",
         "type": "() -> (int32 status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.Close",
+        "ordinal": "6565538312948415655",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.DeprecatedClose",
+        "ordinal": "5236632455805377022",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.DeprecatedSetDebugClientInfo",
+        "ordinal": "4165266880401051333",
         "type": "(string:64 name,uint64 id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.DeprecatedSetName",
+        "ordinal": "8585280573121685968",
         "type": "(uint32 priority,string:64 name)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.DeprecatedSync",
+        "ordinal": "667093201286854750",
         "type": "() -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.GetAuxBuffers",
+        "ordinal": "7812808981908462165",
         "type": "() -> (int32 status,fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection_info_aux_buffers)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetConstraints",
+        "ordinal": "5592402040917795451",
         "type": "(bool has_constraints,fuchsia.sysmem/BufferCollectionConstraints constraints)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetConstraintsAuxBuffers",
+        "ordinal": "1934311861550897175",
         "type": "(fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers constraints)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetDebugClientInfo",
+        "ordinal": "8247627555829145314",
         "type": "(string:64 name,uint64 id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetDebugTimeoutLogDeadline",
+        "ordinal": "5103580339765479527",
         "type": "(int64 deadline)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetName",
+        "ordinal": "8621046055753884739",
         "type": "(uint32 priority,string:64 name)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.SetVerboseLogging",
+        "ordinal": "7781062160284766856",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.Sync",
+        "ordinal": "312857390244586129",
         "type": "() -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollection.WaitForBuffersAllocated",
+        "ordinal": "8162325630082982818",
         "type": "() -> (int32 status,fuchsia.sysmem/BufferCollectionInfo_2 buffer_collection_info)"
     },
     {
@@ -120,51 +142,61 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.buffer_memory_constraints",
+        "ordinal": "8",
         "type": "fuchsia.sysmem/BufferMemoryConstraints"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.has_buffer_memory_constraints",
+        "ordinal": "7",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.image_format_constraints",
+        "ordinal": "10",
         "type": "array<fuchsia.sysmem/ImageFormatConstraints,32>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.image_format_constraints_count",
+        "ordinal": "9",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.max_buffer_count",
+        "ordinal": "6",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count",
+        "ordinal": "5",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_camping",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_dedicated_slack",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.min_buffer_count_for_shared_slack",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraints.usage",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/BufferUsage"
     },
     {
@@ -174,11 +206,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers.allow_clear_aux_buffers_for_secure",
+        "ordinal": "2",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionConstraintsAuxBuffers.need_clear_aux_buffers_for_secure",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -188,22 +222,26 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionInfo.buffer_count",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionInfo.format",
+        "ordinal": "2",
         "type": "fuchsia.sysmem/BufferFormat"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionInfo.vmo_size",
+        "ordinal": "4",
         "type": "uint64",
         "value": "0"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionInfo.vmos",
+        "ordinal": "3",
         "type": "array<zx/handle:<VMO,optional>,64>"
     },
     {
@@ -214,16 +252,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionInfo_2.buffer_count",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionInfo_2.buffers",
+        "ordinal": "3",
         "type": "array<fuchsia.sysmem/VmoBuffer,64>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferCollectionInfo_2.settings",
+        "ordinal": "2",
         "type": "fuchsia.sysmem/SingleBufferSettings"
     },
     {
@@ -234,71 +275,85 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.Close",
+        "ordinal": "6565538312948415655",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedClose",
+        "ordinal": "1287775990545719670",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedSetDebugClientInfo",
+        "ordinal": "7099778850607716224",
         "type": "(string:64 name,uint64 id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedSetDebugTimeoutLogDeadline",
+        "ordinal": "5688369387176735056",
         "type": "(int64 deadline)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedSetName",
+        "ordinal": "2411227692732065937",
         "type": "(uint32 priority,string:64 name)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.DeprecatedSync",
+        "ordinal": "1626954807884778704",
         "type": "() -> ()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.Duplicate",
+        "ordinal": "3431604093557895826",
         "type": "(uint32 rights_attenuation_mask,server_end:fuchsia.sysmem/BufferCollectionToken token_request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.DuplicateSync",
+        "ordinal": "332940554004438808",
         "type": "(vector<zx/rights>:64 rights_attenuation_masks) -> (vector<client_end:fuchsia.sysmem/BufferCollectionToken>:64 tokens)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.SetDebugClientInfo",
+        "ordinal": "8247627555829145314",
         "type": "(string:64 name,uint64 id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.SetDebugTimeoutLogDeadline",
+        "ordinal": "5103580339765479527",
         "type": "(int64 deadline)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.SetDispensable",
+        "ordinal": "8567232103478785459",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.SetName",
+        "ordinal": "8621046055753884739",
         "type": "(uint32 priority,string:64 name)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.SetVerboseLogging",
+        "ordinal": "7781062160284766856",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/BufferCollectionToken.Sync",
+        "ordinal": "312857390244586129",
         "type": "() -> ()"
     },
     {
@@ -308,11 +363,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferFormat.image",
+        "ordinal": "2",
         "type": "fuchsia.sysmem/ImageFormat"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferFormat.tag",
+        "ordinal": "1",
         "type": "uint32",
         "value": "0"
     },
@@ -323,52 +380,61 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.cpu_domain_supported",
+        "ordinal": "6",
         "type": "bool",
         "value": "true"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.heap_permitted",
+        "ordinal": "9",
         "type": "array<fuchsia.sysmem/HeapType,32>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.heap_permitted_count",
+        "ordinal": "8",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.inaccessible_domain_supported",
+        "ordinal": "7",
         "type": "bool",
         "value": "false"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.max_size_bytes",
+        "ordinal": "2",
         "type": "uint32",
         "value": "4294967295"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.min_size_bytes",
+        "ordinal": "1",
         "type": "uint32",
         "value": "0"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.physically_contiguous_required",
+        "ordinal": "3",
         "type": "bool",
         "value": "false"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.ram_domain_supported",
+        "ordinal": "5",
         "type": "bool",
         "value": "false"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemoryConstraints.secure_required",
+        "ordinal": "4",
         "type": "bool",
         "value": "false"
     },
@@ -379,26 +445,31 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemorySettings.coherency_domain",
+        "ordinal": "4",
         "type": "fuchsia.sysmem/CoherencyDomain"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemorySettings.heap",
+        "ordinal": "5",
         "type": "fuchsia.sysmem/HeapType"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemorySettings.is_physically_contiguous",
+        "ordinal": "2",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemorySettings.is_secure",
+        "ordinal": "3",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferMemorySettings.size_bytes",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -408,26 +479,31 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferUsage.cpu",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferUsage.display",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferUsage.none",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferUsage.video",
+        "ordinal": "5",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/BufferUsage.vulkan",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
@@ -458,6 +534,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ColorSpace.type",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/ColorSpaceType"
     },
     {
@@ -523,11 +600,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/DriverConnector.Connect",
+        "ordinal": "7366281471101469060",
         "type": "(server_end:fuchsia.sysmem/Allocator allocator_request)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/DriverConnector.SetAuxServiceDirectory",
+        "ordinal": "6074137568747846023",
         "type": "(fuchsia.io/Directory service_directory)"
     },
     {
@@ -759,6 +838,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/FormatModifier.value",
+        "ordinal": "1",
         "type": "uint64"
     },
     {
@@ -804,32 +884,38 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat.color_space",
+        "ordinal": "5",
         "type": "fuchsia.sysmem/ColorSpace"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat.height",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat.layers",
+        "ordinal": "3",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat.pixel_format",
+        "ordinal": "4",
         "type": "fuchsia.sysmem/PixelFormat"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat.planes",
+        "ordinal": "6",
         "type": "array<fuchsia.sysmem/ImagePlane,4>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat.width",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -839,123 +925,146 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.bytes_per_row_divisor",
+        "ordinal": "14",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.coded_height_divisor",
+        "ordinal": "13",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.coded_width_divisor",
+        "ordinal": "12",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.color_space",
+        "ordinal": "3",
         "type": "array<fuchsia.sysmem/ColorSpace,32>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.color_spaces_count",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.display_height_divisor",
+        "ordinal": "17",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.display_width_divisor",
+        "ordinal": "16",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.layers",
+        "ordinal": "11",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.max_bytes_per_row",
+        "ordinal": "9",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.max_coded_height",
+        "ordinal": "7",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.max_coded_width",
+        "ordinal": "5",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.max_coded_width_times_coded_height",
+        "ordinal": "10",
         "type": "uint32",
         "value": "4294967295"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.min_bytes_per_row",
+        "ordinal": "8",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.min_coded_height",
+        "ordinal": "6",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.min_coded_width",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.pixel_format",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/PixelFormat"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_bytes_per_row",
+        "ordinal": "23",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_coded_height",
+        "ordinal": "21",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.required_max_coded_width",
+        "ordinal": "19",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_bytes_per_row",
+        "ordinal": "22",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_coded_height",
+        "ordinal": "20",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.required_min_coded_width",
+        "ordinal": "18",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormatConstraints.start_offset_divisor",
+        "ordinal": "15",
         "type": "uint32",
         "value": "1"
     },
@@ -966,60 +1075,71 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.bytes_per_row",
+        "ordinal": "4",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.coded_height",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.coded_width",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.color_space",
+        "ordinal": "8",
         "type": "fuchsia.sysmem/ColorSpace"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.display_height",
+        "ordinal": "6",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.display_width",
+        "ordinal": "5",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.has_pixel_aspect_ratio",
+        "ordinal": "9",
         "type": "bool",
         "value": "false"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.layers",
+        "ordinal": "7",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.pixel_aspect_ratio_height",
+        "ordinal": "11",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.pixel_aspect_ratio_width",
+        "ordinal": "10",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageFormat_2.pixel_format",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/PixelFormat"
     },
     {
@@ -1029,11 +1149,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImagePlane.byte_offset",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImagePlane.bytes_per_row",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
@@ -1043,27 +1165,32 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageSpec.color_space",
+        "ordinal": "5",
         "type": "fuchsia.sysmem/ColorSpace"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageSpec.layers",
+        "ordinal": "3",
         "type": "uint32",
         "value": "1"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageSpec.min_height",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageSpec.min_width",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/ImageSpec.pixel_format",
+        "ordinal": "4",
         "type": "fuchsia.sysmem/PixelFormat"
     },
     {
@@ -1121,31 +1248,37 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.Close",
+        "ordinal": "6565538312948415655",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.SetDebugClientInfo",
+        "ordinal": "8247627555829145314",
         "type": "(string:64 name,uint64 id)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.SetDebugTimeoutLogDeadline",
+        "ordinal": "5103580339765479527",
         "type": "(int64 deadline)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.SetName",
+        "ordinal": "8621046055753884739",
         "type": "(uint32 priority,string:64 name)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.SetVerboseLogging",
+        "ordinal": "7781062160284766856",
         "type": "()"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/Node.Sync",
+        "ordinal": "312857390244586129",
         "type": "() -> ()"
     },
     {
@@ -1155,16 +1288,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/PixelFormat.format_modifier",
+        "ordinal": "3",
         "type": "fuchsia.sysmem/FormatModifier"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/PixelFormat.has_format_modifier",
+        "ordinal": "2",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/PixelFormat.type",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/PixelFormatType"
     },
     {
@@ -1270,11 +1406,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapAndRange.heap",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/HeapType"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapAndRange.range",
+        "ordinal": "2",
         "type": "fuchsia.sysmem/SecureHeapRange"
     },
     {
@@ -1284,16 +1422,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapAndRangeModification.heap",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/HeapType"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapAndRangeModification.new_range",
+        "ordinal": "3",
         "type": "fuchsia.sysmem/SecureHeapRange"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapAndRangeModification.old_range",
+        "ordinal": "2",
         "type": "fuchsia.sysmem/SecureHeapRange"
     },
     {
@@ -1303,11 +1444,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapAndRanges.heap",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/HeapType"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapAndRanges.ranges",
+        "ordinal": "2",
         "type": "vector<fuchsia.sysmem/SecureHeapRange>:128"
     },
     {
@@ -1317,26 +1460,31 @@
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapProperties.dynamic_protection_ranges",
+        "ordinal": "2",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapProperties.heap",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/HeapType"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapProperties.is_mod_protected_range_available",
+        "ordinal": "5",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapProperties.max_protected_range_count",
+        "ordinal": "4",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapProperties.protected_range_granularity",
+        "ordinal": "3",
         "type": "uint32"
     },
     {
@@ -1346,11 +1494,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapRange.physical_address",
+        "ordinal": "1",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapRange.size_bytes",
+        "ordinal": "2",
         "type": "uint64"
     },
     {
@@ -1360,6 +1510,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.sysmem/SecureHeapsAndRanges.heaps",
+        "ordinal": "1",
         "type": "vector<fuchsia.sysmem/SecureHeapAndRanges>:32"
     },
     {
@@ -1369,31 +1520,37 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/SecureMem.AddSecureHeapPhysicalRange",
+        "ordinal": "2063119009466856254",
         "type": "(fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/SecureMem.DeleteSecureHeapPhysicalRange",
+        "ordinal": "8253573362087858926",
         "type": "(fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/SecureMem.GetPhysicalSecureHeapProperties",
+        "ordinal": "2756288888227435028",
         "type": "(fuchsia.sysmem/SecureHeapAndRange entire_heap) -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/SecureMem.GetPhysicalSecureHeaps",
+        "ordinal": "541049457444649477",
         "type": "() -> (fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/SecureMem.ModifySecureHeapPhysicalRange",
+        "ordinal": "1535656706441906445",
         "type": "(fuchsia.sysmem/SecureHeapAndRangeModification range_modification) -> (fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.sysmem/SecureMem.ZeroSubRange",
+        "ordinal": "8394981472523288155",
         "type": "(bool is_covering_range_explicit,fuchsia.sysmem/SecureHeapAndRange heap_range) -> (fuchsia.sysmem/SecureMem_ZeroSubRange_Result result)"
     },
     {
@@ -1407,11 +1564,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SecureMem_AddSecureHeapPhysicalRange_Response"
     },
     {
@@ -1426,11 +1585,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SecureMem_DeleteSecureHeapPhysicalRange_Response"
     },
     {
@@ -1441,6 +1602,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response.properties",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SecureHeapProperties"
     },
     {
@@ -1450,11 +1612,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeapProperties_Response"
     },
     {
@@ -1465,6 +1629,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response.heaps",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SecureHeapsAndRanges"
     },
     {
@@ -1474,11 +1639,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SecureMem_GetPhysicalSecureHeaps_Response"
     },
     {
@@ -1493,11 +1660,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SecureMem_ModifySecureHeapPhysicalRange_Response"
     },
     {
@@ -1512,11 +1681,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_ZeroSubRange_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.sysmem/SecureMem_ZeroSubRange_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SecureMem_ZeroSubRange_Response"
     },
     {
@@ -1527,11 +1698,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/SingleBufferInfo.buffer",
+        "ordinal": "2",
         "type": "fuchsia.sysmem/VmoBuffer"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/SingleBufferInfo.settings",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/SingleBufferSettings"
     },
     {
@@ -1542,16 +1715,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/SingleBufferSettings.buffer_settings",
+        "ordinal": "1",
         "type": "fuchsia.sysmem/BufferMemorySettings"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/SingleBufferSettings.has_image_format_constraints",
+        "ordinal": "2",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/SingleBufferSettings.image_format_constraints",
+        "ordinal": "3",
         "type": "fuchsia.sysmem/ImageFormatConstraints"
     },
     {
@@ -1663,11 +1839,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/VmoBuffer.vmo",
+        "ordinal": "1",
         "type": "zx/handle:<VMO,optional>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.sysmem/VmoBuffer.vmo_usable_start",
+        "ordinal": "2",
         "type": "uint64"
     },
     {

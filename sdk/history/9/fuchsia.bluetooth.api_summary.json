@@ -2,11 +2,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Address.bytes",
+        "ordinal": "2",
         "type": "array<uint8,6>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Address.type",
+        "ordinal": "1",
         "type": "fuchsia.bluetooth/AddressType"
     },
     {
@@ -303,6 +305,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Bool.value",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -328,6 +331,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/DeviceClass.value",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -337,16 +341,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Error.description",
+        "ordinal": "3",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Error.error_code",
+        "ordinal": "1",
         "type": "fuchsia.bluetooth/ErrorCode"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Error.protocol_error_code",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
@@ -422,6 +429,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/HostId.value",
+        "ordinal": "1",
         "type": "uint64"
     },
     {
@@ -431,6 +439,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Int8.value",
+        "ordinal": "1",
         "type": "int8"
     },
     {
@@ -518,6 +527,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/PeerId.value",
+        "ordinal": "1",
         "type": "uint64"
     },
     {
@@ -527,6 +537,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Status.error",
+        "ordinal": "1",
         "type": "box<fuchsia.bluetooth/Error>"
     },
     {
@@ -536,6 +547,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/UInt16.value",
+        "ordinal": "1",
         "type": "uint16"
     },
     {
@@ -551,6 +563,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.bluetooth/Uuid.value",
+        "ordinal": "1",
         "type": "array<uint8,16>"
     },
     {

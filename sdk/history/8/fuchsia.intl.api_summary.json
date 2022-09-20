@@ -2,6 +2,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.intl/CalendarId.id",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -11,51 +12,61 @@
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.day",
+        "ordinal": "3",
         "type": "uint8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.hour",
+        "ordinal": "4",
         "type": "uint8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.minute",
+        "ordinal": "5",
         "type": "uint8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.month",
+        "ordinal": "2",
         "type": "fuchsia.intl/Month"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.nanos",
+        "ordinal": "7",
         "type": "uint64"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.second",
+        "ordinal": "6",
         "type": "uint8"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.time_zone_id",
+        "ordinal": "10",
         "type": "fuchsia.intl/TimeZoneId"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.weekday",
+        "ordinal": "8",
         "type": "fuchsia.intl/DayOfWeek"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.year",
+        "ordinal": "1",
         "type": "uint16"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilTime.year_day",
+        "ordinal": "9",
         "type": "uint16"
     },
     {
@@ -65,11 +76,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilToAbsoluteTimeOptions.repeated_time_conversion",
+        "ordinal": "1",
         "type": "fuchsia.intl/RepeatedTimeConversion"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/CivilToAbsoluteTimeOptions.skipped_time_conversion",
+        "ordinal": "2",
         "type": "fuchsia.intl/SkippedTimeConversion"
     },
     {
@@ -126,6 +139,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.intl/LocaleId.id",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -201,21 +215,25 @@
     {
         "kind": "table/member",
         "name": "fuchsia.intl/Profile.calendars",
+        "ordinal": "2",
         "type": "vector<fuchsia.intl/CalendarId>"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/Profile.locales",
+        "ordinal": "1",
         "type": "vector<fuchsia.intl/LocaleId>"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/Profile.temperature_unit",
+        "ordinal": "4",
         "type": "fuchsia.intl/TemperatureUnit"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/Profile.time_zones",
+        "ordinal": "3",
         "type": "vector<fuchsia.intl/TimeZoneId>"
     },
     {
@@ -225,11 +243,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.intl/PropertyProvider.GetProfile",
+        "ordinal": "1206690812440007659",
         "type": "() -> (fuchsia.intl/Profile profile)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.intl/PropertyProvider.OnChange",
+        "ordinal": "2790522501434993041",
         "type": " -> ()"
     },
     {
@@ -239,6 +259,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.intl/RegulatoryDomain.country_code",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -291,6 +312,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.intl/TimeZoneId.id",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -300,16 +322,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.intl/TimeZoneInfo.id",
+        "ordinal": "1",
         "type": "fuchsia.intl/TimeZoneId"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/TimeZoneInfo.in_dst_at_time",
+        "ordinal": "3",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.intl/TimeZoneInfo.total_offset_at_time",
+        "ordinal": "2",
         "type": "int64"
     },
     {
@@ -319,16 +344,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.intl/TimeZones.AbsoluteToCivilTime",
+        "ordinal": "2681746576696074757",
         "type": "(fuchsia.intl/TimeZoneId time_zone_id,int64 absolute_time) -> (fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.intl/TimeZones.CivilToAbsoluteTime",
+        "ordinal": "869889377323530918",
         "type": "(fuchsia.intl/CivilTime civil_time,fuchsia.intl/CivilToAbsoluteTimeOptions options) -> (fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.intl/TimeZones.GetTimeZoneInfo",
+        "ordinal": "2397264841757097573",
         "type": "(fuchsia.intl/TimeZoneId time_zone_id,int64 at_time) -> (fuchsia.intl/TimeZones_GetTimeZoneInfo_Result result)"
     },
     {
@@ -359,6 +387,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.intl/TimeZones_AbsoluteToCivilTime_Response.civil_time",
+        "ordinal": "1",
         "type": "fuchsia.intl/CivilTime"
     },
     {
@@ -368,11 +397,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.intl/TimeZonesError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.intl/TimeZones_AbsoluteToCivilTime_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.intl/TimeZones_AbsoluteToCivilTime_Response"
     },
     {
@@ -383,6 +414,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.intl/TimeZones_CivilToAbsoluteTime_Response.absolute_time",
+        "ordinal": "1",
         "type": "int64"
     },
     {
@@ -392,11 +424,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.intl/TimeZonesError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.intl/TimeZones_CivilToAbsoluteTime_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.intl/TimeZones_CivilToAbsoluteTime_Response"
     },
     {
@@ -407,6 +441,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.intl/TimeZones_GetTimeZoneInfo_Response.time_zone_info",
+        "ordinal": "1",
         "type": "fuchsia.intl/TimeZoneInfo"
     },
     {
@@ -416,11 +451,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.intl/TimeZones_GetTimeZoneInfo_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.intl/TimeZonesError"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.intl/TimeZones_GetTimeZoneInfo_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.intl/TimeZones_GetTimeZoneInfo_Response"
     },
     {

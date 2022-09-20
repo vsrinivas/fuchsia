@@ -26,11 +26,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/CSsid.data",
+        "ordinal": "2",
         "type": "array<uint8,32>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/CSsid.len",
+        "ordinal": "1",
         "type": "uint8"
     },
     {
@@ -133,6 +135,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilities.bytes",
+        "ordinal": "1",
         "type": "array<uint8,26>"
     },
     {
@@ -142,31 +145,37 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.ampdu_params",
+        "ordinal": "2",
         "type": "uint8"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.asel_capabilities",
+        "ordinal": "6",
         "type": "uint8"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.ht_capability_info",
+        "ordinal": "1",
         "type": "uint16"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.ht_ext_capabilities",
+        "ordinal": "4",
         "type": "uint16"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.supported_mcs_set",
+        "ordinal": "3",
         "type": "array<uint8,16>"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtCapabilitiesFields.tx_beamforming_capabilities",
+        "ordinal": "5",
         "type": "uint32"
     },
     {
@@ -176,6 +185,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/HtOperation.bytes",
+        "ordinal": "1",
         "type": "array<uint8,22>"
     },
     {
@@ -1100,6 +1110,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/VhtCapabilities.bytes",
+        "ordinal": "1",
         "type": "array<uint8,12>"
     },
     {
@@ -1109,11 +1120,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/VhtCapabilitiesFields.supported_vht_mcs_and_nss_set",
+        "ordinal": "2",
         "type": "uint64"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/VhtCapabilitiesFields.vht_capability_info",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -1123,6 +1136,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.wlan.ieee80211/VhtOperation.bytes",
+        "ordinal": "1",
         "type": "array<uint8,5>"
     },
     {

@@ -18,11 +18,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.castconfig/Provider.Notify",
+        "ordinal": "2835315293552560328",
         "type": "(bool processed) -> (bool retry)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.castconfig/Provider.Watch",
+        "ordinal": "898089527416970310",
         "type": "() -> (fuchsia.castconfig/Provider_Watch_Result result)"
     },
     {
@@ -32,6 +34,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.castconfig/Provider_Watch_Response.config",
+        "ordinal": "1",
         "type": "fuchsia.mem/Buffer"
     },
     {
@@ -42,11 +45,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.castconfig/Provider_Watch_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.castconfig/ErrorCode"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.castconfig/Provider_Watch_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.castconfig/Provider_Watch_Response"
     },
     {

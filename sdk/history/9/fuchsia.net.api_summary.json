@@ -2,11 +2,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.net/IpAddress.ipv4",
+        "ordinal": "1",
         "type": "fuchsia.net/Ipv4Address"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.net/IpAddress.ipv6",
+        "ordinal": "2",
         "type": "fuchsia.net/Ipv6Address"
     },
     {
@@ -33,6 +35,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv4Address.addr",
+        "ordinal": "1",
         "type": "array<uint8,4>"
     },
     {
@@ -42,11 +45,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv4AddressWithPrefix.addr",
+        "ordinal": "1",
         "type": "fuchsia.net/Ipv4Address"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv4AddressWithPrefix.prefix_len",
+        "ordinal": "2",
         "type": "uint8"
     },
     {
@@ -56,11 +61,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv4SocketAddress.address",
+        "ordinal": "1",
         "type": "fuchsia.net/Ipv4Address"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv4SocketAddress.port",
+        "ordinal": "2",
         "type": "uint16"
     },
     {
@@ -70,6 +77,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv6Address.addr",
+        "ordinal": "1",
         "type": "array<uint8,16>"
     },
     {
@@ -79,11 +87,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv6AddressWithPrefix.addr",
+        "ordinal": "1",
         "type": "fuchsia.net/Ipv6Address"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv6AddressWithPrefix.prefix_len",
+        "ordinal": "2",
         "type": "uint8"
     },
     {
@@ -93,16 +103,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv6SocketAddress.address",
+        "ordinal": "1",
         "type": "fuchsia.net/Ipv6Address"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv6SocketAddress.port",
+        "ordinal": "2",
         "type": "uint16"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Ipv6SocketAddress.zone_index",
+        "ordinal": "3",
         "type": "uint64"
     },
     {
@@ -118,6 +131,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.net/MacAddress.octets",
+        "ordinal": "1",
         "type": "array<uint8,6>"
     },
     {
@@ -127,11 +141,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.net/SocketAddress.ipv4",
+        "ordinal": "1",
         "type": "fuchsia.net/Ipv4SocketAddress"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.net/SocketAddress.ipv6",
+        "ordinal": "2",
         "type": "fuchsia.net/Ipv6SocketAddress"
     },
     {
@@ -142,11 +158,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Subnet.addr",
+        "ordinal": "1",
         "type": "fuchsia.net/IpAddress"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.net/Subnet.prefix_len",
+        "ordinal": "2",
         "type": "uint8"
     },
     {

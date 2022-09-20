@@ -468,6 +468,7 @@ type S = struct {
     {
         "kind": "struct/member",
         "name": "l/S.x",
+        "ordinal": "1",
         "type": "float32"
     },
     {
@@ -501,24 +502,28 @@ type S = struct {
     {
         "kind": "struct/member",
         "name": "l/S.bar",
+        "ordinal": "3",
         "type": "bool",
         "value": "true"
     },
     {
         "kind": "struct/member",
         "name": "l/S.baz",
+        "ordinal": "4",
         "type": "string",
         "value": "booyah!"
     },
     {
         "kind": "struct/member",
         "name": "l/S.foo",
+        "ordinal": "2",
         "type": "string",
         "value": "huzzah"
     },
     {
         "kind": "struct/member",
         "name": "l/S.x",
+        "ordinal": "1",
         "type": "float32",
         "value": "0.314159"
     },
@@ -552,11 +557,13 @@ type Arrays = struct {
     {
         "kind": "struct/member",
         "name": "l/Arrays.form",
+        "ordinal": "1",
         "type": "array<float32,16>"
     },
     {
         "kind": "struct/member",
         "name": "l/Arrays.matrix",
+        "ordinal": "2",
         "type": "array<array<string,4>,10>"
     },
     {
@@ -583,11 +590,13 @@ type Document = struct {
     {
         "kind": "struct/member",
         "name": "l/Document.description",
+        "ordinal": "2",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "l/Document.title",
+        "ordinal": "1",
         "type": "string:40"
     },
     {
@@ -617,26 +626,31 @@ type Vectors = struct {
     {
         "kind": "struct/member",
         "name": "l/Vectors.blob",
+        "ordinal": "2",
         "type": "vector<uint8>"
     },
     {
         "kind": "struct/member",
         "name": "l/Vectors.complex",
+        "ordinal": "5",
         "type": "vector<vector<array<float32,16>>>"
     },
     {
         "kind": "struct/member",
         "name": "l/Vectors.nullable_vector_of_strings",
+        "ordinal": "3",
         "type": "vector<string>:<24,optional>"
     },
     {
         "kind": "struct/member",
         "name": "l/Vectors.params",
+        "ordinal": "1",
         "type": "vector<int32>:10"
     },
     {
         "kind": "struct/member",
         "name": "l/Vectors.vector_of_nullable_strings",
+        "ordinal": "4",
         "type": "vector<string:optional>"
     },
     {
@@ -665,11 +679,13 @@ type Handles = resource struct {
     {
         "kind": "struct/member",
         "name": "l/Handles.c",
+        "ordinal": "2",
         "type": "zx/handle:<CHANNEL,optional>"
     },
     {
         "kind": "struct/member",
         "name": "l/Handles.h",
+        "ordinal": "1",
         "type": "zx/handle"
     },
     {
@@ -701,6 +717,7 @@ type B = struct {
     {
         "kind": "struct/member",
         "name": "l/B.a",
+        "ordinal": "1",
         "type": "l/A"
     },
     {
@@ -739,26 +756,31 @@ type Circle = struct {
     {
         "kind": "struct/member",
         "name": "l/Circle.center",
+        "ordinal": "2",
         "type": "l/CirclePoint"
     },
     {
         "kind": "struct/member",
         "name": "l/Circle.color",
+        "ordinal": "4",
         "type": "box<l/Color>"
     },
     {
         "kind": "struct/member",
         "name": "l/Circle.dashed",
+        "ordinal": "5",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "l/Circle.filled",
+        "ordinal": "1",
         "type": "bool"
     },
     {
         "kind": "struct/member",
         "name": "l/Circle.radius",
+        "ordinal": "3",
         "type": "float32"
     },
     {
@@ -768,11 +790,13 @@ type Circle = struct {
     {
         "kind": "struct/member",
         "name": "l/CirclePoint.x",
+        "ordinal": "1",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "l/CirclePoint.y",
+        "ordinal": "2",
         "type": "float32"
     },
     {
@@ -782,16 +806,19 @@ type Circle = struct {
     {
         "kind": "struct/member",
         "name": "l/Color.b",
+        "ordinal": "3",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "l/Color.g",
+        "ordinal": "2",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "l/Color.r",
+        "ordinal": "1",
         "type": "float32"
     },
     {
@@ -819,16 +846,19 @@ type Profile = table {
     {
         "kind": "table/member",
         "name": "l/Profile.calendars",
+        "ordinal": "2",
         "type": "vector<string>"
     },
     {
         "kind": "table/member",
         "name": "l/Profile.locales",
+        "ordinal": "1",
         "type": "vector<string>"
     },
     {
         "kind": "table/member",
         "name": "l/Profile.time_zones",
+        "ordinal": "3",
         "type": "vector<string>"
     },
     {
@@ -857,11 +887,13 @@ type Either = strict union {
     {
         "kind": "union/member",
         "name": "l/Either.left",
+        "ordinal": "1",
         "type": "l/Left"
     },
     {
         "kind": "union/member",
         "name": "l/Either.right",
+        "ordinal": "2",
         "type": "l/Right"
     },
     {
@@ -896,6 +928,7 @@ protocol Calculator {
     {
         "kind": "protocol/member",
         "name": "l/Calculator.Add",
+        "ordinal": "250442423443911233",
         "type": "(int32 a,int32 b) -> (int32 sum)"
     },
     {
@@ -931,6 +964,7 @@ protocol P {
     {
         "kind": "protocol/member",
         "name": "l/P.M",
+        "ordinal": "1416054259560567967",
         "type": "(box<l/Bar> b) -> (l/Foo c)"
     },
     {
@@ -969,21 +1003,25 @@ protocol P2 {
     {
         "kind": "protocol/member",
         "name": "l/P2.M1",
+        "ordinal": "837411832102395320",
         "type": "(client_end:l/P a)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P2.M2",
+        "ordinal": "7643406716745546297",
         "type": "(client_end:<l/P,optional> a)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P2.M3",
+        "ordinal": "2712856865629095774",
         "type": "(server_end:l/P a)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P2.M4",
+        "ordinal": "8900715097515580538",
         "type": "(server_end:<l/P,optional> a)"
     },
     {
@@ -1012,21 +1050,25 @@ protocol P {
     {
         "kind": "protocol/member",
         "name": "l/P.F1",
+        "ordinal": "5135084091202286418",
         "type": " -> (int32 a)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P.F2",
+        "ordinal": "2448214607574469420",
         "type": "() -> (int32 a)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P.F3",
+        "ordinal": "542295173779636617",
         "type": "() -> (l/P_F3_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P.F4",
+        "ordinal": "7474367752247153959",
         "type": "()"
     },
     {
@@ -1040,11 +1082,13 @@ protocol P {
     {
         "kind": "union/member",
         "name": "l/P_F3_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "l/P_F3_Result.response",
+        "ordinal": "1",
         "type": "l/P_F3_Response"
     },
     {
@@ -1075,11 +1119,13 @@ protocol P {
     {
         "kind": "protocol/member",
         "name": "l/P.M1",
+        "ordinal": "6412048159635322006",
         "type": " -> (bool a)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P.M2",
+        "ordinal": "4975997396601956357",
         "type": "() -> (l/P_M2_Result result)"
     },
     {
@@ -1089,11 +1135,13 @@ protocol P {
     {
         "kind": "union/member",
         "name": "l/P_M2_Result.err",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "union/member",
         "name": "l/P_M2_Result.response",
+        "ordinal": "1",
         "type": "l/Payload"
     },
     {
@@ -1104,6 +1152,7 @@ protocol P {
     {
         "kind": "struct/member",
         "name": "l/Payload.a",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -1136,11 +1185,13 @@ protocol P {
     {
         "kind": "protocol/member",
         "name": "l/P.M1",
+        "ordinal": "6412048159635322006",
         "type": "(l/U payload) -> (l/T payload)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P.M2",
+        "ordinal": "4975997396601956357",
         "type": "(l/PM2Request payload) -> (l/PM2Response payload)"
     },
     {
@@ -1150,6 +1201,7 @@ protocol P {
     {
         "kind": "table/member",
         "name": "l/PM2Request.c",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -1159,6 +1211,7 @@ protocol P {
     {
         "kind": "union/member",
         "name": "l/PM2Response.d",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -1169,6 +1222,7 @@ protocol P {
     {
         "kind": "table/member",
         "name": "l/T.b",
+        "ordinal": "1",
         "type": "int32"
     },
     {
@@ -1178,6 +1232,7 @@ protocol P {
     {
         "kind": "union/member",
         "name": "l/U.a",
+        "ordinal": "1",
         "type": "uint64"
     },
     {
@@ -1208,11 +1263,13 @@ protocol P {
     {
         "kind": "protocol/member",
         "name": "l/P.M1",
+        "ordinal": "6412048159635322006",
         "type": "() -> (l/P_M1_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "l/P.M2",
+        "ordinal": "4975997396601956357",
         "type": "() -> (l/P_M2_Result result)"
     },
     {
@@ -1222,6 +1279,7 @@ protocol P {
     {
         "kind": "union/member",
         "name": "l/P_M1_Response.a",
+        "ordinal": "1",
         "type": "bool"
     },
     {
@@ -1232,11 +1290,13 @@ protocol P {
     {
         "kind": "union/member",
         "name": "l/P_M1_Result.err",
+        "ordinal": "2",
         "type": "uint32"
     },
     {
         "kind": "union/member",
         "name": "l/P_M1_Result.response",
+        "ordinal": "1",
         "type": "l/P_M1_Response"
     },
     {
@@ -1247,11 +1307,13 @@ protocol P {
     {
         "kind": "union/member",
         "name": "l/P_M2_Result.err",
+        "ordinal": "2",
         "type": "int32"
     },
     {
         "kind": "union/member",
         "name": "l/P_M2_Result.response",
+        "ordinal": "1",
         "type": "l/T"
     },
     {
@@ -1262,6 +1324,7 @@ protocol P {
     {
         "kind": "table/member",
         "name": "l/T.b",
+        "ordinal": "1",
         "type": "string"
     },
     {
@@ -1289,16 +1352,19 @@ type S = struct {
     {
         "kind": "struct/member",
         "name": "l/S.f1",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "l/S.f2",
+        "ordinal": "2",
         "type": "string:4"
     },
     {
         "kind": "struct/member",
         "name": "l/S.f3",
+        "ordinal": "3",
         "type": "string:<4,optional>"
     },
     {
@@ -1326,6 +1392,7 @@ type A = struct {
     {
         "kind": "struct/member",
         "name": "l/A.a",
+        "ordinal": "1",
         "type": "l2/T"
     },
     {
@@ -1361,16 +1428,19 @@ protocol Calculator {
     {
         "kind": "protocol/member",
         "name": "l/Calculator.Add",
+        "ordinal": "250442423443911233",
         "type": "(l2/T a,l/Bar b) -> (l/Foo c)"
     },
     {
         "kind": "protocol/member",
         "name": "l/Calculator.Halve",
+        "ordinal": "7372493581703395840",
         "type": "(int32 num) -> (int32 num)"
     },
     {
         "kind": "protocol/member",
         "name": "l/Calculator.Invert",
+        "ordinal": "2134776808183153853",
         "type": "(int32 num) -> (int32 num)"
     },
     {
@@ -1405,6 +1475,7 @@ type T = table {
     {
         "kind": "union/member",
         "name": "l/E.e",
+        "ordinal": "2",
         "type": "int32"
     },
     {
@@ -1415,6 +1486,7 @@ type T = table {
     {
         "kind": "table/member",
         "name": "l/T.e",
+        "ordinal": "2",
         "type": "int32"
     },
     {
@@ -1447,7 +1519,10 @@ func runGenerateSummaryTests(t *testing.T, tests []summaryTestCase) {
 			// TODO(fxbug.dev/109721): Remove.
 			renameDeclarationToType := true
 
-			if err := s.WriteJSON(&b, renameDeclarationToType); err != nil {
+			// TODO(fxbug.dev/102427): Remove.
+			includeOrdinals := true
+
+			if err := s.WriteJSON(&b, renameDeclarationToType, includeOrdinals); err != nil {
 				t.Fatalf("while writing JOSN: %v", err)
 			}
 			actual := strings.Split(b.String(), "\n")

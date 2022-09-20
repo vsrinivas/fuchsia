@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.ui.lifecycle/LifecycleController.Terminate",
+        "ordinal": "3510967087006914695",
         "type": "()"
     },
     {

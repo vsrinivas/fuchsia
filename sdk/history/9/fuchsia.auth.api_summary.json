@@ -2,21 +2,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/AppConfig.auth_provider_type",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/AppConfig.client_id",
+        "ordinal": "2",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/AppConfig.client_secret",
+        "ordinal": "3",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/AppConfig.redirect_uri",
+        "ordinal": "4",
         "type": "string:optional"
     },
     {
@@ -26,6 +30,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/AttestationSigner.SignData",
+        "ordinal": "5156408031239525219",
         "type": "(vector<uint8> plaintext) -> (fuchsia.auth/AttestationSignerStatus status,vector<uint8>:optional signature)"
     },
     {
@@ -56,16 +61,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/AuthProviderConfig.auth_provider_type",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/AuthProviderConfig.params",
+        "ordinal": "3",
         "type": "vector<string>:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/AuthProviderConfig.url",
+        "ordinal": "2",
         "type": "string"
     },
     {
@@ -75,6 +83,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/AuthenticationContextProvider.GetAuthenticationUIContext",
+        "ordinal": "8571693674495486342",
         "type": "(server_end:fuchsia.auth/AuthenticationUIContext request)"
     },
     {
@@ -84,11 +93,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/AuthenticationUIContext.StartOverlay",
+        "ordinal": "1759195047809256369",
         "type": "(fuchsia.ui.views/ViewHolderToken view_holder_token)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/AuthenticationUIContext.StopOverlay",
+        "ordinal": "2829565860557833903",
         "type": "()"
     },
     {
@@ -98,11 +109,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/ServiceProviderAccount.identity_provider_domain",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/ServiceProviderAccount.user_profile_id",
+        "ordinal": "2",
         "type": "string"
     },
     {
@@ -178,26 +191,31 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/TokenManager.Authorize",
+        "ordinal": "1179614906323446605",
         "type": "(fuchsia.auth/AppConfig app_config,client_end:<fuchsia.auth/AuthenticationUIContext,optional> auth_ui_context,vector<string> app_scopes,string:optional user_profile_id,string:optional auth_code) -> (fuchsia.auth/Status status,box<fuchsia.auth/UserProfileInfo> user_profile_info)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/TokenManager.DeleteAllTokens",
+        "ordinal": "1262637489830242650",
         "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,bool force) -> (fuchsia.auth/Status status)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/TokenManager.GetAccessToken",
+        "ordinal": "4236433476347133173",
         "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,vector<string> app_scopes) -> (fuchsia.auth/Status status,string:optional access_token)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/TokenManager.GetIdToken",
+        "ordinal": "4613758540197579219",
         "type": "(fuchsia.auth/AppConfig app_config,string user_profile_id,string:optional audience) -> (fuchsia.auth/Status status,string:optional id_token)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/TokenManager.ListProfileIds",
+        "ordinal": "5899561549799865623",
         "type": "(fuchsia.auth/AppConfig app_config) -> (fuchsia.auth/Status status,vector<string> user_profile_ids)"
     },
     {
@@ -207,6 +225,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.auth/TokenManagerFactory.GetTokenManager",
+        "ordinal": "5135718418731443932",
         "type": "(string user_id,string application_url,vector<fuchsia.auth/AuthProviderConfig> auth_provider_configs,client_end:fuchsia.auth/AuthenticationContextProvider auth_context_provider,server_end:fuchsia.auth/TokenManager token_manager)"
     },
     {
@@ -216,21 +235,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/UserProfileInfo.display_name",
+        "ordinal": "2",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/UserProfileInfo.id",
+        "ordinal": "1",
         "type": "string"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/UserProfileInfo.image_url",
+        "ordinal": "4",
         "type": "string:optional"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.auth/UserProfileInfo.url",
+        "ordinal": "3",
         "type": "string:optional"
     },
     {

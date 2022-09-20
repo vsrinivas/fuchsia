@@ -2,11 +2,13 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mem/Buffer.size",
+        "ordinal": "2",
         "type": "uint64"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mem/Buffer.vmo",
+        "ordinal": "1",
         "type": "zx/handle:VMO"
     },
     {
@@ -17,11 +19,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.mem/Data.buffer",
+        "ordinal": "2",
         "type": "fuchsia.mem/Buffer"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.mem/Data.bytes",
+        "ordinal": "1",
         "type": "vector<uint8>"
     },
     {
@@ -33,16 +37,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mem/Range.offset",
+        "ordinal": "2",
         "type": "uint64"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mem/Range.size",
+        "ordinal": "3",
         "type": "uint64"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mem/Range.vmo",
+        "ordinal": "1",
         "type": "zx/handle:VMO"
     },
     {

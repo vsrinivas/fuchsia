@@ -94,7 +94,7 @@ type symbolTable struct {
 	// (box<Foo> instead of Foo:optional).
 	structDecls map[fidlgen.EncodedCompoundIdentifier]*fidlgen.Struct
 
-	// payloads contains all struct,table, or union layouts used in any of the
+	// payloads contains all struct, table, or union layouts used in any of the
 	// protocol methods in the library being summarized. Used for generating
 	// parameter lists for method signatures.
 	payloads payloadDict

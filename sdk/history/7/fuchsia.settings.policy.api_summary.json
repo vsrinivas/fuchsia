@@ -23,11 +23,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.settings.policy/Policy.parameters",
+        "ordinal": "2",
         "type": "fuchsia.settings.policy/PolicyParameters"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.settings.policy/Policy.policy_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -37,11 +39,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.settings.policy/PolicyParameters.max",
+        "ordinal": "2",
         "type": "fuchsia.settings.policy/Volume"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.settings.policy/PolicyParameters.min",
+        "ordinal": "1",
         "type": "fuchsia.settings.policy/Volume"
     },
     {
@@ -52,16 +56,19 @@
     {
         "kind": "table/member",
         "name": "fuchsia.settings.policy/Property.active_policies",
+        "ordinal": "3",
         "type": "vector<fuchsia.settings.policy/Policy>"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.settings.policy/Property.available_transforms",
+        "ordinal": "2",
         "type": "vector<fuchsia.settings.policy/Transform>"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.settings.policy/Property.target",
+        "ordinal": "1",
         "type": "fuchsia.settings.policy/Target"
     },
     {
@@ -71,6 +78,7 @@
     {
         "kind": "union/member",
         "name": "fuchsia.settings.policy/Target.stream",
+        "ordinal": "1",
         "type": "fuchsia.media/AudioRenderUsage"
     },
     {
@@ -97,6 +105,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.settings.policy/Volume.volume",
+        "ordinal": "1",
         "type": "float32"
     },
     {
@@ -106,16 +115,19 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.settings.policy/VolumePolicyController.AddPolicy",
+        "ordinal": "2038854270196918399",
         "type": "(fuchsia.settings.policy/Target target,fuchsia.settings.policy/PolicyParameters parameters) -> (fuchsia.settings.policy/VolumePolicyController_AddPolicy_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.settings.policy/VolumePolicyController.GetProperties",
+        "ordinal": "6382087688351074233",
         "type": "() -> (vector<fuchsia.settings.policy/Property> properties)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.settings.policy/VolumePolicyController.RemovePolicy",
+        "ordinal": "98056619514649914",
         "type": "(uint32 policy_id) -> (fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Result result)"
     },
     {
@@ -125,6 +137,7 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.settings.policy/VolumePolicyController_AddPolicy_Response.policy_id",
+        "ordinal": "1",
         "type": "uint32"
     },
     {
@@ -134,11 +147,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.settings.policy/VolumePolicyController_AddPolicy_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.settings.policy/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.settings.policy/VolumePolicyController_AddPolicy_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.settings.policy/VolumePolicyController_AddPolicy_Response"
     },
     {
@@ -153,11 +168,13 @@
     {
         "kind": "union/member",
         "name": "fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Result.err",
+        "ordinal": "2",
         "type": "fuchsia.settings.policy/Error"
     },
     {
         "kind": "union/member",
         "name": "fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Result.response",
+        "ordinal": "1",
         "type": "fuchsia.settings.policy/VolumePolicyController_RemovePolicy_Response"
     },
     {

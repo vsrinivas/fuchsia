@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.location.sensor/WlanBaseStationWatcher.ReportCurrentStations",
+        "ordinal": "2953087884609127114",
         "type": "(fuchsia.wlan.policy/ScanResultIterator stations)"
     },
     {

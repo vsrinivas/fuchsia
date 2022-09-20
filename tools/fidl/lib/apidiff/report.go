@@ -20,10 +20,14 @@ const (
 	// requires another pass where its enclosing declaration is known. See
 	// backfillForParentStrictness().
 	NeedsBackfill Classification = "NeedsBackfill"
-	// APIBreaking change will break compilation for clients.
+	// Compatible means the change is both API and ABI compatible.
+	Compatible Classification = "Compatible"
+	// APIBreaking means the change will break compilation. It might also break
+	// ABI; we don't distinguish between API breaks and API+ABI breaks.
 	APIBreaking Classification = "APIBreaking"
-	// SourceCompatible change does not break compilation.
-	SourceCompatible Classification = "SourceCompatible"
+	// APICompatibleButABIBreaking is used to reject the small category of
+	// changes which break ABI without also breaking API.
+	APICompatibleButABIBreaking Classification = "APICompatibleButABIBreaking"
 )
 
 // ReportItem is a single line item of the API diff report.
@@ -70,7 +74,7 @@ func (r *Report) backfillForParentStrictness(isStrict bool) {
 		if isStrict {
 			r.APIDiff[i].Conclusion = APIBreaking
 		} else {
-			r.APIDiff[i].Conclusion = SourceCompatible
+			r.APIDiff[i].Conclusion = Compatible
 		}
 	}
 	r.backfillIndexes = nil
@@ -115,7 +119,7 @@ func (r *Report) add(item *summarize.ElementStr) {
 		summarize.AliasKind,
 		summarize.TableMemberKind,
 		summarize.BitsMemberKind:
-		ret.Conclusion = SourceCompatible
+		ret.Conclusion = Compatible
 	case summarize.EnumMemberKind, summarize.UnionMemberKind:
 		ret.Conclusion = NeedsBackfill
 	case summarize.StructMemberKind:
@@ -135,7 +139,7 @@ func (r *Report) add(item *summarize.ElementStr) {
 		//    method definition: https://fuchsia.dev/fuchsia-src/reference/fidl/language/versioning?hl=en#swapping.
 		//    We should improve the syntax (e.g. integrate into @available)
 		//    before requiring all new methods to be @transitional.
-		ret.Conclusion = SourceCompatible
+		ret.Conclusion = Compatible
 	default:
 		panic(fmt.Sprintf("unexpected item kind: %+v", item))
 	}
@@ -171,6 +175,15 @@ func (r *Report) compare(before, after *summarize.ElementStr) {
 		before.Resourceness != after.Resourceness,
 		before.Strictness != after.Strictness:
 		ret.Conclusion = APIBreaking
+	case before.Ordinal != after.Ordinal:
+		if before.Kind == "struct/member" {
+			// Reordering struct members breaks API due to positional
+			// initializers in C++. (It of course breaks ABI too.)
+			ret.Conclusion = APIBreaking
+		} else {
+			// Changing table/union/method ordinals breaks ABI only.
+			ret.Conclusion = APICompatibleButABIBreaking
+		}
 	default:
 		panic(fmt.Sprintf("unexpected difference: before = %+v, after = %+v", before, after))
 	}

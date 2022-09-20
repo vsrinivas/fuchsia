@@ -25,7 +25,7 @@ func (s summary) IsEmptyLibrary() bool {
 }
 
 // WriteJSON writes out the summary as JSON.
-func (s summary) WriteJSON(w io.Writer, renameDeclarationToType bool) error {
+func (s summary) WriteJSON(w io.Writer, renameDeclarationToType, includeOrdinals bool) error {
 	e := json.NewEncoder(w)
 	// 4-level indent is chosen to match `fx format-code`.
 	e.SetIndent("", "    ")
@@ -38,6 +38,14 @@ func (s summary) WriteJSON(w io.Writer, renameDeclarationToType bool) error {
 		for i := range serialized {
 			serialized[i].Decl = serialized[i].Type
 			serialized[i].Type = ""
+		}
+	}
+
+	// TODO(102427): Remove.
+	if !includeOrdinals {
+		// The code is already changed to include ordinals, so undo it here.
+		for i := range serialized {
+			serialized[i].Ordinal = ""
 		}
 	}
 
@@ -90,7 +98,7 @@ func (s *summarizer) addUnions(unions []fidlgen.Union) {
 				continue
 			}
 			s.addElement(newMember(
-				&s.symbols, st.Name, m.Name, *m.Type, fidlgen.UnionDeclType, nil))
+				&s.symbols, st.Name, m.Name, *m.Type, fidlgen.UnionDeclType, m.Ordinal, nil))
 		}
 		s.addElement(
 			newAggregateWithStrictness(
@@ -106,7 +114,7 @@ func (s *summarizer) addTables(tables []fidlgen.Table) {
 				// Disregard reserved members
 				continue
 			}
-			s.addElement(newMember(&s.symbols, st.Name, m.Name, *m.Type, fidlgen.TableDeclType, nil))
+			s.addElement(newMember(&s.symbols, st.Name, m.Name, *m.Type, fidlgen.TableDeclType, m.Ordinal, nil))
 		}
 		s.addElement(newAggregate(st.Name, st.Resourceness, fidlgen.TableDeclType))
 	}
@@ -115,9 +123,10 @@ func (s *summarizer) addTables(tables []fidlgen.Table) {
 // addStructs adds the elements corresponding to the FIDL structs.
 func (s *summarizer) addStructs(structs []fidlgen.Struct) {
 	for _, st := range structs {
-		for _, m := range st.Members {
+		for idx, m := range st.Members {
+			oneBased := idx + 1
 			s.addElement(newMember(
-				&s.symbols, st.Name, m.Name, m.Type, fidlgen.StructDeclType, m.MaybeDefaultValue))
+				&s.symbols, st.Name, m.Name, m.Type, fidlgen.StructDeclType, oneBased, m.MaybeDefaultValue))
 		}
 		s.addElement(newAggregate(st.Name, st.Resourceness, fidlgen.StructDeclType))
 	}

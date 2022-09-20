@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.virtualkeyboard/Listener.OnVisibilityChanged",
+        "ordinal": "7321240099177332361",
         "type": "(bool updated_visibility) -> ()"
     },
     {
@@ -11,6 +12,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.accessibility.virtualkeyboard/Registry.Register",
+        "ordinal": "3354408897343547924",
         "type": "(fuchsia.ui.views/ViewRef view_ref,bool is_visible,server_end:fuchsia.accessibility.virtualkeyboard/Listener listener)"
     },
     {

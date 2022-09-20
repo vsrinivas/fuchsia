@@ -20,46 +20,54 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.can_find_start",
+        "ordinal": "4",
         "type": "bool",
         "value": "true"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.can_re_sync",
+        "ordinal": "5",
         "type": "bool",
         "value": "true"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.can_stream_bytes_input",
+        "ordinal": "3",
         "type": "bool",
         "value": "true"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.codec_type",
+        "ordinal": "1",
         "type": "fuchsia.mediacodec/CodecType"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.is_hw",
+        "ordinal": "7",
         "type": "bool",
         "value": "true"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.mime_type",
+        "ordinal": "2",
         "type": "string:256"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.split_header_handling",
+        "ordinal": "8",
         "type": "bool",
         "value": "true"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.mediacodec/CodecDescription.will_report_all_detected_errors",
+        "ordinal": "6",
         "type": "bool",
         "value": "true"
     },
@@ -70,21 +78,25 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.mediacodec/CodecFactory.AttachLifetimeTracking",
+        "ordinal": "1190752722540201112",
         "type": "(zx/handle:EVENTPAIR codec_end)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.mediacodec/CodecFactory.CreateDecoder",
+        "ordinal": "8260659461180265712",
         "type": "(fuchsia.mediacodec/CreateDecoder_Params decoder_params,server_end:fuchsia.media/StreamProcessor decoder)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.mediacodec/CodecFactory.CreateEncoder",
+        "ordinal": "2360908979802926351",
         "type": "(fuchsia.mediacodec/CreateEncoder_Params encoder_params,server_end:fuchsia.media/StreamProcessor encoder)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.mediacodec/CodecFactory.OnCodecList",
+        "ordinal": "3428334245862550752",
         "type": " -> (vector<fuchsia.mediacodec/CodecDescription>:256 codecs)"
     },
     {
@@ -110,56 +122,67 @@
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.input_details",
+        "ordinal": "1",
         "type": "fuchsia.media/FormatDetails"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.permit_lack_of_split_header_handling",
+        "ordinal": "8",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.promise_separate_access_units_on_input",
+        "ordinal": "2",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_find_start",
+        "ordinal": "4",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_re_sync",
+        "ordinal": "5",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.require_can_stream_bytes_input",
+        "ordinal": "3",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.require_hw",
+        "ordinal": "7",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.require_report_all_detected_errors",
+        "ordinal": "6",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.require_sw",
+        "ordinal": "11",
         "type": "bool"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.secure_input_mode",
+        "ordinal": "10",
         "type": "fuchsia.mediacodec/SecureMemoryMode"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateDecoder_Params.secure_output_mode",
+        "ordinal": "9",
         "type": "fuchsia.mediacodec/SecureMemoryMode"
     },
     {
@@ -169,11 +192,13 @@
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateEncoder_Params.input_details",
+        "ordinal": "1",
         "type": "fuchsia.media/FormatDetails"
     },
     {
         "kind": "table/member",
         "name": "fuchsia.mediacodec/CreateEncoder_Params.require_hw",
+        "ordinal": "2",
         "type": "bool"
     },
     {

@@ -2,16 +2,19 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.ui.types/ColorRgb.blue",
+        "ordinal": "3",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.ui.types/ColorRgb.green",
+        "ordinal": "2",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.ui.types/ColorRgb.red",
+        "ordinal": "1",
         "type": "float32"
     },
     {
@@ -21,21 +24,25 @@
     {
         "kind": "struct/member",
         "name": "fuchsia.ui.types/ColorRgba.alpha",
+        "ordinal": "4",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.ui.types/ColorRgba.blue",
+        "ordinal": "3",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.ui.types/ColorRgba.green",
+        "ordinal": "2",
         "type": "float32"
     },
     {
         "kind": "struct/member",
         "name": "fuchsia.ui.types/ColorRgba.red",
+        "ordinal": "1",
         "type": "float32"
     },
     {

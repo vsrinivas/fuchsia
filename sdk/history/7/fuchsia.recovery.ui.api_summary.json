@@ -2,6 +2,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.recovery.ui/FactoryResetCountdown.Watch",
+        "ordinal": "2110053491362534458",
         "type": "() -> (fuchsia.recovery.ui/FactoryResetCountdownState state)"
     },
     {
@@ -11,6 +12,7 @@
     {
         "kind": "table/member",
         "name": "fuchsia.recovery.ui/FactoryResetCountdownState.scheduled_reset_time",
+        "ordinal": "1",
         "type": "int64"
     },
     {
@@ -20,6 +22,7 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.recovery.ui/ProgressRenderer.Render",
+        "ordinal": "7561608878216714836",
         "type": "(fuchsia.recovery.ui/Status status,float32 percent_complete) -> ()"
     },
     {

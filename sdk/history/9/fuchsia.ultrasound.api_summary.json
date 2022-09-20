@@ -2,11 +2,13 @@
     {
         "kind": "protocol/member",
         "name": "fuchsia.ultrasound/Factory.CreateCapturer",
+        "ordinal": "1048052345372418325",
         "type": "(server_end:fuchsia.media/AudioCapturer request) -> (zx/handle:CLOCK reference_clock,fuchsia.media/AudioStreamType stream_type)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.ultrasound/Factory.CreateRenderer",
+        "ordinal": "4389033919919192370",
         "type": "(server_end:fuchsia.media/AudioRenderer renderer) -> (zx/handle:CLOCK reference_clock,fuchsia.media/AudioStreamType stream_type)"
     },
     {
