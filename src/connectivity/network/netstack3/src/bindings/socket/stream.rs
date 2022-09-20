@@ -25,10 +25,9 @@ use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, Peered as _};
 use futures::StreamExt as _;
 use net_types::{
-    ip::{IpAddress, IpVersionMarker, Ipv4, Ipv6},
+    ip::{IpAddress, IpVersion, IpVersionMarker, Ipv4, Ipv6},
     SpecifiedAddr, ZonedAddr,
 };
-use packet::Buf;
 
 use crate::bindings::{
     socket::{IntoErrno, IpSockAddrExt, SockAddr, ZXSIO_SIGNAL_CONNECTED, ZXSIO_SIGNAL_INCOMING},
@@ -37,18 +36,20 @@ use crate::bindings::{
 };
 
 use netstack3_core::{
-    ip::{socket::BufferIpSocketHandler, IpExt, TransportIpContext},
+    ip::IpExt,
     transport::tcp::{
         buffer::{Buffer, IntoBuffers, ReceiveBuffer, RingBuffer},
         segment::Payload,
         socket::{
-            accept, bind, connect_bound, connect_unbound, create_socket, listen, AcceptError,
-            BindError, BoundId, BoundInfo, ConnectError, ConnectionId, ListenerId,
-            LocallyBoundSocketId as _, SocketAddr, TcpNonSyncContext, TcpSyncContext, UnboundId,
+            accept_v4, accept_v6, bind, connect_bound, connect_unbound, create_socket,
+            get_bound_v4_info, get_bound_v6_info, get_connection_v4_info, get_connection_v6_info,
+            get_listener_v4_info, get_listener_v6_info, listen, AcceptError, BindError, BoundId,
+            BoundInfo, ConnectError, ConnectionId, ListenerId, SocketAddr, TcpNonSyncContext,
+            UnboundId,
         },
         state::Takeable,
     },
-    Ctx, SyncCtx,
+    Ctx,
 };
 
 #[derive(Debug)]
@@ -232,7 +233,7 @@ where
                 let mut guard = ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 SocketId::Unbound(
-                    create_socket::<Ipv4, _, _>(sync_ctx, non_sync_ctx),
+                    create_socket::<Ipv4, _>(sync_ctx, non_sync_ctx),
                     LocalZirconSocket(local),
                 )
             };
@@ -244,7 +245,7 @@ where
                 let mut guard = ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 SocketId::Unbound(
-                    create_socket::<Ipv6, _, _>(sync_ctx, non_sync_ctx),
+                    create_socket::<Ipv6, _>(sync_ctx, non_sync_ctx),
                     LocalZirconSocket(local),
                 )
             };
@@ -286,9 +287,6 @@ where
     C: LockableContext,
     C: Clone + Send + Sync + 'static,
     C::NonSyncCtx: SocketWorkerDispatcher,
-    SyncCtx<C::NonSyncCtx>: TcpSyncContext<I, C::NonSyncCtx>
-        + TransportIpContext<I, C::NonSyncCtx>
-        + BufferIpSocketHandler<I, C::NonSyncCtx, Buf<Vec<u8>>>,
 {
     fn spawn(mut self, request_stream: fposix_socket::StreamSocketRequestStream) {
         fasync::Task::spawn(async move {
@@ -341,7 +339,7 @@ where
                 let addr = I::SocketAddress::from_sock_addr(addr)?;
                 let mut guard = self.ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-                let bound = bind::<I, _, _>(
+                let bound = bind::<I, _>(
                     sync_ctx,
                     non_sync_ctx,
                     unbound,
@@ -366,7 +364,7 @@ where
         let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
         match self.id {
             SocketId::Bound(bound, ref mut local_socket) => {
-                let connected = connect_bound::<I, _, _>(
+                let connected = connect_bound::<I, _>(
                     sync_ctx,
                     non_sync_ctx,
                     bound,
@@ -378,7 +376,7 @@ where
                 Ok(())
             }
             SocketId::Unbound(unbound, ref mut local_socket) => {
-                let connected = connect_unbound::<I, _, _>(
+                let connected = connect_unbound::<I, _>(
                     sync_ctx,
                     non_sync_ctx,
                     unbound,
@@ -400,7 +398,7 @@ where
                 let mut guard = self.ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
                 let backlog = NonZeroUsize::new(backlog as usize).ok_or(fposix::Errno::Einval)?;
-                let listener = listen::<I, _, _>(sync_ctx, non_sync_ctx, bound, backlog);
+                let listener = listen::<I, _>(sync_ctx, non_sync_ctx, bound, backlog);
                 let LocalZirconSocket(local) = local_socket.take();
                 non_sync_ctx.register_listener(listener, local);
                 self.id = SocketId::Listener(listener);
@@ -414,22 +412,44 @@ where
 
     async fn get_sock_name(&self) -> Result<fnet::SocketAddress, fposix::Errno> {
         let mut guard = self.ctx.lock().await;
-        let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
+        let Ctx { sync_ctx, non_sync_ctx: _ } = guard.deref_mut();
         match self.id {
             SocketId::Unbound(_, _) => Err(fposix::Errno::Einval),
             SocketId::Bound(id, _) => Ok({
-                let BoundInfo { addr, port } = id.get_info(sync_ctx, non_sync_ctx);
-                (addr, port).into_fidl()
+                match I::VERSION {
+                    IpVersion::V4 => {
+                        let BoundInfo { addr, port } = get_bound_v4_info(sync_ctx, id);
+                        (addr, port).into_fidl().into_sock_addr()
+                    }
+                    IpVersion::V6 => {
+                        let BoundInfo { addr, port } = get_bound_v6_info(sync_ctx, id);
+                        (addr, port).into_fidl().into_sock_addr()
+                    }
+                }
             }),
             SocketId::Listener(id) => Ok({
-                let BoundInfo { addr, port } = id.get_info(sync_ctx, non_sync_ctx);
-                (addr, port).into_fidl()
+                match I::VERSION {
+                    IpVersion::V4 => {
+                        let BoundInfo { addr, port } = get_listener_v4_info(sync_ctx, id);
+                        (addr, port).into_fidl().into_sock_addr()
+                    }
+                    IpVersion::V6 => {
+                        let BoundInfo { addr, port } = get_listener_v6_info(sync_ctx, id);
+                        (addr, port).into_fidl().into_sock_addr()
+                    }
+                }
             }),
-            SocketId::Connection(id) => {
-                Ok(id.get_info(sync_ctx, non_sync_ctx).local_addr.into_fidl())
-            }
+            SocketId::Connection(id) => Ok({
+                match I::VERSION {
+                    IpVersion::V4 => {
+                        get_connection_v4_info(sync_ctx, id).local_addr.into_fidl().into_sock_addr()
+                    }
+                    IpVersion::V6 => {
+                        get_connection_v6_info(sync_ctx, id).local_addr.into_fidl().into_sock_addr()
+                    }
+                }
+            }),
         }
-        .map(SockAddr::into_sock_addr)
     }
 
     async fn accept(
@@ -443,11 +463,30 @@ where
             SocketId::Listener(listener) => {
                 let mut guard = self.ctx.lock().await;
                 let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
-                let (accepted, SocketAddr { ip, port }, peer) =
-                    accept::<I, _, _>(sync_ctx, non_sync_ctx, listener)
-                        .map_err(IntoErrno::into_errno)?;
-                let addr = I::SocketAddress::new(Some(ZonedAddr::Unzoned(ip)), port.get())
-                    .into_sock_addr();
+                let (accepted, addr, peer) = match I::VERSION {
+                    IpVersion::V4 => {
+                        let (accepted, SocketAddr { ip, port }, peer) =
+                            accept_v4(sync_ctx, non_sync_ctx, listener)
+                                .map_err(IntoErrno::into_errno)?;
+                        (
+                            accepted,
+                            fnet::Ipv4SocketAddress::new(Some(ZonedAddr::Unzoned(ip)), port.get())
+                                .into_sock_addr(),
+                            peer,
+                        )
+                    }
+                    IpVersion::V6 => {
+                        let (accepted, SocketAddr { ip, port }, peer) =
+                            accept_v6(sync_ctx, non_sync_ctx, listener)
+                                .map_err(IntoErrno::into_errno)?;
+                        (
+                            accepted,
+                            fnet::Ipv6SocketAddress::new(Some(ZonedAddr::Unzoned(ip)), port.get())
+                                .into_sock_addr(),
+                            peer,
+                        )
+                    }
+                };
                 let (client, request_stream) =
                     fidl::endpoints::create_request_stream::<fposix_socket::StreamSocketMarker>()
                         .expect("failed to create new fidl endpoints");
