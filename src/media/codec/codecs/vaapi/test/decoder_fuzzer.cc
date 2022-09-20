@@ -241,6 +241,7 @@ void VaapiFuzzerTestFixture::onCoreCodecMidStreamOutputConstraintsChange(
 
   // Set the codec output format to either linear or tiled depending on the fuzzer
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+  buffer_collection.buffer_count = output_constraints.min_buffer_count_for_camping;
   buffer_collection.settings.has_image_format_constraints = true;
   buffer_collection.settings.image_format_constraints = image_constraints;
   decoder_->CoreCodecSetBufferCollectionInfo(CodecPort::kOutputPort, buffer_collection);
