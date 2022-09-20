@@ -117,11 +117,15 @@ const c int32 = true;
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "true");
 }
 
-TEST(ConstsTests, GoodConstTesUint64) {
-  TestLibrary library(R"FIDL(library example;
+TEST(ConstsTests, GoodConstTestInt64) {
+  TestLibrary library;
+  library.AddFile("good/simple_int_const.test.fidl");
+  ASSERT_COMPILED(library);
+}
 
-const a int64 = 42;
-)FIDL");
+TEST(ConstsTests, GoodConstTesUint64) {
+  TestLibrary library;
+  library.AddFile("good/simple_uint_const.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -135,11 +139,8 @@ const b uint64 = a;
 }
 
 TEST(ConstsTests, BadConstTestUint64Negative) {
-  TestLibrary library(R"FIDL(
-library example;
-
-const a uint64 = -42;
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/uint_overflow.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantOverflowsType,
                                       fidl::ErrCannotResolveConstantValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-42");

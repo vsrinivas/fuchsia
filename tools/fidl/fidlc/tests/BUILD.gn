@@ -24,6 +24,7 @@ host_test_data("bad_cases") {
     "fidl/bad/self_referential_struct.test.fidl",
     "fidl/bad/self_referential_table.test.fidl",
     "fidl/bad/transports_reassigned.test.fidl",
+    "fidl/bad/uint_overflow.test.fidl",
     "fidl/bad/unused_import.test.fidl",
     "fidl/bad/vector_bound_twice.test.fidl",
   ]
@@ -38,10 +39,12 @@ host_test_data("good_cases") {
     "fidl/good/recursive_type.test.fidl",
     "fidl/good/simple_bits.test.fidl",
     "fidl/good/simple_import.test.fidl",
+    "fidl/good/simple_int_const.test.fidl",
     "fidl/good/simple_resourceness.test.fidl",
     "fidl/good/simple_strictness.test.fidl",
     "fidl/good/simple_struct.test.fidl",
     "fidl/good/simple_transports.test.fidl",
+    "fidl/good/simple_uint_const.test.fidl",
     "fidl/good/strict_union.test.fidl",
     "fidl/good/unbounded_vector_bound_twice.test.fidl",
   ]
