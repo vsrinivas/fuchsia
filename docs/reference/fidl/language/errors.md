@@ -6,4 +6,6 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<errors/_fi-0018.md>>
 
+<<errors/_fi-0040.md>>
+
 [docs-fidlc]: ../language/fidlc.md

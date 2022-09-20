@@ -353,18 +353,6 @@ TEST(UsingTests, BadTooManyProvidedLibraries) {
   ASSERT_EQ(fidl::NameLibrary((*unused.begin())->name), "not.used");
 }
 
-TEST(UsingTests, BadFilesDisagreeOnLibraryName) {
-  TestLibrary library;
-  library.AddSource("lib_file1.fidl", R"FIDL(
-library lib;
-)FIDL");
-  library.AddSource("lib_file2.fidl", R"FIDL(
-library dib;
-)FIDL");
-
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFilesDisagreeOnLibraryName);
-}
-
 TEST(UsingTests, BadLibraryDeclarationNameCollision) {
   SharedAmongstLibraries shared;
   TestLibrary dependency(&shared, "dep.fidl", R"FIDL(library dep;

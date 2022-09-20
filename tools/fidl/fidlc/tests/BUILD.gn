@@ -12,12 +12,20 @@ group("tests") {
 }
 
 host_test_data("bad_cases") {
-  sources = [ "fidl/bad/cannot_start_at_zero.test.fidl" ]
+  sources = [
+    "fidl/bad/cannot_start_at_zero.test.fidl",
+    "fidl/bad/files_disagree_on_library_name_1.test.fidl",
+    "fidl/bad/files_disagree_on_library_name_2.test.fidl",
+  ]
   outputs = [ "$root_out_dir/fidlc-tests/bad/{{source_file_part}}" ]
 }
 
 host_test_data("good_cases") {
-  sources = [ "fidl/good/strict_union.test.fidl" ]
+  sources = [
+    "fidl/good/library_multiple_files_1.test.fidl",
+    "fidl/good/library_multiple_files_2.test.fidl",
+    "fidl/good/strict_union.test.fidl",
+  ]
   outputs = [ "$root_out_dir/fidlc-tests/good/{{source_file_part}}" ]
 }
 
@@ -44,6 +52,7 @@ test("fidlc-test") {
     "handle_tests.cc",
     "json_diagnostics_tests.cc",
     "json_findings_tests.cc",
+    "library_tests.cc",
     "lint_findings_tests.cc",
     "lint_tests.cc",
     "method_tests.cc",
