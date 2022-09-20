@@ -249,6 +249,13 @@ zx_status_t WlanSoftmacDevice::WlanSoftmacStartActiveScan(
   return mac_start_active_scan(mvmvif_, active_scan_args, out_scan_id);
 }
 
+zx_status_t WlanSoftmacDevice::WlanSoftmacCancelScan(
+    uint64_t scan_id) {
+  // TODO(fxbug.dev/107743): Implement.
+  CHECK_DELETE_IN_PROGRESS_WITH_ERRCODE(mvmvif_);
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t WlanSoftmacDevice::WlanSoftmacUpdateWmmParams(wlan_ac_t ac,
                                                           const wlan_wmm_params_t* params) {
   IWL_ERR(this, "%s() needs porting\n", __func__);

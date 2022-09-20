@@ -1082,7 +1082,10 @@ pub(crate) mod test_utils {
 
     pub fn fake_discovery_support() -> banjo_common::DiscoverySupport {
         banjo_common::DiscoverySupport {
-            scan_offload: banjo_common::ScanOffloadExtension { supported: true },
+            scan_offload: banjo_common::ScanOffloadExtension {
+                supported: true,
+                scan_cancel_supported: false,
+            },
             probe_response_offload: banjo_common::ProbeResponseOffloadExtension {
                 supported: false,
             },

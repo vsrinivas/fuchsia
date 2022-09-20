@@ -217,7 +217,10 @@ mod tests {
             name: String::from("devwatchtap"),
             quiet: false,
             discovery_support: fidl_wlan_common::DiscoverySupport {
-                scan_offload: fidl_wlan_common::ScanOffloadExtension { supported: false },
+                scan_offload: fidl_wlan_common::ScanOffloadExtension {
+                    supported: false,
+                    scan_cancel_supported: false,
+                },
                 probe_response_offload: fidl_wlan_common::ProbeResponseOffloadExtension {
                     supported: false,
                 },

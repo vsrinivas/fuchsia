@@ -422,6 +422,9 @@ protocol WlanSoftmac {
     /// Start a passive scan in the device driver. Scan results will be delivered as Beacon
     /// frames via WlanSoftmacIfc.Recv(). When complete, WlanSoftmacIfc.ScanComplete() will
     /// be called with the corresponding unique `scan_id`.
+    ///
+    /// A device driver indicates support for `StartPassiveScan()` using
+    /// `fuchsia.wlan.common/ScanOffloadExtension.supported`.
     StartPassiveScan(struct {
         args WlanSoftmacPassiveScanArgs;
     }) -> (struct {
@@ -437,11 +440,29 @@ protocol WlanSoftmac {
     /// defined by IEEE Std 802.11-2016, 9.2.4.7. MMPDU limit constants can be found in
     /// fuchsia.wlan.ieee80211. These limits are very large and will likely not be exceeded
     /// by specifying the most common IEs found in Probe Request frames.
+    ///
+    /// A device driver indicates support for `StartActiveScan()` using
+    /// `fuchsia.wlan.common/ProbeResponseOffloadExtension.supported`.
     StartActiveScan(struct {
         args WlanSoftmacActiveScanArgs;
     }) -> (struct {
         status zx.status;
         scan_id uint64;
+    });
+
+    /// If supported, cancel the ongoing scan corresponding to `scan_id` in the
+    /// device driver, where `scan_id` is an identifier returned by `StartPassiveScan()`
+    /// or `StartActiveScan()`. The return value of this function indicates whether
+    /// a valid scan_id was passed and will be cancelled. The actual result of
+    /// cancellation should be indicated by the driver using
+    /// `fuchsia.hardware.wlan.softmac/WlanSoftmacIfc.ScanComplete()`.
+    ///
+    /// A device driver indicates support for `CancelScan()` using
+    /// `fuchsia.wlan.common/ScanOffloadExtension.scan_cancel_supported`.
+    CancelScan(struct {
+        scan_id uint64;
+    }) -> (struct {
+        status zx.status;
     });
 
     /// Notifies change of WMM parameters for specified AC

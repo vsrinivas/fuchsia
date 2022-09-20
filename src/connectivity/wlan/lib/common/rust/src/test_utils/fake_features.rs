@@ -6,7 +6,10 @@ use fidl_fuchsia_wlan_common as fidl_common;
 
 pub fn fake_discovery_support() -> fidl_common::DiscoverySupport {
     fidl_common::DiscoverySupport {
-        scan_offload: fidl_common::ScanOffloadExtension { supported: true },
+        scan_offload: fidl_common::ScanOffloadExtension {
+            supported: true,
+            scan_cancel_supported: false,
+        },
         probe_response_offload: fidl_common::ProbeResponseOffloadExtension { supported: false },
     }
 }

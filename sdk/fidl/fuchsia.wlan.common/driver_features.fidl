@@ -10,6 +10,8 @@ library fuchsia.wlan.common;
 type ScanOffloadExtension = struct {
     /// If true, driver orchestrates scans; otherwise MLME must do so.
     supported bool;
+    @available(added=10)
+    scan_cancel_supported bool;
 };
 
 /// Indicates where and how probe responses are to be handled.

@@ -56,6 +56,7 @@ class WlanSoftmacDevice
                                           uint64_t* out_scan_id);
   zx_status_t WlanSoftmacStartActiveScan(const wlan_softmac_active_scan_args_t* active_scan_args,
                                          uint64_t* out_scan_id);
+  zx_status_t WlanSoftmacCancelScan(uint64_t scan_id);
   zx_status_t WlanSoftmacUpdateWmmParams(wlan_ac_t ac, const wlan_wmm_params_t* params);
 
   // Helper function

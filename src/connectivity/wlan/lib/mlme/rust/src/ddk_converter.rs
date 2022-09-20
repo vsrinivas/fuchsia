@@ -133,8 +133,10 @@ pub fn device_info_from_wlan_softmac_info(
 pub fn convert_ddk_discovery_support(
     support: banjo_common::DiscoverySupport,
 ) -> Result<fidl_common::DiscoverySupport, Error> {
-    let scan_offload =
-        fidl_common::ScanOffloadExtension { supported: support.scan_offload.supported };
+    let scan_offload = fidl_common::ScanOffloadExtension {
+        supported: support.scan_offload.supported,
+        scan_cancel_supported: support.scan_offload.scan_cancel_supported,
+    };
     let probe_response_offload = fidl_common::ProbeResponseOffloadExtension {
         supported: support.probe_response_offload.supported,
     };

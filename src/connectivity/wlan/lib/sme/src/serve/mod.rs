@@ -583,7 +583,10 @@ mod tests {
         let discovery_req = assert_variant!(helper.exec.run_until_stalled(&mut helper.mlme_req_stream.next()), Poll::Ready(Some(req)) => req);
         let discovery_responder = assert_variant!(discovery_req, crate::MlmeRequest::QueryDiscoverySupport(responder) => responder);
         let expected_discovery_support = fidl_common::DiscoverySupport {
-            scan_offload: fidl_common::ScanOffloadExtension { supported: true },
+            scan_offload: fidl_common::ScanOffloadExtension {
+                supported: true,
+                scan_cancel_supported: false,
+            },
             probe_response_offload: fidl_common::ProbeResponseOffloadExtension { supported: false },
         };
         discovery_responder.respond(expected_discovery_support);

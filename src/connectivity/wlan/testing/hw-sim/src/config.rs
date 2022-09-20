@@ -29,7 +29,10 @@ pub(crate) fn create_wlantap_config(
         name,
         quiet: false,
         discovery_support: fidl_common::DiscoverySupport {
-            scan_offload: fidl_common::ScanOffloadExtension { supported: true },
+            scan_offload: fidl_common::ScanOffloadExtension {
+                supported: true,
+                scan_cancel_supported: false,
+            },
             probe_response_offload: fidl_common::ProbeResponseOffloadExtension { supported: false },
         },
         mac_sublayer_support: fidl_common::MacSublayerSupport {
