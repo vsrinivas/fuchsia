@@ -74,6 +74,8 @@ static std::optional<uint32_t> GetUint32(const char* arg) {
   return {result};
 }
 
+// If you update this help text you should probably also update the reference
+// documentation at //docs/reference/hardware/tools/audio-driver-ctl.md
 void usage(const char* prog_name) {
   // clang-format off
   printf(
@@ -101,9 +103,14 @@ void usage(const char* prog_name) {
       "  -a <mask>              Active channel mask. For example `0xf` or `15` for\n"
       "                         channels 0, 1, 2, and 3. Defaults to all channels.\n"
       "  -b (8|16|20|24|32)     Bits per sample. Defaults to `16`.\n"
-      "  -c <channels>          Number of channels. Defaults to the first driver-reported\n"
-      "                         value. Run `audio-driver-ctl info` to see how many channels\n"
-      "                         your target Fuchsia device has.\n"
+      "  -c <channels>          Number of channels to use when recording or generating\n"
+      "                         tones/noises. Does not affect playback of WAV files\n"
+      "                         because WAV files specify how many channels to use in\n"
+      "                         their headers. Defaults to the first driver-reported\n"
+      "                         value. Run `audio-driver-ctl info` to see how many\n"
+      "                         channels your target Fuchsia device has. The number of\n"
+      "                         channels must match what the audio driver expects\n"
+      "                         because `audio-driver-ctl` does not do any mixing.\n"
       "  -d <id>                The device node ID of the stream. Defaults to `0`.\n"
       "                         To figure out <id>, run `audio-driver-ctl info`. You'll\n"
       "                         see path values like `/dev/class/audio-input/000`. <id> in\n"
@@ -116,7 +123,7 @@ void usage(const char* prog_name) {
       "Commands:\n"
       "  agc                    Enables or disables automatic gain control for the stream.\n"
       "  duplex                 Simultaneously plays the WAV file located at <playpath>\n"
-      "                         and records it to another WAV file located at <recordpath>\n"
+      "                         and records another WAV file into <recordpath>\n"
       "                         in order to analyze the delays in the system. The `-c`\n"
       "                         option if provided applies to the recording side since\n"
       "                         the number of channels for playback is taken from the\n"
@@ -143,8 +150,7 @@ void usage(const char* prog_name) {
       "                         and %.1f hertz (default: %.1f hertz). <seconds> must be above\n"
       "                         %.3f seconds. If <seconds> is not provided the tone plays\n"
       "                         until a key is pressed. <amplitude> scales the output\n"
-      "                         if provided and must be an increment of 0.1 between\n"
-      "                         %.1f and %.1f.\n", MIN_TONE_FREQ, MAX_TONE_FREQ, DEFAULT_TONE_FREQ, MIN_PLAY_DURATION, MIN_PLAY_AMPLITUDE, MAX_PLAY_AMPLITUDE);
+      "                         if provided and must be between %.1f and %.1f.\n", MIN_TONE_FREQ, MAX_TONE_FREQ, DEFAULT_TONE_FREQ, MIN_PLAY_DURATION, MIN_PLAY_AMPLITUDE, MAX_PLAY_AMPLITUDE);
   printf(
       "  unmute                 Unmutes a stream. Note that the gain of the stream will\n"
       "                         be reset to its default value.\n\n"
@@ -187,6 +193,9 @@ void usage(const char* prog_name) {
       "  Unmute the default output stream:\n"
       "  $ audio-driver-ctl unmute\n\n"
       "Notes:\n"
+      "  Commands that exercise audio streams such as `play` are only supported in diagnostic\n"
+      "  product bundles (https://fuchsia.dev/fuchsia-src/glossary#product-bundle) like `core`.\n"
+      "  In other builds only the informational commands like `info` are supported.\n\n"
       "  To copy WAV files from your host to your target Fuchsia device or vice versa,\n"
       "  run `fx cp (--to-target|--to-host) <source> <destination>` on your host.\n"
       "  <source> is the file you want to copy and <destination> is where you want\n"
