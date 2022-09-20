@@ -16,9 +16,13 @@ namespace media_audio {
 // Not safe for concurrent use.
 class SyntheticClockFactory : public ClockFactory {
  public:
-  explicit SyntheticClockFactory(std::shared_ptr<SyntheticClockRealm> realm) : realm_(realm) {}
+  explicit SyntheticClockFactory(std::shared_ptr<SyntheticClockRealm> realm)
+      : realm_(std::move(realm)),
+        system_mono_(realm_->CreateClock("SystemMonotonicClock", Clock::kMonotonicDomain,
+                                         /*adjustable=*/false)) {}
 
   // Implements ClockFactory.
+  std::shared_ptr<const Clock> SystemMonotonicClock() const override { return system_mono_; }
   zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>> CreateGraphControlledClock(
       std::string_view name) override;
   zx::status<std::shared_ptr<Clock>> CreateWrappedClock(zx::clock handle, std::string_view name,
@@ -27,6 +31,7 @@ class SyntheticClockFactory : public ClockFactory {
 
  private:
   const std::shared_ptr<SyntheticClockRealm> realm_;
+  const std::shared_ptr<const Clock> system_mono_;
 };
 
 }  // namespace media_audio

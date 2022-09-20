@@ -68,6 +68,22 @@ type StreamSinkConsumer = resource table {
     ///
     /// Required.
     3: reference_clock ReferenceClock;
+
+    /// Payload buffer used by packets on this StreamSink.
+    ///
+    /// Required.
+    4: payload_buffer zx.handle:VMO;
+
+    /// Packet timestamps use "media time", which has
+    /// `media_ticks_per_second_numerator` ticks every
+    /// `media_ticks_per_second_denominator` seconds.
+    5: media_ticks_per_second_numerator uint64;
+    6: media_ticks_per_second_denominator uint64;
+
+    /// Numer of frames to produce in each packet.
+    ///
+    /// Optional.
+    7: frames_per_packet uint32;
 };
 
 /// A handle to a reference clock.

@@ -31,6 +31,10 @@ zx::status<zx_koid_t> ZxClockToKoid(const zx::clock& handle) {
 }
 }  // namespace
 
+std::shared_ptr<const Clock> ClockRegistry::SystemMonotonicClock() const {
+  return factory_->SystemMonotonicClock();
+}
+
 zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>>
 ClockRegistry::CreateGraphControlledClock() {
   auto name = std::string("GraphControlledClock") + std::to_string(num_graph_controlled_);

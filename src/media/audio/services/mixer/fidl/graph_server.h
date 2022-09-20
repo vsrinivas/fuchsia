@@ -81,18 +81,19 @@ class GraphServer : public BaseFidlServer<GraphServer, fuchsia_audio_mixer::Grap
   explicit GraphServer(Args args);
 
   NodeId NextNodeId();
-  std::shared_ptr<Clock> LookupClock(fuchsia_audio::wire::RingBuffer& ring_buffer,
-                                     std::string_view node_name);
-  std::shared_ptr<Clock> LookupClock(fuchsia_audio_mixer::wire::ReferenceClock& clock,
-                                     std::string_view node_name);
-  std::shared_ptr<Clock> LookupClock(zx::clock clock, uint32_t domain, std::string_view name);
+  ThreadId NextThreadId();
 
   const std::string name_;
   const std::shared_ptr<const FidlThread> realtime_fidl_thread_;
   const DetachedThreadPtr detached_thread_ = DetachedThread::Create();
+  const std::shared_ptr<GlobalTaskQueue> global_task_queue_ = std::make_shared<GlobalTaskQueue>();
 
   std::unordered_map<NodeId, NodePtr> nodes_;
   NodeId next_node_id_ = 1;
+
+  std::unordered_map<ThreadId, MixThreadPtr> threads_;
+  ThreadId next_thread_id_ = 1;
+
   std::shared_ptr<ClockRegistry> clock_registry_;
 };
 

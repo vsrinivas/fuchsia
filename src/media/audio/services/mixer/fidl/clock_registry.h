@@ -25,6 +25,9 @@ class ClockFactory {
  public:
   virtual ~ClockFactory() = default;
 
+  // Returns a singleton which represents the system monotonic clock.
+  virtual std::shared_ptr<const Clock> SystemMonotonicClock() const = 0;
+
   // Creates a graph-controlled clock with the given. The return value includes an actual Clock
   // object along with a zx::clock handle which must have the same koid as the Clock. The returned
   // Clock mjust be adjustable. The returned handle must have ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER
@@ -61,6 +64,9 @@ class ClockFactory {
 class ClockRegistry {
  public:
   explicit ClockRegistry(std::shared_ptr<ClockFactory> factory) : factory_(std::move(factory)) {}
+
+  // Returns a singleton which represents the system monotonic clock.
+  std::shared_ptr<const Clock> SystemMonotonicClock() const;
 
   // Creates a graph-controlled clock. The return value includes an actual Clock object along with a
   // zx::clock handle which can identify the Clock in future FindClock calls. The returned Clock is

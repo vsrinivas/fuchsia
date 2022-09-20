@@ -83,6 +83,9 @@ class MixThread : public Thread {
   void AddConsumer(ConsumerStagePtr consumer) final TA_REQ(checker());
   void RemoveConsumer(ConsumerStagePtr consumer) final TA_REQ(checker());
 
+  // Reports the mix period.
+  zx::duration mix_period() const { return mix_period_; }
+
   // Shuts down this thread.
   // The underlying kernel thread will tear itself down asynchronously.
   void Shutdown() TA_REQ(checker());

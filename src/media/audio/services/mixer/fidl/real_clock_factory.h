@@ -15,12 +15,18 @@ namespace media_audio {
 // Not safe for concurrent use.
 class RealClockFactory : public ClockFactory {
  public:
+  RealClockFactory();
+
   // Implements ClockFactory.
+  std::shared_ptr<const Clock> SystemMonotonicClock() const override { return system_mono_; }
   zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>> CreateGraphControlledClock(
       std::string_view name) override;
   zx::status<std::shared_ptr<Clock>> CreateWrappedClock(zx::clock handle, std::string_view name,
                                                         uint32_t domain, bool adjustable) override;
   std::shared_ptr<Timer> CreateTimer() override;
+
+ private:
+  const std::shared_ptr<const Clock> system_mono_;
 };
 
 }  // namespace media_audio

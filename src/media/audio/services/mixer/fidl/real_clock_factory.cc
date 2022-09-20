@@ -12,6 +12,21 @@
 
 namespace media_audio {
 
+namespace {
+std::shared_ptr<const Clock> CreateSystemMonotonicClock() {
+  zx::clock mono;
+  auto status = zx::clock::create(
+      ZX_CLOCK_OPT_AUTO_START | ZX_CLOCK_OPT_MONOTONIC | ZX_CLOCK_OPT_CONTINUOUS, nullptr, &mono);
+  if (status != ZX_OK) {
+    FX_PLOGS(FATAL, status) << "zx::clock::create failed for system monotonic clock";
+  }
+  return RealClock::Create("SystemMonotonicClock", std::move(mono), Clock::kMonotonicDomain,
+                           /*adjustable=*/false);
+}
+}  // namespace
+
+RealClockFactory::RealClockFactory() : system_mono_(CreateSystemMonotonicClock()) {}
+
 zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>>
 RealClockFactory::CreateGraphControlledClock(std::string_view name) {
   // Create a new zx::clock.
@@ -32,7 +47,7 @@ RealClockFactory::CreateGraphControlledClock(std::string_view name) {
   }
 
   auto clock = RealClock::Create(name, std::move(adjustable_handle), Clock::kExternalDomain,
-                                 /* adjustable = */ true);
+                                 /*adjustable=*/true);
   return zx::ok(std::make_pair(std::move(clock), std::move(unadjustable_handle)));
 }
 
