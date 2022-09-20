@@ -19,10 +19,13 @@ struct Variant<'a> {
 }
 
 /// A specific variation of a test.
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct TestVariation {
-    // Holds tuples of (trait name, implementation type name).
-    trait_replacements: Vec<(syn::Path, syn::Path)>,
+    /// Params that we use to instantiate the test.
+    params: Vec<syn::Path>,
+    /// Unrelated bounds that we pass along.
+    generics: Vec<syn::TypeParam>,
+    /// Suffix of the test name.
     suffix: String,
 }
 
@@ -35,6 +38,79 @@ fn str_to_syn_path(path: &str) -> syn::Path {
         });
     }
     syn::Path { leading_colon: None, segments }
+}
+
+fn permutations_over_type_generics(
+    variants: &[Variant<'_>],
+    type_generics: &[&syn::TypeParam],
+) -> Vec<TestVariation> {
+    // Generate the permutations by substituting implementations for generics
+    // with a recursive depth-first search.
+    fn do_permutation(
+        variants: &[Variant<'_>],
+        type_generics: &[&syn::TypeParam],
+        suffix: String,
+        params: &mut Vec<syn::Path>,
+        generics: &mut Vec<syn::TypeParam>,
+        test_variations: &mut Vec<TestVariation>,
+    ) {
+        let (first_generic, rest_generics) = match type_generics.split_first() {
+            Some(split) => split,
+            None => {
+                test_variations.push(TestVariation {
+                    params: params.clone(),
+                    generics: generics.clone(),
+                    suffix,
+                });
+                return;
+            }
+        };
+
+        let variants_for_first_generic: Option<&Variant<'_>> =
+            first_generic.bounds.iter().find_map(|b| {
+                let t = match b {
+                    syn::TypeParamBound::Trait(t) => t,
+                    syn::TypeParamBound::Lifetime(_) => return None,
+                };
+                variants.iter().find(|v| v.trait_bound == t.path)
+            });
+        match variants_for_first_generic {
+            None => {
+                // This parameter is not related to a test variation, keep the
+                // parameter in the generated function.
+                params.push(syn::Path::from(syn::PathSegment::from(first_generic.ident.clone())));
+                generics.push((*first_generic).clone());
+                do_permutation(variants, rest_generics, suffix, params, generics, test_variations);
+                let _: Option<_> = params.pop();
+                let _: Option<_> = generics.pop();
+            }
+            Some(Variant { trait_bound: _, implementations }) => {
+                for Implementation { type_name, suffix: s } in *implementations {
+                    params.push(type_name.clone());
+                    do_permutation(
+                        variants,
+                        rest_generics,
+                        format!("{}_{}", suffix, *s),
+                        params,
+                        generics,
+                        test_variations,
+                    );
+                    let _: Option<_> = params.pop();
+                }
+            }
+        }
+    }
+
+    let mut test_variations = Vec::new();
+    do_permutation(
+        variants,
+        &type_generics,
+        String::new(),
+        &mut Vec::new(),
+        &mut Vec::new(),
+        &mut test_variations,
+    );
+    test_variations
 }
 
 fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStream {
@@ -141,76 +217,17 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
         type_generics.push(generic_type)
     }
 
-    fn has_type_bound<'a, I: std::iter::Iterator<Item = &'a syn::TypeParamBound>>(
-        mut bounds: I,
-        want_bound: &syn::Path,
-    ) -> bool {
-        bounds.any(|b| match b {
-            syn::TypeParamBound::Trait(syn::TraitBound {
-                paren_token: _,
-                modifier: _,
-                lifetimes: _,
-                path,
-            }) => path == want_bound,
-            _ => false,
-        })
-    }
-
+    let mut impls = Vec::new();
     // Generate the list of test variations we will generate.
     //
     // The initial variation has no replacements or suffix.
-    let test_variations = variants.into_iter().fold(vec![TestVariation::default()], |acc, v| {
-        // If the test is not generic over `v`, then skip `v`.
-        if !type_generics.iter().any(|gtype| has_type_bound(gtype.bounds.iter(), &v.trait_bound)) {
-            return acc;
-        }
-
-        acc.into_iter()
-            .flat_map(|c| {
-                v.implementations.iter().map(move |i| {
-                    let mut tbs = c.trait_replacements.clone();
-                    tbs.push((v.trait_bound.clone(), i.type_name.clone()));
-                    TestVariation {
-                        trait_replacements: tbs,
-                        suffix: format!("{}_{}", c.suffix, i.suffix),
-                    }
-                })
-            })
-            .collect::<Vec<_>>()
-    });
-
-    let mut impls = Vec::with_capacity(test_variations.len());
-    for v in test_variations.iter() {
-        // We don't need to add an "_" betweeen the name and the suffix here as the suffix
+    for TestVariation { params, generics, suffix } in
+        permutations_over_type_generics(variants, &type_generics)
+    {
+        // We don't need to add an "_" between the name and the suffix here as the suffix
         // will start with one.
-        let test_name_str = format!("{}{}", name.to_string(), v.suffix);
+        let test_name_str = format!("{}{}", name.to_string(), suffix);
         let test_name = syn::Ident::new(&test_name_str, Span::call_site());
-
-        // Pass the test variation's type to the right generic parameters and
-        // leave the rest of the generics.
-        let mut generics = Vec::with_capacity(type_generics.len());
-        let mut params = Vec::with_capacity(type_generics.len());
-        for generic in type_generics.iter() {
-            let syn::TypeParam { attrs: _, ident, colon_token: _, bounds, eq_token: _, default: _ } =
-                &generic;
-
-            if let Some((_, tn)) =
-                v.trait_replacements.iter().find(|(tb, _)| has_type_bound(bounds.iter(), &tb))
-            {
-                // This parameter is relevant to the test variation.
-                params.push(tn.clone());
-            } else {
-                // This parameter is not related to a test variation, keep the
-                // parameter in the generated function.
-                let mut p = syn::punctuated::Punctuated::new();
-                p.push(syn::PathSegment {
-                    ident: ident.clone(),
-                    arguments: syn::PathArguments::None,
-                });
-                params.push(syn::Path { leading_colon: None, segments: p });
-                generics.push(generic);
-            }
-        }
 
         // Pass the test name as the first argument, and keep other arguments
         // in the generated function which will be passed to the original function.
@@ -361,6 +378,90 @@ fn variants_test_inner(input: TokenStream, variants: &[Variant<'_>]) -> TokenStr
 ///     >("test_foo_ns3_netdevice").await
 /// }
 /// ```
+//
+/// Similarly, this macro also handles expanding multiple occurrences of the
+/// same trait bound.
+/// ```
+/// #[variants_test]
+/// async fn test_foo<N1: Netstack, N2: Netstack, E: netemul::Endpoint>(name: &str) {/*...*/}
+/// ```
+///
+/// Expands to:
+/// ```
+/// async fn test_foo<N1: Netstack, N2: Netstack, E: netemul::Endpoint>(name: &str) {/*...*/}
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo_ns2_ns2_eth() {
+///     test_foo::<
+///         netstack_testing_common::realms::Netstack2,
+///         netstack_testing_common::realms::Netstack2,
+///         netemul::Ethernet,
+///     >("test_foo_ns2_ns2_eth")
+///     .await
+/// }
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo_ns2_ns2_netdevice() {
+///     test_foo::<
+///         netstack_testing_common::realms::Netstack2,
+///         netstack_testing_common::realms::Netstack2,
+///         netemul::NetworkDevice,
+///     >("test_foo_ns2_ns2_netdevice")
+///     .await
+/// }
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo_ns2_ns3_eth() {
+///     test_foo::<
+///         netstack_testing_common::realms::Netstack2,
+///         netstack_testing_common::realms::Netstack3,
+///         netemul::Ethernet,
+///     >("test_foo_ns2_ns3_eth")
+///     .await
+/// }
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo_ns2_ns3_netdevice() {
+///     test_foo::<
+///         netstack_testing_common::realms::Netstack2,
+///         netstack_testing_common::realms::Netstack3,
+///         netemul::NetworkDevice,
+///     >("test_foo_ns2_ns3_netdevice")
+///     .await
+/// }
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo_ns3_ns2_eth() {
+///     test_foo::<
+///         netstack_testing_common::realms::Netstack3,
+///         netstack_testing_common::realms::Netstack2,
+///         netemul::Ethernet,
+///     >("test_foo_ns3_ns2_eth")
+///     .await
+/// }
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo_ns3_ns2_netdevice() {
+///     test_foo::<
+///         netstack_testing_common::realms::Netstack3,
+///         netstack_testing_common::realms::Netstack2,
+///         netemul::NetworkDevice,
+///     >("test_foo_ns3_ns2_netdevice")
+///     .await
+/// }
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo_ns3_ns3_eth() {
+///     test_foo::<
+///         netstack_testing_common::realms::Netstack3,
+///         netstack_testing_common::realms::Netstack3,
+///         netemul::Ethernet,
+///     >("test_foo_ns3_ns3_eth")
+///     .await
+/// }
+/// #[fuchsia_async::run_singlethreaded(test)]
+/// async fn test_foo_ns3_ns3_netdevice() {
+///     test_foo::<
+///         netstack_testing_common::realms::Netstack3,
+///         netstack_testing_common::realms::Netstack3,
+///         netemul::NetworkDevice,
+///     >("test_foo_ns3_ns3_netdevice")
+///     .await
+/// }
+/// ```
 #[proc_macro_attribute]
 pub fn variants_test(attrs: TokenStream, input: TokenStream) -> TokenStream {
     if !attrs.is_empty() {
@@ -431,4 +532,105 @@ pub fn variants_test(attrs: TokenStream, input: TokenStream) -> TokenStream {
             },
         ],
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    #[derive(Debug)]
+    struct VariantExpectation {
+        params: Vec<&'static str>,
+        suffix: &'static str,
+    }
+
+    impl PartialEq<TestVariation> for VariantExpectation {
+        fn eq(&self, other: &TestVariation) -> bool {
+            self.suffix == other.suffix
+                && self.params
+                    == other
+                        .params
+                        .iter()
+                        .map(|p| p.get_ident().unwrap().to_string())
+                        .collect::<Vec<_>>()
+        }
+    }
+
+    #[test_case(vec![] => vec![VariantExpectation {
+        params: vec![],
+        suffix: "",
+    }]; "default")]
+    #[test_case(vec!["T: TraitA"] => vec![VariantExpectation {
+        params: vec!["ImplA1"],
+        suffix: "_a1",
+    }, VariantExpectation {
+        params: vec!["ImplA2"],
+        suffix: "_a2",
+    }]; "simple case")]
+    #[test_case(vec!["T: TraitA", "S: TraitB"] => vec![VariantExpectation {
+        params: vec!["ImplA1", "ImplB1"],
+        suffix: "_a1_b1",
+    }, VariantExpectation {
+        params: vec!["ImplA1", "ImplB2"],
+        suffix: "_a1_b2",
+    }, VariantExpectation {
+        params: vec!["ImplA2", "ImplB1"],
+        suffix: "_a2_b1",
+    }, VariantExpectation {
+        params: vec!["ImplA2", "ImplB2"],
+        suffix: "_a2_b2",
+    }]; "two traits")]
+    #[test_case(vec!["T1: TraitA", "T2: TraitA"] => vec![VariantExpectation {
+        params: vec!["ImplA1", "ImplA1"],
+        suffix: "_a1_a1",
+    }, VariantExpectation {
+        params: vec!["ImplA1", "ImplA2"],
+        suffix: "_a1_a2",
+    }, VariantExpectation {
+        params: vec!["ImplA2", "ImplA1"],
+        suffix: "_a2_a1",
+    }, VariantExpectation {
+        params: vec!["ImplA2", "ImplA2"],
+        suffix: "_a2_a2",
+    }]; "two occurrences of a single trait")]
+    fn permutation(generics: impl IntoIterator<Item = &'static str>) -> Vec<TestVariation> {
+        let generics = generics
+            .into_iter()
+            .map(|g| syn::parse_str(g).unwrap())
+            .collect::<Vec<syn::TypeParam>>();
+        let generics = generics.iter().collect::<Vec<&_>>();
+
+        permutations_over_type_generics(
+            &[
+                Variant {
+                    trait_bound: syn::parse_str("TraitA").unwrap(),
+                    implementations: &[
+                        Implementation {
+                            type_name: syn::parse_str("ImplA1").unwrap(),
+                            suffix: "a1",
+                        },
+                        Implementation {
+                            type_name: syn::parse_str("ImplA2").unwrap(),
+                            suffix: "a2",
+                        },
+                    ],
+                },
+                Variant {
+                    trait_bound: syn::parse_str("TraitB").unwrap(),
+                    implementations: &[
+                        Implementation {
+                            type_name: syn::parse_str("ImplB1").unwrap(),
+                            suffix: "b1",
+                        },
+                        Implementation {
+                            type_name: syn::parse_str("ImplB2").unwrap(),
+                            suffix: "b2",
+                        },
+                    ],
+                },
+            ],
+            &generics,
+        )
+    }
 }

@@ -743,22 +743,16 @@ async fn tcp_socket_accept_cross_ns<
     f(client, accepted).await
 }
 
-// TODO(https://fxbug.dev/109648): Parametrize netstack versions using variants_test.
 #[variants_test]
-async fn tcp_socket_accept<E: netemul::Endpoint>(name: &str) {
-    let ((), ()) = futures::join!(
-        tcp_socket_accept_cross_ns::<Netstack2, Netstack3, E, _, _>(
-            format!("{}_2to3", name),
-            |_ns2_client, _ns3_server| async {}
-        ),
-        tcp_socket_accept_cross_ns::<Netstack3, Netstack2, E, _, _>(
-            format!("{}_3to2", name),
-            |_ns3_client, _ns2_server| async {}
-        ),
-    );
+async fn tcp_socket_accept<E: netemul::Endpoint, Client: Netstack, Server: Netstack>(name: &str) {
+    tcp_socket_accept_cross_ns::<Client, Server, E, _, _>(
+        String::from(name),
+        |_client, _server| async {},
+    )
+    .await
 }
 
-// TODO(https://fxbug.dev/109648): Parametrize netstack versions using variants_test.
+// TODO(https://fxbug.dev/109349): Parametrize netstack versions using variants_test.
 #[variants_test]
 async fn tcp_socket_send_recv<E: netemul::Endpoint>(name: &str) {
     tcp_socket_accept_cross_ns::<Netstack2, Netstack3, E, _, _>(

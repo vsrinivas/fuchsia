@@ -14,6 +14,9 @@ rustc_macro("netstack_testing_macros") {
     "//third_party/rust_crates:syn",
   ]
 
+  test_deps = [ "//third_party/rust_crates:test-case" ]
+
   sources = [ "src/proc_macros.rs" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+  with_unit_tests = true
 }
