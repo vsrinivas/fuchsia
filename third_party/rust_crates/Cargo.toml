@@ -286,6 +286,7 @@ mio = { version = "0.8.2", features = ["net", "os-ext", "os-poll"] }
 nix = "0.20"
 notify = "5.0.0-pre.10"
 parking = "2"
+petgraph = "0.6.2"
 proc-macro2 = { version = "1.0.39", features = ["span-locations"] }
 polling = "2.0.2"
 pulldown-cmark = "0.6.0"

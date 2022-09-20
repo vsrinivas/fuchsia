@@ -1372,6 +1372,7 @@ dependencies = [
  "pest",
  "pest_derive",
  "pest_generator",
+ "petgraph",
  "pin-project",
  "pin-utils",
  "pkcs8",

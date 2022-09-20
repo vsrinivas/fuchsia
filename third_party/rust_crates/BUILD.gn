@@ -565,6 +565,12 @@ group("pest_generator") {
   public_deps = [ ":pest_generator-v2_1_3" ]
 }
 
+if (!(current_os == "fuchsia")) {
+  group("petgraph") {
+    public_deps = [ ":petgraph-v0_6_2" ]
+  }
+}
+
 group("pin-project") {
   public_deps = [ ":pin-project-v1_0_11" ]
 }
@@ -6972,6 +6978,10 @@ rust_library("petgraph-v0_6_2") {
     "--edition=2018",
     "-Cmetadata=10ec43366d8813bd",
     "-Cextra-filename=-10ec43366d8813bd",
+    "--cfg=feature=\"default\"",
+    "--cfg=feature=\"graphmap\"",
+    "--cfg=feature=\"matrix_graph\"",
+    "--cfg=feature=\"stable_graph\"",
   ]
 
   visibility = [ ":*" ]
