@@ -137,10 +137,14 @@ class Modular {
     await killBasemgr();
     // basemgr and all the agents can take some time to fully die.
 
-    var retry = 0;
-    while (retry++ <= 30 && await isRunning) {
+    final timer = Stopwatch();
+    timer.start();
+    final timeout = Duration(seconds: 30).inSeconds;
+    while (timer.elapsed.inSeconds < timeout && await isRunning) {
       await Future.delayed(const Duration(seconds: 2));
     }
+    _log.info(
+        'Waited ${timer.elapsed.inSeconds} seconds for Basemgr to shutdown.');
 
     if (await isRunning) {
       throw Sl4fException('Timeout for waiting basemgr to shut down.');
