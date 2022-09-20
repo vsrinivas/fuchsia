@@ -7,6 +7,8 @@
 
 #include <zircon/fidl.h>
 
+#include <algorithm>
+
 namespace fidl {
 
 // Implementation of std::array guaranteed to have the same memory layout as a C array,
@@ -41,6 +43,16 @@ struct Array final {
 
   static_assert(N > 0, "fidl::Array cannot have zero elements.");
 };
+
+template <typename T, size_t N>
+bool operator==(const fidl::Array<T, N>& lhs, const fidl::Array<T, N>& rhs) {
+  return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+}
+
+template <typename T, size_t N>
+bool operator!=(const fidl::Array<T, N>& lhs, const fidl::Array<T, N>& rhs) {
+  return !(lhs == rhs);
+}
 
 }  // namespace fidl
 

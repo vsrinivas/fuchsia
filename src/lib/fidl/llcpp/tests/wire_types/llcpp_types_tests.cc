@@ -136,6 +136,16 @@ TEST(LlcppTypesTests, ArrayLayoutTest) {
   EXPECT_EQ((&a[2] - &a[0]), (&b[2] - &b[0]));
 }
 
+TEST(LlcppTypesTests, ArrayEquality) {
+  constexpr fidl::Array<uint8_t, 3> foo{1, 2, 3};
+  constexpr fidl::Array<uint8_t, 3> bar{1, 2, 3};
+  EXPECT_EQ(foo, bar);
+
+  constexpr fidl::Array<uint8_t, 3> baz{0, 2, 3};
+  EXPECT_NE(foo, baz);
+  EXPECT_NE(bar, baz);
+}
+
 TEST(LlcppTypesTests, StringView) {
   fidl::Arena allocator;
 
