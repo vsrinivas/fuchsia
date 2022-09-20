@@ -34,8 +34,8 @@ be manually implemented. To set up a new IFTTT check, insert the special
 comments `// LINT.IfChange`  and  `// LINT.ThenChange(<other_file_path>)`  in
 each file that should be updated together.
 
-In the following example, IFTTT checks are implemented for  `test.go` and
-`main.README`. If only one of the files change, a warning appears in Gerrit.
+In the following example, IFTTT checks are implemented for `test.go` and
+`main.rs`. If only one of the files change, a warning appears in Gerrit.
 
 `test.go`
 
@@ -44,21 +44,38 @@ import fmt
 
 // LINT.IfChange
 
-fmt.Println("When this block changes, so must main.README")
+fmt.Println("When this block changes, so must main.rs")
 
-// LINT.ThenChange(main.README)
+// LINT.ThenChange(main.rs)
 ```
 
-`main.README`
+`main.rs`
 
-```text
-This is the main README file.
+```rust
+// LINT.IfChange
+
+println!("When this block changes, so must test.go");
+
+// LINT.ThenChange(test.go)
+```
+
+Note that for Markdown files, the structure must be wrapped in comments so that
+Markdown ignores the syntax.
+
+```markdown
+<!--
 
 // LINT.IfChange
 
-`test.go` prints "When this block changes, so must main.README"
+-->
+
+Block to be changed.
+
+<!--
 
 // LINT.ThenChange(test.go)
+
+-->
 ```
 
 IfThisThenThat supports absolute file paths (those that start with `/`), and
