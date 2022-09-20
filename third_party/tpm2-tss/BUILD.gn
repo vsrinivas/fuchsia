@@ -2,6 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("common_public_configs") {
+  include_dirs = [ "src/include" ]
+
+  # Disable logging by default. Developer enable it locally if needed. Note
+  # that enabling log brings in code that currently doesn't compile with some
+  # toolchains like efi, due to missing dependencies.
+  defines = [ "MAXLOGLEVEL=LOGL_NONE" ]
+  if (is_efi_toolchain) {
+    # efi tool chain has __WIN32 defined, which causes some source files and
+    # headers to expect the windows.h header file.
+    include_dirs += [ "efi_sysdeps" ]
+  }
+}
+
+source_set("efi_sysdeps") {
+  sources = [ "efi_sysdeps/sysdeps.cc" ]
+  if (is_kernel) {
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+}
+
 static_library("tss2-mu") {
   include_dirs = [
     "src/include/tss2",
@@ -22,6 +46,20 @@ static_library("tss2-mu") {
     "//build/config:Wno-conversion",
     "//build/config:Wno-extra-semi",
   ]
+
+  public_configs = [ ":common_public_configs" ]
+
+  cflags_c = [
+    "-Wno-implicit-function-declaration",
+    "-Wno-error=missing-prototypes",
+  ]
+
+  if (is_kernel) {
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
 }
 
 static_library("tss2-rc") {
@@ -37,6 +75,19 @@ static_library("tss2-rc") {
     "//build/config:Wno-conversion",
     "//build/config:Wno-extra-semi",
   ]
+
+  cflags_c = [ "-Wno-incompatible-pointer-types-discards-qualifiers" ]
+  public_configs = [ ":common_public_configs" ]
+  if (is_kernel) {
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+    if (is_efi_toolchain) {
+      # efi tool chain doesn't have the __thread attribute. Override it to be empty.
+      defines = [ "__thread=" ]
+    }
+  }
 }
 
 static_library("tss2-sys") {
@@ -188,6 +239,15 @@ static_library("tss2-sys") {
   ]
 
   deps = [ ":tss2-mu" ]
+
+  public_configs = [ ":common_public_configs" ]
+  cflags_c = [ "-Wno-implicit-function-declaration" ]
+  if (is_kernel) {
+    public_deps = [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
 }
 
 static_library("tss2-esys") {

@@ -11,6 +11,7 @@ test("gigaboot_unittests") {
     "gpt_tests.cc",
     "mock_boot_service.cc",
     "mock_boot_service.h",
+    "tss2_uefi_tests.cc",
     "utils_test.cc",
   ]
   public_deps = [

@@ -16,6 +16,8 @@ source_set("lib") {
     "fastboot.h",
     "gpt.cc",
     "gpt.h",
+    "tss2_uefi.cc",
+    "tss2_uefi.h",
     "utils.cc",
     "utils.h",
   ]
@@ -26,6 +28,8 @@ source_set("lib") {
     "//src/firmware/lib/zbi:in_tree",
     "//src/firmware/lib/zircon_boot:in_tree",
     "//src/lib/utf_conversion",
+    "//third_party/tpm2-tss:tss2-rc",
+    "//third_party/tpm2-tss:tss2-sys",
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/phys/efi:main",
     "//zircon/kernel/phys/efi:protocol",
