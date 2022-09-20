@@ -6,6 +6,7 @@ import("//build/host.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/lib/icu/third_party_icu_headers.gni")
+import("//src/lib/icu/tzdata/icu_tzres_source.gni")
 
 if (is_host) {
   rustc_test("icu_data_extractor_tests") {
@@ -31,9 +32,9 @@ if (is_host) {
 
   host_test_data("tzres") {
     sources = [
-      "${icu_root}/tzres/metaZones.res",
-      "${icu_root}/tzres/timezoneTypes.res",
-      "${icu_root}/tzres/zoneinfo64.res",
+      "${icu_tzres_path}/metaZones.res",
+      "${icu_tzres_path}/timezoneTypes.res",
+      "${icu_tzres_path}/zoneinfo64.res",
     ]
     outputs = [
       "$root_out_dir/test_data/icu_data_extractor/tzres/{{source_file_part}}",

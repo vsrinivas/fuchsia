@@ -1,0 +1,28 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/lib/icu/third_party_icu_headers.gni")
+
+declare_args() {
+  # Which source location to use for ICU's time zone .res files:
+  # "git" or "prebuilt".
+  #
+  # If set to "git", then the tzres files will contain the same time zone
+  # definitions as the ICU data monolith.
+  #
+  # If set to "prebuilt", then the tzres files will be retrieved from CIPD
+  # and may be newer than what's available in the ICU data monolith.
+  icu_tzres_source = "git"
+}
+
+declare_args() {
+  # Path to directory containing ICU time zone resource files. See `icu_tzres_source`.
+  icu_tzres_path = "${icu_root}/tzres"
+
+  assert(icu_tzres_source == "git" || icu_tzres_source == "prebuilt")
+
+  if (icu_tzres_source == "prebuilt") {
+    icu_tzres_path = "//prebuilt/third_party/tzres"
+  }
+}

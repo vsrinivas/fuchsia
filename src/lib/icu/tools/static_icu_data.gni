@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//src/lib/icu/third_party_icu_headers.gni")
+import("//src/lib/icu/tzdata/icu_tzres_source.gni")
 
 # Generates a file containing static data extracted from ICU using icu_data_extractor.
 #
@@ -65,7 +66,7 @@ template("static_icu_data") {
     tool = "//src/lib/icu/tools/extractor:icu_data_extractor"
 
     icu_data_file = "${icu_root}/common/icudtl.dat"
-    tz_res_dir = "${icu_root}/tzres/"
+    tz_res_dir = icu_tzres_path
 
     inputs = [
       icu_data_file,
@@ -73,9 +74,9 @@ template("static_icu_data") {
       # While these files aren't strictly the only files in tz_res_dir, in
       # practice they rarely change, so it's OK to list them explicitly as
       # inputs here.
-      "${icu_root}/tzres/metaZones.res",
-      "${icu_root}/tzres/timezoneTypes.res",
-      "${icu_root}/tzres/zoneinfo64.res",
+      "${icu_tzres_path}/metaZones.res",
+      "${icu_tzres_path}/timezoneTypes.res",
+      "${icu_tzres_path}/zoneinfo64.res",
     ]
     outputs = [ output ]
 
