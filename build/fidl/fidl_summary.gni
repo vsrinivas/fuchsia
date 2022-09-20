@@ -51,9 +51,12 @@ template("fidl_summary_json") {
       "--suppress-empty-library",
     ]
 
-    # TODO(fxbug.dev/109721): Remove.
-    if (filter_include([ get_path_info(".", "abspath") ], [ "//vendor/*" ]) ==
-        []) {
+    # TODO(fxbug.dev/109904): Remove.
+    _in_vendor = filter_exclude([ get_path_info(".", "abspath") ],
+                                [ "//vendor/*" ]) == []
+    _vendor_opted_in = defined(invoker.vendor_use_new_api_summary) &&
+                       invoker.vendor_use_new_api_summary
+    if (!_in_vendor || _vendor_opted_in) {
       args += [
         "--rename-declaration-to-type",
         "--include-ordinals",
