@@ -20,7 +20,7 @@
             "core/appmgr:root/cpu_stats:process_time_ns WHERE [a] UnhandledType(a)",
 
             // Appmgr exposes the number of tracked tasks.
-            "core/appmgr:root/cpu_stats:task_count WHERE [a] a > 0",
+            "core/appmgr:root/cpu_stats:task_count WHERE [a] a >= 0",
 
             // Appmgr is using less than 2MB of inspect space.
             "core/appmgr:root/inspect_stats:current_size WHERE [a] a < 2*1024*1024",
