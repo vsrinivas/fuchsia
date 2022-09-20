@@ -589,4 +589,13 @@ type Example = table {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyTableOrdinals);
 }
 
+// TODO(fxbug.dev/35218): This should work once recursive types are fully supported.
+TEST(TableTests, BadRecursionDisallowed) {
+  TestLibrary library;
+  library.AddFile("bad/self_referential_table.test.fidl");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "table 'MySelf' -> table 'MySelf'");
+}
+
 }  // namespace

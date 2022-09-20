@@ -526,17 +526,9 @@ protocol Narcisse {
 }
 
 TEST(ProtocolTests, BadCannotMutuallyCompose) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library;
+  library.AddFile("bad/recursive_protocol_reference.test.fidl");
 
-protocol Yin {
-    compose Yang;
-};
-
-protocol Yang {
-    compose Yin;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(),
                 "protocol 'Yang' -> protocol 'Yin' -> protocol 'Yang'");

@@ -242,31 +242,26 @@ type MyStruct = struct {
 }
 
 TEST(StructsTests, BadMutuallyRecursive) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library;
+  library.AddFile("bad/recursive_struct_reference.test.fidl");
 
-type Yin = struct {
-  yang Yang;
-};
-
-type Yang = struct {
-  yin Yin;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct 'Yang' -> struct 'Yin' -> struct 'Yang'");
 }
 
 TEST(StructsTests, BadSelfRecursive) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library;
+  library.AddFile("bad/self_referential_struct.test.fidl");
 
-type MySelf = struct {
-  me MySelf;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrIncludeCycle);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "struct 'MySelf' -> struct 'MySelf'");
+}
+
+TEST(StructsTests, GoodOptionalityAllowsRecursion) {
+  TestLibrary library;
+  library.AddFile("good/recursive_type.test.fidl");
+
+  ASSERT_COMPILED(library);
 }
 
 TEST(StructsTests, BadMutuallyRecursiveWithIncomingLeaf) {

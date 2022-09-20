@@ -16,6 +16,10 @@ host_test_data("bad_cases") {
     "fidl/bad/cannot_start_at_zero.test.fidl",
     "fidl/bad/files_disagree_on_library_name_1.test.fidl",
     "fidl/bad/files_disagree_on_library_name_2.test.fidl",
+    "fidl/bad/recursive_protocol_reference.test.fidl",
+    "fidl/bad/recursive_struct_reference.test.fidl",
+    "fidl/bad/self_referential_struct.test.fidl",
+    "fidl/bad/self_referential_table.test.fidl",
   ]
   outputs = [ "$root_out_dir/fidlc-tests/bad/{{source_file_part}}" ]
 }
@@ -24,6 +28,7 @@ host_test_data("good_cases") {
   sources = [
     "fidl/good/library_multiple_files_1.test.fidl",
     "fidl/good/library_multiple_files_2.test.fidl",
+    "fidl/good/recursive_type.test.fidl",
     "fidl/good/strict_union.test.fidl",
   ]
   outputs = [ "$root_out_dir/fidlc-tests/good/{{source_file_part}}" ]
