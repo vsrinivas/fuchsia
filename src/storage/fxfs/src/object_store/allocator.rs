@@ -915,7 +915,7 @@ impl Allocator for SimpleAllocator {
             AllocatorValue::Abs { count: 1, owner_object_id },
         );
         let mutation =
-            AllocatorMutation::Allocate { device_range: result.clone(), owner_object_id };
+            AllocatorMutation::Allocate { device_range: result.clone().into(), owner_object_id };
         self.reserved_allocations.insert(item).await.expect("Allocated over an in-use range.");
         assert!(transaction.add(self.object_id(), Mutation::Allocator(mutation)).is_none());
 
@@ -952,7 +952,8 @@ impl Allocator for SimpleAllocator {
             AllocatorKey { device_range: device_range.clone() },
             AllocatorValue::Abs { count: 1, owner_object_id },
         );
-        let mutation = AllocatorMutation::Allocate { device_range, owner_object_id };
+        let mutation =
+            AllocatorMutation::Allocate { device_range: device_range.into(), owner_object_id };
         self.reserved_allocations.insert(item).await.expect("Allocated over an in-use range.");
         transaction.add(self.object_id(), Mutation::Allocator(mutation));
         Ok(())
@@ -1010,7 +1011,7 @@ impl Allocator for SimpleAllocator {
                 match &mut mutation {
                     None => {
                         mutation = Some(AllocatorMutation::Deallocate {
-                            device_range: dealloc_range.start..end,
+                            device_range: (dealloc_range.start..end).into(),
                             owner_object_id,
                         });
                     }
@@ -1210,7 +1211,7 @@ impl JournalingObject for SimpleAllocator {
             }
             Mutation::Allocator(AllocatorMutation::Allocate { device_range, owner_object_id }) => {
                 let item = AllocatorItem {
-                    key: AllocatorKey { device_range },
+                    key: AllocatorKey { device_range: device_range.into() },
                     value: AllocatorValue::Abs { count: 1, owner_object_id },
                     sequence: context.checkpoint.file_offset,
                 };
@@ -1238,7 +1239,7 @@ impl JournalingObject for SimpleAllocator {
                 owner_object_id,
             }) => {
                 let item = AllocatorItem {
-                    key: AllocatorKey { device_range },
+                    key: AllocatorKey { device_range: device_range.into() },
                     value: AllocatorValue::None,
                     sequence: context.checkpoint.file_offset,
                 };
@@ -1345,7 +1346,7 @@ impl JournalingObject for SimpleAllocator {
                     reservation.release_reservation(res_owner, len);
                 }
                 let item = AllocatorItem::new(
-                    AllocatorKey { device_range },
+                    AllocatorKey { device_range: device_range.into() },
                     AllocatorValue::Abs { count: 1, owner_object_id },
                 );
                 inner.dropped_allocations.push(item);

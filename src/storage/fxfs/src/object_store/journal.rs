@@ -380,7 +380,7 @@ impl Journal {
             }
             Mutation::ObjectStore(_) => {}
             Mutation::Allocator(AllocatorMutation::Deallocate { device_range, .. }) => {
-                checksum_list.mark_deallocated(journal_offset, device_range.clone());
+                checksum_list.mark_deallocated(journal_offset, device_range.clone().into());
             }
             _ => {}
         }

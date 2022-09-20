@@ -27,7 +27,8 @@ use {
             hash_map::{Entry, HashMap},
             BTreeSet,
         },
-        ops::Range,
+        convert::{From, Into},
+        ops::{Deref, DerefMut, Range},
         sync::{Arc, Mutex},
         task::{Poll, Waker},
         vec::Vec,
@@ -218,14 +219,57 @@ impl PartialOrd for AllocatorItem {
     }
 }
 
+/// Same as std::ops::Range but with Ord and PartialOrd support, sorted first by start of the range,
+/// then by the end.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct DeviceRange(pub Range<u64>);
+
+impl Deref for DeviceRange {
+    type Target = Range<u64>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl DerefMut for DeviceRange {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl From<Range<u64>> for DeviceRange {
+    fn from(range: Range<u64>) -> Self {
+        DeviceRange(range)
+    }
+}
+
+impl Into<Range<u64>> for DeviceRange {
+    fn into(self) -> Range<u64> {
+        self.0
+    }
+}
+
+impl Ord for DeviceRange {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.start.cmp(&other.start).then(self.end.cmp(&other.end))
+    }
+}
+
+impl PartialOrd for DeviceRange {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
 pub enum AllocatorMutation {
     Allocate {
-        device_range: Range<u64>,
+        device_range: DeviceRange,
         owner_object_id: u64,
     },
     Deallocate {
-        device_range: Range<u64>,
+        device_range: DeviceRange,
         owner_object_id: u64,
     },
     SetLimit {
@@ -238,58 +282,6 @@ pub enum AllocatorMutation {
     /// ObjectStore is still in use due to a high risk of corruption. Similarly, owner_object_id
     /// should never be reused for the same reasons.
     MarkForDeletion(u64),
-}
-
-/// We need Ord and PartialOrd to support deduplication in the associative map used in handling
-/// transactions. Range<> doesn't provide a default for this.
-// TODO(fxbug.dev/108713): Prevent unsustainable growth of this function by wrapping contained
-// types that do not implement Ord.
-impl Ord for AllocatorMutation {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self {
-            Self::Allocate { device_range, owner_object_id } => match other {
-                Self::Allocate {
-                    device_range: device_range2,
-                    owner_object_id: owner_object_id2,
-                } => device_range
-                    .start
-                    .cmp(&device_range2.start)
-                    .then(device_range.end.cmp(&device_range2.end))
-                    .then(owner_object_id.cmp(owner_object_id2)),
-                _ => Ordering::Less,
-            },
-            Self::Deallocate { device_range, owner_object_id } => match other {
-                Self::Allocate { .. } => Ordering::Greater,
-                Self::Deallocate {
-                    device_range: device_range2,
-                    owner_object_id: owner_object_id2,
-                } => device_range
-                    .start
-                    .cmp(&device_range2.start)
-                    .then(device_range.end.cmp(&device_range2.end))
-                    .then(owner_object_id.cmp(owner_object_id2)),
-                _ => Ordering::Less,
-            },
-            Self::SetLimit { owner_object_id, bytes } => match other {
-                Self::Allocate { .. } => Ordering::Greater,
-                Self::Deallocate { .. } => Ordering::Greater,
-                Self::SetLimit { owner_object_id: owner_object_id2, bytes: bytes2 } => {
-                    owner_object_id.cmp(owner_object_id2).then(bytes.cmp(bytes2))
-                }
-                _ => Ordering::Less,
-            },
-            Self::MarkForDeletion(owner_object_id) => match other {
-                Self::MarkForDeletion(owner_object_id2) => owner_object_id.cmp(owner_object_id2),
-                _ => Ordering::Greater,
-            },
-        }
-    }
-}
-
-impl PartialOrd for AllocatorMutation {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
