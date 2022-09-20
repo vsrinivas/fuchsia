@@ -71,6 +71,8 @@ assembly_input_groups("runtime-v1-deprecated") {
     "//src/sys/appmgr:appmgr_scheme_config",
     "//src/sys/appmgr:component_id_index_no_restrict_storage",
     "//src/sys/appmgr:core_component_id_index",
+    "//src/sys/sysmgr",
+    "//src/sys/sysmgr:services_config",
     ":memory-monitor.base_packages",
   ]
   core_realm_shards = [
