@@ -1150,13 +1150,6 @@ func newNetstack(t *testing.T, options netstackTestOptions) (*Netstack, *faketim
 		ndpDisp.dynamicAddressSourceTracker.init(ns)
 	}
 
-	t.Cleanup(func() {
-		for _, nic := range ns.stack.NICInfo() {
-			ifs := nic.Context.(*ifState)
-			ifs.RemoveByUser()
-			ifs.endpoint.Wait()
-		}
-	})
 	return ns, clock
 }
 
