@@ -452,7 +452,7 @@ pub fn generate_from_manifest<W: io::Write>(mut output: &mut W, opt: &Opt) -> Re
                 path: target.package_root(&opt.project_root),
             });
             gn::write_binary_top_level_rule(&mut output, None, bin_name, target)
-                .context("writing binary top level rule")?;
+                .context(format!("writing binary top level rule: {}", target.name()))?;
         }
     }
 
@@ -574,7 +574,7 @@ pub fn generate_from_manifest<W: io::Write>(mut output: &mut W, opt: &Opt) -> Re
             target_cfg,
             binary_name,
         )
-        .context("writing rule")?;
+        .context(format!("writing rule for: {} {}", target.name(), target.version()))?;
     }
 
     if let Some(metadata_path) = &opt.emit_metadata {

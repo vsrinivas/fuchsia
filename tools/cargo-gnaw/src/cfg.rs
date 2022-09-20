@@ -147,7 +147,10 @@ pub fn cfg_to_gn_conditional(cfg: &str) -> Result<String, Error> {
         Ok(String::from("false"))
     } else if cfg.starts_with("target_vendor") {
         Ok(String::from("false"))
+    } else if cfg.starts_with("tracing_unstable") {
+        Ok(String::from("false"))
     } else {
+        // TODO(http://fxbug.dev/109855) better handling needed for these cases.
         Err(anyhow!("Unknown cfg option used: {}", cfg))
     }
 }
