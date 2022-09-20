@@ -15,6 +15,7 @@ use assembly_config_schema::{
 use assembly_driver_manifest::DriverManifestBuilder;
 use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf};
 use assembly_platform_configuration::{PackageConfigPatch, StructuredConfigPatches};
+use assembly_shell_commands::ShellCommandsBuilder;
 use assembly_structured_config::Repackager;
 use assembly_util::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 use fuchsia_pkg::PackageManifest;
@@ -387,7 +388,7 @@ impl ImageAssemblyConfigBuilder {
             kernel_args,
             kernel_clock_backstop,
             qemu_kernel,
-            shell_commands: _,
+            shell_commands,
         } = self;
 
         // add structured config value files to bootfs
@@ -462,6 +463,15 @@ impl ImageAssemblyConfigBuilder {
                 .context("Writing the 'config_data' package metafar.")?;
             base.add_package_from_path(manifest_path)
                 .context("Adding generated config-data package")?;
+        }
+
+        if !shell_commands.is_empty() {
+            let mut shell_commands_builder = ShellCommandsBuilder::new();
+            shell_commands_builder.add_shell_commands(shell_commands, "fuchsia.com".to_string());
+            let manifest =
+                shell_commands_builder.build(&outdir).context("Building shell commands package")?;
+            base.add_package_from_path(manifest)
+                .context("Adding shell commands package to base")?;
         }
 
         // Construct a single "partial" config from the combined fields, and
@@ -643,6 +653,7 @@ impl FileEntryMap {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assembly_config_schema::product_config::ShellCommands;
     use assembly_driver_manifest::DriverManifest;
     use assembly_package_utils::PackageManifestPathBuf;
     use assembly_test_util::generate_test_manifest;
@@ -873,6 +884,33 @@ mod tests {
 
         // 4.  Validate its contents.
         assert_eq!(config_file_data, "configuration data".as_bytes());
+    }
+
+    #[test]
+    fn test_builder_with_shell_commands() {
+        let vars = TempdirPathsForTest::new();
+
+        // Make an assembly input bundle with Shell Commands in it
+        let mut bundle = make_test_assembly_bundle(&vars.bundle_path);
+        bundle.shell_commands.insert(
+            "package1".to_string(),
+            BTreeSet::from([
+                PackageInternalPathBuf::from("bin/binary1"),
+                PackageInternalPathBuf::from("bin/binary2"),
+            ]),
+        );
+        let builder = setup_builder(&vars, vec![bundle]);
+
+        let result: assembly_config_schema::ImageAssemblyConfig =
+            builder.build(&vars.outdir).unwrap();
+
+        // config_data's manifest is in outdir
+        let expected_manifest_path =
+            vars.outdir.path().join("shell-commands").join("package_manifest.json");
+
+        // Validate that the base package set contains shell_commands.
+        assert_eq!(result.base.len(), 3);
+        assert!(result.base.contains(&expected_manifest_path));
     }
 
     #[test]

@@ -59,6 +59,7 @@ ffx_plugin("ffx_assembly") {
     "//src/lib/assembly/package_utils",
     "//src/lib/assembly/partitions_config",
     "//src/lib/assembly/platform_configuration",
+    "//src/lib/assembly/shell_commands",
     "//src/lib/assembly/structured_config",
     "//src/lib/assembly/tool",
     "//src/lib/assembly/update_package",
