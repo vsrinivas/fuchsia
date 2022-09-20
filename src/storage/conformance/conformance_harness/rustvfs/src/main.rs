@@ -10,13 +10,11 @@ use {
     fidl_fuchsia_io_test::{
         self as io_test, Io1Config, Io1HarnessRequest, Io1HarnessRequestStream,
     },
-    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog as syslog,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::prelude::*,
-    log::error,
     std::sync::Arc,
+    tracing::error,
     vfs::{
         directory::{
             entry::DirectoryEntry,
@@ -166,10 +164,8 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
-    syslog::init().unwrap();
-
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(Harness);
     fs.take_and_serve_directory_handle()?;
