@@ -251,6 +251,13 @@ alias alias_of_vector_of_string = vector<string>;
   EXPECT_EQ(invocation.nullability, fidl::types::Nullability::kNonnullable);
 }
 
+TEST(AliasTests, GoodUnboundedVectorBoundTwice) {
+  TestLibrary library;
+  library.AddFile("good/unbounded_vector_bound_twice.test.fidl");
+
+  ASSERT_COMPILED(library);
+}
+
 TEST(AliasTests, GoodVectorNullableOnDecl) {
   TestLibrary library(R"FIDL(library example;
 
@@ -329,15 +336,9 @@ alias alias_of_vector_of_string = vector<string>;
 }
 
 TEST(AliasTests, BadCannotBoundTwice) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library;
+  library.AddFile("bad/vector_bound_twice.test.fidl");
 
-type Message = struct {
-    f alias_of_vector_of_string_max_5:9;
-};
-
-alias alias_of_vector_of_string_max_5 = vector<string>:5;
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBoundTwice);
 }
 
