@@ -7,6 +7,8 @@
 
 #include <lib/fit/function.h>
 
+#include <map>
+
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/async_output_buffer.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
@@ -16,6 +18,7 @@
 namespace zxdb {
 
 class Console;
+class ConsoleContext;
 
 // This object collects the output and errors from a command and tracks its completion.
 //
@@ -40,9 +43,10 @@ class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
   // Reports that the command failed with the given error. The error will be printed to the screen.
   virtual void ReportError(const Err& err) = 0;
 
-  // May be null if this object has outlived the Console object. In production this probably won't
-  // happen but can be triggered in tests more easily.
+  // The Console/ConsoleContext may be null if this object has outlived the Console object. In
+  // production this probably won't happen but can be triggered in tests more easily.
   Console* console() { return weak_console_.get(); }
+  ConsoleContext* GetConsoleContext() const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CommandContext);
@@ -53,6 +57,14 @@ class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
 
  private:
   fxl::WeakPtr<Console> weak_console_;
+
+  // Track all asynchronous output pending. We want to store a reference and lookup by pointer, so
+  // the object is duplicated here (RefPtr doesn't like to be put in a set).
+  //
+  // These pointers own the tree of async outputs for each async operation. We need to keep owning
+  // pointers to the roots of every AsyncOutputBuffer we've installed ourselves as a completion
+  // callback for to keep them in scope until they're completed.
+  std::map<AsyncOutputBuffer*, fxl::RefPtr<AsyncOutputBuffer>> async_output_;
 };
 
 // This is the normal implementation that just outputs everything to the console.

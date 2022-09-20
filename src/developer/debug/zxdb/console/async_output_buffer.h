@@ -38,6 +38,11 @@ class Err;
 //     something, it should append a new AsyncOutputBuffer that it will take responsibility for
 //     Complete()ing.
 //
+// Memory management: This is a tree structure. The ownership of the tree starts at the root (the
+// original AsyncOutputBuffer the caller creates). This in turn owns all child pending
+// AsyncOutputBuffers. Each buffer installs a callback on its children to know when the children are
+// marked complete. These must be non-owning pointers to avoid reference cycles.
+//
 // Example:
 //
 //    // Creates a buffer and appends some text to it.
@@ -66,6 +71,12 @@ class AsyncOutputBuffer : public fxl::RefCountedThreadSafe<AsyncOutputBuffer> {
   //
   // This can only be set to a nonempty function once, but it can be set with an empty function to
   // clear it.
+  //
+  // The caller must ensure that it stays alive longer than this AsyncOutputBuffer if there are
+  // any back-pointers (as there normally are) from the callback. In practice this means that
+  // AsyncOutputBuffers that have non-complete children (which implies waiting callbacks) must keep
+  // owning references to those children also. Any external setters of this callback (like the
+  // Console) must also keep such owning references if they have installed a callback.
   void SetCompletionCallback(CompletionCallback cb);
 
   // Returns true if the buffer has been marked complete (there will be no more nodes appended to

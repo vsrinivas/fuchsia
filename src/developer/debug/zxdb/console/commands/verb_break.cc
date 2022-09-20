@@ -200,16 +200,18 @@ Examples
       hardware execution breakpoint.
 )";
 
-void OutputCreatedMessage(ConsoleContext* context, Breakpoint* breakpoint) {
-  OutputBuffer out("Created ");
-  out.Append(FormatBreakpoint(context, breakpoint, true));
-  Console::get()->Output(out);
+void OutputCreatedMessage(Breakpoint* breakpoint, fxl::RefPtr<CommandContext> cmd_context) {
+  if (ConsoleContext* console_context = cmd_context->GetConsoleContext()) {
+    OutputBuffer out("Created ");
+    out.Append(FormatBreakpoint(console_context, breakpoint, true));
+    cmd_context->Output(out);
+  }
 }
 
-Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb) {
+void RunVerbBreak(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame, Noun::kBreakpoint});
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   // Get existing settings (or defaults for new one).
   BreakpointSettings settings;
@@ -226,10 +228,11 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
   if (cmd.HasSwitch(kStopSwitch)) {
     auto stop_mode = BreakpointSettings::StringToStopMode(cmd.GetSwitchValue(kStopSwitch));
     if (!stop_mode) {
-      return Err(
+      return cmd_context->ReportError(Err(
           "--%s requires \"%s\", \"%s\", \"%s\", or \"%s\".", ClientSettings::Breakpoint::kStopMode,
           ClientSettings::Breakpoint::kStopMode_All, ClientSettings::Breakpoint::kStopMode_Process,
-          ClientSettings::Breakpoint::kStopMode_Thread, ClientSettings::Breakpoint::kStopMode_None);
+          ClientSettings::Breakpoint::kStopMode_Thread,
+          ClientSettings::Breakpoint::kStopMode_None));
     }
     settings.stop_mode = *stop_mode;
   }
@@ -237,10 +240,11 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
   // Type.
   settings.type = BreakpointSettings::Type::kSoftware;
   if (cmd.HasSwitch(kTypeSwitch)) {
-    if (auto opt_type = BreakpointSettings::StringToType(cmd.GetSwitchValue(kTypeSwitch)))
+    if (auto opt_type = BreakpointSettings::StringToType(cmd.GetSwitchValue(kTypeSwitch))) {
       settings.type = *opt_type;
-    else
-      return Err("Unknown breakpoint type.");
+    } else {
+      return cmd_context->ReportError(Err("Unknown breakpoint type."));
+    }
   }
 
   // Size. Track if this is set or not si we can change the default based on the expression result.
@@ -248,12 +252,14 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
   if (cmd.HasSwitch(kSizeSwitch)) {
     has_explicit_size = true;
 
-    if (!BreakpointSettings::TypeHasSize(settings.type))
-      return Err("Breakpoint size is only supported for write and read-write breakpoints.");
+    if (!BreakpointSettings::TypeHasSize(settings.type)) {
+      return cmd_context->ReportError(
+          Err("Breakpoint size is only supported for write and read-write breakpoints."));
+    }
     // TODO(dangyi): settings.byte_size should be validated by BreakpointSettings::ValidateSize.
     if (Err err = StringToUint32(cmd.GetSwitchValue(kSizeSwitch), &settings.byte_size);
         err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
   } else if (BreakpointSettings::TypeHasSize(settings.type)) {
     settings.byte_size = 4;  // Default size.
   }
@@ -265,10 +271,10 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
   if (cmd.HasSwitch(kMultSwitch)) {
     int hit_mult;
     if (Err err = StringToInt(cmd.GetSwitchValue(kMultSwitch), &hit_mult); err.has_error())
-      return err;
+      return cmd_context->ReportError(err);
     // TODO(dangyi): Unify validation logics with settings.
     if (hit_mult <= 0)
-      return Err("hit-mult must be positive.");
+      return cmd_context->ReportError(Err("hit-mult must be positive."));
 
     settings.hit_mult = hit_mult;
   }
@@ -277,8 +283,8 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
     // Creating a breakpoint with no location implicitly uses the current frame's current
     // location.
     if (!cmd.frame()) {
-      return Err(ErrType::kInput,
-                 "There isn't a current frame to take the breakpoint location from.");
+      return cmd_context->ReportError(Err(
+          ErrType::kInput, "There isn't a current frame to take the breakpoint location from."));
     }
 
     // Use the file/line of the frame if available. This is what a user will generally want to see
@@ -291,27 +297,22 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
       settings.locations.emplace_back(cmd.frame()->GetAddress());
 
     // New breakpoint.
-    Breakpoint* breakpoint = context->session()->system().CreateNewBreakpoint();
-    context->SetActiveBreakpoint(breakpoint);
+    ConsoleContext* console_context = cmd_context->GetConsoleContext();
+    Breakpoint* breakpoint = console_context->session()->system().CreateNewBreakpoint();
+    console_context->SetActiveBreakpoint(breakpoint);
 
     breakpoint->SetSettings(settings);
-    OutputCreatedMessage(context, breakpoint);
-    if (cb)
-      cb(err);
-    return Err();
+    OutputCreatedMessage(breakpoint, cmd_context);
+    return;
   }
 
   // Parse the given input location in args[0]. This may require async evaluation.
   EvalLocalInputLocation(
       GetEvalContextForCommand(cmd), cmd.frame(), cmd.args()[0],
-      [settings, has_explicit_size, cb = std::move(cb)](ErrOr<std::vector<InputLocation>> locs,
-                                                        std::optional<uint32_t> expr_size) mutable {
-        if (locs.has_error()) {
-          Console::get()->Output(locs.err());
-          if (cb)
-            cb(locs.err());
-          return;
-        }
+      [settings, has_explicit_size, cmd_context](ErrOr<std::vector<InputLocation>> locs,
+                                                 std::optional<uint32_t> expr_size) mutable {
+        if (locs.has_error())
+          return cmd_context->ReportError(locs.err());
 
         // New breakpoint.
         ConsoleContext* context = &Console::get()->context();
@@ -326,12 +327,8 @@ Err RunVerbBreak(ConsoleContext* context, const Command& cmd, CommandCallback cb
         settings.locations = locs.take_value();
         breakpoint->SetSettings(settings);
 
-        OutputCreatedMessage(context, breakpoint);
-        if (cb)
-          cb(Err());
+        OutputCreatedMessage(breakpoint, cmd_context);
       });
-
-  return Err();
 }
 
 }  // namespace

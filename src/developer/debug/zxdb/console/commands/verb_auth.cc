@@ -30,39 +30,39 @@ Example
   sym-server 3 auth some_credential
 )";
 
-Err RunVerbAuth(ConsoleContext* context, const Command& cmd) {
+void RunVerbAuth(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   if (cmd.args().size() > 1u) {
-    return Err("auth expects exactly one argument.");
+    return cmd_context->ReportError(Err("auth expects exactly one argument."));
   }
 
   if (!cmd.sym_server())
-    return Err("No symbol server selected.");
+    return cmd_context->ReportError(Err("No symbol server selected."));
 
   if (cmd.sym_server()->state() != SymbolServer::State::kAuth) {
-    return Err("Server is not requesting authentication.");
+    return cmd_context->ReportError(Err("Server is not requesting authentication."));
   }
 
   if (cmd.args().size() == 0) {
     if (cmd.sym_server()->auth_type() != SymbolServer::AuthType::kOAuth) {
-      return Err("Unknown authentication type.");
+      return cmd_context->ReportError(Err("Unknown authentication type."));
     }
 
-    Console::get()->Output(std::string("To authenticate, please supply an authentication "
-                                       "token. You can retrieve a token from:\n\n") +
-                           cmd.sym_server()->AuthInfo() +
-                           "\n\nOnce you've retrieved a token, run 'auth <token>'");
-    return Err();
+    cmd_context->Output(std::string("To authenticate, please supply an authentication "
+                                    "token. You can retrieve a token from:\n\n") +
+                        cmd.sym_server()->AuthInfo() +
+                        "\n\nOnce you've retrieved a token, run 'auth <token>'");
+    return;
   }
 
-  cmd.sym_server()->Authenticate(cmd.args()[0], [name = cmd.sym_server()->name()](const Err& err) {
-    if (!err.has_error()) {
-      Console::get()->Output(std::string("Successfully authenticated with ") + name);
-    } else {
-      Console::get()->Output(std::string("Authentication with ") + name + " failed: " + err.msg());
-    }
-  });
-
-  return Err();  // Will complete asynchronously.
+  cmd.sym_server()->Authenticate(
+      cmd.args()[0], [name = cmd.sym_server()->name(), cmd_context](const Err& err) {
+        if (!err.has_error()) {
+          cmd_context->Output(std::string("Successfully authenticated with ") + name);
+        } else {
+          cmd_context->ReportError(
+              Err(std::string("Authentication with ") + name + " failed: " + err.msg()));
+        }
+      });
 }
 
 }  // namespace

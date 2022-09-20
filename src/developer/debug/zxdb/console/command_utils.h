@@ -164,7 +164,7 @@ Err VerifySystemHasRunningProcess(System* system);
 // The optional callback parameter will be issued with the error for calling code to identify the
 // error.
 void ProcessCommandCallback(fxl::WeakPtr<Target> target, bool display_message_on_success,
-                            const Err& err, CommandCallback callback);
+                            const Err& err, fxl::RefPtr<CommandContext> cmd_context);
 
 // Schedules the function's return information to be printed from a PostStopTask on the thread
 // (the thread is in the FunctionReturnInfo).

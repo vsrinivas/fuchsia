@@ -57,8 +57,6 @@ void Console::Output(fxl::RefPtr<AsyncOutputBuffer> output) {
 
       auto found = async_output_.find(output_ptr);
       FX_DCHECK(found != async_output_.end());
-
-      // Clear the completion callback out of paranoia.
       async_output_.erase(found);
     });
     async_output_[output_ptr] = std::move(output);

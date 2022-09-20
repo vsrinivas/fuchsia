@@ -22,7 +22,11 @@ TEST(CommandContext, Empty) {
 }
 
 TEST(CommandContext, AsyncOutputAndErrors) {
-  auto async_output = fxl::MakeRefCounted<AsyncOutputBuffer>();
+  // This test constructs two AsyncOutputBuffers, one depending on the other. We only keep a
+  // reference to the inner one. The ConsoleContext should keep the reference to the outer one
+  // to keep it alive as long as it's not complete.
+  auto inner_async_output = fxl::MakeRefCounted<AsyncOutputBuffer>();
+
   bool called = false;
   {
     auto my_context = fxl::MakeRefCounted<OfflineCommandContext>(
@@ -39,13 +43,17 @@ TEST(CommandContext, AsyncOutputAndErrors) {
 
     my_context->ReportError(Err("Some error"));
     my_context->Output("Some output");
-    my_context->Output(async_output);
+
+    auto outer_async_output = fxl::MakeRefCounted<AsyncOutputBuffer>();
+    outer_async_output->Append(inner_async_output);
+    my_context->Output(outer_async_output);
+    outer_async_output->Complete();
   }
   // Even though our reference went out-of-scope, the async output is still active.
   EXPECT_FALSE(called);
 
-  async_output->Append("Async output");
-  async_output->Complete();
+  inner_async_output->Append("Async output");
+  inner_async_output->Complete();
 
   // Marking the async output complete should have marked the context done.
   EXPECT_TRUE(called);

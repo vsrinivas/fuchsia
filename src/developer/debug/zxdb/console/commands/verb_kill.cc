@@ -35,22 +35,20 @@ Examples
       Kills process 4.
 )";
 
-Err RunVerbKill(ConsoleContext* context, const Command& cmd, CommandCallback callback = nullptr) {
+void RunVerbKill(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
   // Only a process can be detached.
   Err err = cmd.ValidateNouns({Noun::kProcess});
   if (err.has_error())
-    return err;
+    return cmd_context->ReportError(err);
 
   if (!cmd.args().empty())
-    return Err("The 'kill' command doesn't take any parameters.");
+    return cmd_context->ReportError(Err("The 'kill' command doesn't take any parameters."));
 
-  cmd.target()->Kill(
-      [callback = std::move(callback)](fxl::WeakPtr<Target> target, const Err& err) mutable {
-        // The ConsoleContext displays messages for stopped processes, so don't display messages
-        // when successfully killing.
-        ProcessCommandCallback(target, false, err, std::move(callback));
-      });
-  return Err();
+  cmd.target()->Kill([cmd_context](fxl::WeakPtr<Target> target, const Err& err) mutable {
+    // The ConsoleContext displays messages for stopped processes, so don't display messages
+    // when successfully killing.
+    ProcessCommandCallback(target, false, err, cmd_context);
+  });
 }
 
 }  // namespace

@@ -76,6 +76,10 @@ class Console : debug::LogBackend {
  private:
   // Track all asynchronous output pending. We want to store a reference and lookup by pointer, so
   // the object is duplicated here (RefPtr doesn't like to be put in a set).
+  //
+  // These pointers own the tree of async outputs for each async operation. We need to keep owning
+  // pointers to the roots of every AsyncOutputBuffer we've installed ourselves as a completion
+  // callback for to keep them in scope until they're completed.
   std::map<AsyncOutputBuffer*, fxl::RefPtr<AsyncOutputBuffer>> async_output_;
 
   fxl::WeakPtrFactory<Console> weak_factory_;

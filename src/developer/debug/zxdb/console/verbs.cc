@@ -87,6 +87,16 @@ VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb,
       command_group(command_group),
       source_affinity(source_affinity) {}
 
+VerbRecord::VerbRecord(CommandExecutorWithContext exec_context,
+                       std::initializer_list<std::string> aliases, const char* short_help,
+                       const char* help, CommandGroup group, SourceAffinity source_affinity)
+    : exec_context(std::move(exec_context)),
+      aliases(aliases),
+      short_help(short_help),
+      help(help),
+      command_group(group),
+      source_affinity(source_affinity) {}
+
 VerbRecord::VerbRecord(CommandExecutor exec, CommandCompleter complete,
                        std::initializer_list<std::string> aliases, const char* short_help,
                        const char* help, CommandGroup command_group, SourceAffinity source_affinity)
@@ -106,6 +116,17 @@ VerbRecord::VerbRecord(CommandExecutorWithCallback exec_cb, CommandCompleter com
       short_help(short_help),
       help(help),
       command_group(command_group),
+      source_affinity(source_affinity),
+      complete(std::move(complete)) {}
+
+VerbRecord::VerbRecord(CommandExecutorWithContext exec_context, CommandCompleter complete,
+                       std::initializer_list<std::string> aliases, const char* short_help,
+                       const char* help, CommandGroup group, SourceAffinity source_affinity)
+    : exec_context(std::move(exec_context)),
+      aliases(aliases),
+      short_help(short_help),
+      help(help),
+      command_group(group),
       source_affinity(source_affinity),
       complete(std::move(complete)) {}
 

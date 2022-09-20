@@ -19,10 +19,22 @@ void CommandContext::Output(fxl::RefPtr<AsyncOutputBuffer> output) {
     Output(output->DestructiveFlatten());
   } else {
     // Listen for completion.
+    AsyncOutputBuffer* output_ptr = output.get();
     output->SetCompletionCallback([this_ref = RefPtrTo(this), output_ptr = output.get()]() {
       this_ref->Output(output_ptr->DestructiveFlatten());
+
+      auto found = this_ref->async_output_.find(output_ptr);
+      FX_DCHECK(found != this_ref->async_output_.end());
+      this_ref->async_output_.erase(found);
     });
+    async_output_[output_ptr] = std::move(output);
   }
+}
+
+ConsoleContext* CommandContext::GetConsoleContext() const {
+  if (weak_console_)
+    return &weak_console_->context();
+  return nullptr;
 }
 
 // ConsoleCommandContext ---------------------------------------------------------------------------
