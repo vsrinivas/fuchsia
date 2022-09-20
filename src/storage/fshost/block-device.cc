@@ -575,9 +575,9 @@ zx_status_t BlockDevice::CheckFilesystem() {
   }
 
   const std::array<DiskFormat, 3> kFormatsToCheck = {
-      fs_management::kDiskFormatMinfs, fs_management::kDiskFormatF2fs,
-      // TODO(fxbug.dev/106845): Re-enable fsck for Fxfs.
-      // fs_management::kDiskFormatFxfs,
+      fs_management::kDiskFormatMinfs,
+      fs_management::kDiskFormatF2fs,
+      fs_management::kDiskFormatFxfs,
   };
   if (std::find(kFormatsToCheck.begin(), kFormatsToCheck.end(), format_) == kFormatsToCheck.end()) {
     FX_LOGS(INFO) << "Skipping consistency checker for partition of type "
