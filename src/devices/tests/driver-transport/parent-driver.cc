@@ -8,6 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/driver2/outgoing_directory.h>
 #include <lib/fdf/cpp/arena.h>
 #include <lib/fdf/cpp/channel.h>
 #include <lib/fdf/cpp/dispatcher.h>
@@ -25,8 +26,7 @@
 namespace fdtt = fuchsia_driver_transport_test;
 
 class Device;
-using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::ServiceConnectable,
-                               ddk::Messageable<fdtt::TestDevice>::Mixin>;
+using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::Messageable<fdtt::TestDevice>::Mixin>;
 
 class Device : public DeviceType,
                public fdf::WireServer<fdtt::DriverTransportProtocol>,
@@ -35,7 +35,9 @@ class Device : public DeviceType,
   static zx_status_t Bind(void* ctx, zx_device_t* device);
 
   Device(zx_device_t* parent, fdf::UnownedDispatcher dispatcher)
-      : DeviceType(parent), dispatcher_(std::move(dispatcher)) {}
+      : DeviceType(parent),
+        dispatcher_(std::move(dispatcher)),
+        outgoing_(driver::OutgoingDirectory::Create(dispatcher_->get())) {}
 
   // TestDevice protocol implementation.
   void SetTestData(SetTestDataRequestView request, SetTestDataCompleter::Sync& completer) override;
@@ -44,29 +46,18 @@ class Device : public DeviceType,
   void TransmitData(fdf::Arena& arena, TransmitDataCompleter::Sync& completer) override;
 
   // Device protocol implementation.
-  zx_status_t DdkServiceConnect(const char* service_name, fdf::Channel channel);
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
  private:
   fdf::UnownedDispatcher dispatcher_;
 
+  driver::OutgoingDirectory outgoing_;
+
   // Data set by the test using |SetTestData|.
   uint8_t data_[fdtt::wire::kMaxTransferSize];
   size_t data_size_;
 };
-
-zx_status_t Device::DdkServiceConnect(const char* service_name, fdf::Channel channel) {
-  // Ensure they are requesting the correct protocol.
-  if (std::string_view(service_name) !=
-      fidl::DiscoverableProtocolName<fdtt::DriverTransportProtocol>) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-  fdf::ServerEnd<fdtt::DriverTransportProtocol> server_end(std::move(channel));
-  fdf::BindServer<fdf::WireServer<fdtt::DriverTransportProtocol>>(dispatcher_->get(),
-                                                                  std::move(server_end), this);
-  return ZX_OK;
-}
 
 // Sets the test data that will be retrieved by |TransmitData|.
 void Device::SetTestData(SetTestDataRequestView request, SetTestDataCompleter::Sync& completer) {
@@ -85,7 +76,39 @@ void Device::TransmitData(fdf::Arena& arena, TransmitDataCompleter::Sync& comple
 zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
   auto dispatcher = fdf::Dispatcher::GetCurrent();
   auto dev = std::make_unique<Device>(device, std::move(dispatcher));
-  auto status = dev->DdkAdd("parent");
+
+  driver::ServiceInstanceHandler handler;
+  fdtt::Service::Handler service(&handler);
+
+  auto protocol =
+      [dev = dev.get()](fdf::ServerEnd<fdtt::DriverTransportProtocol> server_end) mutable {
+        fdf::BindServer<fdf::WireServer<fdtt::DriverTransportProtocol>>(
+            fdf::Dispatcher::GetCurrent()->get(), std::move(server_end), dev);
+      };
+  auto add_status = service.add_driver_transport_protocol(std::move(protocol));
+  if (add_status.is_error()) {
+    return add_status.status_value();
+  }
+  add_status = dev->outgoing_.AddService<fdtt::Service>(std::move(handler));
+  if (add_status.is_error()) {
+    return add_status.status_value();
+  }
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+  auto result = dev->outgoing_.Serve(std::move(endpoints->server));
+  if (result.is_error()) {
+    return result.status_value();
+  }
+
+  std::array offers = {
+      fdtt::Service::Name,
+  };
+
+  zx_status_t status =
+      dev->DdkAdd(ddk::DeviceAddArgs("parent").set_runtime_service_offers(offers).set_outgoing_dir(
+          endpoints->client.TakeChannel()));
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev
     __UNUSED auto ptr = dev.release();

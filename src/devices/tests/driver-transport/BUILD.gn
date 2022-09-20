@@ -52,6 +52,7 @@ fuchsia_driver("parent-drv") {
     ":fuchsia.driver.transport.test_cpp_driver",
     ":fuchsia.driver.transport.test_cpp_wire",
     ":parent-driver-bind",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/fdio",
     "//src/devices/lib/driver",

@@ -71,23 +71,17 @@ void Device::GetParentDataOverDriverTransport(
 
 // static
 zx_status_t Device::Bind(void* ctx, zx_device_t* device) {
-  auto endpoints = fdf::CreateEndpoints<fdtt::DriverTransportProtocol>();
-  if (endpoints.is_error()) {
-    return endpoints.status_value();
+  // Connect to our parent driver.
+  auto client_end = DdkConnectRuntimeProtocol<fdtt::Service::DriverTransportProtocol>(device);
+  if (client_end.is_error()) {
+    zxlogf(ERROR, "DdkConnectRuntimeProtocol Failed =(");
+    return client_end.status_value();
   }
 
   auto* dispatcher = fdf_dispatcher_get_current_dispatcher();
-  auto dev = std::make_unique<Device>(device, std::move(endpoints->client), dispatcher);
-  // Connect to our parent driver.
-  zx_status_t status =
-      dev->DdkServiceConnect(fidl::DiscoverableProtocolName<fdtt::DriverTransportProtocol>,
-                             endpoints->server.TakeHandle());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "DdkServiceConnect Failed =(");
-    return status;
-  }
+  auto dev = std::make_unique<Device>(device, std::move(*client_end), dispatcher);
 
-  status = dev->DdkAdd("child");
+  zx_status_t status = dev->DdkAdd("child");
   if (status == ZX_OK) {
     // devmgr is now in charge of the memory for dev
     __UNUSED auto ptr = dev.release();
