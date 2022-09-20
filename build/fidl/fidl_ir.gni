@@ -26,10 +26,6 @@ import("//build/fidl/fidlc.gni")
 #     [string] Only compile APIs available at this Fuchsia API level. See the
 #     FIDL compiler's --available flag for more info.
 #
-#   out_summary
-#     [path] If set, generates an API summary file at the given path.
-#     Must be relative to gen_dir.
-#
 #   out_json_summary
 #     [path] If set, generates a JSON API summary file at the given path.
 #     Must be relative to gen_dir.
@@ -65,25 +61,12 @@ template("fidl_ir") {
                            [
                              "goldens_dir",
                              "out_json_summary",
-                             "out_summary",
                              "visibility",
                            ])
     visibility = [ ":*" ]
   }
 
   main_target_deps += [ ":$fidlc_target_name" ]
-
-  if (defined(invoker.out_summary)) {
-    fidl_summary_target_name = "${target_name}_summary"
-    main_target_deps += [ ":$fidl_summary_target_name" ]
-    fidl_summary(fidl_summary_target_name) {
-      forward_variables_from(invoker, [ "testonly" ])
-      visibility = [ ":*" ]
-      inputs = [ invoker.json_representation ]
-      outputs = [ invoker.out_summary ]
-      deps = [ ":$fidlc_target_name" ]
-    }
-  }
 
   if (defined(invoker.out_json_summary)) {
     fidl_summary_json_target_name = "${target_name}_summary_json"

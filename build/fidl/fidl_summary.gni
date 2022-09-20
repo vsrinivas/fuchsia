@@ -4,56 +4,6 @@
 
 import("//build/compiled_action.gni")
 
-# Generates the FIDL API summary files based on the FIDL IR generated
-# by fidlc.
-
-_fidl_api_summarize_tool = "//tools/fidl/fidl_api_summarize"
-
-# Generates a human-readable FIDL API summary.
-#
-# For details on the FIDL API summary format, see RFC-0076 at:
-# https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0076_fidl_api_summaries
-#
-# Args:
-#
-# inputs: list(label)
-#   A singleton list naming the FIDL IR file to read.
-#
-# outputs: list(label)
-#   A singleton list naming the output API summary file to generate.
-#
-# testonly: bool(optional)
-#
-# deps: list[label]
-#
-# visiblility: list[label]
-template("fidl_summary") {
-  compiled_action("${target_name}") {
-    forward_variables_from(invoker,
-                           [
-                             "testonly",
-                             "deps",
-                             "inputs",
-                             "outputs",
-                             "visibility",
-                           ])
-
-    assert(defined(inputs), "inputs is required")
-    assert(inputs != [] && inputs == [ inputs[0] ],
-           "inputs must have exactly one element")
-    assert(defined(outputs), "outputs is required")
-    assert(outputs != [] && outputs == [ outputs[0] ],
-           "outputs must have exactly one element")
-    tool = _fidl_api_summarize_tool
-    args = [
-      "--fidl-ir-file",
-      rebase_path(inputs[0], root_build_dir),
-      "--output-file",
-      rebase_path(outputs[0], root_build_dir),
-    ]
-  }
-}
-
 # Generates a machine-readable, JSON-formatted, FIDL API summary.
 #
 # For details on the FIDL API summary format, see RFC-0076 at:
@@ -92,7 +42,7 @@ template("fidl_summary_json") {
            "outputs must have exactly one element")
     _summary_file_json = outputs[0]
 
-    tool = _fidl_api_summarize_tool
+    tool = "//tools/fidl/fidl_api_summarize"
     args = [
       "--fidl-ir-file",
       rebase_path(_json_representation, root_build_dir),
