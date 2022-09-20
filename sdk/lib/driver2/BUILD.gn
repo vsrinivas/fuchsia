@@ -59,9 +59,6 @@ sdk_source_set("cpp") {
     "outgoing_directory.cc",
     "outgoing_directory.h",
     "record_cpp.h",
-    "runtime.h",
-    "runtime_connector_impl.cc",
-    "runtime_connector_impl.h",
     "service_client.h",
     "start_args.h",
     "structured_logger.h",
@@ -92,6 +89,38 @@ source_set("cpp-promise") {
   ]
 }
 
+# TODO(fxbug.dev/109356): remove this once all users are migrated off
+# v1 of runtime protocol discovery.
+sdk_source_set("runtime-deprecated") {
+  category = "experimental"
+  sdk_name = "runtime-deprecated"
+
+  include_base = "//sdk"
+
+  sources = [
+    "runtime.h",
+    "runtime_connector_impl.cc",
+    "runtime_connector_impl.h",
+  ]
+
+  visibility = [
+    "//sdk/lib/driver2:*",
+    "//src/devices/misc/drivers/compat:lib",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
+    "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_cpp",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/fidl",
+    "//sdk/lib/fidl_driver:fidl_driver_transport",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/syslog/structured_backend",
+  ]
+}
+
 executable("cpp_test") {
   testonly = true
   sources = [
@@ -99,7 +128,6 @@ executable("cpp_test") {
     "tests/logger_test.cc",
     "tests/namespace_test.cc",
     "tests/node_add_args_test.cc",
-    "tests/runtime_connector_impl_test.cc",
     "tests/start_args_test.cc",
     "tests/test_base.cc",
     "tests/test_base.h",
