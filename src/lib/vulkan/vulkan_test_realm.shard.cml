@@ -26,6 +26,7 @@
         // These system capabilities are offered for use by the vulkan tests.
         {
             protocol: [
+                "fuchsia.media.ProfileProvider",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader",
             ],

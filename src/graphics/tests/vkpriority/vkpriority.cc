@@ -22,7 +22,8 @@ namespace {
 
 class VkPriorityTest {
  public:
-  explicit VkPriorityTest(bool different_priority) : different_priority_(different_priority) {}
+  explicit VkPriorityTest(bool different_priority, bool use_global_priority = false)
+      : different_priority_(different_priority), use_global_priority_(use_global_priority) {}
 
   bool Initialize();
   bool Exec();
@@ -38,6 +39,7 @@ class VkPriorityTest {
   VkQueue low_prio_vk_queue_;
   VkQueue high_prio_vk_queue_;
   bool different_priority_;
+  bool use_global_priority_;
 
   VkCommandPool vk_command_pool_;
   VkCommandBuffer low_prio_vk_command_buffer_;
@@ -157,14 +159,21 @@ bool VkPriorityTest::InitVulkan() {
     queue_priorities[0] = 0.0;
   }
 
-  VkDeviceQueueCreateInfo queue_create_info = {.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                                               .pNext = nullptr,
-                                               .flags = 0,
-                                               .queueFamilyIndex = 0,
-                                               .queueCount = 2,
-                                               .pQueuePriorities = queue_priorities};
+  VkDeviceQueueGlobalPriorityCreateInfoEXT global_create_info{
+      .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_GLOBAL_PRIORITY_CREATE_INFO_EXT,
+      .pNext = nullptr,
+      .globalPriority = VK_QUEUE_GLOBAL_PRIORITY_HIGH_EXT,
+  };
 
-  std::vector<const char*> enabled_extension_names;
+  VkDeviceQueueCreateInfo queue_create_info = {
+      .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+      .pNext = use_global_priority_ ? &global_create_info : nullptr,
+      .flags = 0,
+      .queueFamilyIndex = 0,
+      .queueCount = 2,
+      .pQueuePriorities = queue_priorities};
+
+  std::vector<const char*> enabled_extension_names{VK_EXT_GLOBAL_PRIORITY_EXTENSION_NAME};
 
   VkDeviceCreateInfo createInfo = {
       .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -406,6 +415,12 @@ TEST(Vulkan, Priority) {
 
 TEST(Vulkan, EqualPriority) {
   VkPriorityTest test(false);
+  ASSERT_TRUE(test.Initialize());
+  ASSERT_TRUE(test.Exec());
+}
+
+TEST(Vulkan, GlobalPriority) {
+  VkPriorityTest test(true, true);
   ASSERT_TRUE(test.Initialize());
   ASSERT_TRUE(test.Exec());
 }

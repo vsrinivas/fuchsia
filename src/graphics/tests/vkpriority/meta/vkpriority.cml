@@ -11,4 +11,7 @@
     program: {
         binary: "bin/vkpriority",
     },
+    use: [
+        { protocol: "fuchsia.media.ProfileProvider" },
+    ],
 }
