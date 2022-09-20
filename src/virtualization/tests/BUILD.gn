@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cipd.gni")
 import("//build/components.gni")
 import("//src/media/audio/audio_core_package_v2.gni")
 import("//src/virtualization/buildtools/linux_paths.gni")
@@ -421,7 +422,9 @@ romfs_image("extras") {
 
   # We don't run the container tests on arm64, so don't provide any container images to reduce the
   # size of the tests.
-  if (target_cpu == "x64") {
+  #
+  # We also need internal_access because otherwise CIPD will not be able to resolve these files.
+  if (internal_access && target_cpu == "x64") {
     inputs += [
       "//prebuilt/virtualization/packages/termina_guest/container/${target_cpu}/lxd.tar.xz",
       "//prebuilt/virtualization/packages/termina_guest/container/${target_cpu}/rootfs.tar.xz",
