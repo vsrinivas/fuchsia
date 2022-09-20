@@ -195,6 +195,8 @@ async fn test_media_sounds() {
         AudioRenderUsage::Background,
     )
     .await;
+
+    let _ = instance.destroy().await;
 }
 
 // Test to ensure that when the media volume changes via a system update, the SoundPlayer does
@@ -229,6 +231,8 @@ async fn test_media_sounds_system_source() {
         AudioRenderUsage::Background,
     )
     .await;
+
+    let _ = instance.destroy().await;
 }
 
 // Test to ensure that when the media volume changes via a system update, the SoundPlayer does
@@ -262,6 +266,8 @@ async fn test_media_sounds_system_with_feedback_source() {
         AudioRenderUsage::Background,
     )
     .await;
+
+    let _ = instance.destroy().await;
 }
 
 // Test to ensure that when the volume changes, the SoundPlayer receives requests to play the sounds
@@ -305,6 +311,8 @@ async fn test_interruption_sounds() {
         AudioRenderUsage::Background,
     )
     .await;
+
+    let _ = instance.destroy().await;
 }
 
 // Test to ensure that when the volume is set to max while already at max volume
@@ -345,6 +353,8 @@ async fn test_max_volume_sound_on_sw_change() {
         AudioRenderUsage::Background,
     )
     .await;
+
+    let _ = instance.destroy().await;
 }
 
 // Test to ensure that when the volume is changed on multiple channels, the sound only plays once.
@@ -389,6 +399,8 @@ async fn test_earcons_on_multiple_channel_change() {
         AudioRenderUsage::Background,
     )
     .await;
+
+    let _ = instance.destroy().await;
 }
 
 // Test to ensure that when the media stream changes, the settings service matches the background
@@ -405,7 +417,11 @@ async fn test_media_background_matching() {
     // Verify that audio core receives the initial request on start.
     let _ = signal_receiver.next().await;
 
+    let mut sound_event_receiver =
+        VolumeChangeEarconsTest::create_sound_played_listener(&volume_change_earcons_test).await;
+
     VolumeChangeEarconsTest::set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
+    let _ = sound_event_receiver.next().await.unwrap();
     VolumeChangeEarconsTest::verify_volume(
         &audio_proxy,
         AudioRenderUsage::Background,
@@ -415,12 +431,15 @@ async fn test_media_background_matching() {
 
     VolumeChangeEarconsTest::set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS_MAX])
         .await;
+    let _ = sound_event_receiver.next().await.unwrap();
     VolumeChangeEarconsTest::verify_volume(
         &audio_proxy,
         AudioRenderUsage::Background,
         CHANGED_MEDIA_BACKGROUND_STREAM_SETTINGS_MAX,
     )
     .await;
+
+    let _ = instance.destroy().await;
 }
 
 // Test to ensure that when the interruption stream changes, the settings service matches
@@ -437,10 +456,14 @@ async fn test_interruption_background_matching() {
     // Verify that audio core receives the initial request on start.
     let _ = signal_receiver.next().await;
 
+    let mut sound_event_receiver =
+        VolumeChangeEarconsTest::create_sound_played_listener(&volume_change_earcons_test).await;
+
     // Test that the volume-changed sound gets played on the soundplayer for interruption
     // and the volume is matched on the background.
     VolumeChangeEarconsTest::set_volume(&audio_proxy, vec![CHANGED_INTERRUPTION_STREAM_SETTINGS])
         .await;
+    let _ = sound_event_receiver.next().await.unwrap();
     VolumeChangeEarconsTest::verify_volume(
         &audio_proxy,
         AudioRenderUsage::Background,
@@ -454,10 +477,13 @@ async fn test_interruption_background_matching() {
         vec![CHANGED_INTERRUPTION_STREAM_SETTINGS_MAX],
     )
     .await;
+    let _ = sound_event_receiver.next().await.unwrap();
     VolumeChangeEarconsTest::verify_volume(
         &audio_proxy,
         AudioRenderUsage::Background,
         CHANGED_INTERRUPTION_BACKGROUND_STREAM_SETTINGS_MAX,
     )
     .await;
+
+    let _ = instance.destroy().await;
 }
