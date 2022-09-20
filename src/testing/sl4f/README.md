@@ -6,16 +6,20 @@ from remote host driven test frameworks in the form of core service commands,
 parses these requests, and fulfills them with the appropriate Fuchsia
 equivalent (FIDL) commands.
 
-## SL4F Includes
+## Build SL4F
 
-To include SL4F by default to the build include it with your build:
-`--with src/testing/sl4f:bin`
+To include SL4F by default in the build include it with your build:
+`--with //src/testing/sl4f`. Note that SL4F is only supported on `*_eng` products
+like `workstation_eng`. `core` is not supported.
+
+## Start SL4F component
+
+Start a new SL4F component instance with `ffx component start /core/sl4f`.
 
 ## Pushing incremental changes
 
-1. Build with this command `fx build`.
-2. Terminte previous instances of sl4f: `fx shell killall sl4f.cmx`.
-3. Start a new sl4f instance: `fx run sl4f.cmx`.
+1. Build with `fx build`.
+2. Reload the SL4F component with `ffx component reload /core/sl4f`.
 
 **Note**: you can tune your test framework to open an ssh connection to run
 SL4F in the background.
