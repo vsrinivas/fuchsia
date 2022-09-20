@@ -269,6 +269,14 @@ async fn create_child_view_spec(
         })
         .await?;
 
+    let (mouse, mouse_server) = create_proxy::<ui_test_input::MouseMarker>()?;
+    input_registry
+        .register_mouse(ui_test_input::RegistryRegisterMouseRequest {
+            device: Some(mouse_server),
+            ..ui_test_input::RegistryRegisterMouseRequest::EMPTY
+        })
+        .await?;
+
     fasync::Task::local(async move {
         let (sender, mut receiver) = futures::channel::mpsc::unbounded::<Event<TestEvent>>();
         let event_sender = EventSender::<TestEvent>(sender);
@@ -287,11 +295,13 @@ async fn create_child_view_spec(
                 }
                 Event::WindowEvent { event: window_event, .. } => match window_event {
                     WindowEvent::Focused { focused } => {
-                        // Upon gaining focus, we can receive keyboard events. Inject 'q' to quit.
                         if focused {
-                            // Send key event to child view.
-                            inject_text("q".to_string(), keyboard.clone());
+                            tap(mouse.clone());
                         }
+                    }
+                    WindowEvent::Mouse { .. } => {
+                        // Inject 'q' to quit.
+                        inject_text("q".to_string(), keyboard.clone());
                     }
                     WindowEvent::Keyboard { event, responder } => {
                         if let KeyEvent { key: Some(Key::Q), .. } = event {
@@ -327,6 +337,25 @@ fn inject_text(text: String, keyboard: ui_test_input::KeyboardProxy) {
             })
             .await
             .expect("Failed to inject text using fuchsia.ui.test.input.Keyboard");
+    })
+    .detach();
+}
+
+fn tap(mouse: ui_test_input::MouseProxy) {
+    fasync::Task::local(async move {
+        mouse
+            .simulate_mouse_event(ui_test_input::MouseSimulateMouseEventRequest {
+                pressed_buttons: Some(vec![ui_test_input::MouseButton::First]),
+                ..ui_test_input::MouseSimulateMouseEventRequest::EMPTY
+            })
+            .await
+            .expect("Failed to tap using fuchsia.ui.test.input.Mouse");
+        mouse
+            .simulate_mouse_event(ui_test_input::MouseSimulateMouseEventRequest {
+                ..ui_test_input::MouseSimulateMouseEventRequest::EMPTY
+            })
+            .await
+            .expect("Failed to tap using fuchsia.ui.test.input.Mouse");
     })
     .detach();
 }

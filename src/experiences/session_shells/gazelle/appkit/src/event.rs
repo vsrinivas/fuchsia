@@ -5,7 +5,7 @@
 use {
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_element as felement, fidl_fuchsia_ui_input3 as ui_input3,
-    fidl_fuchsia_ui_views as ui_views,
+    fidl_fuchsia_ui_pointer as fptr, fidl_fuchsia_ui_views as ui_views,
 };
 
 use crate::{child_view::ChildViewId, window::WindowId};
@@ -56,6 +56,10 @@ pub enum WindowEvent {
         event: ui_input3::KeyEvent,
         responder: ui_input3::KeyboardListenerOnKeyEventResponder,
     },
+    /// A mouse event received for this window.
+    Mouse { event: fptr::MouseEvent },
+    /// A touch event received for this window.
+    Touch { event: fptr::TouchEvent },
     /// Window was closed by the [GraphicalPresenter] presenting this window.
     Closed,
 }

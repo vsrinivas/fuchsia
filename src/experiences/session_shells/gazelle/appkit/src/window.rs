@@ -10,8 +10,8 @@ use {
     },
     fidl::AsHandleRef,
     fidl_fuchsia_element as felement, fidl_fuchsia_ui_composition as ui_comp,
-    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_async as fasync,
+    fidl_fuchsia_ui_input3 as ui_input3, fidl_fuchsia_ui_pointer as fptr,
+    fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic::flatland::{IdGenerator, ViewCreationTokenPair},
     futures::{FutureExt, StreamExt, TryFutureExt, TryStreamExt},
@@ -187,6 +187,7 @@ impl<T> Window<T> {
             };
         let (focused, focused_request) = create_proxy::<ui_views::ViewRefFocusedMarker>()?;
         let (view_focuser, view_focuser_request) = create_proxy::<ui_views::FocuserMarker>()?;
+        let (mouse, mouse_request) = create_proxy::<fptr::MouseSourceMarker>()?;
 
         self.id = WindowId::from_view_creation_token(&view_creation_token);
         self.focuser = Some(view_focuser);
@@ -194,6 +195,7 @@ impl<T> Window<T> {
         let view_bound_protocols = ui_comp::ViewBoundProtocols {
             view_ref_focused: Some(focused_request),
             view_focuser: Some(view_focuser_request),
+            mouse_source: Some(mouse_request),
             ..ui_comp::ViewBoundProtocols::EMPTY
         };
 
@@ -250,13 +252,17 @@ impl<T> Window<T> {
         )
         .boxed();
 
+        let mouse_fut =
+            Self::serve_mouse_source_watcher(self.id(), mouse, self.event_sender.clone());
+
         // Collect all futures into an abortable spawned task. The task is aborted in [Drop].
         let task = fasync::Task::spawn(async move {
             futures::join!(
                 flatland_and_layout_watcher_fut,
                 viewref_focused_fut,
                 graphical_presenter_fut,
-                keyboard_fut
+                keyboard_fut,
+                mouse_fut,
             );
         });
         self.running_tasks.push(task);
@@ -453,6 +459,38 @@ impl<T> Window<T> {
                 }
                 Err(fidl_error) => {
                     error!("ViewRefFocused fidl error: {:?}", fidl_error);
+                    break;
+                }
+            }
+        }
+    }
+
+    async fn serve_mouse_source_watcher(
+        window_id: WindowId,
+        mouse_source: fptr::MouseSourceProxy,
+        event_sender: EventSender<T>,
+    ) {
+        let mut mouse_source_stream =
+            HangingGetStream::new(mouse_source, fptr::MouseSourceProxy::watch);
+
+        while let Some(result) = mouse_source_stream.next().await {
+            match result {
+                Ok(events) => {
+                    for event in events.iter() {
+                        event_sender
+                            .send(Event::WindowEvent {
+                                window_id,
+                                event: WindowEvent::Mouse { event: event.clone() },
+                            })
+                            .expect("failed to send Message.");
+                    }
+                }
+                Err(fidl::Error::ClientChannelClosed { .. }) => {
+                    error!("MouseSource connection closed.");
+                    break;
+                }
+                Err(fidl_error) => {
+                    warn!("MouseSource Watch() error: {:?}", fidl_error);
                     break;
                 }
             }
