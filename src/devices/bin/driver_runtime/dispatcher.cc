@@ -457,7 +457,17 @@ void Dispatcher::CompleteShutdown() {
     fbl::AutoLock lock(&callback_lock_);
 
     ZX_ASSERT(state_ == DispatcherState::kShuttingDown);
-    ZX_ASSERT(IsIdleLocked() && !HasFutureOpsScheduledLocked());
+
+    ZX_ASSERT_MSG(num_active_threads_ == 0, "CompleteShutdown called but there are active threads");
+    ZX_ASSERT_MSG(callback_queue_.is_empty(),
+                  "CompleteShutdown called but callback queue has %lu items",
+                  callback_queue_.size_slow());
+    ZX_ASSERT_MSG((!event_waiter_ || !event_waiter_->signaled()),
+                  "CompleteShutdown called but event waiter is still signaled");
+    ZX_ASSERT(IsIdleLocked());
+
+    ZX_ASSERT_MSG(!HasFutureOpsScheduledLocked(),
+                  "CompleteShutdown called but future ops are scheduled");
 
     if (event_waiter_) {
       // Since the event waiter holds a reference to the dispatcher,
