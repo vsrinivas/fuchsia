@@ -6,22 +6,20 @@
 //! among other things, sets the fvm_ramdisk flag to prevent binding of the on-disk filesystems.)
 
 use {
-    crate::test_fixture::{TestFixture, TestFixtureBuilder},
+    crate::test_fixture::{create_hermetic_crypt_service, TestFixture, TestFixtureBuilder},
     device_watcher::recursive_wait_and_open_node,
     either::Either,
     fidl::endpoints::Proxy as _,
     fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_fshost as fshost,
-    fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
+    fidl_fuchsia_fxfs::CryptMarker,
     fidl_fuchsia_hardware_block_volume::VolumeMarker,
-    fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger,
+    fidl_fuchsia_io as fio,
     fs_management::{filesystem::Filesystem, Fxfs, Minfs},
     fuchsia_component::client::connect_to_protocol_at_path,
-    fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_zircon::{self as zx, HandleBased as _},
-    key_bag::{Aes256Key, KeyBagManager, WrappingKey, AES128_KEY_SIZE},
+    key_bag::{KeyBagManager, WrappingKey, AES128_KEY_SIZE},
     ramdevice_client::VmoRamdiskClientBuilder,
-    std::ops::Deref,
     std::path::Path,
     storage_isolated_driver_manager::{fvm::bind_fvm_driver, zxcrypt::unseal_insecure_zxcrypt},
 };
@@ -35,58 +33,6 @@ fn generate_insecure_key(name: &[u8]) -> WrappingKey {
     let mut bytes = [0u8; AES128_KEY_SIZE];
     bytes[..name.len()].copy_from_slice(&name);
     WrappingKey::Aes128(bytes)
-}
-
-async fn create_hermetic_crypt_service(
-    data_key: Aes256Key,
-    metadata_key: Aes256Key,
-) -> RealmInstance {
-    let builder = RealmBuilder::new().await.unwrap();
-    let url = "#meta/fxfs-crypt.cm";
-    let crypt = builder.add_child("fxfs-crypt", url, ChildOptions::new().eager()).await.unwrap();
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<CryptMarker>())
-                .capability(Capability::protocol::<CryptManagementMarker>())
-                .from(&crypt)
-                .to(Ref::parent()),
-        )
-        .await
-        .unwrap();
-    builder
-        .add_route(
-            Route::new()
-                .capability(Capability::protocol::<flogger::LogSinkMarker>())
-                .from(Ref::parent())
-                .to(&crypt),
-        )
-        .await
-        .unwrap();
-    let realm = builder.build().await.expect("realm build failed");
-    let crypt_management =
-        realm.root.connect_to_protocol_at_exposed_dir::<CryptManagementMarker>().unwrap();
-    crypt_management
-        .add_wrapping_key(0, data_key.deref())
-        .await
-        .unwrap()
-        .expect("add_wrapping_key failed");
-    crypt_management
-        .add_wrapping_key(1, metadata_key.deref())
-        .await
-        .unwrap()
-        .expect("add_wrapping_key failed");
-    crypt_management
-        .set_active_key(KeyPurpose::Data, 0)
-        .await
-        .unwrap()
-        .expect("set_active_key failed");
-    crypt_management
-        .set_active_key(KeyPurpose::Metadata, 1)
-        .await
-        .unwrap()
-        .expect("set_active_key failed");
-    realm
 }
 
 async fn write_data_file_common(fixture: TestFixture, expected_volume_size: u64) {

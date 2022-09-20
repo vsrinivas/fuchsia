@@ -4,25 +4,18 @@
 
 use {
     crate::mocks,
-    anyhow::Error,
     device_watcher::recursive_wait_and_open_node,
     fidl::endpoints::{create_proxy, Proxy},
     fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost,
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
     fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger, fidl_fuchsia_process as fprocess,
     fs_management::{Blobfs, Fxfs, BLOBFS_TYPE_GUID, DATA_TYPE_GUID},
-    fuchsia_component::client::connect_to_protocol,
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::FutureExt,
     key_bag::Aes256Key,
     ramdevice_client::{RamdiskClient, VmoRamdiskClientBuilder},
-    std::{
-        io::Write,
-        ops::Deref,
-        path::Path,
-        sync::atomic::{AtomicBool, Ordering},
-    },
+    std::{io::Write, ops::Deref, path::Path},
     storage_isolated_driver_manager::{
         fvm::{create_fvm_volume, set_up_fvm},
         zxcrypt,
@@ -64,6 +57,58 @@ const METADATA_KEY: Aes256Key = Aes256Key::create([
     0x0f, 0x4d, 0xca, 0x6b, 0x35, 0x0e, 0x85, 0x6a, 0xb3, 0x8c, 0xdd, 0xe9, 0xda, 0x0e, 0xc8, 0x22,
     0x8e, 0xea, 0xd8, 0x05, 0xc4, 0xc9, 0x0b, 0xa8, 0xd8, 0x85, 0x87, 0x50, 0x75, 0x40, 0x1c, 0x4c,
 ]);
+
+pub async fn create_hermetic_crypt_service(
+    data_key: Aes256Key,
+    metadata_key: Aes256Key,
+) -> RealmInstance {
+    let builder = RealmBuilder::new().await.unwrap();
+    let url = "#meta/fxfs-crypt.cm";
+    let crypt = builder.add_child("fxfs-crypt", url, ChildOptions::new().eager()).await.unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<CryptMarker>())
+                .capability(Capability::protocol::<CryptManagementMarker>())
+                .from(&crypt)
+                .to(Ref::parent()),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<flogger::LogSinkMarker>())
+                .from(Ref::parent())
+                .to(&crypt),
+        )
+        .await
+        .unwrap();
+    let realm = builder.build().await.expect("realm build failed");
+    let crypt_management =
+        realm.root.connect_to_protocol_at_exposed_dir::<CryptManagementMarker>().unwrap();
+    crypt_management
+        .add_wrapping_key(0, data_key.deref())
+        .await
+        .unwrap()
+        .expect("add_wrapping_key failed");
+    crypt_management
+        .add_wrapping_key(1, metadata_key.deref())
+        .await
+        .unwrap()
+        .expect("add_wrapping_key failed");
+    crypt_management
+        .set_active_key(KeyPurpose::Data, 0)
+        .await
+        .unwrap()
+        .expect("set_active_key failed");
+    crypt_management
+        .set_active_key(KeyPurpose::Metadata, 1)
+        .await
+        .unwrap()
+        .expect("set_active_key failed");
+    realm
+}
 
 #[derive(Default)]
 pub struct TestFixtureBuilder {
@@ -329,6 +374,7 @@ async fn init_data_minfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
 }
 
 async fn init_data_fxfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
+    let crypt_realm = create_hermetic_crypt_service(DATA_KEY, METADATA_KEY).await;
     let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
     let data_device = recursive_wait_and_open_node(dev, data_path.strip_prefix("/dev/").unwrap())
         .await
@@ -346,10 +392,10 @@ async fn init_data_fxfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
             .expect("create file failed");
         file.write_all(KEY_BAG_CONTENTS.as_bytes()).expect("write file failed");
 
-        init_crypt_service().await.expect("init crypt service failed");
-
         let crypt_service = Some(
-            connect_to_protocol::<CryptMarker>()
+            crypt_realm
+                .root
+                .connect_to_protocol_at_exposed_dir::<CryptMarker>()
                 .expect("Unable to connect to Crypt service")
                 .into_channel()
                 .unwrap()
@@ -374,26 +420,6 @@ async fn init_data_fxfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
     // the file could get dropped.
     file.describe_deprecated().await.expect("describe failed");
     fs.shutdown().await.expect("shutdown failed");
-}
-
-async fn init_crypt_service() -> Result<(), Error> {
-    static INITIALIZED: AtomicBool = AtomicBool::new(false);
-    if INITIALIZED.load(Ordering::SeqCst) {
-        return Ok(());
-    }
-    let crypt_management = connect_to_protocol::<CryptManagementMarker>()?;
-    crypt_management.add_wrapping_key(0, DATA_KEY.deref()).await?.map_err(zx::Status::from_raw)?;
-    crypt_management
-        .add_wrapping_key(1, METADATA_KEY.deref())
-        .await?
-        .map_err(zx::Status::from_raw)?;
-    crypt_management.set_active_key(KeyPurpose::Data, 0).await?.map_err(zx::Status::from_raw)?;
-    crypt_management
-        .set_active_key(KeyPurpose::Metadata, 1)
-        .await?
-        .map_err(zx::Status::from_raw)?;
-    INITIALIZED.store(true, Ordering::SeqCst);
-    Ok(())
 }
 
 pub struct TestFixture {
