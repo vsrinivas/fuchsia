@@ -11,6 +11,7 @@ go_library("main") {
   sources = [
     "config.go",
     "driver.go",
+    "filter.go",
     "gn.go",
     "include.go",
     "log.go",

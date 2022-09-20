@@ -12,7 +12,6 @@ go_library("world") {
     "config.go",
     "csv.go",
     "diff.go",
-    "filter.go",
     "git.go",
     "gn_test.go",
     "init.go",

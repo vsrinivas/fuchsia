@@ -40,9 +40,25 @@ func Execute(ctx context.Context, config *CheckLicensesConfig) error {
 	log.Printf("Done. [%v]\n", time.Since(startDirectory))
 	r.End()
 
+	// If we plan on generating an output notice file:
+	// Filter out the projects that we don't care about (absent from the build graph).
+	if Config.OutputLicenseFile {
+		r := trace.StartRegion(ctx, "cmd.FilterProjects("+Config.Target+")")
+		startFilter := time.Now()
+		log.Printf("Filtering out projects that are not in the build graph for the current workspace...")
+		if err := FilterProjects(); err != nil {
+			log.Println("Error!")
+			return err
+		}
+		log.Printf("Done. [%v]\n", time.Since(startFilter))
+		r.End()
+	} else {
+		project.FilteredProjects = project.AllProjects
+	}
+
 	r = trace.StartRegion(ctx, "project.AnalyzeLicenses")
 	startAnalyze := time.Now()
-	log.Printf("Searching for license texts [%v projects]... ", len(project.AllProjects))
+	log.Printf("Searching for license texts [%v projects]... ", len(project.FilteredProjects))
 	err = project.AnalyzeLicenses()
 	if err != nil {
 		log.Println("Error!")

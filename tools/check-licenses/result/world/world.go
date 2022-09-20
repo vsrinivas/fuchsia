@@ -47,6 +47,15 @@ func NewWorld() (*World, error) {
 	}
 	sort.Sort(project.Order(allProjects))
 
+	filteredProjects := make([]*project.Project, 0)
+	for _, p := range project.FilteredProjects {
+		sort.SliceStable(p.SearchResults, func(i, j int) bool {
+			return string(p.SearchResults[i].LicenseData.Data) < string(p.SearchResults[j].LicenseData.Data)
+		})
+		filteredProjects = append(filteredProjects, p)
+	}
+	sort.Sort(project.Order(filteredProjects))
+
 	allFiles := make([]*file.File, 0)
 	for _, f := range file.AllFiles {
 		allFiles = append(allFiles, f)
@@ -60,15 +69,12 @@ func NewWorld() (*World, error) {
 	sort.Sort(directory.Order(allDirectories))
 
 	w := &World{
-		Status:      &strings.Builder{},
-		Files:       allFiles,
-		Directories: allDirectories,
-		Patterns:    allPatterns,
-		Projects:    allProjects,
-	}
-
-	if err := w.FilterProjects(); err != nil {
-		return nil, err
+		Status:           &strings.Builder{},
+		Files:            allFiles,
+		Directories:      allDirectories,
+		Patterns:         allPatterns,
+		Projects:         allProjects,
+		FilteredProjects: filteredProjects,
 	}
 
 	if err := w.AddLicenseUrls(); err != nil {

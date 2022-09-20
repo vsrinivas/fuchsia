@@ -166,7 +166,9 @@ func mainImpl() error {
 
 	// Set non-string config values directly.
 	Config.Result.OutputLicenseFile = *outputLicenseFile
+	Config.OutputLicenseFile = *outputLicenseFile
 	Config.World.Filters = strings.Split(*filter, ",")
+	Config.Filters = strings.Split(*filter, ",")
 
 	if err := os.Chdir(*fuchsiaDir); err != nil {
 		return err

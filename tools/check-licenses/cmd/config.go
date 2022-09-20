@@ -46,6 +46,8 @@ type CheckLicensesConfig struct {
 
 	Target string `json:"target"`
 
+	Filters []string
+
 	OutputLicenseFile bool `json:"outputLicenseFile"`
 }
 
@@ -146,6 +148,7 @@ func (c *CheckLicensesConfig) Merge(other *CheckLicensesConfig) error {
 		c.LogLevel = other.LogLevel
 	}
 
+	c.Filters = append(c.Filters, other.Filters...)
 	c.OutputLicenseFile = c.OutputLicenseFile || other.OutputLicenseFile
 
 	return nil

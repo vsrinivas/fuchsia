@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package world
+package main
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"path/filepath"
 	"sort"
@@ -17,7 +18,7 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/check-licenses/project"
 )
 
-func (w *World) FilterProjects() error {
+func FilterProjects() error {
 	projects := make([]*project.Project, 0)
 	projectsMap := make(map[*project.Project]bool, 0)
 
@@ -25,16 +26,16 @@ func (w *World) FilterProjects() error {
 	var err error
 
 	if isDir(Config.Target) {
-		w.Status.WriteString(fmt.Sprintf("Filtering projects using a folder prefix check: `%s`\n", Config.Target))
-		filepaths = w.FilterProjectsUsingDirectoryPrefix(filepaths)
+		log.Printf(fmt.Sprintf(" -> Filtering projects using a folder prefix check: `%s`\n", Config.Target))
+		filepaths = FilterProjectsUsingDirectoryPrefix(filepaths)
 	}
 
-	filepaths, err = w.FilterExtraProjects(filepaths)
+	filepaths, err = FilterExtraProjects(filepaths)
 	if err != nil {
 		return err
 	}
 
-	fileMap, err := w.getFileMap()
+	fileMap, err := getFileMap()
 	if err != nil {
 		return err
 	}
@@ -52,17 +53,19 @@ func (w *World) FilterProjects() error {
 	}
 	sort.Sort(project.Order(projects))
 
-	w.FilteredProjects = projects
+	for _, p := range projects {
+		project.FilteredProjects[p.Root] = p
+	}
 
-	filteredCount := len(w.FilteredProjects)
-	totalCount := len(w.Projects)
+	filteredCount := len(project.FilteredProjects)
+	totalCount := len(project.AllProjects)
 	filteredOutCount := totalCount - filteredCount
-	w.Status.WriteString(fmt.Sprintf("%v projects remain (filtered out %v from the full list of %v projects).\n", filteredCount, filteredOutCount, totalCount))
+	log.Printf(" -> %v projects remain (filtered out %v from the full list of %v projects).\n", filteredCount, filteredOutCount, totalCount)
 	return nil
 }
 
-func (w *World) FilterProjectsUsingDirectoryPrefix(filepaths []string) []string {
-	for _, p := range w.Projects {
+func FilterProjectsUsingDirectoryPrefix(filepaths []string) []string {
+	for _, p := range project.AllProjects {
 		for _, f := range p.Files {
 			if strings.HasPrefix(f.AbsPath, Config.Target) {
 				filepaths = append(filepaths, f.AbsPath)
@@ -72,9 +75,9 @@ func (w *World) FilterProjectsUsingDirectoryPrefix(filepaths []string) []string 
 	return filepaths
 }
 
-func (w *World) FilterExtraProjects(filepaths []string) ([]string, error) {
+func FilterExtraProjects(filepaths []string) ([]string, error) {
 	for _, projectFile := range Config.Filters {
-		w.Status.WriteString(fmt.Sprintf("Adding additional projects from json file: `%s`\n", projectFile))
+		log.Printf(" -> Adding additional projects from json file: `%s`\n", projectFile)
 
 		f, err := os.Open(projectFile)
 		if err != nil {
@@ -99,7 +102,7 @@ func (w *World) FilterExtraProjects(filepaths []string) ([]string, error) {
 	return filepaths, nil
 }
 
-func (w *World) getFileMap() (map[string]*project.Project, error) {
+func getFileMap() (map[string]*project.Project, error) {
 	// Create a mapping that goes from file path to project,
 	// so we can retrieve the projects that match dependencies in the
 	// gn gen file.
