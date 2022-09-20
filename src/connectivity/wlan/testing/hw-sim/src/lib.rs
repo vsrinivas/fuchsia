@@ -955,8 +955,11 @@ pub async fn loop_until_iface_is_found(helper: &mut test_utils::TestHelper) {
 
         let phy = helper.proxy();
         let scan_event = test_utils::phy_event_from_beacons(&phy, &[]);
+
+        // Once a client interface is available for scanning, it takes up to around 30s for a scan
+        // to complete (see fxb/109900).  Allow double that amount of time to reduce flakiness.
         match helper
-            .run_until_complete_or_timeout(10.seconds(), "receive a scan response", scan_event, fut)
+            .run_until_complete_or_timeout(60.seconds(), "receive a scan response", scan_event, fut)
             .await
         {
             Err(_) => {
