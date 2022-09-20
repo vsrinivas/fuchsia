@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::{anyhow, Context},
-    fidl_fuchsia_element as felement, fidl_fuchsia_session_scene as fscene,
-    fidl_fuchsia_ui_composition as ui_comp,
-    fuchsia_component::client::connect_to_protocol,
-    fuchsia_component::server::ServiceFs,
-    fuchsia_scenic::flatland,
-    futures::{stream, StreamExt},
-};
+use anyhow::{anyhow, Context};
+use fidl_fuchsia_element as felement;
+use fidl_fuchsia_session_scene as fscene;
+use fidl_fuchsia_ui_composition as ui_comp;
+use fuchsia_component::{client, server};
+use fuchsia_scenic::flatland;
+use futures::{stream, StreamExt};
 
 mod wm;
 
@@ -20,10 +18,10 @@ enum IncomingService {
 
 #[fuchsia::main(logging = true)]
 async fn main() -> anyhow::Result<()> {
-    let flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
-    let scene_manager = connect_to_protocol::<fscene::ManagerMarker>()?;
+    let flatland = client::connect_to_protocol::<flatland::FlatlandMarker>()?;
+    let scene_manager = client::connect_to_protocol::<fscene::ManagerMarker>()?;
 
-    let mut fs = ServiceFs::new();
+    let mut fs = server::ServiceFs::new();
     fs.dir("svc").add_fidl_service(IncomingService::GraphicalPresenter);
     fs.take_and_serve_directory_handle()?;
 
@@ -37,12 +35,10 @@ async fn main() -> anyhow::Result<()> {
     let mut incoming_connections = fs.fuse();
 
     let mut graphical_presenter_requests = stream::SelectAll::new();
-    let mut events = stream::SelectAll::new();
 
-    let mut server =
-        wm::WindowManager::new(flatland.clone(), view_creation_token_pair.view_creation_token)
-            .await?;
-
+    let mut manager = wm::Manager::new(
+        wm::View::new(flatland.clone(), view_creation_token_pair.view_creation_token).await?,
+    );
     flatland.present(flatland::PresentArgs::EMPTY)?;
 
     present_root_result
@@ -83,14 +79,22 @@ async fn main() -> anyhow::Result<()> {
                         graphical_presenter_requests.push(stream),
                 },
             request = graphical_presenter_requests.select_next_some() => {
-                let present_view_request = request.context("getting PresentView request")?;
-                events.push(server.present_view(present_view_request)?);
+                let felement::GraphicalPresenterRequest::PresentView {
+                    view_spec,
+                    annotation_controller,
+                    view_controller_request,
+                    responder,
+                } = request.context("getting PresentView request")?;
+                manager.present_view(
+                    view_spec, annotation_controller, view_controller_request)?;
+
+                responder.send(&mut Ok(())).context("while replying to PresentView")?;
                 presentation_requested = true;
             },
-            event = events.select_next_some() => {
-                events.push(server.handle_event(event));
+            background_result = manager.select_background_task() => {
+                let () = background_result.expect("while doing background work");
                 presentation_requested = true;
-            }
+             }
         }
     }
 }
