@@ -338,7 +338,7 @@ impl LightController {
         for group_config in config.light_groups {
             let mut light_state: Vec<LightState> = Vec::new();
 
-            // TODO(fxbug.dev/62591): once all clients go through setui, restore state from hardware
+            // TODO(fxbug.dev/56319): once all clients go through setui, restore state from hardware
             // only if not found in persistent storage.
             for light_index in group_config.hardware_index.iter() {
                 light_state.push(
