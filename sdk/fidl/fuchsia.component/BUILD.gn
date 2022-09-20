@@ -20,4 +20,7 @@ fidl("fuchsia.component") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.process",
   ]
+
+  # TODO(fxbug.dev/109747): Re-enable.
+  excluded_checks = [ "invalid-case-for-decl-name" ]
 }

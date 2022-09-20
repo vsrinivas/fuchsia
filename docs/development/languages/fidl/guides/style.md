@@ -70,7 +70,7 @@ Element                    | Casing             | Example
 `bits`                     | _upper camel case_ | `InfoFeatures`
 bitfield members           | _upper snake case_ | `WLAN_SNOOP`
 `const`                    | _upper snake case_ | `MAX_NAMES`
-primitive alias            | _lower snake case_ | `hw_partition`
+`alias`                    | _upper camel case_ | `DeviceId`
 `protocol`                 | _upper camel case_ | `AudioRenderer`
 protocol method parameters | _lower snake case_ | `enable_powersave`
 protocol methods           | _upper camel case_ | `GetBatteryStatus`

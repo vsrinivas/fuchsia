@@ -558,6 +558,13 @@ Linter::Linter()
         linter.CheckCase(layout_kind + "s", element.identifier, linter.invalid_case_for_decl_name(),
                          linter.decl_case_type_for_style());
       });
+  callbacks_.OnAliasDeclaration([&linter = *this]
+                                //
+                                (const raw::AliasDeclaration& element) {
+                                  linter.CheckCase("type alias", element.alias,
+                                                   linter.invalid_case_for_decl_name(),
+                                                   linter.decl_case_type_for_style());
+                                });
   callbacks_.OnLayout(
       [&linter = *this, explict_flexible_modifier_check = explict_flexible_modifier,
        modifiers_order_check = modifiers_order]

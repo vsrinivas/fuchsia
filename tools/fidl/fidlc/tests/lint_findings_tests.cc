@@ -1020,7 +1020,7 @@ library fidl.a;
 
 using zx as ${TEST};
 
-alias unused = ${TEST}.handle;
+alias Unused = ${TEST}.handle;
 )FIDL");
 
   test.substitute("TEST", "what_if_someone_does_this");
@@ -1651,10 +1651,10 @@ type SomeStruct = struct {
   test.that("developer cannot work around the check by aliasing").source_template(R"FIDL(
 library fidl.a;
 
-alias unbounded_str = ${TEST};
+alias UnboundedStr = ${TEST};
 
 type SomeStruct = struct {
-  test_string unbounded_str;
+  test_string UnboundedStr;
 };
 )FIDL");
 
@@ -1919,10 +1919,10 @@ type SomeStruct = struct {
 library fidl.a;
 
 // explanation for why we want this
-alias unbounded_vector = ${TEST};
+alias UnboundedVector = ${TEST};
 
 type SomeStruct = struct {
-  test_vector unbounded_vector;
+  test_vector UnboundedVector;
 };
 )FIDL")
       .substitute("TEST", "vector<uint8>");

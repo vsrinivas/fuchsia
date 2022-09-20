@@ -13,4 +13,6 @@ fidl("fuchsia.ui.shortcut2") {
     "//sdk/fidl/fuchsia.ui.input3",
     "//sdk/fidl/fuchsia.ui.views",
   ]
+
+  excluded_checks = [ "invalid-case-for-decl-name" ]
 }

@@ -20,4 +20,7 @@ fidl("fuchsia.sys.internal") {
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.sys",
   ]
+
+  # TODO(fxbug.dev/109747): Re-enable.
+  excluded_checks = [ "invalid-case-for-decl-name" ]
 }

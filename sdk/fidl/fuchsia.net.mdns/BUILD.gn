@@ -12,6 +12,8 @@ fidl("fuchsia.net.mdns") {
 
     # 'Service' is used in this context to refer to DNS-SD services, not FIDL services.
     "protocol-name-includes-service",
+
+    "invalid-case-for-decl-name",
   ]
 
   sdk_category = "partner"

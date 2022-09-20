@@ -99,7 +99,7 @@ library fuchsia.a;
 
 using zx as bad_USING;
 
-alias unused = bad_USING.handle;
+alias Unused = bad_USING.handle;
 )FIDL");
   library.UseLibraryZx();
   ASSERT_COMPILED(library);
@@ -113,7 +113,31 @@ library fuchsia.a;
 
 using zx as good_using;
 
-alias unused = good_using.handle;
+alias Unused = good_using.handle;
+)FIDL");
+  library.UseLibraryZx();
+  ASSERT_COMPILED(library);
+  ASSERT_TRUE(library.Lint());
+  ASSERT_WARNINGS(0, library, "");
+}
+
+TEST(LintTests, BadAliasNames) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+alias snake_case = uint32;
+)FIDL");
+  library.UseLibraryZx();
+  ASSERT_COMPILED(library);
+  ASSERT_FALSE(library.Lint());
+  ASSERT_WARNINGS(1, library, "snake_case");
+}
+
+TEST(LintTests, GoodAliasNames) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+alias SnakeCase = uint32;
 )FIDL");
   library.UseLibraryZx();
   ASSERT_COMPILED(library);
