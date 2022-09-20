@@ -706,6 +706,7 @@ sed -i -e "s|$PWD/||g" "$depfile.nolink"
 #   prebuilt/third_party/rust/mac-x64/lib/rustlib/x86_64-fuchsia/lib/libstd-0c588baa7fcccb3b.rlib
 # output example:
 #   prebuilt/third_party/rust/linux-x64/lib/rustlib/x86_64-fuchsia/lib/libstd-702aada9fd6fb728.rlib
+# TODO(https://fxbug.dev/106711): remove this transform once libs are consistent
 function remap_remote_rust_lib() {
 case "$1" in
   *prebuilt/third_party/rust/*/lib/*)
@@ -724,12 +725,18 @@ esac
 remote_depfile_inputs=(
   $(depfile_inputs_by_line "$depfile.nolink" | \
     while read line
-    do relpath "$project_root" "$(remap_remote_rust_lib "$line")"
+    do
+      # It is possible to find multiple libraries versions.
+      # Upload all of them.
+      _remote_rust_lib=( $(remap_remote_rust_lib "$line") )
+      for lib in "${_remote_rust_lib[@]}"
+      do relpath "$project_root" "$lib"
+      done
     done
   )
 )
 # Done with temporary depfile, remove it.
-rm -f "$depfile.nolink"
+cleanup_files+=( "$depfile.nolink" )
 
 # Some Rust libraries come with both .rlib and .so (like libstd), however,
 # the depfile generator fails to list the .so file in some cases,
