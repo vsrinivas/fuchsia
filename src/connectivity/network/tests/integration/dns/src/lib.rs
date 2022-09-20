@@ -211,14 +211,21 @@ async fn discovered_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
         .expect("failed to connect to DHCP server");
 
     let dhcp_server_ref = &dhcp_server;
-    // TODO(https://fxbug.dev/62554): derive these from SERVER_ADDR.
+
+    let server_addr_v4 =
+        assert_matches::assert_matches!(SERVER_ADDR.addr, fnet::IpAddress::Ipv4(v4) => v4);
+    let (range_start, range_stop) = {
+        let [a, b, c, d] = server_addr_v4.addr;
+        // A small pool of addresses derived from the server's.
+        (fnet::Ipv4Address { addr: [a, b, c, d + 1] }, fnet::Ipv4Address { addr: [a, b, c, d + 4] })
+    };
     let () = stream::iter(
         [
-            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![fidl_ip_v4!("192.168.0.1")]),
+            fidl_fuchsia_net_dhcp::Parameter::IpAddrs(vec![server_addr_v4]),
             fidl_fuchsia_net_dhcp::Parameter::AddressPool(fidl_fuchsia_net_dhcp::AddressPool {
                 prefix_length: Some(25),
-                range_start: Some(fidl_ip_v4!("192.168.0.2")),
-                range_stop: Some(fidl_ip_v4!("192.168.0.5")),
+                range_start: Some(range_start),
+                range_stop: Some(range_stop),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             }),
             fidl_fuchsia_net_dhcp::Parameter::BoundDeviceNames(vec!["eth2".to_string()]),
