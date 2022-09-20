@@ -4,6 +4,7 @@
 
 mod binder;
 mod features;
+mod framebuffer_server;
 mod logd;
 mod registry;
 

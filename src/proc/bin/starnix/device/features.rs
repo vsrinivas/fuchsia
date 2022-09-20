@@ -28,6 +28,14 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
                 create_socket_and_start_server(current_task);
             }
             "selinux_enabled" => {}
+            "framebuffer" => {
+                let framebuffer = current_task.kernel().framebuffer.clone();
+                current_task
+                    .kernel()
+                    .device_registry
+                    .write()
+                    .register_chrdev_major(framebuffer.clone(), FB_MAJOR)?;
+            }
             feature => {
                 tracing::warn!("Unsupported feature: {:?}", feature);
             }
@@ -63,6 +71,9 @@ pub fn run_component_features(
                     b"/data/tmp/wayland-1".to_vec(),
                     outgoing_dir,
                 )?;
+            }
+            "framebuffer" => {
+                current_task.kernel().framebuffer.start_server(outgoing_dir.take().unwrap());
             }
             "binder" => {}
             "logd" => {}

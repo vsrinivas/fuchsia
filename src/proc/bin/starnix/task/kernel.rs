@@ -9,6 +9,7 @@ use std::ffi::CStr;
 use std::iter::FromIterator;
 use std::sync::Arc;
 
+use crate::device::framebuffer::Framebuffer;
 use crate::device::{DeviceMode, DeviceRegistry};
 use crate::fs::socket::SocketAddress;
 use crate::fs::{FileOps, FileSystemHandle, FsNode};
@@ -63,6 +64,13 @@ pub struct Kernel {
     // The features enabled for the galaxy this kernel is associated with, as specified in
     // the galaxy's configuration file.
     pub features: HashSet<String>,
+
+    /// A `Framebuffer` that can be used to display a view in the workstation UI. If the galaxy
+    /// specifies the `framebuffer` feature this framebuffer will be registered as a device.
+    ///
+    /// When a component is run in that galaxy and also specifies the `framebuffer` feature, the
+    /// framebuffer will be served as the view of the component.
+    pub framebuffer: Arc<Framebuffer>,
 }
 
 impl Kernel {
@@ -93,6 +101,7 @@ impl Kernel {
             selinux_fs: OnceCell::new(),
             device_registry: RwLock::new(DeviceRegistry::new_with_common_devices()),
             features: HashSet::from_iter(features.iter().cloned()),
+            framebuffer: Framebuffer::new().expect("Failed to create framebuffer"),
         })
     }
 

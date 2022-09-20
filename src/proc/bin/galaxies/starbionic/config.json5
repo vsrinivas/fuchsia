@@ -4,6 +4,7 @@
     ],
     features: [
         "binder",
+        "framebuffer",
         "selinux_enabled",
     ],
     init: [
