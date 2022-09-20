@@ -367,6 +367,15 @@ int first_used_page_table_entry(const volatile pte_t* page_table, uint page_size
   for (unsigned int i = 0; i < count; i++) {
     pte_t pte = page_table[i];
     if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
+      // Although the descriptor isn't exactly the INVALID value, it might have been corrupted and
+      // also not a valid entry. Some forms of corruption are indistinguishable from valid entries,
+      // so this is really just checking for scenarios where the low type bits got set to INVALID,
+      // but the rest of the entry did not.
+      //
+      // TODO(fxbug.dev/79118): Once fxbug.dev/79118 is resolved this can be removed.
+      ASSERT_MSG(is_pte_valid(pte),
+                 "page_table at %p has malformed invalid entry %#" PRIx64 " at %u\n", page_table,
+                 pte, i);
       return i;
     }
   }
@@ -1720,14 +1729,78 @@ zx_status_t ArmArchVmAspace::Init() {
   return ZX_OK;
 }
 
+zx_status_t ArmArchVmAspace::DebugFindFirstLeafMapping(vaddr_t* out_pt, vaddr_t* out_vaddr,
+                                                       pte_t* out_pte) const {
+  canary_.Assert();
+
+  DEBUG_ASSERT(tt_virt_);
+  DEBUG_ASSERT(out_vaddr);
+  DEBUG_ASSERT(out_pte);
+
+  const unsigned int count = 1U << (page_size_shift_ - 3);
+  const volatile pte_t* page_table = tt_virt_;
+  uint32_t index_shift = top_index_shift_;
+  vaddr_t vaddr = 0;
+  while (true) {
+    uint64_t index = 0;
+    pte_t pte;
+    // Walk the page table until we find an entry.
+    for (index = 0; index < count; index++) {
+      pte = page_table[index];
+      if (pte != MMU_PTE_DESCRIPTOR_INVALID) {
+        break;
+      }
+    }
+    if (index == count) {
+      return ZX_ERR_NOT_FOUND;
+    }
+    // Update the virtual address for the index at the current level.
+    vaddr += (index << index_shift);
+
+    const uint descriptor_type = pte & MMU_PTE_DESCRIPTOR_MASK;
+    const paddr_t pte_addr = pte & MMU_PTE_OUTPUT_ADDR_MASK;
+
+    // If we have found a leaf mapping, return it.
+    if (descriptor_type == ((index_shift > page_size_shift_) ? MMU_PTE_L012_DESCRIPTOR_BLOCK
+                                                             : MMU_PTE_L3_DESCRIPTOR_PAGE)) {
+      *out_vaddr = vaddr;
+      *out_pte = pte;
+      *out_pt = reinterpret_cast<vaddr_t>(page_table);
+      return ZX_OK;
+    }
+
+    // Assume this entry could be corrupted and validate the next table address is valid, and return
+    // graceful errors on invalid descriptor types.
+    if (!is_physmap_phys_addr(pte_addr) || index_shift <= page_size_shift_ ||
+        descriptor_type != MMU_PTE_L012_DESCRIPTOR_TABLE) {
+      *out_vaddr = vaddr;
+      *out_pte = pte;
+      *out_pt = reinterpret_cast<vaddr_t>(page_table);
+      return ZX_ERR_BAD_STATE;
+    }
+
+    page_table = static_cast<const volatile pte_t*>(paddr_to_physmap(pte_addr));
+    index_shift -= page_size_shift_ - 3;
+  }
+}
+
 void ArmArchVmAspace::AssertEmptyLocked() const {
   // Check to see if the top level page table is empty. If not the user didn't
   // properly unmap everything before destroying the aspace
   if (const int index = first_used_page_table_entry(tt_virt_, page_size_shift_); index != -1) {
+    vaddr_t pt_addr = 0;
+    vaddr_t entry_vaddr = 0;
+    pte_t pte = 0;
+    // Attempt to walk the page table and find the first leaf most mapping that we can. This
+    // represents (at least one of) the entries that is holding this page table alive.
+    //
+    // TODO(fxbug.dev/79118): Once fxbug.dev/79118 is resolved this call, and the entire called
+    // method, can be removed.
+    zx_status_t status = DebugFindFirstLeafMapping(&pt_addr, &entry_vaddr, &pte);
     panic(
         "top level page table still in use! aspace %p pt_pages_ %zu tt_virt %p index %d entry "
-        "%" PRIx64 "\n",
-        this, pt_pages_, tt_virt_, index, tt_virt_[index]);
+        "%" PRIx64 ". Leaf query status %d pt_addr %zu vaddr %zu entry %" PRIx64 "\n",
+        this, pt_pages_, tt_virt_, index, tt_virt_[index], status, pt_addr, entry_vaddr, pte);
   }
 
   if (pt_pages_ != 1) {
