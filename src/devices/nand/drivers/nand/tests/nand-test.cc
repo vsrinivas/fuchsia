@@ -311,7 +311,7 @@ class NandDeviceTest : public NandTest {
   }
 
   bool Wait() {
-    zx_status_t status = sync_completion_wait(&event_, ZX_SEC(5));
+    zx_status_t status = sync_completion_wait(&event_, ZX_SEC(20));
     sync_completion_reset(&event_);
     return status == ZX_OK;
   }
