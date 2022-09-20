@@ -9,7 +9,7 @@ toc:
 - title: "Overview"
   path: /docs/reference/fidl/language/language.md
 - title: "Errors"
-  path: /docs/reference/fidl/language/errors.md
+  path: /docs/reference/fidl/language/errcat.md
 - title: "Attributes"
   path: /docs/reference/fidl/language/attributes.md
 - title: "Versioning"
