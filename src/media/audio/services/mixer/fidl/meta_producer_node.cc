@@ -47,12 +47,6 @@ void MetaProducerNode::Stop(ProducerStage::StopCommand cmd) const {
   }
 }
 
-zx::duration MetaProducerNode::GetSelfPresentationDelayForSource(const NodePtr& source) {
-  // Producers do not have internal delay contribution.
-  // TODO(fxbug.dev/87651): Add a method to introduce external delay.
-  return zx::duration(0);
-}
-
 NodePtr MetaProducerNode::CreateNewChildSource() {
   // Producers do not have source nodes.
   return nullptr;

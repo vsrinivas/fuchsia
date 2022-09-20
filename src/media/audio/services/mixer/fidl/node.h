@@ -148,10 +148,9 @@ class Node {
 
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect
-  // to `source` edge, on top of any additional external delay contribution that is set via
-  // `set_external_presentation_delay`.
-  // REQUIRED: An edge exists from `source` to this node.
-  virtual zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) = 0;
+  // to `source` edge.
+  // REQUIRED: !is_meta() and an edge exists from `source` to this node (unless source == nullptr).
+  virtual zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const = 0;
 
  protected:
   Node(std::string_view name, bool is_meta, PipelineDirection pipeline_direction,

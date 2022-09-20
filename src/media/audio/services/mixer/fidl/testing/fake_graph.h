@@ -8,14 +8,17 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
+#include <functional>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
+#include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/testing/fake_pipeline_stage.h"
 
 namespace media_audio {
@@ -31,43 +34,49 @@ using FakeNodePtr = std::shared_ptr<FakeNode>;
 // Not safe for concurrent use.
 class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
  public:
-  // Register a handler for `CreateNewChildSource`.
+  // Registers a handler for `GetSelfPresentationDelayForSource`.
+  // If a handler is not registered, a default handler is used.
+  void SetOnGetSelfPresentationDelayForSource(std::function<zx::duration(const NodePtr&)> handler) {
+    on_get_self_presentation_delay_for_source_ = std::move(handler);
+  }
+
+  // Registers a handler for `CreateNewChildSource`.
   // If a handler is not registered, a default handler is used.
   void SetOnCreateNewChildSource(std::function<NodePtr()> handler) {
     on_create_new_child_source_ = std::move(handler);
   }
 
-  // Register a handler for `CreateNewChildDest`.
+  // Registers a handler for `CreateNewChildDest`.
   // If a handler is not registered, a default handler is used.
   void SetOnCreateNewChildDest(std::function<NodePtr()> handler) {
     on_create_new_child_dest_ = std::move(handler);
   }
 
-  // Register a handler for `DestroyChildSource`.
+  // Registers a handler for `DestroyChildSource`.
   // If a handler is not registered, a default handler is used.
   void SetOnDestroyChildSource(std::function<void(NodePtr)> handler) {
     on_destroy_child_source_ = std::move(handler);
   }
 
-  // Register a handler for `DestroyChildDest`.
+  // Registers a handler for `DestroyChildDest`.
   // If a handler is not registered, a default handler is used.
   void SetOnDestroyChildDest(std::function<void(NodePtr)> handler) {
     on_destroy_child_dest_ = std::move(handler);
   }
 
-  // Register a handler for `CanAcceptSourceFormat`.
+  // Registers a handler for `CanAcceptSourceFormat`.
   // The default handler always returns true.
   void SetOnCanAcceptSourceFormat(std::function<bool(const Format&)> handler) {
     on_can_accept_source_format_ = std::move(handler);
   }
 
-  // Register a handler for `MaxSources`.
+  // Registers a handler for `MaxSources`.
   // The default handler returns infinity.
   void SetOnMaxSources(std::function<std::optional<size_t>()> handler) {
     on_max_sources_ = std::move(handler);
   }
 
-  // Register a handler for `AllowsDest`.
+  // Registers a handler for `AllowsDest`.
   // The default handler returns true.
   void SetOnAllowsDest(std::function<bool()> handler) { on_allows_dest_ = std::move(handler); }
 
@@ -80,12 +89,9 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
   }
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) override {
-    return zx::duration(0);
-  }
+  zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const final;
 
  protected:
-  // Implements Node.
   NodePtr CreateNewChildSource() final;
   NodePtr CreateNewChildDest() final;
   void DestroyChildSource(NodePtr child_source) final;
@@ -102,6 +108,7 @@ class FakeNode : public Node, public std::enable_shared_from_this<FakeNode> {
            FakeNodePtr parent, const Format* format);
 
   FakeGraph& graph_;
+  std::function<zx::duration(const NodePtr&)> on_get_self_presentation_delay_for_source_;
   std::function<NodePtr()> on_create_new_child_source_;
   std::function<NodePtr()> on_create_new_child_dest_;
   std::function<void(NodePtr)> on_destroy_child_source_;

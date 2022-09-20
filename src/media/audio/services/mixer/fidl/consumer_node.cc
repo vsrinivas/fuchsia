@@ -45,7 +45,7 @@ std::shared_ptr<ConsumerNode> ConsumerNode::Create(Args args) {
 void ConsumerNode::Start(ConsumerStage::StartCommand cmd) const { command_queue_->push(cmd); }
 void ConsumerNode::Stop(ConsumerStage::StopCommand cmd) const { command_queue_->push(cmd); }
 
-zx::duration ConsumerNode::GetSelfPresentationDelayForSource(const NodePtr& source) {
+zx::duration ConsumerNode::GetSelfPresentationDelayForSource(const NodePtr& source) const {
   // TODO(fxbug.dev/87651): Implement this.
   return zx::duration(0);
 }

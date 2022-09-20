@@ -5,16 +5,20 @@
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
+#include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 
 namespace media_audio {
 
 namespace {
+
 const Format kDefaultFormat =
     Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kSigned16, 1, 16000});
+
 }  // namespace
 
 FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, PipelineDirection pipeline_direction,
@@ -25,8 +29,15 @@ FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, PipelineDirection 
                          .name = "PipelineStage" + std::to_string(id),
                          .format = *format,
                      }),
-           parent),
+           std::move(parent)),
       graph_(graph) {}
+
+zx::duration FakeNode::GetSelfPresentationDelayForSource(const NodePtr& source) const {
+  if (on_get_self_presentation_delay_for_source_) {
+    return on_get_self_presentation_delay_for_source_(source);
+  }
+  return zx::nsec(0);
+}
 
 NodePtr FakeNode::CreateNewChildSource() {
   if (on_create_new_child_source_) {
@@ -140,6 +151,7 @@ FakeGraph::~FakeGraph() {
     node->child_sources_.clear();
     node->child_dests_.clear();
     // Clear closures that might have additional references.
+    node->on_get_self_presentation_delay_for_source_ = nullptr;
     node->on_create_new_child_source_ = nullptr;
     node->on_create_new_child_dest_ = nullptr;
     node->on_destroy_child_source_ = nullptr;
