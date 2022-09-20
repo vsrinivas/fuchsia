@@ -1,0 +1,48 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "structured_config_cpp_elf_receiver_minimal_shards"
+  sources = [ "src/main.cc" ]
+  deps = [ ":config_lib" ]
+}
+
+fuchsia_component_manifest("manifest") {
+  testonly = true
+  component_name = "cpp_elf_receiver"
+  manifest = "meta/receiver.cml"
+}
+
+fuchsia_structured_config_cpp_elf_lib("config_lib") {
+  testonly = true
+  namespace = "receiver_config"
+  cm_label = ":manifest"
+}
+
+fuchsia_component("component") {
+  testonly = true
+  cm_label = ":manifest"
+  deps = [ ":bin" ]
+}
+
+fuchsia_structured_config_values("values") {
+  testonly = true
+  cm_label = ":manifest"
+  values_source = "../config/values.json5"
+}
+
+fuchsia_package("cpp_elf") {
+  testonly = true
+  package_name = "sc_cpp_elf_minimal_shards_test"
+  deps = [
+    ":component",
+    ":values",
+
+    # fxbug.dev/101490: Dep included for affected tests presubmit
+    "//src/sys/component_manager:component-manager-realm-builder-cmp",
+  ]
+}
