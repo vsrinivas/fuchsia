@@ -24,9 +24,10 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
   // |fuchsia::virtualization::GuestManager|
   void LaunchGuest(fuchsia::virtualization::GuestConfig user_config,
                    fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-                   fuchsia::virtualization::GuestManager::LaunchGuestCallback callback) override;
+                   LaunchGuestCallback callback) override;
+  void ForceShutdownGuest(ForceShutdownGuestCallback callback) override;
   void ConnectToGuest(fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
-                      fuchsia::virtualization::GuestManager::ConnectToGuestCallback) override;
+                      ConnectToGuestCallback) override;
   void GetGuestInfo(GetGuestInfoCallback callback) override;
 
   // Store a subset of the configuration. This can be queried while the guest is running using
@@ -37,7 +38,9 @@ class GuestManager : public fuchsia::virtualization::GuestManager {
   bool is_guest_started() const;
 
  protected:
-  virtual zx::status<fuchsia::virtualization::GuestConfig> GetDefaultGuestConfig();
+  virtual fitx::result<::fuchsia::virtualization::GuestManagerError,
+                       ::fuchsia::virtualization::GuestConfig>
+  GetDefaultGuestConfig();
   virtual void OnGuestLaunched() {}
 
  private:

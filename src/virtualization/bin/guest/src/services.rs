@@ -8,7 +8,6 @@ use {
     fuchsia_async::{self as fasync},
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon::{self as zx, HandleBased},
-    fuchsia_zircon_status as zx_status,
     std::os::unix::{io::AsRawFd, io::FromRawFd, prelude::RawFd},
 };
 
@@ -111,10 +110,7 @@ pub async fn connect_to_guest(guest_type: GuestType) -> Result<GuestProxy, Error
     let guest_manager = connect_to_manager(guest_type)?;
     let (guest, guest_server_end) =
         fidl::endpoints::create_proxy::<GuestMarker>().context("Failed to create Guest")?;
-    guest_manager
-        .connect_to_guest(guest_server_end)
-        .await?
-        .map_err(|status| anyhow!(zx_status::Status::from_raw(status)))?;
+    guest_manager.connect_to_guest(guest_server_end).await?.map_err(|err| anyhow!("{:?}", err))?;
 
     Ok(guest)
 }

@@ -12,6 +12,9 @@
 
 namespace termina_guest_manager {
 
+using ::fuchsia::virtualization::GuestConfig;
+using ::fuchsia::virtualization::GuestManagerError;
+
 constexpr std::string_view kLinuxEnvironmentName("termina");
 constexpr size_t kBytesToWipe = 1ul * 1024 * 1024;  // 1 MiB
 
@@ -43,7 +46,7 @@ TerminaGuestManager::TerminaGuestManager(async_dispatcher_t* dispatcher,
       });
 }
 
-zx::status<fuchsia::virtualization::GuestConfig> TerminaGuestManager::GetDefaultGuestConfig() {
+fitx::result<GuestManagerError, GuestConfig> TerminaGuestManager::GetDefaultGuestConfig() {
   TRACE_DURATION("termina_guest_manager", "TerminaGuestManager::GetDefaultGuestConfig");
 
   auto base_config = GuestManager::GetDefaultGuestConfig();
@@ -54,7 +57,7 @@ zx::status<fuchsia::virtualization::GuestConfig> TerminaGuestManager::GetDefault
   auto block_devices_result = GetBlockDevices(structured_config_);
   if (block_devices_result.is_error()) {
     FX_LOGS(ERROR) << "Failed to option block devices: " << block_devices_result.error_value();
-    return zx::error(ZX_ERR_INTERNAL);
+    return fitx::error(GuestManagerError::BAD_CONFIG);
   }
 
   // Drop /dev from our local namespace. We no longer need this capability so we go ahead and
@@ -74,14 +77,14 @@ zx::status<fuchsia::virtualization::GuestConfig> TerminaGuestManager::GetDefault
   // Add the vsock listeners for gRPC services.
   *termina_config.mutable_vsock_listeners() = guest_.take_vsock_listeners();
 
-  return zx::ok(guest_config::MergeConfigs(std::move(*base_config), std::move(termina_config)));
+  return fitx::ok(guest_config::MergeConfigs(std::move(*base_config), std::move(termina_config)));
 }
 
 void TerminaGuestManager::StartGuest() {
   fuchsia::virtualization::GuestConfig cfg;
   LaunchGuest(std::move(cfg), guest_controller_.NewRequest(), [](auto res) {
     if (res.is_err()) {
-      FX_PLOGS(INFO, res.err()) << "Termina Guest failed to launch";
+      FX_LOGS(INFO) << "Termina Guest failed to launch: " << static_cast<int32_t>(res.err());
     }
   });
 }

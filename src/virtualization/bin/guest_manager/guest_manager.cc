@@ -40,6 +40,7 @@ using ::fuchsia::virtualization::GuestConfig;
 using ::fuchsia::virtualization::GuestDescriptor;
 using ::fuchsia::virtualization::GuestLifecycle_Create_Result;
 using ::fuchsia::virtualization::GuestLifecycle_Run_Result;
+using ::fuchsia::virtualization::GuestManagerError;
 using ::fuchsia::virtualization::GuestStatus;
 
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
@@ -50,7 +51,7 @@ GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext
   context_->outgoing()->AddPublicService(manager_bindings_.GetHandler(this));
 }
 
-zx::status<fuchsia::virtualization::GuestConfig> GuestManager::GetDefaultGuestConfig() {
+fitx::result<GuestManagerError, GuestConfig> GuestManager::GetDefaultGuestConfig() {
   // Reads guest config from [zircon|termina|debian]_guest package provided as child in
   // [zircon|termina|debian]_guest_manager component hierarchy.
   const std::string config_path = config_pkg_dir_path_ + config_path_;
@@ -64,14 +65,15 @@ zx::status<fuchsia::virtualization::GuestConfig> GuestManager::GetDefaultGuestCo
   bool readFileSuccess = files::ReadFileToString(config_path, &content);
   if (!readFileSuccess) {
     FX_LOGS(ERROR) << "Failed to read guest configuration " << config_path;
-    return zx::error(ZX_ERR_INVALID_ARGS);
+    return fitx::error(GuestManagerError::BAD_CONFIG);
   }
   auto config = guest_config::ParseConfig(content, std::move(open_at));
   if (config.is_error()) {
     FX_PLOGS(ERROR, config.error_value()) << "Failed to parse guest configuration " << config_path;
-    return zx::error(ZX_ERR_INVALID_ARGS);
+    return fitx::error(GuestManagerError::BAD_CONFIG);
   }
-  return zx::ok(std::move(*config));
+
+  return fitx::ok(std::move(*config));
 }
 
 // |fuchsia::virtualization::GuestManager|
@@ -79,7 +81,7 @@ void GuestManager::LaunchGuest(GuestConfig user_config,
                                fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                                LaunchGuestCallback callback) {
   if (is_guest_started()) {
-    callback(fpromise::error(ZX_ERR_ALREADY_EXISTS));
+    callback(fpromise::error(GuestManagerError::ALREADY_RUNNING));
     return;
   }
 
@@ -132,7 +134,7 @@ void GuestManager::LaunchGuest(GuestConfig user_config,
     std::unordered_set<uint32_t> ports;
     for (auto& listener : merged_cfg.vsock_listeners()) {
       if (!ports.insert(listener.port).second) {
-        callback(fpromise::error(ZX_ERR_INVALID_ARGS));
+        callback(fpromise::error(GuestManagerError::BAD_CONFIG));
         return;
       }
     }
@@ -158,9 +160,7 @@ void GuestManager::HandleCreateResult(
     stop_time_ = zx::clock::get_monotonic();
     state_ = GuestStatus::STOPPED;
     last_error_ = result.err();
-
-    // TODO(fxbug.dev/104989): Change to returning a GuestManagerError.
-    callback(fpromise::error(ZX_ERR_INTERNAL));
+    callback(fpromise::error(GuestManagerError::START_FAILURE));
 
     // TODO(fxbug.dev/104989): Destroy dynamic children so that we don't need to restart the VMM.
     lifecycle_.Unbind();
@@ -185,6 +185,11 @@ void GuestManager::HandleRunResult(GuestLifecycle_Run_Result result) {
   lifecycle_.Unbind();
 }
 
+void GuestManager::ForceShutdownGuest(ForceShutdownGuestCallback callback) {
+  // TODO(fxbug.dev/104989): Implement this.
+  FX_CHECK(false) << "Not implemented";
+}
+
 void GuestManager::ConnectToGuest(
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
     fuchsia::virtualization::GuestManager::ConnectToGuestCallback callback) {
@@ -193,7 +198,7 @@ void GuestManager::ConnectToGuest(
     callback(fpromise::ok());
   } else {
     FX_LOGS(ERROR) << "Failed to connect to guest. Guest is not running";
-    callback(fpromise::error(ZX_ERR_UNAVAILABLE));
+    callback(fpromise::error(GuestManagerError::NOT_RUNNING));
   }
 }
 

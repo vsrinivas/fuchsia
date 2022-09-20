@@ -18,6 +18,7 @@ using ::fuchsia::virtualization::GuestConfig;
 using ::fuchsia::virtualization::GuestDescriptor;
 using ::fuchsia::virtualization::GuestError;
 using ::fuchsia::virtualization::GuestLifecycle;
+using ::fuchsia::virtualization::GuestManagerError;
 
 class FakeGuestLifecycle : public GuestLifecycle {
  public:
@@ -80,7 +81,7 @@ TEST_F(GuestManagerTest, LaunchFailInvalidPath) {
   bool launch_callback_called = false;
   manager.LaunchGuest({}, {}, [&launch_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, res.err());
+    ASSERT_EQ(GuestManagerError::BAD_CONFIG, res.err());
     launch_callback_called = true;
   });
   ASSERT_TRUE(launch_callback_called);
@@ -92,7 +93,7 @@ TEST_F(GuestManagerTest, LaunchFailInvalidConfig) {
   bool launch_callback_called = false;
   manager.LaunchGuest({}, {}, [&launch_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
-    ASSERT_EQ(ZX_ERR_INVALID_ARGS, res.err());
+    ASSERT_EQ(GuestManagerError::BAD_CONFIG, res.err());
     launch_callback_called = true;
   });
   ASSERT_TRUE(launch_callback_called);
@@ -143,7 +144,7 @@ TEST_F(GuestManagerTest, FailedToCreateAndInitializeVmmWithRestart) {
                         [&launch_callback_called](auto res) {
                           ASSERT_TRUE(res.is_err());
                           // TODO(fxbug.dev/104989): Change to returning a GuestManagerError.
-                          ASSERT_EQ(res.err(), ZX_ERR_INTERNAL);
+                          ASSERT_EQ(res.err(), GuestManagerError::START_FAILURE);
                           launch_callback_called = true;
                         });
   }
@@ -260,7 +261,7 @@ TEST_F(GuestManagerTest, DoubleLaunchFail) {
   manager.LaunchGuest(std::move(user_guest_config), guest.NewRequest(),
                       [&launch_callback_called](auto res) {
                         ASSERT_TRUE(res.is_err());
-                        ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, res.err());
+                        ASSERT_EQ(GuestManagerError::ALREADY_RUNNING, res.err());
                         launch_callback_called = true;
                       });
   RunLoopUntilIdle();
@@ -335,7 +336,7 @@ TEST_F(GuestManagerTest, ConnectToGuest) {
   fuchsia::virtualization::GuestPtr guest;
   manager.ConnectToGuest(guest.NewRequest(), [&connect_callback_called](auto res) {
     ASSERT_TRUE(res.is_err());
-    ASSERT_EQ(ZX_ERR_UNAVAILABLE, res.err());
+    ASSERT_EQ(GuestManagerError::NOT_RUNNING, res.err());
     connect_callback_called = true;
   });
   ASSERT_TRUE(connect_callback_called);
@@ -381,7 +382,7 @@ TEST_F(GuestManagerTest, DuplicateListenersProvidedByUserGuestConfig) {
                       });
 
   ASSERT_TRUE(launch_callback_called);
-  ASSERT_EQ(result.err(), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(result.err(), GuestManagerError::BAD_CONFIG);
 }
 
 TEST_F(GuestManagerTest, UserProvidedInitialListeners) {

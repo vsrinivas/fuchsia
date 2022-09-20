@@ -38,9 +38,7 @@ pub async fn connect_to_balloon_controller(
             .connect_to_guest(guest_server_end)
             .await
             .map_err(|err| anyhow!("failed to get a connect_to_guest response: {}", err))?
-            .map_err(|err| {
-                anyhow!("connect_to_guest failed with: {}", zx_status::Status::from_raw(err))
-            })?;
+            .map_err(|err| anyhow!("connect_to_guest failed with: {:?}", err))?;
 
         let (balloon_controller, balloon_server_end) =
             fidl::endpoints::create_proxy::<BalloonControllerMarker>()

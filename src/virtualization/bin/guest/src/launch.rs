@@ -6,7 +6,7 @@ use {
     crate::services,
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_virtualization::{GuestConfig, GuestMarker, GuestProxy},
-    fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
+    fuchsia_async as fasync,
 };
 
 pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {
@@ -56,7 +56,7 @@ impl GuestLaunch {
             eprintln!("");
             return Err(anyhow!("Unable to start guest: {}", fidl_result.unwrap_err()));
         }
-        fidl_result?.map_err(zx_status::Status::from_raw)?;
+        fidl_result?.map_err(|err| anyhow!("{:?}", err))?;
         Ok(GuestLaunch { guest })
     }
 

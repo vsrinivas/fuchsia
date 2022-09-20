@@ -455,7 +455,7 @@ pub async fn run_micro_benchmark(guest_type: arguments::GuestType) -> Result<(),
         .connect_to_guest(guest_server_end)
         .await
         .map_err(|err| anyhow!("failed to get a connect_to_guest response: {}", err))?
-        .map_err(|err| anyhow!("connect_to_guest failed with: {}", zx::Status::from_raw(err)))?;
+        .map_err(|err| anyhow!("connect_to_guest failed with: {:?}", err))?;
 
     let (vsock_endpoint, vsock_server_end) = create_proxy::<HostVsockEndpointMarker>()
         .map_err(|err| anyhow!("failed to create vsock proxy: {}", err))?;

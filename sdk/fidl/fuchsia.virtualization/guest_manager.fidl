@@ -5,6 +5,21 @@ library fuchsia.virtualization;
 
 using zx;
 
+type GuestManagerError = strict enum {
+    /// The guest manager failed to parse the configuration from the guest package, or it was
+    /// otherwise invalid.
+    BAD_CONFIG = 1;
+
+    /// The guest is already running. Stop the guest before attempting to launch again.
+    ALREADY_RUNNING = 2;
+
+    /// Attempted to connect to a non-running guest.
+    NOT_RUNNING = 3;
+
+    /// Failed to start the guest. See VMM component logs for a more detailed reason.
+    START_FAILURE = 4;
+};
+
 type GuestStatus = strict enum {
     /// Initial state when the guest manager is created but before the guest has ever been run.
     NOT_STARTED = 1;
@@ -65,21 +80,31 @@ type GuestInfo = table {
 
 @discoverable
 protocol GuestManager {
-    /// Launch a new guest instance
+    /// Launch a new guest instance.
     ///
-    /// Returns ZX_ERR_ALREADY_EXISTS if the guest already launched
-    /// Returns ZX_ERR_INVALID_ARGS if failed to parse config from the guest package
-    /// TODO(fxbug.dev/104989): Return a GuestManagerError.
+    /// Possible errors:
+    ///     - BAD_CONFIG: Failed to parse the config from the guest package, or other config
+    ///         problems detected by the guest manager.
+    ///     - ALREADY_RUNNING: The guest is already running. Stop the guest before launching again.
+    ///     - START_FAILURE: Failed to initialize the VMM and devices, and start the guest. See
+    ///         component logs for a more specific failure.
     LaunchGuest(resource struct {
         guest_config GuestConfig;
         controller server_end:Guest;
-    }) -> (struct {}) error zx.status;
+    }) -> (struct {}) error GuestManagerError;
 
-    /// Connect to a currently running guest
-    /// TODO(fxbug.dev/104989): Return a GuestManagerError.
+    /// Forcibly shuts down a running guest. After ForceShutdownGuest returns, LaunchGuest can be
+    /// used to launch another guest.
+    ForceShutdownGuest() -> ();
+
+    /// Connect to a currently running guest.
+    ///
+    /// Possible errors:
+    ///     - NOT_RUNNING: Attempted to connect to a guest in a non-running state. Ensure the guest
+    ///         has launched before attempting to reconnect.
     ConnectToGuest(resource struct {
         controller server_end:Guest;
-    }) -> (struct {}) error zx.status;
+    }) -> (struct {}) error GuestManagerError;
 
     /// Query guest info
     GetGuestInfo() -> (resource struct {
