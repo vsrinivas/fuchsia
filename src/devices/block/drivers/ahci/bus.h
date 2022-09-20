@@ -26,7 +26,7 @@ class Bus {
 
   // Initialize io_buffer, returning the mapped physical and virtual addresses.
   // In parameters are the same as those of io_buffer_init().
-  virtual zx_status_t IoBufferInit(io_buffer_t* buffer_, size_t size, uint32_t flags,
+  virtual zx_status_t IoBufferInit(ddk::IoBuffer* buffer_, size_t size, uint32_t flags,
                                    zx_paddr_t* phys_out, void** virt_out) = 0;
 
   // Pin a set of pages for bus transaction initiators (if supported).

@@ -26,7 +26,7 @@ zx_status_t FakeBus::Configure(zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t FakeBus::IoBufferInit(io_buffer_t* buffer_, size_t size, uint32_t flags,
+zx_status_t FakeBus::IoBufferInit(ddk::IoBuffer* buffer_, size_t size, uint32_t flags,
                                   zx_paddr_t* phys_out, void** virt_out) {
   ZX_DEBUG_ASSERT(size == sizeof(ahci_port_mem_t));
 

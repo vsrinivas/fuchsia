@@ -124,7 +124,7 @@ class Port {
   uint32_t completed_ = 0;      // bitmask of completed commands
   sata_txn_t* sync_ = nullptr;  // FLUSH command in flight
 
-  io_buffer_t buffer_{};
+  ddk::IoBuffer buffer_{};
   size_t reg_base_ = 0;
   ahci_port_mem_t* mem_ = nullptr;
 

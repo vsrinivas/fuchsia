@@ -20,8 +20,8 @@ class PciBus : public Bus {
   explicit PciBus(zx_device_t* parent) : pci_(parent, ddk::Pci::kFragmentName) {}
   ~PciBus() override;
   zx_status_t Configure(zx_device_t* parent) override;
-  zx_status_t IoBufferInit(io_buffer_t* buffer_, size_t size, uint32_t flags, zx_paddr_t* phys_out,
-                           void** virt_out) override;
+  zx_status_t IoBufferInit(ddk::IoBuffer* buffer_, size_t size, uint32_t flags,
+                           zx_paddr_t* phys_out, void** virt_out) override;
   zx_status_t BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_t offset, uint64_t size,
                      zx_paddr_t* addrs, size_t addrs_count, zx::pmt* pmt_out) override;
 
