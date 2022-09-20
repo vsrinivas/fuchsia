@@ -655,6 +655,33 @@ mod tests {
     use std::io::Write;
     use tempfile::TempDir;
 
+    struct TempdirPathsForTest {
+        pub outdir: TempDir,
+        pub bundle_path: PathBuf,
+        pub config_data_target_package_name: String,
+        pub config_data_target_package_dir: PathBuf,
+        pub config_data_file_path: PathBuf,
+    }
+
+    impl TempdirPathsForTest {
+        fn new() -> Self {
+            let outdir = TempDir::new().unwrap();
+            let bundle_path = outdir.path().join("bundle");
+            let config_data_target_package_name = "base_package0".to_owned();
+            let config_data_target_package_dir =
+                bundle_path.join("config_data").join(&config_data_target_package_name);
+            let config_data_file_path =
+                config_data_target_package_dir.join("config_data_source_file");
+            Self {
+                outdir,
+                bundle_path,
+                config_data_target_package_name,
+                config_data_target_package_dir,
+                config_data_file_path,
+            }
+        }
+    }
+
     fn write_empty_pkg(path: impl AsRef<Path>, name: &str) -> PackageManifestPathBuf {
         let path = path.as_ref();
         let mut builder = PackageBuilder::new(name);
@@ -773,40 +800,47 @@ mod tests {
         assert_eq!(result.qemu_kernel, outdir.path().join("path/to/qemu/kernel"));
     }
 
-    #[test]
-    fn test_builder_with_config_data() {
-        let outdir = TempDir::new().unwrap();
+    fn setup_builder(
+        vars: &TempdirPathsForTest,
+        bundles: Vec<AssemblyInputBundle>,
+    ) -> ImageAssemblyConfigBuilder {
         let mut builder = ImageAssemblyConfigBuilder::default();
 
         // Write a file to the temp dir for use with config_data.
-        let bundle_path = outdir.path().join("bundle");
-        let config_data_target_package_name = "base_package0";
-        let config_data_target_package_dir =
-            bundle_path.join("config_data").join(config_data_target_package_name);
-        let config_data_file_path = config_data_target_package_dir.join("config_data_source_file");
-        std::fs::create_dir_all(&config_data_target_package_dir).unwrap();
-        std::fs::write(&config_data_file_path, "configuration data").unwrap();
+        std::fs::create_dir_all(&vars.config_data_target_package_dir).unwrap();
+        std::fs::write(&vars.config_data_file_path, "configuration data").unwrap();
+        for bundle in bundles {
+            builder.add_parsed_bundle(&vars.bundle_path, bundle).unwrap();
+        }
+        builder
+    }
+
+    #[test]
+    fn test_builder_with_config_data() {
+        let vars = TempdirPathsForTest::new();
 
         // Create an assembly bundle and add a config_data entry to it.
-        let mut bundle = make_test_assembly_bundle(&bundle_path);
+        let mut bundle = make_test_assembly_bundle(&vars.bundle_path);
+
         bundle.config_data.insert(
-            config_data_target_package_name.to_string(),
+            vars.config_data_target_package_name.clone(),
             vec![FileEntry {
-                source: config_data_file_path,
+                source: vars.config_data_file_path.clone(),
                 destination: "dest/file/path".to_owned(),
             }],
         );
 
-        builder.add_parsed_bundle(&bundle_path, bundle).unwrap();
-        let result: assembly_config_schema::ImageAssemblyConfig = builder.build(&outdir).unwrap();
+        let builder = setup_builder(&vars, vec![bundle]);
+        let result: assembly_config_schema::ImageAssemblyConfig =
+            builder.build(&vars.outdir).unwrap();
 
         // config_data's manifest is in outdir
         let expected_config_data_manifest_path =
-            outdir.path().join("config_data").join("package_manifest.json");
+            vars.outdir.path().join("config_data").join("package_manifest.json");
 
         // Validate that the base package set contains config_data.
         assert_eq!(result.base.len(), 3);
-        assert!(result.base.contains(&bundle_path.join("base_package0")));
+        assert!(result.base.contains(&vars.bundle_path.join("base_package0")));
         assert!(result.base.contains(&expected_config_data_manifest_path));
 
         // Validate the contents of config_data is what is, expected by:
@@ -831,7 +865,10 @@ mod tests {
 
         // 3.  Read the configuration file.
         let config_file_data = far_reader
-            .read_file(&format!("meta/data/{}/dest/file/path", config_data_target_package_name))
+            .read_file(&format!(
+                "meta/data/{}/dest/file/path",
+                vars.config_data_target_package_name
+            ))
             .unwrap();
 
         // 4.  Validate its contents.
