@@ -4,7 +4,7 @@
 
 import("//src/developer/ffx/build/ffx_plugin.gni")
 
-ffx_plugin("ffx_package_far") {
+ffx_plugin("ffx_package_archive_extract") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
@@ -13,10 +13,10 @@ ffx_plugin("ffx_package_far") {
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/package/archive:lib",
   ]
+
   test_deps = [ "//third_party/rust_crates:tempfile" ]
+
   args_sources = [ "src/args.rs" ]
-  sources = [
-    "src/extract.rs",
-    "src/lib.rs",
-  ]
+
+  sources = [ "src/lib.rs" ]
 }

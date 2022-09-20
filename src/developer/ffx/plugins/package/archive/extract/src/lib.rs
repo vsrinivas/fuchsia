@@ -4,18 +4,24 @@
 
 use anyhow::Result;
 use errors::ffx_bail;
+use ffx_core::ffx_plugin;
+use ffx_package_archive_extract_args::ExtractCommand;
 use ffx_package_archive_utils::{read_file_entries, ArchiveEntry, FarArchiveReader, FarListReader};
-use ffx_package_far_args::ExtractSubCommand;
+use ffx_writer::Writer;
 use std::fs;
 
-pub fn extract_impl<W: std::io::Write>(cmd: ExtractSubCommand, writer: &mut W) -> Result<()> {
+#[ffx_plugin("ffx_package")]
+pub async fn cmd_extract(
+    cmd: ExtractCommand,
+    #[ffx(machine = Vec<T:Serialize>)] mut writer: Writer,
+) -> Result<()> {
     let mut archive_reader: Box<dyn FarListReader> = Box::new(FarArchiveReader::new(&cmd.archive)?);
 
-    extract_implementation(cmd, writer, &mut archive_reader)
+    extract_implementation(cmd, &mut writer, &mut archive_reader)
 }
 
 fn extract_implementation<W: std::io::Write>(
-    cmd: ExtractSubCommand,
+    cmd: ExtractCommand,
     writer: &mut W,
     reader: &mut Box<dyn FarListReader>,
 ) -> Result<()> {
@@ -81,7 +87,7 @@ mod test {
     fn test_extract_blob() -> Result<()> {
         let tmp_out_dir = Builder::new().prefix("test_extract").tempdir()?;
         let tmp_out_path = tmp_out_dir.into_path();
-        let cmd = ExtractSubCommand {
+        let cmd = ExtractCommand {
             archive: PathBuf::from("some.far"),
             far_paths: vec![PathBuf::from(BLOB1)],
             output_dir: tmp_out_path.clone(),
@@ -115,7 +121,7 @@ mod test {
         let tmp_out_dir = Builder::new().prefix("test_extract").tempdir()?;
         let tmp_out_path = tmp_out_dir.into_path();
 
-        let cmd = ExtractSubCommand {
+        let cmd = ExtractCommand {
             archive: PathBuf::from("some.far"),
             far_paths: vec![PathBuf::from(BLOB1), PathBuf::from(BLOB2)],
             output_dir: tmp_out_path.clone(),
@@ -153,7 +159,7 @@ mod test {
         let tmp_out_dir = Builder::new().prefix("test_extract").tempdir()?;
         let tmp_out_path = tmp_out_dir.into_path();
 
-        let cmd = ExtractSubCommand {
+        let cmd = ExtractCommand {
             archive: PathBuf::from("some.far"),
             far_paths: vec![PathBuf::from(LIB_RUN_SO_PATH)],
             as_hash: false,
@@ -188,7 +194,7 @@ mod test {
         let tmp_out_dir = Builder::new().prefix("test_extract").tempdir()?;
         let tmp_out_path = tmp_out_dir.into_path();
 
-        let cmd = ExtractSubCommand {
+        let cmd = ExtractCommand {
             archive: PathBuf::from("some.far"),
             far_paths: vec![],
             as_hash: false,

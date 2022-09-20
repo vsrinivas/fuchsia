@@ -10,27 +10,10 @@ use std::path::PathBuf;
 #[derive(Eq, FromArgs, PartialEq, Debug)]
 #[argh(
     subcommand,
-    name = "far",
-    description = "list and extract contents of a Fuchsia ARchive file"
-)]
-pub struct FarCommand {
-    #[argh(subcommand)]
-    pub subcommand: FarSubCommand,
-}
-
-#[derive(Eq, FromArgs, PartialEq, Debug)]
-#[argh(subcommand)]
-pub enum FarSubCommand {
-    Extract(ExtractSubCommand),
-}
-
-#[derive(Eq, FromArgs, PartialEq, Debug)]
-#[argh(
-    subcommand,
     name = "extract",
     description = "extract  the contents of <far_path> inside the Fuchia package archive file to the output directory"
 )]
-pub struct ExtractSubCommand {
+pub struct ExtractCommand {
     #[argh(
         switch,
         short = 'v',

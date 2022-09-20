@@ -12,6 +12,7 @@ ffx_plugin("ffx_package_archive") {
   plugin_deps = [
     "cat:ffx_package_archive_cat",
     "create:ffx_package_archive_create",
+    "extract:ffx_package_archive_extract",
     "list:ffx_package_archive_list",
   ]
 
