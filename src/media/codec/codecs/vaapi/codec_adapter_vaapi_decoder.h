@@ -11,6 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
+#include <lib/fitx/result.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_buffer.h>
 #include <lib/media/codec_impl/codec_diagnostics.h>
@@ -85,7 +86,8 @@ class SurfaceBufferManager {
   // Given the new picture size, return the dimensions of the surface needed to hold the new picture
   // size. This function will use historic data of the picture size, meaning that if a surface size
   // can not decrease, due to Intel media driver requirements, this function will take that into
-  // consideration when returning a required surface size.
+  // consideration when returning a required surface size. Note that this function does not take
+  // into account the pixel format.
   virtual gfx::Size GetRequiredSurfaceSize(const gfx::Size& picture_size) = 0;
 
   // Updates the picture size of the current stream. If the surfaces that are currently under
@@ -621,6 +623,16 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
            (format_constraints.pixel_format.format_modifier.value !=
             fuchsia_sysmem::wire::kFormatModifierLinear);
   }
+
+  // Called directly after a reconfiguration change during a stream. If a the result is
+  // fitx::error(std::string), there was a problem with the new constraints that can't be solved
+  // with a buffer reconfiguration (i.e. the requested buffers exceed the max supported size for our
+  // given hardware) and SetCodecFailure should be called with the error. If fitx::ok(bool) then
+  // there were no fatal codec failures and the bool contains if the buffers should be reconfigured.
+  // If true the buffers *CAN NOT* be used with the new configuration and the old buffers will have
+  // to be discarded. If false the buffers *CAN* be used with the new configuration and only the new
+  // output format has to be sent to the client.
+  fitx::result<std::string, bool> IsBufferReconfigurationNeeded() const;
 
   // Processes input in a loop. Should only execute on input_processing_thread_.
   // Loops for the lifetime of a stream.

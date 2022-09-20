@@ -7,13 +7,13 @@
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
 #include <lib/stdcompat/span.h>
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
 #include <condition_variable>
 #include <mutex>
 #include <optional>
-#include <sstream>
 #include <unordered_map>
 
 #include <fbl/algorithm.h>
@@ -898,44 +898,52 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
     state_ = DecoderState::kIdle;
 
     if (result == media::AcceleratedVideoDecoder::kConfigChange) {
-      {
+      // We only need to request a output buffer reconfiguration if the current buffers are not able
+      // to handle the new picture size. If they are able to handle the new picture size then the
+      // new output format will be sent to the client and the current buffers will be kept. Since
+      // linear and tiled format modifier effects how the planes are stored on the surface, the
+      // surface manager is responsible for doing the calculation on how big the buffer needs to be
+      // in order to store the output.
+      auto output_re_config_required_result = IsBufferReconfigurationNeeded();
+
+      if (output_re_config_required_result.is_error()) {
+        SetCodecFailure(output_re_config_required_result.error_value().c_str());
+        break;
+      }
+
+      ZX_ASSERT(output_re_config_required_result.is_ok());
+      bool output_re_config_required = output_re_config_required_result.value();
+
+      // If buffer reconfiguration is needed, reset mid_stream_output_buffer_reconfig_finish_ since
+      // we are going to block the input_processing thread until either the stream is stopped or
+      // CoreCodecMidStreamOutputBufferReConfigFinish() is called.
+      if (output_re_config_required) {
         std::lock_guard<std::mutex> guard(lock_);
         mid_stream_output_buffer_reconfig_finish_ = false;
       }
 
-      // Trigger a mid stream output constraints change
-      // TODO(fxbug.dev/102737): We always request a output reconfiguration. This may or may not
-      // be needed.
-      bool output_re_config_required = true;
-      events_->onCoreCodecMidStreamOutputConstraintsChange(output_re_config_required);
-
-      // If an output reconfiguration was not needed, we still need to inform the client that the
-      // output codec format has changed before the next output packet is sent to the client.
-      //
-      // TODO(stefanbossbaly): Currently this won't happen since we always have
-      // output_re_config_required true currently. Once updated to use existing buffers, this will
-      // be necessary to inform the client of output format changes.
-      if (!output_re_config_required) {
+      if (output_re_config_required) {
+        // TODO(stefanbossbaly): Calling onCoreCodecMidStreamOutputConstraintsChange() with false is
+        // now deprecated. Remove the |output_re_config_buffer| parameter.
+        events_->onCoreCodecMidStreamOutputConstraintsChange(true);
+      } else {
+        // If an output reconfiguration was not needed, we still need to inform the client that the
+        // output codec format has changed before the next output packet is sent to the client.
         events_->onCoreCodecOutputFormatChange();
       }
 
       gfx::Size pic_size = media_decoder_->GetPicSize();
 
       if (!context_id_) {
-        // TODO(stefanbossbaly): Currently is it unknown why vaCreateContext needs the picture_size.
-        // In the media SDK library they align them by 16 but then never reconstructed even when the
-        // starting resolution is smaller than the current resolution. Further investigation or
-        // explanation is required by the media-driver team but for now just align the size by
-        // |kLinearSurfaceWidthAlignment| and |kLinearSurfaceHeightAlignment| respectively.
-        int aligned_surface_width = static_cast<int>(
-            fbl::round_up(static_cast<uint32_t>(pic_size.width()), kLinearSurfaceWidthAlignment));
-        int aligned_surface_height = static_cast<int>(
-            fbl::round_up(static_cast<uint32_t>(pic_size.height()), kLinearSurfaceHeightAlignment));
-
+        // vaCreateContext's |picture_width| and |picture_height| parameters are only used to ensure
+        // that they are not negative and do not exceed the maximum size allowed by the hardware.
+        // Once vaRenderPicture() is called with a VADecPictureParameterBuffer struct as a
+        // parameter, |picture_width| and |picture_height| parameters provided to vaCreateContext()
+        // will be overridden.
         VAContextID context_id;
-        VAStatus va_res = vaCreateContext(
-            VADisplayWrapper::GetSingleton()->display(), config_->id(), aligned_surface_width,
-            aligned_surface_height, VA_PROGRESSIVE, nullptr, 0, &context_id);
+        VAStatus va_res = vaCreateContext(VADisplayWrapper::GetSingleton()->display(),
+                                          config_->id(), pic_size.width(), pic_size.height(),
+                                          VA_PROGRESSIVE, nullptr, 0, &context_id);
         if (va_res != VA_STATUS_SUCCESS) {
           SetCodecFailure("vaCreateContext failed: %s", vaErrorStr(va_res));
           break;
@@ -1016,6 +1024,164 @@ template <class... Args>
 void CodecAdapterVaApiDecoder::SetCodecFailure(const char* format, Args&&... args) {
   state_ = DecoderState::kError;
   events_->onCoreCodecFailCodec(format, std::forward<Args>(args)...);
+}
+
+fitx::result<std::string, bool> CodecAdapterVaApiDecoder::IsBufferReconfigurationNeeded() const {
+  // After issuing a kConfigChange, the media decoder picture size will now reflect what size
+  // the current stream needs in order to proceed
+  gfx::Size pic_size = media_decoder_->GetPicSize();
+  gfx::Rect visible_rect = media_decoder_->GetVisibleRect();
+
+  uint32_t coded_width = safemath::checked_cast<uint32_t>(pic_size.width());
+  uint32_t coded_height = safemath::checked_cast<uint32_t>(pic_size.height());
+  uint32_t display_width = safemath::checked_cast<uint32_t>(visible_rect.width());
+  uint32_t display_height = safemath::checked_cast<uint32_t>(visible_rect.height());
+
+  // Ensure that the new picture size is within the allowed hardware requirements
+  if (coded_height > max_picture_height_) {
+    FX_SLOG(ERROR, "coded_height exceeds max_picture_height_", KV("coded_height", coded_height),
+            KV("max_picture_height_", max_picture_height_));
+    std::ostringstream oss;
+    oss << "Requested picture height " << coded_height
+        << " exceeds max hardware supported height of " << max_picture_height_;
+    return fitx::error(oss.str());
+  }
+  if (coded_width > max_picture_width_) {
+    FX_SLOG(ERROR, "coded_width exceeds max_picture_width_", KV("coded_width", coded_width),
+            KV("max_picture_width_", max_picture_width_));
+    std::ostringstream oss;
+    oss << "Requested picture width " << coded_width << " exceeds max hardware supported width of "
+        << max_picture_width_;
+    return fitx::error(oss.str());
+  }
+
+  // Ensure that we have buffers already configured, if not then a reconfiguration is always needed
+  if (!surface_buffer_manager_ || !buffer_settings_[kOutputPort].has_value()) {
+    return fitx::ok(true);
+  }
+
+  ZX_ASSERT(buffer_settings_[kOutputPort]->has_image_format_constraints);
+  auto surface_size = surface_buffer_manager_->GetRequiredSurfaceSize(pic_size);
+
+  // TODO(stefanbossbaly): This isn't the correct calculation as it does not factor in alignment
+  // for tiled surfaces
+  auto total_plane_size_checked =
+      ((safemath::MakeCheckedNum(surface_size.GetArea()) * 3) / 2).Cast<uint32_t>();
+
+  // The check above should ensure that we never get to an unsupported hardware size, but
+  // better safe than sorry when calling ValueOrDie()
+  if (!total_plane_size_checked.IsValid()) {
+    FX_SLOG(ERROR, "Surface size exceeds the max hardware supported size");
+    return fitx::error("Surface size exceeds the max hardware supported size");
+  }
+  uint32_t total_plane_size = total_plane_size_checked.ValueOrDie();
+
+  // Ensure the size of the buffers can hold the new plane size
+  if (total_plane_size > buffer_settings_[kOutputPort]->buffer_settings.size_bytes) {
+    FX_SLOG(DEBUG, "total_plane_size > buffer_size_bytes", KV("total_plane_size", total_plane_size),
+            KV("buffer_size_bytes", buffer_settings_[kOutputPort]->buffer_settings.size_bytes));
+    return fitx::ok(true);
+  }
+
+  const auto& image_constraints = buffer_settings_[kOutputPort]->image_format_constraints;
+
+  if (display_width % image_constraints.display_width_divisor != 0u) {
+    FX_SLOG(DEBUG, "display_width not divisible by display_width_divisor",
+            KV("display_width", display_width),
+            KV("display_width_divisor", image_constraints.display_width_divisor));
+    // These will fail, but let them fail when trying to re-negotiate sysmem buffers.
+    return fitx::ok(true);
+  }
+
+  if (display_height % image_constraints.display_height_divisor != 0u) {
+    FX_SLOG(DEBUG, "display_height not divisible by display_height_divisor",
+            KV("display_height", display_height),
+            KV("display_height_divisor", image_constraints.display_height_divisor));
+    // These will fail, but let them fail when trying to re-negotiate sysmem buffers.
+    return fitx::ok(true);
+  }
+
+  auto coded_area_checked = safemath::CheckMul(coded_width, coded_height).Cast<uint32_t>();
+  if (!coded_area_checked.IsValid()) {
+    FX_SLOG(ERROR, "Surface size exceeds uint32_t", KV("coded_width", coded_width),
+            KV("coded_height", coded_height));
+    return fitx::error("Surface size exceeds uint32_t");
+  }
+  uint32_t coded_area = coded_area_checked.ValueOrDie();
+  if (coded_area > image_constraints.max_coded_width_times_coded_height) {
+    FX_SLOG(DEBUG, "coded_area > max_coded_width_times_coded_height", KV("coded_area", coded_area),
+            KV("max_coded_width_times_coded_height",
+               image_constraints.max_coded_width_times_coded_height));
+    // These will very likely fail, but let them fail when trying to re-negotiate sysmem buffers.
+    return fitx::ok(true);
+  }
+
+  if (coded_width % image_constraints.coded_width_divisor != 0u) {
+    FX_SLOG(DEBUG, "coded_width not divisible by coded_width_divisor",
+            KV("coded_width", coded_width),
+            KV("coded_width_divisor", image_constraints.coded_width_divisor));
+    // These will fail, but let them fail when trying to re-negotiate sysmem buffers.
+    return fitx::ok(true);
+  }
+
+  if (coded_height % image_constraints.coded_height_divisor != 0u) {
+    FX_SLOG(DEBUG, "coded_height not divisible by coded_height_divisor",
+            KV("coded_height", coded_height),
+            KV("coded_height_divisor", image_constraints.coded_height_divisor));
+    // These will fail, but let them fail when trying to re-negotiate sysmem buffers.
+    return fitx::ok(true);
+  }
+
+  if (coded_width < image_constraints.min_coded_width) {
+    FX_SLOG(DEBUG, "coded_width < min_coded_width", KV("coded_width", coded_width),
+            KV("min_coded_width", image_constraints.min_coded_width));
+    return fitx::ok(true);
+  }
+
+  if (coded_width > image_constraints.max_coded_width) {
+    FX_SLOG(DEBUG, "coded_width > max_coded_width", KV("coded_width", coded_width),
+            KV("max_coded_width", image_constraints.max_coded_width));
+    return fitx::ok(true);
+  }
+
+  if (coded_height < image_constraints.min_coded_height) {
+    FX_SLOG(DEBUG, "coded_height < min_coded_height", KV("coded_height", coded_height),
+            KV("min_coded_height", image_constraints.min_coded_height));
+    return fitx::ok(true);
+  }
+
+  if (coded_height > image_constraints.max_coded_height) {
+    FX_SLOG(DEBUG, "coded_height > max_coded_height", KV("coded_height", coded_height),
+            KV("max_coded_height", image_constraints.max_coded_height));
+    return fitx::ok(true);
+  }
+
+  uint32_t stride = safemath::checked_cast<uint32_t>(surface_size.width());
+  if (stride < image_constraints.min_bytes_per_row) {
+    FX_SLOG(DEBUG, "stride < min_bytes_per_row", KV("stride", stride),
+            KV("min_bytes_per_row", image_constraints.min_bytes_per_row));
+    return fitx::ok(true);
+  }
+
+  if (stride > image_constraints.max_bytes_per_row) {
+    FX_SLOG(DEBUG, "stride > max_bytes_per_row", KV("stride", stride),
+            KV("max_bytes_per_row", image_constraints.max_bytes_per_row));
+    return fitx::ok(true);
+  }
+
+  // This check only makes sense if the output is linear since tiled formats don't really have a
+  // concept of bytes per row divisor
+  if (!IsOutputTiled()) {
+    if (stride % image_constraints.bytes_per_row_divisor != 0u) {
+      FX_SLOG(DEBUG, "stride not divisible by bytes_per_row_divisor", KV("stride", stride),
+              KV("bytes_per_row_divisor", image_constraints.bytes_per_row_divisor));
+      // These will fail, but let them fail when trying to re-negotiate sysmem buffers.
+      return fitx::ok(true);
+    }
+  }
+
+  // The current buffers meet all conditions, output reconfiguration is not needed
+  return fitx::ok(false);
 }
 
 void CodecAdapterVaApiDecoder::ProcessInputLoop() {
