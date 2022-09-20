@@ -6,11 +6,10 @@
 
 use {
     crate::config::Config,
+    crate::metadata::verify::VerifierProxy,
     commit::do_commit,
     errors::MetadataError,
-    fidl_fuchsia_paver as paver,
-    fidl_fuchsia_update_verify::BlobfsVerifierProxy,
-    fuchsia_inspect as finspect,
+    fidl_fuchsia_paver as paver, fuchsia_inspect as finspect,
     fuchsia_zircon::{self as zx, EventPair, Peered},
     futures::channel::oneshot,
     policy::PolicyEngine,
@@ -40,7 +39,7 @@ pub async fn put_metadata_in_happy_state(
     boot_manager: &paver::BootManagerProxy,
     p_internal: &EventPair,
     unblocker: oneshot::Sender<()>,
-    blobfs_verifier: &BlobfsVerifierProxy,
+    verifiers: &[&dyn VerifierProxy],
     node: &finspect::Node,
     config: &Config,
 ) -> Result<(), MetadataError> {
@@ -53,7 +52,7 @@ pub async fn put_metadata_in_happy_state(
             // At this point, the FIDL server should start responding to requests so that clients can
             // find out that the health verification is underway.
             unblocker = unblock_fidl_server(unblocker)?;
-            let res = do_health_verification(&[blobfs_verifier], node).await;
+            let res = do_health_verification(verifiers, node).await;
             let () = PolicyEngine::apply_config(res, config).map_err(MetadataError::Verify)?;
             let () =
                 do_commit(boot_manager, current_config).await.map_err(MetadataError::Commit)?;
@@ -92,7 +91,9 @@ mod tests {
         assert_matches::assert_matches,
         configuration::Configuration,
         fasync::OnSignals,
-        fidl_fuchsia_update_verify as fidl, fuchsia_async as fasync,
+        fidl_fuchsia_update_verify as fidl,
+        fidl_fuchsia_update_verify::BlobfsVerifierProxy,
+        fuchsia_async as fasync,
         fuchsia_zircon::{AsHandleRef, Status},
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
         mock_verifier::MockVerifierService,
@@ -144,7 +145,7 @@ mod tests {
             &paver.spawn_boot_manager_service(),
             &p_internal,
             unblocker,
-            &blobfs_verifier,
+            &[&blobfs_verifier],
             &finspect::Node::default(),
             &Config::default(),
         )
@@ -179,7 +180,7 @@ mod tests {
             &paver.spawn_boot_manager_service(),
             &p_internal,
             unblocker,
-            &blobfs_verifier,
+            &[&blobfs_verifier],
             &finspect::Node::default(),
             &Config::default(),
         )
@@ -212,7 +213,7 @@ mod tests {
             &boot_manager_proxy,
             &p_internal,
             unblocker,
-            &blobfs_verifier,
+            &[&blobfs_verifier],
             &finspect::Node::default(),
             &Config::builder().enabled(false).build(),
         )
@@ -245,7 +246,7 @@ mod tests {
             &paver.spawn_boot_manager_service(),
             &p_internal,
             unblocker,
-            &blobfs_verifier,
+            &[&blobfs_verifier],
             &finspect::Node::default(),
             &Config::default(),
         )
@@ -294,7 +295,7 @@ mod tests {
             &paver.spawn_boot_manager_service(),
             &p_internal,
             unblocker,
-            &blobfs_verifier,
+            &[&blobfs_verifier],
             &finspect::Node::default(),
             &Config::default(),
         )
@@ -345,7 +346,7 @@ mod tests {
             &paver.spawn_boot_manager_service(),
             &p_internal,
             unblocker,
-            &blobfs_verifier,
+            &[&blobfs_verifier],
             &finspect::Node::default(),
             &Config::builder().blobfs(Mode::Ignore).build(),
         )
@@ -396,7 +397,7 @@ mod tests {
             &paver.spawn_boot_manager_service(),
             &p_internal,
             unblocker,
-            &blobfs_verifier,
+            &[&blobfs_verifier],
             &finspect::Node::default(),
             &Config::builder().blobfs(Mode::RebootOnFailure).build(),
         )

@@ -93,7 +93,7 @@ async fn main_inner_async() -> Result<(), Error> {
                 &boot_manager,
                 &p_internal,
                 unblocker,
-                &blobfs_verifier,
+                &[&blobfs_verifier],
                 verification_node_ref,
                 &config,
             )
