@@ -523,8 +523,7 @@ zx_status_t MesonCpuClock::WaitForBusyCpu() {
 
 AmlClock::~AmlClock() = default;
 
-AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio,
-                   std::optional<fdf::MmioBuffer> dosbus_mmio,
+AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffer dosbus_mmio,
                    std::optional<fdf::MmioBuffer> msr_mmio, uint32_t device_id)
     : DeviceType(device),
       hiu_mmio_(std::move(hiu_mmio)),
@@ -561,7 +560,7 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio,
       constexpr size_t cpu_clk_count = std::size(g12a_cpu_clks);
       cpu_clks_.reserve(cpu_clk_count);
       for (size_t i = 0; i < cpu_clk_count; i++) {
-        cpu_clks_.emplace_back(&hiu_mmio_, g12a_cpu_clks[i].reg, &*pllclk_[g12a_cpu_clks[i].pll],
+        cpu_clks_.emplace_back(&hiu_mmio_, g12a_cpu_clks[i].reg, &pllclk_[g12a_cpu_clks[i].pll],
                                g12a_cpu_clks[i].initial_hz);
       }
 
@@ -583,7 +582,7 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio,
       constexpr size_t cpu_clk_count = std::size(g12b_cpu_clks);
       cpu_clks_.reserve(cpu_clk_count);
       for (size_t i = 0; i < cpu_clk_count; i++) {
-        cpu_clks_.emplace_back(&hiu_mmio_, g12b_cpu_clks[i].reg, &*pllclk_[g12b_cpu_clks[i].pll],
+        cpu_clks_.emplace_back(&hiu_mmio_, g12b_cpu_clks[i].reg, &pllclk_[g12b_cpu_clks[i].pll],
                                g12b_cpu_clks[i].initial_hz);
       }
 
@@ -630,12 +629,13 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio,
       muxes_ = a5_muxes;
       mux_count_ = std::size(a5_muxes);
 
+      pll_count_ = A5_PLL_COUNT;
       InitHiu();
 
       constexpr size_t cpu_clk_count = std::size(a5_cpu_clks);
       cpu_clks_.reserve(cpu_clk_count);
       // For A5, there is only 1 CPU clock
-      cpu_clks_.emplace_back(&hiu_mmio_, a5_cpu_clks[0].reg, &*pllclk_[a5_cpu_clks[0].pll],
+      cpu_clks_.emplace_back(&hiu_mmio_, a5_cpu_clks[0].reg, &pllclk_[a5_cpu_clks[0].pll],
                              a5_cpu_clks[0].initial_hz, chip_id, std::move(smc_resource));
 
       break;
@@ -647,7 +647,6 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio,
 
 zx_status_t AmlClock::Create(zx_device_t* parent) {
   zx_status_t status;
-  unsigned max_mmio_region = 0;
 
   // Get the platform device protocol and try to map all the MMIO regions.
   ddk::PDev pdev(parent);
@@ -668,6 +667,12 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return status;
   }
 
+  status = pdev.MapMmio(kDosbusMmio, &dosbus_mmio);
+  if (status != ZX_OK || !dosbus_mmio) {
+    zxlogf(ERROR, "aml-clk: failed to map DOS regs: %s", zx_status_get_string(status));
+    return status;
+  }
+
   // Use the Pdev Device Info to determine if we've been provided with two
   // MMIO regions.
   pdev_device_info_t info;
@@ -677,19 +682,8 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return status;
   }
 
-  // For A113X2, don't have dosbus reg
-  max_mmio_region = kDosbusMmio;
-  if (info.pid != PDEV_PID_AMLOGIC_A5) {
-    max_mmio_region = kMsrMmio;
-    status = pdev.MapMmio(kDosbusMmio, &dosbus_mmio);
-    if (status != ZX_OK || !dosbus_mmio) {
-      zxlogf(ERROR, "aml-clk: failed to map DOS regs, status = %d", status);
-      return status;
-    }
-  }
-
-  if (info.mmio_count > max_mmio_region) {
-    status = pdev.MapMmio(max_mmio_region, &msr_mmio);
+  if (info.mmio_count > kMsrMmio) {
+    status = pdev.MapMmio(kMsrMmio, &msr_mmio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "aml-clk: failed to map MSR regs, status = %d", status);
       return status;
@@ -719,11 +713,11 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
 }
 
 zx_status_t AmlClock::ClkTogglePll(uint32_t clk, const bool enable) {
-  if (clk >= HIU_PLL_COUNT) {
+  if (clk >= pll_count_) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return pllclk_[clk]->Toggle(enable);
+  return pllclk_[clk].Toggle(enable);
 }
 
 zx_status_t AmlClock::ClkToggle(uint32_t clk, bool enable) {
@@ -771,7 +765,7 @@ void AmlClock::ClkToggleHw(const meson_clk_gate_t* gate, bool enable) {
       mmio = &hiu_mmio_;
       break;
     case kMesonRegisterSetDos:
-      mmio = &(*dosbus_mmio_);
+      mmio = &dosbus_mmio_;
       break;
     default:
       ZX_ASSERT(false);
@@ -1112,12 +1106,12 @@ zx_status_t AmlClock::GetMesonRateClock(const uint32_t clk, MesonRateClock** out
 
   switch (type) {
     case aml_clk_common::aml_clk_type::kMesonPll:
-      if (clkid >= HIU_PLL_COUNT) {
+      if (clkid >= pll_count_) {
         zxlogf(ERROR, "%s: HIU PLL out of range, clkid = %hu.", __func__, clkid);
         return ZX_ERR_INVALID_ARGS;
       }
 
-      *out = pllclk_[clkid].get();
+      *out = &pllclk_[clkid];
       return ZX_OK;
     case aml_clk_common::aml_clk_type::kMesonCpuClk:
       if (clkid >= cpu_clks_.size()) {
@@ -1136,11 +1130,12 @@ zx_status_t AmlClock::GetMesonRateClock(const uint32_t clk, MesonRateClock** out
 }
 
 void AmlClock::InitHiu() {
+  pllclk_.reserve(pll_count_);
   s905d2_hiu_init_etc(&hiudev_, static_cast<MMIO_PTR uint8_t*>(hiu_mmio_.get()));
-  for (unsigned int pllnum = 0; pllnum < HIU_PLL_COUNT; pllnum++) {
+  for (unsigned int pllnum = 0; pllnum < pll_count_; pllnum++) {
     const hhi_plls_t pll = static_cast<hhi_plls_t>(pllnum);
-    pllclk_[pllnum] = std::make_unique<MesonPllClock>(pll, &hiudev_);
-    pllclk_[pllnum]->Init();
+    pllclk_.emplace_back(pll, &hiudev_);
+    pllclk_[pllnum].Init();
   }
 }
 

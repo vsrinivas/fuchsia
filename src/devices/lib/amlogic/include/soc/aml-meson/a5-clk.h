@@ -87,9 +87,7 @@ constexpr uint32_t CLK_TIMESTAMP_SEL = AmlClkId(27, clk_type::kMesonMuxRo);
 constexpr uint32_t CLK_A5_MUX_COUNT = 28;
 
 // kMesonPllClocks
-constexpr uint32_t CLK_GP0_PLL = AmlClkId(GP0_PLL, clk_type::kMesonPll);
-constexpr uint32_t CLK_HIFI_PLL = AmlClkId(HIFI_PLL, clk_type::kMesonPll);
-constexpr uint32_t CLK_SYS_PLL = AmlClkId(SYS_PLL, clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS_PLL = AmlClkId(A5_SYS_PLL, clk_type::kMesonPll);
 
 // Cpu Clocks
 constexpr uint32_t CLK_SYS_CPU_CLK = AmlClkId(0, clk_type::kMesonCpuClk);

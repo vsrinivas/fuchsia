@@ -23,6 +23,11 @@ constexpr pbus_mmio_t clk_mmios[] = {
         .base = A5_CLK_BASE,
         .length = A5_CLK_LENGTH,
     },
+    // ANA Registers - kDosbusMmio
+    {
+        .base = A5_ANACTRL_BASE,
+        .length = A5_ANACTRL_LENGTH,
+    },
     // CLK MSR block
     {
         .base = A5_MSR_CLK_BASE,
