@@ -297,8 +297,13 @@ impl VsockConnection {
         &self,
         chain: WritableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
-        let state = self.state.read().await;
-        state.handle_rx_chain(chain)
+        // Prefer a read lock to avoid cancelling pending tasks, but acquire a write lock if
+        // necessary to prevent TX from starving RX as this lock is write preferring.
+        if let Some(state) = self.state.try_read() {
+            state.handle_rx_chain(chain)
+        } else {
+            self.cancel_pending_tasks_and_get_mutable_state().await.handle_rx_chain(chain)
+        }
     }
 
     pub async fn handle_state_action(&self) -> StateAction {
