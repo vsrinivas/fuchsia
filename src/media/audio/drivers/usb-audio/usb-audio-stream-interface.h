@@ -6,13 +6,13 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_STREAM_INTERFACE_H_
 
 #include <zircon/device/audio.h>
-#include <zircon/hw/usb/audio.h>
 
 #include <memory>
 #include <utility>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/vector.h>
+#include <usb/audio.h>
 
 #include "usb-audio-descriptors.h"
 #include "usb-audio.h"

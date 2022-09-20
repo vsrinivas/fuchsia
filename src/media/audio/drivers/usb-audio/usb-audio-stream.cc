@@ -9,7 +9,6 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
-#include <zircon/hw/usb/audio.h>
 #include <zircon/process.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
@@ -22,6 +21,7 @@
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <usb/audio.h>
 #include <usb/usb-request.h>
 
 #include "src/lib/digest/digest.h"

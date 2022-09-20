@@ -8,9 +8,9 @@
 #include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
-#include <zircon/hw/usb/audio.h>
 
 #include <fbl/array.h>
+#include <usb/audio.h>
 #include <usb/usb.h>
 
 namespace audio {

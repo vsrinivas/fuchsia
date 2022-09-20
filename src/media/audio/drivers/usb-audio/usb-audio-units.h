@@ -5,8 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_UNITS_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_UNITS_H_
 
-#include <zircon/hw/usb/audio.h>
-
 #include <memory>
 #include <utility>
 
@@ -15,6 +13,7 @@
 #include <fbl/macros.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <usb/audio.h>
 
 #include "usb-audio-descriptors.h"
 

@@ -62,7 +62,6 @@ sysroot_uninstrumented_libc_entries = [
         "zircon/hw/gpt.h",
         "zircon/hw/pci.h",
         "zircon/hw/usb.h",
-        "zircon/hw/usb/audio.h",
         "zircon/hw/usb/cdc.h",
         "zircon/hw/usb/dfu.h",
         "zircon/hw/usb/hid.h",

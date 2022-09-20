@@ -42,3 +42,8 @@ zx_library("usb") {
     "//src/lib/ddktl",
   ]
 }
+
+zx_library("audio") {
+  sdk = "source"
+  sdk_headers = [ "usb/audio.h" ]
+}

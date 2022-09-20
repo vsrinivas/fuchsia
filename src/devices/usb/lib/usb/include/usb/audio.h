@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SYSROOT_ZIRCON_HW_USB_AUDIO_H_
-#define SYSROOT_ZIRCON_HW_USB_AUDIO_H_
+#ifndef SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_AUDIO_H_
+#define SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_AUDIO_H_
 
 // clang-format off
 
@@ -524,4 +524,4 @@ typedef struct {
 
 __END_CDECLS
 
-#endif  // SYSROOT_ZIRCON_HW_USB_AUDIO_H_
+#endif  // SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_AUDIO_H_

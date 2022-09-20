@@ -5,12 +5,11 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_CONTROL_INTERFACE_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_CONTROL_INTERFACE_H_
 
-#include <zircon/hw/usb/audio.h>
-
 #include <memory>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
+#include <usb/audio.h>
 
 #include "usb-audio-descriptors.h"
 #include "usb-audio-path.h"
