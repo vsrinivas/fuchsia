@@ -1135,7 +1135,7 @@ bool DpDisplay::InitDdi() {
 
   // Enable power for this DDI.
   controller()->power()->SetDdiIoPowerState(ddi(), /* enable */ true);
-  if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::nsec(1),
+  if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::usec(1),
                  20)) {
     zxlogf(ERROR, "Failed to enable IO power for ddi");
     return false;

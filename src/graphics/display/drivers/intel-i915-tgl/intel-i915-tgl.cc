@@ -322,7 +322,7 @@ bool Controller::BringUpDisplayEngine(bool resume) {
     dpll_enable.WriteTo(mmio_space());
     if (!PollUntil(
             [&] { return tgl_registers::Lcpll1Control::Get().ReadFrom(mmio_space()).pll_lock(); },
-            zx::usec(1), 5)) {
+            zx::msec(1), 5)) {
       zxlogf(ERROR, "Failed to configure dpll0");
       return false;
     }
