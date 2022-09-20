@@ -89,21 +89,6 @@ impl Mapping {
         }
     }
 
-    fn with_flags(&self, flags: zx::VmarFlags) -> Mapping {
-        Mapping {
-            base: self.base,
-            vmo: self.vmo.clone(),
-            vmo_offset: self.vmo_offset,
-            permissions: flags
-                & (zx::VmarFlags::PERM_READ
-                    | zx::VmarFlags::PERM_WRITE
-                    | zx::VmarFlags::PERM_EXECUTE),
-            options: self.options,
-            filename: self.filename.clone(),
-            name: self.name.clone(),
-        }
-    }
-
     /// Converts a `UserAddress` to an offset in this mapping's VMO.
     fn address_to_offset(&self, addr: UserAddress) -> u64 {
         (addr.ptr() - self.base.ptr()) as u64 + self.vmo_offset
@@ -582,8 +567,7 @@ impl MemoryManagerState {
         length: usize,
         flags: zx::VmarFlags,
     ) -> Result<(), Errno> {
-        let (_, mapping) = self.mappings.get(&addr).ok_or_else(|| errno!(EINVAL))?;
-
+        // Make one call to mprotect to update all the zircon protections.
         // SAFETY: This is safe because the vmar belongs to a different process.
         unsafe { self.user_vmar.protect(addr.ptr(), length, flags) }.map_err(|s| match s {
             zx::Status::INVALID_ARGS => errno!(EINVAL),
@@ -593,9 +577,23 @@ impl MemoryManagerState {
             _ => impossible_error(s),
         })?;
 
+        // Update the flags on each mapping in the range.
         let end = (addr + length).round_up(*PAGE_SIZE)?;
-        let mapping = mapping.with_flags(flags);
-        self.mappings.insert(addr..end, mapping);
+        let prot_range = addr..end;
+        let mut updates = vec![];
+        for (range, mapping) in self.mappings.intersection(addr..end) {
+            let range = range.intersect(&prot_range);
+            let mut mapping = mapping.clone();
+            mapping.permissions = flags
+                & (zx::VmarFlags::PERM_READ
+                    | zx::VmarFlags::PERM_WRITE
+                    | zx::VmarFlags::PERM_EXECUTE);
+            updates.push((range, mapping));
+        }
+        // Use a separate loop to avoid mutating the mappings structure while iterating over it.
+        for (range, mapping) in updates {
+            self.mappings.insert(range, mapping);
+        }
         Ok(())
     }
 

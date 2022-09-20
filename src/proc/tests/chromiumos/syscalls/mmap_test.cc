@@ -13,6 +13,7 @@
 
 constexpr size_t MMAP_FILE_SIZE = 64;
 constexpr intptr_t LIMIT_4GB = 0x80000000;
+constexpr size_t PAGE_SIZE = 0x1000;
 
 namespace {
 
@@ -40,6 +41,22 @@ TEST(MmapTest, Map32Test) {
   close(fd);
 
   unlink(path.c_str());
+}
+
+TEST(MmapTest, MprotectMultipleMappings) {
+  char* page1 = (char*)mmap(nullptr, PAGE_SIZE * 2, PROT_READ | PROT_WRITE,
+                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  ASSERT_NE(page1, MAP_FAILED) << strerror(errno);
+  char* page2 = (char*)mmap(page1 + PAGE_SIZE, PAGE_SIZE, PROT_READ | PROT_WRITE,
+                            MAP_PRIVATE | MAP_ANONYMOUS | MAP_FIXED, -1, 0);
+  ASSERT_NE(page2, MAP_FAILED) << strerror(errno);
+  memset(page1, 'F', PAGE_SIZE * 2);
+  // This gets the starnix mapping state out of sync with the real zircon mappings...
+  ASSERT_EQ(mprotect(page1, PAGE_SIZE * 2, PROT_READ), 0) << strerror(errno);
+  // ...so madvise clears a page that is not mapped.
+  ASSERT_EQ(madvise(page2, PAGE_SIZE, MADV_DONTNEED), 0) << strerror(errno);
+  ASSERT_EQ(*page1, 'F');
+  ASSERT_EQ(*page2, 0);  // would fail
 }
 
 }  // namespace
