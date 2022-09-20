@@ -21,6 +21,7 @@ host_test_data("bad_cases") {
     "fidl/bad/recursive_struct_reference.test.fidl",
     "fidl/bad/self_referential_struct.test.fidl",
     "fidl/bad/self_referential_table.test.fidl",
+    "fidl/bad/transports_reassigned.test.fidl",
     "fidl/bad/vector_bound_twice.test.fidl",
   ]
   outputs = [ "$root_out_dir/fidlc-tests/bad/{{source_file_part}}" ]
@@ -33,6 +34,7 @@ host_test_data("good_cases") {
     "fidl/good/masked_bits.test.fidl",
     "fidl/good/recursive_type.test.fidl",
     "fidl/good/simple_bits.test.fidl",
+    "fidl/good/simple_transports.test.fidl",
     "fidl/good/strict_union.test.fidl",
     "fidl/good/unbounded_vector_bound_twice.test.fidl",
   ]

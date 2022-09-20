@@ -10,17 +10,9 @@
 namespace {
 
 TEST(TransportTests, GoodChannelTransportWithChannelTransportEnd) {
-  TestLibrary library(R"FIDL(
-library example;
+  TestLibrary library;
+  library.AddFile("good/simple_transports.test.fidl");
 
-protocol P {
-  M(resource struct{
-     c client_end:P;
-  }) -> (resource struct{
-     s server_end:P;
-  });
-};
-)FIDL");
   ASSERT_COMPILED(library);
 }
 
@@ -269,6 +261,14 @@ protocol P {
 };
 )FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleUsedInIncompatibleTransport);
+}
+
+TEST(TransportTests, BadCannotReassignTransport) {
+  TestLibrary library;
+  library.AddFile("bad/transports_reassigned.test.fidl");
+
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrCannotConstrainTwice,
+                                      fidl::ErrCannotConstrainTwice);
 }
 
 }  // namespace
