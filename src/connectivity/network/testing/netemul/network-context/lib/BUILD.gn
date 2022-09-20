@@ -107,6 +107,7 @@ executable("network_test_bin") {
     ":ethertap",
     ":netdump",
     ":network_service",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_cpp_hlcpp_conversion",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/lib/network-device/cpp",
     "//src/connectivity/network/testing/netemul/network-context/fidl:devmgr",

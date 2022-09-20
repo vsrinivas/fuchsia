@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.network/cpp/hlcpp_conversion.h>
 #include <fuchsia/netemul/devmgr/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
@@ -1106,9 +1107,7 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
   EthernetClient eth_cli(dispatcher(), conn_eth.ethernet().Bind());
   fidl::InterfaceHandle<fuchsia::hardware::network::Device> device;
   conn_netdev.network_device().Bind()->GetDevice(device.NewRequest());
-  // TODO(https://fxbug.dev/72980): Use more ergonomic conversion.
-  network::client::NetworkDeviceClient netdev_cli(
-      fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()));
+  network::client::NetworkDeviceClient netdev_cli(fidl::HLCPPToNatural(device));
   bool ok = false;
 
   // Configure both ethernet clients.
@@ -1232,14 +1231,10 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   // Create both clients.
   fidl::InterfaceHandle<fuchsia::hardware::network::Device> device1;
   conn1.network_device().Bind()->GetDevice(device1.NewRequest());
-  // TODO(https://fxbug.dev/72980): Use more ergonomic conversion.
-  network::client::NetworkDeviceClient cli1(
-      fidl::ClientEnd<fuchsia_hardware_network::Device>(device1.TakeChannel()));
+  network::client::NetworkDeviceClient cli1(fidl::HLCPPToNatural(device1));
   fidl::InterfaceHandle<fuchsia::hardware::network::Device> device2;
   conn2.network_device().Bind()->GetDevice(device2.NewRequest());
-  // TODO(https://fxbug.dev/72980): Use more ergonomic conversion.
-  network::client::NetworkDeviceClient cli2(
-      fidl::ClientEnd<fuchsia_hardware_network::Device>(device2.TakeChannel()));
+  network::client::NetworkDeviceClient cli2(fidl::HLCPPToNatural(device2));
   bool ok = false;
 
   // Configure both ethernet clients.
@@ -1491,9 +1486,7 @@ TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
   // Create and configure network device client.
   fidl::InterfaceHandle<fuchsia::hardware::network::Device> device;
   conn.network_device().Bind()->GetDevice(device.NewRequest());
-  // TODO(https://fxbug.dev/72980): Use more ergonomic conversion.
-  network::client::NetworkDeviceClient cli(
-      fidl::ClientEnd<fuchsia_hardware_network::Device>(device.TakeChannel()));
+  network::client::NetworkDeviceClient cli(fidl::HLCPPToNatural(device));
   bool ok = false;
   cli.OpenSession("test_session", [&ok](zx_status_t status) {
     ok = true;
