@@ -15,7 +15,7 @@ const NUM_CONNECTIONS: u64 = 3;
 
 #[fuchsia::test]
 async fn binder() {
-    let mut event_stream = EventStream::open_at_path("/events/event_stream").unwrap();
+    let mut event_stream = EventStream::open().unwrap();
 
     let mut binders = (0..NUM_CONNECTIONS)
         .map(|_| {

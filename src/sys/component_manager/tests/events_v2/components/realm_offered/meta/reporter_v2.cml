@@ -20,10 +20,6 @@
         {
             event_stream: "started_nested",
             from: "parent",
-            path: "/events/event_stream",
-        },
-        {
-            protocol: [ "fuchsia.sys2.EventSource" ],
         },
     ],
 }

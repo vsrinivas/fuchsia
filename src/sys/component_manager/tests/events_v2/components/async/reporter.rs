@@ -7,17 +7,13 @@ use {
         events::{Destroyed, Event, EventStream, Started},
         matcher::EventMatcher,
     },
-    fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_component_test::ScopedInstance,
 };
 
 #[fuchsia::main(logging_tags = ["async_reporter"])]
 async fn main() {
     // Track all the starting child components.
-    let mut event_stream = EventStream::new_v2(
-        connect_to_protocol_at_path::<fsys::EventStream2Marker>("/events/event_stream").unwrap(),
-    );
+    let mut event_stream = EventStream::open().unwrap();
     let mut instances = vec![];
     let url = "#meta/stub_component_v2.cm".to_string();
     for _ in 1..=3 {

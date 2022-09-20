@@ -30,7 +30,6 @@
                 "running_unscoped",
             ],
             from: "parent",
-            path: "/events/event_stream",
             filter: { name: "diagnostics" },
         },
     ],

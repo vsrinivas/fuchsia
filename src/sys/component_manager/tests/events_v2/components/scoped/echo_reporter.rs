@@ -5,14 +5,11 @@
 use {
     component_events::{events::*, matcher::*},
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::connect_to_protocol_at_path,
 };
 
 #[fuchsia::main]
 async fn main() {
-    let mut event_stream = EventStream::new_v2(
-        connect_to_protocol_at_path::<fsys::EventStream2Marker>("/events/event_stream").unwrap(),
-    );
+    let mut event_stream = EventStream::open().unwrap();
     loop {
         // For component start events, we can get the event as either Started
         // or Running. This is inherently prone to race conditions so we check for

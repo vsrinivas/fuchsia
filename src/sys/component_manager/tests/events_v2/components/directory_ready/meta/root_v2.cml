@@ -23,7 +23,6 @@
         {
             event_stream: "directory_ready_v2",
             from: "parent",
-            path: "/events/event_stream",
             filter: {
                 name: [
                     "insufficient_rights",

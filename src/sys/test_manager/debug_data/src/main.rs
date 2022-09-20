@@ -15,8 +15,10 @@ use fidl_fuchsia_sys2 as fsys;
 use fidl_fuchsia_test_debug as ftest_debug;
 use fidl_fuchsia_test_internal as ftest_internal;
 use fidl_fuchsia_test_manager as ftest_manager;
-use fuchsia_component::client::connect_to_protocol_at_path;
-use fuchsia_component::{client::connect_to_protocol, server::ServiceFs};
+use fuchsia_component::{
+    client::{connect_to_protocol, connect_to_protocol_at_path},
+    server::ServiceFs,
+};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, pin_mut, FutureExt, StreamExt};
 use tracing::info;
@@ -41,8 +43,10 @@ async fn main() -> Result<(), Error> {
         },
     );
     fs.take_and_serve_directory_handle()?;
-    let event_stream =
-        connect_to_protocol_at_path::<fsys::EventStream2Marker>("/events/event_stream").unwrap();
+    let event_stream = connect_to_protocol_at_path::<fsys::EventStream2Marker>(
+        "/svc/fuchsia.component.EventStream",
+    )
+    .unwrap();
 
     futures::future::join(
         debug_data_set::handle_debug_data_controller_and_events(

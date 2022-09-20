@@ -8,9 +8,7 @@ use {
         matcher::EventMatcher,
     },
     fidl::endpoints::{create_proxy, DiscoverableProtocolMarker, ServerEnd},
-    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::connect_to_protocol_at_path,
-    fuchsia_fs,
+    fidl_fidl_test_components as ftest, fidl_fuchsia_io as fio, fuchsia_fs,
     futures::StreamExt,
     maplit::hashmap,
 };
@@ -45,9 +43,7 @@ async fn call_trigger(directory: &fio::DirectoryProxy, paths: &Vec<String>) {
 /// It sends "Saw: /path/to/dir on /some_moniker" for each successful read.
 #[fuchsia::main]
 async fn main() {
-    let mut event_stream = EventStream::new_v2(
-        connect_to_protocol_at_path::<fsys::EventStream2Marker>("/events/event_stream").unwrap(),
-    );
+    let mut event_stream = EventStream::open().unwrap();
     // For successful CapabilityRead events, this is a map of the directory to expected contents
     let mut all_expected_entries = hashmap! {
         "normal".to_string() => vec![ftest::TriggerMarker::PROTOCOL_NAME.to_string()],

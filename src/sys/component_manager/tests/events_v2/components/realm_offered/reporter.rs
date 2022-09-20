@@ -4,16 +4,14 @@
 
 use {
     component_events::{events::EventStream, matcher::EventMatcher, sequence::*},
-    fidl_fidl_test_components as ftest, fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_path},
+    fidl_fidl_test_components as ftest,
+    fuchsia_component::client::connect_to_protocol,
 };
 
 #[fuchsia::main]
 async fn main() {
     // Track all the starting components.
-    let event_stream = EventStream::new_v2(
-        connect_to_protocol_at_path::<fsys::EventStream2Marker>("/events/event_stream").unwrap(),
-    );
+    let event_stream = EventStream::open().unwrap();
     // Connect to the parent offered Trigger. The parent will start the lazy child components and
     // this component should know about their started events given that it was offered those
     // events.

@@ -5,15 +5,12 @@
 use {
     component_events::events::{DirectoryReady, Event, EventStream, Running},
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_component::client::connect_to_protocol_at_path,
 };
 
 #[fuchsia::main]
 async fn main() {
     // Validate that RUNNING and DirectoryReady is synthesized for root
-    let mut event_stream = EventStream::new_v2(
-        connect_to_protocol_at_path::<fsys::EventStream2Marker>("/events/event_stream").unwrap(),
-    );
+    let mut event_stream = EventStream::open().unwrap();
     let mut found_directory_ready = false;
     let mut found_running = false;
     loop {
