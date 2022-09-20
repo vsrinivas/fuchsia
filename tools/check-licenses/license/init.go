@@ -102,12 +102,14 @@ func Initialize(c *LicenseConfig) error {
 	return nil
 }
 
+// Helper function used to traverse a license patterns directory,
+// and create Pattern objects for each "*.lic" file found.
 func patternsWalker(path string, info os.FileInfo, err error) error {
 	if info.IsDir() {
 		return nil
 	}
 
-	if !strings.HasSuffix(info.Name(), ".lic") {
+	if !(strings.HasSuffix(info.Name(), ".lic") || strings.HasSuffix(info.Name(), ".txt")) {
 		return nil
 	}
 

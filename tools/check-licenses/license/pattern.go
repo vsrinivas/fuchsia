@@ -5,6 +5,7 @@
 package license
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,6 +41,9 @@ type Pattern struct {
 	// This license pattern is only allowed to match with projects listed here.
 	AllowList []string
 
+	// Exceptions is a list of structs that hold information about allowlisted projects.
+	Exceptions []*Exception
+
 	// Matches maintains a slice of pointers to the data fragments that it matched against.
 	// This is used in some templates in the result package, for grouping license texts
 	// by pattern type in the resulting NOTICE file.
@@ -67,11 +71,35 @@ func (a Order) Less(i, j int) bool { return a[i].Name < a[j].Name }
 // NewPattern returns a Pattern object with the regex pattern loaded from the .lic folder.
 // Some preprocessing is done to the pattern (e.g. removing code comment characters).
 func NewPattern(path string) (*Pattern, error) {
-	bytes, err := os.ReadFile(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	regex := string(bytes)
+
+	// License pattern files end in ".lic", and are essentially giant regex
+	// strings. This works and is potentially more flexible, but they are
+	// hard to maintain, and hard to tailor to fit multiple license texts
+	// from different projects.
+	//
+	// Here, we now support license texts in their entirety. The following
+	// code converts a license text block into a regex pattern by escaping
+	// special characters.
+	if filepath.Ext(path) == ".txt" {
+		b = bytes.ReplaceAll(b, []byte(`\`), []byte(`\\`))
+		b = bytes.ReplaceAll(b, []byte(`.`), []byte(`\.`))
+		b = bytes.ReplaceAll(b, []byte(`?`), []byte(`\?`))
+		b = bytes.ReplaceAll(b, []byte("`"), []byte(`\x60`))
+		b = bytes.ReplaceAll(b, []byte(`[`), []byte(`\[`))
+		b = bytes.ReplaceAll(b, []byte(`]`), []byte(`\]`))
+		b = bytes.ReplaceAll(b, []byte(`(`), []byte(`\(`))
+		b = bytes.ReplaceAll(b, []byte(`)`), []byte(`\)`))
+		b = bytes.ReplaceAll(b, []byte(`*`), []byte(`\*`))
+		b = bytes.ReplaceAll(b, []byte(`+`), []byte(`\+`))
+
+		b = append([]byte(`(`), b...)
+		b = append(b, []byte(`)`)...)
+	}
+	regex := string(b)
 
 	// Remove any duplicate whitespace characters
 	regex = strings.Join(strings.Fields(regex), " ")
@@ -119,6 +147,14 @@ func NewPattern(path string) (*Pattern, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	exceptions := make([]*Exception, 0)
+	for _, e := range Config.Exceptions {
+		if e.LicenseType == licType {
+			exceptions = append(exceptions, e)
+		}
+	}
+
 	return &Pattern{
 		Name:               name,
 		AbsPath:            absPath,
@@ -126,6 +162,7 @@ func NewPattern(path string) (*Pattern, error) {
 		Type:               licType,
 		Category:           licCategory,
 		AllowList:          allowlist,
+		Exceptions:         exceptions,
 		Matches:            make([]*file.FileData, 0),
 		PreviousMatches:    make(map[string]bool),
 		PreviousMismatches: make(map[string]bool),
