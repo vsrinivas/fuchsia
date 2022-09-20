@@ -135,26 +135,10 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             expect_enable,
             iface.control().enable().await.expect("send enable").expect("enable interface")
         );
-        // TODO(https://fxbug.dev/20989#c5): netstack3 doesn't allow addresses to be added while
-        // link is down.
-        let () = iface.set_link_up(true).await.expect("bring device up");
 
-        fidl_fuchsia_net_interfaces_ext::wait_interface_with_id(
-            fidl_fuchsia_net_interfaces_ext::event_stream_from_state(&interfaces_state)
-                .expect("interface stream"),
-            &mut fidl_fuchsia_net_interfaces_ext::InterfaceState::Unknown(id),
-            |fidl_fuchsia_net_interfaces_ext::Properties {
-                 id: _,
-                 name: _,
-                 device_class: _,
-                 online,
-                 addresses: _,
-                 has_default_ipv4_route: _,
-                 has_default_ipv6_route: _,
-             }| (*online).then(|| ()),
-        )
-        .await
-        .expect("wait device online");
+        // Interface must be online for us to observe the address in the
+        // assigned state later.
+        let () = iface.set_link_up(true).await.expect("bring device up");
 
         let addr = fidl_fuchsia_net::Subnet {
             addr: fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
