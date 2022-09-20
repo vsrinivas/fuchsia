@@ -13,7 +13,6 @@ executable("touch-input-test-ip-bin") {
   deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics",
     "//sdk/fidl/fuchsia.buildinfo",
-    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.hardware.display",
@@ -21,6 +20,7 @@ executable("touch-input-test-ip-bin") {
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.memorypressure",
+    "//sdk/fidl/fuchsia.metrics",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.posix.socket",

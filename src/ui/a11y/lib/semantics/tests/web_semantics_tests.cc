@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/buildinfo/cpp/fidl.h>
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
@@ -11,6 +10,7 @@
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
@@ -184,9 +184,10 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
                        .source = ParentRef(),
                        .targets = {ChildRef{kFontsProvider}, ChildRef{kWebContextProvider}}});
-    realm()->AddRoute({.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
-                       .source = ChildRef{kMockCobalt},
-                       .targets = {ChildRef{kMemoryPressureProvider}}});
+    realm()->AddRoute(
+        {.capabilities = {Protocol{fuchsia::metrics::MetricEventLoggerFactory::Name_}},
+         .source = ChildRef{kMockCobalt},
+         .targets = {ChildRef{kMemoryPressureProvider}}});
     realm()->AddRoute({.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},
                        .source = ParentRef(),
                        .targets = {ChildRef{kMemoryPressureProvider}, ChildRef{kWebView}}});

@@ -82,7 +82,6 @@ source_set("semantics_integration_test_fixture") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.hardware.display",
@@ -167,7 +166,6 @@ executable("web-semantics-test-bin") {
   deps = [
     ":semantics_integration_test_fixture",
     "//sdk/fidl/fuchsia.buildinfo",
-    "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.component",
     "//sdk/fidl/fuchsia.fonts",
     "//sdk/fidl/fuchsia.intl",
@@ -175,6 +173,7 @@ executable("web-semantics-test-bin") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.memorypressure",
+    "//sdk/fidl/fuchsia.metrics",
     "//sdk/fidl/fuchsia.net.interfaces",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.posix.socket",

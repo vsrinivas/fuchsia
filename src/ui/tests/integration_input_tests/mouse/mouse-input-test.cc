@@ -4,12 +4,12 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/buildinfo/cpp/fidl.h>
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/input/report/cpp/fidl.h>
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
@@ -857,7 +857,7 @@ class ChromiumInputTest : public MouseInputBase {
                           Protocol{fuchsia::logger::LogSink::Name_}},
          .source = ParentRef(),
          .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
+        {.capabilities = {Protocol{fuchsia::metrics::MetricEventLoggerFactory::Name_}},
          .source = ChildRef{kMockCobalt},
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},

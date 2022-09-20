@@ -4,7 +4,6 @@
 
 #include <fuchsia/accessibility/semantics/cpp/fidl.h>
 #include <fuchsia/buildinfo/cpp/fidl.h>
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/input/injection/cpp/fidl.h>
 #include <fuchsia/input/virtualkeyboard/cpp/fidl.h>
@@ -12,6 +11,7 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/memorypressure/cpp/fidl.h>
+#include <fuchsia/metrics/cpp/fidl.h>
 #include <fuchsia/net/interfaces/cpp/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/posix/socket/cpp/fidl.h>
@@ -410,7 +410,7 @@ class WebEngineTest : public VirtualKeyboardBase {
         {.capabilities = {Protocol{fuchsia::web::ContextProvider::Name_}},
          .source = ChildRef{kWebContextProvider},
          .targets = {target}},
-        {.capabilities = {Protocol{fuchsia::cobalt::LoggerFactory::Name_}},
+        {.capabilities = {Protocol{fuchsia::metrics::MetricEventLoggerFactory::Name_}},
          .source = ChildRef{kMockCobalt},
          .targets = {ChildRef{kMemoryPressureProvider}}},
         {.capabilities = {Protocol{fuchsia::sysmem::Allocator::Name_}},

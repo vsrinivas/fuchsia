@@ -5,7 +5,6 @@
 // TODO(fxb.dev/98392): Remove non-cts deps, and use <> for sdk libraries.
 #include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture.h"
 
-#include <fuchsia/cobalt/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/fonts/cpp/fidl.h>
 #include <fuchsia/hardware/display/cpp/fidl.h>
