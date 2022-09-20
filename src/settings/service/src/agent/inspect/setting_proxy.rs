@@ -21,8 +21,8 @@ use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor;
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
-use settings_inspect_utils::inspect_queue::InspectQueue;
 use settings_inspect_utils::inspect_writable_map::InspectWritableMap;
+use settings_inspect_utils::inspect_writable_queue::InspectWritableQueue;
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
@@ -44,7 +44,7 @@ const INSPECT_REQUESTS_COUNT: usize = 15;
 struct SettingTypeInspectInfo {
     /// Map from the name of the Request variant to a RequestInspectInfo that holds a list of
     /// recent requests.
-    requests_by_type: InspectWritableMap<InspectQueue<RequestInspectInfo>>,
+    requests_by_type: InspectWritableMap<InspectWritableQueue<RequestInspectInfo>>,
 
     /// Incrementing count for all requests of this setting type.
     ///
@@ -298,12 +298,12 @@ impl SettingProxyInspectAgent {
         let inspect_queue_node = &setting_type_info.inspect_node;
         let inspect_queue =
             setting_type_info.requests_by_type.get_or_insert_with(key.to_string(), || {
-                InspectQueue::<RequestInspectInfo>::new(INSPECT_REQUESTS_COUNT)
+                InspectWritableQueue::<RequestInspectInfo>::new(INSPECT_REQUESTS_COUNT)
                     .with_inspect(inspect_queue_node, key)
                     // `with_inspect` will only return an error on types with
                     // interior mutability. Since none are used here, this should be
                     // fine.
-                    .expect("failed to create InspectQueue inspect node")
+                    .expect("failed to create InspectWritableQueue inspect node")
             });
 
         let count = setting_type_info.count;

@@ -52,7 +52,7 @@ use fuchsia_inspect::{self as inspect, component, Node, Property};
 use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 use futures::StreamExt;
 use inspect::StringProperty;
-use settings_inspect_utils::inspect_queue::InspectQueue;
+use settings_inspect_utils::inspect_writable_queue::InspectWritableQueue;
 use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 use std::borrow::Cow;
 use std::sync::Arc;
@@ -125,7 +125,7 @@ struct ExternalApiCallsWrapper {
     /// The number of total calls that have been made on this protocol.
     count: IValue<u64>,
     /// The most recent pending and completed calls per-protocol.
-    calls: ManagedInspectMap<InspectQueue<ExternalApiCallInfo>>,
+    calls: ManagedInspectMap<InspectWritableQueue<ExternalApiCallInfo>>,
     /// The external api event counts.
     event_counts: ManagedInspectMap<IValue<u64>>,
 }
@@ -357,12 +357,15 @@ impl ExternalApiInspectAgent {
     }
 
     /// Retrieves the completed calls queue for `protocol`. Implicitly calls `ensure_queue_exists`.
-    fn get_completed_queue(&mut self, protocol: &str) -> &InspectQueue<ExternalApiCallInfo> {
+    fn get_completed_queue(
+        &mut self,
+        protocol: &str,
+    ) -> &InspectWritableQueue<ExternalApiCallInfo> {
         self.get_queue(protocol, COMPLETED_CALLS_KEY, MAX_COMPLETED_CALLS)
     }
 
     /// Retrieves the pending calls queue for `protocol`. Implicitly calls `ensure_queue_exists`.
-    fn get_pending_queue(&mut self, protocol: &str) -> &InspectQueue<ExternalApiCallInfo> {
+    fn get_pending_queue(&mut self, protocol: &str) -> &InspectWritableQueue<ExternalApiCallInfo> {
         self.get_queue(protocol, PENDING_CALLS_KEY, MAX_PENDING_CALLS)
     }
 
@@ -372,7 +375,7 @@ impl ExternalApiInspectAgent {
         protocol: &str,
         queue_key: &'static str,
         default_queue_size: usize,
-    ) -> &InspectQueue<ExternalApiCallInfo> {
+    ) -> &InspectWritableQueue<ExternalApiCallInfo> {
         self.ensure_queue_exists(protocol, queue_key.into(), default_queue_size);
         self.api_calls
             .get(protocol)
@@ -411,7 +414,7 @@ impl ExternalApiInspectAgent {
         let protocol_map = self.api_calls.get_mut(protocol).expect("Protocol entry should exist");
         let _ = protocol_map
             .calls
-            .get_or_insert_with(queue_key.to_string(), || InspectQueue::new(queue_size));
+            .get_or_insert_with(queue_key.to_string(), || InspectWritableQueue::new(queue_size));
     }
 
     /// Inserts the given `info` into the entry at `protocol` and `queue_key`, incrementing

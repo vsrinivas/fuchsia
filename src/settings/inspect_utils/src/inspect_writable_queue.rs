@@ -9,7 +9,7 @@ use std::collections::VecDeque;
 /// A vector of items to be written to inspect. It will only keep the last [size_limit]
 /// items. It is compatible with inspect_derive.
 #[derive(Default)]
-pub struct InspectQueue<T> {
+pub struct InspectWritableQueue<T> {
     items: VecDeque<T>,
     // Required because VecDeque::with_capacity doesn't necessarily give the
     // exact capacity specified.
@@ -17,7 +17,7 @@ pub struct InspectQueue<T> {
     inspect_node: Node,
 }
 
-impl<T> InspectQueue<T> {
+impl<T> InspectWritableQueue<T> {
     pub fn new(size: usize) -> Self {
         Self {
             items: VecDeque::with_capacity(size),
@@ -48,7 +48,7 @@ impl<T> InspectQueue<T> {
     }
 }
 
-impl<T> Inspect for &mut InspectQueue<T>
+impl<T> Inspect for &mut InspectWritableQueue<T>
 where
     for<'a> &'a mut T: Inspect,
 {
@@ -64,18 +64,18 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::inspect_queue::InspectQueue;
+    use crate::inspect_writable_queue::InspectWritableQueue;
     use fuchsia_inspect::{self as inspect, assert_data_tree, Node};
     use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 
     #[derive(Inspect)]
     struct TestInspectWrapper {
         inspect_node: Node,
-        queue: InspectQueue<TestInspectItem>,
+        queue: InspectWritableQueue<TestInspectItem>,
     }
 
     impl TestInspectWrapper {
-        fn new(queue: InspectQueue<TestInspectItem>) -> Self {
+        fn new(queue: InspectWritableQueue<TestInspectItem>) -> Self {
             Self { inspect_node: Node::default(), queue: queue }
         }
     }
@@ -97,7 +97,7 @@ mod tests {
     #[test]
     fn test_queue_under_capacity() {
         let inspector = inspect::Inspector::new();
-        let mut inspect_queue = InspectQueue::<TestInspectItem>::new(3);
+        let mut inspect_queue = InspectWritableQueue::<TestInspectItem>::new(3);
         let test_val_1 = TestInspectItem::new(6);
         let test_val_2 = TestInspectItem::new(5);
         inspect_queue.push(test_val_1);
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn test_queue_over_capacity() {
         let inspector = inspect::Inspector::new();
-        let mut inspect_queue = InspectQueue::<TestInspectItem>::new(2);
+        let mut inspect_queue = InspectWritableQueue::<TestInspectItem>::new(2);
         let test_val_1 = TestInspectItem::new(6);
         let test_val_2 = TestInspectItem::new(5);
         let test_val_3 = TestInspectItem::new(4);
