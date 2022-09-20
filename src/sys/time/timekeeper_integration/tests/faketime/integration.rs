@@ -12,7 +12,7 @@ use {
     std::sync::Arc,
     test_util::assert_geq,
     time_metrics_registry::{
-        TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
+        TimekeeperTimeSourceEventsMigratedMetricDimensionEventType as TimeSourceEvent,
         TIMEKEEPER_TIME_SOURCE_EVENTS_MIGRATED_METRIC_ID,
     },
     timekeeper_integration_lib::{
