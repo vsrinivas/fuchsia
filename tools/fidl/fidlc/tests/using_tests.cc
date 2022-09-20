@@ -24,16 +24,9 @@ type Bar = struct {
 )FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library(&shared, "example.fidl", R"FIDL(
-library example;
+  TestLibrary library(&shared);
+  library.AddFile("good/simple_import.test.fidl");
 
-using dependent;
-
-type Foo = struct {
-    dep dependent.Bar;
-};
-
-)FIDL");
   ASSERT_COMPILED(library);
 }
 
@@ -315,17 +308,9 @@ TEST(UsingTests, BadUnusedUsing) {
 )FIDL");
   ASSERT_COMPILED(dependency);
 
-  TestLibrary library(&shared, "example.fidl", R"FIDL(
-library example;
+  TestLibrary library(&shared);
+  library.AddFile("bad/unused_import.test.fidl");
 
-using dependent;
-
-type Foo = struct {
-    does_not int64;
-    use_dependent int32;
-};
-
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnusedImport);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
 }
