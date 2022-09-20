@@ -8,6 +8,7 @@
 //! internally managed pool of identifiers kept densely packed.
 
 use alloc::vec::Vec;
+use core::fmt::Debug;
 
 /// [`IdMap`]s use `usize`s for keys.
 pub(crate) type Key = usize;
@@ -557,6 +558,13 @@ impl<'a, K: EntryKey, T> OccupiedEntry<'a, K, T> {
         let key = f(self.key);
         assert_eq!(idx, key.get_key_index());
         OccupiedEntry { key, id_map: self.id_map }
+    }
+}
+
+impl<'a, K: Debug, T> Debug for OccupiedEntry<'a, K, T> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let Self { key, id_map: _ } = self;
+        f.debug_struct("OccupiedEntry").field("key", key).field("id_map", &"_").finish()
     }
 }
 

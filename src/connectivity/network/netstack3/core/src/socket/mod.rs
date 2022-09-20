@@ -343,10 +343,10 @@ pub(crate) trait SocketTypeStateMut<'a> {
     type SharingState;
     type Addr;
     type Entry: SocketTypeStateEntry<
-        State = Self::State,
-        SharingState = Self::SharingState,
-        Addr = Self::Addr,
-    >;
+            State = Self::State,
+            SharingState = Self::SharingState,
+            Addr = Self::Addr,
+        > + Debug;
 
     fn get_by_id_mut(
         self,
@@ -368,20 +368,16 @@ pub(crate) trait SocketTypeStateMut<'a> {
     {
         self.entry(id).map(SocketTypeStateEntry::remove)
     }
-
-    fn try_update_addr(
-        self,
-        id: &Self::Id,
-        new_addr: impl FnOnce(Self::Addr) -> Self::Addr,
-    ) -> Result<(), ExistsError>;
 }
 
-pub(crate) trait SocketTypeStateEntry {
+pub(crate) trait SocketTypeStateEntry: Sized {
     type State;
     type SharingState;
     type Addr;
 
     fn get(&self) -> &(Self::State, Self::SharingState, Self::Addr);
+
+    fn try_update_addr(self, new_addr: Self::Addr) -> Result<Self, (ExistsError, Self)>;
 
     fn remove(self) -> (Self::State, Self::SharingState, Self::Addr);
 }
@@ -443,6 +439,8 @@ where
     }
 }
 
+#[derive(Derivative)]
+#[derivative(Debug(bound = "A: Debug"))]
 struct SocketStateEntry<'a, IdV, A: Eq + Hash, S: Tagged<A>, AddrState, Convert> {
     id_entry: IdMapOccupiedEntry<'a, usize, IdV>,
     addr_entry: SocketMapOccupiedEntry<'a, A, S>,
@@ -528,7 +526,8 @@ where
                 let index = id_to_sock.push((state.into(), tag_state, socket_addr));
                 let (_state, tag_state, _addr): &(Self::State, _, Self::Addr) =
                     id_to_sock.get(index).unwrap();
-                v.insert(Convert::to_bound(AddrState::new(tag_state, index.into())));
+                let _: SocketMapOccupiedEntry<'_, _, _> =
+                    v.insert(Convert::to_bound(AddrState::new(tag_state, index.into())));
                 Ok(index.into())
             }
         }
@@ -546,47 +545,6 @@ where
             Entry::Occupied(o) => o,
         };
         Some(SocketStateEntry { id_entry, addr_entry, _marker: PhantomData::default() })
-    }
-
-    fn try_update_addr(
-        self,
-        id: &Self::Id,
-        new_addr: impl FnOnce(Self::Addr) -> Self::Addr,
-    ) -> Result<(), ExistsError> {
-        let Self(id_to_sock, addr_to_state, _) = self;
-        let (_state, _tag_state, addr) = id_to_sock.get_mut(id.clone().into()).unwrap();
-
-        let new_addr = new_addr(addr.clone());
-        let new_addrvec = Convert::to_addr_vec(&new_addr);
-        let addrvec = Convert::to_addr_vec(addr);
-
-        let state = addr_to_state.remove(&addrvec).expect("existing entry not found");
-        let result = match addr_to_state.entry(new_addrvec) {
-            Entry::Occupied(_) => Err(state),
-            Entry::Vacant(v) => {
-                if v.descendant_counts().len() != 0 {
-                    Err(state)
-                } else {
-                    v.insert(state);
-                    Ok(())
-                }
-            }
-        };
-
-        match result {
-            Ok(()) => Ok(()),
-            Err(to_restore) => {
-                // Restore the old state before returning an error.
-                match addr_to_state.entry(addrvec) {
-                    Entry::Occupied(_) => unreachable!("just-removed-from entry is occupied"),
-                    Entry::Vacant(v) => v.insert(to_restore),
-                };
-                Err(ExistsError)
-            }
-        }?;
-        *addr = new_addr;
-
-        Ok(())
     }
 }
 
@@ -612,6 +570,38 @@ where
     fn get(&self) -> &(Self::State, Self::SharingState, Self::Addr) {
         let Self { id_entry, addr_entry: _, _marker } = self;
         id_entry.get()
+    }
+
+    fn try_update_addr(self, new_addr: Self::Addr) -> Result<Self, (ExistsError, Self)> {
+        let Self { mut id_entry, addr_entry, _marker } = self;
+
+        let new_addrvec = Convert::to_addr_vec(&new_addr);
+        let (addr_state, addr_to_state) = addr_entry.remove_from_map();
+        let addr_to_state = match addr_to_state.entry(new_addrvec) {
+            Entry::Occupied(o) => o.into_map(),
+            Entry::Vacant(v) => {
+                if v.descendant_counts().len() != 0 {
+                    v.into_map()
+                } else {
+                    let new_addr_entry = v.insert(addr_state);
+                    let (_, _, addr): &mut (Self::State, Self::SharingState, _) =
+                        id_entry.get_mut();
+                    *addr = new_addr;
+                    return Ok(SocketStateEntry { id_entry, addr_entry: new_addr_entry, _marker });
+                }
+            }
+        };
+        let to_restore = addr_state;
+
+        let (_, _, addr): &(Self::State, Self::SharingState, _) = id_entry.get();
+        let addrvec = Convert::to_addr_vec(&addr);
+
+        // Restore the old state before returning an error.
+        let addr_entry = match addr_to_state.entry(addrvec) {
+            Entry::Occupied(_) => unreachable!("just-removed-from entry is occupied"),
+            Entry::Vacant(v) => v.insert(to_restore),
+        };
+        return Err((ExistsError, SocketStateEntry { id_entry, addr_entry, _marker }));
     }
 
     fn remove(self) -> (Self::State, Self::SharingState, Self::Addr) {
@@ -1212,14 +1202,24 @@ mod tests {
 
         // Moving from (1, "aaa") to (1, None) should fail since it is shadowed
         // by (1, "yyy"), and vise versa.
-        assert_eq!(
-            bound.listeners_mut().try_update_addr(&second, |_| both_shadow),
-            Err(ExistsError)
-        );
-        assert_eq!(
-            bound.listeners_mut().try_update_addr(&first, |_| both_shadow),
-            Err(ExistsError)
-        );
+        let (ExistsError, entry) = bound
+            .listeners_mut()
+            .entry(&second)
+            .unwrap()
+            .try_update_addr(both_shadow)
+            .expect_err("update should fail");
+
+        // The entry should correspond to `second`.
+        assert_eq!(entry.get(), &(0, 'b', second_addr));
+        drop(entry);
+
+        let (ExistsError, entry) = bound
+            .listeners_mut()
+            .entry(&first)
+            .unwrap()
+            .try_update_addr(both_shadow)
+            .expect_err("update should fail");
+        assert_eq!(entry.get(), &(0, 'a', first_addr));
     }
 
     #[test]

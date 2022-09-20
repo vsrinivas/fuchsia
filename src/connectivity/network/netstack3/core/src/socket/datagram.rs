@@ -30,7 +30,7 @@ use crate::{
         address::{ConnAddr, ConnIpAddr, ListenerIpAddr},
         AddrVec, Bound, BoundSocketMap, ExistsError, InsertError, ListenerAddr, SocketMapAddrSpec,
         SocketMapAddrStateSpec, SocketMapConflictPolicy, SocketMapStateSpec, SocketTypeState as _,
-        SocketTypeStateMut as _,
+        SocketTypeStateEntry as _, SocketTypeStateMut as _,
     },
 };
 
@@ -619,20 +619,30 @@ where
         }
 
         match id {
-            DatagramBoundId::Listener(id) => bound
-                .listeners_mut()
-                .try_update_addr(&id, |ListenerAddr { ip, device: _ }| ListenerAddr {
-                    ip,
-                    device: device_id,
-                })
-                .map_err(|ExistsError {}| LocalAddressError::AddressInUse),
-            DatagramBoundId::Connected(id) => bound
-                .conns_mut()
-                .try_update_addr(&id, |ConnAddr { ip, device: _ }| ConnAddr {
-                    ip,
-                    device: device_id,
-                })
-                .map_err(|ExistsError| LocalAddressError::AddressInUse),
+            DatagramBoundId::Listener(id) => {
+                let entry = bound
+                    .listeners_mut()
+                    .entry(&id)
+                    .unwrap_or_else(|| panic!("invalid listener ID {:?}", id));
+                let (_, _, addr) = entry.get();
+                let new_addr = ListenerAddr { device: device_id, ..addr.clone() };
+                entry
+                    .try_update_addr(new_addr)
+                    .map_err(|(ExistsError, _entry)| LocalAddressError::AddressInUse)
+                    .map(|_| ())
+            }
+            DatagramBoundId::Connected(id) => {
+                let entry = bound
+                    .conns_mut()
+                    .entry(&id)
+                    .unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
+                let (_, _, addr) = entry.get();
+                let new_addr = ConnAddr { device: device_id, ..addr.clone() };
+                entry
+                    .try_update_addr(new_addr)
+                    .map_err(|(ExistsError, _entry)| LocalAddressError::AddressInUse)
+                    .map(|_| ())
+            }
         }
     })
 }

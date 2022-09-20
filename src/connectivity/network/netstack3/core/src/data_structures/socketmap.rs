@@ -10,6 +10,7 @@
 //! the number of values of certain types present in the map.
 
 use alloc::collections::{hash_map, HashMap};
+use core::fmt::Debug;
 use core::{hash::Hash, num::NonZeroUsize};
 
 use const_unwrap::const_unwrap_option;
@@ -93,7 +94,6 @@ struct DescendantCounts<T, const INLINE_SIZE: usize = 1> {
 /// exists, `SocketMap::get(map, a)` is `Some(v)`, i.e. the `HashMap` that
 /// [`SocketMap`] wraps contains a [`MapValue`] whose `value` field is
 /// `Some(v)`.
-#[cfg_attr(test, derive(Debug))]
 pub(crate) struct OccupiedEntry<'a, A: Hash + Eq, V: Tagged<A>>(&'a mut SocketMap<A, V>, A);
 
 /// An entry for a key in a map that does not have a value.
@@ -150,6 +150,7 @@ where
     ///
     /// If there is a value for key `key`, removes it and returns it. Otherwise
     /// returns None.
+    #[cfg(test)]
     pub fn remove(&mut self, key: &A) -> Option<V>
     where
         A: Clone,
@@ -276,9 +277,22 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged<K>> OccupiedEntry<'a, K, V> {
         r
     }
 
+    /// Extracts the underlying [`SocketMap`] reference backing this entry.
+    pub(crate) fn into_map(self) -> &'a mut SocketMap<K, V> {
+        let Self(socketmap, _) = self;
+        socketmap
+    }
+
     /// Removes the value from the map and returns it.
     pub(crate) fn remove(self) -> V {
-        let Self(SocketMap { map, len }, key) = self;
+        let (value, _map) = self.remove_from_map();
+        value
+    }
+
+    /// Removes the value from the map and returns both.
+    pub(crate) fn remove_from_map(self) -> (V, &'a mut SocketMap<K, V>) {
+        let Self(socketmap, key) = self;
+        let SocketMap { map, len } = socketmap;
         let shadows = key.iter_shadows();
         let mut entry = match map.entry(key) {
             hash_map::Entry::Occupied(o) => o,
@@ -299,20 +313,34 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged<K>> OccupiedEntry<'a, K, V> {
         }
         SocketMap::decrement_descendant_counts(map, shadows, tag);
         *len -= 1;
-        value
+        (value, socketmap)
     }
 }
 
 impl<'a, K: Eq + Hash + IterShadows, V: Tagged<K>> VacantEntry<'a, K, V> {
     /// Inserts a value for the key referenced by this entry.
-    pub(crate) fn insert(self, value: V) {
-        let Self(SocketMap { map, len }, key) = self;
+    ///
+    /// Returns a reference to the newly-inserted value.
+    pub(crate) fn insert(self, value: V) -> OccupiedEntry<'a, K, V>
+    where
+        K: Clone,
+    {
+        let Self(socket_map, key) = self;
+        let SocketMap { map, len } = socket_map;
         let iter_shadows = key.iter_shadows();
         let tag = value.tag(&key);
-        let MapValue { value: map_value, descendant_counts: _ } = map.entry(key).or_default();
-        assert!(map_value.replace(value).is_none());
         *len += 1;
         SocketMap::increment_descendant_counts(map, iter_shadows, tag);
+        let MapValue { value: map_value, descendant_counts: _ } =
+            map.entry(key.clone()).or_default();
+        assert!(map_value.replace(value).is_none());
+        OccupiedEntry(socket_map, key)
+    }
+
+    /// Extracts the underlying [`SocketMap`] reference backing this entry.
+    pub(crate) fn into_map(self) -> &'a mut SocketMap<K, V> {
+        let Self(socketmap, _) = self;
+        socketmap
     }
 
     /// Gets the descendant counts for this entry.
@@ -321,6 +349,13 @@ impl<'a, K: Eq + Hash + IterShadows, V: Tagged<K>> VacantEntry<'a, K, V> {
     ) -> impl ExactSizeIterator<Item = &'_ (V::Tag, NonZeroUsize)> {
         let Self(socket_map, key) = self;
         socket_map.descendant_counts(&key)
+    }
+}
+
+impl<'a, A: Debug + Eq + Hash, V: Tagged<A>> Debug for OccupiedEntry<'a, A, V> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let Self(_socket_map, key) = self;
+        f.debug_tuple("OccupiedEntry").field(&"_").field(key).finish()
     }
 }
 
@@ -626,7 +661,7 @@ mod tests {
                         assert_eq!(s.map_mut(|value| core::mem::replace(value, v)), h.insert(v))
                     }
                     (Entry::Vacant(s), hash_map::Entry::Vacant(h)) => {
-                        s.insert(v);
+                        let _: OccupiedEntry<'_, _, _> = s.insert(v);
                         let _: &mut TV<_, _> = h.insert(v);
                     }
                     (Entry::Occupied(_), hash_map::Entry::Vacant(_)) => {
