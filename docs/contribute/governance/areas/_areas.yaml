@@ -178,7 +178,7 @@
     - fidl: 'fuchsia.ui.gfx'
 
 - name: 'HCI'
-  api_primary: 'neelsa@google.com'
+  api_primary: 'quiche@google.com'
   api_secondary: 'jaeheon@google.com'
   description: |
     <p>Covers input, accessibility, internationalization.</p>
@@ -366,7 +366,7 @@
 
 - name: 'View System'
   api_primary: 'jaeheon@google.com'
-  api_secondary: 'neelsa@google.com'
+  api_secondary: 'quiche@google.com'
   description: |
     The set of APIs that need to reason about and interact with visual regions
     ("views") and their lifecycle. They generally are not tied to a particular
