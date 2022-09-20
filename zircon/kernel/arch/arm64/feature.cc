@@ -490,6 +490,9 @@ void arm64_feature_init() {
       case 1:
         arm64_mmu_features.accessed_bit = true;
         break;
+      case 0:
+        // No A or D feature implemented
+        break;
     }
 
     // Check for PAN features
