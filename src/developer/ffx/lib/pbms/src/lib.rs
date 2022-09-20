@@ -30,6 +30,8 @@ use {
     },
     ::gcs::client::{DirectoryProgress, FileProgress, ProgressResult},
     anyhow::{anyhow, bail, Context, Result},
+    errors::ffx_bail,
+    ffx_config::sdk,
     fms::Entries,
     futures::TryStreamExt as _,
     itertools::Itertools as _,
@@ -148,7 +150,11 @@ pub async fn fms_entries_from(product_url: &url::Url) -> Result<Entries> {
 ///
 /// This function should only be called with an iterator of `url::Url`s that has
 /// 2 or more entries, and has already been sorted & reversed.
-fn default_pbm_of_many<I>(mut urls: I, looking_for: Option<String>) -> Result<url::Url>
+fn default_pbm_of_many<I>(
+    mut urls: I,
+    sdk_version: &sdk::SdkVersion,
+    looking_for: Option<String>,
+) -> Result<url::Url>
 where
     I: Iterator<Item = url::Url> + Clone,
 {
@@ -160,21 +166,35 @@ where
     let formatted =
         urls.clone().map(|url| format!("`{}`", url)).collect::<Vec<String>>().join("\n");
     println!(
-        "Multiple product bundles found{extra_message}. To run a specific product, pass \
+        "Multiple product bundles found{extra_message}. To choose a specific product, pass \
         in a full URL from the following:\n{formatted}",
         extra_message = extra_message,
         formatted = formatted
     );
-    let first = match urls.next() {
-        Some(first) => first,
-        None => {
-            return Err(anyhow!(
-                "This function should only be called with an iterator with at least 2 entries."
-            ))
+    tracing::info!("Product bundles: {}", formatted);
+    let first = match sdk_version {
+        sdk::SdkVersion::Version(version) => {
+            tracing::info!("Sdk version: `{}`", version);
+            let mut matching_sdk_version = urls.filter(|url| url.to_string().contains(version));
+            let first = matching_sdk_version.next();
+            match first {
+                Some(first) => first,
+                None => {
+                    ffx_bail!("There were no product-bundles for your sdk version: `{}`", version)
+                }
+            }
         }
+        sdk::SdkVersion::InTree | sdk::SdkVersion::Unknown => match urls.next() {
+            Some(first) => first,
+            None => {
+                return Err(anyhow!(
+                    "This function should only be called with an iterator with at least 2 entries."
+                ))
+            }
+        },
     };
     println!(
-        "Defaulting to the first product-bundle in sorted order: `{first}`",
+        "Defaulting to the first valid product-bundle in sorted order: `{first}`",
         first = first.to_string()
     );
     Ok(first)
@@ -196,6 +216,8 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
     let mut urls = product_bundle_urls().await.context("getting product bundle URLs")?;
     // Sort the URLs lexigraphically, then reverse them so the most recent
     // version strings will be first.
+    let sdk = ffx_config::get_sdk().await?;
+    let sdk_version = sdk.get_version();
     urls.sort();
     urls.reverse();
     if let Some(looking_for) = &looking_for {
@@ -209,13 +231,13 @@ pub async fn select_product_bundle(looking_for: &Option<String>) -> Result<url::
                 "{}",
                 "A product bundle with that name was not found, please check the spelling and try again."
             ),
-            Err(matches) => default_pbm_of_many(matches, Some(looking_for.to_string())),
+            Err(matches) => default_pbm_of_many(matches, sdk_version, Some(looking_for.to_string())),
         }
     } else {
         match urls.into_iter().at_most_one() {
             Ok(Some(url)) => Ok(url),
             Ok(None) => bail!("There are no product bundles available."),
-            Err(urls) => default_pbm_of_many(urls, None),
+            Err(urls) => default_pbm_of_many(urls, sdk_version, None),
         }
     }
 }
