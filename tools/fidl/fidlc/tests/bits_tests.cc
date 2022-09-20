@@ -9,15 +9,10 @@
 
 namespace {
 
-TEST(BitsTests, GoodBitsTestSimple) {
-  TestLibrary library(R"FIDL(library example;
+TEST(BitsTests, GoodSimple) {
+  TestLibrary library;
+  library.AddFile("good/simple_bits.test.fidl");
 
-type Fruit = bits : uint64 {
-    ORANGE = 1;
-    APPLE = 2;
-    BANANA = 4;
-};
-)FIDL");
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupBits("Fruit");
   ASSERT_NOT_NULL(type_decl);
@@ -28,7 +23,7 @@ type Fruit = bits : uint64 {
   EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint64);
 }
 
-TEST(BitsTests, GoodBitsDefaultUint32) {
+TEST(BitsTests, GoodDefaultUint32) {
   TestLibrary library(R"FIDL(library example;
 
 type Fruit = bits {
@@ -44,7 +39,7 @@ type Fruit = bits {
   EXPECT_EQ(underlying_primitive->subtype, fidl::types::PrimitiveSubtype::kUint32);
 }
 
-TEST(BitsTests, BadBitsTestSigned) {
+TEST(BitsTests, BadSigned) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -57,7 +52,7 @@ type Fruit = bits : int64 {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBitsTypeMustBeUnsignedIntegralPrimitive);
 }
 
-TEST(BitsTests, BadBitsTestWithNonUniqueValues) {
+TEST(BitsTests, BadNonUniqueValues) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -71,7 +66,7 @@ type Fruit = bits : uint64 {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
-TEST(BitsTests, BadBitsTestWithNonUniqueValuesOutOfLine) {
+TEST(BitsTests, BadNonUniqueValuesOutOfLine) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -88,7 +83,7 @@ const TWO_SQUARED uint32 = 4;
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
-TEST(BitsTests, BadBitsTestUnsignedWithNegativeMember) {
+TEST(BitsTests, BadUnsignedWithNegativeMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -102,7 +97,7 @@ type Fruit = bits : uint64 {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
 }
 
-TEST(BitsTests, BadBitsTestMemberOverflow) {
+TEST(BitsTests, BadMemberOverflow) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -116,7 +111,7 @@ type Fruit = bits : uint8 {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "256");
 }
 
-TEST(BitsTests, BadBitsTestDuplicateMember) {
+TEST(BitsTests, BadDuplicateMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -130,7 +125,7 @@ type Fruit = bits : uint64 {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }
 
-TEST(BitsTests, BadBitsTestNoMembersWhenStrict) {
+TEST(BitsTests, BadNoMembersWhenStrict) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -139,7 +134,7 @@ type B = strict bits {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMustHaveOneMember);
 }
 
-TEST(BitsTests, GoodBitsTestNoMembersAllowedWhenFlexible) {
+TEST(BitsTests, GoodNoMembersAllowedWhenFlexible) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -148,7 +143,7 @@ type B = flexible bits {};
   ASSERT_COMPILED(library);
 }
 
-TEST(BitsTests, GoodBitsTestNoMembersAllowedWhenDefaultsToFlexible) {
+TEST(BitsTests, GoodNoMembersAllowedWhenDefaultsToFlexible) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -157,7 +152,7 @@ type B = bits {};
   ASSERT_COMPILED(library);
 }
 
-TEST(BitsTests, GoodBitsTestKeywordNames) {
+TEST(BitsTests, GoodKeywordNames) {
   TestLibrary library(R"FIDL(library example;
 
 type Fruit = bits : uint64 {
@@ -169,26 +164,17 @@ type Fruit = bits : uint64 {
   ASSERT_COMPILED(library);
 }
 
-TEST(BitsTests, BadBitsTestNonPowerOfTwo) {
-  TestLibrary library(R"FIDL(
-library example;
+TEST(BitsTests, BadNonPowerOfTwo) {
+  TestLibrary library;
+  library.AddFile("bad/bits_non_power_of_two.test.fidl");
 
-type non_power_of_two = bits : uint64 {
-    three = 3;
-};
-)FIDL");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrBitsMemberMustBePowerOfTwo);
 }
 
-TEST(BitsTests, GoodBitsTestMask) {
-  TestLibrary library(R"FIDL(library example;
+TEST(BitsTests, GoodWithMask) {
+  TestLibrary library;
+  library.AddFile("good/masked_bits.test.fidl");
 
-type Life = bits {
-    A = 0b000010;
-    B = 0b001000;
-    C = 0b100000;
-};
-)FIDL");
   ASSERT_COMPILED(library);
 
   auto bits = library.LookupBits("Life");
@@ -196,7 +182,7 @@ type Life = bits {
   EXPECT_EQ(bits->mask, 42);
 }
 
-TEST(BitsTests, BadBitsShantBeNullable) {
+TEST(BitsTests, BadShantBeNullable) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -211,7 +197,7 @@ type Struct = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotBeOptional);
 }
 
-TEST(BitsTests, BadBitsMultipleConstraints) {
+TEST(BitsTests, BadMultipleConstraints) {
   TestLibrary library(R"FIDL(
 library example;
 

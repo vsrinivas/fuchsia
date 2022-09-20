@@ -13,6 +13,7 @@ group("tests") {
 
 host_test_data("bad_cases") {
   sources = [
+    "fidl/bad/bits_non_power_of_two.test.fidl",
     "fidl/bad/cannot_start_at_zero.test.fidl",
     "fidl/bad/files_disagree_on_library_name_1.test.fidl",
     "fidl/bad/files_disagree_on_library_name_2.test.fidl",
@@ -28,7 +29,9 @@ host_test_data("good_cases") {
   sources = [
     "fidl/good/library_multiple_files_1.test.fidl",
     "fidl/good/library_multiple_files_2.test.fidl",
+    "fidl/good/masked_bits.test.fidl",
     "fidl/good/recursive_type.test.fidl",
+    "fidl/good/simple_bits.test.fidl",
     "fidl/good/strict_union.test.fidl",
   ]
   outputs = [ "$root_out_dir/fidlc-tests/good/{{source_file_part}}" ]
