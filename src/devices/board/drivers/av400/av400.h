@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_AV400_AV400_H_
 #define SRC_DEVICES_BOARD_DRIVERS_AV400_AV400_H_
 
+#include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
@@ -99,6 +100,7 @@ class Av400 : public Av400Type {
   ddk::IommuProtocolClient iommu_;
   thrd_t thread_;
   ddk::GpioImplProtocolClient gpio_impl_;
+  ddk::ClockImplProtocolClient clk_impl_;
 };
 
 }  // namespace av400

@@ -60,6 +60,11 @@ struct AmlConfig {
   char manufacturer[kMaxAmlConfigString];
   char product_name[kMaxAmlConfigString];
   bool is_input;
+
+  // If false, it will use HIFI_PLL by default.
+  // If true, it will use MP0_PLL
+  bool is_custom_tdm_src_clk_sel;
+
   // If false, it will use same suffix channel by default.
   // e.g.
   //  TDMOUT_A -> MCLK_A -> SCLK_A -> LRCLK_A

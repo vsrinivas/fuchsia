@@ -38,6 +38,7 @@ constexpr pbus_mmio_t clk_mmios[] = {
 constexpr clock_id_t clock_ids[] = {
     {a5_clk::CLK_ADC},         {a5_clk::CLK_NAND_SEL},       {a5_clk::CLK_PWM_G},
     {a5_clk::CLK_SYS_CPU_CLK}, {a5_clk::CLK_DSPA_PRE_A_SEL}, {a5_clk::CLK_DSPA_PRE_A},
+    {a5_clk::CLK_HIFI_PLL},    {a5_clk::CLK_MPLL0},
 };
 
 const pbus_metadata_t clock_metadata[] = {
@@ -76,6 +77,12 @@ zx_status_t Av400::ClkInit() {
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ProtocolDeviceAdd failed, st = %s", __func__, zx_status_get_string(status));
     return status;
+  }
+
+  clk_impl_ = ddk::ClockImplProtocolClient(parent());
+  if (!clk_impl_.is_valid()) {
+    zxlogf(ERROR, "ClockImplProtocolClient failed");
+    return ZX_ERR_INTERNAL;
   }
 
   return ZX_OK;

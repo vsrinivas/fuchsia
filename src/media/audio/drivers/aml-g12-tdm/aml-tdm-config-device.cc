@@ -12,6 +12,13 @@
 namespace audio::aml_g12 {
 
 AmlTdmConfigDevice::AmlTdmConfigDevice(const metadata::AmlConfig& metadata, fdf::MmioBuffer mmio) {
+  ee_audio_mclk_src_t mclk_src = {};
+  if (metadata.is_custom_tdm_src_clk_sel) {
+    mclk_src = MP0_PLL;
+  } else {
+    mclk_src = HIFI_PLL;
+  }
+
   if (metadata.is_input) {
     aml_tdm_in_t tdm = {};
     aml_toddr_t ddr = {};
@@ -37,7 +44,7 @@ AmlTdmConfigDevice::AmlTdmConfigDevice(const metadata::AmlConfig& metadata, fdf:
     if (metadata.is_custom_tdm_clk_sel)
       mclk = ToMclkId(metadata.tdm_clk_sel);
 
-    device_ = AmlTdmInDevice::Create(std::move(mmio), HIFI_PLL, tdm, ddr, mclk, metadata.version);
+    device_ = AmlTdmInDevice::Create(std::move(mmio), mclk_src, tdm, ddr, mclk, metadata.version);
   } else {
     aml_tdm_out_t tdm = {};
     aml_frddr_t ddr = {};
@@ -63,7 +70,7 @@ AmlTdmConfigDevice::AmlTdmConfigDevice(const metadata::AmlConfig& metadata, fdf:
     if (metadata.is_custom_tdm_clk_sel)
       mclk = ToMclkId(metadata.tdm_clk_sel);
 
-    device_ = AmlTdmOutDevice::Create(std::move(mmio), HIFI_PLL, tdm, ddr, mclk, metadata.version);
+    device_ = AmlTdmOutDevice::Create(std::move(mmio), mclk_src, tdm, ddr, mclk, metadata.version);
   }
   ZX_ASSERT(device_ != nullptr);
 }

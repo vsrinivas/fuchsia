@@ -12,6 +12,7 @@
 #include <ddktl/metadata/audio.h>
 #include <soc/aml-a5/a5-gpio.h>
 #include <soc/aml-common/aml-audio.h>
+#include <soc/aml-meson/a5-clk.h>
 #include <ti/ti-audio.h>
 
 #include "av400.h"
@@ -109,77 +110,51 @@ static zx_status_t InitAudioTop(void) {
   return ZX_OK;
 }
 
-static zx_status_t HifiPllInit(void) {
-  zx_status_t status;
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  zx::unowned_resource resource(get_root_resource());
-  std::optional<fdf::MmioBuffer> buf;
-  status = fdf::MmioBuffer::Create(A5_ANACTRL_BASE, A5_ANACTRL_LENGTH, *resource,
-                                   ZX_CACHE_POLICY_UNCACHED_DEVICE, &buf);
+zx_status_t Av400::AudioInit() {
+  uint8_t tdm_instance_id = 1;
+
+  // For pdm
+  uint32_t clock_id = a5_clk::CLK_HIFI_PLL;
+  uint32_t clock_rate = 768'000'000;
+  zx_status_t status = clk_impl_.Disable(clock_id);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "MmioBuffer::Create failed %s", zx_status_get_string(status));
+    zxlogf(ERROR, "Disable failed: %s", zx_status_get_string(status));
     return status;
   }
 
-  uint32_t lock_check = PLL_LOCK_CHECK_MAX;
-  uint32_t val = 0;
-  constexpr uint32_t hifi_ctl0 = (128 << 0) |  // dco_m  [7:0]   = 128
-                                 (1 << 10) |   // dco_n  [14:10] = 1
-                                 (2 << 16) |   // dco_od [17:16] = 2
-                                 (1 << 28) |   // dco_en [28]    = 1 (enable)
-                                 (1 << 29);    // reset  [29]    = 1 (hold reset)
-
-  constexpr uint32_t hifi_ctl1 = 0x6aab;      // frac [18:0]
-  constexpr uint32_t hifi_ctl2 = 0x0;         // ss mode ctrl - unset
-  constexpr uint32_t hifi_ctl3 = 0x6a285c00;  // hifi_ctl3 ~ hifi_ctl6
-  constexpr uint32_t hifi_ctl4 = 0x65771290;  //
-  constexpr uint32_t hifi_ctl5 = 0x39272000;  // default setting (don't modify it)
-  constexpr uint32_t hifi_ctl6 = 0x56540000;  //
-  do {
-    /*
-     * DCO = 24M * (M + 0) / N
-     * CLK = DCO / (1 << od)
-     *
-     * A5_ANACTRL_HIFIPLL_CTRL0
-     * => HIFI_DCO = 24M * 128 / 1 = 3072M
-     * => HIFI_CLK = 3072M / (1 << 2) = 768M
-     */
-    buf->Write32(hifi_ctl0, A5_ANACTRL_HIFIPLL_CTRL0);
-    buf->Write32(hifi_ctl1, A5_ANACTRL_HIFIPLL_CTRL1);
-    buf->Write32(hifi_ctl2, A5_ANACTRL_HIFIPLL_CTRL2);
-    buf->Write32(hifi_ctl3, A5_ANACTRL_HIFIPLL_CTRL3);
-    buf->Write32(hifi_ctl4, A5_ANACTRL_HIFIPLL_CTRL4);
-    buf->Write32(hifi_ctl5, A5_ANACTRL_HIFIPLL_CTRL5);
-    buf->Write32(hifi_ctl6, A5_ANACTRL_HIFIPLL_CTRL6);
-
-    // Write bit31 from 1 to 0:
-    // Add some delay, make the PLL more stable, if not,
-    // It will probably fail locking
-    val = buf->Read32(A5_ANACTRL_HIFIPLL_CTRL0);
-    buf->Write32(val | (1 << 29), A5_ANACTRL_HIFIPLL_CTRL0);
-    zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
-
-    val = buf->Read32(A5_ANACTRL_HIFIPLL_CTRL0);
-    buf->Write32(val & (~(1 << 29)), A5_ANACTRL_HIFIPLL_CTRL0);
-    zx_nanosleep(zx_deadline_after(ZX_USEC(100)));
-
-    val = !((buf->Read32(A5_ANACTRL_HIFIPLL_STS) >> 31) & 1);
-  } while (val && --lock_check);
-
-  if (lock_check == 0) {
-    zxlogf(ERROR, "hifi_pll lock failed");
-    return ZX_ERR_INVALID_ARGS;
+  status = clk_impl_.SetRate(clock_id, clock_rate);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "SetRate failed: %s", zx_status_get_string(status));
+    return status;
   }
 
-  zxlogf(INFO, "hifi_pll lock ok!");
-  return ZX_OK;
-}
+  status = clk_impl_.Enable(clock_id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Enable failed: %s", zx_status_get_string(status));
+    return status;
+  }
 
-zx_status_t Av400::AudioInit() {
-  uint8_t tdm_instance_id = 1;
-  zx_status_t status;
+  // For tdm in/out
+  clock_id = a5_clk::CLK_MPLL0;
+  clock_rate = 491'520'000;
+  status = clk_impl_.Disable(clock_id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Disable failed: %s", zx_status_get_string(status));
+    return status;
+  }
 
-  HifiPllInit();
+  status = clk_impl_.SetRate(clock_id, clock_rate);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "SetRate failed: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = clk_impl_.Enable(clock_id);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Enable failed: %s", zx_status_get_string(status));
+    return status;
+  }
+
   status = InitAudioTop();
   if (status != ZX_OK)
     return status;
@@ -263,8 +238,10 @@ zx_status_t Av400::AudioInit() {
   snprintf(metadata.product_name, sizeof(metadata.product_name), "av400");
 
   metadata.is_input = false;
-  metadata.mClockDivFactor = 62;  // mclk = 768M / 62 = 12.19M (tas5707 limitation)
-  metadata.sClockDivFactor = 4;   // sclk = 12.19M / 4 = 3.09M
+  // Use mp0_pll as the MCLK source clock to make MCLK more accurate
+  metadata.is_custom_tdm_src_clk_sel = true;
+  metadata.mClockDivFactor = 40;  // mclk = 491'520'000 / 40 = 12'288'000 hz
+  metadata.sClockDivFactor = 4;   // sclk = 12'288'000 / 4 = 3'072'000 hz
   metadata.unique_id = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS;
   metadata.bus = metadata::AmlBus::TDM_B;
 
@@ -280,6 +257,8 @@ zx_status_t Av400::AudioInit() {
 
   metadata.version = metadata::AmlVersion::kA5;
   metadata.dai.type = metadata::DaiType::I2s;
+  metadata.dai.bits_per_sample = 16;
+  metadata.dai.bits_per_slot = 32;
   metadata.codecs.number_of_codecs = 1;
   metadata.codecs.types[0] = metadata::CodecType::Tas5707;
   metadata.ring_buffer.number_of_channels = 2;
@@ -328,8 +307,10 @@ zx_status_t Av400::AudioInit() {
     snprintf(metadata.product_name, sizeof(metadata.product_name), "av400");
 
     metadata.is_input = true;
-    metadata.mClockDivFactor = 62;  // mclk = 768M / 62 = 12.19M
-    metadata.sClockDivFactor = 4;   // sclk = 12.19M / 4 = 3.09M
+    // Use mp0_pll as the MCLK source clock to make MCLK more accurate
+    metadata.is_custom_tdm_src_clk_sel = true;
+    metadata.mClockDivFactor = 40;  // mclk = 491'520'000 / 40 = 12'288'000 hz
+    metadata.sClockDivFactor = 4;   // sclk = 12'288'000 / 4 = 3'072'000 hz
     metadata.bus = metadata::AmlBus::TDM_A;
 
     metadata.is_custom_tdm_clk_sel = true;
