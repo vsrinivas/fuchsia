@@ -20,11 +20,6 @@ typedef enum {
   HIU_PLL_COUNT,
 } hhi_plls_t;
 
-typedef enum {
-  A5_SYS_PLL = 0,
-  A5_PLL_COUNT,
-} a5_plls_t;
-
 typedef struct {
   uint64_t rate;
   uint32_t n;

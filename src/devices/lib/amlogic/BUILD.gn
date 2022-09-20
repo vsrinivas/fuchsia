@@ -52,9 +52,13 @@ zx_library("amlogic") {
     "soc/aml-a5/a5-gpio.h",
     "soc/aml-a5/a5-hw.h",
     "soc/aml-a5/a5-pwm.h",
+    "soc/aml-a5/a5-hiu.h",
+    "soc/aml-a5/a5-hiu-regs.h",
   ]
   sources = [
     "a113-clocks.c",
+    "a5-hiu.cc",
+    "a5-pll-rates.cc",
     "aml-g12-saradc.cc",
     "aml-pdm-audio.cc",
     "aml-tdm-audio.cc",
@@ -69,6 +73,7 @@ zx_library("amlogic") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/hwreg",
     "//zircon/system/ulib/sync",
     "//zircon/system/ulib/zx",
   ]

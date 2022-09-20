@@ -70,6 +70,14 @@ class MesonPllClock : public MesonRateClock {
  public:
   explicit MesonPllClock(const hhi_plls_t pll_num, aml_hiu_dev_t* hiudev)
       : pll_num_(pll_num), hiudev_(hiudev) {}
+  explicit MesonPllClock(std::unique_ptr<AmlMesonPllDevice> a5_hiudev)
+      : pll_num_(HIU_PLL_COUNT),  // A5 doesn't use it.
+        a5_hiudev_(std::move(a5_hiudev)) {}
+  explicit MesonPllClock(MesonPllClock&& other)
+      : pll_num_(other.pll_num_),  // A5 doesn't use it.
+        pll_(other.pll_),
+        hiudev_(other.hiudev_),
+        a5_hiudev_(std::move(other.a5_hiudev_)) {}
   ~MesonPllClock() = default;
 
   void Init();
@@ -85,13 +93,22 @@ class MesonPllClock : public MesonRateClock {
   const hhi_plls_t pll_num_;
   aml_pll_dev_t pll_;
   aml_hiu_dev_t* hiudev_;
+  std::unique_ptr<AmlMesonPllDevice> a5_hiudev_;
 };
 
 void MesonPllClock::Init() {
-  s905d2_pll_init_etc(hiudev_, &pll_, pll_num_);
+  const hhi_pll_rate_t* rate_table = nullptr;
+  size_t rate_table_size = 0;
 
-  const hhi_pll_rate_t* rate_table = s905d2_pll_get_rate_table(pll_num_);
-  const size_t rate_table_size = s905d2_get_rate_table_count(pll_num_);
+  if (a5_hiudev_) {
+    rate_table = a5_hiudev_->GetRateTable();
+    rate_table_size = a5_hiudev_->GetRateTableSize();
+  } else {
+    s905d2_pll_init_etc(hiudev_, &pll_, pll_num_);
+
+    rate_table = s905d2_pll_get_rate_table(pll_num_);
+    rate_table_size = s905d2_get_rate_table_count(pll_num_);
+  }
 
   // Make sure that the rate table is sorted in strictly ascending order.
   for (size_t i = 0; i < rate_table_size - 1; i++) {
@@ -99,15 +116,29 @@ void MesonPllClock::Init() {
   }
 }
 
-zx_status_t MesonPllClock::SetRate(const uint32_t hz) { return s905d2_pll_set_rate(&pll_, hz); }
+zx_status_t MesonPllClock::SetRate(const uint32_t hz) {
+  if (a5_hiudev_) {
+    return a5_hiudev_->SetRate(hz);
+  }
+
+  return s905d2_pll_set_rate(&pll_, hz);
+}
 
 zx_status_t MesonPllClock::QuerySupportedRate(const uint64_t max_rate, uint64_t* result) {
   // Find the largest rate that does not exceed `max_rate`
 
   // Start by getting the rate tables.
-  const hhi_pll_rate_t* rate_table = s905d2_pll_get_rate_table(pll_num_);
-  const size_t rate_table_size = s905d2_get_rate_table_count(pll_num_);
+  const hhi_pll_rate_t* rate_table = nullptr;
+  size_t rate_table_size = 0;
   const hhi_pll_rate_t* best_rate = nullptr;
+
+  if (a5_hiudev_) {
+    rate_table = a5_hiudev_->GetRateTable();
+    rate_table_size = a5_hiudev_->GetRateTableSize();
+  } else {
+    rate_table = s905d2_pll_get_rate_table(pll_num_);
+    rate_table_size = s905d2_get_rate_table_count(pll_num_);
+  }
 
   // The rate table is already sorted in ascending order so pick the largest
   // element that does not exceed max_rate.
@@ -131,9 +162,17 @@ zx_status_t MesonPllClock::GetRate(uint64_t* result) { return ZX_ERR_NOT_SUPPORT
 
 zx_status_t MesonPllClock::Toggle(const bool enable) {
   if (enable) {
-    return s905d2_pll_ena(&pll_);
+    if (a5_hiudev_) {
+      return a5_hiudev_->Enable();
+    } else {
+      return s905d2_pll_ena(&pll_);
+    }
   } else {
-    s905d2_pll_disable(&pll_);
+    if (a5_hiudev_) {
+      a5_hiudev_->Disable();
+    } else {
+      s905d2_pll_disable(&pll_);
+    }
     return ZX_OK;
   }
 }
@@ -629,8 +668,8 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffe
       muxes_ = a5_muxes;
       mux_count_ = std::size(a5_muxes);
 
-      pll_count_ = A5_PLL_COUNT;
-      InitHiu();
+      pll_count_ = a5_pll::PLL_COUNT;
+      InitHiuA5();
 
       constexpr size_t cpu_clk_count = std::size(a5_cpu_clks);
       cpu_clks_.reserve(cpu_clk_count);
@@ -1135,6 +1174,15 @@ void AmlClock::InitHiu() {
   for (unsigned int pllnum = 0; pllnum < pll_count_; pllnum++) {
     const hhi_plls_t pll = static_cast<hhi_plls_t>(pllnum);
     pllclk_.emplace_back(pll, &hiudev_);
+    pllclk_[pllnum].Init();
+  }
+}
+
+void AmlClock::InitHiuA5() {
+  pllclk_.reserve(pll_count_);
+  for (unsigned int pllnum = 0; pllnum < pll_count_; pllnum++) {
+    auto plldev = a5_pll::CreatePllDeviceA5(&dosbus_mmio_, pllnum);
+    pllclk_.emplace_back(std::move(plldev));
     pllclk_[pllnum].Init();
   }
 }

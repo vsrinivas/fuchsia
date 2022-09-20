@@ -22,6 +22,7 @@
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <hwreg/mmio.h>
+#include <soc/aml-a5/a5-hiu.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 
 #include "aml-clk-blocks.h"
@@ -104,6 +105,8 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   zx_status_t GetMesonRateClock(const uint32_t clk, MesonRateClock** out);
 
   void InitHiu();
+
+  void InitHiuA5();
 
   // IO MMIO
   fdf::MmioBuffer hiu_mmio_;
