@@ -572,11 +572,16 @@ Fuchsia's updatability.
 * With that in mind, we detail changes to the bindings specification. This is
   ABI breaking, and is a major evolution of the wire format (which
   covers both "at rest" and "dynamic" concerns).
-* We will build support for all features, gated by a new [magic
-  number][RFC-0037-new-magic-number] `0xa` (10).
-* As we have done in the past, we will likely group together multiple wire
-  format breaking changes which will all see the light of day under "magic
-  number 2". Our goal is to complete this migration rapidly.
+
+A previous version of this RFC called for gating the rollout of unknown
+interactions behind a new magic number. However, as specified, unknown
+interactions is backwards compatible with existing protocols, since the header
+bit used to indicate strictness was previously unused/reserved and the wire
+format only changes for flexible two way methods, which can only exist in open
+protocols. Instead of changing the magic number, we will use a two stage rollout
+where we enable unknown interactions support but have the default modifiers set
+to `closed` and `strict`, then add those modifiers explicitly to existing FIDL
+files, then change the defaults to `open` and `flexible`.
 
 ## Performance considerations {#performance-considerations}
 
@@ -932,7 +937,6 @@ can receive both one way and two way interactions:
 [`zx_channel_write`]: /docs/reference/syscalls/channel_write.md
 [RFC-0024]: 0024_mandatory_source_compatibility.md
 [RFC-0033]: 0033_handling_unknown_fields_strictness.md
-[RFC-0037-new-magic-number]: 0037_transactional_message_header_v3.md#new-magic-number
 [RFC-0037-transactional-message-header-v3]: 0037_transactional_message_header_v3.md#transactional-message-header-v3
 [RFC-0037]: 0037_transactional_message_header_v3.md
 [RFC-0057]: 0057_default_no_handles.md
