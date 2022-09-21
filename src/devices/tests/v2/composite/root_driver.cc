@@ -38,17 +38,17 @@ class NumberServer : public fidl::WireServer<ft::Device> {
 
 class RootDriver : public driver::DriverBase {
  public:
-  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : driver::DriverBase("root", std::move(start_args), std::move(dispatcher)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("root", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
-    node_client_.Bind(std::move(node()), async_dispatcher());
+    node_client_.Bind(std::move(node()), dispatcher());
     // Add service "left".
     {
       driver::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
-        fidl::BindServer<fidl::WireServer<ft::Device>>(async_dispatcher(), std::move(server_end),
+        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
                                                        &this->left_server_);
       };
       zx::status<> status = service.add_device(std::move(device));
@@ -66,7 +66,7 @@ class RootDriver : public driver::DriverBase {
       driver::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
-        fidl::BindServer<fidl::WireServer<ft::Device>>(async_dispatcher(), std::move(server_end),
+        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
                                                        &this->right_server_);
       };
       zx::status<> status = service.add_device(std::move(device));
@@ -145,7 +145,7 @@ class RootDriver : public driver::DriverBase {
         return;
       }
 
-      controller.Bind(std::move(client), async_dispatcher());
+      controller.Bind(std::move(client), dispatcher());
       FDF_LOG(INFO, "Successfully added child.");
     };
 

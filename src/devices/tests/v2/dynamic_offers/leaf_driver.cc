@@ -17,21 +17,21 @@ namespace {
 
 class LeafDriver : public driver::DriverBase {
  public:
-  LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : driver::DriverBase("leaf", std::move(start_args), std::move(dispatcher)) {}
+  LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("leaf", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
     auto handshake = driver::Connect<ft::Service::Device>(*context().incoming());
     if (handshake.is_error()) {
       return handshake.take_error();
     }
-    handshake_.Bind(*std::move(handshake), async_dispatcher());
+    handshake_.Bind(*std::move(handshake), dispatcher());
 
     auto waiter = context().incoming()->Connect<ft::Waiter>();
     if (waiter.is_error()) {
       return waiter.take_error();
     }
-    waiter_.Bind(*std::move(waiter), async_dispatcher());
+    waiter_.Bind(*std::move(waiter), dispatcher());
 
     AsyncCallDoThenAck();
     return zx::ok();

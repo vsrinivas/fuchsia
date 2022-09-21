@@ -17,13 +17,13 @@ namespace {
 
 class RootDriver : public driver::DriverBase {
  public:
-  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : driver::DriverBase("root", std::move(start_args), std::move(dispatcher)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("root", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
-    node_.Bind(std::move(node()), async_dispatcher());
+    node_.Bind(std::move(node()), dispatcher());
     child_ = compat::DeviceServer("v1", 0, "root/v1", compat::MetadataMap());
-    auto status = child_->Serve(async_dispatcher(), &context().outgoing()->component());
+    auto status = child_->Serve(dispatcher(), &context().outgoing()->component());
     if (status != ZX_OK) {
       FDF_LOG(ERROR, "Failed to serve compat device server: %s", zx_status_get_string(status));
       node_.AsyncTeardown();
@@ -62,7 +62,7 @@ class RootDriver : public driver::DriverBase {
             return;
           }
 
-          controller_.Bind(std::move(client), async_dispatcher());
+          controller_.Bind(std::move(client), dispatcher());
         });
     return zx::ok();
   }

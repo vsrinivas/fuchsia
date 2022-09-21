@@ -22,19 +22,18 @@ const std::string_view kChildName = "leaf";
 
 class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake> {
  public:
-  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : driver::DriverBase("root", std::move(start_args), std::move(dispatcher)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("root", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
-    node_.Bind(std::move(node()), async_dispatcher());
+    node_.Bind(std::move(node()), dispatcher());
     // Setup the outgoing directory.
     {
       driver::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
 
       auto device = [this](fidl::ServerEnd<ft::Handshake> server_end) mutable -> void {
-        fidl::BindServer<fidl::Server<ft::Handshake>>(async_dispatcher(), std::move(server_end),
-                                                      this);
+        fidl::BindServer<fidl::Server<ft::Handshake>>(dispatcher(), std::move(server_end), this);
       };
       zx::status<> status = service.add_device(std::move(device));
       if (status.is_error()) {
@@ -102,7 +101,7 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
             return;
           }
 
-          controller_.Bind(std::move(client), async_dispatcher());
+          controller_.Bind(std::move(client), dispatcher());
         });
 
     return zx::ok();

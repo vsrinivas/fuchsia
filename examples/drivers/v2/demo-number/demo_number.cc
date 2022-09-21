@@ -111,8 +111,8 @@ class DemoNumberServer : public fidl::Server<fuchsia_hardware_demo::Demo> {
 // This class represents the driver instance.
 class DemoNumber : public driver::DriverBase {
  public:
-  DemoNumber(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : DriverBase(kDriverName, std::move(start_args), std::move(dispatcher)) {}
+  DemoNumber(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : DriverBase(kDriverName, std::move(start_args), std::move(driver_dispatcher)) {}
 
   // Called by the driver framework to initialize the driver instance.
   zx::status<> Start() override {
@@ -125,7 +125,7 @@ class DemoNumber : public driver::DriverBase {
         service.add_demo([this](fidl::ServerEnd<fuchsia_hardware_demo::Demo> request) -> void {
           // Bind each connection request to a fuchsia.hardware.demo/Demo server instance.
           auto demo_impl = std::make_unique<DemoNumberServer>(&logger_);
-          fidl::BindServer(this->async_dispatcher(), std::move(request), std::move(demo_impl),
+          fidl::BindServer(dispatcher(), std::move(request), std::move(demo_impl),
                            std::mem_fn(&DemoNumberServer::OnUnbound));
         });
     ZX_ASSERT(result.is_ok());

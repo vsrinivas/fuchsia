@@ -11,8 +11,8 @@ using driver::Record;
 // ----------------------------------Default BasicFactory------------------------------------------
 class MyDriver : public DriverBase {
  public:
-  MyDriver(DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : DriverBase("my_driver", std::move(start_args), std::move(dispatcher)) {}
+  MyDriver(DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : DriverBase("my_driver", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
     // context().incoming()->Connect(...);
@@ -51,14 +51,15 @@ class AnotherDriver : public DriverBase {
 // Here is our custom factory, we can pass it into our Record down below.
 class CustomFactory {
  public:
-  static zx::status<std::unique_ptr<DriverBase>> CreateDriver(DriverStartArgs start_args,
-                                                              fdf::UnownedDispatcher dispatcher) {
+  static zx::status<std::unique_ptr<DriverBase>> CreateDriver(
+      DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher) {
     // The logic here right now is similar to the one in |BasicFactory| but it does not have to be.
     // The driver author can run any custom constructor/initialization here.
     std::unique_ptr<DriverBase> driver = std::make_unique<AnotherDriver>(
-        std::string_view("custom_driver"), std::move(start_args), std::move(dispatcher));
+        std::string_view("custom_driver"), std::move(start_args), std::move(driver_dispatcher));
     auto result = driver->Start();
     if (result.is_error()) {
+      FDF_LOGL(WARNING, driver->logger(), "Failed to Start driver: %s", result.status_string());
       return result.take_error();
     }
 

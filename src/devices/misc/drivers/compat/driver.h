@@ -30,8 +30,8 @@ std::vector<std::string> GetFragmentNames(
 // Driver is the compatibility driver that loads DFv1 drivers.
 class Driver : public driver::DriverBase {
  public:
-  Driver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher, device_t device,
-         const zx_protocol_device_t* ops, std::string_view driver_path);
+  Driver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher,
+         device_t device, const zx_protocol_device_t* ops, std::string_view driver_path);
   ~Driver() override;
 
   zx::status<> Start() override;
@@ -65,9 +65,8 @@ class Driver : public driver::DriverBase {
 
   // These accessors are used by other classes in the compat driver so we want to expose
   // them publicly since they are protected in DriverBase.
-  async_dispatcher_t* dispatcher() { return async_dispatcher(); }
+  async_dispatcher_t* dispatcher() { return driver::DriverBase::dispatcher(); }
   const driver::Namespace& driver_namespace() { return *context().incoming(); }
-  driver::Logger& logger() { return logger_; }
   driver::OutgoingDirectory& outgoing() { return *context().outgoing(); }
 
   uint32_t GetNextDeviceId() { return next_device_id_++; }
@@ -136,7 +135,7 @@ class Driver : public driver::DriverBase {
 class DriverFactory {
  public:
   static zx::status<std::unique_ptr<driver::DriverBase>> CreateDriver(
-      driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher);
+      driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher);
 };
 
 class DriverList {

@@ -22,9 +22,9 @@ namespace {
 
 class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
  public:
-  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : DriverBase("root", std::move(start_args), std::move(dispatcher)),
-        node_(fidl::WireClient(std::move(node()), async_dispatcher())) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : DriverBase("root", std::move(start_args), std::move(driver_dispatcher)),
+        node_(fidl::WireClient(std::move(node()), dispatcher())) {}
 
   static constexpr const char* Name() { return "root"; }
 
@@ -56,7 +56,8 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
     ft::Service::Handler service(&handler);
 
     auto root = [this](fdf::ServerEnd<ft::Root> server_end) {
-      fdf::BindServer<fdf::Server<ft::Root>>(dispatcher()->get(), std::move(server_end), this);
+      fdf::BindServer<fdf::Server<ft::Root>>(driver_dispatcher()->get(), std::move(server_end),
+                                             this);
     };
     auto status = service.add_root(std::move(root));
     if (status.is_error()) {
@@ -88,7 +89,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
     child_ = compat::DeviceServer(
         "v1", 0, "root/v1", compat::MetadataMap(),
         compat::ServiceOffersV1("v1", std::move(vfs_client_), std::move(service_offers)));
-    zx_status_t status = child_->Serve(async_dispatcher(), context().outgoing().get());
+    zx_status_t status = child_->Serve(dispatcher(), context().outgoing().get());
     if (status != ZX_OK) {
       return fitx::error(fdf::NodeError::kInternal);
     }
@@ -130,7 +131,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
     if (add_result->is_error()) {
       return fitx::error(add_result->error_value());
     }
-    controller_.Bind(std::move(endpoints->client), async_dispatcher());
+    controller_.Bind(std::move(endpoints->client), dispatcher());
     return fitx::ok();
   }
 

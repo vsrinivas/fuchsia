@@ -11,8 +11,8 @@ namespace {
 
 class LeafDriver : public driver::DriverBase {
  public:
-  LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : driver::DriverBase("leaf", std::move(start_args), std::move(dispatcher)) {}
+  LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("leaf", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
     auto waiter = context().incoming()->Connect<ft::Waiter>();
@@ -20,7 +20,7 @@ class LeafDriver : public driver::DriverBase {
       node().reset();
       return waiter.take_error();
     }
-    const fidl::WireSharedClient<ft::Waiter> client{std::move(waiter.value()), async_dispatcher()};
+    const fidl::WireSharedClient<ft::Waiter> client{std::move(waiter.value()), dispatcher()};
     auto result = client.sync()->Ack();
     if (!result.ok()) {
       node().reset();

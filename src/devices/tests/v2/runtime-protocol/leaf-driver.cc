@@ -33,29 +33,29 @@ namespace {
 
 class LeafDriver : public driver::DriverBase {
  public:
-  LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : DriverBase("leaf", std::move(start_args), std::move(dispatcher)),
-        executor_(async_dispatcher()),
-        node_(fidl::WireSharedClient(std::move(node()), async_dispatcher())) {}
+  LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : DriverBase("leaf", std::move(start_args), std::move(driver_dispatcher)),
+        executor_(dispatcher()),
+        node_(fidl::WireSharedClient(std::move(node()), dispatcher())) {}
 
   zx::status<> Start() override {
     auto setter_client = driver::Connect<ft::Service::Setter>(*context().incoming());
     if (setter_client.is_error()) {
       return setter_client.take_error();
     }
-    setter_.Bind(*std::move(setter_client), dispatcher()->get());
+    setter_.Bind(*std::move(setter_client), driver_dispatcher()->get());
 
     auto getter_client = driver::Connect<ft::Service::Getter>(*context().incoming());
     if (getter_client.is_error()) {
       return getter_client.take_error();
     }
-    getter_.Bind(*std::move(getter_client), dispatcher()->get());
+    getter_.Bind(*std::move(getter_client), driver_dispatcher()->get());
 
     auto waiter_client = context().incoming()->Connect<ft::Waiter>();
     if (waiter_client.is_error()) {
       return waiter_client.take_error();
     }
-    waiter_.Bind(*std::move(waiter_client), async_dispatcher());
+    waiter_.Bind(*std::move(waiter_client), dispatcher());
 
     auto task = CallSetter()
                     .and_then(fit::bind_member(this, &LeafDriver::CallGetter))

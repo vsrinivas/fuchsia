@@ -60,8 +60,8 @@ zx::status<fidl::ServerEnd<fuchsia_io::Directory>> ExportDevfsEntry(
 
 class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::Device> {
  public:
-  LifecycleDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : DriverBase("lifeycle-driver", std::move(start_args), std::move(dispatcher)) {}
+  LifecycleDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : DriverBase("lifeycle-driver", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
     // Serve our Service.
@@ -69,7 +69,7 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
     ft::Service::Handler service(&handler);
 
     auto result = service.add_device([this](fidl::ServerEnd<ft::Device> request) -> void {
-      fidl::BindServer(async_dispatcher(), std::move(request), this);
+      fidl::BindServer(dispatcher(), std::move(request), this);
     });
     ZX_ASSERT(result.is_ok());
 

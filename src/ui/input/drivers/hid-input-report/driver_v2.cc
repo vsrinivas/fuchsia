@@ -48,7 +48,7 @@ class InputReportDriver : public driver::DriverBase {
 
     // Expose the driver's inspect data.
     exposed_inspector_.emplace(inspect::ComponentInspector(
-        context().outgoing()->component(), async_dispatcher(), input_report_->Inspector()));
+        context().outgoing()->component(), dispatcher(), input_report_->Inspector()));
 
     // Start the inner DFv1 driver.
     input_report_->Start();
@@ -62,7 +62,7 @@ class InputReportDriver : public driver::DriverBase {
 
     // Create our compat context, and serve our device when it's created.
     compat::Context::ConnectAndCreate(
-        &context(), async_dispatcher(),
+        &context(), dispatcher(),
         fit::bind_member(this, &InputReportDriver::CreateAndExportDevice));
     return zx::ok();
   }

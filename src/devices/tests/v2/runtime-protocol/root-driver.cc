@@ -23,7 +23,6 @@ using namespace fuchsia_driver_framework;
 }  // namespace fdf
 
 namespace fcd = fuchsia_component_decl;
-namespace fio = fuchsia_io;
 namespace ft = fuchsia_runtime_test;
 
 namespace {
@@ -34,23 +33,25 @@ class RootDriver : public driver::DriverBase,
                    public fdf::Server<ft::Setter>,
                    public fdf::Server<ft::Getter> {
  public:
-  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : DriverBase("root", std::move(start_args), std::move(dispatcher)),
-        node_(fidl::WireClient(std::move(node()), async_dispatcher())) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : DriverBase("root", std::move(start_args), std::move(driver_dispatcher)),
+        node_(fidl::WireClient(std::move(node()), dispatcher())) {}
 
   zx::status<> Start() override {
     driver::ServiceInstanceHandler handler;
     ft::Service::Handler service(&handler);
 
     auto setter = [this](fdf::ServerEnd<ft::Setter> server_end) mutable -> void {
-      fdf::BindServer<fdf::Server<ft::Setter>>(dispatcher()->get(), std::move(server_end), this);
+      fdf::BindServer<fdf::Server<ft::Setter>>(driver_dispatcher()->get(), std::move(server_end),
+                                               this);
     };
     zx::status<> status = service.add_setter(std::move(setter));
     if (status.is_error()) {
       FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
     }
     auto getter = [this](fdf::ServerEnd<ft::Getter> server_end) mutable -> void {
-      fdf::BindServer<fdf::Server<ft::Getter>>(dispatcher()->get(), std::move(server_end), this);
+      fdf::BindServer<fdf::Server<ft::Getter>>(driver_dispatcher()->get(), std::move(server_end),
+                                               this);
     };
     status = service.add_getter(std::move(getter));
     if (status.is_error()) {
@@ -126,7 +127,7 @@ class RootDriver : public driver::DriverBase,
     if (add_result->is_error()) {
       return fitx::error(add_result->error_value());
     }
-    controller_.Bind(std::move(endpoints->client), async_dispatcher());
+    controller_.Bind(std::move(endpoints->client), dispatcher());
     return fitx::ok();
   }
 

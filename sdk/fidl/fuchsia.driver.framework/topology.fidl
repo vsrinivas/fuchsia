@@ -60,6 +60,8 @@ type NodeAddArgs = table {
     1: name string:MAX_NODE_NAME_LENGTH;
 
     /// Capabilities to offer to the driver that is bound to this node.
+    /// The driver must ensure these capabilities are added to its outgoing directory
+    /// before adding the child node.
     2: offers vector<fuchsia.component.decl.Offer>:MAX_OFFER_COUNT;
 
     /// Functions to provide to the driver that is bound to this node.

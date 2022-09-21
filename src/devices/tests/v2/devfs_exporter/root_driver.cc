@@ -18,8 +18,8 @@ class RootDriver : public driver::DriverBase, public fidl::WireServer<ft::Device
   static constexpr std::string_view name = "root";
 
  public:
-  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : driver::DriverBase(name, std::move(start_args), std::move(dispatcher)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase(name, std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
     // Setup the outgoing directory.
@@ -38,8 +38,8 @@ class RootDriver : public driver::DriverBase, public fidl::WireServer<ft::Device
       return status.take_error();
     }
     auto exporter = driver::DevfsExporter::Create(
-        *context().incoming(), async_dispatcher(),
-        fidl::WireSharedClient(std::move(endpoints->client), async_dispatcher()));
+        *context().incoming(), dispatcher(),
+        fidl::WireSharedClient(std::move(endpoints->client), dispatcher()));
     if (exporter.is_error()) {
       return exporter.take_error();
     }

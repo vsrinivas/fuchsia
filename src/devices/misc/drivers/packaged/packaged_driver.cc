@@ -8,22 +8,16 @@
 
 #include <optional>
 
-namespace fdf {
-using namespace fuchsia_driver_framework;
-}  // namespace fdf
-
-namespace fio = fuchsia_io;
-
 namespace {
 
 class PackagedDriver : public driver::DriverBase {
  public:
-  PackagedDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : driver::DriverBase("packaged", std::move(start_args), std::move(dispatcher)) {}
+  PackagedDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("packaged", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
     exposed_inspector_.emplace(
-        inspect::ComponentInspector(context().outgoing()->component(), async_dispatcher()));
+        inspect::ComponentInspector(context().outgoing()->component(), dispatcher()));
     auto& root = exposed_inspector_->root();
     root.RecordString("hello", "world");
 

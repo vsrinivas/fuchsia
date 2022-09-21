@@ -16,11 +16,11 @@ namespace {
 
 class LeafDriver : public driver::DriverBase {
  public:
-  LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : driver::DriverBase("leaf", std::move(start_args), std::move(dispatcher)) {}
+  LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
+      : driver::DriverBase("leaf", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::status<> Start() override {
-    auto result = async::PostTask(async_dispatcher(), [&]() { RunAsync(); });
+    auto result = async::PostTask(dispatcher(), [&]() { RunAsync(); });
     if (result == ZX_OK) {
       return zx::ok();
     }
@@ -37,7 +37,7 @@ class LeafDriver : public driver::DriverBase {
     }
 
     const fidl::WireSharedClient<ft::Waiter> client{std::move(connect_result.value()),
-                                                    async_dispatcher()};
+                                                    dispatcher()};
     auto work_result = DoWork(client);
     if (work_result.is_error()) {
       FDF_LOG(ERROR, "DoWork was not successful: %s", work_result.status_string());
