@@ -76,8 +76,8 @@ zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
 
   // Check that use of large pages is supported.
   if (!ept_info.large_pages) {
+    // Warning only.
     dprintf(CRITICAL, "hypervisor: EPT large pages not supported\n");
-    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Check that the INVEPT instruction is supported.
