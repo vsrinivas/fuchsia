@@ -285,6 +285,9 @@ async fn create_interface(
                 | netdevice_worker::Error::MacNotUnicast { .. } => {
                     Some(fnet_interfaces_admin::InterfaceRemovedReason::BadPort)
                 }
+                netdevice_worker::Error::DuplicateName(_) => {
+                    Some(fnet_interfaces_admin::InterfaceRemovedReason::DuplicateName)
+                }
                 netdevice_worker::Error::SystemResource(_)
                 | netdevice_worker::Error::InvalidPortInfo(_) => None,
             };

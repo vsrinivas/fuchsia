@@ -54,6 +54,8 @@ pub(crate) enum Error {
     ConfigurationNotSupported,
     #[error("mac {mac} on port {port:?} is not a valid unicast address")]
     MacNotUnicast { mac: net_types::ethernet::Mac, port: netdevice_client::Port },
+    #[error("interface named {0} already exists")]
+    DuplicateName(String),
 }
 
 const DEFAULT_BUFFER_LENGTH: usize = 2048;
@@ -218,6 +220,18 @@ impl DeviceHandler {
         };
         let ctx = &mut ns.ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
+
+        // Check if there already exists an interface with this name.
+        // Interface names are unique.
+        let name = name
+            .map(|name| {
+                if let Some(_device_info) = non_sync_ctx.devices.get_device_by_name(&name) {
+                    return Err(Error::DuplicateName(name));
+                };
+                Ok(name)
+            })
+            .transpose()?;
+
         let core_id =
             netstack3_core::device::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
         state_entry.insert(core_id);

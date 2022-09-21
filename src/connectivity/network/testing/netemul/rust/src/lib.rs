@@ -976,13 +976,14 @@ impl<'a> TestEndpoint<'a> {
         }
     }
 
-    /// Consumes this `TestEndpoint` and tries to add it to the Netstack in
-    /// `realm`, returning a [`TestInterface`] on success.
+    /// Like `into_interface_realm_with_name` but with default parameters.
     pub async fn into_interface_in_realm(self, realm: &TestRealm<'a>) -> Result<TestInterface<'a>> {
         self.into_interface_in_realm_with_name(realm, Default::default()).await
     }
 
-    async fn into_interface_in_realm_with_name(
+    /// Consumes this `TestEndpoint` and tries to add it to the Netstack in
+    /// `realm`, returning a [`TestInterface`] on success.
+    pub async fn into_interface_in_realm_with_name(
         self,
         realm: &TestRealm<'a>,
         if_config: InterfaceConfig<'_>,

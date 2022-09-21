@@ -958,11 +958,6 @@ async fn control_terminal_events<N: Netstack>(
             (control2, vec![KeepResource::Control(control1), KeepResource::Port(port)])
         }
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::DuplicateName => {
-            if N::VERSION == NetstackVersion::Netstack3 {
-                // TODO(https://fxbug.dev/84516): Keep track of names properly
-                // in NS3 and reject duplicate interface names.
-                return;
-            }
             let (port1, port1_id) = create_port(base_port_config.clone()).await;
             let if_name = "test_same_name";
             let control1 = {

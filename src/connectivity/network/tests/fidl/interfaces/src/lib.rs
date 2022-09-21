@@ -36,11 +36,12 @@ async fn watcher_existing<N: Netstack>(name: &str) {
     let stack =
         realm.connect_to_protocol::<fnet_stack::StackMarker>().expect("connect to protocol");
 
-    #[derive(Clone, Copy, Debug, PartialEq, Eq)]
+    #[derive(Clone, Debug, PartialEq, Eq)]
     enum Expectation {
         Loopback(u64),
         Ethernet {
             id: u64,
+            name: String,
             addr: fidl_fuchsia_net::Subnet,
             has_default_ipv4_route: bool,
             has_default_ipv6_route: bool,
@@ -75,15 +76,14 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                 }
                 Expectation::Ethernet {
                     id,
+                    name,
                     addr,
                     has_default_ipv4_route,
                     has_default_ipv6_route,
                 } => {
                     let fidl_fuchsia_net_interfaces_ext::Properties {
                         id: rhs_id,
-                        // TODO(https://fxbug.dev/84516): Not comparing name
-                        // because ns3 doesn't generate names yet.
-                        name: _,
+                        name: rhs_name,
                         device_class,
                         online,
                         addresses,
@@ -97,6 +97,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
                         addr: *addr,
                         valid_until: zx::sys::ZX_TIME_INFINITE,
                     }) && *online
+                        && name == rhs_name
                         && id == rhs_id
                         && has_default_ipv4_route == rhs_ipv4_route
                         && has_default_ipv6_route == rhs_ipv6_route
@@ -121,20 +122,27 @@ async fn watcher_existing<N: Netstack>(name: &str) {
         // TODO(https://fxbug.dev/88796): Use TestRealm::join_network_with
         // https://fuchsia-docs.firebaseapp.com/rust/netemul/struct.TestRealm.html#method.join_network_with
         // when `fuchsia.net.interfaces.admin` is supported.
+
+        let if_name = format!("test-ep-{}", idx);
+
         let ep = sandbox
-            .create_endpoint::<netemul::Ethernet, _>(format!("test-ep-{}", idx))
+            .create_endpoint::<netemul::NetworkDevice, _>(if_name.clone())
             .await
             .expect("create endpoint");
 
-        let iface = ep.into_interface_in_realm(&realm).await.expect("add device to stack");
+        let iface = ep
+            .into_interface_in_realm_with_name(
+                &realm,
+                netemul::InterfaceConfig {
+                    name: Some(if_name.clone().into()),
+                    ..Default::default()
+                },
+            )
+            .await
+            .expect("add device to stack");
         let id = iface.id();
 
-        // Ethernet Devices start enabled in Netstack3.
-        let expect_enable = N::VERSION != NetstackVersion::Netstack3;
-        assert_eq!(
-            expect_enable,
-            iface.control().enable().await.expect("send enable").expect("enable interface")
-        );
+        assert!(iface.control().enable().await.expect("send enable").expect("enable interface"));
 
         // Interface must be online for us to observe the address in the
         // assigned state later.
@@ -146,8 +154,13 @@ async fn watcher_existing<N: Netstack>(name: &str) {
             }),
             prefix_len: 24,
         };
-        let expected =
-            Expectation::Ethernet { id, addr, has_default_ipv4_route, has_default_ipv6_route };
+        let expected = Expectation::Ethernet {
+            id,
+            name: if_name,
+            addr,
+            has_default_ipv4_route,
+            has_default_ipv6_route,
+        };
         assert_eq!(expectations.insert(id, expected), None);
         let address_state_provider = interfaces::add_address_wait_assigned(
             iface.control(),
