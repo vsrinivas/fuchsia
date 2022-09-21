@@ -35,18 +35,37 @@ use {
     fms::Entries,
     futures::TryStreamExt as _,
     itertools::Itertools as _,
+    sdk_metadata::ProductBundle,
     std::path::{Path, PathBuf},
 };
 
-pub use crate::{
-    pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_storage_dir},
-    virtual_device_product::VirtualDeviceProduct,
-};
+pub use crate::pbms::{fetch_data_for_product_bundle_v1, get_product_dir, get_storage_dir};
 
 mod gcs;
 mod pbms;
 mod repo_info;
-mod virtual_device_product;
+
+/// Load a product bundle by name, uri, or local path.
+/// This is capable of loading both v1 and v2 ProductBundles.
+pub async fn load_product_bundle(product_bundle: &Option<String>) -> Result<ProductBundle> {
+    tracing::debug!("Loading a product bundle: {:?}", product_bundle);
+
+    //  If `product_bundle` is a local path, load it directly.
+    if let Some(path) = product_bundle.as_ref().map(|s| Path::new(s)).filter(|p| p.exists()) {
+        return ProductBundle::try_load_from(path);
+    }
+
+    // Otherwise, use the `fms` crate to fetch and parse the product bundle by name or uri.
+    let product_url =
+        select_product_bundle(product_bundle).await.context("Selecting product bundle")?;
+    let name = product_url.fragment().expect("Product name is required.");
+
+    let fms_entries = fms_entries_from(&product_url).await.context("get fms entries")?;
+    let product = fms::find_product_bundle(&fms_entries, &Some(name.to_string()))
+        .context("problem with product_bundle")?
+        .to_owned();
+    Ok(ProductBundle::V1(product))
+}
 
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
 pub async fn update_metadata_all<F>(output_dir: &Path, progress: &mut F) -> Result<()>

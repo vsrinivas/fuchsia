@@ -16,6 +16,7 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
     ]
     deps = [
+      "//build/sdk/meta:rust",
       "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/lib/errors:lib",

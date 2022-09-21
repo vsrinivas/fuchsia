@@ -17,6 +17,7 @@ if (is_host) {
     deps = [
       "//build/sdk/meta:rust",
       "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+      "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/lib/pbms:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",

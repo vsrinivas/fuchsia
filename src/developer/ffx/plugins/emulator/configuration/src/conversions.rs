@@ -7,37 +7,72 @@
 //! to a minimum, while improving our ability to fully test the conversion code.
 
 use crate::{DeviceConfig, EmulatorConfiguration, GuestConfig, PortMapping, VirtualCpu};
-use anyhow::{anyhow, Context, Result};
+use anyhow::{anyhow, bail, Context, Result};
+use sdk_metadata::{ProductBundle, ProductBundleV1, VirtualDeviceV1};
+use std::path::Path;
+
+pub async fn convert_bundle_to_configs(
+    product_bundle: ProductBundle,
+    device_name: Option<String>,
+    verbose: bool,
+) -> Result<EmulatorConfiguration> {
+    match &product_bundle {
+        ProductBundle::V1(product_bundle) => {
+            // Get the virtual devices.
+            let product_url = pbms::select_product_bundle(&Some(product_bundle.name.clone()))
+                .await
+                .context("Selecting product bundle")?;
+            let fms_entries =
+                pbms::fms_entries_from(&product_url).await.context("get fms entries")?;
+            let virtual_devices =
+                fms::find_virtual_devices(&fms_entries, &product_bundle.device_refs)
+                    .context("problem with virtual device")?;
+
+            // Find the data root, which is used to find the images and template file.
+            let data_root = pbms::get_images_dir(&product_url).await.context("images dir")?;
+
+            // Determine the correct device name from the user, or default to the first one listed
+            // in the product bundle.
+            let virtual_device = match device_name {
+                // If no device_name is given, choose the first virtual device listed in the
+                // productbundle.
+                None => match &virtual_devices[0] {
+                    sdk_metadata::VirtualDevice::V1(v) => v,
+                },
+
+                // Otherwise, find the virtual device by name in the product bundle.
+                Some(device_name) => {
+                    let vd = virtual_devices
+                        .iter()
+                        .find(|vd| vd.name() == device_name)
+                        .ok_or(anyhow!("The device is not found in the product bundle"))?;
+                    match vd {
+                        sdk_metadata::VirtualDevice::V1(v) => v,
+                    }
+                }
+            };
+
+            if verbose {
+                println!(
+                    "Found PBM: {:?}, device_refs: {:?}, virtual_device: {:?}",
+                    &product_bundle.name, &product_bundle.device_refs, &virtual_device
+                );
+            }
+            convert_v1_bundle_to_configs(product_bundle, &virtual_device, &data_root)
+        }
+        _ => bail!("ProductBundleV2 is not support in the emulator yet"),
+    }
+}
 
 /// - `data_root` is a path to a directory. When working in-tree it's the path
 ///   to build output dir; when using the SDK it's the path to the downloaded
 ///   images directory.
-pub fn convert_bundle_to_configs(
-    bundle: pbms::VirtualDeviceProduct,
-    device_name: Option<String>,
+fn convert_v1_bundle_to_configs(
+    product_bundle: &ProductBundleV1,
+    virtual_device: &VirtualDeviceV1,
+    data_root: &Path,
 ) -> Result<EmulatorConfiguration> {
     let mut emulator_configuration: EmulatorConfiguration = EmulatorConfiguration::default();
-
-    // Determine the correct device name from the user, or default to the first one listed in the
-    // product bundle.
-    let virtual_device = match device_name {
-        // If no device_name is given, choose the first virtual device listed in the productbundle.
-        None => match &bundle.virtual_devices()[0] {
-            sdk_metadata::VirtualDevice::V1(v) => v,
-        },
-
-        // Otherwise, find the virtual device by name in the product bundle.
-        Some(device_name) => {
-            let vd = bundle
-                .virtual_devices()
-                .iter()
-                .find(|vd| vd.name() == device_name)
-                .ok_or(anyhow!("The device is not found in the product bundle"))?;
-            match vd {
-                sdk_metadata::VirtualDevice::V1(v) => v,
-            }
-        }
-    };
 
     // Map the product and device specifications to the Device, and Guest configs.
     emulator_configuration.device = DeviceConfig {
@@ -53,7 +88,6 @@ pub fn convert_bundle_to_configs(
         storage: virtual_device.hardware.storage.clone(),
     };
 
-    let data_root = bundle.images_dir();
     if let Some(template) = &virtual_device.start_up_args_template {
         emulator_configuration.runtime.template =
             data_root.join(&template).canonicalize().with_context(|| {
@@ -70,7 +104,7 @@ pub fn convert_bundle_to_configs(
         }
     }
 
-    if let Some(emu) = &bundle.emu_manifest() {
+    if let Some(emu) = &product_bundle.manifests.emu {
         emulator_configuration.guest = GuestConfig {
             // TODO(fxbug.dev/88908): Eventually we'll need to support multiple disk_images.
             fvm_image: if !emu.disk_images.is_empty() {
@@ -84,7 +118,7 @@ pub fn convert_bundle_to_configs(
     } else {
         return Err(anyhow!(
             "The Product Bundle specified by {} does not contain any Emulator Manifests.",
-            &bundle.name()
+            &product_bundle.name
         ));
     }
     Ok(emulator_configuration)
@@ -98,7 +132,7 @@ mod tests {
         AudioDevice, AudioModel, CpuArchitecture, DataAmount, DataUnits, ElementType, EmuManifest,
         InputDevice, Manifests, PointingDevice, Screen, ScreenUnits,
     };
-    use sdk_metadata::{ProductBundle, ProductBundleV1, VirtualDevice, VirtualDeviceV1};
+    use sdk_metadata::{ProductBundleV1, VirtualDeviceV1};
     use std::collections::HashMap;
 
     #[test]
@@ -143,12 +177,7 @@ mod tests {
         };
 
         // Run the conversion, then assert everything in the config matches the manifest data.
-        let bundle = pbms::VirtualDeviceProduct::from_parts(
-            ProductBundle::V1(pb.to_owned()),
-            vec![VirtualDevice::V1(device.to_owned())],
-            sdk_root.to_owned(),
-        );
-        let config = convert_bundle_to_configs(bundle, /*device_name=*/ None)
+        let config = convert_v1_bundle_to_configs(&pb, &device, &sdk_root)
             .expect("convert_bundle_to_configs");
         assert_eq!(config.device.audio, device.hardware.audio);
         assert_eq!(config.device.cpu.architecture, device.hardware.cpu.arch);
@@ -194,13 +223,8 @@ mod tests {
         ports.insert("debug".to_string(), 2345);
         device.ports = Some(ports);
 
-        let bundle = pbms::VirtualDeviceProduct::from_parts(
-            ProductBundle::V1(pb.to_owned()),
-            vec![VirtualDevice::V1(device.to_owned())],
-            sdk_root.to_owned(),
-        );
-        let mut config = convert_bundle_to_configs(bundle, /*device_name=*/ None)
-            .expect("convert_bundle_to_configs again");
+        let mut config = convert_v1_bundle_to_configs(&pb, &device, &sdk_root)
+            .expect("convert_bundle_to_configs");
 
         // Verify that all of the new values are loaded and match the new manifest data.
         assert_eq!(config.device.audio, device.hardware.audio);

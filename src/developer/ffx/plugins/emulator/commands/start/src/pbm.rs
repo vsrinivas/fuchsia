@@ -16,25 +16,27 @@ use ffx_emulator_config::{
     NetworkingMode, OperatingSystem,
 };
 use ffx_emulator_start_args::StartCommand;
+use sdk_metadata::ProductBundle;
 use std::{collections::hash_map::DefaultHasher, env, hash::Hasher, path::PathBuf, time::Duration};
 
 /// Lists the virtual device spec names in the specified product.
 pub(crate) async fn list_virtual_devices(cmd: &StartCommand) -> Result<Vec<String>> {
-    let bundle: pbms::VirtualDeviceProduct =
-        pbms::VirtualDeviceProduct::new(&cmd.product_bundle).await?;
-    Ok(bundle.device_refs().clone())
+    let bundle = pbms::load_product_bundle(&cmd.product_bundle).await?;
+    match bundle {
+        ProductBundle::V1(product_bundle) => Ok(product_bundle.device_refs.clone()),
+        ProductBundle::V2(_) => {
+            bail!("V2 Product Bundles do not yet contain multiple virtual devices")
+        }
+    }
 }
 
 /// Create a RuntimeConfiguration based on the command line args.
 pub(crate) async fn make_configs(cmd: &StartCommand) -> Result<EmulatorConfiguration> {
-    let bundle: pbms::VirtualDeviceProduct =
-        pbms::VirtualDeviceProduct::new(&cmd.product_bundle).await?;
-    if cmd.verbose {
-        println!("Found PBM {:?}, device_refs {:?}", bundle.name(), bundle.device_refs(),);
-    }
+    let product_bundle = pbms::load_product_bundle(&cmd.product_bundle).await?;
 
     // Apply the values from the manifest to an emulation configuration.
-    let mut emu_config = convert_bundle_to_configs(bundle, cmd.device.clone())
+    let mut emu_config = convert_bundle_to_configs(product_bundle, cmd.device.clone(), cmd.verbose)
+        .await
         .context("problem with convert_bundle_to_configs")?;
 
     // HostConfig values that come from the OS environment.
