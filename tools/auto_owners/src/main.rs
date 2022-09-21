@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::bail;
+use anyhow::{bail, Result};
 use argh::FromArgs;
 use camino::{Utf8Path, Utf8PathBuf};
 use gnaw_lib::CrateOutputMetadata;
@@ -42,7 +42,7 @@ struct Options {
     gn_bin: PathBuf,
 }
 
-fn main() -> anyhow::Result<()> {
+fn main() -> Result<()> {
     let Options { overrides, metadata, gn_bin, out_dir, num_threads } = argh::from_env();
     if let Some(num_threads) = num_threads {
         rayon::ThreadPoolBuilder::new().num_threads(num_threads).build_global().unwrap();
@@ -74,7 +74,7 @@ impl OwnersDb {
         metadata_path: PathBuf,
         gn_bin: PathBuf,
         out_dir: PathBuf,
-    ) -> anyhow::Result<Self> {
+    ) -> Result<Self> {
         let overrides: BTreeMap<String, Vec<Utf8PathBuf>> =
             toml::de::from_str(&std::fs::read_to_string(overrides)?)?;
         let external_crates: Vec<CrateOutputMetadata> =
@@ -101,7 +101,7 @@ impl OwnersDb {
     }
 
     /// Update all OWNERS files in //third_party/rust_crates.
-    fn update_all_files(&self) -> anyhow::Result<()> {
+    fn update_all_files(&self) -> Result<()> {
         eprintln!("Updating OWNERS files...");
         self.external_crates
             .par_iter()
@@ -111,14 +111,14 @@ impl OwnersDb {
             })
             .map(|metadata| self.update_owners_file(metadata))
             .panic_fuse()
-            .collect::<anyhow::Result<()>>()?;
+            .collect::<Result<()>>()?;
         eprintln!("\nDone!");
 
         Ok(())
     }
 
     /// Update the OWNERS file for a single 3p crate.
-    fn update_owners_file(&self, metadata: &CrateOutputMetadata) -> anyhow::Result<()> {
+    fn update_owners_file(&self, metadata: &CrateOutputMetadata) -> Result<()> {
         let file = self.compute_owners_file(metadata)?;
         let owners_path = metadata.path.join("OWNERS");
         if !file.is_empty() {
@@ -132,7 +132,7 @@ impl OwnersDb {
         Ok(())
     }
 
-    fn compute_owners_file(&self, metadata: &CrateOutputMetadata) -> anyhow::Result<OwnersFile> {
+    fn compute_owners_file(&self, metadata: &CrateOutputMetadata) -> Result<OwnersFile> {
         if let Some(krate_overrides) = self.overrides.get(&metadata.name) {
             Ok(OwnersFile {
                 path: metadata.path.join("OWNERS"),
@@ -151,10 +151,7 @@ impl OwnersDb {
     /// `//third_party/rust_crates:foo-v1_0_0` but we discourage the use of those targets
     /// throughout the tree. To find dependencies from in-house code we need to also get reverse
     /// deps for the equivalent target without the version, e.g. `//third_party/rust_crates:foo`.
-    fn owners_files_from_reverse_deps(
-        &self,
-        metadata: &CrateOutputMetadata,
-    ) -> anyhow::Result<OwnersFile> {
+    fn owners_files_from_reverse_deps(&self, metadata: &CrateOutputMetadata) -> Result<OwnersFile> {
         let targets = Self::toolchain_suffixed_targets(
             &metadata.canonical_target,
             metadata.shortcut_target.as_ref().map(String::as_str),
@@ -194,12 +191,12 @@ impl OwnersDb {
 
     /// Run `gn refs $OUT_DIR $CRATE_GN_TARGET` and return a list of GN targets which depend on the
     /// target.
-    fn reverse_deps(&self, target: &str) -> anyhow::Result<BTreeSet<String>> {
+    fn reverse_deps(&self, target: &str) -> Result<BTreeSet<String>> {
         gn_reverse_deps(&self.gn_bin, &self.out_dir, target)
     }
 
     /// Given a GN target, find the most likely path for its corresponding OWNERS file.
-    fn owners_file_for_gn_target(&self, target: &str) -> anyhow::Result<Utf8PathBuf> {
+    fn owners_file_for_gn_target(&self, target: &str) -> Result<Utf8PathBuf> {
         // none of the metadata we have emits toolchain suffices, so remove them. the target
         // toolchain is the default toolchain so we don't encounter an targets suffixed that way
         let target = if let Some(idx) = target.find(GN_TOOLCHAIN_SUFFIX_PREFIX) {
@@ -313,11 +310,7 @@ impl std::fmt::Display for OwnersFile {
     }
 }
 
-fn gn_reverse_deps(
-    gn_bin: &Path,
-    out_dir: &Path,
-    target: &str,
-) -> anyhow::Result<BTreeSet<String>> {
+fn gn_reverse_deps(gn_bin: &Path, out_dir: &Path, target: &str) -> Result<BTreeSet<String>> {
     let output = Command::new(gn_bin).arg("refs").arg(out_dir).arg(target).output()?;
     let stdout = String::from_utf8(output.stdout.clone())?;
 
