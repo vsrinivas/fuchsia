@@ -34,6 +34,7 @@ rustc_library("settings_inspect_utils") {
     "src/joinable_inspect_vecdeque.rs",
     "src/lib.rs",
     "src/managed_inspect_map.rs",
+    "src/managed_inspect_queue.rs",
   ]
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]

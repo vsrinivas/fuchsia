@@ -18,3 +18,6 @@ pub mod joinable_inspect_vecdeque;
 
 /// A map that controls an inspect node and writes inserted items to the node automatically.
 pub mod managed_inspect_map;
+
+/// A queue that controls an inspect node and writes inserted items to the node automatically.
+pub mod managed_inspect_queue;
