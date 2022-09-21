@@ -294,7 +294,7 @@ void {{ . }}::_CloseHandles() {
   {{- range .Members }}
     {{- if .Type.IsResource }}
       if (has_{{ .Name }}()) {
-        {{- CloseHandles . true false }}
+        {{- CloseHandles . true }}
       }
     {{- end }}
   {{- end }}

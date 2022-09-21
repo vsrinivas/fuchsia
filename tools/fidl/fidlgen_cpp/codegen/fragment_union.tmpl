@@ -196,7 +196,7 @@ void {{ . }}::_CloseHandles() {
   {{- range .Members }}
     {{- if .Type.IsResource }}
       case {{ .WireOrdinalName }}: {
-        {{- CloseHandles . false true }}
+        {{- CloseHandles . true }}
         break;
       }
     {{- end }}

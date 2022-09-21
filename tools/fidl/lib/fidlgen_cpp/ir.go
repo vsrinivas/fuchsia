@@ -110,13 +110,11 @@ var TypeKinds = namespacedEnum(typeKinds{}).(typeKinds)
 type Type struct {
 	nameVariants
 
-	WirePointer bool
-
 	// Defines what operation we should use to pass a value without a move (LLCPP). It also
 	// defines the way we should initialize a field.
 	WireFamily familyKind
 
-	// NeedsDtor indicates whether this type needs to be destructed explicitely
+	// NeedsDtor indicates whether this type needs to be destructed explicitly
 	// or not.
 	NeedsDtor bool
 
@@ -515,7 +513,6 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			Unified: makeName("std::array").arrayTemplate(t.Unified, *val.ElementCount),
 			Wire:    makeName("fidl::Array").arrayTemplate(t.Wire, *val.ElementCount),
 		}
-		r.WirePointer = t.WirePointer
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Array
@@ -535,7 +532,6 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			r.nameVariants.HLCPP = makeName("std::vector").template(t.HLCPP)
 		}
 		r.WireFamily = FamilyKinds.Vector
-		r.WirePointer = t.WirePointer
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Vector
 		r.IsResource = t.IsResource
@@ -668,14 +664,12 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 				r.Kind = TypeKinds.Struct
 				r.DeclarationName = val.Identifier
 				r.WireFamily = FamilyKinds.Reference
-				r.WirePointer = val.Nullable
 				r.IsResource = declInfo.IsResourceType()
 				r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
 			case fidlgen.TableDeclType:
 				r.Kind = TypeKinds.Table
 				r.DeclarationName = val.Identifier
 				r.WireFamily = FamilyKinds.Reference
-				r.WirePointer = val.Nullable
 				r.IsResource = declInfo.IsResourceType()
 				r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
 			case fidlgen.UnionDeclType:

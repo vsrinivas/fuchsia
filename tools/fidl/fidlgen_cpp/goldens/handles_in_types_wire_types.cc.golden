@@ -5,27 +5,15 @@
 #ifdef __Fuchsia__
 void ::test_handlesintypes::wire::HandlesInTypes::_CloseHandles() {
   normal_handle.reset();
-  {
-    ::zx::vmo* handle_in_vec_element = handle_in_vec.data();
-    for (uint64_t i = 0; i < handle_in_vec.count(); ++i, ++handle_in_vec_element) {
-      handle_in_vec_element->reset();
-    }
+  for (auto& e : handle_in_vec) {
+    e.reset();
   }
-  {
-    ::zx::vmo* handle_in_array_element = handle_in_array.data();
-    for (size_t i = 0; i < handle_in_array.size(); ++i, ++handle_in_array_element) {
-      handle_in_array_element->reset();
-    }
+  for (auto& e : handle_in_array) {
+    e.reset();
   }
-  {
-    ::fidl::Array<::zx::vmo, 5>* handle_in_mixed_vec_array_element = handle_in_mixed_vec_array.data();
-    for (uint64_t i = 0; i < handle_in_mixed_vec_array.count(); ++i, ++handle_in_mixed_vec_array_element) {
-      {
-        ::zx::vmo* handle_in_mixed_vec_array_element_element = (*handle_in_mixed_vec_array_element).data();
-        for (size_t i = 0; i < (*handle_in_mixed_vec_array_element).size(); ++i, ++handle_in_mixed_vec_array_element_element) {
-          handle_in_mixed_vec_array_element_element->reset();
-        }
-      }
+  for (auto& e : handle_in_mixed_vec_array) {
+    for (auto& e : e) {
+      e.reset();
     }
   }
   table_with_handle._CloseHandles();

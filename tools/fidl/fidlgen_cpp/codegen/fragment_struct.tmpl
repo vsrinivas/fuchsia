@@ -48,7 +48,7 @@ struct {{ .Name }} {
 {{- IfdefFuchsia -}}
 void {{ . }}::_CloseHandles() {
   {{- range .Members }}
-    {{- CloseHandles . false false }}
+    {{- CloseHandles . false }}
   {{- end }}
 }
 {{- EndifFuchsia -}}
