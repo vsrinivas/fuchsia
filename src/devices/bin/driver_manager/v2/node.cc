@@ -400,6 +400,8 @@ void Node::AddToParents() {
 
 void Node::Remove() {
   removal_in_progress_ = true;
+  // Get an extra shared_ptr to ourselves so we are not freed halfway through this function.
+  auto this_node = shared_from_this();
 
   // Disable driver binding for the node. This also prevents child nodes from
   // being added to this node.
@@ -430,7 +432,6 @@ void Node::Remove() {
   // Let the removal begin
 
   // Erase ourselves from each parent.
-  auto this_node = shared_from_this();
   for (auto parent : parents_) {
     auto& children = parent->children_;
     children.erase(std::find(children.begin(), children.end(), this_node));
