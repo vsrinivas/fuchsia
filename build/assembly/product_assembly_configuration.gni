@@ -31,6 +31,15 @@ import("//build/group_with_inputs.gni")
 #     product-provided package to place into the base set. The scope must have a
 #     'package_target' field pointing to the GN target of the fuchsia_package.
 #
+#   base_driver_packages (optional)
+#     [list, GN scopes] A list of GN scopes that hold the driver packages to
+#     include in the base package set. Packages listed here should not be
+#     listed in the base_packages and will be included automatically in
+#     the base package set as driver packages. The scope must have a
+#     `package_target` field pointing to the GN target of the fuchsia_package,
+#     and `driver_components` field containing a list of relative paths to
+#     driver components provided by the package, e.g. "meta/driver.cm"
+#
 #   cache_packages [optional]
 #     [list, GN scopes] A list of GN scopes that hold the information for a
 #     product-provided package to place into the cache set. The scope must have a
@@ -58,6 +67,7 @@ template("product_assembly_configuration") {
         "${target_name}.product_assembly_config.json.for_validation"
 
     base_package_set = "${target_name}.base_packages"
+    base_driver_package_set = "${target_name}.base_driver_packages"
     cache_package_set = "${target_name}.cache_packages"
 
     # Base packages specified by the invoker, used to create the list of
@@ -79,6 +89,15 @@ template("product_assembly_configuration") {
         assert(defined(package.package_target),
                "package_target must be supplied")
         cache_package_labels += [ package.package_target ]
+      }
+    }
+
+    # Driver packages specified by the invoker, used to create the list of
+    # manifests and as the deps for the package set targets.
+    base_driver_package_labels = []
+    if (defined(invoker.base_driver_packages)) {
+      foreach(package, invoker.base_driver_packages) {
+        base_driver_package_labels += [ package.package_target ]
       }
     }
   }
@@ -164,6 +183,31 @@ template("product_assembly_configuration") {
         ]
       }
     }
+
+    driver_packages = []
+    driver_package_manifests = []
+    if (defined(invoker.base_driver_packages)) {
+      foreach(driver_package, invoker.base_driver_packages) {
+        assert(defined(driver_package.package_target),
+               "package target must be supplied")
+        _package_out_dir =
+            get_label_info(driver_package.package_target, "target_out_dir")
+        _package_name = get_label_info(driver_package.package_target, "name")
+        _manifest_path =
+            "${_package_out_dir}/${_package_name}/package_manifest.json"
+        _manifest_path_rebased = rebase_path(_manifest_path, root_build_dir)
+
+        driver_package_manifests += [ _manifest_path ]
+        driver_packages += [
+          # This scope needs to serialize to json and deserialize
+          # to a DriverDetails Assembly config struct
+          {
+            package = _manifest_path_rebased
+            components = driver_package.driver_components
+          },
+        ]
+      }
+    }
   }
 
   _assembly_config = {
@@ -187,6 +231,8 @@ template("product_assembly_configuration") {
         base = files.base_packages
         cache = files.cache_packages
       }
+
+      drivers = files.driver_packages
     }
   }
 
@@ -221,8 +267,16 @@ template("product_assembly_configuration") {
     deps = labels.base_package_labels
   }
 
+  # Create a target for the base driver packages, so they appear in the dep
+  # graph as distinct from the cache packages, and validate that they produce
+  # all of the manifests whose paths were computed from the labels.
+  group_with_inputs(labels.base_driver_package_set) {
+    inputs = files.driver_package_manifests
+    deps = labels.base_driver_package_labels
+  }
+
   # Create a target for the cache packages, so they appear in the dep graph
-  # as distinct from the cache packages, and validate that they produce all of
+  # as distinct from the base packages, and validate that they produce all of
   # the manifests whose paths were computed from the labels.
   group_with_inputs(labels.cache_package_set) {
     inputs = files.cache_package_manifests
@@ -246,6 +300,7 @@ template("product_assembly_configuration") {
       deps = []
     }
     deps += [
+      ":${labels.base_driver_package_set}",
       ":${labels.base_package_set}",
       ":${labels.cache_package_set}",
     ]
