@@ -84,61 +84,67 @@ impl AsRef<[Option<defs::KeyLevels>]> for Keymap<'_> {
     }
 }
 
-/// Attaches a fixed [KeyMeaning] to the given [Key] if one exists.
-///
-/// These are the default key meanings of keys on a US QWERTY keyboard. As such,
-/// we must try the key to key meaning mapping coming from the keymap first, to
-/// allow the keymap the option to move these keys around when this is desired.
-///
-/// We do not really expect these to happen frequently in standardized keymaps,
-/// but custom keymaps might do this (e.g. mapping Esc to CapsLock), and in
-/// general we should avoid putting arbitrary constraints on key maps if such
-/// are not necessary.
-fn try_into_nonprintable(key: Key) -> Option<KeyMeaning> {
-    match key {
-        Key::Enter => Some(NonPrintableKey::Enter),
-        Key::Tab => Some(NonPrintableKey::Tab),
-        Key::Backspace => Some(NonPrintableKey::Backspace),
-        Key::Up => Some(NonPrintableKey::Up),
-        Key::Down => Some(NonPrintableKey::Down),
-        Key::Left => Some(NonPrintableKey::Left),
-        Key::Right => Some(NonPrintableKey::Right),
-        Key::End => Some(NonPrintableKey::End),
-        Key::Home => Some(NonPrintableKey::Home),
-        Key::PageUp => Some(NonPrintableKey::PageUp),
-        Key::PageDown => Some(NonPrintableKey::PageDown),
-        Key::LeftAlt => Some(NonPrintableKey::Alt),
-        Key::RightAlt => Some(NonPrintableKey::Alt),
-        Key::RightCtrl => Some(NonPrintableKey::Control),
-        Key::LeftCtrl => Some(NonPrintableKey::Control),
-        Key::CapsLock => Some(NonPrintableKey::CapsLock),
-        Key::LeftShift => Some(NonPrintableKey::Shift),
-        Key::RightShift => Some(NonPrintableKey::Shift),
-        Key::LeftMeta => Some(NonPrintableKey::Meta),
-        Key::RightMeta => Some(NonPrintableKey::Meta),
-        Key::NumLock => Some(NonPrintableKey::NumLock),
-        Key::ScrollLock => Some(NonPrintableKey::ScrollLock),
-        Key::F1 => Some(NonPrintableKey::F1),
-        Key::F2 => Some(NonPrintableKey::F2),
-        Key::F3 => Some(NonPrintableKey::F3),
-        Key::F4 => Some(NonPrintableKey::F4),
-        Key::F5 => Some(NonPrintableKey::F5),
-        Key::F6 => Some(NonPrintableKey::F6),
-        Key::F7 => Some(NonPrintableKey::F7),
-        Key::F8 => Some(NonPrintableKey::F8),
-        Key::F9 => Some(NonPrintableKey::F9),
-        Key::F10 => Some(NonPrintableKey::F10),
-        Key::F11 => Some(NonPrintableKey::F11),
-        Key::F12 => Some(NonPrintableKey::F12),
-        _ => None,
-    }
-    .map(|k| KeyMeaning::NonPrintableKey(k))
-}
-
 impl<'a> Keymap<'a> {
     /// Creates a new keymap.
     fn new(map: &'a [Option<defs::KeyLevels>]) -> Self {
         Keymap { map }
+    }
+
+    /// Attaches a fixed [KeyMeaning] to the given [Key] if one exists.
+    ///
+    /// These are mostly the default key meanings of keys on a US QWERTY keyboard.
+    /// As such, we must try the key to key meaning mapping coming from the keymap first,
+    /// to allow the keymap the option to move these keys around when this is desired.
+    ///
+    /// We do not really expect these to happen frequently in standardized keymaps,
+    /// but custom keymaps might do this (e.g. mapping Esc to CapsLock), and in
+    /// general we should avoid putting arbitrary constraints on key maps if such
+    /// are not necessary.
+    fn try_into_nonprintable(&self, key: Key) -> Option<KeyMeaning> {
+        match key {
+            Key::Enter => Some(NonPrintableKey::Enter),
+            Key::Tab => Some(NonPrintableKey::Tab),
+            Key::Backspace => Some(NonPrintableKey::Backspace),
+            Key::Up => Some(NonPrintableKey::Up),
+            Key::Down => Some(NonPrintableKey::Down),
+            Key::Left => Some(NonPrintableKey::Left),
+            Key::Right => Some(NonPrintableKey::Right),
+            Key::End => Some(NonPrintableKey::End),
+            Key::Home => Some(NonPrintableKey::Home),
+            Key::PageUp => Some(NonPrintableKey::PageUp),
+            Key::PageDown => Some(NonPrintableKey::PageDown),
+            Key::RightAlt => Some(if std::ptr::eq(self, &*FR_AZERTY) {
+                // Used for Chromium testing - not yet handled consistently and
+                // seriously.
+                NonPrintableKey::AltGraph
+            } else {
+                NonPrintableKey::Alt
+            }),
+            Key::LeftAlt => Some(NonPrintableKey::Alt),
+            Key::RightCtrl => Some(NonPrintableKey::Control),
+            Key::LeftCtrl => Some(NonPrintableKey::Control),
+            Key::CapsLock => Some(NonPrintableKey::CapsLock),
+            Key::LeftShift => Some(NonPrintableKey::Shift),
+            Key::RightShift => Some(NonPrintableKey::Shift),
+            Key::LeftMeta => Some(NonPrintableKey::Meta),
+            Key::RightMeta => Some(NonPrintableKey::Meta),
+            Key::NumLock => Some(NonPrintableKey::NumLock),
+            Key::ScrollLock => Some(NonPrintableKey::ScrollLock),
+            Key::F1 => Some(NonPrintableKey::F1),
+            Key::F2 => Some(NonPrintableKey::F2),
+            Key::F3 => Some(NonPrintableKey::F3),
+            Key::F4 => Some(NonPrintableKey::F4),
+            Key::F5 => Some(NonPrintableKey::F5),
+            Key::F6 => Some(NonPrintableKey::F6),
+            Key::F7 => Some(NonPrintableKey::F7),
+            Key::F8 => Some(NonPrintableKey::F8),
+            Key::F9 => Some(NonPrintableKey::F9),
+            Key::F10 => Some(NonPrintableKey::F10),
+            Key::F11 => Some(NonPrintableKey::F11),
+            Key::F12 => Some(NonPrintableKey::F12),
+            _ => None,
+        }
+        .map(|k| KeyMeaning::NonPrintableKey(k))
     }
 
     /// Applies the keymap to the given key.
@@ -156,7 +162,7 @@ impl<'a> Keymap<'a> {
             .ok()
             .and_then(|v| if v == EMPTY_CODEPOINT { None } else { Some(v) })
             .map(KeyMeaning::Codepoint)
-            .or_else(|| try_into_nonprintable(key))
+            .or_else(|| self.try_into_nonprintable(key))
             .or_else(|| {
                 debug!(
                     ?key,
@@ -1011,6 +1017,7 @@ mod tests {
     }
 
     #[test_case(
+        &US_QWERTY,
         Key::A,
         ModifierState::new(),
         LockStateKeys::new(),
@@ -1018,19 +1025,39 @@ mod tests {
         "test basic mapping")
     ]
     #[test_case(
+        &US_QWERTY,
         Key::A,
         ModifierState::new().with(Modifiers::LEFT_SHIFT),
         LockStateKeys::new(),
         Some(KeyMeaning::Codepoint(65));
         "test basic mapping - capital letter")
     ]
+    #[test_case(
+        // This test case is needed for Chromium integration.
+        // See fxbug.dev/109987.
+        &FR_AZERTY,
+        Key::RightAlt,
+        ModifierState::new(),
+        LockStateKeys::new(),
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::AltGraph));
+        "test FR AZERTY right Alt mapping to AltGr")
+    ]
+    #[test_case(
+        &US_QWERTY,
+        Key::RightAlt,
+        ModifierState::new(),
+        LockStateKeys::new(),
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Alt));
+        "test US QWERTY right Alt mapping")
+    ]
     fn test_keymap_apply(
+        keymap: &Keymap<'_>,
         key: Key,
         modifier_state: ModifierState,
         lock_state: LockStateKeys,
         expected: Option<KeyMeaning>,
     ) {
-        let actual = US_QWERTY.apply(key, &modifier_state, &lock_state);
+        let actual = keymap.apply(key, &modifier_state, &lock_state);
         assert_eq!(expected, actual, "expected: {:?}, actual: {:?}", expected, actual);
     }
 
