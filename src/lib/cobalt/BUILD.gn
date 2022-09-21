@@ -28,10 +28,6 @@ fuchsia_unittest_component("cobalt_lib_unittests") {
   manifest = "meta/cobalt_lib_unittests.cml"
 }
 
-fuchsia_unittest_component("fuchsia_cobalt_lib_test") {
-  deps = [ "//src/lib/cobalt/rust:fuchsia-cobalt_test" ]
-}
-
 fuchsia_unittest_component("fuchsia_cobalt_builders_lib_test") {
   deps = [ "//src/lib/cobalt/rust/builders:builders_test" ]
 }
@@ -39,7 +35,6 @@ fuchsia_unittest_component("fuchsia_cobalt_builders_lib_test") {
 fuchsia_test_package("cobalt_lib_tests") {
   test_components = [
     ":cobalt_lib_unittests",
-    ":fuchsia_cobalt_lib_test",
     ":fuchsia_cobalt_builders_lib_test",
   ]
   test_specs = {
