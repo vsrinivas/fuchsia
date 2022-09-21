@@ -1142,16 +1142,11 @@ impl Journal {
                 let mut inner = self.inner.lock().unwrap();
                 let checkpoint = inner.writer.journal_file_checkpoint();
                 for TxnMutation { object_id, mutation, .. } in &transaction.mutations {
-                    let mutation = if let Some(mutation) =
-                        self.objects.encrypt_mutation(*object_id, mutation)
-                    {
-                        mutation
-                    } else {
-                        mutation.clone()
-                    };
-                    inner
-                        .writer
-                        .write_record(&JournalRecord::Mutation { object_id: *object_id, mutation });
+                    self.objects.write_mutation(
+                        *object_id,
+                        mutation,
+                        Writer(*object_id, &mut inner.writer),
+                    );
                 }
                 checkpoint
             };
@@ -1299,6 +1294,15 @@ impl Journal {
     /// Terminate all journal activity.
     pub fn terminate(&self) {
         self.inner.lock().unwrap().terminate();
+    }
+}
+
+/// Wrapper to allow records to be written to the journal.
+pub struct Writer<'a>(u64, &'a mut JournalWriter);
+
+impl Writer<'_> {
+    pub fn write(&mut self, mutation: Mutation) {
+        self.1.write_record(&JournalRecord::Mutation { object_id: self.0, mutation });
     }
 }
 

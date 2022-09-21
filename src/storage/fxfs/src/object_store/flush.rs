@@ -6,7 +6,6 @@
 
 use {
     crate::{
-        crypt::{KeyPurpose, StreamCipher, UnwrappedKey},
         debug_assert_not_too_long,
         log::*,
         lsm_tree::{
@@ -94,7 +93,7 @@ impl ObjectStore {
             ..Default::default()
         };
 
-        let roll_metadata_key = self
+        let roll_mutations_key = self
             .mutations_cipher
             .lock()
             .unwrap()
@@ -103,31 +102,8 @@ impl ObjectStore {
                 cipher.offset() >= self.filesystem().options().roll_metadata_key_byte_count
             })
             .unwrap_or(false);
-        if roll_metadata_key {
-            let (wrapped_key, unwrapped_key) = self
-                .crypt()
-                .unwrap()
-                .create_key(self.store_object_id, KeyPurpose::Metadata)
-                .await?;
-            struct SetMutationsCipherCallback<'a>(&'a ObjectStore, UnwrappedKey);
-            impl AssociatedObject for SetMutationsCipherCallback<'_> {
-                fn will_apply_mutation(
-                    &self,
-                    _mutation: &Mutation,
-                    _object_id: u64,
-                    _manager: &ObjectManager,
-                ) {
-                    *self.0.mutations_cipher.lock().unwrap() = Some(StreamCipher::new(&self.1, 0));
-                }
-            }
-            let set_cipher_callback = SetMutationsCipherCallback(self, unwrapped_key);
-            let mut transaction = filesystem.clone().new_transaction(&[], txn_options).await?;
-            transaction.add_with_object(
-                self.store_object_id(),
-                Mutation::update_mutations_key(wrapped_key),
-                AssocObj::Borrowed(&set_cipher_callback),
-            );
-            transaction.commit().await?;
+        if roll_mutations_key {
+            self.roll_mutations_key(self.crypt().unwrap().as_ref()).await?;
         }
 
         struct StoreInfoSnapshot<'a> {
@@ -168,14 +144,6 @@ impl ObjectStore {
             AssocObj::Borrowed(&store_info_snapshot),
         );
         transaction.commit().await?;
-
-        #[cfg(test)]
-        if roll_metadata_key {
-            let fs = self.filesystem();
-            if let Some(hook) = &fs.options().after_metadata_key_roll_hook {
-                hook(fs.clone()).await?;
-            }
-        }
 
         // There is a transaction to create objects at the start and then another transaction at the
         // end. Between those two transactions, there are transactions that write to the files.  In
@@ -391,25 +359,19 @@ mod tests {
     use {
         crate::{
             crypt::insecure::InsecureCrypt,
-            errors::FxfsError,
-            filesystem::{self, Filesystem, FxFilesystem, SyncOptions},
+            filesystem::{self, Filesystem, FxFilesystem},
             object_store::{
                 directory::Directory,
                 transaction::{Options, TransactionHandler},
                 volume::root_volume,
             },
         },
-        anyhow::bail,
         fuchsia_async as fasync,
-        futures::FutureExt,
-        std::sync::{
-            atomic::{AtomicBool, Ordering},
-            Arc,
-        },
+        std::sync::Arc,
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
 
-    async fn run_key_roll_test(with_failure: bool, flush_before_unlock: bool) {
+    async fn run_key_roll_test(flush_before_unlock: bool) {
         let device = DeviceHolder::new(FakeDevice::new(8192, 1024));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let store_id = {
@@ -425,29 +387,8 @@ mod tests {
         let device = fs.take_device().await;
         device.reopen(false);
 
-        let stop = Arc::new(AtomicBool::new(false));
-
-        let stop_clone = stop.clone();
-
-        let filesystem_options = filesystem::Options {
-            roll_metadata_key_byte_count: 512 * 1024,
-            after_metadata_key_roll_hook: Some(Box::new(move |fs: Arc<dyn Filesystem>| {
-                stop_clone.store(true, Ordering::SeqCst);
-                async move {
-                    // Sync the filesystem so any new children that were created with the new cipher
-                    // will be there when the journal is replayed.
-                    fs.sync(SyncOptions::default()).await.expect("sync failed");
-                    if with_failure {
-                        // Fail the compaction so that the updated store-info file doesn't make it.
-                        bail!(FxfsError::Internal);
-                    } else {
-                        Ok(())
-                    }
-                }
-                .boxed()
-            })),
-            ..Default::default()
-        };
+        let filesystem_options =
+            filesystem::Options { roll_metadata_key_byte_count: 512 * 1024, ..Default::default() };
 
         let fs = FxFilesystem::open_with_options(
             device,
@@ -460,44 +401,47 @@ mod tests {
             let store = fs.object_manager().store(store_id).expect("store not found");
             store.unlock(Arc::new(InsecureCrypt::new())).await.expect("unlock failed");
 
-            // Keep writing until we're told to stop.
+            // Keep writing until we notice the key has rolled.
             let root_dir = Directory::open(&store, store.root_directory_object_id())
                 .await
                 .expect("open failed");
 
             let mut last_mutations_cipher_offset = 0;
-            let mut cipher_rolled = false;
             let mut i = 0;
             loop {
-                // These can fail if with_failure is true.
-                if let Ok(mut transaction) =
-                    fs.clone().new_transaction(&[], Options::default()).await
-                {
-                    if let Ok(_) =
-                        root_dir.create_child_file(&mut transaction, &format!("{:<200}", i)).await
-                    {
-                        i += 1;
-                        let _ = transaction.commit().await;
-                    }
-                }
-                let done = stop.load(Ordering::SeqCst);
+                let mut transaction = fs
+                    .clone()
+                    .new_transaction(&[], Options::default())
+                    .await
+                    .expect("new_transaction failed");
+                root_dir
+                    .create_child_file(&mut transaction, &format!("{:<200}", i))
+                    .await
+                    .expect("create_child_file failed");
+                i += 1;
+                transaction.commit().await.expect("commit failed");
                 let cipher_offset =
                     store.mutations_cipher.lock().unwrap().as_ref().unwrap().offset();
                 if cipher_offset < last_mutations_cipher_offset {
-                    cipher_rolled = true;
-                }
-                if done {
                     break;
                 }
                 last_mutations_cipher_offset = cipher_offset;
             }
-            assert!(cipher_rolled);
+
+            // Write one more file to ensure the cipher has a non-zero offset.
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            root_dir
+                .create_child_file(&mut transaction, &format!("{:<200}", i))
+                .await
+                .expect("create_child_file failed");
+            transaction.commit().await.expect("commit failed");
         }
-        match fs.close().await {
-            Err(_) if with_failure => {}
-            Err(e) => panic!("close failed: {:?}", e),
-            Ok(()) => {}
-        }
+
+        fs.close().await.expect("close failed");
 
         // Reopen and make sure replay succeeds.
         let device = fs.take_device().await;
@@ -524,26 +468,19 @@ mod tests {
         {
             let store = fs.object_manager().store(store_id).expect("store not found");
             store.unlock(Arc::new(InsecureCrypt::new())).await.expect("unlock failed");
+
+            // The key should get rolled when we unlock.
+            assert_eq!(store.mutations_cipher.lock().unwrap().as_ref().unwrap().offset(), 0);
         }
     }
 
     #[fasync::run(10, test)]
     async fn test_metadata_key_roll() {
-        run_key_roll_test(/* with_failure: */ false, /* flush_before_unlock: */ false).await;
-    }
-
-    #[fasync::run(10, test)]
-    async fn test_metadata_key_roll_with_compaction_failure() {
-        run_key_roll_test(/* with_failure: */ true, /* flush_before_unlock: */ false).await;
+        run_key_roll_test(/* flush_before_unlock: */ false).await;
     }
 
     #[fasync::run(10, test)]
     async fn test_metadata_key_roll_with_flush_before_unlock() {
-        run_key_roll_test(/* with_failure: */ false, /* flush_before_unlock: */ true).await;
-    }
-
-    #[fasync::run(10, test)]
-    async fn test_metadata_key_roll_with_compaction_failure_and_flush_before_unlock() {
-        run_key_roll_test(/* with_failure: */ true, /* flush_before_unlock: */ true).await;
+        run_key_roll_test(/* flush_before_unlock: */ true).await;
     }
 }

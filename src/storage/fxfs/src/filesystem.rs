@@ -13,7 +13,7 @@ use {
             allocator::{Allocator, Hold, Reservation, SimpleAllocator},
             directory::Directory,
             graveyard::Graveyard,
-            journal::{super_block::SuperBlock, Journal, JournalCheckpoint, JournalOptions},
+            journal::{self, super_block::SuperBlock, Journal, JournalCheckpoint, JournalOptions},
             object_manager::ObjectManager,
             transaction::{
                 self, AssocObj, LockKey, LockManager, MetadataReservation, Mutation, ReadGuard,
@@ -54,25 +54,11 @@ pub struct Options {
     /// we can't end up with more than two live keys (so it must be bigger than the maximum possible
     /// size of unflushed journal contents).  This is exposed for testing purposes.
     pub roll_metadata_key_byte_count: u64,
-
-    #[cfg(test)]
-    pub after_metadata_key_roll_hook: Option<
-        Box<
-            dyn Fn(Arc<dyn Filesystem>) -> futures::future::BoxFuture<'static, Result<(), Error>>
-                + Send
-                + Sync,
-        >,
-    >,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Options {
-            roll_metadata_key_byte_count: 128 * 1024 * 1024,
-            #[cfg(test)]
-            after_metadata_key_roll_hook: None,
-            read_only: false,
-        }
+        Options { roll_metadata_key_byte_count: 128 * 1024 * 1024, read_only: false }
     }
 }
 
@@ -159,9 +145,10 @@ pub trait JournalingObject: Send + Sync {
     /// Also returns the earliest version of a struct in the filesystem.
     async fn flush(&self) -> Result<Version, Error>;
 
-    /// Optionally encrypts a mutation.
-    fn encrypt_mutation(&self, _mutation: &Mutation) -> Option<Mutation> {
-        None
+    /// Writes a mutation to the journal.  This allows objects to encrypt or otherwise modify what
+    /// gets written to the journal.
+    fn write_mutation(&self, mutation: &Mutation, mut writer: journal::Writer<'_>) {
+        writer.write(mutation.clone());
     }
 }
 

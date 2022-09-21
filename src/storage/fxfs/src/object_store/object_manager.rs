@@ -649,8 +649,8 @@ impl ObjectManager {
         self.inner.write().unwrap().borrowed_metadata_space = v;
     }
 
-    pub fn encrypt_mutation(&self, object_id: u64, mutation: &Mutation) -> Option<Mutation> {
-        self.inner.read().unwrap().stores.get(&object_id).and_then(|x| x.encrypt_mutation(mutation))
+    pub fn write_mutation(&self, object_id: u64, mutation: &Mutation, writer: journal::Writer<'_>) {
+        self.object(object_id).unwrap().write_mutation(mutation, writer);
     }
 
     pub fn unlocked_stores(&self) -> Vec<Arc<ObjectStore>> {

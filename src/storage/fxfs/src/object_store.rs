@@ -183,9 +183,9 @@ pub struct EncryptedMutations {
     // The encrypted mutations.
     data: Vec<u8>,
 
-    // If the mutations key was rolled, this holds the amount of data in `data` encrypted using the
-    // old key, and also stores the new key.
-    mutations_key_roll: Option<(usize, WrappedKey)>,
+    // If the mutations key was rolled, this holds the offset in `data` where the new key should
+    // apply.
+    mutations_key_roll: Vec<(usize, WrappedKey)>,
 }
 
 impl Versioned for EncryptedMutations {
@@ -196,14 +196,13 @@ impl Versioned for EncryptedMutations {
 
 impl EncryptedMutations {
     fn extend(&mut self, other: EncryptedMutations) -> Result<(), Error> {
-        ensure!(
-            self.mutations_key_roll.is_none() || other.mutations_key_roll.is_none(),
-            FxfsError::Inconsistent
-        );
         self.transactions.extend(other.transactions);
-        if let Some((offset, key)) = other.mutations_key_roll {
-            self.mutations_key_roll = Some((self.data.len() + offset, key));
-        }
+        self.mutations_key_roll.extend(
+            other
+                .mutations_key_roll
+                .into_iter()
+                .map(|(offset, key)| (offset + self.data.len(), key)),
+        );
         self.data.extend(other.data);
         Ok(())
     }
@@ -311,13 +310,9 @@ impl StoreOrReplayInfo {
     }
 
     fn set_mutations_key(&mut self, key: WrappedKey) {
-        match self {
-            StoreOrReplayInfo::Info(StoreInfo { mutations_key, .. }) => *mutations_key = Some(key),
-            StoreOrReplayInfo::Replay(replay_info) => {
-                let mutations = &mut replay_info.front_mut().unwrap().encrypted_mutations;
-                mutations.mutations_key_roll = Some((mutations.data.len(), key));
-            }
-        }
+        let mutations =
+            &mut self.replay_info_mut().unwrap().front_mut().unwrap().encrypted_mutations;
+        mutations.mutations_key_roll.push((mutations.data.len(), key));
     }
 }
 
@@ -1232,33 +1227,43 @@ impl ObjectStore {
         });
 
         let EncryptedMutations { transactions, mut data, mutations_key_roll } = mutations;
-        if let Some((offset, key)) = mutations_key_roll {
-            let (old, new) = data.split_at_mut(offset);
+
+        let mut slice = &mut data[..];
+        let mut last_offset = 0;
+        for (offset, key) in mutations_key_roll {
+            let split_offset = offset.checked_sub(last_offset).ok_or(FxfsError::Inconsistent)?;
+            last_offset = offset;
+            ensure!(split_offset <= slice.len(), FxfsError::Inconsistent);
+            let (old, new) = slice.split_at_mut(split_offset);
             mutations_cipher.decrypt(old);
             let unwrapped_key = crypt
                 .unwrap_key(&key, self.store_object_id)
                 .await
                 .context("Failed to unwrap mutations keys")?;
             mutations_cipher = StreamCipher::new(&unwrapped_key, 0);
-            mutations_cipher.decrypt(new);
-        } else {
-            mutations_cipher.decrypt(&mut data);
+            slice = new;
         }
+        mutations_cipher.decrypt(slice);
+
+        // Always roll the mutations key when we unlock which guarantees we won't reuse a previous
+        // key and nonce.
+        self.roll_mutations_key(crypt.as_ref()).await?;
 
         let mut cursor = std::io::Cursor::new(data);
         for (checkpoint, count) in transactions {
             let context = ApplyContext { mode: ApplyMode::Replay, checkpoint };
             for _ in 0..count {
                 self.apply_mutation(
-                    Mutation::deserialize_from_version(&mut cursor, context.checkpoint.version)?,
+                    Mutation::deserialize_from_version(&mut cursor, context.checkpoint.version)
+                        .context("failed to deserialize encrypted mutation")?,
                     &context,
                     AssocObj::None,
                 )
-                .await?;
+                .await
+                .context("failed to apply encrypted mutation")?;
             }
         }
 
-        *self.mutations_cipher.lock().unwrap() = Some(mutations_cipher);
         *self.lock_state.lock().unwrap() = LockState::Unlocked(crypt);
 
         // To avoid unbounded memory growth, we should flush the encrypted mutations now. Otherwise
@@ -1454,6 +1459,21 @@ impl ObjectStore {
             ),
         );
     }
+
+    // Roll the mutations key.  The new key will be written for the next encrypted mutation.
+    async fn roll_mutations_key(&self, crypt: &dyn Crypt) -> Result<(), Error> {
+        let (wrapped_key, unwrapped_key) =
+            crypt.create_key(self.store_object_id, KeyPurpose::Metadata).await?;
+
+        // The mutations_cipher lock must be held for the duration so that mutations_cipher and
+        // store_info are updated atomically.  Otherwise, write_mutation could find a new cipher but
+        // end up writing the wrong wrapped key.
+        let mut cipher = self.mutations_cipher.lock().unwrap();
+        *cipher = Some(StreamCipher::new(&unwrapped_key, 0));
+        self.store_info.lock().unwrap().info_mut().unwrap().mutations_key = Some(wrapped_key);
+        // mutations_cipher_offset is updated by flush.
+        Ok(())
+    }
 }
 
 #[async_trait]
@@ -1515,7 +1535,9 @@ impl JournalingObject for ObjectStore {
                 self.store_info.lock().unwrap().push_encrypted_mutation(&context.checkpoint, data);
             }
             Mutation::UpdateMutationsKey(UpdateMutationsKey(key)) => {
-                self.store_info.lock().unwrap().set_mutations_key(key);
+                if context.mode.is_replay() {
+                    self.store_info.lock().unwrap().set_mutations_key(key);
+                }
             }
             _ => bail!("unexpected mutation: {:?}", mutation),
         }
@@ -1534,17 +1556,36 @@ impl JournalingObject for ObjectStore {
         return self.flush_with_reason(flush::Reason::Journal).await;
     }
 
-    fn encrypt_mutation(&self, mutation: &Mutation) -> Option<Mutation> {
+    fn write_mutation(&self, mutation: &Mutation, mut writer: journal::Writer<'_>) {
         match mutation {
             // Encrypt all object store mutations.
-            Mutation::ObjectStore(_) => self.mutations_cipher.lock().unwrap().as_mut().map(|c| {
-                let mut buffer = Vec::new();
-                mutation.serialize_into(&mut buffer).unwrap();
-                c.encrypt(&mut buffer);
-                Mutation::EncryptedObjectStore(buffer.into())
-            }),
-            _ => None,
+            Mutation::ObjectStore(_) => {
+                let mut cipher = self.mutations_cipher.lock().unwrap();
+                if let Some(cipher) = cipher.as_mut() {
+                    // If this is the first time we've used this key, we must write the key out.
+                    if cipher.offset() == 0 {
+                        writer.write(Mutation::update_mutations_key(
+                            self.store_info
+                                .lock()
+                                .unwrap()
+                                .info()
+                                .unwrap()
+                                .mutations_key
+                                .as_ref()
+                                .unwrap()
+                                .clone(),
+                        ));
+                    }
+                    let mut buffer = Vec::new();
+                    mutation.serialize_into(&mut buffer).unwrap();
+                    cipher.encrypt(&mut buffer);
+                    writer.write(Mutation::EncryptedObjectStore(buffer.into()));
+                    return;
+                }
+            }
+            _ => {}
         }
+        writer.write(mutation.clone());
     }
 }
 
@@ -2115,5 +2156,67 @@ mod tests {
 
         store.unlock(crypt).await.expect("unlock failed");
         root_directory.lookup("test").await.expect("lookup failed").expect("not found");
+    }
+
+    #[fasync::run(10, test)]
+    async fn test_key_rolled_when_unlocked() {
+        let fs = test_filesystem().await;
+        let crypt = Arc::new(InsecureCrypt::new());
+
+        let object_id;
+        {
+            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            let store = root_volume
+                .new_volume("test", Some(crypt.clone()))
+                .await
+                .expect("new_volume failed");
+            let root_directory = Directory::open(&store, store.root_directory_object_id())
+                .await
+                .expect("open failed");
+            let mut transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            object_id = root_directory
+                .create_child_file(&mut transaction, "test")
+                .await
+                .expect("create_child_file failed")
+                .object_id();
+            transaction.commit().await.expect("commit failed");
+        }
+
+        fs.close().await.expect("Close failed");
+        let mut device = fs.take_device().await;
+
+        // Repeatedly remount so that we can be sure that we can remount when there are many
+        // mutations keys.
+        for _ in 0..100 {
+            device.reopen(false);
+            let fs = FxFilesystem::open(device).await.expect("open failed");
+            {
+                let root_volume = root_volume(&fs).await.expect("root_volume failed");
+                let store = root_volume
+                    .volume("test", Some(crypt.clone()))
+                    .await
+                    .expect("open_volume failed");
+
+                // The key should get rolled every time we unlock.
+                assert_eq!(store.mutations_cipher.lock().unwrap().as_ref().unwrap().offset(), 0);
+
+                // Make sure there's an encrypted mutation.
+                let handle =
+                    ObjectStore::open_object(&store, object_id, HandleOptions::default(), None)
+                        .await
+                        .expect("open_object failed");
+                let buffer = handle.allocate_buffer(100);
+                handle
+                    .write_or_append(Some(0), buffer.as_ref())
+                    .await
+                    .expect("write_or_append failed");
+            }
+            fs.close().await.expect("Close failed");
+            device = fs.take_device().await;
+        }
     }
 }
