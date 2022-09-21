@@ -147,9 +147,15 @@ impl Payload for SendPayload<'_> {
 #[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct RingBuffer {
     storage: Vec<u8>,
-    // The index where the reader starts to read.
+    /// The index where the reader starts to read.
+    ///
+    /// Maintains the invariant that `head < storage.len()` by wrapping
+    /// around to 0 as needed.
     head: usize,
-    // Anything between [head, head+len) is readable.
+    /// The amount of readable data in `storage`.
+    ///
+    /// Anything between [head, head+len) is readable. This will never exceed
+    /// `storage.len()`.
     len: usize,
 }
 
@@ -259,10 +265,10 @@ impl ReceiveBuffer for RingBuffer {
 
 impl SendBuffer for RingBuffer {
     fn mark_read(&mut self, count: usize) {
-        let Self { storage: _, head, len } = self;
+        let Self { storage, head, len } = self;
         assert!(count <= *len);
         *len -= count;
-        *head += count;
+        *head = (*head + count) % storage.len();
     }
 
     fn peek_with<'a, F, R>(&'a mut self, offset: usize, f: F) -> R
@@ -435,8 +441,6 @@ impl<R: Default + ReceiveBuffer, S: Default + SendBuffer> IntoBuffers<R, S> for 
 
 #[cfg(test)]
 mod test {
-    use super::*;
-    use crate::transport::tcp::seqnum::WindowSize;
     use proptest::{
         proptest,
         strategy::{Just, Strategy},
@@ -445,12 +449,18 @@ mod test {
     use proptest_support::failed_seeds;
     use test_case::test_case;
 
+    use super::*;
+
+    use crate::transport::tcp::seqnum::WindowSize;
+
     const TEST_BYTES: &'static [u8] = "Hello World!".as_bytes();
 
     proptest! {
         #![proptest_config(Config {
             // Add all failed seeds here.
-            failure_persistence: failed_seeds!(),
+            failure_persistence: failed_seeds!(
+                "cc f621ca7d3a2b108e0dc41f7169ad028f4329b79e90e73d5f68042519a9f63999"
+            ),
             ..Config::default()
         })]
 
@@ -532,10 +542,11 @@ mod test {
             let old_head = rb.head;
             let old_len = rb.len();
             rb.mark_read(readable);
-            // Assert that length is updated but everything else is unchanged.
+            // Assert that length and head are updated but everything else is
+            // unchanged.
             let RingBuffer { storage, head, len } = rb;
             assert_eq!(len, old_len - readable);
-            assert_eq!(head, old_head + readable);
+            assert_eq!(head, (old_head + readable) % old_storage.len());
             assert_eq!(storage, old_storage);
         }
 
@@ -583,6 +594,46 @@ mod test {
             let _advanced = assembler.insert(SeqNum::new(start)..SeqNum::new(end));
         }
         assembler
+    }
+
+    #[test]
+    // Regression test for https://fxbug.dev/109960.
+    fn ring_buffer_wrap_around() {
+        const CAPACITY: usize = 16;
+        let mut rb = RingBuffer::new(CAPACITY);
+
+        // Write more than half the buffer.
+        const BUF_SIZE: usize = 10;
+        assert_eq!(rb.enqueue_data(&[0xAA; BUF_SIZE]), BUF_SIZE);
+        rb.peek_with(0, |payload| assert_eq!(payload, SendPayload::Contiguous(&[0xAA; BUF_SIZE])));
+        rb.mark_read(BUF_SIZE);
+
+        // Write around the end of the buffer.
+        assert_eq!(rb.enqueue_data(&[0xBB; BUF_SIZE]), BUF_SIZE);
+        rb.peek_with(0, |payload| {
+            assert_eq!(
+                payload,
+                SendPayload::Straddle(
+                    &[0xBB; (CAPACITY - BUF_SIZE)],
+                    &[0xBB; (BUF_SIZE * 2 - CAPACITY)]
+                )
+            )
+        });
+        // Mark everything read, which should advance `head` around to the
+        // beginning of the buffer.
+        rb.mark_read(BUF_SIZE);
+
+        // Now make a contiguous sequence of bytes readable.
+        assert_eq!(rb.enqueue_data(&[0xCC; BUF_SIZE]), BUF_SIZE);
+        rb.peek_with(0, |payload| assert_eq!(payload, SendPayload::Contiguous(&[0xCC; BUF_SIZE])));
+
+        // Check that the unwritten bytes are left untouched. If `head` was
+        // advanced improperly, this will crash.
+        let read = rb.read_with(|segments| {
+            assert_eq!(segments, [[0xCC; BUF_SIZE]]);
+            BUF_SIZE
+        });
+        assert_eq!(read, BUF_SIZE);
     }
 
     #[test]
