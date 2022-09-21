@@ -79,3 +79,7 @@ toc:
   - title: "C"
     path: /docs/development/languages/fidl/tutorials/tutorial-c.md
     status: deprecated
+- title: "Examples"
+  section:
+  - title: "Overview"
+    path: /docs/development/languages/fidl/examples/README.md
