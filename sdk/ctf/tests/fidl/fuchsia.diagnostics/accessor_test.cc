@@ -246,6 +246,37 @@ const char EXPECTED_DATA[] = R"JSON({
     "version": 1
 })JSON";
 
+struct Sorter {
+  bool operator()(const rapidjson::Value::Member& a, const rapidjson::Value::Member& b) const {
+    return strcmp(a.name.GetString(), b.name.GetString()) < 0;
+  }
+};
+
+template <typename T>
+void SortJsonValue(T value) {
+  if (value->IsObject()) {
+    std::sort(value->MemberBegin(), value->MemberEnd(), Sorter());
+    for (auto element = value->MemberBegin(); element != value->MemberEnd(); ++element) {
+      SortJsonValue(&element->value);
+    }
+  } else if (value->IsArray()) {
+    auto array = value->GetArray();
+    for (auto element = value->Begin(); element != value->End(); ++element) {
+      SortJsonValue(element);
+    }
+  }
+}
+
+std::string SortJsonFile(std::string input) {
+  rapidjson::Document document;
+  document.Parse(input.c_str());
+  SortJsonValue(&document);
+  rapidjson::StringBuffer buffer;
+  rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+  document.Accept(writer);
+  return buffer.GetString();
+}
+
 // Tests that reading inspect data returns expected data from the archive accessor.
 TEST_F(AccessorTest, StreamDiagnosticsInspect) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
@@ -302,7 +333,7 @@ TEST_F(AccessorTest, StreamDiagnosticsInspect) {
   re2::RE2::GlobalReplace(&expected, re2::RE2("CHILD_NAME"), realm.GetChildName());
   re2::RE2::GlobalReplace(&expected, re2::RE2("TIMESTAMP"), timestamp);
 
-  EXPECT_EQ(expected, actual);
+  EXPECT_EQ(expected, SortJsonFile(actual));
 }
 
 }  // namespace
