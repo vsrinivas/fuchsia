@@ -199,7 +199,7 @@ async fn repo_spec_to_backend(
                         blob_repo_path,
                         err
                     );
-                    ffx::RepositoryError::InvalidUrl
+                    ffx::RepositoryError::IoError
                 },
             )?,
         )),
@@ -284,9 +284,11 @@ async fn register_target(
     save_config: SaveConfig,
     inner: Arc<RwLock<RepoInner>>,
 ) -> Result<(), ffx::RepositoryError> {
+    let repo_name = &target_info.repo_name;
+
     tracing::info!(
         "Registering repository {:?} for target {:?}",
-        target_info.repo_name,
+        repo_name,
         target_info.target_identifier
     );
 
@@ -294,7 +296,7 @@ async fn register_target(
         .read()
         .await
         .manager
-        .get(&target_info.repo_name)
+        .get(repo_name)
         .ok_or_else(|| ffx::RepositoryError::NoMatchingRepository)?;
 
     let (target, proxy) = futures::select! {
@@ -345,19 +347,21 @@ async fn register_target(
         })?,
     );
 
-    let config = {
-        let repo = repo.read().await;
+    // Make sure the repository is up to date.
+    update_repository(repo_name, &repo).await?;
 
-        repo.get_config(
-            &format!("{}/{}", repo_host, repo.name()),
+    let config = repo
+        .read()
+        .await
+        .get_config(
+            &format!("{}/{}", repo_host, repo_name),
             target_info.storage_type.as_ref().map(|storage_type| storage_type.clone().into()),
         )
         .await
         .map_err(|e| {
             tracing::error!("failed to get config: {}", e);
             return ffx::RepositoryError::RepositoryManagerError;
-        })?
-    };
+        })?;
 
     match proxy.add(config.into()).await {
         Ok(Ok(())) => {}
@@ -372,8 +376,7 @@ async fn register_target(
     }
 
     if !target_info.aliases.is_empty() {
-        let () = create_aliases(cx, &target_info.repo_name, &target_nodename, &target_info.aliases)
-            .await?;
+        let () = create_aliases(cx, repo_name, &target_nodename, &target_info.aliases).await?;
     }
 
     if should_make_tunnel {
