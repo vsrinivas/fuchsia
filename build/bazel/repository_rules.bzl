@@ -28,15 +28,6 @@ def _ninja_target_from_gn_label(gn_label):
     return ninja_target
 
 def _bazel_inputs_repository_impl(repo_ctx):
-    # Set this constant to True to force Ninja invocation to ensure that
-    # all Ninja outputs are properly generated, or False if you want to
-    # create empty files or directories if needed.
-    #
-    # The latter allows performing some Bazel queries before building
-    # anything, which might be crucial to later switch from Ninja to Bazel
-    # as the main driver for the platform build system.
-    INVOKE_NINJA = False
-
     build_bazel_content = '''# Auto-generated - do not edit
 
 package(
@@ -59,7 +50,6 @@ exports_files(
     # This is the root directory for all source entries in the manifest.
     # Create a //:ninja_output symlink in the repository to point to it.
     ninja_output_dir = repo_ctx.os.environ["BAZEL_FUCHSIA_NINJA_OUTPUT_DIR"]
-    ninja_executable = repo_ctx.os.environ["BAZEL_FUCHSIA_NINJA_PREBUILT"]
     source_prefix = ninja_output_dir + "/"
 
     ninja_targets = []
@@ -82,8 +72,8 @@ filegroup(
                 # If the file doesn't exist because Ninja has not run yet,
                 # create an empty file now. This allows Bazel queries to work
                 # while the file itself will be overwritten by Ninja later.
-                if not INVOKE_NINJA and not repo_ctx.path(src_file).exists:
-                    repo_ctx.file(src_file, "")
+                if not repo_ctx.path(src_file).exists:
+                    repo_ctx.file(dst, "")
 
             content += "    ],\n"
         elif "source_dir" in entry:
@@ -95,7 +85,7 @@ filegroup(
 
             # If the directory does not exist, create it to allow basic Bazel
             # queries to work before a Ninja invocation.
-            if not INVOKE_NINJA and not repo_ctx.path(src_dir).exists:
+            if not repo_ctx.path(src_dir).exists:
                 repo_ctx.execute(["mkdir", "-p", src_dir])
         else:
             fail("Invalid inputs manifest entry: %s" % entry)
@@ -109,14 +99,6 @@ filegroup(
     repo_ctx.file("BUILD.bazel", build_bazel_content)
     repo_ctx.file("WORKSPACE.bazel", "")
     repo_ctx.file("MODULE.bazel", 'module(name = "{name}", version = "1"),\n'.format(name = repo_ctx.attr.name))
-
-    if INVOKE_NINJA:
-        # Invoke Ninja to ensure that the dependencies of all bazel_input_xxx()
-        # targets are properly generated.
-        repo_ctx.execute(
-            [ninja_executable, "-C", ninja_output_dir] + ninja_targets,
-            quiet = False,
-        )
 
 bazel_inputs_repository = repository_rule(
     implementation = _bazel_inputs_repository_impl,

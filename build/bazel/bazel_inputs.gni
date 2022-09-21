@@ -458,7 +458,7 @@ template("bazel_inputs_manifest") {
     outputs = [ invoker.output ]
     data_keys = [ "bazel_inputs" ]
     walk_keys = [ "bazel_inputs_barrier" ]
-    deps = invoker.input_deps
+    deps = invoker.inputs_deps
     output_conversion = "json"
   }
 }

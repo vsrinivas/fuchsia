@@ -27,24 +27,10 @@ if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
   fx-error "No Fuchsia build directory, please run `fx set` or `fx gen`."
 fi
 
-# Regenerate Bazel wrapper and workspace if needed.
-BAZEL_TOPDIR="${FUCHSIA_BUILD_DIR}/gen/build/bazel"
-BAZEL_WRAPPER="${BAZEL_TOPDIR}/bazel"
+readonly BAZEL_WRAPPER="${FUCHSIA_BUILD_DIR}/gen/build/bazel/bazel"
 
-# Always call Ninja to ensure the Bazel workspace is properly regenerated
-# if anything under //build/bazel/... changes. This adds a 6 to 10 seconds
-# latency to the command but increases correctness. If this is too painful
-# during incremental development tasks, just call the bazel wrapper directly
-# for example with a shell alias, as in:
-#
-#   # quick variant of 'fx bazel' to avoid Ninja no-op latency.
-#   alias qbazel=out/default/gen/build/bazel/bazel
-#
-#   qbazel build ...
-#
-# TODO(https://fxbug.dev/107967): Regenerate workspace when top-level
-# entries are added to the Fuchsia root directory.
-fx-run-ninja "" "$PREBUILT_NINJA" -C "${FUCHSIA_BUILD_DIR}" \
-    build :bazel_workspace
+# Regenerate Bazel workspace and launcher script if needed.
+# Note that this also regenerates the Ninja build plan if necessary.
+"${FUCHSIA_DIR}"/build/bazel/scripts/update-workspace.py
 
 "${BAZEL_WRAPPER}" "$@"

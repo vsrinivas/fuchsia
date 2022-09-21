@@ -38,9 +38,13 @@ bazel_inputs_manifest("legacy_ninja_build_outputs") {
 
   # IMPORTANT: All bazel_input_resource_xxx() targets must be reachable
   # from this dependencies list!
-  input_deps = [
+  inputs_deps = [
     "//build/bazel/tests/bazel_input_resource_directory:bazel_inputs",
     "//build/bazel/tests/build_action:bazel_inputs",
+
+    # This dependency is required to properly populate @fuchsia_sdk for
+    # @rules_fuchsia//:fuchsia/workspace/fuchsia_sdk_repository.bzl
+    "//sdk:core",
   ]
 }
 
@@ -59,34 +63,44 @@ action("generate_main_workspace") {
           "//build/bazel/bazel_workspace.gni$0x0aOld bazel_top_dir location " +
           "[${bazel_top_dir}] new location [${target_gen_dir}")
 
-  script = "//build/bazel/scripts/generate-workspace.py"
-  inputs = []
+  script = "//build/bazel/scripts/update-workspace.py"
 
-  # Location of the Bazel prebuilt binary to invoke.
-  _bazel_bin = "//prebuilt/third_party/bazel/${host_os}-${host_cpu}/bazel"
+  # The update script tracks the file and directory entries of FUCHSIA_DIR
+  # and will update the workspace if they change (i.e. if a file or
+  # directory is added to / removed from FUCHSIA_DIR itself). However,
+  # there is no way for Ninja to track these changes, and thus no way
+  # to enforce the action to be run when this happens, even though these
+  # are rare occurences, that could happen in the following cases:
+  #
+  # - A developer manually adds or removes a file to/from FUCHSIA_DIR.
+  #   In this case, manually calling the script is needed, and this
+  #   can be done by invoking any `fx bazel ...` command (even
+  #   `fx bazel version`) or `fx build bazel_workspace`.
+  #
+  # - A `jiri update` modifies the content of FUCHSIA_DIR. Depend on
+  #   the top-level //.git/index file to detect this. Note that the
+  #   script will not necessarily update the workspace in this case,
+  #   this simply ensures that it is run to do its checks.
+  #
+  # - A manual `git checkout HEAD^ -- .` command will modify the local
+  #   workspace without modifying the index, so also depend on
+  #   //.git/HEAD to detect this.
+  #
+  inputs = [
+    "//.git/index",
+    "//.git/HEAD",
 
-  # This only lists the wrapper script as an output for this script,
-  # but it also generates the `workspace` directory, whose content
-  # depends on the top-level file and directory entries that appear
-  # in the Fuchsia checkout directory and is thus not predictable.
+    # The bazel prebuilt is an implicit input for the script.
+    "//prebuilt/third_party/bazel/${host_os}-${host_cpu}/bazel",
+  ]
+
   outputs = [
     "$target_gen_dir/bazel",
-    "$target_gen_dir/workspace/WORKSPACE.bazel",
-  ]
-  args = [
-    "--bazel-bin",
-    rebase_path(_bazel_bin, root_build_dir),
-    "--fuchsia-dir",
-    rebase_path("//", root_build_dir),
-    rebase_path(target_gen_dir, root_build_dir),
+    "$target_gen_dir/generated-info.json",
   ]
 
   # This cannot be hermetic since it creates a collection of
   # symlinks that depends on the state of the source tree.
-  #
-  # TODO(fxbug.dev/107967): Ensure that the workspace is always
-  # re-generated if a top-level directory or file is added to or
-  # removed from $FUCHSIA_DIR.
   hermetic_deps = false
 
   # The generated wrapper includes the absolute path of the Ninja output

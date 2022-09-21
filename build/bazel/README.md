@@ -39,14 +39,11 @@ Now that you've been warned, here's how this is supposed to work:
     will be used in the future when [BzlMod][BzlMod] is enabled to manage
     external dependencies instead or workspace directives.
 
-  - A top-level `.bazelrc` symlink to the build configuration file at
-    `//build/bazel/toplevel.bazelrc`. Note that this will likely change in
-    the future, since this file's content will need to be generated based on
-    configuration options passed to `fint set ...` and `fx set ...` in
-    the future.
-
-    Also note that the user's own bazel configuration file (e.g.
-    `$HOME/.bazelrc`) will always be ignored.
+  - A top-level auto-generated `.bazelrc` file to configure Bazel.
+    Note that this does not support `--config=fuchsia_x64` and
+    `--config=fuchsia_arm64` are per the Fuchsia Bazel SDK. Also note that
+    the user's own bazel configuration file (e.g. `$HOME/.bazelrc`) will
+    always be ignored.
 
   - Symlinks to all top-level entries in the Fuchsia source tree, except for
     `out`. This way, any source or configuration file will appear at the same
@@ -79,14 +76,8 @@ Now that you've been warned, here's how this is supposed to work:
   output.
 
 - For debugging only, the `fx bazel` wrapper tool is provided
-  to launch a Bazel command inside the Fuchsia workspace file.
-
-  This requires that the `workspace` and `legacy_ninja_build_outputs`
-  are properly generated. This can be done manually with:
-
-```sh
-fx build :bazel_workspace
-```
+  to launch a Bazel command inside the Fuchsia workspace file. This will
+  always update the Bazel workspace if needed.
 
   For example, use `fx bazel version` to print information
   about the version number, of `fx bazel workspace` to print
@@ -104,10 +95,10 @@ are that:
 - Developers cannot call Bazel directly from the Fuchsia source tree (which
   otherwise would likely fail with very confusing error messages).
 
-- Bazel's traditional command line interface to configure the build is not
+- Bazel's traditional command line interface to configure Bazel is not
   compatible with the requirements of the Fuchsia platform build. In
-  particular, using `--config=fuchsia_arm64` from the command-line as with
-  the Fuchsia Bazel SDK will not work!
+  particular, the Fuchsia Bazel SDK samples use `--config=fuchsia_arm64`
+  to specify the target device architecture, but this will not work here.
 
 - Finally, Bazel support in the Fuchsia platform build is still very
   experimental, and is best considered an implementation detail, hidden

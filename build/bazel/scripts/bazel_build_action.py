@@ -15,7 +15,7 @@ import sys
 
 
 def copy_file_if_changed(src_path, dst_path):
-    # NOTE: For some reason, filecmp.cmp() will return true if
+    # NOTE: For some reason, filecmp.cmp() will return True if
     # dst_path does not exist, even if src_path is not empty!?
     if os.path.exists(dst_path) and filecmp.cmp(src_path, dst_path,
                                                 shallow=False):

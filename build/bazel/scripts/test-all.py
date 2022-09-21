@@ -46,6 +46,81 @@ def get_fx_build_dir(fuchsia_dir):
     return os.path.join(fuchsia_dir, build_dir)
 
 
+class CommandLauncher(object):
+    """Helper class used to launch external commands."""
+
+    def __init__(self, cwd, log_file, prefix_args=[]):
+        self._cwd = cwd
+        self._log_file = log_file
+        self._prefix_args = prefix_args
+
+    def run(self, args):
+        """Run command, write output to logfile. Raise exception on error."""
+        subprocess.check_call(
+            self._prefix_args + args,
+            stdout=self._log_file,
+            stderr=subprocess.STDOUT,
+            cwd=self._cwd,
+            text=True)
+
+    def get_output(self, args):
+        """Run command, return output as string, Raise exception on error."""
+        args = self._prefix_args + args
+        ret = subprocess.run(
+            args, capture_output=True, cwd=self._cwd, text=True)
+        if ret.returncode != 0:
+            print(
+                'ERROR: Received returncode=%d when trying to run command\n  %s\nError output:\n%s'
+                % (
+                    ret.returncode, ' '.join(
+                        shlex.quote(arg) for arg in args), ret.stderr),
+                file=sys.stderr)
+            ret.check_returncode()
+
+        return ret.stdout
+
+
+def check_update_workspace_script(
+        fuchsia_dir, update_workspace_cmd, cmd_launcher):
+    """Check the behavior of the update-workspace.py script!"""
+
+    def get_update_output():
+        return cmd_launcher.get_output(update_workspace_cmd)
+
+    # Calling the update script a second time should not trigger an update.
+    out = get_update_output()
+    assert not out, 'Unexpected workspace update!'
+
+    # Adding a top-level file entry to FUCHSIA_DIR should trigger an update.
+    touched_file = os.path.join(
+        fuchsia_dir, 'touched-file-for-tests-please-remove')
+    with open(touched_file, 'w') as f:
+        f.write('0')
+
+    try:
+        out = get_update_output()
+        assert out, 'Expected workspace update after adding FUCHSIA_DIR file!'
+
+        # Then calling the script again should do nothing.
+        out = get_update_output()
+        assert not out, 'Unexpected workspace update after FUCHSIA_DIR addition!'
+    finally:
+        os.remove(touched_file)
+
+    # Removing a top-level file entry from FUCHSIA_DIR should trigger an update.
+    out = get_update_output()
+    assert out, 'Expected workspace update after removing FUCHSIA_DIR file!'
+
+    # But not calling the script again after that.
+    out = get_update_output()
+    assert not out, 'Unexpected workspace update after FUCHSIA_DIR removal!'
+
+    # Touching a BUILD.gn file should trigger an update (of the Ninja build plan).
+    os.utime(os.path.join(fuchsia_dir, 'build', 'bazel', 'BUILD.gn'))
+    out = get_update_output()
+    assert out, 'Expected workspace update after touching BUILD.gn file!'
+
+
 def main():
     parser = argparse.ArgumentParser(
         description=__doc__,
@@ -107,33 +182,76 @@ def main():
     if log_file:
         log('Logging enabled, use: tail -f ' + log_file_path)
 
-    def run_command(args):
-        subprocess.check_call(
-            args,
-            stdout=log_file,
-            stderr=subprocess.STDOUT,
-            cwd=fuchsia_dir,
-            text=True)
+    log('Using Fuchsia root directory: ' + fuchsia_dir)
+
+    build_dir = args.fuchsia_build_dir
+    if not build_dir:
+        build_dir = get_fx_build_dir(fuchsia_dir)
+
+    build_dir = os.path.abspath(build_dir)
+    log('Using build directory: ' + build_dir)
+
+    if not os.path.exists(build_dir):
+        print(
+            'ERROR: Missing build directory, did you call `fx set`?: ' +
+            build_dir,
+            file=sys.stderr)
+        return 1
+
+    command_launcher = CommandLauncher(fuchsia_dir, log_file)
+
+    # Path to 'fx' script, relative to fuchsia_dir.
+    fx_script = 'scripts/fx'
 
     def run_fx_command(args):
-        run_command(['scripts/fx'] + args)
+        command_launcher.run([fx_script] + args)
 
-    def get_command_output(args):
-        ret = subprocess.run(
-            args, capture_output=True, cwd=fuchsia_dir, text=True)
-        if ret.returncode != 0:
-            print(
-                'ERROR: Received returncode=%d when trying to run command\n  %s\nError output:\n%s'
-                % (
-                    ret.returncode, ' '.join(
-                        shlex.quote(arg) for arg in args), ret.stderr),
-                file=sys.stderr)
-            ret.check_returncode()
-
-        return ret.stdout
+    def run_bazel_command(args):
+        run_fx_command(['bazel'] + args)
 
     def get_fx_command_output(args):
-        return get_command_output(['scripts/fx'] + args)
+        return command_launcher.get_output([fx_script] + args)
+
+    def get_bazel_command_output(args):
+        return get_fx_command_output(['bazel'] + args)
+
+    # Preparation step
+    if args.skip_prepare:
+        log('Skipping preparation step due to --skip-prepare.')
+    else:
+        log('Preparing Fuchsia checkout at: ' + fuchsia_dir)
+        command_launcher.run(
+            [
+                os.path.join(_SCRIPT_DIR, 'prepare-fuchsia-checkout.py'),
+                '--fuchsia-dir', fuchsia_dir
+            ])
+
+    # Clean step
+    if args.skip_clean:
+        log('Skipping cleanup step due to --skip-clean.')
+    else:
+        log('Cleaning current output directory.')
+        run_fx_command(['clean'])
+        log('Regenerating GN outputs.')
+        run_fx_command(['gen'])
+
+    log('Generating bazel workspace and repositories.')
+    update_workspace_cmd = [
+        os.path.join(_SCRIPT_DIR, 'update-workspace.py'),
+        '--fuchsia-dir',
+        fuchsia_dir,
+    ]
+    command_launcher.run(update_workspace_cmd)
+
+    # Prepare bazel wrapper script invocations.
+    bazel_script = os.path.join(build_dir, 'gen', 'build', 'bazel', 'bazel')
+    assert os.path.exists(bazel_script), (
+        'Bazel script does not exist: ' + bazel_script)
+
+    # Verify that adding or removinf files from FUCHSIA_DIR invokes a regeneration.
+    log('Checking behavior of update-workspace.py script.')
+    check_update_workspace_script(
+        fuchsia_dir, update_workspace_cmd, command_launcher)
 
     def check_test_query(name, path):
         """Run a Bazel query and verify its output.
@@ -155,9 +273,9 @@ def main():
         with open(os.path.join(path, 'test-query.expected_output')) as f:
             expected_output = f.read()
 
-        output = get_fx_command_output(['bazel', 'query'] + query_patterns)
+        output = get_bazel_command_output(['query'] + query_patterns)
         try:
-            output = get_fx_command_output(['bazel', 'query'] + query_patterns)
+            output = get_bazel_command_output(['query'] + query_patterns)
         except subprocess.CalledProcessError:
             return False
 
@@ -170,47 +288,6 @@ def main():
 
         return True
 
-    log('Using Fuchsia root directory: ' + fuchsia_dir)
-
-    build_dir = args.fuchsia_build_dir
-    if not build_dir:
-        build_dir = get_fx_build_dir(fuchsia_dir)
-
-    build_dir = os.path.abspath(build_dir)
-    log('Using build directory: ' + build_dir)
-
-    if not os.path.exists(build_dir):
-        print(
-            'ERROR: Missing build directory, did you call `fx set`?: ' +
-            build_dir,
-            file=sys.stderr)
-        return 1
-
-    if args.skip_prepare:
-        log('Skipping preparation step due to --skip-prepare.')
-    else:
-        log('Preparing Fuchsia checkout at: ' + fuchsia_dir)
-        run_command(
-            [
-                os.path.join(_SCRIPT_DIR, 'prepare-fuchsia-checkout.py'),
-                '--fuchsia-dir', fuchsia_dir
-            ])
-
-    if args.skip_clean:
-        log('Skipping cleanup step due to --skip-clean.')
-    else:
-        log('Cleaning current output directory.')
-        run_fx_command(['clean'])
-
-    log('Generating bazel workspace and repositories.')
-    # This step should only setup the Bazel workspace, and creates the
-    # special launcher script at out/default/gen/build/bazel/bazel which
-    # the `fx bazel` command depends on. This operation should be pretty
-    # fast, except for regeneration of the Ninja build plan if needed,
-    # since Bazel repositories are only populated on demand, when a
-    # query or build command reaches a target that depends on them.
-    run_fx_command(['build', ':bazel_workspace'])
-
     log('bazel query check (before Ninja build)')
     # NOTE: This requires the previous step to generate the Bazel workspace.
     # However, no Ninja outputs have been generated so far.
@@ -218,10 +295,13 @@ def main():
             args.fuchsia_dir, 'build/bazel/tests/bazel_query_before_ninja')):
         return 1
 
-    log('bazel_inputs_resource_directory() check.')
     # NOTE: this requires Ninja outputs to be properly generated.
     # See note in build/bazel/tests/bazel_inputs_resource_directory/BUILD.bazel
-    run_fx_command(['build', 'build/bazel:legacy_ninja_build_outputs'])
+    log("Generating @legacy_ninja_build_outputs repository")
+    run_fx_command(
+        ['build', '-d', 'explain', 'build/bazel:legacy_ninja_build_outputs'])
+
+    log('bazel_inputs_resource_directory() check.')
     if not check_test_query('bazel_input_resource_directory', os.path.join(
             args.fuchsia_dir,
             'build/bazel/tests/bazel_input_resource_directory')):
@@ -231,7 +311,7 @@ def main():
     # This builds and runs a simple hello_world host binary using the
     # @prebuilt_clang toolchain (which differs from sdk-integration's
     # @fuchsia_clang that can only generate Fuchsia binaries so far.
-    run_fx_command(['bazel', 'run', '//build/bazel/tests/hello_world'])
+    run_bazel_command(['run', '//build/bazel/tests/hello_world'])
 
     log('bazel_build_action() checks.')
     # This verifies that bazel_build_action() works properly, i.e. that
