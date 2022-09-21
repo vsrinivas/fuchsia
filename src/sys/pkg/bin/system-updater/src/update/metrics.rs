@@ -4,9 +4,22 @@
 
 use {
     crate::update::{config::Initiator, FetchError, PrepareError, ResolveError},
+    anyhow::{format_err, Context, Error},
     cobalt_client::traits::AsEventCode,
     cobalt_sw_delivery_registry as metrics,
-    futures::future::Future,
+    fidl_contrib::{
+        protocol_connector::{ConnectedProtocol, ProtocolSender},
+        ProtocolConnector,
+    },
+    fidl_fuchsia_metrics::{
+        MetricEvent, MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec,
+    },
+    fuchsia_cobalt_builders::MetricEventExt,
+    fuchsia_component::client::connect_to_protocol,
+    futures::{
+        future::{self, Future},
+        FutureExt,
+    },
     std::{
         convert::TryInto,
         time::{Duration, Instant, SystemTime},
@@ -19,9 +32,53 @@ pub use {
     metrics::SoftwareDeliveryMetricDimensionStatusCode as StatusCode,
 };
 
+pub struct CobaltConnectedService;
+impl ConnectedProtocol for CobaltConnectedService {
+    type Protocol = MetricEventLoggerProxy;
+    type ConnectError = Error;
+    type Message = MetricEvent;
+    type SendError = Error;
+
+    fn get_protocol<'a>(
+        &'a mut self,
+    ) -> future::BoxFuture<'a, Result<MetricEventLoggerProxy, Error>> {
+        async {
+            let (logger_proxy, server_end) =
+                fidl::endpoints::create_proxy().context("failed to create proxy endpoints")?;
+            let metric_event_logger_factory =
+                connect_to_protocol::<MetricEventLoggerFactoryMarker>()
+                    .context("Failed to connect to fuchsia::metrics::MetricEventLoggerFactory")?;
+
+            metric_event_logger_factory
+                .create_metric_event_logger(
+                    ProjectSpec { project_id: Some(metrics::PROJECT_ID), ..ProjectSpec::EMPTY },
+                    server_end,
+                )
+                .await?
+                .map_err(|e| format_err!("Connection to MetricEventLogger refused {e:?}"))?;
+
+            Ok(logger_proxy)
+        }
+        .boxed()
+    }
+
+    fn send_message<'a>(
+        &'a mut self,
+        protocol: &'a MetricEventLoggerProxy,
+        mut msg: MetricEvent,
+    ) -> future::BoxFuture<'a, Result<(), Error>> {
+        async move {
+            let fut = protocol.log_metric_events(&mut std::iter::once(&mut msg));
+            fut.await?.map_err(|e| format_err!("Failed to log metric {e:?}"))?;
+            Ok(())
+        }
+        .boxed()
+    }
+}
+
 pub fn connect_to_cobalt() -> (Client, impl Future<Output = ()>) {
-    let (cobalt, cobalt_fut) = fuchsia_cobalt::CobaltConnector::default()
-        .serve(fuchsia_cobalt::ConnectionType::project_id(metrics::PROJECT_ID));
+    let (cobalt, cobalt_fut) =
+        ProtocolConnector::new(CobaltConnectedService).serve_and_log_errors();
     (Client(cobalt), cobalt_fut)
 }
 
@@ -95,49 +152,42 @@ pub fn system_time_to_monotonic_time(time: SystemTime) -> Option<Instant> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Client(fuchsia_cobalt::CobaltSender);
+pub struct Client(ProtocolSender<MetricEvent>);
 
 impl Client {
-    pub fn log_ota_start(&mut self, target_version: &str, initiator: Initiator, when: SystemTime) {
-        self.0.with_component().log_event_count(
-            metrics::OTA_START_METRIC_ID,
-            (initiator, hour_of_day(when)),
-            target_version,
-            0, // duration
-            1, // count
+    pub fn log_ota_start(&mut self, initiator: Initiator, when: SystemTime) {
+        self.0.send(
+            MetricEvent::builder(metrics::OTA_START_MIGRATED_METRIC_ID)
+                .with_event_codes((initiator, hour_of_day(when)))
+                .as_occurrence(1),
         );
     }
 
     pub fn log_ota_result_attempt(
         &mut self,
-        target_version: &str,
         initiator: Initiator,
         attempts: u32,
         phase: Phase,
         status: StatusCode,
     ) {
-        self.0.with_component().log_event_count(
-            metrics::OTA_RESULT_ATTEMPTS_METRIC_ID,
-            (initiator, phase, status),
-            target_version,
-            0,
-            attempts.into(), // "attempts" is not "count", but that's what the go impl does.
+        self.0.send(
+            MetricEvent::builder(metrics::OTA_RESULT_ATTEMPTS_MIGRATED_METRIC_ID)
+                .with_event_codes((initiator, phase, status))
+                .as_occurrence(attempts.into()),
         );
     }
 
     pub fn log_ota_result_duration(
         &mut self,
-        target_version: &str,
         initiator: Initiator,
         phase: Phase,
         status: StatusCode,
         duration: Duration,
     ) {
-        self.0.with_component().log_elapsed_time(
-            metrics::OTA_RESULT_DURATION_METRIC_ID,
-            (initiator, phase, status),
-            target_version,
-            duration_to_micros(duration),
+        self.0.send(
+            MetricEvent::builder(metrics::OTA_RESULT_DURATION_MIGRATED_METRIC_ID)
+                .with_event_codes((initiator, phase, status))
+                .as_integer(duration_to_micros(duration)),
         );
     }
 }

@@ -16,8 +16,8 @@
     use: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.hardware.power.statecontrol.Admin",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.paver.Paver",
                 "fuchsia.pkg.PackageCache",
                 "fuchsia.pkg.PackageResolver",

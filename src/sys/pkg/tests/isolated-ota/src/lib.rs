@@ -294,7 +294,9 @@ impl TestEnv {
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
-                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.MetricEventLoggerFactory",
+                    ))
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
                     .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                     .from(Ref::parent())

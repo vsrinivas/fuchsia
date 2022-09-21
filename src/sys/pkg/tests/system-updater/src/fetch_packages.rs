@@ -67,7 +67,6 @@ async fn fails_on_update_package_fetch_error_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -127,7 +126,6 @@ async fn fails_on_update_package_fetch_error() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -238,7 +236,6 @@ async fn fails_on_content_package_fetch_error_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -364,7 +361,6 @@ async fn fails_on_content_package_fetch_error() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 

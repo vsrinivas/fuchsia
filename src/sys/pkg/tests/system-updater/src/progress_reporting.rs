@@ -186,7 +186,7 @@ async fn monitor_fails_when_no_update_running() {
 
     // There is no update underway, so the monitor should not attach.
     assert_matches!(monitor_update(None, &env.installer_proxy()).await, Ok(None));
-    assert_eq!(env.logger_factory.loggers.lock().len(), 0);
+    assert_eq!(env.metric_event_logger_factory.clone_loggers().len(), 0);
     assert_eq!(env.take_interactions(), vec![]);
 }
 

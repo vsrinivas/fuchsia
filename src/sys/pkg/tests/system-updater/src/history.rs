@@ -35,7 +35,6 @@ async fn succeeds_without_writable_data_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "".into(),
         }
     );
 
@@ -95,7 +94,6 @@ async fn succeeds_without_writable_data() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "".into(),
         }
     );
 

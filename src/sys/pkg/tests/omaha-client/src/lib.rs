@@ -560,7 +560,9 @@ impl TestEnvBuilder {
                 .add_route(
                     Route::new()
                         .capability(Capability::storage("data"))
-                        .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                        .capability(Capability::protocol_by_name(
+                            "fuchsia.metrics.MetricEventLoggerFactory",
+                        ))
                         .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                         .from(Ref::parent())
                         .to(&system_updater),

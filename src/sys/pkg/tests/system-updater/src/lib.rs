@@ -24,6 +24,7 @@ use {
     fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon::Status,
     futures::prelude::*,
+    mock_metrics::MockMetricEventLoggerFactory,
     mock_paver::{hooks as mphooks, MockPaverService, MockPaverServiceBuilder, PaverEvent},
     mock_reboot::{MockRebootService, RebootReason},
     mock_resolver::MockResolverService,
@@ -114,7 +115,7 @@ enum Protocol {
     SpaceManager,
     Paver,
     Reboot,
-    Cobalt,
+    FuchsiaMetrics,
     RetainedPackages,
 }
 
@@ -250,7 +251,7 @@ impl TestEnvBuilder {
         };
 
         let cache_service = Arc::new(MockCacheService::new(Arc::clone(&interactions)));
-        let logger_factory = Arc::new(MockLoggerFactory::new());
+        let logger_factory = Arc::new(MockMetricEventLoggerFactory::new());
         let space_service = Arc::new(MockSpaceService::new(Arc::clone(&interactions)));
         let retained_packages_service =
             Arc::new(MockRetainedPackagesService::new(Arc::clone(&interactions)));
@@ -307,14 +308,10 @@ impl TestEnvBuilder {
                     .detach()
                 });
             }
-            if should_register(Protocol::Cobalt) {
+            if should_register(Protocol::FuchsiaMetrics) {
                 fs.dir("svc").add_fidl_service(move |stream| {
-                    fasync::Task::spawn(
-                        Arc::clone(&logger_factory)
-                            .run_logger_factory(stream)
-                            .unwrap_or_else(|e| panic!("error running logger factory: {:?}", e)),
-                    )
-                    .detach()
+                    fasync::Task::spawn(Arc::clone(&logger_factory).run_logger_factory(stream))
+                        .detach()
                 });
             }
             if should_register(Protocol::SpaceManager) {
@@ -390,7 +387,9 @@ impl TestEnvBuilder {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.MetricEventLoggerFactory",
+                    ))
                     .capability(Capability::protocol_by_name("fuchsia.paver.Paver"))
                     .capability(Capability::protocol_by_name("fuchsia.pkg.PackageCache"))
                     .capability(Capability::protocol_by_name("fuchsia.pkg.PackageResolver"))
@@ -448,7 +447,7 @@ impl TestEnvBuilder {
             _paver_service: paver_service,
             _reboot_service: reboot_service,
             cache_service,
-            logger_factory,
+            metric_event_logger_factory: logger_factory,
             _space_service: space_service,
             _test_dir: test_dir,
             data_path,
@@ -464,7 +463,7 @@ struct TestEnv {
     _paver_service: Arc<MockPaverService>,
     _reboot_service: Arc<MockRebootService>,
     cache_service: Arc<MockCacheService>,
-    logger_factory: Arc<MockLoggerFactory>,
+    metric_event_logger_factory: Arc<MockMetricEventLoggerFactory>,
     _space_service: Arc<MockSpaceService>,
     _test_dir: TempDir,
     data_path: PathBuf,
@@ -562,10 +561,10 @@ impl TestEnv {
     }
 
     async fn get_ota_metrics(&self) -> OtaMetrics {
-        let loggers = self.logger_factory.loggers.lock().clone();
+        let loggers = self.metric_event_logger_factory.clone_loggers();
         assert_eq!(loggers.len(), 1);
         let logger = loggers.into_iter().next().unwrap();
-        let events = logger.cobalt_events.lock().clone();
+        let events = logger.clone_metric_events();
         OtaMetrics::from_events(events)
     }
 }
@@ -670,105 +669,24 @@ impl MockRetainedPackagesService {
     }
 }
 
-#[derive(Clone)]
-struct CustomEvent {
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    metric_id: u32,
-    // TODO(fxbug.dev/84729)
-    #[allow(unused)]
-    values: Vec<fidl_fuchsia_cobalt::CustomEventValue>,
-}
-
-struct MockLogger {
-    cobalt_events: Mutex<Vec<fidl_fuchsia_cobalt::CobaltEvent>>,
-}
-
-impl MockLogger {
-    fn new() -> Self {
-        Self { cobalt_events: Mutex::new(vec![]) }
-    }
-
-    async fn run_logger(
-        self: Arc<Self>,
-        mut stream: fidl_fuchsia_cobalt::LoggerRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await.expect("received request") {
-            match event {
-                fidl_fuchsia_cobalt::LoggerRequest::LogCobaltEvent { event, responder } => {
-                    self.cobalt_events.lock().push(event);
-                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
-                }
-                _ => {
-                    panic!("unhandled Logger method {:?}", event);
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
-struct MockLoggerFactory {
-    loggers: Mutex<Vec<Arc<MockLogger>>>,
-}
-
-impl MockLoggerFactory {
-    fn new() -> Self {
-        Self { loggers: Mutex::new(vec![]) }
-    }
-
-    async fn run_logger_factory(
-        self: Arc<Self>,
-        mut stream: fidl_fuchsia_cobalt::LoggerFactoryRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(event) = stream.try_next().await.expect("received request") {
-            match event {
-                fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectId {
-                    project_id,
-                    logger,
-                    responder,
-                } => {
-                    eprintln!("TEST: Got CreateLogger request with project_id {:?}", project_id);
-                    let mock_logger = Arc::new(MockLogger::new());
-                    self.loggers.lock().push(Arc::clone(&mock_logger));
-                    fasync::Task::spawn(
-                        mock_logger
-                            .run_logger(logger.into_stream()?)
-                            .unwrap_or_else(|e| eprintln!("error while running Logger: {:?}", e)),
-                    )
-                    .detach();
-                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
-                }
-                _ => {
-                    panic!("unhandled LoggerFactory method: {:?}", event);
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
 #[derive(PartialEq, Eq, Debug)]
 struct OtaMetrics {
     initiator: u32,
     phase: u32,
     status_code: u32,
-    target: String,
 }
 
 impl OtaMetrics {
-    fn from_events(mut events: Vec<fidl_fuchsia_cobalt::CobaltEvent>) -> Self {
+    fn from_events(mut events: Vec<fidl_fuchsia_metrics::MetricEvent>) -> Self {
         events.sort_by_key(|e| e.metric_id);
 
         // expecting one of each event
         assert_eq!(
             events.iter().map(|e| e.metric_id).collect::<Vec<_>>(),
             vec![
-                metrics::OTA_START_METRIC_ID,
-                metrics::OTA_RESULT_ATTEMPTS_METRIC_ID,
-                metrics::OTA_RESULT_DURATION_METRIC_ID,
+                metrics::OTA_START_MIGRATED_METRIC_ID,
+                metrics::OTA_RESULT_ATTEMPTS_MIGRATED_METRIC_ID,
+                metrics::OTA_RESULT_DURATION_MIGRATED_METRIC_ID,
             ]
         );
 
@@ -779,25 +697,15 @@ impl OtaMetrics {
         let duration = iter.next().unwrap();
 
         // Some basic sanity checks follow
-        assert_eq!(
-            attempt.payload,
-            fidl_fuchsia_cobalt::EventPayload::EventCount(fidl_fuchsia_cobalt::CountEvent {
-                period_duration_micros: 0,
-                count: 1
-            })
-        );
+        assert_eq!(attempt.payload, fidl_fuchsia_metrics::MetricEventPayload::Count(1));
 
-        let fidl_fuchsia_cobalt::CobaltEvent { event_codes, component, .. } = attempt;
+        let fidl_fuchsia_metrics::MetricEvent { event_codes, .. } = attempt;
 
         // metric event_codes and component should line up across all 3 result metrics
         assert_eq!(&duration.event_codes, &event_codes);
-        assert_eq!(&duration.component, &component);
 
         // OtaStart only has initiator and hour_of_day, so just check initiator.
         assert_eq!(start.event_codes[0], event_codes[0]);
-        assert_eq!(start.component, Some("".to_string()));
-
-        let target = component.expect("a target update merkle");
 
         assert_eq!(event_codes.len(), 3);
         let initiator = event_codes[0];
@@ -805,7 +713,7 @@ impl OtaMetrics {
         let status_code = event_codes[2];
 
         match duration.payload {
-            fidl_fuchsia_cobalt::EventPayload::ElapsedMicros(_time) => {
+            fidl_fuchsia_metrics::MetricEventPayload::IntegerValue(_time) => {
                 // Ignore the value since timing is not predictable.
             }
             other => {
@@ -813,7 +721,7 @@ impl OtaMetrics {
             }
         }
 
-        Self { initiator, phase, status_code, target }
+        Self { initiator, phase, status_code }
     }
 }
 

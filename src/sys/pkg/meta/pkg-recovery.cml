@@ -39,7 +39,7 @@
         {
             protocol: [
                 "fuchsia.boot.Arguments",
-                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",

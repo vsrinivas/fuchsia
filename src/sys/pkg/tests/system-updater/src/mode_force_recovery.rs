@@ -29,7 +29,6 @@ async fn writes_recovery_and_force_reboots_into_it_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "".into(),
         }
     );
 
@@ -97,7 +96,6 @@ async fn writes_recovery_and_force_reboots_into_it() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "".into(),
         }
     );
 

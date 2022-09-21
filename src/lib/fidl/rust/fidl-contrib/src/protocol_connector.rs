@@ -274,21 +274,26 @@ impl<CP: ConnectedProtocol> ProtocolConnector<CP> {
                 }
             };
 
-            'receiving: while let Some(message) = receiver.next().await {
-                let resp = self.protocol.send_message(&protocol, message).await;
-                match resp {
-                    Ok(_) => {
-                        backoff.reset();
-                        continue;
-                    }
-                    Err(e) => {
-                        if fidl::endpoints::Proxy::is_closed(&protocol) {
-                            h(ProtocolConnectorError::ConnectionLost);
-                            break 'receiving;
-                        } else {
-                            h(ProtocolConnectorError::ProtocolError(e));
+            'receiving: loop {
+                match receiver.next().await {
+                    Some(message) => {
+                        let resp = self.protocol.send_message(&protocol, message).await;
+                        match resp {
+                            Ok(_) => {
+                                backoff.reset();
+                                continue;
+                            }
+                            Err(e) => {
+                                if fidl::endpoints::Proxy::is_closed(&protocol) {
+                                    h(ProtocolConnectorError::ConnectionLost);
+                                    break 'receiving;
+                                } else {
+                                    h(ProtocolConnectorError::ProtocolError(e));
+                                }
+                            }
                         }
                     }
+                    None => return,
                 }
             }
 

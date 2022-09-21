@@ -30,7 +30,6 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: expected_status_code as u32,
-            target: "".into(),
         }
     );
 }
@@ -61,7 +60,6 @@ async fn test_resolve_error_maps_to_cobalt_status_code_v1(
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::PackageDownload as u32,
             status_code: expected_status_code as u32,
-            target: "".into(),
         }
     );
 }
@@ -140,7 +138,7 @@ async fn reports_network_v1() {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_metrics_fail_to_send_v1() {
-    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).build().await;
+    let env = TestEnvBuilder::new().unregister_protocol(Protocol::FuchsiaMetrics).build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -150,7 +148,7 @@ async fn succeeds_even_if_metrics_fail_to_send_v1() {
 
     env.run_update().await.expect("run system updater");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
+    let loggers = env.metric_event_logger_factory.clone_loggers();
     assert_eq!(loggers.len(), 0);
 
     assert_eq!(
@@ -190,7 +188,7 @@ async fn succeeds_even_if_metrics_fail_to_send_v1() {
 
 #[fasync::run_singlethreaded(test)]
 async fn succeeds_even_if_metrics_fail_to_send() {
-    let env = TestEnvBuilder::new().unregister_protocol(Protocol::Cobalt).build().await;
+    let env = TestEnvBuilder::new().unregister_protocol(Protocol::FuchsiaMetrics).build().await;
 
     env.resolver
         .register_package("update", "upd4t3")
@@ -200,7 +198,7 @@ async fn succeeds_even_if_metrics_fail_to_send() {
 
     env.run_update().await.expect("run system updater");
 
-    let loggers = env.logger_factory.loggers.lock().clone();
+    let loggers = env.metric_event_logger_factory.clone_loggers();
     assert_eq!(loggers.len(), 0);
 
     assert_eq!(

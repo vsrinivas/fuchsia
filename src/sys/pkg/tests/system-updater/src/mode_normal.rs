@@ -32,7 +32,6 @@ async fn updates_the_system_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "1.2.3.4".into(),
         }
     );
 
@@ -95,7 +94,6 @@ async fn updates_the_system() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "1.2.3.4".into(),
         }
     );
 
@@ -218,7 +216,6 @@ async fn updates_the_system_with_progress_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "5.6.7.8".into(),
         }
     );
 
@@ -304,7 +301,6 @@ async fn updates_the_system_with_progress() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "5.6.7.8".into(),
         }
     );
 

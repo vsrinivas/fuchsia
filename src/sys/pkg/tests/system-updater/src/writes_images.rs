@@ -83,7 +83,6 @@ async fn fails_on_missing_zbi_error() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -129,7 +128,6 @@ async fn fails_on_missing_zbi_error_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageWrite as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -184,7 +182,6 @@ async fn fails_on_image_write_error_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageWrite as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -262,7 +259,6 @@ async fn fails_on_image_write_error() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageWrite as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -451,7 +447,6 @@ async fn writes_to_both_configs_if_abr_not_supported_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "".into(),
         }
     );
 
@@ -519,7 +514,6 @@ async fn writes_to_both_configs_if_abr_not_supported() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "".into(),
         }
     );
 
@@ -578,7 +572,6 @@ async fn does_not_update_with_unhealthy_current_partition_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -629,7 +622,6 @@ async fn does_not_update_with_unhealthy_current_partition() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -683,7 +675,6 @@ async fn does_not_update_if_alternate_cant_be_marked_unbootable_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -742,7 +733,6 @@ async fn does_not_update_if_alternate_cant_be_marked_unbootable() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -990,7 +980,6 @@ async fn update_with_current_config_v1(
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "".into(),
         }
     );
 
@@ -1036,7 +1025,6 @@ async fn update_with_current_config(
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::SuccessPendingReboot as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Success as u32,
-            target: "".into(),
         }
     );
 

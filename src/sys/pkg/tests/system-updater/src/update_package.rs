@@ -60,7 +60,6 @@ async fn rejects_invalid_package_name_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "build version".into(),
         }
     );
 }
@@ -114,7 +113,6 @@ async fn rejects_invalid_package_name() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "build version".into(),
         }
     );
 }

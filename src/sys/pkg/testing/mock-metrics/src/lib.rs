@@ -10,13 +10,17 @@ use {
     std::{sync::Arc, time::Duration},
 };
 
-struct MockMetricEventLogger {
+pub struct MockMetricEventLogger {
     cobalt_events: Mutex<Vec<MetricEvent>>,
 }
 
 impl MockMetricEventLogger {
     fn new() -> Self {
         Self { cobalt_events: Mutex::new(vec![]) }
+    }
+
+    pub fn clone_metric_events(&self) -> Vec<MetricEvent> {
+        self.cobalt_events.lock().clone()
     }
 
     async fn run_logger(self: Arc<Self>, mut stream: fidl::MetricEventLoggerRequestStream) {
@@ -46,6 +50,10 @@ impl MockMetricEventLoggerFactory {
 
     pub fn with_id(id: u32) -> Self {
         Self { loggers: Mutex::new(vec![]), project_id: id }
+    }
+
+    pub fn clone_loggers(&self) -> Vec<Arc<MockMetricEventLogger>> {
+        self.loggers.lock().clone()
     }
 
     pub async fn run_logger_factory(

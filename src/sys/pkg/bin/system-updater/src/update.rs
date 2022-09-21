@@ -275,7 +275,7 @@ async fn update(
         let cobalt_forwarder_task = Task::spawn(cobalt_forwarder_task);
 
         fx_log_info!("starting system update with config: {:?}", config);
-        cobalt.log_ota_start("", config.initiator, config.start_time);
+        cobalt.log_ota_start(config.initiator, config.start_time);
 
         let mut target_version = history::Version::default();
 
@@ -285,16 +285,13 @@ async fn update(
 
         fx_log_info!("system update attempt completed, logging metrics");
         let status_code = metrics::result_to_status_code(attempt_res.as_ref().map(|_| ()));
-        let target_build_version = target_version.build_version.to_string();
         cobalt.log_ota_result_attempt(
-            &target_build_version,
             config.initiator,
             history.lock().attempts_for(&source_version, &target_version) + 1,
             phase,
             status_code,
         );
         cobalt.log_ota_result_duration(
-            &target_build_version,
             config.initiator,
             phase,
             status_code,

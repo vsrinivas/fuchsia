@@ -68,7 +68,6 @@ async fn rejects_mismatched_board_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "1.2.3.4".into(),
         }
     );
 }
@@ -99,7 +98,6 @@ async fn rejects_mismatched_board() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::Tufupdate as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "1.2.3.4".into(),
         }
     );
 }

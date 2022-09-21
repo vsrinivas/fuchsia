@@ -32,7 +32,6 @@ async fn fails_setting_configuration_active_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageCommit as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -102,7 +101,6 @@ async fn fails_commit_recovery_v1() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageCommit as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -173,7 +171,6 @@ async fn fails_setting_configuration_active() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageCommit as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 
@@ -241,7 +238,6 @@ async fn fails_commit_recovery() {
                 as u32,
             phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageCommit as u32,
             status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
-            target: "".into(),
         }
     );
 

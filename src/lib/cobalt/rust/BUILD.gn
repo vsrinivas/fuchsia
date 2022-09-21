@@ -29,8 +29,5 @@ rustc_library("fuchsia-cobalt") {
   ]
 
   # This library is deprecated, do not add new elements to this list.
-  visibility = [
-    "//src/lib/cobalt/*",
-    "//src/sys/pkg/bin/system-updater/*",
-  ]
+  visibility = [ "//src/lib/cobalt/*" ]
 }
