@@ -836,8 +836,8 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
   {
     zx::status server = fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>(&client_end);
     ASSERT_OK(server.status_value());
-    ASSERT_OK(devfs_watch(coordinator().root_device()->self, std::move(server.value()),
-                          fio::wire::WatchMask::kAdded));
+    ASSERT_OK(coordinator().root_device()->self->watch(
+        coordinator().dispatcher(), std::move(server.value()), fio::wire::WatchMask::kAdded));
   }
 
   size_t device_indexes[2];
@@ -902,8 +902,9 @@ TEST_F(CompositeTestCase, Topology) {
                                                  &composite));
 
   Devnode* dn = coordinator().root_device()->self;
-  fbl::RefPtr<Device> composite_dev;
-  ASSERT_OK(devfs_walk(dn, "composite-dev", &composite_dev));
+  zx::status composite_dev_result = dn->walk("composite-dev");
+  ASSERT_OK(composite_dev_result.status_value());
+  fbl::RefPtr<Device> composite_dev(composite_dev_result.value()->device);
 
   char path_buf[PATH_MAX];
   ASSERT_OK(coordinator().GetTopologicalPath(composite_dev, path_buf, sizeof(path_buf)));

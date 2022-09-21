@@ -58,8 +58,7 @@ Device::~Device() {
   // We can probably get rid of the IMMORTAL flag, since if the Coordinator is
   // holding a reference we shouldn't be able to hit that check, in which case
   // the flag is only used to modify the proxy library loading behavior.
-
-  devfs_unpublish(this);
+  coordinator->devfs().unpublish(this);
 
   // If we destruct early enough, we may have created the core devices and devfs might not exist
   // yet.
@@ -166,7 +165,7 @@ zx_status_t Device::Create(
     dev->flags |= DEV_CTX_INVISIBLE;
   }
 
-  if ((status = devfs_publish(real_parent, dev)) < 0) {
+  if ((status = coordinator->devfs().publish(real_parent, dev)) < 0) {
     return status;
   }
 
@@ -230,7 +229,7 @@ zx_status_t Device::CreateComposite(
 
   // TODO(teisenbe): Figure out how to manifest in devfs?  For now just hang it off of
   // the root device?
-  if ((status = devfs_publish(coordinator->root_device(), dev)) < 0) {
+  if ((status = coordinator->devfs().publish(coordinator->root_device(), dev)) < 0) {
     return status;
   }
 

@@ -20,7 +20,7 @@ class ExportWatcher : public fidl::WireAsyncEventHandler<fuchsia_io::Node> {
 
   // Create an ExportWatcher.
   static zx::status<std::unique_ptr<ExportWatcher>> Create(
-      async_dispatcher_t* dispatcher, Devnode* root,
+      async_dispatcher_t* dispatcher, Devfs& devfs, Devnode* root,
       fidl::ClientEnd<fuchsia_io::Directory> service_dir, std::string_view service_path,
       std::string_view devfs_path, uint32_t protocol_id,
       fuchsia_device_fs::wire::ExportOptions options);
@@ -51,7 +51,7 @@ class ExportWatcher : public fidl::WireAsyncEventHandler<fuchsia_io::Node> {
 class DevfsExporter : public fidl::WireServer<fuchsia_device_fs::Exporter> {
  public:
   // The `root` Devnode must outlive `this`.
-  DevfsExporter(Devnode* root, async_dispatcher_t* dispatcher);
+  DevfsExporter(Devfs& devfs, Devnode* root, async_dispatcher_t* dispatcher);
 
   void PublishExporter(component::OutgoingDirectory& outgoing);
 
@@ -64,6 +64,7 @@ class DevfsExporter : public fidl::WireServer<fuchsia_device_fs::Exporter> {
 
   void MakeVisible(MakeVisibleRequestView request, MakeVisibleCompleter::Sync& completer) override;
 
+  Devfs& devfs_;
   Devnode* const root_;
   async_dispatcher_t* const dispatcher_;
 

@@ -243,13 +243,11 @@ int main(int argc, char** argv) {
   // Services offered to the rest of the system.
   coordinator.InitOutgoingServices(outgoing);
 
-  devfs_init(coordinator.root_device(), loop.dispatcher());
-
   std::optional<driver_manager::DriverDevelopmentService> driver_development_service;
 
   // Launch devfs_exporter.
-  auto devfs_exporter =
-      driver_manager::DevfsExporter(coordinator.root_device()->devnode(), loop.dispatcher());
+  auto devfs_exporter = driver_manager::DevfsExporter(
+      coordinator.devfs(), coordinator.root_device()->devnode(), loop.dispatcher());
   devfs_exporter.PublishExporter(outgoing);
 
   // Launch DriverRunner for DFv2 drivers.
@@ -293,8 +291,6 @@ int main(int argc, char** argv) {
     driver_runner.ScheduleBaseDriversBinding();
   }
 
-  devfs_connect_diagnostics(coordinator.inspect_manager().diagnostics_client());
-
   // Check if whatever launched devmgr gave a channel for component lifecycle events
   fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> component_lifecycle_request(
       zx::channel(zx_take_startup_handle(PA_LIFECYCLE)));
@@ -313,8 +309,26 @@ int main(int argc, char** argv) {
          "continuing");
   }
 
-  system_instance.InstallDevFsIntoNamespace();
-  system_instance.ServiceStarter(&coordinator);
+  // Install devfs into our own namespace. Why? Unclear.
+  {
+    fdio_ns_t* ns;
+    zx_status_t status;
+    status = fdio_ns_get_installed(&ns);
+    ZX_ASSERT_MSG(status == ZX_OK, "driver_manager: cannot get namespace: %s",
+                  zx_status_get_string(status));
+
+    zx::status devfs_client = coordinator.devfs().Connect(coordinator.dispatcher());
+    ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
+
+    status = fdio_ns_bind(ns, "/dev", devfs_client.value().TakeChannel().release());
+    ZX_ASSERT_MSG(status == ZX_OK, "driver_manager: cannot bind /dev to namespace: %s",
+                  zx_status_get_string(status));
+  }
+  {
+    zx::status devfs_client = coordinator.devfs().Connect(coordinator.dispatcher());
+    ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
+    system_instance.ServiceStarter(&coordinator, std::move(devfs_client.value()));
+  }
 
   fbl::unique_fd lib_fd;
   {
@@ -357,9 +371,15 @@ int main(int argc, char** argv) {
       "fuchsia.hardware.usb.DeviceWatcher");
   ZX_ASSERT(result.is_ok());
 
-  result = outgoing.AddDirectory(system_instance.CloneFs("dev"), "dev");
+  zx::status diagnostics_client = coordinator.inspect_manager().Connect();
+  ZX_ASSERT_MSG(diagnostics_client.is_ok(), "%s", diagnostics_client.status_string());
+
+  zx::status devfs_client = coordinator.devfs().Connect(coordinator.dispatcher());
+  ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
+
+  result = outgoing.AddDirectory(std::move(devfs_client.value()), "dev");
   ZX_ASSERT(result.is_ok());
-  result = outgoing.AddDirectory(system_instance.CloneFs("dev/diagnostics"), "diagnostics");
+  result = outgoing.AddDirectory(std::move(diagnostics_client.value()), "diagnostics");
   ZX_ASSERT(result.is_ok());
   ZX_ASSERT(outgoing.ServeFromStartupInfo().is_ok());
 

@@ -156,13 +156,21 @@ InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   devfs_ = std::move(status.value());
 
   if (dispatcher) {
-    auto server_end = fidl::CreateEndpoints(&diagnostics_client_);
     diagnostics_vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher);
-    diagnostics_vfs_->ServeDirectory(diagnostics_dir_, std::move(*server_end));
   }
 
   devices_ = root_node().CreateChild("devices");
   device_count_ = root_node().CreateUint("device_count", 0);
+}
+
+zx::status<fidl::ClientEnd<fuchsia_io::Directory>> InspectManager::Connect() {
+  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  auto& [client, server] = endpoints.value();
+  return zx::make_status(diagnostics_vfs_->ServeDirectory(diagnostics_dir_, std::move(server)),
+                         std::move(client));
 }
 
 DeviceInspect::DeviceInspect(inspect::Node& devices, inspect::UintProperty& device_count,

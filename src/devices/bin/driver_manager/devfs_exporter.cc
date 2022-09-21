@@ -12,7 +12,7 @@ namespace fdfs = fuchsia_device_fs;
 namespace driver_manager {
 
 zx::status<std::unique_ptr<ExportWatcher>> ExportWatcher::Create(
-    async_dispatcher_t* dispatcher, Devnode* root,
+    async_dispatcher_t* dispatcher, Devfs& devfs, Devnode* root,
     fidl::ClientEnd<fuchsia_io::Directory> service_dir, std::string_view service_path,
     std::string_view devfs_path, uint32_t protocol_id,
     fuchsia_device_fs::wire::ExportOptions options) {
@@ -34,8 +34,8 @@ zx::status<std::unique_ptr<ExportWatcher>> ExportWatcher::Create(
   watcher->devfs_path_ = std::string(devfs_path);
   watcher->client_ = fidl::WireClient(std::move(endpoints->client), dispatcher, watcher.get());
 
-  zx_status_t status = devfs_export(root, std::move(service_dir), service_path, devfs_path,
-                                    protocol_id, options, watcher->devnodes_);
+  zx_status_t status = devfs.export_dir(root, std::move(service_dir), service_path, devfs_path,
+                                        protocol_id, options, watcher->devnodes_);
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -49,14 +49,14 @@ zx_status_t ExportWatcher::MakeVisible() {
       return ZX_ERR_BAD_STATE;
     }
     node->service_options &= ~fuchsia_device_fs::wire::ExportOptions::kInvisible;
-    devfs_notify(node->parent, node->name, fuchsia_io::wire::WatchEvent::kAdded);
+    node->parent->notify(node->name, fuchsia_io::wire::WatchEvent::kAdded);
   }
 
   return ZX_OK;
 }
 
-DevfsExporter::DevfsExporter(Devnode* root, async_dispatcher_t* dispatcher)
-    : root_(root), dispatcher_(dispatcher) {}
+DevfsExporter::DevfsExporter(Devfs& devfs, Devnode* root, async_dispatcher_t* dispatcher)
+    : devfs_(devfs), root_(root), dispatcher_(dispatcher) {}
 
 void DevfsExporter::PublishExporter(component::OutgoingDirectory& outgoing) {
   auto result = outgoing.AddProtocol<fdfs::Exporter>(this);
@@ -65,7 +65,7 @@ void DevfsExporter::PublishExporter(component::OutgoingDirectory& outgoing) {
 
 void DevfsExporter::Export(ExportRequestView request, ExportCompleter::Sync& completer) {
   auto result = ExportWatcher::Create(
-      dispatcher_, root_, std::move(request->service_dir), request->service_path.get(),
+      dispatcher_, devfs_, root_, std::move(request->service_dir), request->service_path.get(),
       request->devfs_path.get(), request->protocol_id, fuchsia_device_fs::wire::ExportOptions());
   if (result.is_error()) {
     LOGF(ERROR, "Failed to export service to devfs path \"%.*s\": %s",
@@ -91,7 +91,7 @@ void DevfsExporter::Export(ExportRequestView request, ExportCompleter::Sync& com
 
 void DevfsExporter::ExportOptions(ExportOptionsRequestView request,
                                   ExportOptionsCompleter::Sync& completer) {
-  auto result = ExportWatcher::Create(dispatcher_, root_, std::move(request->service_dir),
+  auto result = ExportWatcher::Create(dispatcher_, devfs_, root_, std::move(request->service_dir),
                                       request->service_path.get(), request->devfs_path.get(),
                                       request->protocol_id, request->options);
   if (result.is_error()) {

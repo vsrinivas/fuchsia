@@ -63,9 +63,7 @@ class InspectManager {
 
   InspectManager() = delete;
 
-  fidl::UnownedClientEnd<fuchsia_io::Directory> diagnostics_client() {
-    return diagnostics_client_.borrow();
-  }
+  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect();
 
   fs::PseudoDir& diagnostics_dir() { return *diagnostics_dir_; }
 
@@ -87,8 +85,6 @@ class InspectManager {
   std::unique_ptr<fs::SynchronousVfs> diagnostics_vfs_;
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   fbl::RefPtr<fs::PseudoDir> driver_host_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-
-  fidl::ClientEnd<fuchsia_io::Directory> diagnostics_client_;
 
   inspect::UintProperty device_count_;
   inspect::Node devices_;

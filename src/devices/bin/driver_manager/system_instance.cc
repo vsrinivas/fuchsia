@@ -72,18 +72,9 @@ zx_status_t SystemInstance::CreateDriverHostJob(const zx::job& root_job,
   return ZX_OK;
 }
 
-void SystemInstance::InstallDevFsIntoNamespace() {
-  fdio_ns_t* ns;
-  zx_status_t r;
-  r = fdio_ns_get_installed(&ns);
-  ZX_ASSERT_MSG(r == ZX_OK, "driver_manager: cannot get namespace: %s\n", zx_status_get_string(r));
-  r = fdio_ns_bind(ns, "/dev", CloneFs("dev").TakeChannel().release());
-  ZX_ASSERT_MSG(r == ZX_OK, "driver_manager: cannot bind /dev to namespace: %s\n",
-                zx_status_get_string(r));
-}
-
-void SystemInstance::ServiceStarter(Coordinator* coordinator) {
-  coordinator->RegisterWithPowerManager(CloneFs("dev"), [](zx_status_t status) {
+void SystemInstance::ServiceStarter(Coordinator* coordinator,
+                                    fidl::ClientEnd<fio::Directory> devfs) {
+  coordinator->RegisterWithPowerManager(std::move(devfs), [](zx_status_t status) {
     if (status != ZX_OK) {
       LOGF(WARNING, "Unable to RegisterWithPowerManager: %d", status);
     }
@@ -93,9 +84,6 @@ void SystemInstance::ServiceStarter(Coordinator* coordinator) {
 }
 
 fidl::ClientEnd<fuchsia_io::Directory> SystemInstance::CloneFs(const char* path) {
-  if (!strcmp(path, "dev")) {
-    return fidl::ClientEnd<fuchsia_io::Directory>(devfs_root_clone());
-  }
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
     return fidl::ClientEnd<fuchsia_io::Directory>();
@@ -108,14 +96,6 @@ fidl::ClientEnd<fuchsia_io::Directory> SystemInstance::CloneFs(const char* path)
     if (status == ZX_OK) {
       status = driver_host_svc_->Serve(std::move(endpoints->server));
     }
-  } else if (!strncmp(path, "dev/", 4)) {
-    zx::unowned_channel fs = devfs_root_borrow();
-    path += 4;
-    status = fdio_open_at(fs->get(), path,
-                          static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kRightReadable |
-                                                fuchsia_io::wire::OpenFlags::kRightWritable |
-                                                fuchsia_io::wire::OpenFlags::kDirectory),
-                          endpoints->server.TakeChannel().release());
   }
   if (status != ZX_OK) {
     LOGF(ERROR, "CloneFs failed for '%s': %s", path, zx_status_get_string(status));

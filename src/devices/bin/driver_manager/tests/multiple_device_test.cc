@@ -485,19 +485,19 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
 
 TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
   Devnode* root_node = coordinator().root_device()->self;
-  ASSERT_FALSE(devfs_has_watchers(root_node));
+  ASSERT_FALSE(root_node->has_watchers());
 
   // Create the watcher and make sure it's been registered.
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>();
   ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(
-      devfs_watch(root_node, std::move(endpoints->server), fuchsia_io::wire::WatchMask::kAdded));
-  ASSERT_TRUE(devfs_has_watchers(root_node));
+  ASSERT_OK(root_node->watch(coordinator_loop()->dispatcher(), std::move(endpoints->server),
+                             fuchsia_io::wire::WatchMask::kAdded));
+  ASSERT_TRUE(root_node->has_watchers());
 
   // Free our channel and make sure it gets de-registered.
   endpoints->client.reset();
   coordinator_loop()->RunUntilIdle();
-  ASSERT_FALSE(devfs_has_watchers(root_node));
+  ASSERT_FALSE(root_node->has_watchers());
 }
 
 // This functor accepts a |fidl::WireUnownedResult<FidlMethod>&| and checks that
@@ -522,9 +522,9 @@ class UnsupportedErrorMatcher {
 };
 
 TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
-  zx::channel chan = devfs_root_clone();
-  fidl::WireClient client(fidl::ClientEnd<fuchsia_io::Directory>(std::move(chan)),
-                          coordinator_loop()->dispatcher());
+  zx::status devfs_client = coordinator().devfs().Connect(coordinator_loop()->dispatcher());
+  ASSERT_OK(devfs_client.status_value());
+  fidl::WireClient client(std::move(devfs_client.value()), coordinator_loop()->dispatcher());
 
   {
     zx::channel s, c;

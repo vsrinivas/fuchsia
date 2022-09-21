@@ -38,9 +38,8 @@ class SystemInstance : public FsProvider {
   fidl::ClientEnd<fuchsia_io::Directory> CloneFs(const char* path) override;
 
   zx_status_t CreateDriverHostJob(const zx::job& root_job, zx::job* driver_host_job_out);
-  void InstallDevFsIntoNamespace();
 
-  void ServiceStarter(Coordinator* coordinator);
+  void ServiceStarter(Coordinator* coordinator, fidl::ClientEnd<fuchsia_io::Directory> devfs);
 
  private:
   zx_status_t InitializeDriverHostSvcDir();

@@ -231,6 +231,8 @@ class Coordinator : public CompositeManagerBridge,
   const fbl::RefPtr<Device>& root_device() { return root_device_; }
   const fbl::RefPtr<Device>& sys_device() { return sys_device_; }
 
+  Devfs& devfs() { return devfs_; }
+
   zx_status_t SetMexecZbis(zx::vmo kernel_zbi, zx::vmo data_zbi);
 
   SuspendResumeManager* suspend_resume_manager() { return suspend_resume_manager_.get(); }
@@ -302,10 +304,13 @@ class Coordinator : public CompositeManagerBridge,
   // All DriverHosts
   fbl::DoublyLinkedList<DriverHost*> driver_hosts_;
 
+  InspectManager* const inspect_manager_;
+
   fbl::RefPtr<Device> root_device_;
   fbl::RefPtr<Device> sys_device_;
 
-  InspectManager* const inspect_manager_;
+  Devfs devfs_;
+
   SystemStateManager system_state_manager_;
   SystemPowerState shutdown_system_state_;
 

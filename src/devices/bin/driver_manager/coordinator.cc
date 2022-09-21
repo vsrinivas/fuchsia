@@ -257,15 +257,20 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       dispatcher_(dispatcher),
       base_resolver_(config_.boot_args),
       inspect_manager_(inspect_manager),
+      root_device_(fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
+                                               ZX_PROTOCOL_ROOT, zx::vmo(), zx::channel(),
+                                               fidl::ClientEnd<fio::Directory>())),
+      devfs_(root_device_),
       system_state_manager_(this),
       package_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
                      dispatcher, config_.require_system, &package_resolver_) {
+  zx::status diagnostics_client = inspect_manager_->Connect();
+  ZX_ASSERT_MSG(diagnostics_client.is_ok(), "%s", diagnostics_client.status_string());
+  devfs_.connect_diagnostics(std::move(diagnostics_client.value()));
+
   shutdown_system_state_ = config_.default_shutdown_system_state;
 
-  root_device_ =
-      fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr, ZX_PROTOCOL_ROOT,
-                                  zx::vmo(), zx::channel(), fidl::ClientEnd<fio::Directory>());
   root_device_->flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
 
   bind_driver_manager_ =
@@ -306,7 +311,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
     bind_driver_manager_->BindAllDevicesDriverIndex(config);
   });
 
-  devfs_publish(root_device_, sys_device_);
+  devfs_.publish(root_device_, sys_device_);
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "V1 drivers loaded and published");
@@ -550,7 +555,7 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
   }
   if (dev->flags & DEV_CTX_INVISIBLE) {
     dev->flags &= ~DEV_CTX_INVISIBLE;
-    devfs_advertise(dev);
+    devfs_.advertise(dev);
     zx_status_t r = dev->SignalReadyForBind();
     if (r != ZX_OK) {
       return r;
@@ -989,13 +994,12 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
     }
   } else {
     for (const auto& device_path : request->device_filter) {
-      fbl::RefPtr<Device> device;
-      zx_status_t status = devfs_walk(root_device_->devnode(), device_path.get(), &device);
-      if (status != ZX_OK) {
-        request->iterator.Close(status);
+      zx::status dn = root_device_->devnode()->walk(device_path.get());
+      if (dn.is_error()) {
+        request->iterator.Close(dn.status_value());
         return;
       }
-      device_list.push_back(std::move(device));
+      device_list.push_back(fbl::RefPtr(dn.value()->device));
     }
   }
 
