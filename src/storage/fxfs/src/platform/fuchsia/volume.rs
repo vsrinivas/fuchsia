@@ -633,7 +633,7 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.unwrap();
         {
-            let root_volume = root_volume(&filesystem).await.unwrap();
+            let root_volume = root_volume(filesystem.clone()).await.unwrap();
             let volume =
                 root_volume.new_volume("vol", Some(Arc::new(InsecureCrypt::new()))).await.unwrap();
             let mut transaction = filesystem

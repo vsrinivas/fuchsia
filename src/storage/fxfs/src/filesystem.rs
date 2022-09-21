@@ -85,6 +85,9 @@ pub trait Filesystem: TransactionHandler {
     /// Returns filesystem information.
     fn get_info(&self) -> Info;
 
+    /// Returns the super-block.
+    fn super_block(&self) -> SuperBlock;
+
     /// Returns the graveyard manager (whilst there exists a graveyard per store, the manager
     /// handles all of them).
     fn graveyard(&self) -> &Arc<Graveyard>;
@@ -365,10 +368,6 @@ impl FxFilesystem {
         sync_status.map(|_| ())
     }
 
-    pub fn super_block(&self) -> SuperBlock {
-        self.journal.super_block()
-    }
-
     async fn reservation_for_transaction<'a>(
         self: &Arc<Self>,
         options: transaction::Options<'a>,
@@ -459,6 +458,10 @@ impl Filesystem for FxFilesystem {
             total_bytes: self.device.get().unwrap().size(),
             used_bytes: self.object_manager().allocator().get_used_bytes(),
         }
+    }
+
+    fn super_block(&self) -> SuperBlock {
+        self.journal.super_block()
     }
 
     fn graveyard(&self) -> &Arc<Graveyard> {
@@ -561,7 +564,7 @@ pub async fn mkfs_with_default(
     {
         // expect instead of propagating errors here, since otherwise we could drop |fs| before
         // close is called, which leads to confusing and unrelated error messages.
-        let root_volume = root_volume(&fs).await.expect("Open root_volume failed");
+        let root_volume = root_volume(fs.clone()).await.expect("Open root_volume failed");
         root_volume.new_volume("default", crypt).await.expect("Create volume failed");
     }
     fs.close().await?;
@@ -629,7 +632,7 @@ mod tests {
         join_all(tasks).await;
         fs.sync(SyncOptions::default()).await.expect("sync failed");
 
-        fsck(&fs).await.expect("fsck failed");
+        fsck(fs.clone()).await.expect("fsck failed");
         fs.close().await.expect("Close failed");
     }
 

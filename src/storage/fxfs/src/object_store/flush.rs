@@ -375,7 +375,7 @@ mod tests {
         let device = DeviceHolder::new(FakeDevice::new(8192, 1024));
         let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let store_id = {
-            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
             root_volume
                 .new_volume("test", Some(Arc::new(InsecureCrypt::new())))
                 .await

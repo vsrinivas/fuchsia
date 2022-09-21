@@ -17,7 +17,7 @@ use {
             Directory, HandleOptions, ObjectDescriptor, ObjectStore,
         },
     },
-    std::{io::Write, path::Path, sync::Arc},
+    std::{io::Write, ops::Deref, path::Path, sync::Arc},
 };
 
 const DEFAULT_VOLUME: &str = "default";
@@ -70,7 +70,7 @@ pub async fn open_volume(
     fs: &OpenFxFilesystem,
     crypt: Arc<dyn Crypt>,
 ) -> Result<Arc<ObjectStore>, Error> {
-    let root_volume = root_volume(fs).await?;
+    let root_volume = root_volume(fs.deref().clone()).await?;
     root_volume.volume(DEFAULT_VOLUME, Some(crypt)).await.map(|v| v.into())
 }
 
@@ -120,8 +120,7 @@ pub async fn fsck(fs: &OpenFxFilesystem, verbose: bool) -> Result<(), Error> {
         on_error: |err| eprintln!("{:?}", err.to_string()),
         verbose,
     };
-    // TODO(fxbug.dev/106845): Also check volumes
-    fsck::fsck_with_options(fs, options).await
+    fsck::fsck_with_options(fs.deref().clone(), &options).await
 }
 
 /// Read a file's contents into a Vec and return it.

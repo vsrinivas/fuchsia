@@ -36,6 +36,13 @@ __EXPORT zx::status<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> e
                                  fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
                                  zx::channel crypt_client = {});
 
+// Checks volume |name| in the filesystem instance.  |crypt_client| is an optional channel to
+// a Crypt service instance, in which case the volume is decrypted using that service.
+//
+// Currently this is only supported for Fxfs.
+__EXPORT zx::status<> CheckVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+                                  std::string_view name, zx::channel crypt_client = {});
+
 }  // namespace fs_management
 
 #endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_VOLUMES_H_

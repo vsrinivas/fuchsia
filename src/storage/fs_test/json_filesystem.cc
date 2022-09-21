@@ -4,8 +4,13 @@
 
 #include "src/storage/fs_test/json_filesystem.h"
 
+#include <zircon/errors.h>
+
+#include "src/lib/storage/fs_management/cpp/launch.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fs_test/crypt_service.h"
+#include "src/storage/fs_test/fs_test.h"
+#include "zircon/third_party/ulib/musl/include/stdlib.h"
 
 namespace fs_test {
 
@@ -104,9 +109,36 @@ class JsonInstance : public FilesystemInstance {
       options.component_child_name = name.c_str();
       options.component_url = "#meta/" + name;
     }
-    // TODO(fxbug.dev/106845): Also check volumes
-    return zx::make_status(fs_management::Fsck(device_path_.c_str(), filesystem_.format(), options,
-                                               fs_management::LaunchStdioSync));
+    auto status = zx::make_status(fs_management::Fsck(device_path_.c_str(), filesystem_.format(),
+                                                      options, fs_management::LaunchStdioSync));
+    if (status.is_error()) {
+      return status.take_error();
+    }
+    if (!filesystem_.GetTraits().is_multi_volume) {
+      return zx::ok();
+    }
+    // Also check the volume, which requires re-mounting.
+    fs_management::MountOptions mount_options{
+        .readonly = true,
+    };
+    if (filesystem_.GetTraits().uses_crypt) {
+      mount_options.crypt_client = []() { return *GetCryptService(); };
+    }
+    if (filesystem_.is_component()) {
+      const std::string& name = filesystem_.GetTraits().name;
+      mount_options.component_child_name = name.c_str();
+      mount_options.component_url = "#meta/" + name;
+    }
+    fbl::unique_fd fd(open(device_path_.c_str(), O_RDONLY));
+    if (!fd) {
+      return zx::error(ZX_ERR_BAD_STATE);
+    }
+    auto fs = fs_management::MountMultiVolume(std::move(fd), filesystem_.format(), mount_options,
+                                              fs_management::LaunchStdioAsync);
+    if (fs.is_error()) {
+      return fs.take_error();
+    }
+    return fs->CheckVolume(kDefaultVolumeName, mount_options.crypt_client());
   }
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }

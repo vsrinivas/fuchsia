@@ -1726,7 +1726,7 @@ mod tests {
     async fn test_create_and_open_store() {
         let fs = test_filesystem().await;
         let store_id = {
-            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
             root_volume
                 .new_volume("test", Some(Arc::new(InsecureCrypt::new())))
                 .await
@@ -1948,7 +1948,7 @@ mod tests {
         // overwrite both of those extents.
         object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
 
-        fsck(&fs).await.expect("fsck failed");
+        fsck(fs.clone()).await.expect("fsck failed");
     }
 
     #[fasync::run(10, test)]
@@ -1968,7 +1968,7 @@ mod tests {
             let fs = reopen(fs).await;
 
             let (store_object_id, object_id) = {
-                let root_volume = root_volume(&fs).await.expect("root_volume failed");
+                let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
                 let store =
                     root_volume.volume("test", Some(crypt.clone())).await.expect("volume failed");
                 let root_directory = Directory::open(&store, store.root_directory_object_id())
@@ -1997,10 +1997,10 @@ mod tests {
 
             let fs = reopen(fs).await;
 
-            let check_object = |fs| {
+            let check_object = |fs: Arc<dyn Filesystem>| {
                 let crypt = crypt.clone();
                 async move {
-                    let root_volume = root_volume(&fs).await.expect("root_volume failed");
+                    let root_volume = root_volume(fs).await.expect("root_volume failed");
                     let volume =
                         root_volume.volume("test", Some(crypt)).await.expect("volume failed");
 
@@ -2052,7 +2052,7 @@ mod tests {
 
             let fs = reopen(fs).await;
 
-            fsck(&fs).await.expect("fsck failed");
+            fsck(fs.clone()).await.expect("fsck failed");
 
             let fs = reopen(fs).await;
 
@@ -2065,7 +2065,7 @@ mod tests {
         let crypt = Arc::new(InsecureCrypt::new());
 
         {
-            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
             let _store = root_volume
                 .new_volume("test", Some(crypt.clone()))
                 .await
@@ -2084,7 +2084,7 @@ mod tests {
         let crypt = Arc::new(InsecureCrypt::new());
 
         {
-            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
             let store = root_volume
                 .new_volume("test", Some(crypt.clone()))
                 .await
@@ -2126,7 +2126,7 @@ mod tests {
         let device = fs.take_device().await;
         device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
-        let root_volume = root_volume(&fs).await.expect("root_volume failed");
+        let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
         let store = root_volume.volume("test", Some(crypt.clone())).await.expect("volume failed");
 
         assert_eq!(store.last_object_id.lock().unwrap().id, 2u64 << 32);
@@ -2137,7 +2137,7 @@ mod tests {
         let fs = test_filesystem().await;
         let crypt = Arc::new(InsecureCrypt::new());
 
-        let root_volume = root_volume(&fs).await.expect("root_volume failed");
+        let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
         let store =
             root_volume.new_volume("test", Some(crypt.clone())).await.expect("new_volume failed");
         let root_directory =
@@ -2165,7 +2165,7 @@ mod tests {
 
         let object_id;
         {
-            let root_volume = root_volume(&fs).await.expect("root_volume failed");
+            let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
             let store = root_volume
                 .new_volume("test", Some(crypt.clone()))
                 .await
@@ -2195,7 +2195,7 @@ mod tests {
             device.reopen(false);
             let fs = FxFilesystem::open(device).await.expect("open failed");
             {
-                let root_volume = root_volume(&fs).await.expect("root_volume failed");
+                let root_volume = root_volume(fs.clone()).await.expect("root_volume failed");
                 let store = root_volume
                     .volume("test", Some(crypt.clone()))
                     .await

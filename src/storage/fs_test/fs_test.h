@@ -36,6 +36,8 @@ class Filesystem;
 
 using RamDevice = std::variant<storage::RamDisk, ramdevice_client::RamNand>;
 
+constexpr const char kDefaultVolumeName[] = "default";
+
 struct TestFilesystemOptions {
   static TestFilesystemOptions DefaultBlobfs();
   static TestFilesystemOptions BlobfsWithoutFvm();

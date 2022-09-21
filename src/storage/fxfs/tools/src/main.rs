@@ -10,7 +10,7 @@ use {
         filesystem::{mkfs_with_default, FxFilesystem, OpenOptions},
         fsck,
     },
-    std::{io::Read, path::Path, sync::Arc},
+    std::{io::Read, ops::Deref, path::Path, sync::Arc},
     storage_device::{file_backed_device::FileBackedDevice, DeviceHolder},
     tools::ops,
 };
@@ -206,7 +206,7 @@ async fn main() -> Result<(), Error> {
                         on_error: |err| eprintln!("{:?}", err.to_string()),
                         verbose: args.verbose,
                     };
-                    fsck::fsck_with_options(&fs, options).await
+                    fsck::fsck_with_options(fs.deref().clone(), &options).await
                 }
                 ImageSubCommand::Ls(lsargs) => {
                     let device = DeviceHolder::new(FileBackedDevice::new(

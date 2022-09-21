@@ -71,7 +71,7 @@ enum ScannedObject {
 }
 
 struct ScannedStore<'a, F: Fn(&FsckIssue)> {
-    fsck: &'a Fsck<F>,
+    fsck: &'a Fsck<'a, F>,
     objects: BTreeMap<u64, ScannedObject>,
     root_objects: Vec<u64>,
     store_id: u64,
@@ -80,7 +80,7 @@ struct ScannedStore<'a, F: Fn(&FsckIssue)> {
 
 impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
     fn new(
-        fsck: &'a Fsck<F>,
+        fsck: &'a Fsck<'a, F>,
         root_objects: impl AsRef<[u64]>,
         store_id: u64,
         is_root_store: bool,
@@ -500,7 +500,6 @@ impl<'iter, 'a, F: Fn(&FsckIssue)> std::iter::Iterator for ScannedStoreIterator<
 // updating the sizes for files in |scanned|.
 // TODO(fxbug.dev/95475): Roll this back into main function.
 async fn scan_extents<'a, F: Fn(&FsckIssue)>(
-    fsck: &'a Fsck<F>,
     store: &ObjectStore,
     scanned: &mut ScannedStore<'a, F>,
 ) -> Result<(), Error> {
@@ -527,18 +526,23 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
         {
             if let ExtentValue::Some { device_offset, .. } = value {
                 if range.start % bs > 0 || range.end % bs > 0 {
-                    fsck.error(FsckError::MisalignedExtent(
+                    scanned.fsck.error(FsckError::MisalignedExtent(
                         store_id,
                         *object_id,
                         range.clone(),
                         0,
                     ))?;
                 } else if range.start >= range.end {
-                    fsck.error(FsckError::MalformedExtent(store_id, *object_id, range.clone(), 0))?;
+                    scanned.fsck.error(FsckError::MalformedExtent(
+                        store_id,
+                        *object_id,
+                        range.clone(),
+                        0,
+                    ))?;
                 }
                 allocated_bytes += range.length().unwrap();
                 if device_offset % bs > 0 {
-                    fsck.error(FsckError::MisalignedExtent(
+                    scanned.fsck.error(FsckError::MisalignedExtent(
                         store_id,
                         *object_id,
                         range.clone(),
@@ -552,7 +556,7 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
                         match attributes.iter().find(|(attr_id, _)| attr_id == attribute_id) {
                             Some((_, size)) => {
                                 if range.end > round_up(*size, bs).unwrap() {
-                                    fsck.error(FsckError::ExtentExceedsLength(
+                                    scanned.fsck.error(FsckError::ExtentExceedsLength(
                                         store_id,
                                         *object_id,
                                         *attribute_id,
@@ -562,7 +566,7 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
                                 }
                             }
                             None => {
-                                fsck.warning(FsckWarning::ExtentForMissingAttribute(
+                                scanned.fsck.warning(FsckWarning::ExtentForMissingAttribute(
                                     store.store_object_id(),
                                     *object_id,
                                     *attribute_id,
@@ -572,14 +576,14 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
                         *allocated_size += range.end - range.start;
                     }
                     Some(ScannedObject::Directory(..)) => {
-                        fsck.warning(FsckWarning::ExtentForDirectory(
+                        scanned.fsck.warning(FsckWarning::ExtentForDirectory(
                             store.store_object_id(),
                             *object_id,
                         ))?;
                     }
                     Some(_) => { /* NOP */ }
                     None => {
-                        fsck.warning(FsckWarning::ExtentForNonexistentObject(
+                        scanned.fsck.warning(FsckWarning::ExtentForNonexistentObject(
                             store.store_object_id(),
                             *object_id,
                         ))?;
@@ -592,12 +596,16 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
                     AllocatorValue::Abs { count: 1, owner_object_id: store_id },
                 );
                 let lower_bound = item.key.lower_bound_for_merge_into();
-                fsck.allocations.merge_into(item, &lower_bound, allocator::merge::merge).await;
+                scanned
+                    .fsck
+                    .allocations
+                    .merge_into(item, &lower_bound, allocator::merge::merge)
+                    .await;
             }
         }
         iter.advance().await?;
     }
-    fsck.verbose(format!(
+    scanned.fsck.verbose(format!(
         "Store {} has {} bytes allocated",
         store.store_object_id(),
         allocated_bytes
@@ -608,7 +616,7 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
 /// Scans an object store, accumulating all of its allocations into |fsck.allocations| and
 /// validating various object properties.
 pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
-    fsck: &Fsck<F>,
+    fsck: &Fsck<'_, F>,
     store: &ObjectStore,
     root_objects: impl AsRef<[u64]>,
 ) -> Result<(), Error> {
@@ -655,7 +663,7 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
     }
 
     // Iterate over extents, adding them to the relevant attributes for the file.
-    scan_extents(fsck, store, &mut scanned).await?;
+    scan_extents(store, &mut scanned).await?;
 
     // At this point, we've provided all of the inputs to |scanned|.
 

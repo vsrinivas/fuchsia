@@ -181,6 +181,10 @@ class __EXPORT StartedMultiVolumeFilesystem {
   // this object.
   zx::status<MountedVolume*> CreateVolume(std::string_view name, zx::channel crypt_client);
 
+  // Verifies the integrity of a volume.  |crypt_client| is an optional connection to a crypt
+  // service used to unlock the volume; if unset, the volume is assumed to be unencrypted.
+  zx::status<> CheckVolume(std::string_view name, zx::channel crypt_client);
+
   // Returns a pointer to the given volume, if it is already open.  The lifetime of the pointer is
   // less than this object.
   __EXPORT const MountedVolume* GetVolume(const std::string& volume) const {
@@ -201,8 +205,8 @@ class __EXPORT StartedMultiVolumeFilesystem {
 class __EXPORT StartedSingleVolumeMultiVolumeFilesystem : public SingleVolumeFilesystemInterface {
  public:
   StartedSingleVolumeMultiVolumeFilesystem() = default;
-  explicit StartedSingleVolumeMultiVolumeFilesystem(
-      fidl::ClientEnd<fuchsia_io::Directory> exposed_dir, MountedVolume volume)
+  StartedSingleVolumeMultiVolumeFilesystem(fidl::ClientEnd<fuchsia_io::Directory> exposed_dir,
+                                           MountedVolume volume)
       : exposed_dir_(std::move(exposed_dir)), volume_(std::move(volume)) {}
   StartedSingleVolumeMultiVolumeFilesystem(StartedSingleVolumeMultiVolumeFilesystem&& o)
       : exposed_dir_(std::move(o.exposed_dir_)), volume_(std::move(o.volume_)) {

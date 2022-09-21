@@ -5,7 +5,7 @@
 use {
     crate::{
         crypt::Crypt,
-        filesystem::{Filesystem, FxFilesystem},
+        filesystem::Filesystem,
         fsck::errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
         log::*,
         lsm_tree::{
@@ -19,7 +19,7 @@ use {
         object_store::{
             allocator::{Allocator, AllocatorKey, AllocatorValue, CoalescingIterator},
             journal::super_block::SuperBlockInstance,
-            transaction::{LockKey, TransactionHandler},
+            transaction::LockKey,
             volume::root_volume,
             HandleOptions, ObjectKey, ObjectStore, ObjectValue, StoreInfo,
             MAX_STORE_INFO_SERIALIZED_SIZE,
@@ -46,7 +46,6 @@ mod store_scanner;
 #[cfg(test)]
 mod tests;
 
-#[derive(Clone)]
 pub struct FsckOptions<F: Fn(&FsckIssue)> {
     /// Whether to fail fsck if any warnings are encountered.
     pub fail_on_warning: bool,
@@ -60,13 +59,15 @@ pub struct FsckOptions<F: Fn(&FsckIssue)> {
     pub verbose: bool,
 }
 
-pub fn default_options() -> FsckOptions<impl Fn(&FsckIssue)> {
-    FsckOptions {
-        fail_on_warning: false,
-        halt_on_error: false,
-        do_slow_passes: true,
-        on_error: FsckIssue::log,
-        verbose: false,
+impl Default for FsckOptions<fn(&FsckIssue)> {
+    fn default() -> Self {
+        Self {
+            fail_on_warning: false,
+            halt_on_error: false,
+            do_slow_passes: true,
+            on_error: FsckIssue::log,
+            verbose: false,
+        }
     }
 }
 
@@ -77,13 +78,13 @@ pub fn default_options() -> FsckOptions<impl Fn(&FsckIssue)> {
 //
 // TODO(fxbug.dev/96075): This currently takes a write lock on the filesystem.  It would be nice if
 // we could take a snapshot.
-pub async fn fsck(filesystem: &Arc<FxFilesystem>) -> Result<(), Error> {
-    fsck_with_options(filesystem, default_options()).await
+pub async fn fsck(filesystem: Arc<dyn Filesystem>) -> Result<(), Error> {
+    fsck_with_options(filesystem, &FsckOptions::default()).await
 }
 
 pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
-    filesystem: &Arc<FxFilesystem>,
-    options: FsckOptions<F>,
+    filesystem: Arc<dyn Filesystem>,
+    options: &FsckOptions<F>,
 ) -> Result<(), Error> {
     info!("Starting fsck");
     let _guard = filesystem.write_lock(&[LockKey::Filesystem]).await;
@@ -116,7 +117,7 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     ]);
     root_store_root_objects.append(&mut root_store.root_objects());
 
-    let root_volume = root_volume(filesystem).await?;
+    let root_volume = root_volume(filesystem.clone()).await?;
     let volume_directory = root_volume.volume_directory();
     let layer_set = volume_directory.store().tree().layer_set();
     let mut merger = layer_set.merger();
@@ -127,7 +128,12 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     while let Some((_, store_id, _)) = iter.get() {
         journal_checkpoint_ids.insert(store_id);
         child_store_object_ids.insert(store_id);
-        fsck.check_child_store_metadata(filesystem, store_id, &mut root_store_root_objects).await?;
+        fsck.check_child_store_metadata(
+            filesystem.as_ref(),
+            store_id,
+            &mut root_store_root_objects,
+        )
+        .await?;
         iter.advance().await?;
     }
 
@@ -283,16 +289,16 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
 // TODO(fxbug.dev/96075): This currently takes a write lock on the filesystem.  It would be nice if
 // we could take a snapshot.
 pub async fn fsck_volume(
-    filesystem: &Arc<FxFilesystem>,
+    filesystem: &dyn Filesystem,
     store_id: u64,
     crypt: Option<Arc<dyn Crypt>>,
 ) -> Result<(), Error> {
-    fsck_volume_with_options(filesystem, default_options(), store_id, crypt).await
+    fsck_volume_with_options(filesystem, &FsckOptions::default(), store_id, crypt).await
 }
 
 pub async fn fsck_volume_with_options<F: Fn(&FsckIssue)>(
-    filesystem: &Arc<FxFilesystem>,
-    options: FsckOptions<F>,
+    filesystem: &dyn Filesystem,
+    options: &FsckOptions<F>,
     store_id: u64,
     crypt: Option<Arc<dyn Crypt>>,
 ) -> Result<(), Error> {
@@ -327,16 +333,16 @@ impl<K: RangeKey + PartialEq> KeyExt for K {
     }
 }
 
-struct Fsck<F: Fn(&FsckIssue)> {
-    options: FsckOptions<F>,
+struct Fsck<'a, F: Fn(&FsckIssue)> {
+    options: &'a FsckOptions<F>,
     // A list of allocations generated based on all extents found across all scanned object stores.
     allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     errors: AtomicU64,
     warnings: AtomicU64,
 }
 
-impl<F: Fn(&FsckIssue)> Fsck<F> {
-    fn new(options: FsckOptions<F>) -> Self {
+impl<'a, F: Fn(&FsckIssue)> Fsck<'a, F> {
+    fn new(options: &'a FsckOptions<F>) -> Self {
         Fsck {
             options,
             // TODO(fxbug.dev/95981): fix magic number
@@ -393,7 +399,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
     // Does not actually verify the inner contents of the store; for that, use check_child_store.
     async fn check_child_store_metadata(
         &mut self,
-        filesystem: &FxFilesystem,
+        filesystem: &dyn Filesystem,
         store_id: u64,
         root_store_root_objects: &mut Vec<u64>,
     ) -> Result<(), Error> {
@@ -430,7 +436,7 @@ impl<F: Fn(&FsckIssue)> Fsck<F> {
 
     async fn check_child_store(
         &mut self,
-        filesystem: &FxFilesystem,
+        filesystem: &dyn Filesystem,
         store_id: u64,
         mut crypt: Option<Arc<dyn Crypt>>,
     ) -> Result<(), Error> {

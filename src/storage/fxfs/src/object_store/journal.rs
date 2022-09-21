@@ -1375,7 +1375,7 @@ mod tests {
             let mut buf = handle.allocate_buffer(TEST_DEVICE_BLOCK_SIZE as usize);
             assert_eq!(handle.read(0, buf.as_mut()).await.expect("read failed"), TEST_DATA.len());
             assert_eq!(&buf.as_slice()[..TEST_DATA.len()], TEST_DATA);
-            fsck(&fs).await.expect("fsck failed");
+            fsck(fs.clone()).await.expect("fsck failed");
             fs.close().await.expect("Close failed");
         }
     }
@@ -1434,7 +1434,7 @@ mod tests {
         let device = fs.take_device().await;
         device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
-        fsck(&fs).await.expect("fsck failed");
+        fsck(fs.clone()).await.expect("fsck failed");
         {
             let root_store = fs.root_store();
             // Check the first two objects which should exist.
@@ -1482,7 +1482,7 @@ mod tests {
         device.reopen(false);
         let fs = FxFilesystem::open(device).await.expect("open failed");
         {
-            fsck(&fs).await.expect("fsck failed");
+            fsck(fs.clone()).await.expect("fsck failed");
 
             // Check the first two and the last objects.
             for &object_id in object_ids[0..1].iter().chain(object_ids.last().cloned().iter()) {

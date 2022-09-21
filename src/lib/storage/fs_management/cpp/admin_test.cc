@@ -113,7 +113,6 @@ class OutgoingDirectoryFixture : public testing::Test {
         .component_collection_name = options_.component_collection_name,
         .component_url = options_.component_url,
     };
-    // TODO(fxbug.dev/106845): Also check the volume.
     ASSERT_EQ(status = Fsck(ramdisk_.path().c_str(), format_, fsck_options, LaunchStdioSync), ZX_OK)
         << zx_status_get_string(status);
 

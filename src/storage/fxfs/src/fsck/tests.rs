@@ -18,7 +18,7 @@ use {
         object_store::{
             allocator::{Allocator, AllocatorKey, AllocatorValue, CoalescingIterator},
             directory::Directory,
-            transaction::{self, Options, TransactionHandler},
+            transaction::{self, Options},
             volume::root_volume,
             AttributeKey, ExtentValue, HandleOptions, Mutation, ObjectAttributes, ObjectDescriptor,
             ObjectKey, ObjectKind, ObjectStore, ObjectValue, StoreInfo, Timestamp,
@@ -89,14 +89,19 @@ impl FsckTest {
                 self.errors.lock().unwrap().push(err.clone());
             },
         };
-        fsck_with_options(&self.filesystem(), options.clone()).await?;
+        fsck_with_options(self.filesystem(), &options).await?;
         if let Some(store_id) = test_options.volume_store_id {
-            fsck_volume_with_options(&self.filesystem(), options, store_id, self.crypt.clone())
-                .await?;
+            fsck_volume_with_options(
+                self.filesystem().as_ref(),
+                &options,
+                store_id,
+                self.crypt.clone(),
+            )
+            .await?;
         }
         Ok(())
     }
-    fn filesystem(&self) -> Arc<FxFilesystem> {
+    fn filesystem(&self) -> Arc<dyn Filesystem> {
         self.filesystem.as_ref().unwrap().deref().clone()
     }
     fn errors(&self) -> Vec<FsckIssue> {
@@ -112,7 +117,7 @@ impl FsckTest {
 // will still be subject to merging).
 // Doing this in the root store might cause a variety of unrelated failures.
 async fn install_items_in_store<K: Key, V: Value>(
-    filesystem: &Arc<FxFilesystem>,
+    filesystem: &Arc<dyn Filesystem>,
     store: &ObjectStore,
     items: impl AsRef<[Item<K, V>]>,
 ) {
@@ -414,7 +419,7 @@ async fn test_misaligned_extent_in_child_store() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         let mut transaction = fs
@@ -450,7 +455,7 @@ async fn test_malformed_extent_in_child_store() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         let mut transaction = fs
@@ -629,7 +634,7 @@ async fn test_missing_object_tree_layer_file() {
 
     {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let volume = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
         let mut transaction = fs
             .clone()
@@ -661,7 +666,7 @@ async fn test_missing_object_store_handle() {
 
     {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store_id = {
             let volume = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
             volume.store_object_id()
@@ -681,7 +686,7 @@ async fn test_misordered_layer_file() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
         install_items_in_store(
             &fs,
@@ -708,7 +713,7 @@ async fn test_overlapping_keys_in_layer_file() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
         install_items_in_store(
             &fs,
@@ -739,7 +744,7 @@ async fn test_unexpected_record_in_layer_file() {
     // This test relies on the value below being something that doesn't deserialize to a valid ObjectValue.
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
         install_items_in_store(
             &fs,
@@ -763,7 +768,7 @@ async fn test_mismatched_key_and_value() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
         install_items_in_store(
             &fs,
@@ -822,7 +827,7 @@ async fn test_multiple_links_to_directory() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -894,7 +899,7 @@ async fn test_volume_in_child_store() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -925,7 +930,7 @@ async fn test_children_on_file() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
         let root_directory =
             Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
@@ -967,7 +972,7 @@ async fn test_attribute_on_directory() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         install_items_in_store(
@@ -995,7 +1000,7 @@ async fn test_orphaned_attribute() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         install_items_in_store(
@@ -1026,7 +1031,7 @@ async fn test_records_for_tombstoned_object() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         install_items_in_store(
@@ -1060,7 +1065,7 @@ async fn test_invalid_object_in_store() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         install_items_in_store(
@@ -1230,7 +1235,7 @@ async fn test_spurious_extents() {
 
     let store_id = {
         let fs = test.filesystem();
-        let root_volume = root_volume(&fs).await.unwrap();
+        let root_volume = root_volume(fs.clone()).await.unwrap();
         let store = root_volume.new_volume("vol", Some(test.get_crypt())).await.unwrap();
 
         let mut transaction = fs

@@ -217,7 +217,7 @@ impl Component {
             OpenOptions::read_only(options.read_only),
         )
         .await?;
-        let volumes = VolumesDirectory::new(root_volume(&fs).await?).await?;
+        let volumes = VolumesDirectory::new(root_volume(fs.clone()).await?).await?;
 
         self.outgoing_dir.add_entry_impl(
             "volumes".to_string(),
@@ -264,8 +264,7 @@ impl Component {
             }
             State::Running(ref fs, ..) => (None, fs.deref().clone()),
         };
-        let fsck_options = fsck::default_options();
-        let res = fsck::fsck_with_options(&fs, fsck_options).await;
+        let res = fsck::fsck(fs.clone()).await;
         if let Some(fs_container) = fs_container {
             let _ = fs_container.close().await;
         }
@@ -408,7 +407,7 @@ mod tests {
             .await
             .expect("FxFilesystem::new_empty failed");
             {
-                let root_volume = root_volume(&fs).await.expect("Open root_volume failed");
+                let root_volume = root_volume(fs.clone()).await.expect("Open root_volume failed");
                 root_volume.new_volume("default", None).await.expect("Create volume failed");
             }
             fs.close().await.expect("close failed");

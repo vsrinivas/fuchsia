@@ -125,9 +125,9 @@ async fn main() -> Result<(), Error> {
                 OpenOptions { trace: verbose, ..OpenOptions::read_only(true) },
             )
             .await?;
-            let mut options = fsck::default_options();
+            let mut options = fsck::FsckOptions::default();
             options.verbose = verbose;
-            fsck::fsck_with_options(&fs, options).await
+            fsck::fsck_with_options(fs.clone(), &options).await
         }
         TopLevel { nested: SubCommand::Component(_), .. } => unreachable!(),
     }

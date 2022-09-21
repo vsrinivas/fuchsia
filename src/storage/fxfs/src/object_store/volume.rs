@@ -6,12 +6,10 @@ use {
     crate::{
         crypt::Crypt,
         errors::FxfsError,
-        filesystem::{Filesystem, FxFilesystem},
+        filesystem::Filesystem,
         object_store::{
-            allocator::Allocator,
-            directory::Directory,
-            transaction::{Options, TransactionHandler},
-            NewChildStoreOptions, ObjectDescriptor, ObjectStore,
+            allocator::Allocator, directory::Directory, transaction::Options, NewChildStoreOptions,
+            ObjectDescriptor, ObjectStore,
         },
     },
     anyhow::{anyhow, bail, Context, Error},
@@ -30,7 +28,7 @@ pub const VOLUMES_DIRECTORY: &str = "volumes";
 /// RootVolume is the top-level volume which stores references to all of the other Volumes.
 pub struct RootVolume {
     _root_directory: Directory<ObjectStore>,
-    filesystem: Arc<FxFilesystem>,
+    filesystem: Arc<dyn Filesystem>,
 }
 
 impl RootVolume {
@@ -152,12 +150,12 @@ impl RootVolume {
 }
 
 /// Returns the root volume for the filesystem.
-pub async fn root_volume(fs: &Arc<FxFilesystem>) -> Result<RootVolume, Error> {
-    let root_store = fs.root_store();
+pub async fn root_volume(filesystem: Arc<dyn Filesystem>) -> Result<RootVolume, Error> {
+    let root_store = filesystem.root_store();
     let root_directory = Directory::open(&root_store, root_store.root_directory_object_id())
         .await
         .context("Unable to open root volume directory")?;
-    Ok(RootVolume { _root_directory: root_directory, filesystem: fs.clone() })
+    Ok(RootVolume { _root_directory: root_directory, filesystem })
 }
 
 /// Returns the object IDs for all volumes.
@@ -196,7 +194,7 @@ mod tests {
     async fn test_lookup_nonexistent_volume() {
         let device = DeviceHolder::new(FakeDevice::new(8192, 512));
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
-        let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+        let root_volume = root_volume(filesystem.clone()).await.expect("root_volume failed");
         root_volume
             .volume("vol", Some(Arc::new(InsecureCrypt::new())))
             .await
@@ -211,7 +209,7 @@ mod tests {
         let filesystem = FxFilesystem::new_empty(device).await.expect("new_empty failed");
         let crypt = Arc::new(InsecureCrypt::new());
         {
-            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+            let root_volume = root_volume(filesystem.clone()).await.expect("root_volume failed");
             let store = root_volume
                 .new_volume("vol", Some(crypt.clone()))
                 .await
@@ -236,7 +234,7 @@ mod tests {
             let device = filesystem.take_device().await;
             device.reopen(false);
             let filesystem = FxFilesystem::open(device).await.expect("open failed");
-            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+            let root_volume = root_volume(filesystem.clone()).await.expect("root_volume failed");
             let volume = root_volume.volume("vol", Some(crypt)).await.expect("volume failed");
             let root_directory = Directory::open(&volume, volume.root_directory_object_id())
                 .await
@@ -255,7 +253,7 @@ mod tests {
         let parent_objects;
         // Add volume and a file (some data).
         {
-            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+            let root_volume = root_volume(filesystem.clone()).await.expect("root_volume failed");
             let store = root_volume
                 .new_volume("vol", Some(crypt.clone()))
                 .await
@@ -300,7 +298,7 @@ mod tests {
                 filesystem.allocator().get_owner_allocated_bytes().get(&store_object_id),
                 Some(&8192)
             );
-            let root_volume = root_volume(&filesystem).await.expect("root_volume failed");
+            let root_volume = root_volume(filesystem.clone()).await.expect("root_volume failed");
             root_volume.delete_volume("vol").await.expect("delete_volume");
             // Confirm data allocation is gone.
             assert_eq!(

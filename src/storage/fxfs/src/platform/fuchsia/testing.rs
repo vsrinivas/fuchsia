@@ -6,7 +6,7 @@ use {
     crate::{
         crypt::insecure::InsecureCrypt,
         filesystem::{FxFilesystem, OpenFxFilesystem},
-        fsck::{errors::FsckIssue, fsck_with_options, FsckOptions},
+        fsck::{errors::FsckIssue, fsck_volume_with_options, fsck_with_options, FsckOptions},
         object_store::volume::root_volume,
         platform::fuchsia::volume::FxVolumeAndRoot,
     },
@@ -33,6 +33,7 @@ impl From<State> for (OpenFxFilesystem, FxVolumeAndRoot) {
 
 pub struct TestFixture {
     state: Option<State>,
+    encrypted: bool,
 }
 
 impl TestFixture {
@@ -47,7 +48,7 @@ impl TestFixture {
     pub async fn open(device: DeviceHolder, format: bool, encrypted: bool) -> Self {
         let (filesystem, volume) = if format {
             let filesystem = FxFilesystem::new_empty(device).await.unwrap();
-            let root_volume = root_volume(&filesystem).await.unwrap();
+            let root_volume = root_volume(filesystem.clone()).await.unwrap();
             let vol = FxVolumeAndRoot::new(
                 root_volume
                     .new_volume(
@@ -63,7 +64,7 @@ impl TestFixture {
             (filesystem, vol)
         } else {
             let filesystem = FxFilesystem::open(device).await.unwrap();
-            let root_volume = root_volume(&filesystem).await.unwrap();
+            let root_volume = root_volume(filesystem.clone()).await.unwrap();
             let vol = FxVolumeAndRoot::new(
                 root_volume
                     .volume(
@@ -89,7 +90,7 @@ impl TestFixture {
             Path::dot(),
             ServerEnd::new(server_end.into_channel()),
         );
-        Self { state: Some(State { filesystem, volume, root }) }
+        Self { state: Some(State { filesystem, volume, root }), encrypted }
     }
 
     /// Closes the test fixture, shutting down the filesystem. Returns the device, which can be
@@ -112,6 +113,8 @@ impl TestFixture {
             .expect("close root failed");
         let (filesystem, volume) = state.into();
 
+        let store_id = volume.volume().store().store_object_id();
+
         // Wait for all tasks to finish running.  If we don't do this, it's possible that we haven't
         // yet noticed that a connection has closed, and so tasks can still be running and they can
         // hold references to the volume which we want to unwrap.
@@ -131,21 +134,24 @@ impl TestFixture {
         device.ensure_unique();
         device.reopen(false);
         let filesystem = FxFilesystem::open(device).await.expect("open failed");
-        // TODO(fxbug.dev/106845): Check volumes, too.
-        fsck_with_options(
-            &filesystem,
-            FsckOptions {
-                fail_on_warning: true,
-                halt_on_error: false,
-                do_slow_passes: true,
-                verbose: false,
-                on_error: |err: &FsckIssue| {
-                    eprintln!("Fsck error: {:?}", err);
-                },
+        let options = FsckOptions {
+            fail_on_warning: true,
+            halt_on_error: false,
+            do_slow_passes: true,
+            verbose: false,
+            on_error: |err: &FsckIssue| {
+                eprintln!("Fsck error: {:?}", err);
             },
+        };
+        fsck_with_options(filesystem.clone(), &options).await.expect("fsck failed");
+        fsck_volume_with_options(
+            filesystem.as_ref(),
+            &options,
+            store_id,
+            if self.encrypted { Some(Arc::new(InsecureCrypt::new())) } else { None },
         )
         .await
-        .expect("fsck failed");
+        .expect("fsck_volume failed");
 
         filesystem.close().await.expect("close filesystem failed");
         let device = filesystem.take_device().await;

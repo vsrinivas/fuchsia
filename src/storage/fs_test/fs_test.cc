@@ -312,8 +312,8 @@ FsMount(const std::string& device_path, const std::string& mount_path,
 
   std::unique_ptr<fs_management::SingleVolumeFilesystemInterface> fs;
   if (is_multi_volume) {
-    auto result = fs_management::MountMultiVolumeWithDefault(std::move(fd), format, options,
-                                                             fs_management::LaunchStdioAsync);
+    auto result = fs_management::MountMultiVolumeWithDefault(
+        std::move(fd), format, options, fs_management::LaunchStdioAsync, kDefaultVolumeName);
     if (result.is_error()) {
       LogMountError(result);
       return result.take_error();

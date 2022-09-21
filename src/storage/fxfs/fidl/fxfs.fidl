@@ -78,6 +78,11 @@ type MountOptions = resource struct {
     crypt client_end:<Crypt, optional>;
 };
 
+type CheckOptions = resource struct {
+    /// An optional connection to a crypt client (for encrypted volumes).
+    crypt client_end:<Crypt, optional>;
+};
+
 protocol Volume {
     /// Mounts the volume.  If the volume is encrypted, `options.crypt` should provide all key
     /// access for the given volume.  `outgoing_directory` will contain the root and other services
@@ -87,6 +92,12 @@ protocol Volume {
     Mount(resource struct {
         outgoing_directory server_end:fuchsia.io.Directory;
         options MountOptions;
+    }) -> (struct {}) error zx.status;
+
+    /// Check the volume for consistency.  If the volume is encrypted, `options.crypt` should
+    /// provide all key access for the given volume.
+    Check(resource struct {
+        options CheckOptions;
     }) -> (struct {}) error zx.status;
 
     // Set the limit in bytes on the volume.

@@ -275,6 +275,11 @@ zx::status<MountedVolume*> StartedMultiVolumeFilesystem::CreateVolume(std::strin
   return zx::ok(&iter->second);
 }
 
+__EXPORT zx::status<> StartedMultiVolumeFilesystem::CheckVolume(std::string_view volume_name,
+                                                                zx::channel crypt_client) {
+  return fs_management::CheckVolume(exposed_dir_, volume_name, std::move(crypt_client));
+}
+
 __EXPORT
 StartedSingleVolumeMultiVolumeFilesystem::~StartedSingleVolumeMultiVolumeFilesystem() {
   [[maybe_unused]] auto res = Unmount();
