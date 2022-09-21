@@ -79,11 +79,12 @@ async fn test_oir<E: netemul::Endpoint, M: Manager>(name: &str) {
     .await
     .expect("wait for non loopback interface");
 
-    // TODO(https://fxbug.dev/92164): make orderly shutdown automatic or unnecessary.
+    // Wait for orderly shutdown of the test realm to complete before allowing
+    // test interfaces to be cleaned up.
     //
-    // In the meantime, block on destruction of the test realm before we allow test interfaces to be
-    // cleaned up. This prevents test interfaces from being removed while NetCfg is still in the
-    // process of configuring them after adding them to the Netstack, which causes spurious errors.
+    // This is necessary to prevent test interfaces from being removed while
+    // NetCfg is still in the process of configuring them after adding them to
+    // the Netstack, which causes spurious errors.
     realm.shutdown().await.expect("failed to shutdown realm");
 }
 
@@ -227,11 +228,12 @@ async fn test_oir_interface_name_conflict<E: netemul::Endpoint, M: Manager>(name
         "second interface from network manager should use a temporary name"
     );
 
-    // TODO(https://fxbug.dev/92164): make orderly shutdown automatic or unnecessary.
+    // Wait for orderly shutdown of the test realm to complete before allowing
+    // test interfaces to be cleaned up.
     //
-    // In the meantime, block on destruction of the test realm before we allow test interfaces to be
-    // cleaned up. This prevents test interfaces from being removed while NetCfg is still in the
-    // process of configuring them after adding them to the Netstack, which causes spurious errors.
+    // This is necessary to prevent test interfaces from being removed while
+    // NetCfg is still in the process of configuring them after adding them to
+    // the Netstack, which causes spurious errors.
     let () = realm.shutdown().await.expect("failed to shutdown realm");
 }
 
@@ -644,10 +646,11 @@ async fn test_forwarding<E: netemul::Endpoint, M: Manager>(name: &str) {
     assert_eq!(v4, Some(true));
     assert_eq!(v6, Some(false));
 
-    // TODO(https://fxbug.dev/92164): make orderly shutdown automatic or unnecessary.
+    // Wait for orderly shutdown of the test realm to complete before allowing
+    // test interfaces to be cleaned up.
     //
-    // In the meantime, block on destruction of the test realm before we allow test interfaces to be
-    // cleaned up. This prevents test interfaces from being removed while NetCfg is still in the
-    // process of configuring them after adding them to the Netstack, which causes spurious errors.
+    // This is necessary to prevent test interfaces from being removed while
+    // NetCfg is still in the process of configuring them after adding them to
+    // the Netstack, which causes spurious errors.
     realm.shutdown().await.expect("failed to shutdown realm");
 }

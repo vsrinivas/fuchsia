@@ -532,6 +532,11 @@ impl<'a> TestRealm<'a> {
     }
 
     /// Shuts down the realm.
+    ///
+    /// It is often useful to call this method to ensure that the realm
+    /// completes orderly shutdown before allowing other resources to be dropped
+    /// and get cleaned up, such as [`TestEndpoint`]s, which components in the
+    /// realm might be interacting with.
     pub async fn shutdown(&self) -> Result {
         let () = self.realm.shutdown().context("call shutdown")?;
         let events = self
