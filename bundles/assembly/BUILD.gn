@@ -8,6 +8,7 @@ assert(is_fuchsia,
        "Assembly Input Bundles can only be in the Fuchsia toolchain")
 
 group("assembly") {
+  testonly = true
   deps = [
     ":common_minimal",
     ":common_minimal_eng",
@@ -50,6 +51,7 @@ assembly_input_bundle("common_minimal") {
 # level.
 #
 assembly_input_bundle("common_minimal_eng") {
+  testonly = true
   base_packages = [
     # Empty placeholder for now, this is setting up the pattern, before actually
     # moving packages into it (the next CL)
