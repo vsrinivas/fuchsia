@@ -75,7 +75,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/power/power-manager:*",
   "//src/recovery/factory-reset-trigger:*",
   "//src/recovery/progress-ui:*",
-  "//src/security/cr50_agent:*",
   "//src/security/kms:*",
   "//src/security/pkg_test/dns_resolver:*",
   "//src/security/pkg_test/fake_boot_arguments:*",

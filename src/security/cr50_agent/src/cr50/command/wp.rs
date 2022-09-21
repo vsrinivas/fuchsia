@@ -55,7 +55,7 @@ impl Serializable for WpInfoRequest {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn test_wp_info_request_serialize() {
         let mut serializer = Serializer::new();
         WpInfoRequest::new().serialize(&mut serializer);
@@ -64,7 +64,7 @@ mod tests {
         assert_eq!(data, vec![0x00, 0x27]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_wp_state_deserialize() {
         let response = vec![
             0x00, 0x27, /* header - Subcommand::Wp */

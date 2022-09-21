@@ -160,7 +160,7 @@ mod tests {
     use super::*;
     use std::convert::TryInto;
 
-    #[test]
+    #[fuchsia::test]
     fn test_ccd_request_serialize() {
         let ccd = CcdRequest::<CcdGetInfoResponse>::new(CcdCommand::Open);
         let mut serializer = Serializer::new();
@@ -172,7 +172,7 @@ mod tests {
         assert_eq!(u16::from_be_bytes(state[0..2].try_into().unwrap()), Subcommand::Ccd as u16);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_ccd_request_serialize_with_password() {
         let ccd =
             CcdRequest::<CcdGetInfoResponse>::new_with_password(CcdCommand::Open, "test").unwrap();
@@ -186,7 +186,7 @@ mod tests {
         assert_eq!(&state[3..], b"test\0");
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_ccd_get_info_response_deserialize() {
         let info = vec![
             0x00, 0x22, /* header - Subcommand::Ccd */
@@ -215,7 +215,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_ccd_poll_pp_deserialize() {
         let vec = vec![0x00, 0x22, 0x1];
         let mut response = Deserializer::new(vec);

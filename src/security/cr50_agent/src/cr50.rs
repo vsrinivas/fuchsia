@@ -35,10 +35,10 @@ use fidl_fuchsia_tpm_cr50::{
     TryAuthResponse, TryAuthSuccess, WpState,
 };
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
 use std::sync::Arc;
+use tracing::warn;
 
 pub struct Cr50 {
     proxy: TpmDeviceProxy,
@@ -59,7 +59,7 @@ impl Cr50 {
             Ok(content) => Ok((Cr50Rc::Cr50(Cr50Status::Success), content)),
             Err(ExecuteError::Tpm(status)) => Ok((status.into(), default)),
             Err(ExecuteError::Other(e)) => {
-                fx_log_warn!("Error while executing {}: {:?}", cmd, e);
+                warn!("Error while executing {}: {:?}", cmd, e);
                 Err(zx::Status::INTERNAL.into_raw())
             }
         }
@@ -344,7 +344,7 @@ impl Cr50 {
             } else {
                 // No power button inhibitor is available. Print out a warning but continue - the TPM
                 // will do the presence check even if the AP powers off.
-                fx_log_warn!(
+                warn!(
                     "Power button inhibitor is unavailable. Device may power off when physical \
                     presence check starts, check TPM console for physical presence status"
                 );
@@ -363,12 +363,12 @@ impl Cr50 {
                 let pp = match request.execute(&proxy).await {
                     Ok(pp) => pp,
                     Err(e) => {
-                        fx_log_warn!("Physical presence check failed: {:?}", e);
+                        warn!("Physical presence check failed: {:?}", e);
                         handle
                             .send_on_change(&mut PhysicalPresenceEvent::Err(
                                 zx::Status::INTERNAL.into_raw(),
                             ))
-                            .unwrap_or_else(|e| fx_log_warn!("Error sending on change: {:?}", e));
+                            .unwrap_or_else(|e| warn!("Error sending on change: {:?}", e));
                         return;
                     }
                 };
@@ -376,7 +376,7 @@ impl Cr50 {
                     last_pp = Some(pp.get_state());
                     handle
                         .send_on_change(&mut PhysicalPresenceEvent::State(pp.get_state()))
-                        .unwrap_or_else(|e| fx_log_warn!("Error sending on change: {:?}", e));
+                        .unwrap_or_else(|e| warn!("Error sending on change: {:?}", e));
                 }
 
                 // Wait 10ms before checking again.

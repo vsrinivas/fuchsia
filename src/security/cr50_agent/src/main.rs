@@ -15,11 +15,10 @@ use fidl_fuchsia_tpm_cr50::{Cr50RequestStream, PinWeaverRequestStream};
 use fuchsia_component::server::ServiceFs;
 use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::{component, health::Reporter};
-use fuchsia_syslog::{fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 use futures::prelude::*;
 use std::{path::Path, sync::Arc};
-use tracing;
+use tracing::{debug, info, warn};
 
 /// Wraps all hosted protocols into a single type that can be matched against
 /// and dispatched.
@@ -52,7 +51,10 @@ async fn is_cr50(dir: &fio::DirectoryProxy, name: &str) -> Result<Option<TpmDevi
         return Ok(Some(proxy));
     }
 
-    fx_log_info!("Ignoring TPM with incorrect VID:DID {:x}:{:x}", vendor_id, device_id);
+    info!(
+        vendor_id = %format!("{:x}", vendor_id),
+        device_id = %format!("{:x}", device_id),
+        "Ignoring TPM with incorrect");
     Ok(None)
 }
 
@@ -70,7 +72,7 @@ async fn find_cr50() -> Result<TpmDeviceProxy, Error> {
             Ok(Some(proxy)) => return Ok(proxy),
             Ok(None) => {}
             Err(e) => {
-                fx_log_warn!("Failed to check if {}/{} is a cr50: {:?}", tpm_path, entry.name, e)
+                warn!("Failed to check if {}/{} is a cr50: {:?}", tpm_path, entry.name, e)
             }
         }
     }
@@ -89,7 +91,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let proxy = match find_cr50().await {
         Ok(proxy) => proxy,
         Err(e) => {
-            fx_log_warn!("Could not find a cr50: {:?}", e);
+            warn!("Could not find a cr50: {:?}", e);
             component::health().set_unhealthy("no cr50 found");
             return Ok(());
         }
@@ -97,7 +99,7 @@ async fn main() -> Result<(), anyhow::Error> {
     let power_button = match PowerButton::new_from_namespace() {
         Ok(btn) => Some(btn),
         Err(e) => {
-            fx_log_warn!("Could not connect to power button monitor: {:?}", e);
+            warn!("Could not connect to power button monitor: {:?}", e);
             None
         }
     };
@@ -110,7 +112,7 @@ async fn main() -> Result<(), anyhow::Error> {
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
 
     component::health().set_ok();
-    tracing::debug!("Initialized.");
+    debug!("Initialized.");
 
     let cr50_ref = &cr50;
     service_fs
@@ -118,12 +120,12 @@ async fn main() -> Result<(), anyhow::Error> {
             match request {
                 IncomingRequest::Cr50(stream) => {
                     Arc::clone(cr50_ref).handle_cr50_stream(stream).await.unwrap_or_else(|e| {
-                        fx_log_warn!("Failed while handling cr50 requests: {:?}", e);
+                        warn!("Failed while handling cr50 requests: {:?}", e);
                     })
                 }
                 IncomingRequest::Pinweaver(stream) => {
                     Arc::clone(cr50_ref).handle_pinweaver_stream(stream).await.unwrap_or_else(|e| {
-                        fx_log_warn!("Failed while handling pinweaver requests: {:?}", e);
+                        warn!("Failed while handling pinweaver requests: {:?}", e);
                     })
                 }
             }

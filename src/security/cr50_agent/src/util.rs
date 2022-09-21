@@ -117,7 +117,7 @@ impl Serializer {
 mod tests {
     use super::*;
 
-    #[test]
+    #[fuchsia::test]
     fn serializer_put_data() {
         let mut s = Serializer::new();
         s.put_be_u32(0xd00dfeed);
@@ -129,7 +129,7 @@ mod tests {
         assert_eq!(vec, vec![0xd0, 0x0d, 0xfe, 0xed, 0xfa, 0xce, 0xaa, 0xce, 0xfa]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn deserializer_take_data() {
         let data = vec![0xd0, 0x0d, 0xfe, 0xed, 0xfa, 0xce, 0xaa];
         let mut d = Deserializer::new(data);
@@ -142,7 +142,7 @@ mod tests {
         assert_eq!(d.available(), 0);
         assert_eq!(d.take_u8().unwrap_err(), DeserializeError::NotEnoughBytes);
     }
-    #[test]
+    #[fuchsia::test]
     fn deserializer_take_data_le() {
         let data = vec![0xd0, 0x0d, 0xfe, 0xed, 0xfa, 0xce, 0xaa];
         let mut d = Deserializer::new(data);

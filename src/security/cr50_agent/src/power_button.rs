@@ -5,8 +5,8 @@
 use anyhow::{Context, Error};
 use fidl_fuchsia_power_button::{Action, MonitorMarker, MonitorProxy};
 use fuchsia_async::Task;
-use fuchsia_syslog::fx_log_err;
 use std::sync::{Arc, Mutex};
+use tracing::error;
 
 struct PowerButtonInner {
     proxy: MonitorProxy,
@@ -66,7 +66,7 @@ impl PowerButton {
             let action = inner.orig_action;
             inner.release_task = Some(fuchsia_async::Task::spawn(async move {
                 proxy.set_action(action).await.unwrap_or_else(|e| {
-                    fx_log_err!("Failed to restore power button action: {:?}", e);
+                    error!("Failed to restore power button action: {:?}", e);
                 });
             }));
         }

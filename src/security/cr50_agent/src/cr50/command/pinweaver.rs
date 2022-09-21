@@ -7,11 +7,11 @@ use fidl_fuchsia_tpm_cr50::{
     DELAY_SCHEDULE_MAX_COUNT, HASH_SIZE, HE_SECRET_MAX_SIZE, LE_SECRET_MAX_SIZE, MAC_SIZE,
     MAX_LOG_ENTRIES,
 };
-use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon as zx;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 use std::{convert::TryInto, marker::PhantomData};
+use tracing::warn;
 
 use crate::{
     cr50::command::{Deserializable, Header, Serializable, Subcommand, TpmRequest},
@@ -104,7 +104,7 @@ where
         let _ = Header::deserialize(deserializer)?;
         let version = deserializer.take_u8()?;
         if version != PROTOCOL_VERSION {
-            fx_log_warn!("Unknown protocol version {}", version);
+            warn!("Unknown protocol version {}", version);
         }
         let _data_length = deserializer.take_le_u16()?;
         let response = PinweaverResponse {
@@ -377,8 +377,8 @@ impl Serializable for PinweaverTryAuth {
     /// auxiliary hashes [u8 array]
     fn serialize(&self, serializer: &mut Serializer) {
         let size = self.low_entropy_secret.len() + self.cred_metadata.len() + self.h_aux.len();
-        serializer.put_le_u16(size.try_into().unwrap_or_else(|e| {
-            fx_log_warn!("TryAuth request too long! ({:?})", e);
+        serializer.put_le_u16(size.try_into().unwrap_or_else(|err| {
+            warn!(?err, "TryAuth request too long!");
             0
         }));
         self.low_entropy_secret.as_slice().serialize(serializer);
@@ -627,8 +627,8 @@ impl Serializable for PinweaverLogReplay {
         serializer.put_le_u16(
             (HASH_SIZE as usize + self.leaf_data.len() + self.h_aux.len())
                 .try_into()
-                .unwrap_or_else(|e| {
-                    fx_log_warn!("LogReplay request too long ({:?})", e);
+                .unwrap_or_else(|err| {
+                    warn!(?err, "LogReplay request too long");
                     0
                 }),
         );
@@ -656,7 +656,7 @@ mod tests {
     use super::*;
     use fidl_fuchsia_tpm_cr50::DelayScheduleEntry as FidlDelayScheduleEntry;
 
-    #[test]
+    #[fuchsia::test]
     fn test_delay_seconds_from_duration() {
         let cases: Vec<(zx::Duration, Result<u32, PinWeaverError>)> = vec![
             (zx::Duration::INFINITE_PAST, Err(PinWeaverError::DelayScheudleInvalid)),
@@ -677,7 +677,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_reset_tree() {
         let mut serializer = Serializer::new();
         PinweaverResetTree::new(11, 10).serialize(&mut serializer);
@@ -693,7 +693,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_reset_tree_response() {
         let data = vec![
             0x00, 0x25, /* Subcommand::Pinweaver */
@@ -719,7 +719,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_insert_leaf() {
         let le_secret: Vec<u8> = vec![0xaa; HASH_SIZE as usize];
         let he_secret: Vec<u8> = vec![0xbb; HASH_SIZE as usize];
@@ -790,7 +790,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_try_auth() {
         let mut serializer = Serializer::new();
         let mut params = TryAuthParams::EMPTY;
@@ -825,7 +825,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_try_auth_response() {
         let data = vec![
             0x00, 0x25, /* Subcommand::Pinweaver */
@@ -913,7 +913,7 @@ mod tests {
         assert_eq!(data.unimported_leaf_data.payload, vec![0xaa, 0xbb, 0xcc]);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_remove_leaf() {
         let mut serializer = Serializer::new();
         let mut params = RemoveLeafParams::EMPTY;
@@ -946,7 +946,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_get_log() {
         let mut serializer = Serializer::new();
         let root = [0xaa; HASH_SIZE as usize];
@@ -966,7 +966,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_get_log_response() {
         let mut deserializer = Deserializer::new(vec![
             0x00, 0x25, /* Subcommand::Pinweaver */
@@ -1020,7 +1020,7 @@ mod tests {
         )
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_replay() {
         let mut serializer = Serializer::new();
         let mut params = LogReplayParams::EMPTY;
@@ -1050,7 +1050,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_log_replay_response() {
         let mut deserializer = Deserializer::new(vec![
             0x00, 0x25, /* Subcommand::Pinweaver */
