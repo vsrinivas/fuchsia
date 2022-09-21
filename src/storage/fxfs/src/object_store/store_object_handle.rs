@@ -576,7 +576,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             )))
             .await?;
         loop {
-            let (device_offset, to_do) = match iter.get() {
+            let (device_offset, bytes_to_write) = match iter.get() {
                 Some(ItemRef {
                     key:
                         ObjectKey {
@@ -598,21 +598,27 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                     && *attribute_id == self.attribute_id
                     && range.start <= offset =>
                 {
+                    let offset_within_extent = offset - range.start;
+                    let remaining_length_of_extent = (range.end - offset) as usize;
                     (
-                        device_offset + (offset - range.start),
-                        min(buf.len(), (range.end - offset) as usize),
+                        device_offset + offset_within_extent,
+                        min(buf.len(), remaining_length_of_extent),
                     )
                 }
-                _ => bail!("offset {} not allocated/has checksums", offset),
+                _ => bail!(
+                    "extent overlapping offset {} is either not allocated or has checksums",
+                    offset
+                ),
             };
-            let (part, remainder) = buf.split_at_mut(to_do);
-            self.write_at(offset, part, device_offset, false).await?;
-            if remainder.len() == 0 {
+            let (current_buf, remaining_buf) = buf.split_at_mut(bytes_to_write);
+            self.write_at(offset, current_buf, device_offset, false).await?;
+            if remaining_buf.len() == 0 {
                 break;
+            } else {
+                buf = remaining_buf;
+                offset += bytes_to_write as u64;
+                iter.advance().await?;
             }
-            buf = remainder;
-            offset += to_do as u64;
-            iter.advance().await?;
         }
         Ok(())
     }
