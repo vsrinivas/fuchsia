@@ -27,9 +27,11 @@ template("ctf_fidl") {
   }
   write_file_target = target_name + "_ctf_file"
 
-  if (defined(verify_target)) {
+  # This will only end up being referenced in the FIDL toolchain (as a dep to
+  # the action which runs fidlc), so we only need to define it in there.
+  if (defined(verify_target) && current_toolchain == fidl_toolchain) {
     ctf_element(verify_target) {
-      deps = invoker_deps
+      deps_to_verify = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }

@@ -25,7 +25,7 @@ class VerifyDepsInSDK:
       root_build_dir (string): An absolute path to the GN's $root_build_dir.
       output_file (string): The path to (including) the file to be generated.
       invoker_label (string): The label of the invoker of verify_deps_in_sdk.
-      deps (list(string)): A list of fully qualified GN labels.
+      deps_to_verify (list(string)): A list of fully qualified GN labels.
       allowed_deps (list(string)): A list of allowed deps found in //sdk/cts/allowed_ctf_deps.gni"
       allowed_dirs (list(string)): A list of allowed directories found in //sdk/cts/allowed_ctf_deps.gni"
       sdk_manifests (list(string)): A list of absolute paths to SDK manifest files.
@@ -35,7 +35,7 @@ class VerifyDepsInSDK:
     """
 
     def __init__(
-            self, root_build_dir, output_file, invoker_label, deps,
+            self, root_build_dir, output_file, invoker_label, deps_to_verify,
             allowed_deps, allowed_dirs, sdk_manifests):
         if not (root_build_dir and os.path.exists(root_build_dir)):
             raise ValueError('root_build_dir cannot be empty and must exist.')
@@ -46,8 +46,8 @@ class VerifyDepsInSDK:
         if not invoker_label:
             raise ValueError('invoker_label cannot be empty.')
 
-        if not deps:
-            raise ValueError('deps cannot be empty.')
+        if not deps_to_verify:
+            raise ValueError('deps_to_verify cannot be empty.')
 
         if not allowed_deps:
             raise ValueError('allowed_deps cannot be empty')
@@ -65,7 +65,7 @@ class VerifyDepsInSDK:
         self.root_build_dir = root_build_dir
         self.output_file = output_file
         self.invoker_label = invoker_label
-        self.deps = deps
+        self.deps_to_verify = deps_to_verify
         self.allowed_deps = allowed_deps
         self.allowed_dirs = allowed_dirs
         self.sdk_manifests = sdk_manifests
@@ -107,12 +107,15 @@ class VerifyDepsInSDK:
 
         All dependencies must be in allowed_deps, allowed_dirs, or be CTF targets themselves.
 
+        Note: At the time this script runs, these dependencies (self.deps_to_verify)
+        have not necessarily been built. The verification target does not depend on them.
+
         Returns:
           A list of labels that are not allowed to be used. The list will be empty if all deps are allowed.
         """
         unaccepted_deps = []
         unverified_deps = []
-        for dep in self.deps:
+        for dep in self.deps_to_verify:
             dep_found = False
 
             if dep in self.allowed_deps or os.path.exists(
@@ -165,9 +168,8 @@ class VerifyDepsInSDK:
             if dep.endswith('_rust'):
                 dep = dep[:-5]
 
-            if dep not in sdk_atom_label_to_category or sdk_atom_label_to_category[dep] not in [
-                    'partner', 'public'
-            ]:
+            if dep not in sdk_atom_label_to_category or sdk_atom_label_to_category[
+                    dep] not in ['partner', 'public']:
                 unaccepted_deps.append(dep)
 
         return unaccepted_deps
@@ -182,7 +184,7 @@ class VerifyDepsInSDK:
             os.makedirs(target_gen_dir)
 
         with open(self.output_file, 'w') as f:
-            for dep in self.deps:
+            for dep in self.deps_to_verify:
                 f.write(f'{dep}\n')
 
 
@@ -201,7 +203,7 @@ def main():
         required=True,
         help='The label of the invoker of verify_deps_in_sdk.')
     parser.add_argument(
-        '--deps',
+        '--deps_to_verify',
         nargs='+',
         required=True,
         help=
@@ -227,8 +229,9 @@ def main():
     args = parser.parse_args()
     try:
         target = VerifyDepsInSDK(
-            args.root_build_dir, args.output, args.invoker_label, args.deps,
-            args.allowed_deps, args.allowed_dirs, args.sdk_manifests)
+            args.root_build_dir, args.output, args.invoker_label,
+            args.deps_to_verify, args.allowed_deps, args.allowed_dirs,
+            args.sdk_manifests)
     except ValueError as e:
         print(f'ValueError: {e}')
         return 1
@@ -237,7 +240,9 @@ def main():
     if not unaccepted_deps:
         target.create_output_file()
     else:
-        print(f'The following dependencies of "{args.invoker_label}" are not allowed: {unaccepted_deps}')
+        print(
+            f'The following dependencies of "{args.invoker_label}" are not allowed: {unaccepted_deps}'
+        )
         return 1
 
     return 0

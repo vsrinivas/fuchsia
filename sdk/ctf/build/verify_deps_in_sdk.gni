@@ -14,8 +14,13 @@ ALLOWED_SDKS = [
 # Ensures that dependencies exist in a public SDK's generated manifest. Allow lists can
 # be passed to permit specific dependencies or directories.
 #
+# The verification target produced by this template will not actually depend on
+# deps_to_verify, because it only relies on information from gn gen time.
+#
 # Parameters
 #
+#   deps_to_verify (required)
+#     A list of dependencies to verify.
 #   invoker_label (required)
 #     The label of the invoking target. This is used to print a helpful error message.
 #     e.g. "The following dependencies of $invoker_label cannot be used."
@@ -28,21 +33,23 @@ ALLOWED_SDKS = [
 #     Useful for allowing all third_party dependencies.
 #     e.g. [ "//third_party/rust_crates/*" ]
 #     type: list
-#   deps (required)
 template("verify_deps_in_sdk") {
-  assert(defined(invoker.deps))
+  assert(defined(invoker.deps_to_verify))
   assert(defined(invoker.invoker_label))
+  assert(!defined(invoker.deps),
+         "All dependencies should be added to \"deps_to_verify\"")
   assert(!defined(invoker.public_deps),
-         "All dependencies should be added to \"deps\"")
+         "All dependencies should be added to \"deps_to_verify\"")
 
   fully_qualified_deps = []
-  foreach(dep, invoker.deps) {
+  foreach(dep, invoker.deps_to_verify) {
     fully_qualified_deps += [ get_label_info(dep, "label_no_toolchain") ]
   }
 
   action(target_name) {
     forward_variables_from(invoker, "*")
 
+    deps = []
     inputs = []
     foreach(sdk, ALLOWED_SDKS) {
       sdk_manifest_copy = sdk + "_copy($target_toolchain)"
@@ -72,7 +79,7 @@ template("verify_deps_in_sdk") {
       rebase_path(outputs[0], root_build_dir),
       "--invoker_label",
       invoker_label,
-      "--deps",
+      "--deps_to_verify",
     ]
     args += fully_qualified_deps
     if (defined(allowed_deps)) {

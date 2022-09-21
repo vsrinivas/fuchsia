@@ -32,7 +32,7 @@ template("ctf_rustc_library") {
 
   if (defined(verify_target)) {
     ctf_element(verify_target) {
-      deps = invoker_deps
+      deps_to_verify = invoker_deps
       invoker_label = get_label_info(invoker.target_name, "label_no_toolchain")
     }
   }
