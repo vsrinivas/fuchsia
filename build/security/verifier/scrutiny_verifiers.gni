@@ -100,6 +100,8 @@ template("scrutiny_verifiers") {
          "route_sources_config is required for scrutiny_verifiers()")
   assert(defined(invoker.static_pkgs_goldens),
          "static_pkgs_goldens is required for scrutiny_verifiers()")
+  assert(defined(invoker.structured_config_policy),
+         "structured_config_policy is required for scrutiny_verifiers()")
   assert(
       defined(invoker.verify_component_resolvers_allowlist),
       "verify_component_resolvers_allowlist is required for scrutiny_verifiers()")
@@ -127,6 +129,19 @@ template("scrutiny_verifiers") {
   }
 
   verifiers = []
+
+  verify_structured_config_policy_by_build_type(
+      "${invoker.assembly_image_name}_verify_structured_config_policy_exists") {
+    product_assembly_config_file = invoker.product_assembly_config_file
+    structured_config_policy = invoker.structured_config_policy
+    deps = []
+    if (defined(invoker.product_assembly_config_dep)) {
+      deps += [ invoker.product_assembly_config_dep ]
+    }
+  }
+  verifiers += [
+    ":${invoker.assembly_image_name}_verify_structured_config_policy_exists",
+  ]
 
   # TODO(fxbug.dev/102968): There is a need for scrutiny verifiers that process
   # structured configuration files. Until such verifiers are ready, structured
@@ -258,9 +273,7 @@ template("scrutiny_verifiers") {
       verifiers += [ ":${invoker.assembly_image_name}_verify_static_pkgs" ]
     }
 
-    # TODO(https://fxrev.dev/713604) make this argument required
-    if (defined(invoker.structured_config_policy) &&
-        invoker.structured_config_policy != "") {
+    if (invoker.structured_config_policy != "") {
       verify_assembled_structured_config(
           "${invoker.assembly_image_name}_verify_assembled_structured_config") {
         testonly = invoker.testonly

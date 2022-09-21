@@ -126,7 +126,8 @@ declare_args() {
   recovery_static_pkgs_goldens = []
 
   # An optional file path to the structured configuration policy to be used on the
-  # assembled fuchsia system. Defaults to no enforcement.
+  # assembled fuchsia system. Defaults to no enforcement. Policy must be provided
+  # for any product which is not an `eng` build type.
   fuchsia_structured_config_policy = ""
 
   # An optional file path to the structured configuration policy to be used on the

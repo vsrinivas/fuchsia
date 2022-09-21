@@ -142,3 +142,55 @@ template("verify_structured_config_by_build_type") {
     }
   }
 }
+
+# Verify that non-eng build types have a structured configuration policy specified.
+#
+# Parameters
+#
+#
+#   product_assembly_config_file (required)
+#     [path] The path to the product assembly configuration tha designates the
+#     build type.
+#
+#   structured_config_policy (required)
+#     [path] The path to the structured config policy for the product. Allowed to be
+#     empty for eng build types.
+#
+#   deps (optional)
+#     Usual GN meaning.
+template("verify_structured_config_policy_by_build_type") {
+  assert(
+      defined(invoker.product_assembly_config_file),
+      "verify_structured_config_policy_by_build_type() must specify product_assembly_config_file")
+  assert(
+      defined(invoker.structured_config_policy),
+      "verify_structured_config_policy_by_build_type() must specify structured_config_policy")
+
+  action(target_name) {
+    _output = "${target_out_dir}/${target_name}.verified"
+
+    script = "//src/security/policy/build/verify_sc_policy_by_build_type.py"
+    args = [
+      "--product-config",
+      rebase_path(invoker.product_assembly_config_file, root_out_dir),
+      "--output",
+      rebase_path(_output, root_out_dir),
+    ]
+
+    inputs = [ invoker.product_assembly_config_file ]
+    if (invoker.structured_config_policy != "") {
+      args += [
+        "--structured-config-policy",
+        rebase_path(invoker.structured_config_policy, root_out_dir),
+      ]
+      inputs += [ invoker.structured_config_policy ]
+    }
+
+    outputs = [ _output ]
+
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+  }
+}
