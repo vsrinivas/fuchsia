@@ -246,8 +246,10 @@ int main(int argc, char** argv) {
   std::optional<driver_manager::DriverDevelopmentService> driver_development_service;
 
   // Launch devfs_exporter.
-  auto devfs_exporter = driver_manager::DevfsExporter(
-      coordinator.devfs(), coordinator.root_device()->devnode(), loop.dispatcher());
+  std::optional<Devnode>& root_node = coordinator.root_device()->self;
+  ZX_ASSERT(root_node.has_value());
+  driver_manager::DevfsExporter devfs_exporter(coordinator.devfs(), &root_node.value(),
+                                               loop.dispatcher());
   devfs_exporter.PublishExporter(outgoing);
 
   // Launch DriverRunner for DFv2 drivers.

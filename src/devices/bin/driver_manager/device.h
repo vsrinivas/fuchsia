@@ -27,6 +27,7 @@
 #include <fbl/vector.h>
 
 #include "src/devices/bin/driver_manager/composite_device.h"
+#include "src/devices/bin/driver_manager/devfs.h"
 #include "src/devices/bin/driver_manager/inspect.h"
 #include "src/devices/bin/driver_manager/metadata.h"
 #include "src/devices/bin/driver_manager/v2/node.h"
@@ -512,10 +513,9 @@ class Device final
   zx::duration backoff = zx::msec(250);
   // The number of retries left for the driver.
   uint32_t retries = 4;
-  Devnode* self = nullptr;
-  Devnode* link = nullptr;
 
-  Devnode* devnode() { return self; }
+  std::optional<Devnode> self;
+  std::optional<Devnode> link;
 
   const fbl::String& link_name() const { return link_name_; }
   void set_link_name(fbl::String link_name) { link_name_ = std::move(link_name); }
@@ -591,6 +591,8 @@ class Device final
 
   // Returns true if this device already has a driver bound.
   bool IsAlreadyBound() const;
+
+  void UnpublishDevfs();
 
  private:
   // dfv2::NodeManager

@@ -260,7 +260,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       root_device_(fbl::MakeRefCounted<Device>(this, "root", fbl::String(), "root,", nullptr,
                                                ZX_PROTOCOL_ROOT, zx::vmo(), zx::channel(),
                                                fidl::ClientEnd<fio::Directory>())),
-      devfs_(root_device_),
+      devfs_(root_device_.get()),
       system_state_manager_(this),
       package_resolver_(config_.boot_args),
       driver_loader_(config_.boot_args, std::move(config_.driver_index), &base_resolver_,
@@ -285,7 +285,13 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
       std::make_unique<FirmwareLoader>(this, firmware_dispatcher, config_.path_prefix);
 }
 
-Coordinator::~Coordinator() {}
+Coordinator::~Coordinator() {
+  // Device::~Device needs to call into Devfs to complete its cleanup; we must
+  // do this ahead of the normal destructor order to avoid reaching into devfs_
+  // after it has been dropped.
+  root_device_ = nullptr;
+  sys_device_ = nullptr;
+}
 
 void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
   InitCoreDevices(sys_device_driver);
@@ -311,7 +317,7 @@ void Coordinator::LoadV1Drivers(std::string_view sys_device_driver) {
     bind_driver_manager_->BindAllDevicesDriverIndex(config);
   });
 
-  devfs_.publish(root_device_, sys_device_);
+  devfs_.publish(*root_device_, *sys_device_);
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "V1 drivers loaded and published");
@@ -555,7 +561,7 @@ zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
   }
   if (dev->flags & DEV_CTX_INVISIBLE) {
     dev->flags &= ~DEV_CTX_INVISIBLE;
-    devfs_.advertise(dev);
+    devfs_.advertise(*dev);
     zx_status_t r = dev->SignalReadyForBind();
     if (r != ZX_OK) {
       return r;
@@ -990,16 +996,19 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
   std::vector<fbl::RefPtr<Device>> device_list;
   if (request->device_filter.empty()) {
     for (auto& device : device_manager_->devices()) {
-      device_list.push_back(fbl::RefPtr(&device));
+      device_list.emplace_back(&device);
     }
   } else {
+    std::optional<Devnode>& root_node_opt = root_device_->self;
+    ZX_ASSERT(root_node_opt.has_value());
+    Devnode& root_node = root_node_opt.value();
     for (const auto& device_path : request->device_filter) {
-      zx::status dn = root_device_->devnode()->walk(device_path.get());
+      zx::status dn = root_node.walk(device_path.get());
       if (dn.is_error()) {
         request->iterator.Close(dn.status_value());
         return;
       }
-      device_list.push_back(fbl::RefPtr(dn.value()->device));
+      device_list.emplace_back(dn.value()->device());
     }
   }
 

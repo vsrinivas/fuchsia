@@ -94,7 +94,7 @@ zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev,
   // Notify observers that this device is available again
   // Needed for non-auto-binding drivers like GPT against block, etc
   if (!new_device && autobind) {
-    coordinator_->devfs().advertise_modified(dev);
+    coordinator_->devfs().advertise_modified(*dev);
   }
 
   return ZX_OK;

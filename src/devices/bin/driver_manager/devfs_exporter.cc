@@ -49,7 +49,9 @@ zx_status_t ExportWatcher::MakeVisible() {
       return ZX_ERR_BAD_STATE;
     }
     node->service_options &= ~fuchsia_device_fs::wire::ExportOptions::kInvisible;
-    node->parent->notify(node->name, fuchsia_io::wire::WatchEvent::kAdded);
+    Devnode* parent = node->parent();
+    ZX_ASSERT(parent != nullptr);
+    parent->notify(node->name(), fuchsia_io::wire::WatchEvent::kAdded);
   }
 
   return ZX_OK;

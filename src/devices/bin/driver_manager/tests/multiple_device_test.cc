@@ -484,20 +484,23 @@ TEST_F(MultipleDeviceTestCase, PowerManagerRegistration) {
 }
 
 TEST_F(MultipleDeviceTestCase, DevfsWatcherCleanup) {
-  Devnode* root_node = coordinator().root_device()->self;
-  ASSERT_FALSE(root_node->has_watchers());
+  std::optional<Devnode>& root_node_opt = coordinator().root_device()->self;
+  ASSERT_TRUE(root_node_opt.has_value());
+  Devnode& root_node = root_node_opt.value();
+
+  ASSERT_FALSE(root_node.has_watchers());
 
   // Create the watcher and make sure it's been registered.
   zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>();
   ASSERT_OK(endpoints.status_value());
-  ASSERT_OK(root_node->watch(coordinator_loop()->dispatcher(), std::move(endpoints->server),
-                             fuchsia_io::wire::WatchMask::kAdded));
-  ASSERT_TRUE(root_node->has_watchers());
+  ASSERT_OK(root_node.watch(coordinator_loop()->dispatcher(), std::move(endpoints->server),
+                            fuchsia_io::wire::WatchMask::kAdded));
+  ASSERT_TRUE(root_node.has_watchers());
 
   // Free our channel and make sure it gets de-registered.
   endpoints->client.reset();
   coordinator_loop()->RunUntilIdle();
-  ASSERT_FALSE(root_node->has_watchers());
+  ASSERT_FALSE(root_node.has_watchers());
 }
 
 // This functor accepts a |fidl::WireUnownedResult<FidlMethod>&| and checks that

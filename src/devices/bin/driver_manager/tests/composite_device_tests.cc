@@ -901,10 +901,11 @@ TEST_F(CompositeTestCase, Topology) {
                                                  std::size(device_indexes), fragment_device_indexes,
                                                  &composite));
 
-  Devnode* dn = coordinator().root_device()->self;
-  zx::status composite_dev_result = dn->walk("composite-dev");
+  std::optional<Devnode>& dn = coordinator().root_device()->self;
+  ASSERT_TRUE(dn.has_value());
+  zx::status composite_dev_result = dn.value().walk("composite-dev");
   ASSERT_OK(composite_dev_result.status_value());
-  fbl::RefPtr<Device> composite_dev(composite_dev_result.value()->device);
+  fbl::RefPtr<Device> composite_dev(composite_dev_result.value()->device());
 
   char path_buf[PATH_MAX];
   ASSERT_OK(coordinator().GetTopologicalPath(composite_dev, path_buf, sizeof(path_buf)));

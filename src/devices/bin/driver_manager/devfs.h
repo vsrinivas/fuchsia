@@ -21,7 +21,8 @@ class DcIostate;
 struct Watcher;
 
 struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
-  Devnode(Devfs& devfs, const fbl::RefPtr<Device>& dev, std::string_view name);
+  // `parent` and `device` must outlive `this`.
+  Devnode(Devfs& devfs, Devnode* parent, Device* device, fbl::String name);
   ~Devnode();
 
   Devnode(const Devnode&) = delete;
@@ -35,19 +36,16 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
                     fidl::ServerEnd<fuchsia_io::DirectoryWatcher> server_end,
                     fuchsia_io::wire::WatchMask mask);
 
-  fbl::String name;
-  const uint64_t ino = 0;
-
-  // nullptr if we are a pure directory node,
-  // otherwise the device we are referencing
-  Device* device;
-
   zx::status<Devnode*> walk(std::string_view path);
 
   void notify(std::string_view name, fuchsia_io::wire::WatchEvent op);
 
   // This method is exposed for testing. It returns true if the devfs has active watchers.
   bool has_watchers() const;
+
+  Device* device() const;
+  Devnode* parent() const;
+  std::string_view name() const;
 
   // Set if this devnode is attached to a remote service.
   fidl::ClientEnd<fuchsia_io::Directory> service_dir;
@@ -59,45 +57,62 @@ struct Devnode : public fbl::DoublyLinkedListable<Devnode*> {
   // list of our child devnodes
   fbl::DoublyLinkedList<Devnode*> children;
 
-  // Pointer to our parent, for removing ourselves from its list of
-  // children. Our parent must outlive us.
-  Devnode* parent = nullptr;
-
   // list of attached iostates
   fbl::DoublyLinkedList<DcIostate*> iostate;
-
-  // used to assign unique small device numbers
-  // for class device links
-  uint32_t seqcount = 0;
 
  private:
   friend class DcIostate;
   friend class Devfs;
 
-  bool is_special_ino(uint64_t ino) const;
+  // A devnode is a directory (from stat's perspective) if it has children, or
+  // if it doesn't have a device, or if its device has no rpc handle.
+  bool is_dir() const;
   bool is_invisible() const;
+
+  // Local devnodes are ones that we should not hand off OPEN RPCs to the
+  // underlying driver_host.
+  bool is_local() const;
+  bool is_special_ino(uint64_t ino) const;
+
+  Devnode* lookup(std::string_view name);
 
   void open(async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_io::Node> ipc,
             std::string_view path, fuchsia_io::OpenFlags flags);
 
   zx_status_t readdir(uint64_t* ino_inout, void* data, size_t len);
 
-  const Devfs& devfs_;
+  zx_status_t seq_name(char* data, size_t size);
+
+  Devfs& devfs_;
+
+  // Pointer to our parent, for removing ourselves from its list of
+  // children. Our parent must outlive us.
+  Devnode* parent_;
+
+  // nullptr if we are a pure directory node,
+  // otherwise the device we are referencing
+  Device* device_;
+
+  const fbl::String name_;
+  const uint64_t ino_;
+
+  // used to assign unique small device numbers
+  // for class device links
+  uint32_t seqcount_ = 0;
 };
 
 zx_status_t devfs_connect(const Device* dev, fidl::ServerEnd<fuchsia_io::Node> client_remote);
 
 class Devfs {
  public:
-  // Initializes a devfs directory from `device`.
-  explicit Devfs(const fbl::RefPtr<Device>& device);
+  // `device` must outlive `this`.
+  explicit Devfs(Device* device);
 
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect(async_dispatcher_t* dispatcher);
 
-  zx_status_t publish(const fbl::RefPtr<Device>& parent, const fbl::RefPtr<Device>& dev);
-  void unpublish(Device* dev);
-  void advertise(const fbl::RefPtr<Device>& dev);
-  void advertise_modified(const fbl::RefPtr<Device>& dev);
+  zx_status_t publish(Device& parent, Device& dev);
+  void advertise(Device& device);
+  void advertise_modified(Device& dev);
   void connect_diagnostics(fidl::ClientEnd<fuchsia_io::Directory> diagnostics_channel);
 
   // Exports `service_path` from `service_dir` to `devfs_path`, under `dn`. If
@@ -112,27 +127,25 @@ class Devfs {
                          std::vector<std::unique_ptr<Devnode>>& out);
 
   // For testing only.
-  Devnode* proto_node(uint32_t protocol_id) const;
+  Devnode* proto_node(uint32_t protocol_id);
 
  private:
   friend struct Devnode;
-
-  std::unique_ptr<Devnode> mkdir(Devnode* parent, std::string_view name);
 
   uint64_t next_ino = 1;
 
   Devnode* root_devnode_;
 
-  std::unique_ptr<Devnode> class_devnode;
+  Devnode class_devnode;
 
   // Dummy node to represent dev/diagnostics directory.
-  std::unique_ptr<Devnode> diagnostics_devnode;
+  Devnode diagnostics_devnode;
 
   // Dummy node to represent dev/null directory.
-  std::unique_ptr<Devnode> null_devnode;
+  Devnode null_devnode;
 
   // Dummy node to represent dev/zero directory.
-  std::unique_ptr<Devnode> zero_devnode;
+  Devnode zero_devnode;
 
   // Connection to diagnostics VFS server.
   std::optional<fidl::ClientEnd<fuchsia_io::Directory>> diagnostics_channel;
@@ -148,7 +161,7 @@ class Devfs {
 #include <lib/ddk/protodefs.h>
   };
 
-  std::unordered_map<uint32_t, std::unique_ptr<Devnode>> proto_info_nodes;
+  std::unordered_map<uint32_t, Devnode> proto_info_nodes;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVFS_H_

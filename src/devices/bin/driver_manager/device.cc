@@ -52,13 +52,18 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
   set_state(Device::State::kActive);  // set default state
 }
 
+void Device::UnpublishDevfs() {
+  self.reset();
+  link.reset();
+}
+
 Device::~Device() {
   // Ideally we'd assert here that immortal devices are never destroyed, but
   // they're destroyed when the Coordinator object is cleaned up in tests.
   // We can probably get rid of the IMMORTAL flag, since if the Coordinator is
   // holding a reference we shouldn't be able to hit that check, in which case
   // the flag is only used to modify the proxy library loading behavior.
-  coordinator->devfs().unpublish(this);
+  UnpublishDevfs();
 
   // If we destruct early enough, we may have created the core devices and devfs might not exist
   // yet.
@@ -165,7 +170,7 @@ zx_status_t Device::Create(
     dev->flags |= DEV_CTX_INVISIBLE;
   }
 
-  if ((status = coordinator->devfs().publish(real_parent, dev)) < 0) {
+  if ((status = coordinator->devfs().publish(*real_parent, *dev)) != ZX_OK) {
     return status;
   }
 
@@ -229,7 +234,7 @@ zx_status_t Device::CreateComposite(
 
   // TODO(teisenbe): Figure out how to manifest in devfs?  For now just hang it off of
   // the root device?
-  if ((status = coordinator->devfs().publish(coordinator->root_device(), dev)) < 0) {
+  if ((status = coordinator->devfs().publish(*coordinator->root_device(), *dev)) < 0) {
     return status;
   }
 

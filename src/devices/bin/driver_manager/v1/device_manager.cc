@@ -233,7 +233,7 @@ zx_status_t DeviceManager::RemoveDevice(const fbl::RefPtr<Device>& dev, bool for
   dev->set_state(Device::State::kDead);
 
   // remove from devfs, preventing further OPEN attempts
-  coordinator_->devfs().unpublish(dev.get());
+  dev->UnpublishDevfs();
 
   // Mark any suspend that's in-flight as completed, since if the device is
   // removed it should be in its lowest state.
