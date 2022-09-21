@@ -78,6 +78,7 @@ class AcpiPciroot : public PcirootBase {
       : PcirootBase(root_host, parent, name),
         context_(std::move(ctx)),
         acpi_bdfs_(std::move(acpi_bdfs)) {}
+  ~AcpiPciroot() override = default;
 };
 
 namespace acpi {

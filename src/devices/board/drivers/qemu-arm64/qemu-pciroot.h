@@ -21,6 +21,7 @@ class QemuArm64Pciroot : public PcirootBase {
                             zx_device_t* parent, const char* name);
   virtual zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) final;
   virtual zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* info) final;
+  ~QemuArm64Pciroot() override = default;
 
  private:
   Context context_;

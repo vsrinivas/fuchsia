@@ -17,6 +17,7 @@
 #include <memory>
 
 #include <acpica/acpi.h>
+#include <ddktl/device.h>
 
 #include "src/devices/board/lib/acpi/device.h"
 #include "src/devices/board/lib/acpi/pci-internal.h"
@@ -77,5 +78,6 @@ zx_status_t AcpiPciroot::Create(PciRootHost* root_host, AcpiPciroot::Context ctx
                                 zx_device_t* parent, const char* name,
                                 std::vector<pci_bdf_t> acpi_bdfs) {
   auto pciroot = new AcpiPciroot(root_host, std::move(ctx), parent, name, std::move(acpi_bdfs));
-  return pciroot->DdkAdd(name);
+  return pciroot->DdkAdd(
+      ddk::DeviceAddArgs(name).set_inspect_vmo(pciroot->inspect().DuplicateVmo()));
 }

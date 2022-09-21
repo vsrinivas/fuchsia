@@ -15,18 +15,21 @@
 #include <zxtest/zxtest.h>
 
 class PciRootHostTests : public zxtest::Test {
- protected:
-  void SetUp() final {
-    ASSERT_OK(fake_root_resource_create(fake_root_.reset_and_get_address()));
-    root_host_ = std::make_unique<PciRootHost>(zx::unowned_resource(fake_root_.borrow()),
-                                               PCI_ADDRESS_SPACE_IO);
+ public:
+  PciRootHostTests() {
+    ASSERT_OK(fake_root_resource_create(fake_root_resource_.reset_and_get_address()));
   }
 
-  zx::resource& fake_root() { return fake_root_; }
+ protected:
+  void SetUp() final {
+    root_host_ = std::make_unique<PciRootHost>(fake_root_resource_.borrow(), PCI_ADDRESS_SPACE_IO);
+  }
+
+  zx::resource& fake_root_resource() { return fake_root_resource_; }
   PciRootHost& root_host() { return *root_host_; }
 
  private:
-  zx::resource fake_root_;
+  zx::resource fake_root_resource_;
   std::unique_ptr<PciRootHost> root_host_;
 };
 
@@ -57,7 +60,7 @@ TEST_F(PciRootHostTests, ResourceAllocationLifecycle) {
 }
 
 TEST_F(PciRootHostTests, Mcfg) {
-  McfgAllocation in_mcfg = {
+  const McfgAllocation in_mcfg = {
       .address = 0x100000000,
       .pci_segment = 1,
       .start_bus_number = 0,
