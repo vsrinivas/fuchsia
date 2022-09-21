@@ -1421,15 +1421,9 @@ void Thread::SecondaryCpuInitEarly() {
 
   percpu::InitializeSecondaryFinish();
 
-  // Save |this|'s stack because |thread_construct_first| will zero out the whole struct.
-  KernelStack stack = ktl::move(stack_);
-
   char name[16];
   snprintf(name, sizeof(name), "cpu_init %u", arch_curr_cpu_num());
   thread_construct_first(this, name);
-
-  // Restore the stack.
-  stack_ = ktl::move(stack);
 }
 
 /**

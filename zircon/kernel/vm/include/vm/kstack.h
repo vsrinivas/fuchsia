@@ -23,11 +23,11 @@ class KernelStack {
   // Destruction will automatically call Teardown();
   ~KernelStack();
 
-  // Disallow copy; allow move.
+  // Disallow copy; disallow move.
   KernelStack(KernelStack&) = delete;
   KernelStack& operator=(KernelStack&) = delete;
-  KernelStack(KernelStack&&) = default;
-  KernelStack& operator=(KernelStack&&) = default;
+  KernelStack(KernelStack&&) = delete;
+  KernelStack& operator=(KernelStack&&) = delete;
 
   // Initializes a kernel stack with appropriate overrun padding.
   zx_status_t Init();
