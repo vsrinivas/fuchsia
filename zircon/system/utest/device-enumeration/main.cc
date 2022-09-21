@@ -634,7 +634,7 @@ TEST_F(DeviceEnumerationTest, NucTest) {
       // TODO(fxbug.dev/84037): Temporarily removed.
       // "pci-00:1f.3-fidl/intel-hda-000",
       // "pci-00:1f.3-fidl/intel-hda-controller",
-      "pci-00:1f.6/e1000",
+      "pci-00:1f.6-fidl/e1000",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

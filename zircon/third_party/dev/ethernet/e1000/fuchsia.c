@@ -243,7 +243,7 @@ static void e1000_release(void* ctx) {
   DEBUGOUT("entry");
   struct adapter* adapter = ctx;
   e1000_reset_hw(&adapter->hw);
-  pci_set_bus_mastering(&adapter->osdep.pci, false);
+  e1000_pci_set_bus_mastering(adapter->osdep.pci, false);
 
   io_buffer_release(&adapter->buffer);
   mmio_buffer_release(&adapter->bar0_mmio);
@@ -251,6 +251,7 @@ static void e1000_release(void* ctx) {
 
   zx_handle_close(adapter->btih);
   zx_handle_close(adapter->irqh);
+  e1000_pci_free(adapter->osdep.pci);
   free(adapter);
 }
 
@@ -419,7 +420,7 @@ static int e1000_irq_thread(void* arg) {
       }
     }
     if (adapter->irq_mode == PCI_INTERRUPT_MODE_LEGACY) {
-      pci_ack_interrupt(&adapter->osdep.pci);
+      e1000_pci_ack_interrupt(adapter->osdep.pci);
     }
     mtx_unlock(&adapter->lock);
   }
@@ -529,14 +530,13 @@ static ethernet_impl_protocol_ops_t e1000_ethernet_impl_ops = {.query = e1000_qu
                                                                .set_param = e1000_set_param};
 
 static void e1000_identify_hardware(struct adapter* adapter) {
-  pci_protocol_t* pci = &adapter->osdep.pci;
-
+  struct e1000_pci* pci = adapter->osdep.pci;
   /* Make sure our PCI config space has the necessary stuff set */
-  pci_read_config16(pci, PCI_CONFIG_COMMAND, &adapter->hw.bus.pci_cmd_word);
+  e1000_pci_read_config16(pci, PCI_CONFIG_COMMAND, &adapter->hw.bus.pci_cmd_word);
 
   /* Save off the information about this board */
   pci_device_info_t pci_info;
-  zx_status_t status = pci_get_device_info(pci, &pci_info);
+  zx_status_t status = e1000_pci_get_device_info(pci, &pci_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "pci_get_device_info failure");
     return;
@@ -545,8 +545,8 @@ static void e1000_identify_hardware(struct adapter* adapter) {
   adapter->hw.vendor_id = pci_info.vendor_id;
   adapter->hw.device_id = pci_info.device_id;
   adapter->hw.revision_id = pci_info.revision_id;
-  pci_read_config16(pci, PCI_CONFIG_SUBSYSTEM_VENDOR_ID, &adapter->hw.subsystem_vendor_id);
-  pci_read_config16(pci, PCI_CONFIG_SUBSYSTEM_ID, &adapter->hw.subsystem_device_id);
+  e1000_pci_read_config16(pci, PCI_CONFIG_SUBSYSTEM_VENDOR_ID, &adapter->hw.subsystem_vendor_id);
+  e1000_pci_read_config16(pci, PCI_CONFIG_SUBSYSTEM_ID, &adapter->hw.subsystem_device_id);
 
   /* Do Shared Code Init and Setup */
   if (e1000_set_mac_type(&adapter->hw)) {
@@ -556,10 +556,10 @@ static void e1000_identify_hardware(struct adapter* adapter) {
 }
 
 static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
-  pci_protocol_t* pci = &adapter->osdep.pci;
+  struct e1000_pci* pci = adapter->osdep.pci;
 
   zx_status_t status =
-      pci_map_bar_buffer(pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &adapter->bar0_mmio);
+      e1000_pci_map_bar_buffer(pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &adapter->bar0_mmio);
   if (status != ZX_OK) {
     zxlogf(ERROR, "pci_map_bar cannot map io %d", status);
     return status;
@@ -575,7 +575,7 @@ static zx_status_t e1000_allocate_pci_resources(struct adapter* adapter) {
     pci_bar_t bar = {};
     bool found_io_bar = false;
     for (uint32_t i = 1; i < PCI_MAX_BAR_REGS; i++) {
-      if ((status = pci_get_bar(pci, i, &bar)) == ZX_OK && bar.type == PCI_BAR_TYPE_IO) {
+      if ((status = e1000_pci_get_bar(pci, i, &bar)) == ZX_OK && bar.type == PCI_BAR_TYPE_IO) {
         adapter->osdep.iobase = bar.result.io.address;
         adapter->hw.io_base = 0;
         found_io_bar = true;
@@ -919,34 +919,33 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
   mtx_init(&adapter->send_lock, mtx_plain);
 
   zx_status_t status = ZX_OK;
-  if ((status = device_get_fragment_protocol(dev, "pci", ZX_PROTOCOL_PCI, &adapter->osdep.pci)) !=
-      ZX_OK) {
+  if ((status = e1000_pci_connect_fragment_protocol(dev, "pci", &adapter->osdep.pci)) != ZX_OK) {
     zxlogf(ERROR, "no pci protocol (%d)", status);
     goto fail;
   }
 
-  pci_protocol_t* pci = &adapter->osdep.pci;
+  struct e1000_pci* pci = adapter->osdep.pci;
 
-  status = pci_set_bus_mastering(pci, true);
+  status = e1000_pci_set_bus_mastering(pci, true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "cannot enable bus master %d", status);
     goto fail;
   }
 
-  status = pci_get_bti(pci, 0, &adapter->btih);
+  status = e1000_pci_get_bti(pci, 0, &adapter->btih);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to get BTI");
     goto fail;
   }
 
   // Request 1 interrupt of any mode.
-  status = pci_configure_interrupt_mode(pci, 1, &adapter->irq_mode);
+  status = e1000_pci_configure_interrupt_mode(pci, 1, &adapter->irq_mode);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to configure irqs");
     goto fail;
   }
 
-  status = pci_map_interrupt(pci, 0, &adapter->irqh);
+  status = e1000_pci_map_interrupt(pci, 0, &adapter->irqh);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to map irq");
     goto fail;
@@ -978,8 +977,8 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
   if ((hw->mac.type == e1000_ich8lan) || (hw->mac.type == e1000_ich9lan) ||
       (hw->mac.type == e1000_ich10lan) || (hw->mac.type == e1000_pchlan) ||
       (hw->mac.type == e1000_pch2lan) || (hw->mac.type == e1000_pch_lpt)) {
-    status = pci_map_bar_buffer(pci, EM_BAR_TYPE_FLASH / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                &adapter->flash_mmio);
+    status = e1000_pci_map_bar_buffer(pci, EM_BAR_TYPE_FLASH / 4, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                      &adapter->flash_mmio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Mapping of Flash failed");
       goto fail;
@@ -1124,8 +1123,8 @@ fail:
   if (adapter->btih) {
     zx_handle_close(adapter->btih);
   }
-  if (adapter->osdep.pci.ops) {
-    pci_set_bus_mastering(&adapter->osdep.pci, false);
+  if (e1000_pci_is_valid(adapter->osdep.pci)) {
+    e1000_pci_set_bus_mastering(adapter->osdep.pci, false);
   }
   zx_handle_close(adapter->irqh);
   mmio_buffer_release(&adapter->bar0_mmio);
@@ -1142,4 +1141,3 @@ static zx_driver_ops_t e1000_driver_ops = {
 
 // clang-format off
 ZIRCON_DRIVER(e1000, e1000_driver_ops, "zircon", "0.1");
-

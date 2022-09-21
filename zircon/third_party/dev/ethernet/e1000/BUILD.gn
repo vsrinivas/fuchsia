@@ -41,7 +41,7 @@ fuchsia_driver("e1000-driver") {
     "e1000_manage.c",
     "e1000_mbx.c",
     "e1000_nvm.c",
-    "e1000_osdep.c",
+    "e1000_osdep.cc",
     "e1000_phy.c",
     "e1000_vf.c",
     "fuchsia.c",

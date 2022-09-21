@@ -6,7 +6,7 @@ using fuchsia.driver.framework;
 using fuchsia.pci;
 using fuchsia.intel.e1000;
 
-fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_FIDL_PROTOCOL == fuchsia.pci.BIND_FIDL_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
 accept fuchsia.BIND_PCI_DID {
   fuchsia.intel.e1000.BIND_PCI_DID.E1000_82542,

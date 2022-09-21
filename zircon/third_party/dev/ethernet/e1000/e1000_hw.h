@@ -1044,11 +1044,20 @@ struct e1000_hw {
 #include "e1000_i210.h"
 
 /* These functions must be implemented by drivers */
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  // defined(__cplusplus)
+
 void e1000_pci_clear_mwi(struct e1000_hw *hw);
 void e1000_pci_set_mwi(struct e1000_hw *hw);
 s32  e1000_read_pcie_cap_reg(struct e1000_hw *hw, u32 reg, u16 *value);
 s32  e1000_write_pcie_cap_reg(struct e1000_hw *hw, u32 reg, u16 *value);
 void e1000_read_pci_cfg(struct e1000_hw *hw, u32 reg, u16 *value);
 void e1000_write_pci_cfg(struct e1000_hw *hw, u32 reg, u16 *value);
+
+#if defined(__cplusplus)
+}  // extern "C"
+#endif  // defined(__cplusplus)
 
 #endif

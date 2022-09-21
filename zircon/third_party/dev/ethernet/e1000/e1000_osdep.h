@@ -94,14 +94,47 @@ typedef int8_t s8;
 
 #define ASSERT_CTX_LOCK_HELD(hw)
 
+// An opaque struct that contains a C++ PCI client.
+struct e1000_pci;
+
+#if defined(__cplusplus)
+extern "C" {
+#endif  // defined(__cplusplus)
+
+// A set of C wrappers around the C++ PCI methods.
+zx_status_t e1000_pci_set_bus_mastering(const struct e1000_pci* pci, bool enabled);
+zx_status_t e1000_pci_ack_interrupt(const struct e1000_pci* pci);
+zx_status_t e1000_pci_read_config16(const struct e1000_pci* pci, uint16_t offset,
+                                    uint16_t* out_value);
+zx_status_t e1000_pci_get_device_info(const struct e1000_pci* pci, pci_device_info_t* out_info);
+zx_status_t e1000_pci_map_bar_buffer(const struct e1000_pci* pci, uint32_t bar_id,
+                                     uint32_t cache_policy, mmio_buffer_t* mmio);
+zx_status_t e1000_pci_get_bar(const struct e1000_pci* pci, uint32_t bar_id, pci_bar_t* out_result);
+zx_status_t e1000_pci_get_bti(const struct e1000_pci* pci, uint32_t index, zx_handle_t* out_bti);
+zx_status_t e1000_pci_configure_interrupt_mode(const struct e1000_pci* pci,
+                                               uint32_t requested_irq_count,
+                                               pci_interrupt_mode_t* out_mode);
+zx_status_t e1000_pci_map_interrupt(const struct e1000_pci* pci, uint32_t which_irq,
+                                    zx_handle_t* out_interrupt);
+
+zx_status_t e1000_pci_connect_fragment_protocol(struct zx_device* parent, const char* fragment_name,
+                                                struct e1000_pci** pci);
+void e1000_pci_free(struct e1000_pci* pci);
+
+bool e1000_pci_is_valid(const struct e1000_pci* pci);
+
+#if defined(__cplusplus)
+}  // extern "C"
+#endif  // defined(__cplusplus)
+
 struct e1000_osdep {
-  pci_protocol_t pci;
+  struct e1000_pci* pci;
   uintptr_t membase;
   uintptr_t iobase;
   uintptr_t flashbase;
 };
 
-#define hw2pci(hw) (&((struct e1000_osdep*)(hw)->back)->pci)
+#define hw2pci(hw) ((struct e1000_osdep*)(hw)->back)->pci
 #define hw2membase(hw) (((struct e1000_osdep*)(hw)->back)->membase)
 #define hw2iobase(hw) (((struct e1000_osdep*)(hw)->back)->iobase)
 #define hw2flashbase(hw) (((struct e1000_osdep*)(hw)->back)->flashbase)
