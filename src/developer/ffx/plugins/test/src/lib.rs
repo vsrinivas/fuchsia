@@ -187,6 +187,7 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             ),
         },
         accumulate_debug_data: false, // ffx never accumulates.
+        log_protocol: None,
     };
     let test_definitions =
         test_params_from_args(cmd, std::io::stdin, experiments.json_input.enabled)?;

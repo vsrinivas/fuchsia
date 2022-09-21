@@ -5,13 +5,14 @@
 use assert_matches::assert_matches;
 use diagnostics_data::Severity;
 use diagnostics_reader::{ArchiveReader, Inspect, Property};
-use fidl_fuchsia_test_manager::{LaunchError, RunBuilderMarker};
+use fidl_fuchsia_test_manager::{LaunchError, LogsIteratorOption, RunBuilderMarker};
 use regex::Regex;
 use run_test_suite_lib::{output, Outcome, RunTestSuiteError, TestParams};
 use std::convert::TryInto;
 use std::ops::Deref;
 use std::str::from_utf8;
 use std::sync::Arc;
+use test_case::test_case;
 use test_list::TestTag;
 use test_output_directory::{
     self as directory,
@@ -77,6 +78,7 @@ fn new_run_params() -> run_test_suite_lib::RunParams {
         stop_after_failures: None,
         experimental_parallel_execution: None,
         accumulate_debug_data: false,
+        log_protocol: None,
     }
 }
 
@@ -714,18 +716,26 @@ async fn launch_and_test_huge_test(
     );
 }
 
+#[test_case(LogsIteratorOption::BatchIterator ; "batch")]
+#[test_case(LogsIteratorOption::ArchiveIterator ; "archive")]
 #[fuchsia::test]
-async fn launch_and_test_logspam_test() {
+async fn launch_and_test_logspam_test(iterator_option: LogsIteratorOption) {
     let (reporter, _output, output_dir) = create_shell_and_dir_reporter();
-    let outcome = run_test_once(
-        reporter,
-        new_test_params(
+
+    let mut run_params = new_run_params();
+    run_params.log_protocol = Some(iterator_option);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        vec![new_test_params(
             "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logspam_test.cm",
-        ),
+        )],
+        run_params,
         None,
+        run_test_suite_lib::output::RunReporter::new(reporter),
+        futures::future::pending(),
     )
-    .await
-    .expect("Running test should not fail");
+    .await;
     assert_eq!(outcome, Outcome::Passed);
 
     directory::testing::assert_run_result(
@@ -1184,6 +1194,7 @@ async fn test_continue_on_timeout(
             stop_after_failures: None,
             experimental_parallel_execution: None,
             accumulate_debug_data: false,
+            log_protocol: None,
         },
         None,
         reporter,
@@ -1252,6 +1263,7 @@ async fn test_stop_after_n_failures(
                     stop_after_failures: Some(5u32.try_into().unwrap()),
                     experimental_parallel_execution: None,
                     accumulate_debug_data: false,
+                    log_protocol: None,
                 },
                 None, reporter, futures::future::pending(),
         )
@@ -1326,73 +1338,98 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/echo_test_realm.
     assert_eq!(outcome, Outcome::Passed);
 }
 
-#[fixture::fixture(run_with_reporter)]
+#[test_case("batch", LogsIteratorOption::BatchIterator ; "batch")]
+#[test_case("archive", LogsIteratorOption::ArchiveIterator ; "archive")]
 #[fuchsia::test]
-async fn test_logging_component(
-    reporter: TestMuxMuxReporter,
-    output: TestOutputView,
-    output_dir: tempfile::TempDir,
-) {
-    let mut test_params = new_test_params(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
-    );
-    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
-    let outcome =
-        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
+async fn test_logging_component(subcase: &'static str, iterator_option: LogsIteratorOption) {
+    run_with_reporter(
+        &format!("test_logging_component_{}", subcase), 
+        |reporter: TestMuxMuxReporter, output: TestOutputView, output_dir: tempfile::TempDir| async move {
+            let mut test_params = new_test_params(
+                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
+            );
+            test_params.timeout_seconds = std::num::NonZeroU32::new(600);
+            let mut run_params = new_run_params();
+            run_params.log_protocol = Some(iterator_option);
+            let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+                fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+                    .expect("connecting to RunBuilderProxy"),
+                vec![test_params],
+                run_params,
+                None,
+                run_test_suite_lib::output::RunReporter::new(reporter),
+                futures::future::pending(),
+            )
+            .await;
 
-    let expected_logs =
-        "[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: Logging initialized
+            let expected_logs =
+                "[TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: Logging initialized
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] DEBUG: my debug message
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] INFO: my info message
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message
 ";
 
-    let expected_output = format!("Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm'
+            let expected_output = format!("Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm'
 [RUNNING]	log_and_exit
 {}[PASSED]	log_and_exit
 
 1 out of 1 tests passed...
 fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm completed with result: PASSED
 ", expected_logs);
-    assert_output!(output.lock().as_slice(), expected_output.as_str());
-    assert_eq!(outcome, Outcome::Passed);
+            assert_output!(output.lock().as_slice(), expected_output.as_str());
+            assert_eq!(outcome, Outcome::Passed);
 
-    directory::testing::assert_run_result(
-        output_dir.path(),
-        &ExpectedTestRun::new(directory::Outcome::Passed).with_suite(
-            ExpectedSuite::new(
-                "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
-                directory::Outcome::Passed,
-            )
-            .with_tag(TestTag::new("internal", "true"))
-            .with_matching_artifact(
-                directory::ArtifactType::Syslog,
-                "syslog.txt".into(),
-                move |contents| {
-                    assert_output!(contents.as_bytes(), expected_logs);
-                },
-            )
-            .with_case(ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)),
-        ),
-    );
+            directory::testing::assert_run_result(
+                output_dir.path(),
+                &ExpectedTestRun::new(directory::Outcome::Passed).with_suite(
+                    ExpectedSuite::new(
+                        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
+                        directory::Outcome::Passed,
+                    )
+                    .with_tag(TestTag::new("internal", "true"))
+                    .with_matching_artifact(
+                        directory::ArtifactType::Syslog,
+                        "syslog.txt".into(),
+                        move |contents| {
+                            assert_output!(contents.as_bytes(), expected_logs);
+                        },
+                    )
+                    .with_case(ExpectedTestCase::new("log_and_exit", directory::Outcome::Passed)),
+                ),
+            );
+        }
+    ).await;
 }
 
-#[fixture::fixture(run_with_reporter)]
+#[test_case("batch", LogsIteratorOption::BatchIterator ; "batch")]
+#[test_case("archive", LogsIteratorOption::ArchiveIterator ; "archive")]
 #[fuchsia::test]
 async fn test_logging_component_min_severity(
-    reporter: TestMuxMuxReporter,
-    output: TestOutputView,
-    _: tempfile::TempDir,
+    subcase: &'static str,
+    iterator_option: LogsIteratorOption,
 ) {
-    let mut test_params = new_test_params(
-        "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
-    );
-    test_params.timeout_seconds = std::num::NonZeroU32::new(600);
-    let outcome = run_test_once(reporter, test_params, Some(Severity::Info))
-        .await
-        .expect("Running test should not fail");
+    run_with_reporter(
+        &format!("test_logging_component_{}", subcase), 
+        |reporter: TestMuxMuxReporter, output: TestOutputView, _output_dir: tempfile::TempDir| async move {
 
-    let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm'
+        let mut test_params = new_test_params(
+            "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm",
+        );
+        test_params.timeout_seconds = std::num::NonZeroU32::new(600);
+        let mut run_params = new_run_params();
+        run_params.log_protocol = Some(iterator_option);
+        let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+            fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+                .expect("connecting to RunBuilderProxy"),
+            vec![test_params],
+            run_params,
+            Some(Severity::Info),
+            run_test_suite_lib::output::RunReporter::new(reporter),
+            futures::future::pending(),
+        )
+        .await;
+
+        let expected_output = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm'
 [RUNNING]	log_and_exit
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] INFO: my info message\n\
 [TIMESTAMP][PID][TID][<root>][log_and_exit,logging_test] WARN: my warn message\n\
@@ -1401,8 +1438,9 @@ async fn test_logging_component_min_severity(
 1 out of 1 tests passed...
 fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/logging_test.cm completed with result: PASSED
 ";
-    assert_output!(output.lock().as_slice(), expected_output);
-    assert_eq!(outcome, Outcome::Passed);
+        assert_output!(output.lock().as_slice(), expected_output);
+        assert_eq!(outcome, Outcome::Passed);
+    }).await;
 }
 
 #[fixture::fixture(run_with_reporter)]
@@ -1474,30 +1512,46 @@ fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/stdout_ansi_test
     assert_eq!(outcome, Outcome::Passed);
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_logging_component_max_severity_info() {
-    test_max_severity(Severity::Info).await;
+#[test_case(LogsIteratorOption::BatchIterator ; "batch")]
+#[test_case(LogsIteratorOption::ArchiveIterator ; "archive")]
+#[fuchsia::test]
+async fn test_logging_component_max_severity_info(iterator_option: LogsIteratorOption) {
+    test_max_severity(Severity::Info, iterator_option).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_logging_component_max_severity_warn() {
-    test_max_severity(Severity::Warn).await;
+#[test_case(LogsIteratorOption::BatchIterator ; "batch")]
+#[test_case(LogsIteratorOption::ArchiveIterator ; "archive")]
+#[fuchsia::test]
+async fn test_logging_component_max_severity_warn(iterator_option: LogsIteratorOption) {
+    test_max_severity(Severity::Warn, iterator_option).await;
 }
 
-#[fuchsia_async::run_singlethreaded(test)]
-async fn test_logging_component_max_severity_error() {
-    test_max_severity(Severity::Error).await;
+#[test_case(LogsIteratorOption::BatchIterator ; "batch")]
+#[test_case(LogsIteratorOption::ArchiveIterator ; "archive")]
+#[fuchsia::test]
+async fn test_logging_component_max_severity_error(iterator_option: LogsIteratorOption) {
+    test_max_severity(Severity::Error, iterator_option).await;
 }
 
-async fn test_max_severity(max_severity: Severity) {
+async fn test_max_severity(max_severity: Severity, iterator_option: LogsIteratorOption) {
     let mut test_params = new_test_params(
         "fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm",
     );
     test_params.timeout_seconds = std::num::NonZeroU32::new(600);
     test_params.max_severity_logs = Some(max_severity);
     let (reporter, output) = create_shell_reporter();
-    let outcome =
-        run_test_once(reporter, test_params, None).await.expect("Running test should not fail");
+    let mut run_params = new_run_params();
+    run_params.log_protocol = Some(iterator_option);
+    let outcome = run_test_suite_lib::run_tests_and_get_outcome(
+        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+            .expect("connecting to RunBuilderProxy"),
+        vec![test_params],
+        run_params,
+        None,
+        run_test_suite_lib::output::RunReporter::new(reporter),
+        futures::future::pending(),
+    )
+    .await;
 
     let expected_output_prefix = "Running test 'fuchsia-pkg://fuchsia.com/run_test_suite_integration_tests#meta/error_logging_test.cm'
 [RUNNING]	log_and_exit

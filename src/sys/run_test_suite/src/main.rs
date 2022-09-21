@@ -142,6 +142,7 @@ async fn main() {
         },
         experimental_parallel_execution: None,
         accumulate_debug_data: true, // must be true to support coverage via scp
+        log_protocol: None,
     };
 
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(

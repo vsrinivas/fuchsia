@@ -525,7 +525,7 @@ async fn run_tests<'a, F: 'a + Future<Output = ()> + Unpin>(
             run_disabled_tests: Some(params.also_run_disabled_tests),
             timeout,
             case_filters_to_run: params.test_filters,
-            log_iterator: Some(diagnostics::get_type()),
+            log_iterator: Some(run_params.log_protocol.unwrap_or_else(diagnostics::get_type)),
             ..fidl_fuchsia_test_manager::RunOptions::EMPTY
         };
 
@@ -1559,6 +1559,7 @@ mod test {
                 stop_after_failures: None,
                 experimental_parallel_execution: None,
                 accumulate_debug_data: false,
+                log_protocol: None,
             },
             None,
             params.run_reporter,
@@ -1882,6 +1883,7 @@ mod test {
             stop_after_failures: None,
             experimental_parallel_execution: Some(max_parallel_suites),
             accumulate_debug_data: false,
+            log_protocol: None,
         };
 
         let request_parallel_fut = request_scheduling_options(&run_params, &builder_proxy);
@@ -1908,6 +1910,7 @@ mod test {
             stop_after_failures: None,
             experimental_parallel_execution: None,
             accumulate_debug_data: false,
+            log_protocol: None,
         };
 
         let request_parallel_fut = request_scheduling_options(&run_params, &builder_proxy);

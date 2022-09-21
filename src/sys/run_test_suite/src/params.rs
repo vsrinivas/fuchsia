@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {diagnostics_data::Severity, test_list::TestTag};
+use {diagnostics_data::Severity, fidl_fuchsia_test_manager as ftest_manager, test_list::TestTag};
 
 /// Parameters that specify how a single test suite should be executed.
 #[derive(Clone, Debug, PartialEq, Default)]
@@ -47,7 +47,13 @@ pub struct RunParams {
     /// Server will use default value if this is zero.
     pub experimental_parallel_execution: Option<u16>,
 
+    /// Whether or not to merge debug data from previous runs with new debug data collected
+    /// for this test run.
     pub accumulate_debug_data: bool,
+
+    /// If set, set the protocol used to retrieve logs. If not set, an appropriate default
+    /// will be chosen by the implementation.
+    pub log_protocol: Option<ftest_manager::LogsIteratorOption>,
 }
 
 /// Sets the behavior of the overall run if a suite terminates with a timeout.
