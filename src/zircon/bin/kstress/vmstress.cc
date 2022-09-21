@@ -975,7 +975,7 @@ class MultiVmoTestInstance : public TestInstance {
         memory_limit_pages_(mem_limit / zx_system_get_page_size()),
         // Scale our maximum threads to ensure that if all threads allocate a full size vmo (via
         // copy-on-write or otherwise) we wouldn't exceed our memory limit
-        max_threads_(memory_limit_pages_ / kMaxVmoPages) {}
+        max_threads_(std::min(memory_limit_pages_ / kMaxVmoPages, kMaxThreads)) {}
 
   zx_status_t Start() override {
     // If max threads was calculated smaller than low threads then that means we really don't have
@@ -1460,6 +1460,14 @@ class MultiVmoTestInstance : public TestInstance {
   // without worrying that they all commit and blow the memory limit.
   static constexpr uint64_t kMaxVmoPages = 128;
 
+  // While it might be possible for max_threads_ to be arbitrarily high and still not exhaust free
+  // memory, cap the number so that we don't end up spinning an arbitrarily large number of threads
+  // on a system with large amounts of memory. An exceedingly large number of threads can slow down
+  // the overall system and cause test timeouts in certain environments (like in CQ, where the
+  // ssh-keep-alive does not get a chance to get scheduled and the ssh connection to the target gets
+  // dropped). The parallelism offered by 300 threads should be sufficiently interesting.
+  static constexpr uint64_t kMaxThreads = 300;
+
   // This will be set to the total memory limit (in pages) that this test instance is constructed
   // with. We should not spend more than that.
   const uint64_t memory_limit_pages_;
@@ -1486,7 +1494,7 @@ class MultiVmoTestInstance : public TestInstance {
 
 // Test thread which initializes/tears down TestInstances
 int VmStressTest::test_thread() {
-  constexpr uint64_t kMaxInstances = 4;
+  constexpr uint64_t kMaxInstances = 8;
   constexpr uint64_t kVariableInstances = kMaxInstances - 1;
   std::unique_ptr<TestInstance> test_instances[kMaxInstances] = {};
 
