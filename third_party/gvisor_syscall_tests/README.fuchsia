@@ -1,0 +1,17 @@
+Name: gvisor
+URL: https://github.com/google/gvisor
+License: Apache 2.0
+License File: LICENSE
+Description:
+
+gVisor is an application kernel, written in Go, that implements
+a substantial portion of the Linux system surface. This project
+vendors a subset of the test sources used by gVisor to validate
+POSIX behavior.
+
+Local Modifications:
+Retained subset of test sources under `test/syscalls/linux` and utils under `test/util`.
+Added Fuchsia test targets and component manifests (BUILD.gn, *.cml).
+Added files tracking expectations on Fuchsia (*_expectations.cc).
+Added custom main file to run tests with expectations (gtest_main.cc).
+Added README.fuchsia.

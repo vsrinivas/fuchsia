@@ -121,6 +121,7 @@ tables_generator_tests_*.txt
 /third_party/tpm2-tss/src
 !/third_party/pigweed
 /third_party/pigweed/src
+!/third_party/gvisor_syscall_tests
 
 /tmp/
 /vendor/
