@@ -44,6 +44,7 @@ rustc_library("lib") {
   ]
 
   deps = [
+    "fidl/fuchsia.test.debug:fuchsia.test.debug_rust",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
     "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_rust",
     "//sdk/fidl/fuchsia.component.test:fuchsia.component.test_rust",
@@ -82,6 +83,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
@@ -90,12 +92,12 @@ rustc_library("lib") {
     "//src/lib/fuchsia",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:tempfile",
   ]
 
   sources = [
     "src/above_root_capabilities.rs",
     "src/constants.rs",
+    "src/debug_data_processor.rs",
     "src/debug_data_server.rs",
     "src/diagnostics.rs",
     "src/enclosing_env.rs",

@@ -4,6 +4,7 @@
 
 mod above_root_capabilities;
 mod constants;
+mod debug_data_processor;
 mod debug_data_server;
 mod diagnostics;
 mod enclosing_env;

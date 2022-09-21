@@ -227,7 +227,6 @@ async fn filter_map_filename(
 /// |dir_path|.
 ///
 /// The contents under |dir_path| are assumed to not change while the iterator is served.
-#[allow(unused)]
 pub(crate) async fn serve_iterator(
     dir_path: &str,
     mut event_sender: mpsc::Sender<RunEvent>,
