@@ -19,7 +19,7 @@ where
 impl<F, O> SimpleFileNode<F, O>
 where
     F: Fn() -> Result<O, Errno> + Send + Sync,
-    O: FileOps + 'static,
+    O: FileOps,
 {
     pub fn new(create_file_ops: F) -> SimpleFileNode<F, O> {
         SimpleFileNode { create_file_ops }
@@ -28,7 +28,7 @@ where
 impl<F, O> FsNodeOps for SimpleFileNode<F, O>
 where
     F: Fn() -> Result<O, Errno> + Send + Sync + 'static,
-    O: FileOps + 'static,
+    O: FileOps,
 {
     fn create_file_ops(
         &self,

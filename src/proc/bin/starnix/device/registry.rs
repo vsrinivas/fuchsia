@@ -19,7 +19,7 @@ pub enum DeviceMode {
     Block,
 }
 
-pub trait DeviceOps: Send + Sync {
+pub trait DeviceOps: Send + Sync + 'static {
     fn open(
         &self,
         _current_task: &CurrentTask,
@@ -35,7 +35,8 @@ impl<F> DeviceOps for F
 where
     F: Send
         + Sync
-        + Fn(&CurrentTask, DeviceType, &FsNode, OpenFlags) -> Result<Box<dyn FileOps>, Errno>,
+        + Fn(&CurrentTask, DeviceType, &FsNode, OpenFlags) -> Result<Box<dyn FileOps>, Errno>
+        + 'static,
 {
     fn open(
         &self,
@@ -74,10 +75,7 @@ impl DeviceRegistry {
         registry
     }
 
-    pub fn register_chrdev_major<D>(&mut self, device: D, major: u32) -> Result<(), Errno>
-    where
-        D: DeviceOps + 'static,
-    {
+    pub fn register_chrdev_major(&mut self, device: impl DeviceOps, major: u32) -> Result<(), Errno> {
         match self.char_devices.entry(major) {
             Entry::Vacant(e) => {
                 e.insert(Box::new(device));
@@ -90,9 +88,7 @@ impl DeviceRegistry {
         }
     }
 
-    pub fn register_misc_chrdev<D>(&mut self, device: D) -> Result<DeviceType, Errno>
-    where
-        D: DeviceOps + 'static,
+    pub fn register_misc_chrdev(&mut self, device: impl DeviceOps) -> Result<DeviceType, Errno>
     {
         self.misc_devices.write().register(device)
     }
@@ -133,7 +129,7 @@ impl MiscRegistry {
         Self { misc_devices: BTreeMap::new(), next_dynamic_minor: 0 }
     }
 
-    fn register(&mut self, device: impl DeviceOps + 'static) -> Result<DeviceType, Errno> {
+    fn register(&mut self, device: impl DeviceOps) -> Result<DeviceType, Errno> {
         let minor = self.next_dynamic_minor;
         if minor > 255 {
             return error!(ENOMEM);

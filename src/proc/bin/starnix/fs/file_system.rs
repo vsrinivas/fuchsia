@@ -63,14 +63,14 @@ pub struct FileSystem {
 
 impl FileSystem {
     /// Create a new filesystem.
-    pub fn new(kernel: &Kernel, ops: impl FileSystemOps + 'static) -> FileSystemHandle {
+    pub fn new(kernel: &Kernel, ops: impl FileSystemOps) -> FileSystemHandle {
         Self::new_internal(kernel, ops, false)
     }
 
     /// Create a new filesystem with the permanent_entries flag set.
     pub fn new_with_permanent_entries(
         kernel: &Kernel,
-        ops: impl FileSystemOps + 'static,
+        ops: impl FileSystemOps,
     ) -> FileSystemHandle {
         Self::new_internal(kernel, ops, true)
     }
@@ -78,7 +78,7 @@ impl FileSystem {
     /// Create a new filesystem and call set_root in one step.
     pub fn new_with_root(
         kernel: &Kernel,
-        ops: impl FileSystemOps + 'static,
+        ops: impl FileSystemOps,
         root_node: FsNode,
     ) -> FileSystemHandle {
         let fs = Self::new_with_permanent_entries(kernel, ops);
@@ -86,7 +86,7 @@ impl FileSystem {
         fs
     }
 
-    pub fn set_root(self: &FileSystemHandle, root: impl FsNodeOps + 'static) {
+    pub fn set_root(self: &FileSystemHandle, root: impl FsNodeOps) {
         self.set_root_node(FsNode::new_root(root));
     }
 
@@ -104,7 +104,7 @@ impl FileSystem {
 
     fn new_internal(
         kernel: &Kernel,
-        ops: impl FileSystemOps + 'static,
+        ops: impl FileSystemOps,
         permanent_entries: bool,
     ) -> FileSystemHandle {
         Arc::new(FileSystem {
@@ -196,7 +196,7 @@ impl FileSystem {
 
     pub fn create_node_with_ops(
         self: &Arc<Self>,
-        ops: impl FsNodeOps + 'static,
+        ops: impl FsNodeOps,
         mode: FileMode,
         owner: FsCred,
     ) -> FsNodeHandle {
@@ -260,7 +260,7 @@ impl FileSystem {
 }
 
 /// The filesystem-implementation-specific data for FileSystem.
-pub trait FileSystemOps: Send + Sync {
+pub trait FileSystemOps: Send + Sync + 'static {
     /// Return information about this filesystem.
     ///
     /// A typical implementation looks like this:

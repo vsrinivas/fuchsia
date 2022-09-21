@@ -31,7 +31,7 @@ impl<'a> StaticDirectoryBuilder<'a> {
     pub fn add_entry(
         self,
         name: &'static FsStr,
-        ops: impl FsNodeOps + 'static,
+        ops: impl FsNodeOps,
         mode: FileMode,
     ) -> Self {
         self.add_device_entry(name, ops, mode, DeviceType::NONE)
@@ -41,7 +41,7 @@ impl<'a> StaticDirectoryBuilder<'a> {
     pub fn add_entry_with_creds(
         self,
         name: &'static FsStr,
-        ops: impl FsNodeOps + 'static,
+        ops: impl FsNodeOps,
         mode: FileMode,
         creds: FsCred,
     ) -> Self {
@@ -52,7 +52,7 @@ impl<'a> StaticDirectoryBuilder<'a> {
     pub fn add_device_entry(
         self,
         name: &'static FsStr,
-        ops: impl FsNodeOps + 'static,
+        ops: impl FsNodeOps,
         mode: FileMode,
         dev: DeviceType,
     ) -> Self {
@@ -63,7 +63,7 @@ impl<'a> StaticDirectoryBuilder<'a> {
     pub fn add_device_entry_with_creds(
         self,
         name: &'static FsStr,
-        ops: impl FsNodeOps + 'static,
+        ops: impl FsNodeOps,
         mode: FileMode,
         dev: DeviceType,
         creds: FsCred,

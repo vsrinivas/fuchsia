@@ -72,7 +72,7 @@ where
 impl<F, O> SeLinuxNode<F, O>
 where
     F: Fn() -> Result<O, Errno> + Send + Sync,
-    O: FileOps + 'static,
+    O: FileOps,
 {
     pub fn new(create_file_ops: F) -> SeLinuxNode<F, O> {
         Self { create_file_ops }
@@ -81,7 +81,7 @@ where
 impl<F, O> FsNodeOps for SeLinuxNode<F, O>
 where
     F: Fn() -> Result<O, Errno> + Send + Sync + 'static,
-    O: FileOps + 'static,
+    O: FileOps,
 {
     fn create_file_ops(
         &self,

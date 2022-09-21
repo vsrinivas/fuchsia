@@ -43,7 +43,7 @@ impl SeekOrigin {
 }
 
 /// Corresponds to struct file_operations in Linux, plus any filesystem-specific data.
-pub trait FileOps: Send + Sync + AsAny {
+pub trait FileOps: Send + Sync + AsAny + 'static {
     /// Called when the FileObject is closed.
     fn close(&self, _file: &FileObject) {}
 

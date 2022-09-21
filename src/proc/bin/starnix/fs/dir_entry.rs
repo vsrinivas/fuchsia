@@ -209,7 +209,7 @@ impl DirEntry {
         self: &DirEntryHandle,
         name: &FsStr,
         mode: FileMode,
-        ops: impl FsNodeOps + 'static,
+        ops: impl FsNodeOps,
     ) -> Result<DirEntryHandle, Errno> {
         self.add_node_ops_dev(name, mode, DeviceType::NONE, ops)
     }
@@ -219,7 +219,7 @@ impl DirEntry {
         name: &FsStr,
         mode: FileMode,
         dev: DeviceType,
-        ops: impl FsNodeOps + 'static,
+        ops: impl FsNodeOps,
     ) -> Result<DirEntryHandle, Errno> {
         self.create_entry(name, || {
             let node = self.node.fs().create_node(Box::new(ops), mode, FsCred::root());

@@ -173,7 +173,7 @@ pub enum XattrOp {
     Replace,
 }
 
-pub trait FsNodeOps: Send + Sync + AsAny {
+pub trait FsNodeOps: Send + Sync + AsAny + 'static {
     /// Build the `FileOps` for the file associated to this node.
     ///
     /// The returned FileOps will be used to create a FileObject, which might
@@ -360,7 +360,7 @@ impl FsNodeOps for SpecialNode {
 }
 
 impl FsNode {
-    pub fn new_root(ops: impl FsNodeOps + 'static) -> FsNode {
+    pub fn new_root(ops: impl FsNodeOps) -> FsNode {
         Self::new_internal(Box::new(ops), Weak::new(), 1, mode!(IFDIR, 0o777), FsCred::root())
     }
 
