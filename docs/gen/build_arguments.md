@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/1508af8477552212177808dc61c6e6f7382c2055/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/71fd3f48518213943be8f2997b71bb7752271aa8/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/1508af8477552212177808dc61c6e6f7382c2055/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/71fd3f48518213943be8f2997b71bb7752271aa8/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -125,7 +125,7 @@ example, because the package is in base).
 
 **Current value (from the default):** `true`
 
-From //build/security.gni:236
+From //build/security.gni:237
 
 ### avb_algorithm
 
@@ -222,7 +222,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:241
+From //build/security.gni:242
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -1077,9 +1077,9 @@ From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.
 
 ### crashpad_http_transport_impl
 
-**Current value (from the default):** `"socket"`
+**Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:19](https://fuchsia.googlesource.com/third_party/crashpad/+/bbc99508df7708de3197af4f60237a112042ae51/util/net/tls.gni#19)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/bbc99508df7708de3197af4f60237a112042ae51/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
@@ -2734,7 +2734,7 @@ on the assembled fuchsia system.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:139
+From //build/security.gni:140
 
 ### fuchsia_sdk_root
 Consumers of the Fuchsia SDK instantiate templates for various SDK parts at
@@ -2770,17 +2770,18 @@ From //build/security.gni:111
 
 ### fuchsia_structured_config_policy
 An optional file path to the structured configuration policy to be used on the
-assembled fuchsia system. Defaults to no enforcement.
+assembled fuchsia system. Defaults to no enforcement. Policy must be provided
+for any product which is not an `eng` build type.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:130
+From //build/security.gni:131
 
 ### fuchsia_verify_component_resolvers_allowlist
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:206
+From //build/security.gni:207
 
 ### fuchsia_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -2791,13 +2792,13 @@ routes in the fuchsia component tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:191
+From //build/security.gni:192
 
 ### fuchsia_verify_routes_exceptions_allowlist
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist.json5"`
 
-From //build/security.gni:151
+From //build/security.gni:152
 
 ### fuchsia_verify_routes_exceptions_allowlist_bootfs
 Same as fuchsia_verify_routes_exceptions_allowlist, except this allowlist
@@ -2805,7 +2806,7 @@ gets added in bootfs_only builds.
 
 **Current value (from the default):** `"//src/security/policy/build/verify_routes_exceptions_allowlist_bootfs.json5"`
 
-From //build/security.gni:167
+From //build/security.gni:168
 
 ### fuchsia_verify_routes_exceptions_allowlist_product
 Same as fuchsia_verify_routes_exceptions_allowlist, except these allowlists
@@ -2813,7 +2814,7 @@ get added according to product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:180
+From //build/security.gni:181
 
 ### fuchsia_zbi_bootfs_filelist_goldens
 An optional list of golden files for fuchsia.zbi bootFS file list. If
@@ -2879,7 +2880,7 @@ is generally available.
 
 **Current value (from the default):** `false`
 
-From //build/security.gni:246
+From //build/security.gni:247
 
 ### futex_tracing_enabled
 Enables kernel tracing of futex interactions
@@ -3012,7 +3013,7 @@ From //build/go/go_build.gni:22
     will have build and test results cached, and is safe to be written to
     concurrently. If overridden, this directory must be a full path.
 
-**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/.gocache"`
+**Current value (from the default):** `"/b/s/w/ir/x/w/fuchsia/out/not-default/dartlang/.gocache"`
 
 From //build/go/go_build.gni:18
 
@@ -5722,7 +5723,7 @@ on the assembled recovery system.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:143
+From //build/security.gni:144
 
 ### recovery_static_pkgs_goldens
 An optional list of golden files for recovery.zbi static pkgs list. If
@@ -5750,13 +5751,13 @@ for any product which is not an `eng` build type.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:135
+From //build/security.gni:136
 
 ### recovery_verify_component_resolvers_allowlist
 
 **Current value (from the default):** `"//src/security/policy/component_resolvers_policy.json5"`
 
-From //build/security.gni:214
+From //build/security.gni:215
 
 ### recovery_verify_routes_component_tree_config
 An optional component tree configuration file used to finalize dynamic
@@ -5767,7 +5768,7 @@ routes in the fuchsia component tree.
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:198
+From //build/security.gni:199
 
 ### recovery_verify_routes_exceptions_allowlist
 An optional list of (capability, moniker) pairs that determine exceptions
@@ -5783,7 +5784,7 @@ configurations that do perform recovery build verification is
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:163
+From //build/security.gni:164
 
 ### recovery_verify_routes_exceptions_allowlist_bootfs
 Same as recovery_verify_routes_exceptions_allowlist, except this allowlist
@@ -5796,7 +5797,7 @@ configurations that do perform recovery build verification is
 
 **Current value (from the default):** `""`
 
-From //build/security.gni:176
+From //build/security.gni:177
 
 ### recovery_verify_routes_exceptions_allowlist_product
 Same as recovery_verify_routes_exceptions_allowlist, except these allowlists
@@ -5804,7 +5805,7 @@ get added according to product-specific configuration.
 
 **Current value (from the default):** `[]`
 
-From //build/security.gni:184
+From //build/security.gni:185
 
 ### recovery_zbi_bootfs_filelist_goldens
 An optional list of golden files for recovery.zbi bootFS file list. If
@@ -6529,12 +6530,12 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/security.gni:227
+From //build/security.gni:228
 
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
-**Current value (from the default):** `"thinlto-cache"`
+**Current value (from the default):** `"dartlang/thinlto-cache"`
 
 From //build/config/lto/config.gni:16
 
@@ -6805,7 +6806,7 @@ VkInstances or VkDevice will fail.
 This argument will affect all vulkan_{executable/test} build targets.
 
 
-**Current value (from the default):** `true`
+**Current value (from the default):** `false`
 
 From //src/lib/vulkan/build/config.gni:40
 
