@@ -18,6 +18,10 @@ if (is_host) {
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/lib/errors:lib",
       "//src/developer/ffx/lib/fms:lib",
+      "//src/developer/ffx/lib/pbms:lib",
+      "//src/lib/assembly/assembly_manifest",
+      "//src/lib/assembly/partitions_config",
+      "//src/lib/assembly/util",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//src/lib/gcs:lib",
@@ -41,7 +45,10 @@ if (is_host) {
       "//third_party/rust_crates:zip",
     ]
 
-    test_deps = [ "//third_party/rust_crates:regex" ]
+    test_deps = [
+      "//third_party/rust_crates:maplit",
+      "//third_party/rust_crates:regex",
+    ]
 
     sources = [
       "src/boot/mod.rs",

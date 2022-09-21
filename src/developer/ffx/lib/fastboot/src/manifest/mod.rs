@@ -7,7 +7,6 @@ use {
         common::{
             cmd::{BootParams, Command, ManifestParams},
             file::{ArchiveResolver, FileResolver, Resolver, TarResolver},
-            gcs::GcsResolver,
             prepare, Boot, Flash, Unlock,
         },
         manifest::{
@@ -16,14 +15,19 @@ use {
         },
     },
     anyhow::{anyhow, Context, Result},
+    assembly_manifest::AssemblyManifest,
+    assembly_partitions_config::{Partition, Slot},
+    assembly_util::PathToStringExt,
     async_trait::async_trait,
     chrono::Utc,
     errors::{ffx_bail, ffx_error},
     fidl_fuchsia_developer_ffx::FastbootProxy,
     fms::Entries,
-    sdk_metadata::{Metadata, ProductBundleV1},
+    pbms::load_product_bundle,
+    sdk_metadata::{Metadata, ProductBundle, ProductBundleV2},
     serde::{Deserialize, Serialize},
     serde_json::{from_value, to_value, Value},
+    std::collections::BTreeMap,
     std::fs::File,
     std::io::{BufReader, Read, Write},
     std::path::PathBuf,
@@ -59,6 +63,18 @@ pub enum FlashManifestVersion {
     V3(FlashManifestV3),
     Sdk(SdkEntries),
 }
+
+/// The type of the image used in the below ImageMap.
+#[derive(Debug, PartialOrd, Ord, PartialEq, Eq)]
+enum ImageType {
+    ZBI,
+    VBMeta,
+    FVM,
+}
+
+/// A map from a slot to the image paths assigned to that slot.
+/// This is used during the construction of a manifest from a product bundle.
+type ImageMap = BTreeMap<Slot, BTreeMap<ImageType, String>>;
 
 impl FlashManifestVersion {
     pub fn write<W: Write>(&self, writer: W) -> Result<()> {
@@ -118,11 +134,188 @@ impl FlashManifestVersion {
         Ok(Self::Sdk(SdkEntries::new(entries)))
     }
 
-    pub fn from_product_bundle(product_bundle: ProductBundleV1) -> Result<Self> {
-        let mut entries = Entries::new();
-        entries.add_metadata(Metadata::ProductBundleV1(product_bundle))?;
-        Ok(Self::Sdk(SdkEntries::new(entries)))
+    pub fn from_product_bundle(product_bundle: &ProductBundle) -> Result<Self> {
+        match product_bundle {
+            ProductBundle::V1(product_bundle) => {
+                let mut entries = Entries::new();
+                entries.add_metadata(Metadata::ProductBundleV1(product_bundle.clone()))?;
+                Ok(Self::Sdk(SdkEntries::new(entries)))
+            }
+            ProductBundle::V2(product_bundle) => Self::from_product_bundle_v2(product_bundle),
+        }
     }
+
+    fn from_product_bundle_v2(product_bundle: &ProductBundleV2) -> Result<Self> {
+        // Copy the unlock credentials from the partitions config to the flash manifest.
+        let mut credentials = vec![];
+        for c in &product_bundle.partitions.unlock_credentials {
+            credentials.push(c.path_to_string()?);
+        }
+
+        // Copy the bootloader partitions from the partitions config to the flash manifest.
+        let mut bootloader_partitions = vec![];
+        for p in &product_bundle.partitions.bootloader_partitions {
+            if let Some(name) = &p.name {
+                bootloader_partitions.push(v3::Partition {
+                    name: name.to_string(),
+                    path: p.image.path_to_string()?,
+                    condition: None,
+                });
+            }
+        }
+
+        // Copy the bootloader partitions from the partitions config to the flash manifest. Join them
+        // with the bootloader partitions, because they are always flashed together.
+        let mut all_bootloader_partitions = bootloader_partitions.clone();
+        for p in &product_bundle.partitions.bootstrap_partitions {
+            let condition = if let Some(c) = &p.condition {
+                Some(v3::Condition { variable: c.variable.to_string(), value: c.value.to_string() })
+            } else {
+                None
+            };
+            all_bootloader_partitions.push(v3::Partition {
+                name: p.name.to_string(),
+                path: p.image.path_to_string()?,
+                condition,
+            });
+        }
+
+        // Create a map from slot to available images by name (zbi, vbmeta, fvm).
+        let mut image_map: ImageMap = BTreeMap::new();
+        if let Some(manifest) = &product_bundle.system_a {
+            add_images_to_map(&mut image_map, &manifest, Slot::A)?;
+        }
+        if let Some(manifest) = &product_bundle.system_b {
+            add_images_to_map(&mut image_map, &manifest, Slot::B)?;
+        }
+        if let Some(manifest) = &product_bundle.system_r {
+            add_images_to_map(&mut image_map, &manifest, Slot::R)?;
+        }
+
+        // Define the flashable "products".
+        let mut products = vec![];
+        products.push(v3::Product {
+            name: "recovery".into(),
+            bootloader_partitions: bootloader_partitions.clone(),
+            partitions: get_mapped_partitions(
+                &product_bundle.partitions.partitions,
+                &image_map,
+                /*is_recovery=*/ true,
+            ),
+            oem_files: vec![],
+            requires_unlock: false,
+        });
+        products.push(v3::Product {
+            name: "fuchsia_only".into(),
+            bootloader_partitions: bootloader_partitions.clone(),
+            partitions: get_mapped_partitions(
+                &product_bundle.partitions.partitions,
+                &image_map,
+                /*is_recovery=*/ false,
+            ),
+            oem_files: vec![],
+            requires_unlock: false,
+        });
+        products.push(v3::Product {
+            name: "fuchsia".into(),
+            bootloader_partitions: all_bootloader_partitions.clone(),
+            partitions: get_mapped_partitions(
+                &product_bundle.partitions.partitions,
+                &image_map,
+                /*is_recovery=*/ false,
+            ),
+            oem_files: vec![],
+            requires_unlock: !product_bundle.partitions.bootstrap_partitions.is_empty(),
+        });
+        if !product_bundle.partitions.bootstrap_partitions.is_empty() {
+            products.push(v3::Product {
+                name: "bootstrap".into(),
+                bootloader_partitions: all_bootloader_partitions.clone(),
+                partitions: vec![],
+                oem_files: vec![],
+                requires_unlock: true,
+            });
+        }
+
+        // Create the flash manifest.
+        let ret = v3::FlashManifest {
+            hw_revision: product_bundle.partitions.hardware_revision.clone(),
+            credentials,
+            products,
+        };
+
+        Ok(Self::V3(ret))
+    }
+}
+
+/// Add a set of images from |manifest| to the |image_map|, assigning them to |slot|. This ignores
+/// all images other than the ZBI, VBMeta, and fastboot FVM.
+fn add_images_to_map(
+    image_map: &mut ImageMap,
+    manifest: &AssemblyManifest,
+    slot: Slot,
+) -> Result<()> {
+    let slot_entry = image_map.entry(slot).or_insert(BTreeMap::new());
+    for image in &manifest.images {
+        match image {
+            assembly_manifest::Image::ZBI { path, .. } => {
+                slot_entry.insert(ImageType::ZBI, path.path_to_string()?)
+            }
+            assembly_manifest::Image::VBMeta(path) => {
+                slot_entry.insert(ImageType::VBMeta, path.path_to_string()?)
+            }
+            assembly_manifest::Image::FVMFastboot(path) => {
+                if let Slot::R = slot {
+                    // Recovery should not include a separate FVM, because it is embedded into the
+                    // ZBI as a ramdisk.
+                    None
+                } else {
+                    slot_entry.insert(ImageType::FVM, path.path_to_string()?)
+                }
+            }
+            _ => None,
+        };
+    }
+    Ok(())
+}
+
+/// Construct a list of partitions to add to the flash manifest by mapping the partitions to the
+/// images. If |is_recovery|, then put the recovery images in every slot.
+fn get_mapped_partitions(
+    partitions: &Vec<Partition>,
+    image_map: &ImageMap,
+    is_recovery: bool,
+) -> Vec<v3::Partition> {
+    let mut mapped_partitions = vec![];
+
+    // Assign the images to particular partitions. If |is_recovery|, then we use the recovery
+    // images for all slots.
+    for p in partitions {
+        let (partition, name, slot) = match p {
+            Partition::ZBI { name, slot } => (name, ImageType::ZBI, slot),
+            Partition::VBMeta { name, slot } => (name, ImageType::VBMeta, slot),
+
+            // Arbitrarily, take the fvm from the slot A system.
+            Partition::FVM { name } => (name, ImageType::FVM, &Slot::A),
+        };
+
+        if let Some(slot) = match is_recovery {
+            // If this is recovery mode, then fill every partition with images from the slot R
+            // system.
+            true => image_map.get(&Slot::R),
+            false => image_map.get(slot),
+        } {
+            if let Some(path) = slot.get(&name) {
+                mapped_partitions.push(v3::Partition {
+                    name: partition.to_string(),
+                    path: path.to_string(),
+                    condition: None,
+                });
+            }
+        }
+    }
+
+    mapped_partitions
 }
 
 #[async_trait(?Send)]
@@ -232,17 +425,15 @@ impl Boot for FlashManifestVersion {
 
 pub async fn from_sdk<W: Write>(
     writer: &mut W,
-    version: String,
     fastboot_proxy: FastbootProxy,
     cmd: ManifestParams,
 ) -> Result<()> {
     match cmd.product_bundle.as_ref() {
         Some(b) => {
-            let resolver = GcsResolver::new(version.clone(), b.to_string()).await?;
-            let product_bundle = resolver.product_bundle().clone();
+            let product_bundle = load_product_bundle(&Some(b.to_string())).await?;
             FlashManifest {
-                resolver,
-                version: FlashManifestVersion::from_product_bundle(product_bundle)?,
+                resolver: Resolver::new(PathBuf::from(b))?,
+                version: FlashManifestVersion::from_product_bundle(&product_bundle)?,
             }
             .flash(writer, fastboot_proxy, cmd)
             .await
@@ -332,6 +523,7 @@ impl<F: FileResolver + Sync> FlashManifest<F> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use maplit::btreemap;
     use serde_json::from_str;
     use std::io::BufReader;
 
@@ -395,5 +587,206 @@ mod test {
     async fn test_loading_version_1_from_array() -> Result<()> {
         let manifest_contents = ARRAY_MANIFEST.to_string();
         FlashManifestVersion::load(BufReader::new(manifest_contents.as_bytes())).map(|_| ())
+    }
+
+    #[test]
+    fn test_add_images_to_map() {
+        let mut image_map: ImageMap = BTreeMap::new();
+        let manifest = AssemblyManifest {
+            images: vec![
+                assembly_manifest::Image::ZBI { path: "path/to/fuchsia.zbi".into(), signed: false },
+                assembly_manifest::Image::VBMeta("path/to/fuchsia.vbmeta".into()),
+                assembly_manifest::Image::FVMFastboot("path/to/fvm.fastboot.blk".into()),
+                // These should be ignored.
+                assembly_manifest::Image::FVM("path/to/fvm.blk".into()),
+                assembly_manifest::Image::BasePackage("path/to/base".into()),
+            ],
+        };
+        add_images_to_map(&mut image_map, &manifest, Slot::A).unwrap();
+        assert_eq!(image_map.len(), 1);
+        assert_eq!(image_map[&Slot::A].len(), 3);
+        assert_eq!(image_map[&Slot::A][&ImageType::ZBI], "path/to/fuchsia.zbi");
+        assert_eq!(image_map[&Slot::A][&ImageType::VBMeta], "path/to/fuchsia.vbmeta");
+        assert_eq!(image_map[&Slot::A][&ImageType::FVM], "path/to/fvm.fastboot.blk");
+
+        add_images_to_map(&mut image_map, &manifest, Slot::B).unwrap();
+        assert_eq!(image_map.len(), 2);
+        assert_eq!(image_map[&Slot::B].len(), 3);
+        assert_eq!(image_map[&Slot::B][&ImageType::ZBI], "path/to/fuchsia.zbi");
+        assert_eq!(image_map[&Slot::B][&ImageType::VBMeta], "path/to/fuchsia.vbmeta");
+        assert_eq!(image_map[&Slot::B][&ImageType::FVM], "path/to/fvm.fastboot.blk");
+
+        add_images_to_map(&mut image_map, &manifest, Slot::R).unwrap();
+        assert_eq!(image_map.len(), 3);
+        assert_eq!(image_map[&Slot::R].len(), 2);
+        assert_eq!(image_map[&Slot::R][&ImageType::ZBI], "path/to/fuchsia.zbi");
+        assert_eq!(image_map[&Slot::R][&ImageType::VBMeta], "path/to/fuchsia.vbmeta");
+    }
+
+    #[test]
+    fn test_get_mapped_partitions_no_slots() {
+        let partitions = vec![];
+        let image_map: ImageMap = btreemap! {
+            Slot::A => btreemap!{
+                ImageType::ZBI => "zbi".into(),
+                ImageType::VBMeta => "vbmeta".into(),
+                ImageType::FVM => "fvm".into(),
+            },
+        };
+        let mapped = get_mapped_partitions(&partitions, &image_map, /*is_recovery=*/ false);
+        assert!(mapped.is_empty());
+    }
+
+    #[test]
+    fn test_get_mapped_partitions_slot_a_only() {
+        let partitions = vec![
+            Partition::ZBI { name: "part1".into(), slot: Slot::A },
+            Partition::VBMeta { name: "part2".into(), slot: Slot::A },
+            Partition::FVM { name: "part3".into() },
+        ];
+        let image_map: ImageMap = btreemap! {
+            Slot::A => btreemap!{
+                ImageType::ZBI => "zbi_a".into(),
+                ImageType::VBMeta => "vbmeta_a".into(),
+                ImageType::FVM => "fvm_a".into(),
+            },
+            Slot::B => btreemap!{
+                ImageType::ZBI => "zbi_b".into(),
+                ImageType::VBMeta => "vbmeta_b".into(),
+                ImageType::FVM => "fvm_b".into(),
+            },
+            Slot::R => btreemap!{
+                ImageType::ZBI => "zbi_r".into(),
+                ImageType::VBMeta => "vbmeta_r".into(),
+            },
+        };
+        let mapped = get_mapped_partitions(&partitions, &image_map, /*is_recovery=*/ false);
+        assert_eq!(
+            mapped,
+            vec![
+                v3::Partition { name: "part1".into(), path: "zbi_a".into(), condition: None },
+                v3::Partition { name: "part2".into(), path: "vbmeta_a".into(), condition: None },
+                v3::Partition { name: "part3".into(), path: "fvm_a".into(), condition: None },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_mapped_partitions_all_slots() {
+        let partitions = vec![
+            Partition::ZBI { name: "part1".into(), slot: Slot::A },
+            Partition::VBMeta { name: "part2".into(), slot: Slot::A },
+            Partition::ZBI { name: "part3".into(), slot: Slot::B },
+            Partition::VBMeta { name: "part4".into(), slot: Slot::B },
+            Partition::ZBI { name: "part5".into(), slot: Slot::R },
+            Partition::VBMeta { name: "part6".into(), slot: Slot::R },
+            Partition::FVM { name: "part7".into() },
+        ];
+        let image_map: ImageMap = btreemap! {
+            Slot::A => btreemap!{
+                ImageType::ZBI => "zbi_a".into(),
+                ImageType::VBMeta => "vbmeta_a".into(),
+                ImageType::FVM => "fvm_a".into(),
+            },
+            Slot::B => btreemap!{
+                ImageType::ZBI => "zbi_b".into(),
+                ImageType::VBMeta => "vbmeta_b".into(),
+                ImageType::FVM => "fvm_b".into(),
+            },
+            Slot::R => btreemap!{
+                ImageType::ZBI => "zbi_r".into(),
+                ImageType::VBMeta => "vbmeta_r".into(),
+                ImageType::FVM => "fvm_r".into(),
+            },
+        };
+        let mapped = get_mapped_partitions(&partitions, &image_map, /*is_recovery=*/ false);
+        assert_eq!(
+            mapped,
+            vec![
+                v3::Partition { name: "part1".into(), path: "zbi_a".into(), condition: None },
+                v3::Partition { name: "part2".into(), path: "vbmeta_a".into(), condition: None },
+                v3::Partition { name: "part3".into(), path: "zbi_b".into(), condition: None },
+                v3::Partition { name: "part4".into(), path: "vbmeta_b".into(), condition: None },
+                v3::Partition { name: "part5".into(), path: "zbi_r".into(), condition: None },
+                v3::Partition { name: "part6".into(), path: "vbmeta_r".into(), condition: None },
+                v3::Partition { name: "part7".into(), path: "fvm_a".into(), condition: None },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_mapped_partitions_missing_slot() {
+        let partitions = vec![
+            Partition::ZBI { name: "part1".into(), slot: Slot::A },
+            Partition::VBMeta { name: "part2".into(), slot: Slot::A },
+            Partition::ZBI { name: "part3".into(), slot: Slot::B },
+            Partition::VBMeta { name: "part4".into(), slot: Slot::B },
+            Partition::ZBI { name: "part5".into(), slot: Slot::R },
+            Partition::VBMeta { name: "part6".into(), slot: Slot::R },
+            Partition::FVM { name: "part7".into() },
+        ];
+        let image_map: ImageMap = btreemap! {
+            Slot::A => btreemap!{
+                ImageType::ZBI => "zbi_a".into(),
+                ImageType::VBMeta => "vbmeta_a".into(),
+                ImageType::FVM => "fvm_a".into(),
+            },
+            Slot::R => btreemap!{
+                ImageType::ZBI => "zbi_r".into(),
+                ImageType::VBMeta => "vbmeta_r".into(),
+            },
+        };
+        let mapped = get_mapped_partitions(&partitions, &image_map, /*is_recovery=*/ false);
+        assert_eq!(
+            mapped,
+            vec![
+                v3::Partition { name: "part1".into(), path: "zbi_a".into(), condition: None },
+                v3::Partition { name: "part2".into(), path: "vbmeta_a".into(), condition: None },
+                v3::Partition { name: "part5".into(), path: "zbi_r".into(), condition: None },
+                v3::Partition { name: "part6".into(), path: "vbmeta_r".into(), condition: None },
+                v3::Partition { name: "part7".into(), path: "fvm_a".into(), condition: None },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_get_mapped_partitions_recovery() {
+        let partitions = vec![
+            Partition::ZBI { name: "part1".into(), slot: Slot::A },
+            Partition::VBMeta { name: "part2".into(), slot: Slot::A },
+            Partition::ZBI { name: "part3".into(), slot: Slot::B },
+            Partition::VBMeta { name: "part4".into(), slot: Slot::B },
+            Partition::ZBI { name: "part5".into(), slot: Slot::R },
+            Partition::VBMeta { name: "part6".into(), slot: Slot::R },
+            Partition::FVM { name: "part7".into() },
+        ];
+        let image_map: ImageMap = btreemap! {
+            Slot::A => btreemap!{
+                ImageType::ZBI => "zbi_a".into(),
+                ImageType::VBMeta => "vbmeta_a".into(),
+                ImageType::FVM => "fvm_a".into(),
+            },
+            Slot::B => btreemap!{
+                ImageType::ZBI => "zbi_b".into(),
+                ImageType::VBMeta => "vbmeta_b".into(),
+                ImageType::FVM => "fvm_b".into(),
+            },
+            Slot::R => btreemap!{
+                ImageType::ZBI => "zbi_r".into(),
+                ImageType::VBMeta => "vbmeta_r".into(),
+            },
+        };
+        let mapped = get_mapped_partitions(&partitions, &image_map, /*is_recovery=*/ true);
+        assert_eq!(
+            mapped,
+            vec![
+                v3::Partition { name: "part1".into(), path: "zbi_r".into(), condition: None },
+                v3::Partition { name: "part2".into(), path: "vbmeta_r".into(), condition: None },
+                v3::Partition { name: "part3".into(), path: "zbi_r".into(), condition: None },
+                v3::Partition { name: "part4".into(), path: "vbmeta_r".into(), condition: None },
+                v3::Partition { name: "part5".into(), path: "zbi_r".into(), condition: None },
+                v3::Partition { name: "part6".into(), path: "vbmeta_r".into(), condition: None },
+            ]
+        );
     }
 }
