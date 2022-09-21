@@ -72,7 +72,7 @@ async fn main() -> Result<(), Error> {
             let resolver = resolver.clone();
             let debug_data_controller = debug_data_controller.clone();
             let root_inspect_clone = root_inspect.clone();
-            fasync::Task::spawn(async move {
+            fasync::Task::local(async move {
                 test_manager_lib::run_test_manager(
                     stream,
                     resolver,

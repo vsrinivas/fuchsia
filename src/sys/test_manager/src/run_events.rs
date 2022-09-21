@@ -13,11 +13,11 @@ use {
     fuchsia_zircon as zx,
 };
 
-enum RunEventPayload {
+pub(crate) enum RunEventPayload {
     DebugData(ClientEnd<DebugDataIteratorMarker>),
 }
 
-pub struct RunEvent {
+pub(crate) struct RunEvent {
     timestamp: i64,
     payload: RunEventPayload,
 }
@@ -42,6 +42,11 @@ impl RunEvent {
             timestamp: zx::Time::get_monotonic().into_nanos(),
             payload: RunEventPayload::DebugData(client),
         }
+    }
+
+    #[cfg(test)]
+    pub fn into_payload(self) -> RunEventPayload {
+        self.payload
     }
 }
 
