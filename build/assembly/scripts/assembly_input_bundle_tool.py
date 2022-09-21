@@ -11,7 +11,7 @@ import sys
 from typing import Dict, List, Set, Tuple
 
 from depfile import DepFile
-from assembly import AssemblyInputBundle, AIBCreator, FilePath, PackageManifest
+from assembly import AssemblyInputBundle, AIBCreator, DriverDetails, FilePath, PackageManifest
 from serialization.serialization import json_load
 
 
@@ -29,6 +29,9 @@ def create_bundle(args: argparse.Namespace) -> None:
 
     if args.shell_cmds_list:
         add_shell_commands_from_file(aib_creator, args.shell_cmds_list)
+
+    if args.drivers_pkg_list:
+        add_driver_list_from_file(aib_creator, args.drivers_pkg_list)
 
     # Add any bootloaders.
     if args.qemu_kernel:
@@ -57,6 +60,20 @@ def add_pkg_list_from_file(
             raise ValueError(
                 f"duplicate pkg manifest found: {pkg_manifest_path}")
         pkg_set.add(pkg_manifest_path)
+
+
+def add_driver_list_from_file(aib_creator: AIBCreator, driver_list_file):
+    pkg_set: Set = getattr(aib_creator, "base")
+    driver_details_list = _read_json_file(driver_list_file)
+    for driver_details in driver_details_list:
+        if driver_details["package_target"] in pkg_set:
+            raise ValueError(
+                f"duplicate pkg manifest found: {driver_details['package_target']}"
+            )
+        aib_creator.provided_base_driver_details.append(
+            DriverDetails(
+                driver_details["package_target"],
+                driver_details["driver_components"]))
 
 
 def add_shell_commands_from_file(
@@ -243,6 +260,10 @@ def main():
         type=argparse.FileType('r'),
         help=
         "Path to a json list of package manifests for the 'base' package set")
+    bundle_creation_parser.add_argument(
+        "--drivers-pkg-list",
+        type=argparse.FileType('r'),
+        help="Path to a json list of driver details for the 'base' package set")
     bundle_creation_parser.add_argument(
         "--shell-cmds-list",
         type=argparse.FileType('r'),

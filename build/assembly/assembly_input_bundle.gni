@@ -221,23 +221,32 @@ template("assembly_input_bundle_archive") {
 #    [path] A different directory to write the bundle into, if not to write it
 #    to '$target_out_dir/$bundle_name'.
 #
-#   base_packages [optional]
-#     [list, GN labels] A list of GN labels of fuchsia_package targets to
-#     include in the base package set.
+#  base_packages [optional]
+#    [list, GN labels] A list of GN labels of fuchsia_package targets to
+#    include in the base package set.
 #
-#     Note: These are direct labels for specific targets, not deps to walk for
-#     metadata.  If the target isn't a package target, it will cause an error
-#     like:
-#       "no dependency provides the input <package_name>/package_manifest.json"
+#    Note: These are direct labels for specific targets, not deps to walk for
+#    metadata.  If the target isn't a package target, it will cause an error
+#    like:
+#      "no dependency provides the input <package_name>/package_manifest.json"
 #
-#   cache_packages [optional]
-#     [list, GN labels] A list of GN labels of fuchsia_package targets to
-#     include in the cache package set.
+#   base_driver_packages (optional)
+#     [list, GN scopes] A list of GN scopes that hold the driver packages to
+#     include in the base package set. Packages listed here should not be
+#     listed in the base_packages and will be included automatically in
+#     the base package set as driver packages. The scope must have a
+#     `package_target` field pointing to the GN target of the fuchsia_package,
+#     and `driver_components` field containing a list of relative paths to
+#     driver components provided by the package, e.g. "meta/driver.cm"
 #
-#     Note: These are direct labels for specific targets, not deps to walk for
-#     metadata.  If the target isn't a package target, it will cause an error
-#     like:
-#       "no dependency provides the input <package_name>/package_manifest.json"
+#  cache_packages [optional]
+#    [list, GN labels] A list of GN labels of fuchsia_package targets to
+#    include in the cache package set.
+#
+#    Note: These are direct labels for specific targets, not deps to walk for
+#    metadata.  If the target isn't a package target, it will cause an error
+#    like:
+#      "no dependency provides the input <package_name>/package_manifest.json"
 #
 #  qemu_kernel (optional; default: false)
 #    [path] Path to the qemu kernel.
@@ -337,11 +346,28 @@ template("assembly_input_bundle") {
   package_sets = {
     base = []
     if (defined(invoker.base_packages)) {
-      base = invoker.base_packages
+      foreach(_target, invoker.base_packages) {
+        base += [
+          {
+            package_target = _target
+          },
+        ]
+      }
     }
     cache = []
     if (defined(invoker.cache_packages)) {
-      cache = invoker.cache_packages
+      foreach(_target, invoker.cache_packages) {
+        cache += [
+          {
+            package_target = _target
+          },
+        ]
+      }
+    }
+
+    drivers = []
+    if (defined(invoker.base_driver_packages)) {
+      drivers = invoker.base_driver_packages
     }
   }
 
@@ -350,32 +376,54 @@ template("assembly_input_bundle") {
           [
             "base",
             "cache",
+            "drivers",
           ]) {
-    _package_targets = package_sets[set_name]
-    _manifests = []
+    _package_target_details = package_sets[set_name]
+    _package_targets = []
+    _manifest_entries = []
 
     # Skip empty package sets
-    if (_package_targets != []) {
+    if (_package_target_details != []) {
       # 1a) Calculate the manifest path for each package target
-      foreach(package_target, _package_targets) {
-        _package_out_dir = get_label_info(package_target, "target_out_dir")
-        _package_name = get_label_info(package_target, "name")
+      foreach(details, _package_target_details) {
+        assert(
+            defined(details.package_target),
+            "A target must be defined for each package. (this should be unreachable)")
+        _package_targets += [ details.package_target ]
+        _package_out_dir =
+            get_label_info(details.package_target, "target_out_dir")
+        _package_name = get_label_info(details.package_target, "name")
         _manifest_path =
             "${_package_out_dir}/${_package_name}/package_manifest.json"
         _manifest_path_rebased = rebase_path(_manifest_path, root_build_dir)
 
-        _manifests += [ _manifest_path_rebased ]
+        if (set_name == "drivers") {
+          assert(defined(details.driver_components),
+                 "driver_components must be specified for driver targets")
+          _manifest_entries += [
+            {
+              package_target = _manifest_path_rebased
+              driver_components = details.driver_components
+            },
+          ]
+        } else {
+          _manifest_entries += [ _manifest_path_rebased ]
+        }
       }
 
       _manifest_list = "${target_name}.${set_name}_packages.list"
       _manifest_list_file = "${target_gen_dir}/${_manifest_list}"
 
       # 1b) Generate a file containing that list
+      # For base packages this will be a list of package manifests.
+      # For drivers, this will be a list of DriverDetails, containing
+      # the package manifests and component file paths.
       generated_file(_manifest_list) {
+        forward_variables_from(invoker, [ "testonly" ])
         deps = _package_targets
         outputs = [ "${_manifest_list_file}" ]
         output_conversion = "json"
-        contents = _manifests
+        contents = _manifest_entries
       }
 
       # 2) add the file as an input and argument to the AIB creation action
@@ -460,6 +508,7 @@ template("assembly_input_bundle") {
       package_barrier = []
       config_package_barrier = []
       distribution_entries_barrier = []
+      driver_package_component_files_barrier = []
     }
   }
 
