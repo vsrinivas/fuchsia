@@ -11,17 +11,7 @@ use {
     fuchsia_zircon_status::Status,
 };
 
-pub const SELECTOR_FORMAT_HELP: &str =
-    "Selector format: <component moniker>:(in|out|exposed)[:<service name>].
-Wildcards may be used anywhere in the selector.
-
-Example: 'remote-control:out:*' would return all services in 'out' for
-the component remote-control.
-
-Note that moniker wildcards are not recursive: 'a/*/c' will only match
-components named 'c' running in some sub-realm directly below 'a', and
-no further.";
-
+/// Obtain the root LifecycleController protocol using the RemoteControl protocol.
 pub async fn connect_to_lifecycle_controller(
     rcs_proxy: &rc::RemoteControlProxy,
 ) -> Result<fsys::LifecycleControllerProxy> {
@@ -33,6 +23,7 @@ pub async fn connect_to_lifecycle_controller(
     Ok(lifecycle_controller)
 }
 
+/// Obtain the root RealmQuery protocol using the RemoteControl protocol.
 pub async fn connect_to_realm_query(
     rcs_proxy: &rc::RemoteControlProxy,
 ) -> Result<fsys::RealmQueryProxy> {
@@ -44,6 +35,7 @@ pub async fn connect_to_realm_query(
     Ok(realm_query)
 }
 
+/// Obtain the root RealmExplorer protocol using the RemoteControl protocol.
 pub async fn connect_to_realm_explorer(
     rcs_proxy: &rc::RemoteControlProxy,
 ) -> Result<fsys::RealmExplorerProxy> {
