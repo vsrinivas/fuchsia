@@ -112,7 +112,6 @@ executable("unittests") {
     ":gfx_tests_main",
     ":testing_deps",
     "//sdk/lib/stdcompat",
-    "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
     "//src/lib/fsl",
     "//src/ui/scenic/lib/gfx:object_linker",
     "//src/ui/scenic/lib/input",
