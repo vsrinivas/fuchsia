@@ -13,8 +13,7 @@
 #include <vector>
 
 #include <usb/usb.h>
-
-#include "src/camera/drivers/usb_video/usb_video.h"
+#include <usb/video.h>
 
 namespace camera::usb_video {
 

@@ -86,6 +86,8 @@ __BEGIN_CDECLS
 #define USB_VIDEO_VS_UPDATE_FRAME_SEGMENT_CONTROL  0x08
 #define USB_VIDEO_VS_SYNCH_DELAY_CONTROL           0x09
 
+// TODO(fxb/110009): Change fields to use snake_case naming convention.
+
 // header for usb_video_vc_* below
 typedef struct {
     uint8_t bLength;
@@ -149,6 +151,22 @@ typedef struct {
     uint8_t bmaControls[];
 } __PACKED usb_video_vs_input_header_desc;
 
+// Definition of above without the variable component:
+typedef struct {
+  uint8_t bLength;
+  uint8_t bDescriptorType;     // USB_VIDEO_CS_INTERFACE
+  uint8_t bDescriptorSubtype;  // USB_VIDEO_VS_HEADER
+  uint8_t bNumFormats;
+  uint16_t wTotalLength;
+  uint8_t bEndpointAddress;
+  uint8_t bmInfo;
+  uint8_t bTerminalLink;
+  uint8_t bStillCaptureMethod;
+  uint8_t bTriggerSupport;
+  uint8_t bTriggerUsage;
+  uint8_t bControlSize;
+} __PACKED usb_video_vs_input_header_desc_short;
+
 #define GUID_LENGTH 16
 
 // A GUID consists of a:
@@ -195,6 +213,15 @@ typedef struct {
     0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71 \
 }
 
+// Header common to all frame descriptors:
+typedef struct {
+  uint8_t bLength;
+  uint8_t bDescriptorType;  // USB_VIDEO_CS_INTERFACE
+  uint8_t bDescriptorSubType;
+  uint8_t bFormatIndex;
+  uint8_t bNumFrameDescriptors;
+} __PACKED usb_video_format_header;
+
 // USB Video Payload Uncompressed
 typedef struct {
     uint8_t bLength;
@@ -226,6 +253,31 @@ typedef struct {
     uint8_t bCopyProtect;
 } __PACKED usb_video_vs_mjpeg_format_desc;
 
+// USB Video Payload Frame Based
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;         // USB_VIDEO_CS_INTERFACE
+    uint8_t bDescriptorSubType;      // USB_VIDEO_VS_FORMAT_FRAME_BASED
+    uint8_t bFormatIndex;
+    uint8_t bNumFrameDescriptors;
+    uint8_t guidFormat[GUID_LENGTH];
+    uint8_t bBitsPerPixel;
+    uint8_t bDefaultFrameIndex;
+    uint8_t bAspectRatioX;
+    uint8_t bAspectRatioY;
+    uint8_t bmInterfaceFlags;
+    uint8_t bCopyProtect;
+    uint8_t bVariableSize;
+} __PACKED usb_video_vs_frame_based_format_desc;
+
+// Header common to all frame descriptors
+typedef struct {
+  uint8_t bLength;
+  uint8_t bDescriptorType;  // USB_VIDEO_CS_INTERFACE
+  uint8_t bDescriptorSubType;
+  uint8_t bFrameIndex;
+} __PACKED usb_video_frame_header;
+
 // Uncompressed and MJPEG formats have the same frame descriptor structure.
 typedef struct {
     uint8_t bLength;
@@ -242,6 +294,22 @@ typedef struct {
     uint8_t bFrameIntervalType;
     uint32_t dwFrameInterval[];
 } __PACKED usb_video_vs_frame_desc;
+
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;         // USB_VIDEO_CS_INTERFACE
+    uint8_t bDescriptorSubType;      // USB_VIDEO_VS_FRAME_UNCOMPRESSED / USB_VIDEO_VS_FRAME_MJPEG
+    uint8_t bFrameIndex;
+    uint8_t bmCapabilities;
+    uint16_t wWidth;
+    uint16_t wHeight;
+    uint32_t dwMinBitRate;
+    uint32_t dwMaxBitRate;
+    uint32_t dwDefaultFrameInterval;
+    uint8_t bFrameIntervalType;
+    uint32_t dwBytesPerLine;
+    uint32_t dwFrameInterval[];
+} __PACKED usb_video_vs_frame_based_frame_desc;
 
 // Stream negotiation
 #define USB_VIDEO_BM_HINT_FRAME_INTERVAL        (1 << 0)

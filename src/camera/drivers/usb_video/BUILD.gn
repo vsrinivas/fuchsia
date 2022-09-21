@@ -52,6 +52,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_cpp_wire",
     "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:video",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fzl",
