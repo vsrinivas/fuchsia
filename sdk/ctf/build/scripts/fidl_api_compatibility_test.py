@@ -63,14 +63,24 @@ class CompatibilityError(Exception):
 class GoldenMismatchError(Exception):
     """Exception raised when a stale golden file is detected."""
 
-    def __init__(self, api_level, current, golden, show_update_hint=False):
+    def __init__(
+            self,
+            api_level,
+            current,
+            golden,
+            show_update_hint=False,
+            show_fidl_availability_hint=True):
         self.api_level = api_level
         self.current = current
         self.golden = golden
         self.show_update_hint = show_update_hint
+        self.show_fidl_availability_hint = show_fidl_availability_hint
 
     def __str__(self):
-        hints = [FIDL_AVAILABILITY_HINT]
+        hints = []
+        if self.show_fidl_availability_hint:
+            hints.append(FIDL_AVAILABILITY_HINT)
+
         if self.show_update_hint:
             cmd = update_cmd(self.current, self.golden)
             hints.append(
@@ -174,7 +184,17 @@ def fail_on_breaking_changes(args):
             golden=args.golden,
         )
 
-    return fail_on_unacknowledged_changes(args)
+    if not filecmp.cmp(args.golden, args.current):
+        return GoldenMismatchError(
+            api_level=args.api_level,
+            current=args.current,
+            golden=args.golden,
+            show_update_hint=True,
+            # No breaking changes so the user must be using `@available` correctly.
+            show_fidl_availability_hint=False,
+        )
+
+    return None
 
 
 def fail_on_unacknowledged_changes(args):

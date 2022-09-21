@@ -120,10 +120,12 @@ func (r *Report) add(item *summarize.ElementStr) {
 		summarize.TableMemberKind,
 		summarize.BitsMemberKind:
 		ret.Conclusion = Compatible
-	case summarize.EnumMemberKind, summarize.UnionMemberKind:
+	case summarize.EnumMemberKind, summarize.UnionMemberKind, summarize.StructMemberKind:
+		// Adding a member to a struct or a strict enum/union is compatible iff
+		// the parent struct/enum/union is also being added, i.e. this is one of
+		// its initial members. Adding a member to a flexible enum/union is
+		// always compatible. We need to backfill for this information.
 		ret.Conclusion = NeedsBackfill
-	case summarize.StructMemberKind:
-		ret.Conclusion = APIBreaking
 	case summarize.ProtocolMemberKind:
 		// TODO(fxbug.dev/107567): Technically, adding a method is API breaking
 		// because server implementations will fail to compile if they don't

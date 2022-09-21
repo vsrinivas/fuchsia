@@ -984,7 +984,45 @@ type Struct = struct {};
 `,
 		},
 		{
-			name: "struct add member",
+			// The addition of the member should not be considered ABI breaking
+			// because it is added at the same time as the struct.
+			name: "struct with member add",
+			after: `
+library l;
+type Struct = struct {
+    member int32;
+};
+`,
+			before: `
+library l;
+`,
+			expected: `
+{
+    "api_diff": [
+        {
+            "name": "l/Struct.member",
+            "after": {
+                "kind": "struct/member",
+                "name": "l/Struct.member",
+                "ordinal": "1",
+                "type": "int32"
+            },
+            "conclusion": "Compatible"
+        },
+        {
+            "name": "l/Struct",
+            "after": {
+                "kind": "struct",
+                "name": "l/Struct"
+            },
+            "conclusion": "Compatible"
+        }
+    ]
+}
+`,
+		},
+		{
+			name: "struct/member add",
 			before: `
 library l;
 type Struct = struct {};

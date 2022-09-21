@@ -112,13 +112,30 @@ func (e ElementStr) Less(other ElementStr) bool {
 // IsStrict returns true of this element is strict. The result makes sense only
 // on elements that have a defined strictness.
 func (e ElementStr) IsStrict() bool {
+	// Tables are always flexible
+	if e.Kind == TableKind {
+		return false
+	}
+
+	// Structs are always strict
+	if e.Kind == StructKind {
+		return true
+	}
+
+	// Some types are optionally strict.
 	return e.Strictness == isStrict
 }
 
-// HasStrictness returns true if this ElementStr has a notion of strictness, as
-// not all ElementStrs do.
+// HasStrictness returns true if this ElementStr's FIDL kind has a notion of strictness.
+//
+// See https://fuchsia.dev/fuchsia-src/reference/fidl/language/language?hl=en#strict-vs-flexible.
 func (e ElementStr) HasStrictness() bool {
-	return e.Strictness != noStrictness
+	switch e.Kind {
+	case BitsKind, EnumKind, UnionKind, StructKind, TableKind:
+		return true
+	default:
+		return false
+	}
 }
 
 // LoadSummariesJSON loads several the API summaries in the JSON format from
