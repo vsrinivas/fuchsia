@@ -31,12 +31,11 @@ fuchsia_driver("root_driver") {
   sources = [ "root_driver.cc" ]
   deps = [
     ":root_bind",
-    "//sdk/lib/driver2:cpp-promise",
+    "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_compat",
     "//src/devices/bind/fuchsia.test:fuchsia.test_cpp",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
-    "//zircon/system/ulib/async:async-cpp",
   ]
 
   # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
@@ -95,9 +94,8 @@ fuchsia_driver("leaf_driver") {
   deps = [
     ":fuchsia.interop.test_cpp_wire",
     ":interop_leaf_bind",
-    "//sdk/lib/driver2:cpp-promise",
+    "//sdk/lib/driver2:cpp",
     "//src/devices/lib/driver:driver_runtime",
-    "//zircon/system/ulib/async:async-cpp",
   ]
 }
 

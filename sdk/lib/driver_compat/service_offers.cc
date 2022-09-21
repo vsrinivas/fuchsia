@@ -10,11 +10,18 @@ namespace compat {
 
 namespace fcd = fuchsia_component_decl;
 
-std::vector<fuchsia_component_decl::wire::Offer> ServiceOffersV1::CreateOffers(
-    fidl::ArenaBase& arena) {
-  std::vector<fuchsia_component_decl::wire::Offer> offers;
+std::vector<fcd::wire::Offer> ServiceOffersV1::CreateOffers(fidl::ArenaBase& arena) {
+  std::vector<fcd::wire::Offer> offers;
   for (const auto& service_name : offers_) {
     offers.push_back(driver::MakeOffer(arena, service_name, name_));
+  }
+  return offers;
+}
+
+std::vector<fcd::Offer> ServiceOffersV1::CreateOffers() {
+  std::vector<fcd::Offer> offers;
+  for (const auto& service_name : offers_) {
+    offers.push_back(driver::MakeOffer(service_name, name_));
   }
   return offers;
 }

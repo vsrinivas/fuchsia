@@ -5,7 +5,7 @@
 #ifndef LIB_DRIVER_COMPAT_DEVICE_SERVER_H_
 #define LIB_DRIVER_COMPAT_DEVICE_SERVER_H_
 
-#include <fidl/fuchsia.component.decl/cpp/wire.h>
+#include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
 #include <lib/driver2/handlers.h>
 #include <lib/driver2/outgoing_directory.h>
@@ -40,6 +40,7 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
 
   // Create offers to offer this interface to another component.
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
+  std::vector<fuchsia_component_decl::Offer> CreateOffers();
 
   std::string_view name() const { return name_; }
   std::string_view topological_path() const { return topological_path_; }

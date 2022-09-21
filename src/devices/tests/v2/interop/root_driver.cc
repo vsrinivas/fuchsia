@@ -2,20 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/async/cpp/executor.h>
 #include <lib/ddk/device.h>
-#include <lib/driver2/logger.h>
-#include <lib/driver2/namespace.h>
-#include <lib/driver2/node_add_args.h>
-#include <lib/driver2/promise.h>
-#include <lib/driver2/record_cpp.h>
+#include <lib/driver2/driver2_cpp.h>
 #include <lib/driver_compat/compat.h>
 #include <lib/driver_compat/symbols.h>
-#include <lib/fpromise/bridge.h>
-#include <lib/fpromise/result.h>
-#include <lib/fpromise/scope.h>
-#include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <bind/fuchsia/test/cpp/bind.h>
 
@@ -23,123 +13,72 @@ namespace fdf {
 using namespace fuchsia_driver_framework;
 }  // namespace fdf
 
-using fpromise::error;
-using fpromise::ok;
-using fpromise::promise;
-using fpromise::result;
-
 namespace {
 
-class RootDriver {
+class RootDriver : public driver::DriverBase {
  public:
-  RootDriver(async_dispatcher_t* dispatcher, fidl::WireSharedClient<fdf::Node> node,
-             driver::Namespace ns, driver::Logger logger, component::OutgoingDirectory outgoing)
-      : dispatcher_(dispatcher),
-        executor_(dispatcher),
-        node_(std::move(node)),
-        ns_(std::move(ns)),
-        logger_(std::move(logger)),
-        outgoing_(std::move(outgoing)) {}
+  RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
+      : driver::DriverBase("root", std::move(start_args), std::move(dispatcher)) {}
 
-  static constexpr const char* Name() { return "root"; }
-
-  static zx::status<std::unique_ptr<RootDriver>> Start(fdf::wire::DriverStartArgs& start_args,
-                                                       fdf::UnownedDispatcher dispatcher,
-                                                       fidl::WireSharedClient<fdf::Node> node,
-                                                       driver::Namespace ns,
-                                                       driver::Logger logger) {
-    auto outgoing = component::OutgoingDirectory::Create(dispatcher->async_dispatcher());
-    auto driver =
-        std::make_unique<RootDriver>(dispatcher->async_dispatcher(), std::move(node), std::move(ns),
-                                     std::move(logger), std::move(outgoing));
-
-    auto serve = driver->outgoing_.Serve(std::move(start_args.outgoing_dir()));
-    if (serve.is_error()) {
-      return serve.take_error();
-    }
-    auto result = driver->Run();
-    if (result.is_error()) {
-      return result.take_error();
-    }
-    return zx::ok(std::move(driver));
-  }
-
- private:
-  zx::status<> Run() {
-    // Start the driver.
-    auto task =
-        AddChild().or_else(fit::bind_member(this, &RootDriver::UnbindNode)).wrap_with(scope_);
-    executor_.schedule_task(std::move(task));
-    return zx::ok();
-  }
-
-  promise<void, fdf::wire::NodeError> AddChild() {
+  zx::status<> Start() override {
+    node_.Bind(std::move(node()), async_dispatcher());
     child_ = compat::DeviceServer("v1", 0, "root/v1", compat::MetadataMap());
-    zx_status_t status = child_->Serve(dispatcher_, &outgoing_);
+    auto status = child_->Serve(async_dispatcher(), &context().outgoing()->component());
     if (status != ZX_OK) {
-      return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
+      FDF_LOG(ERROR, "Failed to serve compat device server: %s", zx_status_get_string(status));
+      node_.AsyncTeardown();
+      return zx::error(status);
     }
-
-    fidl::Arena arena;
 
     // Set the symbols of the node that a driver will have access to.
     compat_device_.name = "v1";
     compat_device_.proto_ops.ops = reinterpret_cast<void*>(0xabcdef);
-    fdf::wire::NodeSymbol symbol(arena);
-    symbol.set_name(arena, compat::kDeviceSymbol)
-        .set_address(arena, reinterpret_cast<uint64_t>(&compat_device_));
+
+    fdf::NodeSymbol symbol(
+        {.name = compat::kDeviceSymbol, .address = reinterpret_cast<uint64_t>(&compat_device_)});
 
     // Set the properties of the node that a driver will bind to.
-    fdf::wire::NodeProperty property = driver::MakeProperty(
-        arena, 1 /* BIND_PROTOCOL */, bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD);
-    auto offers = child_->CreateOffers(arena);
+    fdf::NodeProperty property =
+        driver::MakeProperty(1 /* BIND_PROTOCOL */, bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD);
 
-    fdf::wire::NodeAddArgs args(arena);
-    args.set_name(arena, "v1")
-        .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(&symbol, 1))
-        .set_offers(arena, fidl::VectorView<fuchsia_component_decl::wire::Offer>::FromExternal(
-                               offers.data(), offers.size()))
-        .set_properties(arena,
-                        fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(&property, 1));
+    auto offers = child_->CreateOffers();
+
+    fdf::NodeAddArgs args(
+        {.name = "v1", .offers = offers, .symbols = {{symbol}}, .properties = {{property}}});
 
     // Create endpoints of the `NodeController` for the node.
     auto endpoints = fidl::CreateEndpoints<fdf::NodeController>();
     if (endpoints.is_error()) {
-      return fpromise::make_error_promise(fdf::wire::NodeError::kInternal);
+      return endpoints.take_error();
     }
 
-    return driver::AddChild(node_, std::move(args), std::move(endpoints->server), {})
-        .and_then([this, client = std::move(endpoints->client)]() mutable {
-          controller_.Bind(std::move(client), dispatcher_);
+    node_->AddChild({std::move(args), std::move(endpoints->server), {}})
+        .Then([&, client = std::move(endpoints->client)](
+                  fidl::Result<fdf::Node::AddChild>& add_result) mutable {
+          if (add_result.is_error()) {
+            FDF_LOG(ERROR, "Failed to AddChild: %s",
+                    add_result.error_value().FormatDescription().c_str());
+            node_.AsyncTeardown();
+            return;
+          }
+
+          controller_.Bind(std::move(client), async_dispatcher());
         });
+    return zx::ok();
   }
 
-  result<> UnbindNode(const fdf::wire::NodeError& error) {
-    FDF_LOG(ERROR, "Failed to start root driver: %d", error);
-    node_.AsyncTeardown();
-    return ok();
-  }
-
-  async_dispatcher_t* const dispatcher_;
-  async::Executor executor_;
-
-  fidl::WireSharedClient<fdf::Node> node_;
-  fidl::WireSharedClient<fdf::NodeController> controller_;
-  driver::Namespace ns_;
-  driver::Logger logger_;
+ private:
+  fidl::SharedClient<fdf::Node> node_;
+  fidl::SharedClient<fdf::NodeController> controller_;
 
   zx_protocol_device_t ops_ = {
       .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
   };
 
-  component::OutgoingDirectory outgoing_;
   compat::device_t compat_device_ = compat::kDefaultDevice;
   std::optional<compat::DeviceServer> child_;
-
-  // NOTE: Must be the last member.
-  fpromise::scope scope_;
 };
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V1(RootDriver);
+FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<RootDriver>);

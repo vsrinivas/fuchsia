@@ -5,7 +5,7 @@
 #ifndef LIB_DRIVER_COMPAT_SERVICE_OFFERS_H_
 #define LIB_DRIVER_COMPAT_SERVICE_OFFERS_H_
 
-#include <fidl/fuchsia.component.decl/cpp/wire.h>
+#include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/driver2/outgoing_directory.h>
 #include <lib/fit/defer.h>
@@ -30,6 +30,7 @@ class ServiceOffersV1 {
 
   // Create offers to offer these services to another component.
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);
+  std::vector<fuchsia_component_decl::Offer> CreateOffers();
 
   fidl::UnownedClientEnd<fuchsia_io::Directory> dir() const { return dir_; }
 
