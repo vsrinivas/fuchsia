@@ -94,11 +94,11 @@ protocol MetricEventLoggerFactory {
 /// A vector of event codes. When used in one of the Log*() calls below,
 /// there must be one event code for each dimension of the metric whose
 /// metric_id is supplied, or else the call will return INVALID_ARGUMENTS.
-alias event_vector = vector<uint32>:MAX_METRIC_DIMENSIONS;
+alias EventVector = vector<uint32>:MAX_METRIC_DIMENSIONS;
 
 /// A histogram that assigns a count to each of several integer ranges.
 /// The order of the vector is immaterial.
-alias integer_histogram = vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS;
+alias IntegerHistogram = vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS;
 
 /// A logger for events that are associated with one project's metrics.
 protocol MetricEventLogger {
@@ -115,7 +115,7 @@ protocol MetricEventLogger {
     LogOccurrence(struct {
         metric_id uint32;
         count uint64;
-        event_codes event_vector;
+        event_codes EventVector;
     }) -> (struct {}) error Error;
 
     /// Logs an integer measurement.
@@ -130,7 +130,7 @@ protocol MetricEventLogger {
     LogInteger(struct {
         metric_id uint32;
         value int64;
-        event_codes event_vector;
+        event_codes EventVector;
     }) -> (struct {}) error Error;
 
     /// Logs a histogram giving many approximate integer measurements.
@@ -144,8 +144,8 @@ protocol MetricEventLogger {
     /// based on these parameters.
     LogIntegerHistogram(struct {
         metric_id uint32;
-        histogram integer_histogram;
-        event_codes event_vector;
+        histogram IntegerHistogram;
+        event_codes EventVector;
     }) -> (struct {}) error Error;
 
     /// Logs a string value that was observed.
@@ -160,7 +160,7 @@ protocol MetricEventLogger {
     LogString(struct {
         metric_id uint32;
         string_value string:MAX_STRING_EVENT_SIZE;
-        event_codes event_vector;
+        event_codes EventVector;
     }) -> (struct {}) error Error;
 
     /// Bulk logging method, equivalent to making many of the above Log*() calls
@@ -189,7 +189,7 @@ type MetricEvent = struct {
 
     /// `event_codes` Ordered list of parameters, one for each of the metric's
     /// dimensions.
-    event_codes event_vector;
+    event_codes EventVector;
 
     /// The metric-type-specific data for the event being logged.
     payload MetricEventPayload;
@@ -205,7 +205,7 @@ type MetricEventPayload = flexible union {
 
     /// The collection of approximate integer measurements, see
     /// LogIntegerHistogram().
-    3: histogram integer_histogram;
+    3: histogram IntegerHistogram;
 
     /// The string to log, see LogString().
     4: string_value string:MAX_STRING_EVENT_SIZE;
