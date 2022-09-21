@@ -1,7 +1,13 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_INITCODES_INL_H_
+#define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_INITCODES_INL_H_
+
 #include <cstdint>
+
+#include "src/graphics/display/drivers/amlogic-display/panel-config.h"
 
 // LCD Init/Shutdown codes from vendor datasheets.
 constexpr uint8_t DELAY_CMD = 0xFF;
@@ -9,10 +15,24 @@ constexpr uint8_t DCS_CMD = 0xFE;
 constexpr uint8_t GEN_CMD = 0xFD;
 constexpr uint8_t FT_GEN_CMD = 0x23;
 
+namespace amlogic_display {
+
 // clang-format off
+constexpr PowerOp lcd_power_on_sequence[] = {
+  { kPowerOpGpio, 0, 1, 200 },
+  { kPowerOpSignal, 0, 0, 0 },
+  { kPowerOpExit, 0, 0, 0 },
+};
+
+constexpr PowerOp lcd_power_off_sequence[] = {
+  { kPowerOpSignal, 0, 0, 5 },
+  { kPowerOpGpio, 0, 0, 20 },
+  // { kPowerOpGpio, 0, 1, 100 },
+  { kPowerOpExit, 0, 0, 0 },
+};
 
 constexpr uint8_t lcd_shutdown_sequence[] = {
-    DELAY_CMD, 5, 0x05, 1, 0x28, DELAY_CMD, 30, 0x05, 1, 0x10, DELAY_CMD, 110, 0xff, 0xff,
+    0xFF, 5, 0x05, 1, 0x28, 0xFF, 30, 0x05, 1, 0x10, 0xFF, 110, 0xff, 0xff,
 };
 
 constexpr uint8_t lcd_init_sequence_TV070WSM_FT[] = {
@@ -826,3 +846,7 @@ constexpr uint8_t lcd_init_sequence_TV070WSM_ST7703I[] = {
 };
 
 // clang-format on
+
+}  // namespace amlogic_display
+
+#endif  // SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_INITCODES_INL_H_

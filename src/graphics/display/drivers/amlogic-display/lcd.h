@@ -13,6 +13,8 @@
 #include <fbl/alloc_checker.h>
 #include <hwreg/mmio.h>
 
+#include "src/graphics/display/drivers/amlogic-display/panel-config.h"
+
 namespace amlogic_display {
 
 // An Lcd controls the panel attached to a MIPI-DSI endpoint.
@@ -43,6 +45,7 @@ class Lcd {
   zx_status_t GetDisplayId();
 
   uint32_t panel_type_;
+  const PanelConfig* panel_config_ = nullptr;
   ddk::GpioProtocolClient gpio_;
   ddk::DsiImplProtocolClient dsiimpl_;
 
