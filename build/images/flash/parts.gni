@@ -29,7 +29,7 @@ if (zircon_r_partition != "") {
   parts += [
     {
       name = zircon_r_partition
-      path = rebase_path(files.recovery_zbi, root_build_dir)
+      path = rebase_path(files.final_recovery_zbi, root_build_dir)
     },
   ]
 }
@@ -53,7 +53,7 @@ if (vbmeta_r_partition != "") {
   parts += [
     {
       name = vbmeta_r_partition
-      path = rebase_path(files.recovery_vbmeta, root_build_dir)
+      path = rebase_path(files.final_recovery_vbmeta, root_build_dir)
     },
   ]
 }
@@ -63,7 +63,7 @@ if (zircon_a_partition != "") {
   recovery_parts += [
     {
       name = zircon_a_partition
-      path = rebase_path(files.recovery_zbi, root_build_dir)
+      path = rebase_path(files.final_recovery_zbi, root_build_dir)
     },
   ]
 }
@@ -71,7 +71,7 @@ if (zircon_b_partition != "") {
   recovery_parts += [
     {
       name = zircon_b_partition
-      path = rebase_path(files.recovery_zbi, root_build_dir)
+      path = rebase_path(files.final_recovery_zbi, root_build_dir)
     },
   ]
 }
@@ -79,7 +79,7 @@ if (zircon_r_partition != "") {
   recovery_parts += [
     {
       name = zircon_r_partition
-      path = rebase_path(files.recovery_zbi, root_build_dir)
+      path = rebase_path(files.final_recovery_zbi, root_build_dir)
     },
   ]
 }
@@ -87,7 +87,7 @@ if (vbmeta_a_partition != "") {
   recovery_parts += [
     {
       name = vbmeta_a_partition
-      path = rebase_path(files.recovery_vbmeta, root_build_dir)
+      path = rebase_path(files.final_recovery_vbmeta, root_build_dir)
     },
   ]
 }
@@ -95,7 +95,7 @@ if (vbmeta_b_partition != "") {
   recovery_parts += [
     {
       name = vbmeta_b_partition
-      path = rebase_path(files.recovery_vbmeta, root_build_dir)
+      path = rebase_path(files.final_recovery_vbmeta, root_build_dir)
     },
   ]
 }
@@ -103,7 +103,7 @@ if (vbmeta_r_partition != "") {
   recovery_parts += [
     {
       name = vbmeta_r_partition
-      path = rebase_path(files.recovery_vbmeta, root_build_dir)
+      path = rebase_path(files.final_recovery_vbmeta, root_build_dir)
     },
   ]
 }
