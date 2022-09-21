@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_CONSUMER_NODE_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_CONSUMER_NODE_H_
 
+#include <zircon/types.h>
+
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/mix/consumer_stage.h"
@@ -55,8 +57,8 @@ class ConsumerNode : public Node {
   ConsumerNode(std::string_view name, PipelineDirection pipeline_direction,
                ConsumerStagePtr pipeline_stage, const Format& format,
                std::shared_ptr<CommandQueue> command_queue)
-      : Node(name, /*is_meta=*/false, pipeline_direction, pipeline_stage,
-             /*parent=*/nullptr),
+      : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock_koid(), pipeline_direction,
+             pipeline_stage, /*parent=*/nullptr),
         format_(format),
         command_queue_(std::move(command_queue)),
         consumer_stage_(std::move(pipeline_stage)) {}

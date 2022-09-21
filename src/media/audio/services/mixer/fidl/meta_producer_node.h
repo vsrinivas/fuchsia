@@ -66,10 +66,10 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   using PacketCommandQueue = SimplePacketQueueProducerStage::CommandQueue;
 
   MetaProducerNode(Args args)
-      : Node(args.name, /*is_meta=*/true, args.pipeline_direction, /*pipeline_stage=*/nullptr,
+      : Node(args.name, /*is_meta=*/true, args.reference_clock_koid, args.pipeline_direction,
+             /*pipeline_stage=*/nullptr,
              /*parent=*/nullptr),
         format_(args.format),
-        reference_clock_koid_(args.reference_clock_koid),
         data_source_(std::move(args.data_source)),
         detached_thread_(std::move(args.detached_thread)) {}
 
@@ -86,7 +86,6 @@ class MetaProducerNode : public Node, public std::enable_shared_from_this<MetaPr
   bool AllowsDest() const final { UNREACHABLE << "AllowsDest should not be called on meta nodes"; }
 
   const Format format_;
-  const zx_koid_t reference_clock_koid_;
   const DataSource data_source_;
   const DetachedThreadPtr detached_thread_;
 

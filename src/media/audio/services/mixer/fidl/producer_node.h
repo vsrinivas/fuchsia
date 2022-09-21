@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_PRODUCER_NODE_H_
 
 #include <lib/zx/time.h>
+#include <zircon/types.h>
 
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
@@ -47,8 +48,8 @@ class ProducerNode : public Node {
  private:
   ProducerNode(std::string_view name, PipelineDirection pipeline_direction,
                PipelineStagePtr pipeline_stage, NodePtr parent)
-      : Node(name, /*is_meta=*/false, pipeline_direction, std::move(pipeline_stage),
-             std::move(parent)) {}
+      : Node(name, /*is_meta=*/false, pipeline_stage->reference_clock_koid(), pipeline_direction,
+             std::move(pipeline_stage), std::move(parent)) {}
 
   NodePtr CreateNewChildSource() final {
     UNREACHABLE << "CreateNewChildSource should not be called on ordinary nodes";

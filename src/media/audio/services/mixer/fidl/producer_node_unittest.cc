@@ -67,6 +67,7 @@ TEST_F(ProducerNodeTest, CreateEdgeSuccess) {
   });
 
   EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
+  EXPECT_EQ(producer->reference_clock_koid(), kReferenceClockKoid);
   EXPECT_EQ(producer->pipeline_stage_thread(), detached_thread_);
   EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread_);
   EXPECT_EQ(producer->pipeline_stage()->format(), kFormat);

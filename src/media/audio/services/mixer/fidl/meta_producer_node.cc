@@ -72,7 +72,7 @@ NodePtr MetaProducerNode::CreateNewChildDest() {
         std::make_shared<SimplePacketQueueProducerStage>(SimplePacketQueueProducerStage::Args{
             .name = child_name,
             .format = format_,
-            .reference_clock_koid = reference_clock_koid_,
+            .reference_clock_koid = reference_clock_koid(),
             .command_queue = queues.packet,
         });
   } else {

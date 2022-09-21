@@ -11,6 +11,7 @@
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
+#include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
 
@@ -23,11 +24,13 @@ const Format kDefaultFormat =
 
 FakeNode::FakeNode(FakeGraph& graph, NodeId id, bool is_meta, PipelineDirection pipeline_direction,
                    FakeNodePtr parent, const Format* format)
-    : Node(std::string("Node") + std::to_string(id), is_meta, pipeline_direction,
+    : Node(std::string("Node") + std::to_string(id), is_meta, DefaultClockKoid(),
+           pipeline_direction,
            is_meta ? nullptr
                    : FakePipelineStage::Create({
                          .name = "PipelineStage" + std::to_string(id),
                          .format = *format,
+                         .reference_clock_koid = DefaultClockKoid(),
                      }),
            std::move(parent)),
       graph_(graph) {}

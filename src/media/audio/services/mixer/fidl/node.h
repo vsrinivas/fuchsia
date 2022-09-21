@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
 #include <lib/fpromise/result.h>
 #include <lib/zx/time.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <string>
@@ -110,41 +111,45 @@ class Node {
 
   // Returns the node's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
-  std::string_view name() const { return name_; }
+  [[nodiscard]] std::string_view name() const { return name_; }
 
   // Reports whether this is a meta node.
-  bool is_meta() const { return is_meta_; }
+  [[nodiscard]] bool is_meta() const { return is_meta_; }
+
+  // Returns the koid of the reference clock used by this node. For ordinary nodes, this corresponds
+  // to the same clock used by the underlying `pipeline_stage()`.
+  [[nodiscard]] zx_koid_t reference_clock_koid() const { return reference_clock_koid_; }
 
   // Returns this ordinary node's source edges.
   // REQUIRED: !is_meta()
-  const std::vector<NodePtr>& sources() const;
+  [[nodiscard]] const std::vector<NodePtr>& sources() const;
 
   // Returns this ordinary node's destination edge, or nullptr if none.
   // REQUIRED: !is_meta()
-  NodePtr dest() const;
+  [[nodiscard]] NodePtr dest() const;
 
   // Returns this meta node's child source nodes.
   // REQUIRED: is_meta()
-  const std::vector<NodePtr>& child_sources() const;
+  [[nodiscard]] const std::vector<NodePtr>& child_sources() const;
 
   // Returns this meta node's child destination nodes.
   // REQUIRED: is_meta()
-  const std::vector<NodePtr>& child_dests() const;
+  [[nodiscard]] const std::vector<NodePtr>& child_dests() const;
 
   // Returns the parent of this node, or nullptr if this is not a child of a meta node.
   // REQUIRED: !is_meta()
-  NodePtr parent() const;
+  [[nodiscard]] NodePtr parent() const;
 
   // Returns the PipelineStage owned by this node.
   // REQUIRED: !is_meta()
-  PipelineStagePtr pipeline_stage() const;
+  [[nodiscard]] PipelineStagePtr pipeline_stage() const;
 
   // Returns the Thread which controls this node's PipelineStage.
   // REQUIRED: !is_meta()
-  ThreadPtr pipeline_stage_thread() const;
+  [[nodiscard]] ThreadPtr pipeline_stage_thread() const;
 
   // Kind of pipeline this node participates in.
-  PipelineDirection pipeline_direction() const { return pipeline_direction_; }
+  [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
 
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect
@@ -153,8 +158,8 @@ class Node {
   virtual zx::duration GetSelfPresentationDelayForSource(const NodePtr& source) const = 0;
 
  protected:
-  Node(std::string_view name, bool is_meta, PipelineDirection pipeline_direction,
-       PipelineStagePtr pipeline_stage, NodePtr parent);
+  Node(std::string_view name, bool is_meta, zx_koid_t reference_clock_koid,
+       PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage, NodePtr parent);
   virtual ~Node() = default;
 
   Node(const Node&) = delete;
@@ -237,6 +242,7 @@ class Node {
 
   const std::string name_;
   const bool is_meta_;
+  const zx_koid_t reference_clock_koid_;
   const PipelineDirection pipeline_direction_;
   const PipelineStagePtr pipeline_stage_;
 

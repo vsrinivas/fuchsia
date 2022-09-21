@@ -46,10 +46,11 @@ bool HasDestInChildren(const std::vector<NodePtr>& children, const NodePtr& dest
 
 }  // namespace
 
-Node::Node(std::string_view name, bool is_meta, PipelineDirection pipeline_direction,
-           PipelineStagePtr pipeline_stage, NodePtr parent)
+Node::Node(std::string_view name, bool is_meta, zx_koid_t reference_clock_koid,
+           PipelineDirection pipeline_direction, PipelineStagePtr pipeline_stage, NodePtr parent)
     : name_(name),
       is_meta_(is_meta),
+      reference_clock_koid_(reference_clock_koid),
       pipeline_direction_(pipeline_direction),
       pipeline_stage_(std::move(pipeline_stage)),
       parent_(std::move(parent)) {
@@ -61,6 +62,7 @@ Node::Node(std::string_view name, bool is_meta, PipelineDirection pipeline_direc
     FX_CHECK(!pipeline_stage_);  // meta nodes cannot own PipelineStages
   } else {
     FX_CHECK(pipeline_stage_);  // each ordinary node own a PipelineStage
+    FX_CHECK(pipeline_stage_->reference_clock_koid() == reference_clock_koid_);
   }
 }
 
