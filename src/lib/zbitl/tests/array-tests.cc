@@ -17,6 +17,10 @@ TEST(ZbitlViewFblByteArrayTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblByteArrayTestTraits>());
 }
 
+TEST(ZbitlViewFblByteArrayTests, CreateFromBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestViewFromBogusZbi<FblByteArrayTestTraits>());
+}
+
 TEST_ITERATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)
 
 TEST_MUTATION(ZbitlViewFblByteArrayTests, FblByteArrayTestTraits)

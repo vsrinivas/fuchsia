@@ -10,6 +10,7 @@
 #include <lib/zbitl/item.h>
 #include <lib/zbitl/json.h>
 #include <lib/zbitl/view.h>
+#include <zircon/boot/image.h>
 
 #include <iterator>
 #include <string>
@@ -139,7 +140,7 @@ inline void TestDefaultConstructedView() {
   // templates, even though the header/payloads are never used.
   for (auto [header, payload] : view) {
     EXPECT_EQ(header->flags, header->flags);
-    EXPECT_TRUE(false) << "should not be reached";
+    FAIL() << "should not be reached";
   }
 
   auto error = view.take_error();
@@ -150,6 +151,23 @@ inline void TestDefaultConstructedView() {
   } else {
     EXPECT_FALSE(error.error_value().storage_error.has_value());
   }
+}
+
+template <typename TestTraits>
+inline void TestViewFromBogusZbi() {
+  typename TestTraits::Context context;
+  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(sizeof(zbi_header_t), &context));
+
+  // make bogus.
+  auto storage = context.TakeStorage();
+  zbi_header_t container_header = {.length = 100};
+  Bytes bytes(reinterpret_cast<const char*>(&container_header), sizeof(container_header));
+  TestTraits::Write(storage, 0, bytes);
+
+  zbitl::View view(std::move(storage));
+
+  EXPECT_TRUE(view.container_header().is_error());
+  EXPECT_EQ(view.size_bytes(), 0u);
 }
 
 template <typename TestTraits>
@@ -635,7 +653,7 @@ void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
     __UNREACHABLE;
   };
 
-  auto do_copy = [&mode, &view, &allocator ](auto&& storage, auto it) -> auto{
+  auto do_copy = [&mode, &view, &allocator](auto&& storage, auto it) -> auto {
     using Storage = decltype(storage);
     switch (mode) {
       case ItemCopyMode::kRaw:

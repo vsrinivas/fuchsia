@@ -16,6 +16,10 @@ TEST_ITERATION(ZbitlViewEfiTests, EfiTestTraits)
 
 TEST_MUTATION(ZbitlViewEfiTests, EfiTestTraits)
 
+TEST(ZbitlViewEfiTests, CreateFromBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestViewFromBogusZbi<EfiTestTraits>());
+}
+
 TEST(ZbitlImageEfiTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<EfiTestTraits>()); }
 
 TEST(ZbitlBootfsEfiTests, Iteration) {

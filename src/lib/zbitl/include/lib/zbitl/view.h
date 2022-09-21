@@ -519,18 +519,8 @@ class View {
   size_t size_bytes() {
     if (limit_ == 0 && std::holds_alternative<Unused>(error_)) {
       // Taking the size before doing begin() takes extra work.
-      auto capacity_error = Traits::Capacity(storage());
-      if (capacity_error.is_ok()) {
-        uint32_t capacity = capacity_error.value();
-        if (capacity >= sizeof(zbi_header_t)) {
-          auto header_error = ReadContainerHeader(storage());
-          if (header_error.is_ok()) {
-            const header_type header(header_error.value());
-            if (header->length <= capacity - sizeof(zbi_header_t)) {
-              return sizeof(zbi_header_t) + header->length;
-            }
-          }
-        }
+      if (auto result = container_header(); result.is_ok()) {
+        return result->length + sizeof(zbi_header_t);
       }
     }
     return limit_;

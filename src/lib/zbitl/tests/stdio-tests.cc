@@ -16,6 +16,10 @@ TEST_ITERATION(ZbitlViewStdioTests, StdioTestTraits)
 
 TEST_MUTATION(ZbitlViewStdioTests, StdioTestTraits)
 
+TEST(ZbitlViewStdioTests, CreateFromBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestViewFromBogusZbi<StdioTestTraits>());
+}
+
 TEST(ZbitlImageStdioTests, Appending) { ASSERT_NO_FATAL_FAILURE(TestAppending<StdioTestTraits>()); }
 
 TEST(ZbitlBootfsStdioTests, Iteration) {

@@ -24,8 +24,8 @@ TEST(ZbitlViewEmptyTupleTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<EmptyTupleTestTraits>());
 }
 
-TEST(ZbitlViewByteSpanTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<ByteSpanTestTraits>());
+TEST(ZbitlViewByteSpanTests, CreateFromBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestViewFromBogusZbi<ByteSpanTestTraits>());
 }
 
 TEST_ITERATION(ZbitlViewByteSpanTests, ByteSpanTestTraits)

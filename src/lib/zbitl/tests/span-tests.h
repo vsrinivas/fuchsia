@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_ZBITL_TESTS_SPAN_TESTS_H_
 #define SRC_LIB_ZBITL_TESTS_SPAN_TESTS_H_
 
+#include <lib/stdcompat/cstddef.h>
 #include <lib/stdcompat/span.h>
 
 #include <memory>

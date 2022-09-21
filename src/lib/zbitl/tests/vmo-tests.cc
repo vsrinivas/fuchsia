@@ -338,6 +338,10 @@ TEST(ZbitlViewVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<VmoTestTraits>());
 }
 
+TEST(ZbitlViewVmoTests, CreateFromBogusZbi) {
+  ASSERT_NO_FATAL_FAILURE(TestViewFromBogusZbi<VmoTestTraits>());
+}
+
 TEST(ZbitlViewVmoTests, Cloning) { ASSERT_NO_FATAL_FAILURE(TestCloning<VmoTestTraits>()); }
 
 TEST_ITERATION(ZbitlViewVmoTests, VmoTestTraits)
