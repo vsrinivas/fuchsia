@@ -231,7 +231,6 @@ arch/arm64/sysroot/include/zircon/hw/usb/cdc.h
 arch/arm64/sysroot/include/zircon/hw/usb/dfu.h
 arch/arm64/sysroot/include/zircon/hw/usb/hid.h
 arch/arm64/sysroot/include/zircon/hw/usb/ums.h
-arch/arm64/sysroot/include/zircon/hw/usb/video.h
 arch/arm64/sysroot/include/zircon/limits.h
 arch/arm64/sysroot/include/zircon/listnode.h
 arch/arm64/sysroot/include/zircon/lookup.h

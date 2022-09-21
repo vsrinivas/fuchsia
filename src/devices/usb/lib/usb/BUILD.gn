@@ -47,3 +47,8 @@ zx_library("audio") {
   sdk = "source"
   sdk_headers = [ "usb/audio.h" ]
 }
+
+zx_library("video") {
+  sdk = "source"
+  sdk_headers = [ "usb/video.h" ]
+}

@@ -202,7 +202,6 @@
   "include/zircon/hw/usb/dfu.h": "300c6c4d953a3315433861241b37a7f5",
   "include/zircon/hw/usb/hid.h": "033c0de8cb1343b1c2b56faad8a6794c",
   "include/zircon/hw/usb/ums.h": "88ea71867bb2283f0d4e7d95dc8ecf28",
-  "include/zircon/hw/usb/video.h": "9a71c9e1dcb62fe94207dddb001ebf4b",
   "include/zircon/limits.h": "564b9d2902c5e1992e2c75cca156ef30",
   "include/zircon/listnode.h": "adc44cc353c4b9b7de4f20c250ddd299",
   "include/zircon/lookup.h": "053d29f711949d3d47b7a6b97b62d735",

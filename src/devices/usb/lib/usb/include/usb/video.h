@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SYSROOT_ZIRCON_HW_USB_VIDEO_H_
-#define SYSROOT_ZIRCON_HW_USB_VIDEO_H_
+#ifndef SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_VIDEO_H_
+#define SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_VIDEO_H_
 
 // clang-format off
 
 #include <zircon/compiler.h>
 #include <stdint.h>
 
-__BEGIN_CDECLS;
+__BEGIN_CDECLS
 
 // video interface subclasses
 #define USB_SUBCLASS_VIDEO_CONTROL                 0x01
@@ -302,7 +302,7 @@ typedef struct {
     uint16_t scrSourceClockSOFCounter;
 } __PACKED usb_video_vs_uncompressed_payload_header;
 
-__END_CDECLS;
+__END_CDECLS
 
 
-#endif  // SYSROOT_ZIRCON_HW_USB_VIDEO_H_
+#endif  // SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_VIDEO_H_
