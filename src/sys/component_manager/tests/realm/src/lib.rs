@@ -19,11 +19,11 @@ pub async fn query_self() {
     let resolved = resolved.unwrap();
     assert_eq!(resolved.uses.len(), 4);
     assert_eq!(resolved.exposes.len(), 1);
-    let started = resolved.started.unwrap();
-    started.out_dir.unwrap();
+    let execution = resolved.execution.unwrap();
+    execution.out_dir.unwrap();
 
     // Test runners should provide "elf/job_id".
-    let runtime_dir = started.runtime_dir.unwrap().into_proxy().unwrap();
+    let runtime_dir = execution.runtime_dir.unwrap().into_proxy().unwrap();
     let job_id_content = fuchsia_fs::directory::open_file(
         &runtime_dir,
         "elf/job_id",
@@ -141,15 +141,15 @@ pub async fn query_echo_server_child() {
         }]
     );
 
-    let started = resolved.started.unwrap();
+    let execution = resolved.execution.unwrap();
 
-    let out_dir = started.out_dir.unwrap();
+    let out_dir = execution.out_dir.unwrap();
     let out_dir = out_dir.into_proxy().unwrap();
     let echo = connect_to_protocol_at_dir_svc::<EchoMarker>(&out_dir).unwrap();
     let reply = echo.echo_string(Some("test")).await.unwrap();
     assert_eq!(reply.unwrap(), "test");
 
-    let runtime_dir = started.runtime_dir.unwrap();
+    let runtime_dir = execution.runtime_dir.unwrap();
     let runtime_dir = runtime_dir.into_proxy().unwrap();
     let elf_dir = fuchsia_fs::directory::open_directory(
         &runtime_dir,

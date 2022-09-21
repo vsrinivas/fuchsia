@@ -154,15 +154,15 @@ impl ElfRuntime {
 /// Additional information about components that are running.
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 #[derive(Debug, Eq, PartialEq)]
-pub struct Started {
+pub struct Execution {
     pub elf_runtime: Option<ElfRuntime>,
     pub outgoing_capabilities: Option<Vec<String>>,
     pub start_reason: String,
 }
 
-impl Started {
-    async fn parse(started: Box<fsys::StartedState>) -> Result<Self> {
-        let elf_runtime = if let Some(runtime_dir) = started.runtime_dir {
+impl Execution {
+    async fn parse(execution: Box<fsys::ExecutionState>) -> Result<Self> {
+        let elf_runtime = if let Some(runtime_dir) = execution.runtime_dir {
             let runtime_dir = runtime_dir.into_proxy()?;
             let runtime_dir = Directory::from_proxy(runtime_dir);
 
@@ -184,7 +184,7 @@ impl Started {
             None
         };
 
-        let outgoing_capabilities = if let Some(out_dir) = started.out_dir {
+        let outgoing_capabilities = if let Some(out_dir) = execution.out_dir {
             let out_dir = out_dir.into_proxy()?;
             let out_dir = Directory::from_proxy(out_dir);
             get_capabilities(out_dir)
@@ -195,7 +195,7 @@ impl Started {
             None
         };
 
-        Ok(Self { elf_runtime, outgoing_capabilities, start_reason: started.start_reason })
+        Ok(Self { elf_runtime, outgoing_capabilities, start_reason: execution.start_reason })
     }
 
     async fn parse_cmx(hub_dir: &Directory) -> Result<Self> {
@@ -234,7 +234,7 @@ pub struct Resolved {
     pub exposed_capabilities: Vec<String>,
     pub merkle_root: Option<String>,
     pub config: Option<Vec<ConfigField>>,
-    pub started: Option<Started>,
+    pub started: Option<Execution>,
 }
 
 impl Resolved {
@@ -274,8 +274,8 @@ impl Resolved {
             None
         };
 
-        let started = if let Some(started) = resolved.started {
-            Some(Started::parse(started).await?)
+        let started = if let Some(execution) = resolved.execution {
+            Some(Execution::parse(execution).await?)
         } else {
             None
         };
@@ -319,7 +319,7 @@ impl Resolved {
             None
         };
 
-        let started = Some(Started::parse_cmx(hub_dir).await?);
+        let started = Some(Execution::parse_cmx(hub_dir).await?);
 
         Ok(Self {
             incoming_capabilities,
@@ -587,7 +587,7 @@ mod tests {
                             }],
                         })),
                         pkg_dir: Some(pkg_dir),
-                        started: Some(Box::new(fsys::StartedState {
+                        execution: Some(Box::new(fsys::ExecutionState {
                             out_dir: Some(out_dir),
                             runtime_dir: Some(runtime_dir),
                             start_reason: "Debugging Workflow".to_string(),
@@ -611,7 +611,7 @@ mod tests {
                         exposes: vec![],
                         config: None,
                         pkg_dir: None,
-                        started: Some(Box::new(fsys::StartedState {
+                        execution: Some(Box::new(fsys::ExecutionState {
                             out_dir: Some(appmgr_out_dir),
                             runtime_dir: None,
                             start_reason: "Debugging Workflow".to_string(),

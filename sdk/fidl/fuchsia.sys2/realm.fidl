@@ -24,7 +24,7 @@ type InstanceState = strict enum {
     /// The component has been resolved by component manager but is not currently running.
     RESOLVED = 1;
 
-    /// The component has been resolved and started by component manager.
+    /// The component has been resolved and started by component manager. It is currently running.
     STARTED = 2;
 };
 
@@ -60,8 +60,9 @@ type ResolvedState = resource struct {
     /// (most likely RO permissions).
     pkg_dir client_end:<fuchsia.io.Directory, optional>;
 
-    /// The execution state of this instance.
-    started box<StartedState>;
+    /// The information available because the component instance is running.
+    /// If this object does not exist, the instance is not running.
+    execution box<ExecutionState>;
 
     /// The directory containing all capabilities exposed by the component.
     /// This directory has RW permissions.
@@ -72,15 +73,15 @@ type ResolvedState = resource struct {
     ns_dir client_end:<fuchsia.io.Directory>;
 };
 
-/// The detailed started state of a component instance
-type StartedState = resource struct {
+/// The detailed execution state of a component instance
+type ExecutionState = resource struct {
     /// The outgoing directory of this instance, if one exists.
     out_dir client_end:<fuchsia.io.Directory, optional>;
 
     /// The debug directory served by the runner of this instance, if one exists.
     runtime_dir client_end:<fuchsia.io.Directory, optional>;
 
-    /// The human-readable explanation for why this instance is running.
+    /// The human-readable explanation for why this instance was started.
     start_reason string:MAX;
 };
 
@@ -98,13 +99,13 @@ type ResolvedDirectories = resource struct {
     /// The directory handles + paths that constitute the component's namespace.
     ns_entries vector<fuchsia.component.runner.ComponentNamespaceEntry>:MAX;
 
-    /// The directories available because the component instance is in started state.
-    /// If this object does not exist, the instance is not started.
-    started_dirs box<StartedDirectories>;
+    /// The directories available because the component instance is running.
+    /// If this object does not exist, the instance is not running.
+    execution_dirs box<ExecutionDirectories>;
 };
 
-/// The directories available because the component instance is in started state
-type StartedDirectories = resource struct {
+/// The directories available because the component instance is running
+type ExecutionDirectories = resource struct {
     /// The outgoing directory of this instance, if one exists.
     out_dir client_end:<fuchsia.io.Directory, optional>;
 

@@ -315,7 +315,7 @@ mod tests {
                         })],
                         config: None,
                         pkg_dir: None,
-                        started: None,
+                        execution: None,
                         exposed_dir,
                         ns_dir,
                     })),
@@ -336,7 +336,7 @@ mod tests {
                             exposes: vec![],
                             config: None,
                             pkg_dir: None,
-                            started: Some(Box::new(fsys::StartedState {
+                            execution: Some(Box::new(fsys::ExecutionState {
                                 out_dir: Some(appmgr_out_dir_1),
                                 runtime_dir: None,
                                 start_reason: "Debugging Workflow".to_string(),
@@ -357,7 +357,7 @@ mod tests {
                             exposes: vec![],
                             config: None,
                             pkg_dir: None,
-                            started: Some(Box::new(fsys::StartedState {
+                            execution: Some(Box::new(fsys::ExecutionState {
                                 out_dir: Some(appmgr_out_dir_2),
                                 runtime_dir: None,
                                 start_reason: "Debugging Workflow".to_string(),

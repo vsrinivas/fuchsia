@@ -95,7 +95,7 @@ impl RealmQuery {
 
         let state = match &resolved {
             Some(r) => {
-                if r.started.is_some() {
+                if r.execution.is_some() {
                     fsys::InstanceState::Started
                 } else {
                     fsys::InstanceState::Resolved
@@ -353,7 +353,7 @@ mod tests {
         assert_eq!(info.instance_id.clone().unwrap(), iid);
 
         let resolved = resolved.unwrap();
-        let started = resolved.started.unwrap();
+        let execution = resolved.execution.unwrap();
 
         // Component should have one config field with right value
         let config = resolved.config.unwrap();
@@ -422,8 +422,8 @@ mod tests {
         );
 
         // Test runners don't provide an out dir or a runtime dir
-        assert!(started.out_dir.is_none());
-        assert!(started.runtime_dir.is_none());
+        assert!(execution.out_dir.is_none());
+        assert!(execution.runtime_dir.is_none());
     }
 
     #[fuchsia::test]
@@ -498,7 +498,7 @@ mod tests {
         assert!(resolved.uses.is_empty());
         assert!(resolved.exposes.is_empty());
         assert!(resolved.pkg_dir.is_some());
-        assert!(resolved.started.is_none());
+        assert!(resolved.execution.is_none());
 
         let result = component_a.start(&StartReason::Debug).await.unwrap();
         assert_eq!(result, fsys::StartResult::Started);
@@ -513,9 +513,9 @@ mod tests {
         assert!(resolved.exposes.is_empty());
         assert!(resolved.pkg_dir.is_some());
 
-        let started = resolved.started.unwrap();
-        assert!(started.out_dir.is_none());
-        assert!(started.runtime_dir.is_none());
+        let execution = resolved.execution.unwrap();
+        assert!(execution.out_dir.is_none());
+        assert!(execution.runtime_dir.is_none());
 
         component_a.stop_instance(false, false).await.unwrap();
 
@@ -529,7 +529,7 @@ mod tests {
         assert!(resolved.exposes.is_empty());
         assert!(resolved.pkg_dir.is_some());
 
-        assert!(resolved.started.is_none());
+        assert!(resolved.execution.is_none());
 
         let child_moniker = ChildMoniker::parse("my_coll:a").unwrap();
         component_root.remove_dynamic_child(&child_moniker).await.unwrap();
@@ -587,7 +587,7 @@ mod tests {
         assert!(resolved.exposes.is_empty());
         assert!(resolved.pkg_dir.is_some());
 
-        assert!(resolved.started.is_none());
+        assert!(resolved.execution.is_none());
 
         let result = component_a.start(&StartReason::Debug).await.unwrap();
         assert_eq!(result, fsys::StartResult::Started);
@@ -602,9 +602,9 @@ mod tests {
         assert!(resolved.exposes.is_empty());
         assert!(resolved.pkg_dir.is_some());
 
-        let started = resolved.started.unwrap();
-        assert!(started.out_dir.is_none());
-        assert!(started.runtime_dir.is_none());
+        let execution = resolved.execution.unwrap();
+        assert!(execution.out_dir.is_none());
+        assert!(execution.runtime_dir.is_none());
 
         component_a.stop_instance(false, false).await.unwrap();
 
@@ -618,7 +618,7 @@ mod tests {
         assert!(resolved.exposes.is_empty());
         assert!(resolved.pkg_dir.is_some());
 
-        assert!(resolved.started.is_none());
+        assert!(resolved.execution.is_none());
     }
 
     #[fuchsia::test]
@@ -676,8 +676,8 @@ mod tests {
 
         assert!(resolved_dirs.pkg_dir.is_some());
 
-        let started_dirs = resolved_dirs.started_dirs.unwrap();
-        assert!(started_dirs.out_dir.is_none());
-        assert!(started_dirs.runtime_dir.is_none());
+        let execution_dirs = resolved_dirs.execution_dirs.unwrap();
+        assert!(execution_dirs.out_dir.is_none());
+        assert!(execution_dirs.runtime_dir.is_none());
     }
 }
