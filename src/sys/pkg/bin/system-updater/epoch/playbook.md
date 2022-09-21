@@ -24,9 +24,6 @@ Create a CL that:
 * updates `SOURCE_EPOCH` in
   [//src/sys/pkg/lib/fuchsia-pkg-testing/src/update_package.rs](/src/sys/pkg/lib/fuchsia-pkg-testing/src/update_package.rs
   to match the new epoch.
-* updates `SOURCE_EPOCH` in
-  [//src/sys/pkg/bin/system-updater/src/update/history/version.rs](/src/sys/pkg/bin/system-updater/src/update/history/version.rs
-  to match the new epoch.
 * updates `epoch` in
   [//src/security/pkg_test/assesmblies/assemble_security_pkg_test_system.gni](/src/security/pkg_test/assemblies/assemble_security_pkg_test_system.gni)
   to match the new epoch.

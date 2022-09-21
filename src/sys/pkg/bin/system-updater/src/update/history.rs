@@ -438,10 +438,12 @@ mod tests {
                 &system_info,
             )
             .await;
-        history.record_update_attempt(update_attempt.finish(
-            Version::for_hash("new".to_owned()),
-            State::FailPrepare(PrepareFailureReason::Internal),
-        ));
+        history.record_update_attempt(
+            update_attempt.finish(
+                Version::for_hash("new"),
+                State::FailPrepare(PrepareFailureReason::Internal),
+            ),
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -501,14 +503,8 @@ mod tests {
         record_fake_update_attempt(&mut history, 42).await;
         let update_attempt = UpdateAttempt {
             attempt_id: history.update_attempts[0].attempt_id.clone(),
-            source_version: Version {
-                vbmeta_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                    .to_string(),
-                zbi_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                    .to_string(),
-                ..Version::default()
-            },
-            target_version: Version::for_hash("new".to_owned()),
+            source_version: Version::for_hash_and_empty_paver_hashes(""),
+            target_version: Version::for_hash("new"),
             options: Options {
                 initiator: Initiator::User,
                 allow_attach_to_existing_attempt: false,
@@ -539,7 +535,7 @@ mod tests {
                             "vbmeta_hash": "",
                             "zbi_hash": "",
                             "build_version": "",
-                            "epoch": SOURCE_EPOCH.to_string()
+                            "epoch": "1001",
                         },
                         "target": {
                             "update_hash": "newer",
@@ -547,7 +543,7 @@ mod tests {
                             "vbmeta_hash": "",
                             "zbi_hash": "",
                             "build_version": "",
-                            "epoch": SOURCE_EPOCH.to_string()
+                            "epoch": "1002",
                         },
                         "options": {
                             "initiator":  "User",
@@ -577,7 +573,7 @@ mod tests {
                             "vbmeta_hash": "",
                             "zbi_hash": "",
                             "build_version": "",
-                            "epoch": SOURCE_EPOCH.to_string()
+                            "epoch": "1000",
                         },
                         "target": {
                             "update_hash": "new",
@@ -585,7 +581,7 @@ mod tests {
                             "vbmeta_hash": "",
                             "zbi_hash": "",
                             "build_version": "",
-                            "epoch": SOURCE_EPOCH.to_string()
+                            "epoch": "1001",
                         },
                         "options": {
                             "initiator":  "User",
@@ -617,8 +613,8 @@ mod tests {
             vec![
                 UpdateAttempt {
                     attempt_id: "1234".to_owned(),
-                    source_version: Version::for_hash("new".to_owned()),
-                    target_version: Version::for_hash("newer".to_owned()),
+                    source_version: Version::for_hash_and_epoch("new", "1001"),
+                    target_version: Version::for_hash_and_epoch("newer", "1002"),
                     options: Options {
                         initiator: Initiator::User,
                         allow_attach_to_existing_attempt: false,
@@ -630,8 +626,8 @@ mod tests {
                 },
                 UpdateAttempt {
                     attempt_id: "4567".to_owned(),
-                    source_version: Version::for_hash("old".to_owned()),
-                    target_version: Version::for_hash("new".to_owned()),
+                    source_version: Version::for_hash_and_epoch("old", "1000"),
+                    target_version: Version::for_hash_and_epoch("new", "1001"),
                     options: Options {
                         initiator: Initiator::User,
                         allow_attach_to_existing_attempt: false,
@@ -660,7 +656,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "1000",
                             },
                             "target_version": {
                                 "update_hash": "new",
@@ -668,7 +664,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "1001",
                             },
                             "options": {
                                 "initiator": "User",
@@ -696,7 +692,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "1001",
                             },
                             "target_version": {
                                 "update_hash": "newer",
@@ -704,7 +700,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "1002",
                             },
                             "options": {
                                 "initiator": "User",
@@ -750,7 +746,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "1000",
                             },
                             "target_version": {
                                 "update_hash": "new",
@@ -758,7 +754,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "1001",
                             },
                             "options": {
                                 "initiator": "User",
@@ -786,7 +782,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "1001",
                             },
                             "target_version": {
                                 "update_hash": "newer",
@@ -794,7 +790,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "1002",
                             },
                             "options": {
                                 "initiator": "User",
@@ -822,7 +818,7 @@ mod tests {
                                 "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": SOURCE_EPOCH.to_string(),
                             },
                             "target_version": {
                                 "update_hash": "new",
@@ -830,7 +826,7 @@ mod tests {
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
                                 "build_version": "",
-                                "epoch": SOURCE_EPOCH.to_string()
+                                "epoch": "",
                             },
                             "options": {
                                 "initiator": "User",
@@ -852,21 +848,15 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn start_update_attempt_uses_last_successful_attempt_as_source_version() {
-        let completed_target_version = Version {
-            update_hash: "completed target version".to_string(),
-            vbmeta_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                .to_string(),
-            zbi_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                .to_string(),
-            ..Version::default()
-        };
+        let completed_target_version =
+            Version::for_hash_and_empty_paver_hashes("completed target version");
 
         let history = UpdateHistory {
             update_attempts: VecDeque::from(vec![
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
-                    source_version: Version::for_hash("old".to_owned()),
-                    target_version: Version::for_hash("failed target version".to_owned()),
+                    source_version: Version::for_hash("old"),
+                    target_version: Version::for_hash("failed target version"),
                     options: Options {
                         initiator: Initiator::User,
                         allow_attach_to_existing_attempt: false,
@@ -878,7 +868,7 @@ mod tests {
                 },
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
-                    source_version: Version::for_hash("old".to_owned()),
+                    source_version: Version::for_hash("old"),
                     target_version: completed_target_version.clone(),
                     options: Options {
                         initiator: Initiator::User,
@@ -932,14 +922,8 @@ mod tests {
         record_fake_update_attempt(&mut history, 42).await;
         let update_attempt = UpdateAttempt {
             attempt_id: history.update_attempts[0].attempt_id.clone(),
-            source_version: Version {
-                vbmeta_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                    .to_string(),
-                zbi_hash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                    .to_string(),
-                ..Version::default()
-            },
-            target_version: Version::for_hash("new".to_owned()),
+            source_version: Version::for_hash_and_empty_paver_hashes(""),
+            target_version: Version::for_hash("new"),
             options: opts,
             update_url: "fuchsia-pkg://fuchsia.test/update".parse().unwrap(),
             start_time: SystemTime::UNIX_EPOCH + Duration::from_nanos(42),
@@ -973,7 +957,7 @@ mod tests {
                         "vbmeta_hash": "",
                         "zbi_hash": "",
                         "build_version": "",
-                        "epoch": SOURCE_EPOCH.to_string()
+                        "epoch": "",
                     },
                     "options": {
                         "allow_attach_to_existing_attempt": false,
@@ -1004,16 +988,8 @@ mod tests {
                 .rev()
                 .map(|i| UpdateAttempt {
                     attempt_id: history.update_attempts[9 - i].attempt_id.clone(),
-                    source_version: Version {
-                        vbmeta_hash:
-                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                                .to_string(),
-                        zbi_hash:
-                            "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
-                                .to_string(),
-                        ..Version::default()
-                    },
-                    target_version: Version::for_hash("new".to_owned()),
+                    source_version: Version::for_hash_and_empty_paver_hashes(""),
+                    target_version: Version::for_hash("new"),
                     options: Options {
                         initiator: Initiator::User,
                         allow_attach_to_existing_attempt: false,
@@ -1130,8 +1106,8 @@ mod tests {
             update_attempts: VecDeque::from(vec![
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
-                    source_version: Version::for_hash("old".to_owned()),
-                    target_version: Version::for_hash("new".to_owned()),
+                    source_version: Version::for_hash("old"),
+                    target_version: Version::for_hash("new"),
                     options: Options {
                         initiator: Initiator::User,
                         allow_attach_to_existing_attempt: false,
@@ -1143,8 +1119,8 @@ mod tests {
                 },
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
-                    source_version: Version::for_hash("old2".to_owned()),
-                    target_version: Version::for_hash("new".to_owned()),
+                    source_version: Version::for_hash("old2"),
+                    target_version: Version::for_hash("new"),
                     options: Options {
                         initiator: Initiator::User,
                         allow_attach_to_existing_attempt: false,
@@ -1167,8 +1143,8 @@ mod tests {
             update_attempts: VecDeque::from(vec![
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
-                    source_version: Version::for_hash("old".to_owned()),
-                    target_version: Version::for_hash("new".to_owned()),
+                    source_version: Version::for_hash("old"),
+                    target_version: Version::for_hash("new"),
                     options: Options {
                         initiator: Initiator::User,
                         allow_attach_to_existing_attempt: false,
@@ -1180,8 +1156,8 @@ mod tests {
                 },
                 UpdateAttempt {
                     attempt_id: "id".to_owned(),
-                    source_version: Version::for_hash("old".to_owned()),
-                    target_version: Version::for_hash("new2".to_owned()),
+                    source_version: Version::for_hash("old"),
+                    target_version: Version::for_hash("new2"),
                     options: Options {
                         initiator: Initiator::User,
                         allow_attach_to_existing_attempt: false,
@@ -1202,8 +1178,8 @@ mod tests {
     async fn last_update_attempt() {
         let first_attempt = UpdateAttempt {
             attempt_id: "0".to_owned(),
-            source_version: Version::for_hash("old".to_owned()),
-            target_version: Version::for_hash("new".to_owned()),
+            source_version: Version::for_hash("old"),
+            target_version: Version::for_hash("new"),
             options: Options {
                 initiator: Initiator::User,
                 allow_attach_to_existing_attempt: false,
@@ -1215,8 +1191,8 @@ mod tests {
         };
         let second_attempt = UpdateAttempt {
             attempt_id: "1".to_owned(),
-            source_version: Version::for_hash("old".to_owned()),
-            target_version: Version::for_hash("new2".to_owned()),
+            source_version: Version::for_hash("old"),
+            target_version: Version::for_hash("new2"),
             options: Options {
                 initiator: Initiator::User,
                 allow_attach_to_existing_attempt: false,
@@ -1238,8 +1214,8 @@ mod tests {
     async fn update_attempt() {
         let attempt_foo = UpdateAttempt {
             attempt_id: "foo".to_owned(),
-            source_version: Version::for_hash("old".to_owned()),
-            target_version: Version::for_hash("new".to_owned()),
+            source_version: Version::for_hash("old"),
+            target_version: Version::for_hash("new"),
             options: Options {
                 initiator: Initiator::User,
                 allow_attach_to_existing_attempt: false,
@@ -1251,8 +1227,8 @@ mod tests {
         };
         let attempt_bar = UpdateAttempt {
             attempt_id: "bar".to_owned(),
-            source_version: Version::for_hash("old".to_owned()),
-            target_version: Version::for_hash("new2".to_owned()),
+            source_version: Version::for_hash("old"),
+            target_version: Version::for_hash("new2"),
             options: Options {
                 initiator: Initiator::User,
                 allow_attach_to_existing_attempt: false,

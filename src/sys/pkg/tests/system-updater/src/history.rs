@@ -559,7 +559,7 @@ async fn increments_attempts_counter_on_retry_v1() {
                     "vbmeta_hash": "",
                     "zbi_hash": "",
                     "build_version": "",
-                    "epoch": SOURCE_EPOCH.to_string()
+                    "epoch": "",
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": false,
@@ -681,7 +681,7 @@ async fn increments_attempts_counter_on_retry() {
                     "vbmeta_hash": "",
                     "zbi_hash": "",
                     "build_version": "",
-                    "epoch": SOURCE_EPOCH.to_string()
+                    "epoch": "",
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": false,
