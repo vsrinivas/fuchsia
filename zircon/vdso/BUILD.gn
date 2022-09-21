@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/compiled_action.gni")
+import("//build/fidl/fidl_library.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/testing/golden_files.gni")
 import("vdso.gni")
@@ -87,7 +88,7 @@ rust_generated = [
 ]
 
 group("vdso") {
-  deps = [ ":zx($default_toolchain)" ]
+  deps = [ ":zx($fidl_toolchain)" ]
 }
 
 group("tests") {
@@ -95,28 +96,76 @@ group("tests") {
   deps = [ ":goldens($default_toolchain)" ]
 }
 
-if (current_toolchain == default_toolchain) {
-  # The system calls are defined as if they were a FIDL library, because
-  # kazoo consumes the FIDL JSON IR (generated below). This generates the
-  # file by invoking fidlc directly.
-  compiled_action("zx") {
+if (current_toolchain == fidl_toolchain) {
+  fidl_library("zx") {
     visibility = [ ":*" ]
-    tool = "//tools/fidl/fidlc:fidlc"
-    outputs = [ "$target_gen_dir/$target_name.fidl.json" ]
-    sources = all_syscall_fidl_files
-    args = [
-      "--name",
-      target_name,
-      "--json",
-      rebase_path(outputs[0], root_build_dir),
-      "--files",
-    ]
-    args += rebase_path(sources, root_build_dir)
 
-    metadata = {
-      generated_sources = rebase_path(outputs, root_build_dir)
-    }
+    sources = [
+      "alias_workarounds.fidl",
+      "bti.fidl",
+      "cache.fidl",
+      "channel.fidl",
+      "clock.fidl",
+      "cprng.fidl",
+      "debug.fidl",
+      "debuglog.fidl",
+      "event.fidl",
+      "eventpair.fidl",
+      "exception.fidl",
+      "fifo.fidl",
+      "framebuffer.fidl",
+      "futex.fidl",
+      "guest.fidl",
+      "handle.fidl",
+      "interrupt.fidl",
+      "iommu.fidl",
+      "ioports.fidl",
+      "job.fidl",
+      "ktrace.fidl",
+      "misc.fidl",
+      "msi.fidl",
+      "mtrace.fidl",
+      "object.fidl",
+      "overview.fidl",
+      "pager.fidl",
+      "pc.fidl",
+      "pci.fidl",
+      "pmt.fidl",
+      "port.fidl",
+      "process.fidl",
+      "profile.fidl",
+      "resource.fidl",
+      "restricted.fidl",
+      "rights.fidl",
+      "smc.fidl",
+      "socket.fidl",
+      "stream.fidl",
+      "syscall.fidl",
+      "system.fidl",
+      "task.fidl",
+      "thread.fidl",
+      "timer.fidl",
+      "vcpu.fidl",
+      "vmar.fidl",
+      "vmo.fidl",
+      "zx_common.fidl",
+      "zx_syscall.fidl",
+    ]
+
+    # TODO(fxbug.dev/109734): Burn these down.
+    excluded_checks = [
+      "invalid-case-for-decl-name",
+      "string-bounds-not-specified",
+      "vector-bounds-not-specified",
+    ]
   }
+}
+
+# TODO(joshuaseaton): Do not let our use of a "library zx" here propagate up to
+# SDK build logic that would then consider this an "SDK library": there is
+# already another library zx in the SDK and so this prevents collision.
+barrier_metadata = {
+  fidl_json_barrier = []
 }
 
 # This provides the public headers that go with the vDSO API, which are
@@ -128,6 +177,7 @@ group("public") {
   ]
   public_configs = [ ":public.config" ]
   public_deps = [ ":generate($default_toolchain)" ]
+  metadata = barrier_metadata
 }
 
 syscall_public_gen_dir = "$root_gen_dir/include/zircon/syscalls"
@@ -152,6 +202,7 @@ group("private") {
   ]
   public_configs = [ ":private.config" ]
   public_deps = [ ":generate($default_toolchain)" ]
+  metadata = barrier_metadata
 }
 
 default_target_gen_dir =
@@ -187,6 +238,7 @@ rustc_library("fuchsia-zircon-sys") {
     # crate.
     "//src/lib/zircon/rust:*",
   ]
+  metadata = barrier_metadata
 }
 
 # The kazoo compiler translates FIDL's IR into syscall-oriented outputs.
@@ -294,9 +346,9 @@ template("kazoo") {
       }
     }
 
-    deps = [ ":zx" ]
-    sources = get_target_outputs(deps[0])
-    assert(sources == [ sources[0] ])  # There can be only one.
+    deps = [ ":zx($fidl_toolchain)" ]
+    fidl_target_gen_dir = get_label_info(deps[0], "target_gen_dir")
+    sources = [ "$fidl_target_gen_dir/zx.fidl.json" ]
     args += [ rebase_path(sources[0], root_build_dir) ]
 
     metadata = {

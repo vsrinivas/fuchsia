@@ -317,6 +317,7 @@ template("sdk") {
     deps = [ ":$main_target_name" ]
     outputs = [ "$fidl_json_file" ]
     data_keys = [ "fidl_json" ]
+    walk_keys = [ "fidl_json_barrier" ]
   }
 
   stamp_file = "$target_gen_dir/$target_name.exported"

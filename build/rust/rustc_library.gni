@@ -103,6 +103,9 @@ import("//build/rust/rustc_test.gni")
 #     The name of the target as it appears in the BUILD file. Enables tooling
 #     to find the template invocation in a BUILD file where this target was defined.
 #
+#   metadata (optional)
+#     The usual GN meaning.
+#
 # Example of usage:
 #
 #   rustc_library("foo-bar") {
@@ -209,6 +212,9 @@ template("rustc_library") {
 
     # Avoid walking into data_deps when checking component manifest expected includes.
     metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
       expect_includes_barrier = deps
     }
   }
