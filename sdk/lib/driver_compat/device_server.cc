@@ -100,6 +100,13 @@ zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
   return ZX_OK;
 }
 
+void DeviceServer::ExportToDevfs(const driver::DevfsExporter& exporter,
+                                 std::string_view service_path,
+                                 fit::callback<void(zx_status_t)> callback) const {
+  exporter.Export(service_path, topological_path_, fuchsia_device_fs::ExportOptions(), proto_id_,
+                  std::move(callback));
+}
+
 std::vector<fcd::wire::Offer> DeviceServer::CreateOffers(fidl::ArenaBase& arena) {
   std::vector<fcd::wire::Offer> offers;
   // Create the main fuchsia.driver.compat.Service offer.

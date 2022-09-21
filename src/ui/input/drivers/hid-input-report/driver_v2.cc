@@ -21,10 +21,12 @@ namespace fio = fuchsia_io;
 
 namespace {
 
+const std::string kDeviceName = "InputReport";
+
 class InputReportDriver : public driver::DriverBase {
  public:
   InputReportDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
-      : DriverBase("InputReport", std::move(start_args), std::move(dispatcher)) {}
+      : DriverBase(kDeviceName, std::move(start_args), std::move(dispatcher)) {}
 
   zx::status<> Start() override {
     auto parent_symbol = driver::GetSymbol<compat::device_t*>(symbols(), compat::kDeviceSymbol);
@@ -51,43 +53,39 @@ class InputReportDriver : public driver::DriverBase {
     // Start the inner DFv1 driver.
     input_report_->Start();
 
+    // Export our InputReport protocol.
+    auto status = context().outgoing()->component().AddProtocol<fuchsia_input_report::InputDevice>(
+        &input_report_.value(), kDeviceName);
+    if (status.is_error()) {
+      return status.take_error();
+    }
+
     // Create our compat context, and serve our device when it's created.
-    compat::Context::ConnectAndCreate(&context(), async_dispatcher(), [this](auto result) {
-      if (!result.is_ok()) {
-        FDF_LOG(ERROR, "Call to Context::ConnectAndCreate failed: %s", result.status_string());
-        ScheduleStop();
-        return;
-      }
-      compat_context_ = std::move(*result);
-      auto status = CreateAndServeDevice();
-      if (!status.is_ok()) {
-        FDF_LOG(ERROR, "Call to CreateAndServeDevice failed: %s", status.status_string());
-        ScheduleStop();
-        return;
-      }
-    });
+    compat::Context::ConnectAndCreate(
+        &context(), async_dispatcher(),
+        fit::bind_member(this, &InputReportDriver::CreateAndExportDevice));
     return zx::ok();
   }
 
  private:
-  zx::status<> CreateAndServeDevice() {
-    // Create our child device and FIDL server.
-    child_ = compat::DeviceServer("InputReport", ZX_PROTOCOL_INPUTREPORT,
-                                  compat_context_->TopologicalPath("InputReport"), {});
-    auto status = context().outgoing()->component().AddProtocol<fuchsia_input_report::InputDevice>(
-        &input_report_.value(), "InputReport");
-    if (status.is_error()) {
-      return status.take_error();
+  void CreateAndExportDevice(zx::status<std::shared_ptr<compat::Context>> context) {
+    if (!context.is_ok()) {
+      FDF_LOG(ERROR, "Call to Context::ConnectAndCreate failed: %s", context.status_string());
+      return ScheduleStop();
     }
-    compat_context_->devfs_exporter().Export(
-        std::string("svc/").append(child_->name()), child_->topological_path(), {},
-        ZX_PROTOCOL_INPUTREPORT, [this](zx_status_t status) {
+    compat_context_ = std::move(*context);
+
+    // Create our child device and export it to devfs.
+    child_ =
+        compat::DeviceServer(kDeviceName, ZX_PROTOCOL_INPUTREPORT,
+                             compat_context_->TopologicalPath(kDeviceName), compat::MetadataMap());
+    child_->ExportToDevfs(
+        compat_context_->devfs_exporter(), child_->name(), [this](zx_status_t status) {
           if (status != ZX_OK) {
             FDF_LOG(WARNING, "Failed to export to devfs: %s", zx_status_get_string(status));
             ScheduleStop();
           }
         });
-    return zx::ok();
   }
 
   // Calling this function drops our node handle, which tells the DriverFramework to call Stop

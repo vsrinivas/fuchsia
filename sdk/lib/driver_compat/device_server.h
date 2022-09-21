@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.component.decl/cpp/fidl.h>
 #include <fidl/fuchsia.driver.compat/cpp/wire.h>
+#include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/handlers.h>
 #include <lib/driver2/outgoing_directory.h>
 #include <lib/driver_compat/service_offers.h>
@@ -37,6 +38,10 @@ class DeviceServer : public fidl::WireServer<fuchsia_driver_compat::Device> {
   // Serve this interface in an outgoing directory.
   zx_status_t Serve(async_dispatcher_t* dispatcher, component::OutgoingDirectory* outgoing);
   zx_status_t Serve(async_dispatcher_t* dispatcher, driver::OutgoingDirectory* outgoing);
+
+  // Export a service path to devfs with this device's properties.
+  void ExportToDevfs(const driver::DevfsExporter& exporter, std::string_view service_path,
+                     fit::callback<void(zx_status_t)> callback) const;
 
   // Create offers to offer this interface to another component.
   std::vector<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::ArenaBase& arena);

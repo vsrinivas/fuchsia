@@ -31,12 +31,12 @@ class DevfsExporter {
   // `protocol_id`.
   void Export(std::string_view service_path, std::string_view devfs_path,
               fuchsia_device_fs::wire::ExportOptions options, uint32_t protocol_id,
-              fit::function<void(zx_status_t)> callback) const;
+              fit::callback<void(zx_status_t)> callback) const;
 
   // Exports `T` to `devfs_path`, with an associated `options` and `protocol_id`.
   template <typename T>
   void Export(std::string_view devfs_path, fuchsia_device_fs::ExportOptions options,
-              uint32_t protocol_id, fit::function<void(zx_status_t)> callback) const {
+              uint32_t protocol_id, fit::callback<void(zx_status_t)> callback) const {
     return Export(fidl::DiscoverableProtocolName<T>, devfs_path, options, protocol_id,
                   std::move(callback));
   }

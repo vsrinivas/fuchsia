@@ -53,7 +53,7 @@ zx_status_t DevfsExporter::ExportSync(std::string_view service_path, std::string
 
 void DevfsExporter::Export(std::string_view service_path, std::string_view devfs_path,
                            fuchsia_device_fs::wire::ExportOptions options, uint32_t protocol_id,
-                           fit::function<void(zx_status_t)> callback) const {
+                           fit::callback<void(zx_status_t)> callback) const {
   // Get a connection to svc_dir.
   auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (svc_endpoints.is_error()) {

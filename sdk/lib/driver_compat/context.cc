@@ -28,9 +28,22 @@ void Context::ConnectAndCreate(driver::DriverContext* driver_context,
   if (status.is_error()) {
     return callback(status.take_error());
   }
+  auto svc_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (svc_endpoints.is_error()) {
+    return callback(svc_endpoints.take_error());
+  }
+  auto response =
+      fidl::WireCall(endpoints->client)
+          ->Open(fuchsia_io::wire::OpenFlags::kRightReadable |
+                     fuchsia_io::wire::OpenFlags::kRightWritable,
+                 0, "svc/", fidl::ServerEnd<fuchsia_io::Node>(svc_endpoints->server.TakeHandle()));
+  if (response.status() != ZX_OK) {
+    return callback(zx::error(response.status()));
+  }
+
   auto exporter = driver::DevfsExporter::Create(
       *driver_context->incoming(), dispatcher,
-      fidl::WireSharedClient(std::move(endpoints->client), dispatcher));
+      fidl::WireSharedClient(std::move(svc_endpoints->client), dispatcher));
   if (exporter.is_error()) {
     return callback(zx::error(exporter.error_value()));
   }
