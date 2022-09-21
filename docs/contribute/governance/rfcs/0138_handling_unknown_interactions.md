@@ -300,7 +300,24 @@ ajar protocol may only compose closed or ajar protocols.
 
 (There are no restrictions on open protocols.)
 
-By default, protocols are ajar.
+By default, protocols are open.
+
+A previous version of this proposal specified ajar as the default. However, this
+lead to a conflict where the default value of the openness modifier, ajar,
+conflicted with the default value of the strictness modifier, flexible, in the
+case of a two-way method declared without explicit modifiers. This meant that a
+protocol containing a two way method could not be compiled without a modifier on
+at least either the protocol or the method.  See below: the default value of
+openness is shown in bold and the default value of strictness is shown in
+italics.
+
+![Visualization: grid showing which combinations of open/ajar/closed compile
+with
+strict/flexible.](resources/0138_handling_unknown_interactions/compileable_interactions.png)
+
+To resolve this, we changed the default of openness from ajar to open, which
+allows protocols to compile two way methods without modifiers on either the
+protocol or the method.
 
 Style guide wise, it is recommended to always indicate explicitly the mode
 of a protocol, i.e. it should be set for every protocol.[^default-debate]
