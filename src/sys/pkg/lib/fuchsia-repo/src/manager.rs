@@ -3,49 +3,66 @@
 // found in the LICENSE file.
 
 use {
-    crate::repository::Repository,
-    parking_lot::RwLock,
-    std::{collections::HashMap, sync::Arc},
+    crate::repo_client::RepoClient,
+    async_lock::RwLock as AsyncRwLock,
+    std::{
+        collections::HashMap,
+        sync::{Arc, RwLock as SyncRwLock},
+    },
 };
 
-type ArcRepository = Arc<Repository>;
+type ArcRepoClient = Arc<AsyncRwLock<RepoClient>>;
 
 /// RepositoryManager is responsible for managing all the repositories in use by ffx.
 pub struct RepositoryManager {
-    repositories: RwLock<HashMap<String, ArcRepository>>,
+    repositories: SyncRwLock<HashMap<String, ArcRepoClient>>,
 }
 
 impl RepositoryManager {
     /// Construct a new [RepositoryManager].
     pub fn new() -> Arc<Self> {
-        Arc::new(Self { repositories: RwLock::new(HashMap::new()) })
+        Arc::new(Self { repositories: SyncRwLock::new(HashMap::new()) })
     }
 
     /// Add a [Repository] to the [RepositoryManager].
-    pub fn add(&self, repo: ArcRepository) {
-        self.repositories.write().insert(repo.name().to_string(), repo);
+    pub fn add(&self, repo: RepoClient) {
+        self.repositories
+            .write()
+            .unwrap()
+            .insert(repo.name().to_string(), Arc::new(AsyncRwLock::new(repo)));
     }
 
     /// Get a [Repository].
-    pub fn get(&self, repo_name: &str) -> Option<ArcRepository> {
-        self.repositories.read().get(repo_name).map(|repo| Arc::clone(repo))
+    pub fn get(&self, repo_name: &str) -> Option<ArcRepoClient> {
+        self.repositories.read().unwrap().get(repo_name).map(|repo| Arc::clone(repo))
     }
 
     /// Remove a [Repository] from the [RepositoryManager].
     pub fn remove(&self, name: &str) -> bool {
-        self.repositories.write().remove(name).is_some()
+        self.repositories.write().unwrap().remove(name).is_some()
     }
 
     /// Removes all [Repositories](Repository) from the [RepositoryManager].
     pub fn clear(&self) {
-        self.repositories.write().clear();
+        self.repositories.write().unwrap().clear();
     }
 
     /// Iterate through all [Repositories].
-    pub fn repositories<'a>(&'a self) -> impl std::iter::Iterator<Item = ArcRepository> + 'a {
-        let mut ret = self.repositories.read().values().map(Arc::clone).collect::<Vec<_>>();
-        ret.sort_unstable_by_key(|x| x.name().to_owned());
-        ret.into_iter()
+    pub fn repositories<'a>(
+        &'a self,
+    ) -> impl std::iter::Iterator<Item = (String, ArcRepoClient)> + 'a {
+        let mut repositories = self
+            .repositories
+            .read()
+            .unwrap()
+            .iter()
+            .map(|(name, repo)| (name.to_owned(), Arc::clone(repo)))
+            .collect::<Vec<_>>();
+
+        // Sort the repositories so it's in a stable order.
+        repositories.sort_unstable_by(|(lhs, _), (rhs, _)| lhs.cmp(&rhs));
+
+        repositories.into_iter()
     }
 }
 
@@ -59,10 +76,10 @@ mod test {
         let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
 
         let manager = RepositoryManager::new();
-        manager.add(Arc::new(repo));
+        manager.add(repo);
 
         assert_eq!(
-            manager.repositories().map(|x| x.name().to_owned()).collect::<Vec<_>>(),
+            manager.repositories().map(|(name, _)| name).collect::<Vec<_>>(),
             vec![REPO_NAME.to_owned()]
         );
     }
@@ -72,10 +89,10 @@ mod test {
         let repo = make_readonly_empty_repository(REPO_NAME).await.unwrap();
 
         let manager = RepositoryManager::new();
-        manager.add(Arc::new(repo));
+        manager.add(repo);
 
         assert_eq!(
-            manager.repositories().map(|x| x.name().to_owned()).collect::<Vec<_>>(),
+            manager.repositories().map(|(name, _)| name).collect::<Vec<_>>(),
             vec![REPO_NAME.to_owned()]
         );
 
@@ -89,8 +106,8 @@ mod test {
         let repo2 = make_readonly_empty_repository("repo2").await.unwrap();
 
         let manager = RepositoryManager::new();
-        manager.add(Arc::new(repo1));
-        manager.add(Arc::new(repo2));
+        manager.add(repo1);
+        manager.add(repo2);
 
         manager.clear();
 

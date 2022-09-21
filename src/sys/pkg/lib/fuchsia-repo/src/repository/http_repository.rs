@@ -10,33 +10,46 @@
 use {
     crate::{
         range::{ContentRange, Range},
-        repository::{Error, RepositoryBackend},
+        repository::{Error, RepoProvider},
         resource::Resource,
     },
     anyhow::{anyhow, Context as _, Result},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
-    futures::TryStreamExt,
+    futures::{future::BoxFuture, AsyncRead, TryStreamExt as _},
     hyper::{
         client::{connect::Connect, Client},
         header::{CONTENT_LENGTH, CONTENT_RANGE, RANGE},
         Body, Method, Request, StatusCode, Uri,
     },
-    std::{fmt::Debug, time::SystemTime},
+    std::{
+        fmt::{self, Debug},
+        time::SystemTime,
+    },
     tuf::{
         interchange::Json,
-        repository::{HttpRepositoryBuilder as TufHttpRepositoryBuilder, RepositoryProvider},
+        metadata::{MetadataPath, MetadataVersion, TargetPath},
+        repository::{
+            HttpRepository as TufHttpRepository, HttpRepositoryBuilder as TufHttpRepositoryBuilder,
+            RepositoryProvider as TufRepositoryProvider,
+        },
     },
     url::Url,
 };
 
-#[derive(Debug)]
-pub struct HttpRepository<C> {
+pub struct HttpRepository<C>
+where
+    C: Connect + Send + Sync + 'static,
+{
     client: Client<C, Body>,
+    tuf_repo: TufHttpRepository<C, Json>,
     metadata_repo_url: Url,
     blob_repo_url: Url,
 }
 
-impl<C> HttpRepository<C> {
+impl<C> HttpRepository<C>
+where
+    C: Connect + Clone + Debug + Send + Sync + 'static,
+{
     pub fn new(
         client: Client<C, Body>,
         mut metadata_repo_url: Url,
@@ -53,7 +66,13 @@ impl<C> HttpRepository<C> {
             blob_repo_url.set_path(&format!("{}/", blob_repo_url.path()));
         }
 
-        Self { client, metadata_repo_url, blob_repo_url }
+        let tuf_repo = TufHttpRepositoryBuilder::<_, Json>::new(
+            metadata_repo_url.clone().into(),
+            client.clone(),
+        )
+        .build();
+
+        Self { client, tuf_repo, metadata_repo_url, blob_repo_url }
     }
 }
 
@@ -145,7 +164,7 @@ where
 }
 
 #[async_trait::async_trait]
-impl<C> RepositoryBackend for HttpRepository<C>
+impl<C> RepoProvider for HttpRepository<C>
 where
     C: Connect + Clone + Debug + Send + Sync + 'static,
 {
@@ -156,35 +175,59 @@ where
         }
     }
 
-    async fn fetch_metadata(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
+    async fn fetch_metadata_range(
+        &self,
+        resource_path: &str,
+        range: Range,
+    ) -> Result<Resource, Error> {
         self.fetch_from(&self.metadata_repo_url, resource_path, range).await
     }
 
-    async fn fetch_blob(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
+    async fn fetch_blob_range(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
         self.fetch_from(&self.blob_repo_url, resource_path, range).await
-    }
-
-    fn get_tuf_repo(
-        &self,
-    ) -> Result<Box<(dyn RepositoryProvider<Json> + Send + Sync + 'static)>, Error> {
-        Ok(Box::new(
-            TufHttpRepositoryBuilder::<_, Json>::new(
-                self.metadata_repo_url.clone().into(),
-                self.client.clone(),
-            )
-            .build(),
-        ))
     }
 
     async fn blob_len(&self, path: &str) -> Result<u64> {
         // FIXME(http://fxbug.dev/98376): It may be more efficient to try to make a HEAD request and
         // see if that includes the content length before falling back to us requesting the blob and
         // dropping the stream.
-        Ok(self.fetch_blob(path, Range::Full).await?.total_len())
+        Ok(self.fetch_blob_range(path, Range::Full).await?.total_len())
     }
 
     async fn blob_modification_time(&self, _path: &str) -> Result<Option<SystemTime>> {
         Ok(None)
+    }
+}
+
+impl<C> Debug for HttpRepository<C>
+where
+    C: Connect + Clone + Debug + Send + Sync + 'static,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("HttpRepository")
+            .field("metadata_repo_url", &self.metadata_repo_url)
+            .field("metadata_blob_url", &self.blob_repo_url)
+            .finish_non_exhaustive()
+    }
+}
+
+impl<C> TufRepositoryProvider<Json> for HttpRepository<C>
+where
+    C: Connect + Clone + Debug + Send + Sync + 'static,
+{
+    fn fetch_metadata<'a>(
+        &'a self,
+        meta_path: &MetadataPath,
+        version: MetadataVersion,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        self.tuf_repo.fetch_metadata(meta_path, version)
+    }
+
+    fn fetch_target<'a>(
+        &'a self,
+        target_path: &TargetPath,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        self.tuf_repo.fetch_target(target_path)
     }
 }
 
@@ -194,10 +237,8 @@ mod tests {
         super::*,
         crate::{
             manager::RepositoryManager,
-            repository::{
-                repo_tests::{self, TestEnv as _},
-                Repository,
-            },
+            repo_client::RepoClient,
+            repository::repo_tests::{self, TestEnv as _},
             server::RepositoryServer,
             test_utils::make_pm_repository,
             util::CHUNK_SIZE,
@@ -223,10 +264,10 @@ mod tests {
 
             // Create a repository and serve it with the server.
             let remote_backend = Box::new(make_pm_repository(&dir).await);
-            let remote_repo = Repository::new("tuf", remote_backend).await.unwrap();
+            let remote_repo = RepoClient::new("tuf", remote_backend).await.unwrap();
 
             let manager = RepositoryManager::new();
-            manager.add(Arc::new(remote_repo));
+            manager.add(remote_repo);
 
             let addr = (Ipv4Addr::LOCALHOST, 0).into();
             let (server_fut, _, server) =
@@ -254,7 +295,7 @@ mod tests {
             true
         }
 
-        fn repo(&self) -> &dyn RepositoryBackend {
+        fn repo(&self) -> &dyn RepoProvider {
             &self.repo
         }
 

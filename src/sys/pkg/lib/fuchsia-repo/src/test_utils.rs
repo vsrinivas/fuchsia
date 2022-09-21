@@ -4,11 +4,13 @@
 
 use {
     crate::{
+        repo_client::RepoClient,
         repo_keys::RepoKeys,
-        repository::{FileSystemRepository, PmRepository, Repository, RepositoryKeyConfig},
+        repository::{FileSystemRepository, PmRepository},
     },
     anyhow::{anyhow, Context, Result},
     camino::{Utf8Path, Utf8PathBuf},
+    fidl_fuchsia_pkg_ext::RepositoryKey,
     fuchsia_pkg::PackageBuilder,
     futures::io::AllowStdIo,
     maplit::hashmap,
@@ -45,8 +47,8 @@ pub(crate) const PKG1_BIN_HASH: &str =
 pub(crate) const PKG1_LIB_HASH: &str =
     "8a8a5f07f935a4e8e1fd1a1eda39da09bb2438ec0adfb149679ddd6e7e1fbb4f";
 
-pub fn repo_key() -> RepositoryKeyConfig {
-    RepositoryKeyConfig::Ed25519Key(
+pub fn repo_key() -> RepositoryKey {
+    RepositoryKey::Ed25519(
         [
             29, 76, 86, 76, 184, 70, 108, 73, 249, 127, 4, 47, 95, 63, 36, 35, 101, 255, 212, 33,
             10, 154, 26, 130, 117, 157, 125, 88, 175, 214, 109, 113,
@@ -106,15 +108,15 @@ pub fn make_repo_dir(root: &Utf8Path) -> Result<()> {
     Ok(())
 }
 
-pub async fn make_readonly_empty_repository(name: &str) -> Result<Repository> {
-    let backend = PmRepository::new(Utf8PathBuf::from(EMPTY_REPO_PATH));
-    Repository::new(name, Box::new(backend)).await.map_err(|e| anyhow!(e))
+pub async fn make_readonly_empty_repository(name: &str) -> Result<RepoClient> {
+    let backend = PmRepository::new(Utf8PathBuf::from(EMPTY_REPO_PATH))?;
+    RepoClient::new(name, Box::new(backend)).await.map_err(|e| anyhow!(e))
 }
 
-pub async fn make_writable_empty_repository(name: &str, root: Utf8PathBuf) -> Result<Repository> {
+pub async fn make_writable_empty_repository(name: &str, root: Utf8PathBuf) -> Result<RepoClient> {
     make_repo_dir(&root)?;
-    let backend = PmRepository::new(root);
-    Ok(Repository::new(name, Box::new(backend)).await?)
+    let backend = PmRepository::new(root)?;
+    Ok(RepoClient::new(name, Box::new(backend)).await?)
 }
 
 pub async fn make_repository(metadata_dir: &Path, blobs_dir: &Path) {
@@ -258,18 +260,18 @@ pub async fn make_pm_repository(dir: impl Into<Utf8PathBuf>) -> PmRepository {
     let empty_repo_dir = PathBuf::from(EMPTY_REPO_PATH).canonicalize().unwrap();
     copy_dir(&empty_repo_dir.join("keys"), keys_dir.as_std_path()).unwrap();
 
-    PmRepository::new(dir)
+    PmRepository::new(dir).unwrap()
 }
 
 pub async fn make_file_system_repository(
     name: &str,
     metadata_dir: impl Into<Utf8PathBuf>,
     blobs_dir: impl Into<Utf8PathBuf>,
-) -> Repository {
+) -> RepoClient {
     let metadata_dir = metadata_dir.into();
     let blobs_dir = blobs_dir.into();
     make_repository(metadata_dir.as_std_path(), blobs_dir.as_std_path()).await;
 
-    let backend = FileSystemRepository::new(metadata_dir, blobs_dir);
-    Repository::new(name, Box::new(backend)).await.unwrap()
+    let backend = FileSystemRepository::new(metadata_dir, blobs_dir).unwrap();
+    RepoClient::new(name, Box::new(backend)).await.unwrap()
 }

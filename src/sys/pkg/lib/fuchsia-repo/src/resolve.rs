@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::repository::{get_tuf_client, Repository},
+    crate::repo_client::{get_tuf_client, RepoClient},
     anyhow::{anyhow, bail, Context, Result},
     async_lock::Mutex,
     chrono::{DateTime, Utc},
@@ -41,7 +41,7 @@ use {
 /// `output_blobs_dir`: Write the package blobs into this directory.
 /// `concurrency`: Maximum number of blobs to download at the same time.
 pub async fn resolve_repository(
-    repo: &Repository,
+    repo: &RepoClient,
     metadata_dir: impl AsRef<Path>,
     blobs_dir: impl AsRef<Path>,
     concurrency: usize,
@@ -72,7 +72,7 @@ pub async fn resolve_repository(
 /// `repo`: Download the package from this repository.
 /// `metadata_dir`: Write repository metadata to this directory.
 pub async fn resolve_repository_metadata(
-    repo: &Repository,
+    repo: &RepoClient,
     metadata_dir: impl AsRef<Path>,
 ) -> Result<Option<Verified<TargetsMetadata>>> {
     let metadata_dir = metadata_dir.as_ref();
@@ -85,13 +85,11 @@ pub async fn resolve_repository_metadata(
 /// `metadata_dir`: Write repository metadata to this directory.
 /// `start_time`: Update metadata relative to this update start time.
 pub async fn resolve_repository_metadata_with_start_time(
-    repo: &Repository,
+    upstream_repo: &RepoClient,
     metadata_dir: impl AsRef<Path>,
     start_time: &DateTime<Utc>,
 ) -> Result<Option<Verified<TargetsMetadata>>> {
     let metadata_dir = metadata_dir.as_ref();
-
-    let upstream_repo = repo.get_tuf_repo()?;
 
     // Cache the TUF metadata from the upstream repository into a temporary directory.
     let mut local_repo =
@@ -122,7 +120,7 @@ pub async fn resolve_repository_metadata_with_start_time(
 /// `output_blobs_dir`: Write the package blobs into this directory.
 /// `concurrency`: Maximum number of blobs to download at the same time.
 pub async fn resolve_package(
-    repo: &Repository,
+    repo: &RepoClient,
     package_path: &str,
     output_blobs_dir: impl AsRef<Path>,
     concurrency: usize,
@@ -229,7 +227,7 @@ fn merkle_from_description(desc: &TargetDescription) -> Result<Hash> {
 /// local blob file was modified after verification.
 pub struct PackageFetcher<'a> {
     /// Download the package from this repository.
-    repo: &'a Repository,
+    repo: &'a RepoClient,
 
     /// Write the package blobs into this directory.
     blobs_dir: &'a Path,
@@ -245,7 +243,7 @@ impl<'a> PackageFetcher<'a> {
     /// Create a package fetcher, which downloads a package from a repository and write the blobs to
     /// a directory.
     pub async fn new(
-        repo: &'a Repository,
+        repo: &'a RepoClient,
         blobs_dir: &'a Path,
         concurrency: usize,
     ) -> Result<PackageFetcher<'a>> {
@@ -313,7 +311,7 @@ impl<'a> PackageFetcher<'a> {
 }
 
 async fn download_blob_to_destination(
-    repo: &Repository,
+    repo: &RepoClient,
     dir: &Path,
     blob: &Hash,
 ) -> Result<PathBuf> {

@@ -13,6 +13,7 @@ rustc_library("fidl-fuchsia-developer-ffx-ext") {
 
   deps = [
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+    "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//third_party/rust_crates:camino",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",

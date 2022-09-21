@@ -6,16 +6,17 @@ use {
     crate::{
         manager::RepositoryManager,
         range::Range,
-        repository::{Error, Repository, RepositoryId},
+        repo_client::{RepoClient, RepositoryId},
+        repository::Error,
     },
     anyhow::Result,
+    async_lock::RwLock as AsyncRwLock,
     async_net::{TcpListener, TcpStream},
     chrono::Utc,
     fuchsia_async as fasync,
     futures::{future::Shared, prelude::*, AsyncRead, AsyncWrite, TryStreamExt},
     http_sse::{Event, EventSender, SseResponseCreator},
     hyper::{body::Body, header::RANGE, service::service_fn, Request, Response, StatusCode},
-    parking_lot::{Mutex, RwLock},
     serde::{Deserialize, Serialize},
     std::{
         collections::{hash_map::Entry, HashMap},
@@ -24,7 +25,7 @@ use {
         io,
         net::SocketAddr,
         pin::Pin,
-        sync::{Arc, Weak},
+        sync::{Arc, Mutex, RwLock as SyncRwLock, Weak},
         task::{Context, Poll},
         time::Duration,
     },
@@ -40,7 +41,7 @@ const MAX_PARSE_RETRIES: usize = 5000;
 // FIXME: This value was chosen basically at random.
 const PARSE_RETRY_DELAY: Duration = Duration::from_micros(100);
 
-type SseResponseCreatorMap = RwLock<HashMap<RepositoryId, Arc<SseResponseCreator>>>;
+type SseResponseCreatorMap = SyncRwLock<HashMap<RepositoryId, Arc<SseResponseCreator>>>;
 
 /// RepositoryManager represents the web server that serves [Repositories](Repository) to a target.
 #[derive(Debug)]
@@ -136,7 +137,7 @@ impl<T> TaskExecutor<T> {
     pub fn spawn<F: Future<Output = T> + 'static>(&self, fut: F) {
         let fut_inner = Arc::clone(&self.inner);
 
-        let mut inner = self.inner.lock();
+        let mut inner = self.inner.lock().unwrap();
 
         // We could technically have a collision when the task id overflows, but if we spawned a
         // task once a nanosecond, we still wouldn't overflow for 584 years. But lets add an
@@ -148,7 +149,7 @@ impl<T> TaskExecutor<T> {
         let fut = async move {
             let res = fut.await;
             // Clean up our entry when the task completes.
-            fut_inner.lock().tasks.remove(&task_id);
+            fut_inner.lock().unwrap().tasks.remove(&task_id);
             res
         };
 
@@ -183,7 +184,7 @@ async fn run_server(
     let executor = TaskExecutor::new();
 
     // Contains all the SSE services.
-    let server_sse_response_creators = Arc::new(RwLock::new(HashMap::new()));
+    let server_sse_response_creators = Arc::new(SyncRwLock::new(HashMap::new()));
 
     loop {
         let mut next = incoming.next().fuse();
@@ -376,7 +377,7 @@ async fn handle_request(
 
     let resource = match resource_path {
         "auto" => {
-            if repo.supports_watch() {
+            if repo.read().await.supports_watch() {
                 return handle_auto(executor, server_stopped, repo, sse_response_creators).await;
             } else {
                 // The repo doesn't support watching.
@@ -385,9 +386,9 @@ async fn handle_request(
         }
         _ => {
             let res = if let Some(resource_path) = resource_path.strip_prefix("blobs/") {
-                repo.fetch_blob_range(resource_path, range.clone()).await
+                repo.read().await.fetch_blob_range(resource_path, range.clone()).await
             } else {
-                repo.fetch_metadata_range(resource_path, range.clone()).await
+                repo.read().await.fetch_metadata_range(resource_path, range.clone()).await
             };
 
             match res {
@@ -430,11 +431,11 @@ async fn handle_request(
 async fn handle_auto(
     executor: TaskExecutor<()>,
     mut server_stopped: Shared<futures::channel::oneshot::Receiver<()>>,
-    repo: Arc<Repository>,
+    repo: Arc<AsyncRwLock<RepoClient>>,
     sse_response_creators: Arc<SseResponseCreatorMap>,
 ) -> Response<Body> {
-    let id = repo.id();
-    let response_creator = sse_response_creators.read().get(&id).map(Arc::clone);
+    let id = repo.read().await.id();
+    let response_creator = sse_response_creators.read().unwrap().get(&id).map(Arc::clone);
 
     // Exit early if we've already created an auto-handler.
     if let Some(response_creator) = response_creator {
@@ -443,7 +444,7 @@ async fn handle_auto(
 
     // Otherwise, create a timestamp watch stream. We'll do it racily to avoid holding the lock and
     // blocking the executor.
-    let watcher = match repo.watch() {
+    let watcher = match repo.read().await.watch() {
         Ok(watcher) => watcher,
         Err(err) => {
             warn!("error creating file watcher: {}", err);
@@ -453,7 +454,7 @@ async fn handle_auto(
 
     // Next, create a response creator. It's possible we raced another call, which could have
     // already created a creator for us. This is denoted by `sender` being `None`.
-    let (response_creator, sender) = match sse_response_creators.write().entry(id) {
+    let (response_creator, sender) = match sse_response_creators.write().unwrap().entry(id) {
         Entry::Occupied(entry) => (Arc::clone(entry.get()), None),
         Entry::Vacant(entry) => {
             // Next, create a response creator.
@@ -474,7 +475,7 @@ async fn handle_auto(
         let sse_response_creators = Arc::downgrade(&sse_response_creators);
 
         // Grab a handle to the repo dropped signal, so we can shut down our watcher.
-        let mut repo_dropped = repo.on_dropped_signal();
+        let mut repo_dropped = repo.read().await.on_dropped_signal();
 
         // Downgrade our repository handle, so we won't block it being deleted.
         let repo = Arc::downgrade(&repo);
@@ -492,7 +493,7 @@ async fn handle_auto(
 
             // Clean up our SSE creators.
             if let Some(sse_response_creators) = sse_response_creators.upgrade() {
-                sse_response_creators.write().remove(&id);
+                sse_response_creators.write().unwrap().remove(&id);
             }
         });
     };
@@ -510,8 +511,11 @@ struct TimestampFile {
     version: u32,
 }
 
-async fn timestamp_watcher<S>(repo: Weak<Repository>, sender: EventSender, mut watcher: S)
-where
+async fn timestamp_watcher<S>(
+    repo: Weak<AsyncRwLock<RepoClient>>,
+    sender: EventSender,
+    mut watcher: S,
+) where
     S: Stream<Item = ()> + Unpin,
 {
     let mut old_version = None;
@@ -548,13 +552,13 @@ where
 
 // Try to read the timestamp.json's version from the repository, or return `None` if we experience
 // any errors.
-async fn read_timestamp_version(repo: Arc<Repository>) -> Option<u32> {
+async fn read_timestamp_version(repo: Arc<AsyncRwLock<RepoClient>>) -> Option<u32> {
     for _ in 0..MAX_PARSE_RETRIES {
         // Read the timestamp file.
         //
         // FIXME: We should be using the TUF client to get the latest
         // timestamp in order to make sure the metadata is valid.
-        match repo.fetch_metadata("timestamp.json").await {
+        match repo.read().await.fetch_metadata("timestamp.json").await {
             Ok(mut file) => {
                 let mut bytes = vec![];
                 match file.read_to_end(&mut bytes).await {
@@ -787,7 +791,7 @@ mod tests {
                 write_file(&dir.join("repository").join(body), body.as_bytes());
             }
 
-            manager.add(Arc::new(repo));
+            manager.add(repo);
         }
 
         run_test(manager, |server_url| async move {
@@ -818,7 +822,7 @@ mod tests {
                 write_file(&dir.join("repository").join(body), body.as_bytes());
             }
 
-            manager.add(Arc::new(repo));
+            manager.add(repo);
         }
 
         run_test(manager, |server_url| async move {
@@ -860,7 +864,7 @@ mod tests {
                 write_file(&dir.join("repository").join(body), body.as_bytes());
             }
 
-            manager.add(Arc::new(repo));
+            manager.add(repo);
         }
 
         run_test(manager, |server_url| async move {
@@ -892,7 +896,7 @@ mod tests {
                 .as_bytes(),
         );
 
-        manager.add(Arc::new(repo));
+        manager.add(repo);
 
         run_test(manager, |server_url| {
             let timestamp_file = timestamp_file.clone();
@@ -969,7 +973,7 @@ mod tests {
                 .as_bytes(),
         );
 
-        manager.add(Arc::new(repo));
+        manager.add(repo);
 
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
         let (server_fut, _, server) =

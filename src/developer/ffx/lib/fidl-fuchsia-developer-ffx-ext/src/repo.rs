@@ -126,6 +126,19 @@ impl From<RepositoryStorageType> for fidl::RepositoryStorageType {
     }
 }
 
+impl From<RepositoryStorageType> for fidl_fuchsia_pkg_ext::RepositoryStorageType {
+    fn from(storage_type: RepositoryStorageType) -> Self {
+        match storage_type {
+            RepositoryStorageType::Ephemeral => {
+                fidl_fuchsia_pkg_ext::RepositoryStorageType::Ephemeral
+            }
+            RepositoryStorageType::Persistent => {
+                fidl_fuchsia_pkg_ext::RepositoryStorageType::Persistent
+            }
+        }
+    }
+}
+
 /// The below types exist to provide definitions with Serialize.
 /// TODO(fxbug.dev/76041) They should be removed in favor of the
 /// corresponding fidl-fuchsia-pkg-ext types.

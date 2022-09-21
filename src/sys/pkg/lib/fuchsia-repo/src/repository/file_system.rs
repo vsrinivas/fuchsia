@@ -6,13 +6,16 @@ use {
     crate::{
         range::{ContentRange, Range},
         repo_storage::RepoStorage,
-        repository::{Error, RepositoryBackend, Resource},
+        repository::{Error, RepoProvider, Resource},
         util::file_stream,
     },
     anyhow::Result,
     camino::{Utf8Component, Utf8Path, Utf8PathBuf},
     fidl_fuchsia_developer_ffx_ext::RepositorySpec,
-    futures::{io::SeekFrom, stream::BoxStream, AsyncSeekExt, Stream, StreamExt},
+    futures::{
+        future::BoxFuture, io::SeekFrom, stream::BoxStream, AsyncRead, AsyncSeekExt, Stream,
+        StreamExt,
+    },
     notify::{immediate_watcher, RecursiveMode, Watcher as _},
     parking_lot::Mutex,
     std::{
@@ -25,24 +28,29 @@ use {
     tracing::warn,
     tuf::{
         interchange::Json,
+        metadata::{MetadataPath, MetadataVersion, TargetPath},
         repository::{
-            FileSystemRepositoryBuilder as TufFileSystemRepositoryBuilder, RepositoryProvider,
-            RepositoryStorageProvider,
+            FileSystemRepository as TufFileSystemRepository,
+            FileSystemRepositoryBuilder as TufFileSystemRepositoryBuilder,
+            RepositoryProvider as TufRepositoryProvider, RepositoryStorageProvider,
         },
     },
 };
 
 /// Serve a repository from the file system.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct FileSystemRepository {
     metadata_repo_path: Utf8PathBuf,
     blob_repo_path: Utf8PathBuf,
+    tuf_repo: TufFileSystemRepository<Json>,
 }
 
 impl FileSystemRepository {
     /// Construct a [FileSystemRepository].
-    pub fn new(metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf) -> Self {
-        Self { metadata_repo_path, blob_repo_path }
+    pub fn new(metadata_repo_path: Utf8PathBuf, blob_repo_path: Utf8PathBuf) -> Result<Self> {
+        let tuf_repo = TufFileSystemRepositoryBuilder::new(metadata_repo_path.clone()).build()?;
+
+        Ok(Self { metadata_repo_path, blob_repo_path, tuf_repo })
     }
 
     async fn fetch(
@@ -104,7 +112,7 @@ impl FileSystemRepository {
 }
 
 #[async_trait::async_trait]
-impl RepositoryBackend for FileSystemRepository {
+impl RepoProvider for FileSystemRepository {
     fn spec(&self) -> RepositorySpec {
         RepositorySpec::FileSystem {
             metadata_repo_path: self.metadata_repo_path.clone(),
@@ -112,11 +120,15 @@ impl RepositoryBackend for FileSystemRepository {
         }
     }
 
-    async fn fetch_metadata(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
+    async fn fetch_metadata_range(
+        &self,
+        resource_path: &str,
+        range: Range,
+    ) -> Result<Resource, Error> {
         self.fetch(&self.metadata_repo_path, resource_path, range).await
     }
 
-    async fn fetch_blob(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
+    async fn fetch_blob_range(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
         self.fetch(&self.blob_repo_path, resource_path, range).await
     }
 
@@ -179,14 +191,22 @@ impl RepositoryBackend for FileSystemRepository {
         let file_path = sanitize_path(&self.blob_repo_path, path)?;
         Ok(Some(async_fs::metadata(&file_path).await?.modified()?))
     }
+}
 
-    fn get_tuf_repo(
-        &self,
-    ) -> Result<Box<(dyn RepositoryProvider<Json> + Send + Sync + 'static)>, Error> {
-        let repo =
-            TufFileSystemRepositoryBuilder::<Json>::new(self.metadata_repo_path.clone()).build()?;
+impl TufRepositoryProvider<Json> for FileSystemRepository {
+    fn fetch_metadata<'a>(
+        &'a self,
+        meta_path: &MetadataPath,
+        version: MetadataVersion,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        self.tuf_repo.fetch_metadata(meta_path, version)
+    }
 
-        Ok(Box::new(repo))
+    fn fetch_target<'a>(
+        &'a self,
+        target_path: &TargetPath,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        self.tuf_repo.fetch_target(target_path)
     }
 }
 
@@ -269,7 +289,7 @@ mod tests {
                 _tmp: tmp,
                 metadata_path: metadata_path.clone(),
                 blob_path: blob_path.clone(),
-                repo: FileSystemRepository::new(metadata_path, blob_path),
+                repo: FileSystemRepository::new(metadata_path, blob_path).unwrap(),
             }
         }
     }
@@ -292,7 +312,7 @@ mod tests {
             f.write_all(bytes).unwrap();
         }
 
-        fn repo(&self) -> &dyn RepositoryBackend {
+        fn repo(&self) -> &dyn RepoProvider {
             &self.repo
         }
     }

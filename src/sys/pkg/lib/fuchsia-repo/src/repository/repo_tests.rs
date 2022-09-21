@@ -4,7 +4,7 @@
 
 use crate::{
     range::Range,
-    repository::{Error, RepositoryBackend},
+    repository::{Error, RepoProvider},
 };
 
 #[async_trait::async_trait]
@@ -19,7 +19,7 @@ pub(crate) trait TestEnv: Sized {
     fn write_blob(&self, path: &str, bytes: &[u8]);
 
     /// The repository under test.
-    fn repo(&self) -> &dyn RepositoryBackend;
+    fn repo(&self) -> &dyn RepoProvider;
 
     /// Shut down the test environment.
     async fn stop(self) {}
@@ -32,7 +32,7 @@ pub(crate) async fn read_metadata(
     range: Range,
 ) -> Result<Vec<u8>, Error> {
     let mut body = vec![];
-    let mut resource = env.repo().fetch_metadata(path, range).await?;
+    let mut resource = env.repo().fetch_metadata_range(path, range).await?;
     resource.read_to_end(&mut body).await?;
 
     assert_eq!(resource.content_len(), body.len() as u64);
@@ -53,7 +53,7 @@ pub(crate) async fn read_blob(
     range: Range,
 ) -> Result<Vec<u8>, Error> {
     let mut body = vec![];
-    let mut resource = env.repo().fetch_blob(path, range).await?;
+    let mut resource = env.repo().fetch_blob_range(path, range).await?;
     resource.read_to_end(&mut body).await?;
 
     assert_eq!(resource.content_len(), body.len() as u64);

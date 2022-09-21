@@ -8,10 +8,7 @@ use {
     ffx_package_download_args::DownloadCommand,
     fuchsia_hyper::new_https_client,
     fuchsia_pkg::PackageManifest,
-    fuchsia_repo::{
-        repository::{HttpRepository, Repository},
-        resolve::resolve_package,
-    },
+    fuchsia_repo::{repo_client::RepoClient, repository::HttpRepository, resolve::resolve_package},
     std::fs::File,
     url::Url,
 };
@@ -27,7 +24,7 @@ pub async fn cmd_download(cmd: DownloadCommand) -> Result<()> {
         Url::parse(&cmd.tuf_url)?,
         Url::parse(&cmd.blob_url)?,
     ));
-    let repo = Repository::new("repo", backend).await?;
+    let repo = RepoClient::new("repo", backend).await?;
 
     let blobs_dir = cmd.output_path.join("blobs");
     std::fs::create_dir_all(&blobs_dir)?;
@@ -79,9 +76,9 @@ mod tests {
 
         // Create a server.
         let backend = Box::new(make_pm_repository(&repo_path).await);
-        let repo = Repository::new("tuf", backend).await.unwrap();
+        let repo = RepoClient::new("tuf", backend).await.unwrap();
         let manager = RepositoryManager::new();
-        manager.add(Arc::new(repo));
+        manager.add(repo);
 
         let addr = (Ipv4Addr::LOCALHOST, 0).into();
         let (server_fut, _, server) =

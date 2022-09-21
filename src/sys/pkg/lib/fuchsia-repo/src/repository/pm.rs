@@ -6,16 +6,17 @@ use {
     crate::{
         range::Range,
         repo_storage::RepoStorage,
-        repository::{Error, FileSystemRepository, RepositoryBackend, RepositorySpec},
+        repository::{Error, FileSystemRepository, RepoProvider, RepositorySpec},
         resource::Resource,
     },
     anyhow::Result,
     camino::Utf8PathBuf,
-    futures::stream::BoxStream,
-    std::time::SystemTime,
+    futures::{future::BoxFuture, stream::BoxStream, AsyncRead},
+    std::{fmt::Debug, time::SystemTime},
     tuf::{
         interchange::Json,
-        repository::{RepositoryProvider, RepositoryStorageProvider},
+        metadata::{MetadataPath, MetadataVersion, TargetPath},
+        repository::{RepositoryProvider as TufRepositoryProvider, RepositoryStorageProvider},
     },
 };
 
@@ -28,27 +29,31 @@ pub struct PmRepository {
 
 impl PmRepository {
     /// Construct a [PmRepository].
-    pub fn new(pm_repo_path: Utf8PathBuf) -> Self {
+    pub fn new(pm_repo_path: Utf8PathBuf) -> Result<Self> {
         let metadata_repo_path = pm_repo_path.join("repository");
         let blob_repo_path = metadata_repo_path.join("blobs");
-        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path);
+        let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path)?;
 
-        Self { pm_repo_path, repo }
+        Ok(Self { pm_repo_path, repo })
     }
 }
 
 #[async_trait::async_trait]
-impl RepositoryBackend for PmRepository {
+impl RepoProvider for PmRepository {
     fn spec(&self) -> RepositorySpec {
         RepositorySpec::Pm { path: self.pm_repo_path.clone() }
     }
 
-    async fn fetch_metadata(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
-        self.repo.fetch_metadata(resource_path, range).await
+    async fn fetch_metadata_range(
+        &self,
+        resource_path: &str,
+        range: Range,
+    ) -> Result<Resource, Error> {
+        self.repo.fetch_metadata_range(resource_path, range).await
     }
 
-    async fn fetch_blob(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
-        self.repo.fetch_blob(resource_path, range).await
+    async fn fetch_blob_range(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
+        self.repo.fetch_blob_range(resource_path, range).await
     }
 
     fn supports_watch(&self) -> bool {
@@ -59,18 +64,29 @@ impl RepositoryBackend for PmRepository {
         self.repo.watch()
     }
 
-    fn get_tuf_repo(
-        &self,
-    ) -> Result<Box<(dyn RepositoryProvider<Json> + Send + Sync + 'static)>, Error> {
-        self.repo.get_tuf_repo()
-    }
-
     async fn blob_len(&self, path: &str) -> Result<u64> {
         self.repo.blob_len(path).await
     }
 
     async fn blob_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
         self.repo.blob_modification_time(path).await
+    }
+}
+
+impl TufRepositoryProvider<Json> for PmRepository {
+    fn fetch_metadata<'a>(
+        &'a self,
+        meta_path: &MetadataPath,
+        version: MetadataVersion,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        self.repo.fetch_metadata(meta_path, version)
+    }
+
+    fn fetch_target<'a>(
+        &'a self,
+        target_path: &TargetPath,
+    ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        self.repo.fetch_target(target_path)
     }
 }
 

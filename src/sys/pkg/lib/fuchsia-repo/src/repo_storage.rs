@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::repo_keys::RepoKeys,
+    crate::{repo_client::get_tuf_client, repo_keys::RepoKeys},
     anyhow::{Context as _, Result},
     chrono::{DateTime, Duration, NaiveDateTime, Utc},
     tuf::{interchange::Json, metadata::MetadataPath, repository::RepositoryStorageProvider},
@@ -29,7 +29,7 @@ pub trait RepoStorage {
 
 pub async fn refresh_repository(repo: &dyn RepoStorage, repo_keys: &RepoKeys) -> Result<()> {
     let tuf_repo = repo.get_tuf_repo_storage()?;
-    let mut tuf_client = crate::repository::get_tuf_client(tuf_repo).await?;
+    let mut tuf_client = get_tuf_client(tuf_repo).await?;
 
     // Download the metadata. We'll use the unix epoch for the update timestamp so we can work with
     // expired metadata.
@@ -113,13 +113,7 @@ pub async fn refresh_repository(repo: &dyn RepoStorage, repo_keys: &RepoKeys) ->
 #[cfg(test)]
 mod tests {
     use {
-        super::*,
-        crate::{
-            repository::{get_tuf_client, RepositoryBackend as _},
-            test_utils,
-        },
-        assert_matches::assert_matches,
-        camino::Utf8Path,
+        super::*, crate::test_utils, assert_matches::assert_matches, camino::Utf8Path,
         std::collections::HashMap,
     };
 
@@ -133,9 +127,7 @@ mod tests {
         let repo = test_utils::make_pm_repository(dir).await;
 
         // Download the older metadata before we refresh it.
-        let tuf_repo = repo.get_tuf_repo().unwrap();
-        let mut tuf_client = get_tuf_client(tuf_repo).await.unwrap();
-        assert_matches!(tuf_client.update().await, Ok(true));
+        let mut tuf_client = get_tuf_client(&repo).await.unwrap();
 
         let root1 = (*tuf_client.database().trusted_root()).clone();
         let targets1 = tuf_client.database().trusted_targets().cloned().unwrap();
@@ -188,9 +180,7 @@ mod tests {
         let repo = test_utils::make_pm_repository(dir).await;
 
         // Download the older metadata before we refresh it.
-        let tuf_repo = repo.get_tuf_repo().unwrap();
-        let mut tuf_client = get_tuf_client(tuf_repo).await.unwrap();
-        assert_matches!(tuf_client.update().await, Ok(true));
+        let mut tuf_client = get_tuf_client(&repo).await.unwrap();
 
         let root1 = (*tuf_client.database().trusted_root()).clone();
         let targets1 = tuf_client.database().trusted_targets().cloned().unwrap();
@@ -247,8 +237,7 @@ mod tests {
         let repo = test_utils::make_pm_repository(dir).await;
 
         // Download the older metadata before we refresh it.
-        let tuf_repo = repo.get_tuf_repo().unwrap();
-        let mut tuf_client = get_tuf_client(tuf_repo).await.unwrap();
+        let mut tuf_client = get_tuf_client(&repo).await.unwrap();
         tuf_client.update().await.unwrap();
 
         let root1 = (*tuf_client.database().trusted_root()).clone();

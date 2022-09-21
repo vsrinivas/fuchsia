@@ -12,7 +12,7 @@ use {
     crate::{
         async_spooled::AsyncSpooledTempFile,
         range::{ContentLength, Range},
-        repository::{Error, RepositoryBackend, RepositorySpec},
+        repository::{Error, RepoProvider, RepositorySpec},
         resource::Resource,
     },
     anyhow::{anyhow, Context as _},
@@ -22,7 +22,7 @@ use {
     tuf::{
         interchange::Json,
         metadata::{MetadataPath, MetadataVersion, TargetPath},
-        repository::RepositoryProvider,
+        repository::RepositoryProvider as TufRepositoryProvider,
     },
     url::Url,
 };
@@ -45,7 +45,7 @@ impl GcsClient for gcs::client::Client {
 }
 
 /// [GcsRepository] serves a package repository from a Google Cloud Storage bucket.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct GcsRepository<T = gcs::client::Client> {
     client: T,
 
@@ -190,9 +190,9 @@ where
 }
 
 #[async_trait::async_trait]
-impl<T> RepositoryBackend for GcsRepository<T>
+impl<T> RepoProvider for GcsRepository<T>
 where
-    T: GcsClient + Clone + Debug + Send + Sync + 'static,
+    T: GcsClient + Debug + Send + Sync + 'static,
 {
     fn spec(&self) -> RepositorySpec {
         RepositorySpec::Gcs {
@@ -201,25 +201,22 @@ where
         }
     }
 
-    async fn fetch_metadata(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
+    async fn fetch_metadata_range(
+        &self,
+        resource_path: &str,
+        range: Range,
+    ) -> Result<Resource, Error> {
         self.get(&self.metadata_repo_url, &resource_path, range).await
     }
 
-    async fn fetch_blob(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
+    async fn fetch_blob_range(&self, resource_path: &str, range: Range) -> Result<Resource, Error> {
         self.get(&self.blob_repo_url, &resource_path, range).await
-    }
-
-    fn get_tuf_repo(
-        &self,
-    ) -> Result<Box<(dyn RepositoryProvider<Json> + Send + Sync + 'static)>, Error> {
-        let repo = GcsRepository::clone(&self);
-        Ok(Box::new(TufGcsRepository { repo }))
     }
 
     async fn blob_len(&self, path: &str) -> Result<u64, anyhow::Error> {
         // FIXME(http://fxbug.dev/98993): The gcs library does not expose a more efficient API for
         // determining the blob size.
-        Ok(self.fetch_blob(path, Range::Full).await?.total_len())
+        Ok(self.fetch_blob_range(path, Range::Full).await?.total_len())
     }
 
     async fn blob_modification_time(
@@ -232,13 +229,9 @@ where
     }
 }
 
-struct TufGcsRepository<T> {
-    repo: GcsRepository<T>,
-}
-
-impl<T> RepositoryProvider<Json> for TufGcsRepository<T>
+impl<T> TufRepositoryProvider<Json> for GcsRepository<T>
 where
-    T: GcsClient + Debug + Clone + Send + Sync + 'static,
+    T: GcsClient + Debug + Send + Sync + 'static,
 {
     fn fetch_metadata<'a>(
         &'a self,
@@ -247,16 +240,14 @@ where
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>, tuf::Error>> {
         let meta_path = meta_path.clone();
         let path = meta_path.components::<Json>(version).join("/");
-        let repo = self.repo.clone();
 
         async move {
-            let resp = RepositoryBackend::fetch_metadata(&repo, &path, Range::Full).await.map_err(
-                |err| match err {
+            let resp =
+                self.fetch_metadata_range(&path, Range::Full).await.map_err(|err| match err {
                     Error::Tuf(err) => err,
                     Error::NotFound => tuf::Error::MetadataNotFound { path: meta_path, version },
                     err => tuf::Error::Opaque(err.to_string()),
-                },
-            )?;
+                })?;
 
             let reader = resp
                 .stream
@@ -275,16 +266,14 @@ where
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>, tuf::Error>> {
         let target_path = target_path.clone();
         let path = target_path.components().join("/");
-        let repo = self.repo.clone();
 
         async move {
-            let resp = RepositoryBackend::fetch_metadata(&repo, &path, Range::Full).await.map_err(
-                |err| match err {
+            let resp =
+                self.fetch_metadata_range(&path, Range::Full).await.map_err(|err| match err {
                     Error::Tuf(err) => err,
                     Error::NotFound => tuf::Error::TargetNotFound(target_path),
                     err => tuf::Error::Opaque(err.to_string()),
-                },
-            )?;
+                })?;
 
             let reader = resp
                 .stream
@@ -316,7 +305,7 @@ mod tests {
         url::Url,
     };
 
-    #[derive(Debug, Clone)]
+    #[derive(Debug)]
     struct MockGcsClient {
         repo: FileSystemRepository,
         content_length_header: &'static str,
@@ -332,8 +321,8 @@ mod tests {
             }
 
             let res = match bucket {
-                "my-tuf-repo" => self.repo.fetch_metadata(object, Range::Full).await,
-                "my-blob-repo" => self.repo.fetch_blob(object, Range::Full).await,
+                "my-tuf-repo" => self.repo.fetch_metadata_range(object, Range::Full).await,
+                "my-blob-repo" => self.repo.fetch_blob_range(object, Range::Full).await,
                 _ => panic!("unknown bucket {:?}", bucket),
             };
 
@@ -381,7 +370,8 @@ mod tests {
 
             make_repository(blob_repo_path.as_std_path(), blob_repo_path.as_std_path()).await;
             let remote_repo =
-                FileSystemRepository::new(metadata_repo_path.clone(), blob_repo_path.clone());
+                FileSystemRepository::new(metadata_repo_path.clone(), blob_repo_path.clone())
+                    .unwrap();
 
             let tuf_url = "gs://my-tuf-repo/";
             let blob_url = "gs://my-blob-repo/";
@@ -415,7 +405,7 @@ mod tests {
             f.write_all(bytes).unwrap();
         }
 
-        fn repo(&self) -> &dyn RepositoryBackend {
+        fn repo(&self) -> &dyn RepoProvider {
             &self.repo
         }
     }

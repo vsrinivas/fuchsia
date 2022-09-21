@@ -20,10 +20,9 @@ use {
     fms::{find_product_bundle, Entries},
     fuchsia_hyper::new_https_client,
     fuchsia_repo::{
+        repo_client::RepoClient,
         repo_keys::RepoKeys,
-        repository::{
-            FileSystemRepository, GcsRepository, HttpRepository, Repository, RepositoryBackend,
-        },
+        repository::{FileSystemRepository, GcsRepository, HttpRepository, RepoProvider},
     },
     futures::{stream::FuturesUnordered, TryStreamExt as _},
     sdk_metadata::{Metadata, PackageBundle},
@@ -447,7 +446,7 @@ where
                 client,
                 repo_metadata_uri.clone(),
                 repo_blobs_uri.clone(),
-            )?) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
+            )?) as Box<dyn RepoProvider>;
 
             if let Ok(()) = fetch_package_repository_from_backend(
                 local_dir,
@@ -470,7 +469,7 @@ where
                 client,
                 repo_metadata_uri.clone(),
                 repo_blobs_uri.clone(),
-            )?) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
+            )?) as Box<dyn RepoProvider>;
 
             fetch_package_repository_from_backend(
                 local_dir,
@@ -489,7 +488,7 @@ where
                 client,
                 repo_metadata_uri.clone(),
                 repo_blobs_uri.clone(),
-            )) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
+            )) as Box<dyn RepoProvider>;
 
             fetch_package_repository_from_backend(
                 local_dir,
@@ -517,7 +516,7 @@ async fn fetch_package_repository_from_backend<F>(
     repo_keys_uri: Url,
     repo_metadata_uri: Url,
     repo_blobs_uri: Url,
-    backend: Box<dyn RepositoryBackend + Send + Sync + 'static>,
+    backend: Box<dyn RepoProvider>,
     progress: &mut F,
 ) -> Result<()>
 where
@@ -528,7 +527,7 @@ where
         repo_metadata_uri,
         repo_blobs_uri
     );
-    let repo = Repository::new("repo", backend).await.with_context(|| {
+    let repo = RepoClient::new("repo", backend).await.with_context(|| {
         format!(
             "creating package repository, repo_metadata_uri {}, repo_blobs_uri {}",
             repo_metadata_uri, repo_blobs_uri
@@ -609,7 +608,7 @@ where
         .context("rendering progress")?;
     };
 
-    let repo_storage = FileSystemRepository::new(metadata_dir, blobs_dir);
+    let repo_storage = FileSystemRepository::new(metadata_dir, blobs_dir)?;
     let keys_dir = local_dir.join("keys");
     let repo_keys = RepoKeys::from_dir(keys_dir.as_std_path())?;
 

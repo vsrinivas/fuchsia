@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        range::ContentRange,
-        repository::{Error, RepositoryConfig},
-        util::read_stream_to_end,
-    },
+    crate::{range::ContentRange, repository::Error, util::read_stream_to_end},
     bytes::Bytes,
+    fidl_fuchsia_pkg_ext::RepositoryConfig,
     futures::{
         future::ready,
         stream::{once, BoxStream, StreamExt},

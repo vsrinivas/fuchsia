@@ -21,9 +21,8 @@ use {
     fuchsia_hyper::{new_https_client, HttpsClient},
     fuchsia_repo::{
         manager::RepositoryManager,
-        repository::{
-            self, FileSystemRepository, HttpRepository, PmRepository, Repository, RepositoryBackend,
-        },
+        repo_client::RepoClient,
+        repository::{self, FileSystemRepository, HttpRepository, PmRepository, RepoProvider},
         server::RepositoryServer,
     },
     fuchsia_zircon_status::Status,
@@ -189,12 +188,27 @@ async fn start_tunnel(
 async fn repo_spec_to_backend(
     repo_spec: &RepositorySpec,
     inner: &Arc<RwLock<RepoInner>>,
-) -> Result<Box<dyn RepositoryBackend + Send + Sync>, ffx::RepositoryError> {
+) -> Result<Box<dyn RepoProvider>, ffx::RepositoryError> {
     match repo_spec {
         RepositorySpec::FileSystem { metadata_repo_path, blob_repo_path } => Ok(Box::new(
-            FileSystemRepository::new(metadata_repo_path.into(), blob_repo_path.into()),
+            FileSystemRepository::new(metadata_repo_path.into(), blob_repo_path.into()).map_err(
+                |err| {
+                    tracing::error!(
+                        "Unable to create file system repository {} {}: {:#}",
+                        metadata_repo_path,
+                        blob_repo_path,
+                        err
+                    );
+                    ffx::RepositoryError::InvalidUrl
+                },
+            )?,
         )),
-        RepositorySpec::Pm { path } => Ok(Box::new(PmRepository::new(path.into()))),
+        RepositorySpec::Pm { path } => {
+            Ok(Box::new(PmRepository::new(path.into()).map_err(|err| {
+                tracing::error!("Unable to create pm repository {}: {:#}", path, err);
+                ffx::RepositoryError::InvalidUrl
+            })?))
+        }
         RepositorySpec::Http { metadata_repo_url, blob_repo_url } => {
             let metadata_repo_url = Url::parse(metadata_repo_url.as_str()).map_err(|err| {
                 tracing::error!(
@@ -232,7 +246,7 @@ async fn add_repository(
 
     // Create the repository.
     let backend = repo_spec_to_backend(&repo_spec, &inner).await?;
-    let repo = Repository::new(repo_name, backend).await.map_err(|err| {
+    let repo = RepoClient::new(repo_name, backend).await.map_err(|err| {
         tracing::error!("Unable to create repository: {:#?}", err);
 
         match err {
@@ -253,7 +267,7 @@ async fn add_repository(
 
     // Finally add the repository.
     let mut inner = inner.write().await;
-    inner.manager.add(Arc::new(repo));
+    inner.manager.add(repo);
 
     // The repository server is only started when repositories are added to the
     // daemon. Now that we added one, make sure the server has started.
@@ -331,16 +345,19 @@ async fn register_target(
         })?,
     );
 
-    let config = repo
-        .get_config(
+    let config = {
+        let repo = repo.read().await;
+
+        repo.get_config(
             &format!("{}/{}", repo_host, repo.name()),
-            target_info.storage_type.clone().map(|storage_type| storage_type.into()),
+            target_info.storage_type.as_ref().map(|storage_type| storage_type.clone().into()),
         )
         .await
         .map_err(|e| {
             tracing::error!("failed to get config: {}", e);
             return ffx::RepositoryError::RepositoryManagerError;
-        })?;
+        })?
+    };
 
     match proxy.add(config.into()).await {
         Ok(Ok(())) => {}
@@ -355,7 +372,8 @@ async fn register_target(
     }
 
     if !target_info.aliases.is_empty() {
-        let () = create_aliases(cx, repo.name(), &target_nodename, &target_info.aliases).await?;
+        let () = create_aliases(cx, &target_info.repo_name, &target_nodename, &target_info.aliases)
+            .await?;
     }
 
     if should_make_tunnel {
@@ -645,7 +663,7 @@ impl<T: EventHandlerProvider> Repo<T> {
 
     async fn list_packages(
         &self,
-        name: &str,
+        repository_name: &str,
         iterator: ServerEnd<ffx::RepositoryPackagesIteratorMarker>,
         include_fields: ffx::ListFields,
     ) -> Result<(), ffx::RepositoryError> {
@@ -657,13 +675,16 @@ impl<T: EventHandlerProvider> Repo<T> {
             }
         };
 
-        let repo = if let Some(r) = self.inner.read().await.manager.get(&name) {
+        let repo = if let Some(r) = self.inner.read().await.manager.get(&repository_name) {
             r
         } else {
             return Err(ffx::RepositoryError::NoMatchingRepository);
         };
 
-        let values = repo.list_packages(include_fields).await.map_err(|err| {
+        // Make sure the repository is up to date.
+        update_repository(repository_name, &repo).await?;
+
+        let values = repo.read().await.list_packages(include_fields).await.map_err(|err| {
             tracing::error!("Unable to list packages: {:#?}", err);
 
             match err {
@@ -725,10 +746,14 @@ impl<T: EventHandlerProvider> Repo<T> {
             return Err(ffx::RepositoryError::NoMatchingRepository);
         };
 
-        let values = repo.show_package(package_name.to_owned()).await.map_err(|err| {
-            tracing::error!("Unable to list package contents {:?}: {}", package_name, err);
-            ffx::RepositoryError::IoError
-        })?;
+        // Make sure the repository is up to date.
+        update_repository(repository_name, &repo).await?;
+
+        let values =
+            repo.read().await.show_package(package_name.to_owned()).await.map_err(|err| {
+                tracing::error!("Unable to list package contents {:?}: {}", package_name, err);
+                ffx::RepositoryError::IoError
+            })?;
         if values.is_none() {
             return Err(ffx::RepositoryError::TargetCommunicationFailure);
         }
@@ -910,18 +935,18 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
             }
             ffx::RepositoryRegistryRequest::ListRepositories { iterator, .. } => {
                 let mut stream = iterator.into_stream()?;
-                let mut values = {
-                    let inner = self.inner.read().await;
 
-                    inner
-                        .manager
-                        .repositories()
-                        .map(|x| ffx::RepositoryConfig {
-                            name: x.name().to_owned(),
-                            spec: x.spec().into(),
-                        })
-                        .collect::<Vec<_>>()
-                };
+                let repositories =
+                    self.inner.read().await.manager.repositories().collect::<Vec<_>>();
+
+                let mut values = Vec::with_capacity(repositories.len());
+                for (name, repo) in repositories {
+                    values.push(ffx::RepositoryConfig {
+                        name,
+                        spec: repo.read().await.spec().into(),
+                    });
+                }
+
                 let mut pos = 0;
 
                 fasync::Task::spawn(async move {
@@ -1083,6 +1108,22 @@ async fn load_registrations_from_config(
             }
         }
     }
+}
+
+async fn update_repository(
+    repo_name: &str,
+    repo: &RwLock<RepoClient>,
+) -> Result<bool, ffx::RepositoryError> {
+    repo.write().await.update().await.map_err(|err| {
+        tracing::error!("Unable to update repository {}: {:#?}", repo_name, err);
+
+        match err {
+            repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
+                ffx::RepositoryError::ExpiredRepositoryMetadata
+            }
+            _ => ffx::RepositoryError::IoError,
+        }
+    })
 }
 
 #[derive(Clone)]
@@ -1250,6 +1291,8 @@ mod tests {
                 33, 10, 154, 26, 130, 117, 157, 125, 88, 175, 214, 109, 113,
             ])]),
             root_version: Some(1),
+            root_threshold: Some(1),
+            use_local_mirror: Some(false),
             storage_type: Some(fidl_fuchsia_pkg::RepositoryStorageType::Ephemeral),
             ..RepositoryConfig::EMPTY
         }
@@ -2815,11 +2858,11 @@ mod tests {
         run_test(async {
             // Serve the empty repository
             let repo_path = fs::canonicalize(EMPTY_REPO_PATH).unwrap();
-            let pm_backend = PmRepository::new(repo_path.try_into().unwrap());
+            let pm_backend = PmRepository::new(repo_path.try_into().unwrap()).unwrap();
 
-            let pm_repo = Repository::new("tuf", Box::new(pm_backend)).await.unwrap();
+            let pm_repo = RepoClient::new("tuf", Box::new(pm_backend)).await.unwrap();
             let manager = RepositoryManager::new();
-            manager.add(Arc::new(pm_repo));
+            manager.add(pm_repo);
 
             let addr = (Ipv4Addr::LOCALHOST, 0).into();
             let (server_fut, _, server) =
