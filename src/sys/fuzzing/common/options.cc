@@ -47,7 +47,9 @@ void SetOptions(Options* options, const Options& overrides) {
     auto suffix_len = strlen(kSanOptions);
     if (name.size() < suffix_len ||
         name.compare(name.size() - suffix_len, suffix_len, kSanOptions)) {
-      FX_LOGS(WARNING) << "Ignoring invalid `sanitizer_options`: " << name;
+      if (!name.empty()) {
+        FX_LOGS(WARNING) << "Ignoring invalid sanitizer_options: '" << name << "'";
+      }
       valid.clear_sanitizer_options();
     }
   }
