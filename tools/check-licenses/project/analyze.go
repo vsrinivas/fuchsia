@@ -17,7 +17,7 @@ import (
 // in each project.
 func AnalyzeLicenses() error {
 	// Convert the projects map into a list and sort it, to make this function consistent.
-	allProjectsList := make([]*Project, 0, len(AllProjects))
+	allProjectsList := make([]*Project, 0, len(FilteredProjects))
 	for _, p := range AllProjects {
 		allProjectsList = append(allProjectsList, p)
 	}
