@@ -48,13 +48,11 @@ use crate::service_context::ExternalServiceEvent;
 use crate::trace;
 
 use fuchsia_async as fasync;
-use fuchsia_inspect::{self as inspect, component, Node, Property};
+use fuchsia_inspect::{component, Node};
 use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 use futures::StreamExt;
-use inspect::StringProperty;
-use settings_inspect_utils::inspect_writable_queue::InspectWritableQueue;
 use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
-use std::borrow::Cow;
+use settings_inspect_utils::managed_inspect_queue::ManagedInspectQueue;
 use std::sync::Arc;
 
 blueprint_definition!(
@@ -83,16 +81,16 @@ struct ExternalApiCallInfo {
     inspect_node: Node,
 
     /// The request sent via the external API.
-    request: StringProperty,
+    request: IValue<String>,
 
     /// The response received by the external API.
-    response: StringProperty,
+    response: IValue<String>,
 
     /// The timestamp at which the request was sent.
-    request_timestamp: StringProperty,
+    request_timestamp: IValue<String>,
 
     /// The timestamp at which the response was received.
-    response_timestamp: StringProperty,
+    response_timestamp: IValue<String>,
 }
 
 impl ExternalApiCallInfo {
@@ -101,20 +99,12 @@ impl ExternalApiCallInfo {
         response: &str,
         request_timestamp: &str,
         response_timestamp: &str,
-        node: &inspect::Node,
-        count: u64,
     ) -> Self {
-        let info = Self::default()
-            .with_inspect(node, &format!("{count:020}"))
-            // `with_inspect` will only return an error on types with
-            // interior mutability. Since none are used here, this should be
-            // fine.
-            .expect("failed to create ExternalApiCallInfo inspect node");
-        info.request.set(request);
-        info.response.set(response);
-        info.request_timestamp.set(request_timestamp);
-        info.response_timestamp.set(response_timestamp);
-
+        let mut info = Self::default();
+        info.request.iset(request.to_string());
+        info.response.iset(response.to_string());
+        info.request_timestamp.iset(request_timestamp.to_string());
+        info.response_timestamp.iset(response_timestamp.to_string());
         info
     }
 }
@@ -125,7 +115,7 @@ struct ExternalApiCallsWrapper {
     /// The number of total calls that have been made on this protocol.
     count: IValue<u64>,
     /// The most recent pending and completed calls per-protocol.
-    calls: ManagedInspectMap<InspectWritableQueue<ExternalApiCallInfo>>,
+    calls: ManagedInspectMap<ManagedInspectQueue<ExternalApiCallInfo>>,
     /// The external api event counts.
     event_counts: ManagedInspectMap<IValue<u64>>,
 }
@@ -260,32 +250,13 @@ impl ExternalApiInspectAgent {
             match external_service_event {
                 ExternalServiceEvent::Created(protocol, timestamp) => {
                     let count = self.get_count(protocol) + 1;
-                    let completed_calls = self.get_completed_queue(protocol);
-                    let completed_calls_node = completed_calls.inspect_node();
-
-                    let info = ExternalApiCallInfo::new(
-                        "connect",
-                        "none",
-                        "none",
-                        &timestamp,
-                        completed_calls_node,
-                        count,
-                    );
-                    self.add_info(protocol, COMPLETED_CALLS_KEY, "Created", info);
+                    let info = ExternalApiCallInfo::new("connect", "none", "none", &timestamp);
+                    self.add_info(protocol, COMPLETED_CALLS_KEY, "Created", info, count);
                 }
                 ExternalServiceEvent::ApiCall(protocol, request, timestamp) => {
                     let count = self.get_count(protocol) + 1;
-                    let pending_calls = self.get_pending_queue(protocol);
-                    let pending_calls_node = pending_calls.inspect_node();
-                    let info = ExternalApiCallInfo::new(
-                        &request,
-                        "none",
-                        &timestamp,
-                        "none",
-                        pending_calls_node,
-                        count,
-                    );
-                    self.add_info(protocol, PENDING_CALLS_KEY, "ApiCall", info);
+                    let info = ExternalApiCallInfo::new(&request, "none", &timestamp, "none");
+                    self.add_info(protocol, PENDING_CALLS_KEY, "ApiCall", info, count);
                 }
                 ExternalServiceEvent::ApiResponse(
                     protocol,
@@ -295,19 +266,14 @@ impl ExternalApiInspectAgent {
                     response_timestamp,
                 ) => {
                     let count = self.get_count(protocol) + 1;
-                    let completed_calls = self.get_completed_queue(protocol);
-                    let completed_calls_node = completed_calls.inspect_node();
-
                     let info = ExternalApiCallInfo::new(
                         &request,
                         &response,
                         &request_timestamp,
                         &response_timestamp,
-                        completed_calls_node,
-                        count,
                     );
                     self.remove_pending(protocol, &info);
-                    self.add_info(protocol, COMPLETED_CALLS_KEY, "ApiResponse", info);
+                    self.add_info(protocol, COMPLETED_CALLS_KEY, "ApiResponse", info, count);
                 }
                 ExternalServiceEvent::ApiError(
                     protocol,
@@ -317,19 +283,14 @@ impl ExternalApiInspectAgent {
                     error_timestamp,
                 ) => {
                     let count = self.get_count(protocol) + 1;
-                    let completed_calls = self.get_completed_queue(protocol);
-                    let completed_calls_node = completed_calls.inspect_node();
-
                     let info = ExternalApiCallInfo::new(
                         &request,
                         &error,
                         &request_timestamp,
                         &error_timestamp,
-                        completed_calls_node,
-                        count,
                     );
                     self.remove_pending(protocol, &info);
-                    self.add_info(protocol, COMPLETED_CALLS_KEY, "ApiError", info);
+                    self.add_info(protocol, COMPLETED_CALLS_KEY, "ApiError", info, count);
                 }
                 ExternalServiceEvent::Closed(
                     protocol,
@@ -338,51 +299,17 @@ impl ExternalApiInspectAgent {
                     response_timestamp,
                 ) => {
                     let count = self.get_count(protocol) + 1;
-                    let completed_calls = self.get_completed_queue(protocol);
-                    let completed_calls_node = completed_calls.inspect_node();
-
                     let info = ExternalApiCallInfo::new(
                         &request,
                         "closed",
                         &request_timestamp,
                         &response_timestamp,
-                        completed_calls_node,
-                        count,
                     );
                     self.remove_pending(protocol, &info);
-                    self.add_info(protocol, COMPLETED_CALLS_KEY, "Closed", info);
+                    self.add_info(protocol, COMPLETED_CALLS_KEY, "Closed", info, count);
                 }
             }
         }
-    }
-
-    /// Retrieves the completed calls queue for `protocol`. Implicitly calls `ensure_queue_exists`.
-    fn get_completed_queue(
-        &mut self,
-        protocol: &str,
-    ) -> &InspectWritableQueue<ExternalApiCallInfo> {
-        self.get_queue(protocol, COMPLETED_CALLS_KEY, MAX_COMPLETED_CALLS)
-    }
-
-    /// Retrieves the pending calls queue for `protocol`. Implicitly calls `ensure_queue_exists`.
-    fn get_pending_queue(&mut self, protocol: &str) -> &InspectWritableQueue<ExternalApiCallInfo> {
-        self.get_queue(protocol, PENDING_CALLS_KEY, MAX_PENDING_CALLS)
-    }
-
-    /// Retrieves the queue at `queue_key` for `protocol`. Implicitly calls `ensure_queue_exists`.
-    fn get_queue(
-        &mut self,
-        protocol: &str,
-        queue_key: &'static str,
-        default_queue_size: usize,
-    ) -> &InspectWritableQueue<ExternalApiCallInfo> {
-        self.ensure_queue_exists(protocol, queue_key.into(), default_queue_size);
-        self.api_calls
-            .get(protocol)
-            .expect("Wrapper should exist")
-            .calls
-            .get(queue_key)
-            .expect("Queue should exist")
     }
 
     /// Retrieves the total call count for the given `protocol`. Implicitly
@@ -403,18 +330,13 @@ impl ExternalApiInspectAgent {
     /// Ensures that an entry exists for the given `protocol`, and `queue_key` adding a
     /// new queue of max size `queue_size` if one does not yet exist. Implicitly calls
     /// `ensure_protocol_exists`.
-    fn ensure_queue_exists(
-        &mut self,
-        protocol: &str,
-        queue_key: Cow<'static, str>,
-        queue_size: usize,
-    ) {
+    fn ensure_queue_exists(&mut self, protocol: &str, queue_key: &'static str, queue_size: usize) {
         self.ensure_protocol_exists(protocol);
 
         let protocol_map = self.api_calls.get_mut(protocol).expect("Protocol entry should exist");
-        let _ = protocol_map
-            .calls
-            .get_or_insert_with(queue_key.to_string(), || InspectWritableQueue::new(queue_size));
+        let _ = protocol_map.calls.get_or_insert_with(queue_key.to_string(), || {
+            ManagedInspectQueue::<ExternalApiCallInfo>::new(queue_size)
+        });
     }
 
     /// Inserts the given `info` into the entry at `protocol` and `queue_key`, incrementing
@@ -425,7 +347,13 @@ impl ExternalApiInspectAgent {
         queue_key: &'static str,
         event_type: &str,
         info: ExternalApiCallInfo,
+        count: u64,
     ) {
+        self.ensure_queue_exists(
+            protocol,
+            queue_key,
+            if queue_key == COMPLETED_CALLS_KEY { MAX_COMPLETED_CALLS } else { MAX_PENDING_CALLS },
+        );
         let wrapper = self.api_calls.get_mut(protocol).expect("Protocol entry should exist");
         {
             let mut wrapper_guard = wrapper.count.as_mut();
@@ -439,7 +367,12 @@ impl ExternalApiInspectAgent {
         }
 
         let queue = wrapper.calls.get_mut(queue_key).expect("Queue should exist");
-        queue.push(info);
+        let key = format!("{count:020}");
+        queue.push(
+            &key,
+            info.with_inspect(queue.inspect_node(), &key)
+                .expect("Failed to create ExternalApiCallInfo node"),
+        );
     }
 
     /// Removes the call with the same request timestamp from the `protocol`'s pending
@@ -449,8 +382,8 @@ impl ExternalApiInspectAgent {
         let wrapper = self.api_calls.get_mut(protocol).expect("Protocol entry should exist");
         let pending_queue =
             wrapper.calls.get_mut(PENDING_CALLS_KEY).expect("Pending queue should exist");
-        let req_timestamp = &info.request_timestamp;
-        pending_queue.items_mut().retain(|pending| &pending.request_timestamp != req_timestamp);
+        let req_timestamp = &*info.request_timestamp;
+        pending_queue.retain(|pending| &*pending.request_timestamp != req_timestamp);
     }
 }
 
@@ -462,7 +395,7 @@ mod tests {
     use crate::message::MessageHubUtil;
     use crate::service;
 
-    use fuchsia_inspect::assert_data_tree;
+    use fuchsia_inspect::{assert_data_tree, Inspector};
     use std::collections::HashSet;
 
     const MOCK_PROTOCOL_NAME: &str = "fuchsia.external.FakeAPI";
@@ -516,7 +449,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect_create_connection() {
-        let inspector = inspect::Inspector::new();
+        let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("external_apis");
         let context = create_context().await;
 
@@ -553,7 +486,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect_pending() {
-        let inspector = inspect::Inspector::new();
+        let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("external_apis");
         let context = create_context().await;
 
@@ -593,7 +526,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect_success_response() {
-        let inspector = inspect::Inspector::new();
+        let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("external_apis");
         let context = create_context().await;
 
@@ -664,7 +597,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect_error() {
-        let inspector = inspect::Inspector::new();
+        let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("external_apis");
         let context = create_context().await;
 
@@ -736,7 +669,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect_channel_closed() {
-        let inspector = inspect::Inspector::new();
+        let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("external_apis");
         let context = create_context().await;
 
@@ -807,7 +740,7 @@ mod tests {
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_inspect_multiple_requests() {
-        let inspector = inspect::Inspector::new();
+        let inspector = Inspector::new();
         let inspect_node = inspector.root().create_child("external_apis");
         let context = create_context().await;
 

@@ -24,7 +24,16 @@ pub struct ManagedInspectQueue<V> {
 impl<V> ManagedInspectQueue<V>
 where
     for<'a> &'a mut V: Inspect,
+    V: std::fmt::Debug + std::default::Default,
 {
+    /// Creates a new [ManagedInspectQueue] with a default node. This gives the parent
+    /// the option to call `with_inspect` itself instead of passing a node into `with_node`.
+    pub fn new(size_limit: usize) -> Self {
+        let mut default = ManagedInspectQueue::<V>::default();
+        default.set_size_limit(size_limit);
+        default
+    }
+
     /// Creates a new [ManagedInspectQueue] that attaches inserted values to the given node.
     /// A size limit of 0 indicates an unlimited length.
     pub fn with_node(node: Node, size_limit: usize) -> Self {
@@ -34,7 +43,6 @@ where
     /// Sets the max number of elements allowed in the queue. If the size is smaller than the
     /// [new_size_limit], the oldest elements will be dropped until it is the right size. A size
     /// limit of 0 indicates an unlimited length.
-    #[cfg(test)]
     fn set_size_limit(&mut self, new_size_limit: usize) {
         while self.items.len() > new_size_limit {
             let _ = self.items.pop_front();
@@ -42,10 +50,17 @@ where
         self.size_limit = new_size_limit;
     }
 
-    /// Returns a mutable reference to the underlying queue.
-    #[cfg(test)]
-    pub fn items_mut(&mut self) -> &mut VecDeque<V> {
-        &mut self.items
+    /// Returns a mutable iterator for the underlying queue.
+    pub fn iter_mut(&mut self) -> std::collections::vec_deque::IterMut<'_, V> {
+        self.items.iter_mut()
+    }
+
+    /// Filters the queue by the condition function [f].
+    pub fn retain<F>(&mut self, f: F)
+    where
+        F: FnMut(&V) -> bool,
+    {
+        self.items.retain(f);
     }
 
     /// Returns a reference to the [ManagedInspectQueue]'s node.
@@ -93,7 +108,7 @@ mod tests {
         queue: ManagedInspectQueue<TestInspectItem>,
     }
 
-    #[derive(Default, Inspect)]
+    #[derive(Debug, Default, Inspect)]
     struct TestInspectItem {
         inspect_node: Node,
         id: IValue<u64>,
@@ -209,9 +224,9 @@ mod tests {
             10,
         );
 
-        let _ = queue.push("0", "value1".to_string().into());
-        let _ = queue.push("1", "value2".to_string().into());
-        let _ = queue.items_mut().remove(0);
+        queue.push("0", "value1".to_string().into());
+        queue.push("1", "value2".to_string().into());
+        let _ = queue.retain(|item| **item != "value1".to_string());
 
         assert_data_tree!(inspector, root: {
             managed_node: {

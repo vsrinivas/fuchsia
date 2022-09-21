@@ -22,11 +22,11 @@ use crate::message::receptor::Receptor;
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
 use settings_inspect_utils::inspect_writable_map::InspectWritableMap;
-use settings_inspect_utils::inspect_writable_queue::InspectWritableQueue;
+use settings_inspect_utils::managed_inspect_queue::ManagedInspectQueue;
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
-use fuchsia_inspect_derive::{Inspect, WithInspect};
+use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 use futures::stream::FuturesUnordered;
 use futures::StreamExt;
 
@@ -44,7 +44,7 @@ const INSPECT_REQUESTS_COUNT: usize = 15;
 struct SettingTypeInspectInfo {
     /// Map from the name of the Request variant to a RequestInspectInfo that holds a list of
     /// recent requests.
-    requests_by_type: InspectWritableMap<InspectWritableQueue<RequestInspectInfo>>,
+    requests_by_type: InspectWritableMap<ManagedInspectQueue<RequestInspectInfo>>,
 
     /// Incrementing count for all requests of this setting type.
     ///
@@ -95,13 +95,15 @@ impl ResponseTypeCount {
 }
 
 /// Information about a request to be written to inspect.
-#[derive(Default, Inspect)]
+#[derive(Debug, Default, Inspect)]
 struct RequestInspectInfo {
-    /// Debug string representation of this Request.
-    request: inspect::StringProperty,
+    /// Debug string representation of this Request. Must be an IValue in order
+    /// to be properly attached by inspect utils.
+    request: IValue<String>,
 
-    /// Milliseconds since creation that this request arrived.
-    request_timestamp: inspect::StringProperty,
+    /// Milliseconds since creation that this request arrived. Must be an IValue in order
+    /// to be properly attached by inspect utils.
+    request_timestamp: IValue<String>,
 
     /// Debug string representation of a corresponding Response.
     response: inspect::StringProperty,
@@ -118,15 +120,10 @@ struct RequestInspectInfo {
 }
 
 impl RequestInspectInfo {
-    fn new(request: String, timestamp: String, node: &inspect::Node, key: &str) -> Self {
-        let mut info = Self::default()
-            .with_inspect(node, key)
-            // `with_inspect` will only return an error on types with
-            // interior mutability. Since none are used here, this should be
-            // fine.
-            .expect("failed to create RequestInspectInfo inspect node");
-        info.request.set(&request);
-        info.request_timestamp.set(&timestamp);
+    fn new(request: String, timestamp: String) -> Self {
+        let mut info = Self::default();
+        info.request.iset(request);
+        info.request_timestamp.iset(timestamp.clone());
         info.link_str_request_timestamp = timestamp;
         info
     }
@@ -295,27 +292,23 @@ impl SettingProxyInspectAgent {
             });
 
         let key = request.for_inspect();
-        let inspect_queue_node = &setting_type_info.inspect_node;
+        let inspect_queue_node = setting_type_info.inspect_node.create_child(key);
         let inspect_queue =
             setting_type_info.requests_by_type.get_or_insert_with(key.to_string(), || {
-                InspectWritableQueue::<RequestInspectInfo>::new(INSPECT_REQUESTS_COUNT)
-                    .with_inspect(inspect_queue_node, key)
-                    // `with_inspect` will only return an error on types with
-                    // interior mutability. Since none are used here, this should be
-                    // fine.
-                    .expect("failed to create InspectWritableQueue inspect node")
+                ManagedInspectQueue::<RequestInspectInfo>::with_node(
+                    inspect_queue_node,
+                    INSPECT_REQUESTS_COUNT,
+                )
             });
 
         let count = setting_type_info.count;
         setting_type_info.count += 1;
 
         let timestamp = clock::inspect_format_now();
-        inspect_queue.push(RequestInspectInfo::new(
-            format!("{:?}", request),
-            timestamp.clone(),
-            inspect_queue.inspect_node(),
+        inspect_queue.push(
             &format!("{:020}", count),
-        ));
+            RequestInspectInfo::new(format!("{:?}", request), timestamp.clone()),
+        );
 
         timestamp
     }
@@ -360,10 +353,9 @@ impl SettingProxyInspectAgent {
             .requests_by_type
             .get_mut(&link_info.key)
             .expect("Should find a RequestInspectInfo to record the response.");
-        let last_requests = request_info_queue.items_mut();
 
         // The match should be the last item in the queue if a response replies back immediately.
-        for request in last_requests.iter().rev() {
+        for request in request_info_queue.iter_mut().rev() {
             if request.link_str_request_timestamp == link_info.link_str_request_timestamp {
                 // Set the response information corresponding to the request.
                 request.response.set(&format!("{:?}", &response));
@@ -556,9 +548,8 @@ mod tests {
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        let _agent =
-            SettingProxyInspectAgent::create_with_node(context, inspect_node, response_counts_node)
-                .await;
+        SettingProxyInspectAgent::create_with_node(context, inspect_node, response_counts_node)
+            .await;
 
         // Interlace different request types to make sure the counter is correct.
         request_processor
@@ -659,9 +650,8 @@ mod tests {
 
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        let _agent =
-            SettingProxyInspectAgent::create_with_node(context, inspect_node, request_counts_node)
-                .await;
+        SettingProxyInspectAgent::create_with_node(context, inspect_node, request_counts_node)
+            .await;
 
         request_processor
             .send_and_receive(
@@ -757,9 +747,8 @@ mod tests {
         let context = create_context().await;
         let request_processor = RequestProcessor::new(context.delegate.clone());
 
-        let _agent =
-            SettingProxyInspectAgent::create_with_node(context, inspect_node, response_counts_node)
-                .await;
+        SettingProxyInspectAgent::create_with_node(context, inspect_node, response_counts_node)
+            .await;
 
         request_processor
             .send_and_receive(
