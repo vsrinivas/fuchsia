@@ -96,9 +96,9 @@ grok_segments() {
   while read line; do
     case "$line" in
     # Program header for the code segment, e.g.:
-    # LOAD           0x002000 0x0000000000002000 0x0000000000002000 0x00f50f 0x00f50f R E 0x1000
-    #                         ^^^^^ vaddr ^^^^^^                    ^filesz^
-    *LOAD*\ R\ E\ *)
+    # LOAD           0x002000 0x0000000000002000 0x0000000000002000 0x00f50f 0x00f50f R? E 0x1000
+    #                         ^^^^^ vaddr ^^^^^^                    ^filesz^          ^ not present on aarch64
+    *LOAD*\ E\ *)
       local words=($line)
       local vaddr=$(printf '%#x' ${words[2]})
       local filesz=$(printf '%#x' ${words[4]})
