@@ -30,8 +30,17 @@ default_project_root="$(readlink -f "$script_dir"/../..)"
 # in this script.
 remote_project_root="/b/f/w"
 
+# Some support tools/steps use Python.
+# Point to our prebuilt host-platform python3.
+python="$(ls "$default_project_root"/prebuilt/third_party/python3/*/bin/python3)" || {
+  echo "*** Python interpreter not found under $default_project_root/prebuilt/third_party/python3."
+  exit 1
+}
+
 # Script to check (local) determinism.
 check_determinism_command=(
+  "$python"
+  -S
   ../../build/tracer/output_cacher.py
   --check-repeatability
 )
@@ -165,11 +174,6 @@ then
     realpath -s --relative-to="$from" "$to"
   }
 else
-  # Point to our prebuilt python3.
-  python="$(ls "$project_root"/prebuilt/third_party/python3/*/bin/python3)" || {
-    echo "*** Python interpreter not found under $project_root/prebuilt/third_party/python3."
-    exit 1
-  }
   function relpath() {
     local -r from="$1"
     local -r to="$2"
