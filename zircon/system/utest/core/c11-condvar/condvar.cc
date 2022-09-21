@@ -25,7 +25,7 @@ struct CondThreadArgs {
 
 class ConditionalVariableTest : public zxtest::Test {
  public:
-  static constexpr int64_t kBackstopTime = 123456789;
+  static constexpr int64_t kBackstopTime = 0;
 
   static void SetUpTestSuite() {
     // cnd_timedwait relies on the system UTC clock which might not have been set or might not have

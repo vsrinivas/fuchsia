@@ -160,7 +160,7 @@ static void wait_for_count(const std::atomic_int& var, int value, pthread_mutex_
 
 class PthreadTest : public zxtest::Test {
  public:
-  static constexpr int64_t kBackstopTime = 123456789;
+  static constexpr int64_t kBackstopTime = 0;
 
   static void SetUpTestSuite() {
     // pthread_cond_timedwait relies on the system UTC clock which might not have been set or might
