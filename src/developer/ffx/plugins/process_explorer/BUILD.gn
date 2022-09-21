@@ -25,6 +25,7 @@ ffx_plugin("ffx_process_explorer") {
   sources = [
     "src/lib.rs",
     "src/processes_data.rs",
+    "src/write_human_readable_output.rs",
   ]
 
   test_deps = [

@@ -5,17 +5,22 @@
 //! Library that obtains and prints information about all processes of a running fuchsia device.
 
 mod processes_data;
+mod write_human_readable_output;
 
 use {
     anyhow::Result,
     ffx_core::ffx_plugin,
-    ffx_process_explorer_args::QueryCommand,
+    ffx_process_explorer_args::{Args, QueryCommand},
     ffx_writer::Writer,
     fidl_fuchsia_process_explorer::QueryProxy,
-    fuchsia_zircon_types as zx_types,
+    fuchsia_zircon_types::zx_koid_t,
     futures::AsyncReadExt,
     processes_data::{processed, raw},
-    std::io::Write,
+    std::collections::HashSet,
+    write_human_readable_output::{
+        pretty_print_invalid_koids, pretty_print_processes_data,
+        pretty_print_processes_name_and_koid,
+    },
 };
 
 // TODO(fxbug.dev/107973): The plugin must remain experimental until the FIDL API is strongly typed.
@@ -23,16 +28,15 @@ use {
 /// Prints processes data.
 pub async fn print_processes_data(
     query_proxy: QueryProxy,
-    _cmd: QueryCommand,
+    cmd: QueryCommand,
     #[ffx(machine = processed::ProcessesData)] writer: Writer,
 ) -> Result<()> {
     let processes_data = get_processes_data(query_proxy).await?;
     let output = processed::ProcessesData::from(processes_data);
-    if writer.is_machine() {
-        writer.machine(&output)?;
-        Ok(())
-    } else {
-        pretty_print_processes_data(writer, output)
+
+    match cmd.arg {
+        Args::List(arg) => list_subcommand(writer, output, arg.verbose),
+        Args::Filter(arg) => filter_subcommand(writer, output, arg.process_koids),
     }
 }
 
@@ -61,73 +65,67 @@ async fn get_processes_data(
     let buffer = get_raw_data(query_proxy).await?;
     Ok(serde_json::from_slice(&buffer)?)
 }
-/// Print to 'w' a human-readable presentation of `processes_data`.
-fn pretty_print_processes_data(
-    mut w: Writer,
+
+/// Returns data that contains information related to the processes contained in `koids`, and a vector containing any invalid koids (if any).
+fn filter_by_process_koids(
     processes_data: processed::ProcessesData,
-) -> Result<()> {
-    writeln!(w, "Total processes found:    {}", processes_data.processes_count)?;
-    writeln!(w)?;
+    koids: Vec<zx_koid_t>,
+) -> (processed::ProcessesData, Vec<zx_koid_t>) {
+    let koids_set: HashSet<zx_koid_t> = HashSet::from_iter(koids);
+    let mut filtered_processes = Vec::new();
+    let mut filtered_processes_koids: HashSet<zx_koid_t> = HashSet::new();
+
     for process in processes_data.processes {
-        writeln!(w, "Process name:             {}", process.name)?;
-        writeln!(w, "Process koid:             {}", process.koid)?;
-        writeln!(w, "Total objects:            {}", process.objects_count)?;
-        for objects_by_type in process.objects {
-            writeln!(
-                w,
-                "   {}: {}",
-                get_object_type_name(objects_by_type.objects_type),
-                objects_by_type.objects_count
-            )?;
-            for object in objects_by_type.objects {
-                writeln!(
-                    w,
-                    "         Koid: {:6}    Related Koid: {:6}    Peer Owner Koid: {:6}",
-                    object.koid, object.related_koid, object.peer_owner_koid
-                )?;
-            }
+        if koids_set.contains(&process.koid) {
+            filtered_processes_koids.insert(process.koid);
+            filtered_processes.push(process);
         }
-        writeln!(w, "===========================================================================")?;
     }
-    writeln!(w)?;
-    Ok(())
+
+    let mut invalid_koids: Vec<zx_koid_t> = Vec::new();
+    for koid in koids_set {
+        if !filtered_processes_koids.contains(&koid) {
+            invalid_koids.push(koid);
+        }
+    }
+
+    (
+        processed::ProcessesData {
+            processes_count: filtered_processes.len(),
+            processes: filtered_processes,
+        },
+        invalid_koids,
+    )
 }
 
-/// Convert objects type from zx_obj_type_t to a string
-/// to make the information more readable.
-fn get_object_type_name(object_type: zx_types::zx_obj_type_t) -> String {
-    match object_type {
-        zx_types::ZX_OBJ_TYPE_NONE => "None",
-        zx_types::ZX_OBJ_TYPE_PROCESS => "Processes",
-        zx_types::ZX_OBJ_TYPE_THREAD => "Threads",
-        zx_types::ZX_OBJ_TYPE_VMO => "VMOs",
-        zx_types::ZX_OBJ_TYPE_CHANNEL => "Channels",
-        zx_types::ZX_OBJ_TYPE_EVENT => "Events",
-        zx_types::ZX_OBJ_TYPE_PORT => "Ports",
-        zx_types::ZX_OBJ_TYPE_INTERRUPT => "Interrupts",
-        zx_types::ZX_OBJ_TYPE_PCI_DEVICE => "PCI Devices",
-        zx_types::ZX_OBJ_TYPE_DEBUGLOG => "Debuglogs",
-        zx_types::ZX_OBJ_TYPE_SOCKET => "Sockets",
-        zx_types::ZX_OBJ_TYPE_RESOURCE => "Resources",
-        zx_types::ZX_OBJ_TYPE_EVENTPAIR => "Event pairs",
-        zx_types::ZX_OBJ_TYPE_JOB => "Jobs",
-        zx_types::ZX_OBJ_TYPE_VMAR => "VMARs",
-        zx_types::ZX_OBJ_TYPE_FIFO => "FIFOs",
-        zx_types::ZX_OBJ_TYPE_GUEST => "Guests",
-        zx_types::ZX_OBJ_TYPE_VCPU => "VCPUs",
-        zx_types::ZX_OBJ_TYPE_TIMER => "Timers",
-        zx_types::ZX_OBJ_TYPE_IOMMU => "IOMMUs",
-        zx_types::ZX_OBJ_TYPE_BTI => "BTIs",
-        zx_types::ZX_OBJ_TYPE_PROFILE => "Profiles",
-        zx_types::ZX_OBJ_TYPE_PMT => "PMTs",
-        zx_types::ZX_OBJ_TYPE_SUSPEND_TOKEN => "Suspend tokens",
-        zx_types::ZX_OBJ_TYPE_PAGER => "Pagers",
-        zx_types::ZX_OBJ_TYPE_EXCEPTION => "Exceptions",
-        zx_types::ZX_OBJ_TYPE_CLOCK => "Clocks",
-        zx_types::ZX_OBJ_TYPE_STREAM => "Streams",
-        _ => "Error",
+fn list_subcommand(
+    w: Writer,
+    processes_data: processed::ProcessesData,
+    verbose: bool,
+) -> Result<()> {
+    if verbose {
+        if w.is_machine() {
+            w.machine(&processes_data)?;
+            Ok(())
+        } else {
+            pretty_print_processes_data(w, processes_data)
+        }
+    } else {
+        pretty_print_processes_name_and_koid(w, processes_data)
     }
-    .to_string()
+}
+
+fn filter_subcommand(
+    w: Writer,
+    processes_data: processed::ProcessesData,
+    koids: Vec<zx_koid_t>,
+) -> Result<()> {
+    let (filtered_output, invalid_koids) = filter_by_process_koids(processes_data, koids);
+    if invalid_koids.len() > 0 {
+        pretty_print_invalid_koids(w, invalid_koids)
+    } else {
+        pretty_print_processes_data(w, filtered_output)
+    }
 }
 
 #[cfg(test)]

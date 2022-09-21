@@ -92,7 +92,7 @@ pub mod processed {
         pub objects_type: zx_obj_type_t,
         /// The number of objects of the specified type associated
         /// with a process.
-        pub objects_count: i64,
+        pub objects_count: usize,
         /// A vector containing all KernelObject type elements.
         pub objects: Vec<KernelObject>,
     }
@@ -104,7 +104,7 @@ pub mod processed {
         pub koid: zx_koid_t,
         pub name: String,
         /// The number of objects associated with the process.
-        pub objects_count: i64,
+        pub objects_count: usize,
         /// A vector of KernelObjectByType type elements.
         pub objects: Vec<KernelObjectsByType>,
     }
@@ -114,7 +114,7 @@ pub mod processed {
     #[derive(Serialize, PartialEq, Debug)]
     pub struct ProcessesData {
         /// Number of processes found.
-        pub processes_count: i64,
+        pub processes_count: usize,
         /// Processes data
         pub processes: Vec<Process>,
     }
@@ -142,7 +142,7 @@ pub mod processed {
                                 let objects = type_to_objects.get(&i).unwrap();
                                 let kot = KernelObjectsByType {
                                     objects_type: i,
-                                    objects_count: objects.len() as i64,
+                                    objects_count: objects.len(),
                                     objects: objects.to_vec(),
                                 };
                                 vector_objects_by_type.push(kot);
@@ -153,14 +153,14 @@ pub mod processed {
                     let p = Process {
                         koid: raw_process.koid,
                         name: raw_process.name,
-                        objects_count: raw_process.objects.len() as i64,
+                        objects_count: raw_process.objects.len(),
                         objects: vector_objects_by_type,
                     };
                     processes.push(p);
                 }
                 processes
             };
-            ProcessesData { processes_count: processes.len() as i64, processes }
+            ProcessesData { processes_count: processes.len(), processes }
         }
     }
 }
