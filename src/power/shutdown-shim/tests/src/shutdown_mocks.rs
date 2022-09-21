@@ -10,9 +10,9 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
     fuchsia_component_test::LocalComponentHandles,
-    fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::BoxFuture, FutureExt, StreamExt, TryFutureExt, TryStreamExt},
+    tracing::{info, warn},
 };
 
 pub fn new_mocks_provider() -> (
@@ -85,7 +85,7 @@ async fn run_statecontrol_admin(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fstatecontrol::AdminRequestStream,
 ) {
-    fx_log_info!("new connection to {}", fstatecontrol::AdminMarker::DEBUG_NAME);
+    info!("new connection to {}", fstatecontrol::AdminMarker::DEBUG_NAME);
     async move {
         match stream.try_next().await? {
             Some(fstatecontrol::AdminRequest::PowerFullyOn { responder }) => {
@@ -93,32 +93,32 @@ async fn run_statecontrol_admin(
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
             }
             Some(fstatecontrol::AdminRequest::Reboot { reason, responder }) => {
-                fx_log_info!("Reboot called");
+                info!("Reboot called");
                 send_signals.unbounded_send(Signal::Statecontrol(Admin::Reboot(reason)))?;
                 responder.send(&mut Ok(()))?;
             }
             Some(fstatecontrol::AdminRequest::RebootToBootloader { responder }) => {
-                fx_log_info!("RebootToBootloader called");
+                info!("RebootToBootloader called");
                 send_signals.unbounded_send(Signal::Statecontrol(Admin::RebootToBootloader))?;
                 responder.send(&mut Ok(()))?;
             }
             Some(fstatecontrol::AdminRequest::RebootToRecovery { responder }) => {
-                fx_log_info!("RebootToRecovery called");
+                info!("RebootToRecovery called");
                 send_signals.unbounded_send(Signal::Statecontrol(Admin::RebootToRecovery))?;
                 responder.send(&mut Ok(()))?;
             }
             Some(fstatecontrol::AdminRequest::Poweroff { responder }) => {
-                fx_log_info!("Poweroff called");
+                info!("Poweroff called");
                 send_signals.unbounded_send(Signal::Statecontrol(Admin::Poweroff))?;
                 responder.send(&mut Ok(()))?;
             }
             Some(fstatecontrol::AdminRequest::Mexec { responder, .. }) => {
-                fx_log_info!("Mexec called");
+                info!("Mexec called");
                 send_signals.unbounded_send(Signal::Statecontrol(Admin::Mexec))?;
                 responder.send(&mut Ok(()))?;
             }
             Some(fstatecontrol::AdminRequest::SuspendToRam { responder }) => {
-                fx_log_info!("SuspendToRam called");
+                info!("SuspendToRam called");
                 send_signals.unbounded_send(Signal::Statecontrol(Admin::SuspendToRam))?;
                 responder.send(&mut Ok(()))?;
             }
@@ -129,7 +129,7 @@ async fn run_statecontrol_admin(
     .unwrap_or_else(|e: anyhow::Error| {
         // Note: the shim checks liveness by writing garbage data on its first connection and
         // observing PEER_CLOSED, so we're expecting this warning to happen once.
-        fx_log_warn!("couldn't run {}: {:?}", fstatecontrol::AdminMarker::DEBUG_NAME, e);
+        warn!("couldn't run {}: {:?}", fstatecontrol::AdminMarker::DEBUG_NAME, e);
     })
     .await
 }
@@ -138,24 +138,21 @@ async fn run_device_manager_system_state_transition(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fdevicemanager::SystemStateTransitionRequestStream,
 ) {
-    fx_log_info!(
-        "new connection to {}",
-        fdevicemanager::SystemStateTransitionMarker::PROTOCOL_NAME
-    );
+    info!("new connection to {}", fdevicemanager::SystemStateTransitionMarker::PROTOCOL_NAME);
     async move {
         match stream.try_next().await? {
             Some(fdevicemanager::SystemStateTransitionRequest::SetTerminationSystemState {
                 state,
                 responder,
             }) => {
-                fx_log_info!("SetTerminationState called");
+                info!("SetTerminationState called");
                 send_signals.unbounded_send(Signal::DeviceManager(state))?;
                 responder.send(&mut Ok(()))?;
             }
             Some(fdevicemanager::SystemStateTransitionRequest::SetMexecZbis {
                 responder, ..
             }) => {
-                fx_log_info!("SetMexecZbis called");
+                info!("SetMexecZbis called");
                 responder.send(&mut Ok(()))?;
             }
             _ => (),
@@ -176,11 +173,11 @@ async fn run_sys2_system_controller(
     send_signals: mpsc::UnboundedSender<Signal>,
     mut stream: fsys::SystemControllerRequestStream,
 ) {
-    fx_log_info!("new connection to {}", fsys::SystemControllerMarker::DEBUG_NAME);
+    info!("new connection to {}", fsys::SystemControllerMarker::DEBUG_NAME);
     async move {
         match stream.try_next().await? {
             Some(fsys::SystemControllerRequest::Shutdown { responder }) => {
-                fx_log_info!("Shutdown called");
+                info!("Shutdown called");
                 // Send the responder out with the signal.
                 // The responder keeps the current request and the request stream alive.
                 send_signals.unbounded_send(Signal::Sys2Shutdown(responder))?;

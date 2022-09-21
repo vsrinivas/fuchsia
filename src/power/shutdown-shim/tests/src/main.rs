@@ -132,7 +132,7 @@ async fn new_realm(
     Ok((builder.build().await?, recv_signals))
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
@@ -147,7 +147,7 @@ async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
@@ -162,7 +162,7 @@ async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
@@ -174,7 +174,7 @@ async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
@@ -186,7 +186,7 @@ async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_present_poweroff() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
@@ -198,7 +198,7 @@ async fn power_manager_present_poweroff() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_present_mexec() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
@@ -212,7 +212,7 @@ async fn power_manager_present_mexec() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
     let shim_statecontrol =
@@ -224,7 +224,7 @@ async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_missing_poweroff() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) =
         new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
@@ -246,7 +246,7 @@ async fn power_manager_missing_poweroff() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) =
         new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
@@ -269,7 +269,7 @@ async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_missing_mexec() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) =
         new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
@@ -294,7 +294,7 @@ async fn power_manager_missing_mexec() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_not_present_poweroff() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) =
         new_realm(RealmVariant::PowerManagerNotPresent).await?;
@@ -316,7 +316,7 @@ async fn power_manager_not_present_poweroff() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_not_present_reboot() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) =
         new_realm(RealmVariant::PowerManagerNotPresent).await?;
@@ -338,7 +338,7 @@ async fn power_manager_not_present_reboot() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_not_present_mexec() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) =
         new_realm(RealmVariant::PowerManagerNotPresent).await?;
@@ -362,7 +362,7 @@ async fn power_manager_not_present_mexec() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn power_manager_not_present_reboot_oom() -> Result<(), Error> {
     let (realm_instance, mut recv_signals) =
         new_realm(RealmVariant::PowerManagerNotPresent).await?;
@@ -384,7 +384,7 @@ async fn power_manager_not_present_reboot_oom() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 // If this test fails it is because a new variant was introduced. If a new
 // variant is introduced the `send_command` function in shutdown-shim must be
 // updated to support it.
