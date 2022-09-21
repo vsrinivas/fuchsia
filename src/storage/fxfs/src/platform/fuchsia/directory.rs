@@ -5,6 +5,7 @@
 use {
     crate::{
         errors::FxfsError,
+        filesystem::SyncOptions,
         log::*,
         object_handle::INVALID_OBJECT_ID,
         object_store::{
@@ -414,8 +415,13 @@ impl MutableDirectory for FxDirectory {
     }
 
     async fn sync(&self) -> Result<(), Status> {
-        // TODO(fxbug.dev/96085): Support sync on root of fxfs volume.
-        Ok(())
+        // FDIO implements `syncfs` by calling sync on a directory, so replicate that behaviour.
+        self.volume()
+            .store()
+            .filesystem()
+            .sync(SyncOptions { flush_device: true, ..Default::default() })
+            .await
+            .map_err(map_to_status)
     }
 
     async fn rename(
