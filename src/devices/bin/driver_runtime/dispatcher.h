@@ -433,6 +433,11 @@ class Dispatcher : public async_dispatcher_t,
   // Cancels the callbacks in |shutdown_queue_|.
   void CompleteShutdown();
 
+  void SetEventWaiter(EventWaiter* event_waiter) __TA_EXCLUDES(&callback_lock_) {
+    fbl::AutoLock lock(&callback_lock_);
+    event_waiter_ = event_waiter;
+  }
+
   // Returns true if the dispatcher has no active threads or queued requests.
   // This does not include unsignaled waits.
   bool IsIdleLocked() __TA_REQUIRES(&callback_lock_);
@@ -466,7 +471,7 @@ class Dispatcher : public async_dispatcher_t,
 
   // Global dispatcher shared across all dispatchers in a process.
   async_dispatcher_t* process_shared_dispatcher_;
-  EventWaiter* event_waiter_;
+  EventWaiter* event_waiter_ __TA_GUARDED(&callback_lock_);
 
   fbl::Mutex callback_lock_;
   // Callback requests that have been registered by channels, but not yet queued.

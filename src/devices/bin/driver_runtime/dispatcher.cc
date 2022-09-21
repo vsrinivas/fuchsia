@@ -327,17 +327,17 @@ zx_status_t Dispatcher::CreateWithAdder(uint32_t options, std::string_view name,
         self->DispatchCallbacks(std::move(event_waiter), std::move(dispatcher_ref));
         driver_context::OnThreadWakeup(GetDispatcherCoordinator());
       });
-  dispatcher->event_waiter_ = event_waiter.get();
+  dispatcher->SetEventWaiter(event_waiter.get());
   zx_status_t status = EventWaiter::BeginWaitWithRef(std::move(event_waiter), dispatcher);
   if (status == ZX_ERR_BAD_STATE) {
-    dispatcher->event_waiter_ = nullptr;
+    dispatcher->SetEventWaiter(nullptr);
     return status;
   }
 
   // This may fail if the entire driver is being shut down by the driver host.
   status = GetDispatcherCoordinator().AddDispatcher(dispatcher);
   if (status != ZX_OK) {
-    dispatcher->event_waiter_ = nullptr;
+    dispatcher->SetEventWaiter(nullptr);
     return status;
   }
 
@@ -1142,12 +1142,12 @@ void Dispatcher::EventWaiter::HandleEvent(std::unique_ptr<EventWaiter> event_wai
                                           zx_status_t status, const zx_packet_signal_t* signal) {
   if (status == ZX_ERR_CANCELED) {
     LOGF(TRACE, "Dispatcher: event waiter shutting down\n");
-    event_waiter->dispatcher_ref_->event_waiter_ = nullptr;
+    event_waiter->dispatcher_ref_->SetEventWaiter(nullptr);
     event_waiter->dispatcher_ref_ = nullptr;
     return;
   } else if (status != ZX_OK) {
     LOGF(ERROR, "Dispatcher: event waiter error: %d\n", status);
-    event_waiter->dispatcher_ref_->event_waiter_ = nullptr;
+    event_waiter->dispatcher_ref_->SetEventWaiter(nullptr);
     event_waiter->dispatcher_ref_ = nullptr;
     return;
   }
