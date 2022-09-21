@@ -185,6 +185,8 @@
             protocol: [
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
+
+                // TODO(https://fxbug.dev/109428) remove once tiles facade is deleted
                 "fuchsia.sys.Launcher", // #appmgr
             ],
             from: "self",

@@ -86,6 +86,8 @@
                 "fuchsia.settings.Input",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Setup",
+
+                // TODO(https://fxbug.dev/109428) remove once tiles facade is deleted
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys2.EventSource",
                 "fuchsia.sysmem.Allocator",

@@ -36,8 +36,10 @@ void main() {
 
     await _killProcesses(helper);
 
-    await helper.component.launch(
-        'fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx', null);
+    // TODO(https://fxbug.dev/108167) use session protocols to re-enable
+    // TODO launch //src/ui/examples/simplest-app-flatland instead
+    // await helper.component.launch(
+    //     'fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx', null);
 
     // Wait for the application to start.
     await Future.delayed(Duration(seconds: 3));

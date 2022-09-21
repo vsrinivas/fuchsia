@@ -40,8 +40,10 @@ void main() {
     });
 
     test('tests launcher with error', () async {
-      final result = await sl4f.Component(sl4fDriver).launch('fake');
-      expect(result['Fail'], -1);
+      expect(
+          sl4f.Component(sl4fDriver)
+              .launch('fuchsia-pkg://fuchsia.com/fake#meta/fake.cm'),
+          throwsException);
     });
   }, timeout: Timeout(_timeout));
 }

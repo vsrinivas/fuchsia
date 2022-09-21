@@ -16,10 +16,8 @@ use component_hub::{
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_decl as fcdecl;
 use fidl_fuchsia_io as fio;
-use fidl_fuchsia_sys::ComponentControllerEvent;
 use fidl_fuchsia_sys2 as fsys;
 use fuchsia_component::client;
-use futures::StreamExt;
 use serde_json::{from_value, Value};
 use tracing::info;
 
@@ -63,7 +61,7 @@ impl ComponentFacade {
             None => return Err(format_err!("Need full component url to launch")),
         };
         if component_url.ends_with(".cmx") {
-            self.launch_v1(tag, &component_url, req.arguments).await
+            return Err(format_err!("CFv1 components are no longer supported"));
         } else {
             if req.arguments.is_some() {
                 return Err(format_err!(
@@ -71,72 +69,6 @@ impl ComponentFacade {
                 ));
             }
             self.launch_v2(tag, &component_url).await
-        }
-    }
-
-    /// Return app created by launch function
-    /// # Arguments
-    /// * `tag`: the sl4f command tag/name
-    /// * `url`: full url of the component
-    /// * `arguments`: optional arguments for the component
-    async fn create_launch_app(
-        &self,
-        tag: &str,
-        url: &str,
-        arguments: Option<Vec<String>>,
-    ) -> Result<client::App, Error> {
-        let launcher = match client::launcher() {
-            Ok(r) => r,
-            Err(err) => fx_err_and_bail!(
-                &with_line!(tag),
-                format_err!("Failed to get launcher service: {}", err)
-            ),
-        };
-        let app = client::launch(&launcher, url.to_string(), arguments)?;
-        Ok(app)
-    }
-
-    /// Launch component with url and optional arguments and detach directly
-    /// # Arguments
-    /// * `tag`: the sl4f command tag/name
-    /// * `url`: url of the component
-    /// * `arguments`: optional arguments for the component
-    async fn launch_v1(
-        &self,
-        tag: &str,
-        url: &str,
-        arguments: Option<Vec<String>>,
-    ) -> Result<ComponentLaunchResponse, Error> {
-        let launch_app = Some(self.create_launch_app(tag, url, arguments).await?);
-        let app = match launch_app {
-            Some(p) => p,
-            None => fx_err_and_bail!(&with_line!(tag), "Failed to launch component."),
-        };
-        let mut code = 0;
-        let mut component_stream = app.controller().take_event_stream();
-        match component_stream
-            .next()
-            .await
-            .expect("component event stream ended before termination event")?
-        {
-            // detach if succeeds
-            ComponentControllerEvent::OnDirectoryReady {} => {
-                app.controller().detach()?;
-            }
-            // if there's exception (like url package not found, return fail)
-            ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
-                code = return_code;
-                if return_code != 0 {
-                    info!(
-                        "Component terminated unexpectedly. Code: {}. Reason: {:?}",
-                        return_code, termination_reason
-                    );
-                }
-            }
-        }
-        match code {
-            0 => Ok(ComponentLaunchResponse::Success),
-            _ => Ok(ComponentLaunchResponse::Fail(code)),
         }
     }
 

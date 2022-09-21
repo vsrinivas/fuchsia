@@ -28,20 +28,12 @@ class Component {
     return result == 'Success';
   }
 
-  /// Launches a component given by [url]
-  ///
-  /// [url] can be of the form "fuchsia-pkg://url.to/component#meta/component.cmx"
-  /// or can also be given as just "component.cmx" in which case it'll be
-  /// converted to a fuchsia-pkg url for fuchsia.com packages.
+  /// Launches a component given by [url].
   Future<dynamic> launch(String url, [List<String> args]) async {
-    var packageUrl = url;
-    if (!url.startsWith('fuchsia-pkg')) {
-      packageUrl = 'fuchsia-pkg://fuchsia.com/$url#meta/$url.cmx';
-    }
     if (args != null && args.isNotEmpty) {
-      return await _sl4f.request(
-          'component_facade.Launch', {'url': packageUrl, 'arguments': args});
+      return await _sl4f
+          .request('component_facade.Launch', {'url': url, 'arguments': args});
     }
-    return await _sl4f.request('component_facade.Launch', {'url': packageUrl});
+    return await _sl4f.request('component_facade.Launch', {'url': url});
   }
 }
