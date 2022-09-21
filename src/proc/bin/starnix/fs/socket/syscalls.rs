@@ -403,9 +403,9 @@ fn recvmsg_internal(
     let mut cmsg_bytes_written = 0;
     let header_size = std::mem::size_of::<cmsghdr>();
 
-    for ancilliary_data in info.ancillary_data {
-        let expected_size = header_size + ancilliary_data.total_size();
-        let message_bytes = ancilliary_data.into_bytes(
+    for ancillary_data in info.ancillary_data {
+        let expected_size = header_size + ancillary_data.total_size();
+        let message_bytes = ancillary_data.into_bytes(
             current_task,
             flags,
             cmsg_buffer_size - cmsg_bytes_written,

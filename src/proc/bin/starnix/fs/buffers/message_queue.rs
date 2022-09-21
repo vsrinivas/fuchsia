@@ -336,8 +336,8 @@ mod tests {
     fn test_control_len() {
         let mut message_queue = MessageQueue::new(usize::MAX);
         let bytes: Vec<u8> = vec![1, 2, 3];
-        let ancilliary_data = vec![AncillaryData::Unix(UnixControlData::Security(bytes.clone()))];
-        let message = Message::new(vec![].into(), None, ancilliary_data);
+        let ancillary_data = vec![AncillaryData::Unix(UnixControlData::Security(bytes.clone()))];
+        let message = Message::new(vec![].into(), None, ancillary_data);
         message_queue.write_message(message);
         assert_eq!(message_queue.len(), 0);
         message_queue.write_message(bytes.clone().into());
