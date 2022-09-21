@@ -68,18 +68,20 @@ func NewClient(
 	}
 
 	bootCounter := new(uint32)
-	go func() {
-		for {
-			line, err := serialConn.ReadLine()
-			if err != nil {
-				logger.Errorf(ctx, "failed to read from serial: %v", err)
-				break
+	if serialConn != nil {
+		go func() {
+			for {
+				line, err := serialConn.ReadLine()
+				if err != nil {
+					logger.Errorf(ctx, "failed to read from serial: %v", err)
+					break
+				}
+				if strings.HasSuffix(line, "Welcome to Zircon\n") {
+					atomic.AddUint32(bootCounter, 1)
+				}
 			}
-			if strings.HasSuffix(line, "Welcome to Zircon\n") {
-				atomic.AddUint32(bootCounter, 1)
-			}
-		}
-	}()
+		}()
+	}
 
 	c := &Client{
 		deviceResolver:           deviceResolver,

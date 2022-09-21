@@ -51,10 +51,15 @@ func NewDeviceConfig(fs *flag.FlagSet, testDataPath string) *DeviceConfig {
 	fs.StringVar(&c.deviceResolverMode, "device-resolver", FfxResolver, "device resolver (default: device-finder)")
 	fs.StringVar(&c.ffxPath, "ffx-path", filepath.Join(testDataPath, "ffx"), "ffx tool path")
 	fs.StringVar(&c.deviceFinderPath, "device-finder-path", filepath.Join(testDataPath, "device-finder"), "device-finder tool path")
-	fs.StringVar(&c.SerialSocketPath, "device-serial", os.Getenv(constants.SerialSocketEnvKey), "device serial path")
+	fs.StringVar(&c.SerialSocketPath, "device-serial", "", "device serial path")
 	fs.DurationVar(&c.connectTimeout, "device-connect-timeout", 5*time.Second, "device connection timeout (default 5 seconds)")
 	fs.BoolVar(&c.WorkaroundBrokenTimeSkip, "workaround-broken-time-skip", false,
 		"whether to sleep for 15 seconds after pave and then reconnect, to work around a known networking bug, fxbug.dev/74861")
+
+	environmentSerialPath := os.Getenv(constants.SerialSocketEnvKey)
+	if c.SerialSocketPath == "" && environmentSerialPath != "" {
+		c.SerialSocketPath = environmentSerialPath
+	}
 
 	return c
 }
